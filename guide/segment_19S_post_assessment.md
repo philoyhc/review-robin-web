@@ -1108,7 +1108,7 @@ allowlist and would be green from its first commit, which is
 
 ---
 
-## Item 5 — a `Blast radius` row records a number, not when it was true
+## Item 5 — a `Blast radius` row records a number, not when it was true — ✅ **closed 2026-09-22**
 
 **Promoted from Item 1 entry E5** on the author's ruling, 2026-09-22 —
 the entry the 22 September read logged with *"no plan, and I am not sure
@@ -1304,8 +1304,40 @@ its verb. `Opportunity` publishes 67 of 100 with **per-row vintage**,
 because two of its four rows were re-measured and two were not — the
 item's own subject, so the table states it.
 
-**Rung 2 is unchanged and unstarted** — whether the re-run gets built,
-decided against the anchored corpus rather than a guess.
+**2026-09-22 — rung 2 answered: the re-run does not get built**, and
+the anchored corpus is what says so. `docs/unenforced_conventions.md`
+**§1.10** carries it. Of the 33 in-scope rows, **3** are
+machine-comparable, **21** carry a qualified value with no single number
+to compare, and **9** have a bare value behind a *prose* command cell.
+
+**Two criteria fail independently, and a review caught the first draft
+conflating them.** Only the 21 are uncomparable by nature — *"67, of
+which 52 are unmentioned"*, *"8, of which 1 is button markup"* — where
+the qualifier is what makes the figure true. The 9 would become
+comparable under a command-cell convention, costing no qualifier, so
+**the ceiling is 12 of 33** and that ceiling, not the qualifier
+argument, is what the coverage objection amounts to.
+
+**The rung still found a live error, which is the argument it cuts
+against itself.** Of the then-four comparable rows, **1 was wrong at its
+own anchor**: Item 7 published *"datalists in the lobby template: 1"*
+against a command yielding **2**, and the template is byte-identical
+between that anchor and `a62d40c` — a **mis-measurement, not drift**
+(elements counted, lines commanded). Corrected in Item 7's table. So
+the re-run's hit rate on its own 4 rows is 1 in 4, and the decision is
+*still* no, on the ground the hit rate does not touch: it would
+**execute shell out of a freely-edited markdown cell** in CI, and a plan
+file is not an execution surface. Against HEAD it would also re-create
+the drift-versus-staleness ambiguity rung 1 existed to remove.
+
+**Correcting Item 7's row is what moved 4 to 3** — the fixed row now
+carries a qualified value, so this rung's own fix changed the figure it
+was first published beside. Recorded because it is the item's subject
+happening to the item.
+
+**What rung 1 bought is the cheap manual check**, not a gate: the
+error above was found by checking out the anchor and re-running, which
+was impossible before G5 and is how §1.10 says to use it.
 
 ### PR ladder
 
@@ -1314,12 +1346,10 @@ decided against the anchored corpus rather than a guess.
    blank template; **G5** beside Item 2's G1–G4, green from its first
    commit because 19S's seven sections were already anchored. No
    anchor was back-filled onto any existing section.
-2. **Rung 2 — decide the re-run on the anchored corpus, and record the
-   answer either way.** Once anchored sections exist, ask whether
-   re-running their commands at close is worth building; a negative
-   answer becomes a `docs/unenforced_conventions.md` §1 entry with this
-   item's measurement behind it, which is more than E5 had. **Must not**
-   build the re-run without that answer.
+2. **Rung 2 — decide the re-run on the anchored corpus.** ✅ **Done
+   2026-09-22: no.** The answer and its measurement are
+   `docs/unenforced_conventions.md` **§1.10**. The re-run was not
+   built.
 
 ### Definition of done
 
@@ -1330,7 +1360,8 @@ decided against the anchored corpus rather than a guess.
   assumed.
 - `.claude/skills/segment-plan/SKILL.md` and
   `guide/segment_plan_template.md` both ask for the anchor.
-- Rung 2's answer is written down — as a built check or as a §1 entry.
+- Rung 2's answer is written down — `docs/unenforced_conventions.md`
+  §1.10, as a §1 entry rather than a built check.
 - `pytest -n auto` green and `ruff check .` clean, with `node` present.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19S.5` exits 0; any warning adjudicated
@@ -1340,18 +1371,18 @@ decided against the anchored corpus rather than a guess.
 
 ### Open questions
 
-- Does the re-run ever get built? **Decided by:** rung 2, against the
-  anchored corpus rather than against this item's guess.
-- **What is the cutoff, and in what unit?** Named six times above and
-  **defined nowhere** — found 2026-09-22 when the author asked what the
-  item still needed. Rung 1 cannot be built without it, because
-  *"sections landing on or after the cutoff"* needs a way to tell when
-  a section landed, and a section carries no date until this item gives
-  it one. **Decided by:** the author. Recommendation: **a segment-number
-  comparison on the plan file**, not a date on the section — the shape
-  Item 2's `LEGACY_BEFORE_SEGMENT` already set, derivable from the
-  filename with no git archaeology and no allowlist. A date cutoff would
-  need `git log` per section to answer the same question.
+- ~~Does the re-run ever get built?~~ **Answered 2026-09-22: no**, on
+  the anchored corpus rather than a guess — `docs/unenforced_conventions.md`
+  §1.10 carries the measurement. **3 of 33** rows are machine-comparable,
+  **21** carry a qualified value that has no single number to compare,
+  and **9** would become comparable under a command-cell convention —
+  so the ceiling is 12 of 33.
+- ~~What is the cutoff, and in what unit?~~ **Answered 2026-09-22 by
+  the author's ruling: a segment comparison**, now
+  `ANCHOR_REQUIRED_FROM = (19, "S")` — see `Semantics` for why a date
+  cutoff was circular. The question existed at all because rung 1's plan
+  named the cutoff six times and defined it nowhere, found when the
+  author asked what the item still needed.
 
 ### Out of scope
 
@@ -1375,6 +1406,9 @@ decided against the anchored corpus rather than a guess.
   entry for `tests/unit/test_index_currency.py` names G5 alongside
   G1–G4, so a contributor editing a `Blast radius` section knows a gate
   reads it (Item 5).
+- `docs/unenforced_conventions.md` — **§1.10** records rung 2's answer:
+  the re-run is not built, with the 4-of-33 measurement behind it
+  (Item 5).
 - `docs/status.md` — row when the item lands (Item 5).
 
 ---
@@ -1656,7 +1690,7 @@ Taken 2026-09-22 at `0ca204b`.
 | what | count | command |
 |---|---|---|
 | `vocabulary()` call sites | **2**, both `_lobby.py` | `grep -rn "vocabulary(" app/ --include='*.py'` |
-| datalists in the lobby template | **1** | `grep -n "datalist" app/web/templates/operator/sessions_list.html` |
+| datalists in the lobby template | **1** element, **2** matching lines | `grep -n "datalist" app/web/templates/operator/sessions_list.html` — the opening and closing tag; an earlier draft published **1** against a line-counting command (19S Item 5 rung 2) |
 | the expander tag input's `list=` | **absent** | `sed -n '283,287p' app/web/templates/operator/sessions_list.html` |
 | templates already using `datalist` | **14** | `grep -rln "datalist" app/web/templates/` |
 

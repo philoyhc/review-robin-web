@@ -238,6 +238,73 @@ the joke it sounds like.
 
 ---
 
+### 1.10 A `Blast radius` row's number is re-run against its anchor
+
+- **Written down at** `guide/segment_19S_post_assessment.md` Item 5,
+  whose rung 1 built the prerequisite — a section must now state the
+  commit or date it was measured at, checked by G5 in
+  `tests/unit/test_index_currency.py`. Rung 2 was to decide, **on the
+  anchored corpus rather than on a guess**, whether re-running the
+  commands is worth building. This entry is that answer: **no**, and
+  the measurement is why.
+- **What the anchored corpus actually contains**, measured 2026-09-22
+  at `9a812f1` over the 7 in-scope sections. **Two criteria fail
+  independently**, and a review caught an earlier draft of this entry
+  conflating them:
+
+  | the 33 rows | count |
+  |---|---:|
+  | bare `**N**` value **and** one self-contained command — comparable | **3** |
+  | bare value, but the command cell is prose (*"the ordering scan in rung 1"*) | 9 |
+  | value is qualified, so there is no single number to compare | **21** |
+
+- **Only the 21 are uncomparable by nature.** A `Blast radius` figure
+  worth recording usually needs a qualifier to be true — *"**67**, of
+  which **52** are unmentioned"*, *"**8**, of which **1** is button
+  markup"*, *"**5** / **11** / **16**"*. The qualifier is what makes the
+  number honest and exactly what makes it uncomparable, and forcing bare
+  integers to raise coverage trades it away — Article VI's disqualifier.
+- **The other 9 are a different failure, and a cheap one.** They carry a
+  bare value and a *prose* command cell, so an authoring convention
+  requiring a self-contained command would make them comparable without
+  touching any qualifier. **The ceiling is therefore 12 of 33, not 33** —
+  and that ceiling, rather than the qualifier argument, is what the
+  coverage objection actually amounts to. Said this way because an
+  earlier draft claimed all 29 non-comparable rows were qualified, which
+  its own table contradicted.
+- **The re-run would catch something real, though.** Of the then-four
+  comparable rows, **1 was wrong at its own anchor**: Item 7 published
+  *"datalists in the lobby template: **1**"* against
+  `grep -n "datalist" …`, which yields **2** — the opening and closing
+  tag. `app/web/templates/operator/sessions_list.html` is byte-identical
+  between that anchor and `a62d40c`, so this is a **mis-measurement,
+  not drift**: the author counted elements while the stated command
+  counts lines. Corrected when this entry was written — **and that
+  correction is why the comparable count now reads 3 rather than 4**:
+  the fixed row carries a qualified value, so this rung's own fix moved
+  the figure it was first published beside. That is the class the re-run
+  catches, and 1 of 4 was a real hit rate.
+- **Why not, then.** Three reasons, in order of weight:
+  1. **It would execute shell out of prose.** Re-running means `exec`ing
+     strings taken from a freely-edited markdown cell, in CI. A plan file
+     is not an execution surface, and making it one is a poor trade at
+     any coverage. This is the reason that survives every recount.
+  2. **The ceiling is 12 of 33**, and reaching even that needs a second
+     authoring convention on the command cell. Three rows qualify today.
+  3. **Against HEAD it is noise; against the anchor it needs a worktree
+     per sha** — 5 distinct shas across 7 sections today. Against HEAD a
+     differing answer is indistinguishable from the tree having moved,
+     which is the problem rung 1 was built to fix and re-running at HEAD
+     re-creates.
+- **What covers it instead.** The anchor itself, which G5 now enforces:
+  it gives a human the means to check a row that looks wrong, by
+  checking out the sha and re-running the command — which is how the
+  one live error above was found. The habit is *when a figure matters,
+  re-run it at its anchor before citing it*. Nothing measures whether
+  anyone did, which is the concession — but unlike every other entry
+  here, the prerequisite for doing it cheaply is now a gate rather than
+  a hope.
+
 ## 2. Enforceable but not enforced — the revisit queue
 
 None of these needs an allowlist, and each would pass on the current
