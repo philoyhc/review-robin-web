@@ -1127,19 +1127,44 @@ have no other side in the tree, and §1.7 concedes the first already.
 Claims that **cite their own command** do have one: the command is
 written down, in a column the convention already asks for.
 
-**Measured 2026-09-22 at `b8aeaa8`**, over every live and archived plan:
+Over every live and archived plan. **Each row states its own vintage**,
+because two were re-measured when rung 1 pinned the definition and two
+were not — which is the defect this item is about, so the table shows
+it rather than hiding it under one header:
 
-| what | count |
-|---|---:|
-| `Blast radius` sections | **98** |
-| rows citing a re-runnable command | **171** of 175 |
-| runnable exactly as written | **162** |
-| sections stating a sha or date to measure against | **45** (46%) |
+| what | count | taken at |
+|---|---:|---|
+| `Blast radius` sections | **100** | `840a2c0` |
+| sections stating when they were measured | **67** (67%) | `840a2c0` |
+| rows citing a re-runnable command | **171** of 175 | `b8aeaa8`, **not re-derived** |
+| runnable exactly as written | **162** | `b8aeaa8`, **not re-derived** |
+
+**The anchor figure is a correction, and the definition is why it
+moved.** The table said **45 of 98 (46%)** when the item was planned.
+No reading of *"stating a sha or date"* reproduces 45 — a sha anywhere
+gives 66, a date anywhere 50, either anywhere 75, a date in the opening
+lines 41 — so the old number is not re-derivable and is replaced rather
+than reconciled. The new one moved twice more as rung 1 pinned the rule
+in code: **69** under *sha-or-date in the opening two lines*, then
+**67** once a date had to share its line with *taken* or *measured*
+(cold read, 2026-09-22 — a bare prose date is not a measurement point).
+**67 of 100 is the figure the check itself computes**, which is the only
+one that can be re-derived.
+
+**The denominator moved too, and not only by growth.** 98 → 100 nets
+four new sections against `guide/segment_plan_template.md`'s two
+leaving the population when `_PLAN_NAME` began excluding it. So the two
+denominators are not the same measurement, and the correction is not a
+pure numerator change.
+
+The gap is **33 sections, not 53**. It strengthens the decision rather
+than weakening it: the convention is already observed in two thirds of
+the corpus, so the check codifies practice instead of imposing it.
 
 **The blocker is not runnability — it is the missing anchor.** 162 rows
-could be re-run today, but in 53 of 98 sections a differing answer is
-indistinguishable from the tree having legitimately moved, because the
-row never said *when* its number was true. A re-run against those is
+could be re-run at `b8aeaa8`, but in **33 of 100** sections a differing
+answer is indistinguishable from the tree having legitimately moved,
+because the row never said *when* its number was true. A re-run against those is
 noise, and a noisy check is the shape `constitution.md` VI says gets
 argued with, raised, then disabled.
 
@@ -1149,7 +1174,7 @@ argued with, raised, then disabled.
 states the commit or date it was measured at, and a check enforces that
 on sections landing from the cutoff onward.
 
-**Rejected: re-running the commands now.** On 53 of 98 sections nothing
+**Rejected: re-running the commands now.** On 33 of 100 sections nothing
 says *when*, so the check would report the passage of time as drift —
 and the two E5 instances a re-run would have caught were both *within* a
 slice, where the anchor is what makes the comparison possible.
@@ -1159,18 +1184,41 @@ slice, where the anchor is what makes the comparison possible.
 measurement says this half can be, cheaply, and a rule nobody has
 written belongs in §2 — this item is that writing.
 
-**Scoped by a date cutoff, not an allowlist**, which is the shape the
-author already accepted for Item 2's G1: the legacy half is excluded by
-one comparison, not by a list of 53 exceptions.
+**Scoped by a segment cutoff, not an allowlist** (author's ruling,
+2026-09-22), which is the shape already accepted for Item 2's G1: the
+legacy half is excluded by one comparison, not by a list of 93
+exceptions. A *date* cutoff was the alternative and is circular — see
+`Semantics`.
 
 ### Semantics
 
-- **An anchor is a 7–40 character hex sha or an ISO date** in the
-  section's opening lines. Both forms are already in use — Items 3 and
-  4 above write *"Taken 2026-09-22 at `92f7aff`"*.
-- **Only sections whose heading lands on or after the cutoff are
-  checked.** Before it, 53 sections have no anchor and back-filling one
-  would mean inventing a date — the defect this item is about.
+- **An anchor is a backticked 7–40 character hex sha, or an ISO date on
+  a line that also says *taken* or *measured***, within the section's
+  first two non-blank lines. Both forms are already in use — the
+  sections above write *"Taken 2026-09-22 at `92f7aff`"*. **The verb
+  requirement came from the cold read**: a bare ISO date passes as an
+  anchor while stating no measurement point, and **344 of the corpus's
+  3,109 sections (11%)** open with exactly that shape. **0** `Blast
+  radius` sections do, so it is pinned on the shape rather than on an
+  instance.
+- **What the scan cannot see, per §1.6's own habit** — a heading at `#`
+  or `####`; an anchor written into the heading text; an anchor past two
+  non-blank lines; a non-ISO date; an unbackticked sha; a plan filename
+  with no leading digits. **0** instances of each today, and the list is
+  in the module beside the constant.
+- **The cutoff is a segment comparison** (author's ruling,
+  2026-09-22), `ANCHOR_REQUIRED_FROM = (19, "S")`, sorted as
+  ``(leading number, remainder)`` so ``19R`` < ``19S`` < ``20``. A
+  *date* cutoff was the alternative and is circular: deciding whether a
+  section is in scope would need to know when it landed, and a section
+  carries no date until this convention gives it one — `git log` per
+  section, for a question the filename answers.
+- **19S, not the next segment.** All **7** of 19S's sections already
+  carry an anchor, so the check covers real sections from its first
+  commit. A cutoff one segment later would have covered **0** —
+  green, and vacuous, which is what §1.6 concedes and §1.8 catches.
+  **93** legacy sections are excluded, **33** of them unanchored, so
+  the exclusion is load-bearing rather than decorative.
 - **A template command stays legal** — nine rows carry a
   `<placeholder>` and record *how* a number was taken, which is worth
   more than one that happens to run. The anchor is the requirement, not
@@ -1185,9 +1233,10 @@ one comparison, not by a list of 53 exceptions.
 - **Anchor before re-run** (2026-09-22) — the measurement inverted the
   expected order: the commands are re-runnable, the comparison point is
   what is missing.
-- **A date cutoff, not an allowlist** (2026-09-22) — one comparison,
-  per Item 2's accepted precedent; a list of 53 legacy sections would
-  breach §2's bar.
+- **A segment cutoff, not a date and not an allowlist** (author's
+  ruling, 2026-09-22) — one tuple comparison on the filename. A date
+  needed `git log` per section to answer what the filename already
+  answers; a list of the 93 legacy sections would breach §2's bar.
 - **The check joins Item 2's module** (2026-09-22) — same subject, *is
   this hand-written claim checkable*, and a second module would split
   one gate list across two docstrings.
@@ -1197,19 +1246,74 @@ one comparison, not by a list of 53 exceptions.
 
 ### Blast radius (measured)
 
-Taken 2026-09-22 at `b8aeaa8`. The corpus figures are in `Opportunity`;
-what this item would *touch* is two prose files and one test module —
-`grep -n "Blast radius" .claude/skills/segment-plan/SKILL.md
+Taken 2026-09-22 at `840a2c0`. The corpus figures are in
+`Opportunity`; what this item *touched* is two prose files and one test
+module — `grep -n "Blast radius" .claude/skills/segment-plan/SKILL.md
 guide/segment_plan_template.md` — with **0** production LOC. At the
-cutoff the check covers **0** sections, rising as plans land, and
-excludes the **53** unanchored legacy ones.
+cutoff the check covers **7** sections across **110** plans scanned
+(live and archived), and excludes **93** legacy ones, **33** of them
+unanchored.
+
+### Status
+
+**2026-09-22 — rung 1 landed, and the cold read found nine things
+worth fixing in it.** `tests/unit/test_index_currency.py` gains **G5**
+and 9 tests, 23 → **32** in the module; suite 4,663 → **4,672**. Two
+prose files carry the convention. **0** production LOC.
+`close_check 19S.5` exits 0.
+
+**The cutoff's value is the design, and it is in `Semantics`.** What
+belongs here instead is that the plan predicted G5 would cover **0**
+sections and it covers **7** — a guard passing by seeing nothing is
+what §1.6 concedes and §1.8 catches, in the item that cites both.
+
+**Five mutations, all caught**, two of them added by the cold read:
+
+| mutation | tests red |
+|---|---:|
+| a recogniser that can never fail | 4 |
+| a heading pattern that matches nothing | 4 |
+| a cutoff past every plan, so the scope empties | 2 |
+| `#{2,3}` narrowed to `###`, dropping the 3 segment-level sections | 1 |
+| a bare prose date accepted as an anchor | 2 |
+
+**The last two are the read's.** The total-count floor **absorbed** the
+`###` narrowing — 97 of 100 clears any plausible total — so the two
+heading levels are now pinned separately. And `_ANCHOR` accepted any
+ISO date in the opening lines, a shape **344 of 3,109 sections (11%)**
+exhibit; a date now has to share its line with *taken* or *measured*.
+
+**Seven more, all acted on.** The module docstring still said *four
+invariants*. `unanchored_sections` took paths and did its own I/O,
+breaking the module's stated design and forcing a `tempfile` round-trip
+— it takes `(name, text)` pairs now, like its four siblings, and the
+mutation runs in memory. `segment_id(...) or "0"` was the silent
+fallback `plan_sort_key`'s own docstring forbids. `## Decision` still
+specified a *date* cutoff three paragraphs from the bullet that had
+been corrected to a segment one, and the superseded **53** survived in
+four more places. §1.6 was cited five times without its own habit
+discharged, so the blind spots are now listed beside the constant. And
+the convention had gone into the section *table* while the plan
+committed it to *"Measuring blast radius"* — it is in both now, rather
+than the `Doc impact` bullet being edited to match what was done.
+
+**The anchored figure moved twice more, and that is the definition
+being pinned rather than flailing**: 30 unanchored under a loose
+four-line window, 31 at two non-blank lines, **33** once a date needed
+its verb. `Opportunity` publishes 67 of 100 with **per-row vintage**,
+because two of its four rows were re-measured and two were not — the
+item's own subject, so the table states it.
+
+**Rung 2 is unchanged and unstarted** — whether the re-run gets built,
+decided against the anchored corpus rather than a guess.
 
 ### PR ladder
 
-1. **Rung 1 — the anchor, and the check that keeps it.** The convention
-   in the `segment-plan` skill and the blank template; the check beside
-   Item 2's, green from its first commit because it covers nothing yet.
-   **Must not** back-fill an anchor onto any existing section.
+1. **Rung 1 — the anchor, and the check that keeps it.** ✅ **Done
+   2026-09-22.** The convention in the `segment-plan` skill and the
+   blank template; **G5** beside Item 2's G1–G4, green from its first
+   commit because 19S's seven sections were already anchored. No
+   anchor was back-filled onto any existing section.
 2. **Rung 2 — decide the re-run on the anchored corpus, and record the
    answer either way.** Once anchored sections exist, ask whether
    re-running their commands at close is worth building; a negative
@@ -1222,7 +1326,7 @@ excludes the **53** unanchored legacy ones.
 - The check fails a `Blast radius` section landing after the cutoff with
   no anchor, demonstrated by a mutation per
   `docs/unenforced_conventions.md` §1.8.
-- It passes the 53 legacy sections untouched, asserted rather than
+- It passes the **93** legacy sections untouched, asserted rather than
   assumed.
 - `.claude/skills/segment-plan/SKILL.md` and
   `guide/segment_plan_template.md` both ask for the anchor.
@@ -1238,20 +1342,39 @@ excludes the **53** unanchored legacy ones.
 
 - Does the re-run ever get built? **Decided by:** rung 2, against the
   anchored corpus rather than against this item's guess.
+- **What is the cutoff, and in what unit?** Named six times above and
+  **defined nowhere** — found 2026-09-22 when the author asked what the
+  item still needed. Rung 1 cannot be built without it, because
+  *"sections landing on or after the cutoff"* needs a way to tell when
+  a section landed, and a section carries no date until this item gives
+  it one. **Decided by:** the author. Recommendation: **a segment-number
+  comparison on the plan file**, not a date on the section — the shape
+  Item 2's `LEGACY_BEFORE_SEGMENT` already set, derivable from the
+  filename with no git archaeology and no allowlist. A date cutoff would
+  need `git log` per section to answer the same question.
 
 ### Out of scope
 
 - **E5's process half** — *did the read run* (§1.7's already), *is this
   feasible*, *what is left to do*. No other side to compare against.
-- **Back-filling anchors** onto the 53 legacy sections.
+- **Back-filling anchors** onto the 93 legacy sections, 33 of which
+  have none.
 - **The four classes already homed** — §1.4, §1.5, §1.6.
 
 ### Doc impact
 
-- `.claude/skills/segment-plan/SKILL.md` — "Measuring blast radius"
-  asks for the commit or date the numbers were taken at (Item 5).
+- `tests/unit/test_index_currency.py` — **G5** joins G1–G4: an
+  in-scope `Blast radius` section states its anchor (Item 5).
+- `.claude/skills/segment-plan/SKILL.md` — **"Measuring blast radius"**
+  asks for the commit or date the numbers were taken at, and the
+  section-table row names the check. Both, because a plan author
+  follows the how-to section and a reader checks the table (Item 5).
 - `guide/segment_plan_template.md` — the blank `Blast radius` block
   carries the anchor line (Item 5).
+- `CLAUDE.md` / `AGENTS.md` — the *"A green `ruff` is not evidence"*
+  entry for `tests/unit/test_index_currency.py` names G5 alongside
+  G1–G4, so a contributor editing a `Blast radius` section knows a gate
+  reads it (Item 5).
 - `docs/status.md` — row when the item lands (Item 5).
 
 ---
@@ -1580,3 +1703,151 @@ Taken 2026-09-22 at `0ca204b`.
   *[filter box + typeahead]*; a second typeahead in the row expander
   belongs in it (Item 7).
 - `docs/status.md` — row when the item lands (Item 7).
+
+---
+
+## Item 8 — a pytest node id cited in live prose resolves
+
+**Logged 2026-09-22 on the author's instruction**, out of Item 4's own
+defect record rather than out of the assessment: that item produced
+**three** citation-staleness incidents, and this is the one of the three
+with a clean derivation.
+
+### Opportunity
+
+`tests/unit/test_doc_references.py` already fails on a backticked repo
+path in live prose that names nothing, and on a `§N` pointer to a
+section that does not exist. It does **not** check a citation of the
+form `` `tests/…py::test_name` `` — so prose can point at a test that
+was renamed or deleted, and the reader who tries to run the cited proof
+gets a collection error instead.
+
+**It is not hypothetical, and it is not only Item 4's.** Measured
+2026-09-22 at `9b32a9f`:
+
+| corpus | citations | resolve |
+|---|---:|---|
+| live prose (the 72 files `LIVE_PROSE` already covers) | **2** | 2 |
+| `guide/archive/` | **3** | **0** |
+
+All three archived citations are stale — one in 19F's plan, two in
+`guide/archive/unfinished_business.md`. Archived prose is history and
+stays exempt, but those three are the evidence that the failure mode
+recurs across segments rather than being one rename today.
+
+**Item 4's instance was in live prose**, which is what makes this
+worth a check: `guide/findings_2026-09-22_csv_contracts.md` is not
+matched by `DATED_DOC` (`findings_` is absent from it), so the register
+citing a pre-rename test name **would have failed this gate** before a
+reviewer found it by reading.
+
+### Decision
+
+Extend `tests/unit/test_doc_references.py` with one check: every
+`` `tests/<path>.py::<name>` `` in `LIVE_PROSE` names a test that
+exists. Same module because it is the same subject — *a citation in
+live prose resolves* — and a second module would split one gate list
+across two docstrings, the reasoning Item 5 used for joining Item 2's.
+
+**Rejected: `pytest --collect-only` per citation.** It is the
+authoritative answer and the wrong instrument: it costs a subprocess per
+hit and turns an unrelated collection error anywhere in the suite into
+this check's failure.
+
+**Rejected: a new module.** See above; and `LIVE_PROSE`, `DATED_DOC`
+and the live-line filter are already there to reuse.
+
+### Semantics
+
+- **Resolution is by definition name, read from the file.** A test
+  exists when its file exists and declares `def <name>(` or
+  `async def <name>(` — sufficient today because the suite has **0**
+  class-based tests (`grep -c "^class Test" tests/`), which is the
+  assumption to re-check if one ever lands.
+- **Parametrised ids are out of shape, not out of scope.** No citation
+  anywhere carries a `[case]` suffix today (**0**), so the check need
+  not strip one; if one appears it should fail loudly rather than be
+  silently tolerated, since a wrong case id is the same defect.
+- **`guide/archive/` stays exempt**, as it is for paths: an archived
+  plan records what was true, and its three stale citations are correct
+  history. This is the concession, stated rather than discovered.
+- **The residual, named because §1.6 asks what a scan cannot see.**
+  `DATED_DOC` excludes `segment_*.md`, and one live citation sits in
+  `guide/segment_19S_post_assessment.md` — so a node id in a *live
+  segment plan* is unchecked. Widening `LIVE_PROSE` is a change to a
+  corpus three other checks share, which is not this item's to make.
+- **Green from its first commit**, which is `docs/unenforced_conventions.md`
+  §2's bar: both live citations resolve at `9b32a9f`. The check arrives
+  as a guard, not as a cleanup.
+
+### Judgment calls — decided
+
+- **Definition-name lookup over `--collect-only`** (2026-09-22) — the
+  cheap instrument that cannot be broken by an unrelated collection
+  error.
+- **Item 4's module, not a new one** (2026-09-22) — same subject as the
+  path and `§N` checks it sits beside.
+- **Two citations is thin and the item says so** (2026-09-22) — the
+  case is the demonstrated instance plus the three archived ones, not
+  the size of today's corpus. §1.6's vacuity concession is why the
+  count is published rather than implied.
+
+### Blast radius (measured)
+
+Taken 2026-09-22 at `9b32a9f`.
+
+| what | count | command |
+|---|---|---|
+| node-id citations in `LIVE_PROSE` | **2** | the scan in `Opportunity` |
+| stale citations in `guide/archive/` | **3** of 3 | the same scan, archive corpus |
+| class-based tests in the suite | **0** | `grep -c "^class Test" tests/ -r` |
+| parametrised node-id citations, any corpus | **0** | the same scan, `\[` in the name |
+| `tests/unit/test_doc_references.py` | **~320** lines, 4 checks today | `grep -c "" tests/unit/test_doc_references.py` |
+| production LOC | **0** | the item adds a test only |
+
+### PR ladder
+
+1. **Rung 1 — the check.** One test in
+   `tests/unit/test_doc_references.py`, plus a mutation proving it
+   fails on a renamed citation and a live floor asserting the scan sees
+   the citations that exist. **Must not** widen `LIVE_PROSE` or touch
+   the path / `§N` checks.
+
+### Definition of done
+
+- The check **fails under a mutation** of what it protects — a citation
+  renamed to a test that does not exist — per
+  `docs/unenforced_conventions.md` §1.8, and the mutation is recorded in
+  `### Status`.
+- A **live floor** asserts the scan finds the citations that are
+  there, so a recogniser that matches nothing cannot pass.
+- The archive exemption is asserted, not assumed: the three stale
+  archived citations do **not** fail the suite.
+- `pytest -n auto` green and `ruff check .` clean, with `node` present.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19S.8` exits 0; any warning adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added
+
+### Open questions
+
+- Should a node id in a **live segment plan** be checked? `DATED_DOC`
+  excludes it today and one such citation exists. **Decided by:** the
+  author, or the first stale instance there. Recommendation: leave it,
+  since widening `LIVE_PROSE` changes a corpus three checks share.
+
+### Out of scope
+
+- **The other two staleness classes Item 4 produced** — wrong `file:line`
+  numbers. A line number has no derivation that survives an edit
+  anywhere above it, which is why only this class became an item.
+- **Widening `LIVE_PROSE`** — see the open question.
+- **`guide/archive/`** — its three stale citations are history.
+
+### Doc impact
+
+- `tests/unit/test_doc_references.py` — the node-id check joins the
+  path and `§N` checks (Item 8).
+- `CLAUDE.md` / `AGENTS.md` — the *"A green `ruff` is not evidence"*
+  entry for that module names what it now covers (Item 8).
+- `docs/status.md` — row when the item lands (Item 8).

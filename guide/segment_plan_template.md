@@ -43,8 +43,14 @@ in Semantics or as a Decision amendment. -->
 
 ## Blast radius (measured)
 
+Taken <YYYY-MM-DD> at `<sha>`.
+
 <!-- Counted before the first slice is cut, with the command that produced each
-count. Do not estimate. -->
+count. Do not estimate. The line above is the anchor: without it a later
+re-run cannot tell a stale number from a tree that legitimately moved. A
+backticked sha counts on its own; a date needs the word "taken" or
+"measured" on its line. Enforced from segment 19S on by
+`tests/unit/test_index_currency.py`. -->
 
 | What | Count | Command |
 |---|---|---|
