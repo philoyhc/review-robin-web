@@ -213,12 +213,14 @@ the joke it sounds like.
 - **The instance.** 19R's plan closed at **1,541 lines for eight items**.
   Its items each compacted at their own close and it still landed there.
   19S, written **after** the budget was raised as a finding, then
-  overran it on **every item it added** — 2026-09-22, ~129 to ~160
-  against ~120, several after deliberate trim passes, each written by
-  someone who had just read this entry. The instance worth keeping is
-  not the tally, which would need maintaining and is the drift class
-  §1.5 concedes: it is that **knowing the budget, having just written
-  about the budget, did not produce items inside it**.
+  overran it on **every item it added** — 2026-09-22, several after
+  deliberate trim passes, each written by someone who had just read
+  this entry. **No range is quoted here on purpose.** An earlier draft
+  gave one and it was stale within the day, two items later, which is
+  the drift class §1.5 concedes and the reason this entry refuses a
+  tally. The instance worth keeping is that **knowing the budget,
+  having just written about the budget, did not produce items inside
+  it**.
 - **Why not — and this one is not about feasibility.** `wc -l` over
   `guide/segment_*.md` is a check anyone could write in a line. Two
   things disqualify it. It would be **red from its first commit**, so it
