@@ -180,45 +180,23 @@ which is what made the entry closable: 34 of the 67 pre-16 archived
 plans are not mentioned in `## Done` at all, and without the ruling
 "fully current" had no test.
 
-#### E5 — the prose about the work is wrong more often than the work
+#### E5 — the prose about the work is wrong more often than the work — ➡ **promoted to Item 5, 2026-09-22**
 
-Across 19R alone: nine wrong descriptions of one rule in six files
-(19R.6); a blast-radius grep whose scope excluded the directories the
-item was about, twice (19R.6); a denominator computed with
-`--since=<bare date>`, taking its time-of-day from the current clock —
-the exact bug `tools/pace_audit.py` has a helper to prevent (19R.7);
-and a close claiming a cold read had run *before* the change, in the
-same commit whose body said it was still running (19R.8). Every one was
-caught by a reader or a gate, none by the author of the prose.
+Seven instances across 19R and 2026-09-22, every one caught by a reader,
+a gate or a re-measurement rather than by whoever wrote the prose. The
+list and its sources stay in `guide/codebase_assessment_22sep.md` §5 and
+`guide/codex_assessment_21sep.md` §5; **Item 5** carries what to do about
+it.
 
-`guide/codebase_assessment_22sep.md` §5 logs it with *no plan, and I
-am not sure what one would look like*; `guide/codex_assessment_21sep.md`
-§5 reads the same pattern as claims written faster than their premises
-are verified.
-
-**Three more instances arrived on 2026-09-22, while the register was
-being worked** — which is the information the entry was short of. The
-account of the `## Done` sort got **three figures wrong** (Codex caught
-two, re-measurement the third); **E7's own stated reason** here was
-wrong, claiming a line-count check would mean judging prose when it is a
-one-liner; and the `rehydrate_commit` comment in this very slice
-asserted an **unsurfaced data loss** that the code reports and the spec
-denies twice, copied from a stale neighbouring docstring. **Classified
-against 19G Item 1's taxonomy**, which sorts prose drift by *what the
-prose disagrees with*, the instances split: one is class **D**
-(behaviour, no source — `docs/unenforced_conventions.md` §1.4), one is
-class **B** (another document's content — §1.5), two are §1.6's
-under-scoped measurement, and the rest disagree with **the output of a
-command the prose itself cites**, or with the **process** (*did the read
-run*, *is this feasible*, *what is left to do*) — classes that taxonomy
-does not carry.
-
-**Logged with no design. Trigger:** a proposal specific enough to test.
-The residue above is narrower than the entry's title, and the one
-mechanism it suggests — re-running the commands a plan's
-`Blast radius` table already writes down — is named here rather than
-proposed, because not every such command is re-runnable (the bench needs
-a cluster) and a per-row opt-out is the shape §2's bar rejects.
+**The entry is promoted narrower than its title, and the classification
+is why.** Against 19G Item 1's taxonomy — which sorts prose drift by
+*what the prose disagrees with* — four of the seven already have live
+homes (`docs/unenforced_conventions.md` §1.4, §1.5 and §1.6), and the
+residue splits: claims that **cite their own command** have something to
+compare against, and claims about the **process** do not. Item 5 takes
+the first half. The three instances from 2026-09-22 are recorded there
+too — including the one committed in the slice that closed E7, and the
+one in this segment's own `rehydrate_commit` docstring, caught cold.
 
 #### E6 — a new guard has no evidence bar — ✅ **closed 2026-09-22**
 
@@ -789,3 +767,151 @@ rung 1 reports, which is the point of splitting them.
 - `spec/csv_contracts.md` — §3.2 aligned to the code, or each retained
   claim explained, per rung 2's adjudication (Item 4).
 - `docs/status.md` — row when the item lands (Item 4).
+
+---
+
+## Item 5 — a `Blast radius` row records a number, not when it was true
+
+**Promoted from Item 1 entry E5** on the author's ruling, 2026-09-22 —
+the entry the 22 September read logged with *"no plan, and I am not sure
+what one would look like."* This item is narrower than that entry,
+deliberately: it takes the one half of it that measurement shows is
+derivable.
+
+### Opportunity
+
+E5's seven instances, classified against 19G Item 1's taxonomy (which
+sorts prose drift by *what the prose disagrees with*), are four already
+homed — class **D** at `docs/unenforced_conventions.md` §1.4, class
+**B** at §1.5, two at §1.6 — and a residue that splits. Claims about
+the **process** (*did the read run*, *is this feasible*, *what is left*)
+have no other side in the tree, and §1.7 concedes the first already.
+Claims that **cite their own command** do have one: the command is
+written down, in a column the convention already asks for.
+
+**Measured 2026-09-22 at `b8aeaa8`**, over every live and archived plan:
+
+| what | count |
+|---|---:|
+| `Blast radius` sections | **98** |
+| rows citing a re-runnable command | **171** of 175 |
+| runnable exactly as written | **162** |
+| sections stating a sha or date to measure against | **45** (46%) |
+
+**The blocker is not runnability — it is the missing anchor.** 162 rows
+could be re-run today, but in 53 of 98 sections a differing answer is
+indistinguishable from the tree having legitimately moved, because the
+row never said *when* its number was true. A re-run against those is
+noise, and a noisy check is the shape `constitution.md` VI says gets
+argued with, raised, then disabled.
+
+### Decision
+
+**Build the prerequisite, not the re-run.** A `Blast radius` section
+states the commit or date it was measured at, and a check enforces that
+on sections landing from the cutoff onward.
+
+**Rejected: re-running the commands now.** On 53 of 98 sections nothing
+says *when*, so the check would report the passage of time as drift —
+and the two E5 instances a re-run would have caught were both *within* a
+slice, where the anchor is what makes the comparison possible.
+
+**Rejected: conceding the class to `docs/unenforced_conventions.md`
+§1**, which is for rules that *should not* be mechanised. The
+measurement says this half can be, cheaply, and a rule nobody has
+written belongs in §2 — this item is that writing.
+
+**Scoped by a date cutoff, not an allowlist**, which is the shape the
+author already accepted for Item 2's G1: the legacy half is excluded by
+one comparison, not by a list of 53 exceptions.
+
+### Semantics
+
+- **An anchor is a 7–40 character hex sha or an ISO date** in the
+  section's opening lines. Both forms are already in use — Items 3 and
+  4 above write *"Taken 2026-09-22 at `92f7aff`"*.
+- **Only sections whose heading lands on or after the cutoff are
+  checked.** Before it, 53 sections have no anchor and back-filling one
+  would mean inventing a date — the defect this item is about.
+- **A template command stays legal** — nine rows carry a
+  `<placeholder>` and record *how* a number was taken, which is worth
+  more than one that happens to run. The anchor is the requirement, not
+  runnability. Sections sit at `##` or `###`; the check reads either, as
+  `close_check.py` does.
+- **The honest limit, so the item does not overclaim**: an anchor makes
+  a *later* comparison possible. It does not make the original number
+  true, and on its own it would have caught **none** of E5's seven.
+
+### Judgment calls — decided
+
+- **Anchor before re-run** (2026-09-22) — the measurement inverted the
+  expected order: the commands are re-runnable, the comparison point is
+  what is missing.
+- **A date cutoff, not an allowlist** (2026-09-22) — one comparison,
+  per Item 2's accepted precedent; a list of 53 legacy sections would
+  breach §2's bar.
+- **The check joins Item 2's module** (2026-09-22) — same subject, *is
+  this hand-written claim checkable*, and a second module would split
+  one gate list across two docstrings.
+- **The process half is not in scope** (2026-09-22) — *did the read run*
+  is §1.7's, already conceded; *is this feasible* and *what is left*
+  have no other side at all.
+
+### Blast radius (measured)
+
+Taken 2026-09-22 at `b8aeaa8`. The corpus figures are in `Opportunity`;
+what this item would *touch* is two prose files and one test module —
+`grep -n "Blast radius" .claude/skills/segment-plan/SKILL.md
+guide/segment_plan_template.md` — with **0** production LOC. At the
+cutoff the check covers **0** sections, rising as plans land, and
+excludes the **53** unanchored legacy ones.
+
+### PR ladder
+
+1. **Rung 1 — the anchor, and the check that keeps it.** The convention
+   in the `segment-plan` skill and the blank template; the check beside
+   Item 2's, green from its first commit because it covers nothing yet.
+   **Must not** back-fill an anchor onto any existing section.
+2. **Rung 2 — decide the re-run on the anchored corpus, and record the
+   answer either way.** Once anchored sections exist, ask whether
+   re-running their commands at close is worth building; a negative
+   answer becomes a `docs/unenforced_conventions.md` §1 entry with this
+   item's measurement behind it, which is more than E5 had. **Must not**
+   build the re-run without that answer.
+
+### Definition of done
+
+- The check fails a `Blast radius` section landing after the cutoff with
+  no anchor, demonstrated by a mutation per
+  `docs/unenforced_conventions.md` §1.8.
+- It passes the 53 legacy sections untouched, asserted rather than
+  assumed.
+- `.claude/skills/segment-plan/SKILL.md` and
+  `guide/segment_plan_template.md` both ask for the anchor.
+- Rung 2's answer is written down — as a built check or as a §1 entry.
+- `pytest -n auto` green and `ruff check .` clean, with `node` present.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19S.5` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- Does the re-run ever get built? **Decided by:** rung 2, against the
+  anchored corpus rather than against this item's guess.
+
+### Out of scope
+
+- **E5's process half** — *did the read run* (§1.7's already), *is this
+  feasible*, *what is left to do*. No other side to compare against.
+- **Back-filling anchors** onto the 53 legacy sections.
+- **The four classes already homed** — §1.4, §1.5, §1.6.
+
+### Doc impact
+
+- `.claude/skills/segment-plan/SKILL.md` — "Measuring blast radius"
+  asks for the commit or date the numbers were taken at (Item 5).
+- `guide/segment_plan_template.md` — the blank `Blast radius` block
+  carries the anchor line (Item 5).
+- `docs/status.md` — row when the item lands (Item 5).

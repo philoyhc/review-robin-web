@@ -3332,10 +3332,10 @@ dep chains called out at the bottom of this file.
      half to a comment on `rehydrate_commit`). **Retired:** the ≥1,000
      LOC watchlist (**E3**) — the author's ruling that it is *not really
      a tripwire but just part of the judgment of codebase assessments*.
-     **Promoted:** Prepare's per-pair insert (**E1** → Item 3).
-     **Open: E5** alone — prose about the work being wrong more often
-     than the work, logged with no design; the author has asked for more
-     information before it is dispositioned.
+     **Promoted:** Prepare's per-pair insert (**E1** → Item 3) and
+     prose about the work being wrong more often than the work
+     (**E5** → Item 5). **Every entry is now disposed of**, which is
+     Item 1's definition of done.
    - **Item 2 — the four index gates** *(planned, not built)*. Every
      archived plan from segment 16 on has a `## Done` entry, those
      headings ascend by declared PR, `docs/status.md`'s `As of` matches
@@ -3354,6 +3354,15 @@ dep chains called out at the bottom of this file.
      the wrong signature is correct, and the four per-row rules beside
      it have never been checked against the code. Behavior first,
      adjudication second.
+   - **Item 5 — a `Blast radius` row records a number, not when it was
+     true** *(planned, not built)*. E5 promoted, and narrower than its
+     title: of its seven instances four are already homed in
+     `docs/unenforced_conventions.md` §§1.4–1.6, and the residue splits
+     into claims that cite their own command and claims about the
+     process. Measured over 111 plans: **98** `Blast radius` sections,
+     **162** rows runnable exactly as written, but only **45** stating a
+     sha or date to compare against — so the item builds the missing
+     anchor, not the re-run.
    - **Promotion is the author's call** on a named trigger. An entry
      never promoted is not a failure of the register; losing the
      finding would have been.
