@@ -3334,8 +3334,8 @@ dep chains called out at the bottom of this file.
      a tripwire but just part of the judgment of codebase assessments*.
      **Promoted:** Prepare's per-pair insert (**E1** → Item 3) and
      prose about the work being wrong more often than the work
-     (**E5** → Item 5). **Every entry is now disposed of**, which is
-     Item 1's definition of done.
+     (**E5** → Item 5). Every entry is disposed of, and **Item 1 closed
+     2026-09-22** on that basis.
    - **Item 2 — the four index gates** *(planned, not built)*. Every
      archived plan from segment 16 on has a `## Done` entry, those
      headings ascend by declared PR, `docs/status.md`'s `As of` matches
@@ -3363,6 +3363,21 @@ dep chains called out at the bottom of this file.
      **162** rows runnable exactly as written, but only **45** stating a
      sha or date to compare against — so the item builds the missing
      anchor, not the re-run.
+   - **Item 6 — a session can be tagged when it is created**
+     *(planned, not built)*. A half-width Tag card below the User
+     interface settings card on `session_new.html`, which carries **0**
+     tag mentions today so a session is born untagged. **Supersedes**
+     `guide/deferred_consolidated.md`'s *Tags, Owners and a typeahead on
+     the Create page* (19R Item 9, unbuilt): one of its three changes,
+     in the slot that plan gave Owners, with Owners still deferred.
+     Nothing is missing underneath — `set_tags` is the whole write path.
+   - **Item 7 — typeahead on the two tag boxes** *(planned, not built)*.
+     Depends on Item 6. The lobby already computes the vocabulary and
+     already feeds a `datalist` for its **filter** box; the row
+     expander's tag input is one attribute away — **but that attribute
+     would be wrong**, because a native `datalist` completes the whole
+     field and the box is comma-separated. So the fork is a UX change or
+     a per-token script, priced in rung 1 before either is built.
    - **Promotion is the author's call** on a named trigger. An entry
      never promoted is not a failure of the register; losing the
      finding would have been.

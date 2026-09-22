@@ -25,7 +25,7 @@ keeps its tag and gains the item number beside it — **E4 → Item 2**
 
 ---
 
-## Item 1 — the register of what the two end-of-window reads surfaced
+## Item 1 — the register of what the two end-of-window reads surfaced — ✅ **closed 2026-09-22**
 
 ### Opportunity
 
@@ -276,17 +276,66 @@ subject was the archiving, not the findings.
 
 ### Open questions
 
-- Does E1 follow the 22 September read (fix before the pilot) or the
-  Codex read (wait for pilot scale)? **Decided by:** the author.
-- Do E3's tripwires need a live home, or does `guide/codex_assessment_21sep.md`
-  §8 move 4's rule replace them? **Decided by:** the author, or the
-  first module to cross one.
-- Does E8's first half get a `findings_<date>_<scope>.md` file of its
-  own, or is an entry here enough? **Decided by:** the author — the
-  two forms differ in who is expected to read them.
-- Is a register that never promotes an entry still doing its job?
-  **Decided by:** this segment's own close, which has to say what became
-  of each entry.
+All four answered, collapsed at the close.
+
+- **E1 follows the 22 September read** — promoted to Item 3 rather than
+  held as a measured candidate (author, 2026-09-22).
+- **E3's tripwires get no live home**: they are not tripwires. Retired
+  on the author's ruling that the ≥1,000 LOC list is part of an
+  assessment's judgment, with `guide/codex_assessment_21sep.md` §8
+  move 4's rule governing instead.
+- **E8's first half got an item, not a findings file** — Item 4, on the
+  author's ruling that spelling out §3.2's current behavior is its own
+  investigation.
+- **The register promoted four of eight**, so the question of whether one
+  that never promotes is doing its job did not arise. What the close can
+  say instead is narrower and more useful: **no entry closed by being
+  declared finished** — each was promoted, rehomed to a live register,
+  or retired with a reason.
+
+### Status
+
+**Closed 2026-09-22, the day it opened, at eight entries and no
+mechanism built.** Intended: one home for what the two end-of-window
+reads surfaced, entries logged and explicitly unscheduled. Done: that,
+plus **four promotions the register was not expected to produce** —
+Items 2–5 all came out of it, so the file that was written to avoid
+becoming a queue produced most of the segment's work anyway. The
+difference is that each promotion was the author's call against a named
+trigger, which is what the register was for.
+
+**Dispositions**, all 2026-09-22: **E2** closed by a pointer (the caveat
+was already 45 lines below the claim); **E4** split — gateable half to
+Item 2, residue to `docs/unenforced_conventions.md` §1.5; **E6** and
+**E7** rehomed to that register as §1.8 and §1.9; **E3** retired as not
+a tripwire; **E1**, **E5** and **E8**'s first half promoted to Items 3,
+5 and 4; **E8**'s second half answered by a docstring.
+
+Decisions confirmed at build:
+
+- **Rehoming beats gating, where a live register already concedes the
+  class.** Three entries (E4's residue, E6, E7) ended in
+  `docs/unenforced_conventions.md` §1, which is what
+  `constitution.md` VI's list is for. The guard held: nothing was
+  rehomed whose answer was not genuinely *deliberately unenforced*.
+- **Two entries' stated reasons were wrong, and measurement found both.**
+  E7 claimed a length check would mean judging prose — `wc -l` is a
+  one-liner, and the real objection is that it would be red from its
+  first commit. E5 claimed the commands in a `Blast radius` table were
+  not re-runnable — 162 of 171 run exactly as written, and the missing
+  piece is the **anchor**, with only 45 of 98 sections stating when they
+  were measured. Both corrections are recorded where the claim was made.
+- **The register produced three new E5 instances while being worked**, one
+  of them in this segment's own `rehydrate_commit` docstring, caught by
+  the cold read. They are Item 5's opening evidence, which is a better
+  starting position than E5's *"no plan, and I am not sure what one
+  would look like."*
+
+**`spec-writer` at this close has nothing to verify**, and that is
+recorded rather than performed: Item 1's manifest names
+`docs/status.md` and `guide/todo_master.md` and no `spec/` path, because
+a register of findings changes no surface contract. The pass is owed by
+Items 2–6, each of which names its own.
 
 ### Out of scope
 
@@ -915,3 +964,321 @@ excludes the **53** unanchored legacy ones.
 - `guide/segment_plan_template.md` — the blank `Blast radius` block
   carries the anchor line (Item 5).
 - `docs/status.md` — row when the item lands (Item 5).
+
+---
+
+## Item 6 — a session can be tagged when it is created
+
+**Logged 2026-09-22 on the author's instruction**, and it **supersedes
+the more ambitious plan**: `guide/deferred_consolidated.md`'s *Tags,
+Owners and a typeahead on the Create page* (19R Item 9, moved there
+unbuilt) carried three changes plus typeahead. This is one of them.
+
+### Opportunity
+
+`app/web/templates/operator/session_new.html` carries **0** tag
+mentions, so a session is born untagged and the operator goes back to
+the lobby to classify it. Every tag write surface is on the lobby: the
+`bulk-tags` toolbar action and the row expander's
+`POST /sessions/{id}/lobby-edit`.
+
+**Nothing is missing underneath.** `set_tags` is the whole write path,
+the audit events are emitted, and tags already reach a new session
+through the settings CSV (`_apply_session_tags`, 18P PR D2). The gap is
+UI over a path that works end to end.
+
+**The placement is the author's, not the superseded plan's**, which put
+Tags in the *left* column below Description and gave this slot to
+Owners. **Owners stays deferred**, as that entry itself recommends:
+*"Tags is one input and one `set_tags` call; Owners is a staged
+mini-editor."*
+
+### Decision
+
+One half-width card below User interface settings, holding one
+comma-delimited text input, written with `set_tags` **after**
+`sessions.create_session` returns an id.
+
+**Rejected: reusing the lobby's write route.**
+`POST /sessions/{id}/lobby-edit` needs a session id and this page has
+none — the same constraint that made Owners a staged editor.
+**Rejected: leaning on the settings CSV instead.** It already works;
+the gap is the operator who is not uploading one.
+
+### Semantics
+
+- **Ordering is forced**: `set_tags` needs the id, so tags apply after
+  create. A failed tag write must not leave a session created and
+  silently untagged — rung 2 decides between one transaction and a
+  reported partial.
+- **The box and the settings CSV can both carry tags, and the existing
+  rule decides it.** Audited 2026-09-22: `POST /sessions` parses the
+  form, calls `sessions.create_session`, **then** applies the CSV, and
+  `_apply_session_metadata` resolves each field by one of **two rules**:
+  *fill-blanks* for `name`, `code`, `description`, `deadline`,
+  `help_contact`, so **the form wins** — its docstring names this flow,
+  *"on Create New Session, operator-typed fields are non-empty so the
+  snapshot fills in only the blanks"* — and *force-apply* for the eight
+  scheduling / toggle / timezone fields, where **the CSV wins** because
+  they are *"session config, not operator-typed identity"*. **All 13
+  Create form fields overlap the CSV**, 5 form-wins and 8 CSV-wins, and
+  a typed tag is operator-typed.
+- **But tags cannot just follow that rule, because their applier is
+  wipe-and-replace.** `_apply_session_tags` deletes every existing tag
+  not in the CSV, runs on **every** apply, and `_ParsedConfig.session_tags`
+  is a bare `list[str]` with **no section-presence flag** — so a bundle
+  with no `session_tags[]` rows is indistinguishable from one asking for
+  none, and **wipes the session's tags**. That is deliberate for the
+  round-trip (*"mirroring the other list sections"*) and fatal for a
+  form box applied before it. Rung 2 therefore either writes the box's
+  tags **after** `apply_session_config`, or merges them into the plan
+  before it — whichever it picks, the form's tags survive a settings
+  CSV that carries none.
+- **Comma-delimited, matching the lobby's `name="tags"`**, so one habit
+  works on both surfaces.
+- `normalize_tag` decides the stored form; a repeated tag collapses; an
+  empty box writes nothing and emits **no** audit event.
+- **No lifecycle gate applies** — the session does not exist yet, which
+  is why Create is the easy surface and Session Home is not (the
+  superseded entry records that blocker and it stays out).
+- **The force-apply path does not re-run the interactive ordering
+  check, and that is safe — traced 2026-09-22, not assumed.** The route
+  calls `scheduled_events.validate_schedule_ordering` (End ≥ Start;
+  Release-from ≥ End) before create; the CSV force-applies the same
+  datetimes afterwards with no re-check, and no Validate rule covers
+  ordering. **Every downstream consumer guards itself**, each for its
+  own reason: `is_response_release_window_open` returns `False` unless
+  the session `is_expired`, **whatever the anchors say** — added at
+  **19F PR 2a** precisely because *"every path that sets them without
+  the button opened the window in a state the UI would never offer"*,
+  naming a **backdated anchor on Quick Setup** as one of its two
+  motivating cases, which is this path; a `responses_release_until`
+  before its anchor leaves the window permanently shut rather than
+  early-open; scheduled activation fires only from `validated` and
+  otherwise takes a one-shot skip with
+  `session.scheduled_activation_skipped`; and reminders past the
+  deadline are skipped with an audit event
+  (`scheduled_events/_reminders.py`). So the ordering check is an
+  **interactive-path courtesy** — a field-level error instead of an odd
+  schedule — not a correctness boundary, and the spec edit this item
+  owes says so rather than leaving a reader to infer a hole.
+
+### Judgment calls — decided
+
+- **The author's slot over the superseded plan's** (2026-09-22).
+- **Tags only; Owners stays deferred** (2026-09-22) — a different size
+  of work, as that entry says itself.
+- **Scaffold first** (2026-09-22) — `CLAUDE.md` requires it for a new
+  card, so the inert card is rung 1 and the write is rung 2.
+- **The form wins over the settings CSV, by precedent rather than by
+  invention** (2026-09-22) — following the identity-versus-config split
+  already implemented rather than adding a second philosophy. The cost
+  is that tags need the ordering worked out, since their applier wipes.
+
+### Blast radius (measured)
+
+Taken 2026-09-22 at `0ca204b`.
+
+| what | count | command |
+|---|---|---|
+| tag mentions on the page | **0** | `grep -c -i tag app/web/templates/operator/session_new.html` |
+| the write path | **1** function, `set_tags` | `grep -n "^def " app/services/session_tags.py` |
+| `vocabulary()` call sites | **2**, both the lobby's views | `grep -rn "vocabulary(" app/ --include='*.py'` |
+| lines with an inline `style=` | **8**, of which **1** is button markup (`.btn-pair`, line 121) | `grep -n 'style="[^"]*"' app/web/templates/operator/session_new.html` |
+
+**That last row corrects the superseded entry's *"8 inline-styled
+buttons"***: the other seven are `page-grid` / `fill-col` wrappers and
+an `h3`, so the `.btn` ride-along is one pair, not eight.
+
+### PR ladder
+
+1. **Rung 1 — the scaffold.** The half-width card in place with real
+   copy and an inert input. **Must not** write anything.
+2. **Rung 2 — the write.** `set_tags` after create, the CSV precedence
+   answered, the partial-failure behaviour decided. **Must not** add
+   typeahead — that is Item 7.
+3. **Rung 3 — the `.btn` pair on this page**, per `CLAUDE.md`'s
+   convention, asking first if either button does not fit a canonical
+   role.
+
+### Definition of done
+
+- A session created with tags in the box has them, asserted through the
+  route rather than the service.
+- **A create carrying both a typed tag and a settings CSV with no
+  `session_tags[]` rows keeps the typed tag**, asserted through the
+  route — the case the wipe-and-replace applier would silently lose.
+- An empty box emits no `session.tag_added` event, asserted.
+- `pytest -n auto` green and `ruff check .` clean, with `node` present.
+- The card is verified on the dev slot, since layout is not testable
+  here — stated in the PR body per `CLAUDE.md`.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19S.6` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- ~~**Box or settings CSV wins** when a create carries both?~~
+  **Answered 2026-09-22 by audit, not by decision: the form wins**, on
+  the rule already in `_apply_session_metadata` — operator-typed fields
+  are fill-blanks and a typed tag is operator-typed. The audit is in
+  `Semantics`; what it leaves rung 2 is *mechanism*, not precedence,
+  because the tag applier's wipe-and-replace means ordering has to be
+  chosen deliberately.
+
+### Out of scope
+
+- **Owners on Create** — a staged mini-editor, still deferred.
+- **Session Home's config card**, whose `config_editing` gate would make
+  tags editable in 2 of 5 lifecycle states where the lobby edits them in
+  any — the superseded entry's recorded blocker.
+- **Typeahead** — Item 7.
+
+### Doc impact
+
+- `spec/sessions_overview.md` — the tag write surfaces it lists gain
+  Create (Item 6).
+- `guide/deferred_consolidated.md` — the superseded entry marked as
+  superseded in part, with Owners and Session Home still deferred
+  (Item 6).
+- `spec/csv_contracts.md` — the settings CSV's apply semantics state
+  the two rules (fill-blanks for operator-typed identity, force-apply
+  for config), the tag section's wipe-on-absence, **and why the
+  force-apply path needs no ordering re-check** (each consumer guards;
+  see `Semantics`). Audited 2026-09-22 and found **undocumented**:
+  `grep -i "precedence\|wins"` over `spec/csv_contracts.md` and
+  `spec/settings_inventory.md` returns nothing, so the rule lives only
+  in `_apply_session.py` (Item 6).
+- `docs/status.md` — row when the item lands (Item 6).
+
+---
+
+## Item 7 — typeahead on the two tag boxes
+
+**Logged 2026-09-22 on the author's instruction**, separately from Item
+6, which builds the box this one would complete. Depends on Item 6 for
+the Create surface to exist.
+
+### Opportunity
+
+Two boxes, two different problems, and **the lobby's is not the one it
+looks like**.
+
+**On the lobby the machinery is already there and unused.**
+`app/web/routes_operator/_lobby.py:101` computes
+`lobby_tags = session_tags.vocabulary(db, session_ids)`, and
+`sessions_list.html:68-76` already feeds it to
+`<datalist id="lobby-filter-options">` for the **filter** box. The row
+expander's tag input at `:285` carries no `list=` — so the vocabulary
+is in scope, one attribute away.
+
+**But that one attribute would be wrong.** The input is `name="tags"`
+and takes a **comma-separated list**, while a native `<datalist>`
+completes the *whole field value*, not the token after the last comma.
+Pointed at the existing list it would offer to replace `alpha, beta`
+with `gamma`. So the lobby needs either a **UX change** (one tag per
+input) or a **progressive-enhancement script** doing per-token
+completion — which `CLAUDE.md` permits and the lobby's expanders
+already use.
+
+**On Create there is no vocabulary at all.** `vocabulary(db,
+session_ids)` is scoped to the sessions on screen and both its callers
+are the lobby's two views; Create has no list. Suggestions there need
+the operator's own tags — a new query shape, not a new service.
+
+### Decision
+
+**Price the fork, then build the choice.** Rung 1 prices (a) a native
+`datalist` with a one-tag-per-input UX on both surfaces against (b) one
+shared per-token script keeping the comma box, each against both
+surfaces and the existing expander script. Rung 2 builds what the author
+picks.
+
+**Rejected: building (b) directly.** The inline-script budget is
+deliberate; whether a second script earns its place is a call, not an
+assumption. **Rejected: shipping (a) on the lobby alone** — the two
+boxes would then disagree about whether a comma means anything, which is
+the inconsistency Item 6 chose its delimiter to avoid.
+
+### Semantics — what rung 1 must answer
+
+- **Create's vocabulary scope**: the operator's own sessions — owned or
+  visible, archived included or not — and its cost at the lobby's
+  measured **1,003** sessions.
+- Whether the lobby's existing datalist is reusable or needs a second id
+  (the filter's vocabulary and a tag editor's may differ once archived
+  sessions are in play).
+- That per-token completion is **impossible with a bare `<datalist>`**,
+  stated with the reason rather than discovered in rung 2.
+- **Normalization must agree with storage**: suggestions come from
+  `vocabulary`, values are stored through `normalize_tag`; if they fold
+  differently the operator is offered a tag they cannot create.
+- The **empty vocabulary** — a first session, no tags anywhere.
+- Keyboard and screen-reader behaviour, which only the dev slot settles.
+
+### Judgment calls — decided
+
+- **Both surfaces or neither** (2026-09-22) — one habit, per Item 6's
+  delimiter reasoning.
+- **Price before building** (2026-09-22) — the cheap-looking option is
+  wrong for the reason above, which is exactly the kind of thing a
+  pricing rung catches.
+- **The lobby's filter typeahead is the precedent to match, not to
+  duplicate** (2026-09-22).
+
+### Blast radius (measured)
+
+Taken 2026-09-22 at `0ca204b`.
+
+| what | count | command |
+|---|---|---|
+| `vocabulary()` call sites | **2**, both `_lobby.py` | `grep -rn "vocabulary(" app/ --include='*.py'` |
+| datalists in the lobby template | **1** | `grep -n "datalist" app/web/templates/operator/sessions_list.html` |
+| the expander tag input's `list=` | **absent** | `sed -n '283,287p' app/web/templates/operator/sessions_list.html` |
+| templates already using `datalist` | **14** | `grep -rln "datalist" app/web/templates/` |
+
+### PR ladder
+
+1. **Rung 1 — price the fork.** Both options against both surfaces,
+   with the vocabulary query measured rather than assumed. **Writes no
+   feature code.**
+2. **Rung 2 — build the choice**, both surfaces together. **Must not**
+   land on one surface only.
+
+### Definition of done
+
+- Rung 1's pricing is written down per option, including the query cost
+  at 1,003 sessions.
+- The chosen mechanism works on **both** boxes, asserted where testable.
+- Suggestions and stored values agree under `normalize_tag`, asserted.
+- `pytest -n auto` green and `ruff check .` clean, with `node` present;
+  any inline script parses (`test_inline_scripts_parse.py`).
+- Keyboard behaviour verified on the dev slot and said so in the PR body.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19S.7` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- **Native datalist with one-tag-per-input, or a per-token script?**
+  **Decided by:** the author, on rung 1's pricing.
+- **What scope is Create's vocabulary?** **Decided by:** rung 1, on the
+  measured cost.
+
+### Out of scope
+
+- **The roster and Assignments typeaheads** (19I Items 7–9). Working,
+  server-side, and a different surface.
+- **Session Home**, which has no tag box to complete (Item 6's blocker).
+- **Building the Create box** — Item 6.
+
+### Doc impact
+
+- `spec/sessions_overview.md` — its lobby drawing names
+  *[filter box + typeahead]*; a second typeahead in the row expander
+  belongs in it (Item 7).
+- `docs/status.md` — row when the item lands (Item 7).
