@@ -469,14 +469,22 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
 
 `apply_session_config` is the inverse of `serialize_session_config`.
 
-**The apply commits.** `apply_session_config` itself only flushes, so
-`_run_quick_setup_settings` — the helper all three upload routes share
-— commits after a successful apply. Stated because the omission was a
-live defect until 2026-09-22: `get_db` closes without committing, so
-every settings import returned a success redirect over work that was
-then rolled back, and no test could see it (the integration fixture
-shares a transaction with the app, so a flushed row reads like a
-committed one).
+**`apply_session_config` does not commit — every caller must.** It
+flushes and returns. `get_db` then closes without committing, so an
+uncommitted apply is *rolled back* while the route returns a success
+redirect. Both in-tree callers commit for themselves:
+`_run_quick_setup_settings`, the helper the three upload routes share,
+after a successful apply; and `session_rehydrate`, all-or-nothing at
+the end of its own run. **A third caller that does not commit
+reproduces the defect silently**, which is why the requirement is
+stated here rather than left to the two call sites.
+
+It was a live defect until 2026-09-22 — every settings import through
+the shared helper returned success over work that was then discarded —
+and no test could see it: the integration fixture shares a transaction
+with the app, so a flushed row reads exactly like a committed one, and
+a commit releasing a savepoint fires no `after_commit`. The test that
+does see it spies on `Session.commit` as a **class** attribute.
 
 #### Settings CSV — apply precedence
 
@@ -485,7 +493,8 @@ only in `app/services/session_config_io/_apply_session.py` and a
 `grep` for *precedence* or *wins* over this file and
 `spec/settings_inventory.md` returned nothing.
 
-All 13 fields on the Create form also appear in this CSV, and
+All 13 non-tag fields on the Create form also appear in this CSV
+(tags are the fourteenth, and the paragraph after next), and
 `POST /operator/sessions` always applies the bundle *after* creating
 the session, so the file runs last. `_apply_session_metadata` then
 resolves each field by one of **two rules** — *fill-blanks* for
@@ -520,7 +529,11 @@ plainly:
 So the rule is delivered by **running the box's `set_tags` after the
 settings block**, not by narrowing the applier for one caller. An
 empty box writes nothing at all — calling `set_tags` with an empty set
-would be a replace, and would drop what the CSV had just applied. The
+would be a replace, and would drop what the CSV had just applied. **The
+same empty `tags=` means the opposite on the lobby's row expander**,
+where it clears the session's tags, so the emptiness rule belongs to
+the create route and not to `set_tags`; a later refactor funnelling
+both surfaces through one helper has to keep both meanings. The
 write also runs on the **failed-upload redirect**, so a create that
 bails out at an earlier Quick Setup slot still keeps the typed tag; a
 slot that failed wrote no tags and a slot that never ran cannot have,

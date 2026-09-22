@@ -538,7 +538,8 @@ anywhere: the rule lived only in
 *precedence* or *wins* over this file and `spec/csv_contracts.md`
 returned nothing.
 
-**All 13 fields on the Create form also appear in the Settings CSV**,
+**All 13 non-tag fields on the Create form also appear in the
+Settings CSV** (tags are the fourteenth, below),
 and `POST /operator/sessions` always applies the CSV *after* creating
 the session — so the file runs last and `_apply_session_metadata`
 decides per field by one of two rules:

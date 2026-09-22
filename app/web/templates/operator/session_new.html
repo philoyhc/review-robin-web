@@ -173,7 +173,12 @@
     <div>
       {% include "operator/partials/_quick_setup_card.html" %}
     </div>
-    <div>
+    {# Two cards stacked in one cell, so the cell is a ``.bottom-left``
+       flex column — the documented primitive for exactly this
+       (`spec/ui_elements.md` §10). Cards inside ``.bottom-grid`` carry
+       no ``margin-bottom`` by design (§4), so the column's ``gap`` is
+       the only thing that spaces them. #}
+    <div class="bottom-left">
       <div class="card" id="user-interface-settings">
         <h3 style="margin-top: 0;">User interface settings</h3>
         <p class="muted">Per-session toggles for the optional Setup tabs.</p>

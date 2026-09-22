@@ -48,10 +48,22 @@ from app.web.routes_operator import _quick_setup
 
 
 def _card(body: str) -> str:
-    """The Tags card's markup, from its anchor to the end of the row."""
+    """The Tags card's own markup — its anchor to its closing tag.
+
+    Bounded at the **next** ``<div class="card"``, or at the end of the
+    page when it is the last one. A first draft returned ``body[start:]``
+    — the whole tail of the document — so every ``in card`` assertion was
+    really an assertion about the rest of the page. Nothing passed
+    vacuously at the time, but the mutation set had degenerated this
+    helper to ``""`` (the narrowing) and never to ``body`` (the widening
+    it actually had), which is `docs/unenforced_conventions.md` §1.11's
+    own subject. ``test_the_card_helper_is_bounded`` is the guard.
+    """
     start = body.find('id="session-tags"')
     assert start != -1, "the Tags card is missing from the page"
-    return body[start:]
+    start = body.rfind('<div class="card"', 0, start)
+    end = body.find('<div class="card"', start + 1)
+    return body[start:] if end == -1 else body[start:end]
 
 
 def _settings_csv(rows: list[tuple[str, str, str]]) -> bytes:
@@ -77,7 +89,7 @@ def _create(
     code: str,
     tags: str | None = None,
     settings: bytes | None = None,
-) -> int:
+) -> None:
     data: dict[str, str] = {"name": "Tagged", "code": code, "description": ""}
     if tags is not None:
         data["tags"] = tags
@@ -95,7 +107,6 @@ def _create(
         "/operator/sessions", data=data, files=files, follow_redirects=False
     )
     assert response.status_code == 303, response.text
-    return 0
 
 
 def _make_session(
@@ -139,6 +150,57 @@ def test_the_tags_card_renders_below_user_interface_settings(
     # unlabelled text input rather than merely an untidy one.
     assert 'id="session-tags-heading"' in card
     assert 'aria-labelledby="session-tags-heading"' in card
+
+
+def test_the_card_helper_is_bounded(client: TestClient) -> None:
+    """``_card`` returns the Tags card, not the rest of the page.
+
+    The guard the helper's own docstring names. Every other render test
+    reads ``assert X in _card(body)``, so a helper that over-returns
+    makes all of them weaker without failing any — the widening mutation
+    is invisible unless something asserts the boundary itself.
+    """
+    body = client.get("/operator/sessions/new").text
+    card = _card(body)
+
+    assert 'id="session-tags"' in card
+    assert card.count('<div class="card"') == 1, (
+        "the slice stops at the next card, so it holds exactly one"
+    )
+    # The card is the last on the page today, so an unbounded helper
+    # returns nearly the same string. Anchor on something that is
+    # definitely outside it and definitely on the page.
+    assert 'id="user-interface-settings"' not in card
+    assert "_schedule_ordering_js" not in card
+    assert len(card) < len(body) / 4, (
+        "one card, not the tail of the document"
+    )
+
+
+def test_the_two_stacked_cards_use_the_documented_column_primitive(
+    client: TestClient,
+) -> None:
+    """The right-hand `.bottom-grid` cell is a `.bottom-left` column.
+
+    Cards inside `.bottom-grid` carry no ``margin-bottom``
+    (`spec/ui_elements.md` §4), so a plain ``<div>`` cell renders two
+    stacked cards flush — which is what the dev slot showed. The fix
+    that spacing belongs to is `.bottom-left`'s ``gap``, §10's named
+    primitive for exactly this, not a new app-wide card rule: a rule
+    keyed on adjacent cards also matches the cards *inside* a
+    `.bottom-left`, so it would double the gap the first time a second
+    card returns to one of Session Home's columns.
+    """
+    body = client.get("/operator/sessions/new").text
+
+    grid = body.find('class="bottom-grid"')
+    assert grid != -1
+    cell = body.rfind('<div class="bottom-left">', grid, body.find('id="session-tags"'))
+    assert cell != -1, (
+        "the cell holding both cards is a .bottom-left flex column"
+    )
+    ui_pos = body.find('id="user-interface-settings"')
+    assert cell < ui_pos, "the column wraps both cards, not just Tags"
 
 
 def test_the_tags_input_is_wired_to_the_create_form(
