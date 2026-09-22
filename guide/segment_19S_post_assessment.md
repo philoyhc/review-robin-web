@@ -16,11 +16,12 @@ impact`** and `python3 tools/close_check.py 19S.1` reads Item 1's.
 
 **Item 1 is the register itself** (author's framing, 2026-09-22): the
 eight entries are one unit of work, closed when every entry has been
-promoted, rehomed or closed with its reason. **Item 2 is the first
-thing promoted out of it** — E4's gateable half.
+promoted, rehomed or closed with its reason. **Items 2–4 are what has
+been promoted out of it** so far.
 
 **Entry tags are stable.** `E1`–`E8` never renumber; a promoted entry
-keeps its tag and gains the item number beside it (E4 → Item 2).
+keeps its tag and gains the item number beside it — **E4 → Item 2**
+(the gateable half), **E1 → Item 3**, **E8's first half → Item 4**.
 
 ---
 
@@ -89,19 +90,19 @@ deferred scope would overstate how well they are understood.
 
 ### Entries
 
-#### E1 — Prepare inserts one ORM object per pair
+#### E1 — Prepare inserts one ORM object per pair — ➡ **promoted to Item 3, 2026-09-22**
 
 20 s at the 200 × 200 / 80,000-row bench, 5.7 s at half the roster, so
 it is climbing steeply — and it is a click with no feedback, on the
 critical path of every session. Evidence:
 `guide/app_responsiveness.md` Finding 4.
 
-**The two reads disagree on timing, not on substance.**
-`guide/codebase_assessment_22sep.md` §8 ranks it move 2 — *fix Prepare
-before the pilot, not after* — while `guide/codex_assessment_21sep.md`
-§8 says keep it a measured candidate and promote it only when pilot
-scale crosses its trigger. **Trigger:** the author choosing between
-those two readings, or a known pilot roster size.
+**The two reads disagreed on timing, not on substance**, and the author
+ruled by promoting it: `guide/codebase_assessment_22sep.md` §8 ranked it
+move 2 (*fix Prepare before the pilot, not after*) against
+`guide/codex_assessment_21sep.md` §8 move 3's *hold it as a measured
+candidate*. **Item 3** carries the design, the measured blast radius and
+the two rungs; this entry is closed as promoted, not as done.
 
 #### E2 — the bench headline is a dated fact, not a standing one — ✅ **closed 2026-09-22**
 
@@ -123,24 +124,28 @@ answer it. That sits with **E1**'s trigger — deployment with
 representative rosters — not with this entry, whose subject was the
 stale headline.
 
-#### E3 — the ≥1,000 LOC watchlist lives only in a document that archives
+#### E3 — the ≥1,000 LOC watchlist lives only in a document that archives — ⬜ **retired 2026-09-22**
 
-Twelve modules ≥ 1,000 LOC, and `guide/codebase_assessment_22sep.md`
-§9 carries the tripwires: `app/services/validation.py` at 1,300 (+346)
-is the new largest with no queued split, `app/services/session_lifecycle.py`
-at 1,107 is **93 LOC** from its ~1,200 tripwire, and
-`app/web/routes_operator/_instruments.py` at 1,279 is **121** from
-~1,400. `app/services/csv_imports.py`, `app/web/routes_operator/_operations.py`
-and `app/services/instruments/_band1.py` (+363, the window's largest
-mover) are on the same list.
+**Retired on the author's ruling**: the list *"is not really a tripwire
+but just part of the judgment of codebase assessments."* That dissolves
+the entry's own question rather than answering it — the entry asked
+whether the tripwires need a live home, and the ruling is that they are
+not tripwires. A figure that exists to prompt a human reading a
+judgement-based document does not need to outlive the document, and
+`guide/README.md`'s `codebase_assessment_*` row already says the
+quantitative rows are *"reading prompts for a human in a document that
+is already judgement-based — deliberately not a CI gate, which is the
+form that gets argued with, raised, then disabled."*
 
-A dated snapshot retires to `guide/archive/` when the next one
-supersedes it, so those numbers leave live prose while the modules stay.
-`guide/codex_assessment_21sep.md` §8 move 4 offers a rule instead — let
-the next failure choose the seam — which is a rule, not a record. **The
-entry's question is whether the tripwires need a live home**, not
-whether to split anything. **Trigger:** a module crossing its tripwire,
-or the next assessment, whichever comes first.
+**What the ruling gives up, recorded so it is a choice and not an
+oversight**: when `guide/codebase_assessment_22sep.md` is superseded,
+§9's numbers — `app/services/validation.py` at 1,300,
+`app/services/session_lifecycle.py` **93 LOC** from its ~1,200 note,
+`app/web/routes_operator/_instruments.py` **121** from ~1,400 — leave
+live prose. The next assessment re-measures them from the tree, which is
+what makes that acceptable: nothing is lost that a fresh read does not
+re-derive. `guide/codex_assessment_21sep.md` §8 move 4's rule — *let the
+next failure choose the seam* — is what governs instead.
 
 #### E4 — the hand-maintained indexes drift, and nothing gates them — ✅ **closed 2026-09-22**
 
@@ -189,8 +194,31 @@ caught by a reader or a gate, none by the author of the prose.
 `guide/codebase_assessment_22sep.md` §5 logs it with *no plan, and I
 am not sure what one would look like*; `guide/codex_assessment_21sep.md`
 §5 reads the same pattern as claims written faster than their premises
-are verified. **Logged with no design. Trigger:** a proposal specific
-enough to test.
+are verified.
+
+**Three more instances arrived on 2026-09-22, while the register was
+being worked** — which is the information the entry was short of. The
+account of the `## Done` sort got **three figures wrong** (Codex caught
+two, re-measurement the third); **E7's own stated reason** here was
+wrong, claiming a line-count check would mean judging prose when it is a
+one-liner; and the `rehydrate_commit` comment in this very slice
+asserted an **unsurfaced data loss** that the code reports and the spec
+denies twice, copied from a stale neighbouring docstring. **Classified
+against 19G Item 1's taxonomy**, which sorts prose drift by *what the
+prose disagrees with*, the instances split: one is class **D**
+(behaviour, no source — `docs/unenforced_conventions.md` §1.4), one is
+class **B** (another document's content — §1.5), two are §1.6's
+under-scoped measurement, and the rest disagree with **the output of a
+command the prose itself cites**, or with the **process** (*did the read
+run*, *is this feasible*, *what is left to do*) — classes that taxonomy
+does not carry.
+
+**Logged with no design. Trigger:** a proposal specific enough to test.
+The residue above is narrower than the entry's title, and the one
+mechanism it suggests — re-running the commands a plan's
+`Blast radius` table already writes down — is named here rather than
+proposed, because not every such command is re-runnable (the bench needs
+a cluster) and a per-row opt-out is the shape §2's bar rejects.
 
 #### E6 — a new guard has no evidence bar — ✅ **closed 2026-09-22**
 
@@ -231,32 +259,42 @@ limit does not look.
 against ~120 after two trim passes. A register whose own entry overran
 its budget is the honest evidence for whatever this becomes.
 
-#### E8 — two findings 19R recorded, did not fix, and has now archived
+#### E8 — two findings 19R recorded, did not fix, and has now archived — ✅ **closed 2026-09-22**
 
-19R Item 4 closed with *two findings recorded, not fixed*, both
-pre-existing and deliberately not bundled into a defect fix. Re-found
-independently by this close's `spec-writer` pass, and verified here:
+Both halves are disposed of, which is what the entry asked for — its
+subject was the archiving, not the findings.
 
-- **`spec/csv_contracts.md` §3.2 documents a signature the code does not
-  have.** The spec spells
-  `parse_relationship_csv(content, *, reviewer_emails, reviewee_identifiers)`;
-  `app/services/relationships.py:49` takes
-  `(content, *, reviewers: list[Reviewer], reviewees: list[Reviewee])` —
-  different names *and* different types, strings against ORM rows. A
-  caller written to the spec fails. **Deciding it is the usual
-  fix-the-code-or-change-the-contract choice**, which is the author's,
-  not a close's (`rrw_sdd_in_practice.md` §4).
-- **`_rehydrate.rehydrate_commit` is invisible to 19R.4's upload gate.**
-  That gate asks *does this endpoint take an upload*, not *does it save
-  a roster*, so the rehydrate path is correct today and ungated —
-  recorded there as "its own item".
+- **`spec/csv_contracts.md` §3.2's stale signature → Item 4.** The
+  author's ruling: spelling out the section's current behavior is **its
+  own investigation**, not the two-line rename it looks like. Reading it
+  for that item found why: the prose beside the wrong signature is
+  *correct*, and the four per-row rules beside it have never been
+  checked against the code at all.
+- **`_rehydrate.rehydrate_commit`'s invisibility to 19R.4's upload gate
+  → a comment at the code**, on the author's instruction. That endpoint
+  writes all three rosters from a *stashed* file set and takes a
+  `token`, not an `UploadFile`, so the gate cannot see it — it asks
+  *does this take an upload*, not *does this save a roster*. Rather than
+  widen the gate, the function now says rehydrate ships **disabled**
+  (`rehydrate_enabled: bool = False`) and is unexercised on real data,
+  **and why it is correct anyway**: `session_rehydrate` passes
+  `field_labels_captured` for all three rosters, so the flag is not what
+  makes it safe and turning the flag on would leave a live ungated
+  save path rather than introduce a defect.
 
-**The entry is the archiving, not the two findings.** Both were properly
-recorded; the record just left live prose, and
-`guide/README.md` names `findings_<YYYY-MM-DD>_<scope>.md` for exactly
-this case. **Trigger:** none needed for the first — it is a one-line
-adjudication whenever the author reaches it; the second is a bounded
-item whenever the gate is next touched.
+  **The cold read on this slice caught three false claims in that
+  comment's first draft**, and the worst of them is **E5's** own failure
+  mode: the sentence *"dropped with a warning nobody surfaces"* was
+  copied from the neighbouring `_require_rehydrate_enabled` docstring
+  instead of read off the code — which surfaces drops as a counted
+  audit figure and a downloadable CSV, as `spec/rehydrate.md` §9 says
+  twice. The neighbour had been stale since 19N's own slices 3a/3b
+  closed `SC-40`, and is fixed here too, since leaving the source of the
+  defect in place while fixing the copy is not a fix. The other two: the
+  comment credited the **flag** with the endpoint's correctness, and it
+  wrote *"twelve-endpoint matrix"* — a figure
+  `tests/integration/test_upload_paths_keep_friendly_labels.py`
+  **deliberately refuses to assert**, because *"a figure self-stales"*.
 
 ### Open questions
 
@@ -473,3 +511,281 @@ No schema, no migration, no route, no template, no `app/` change.
 - `guide/todo_master.md` — the `## Done` maintenance note says the
   per-plan entry and the sort are checked (Item 2).
 - `docs/status.md` — row when the item lands (Item 2).
+
+---
+
+## Item 3 — Prepare inserts one ORM object per pair
+
+**Promoted from Item 1 entry E1** on the author's ruling, 2026-09-22.
+
+### Opportunity
+
+Prepare (Generate + Validate + Invite) measures **20.0 s** at the bench
+— 200 × 200 full matrix, 80,000 rows — and **5.7 s** at half that
+roster, so the cost climbs steeply rather than linearly. At the old
+1,000 × 1,000 / 200,000-row bench it was **74.8 s of which only 17.4 s
+was SQL**: about a minute of Python building ORM objects and the unit of
+work flushing them. Evidence: `guide/app_responsiveness.md` Finding 4,
+which the 2026-09-21 re-set re-confirmed rather than softened.
+
+A single click that blocks that long with no feedback is
+indistinguishable from a hang, and the operator's natural response —
+clicking again — is the worst available move. It is on the critical path
+of **every** session.
+
+**The two reads disagreed on timing, not substance**, and the author has
+ruled by promoting it: `guide/codebase_assessment_22sep.md` §8 ranked it
+move 2 (*fix Prepare before the pilot, not after*), while
+`guide/codex_assessment_21sep.md` §8 move 3 would have held it as a
+measured candidate until pilot scale crossed its trigger.
+
+### Decision
+
+Replace the per-pair `db.add(Assignment(...))` in
+`_materialise_one_instrument` (`app/services/assignments/_generate.py`)
+with a **Core bulk insert** of the same rows, keeping the `db.flush()`
+that follows it. **The precedent is in the same function**: its delete
+half already uses bulk Core — `db.execute(delete(Assignment).where(...))`,
+PR #1065 — while the insert half stayed ORM.
+
+**Rejected: `bulk_save_objects` / `add_all`.** Both still construct one
+Python object per pair, and object construction is what Finding 4
+measures; they would cut the unit-of-work overhead and keep the cost.
+
+**Rejected for this item: a progress indicator or a background job.**
+Either makes a 20 s wait *legible* rather than shorter, and whether one
+is still wanted is not knowable until the insert cost is re-measured.
+
+### Semantics
+
+- **The flush is load-bearing and stays.** `_materialise_one_instrument`
+  calls `recompute_self_review_classification` after its insert/delete,
+  and `replace_assignments` then runs
+  `verify_self_review_classification`, which **re-queries the rows**. A
+  Core insert leaves no ORM identity-map entries, so those two passes
+  must keep seeing the rows through the flush — the property rung 1
+  establishes **before** changing the insert, not after.
+- **`include` is per row** (`pair_include` from the diff), so the
+  payload is a list of dicts with per-row values, not one shared
+  default. `created_by_mode` likewise carries the enum's value per row.
+- **An empty `diff.to_insert` must issue no statement.** A Core
+  `insert()` handed an empty list is an error on some dialects rather
+  than a no-op.
+- **Both dialects.** The bench is Postgres and the suite is SQLite;
+  executemany behaves on both, but `rowcount` does not, so any count the
+  audit event reports comes from the payload length — the diff already
+  has it, computed before the insert either way.
+- **The audit envelope is unchanged.** `counts` comes from the diff, not
+  from the insert's return.
+
+### Judgment calls — decided
+
+- **Core `insert()` over `bulk_save_objects`** (2026-09-22) — the
+  measured cost is object construction, not only the unit of work.
+- **The item is the insert, not Prepare** (2026-09-22) — Validate and
+  Invite are separately measured and untouched, so a Prepare figure that
+  improves by less than the insert's share is the expected outcome, not
+  a miss.
+- **No progress UI here** (2026-09-22) — making a wait legible is a
+  different change from making it shorter, and the second may remove the
+  need for the first.
+
+### Blast radius (measured)
+
+Taken 2026-09-22 at `92f7aff`.
+
+| what | count | command |
+|---|---|---|
+| the insert site | **1** | `grep -rn "Assignment(" app/ --include='*.py'` — 2 hits, the other is the model class |
+| `_generate.py` | **1,119** lines | `wc -l app/services/assignments/_generate.py` |
+| call sites of `replace_assignments` in `app/` | **5** | `grep -rn "replace_assignments(" app/ --include='*.py' \| wc -l` |
+| modules naming it | **11** | `grep -rln "replace_assignments" app/ --include='*.py'` |
+| test files exercising it | **32** | `grep -rln "replace_assignments" tests/ \| wc -l` |
+| schema change | **none** | the columns are untouched; no migration |
+
+**The bench may not be re-takeable here.** `pg_isready` in the build
+container answers *no response* on 5432 (the `psql` client is present,
+a running cluster is not), and `tools/bench_roster_scale.py` refuses any
+non-loopback `DATABASE_URL` by design. Rung 2 says what to do about
+that rather than assuming a figure.
+
+### PR ladder
+
+1. **Rung 1 — the bulk insert, flush property first.** Lands a test
+   that the post-insert self-review verify pass sees every inserted row,
+   *then* the Core insert under it. **Must not touch** Validate, Invite,
+   or the diff computation.
+2. **Rung 2 — re-take Finding 4, or disclose that it could not be
+   re-taken.** `guide/app_responsiveness.md` Finding 4 gains the
+   post-fix figure beside its 20.0 s; if no loopback Postgres is
+   available, the item's `Status` says so and names the dev slot, rather
+   than quoting an unmeasured improvement. **Must not change code.**
+
+### Definition of done
+
+- The self-review verify pass is covered by a test that **fails** if the
+  inserted rows are invisible to it — demonstrated by a mutation, per
+  `docs/unenforced_conventions.md` §1.8.
+- `diff.to_insert` empty issues no insert statement, asserted.
+- Prepare re-measured at 200 × 200 and recorded in Finding 4 — **or**
+  `### Status` states that no cluster was available and the figure is
+  owed from the dev slot.
+- `pytest -n auto` green and `ruff check .` clean, with `node` present.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19S.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- Do either of the self-review passes rely on the ORM identity map
+  rather than on the flush? **Decided by:** rung 1's test, written
+  before the insert changes.
+
+### Out of scope
+
+- **Progress feedback or a background job for Prepare** — a different
+  change, and possibly unnecessary after this one.
+- **Validate and Invite**, Prepare's other two phases.
+- **The other measured candidates** in `guide/app_responsiveness.md`
+  (compression, the pair sort key, page furniture). They stay
+  candidates.
+
+### Doc impact
+
+- `guide/app_responsiveness.md` — Finding 4 gains the post-fix figure,
+  or the disclosure that it could not be re-taken here (Item 3).
+- `docs/status.md` — row when the item lands (Item 3).
+
+---
+
+## Item 4 — spell out what `spec/csv_contracts.md` §3.2 actually describes
+
+**Promoted from Item 1 entry E8's first half** on the author's ruling,
+2026-09-22: this is **its own investigation**, not a two-line fix.
+
+### Opportunity
+
+19R Item 4 recorded, and 19R's closing `spec-writer` pass independently
+re-found, that §3.2 opens on a signature the code does not have —
+`parse_relationship_csv(content, *, reviewer_emails, reviewee_identifiers)`
+against `app/services/relationships.py:49`'s
+`(content, *, reviewers: list[Reviewer], reviewees: list[Reviewee])`.
+Different names **and** different types, strings against ORM rows, so a
+caller written to the spec raises `TypeError`.
+
+**Reading it more closely is what made this an investigation rather than
+a rename.** The prose beside that signature — *"resolves the two FK
+columns against the already-loaded session rosters"* — is **consistent
+with the code**, which does take loaded rosters. So the section is not
+simply wrong: its signature line is stale while its description is
+right, and nobody has checked the **four per-row rules** in its table,
+the Save paragraph, or the `ParseResult` shape against the code at all.
+Fixing the visible line would close the cheapest divergence and leave
+the unexamined ones — which is exactly the shape 19R Item 6 found
+**nine** times in six files.
+
+### Decision
+
+**Write down what the code does, first; adjudicate after.** The
+deliverable of rung 1 is the current behavior of the Relationships
+import path, stated per question, with the code location that answers
+it. Only then does each divergence get a fix-the-code-or-change-the-
+contract call, which is the author's under `rrw_sdd_in_practice.md` §4.
+
+**Rejected: correcting the signature names now.** It would retire the
+one divergence a reader can see for free, and leave a section whose
+remaining claims have never been checked — while making the section
+*look* freshly verified, which is worse than leaving it visibly stale.
+
+### Semantics — the questions rung 1 must answer
+
+Each needs the code's answer and the line that gives it, not a
+restatement of the spec:
+
+- What the two FK columns resolve **against**, and whether resolution is
+  by email / identifier string or by roster row.
+- An **unknown** reviewer or reviewee value.
+- A **blank** cell, and a whitespace-only cell.
+- A **duplicate** pair within one file — the table says the second
+  occurrence is rejected; which one survives, and is the rejection
+  reported per row?
+- A **case difference**, against `normalize_email`'s `str.lower` fold
+  (19N Item 2) rather than against a casefold assumption.
+- A row naming a reviewer or reviewee that exists but is **`inactive`**.
+- The `Status` column's accepted values, against `ROSTER_STATUSES` /
+  `normalise_status` rather than against the table's *"lowercase"*
+  claim.
+- What the caller receives: the `ParseResult` shape — defined in
+  `app/services/csv_imports.py`, **not** in `relationships.py` — and
+  which errors are per-row against fatal.
+
+### Judgment calls — decided
+
+- **Behavior first, adjudication second** (2026-09-22) — the author's
+  framing, and the reason the item exists instead of a patch.
+- **The register entry stays closed** (2026-09-22) — E8 is disposed of
+  by this item plus the rehydrate comment; a finding promoted to an item
+  does not need to stay open in two places.
+
+### Blast radius (measured)
+
+Taken 2026-09-22 at `92f7aff`.
+
+| what | count | command |
+|---|---|---|
+| `spec/csv_contracts.md` | **742** lines; §3.2 is ~30 of them | `grep -c "" spec/csv_contracts.md` |
+| `app/services/relationships.py` | the parse + save pair | `grep -n "def parse_relationship_csv\\|def save_relationships" app/services/relationships.py` |
+| `ParseResult`'s home | `app/services/csv_imports.py:36` | `grep -rn "class ParseResult" app/ --include='*.py'` |
+| upload routes reaching this path | **7** matrix cases; the gate asserts **no total**, by design | `grep -n "^UPLOAD_PATHS" tests/integration/test_upload_paths_keep_friendly_labels.py` |
+
+No code change is in scope for rung 1; rung 2's size is unknown until
+rung 1 reports, which is the point of splitting them.
+
+### PR ladder
+
+1. **Rung 1 — the investigation.** Answers every `Semantics` question
+   with the code's behavior and its location, recorded either in this
+   item or, if the list of divergences runs long, in a
+   `guide/findings_<date>_csv_contracts.md` register — the form
+   `guide/README.md` defines for *found and left standing*. **Changes no
+   spec and no code.**
+2. **Rung 2 — the adjudication.** Per divergence, spec or code, on the
+   author's call; the edits land here. **Must not** re-open questions
+   rung 1 answered.
+
+### Definition of done
+
+- Every `Semantics` question has a written answer naming the code
+  location that settles it.
+- Each divergence carries an explicit disposition: spec edited, code
+  edited, or recorded as deliberate with the reason.
+- `spec/csv_contracts.md` §3.2's signature line matches
+  `app/services/relationships.py`, or the section says why it does not.
+- `pytest -n auto` green and `ruff check .` clean, with `node` present.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19S.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- Does the investigation's output live in this item or in a dated
+  findings register? **Decided by:** rung 1, on the count — a handful of
+  answers belong here; a long list belongs in its own file, as 19M's did.
+
+### Out of scope
+
+- **The other roster importers** (`parse_reviewer_csv` and siblings).
+  §3.2 is the section with a demonstrated divergence; widening to all of
+  §3 would make this the sweep it is deliberately not.
+- **The upload-gate blind spot** (E8's second half), disposed of
+  separately by the comment on `rehydrate_commit`.
+
+### Doc impact
+
+- `spec/csv_contracts.md` — §3.2 aligned to the code, or each retained
+  claim explained, per rung 2's adjudication (Item 4).
+- `docs/status.md` — row when the item lands (Item 4).

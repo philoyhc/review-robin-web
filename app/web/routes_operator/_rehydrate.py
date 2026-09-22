@@ -102,11 +102,14 @@ def _require_rehydrate_enabled() -> None:
     """404 unless ``rehydrate_enabled`` is on (Segment 19N).
 
     Gated rather than deleted: the pipeline is wired and covered by
-    tests, and the gap is in the unsettled cases, not the machinery —
-    a response the regenerated rules cannot place is dropped with a
-    warning nobody surfaces. A 404 rather than a disabled page because
-    an operator who has never seen this feature should not be told it
-    exists and is withheld.
+    tests, and the gap is in the unsettled cases, not the machinery.
+    **The reason is that it has never run on real data**, per
+    ``spec/rehydrate.md`` §9 — *not* an unsurfaced drop. This docstring
+    said the opposite until 2026-09-22: it was written at 19N slice 0,
+    before slices 3a/3b closed ``SC-40`` and made every dropped
+    response counted in the audit event and downloadable as a CSV. A
+    404 rather than a disabled page because an operator who has never
+    seen this feature should not be told it exists and is withheld.
     """
     if not settings.rehydrate_enabled:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -165,7 +168,34 @@ def rehydrate_commit(
     analyzer** (a stale / altered / expired stash fails safe), and on a
     clean verdict rebuild the session and redirect to its Session Home.
     An unusable token or a verdict that no longer passes re-renders the
-    page with the findings — no session is created."""
+    page with the findings — no session is created.
+
+    **Rehydrate is not fully implemented, and ships off.**
+    ``rehydrate_enabled`` is ``False`` in ``app/config.py``, so all four
+    routes in this module 404 in a deployed environment. Per
+    ``spec/rehydrate.md`` §9 the flag is *"a judgement, not an open
+    defect"*: the pipeline has never run on real data and not every
+    detail is settled. It is **not** held off by unreported data loss —
+    a response the regenerated rules cannot place is dropped,
+    **counted in the audit event and handed back as a CSV**, which is
+    what the ``result.dropped`` branch below does. Read this path as
+    covered by tests, **not** as exercised on real data.
+
+    **No upload-route gate sees this endpoint.** It writes all three
+    rosters from a *stashed* file set and takes a ``token``, not an
+    ``UploadFile``, so the gate added at 19R Item 4 — which asks *does
+    this endpoint take an upload*, not *does it save a roster* — cannot
+    reach it. It is nonetheless correct, and the flag is not why:
+    ``session_rehydrate`` passes ``field_labels_captured`` for all
+    three rosters. Turning ``rehydrate_enabled`` on would therefore not
+    introduce a defect; it would leave a live roster-save path that
+    **nothing gates**, which is a coverage gap. That note, and the
+    ruling that widening the gate from *takes an upload* to *reaches a
+    roster save* is its own item, already live in
+    ``tests/integration/test_upload_paths_keep_friendly_labels.py`` —
+    which is where a rename of this function would fail. Recorded at
+    ``guide/segment_19S_post_assessment.md`` Item 1, entry E8.
+    """
     payload = rehydrate_stash.get(db, token=token or "", user=user)
     if payload is None:
         report = RehydrateReport(

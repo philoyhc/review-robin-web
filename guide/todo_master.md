@@ -3322,30 +3322,38 @@ dep chains called out at the bottom of this file.
    **Plan:** `guide/segment_19S_post_assessment.md`.
    **Evidence:** `guide/codebase_assessment_22sep.md` §§5, 8 and 9, plus
    the independent cold read at `guide/codex_assessment_21sep.md`.
-   - **Item 1 — the register.** Eight entries, **none scheduled**, each
-     one thing with no home of its own. **Four closed 2026-09-22**: the
-     hand-maintained indexes drifting (**E4**, split — gateable half to
-     Item 2, residue to `docs/unenforced_conventions.md` §1.5), the
-     bench headline outliving its own correction (**E2**, linked to the
-     section that already qualified it), and two rehomed to that same
-     register — a new guard's evidence bar (**E6** → §1.8) and the plan
-     length budget (**E7** → §1.9). **Four open**: Prepare's 20 s
-     per-pair insert (**E1**), the ≥1,000 LOC watchlist living only in
-     a snapshot that archives (**E3**), prose about the work being wrong
-     more often than the work (**E5**), and the two divergences 19R
-     recorded, did not fix, and has now archived (**E8**). A register,
-     not a queue: both end-of-window reads warned against another
-     open-ended container, and one put it directly — *a measurement is
-     not automatically a backlog item*.
-   - **Item 2 — the four index gates** *(planned 2026-09-22, not yet
-     built)*. E4's gateable half, promoted: every archived plan from
-     segment 16 on has a `## Done` entry, those headings run ascending
-     by declared PR, `docs/status.md`'s `As of` matches its newest row,
-     and no `**Plan:**` pointer under `## Upcoming` resolves into
-     `guide/archive/`. All four pass today and each needs no allowlist,
-     which is `docs/unenforced_conventions.md` §2's bar; three have a
-     demonstrated instance behind them. Two rungs: the module, then the
-     doc alignment.
+   - **Item 1 — the register**, eight entries, **seven disposed of** as
+     of 2026-09-22. Closed: the hand-maintained indexes (**E4**, split —
+     gateable half to Item 2, residue to
+     `docs/unenforced_conventions.md` §1.5), the bench headline
+     outliving its own correction (**E2**), a guard's evidence bar
+     (**E6** → §1.8), the plan length budget (**E7** → §1.9), and the
+     two findings 19R archived (**E8** — first half to Item 4, second
+     half to a comment on `rehydrate_commit`). **Retired:** the ≥1,000
+     LOC watchlist (**E3**) — the author's ruling that it is *not really
+     a tripwire but just part of the judgment of codebase assessments*.
+     **Promoted:** Prepare's per-pair insert (**E1** → Item 3).
+     **Open: E5** alone — prose about the work being wrong more often
+     than the work, logged with no design; the author has asked for more
+     information before it is dispositioned.
+   - **Item 2 — the four index gates** *(planned, not built)*. Every
+     archived plan from segment 16 on has a `## Done` entry, those
+     headings ascend by declared PR, `docs/status.md`'s `As of` matches
+     its newest row, and no `**Plan:**` pointer under `## Upcoming`
+     resolves into `guide/archive/`. All four pass today and need no
+     allowlist, which is `docs/unenforced_conventions.md` §2's bar.
+   - **Item 3 — Prepare's per-pair insert** *(planned, not built)*.
+     **20.0 s** at the 200 × 200 bench, 5.7 s at half; a Core bulk
+     insert replaces `db.add(Assignment(...))` per pair, with the
+     self-review verify pass's visibility established first. Two rungs;
+     the bench may not be re-takeable in the build container, which
+     rung 2 handles rather than assumes.
+   - **Item 4 — what `spec/csv_contracts.md` §3.2 actually describes**
+     *(planned, not built)*. An **investigation**, on the author's
+     ruling, not the signature rename it looks like: the prose beside
+     the wrong signature is correct, and the four per-row rules beside
+     it have never been checked against the code. Behavior first,
+     adjudication second.
    - **Promotion is the author's call** on a named trigger. An entry
      never promoted is not a failure of the register; losing the
      finding would have been.
