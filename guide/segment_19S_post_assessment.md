@@ -591,111 +591,156 @@ the item's subject is `guide/` and `docs/` index prose.
 
 ---
 
-## Item 3 — Prepare inserts one ORM object per pair
+## Item 3 — Prepare builds one ORM object per pair, three times over
 
 **Promoted from Item 1 entry E1** on the author's ruling, 2026-09-22.
+**Widened to the recompute pass** on the author's ruling, 2026-09-22,
+after the trace below found the insert was a third of the cost at best.
 
 ### Opportunity
 
-Prepare (Generate + Validate + Invite) measures **20.0 s** at the bench
-— 200 × 200 full matrix, 80,000 rows — and **5.7 s** at half that
-roster, so the cost climbs steeply rather than linearly. At the old
-1,000 × 1,000 / 200,000-row bench it was **74.8 s of which only 17.4 s
-was SQL**: about a minute of Python building ORM objects and the unit of
-work flushing them. Evidence: `guide/app_responsiveness.md` Finding 4,
-which the 2026-09-21 re-set re-confirmed rather than softened.
+Prepare measures **20.0 s** at the 200 × 200 / 80,000-row bench and
+**5.7 s** at half that roster, so the cost climbs steeply rather than
+linearly; at the old 200,000-row bench it was **74.8 s of which only
+17.4 s was SQL** — about a minute of Python building ORM objects.
+`guide/app_responsiveness.md` Finding 4 has the figures and the
+2026-09-21 re-set that re-confirmed them.
 
-A single click that blocks that long with no feedback is
-indistinguishable from a hang, and the operator's natural response —
-clicking again — is the worst available move. It is on the critical path
-of **every** session.
-
-**The two reads disagreed on timing, not substance**, and the author has
-ruled by promoting it: `guide/codebase_assessment_22sep.md` §8 ranked it
-move 2 (*fix Prepare before the pilot, not after*), while
-`guide/codex_assessment_21sep.md` §8 move 3 would have held it as a
-measured candidate until pilot scale crossed its trigger.
+A click that blocks that long with no feedback is indistinguishable
+from a hang, the operator's natural response is to click again, and it
+is on the critical path of **every** session. The two end-of-window
+reads disagreed on timing, not substance; the author ruled by promoting
+it.
 
 ### Decision
 
-Replace the per-pair `db.add(Assignment(...))` in
-`_materialise_one_instrument` (`app/services/assignments/_generate.py`)
-with a **Core bulk insert** of the same rows, keeping the `db.flush()`
-that follows it. **The precedent is in the same function**: its delete
-half already uses bulk Core — `db.execute(delete(Assignment).where(...))`,
-PR #1065 — while the insert half stayed ORM.
+Two changes, one rung each.
 
-**Rejected: `bulk_save_objects` / `add_all`.** Both still construct one
-Python object per pair, and object construction is what Finding 4
-measures; they would cut the unit-of-work overhead and keep the cost.
+1. **The insert** — replace the per-pair `db.add(Assignment(...))` in
+   `_materialise_one_instrument` (`app/services/assignments/_generate.py`)
+   with a **Core bulk insert** of the same rows, keeping the
+   `db.flush()` that follows. **The precedent is three lines above it**:
+   the delete half already uses bulk Core —
+   `db.execute(delete(Assignment).where(...))`, PR #1065 — while the
+   insert half stayed ORM.
+2. **The recompute pass** — `recompute_self_review_classification`
+   re-materialises the same set as full entities one line later. It
+   drops to a **column-tuple select plus a Core bulk `update`** for the
+   rows whose flag changed.
 
-**Rejected for this item: a progress indicator or a background job.**
-Either makes a 20 s wait *legible* rather than shorter, and whether one
-is still wanted is not knowable until the insert cost is re-measured.
+**Rejected: `bulk_save_objects` / `add_all`** — both still construct one
+Python object per pair, which is the cost Finding 4 measures.
+**Rejected here: a progress indicator or a background job** — either
+makes a 20 s wait *legible* rather than shorter, and whether one is
+still wanted is not knowable until the cost is re-measured.
+
+**Deferred, not rejected: the verify pass.** Author's ruling — the
+third materialisation stays for now; being read-only makes it both the
+cheaper one to move and the safer one to leave.
 
 ### Semantics
 
-- **The flush is load-bearing and stays.** `_materialise_one_instrument`
-  calls `recompute_self_review_classification` after its insert/delete,
-  and `replace_assignments` then runs
-  `verify_self_review_classification`, which **re-queries the rows**. A
-  Core insert leaves no ORM identity-map entries, so those two passes
-  must keep seeing the rows through the flush — the property rung 1
-  establishes **before** changing the insert, not after.
+- **The insert is one of three full materialisations** (traced
+  2026-09-22). The assignment set is built as Python objects at the
+  insert (`_generate.py:528`), again by
+  `recompute_self_review_classification`'s whole-session
+  `select(Assignment, Reviewer, Reviewee)` once per instrument
+  (`_generate.py:557`), and again by the identical select in
+  `verify_self_review_classification` (`_generate.py:1084`). **This is
+  why the item was widened**: rung 1 alone removes a third at best, and
+  the rows are rebuilt as entities one line later.
+- **The recompute pass writes, so column tuples need a write path.** It
+  **compares** `assignment.is_self_review` to the freshly computed value
+  and only counts and assigns on a difference (`_self_review.py:203`).
+  With no entity there is nothing to mutate, so the changed rows go back
+  as one Core `update` keyed by id — and **the stored flag must be in
+  the projection**, or the `changed` count callers read cannot be
+  reproduced. That is the whole contract: a projection of
+  `id`, `instrument_id`, `reviewer_id`, `reviewee_id`, the `Reviewee`
+  and `is_self_review`.
+- **The `group_keys` coupling is one attribute, and it is the trap.**
+  `_group_key_by_assignment` reads `assignment.reviewee`
+  (`app/services/responses/_group_reconciliation.py:123`) — a
+  many-to-one lazy load that resolves from the identity map **only
+  because the same query loaded every `Reviewee`**. Column tuples remove
+  that attribute, so the reviewee is passed explicitly;
+  `classify_self_review` already holds it. `group_keys` needs a variant
+  taking ids + reviewees. Everything else it reads is `id`,
+  `instrument_id`, `reviewer_id` and `reviewee_id`
+  (`_group_reconciliation.py:122`).
+- **The existing verify pass is rung 2's oracle.** It recomputes
+  independently and **raises `AssertionError` in a test env** on drift
+  (`_generate.py:1088`), so every test that regenerates assignments
+  already fails if the rewritten recompute classifies differently. Rung
+  2 adds cases, not an oracle.
+- **The flush is load-bearing and stays.** A Core insert leaves no
+  identity-map entries, so the passes after it must keep seeing the rows
+  through the flush — the property rung 1 establishes **before**
+  changing the insert.
+- **`is_self_review` is omitted at the insert site**, relying on the
+  column's Python-side `default=False` — so rung 1 names the Core form:
+  `db.execute(insert(Assignment), [dicts])` applies Python-side
+  defaults, a multi-VALUES `insert().values([…])` does not behave
+  identically.
 - **`include` is per row** (`pair_include` from the diff), so the
   payload is a list of dicts with per-row values, not one shared
   default. `created_by_mode` likewise carries the enum's value per row.
 - **An empty `diff.to_insert` must issue no statement.** A Core
   `insert()` handed an empty list is an error on some dialects rather
   than a no-op.
-- **Both dialects.** The bench is Postgres and the suite is SQLite;
-  executemany behaves on both, but `rowcount` does not, so any count the
-  audit event reports comes from the payload length — the diff already
-  has it, computed before the insert either way.
-- **The audit envelope is unchanged.** `counts` comes from the diff, not
-  from the insert's return.
+- **Both dialects, and the audit envelope is unchanged.** Executemany
+  behaves on Postgres and SQLite alike but `rowcount` does not, so the
+  audit event's `counts` keeps coming from the diff, which computes it
+  before the insert either way.
 
 ### Judgment calls — decided
 
 - **Core `insert()` over `bulk_save_objects`** (2026-09-22) — the
   measured cost is object construction, not only the unit of work.
-- **The item is the insert, not Prepare** (2026-09-22) — Validate and
-  Invite are separately measured and untouched, so a Prepare figure that
-  improves by less than the insert's share is the expected outcome, not
-  a miss.
+- **Widen to the recompute pass, defer the verify pass** (author's
+  ruling, 2026-09-22, on the trace in `Semantics`). Without the
+  recompute rung the item's own Opportunity is not met, and rung 3
+  would report a small figure as the expected outcome.
+- **The item is still not all of Prepare** (2026-09-22) — Validate and
+  Invite are separately measured and untouched.
 - **No progress UI here** (2026-09-22) — making a wait legible is a
   different change from making it shorter, and the second may remove the
   need for the first.
 
 ### Blast radius (measured)
 
-Taken 2026-09-22 at `92f7aff`.
+Taken 2026-09-22 at `ac5d3b7`; the row counts are a 200 × 200
+single-instrument full matrix.
 
 | what | count | command |
 |---|---|---|
 | the insert site | **1** | `grep -rn "Assignment(" app/ --include='*.py'` — 2 hits, the other is the model class |
-| `_generate.py` | **1,119** lines | `wc -l app/services/assignments/_generate.py` |
-| call sites of `replace_assignments` in `app/` | **5** | `grep -rn "replace_assignments(" app/ --include='*.py' \| wc -l` |
-| modules naming it | **11** | `grep -rln "replace_assignments" app/ --include='*.py'` |
-| test files exercising it | **32** | `grep -rln "replace_assignments" tests/ \| wc -l` |
+| full materialisations of the assignment set per regenerate | **3** (insert, recompute per instrument, verify once) | the three call sites cited in `Semantics` |
+| objects built per pass at the bench | **80,000** | 200 × 200 |
+| entity attributes the two passes actually read | **6** (`id`, `instrument_id`, `reviewer_id`, `reviewee_id`, `reviewee`, `is_self_review`) | the trace in `Semantics` |
+| `replace_assignments`: call sites in `app/` / test files that **call** it / that merely name it | **5** / **11** / **16** | `git grep -l "replace_assignments(" -- tests`, and without the paren |
 | schema change | **none** | the columns are untouched; no migration |
 
-**The bench may not be re-takeable here.** `pg_isready` in the build
-container answers *no response* on 5432 (the `psql` client is present,
-a running cluster is not), and `tools/bench_roster_scale.py` refuses any
-non-loopback `DATABASE_URL` by design. Rung 2 says what to do about
-that rather than assuming a figure.
+**The bench is not re-takeable here** — re-checked 2026-09-22:
+`pg_isready` answers *no response* on 5432 (client present, no cluster),
+and `tools/bench_roster_scale.py` refuses a non-loopback `DATABASE_URL`
+by design. Rung 3 discloses rather than assuming a figure.
 
 ### PR ladder
 
 1. **Rung 1 — the bulk insert, flush property first.** Lands a test
    that the post-insert self-review verify pass sees every inserted row,
    *then* the Core insert under it. **Must not touch** Validate, Invite,
-   or the diff computation.
-2. **Rung 2 — re-take Finding 4, or disclose that it could not be
+   the recompute pass, or the diff computation.
+2. **Rung 2 — the recompute pass.** `group_keys` gains its
+   ids-and-reviewees variant, `recompute_self_review_classification`
+   drops to a column-tuple select and a Core bulk `update`. **Must not
+   change** the classification rule or the verify pass — the existing
+   in-test `AssertionError` on drift is the oracle.
+3. **Rung 3 — re-take Finding 4, or disclose that it could not be
    re-taken.** `guide/app_responsiveness.md` Finding 4 gains the
-   post-fix figure beside its 20.0 s; if no loopback Postgres is
-   available, the item's `Status` says so and names the dev slot, rather
+   post-fix figure beside its 20.0 s; with no loopback Postgres
+   available, the item's `Status` says so and names the dev slot rather
    than quoting an unmeasured improvement. **Must not change code.**
 
 ### Definition of done
@@ -704,6 +749,12 @@ that rather than assuming a figure.
   inserted rows are invisible to it — demonstrated by a mutation, per
   `docs/unenforced_conventions.md` §1.8.
 - `diff.to_insert` empty issues no insert statement, asserted.
+- `is_self_review` lands `False` on a Core-inserted row and is then
+  recomputed, asserted.
+- The rewritten recompute returns the **same `changed` count and the
+  same classification** as the entity version on a group-scoped
+  instrument, asserted — the count needs the stored flag in the
+  projection, the classification needs the `Reviewee`.
 - Prepare re-measured at 200 × 200 and recorded in Finding 4 — **or**
   `### Status` states that no cluster was available and the figure is
   owed from the dev slot.
@@ -717,11 +768,16 @@ that rather than assuming a figure.
 ### Open questions
 
 - Do either of the self-review passes rely on the ORM identity map
-  rather than on the flush? **Decided by:** rung 1's test, written
-  before the insert changes.
+  rather than on the flush? **Partly answered by the trace**: the
+  group path's `assignment.reviewee` resolves *from* the identity map
+  today, which is why rung 2 must pass the reviewee explicitly. Whether
+  anything else does is settled by rung 1's test, written before the
+  insert changes.
 
 ### Out of scope
 
+- **The verify pass** — deferred by the same ruling that widened this
+  item; read-only, so it moves on its own later.
 - **Progress feedback or a background job for Prepare** — a different
   change, and possibly unnecessary after this one.
 - **Validate and Invite**, Prepare's other two phases.
