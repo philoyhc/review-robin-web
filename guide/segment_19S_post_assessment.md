@@ -176,7 +176,7 @@ is an **E5** instance, recorded there, and it is why Item 2's definition
 of done demands a mutation per check rather than a passing run.
 
 **Pre-16 is legacy and out of scope** (author's ruling, 2026-09-22),
-which is what made the entry closable: 34 of the 67 pre-16 archived
+which is what made the entry closable: 52 of the 67 pre-16 archived
 plans are not mentioned in `## Done` at all, and without the ruling
 "fully current" had no test.
 
@@ -378,7 +378,7 @@ Items 2–6, each of which names its own.
 
 ---
 
-## Item 2 — gate the four index invariants a reader keeps catching by hand
+## Item 2 — gate the four index invariants a reader keeps catching by hand — ✅ **closed 2026-09-22**
 
 ### Opportunity
 
@@ -468,7 +468,7 @@ All figures taken 2026-09-22 at `92f7aff`.
 | of those declaring a PR (G2's subject) | **49** | as above, filtered on `#\d{2,5}` |
 | G2 violations today | **0** | the ordering scan in this item's rung 1 |
 | archived plans: all eras / ≥ 16 (G1's subject) | **106** / **39**, of which **0** miss a `## Done` heading | `ls guide/archive/segment_*.md`, filtered on the leading number |
-| pre-16, excluded by the ruling | **67**, of which **34** are unmentioned in `## Done` | the same scan, filter removed |
+| pre-16, excluded by the ruling | **67**, of which **52** are unmentioned in `## Done` | the same scan, filter removed |
 | `**Plan:**` pointers under `## Upcoming` (G4's subject) | **3**, all live | `grep -o '\*\*Plan:\*\* `[^`]*`' guide/todo_master.md` |
 | archived paths cited under `## Upcoming` in other prose | **1** (19P) | the same region, any backticked `guide/archive/` path |
 | `docs/status.md` `As of` vs newest row | equal (both 2026-09-22) | the date scan in rung 1 |
@@ -478,55 +478,51 @@ No schema, no migration, no route, no template, no `app/` change.
 
 ### Status
 
-**2026-09-22 — rung 1 landed the module; the cold read found the item's
-own subject in it.** `tests/unit/test_index_currency.py`, four checks,
-**23 tests**, suite 4,639 → 4,662. The ladder held: rung 1 touched
-neither `guide/todo_master.md` nor `docs/status.md`.
+**Closed 2026-09-22. Intended four checks and a mutation each; shipped
+four checks, 23 tests and seven mutations**, because three of the four
+saw less than they claimed until a mutation said so. Suite 4,639 →
+4,662. `tests/unit/test_index_currency.py`, no `app/` change. The ladder
+held: rung 1 touched neither `guide/todo_master.md` nor `docs/status.md`,
+and rung 2 added no checks.
 
-**Three of the four checks or their guards saw nothing when first
-written**, which is exactly what §1.8 exists to catch and the reason
-this item was the one to adopt it:
+**The finding is that the item's own subject was in it.** Three of the
+four checks or their guards were vacuous when first written — §1.8's
+evidence bar, adopted by this item, is what surfaced each:
 
-- **The G1 mutation was inert.** Renaming a heading to
-  ``19R-removed`` left the check green — ``-`` is a non-word character,
-  so ``^### Segment 19R\b`` still matched. Caught before the read, by
-  the mutation failing to fail.
-- **The same hole was still in G1's pattern, with a live instance.**
-  ``### Segment 12C-1`` satisfies plan id ``12C``, whose own plan has no
-  heading. `id_pattern` uses ``(?![\w-])`` now, and the boundary test
-  covers the hyphen case rather than only the letter case it had.
-- **The G3 mutation was inert twice.** It first inserted its row
-  *first*, where `max(rows)` and ``rows[0]`` agree; the second draft
-  appended after the section's last *line*, a ``---`` rule occurring 18
-  times in the file, so ``replace(..., 1)`` put the row outside the
-  table. It splices by offset now, with a synthetic
-  newest-in-the-middle case beside it.
-- **The `**Plan:**` recogniser matched this repo's prose about itself**
-  — ``\s*`` let ``no `**Plan:**` pointer under`` capture
-  `` pointer under ``, and that false positive is what satisfied G4's
+- **G1's mutation was inert**, and the hole had a live instance. ``-``
+  is a non-word character, so ``19R-removed`` still matched
+  ``^### Segment 19R\b`` — and ``### Segment 12C-1`` was already
+  answering for a ``12C`` whose plan has no heading of its own.
+  `id_pattern` uses ``(?![\w-])`` now.
+- **G3's mutation was inert twice** — first inserting its row where
+  ``max(rows)`` and ``rows[0]`` agree, then appending after a ``---``
+  rule that occurs 18 times in the file, so ``replace(..., 1)`` put the
+  row outside the table. It splices by offset now.
+- **The plan-pointer recogniser matched this repo's prose about its own
+  pointers** — ``\s*`` let the sentence *about* a `**Plan:**` pointer
+  produce a capture — and that false positive is what satisfied G4's
   floor, so the floor passed while every real pointer could have been
-  reformatted away. ``\s+`` now, and the live floor asserts each
-  capture's *shape* rather than only the count.
-- **The floors were slack enough to absorb a narrowing.** At a floor of
-  30, tightening `_PR_REF` to four digits dropped 16 three-digit
-  headings out of G2's subject and still left 33. Floors sit just below
-  the measured counts now.
+  reformatted away. ``\s+`` now, and the floor asserts each capture's
+  *shape*.
+- **The floors absorbed a narrowing.** At a floor of 30, tightening
+  `_PR_REF` to four digits dropped 16 three-digit headings out of G2's
+  subject and still left 33. Floors sit just below the measured counts.
 
-**Seven mutations, all caught** (the harness re-runs the suite against a
-mutated copy of the module): G3's `max`, G2's running maximum, a
+**Seven mutations, all caught** — G3's `max`, G2's running maximum, a
 narrowed `_PR_REF`, the id boundary, the pointer's whitespace, and a
-no-op G1 and G4.
+no-op G1 and G4 — against a mutated copy of the module.
 
-**Two published figures were wrong and are corrected**: the legacy count
-was *34* and is **52** by G1's own criterion, and the non-declaring
-headings were *33 predating the convention* and are **35, not all of
-which predate it**. Both were repeated into `docs/status.md`, which
-rung 2 fixes with the rest of its alignment.
+**Two published figures were wrong and are corrected in this item**: the
+pre-16 plans unmentioned under `## Done` were *34* and are **52 of 67**
+by G1's own criterion, and the headings declaring no PR number were *33,
+all predating the convention* and are **35, not all of which do**. Both
+had been repeated into `docs/status.md`.
 
-**Reads: one**, on this rung, since rung 2 is doc-only and this is the
-item's last build rung (`CLAUDE.md`, "Two cold readers"). It returned
-ten findings; the three above that made a check vacuous were the ones
-worth the read, and every one of them is the class 19R produced four of.
+**Reads: one**, on rung 1, the item's last build rung (`CLAUDE.md`, "Two
+cold readers"). Ten findings; the three that made a check vacuous were
+what the read was worth, and each is the class 19R produced four of.
+`spec-writer` was not run: `## Doc impact` names no `spec/` path, and
+the item's subject is `guide/` and `docs/` index prose.
 
 ### PR ladder
 
@@ -545,9 +541,9 @@ worth the read, and every one of them is the class 19R produced four of.
 ### Definition of done
 
 - `pytest tests/unit/test_index_currency.py` green, and **each of the
-  four fails under a mutation of what it protects** — the four
-  mutations recorded in `### Status`.
-- G1 **with the pre-16 filter removed** reports the 34 unmentioned
+  four fails under a mutation of what it protects** — the mutations
+  recorded in `### Status`.
+- G1 **with the pre-16 filter removed** reports the 52 unmentioned
   legacy plans, proving the filter is load-bearing rather than
   decorative.
 - `cmp -s CLAUDE.md AGENTS.md` exits 0 and both name the module.
@@ -562,14 +558,15 @@ worth the read, and every one of them is the class 19R produced four of.
 
 - Where does the escape for a plan **archived unbuilt** live — a marker
   line in the plan file, or a waiver recorded in the closing item's
-  `Status`? **Decided by:** the author, or the first such plan.
-  Recommendation: a marker in the plan, since §2's bar forbids a list
-  inside the test.
+  `Status`? **Open at close, with no instance yet**: all 39 modern
+  archived plans have a `## Done` entry, so G1 has never had to refuse
+  one. **Decided by:** the first such plan. Recommendation unchanged — a
+  marker in the plan, since §2's bar forbids a list inside the test.
 
 ### Out of scope
 
 - **Pre-16 `## Done` coverage** — legacy, author's ruling 2026-09-22.
-  34 plans unmentioned; the era used grouped headings.
+  52 plans unmentioned; the era used grouped headings.
 - **Judging whether a summary's content is current** —
   `docs/unenforced_conventions.md` §1.5, mechanism already rejected.
 - **`guide/archive/README.md`'s `~Lines` column** — that file says it is
@@ -586,7 +583,8 @@ worth the read, and every one of them is the class 19R produced four of.
 - `AGENTS.md` — the byte-identical twin of the above (Item 2).
 - `docs/unenforced_conventions.md` — §1.5's *"What covers it instead"*
   gains the index-currency half as enforced, mirroring the file-level
-  path half it already records (Item 2).
+  path half it already records; §1.8's quote of this item's definition
+  of done drops the *four* it now contradicts (Item 2).
 - `guide/todo_master.md` — the `## Done` maintenance note says the
   per-plan entry and the sort are checked (Item 2).
 - `docs/status.md` — row when the item lands (Item 2).

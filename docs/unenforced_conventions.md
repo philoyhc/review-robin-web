@@ -102,6 +102,14 @@ the joke it sounds like.
   same change.* The file-level half of that **is** now enforced —
   `tests/unit/test_doc_references.py` fails on a path reference naming
   nothing (19G.1 rung 2; moved to its own module 2026-09-20). The section-level half is not.
+  Since 19S.2 the **index** half is enforced as well:
+  `tests/unit/test_index_currency.py` fails when an archived plan from
+  segment 16 on has no entry under `guide/todo_master.md`'s `## Done`,
+  when those entries stop sorting by declared PR, when `docs/status.md`'s
+  `As of` drifts from its newest row, or when a queued-work plan pointer
+  names a plan that has been archived. What stays unenforced is the
+  judgement this section is about — whether prose pointed at the right
+  file still says what that file says.
 
 ### 1.6 A measurement that certifies a corpus must state what it could not see
 
@@ -191,8 +199,9 @@ the joke it sounds like.
   That is §1.7's disqualifying shape exactly, and Article VI's.
 - **What covers it instead.** The definition of done of any item adding
   a guard, which is where 19S.2 put it: *each of the four checks fails
-  under a mutation of what it protects, the four mutations recorded in
-  `### Status`*. Per-item, verifiable in the item, and worthless if
+  under a mutation of what it protects, the mutations recorded in
+  `### Status`* — seven of them there, because three checks needed a
+  second mutation once the first turned out to be inert. Per-item, verifiable in the item, and worthless if
   nobody writes it — which is the concession.
 
 ### 1.9 A plan stays inside its length budget

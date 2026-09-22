@@ -214,7 +214,12 @@ reject it.
   top-level `.md` in `spec/`, `docs/`, `guide/` **and the root**, this
   file included — and every `§N` pointer), `tests/unit/test_doc_conventions.py`
   (the checks derived from `app` constants), `tests/unit/test_guide_indexes.py` (a
-  README row per `guide/` document), and
+  README row per `guide/` document),
+  `tests/unit/test_index_currency.py` (an archived plan from segment 16
+  on has a `### Segment <id>` entry under `guide/todo_master.md`'s
+  `## Done`, the entries that declare a PR number sort ascending by it,
+  `docs/status.md`'s `As of` matches its newest timeline row, and no
+  queued-work plan pointer names an archived plan), and
   `tests/unit/test_generated_tools_are_current.py` plus
   `tests/unit/test_contrast_audit.py` (both read `base.html`'s inline
   stylesheet). A lint-only run passes all of them by not running them.
