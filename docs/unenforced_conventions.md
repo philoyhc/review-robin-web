@@ -248,39 +248,49 @@ the joke it sounds like.
   commands is worth building. This entry is that answer: **no**, and
   the measurement is why.
 - **What the anchored corpus actually contains**, measured 2026-09-22
-  at `a62d40c` over the 7 in-scope sections:
+  at `9a812f1` over the 7 in-scope sections. **Two criteria fail
+  independently**, and a review caught an earlier draft of this entry
+  conflating them:
 
-  | | count |
+  | the 33 rows | count |
   |---|---:|
-  | rows | **33** |
-  | whose value is a bare `**N**` | 13 |
-  | whose command cell is one self-contained command | 13 |
-  | **both — machine-comparable** | **4** |
+  | bare `**N**` value **and** one self-contained command — comparable | **3** |
+  | bare value, but the command cell is prose (*"the ordering scan in rung 1"*) | 9 |
+  | value is qualified, so there is no single number to compare | **21** |
 
-- **The 29 are not sloppy; they are qualified.** A `Blast radius` figure
+- **Only the 21 are uncomparable by nature.** A `Blast radius` figure
   worth recording usually needs a qualifier to be true — *"**67**, of
   which **52** are unmentioned"*, *"**8**, of which **1** is button
-  markup"*, *"**5** / **11** / **16**"*, *"**106** / **39**, of which
-  **0** miss a heading"*. The qualifier is what makes the number honest
-  and is exactly what makes it uncomparable. Raising coverage means
-  forcing bare integers, which trades the qualifier away — mechanising
-  badly, which is Article VI's own disqualifier.
-- **The re-run would catch something real, though.** Of the 4
+  markup"*, *"**5** / **11** / **16**"*. The qualifier is what makes the
+  number honest and exactly what makes it uncomparable, and forcing bare
+  integers to raise coverage trades it away — Article VI's disqualifier.
+- **The other 9 are a different failure, and a cheap one.** They carry a
+  bare value and a *prose* command cell, so an authoring convention
+  requiring a self-contained command would make them comparable without
+  touching any qualifier. **The ceiling is therefore 12 of 33, not 33** —
+  and that ceiling, rather than the qualifier argument, is what the
+  coverage objection actually amounts to. Said this way because an
+  earlier draft claimed all 29 non-comparable rows were qualified, which
+  its own table contradicted.
+- **The re-run would catch something real, though.** Of the then-four
   comparable rows, **1 was wrong at its own anchor**: Item 7 published
   *"datalists in the lobby template: **1**"* against
   `grep -n "datalist" …`, which yields **2** — the opening and closing
   tag. `app/web/templates/operator/sessions_list.html` is byte-identical
   between that anchor and `a62d40c`, so this is a **mis-measurement,
   not drift**: the author counted elements while the stated command
-  counts lines. Corrected when this entry was written. That is the
-  class the re-run catches, and 1 of 4 is a real hit rate.
+  counts lines. Corrected when this entry was written — **and that
+  correction is why the comparable count now reads 3 rather than 4**:
+  the fixed row carries a qualified value, so this rung's own fix moved
+  the figure it was first published beside. That is the class the re-run
+  catches, and 1 of 4 was a real hit rate.
 - **Why not, then.** Three reasons, in order of weight:
-  1. **Coverage is 4 of 33 by nature**, and cannot be raised without
-     making the other 29 worse.
-  2. **It would execute shell out of prose.** Re-running means `exec`ing
+  1. **It would execute shell out of prose.** Re-running means `exec`ing
      strings taken from a freely-edited markdown cell, in CI. A plan file
-     is not an execution surface, and making it one to check 4 rows is a
-     poor trade at any coverage.
+     is not an execution surface, and making it one is a poor trade at
+     any coverage. This is the reason that survives every recount.
+  2. **The ceiling is 12 of 33**, and reaching even that needs a second
+     authoring convention on the command cell. Three rows qualify today.
   3. **Against HEAD it is noise; against the anchor it needs a worktree
      per sha** — 5 distinct shas across 7 sections today. Against HEAD a
      differing answer is indistinguishable from the tree having moved,

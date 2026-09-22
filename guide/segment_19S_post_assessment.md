@@ -1306,27 +1306,34 @@ item's own subject, so the table states it.
 
 **2026-09-22 — rung 2 answered: the re-run does not get built**, and
 the anchored corpus is what says so. `docs/unenforced_conventions.md`
-**§1.10** carries it. **4 of 33** in-scope rows are machine-comparable:
-13 have a bare `**N**`, 13 have one self-contained command, 4 have
-both.
+**§1.10** carries it. Of the 33 in-scope rows, **3** are
+machine-comparable, **21** carry a qualified value with no single number
+to compare, and **9** have a bare value behind a *prose* command cell.
 
-**The 29 are qualified, not sloppy** — *"67, of which 52 are
-unmentioned"*, *"8, of which 1 is button markup"*, *"5 / 11 / 16"*.
-The qualifier is what makes the figure true and what makes it
-uncomparable, so raising coverage means forcing bare integers and
-trading the qualifier away. Article VI's own disqualifier.
+**Two criteria fail independently, and a review caught the first draft
+conflating them.** Only the 21 are uncomparable by nature — *"67, of
+which 52 are unmentioned"*, *"8, of which 1 is button markup"* — where
+the qualifier is what makes the figure true. The 9 would become
+comparable under a command-cell convention, costing no qualifier, so
+**the ceiling is 12 of 33** and that ceiling, not the qualifier
+argument, is what the coverage objection amounts to.
 
 **The rung still found a live error, which is the argument it cuts
-against itself.** Of the 4 comparable rows, **1 was wrong at its own
-anchor**: Item 7 published *"datalists in the lobby template: 1"*
+against itself.** Of the then-four comparable rows, **1 was wrong at its
+own anchor**: Item 7 published *"datalists in the lobby template: 1"*
 against a command yielding **2**, and the template is byte-identical
 between that anchor and `a62d40c` — a **mis-measurement, not drift**
 (elements counted, lines commanded). Corrected in Item 7's table. So
 the re-run's hit rate on its own 4 rows is 1 in 4, and the decision is
-*still* no, on two grounds the hit rate does not touch: it would
-**execute shell out of a freely-edited markdown cell** in CI, and
-against HEAD it re-creates the very drift-versus-staleness ambiguity
-rung 1 existed to remove.
+*still* no, on the ground the hit rate does not touch: it would
+**execute shell out of a freely-edited markdown cell** in CI, and a plan
+file is not an execution surface. Against HEAD it would also re-create
+the drift-versus-staleness ambiguity rung 1 existed to remove.
+
+**Correcting Item 7's row is what moved 4 to 3** — the fixed row now
+carries a qualified value, so this rung's own fix changed the figure it
+was first published beside. Recorded because it is the item's subject
+happening to the item.
 
 **What rung 1 bought is the cheap manual check**, not a gate: the
 error above was found by checking out the anchor and re-running, which
@@ -1366,18 +1373,16 @@ was impossible before G5 and is how §1.10 says to use it.
 
 - ~~Does the re-run ever get built?~~ **Answered 2026-09-22: no**, on
   the anchored corpus rather than a guess — `docs/unenforced_conventions.md`
-  §1.10 carries the measurement. **4 of 33** rows are machine-comparable,
-  and the other 29 are qualified rather than sloppy.
-- **What is the cutoff, and in what unit?** Named six times above and
-  **defined nowhere** — found 2026-09-22 when the author asked what the
-  item still needed. Rung 1 cannot be built without it, because
-  *"sections landing on or after the cutoff"* needs a way to tell when
-  a section landed, and a section carries no date until this item gives
-  it one. **Decided by:** the author. Recommendation: **a segment-number
-  comparison on the plan file**, not a date on the section — the shape
-  Item 2's `LEGACY_BEFORE_SEGMENT` already set, derivable from the
-  filename with no git archaeology and no allowlist. A date cutoff would
-  need `git log` per section to answer the same question.
+  §1.10 carries the measurement. **3 of 33** rows are machine-comparable,
+  **21** carry a qualified value that has no single number to compare,
+  and **9** would become comparable under a command-cell convention —
+  so the ceiling is 12 of 33.
+- ~~What is the cutoff, and in what unit?~~ **Answered 2026-09-22 by
+  the author's ruling: a segment comparison**, now
+  `ANCHOR_REQUIRED_FROM = (19, "S")` — see `Semantics` for why a date
+  cutoff was circular. The question existed at all because rung 1's plan
+  named the cutoff six times and defined it nowhere, found when the
+  author asked what the item still needed.
 
 ### Out of scope
 
