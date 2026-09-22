@@ -396,13 +396,26 @@ def _node_ref_failure(path: str, name: str) -> str:
     an unrelated collection error anywhere in the suite into this check's
     failure (19S Item 8, `Decision`).
 
-    ``def`` is anchored at **column 0**, which is what keeps that
-    substitution honest. An earlier draft allowed leading whitespace and
-    so resolved a nested ``def``, a method inside a ``class``, and a
-    ``def`` written inside a docstring or a string constant — none of
-    which pytest collects, all of which passed silently. At column 0 each
-    becomes a visible failure instead. The repo has 0 indented test defs
-    today, so nothing legitimate is excluded.
+    Two conditions keep that substitution honest, and a draft of this
+    had neither:
+
+    * ``def`` is anchored at **column 0**. Allowing leading whitespace
+      resolved a nested ``def``, a method inside a ``class``, and a
+      ``def`` written inside a docstring or a string constant — none of
+      which pytest collects, all of which passed silently. The repo has
+      0 indented test defs, so nothing legitimate is excluded.
+    * the name must be **collectible**, i.e. start with ``test``, which
+      is pytest's ``python_functions`` default and is not overridden
+      anywhere in this repo. Without it a column-0 helper resolved:
+      ``tests/…::override_get_current_user`` passed here while
+      ``pytest --collect-only`` on it exits 4. Node-id syntax means "a
+      thing pytest collects", so a name that cannot be one is a broken
+      citation, not a loose one.
+
+    The residual, since §1.6 asks: a ``@pytest.fixture`` named ``test_*``
+    at column 0 still resolves. pytest warns about that shape and the
+    repo has none; detecting it means reading decorators, which is
+    parsing rather than matching.
     """
     if "[" in name:
         # Checked before the file, because it is a statement about the
@@ -412,6 +425,11 @@ def _node_ref_failure(path: str, name: str) -> str:
         return (
             "parametrised ids are not resolved by this check — cite the "
             "base test name, or mark the line if the case id matters"
+        )
+    if not name.startswith("test"):
+        return (
+            "not a collectible test name — pytest's python_functions "
+            "default is 'test*', so this cannot be a node id"
         )
     target, failure = _resolve_test_file(path)
     if target is None:
@@ -621,7 +639,18 @@ def test_the_node_id_recogniser_works_outside_its_live_examples() -> None:
 
     # Only a column-0 `def` counts: an indented one is a method, a nested
     # helper, or text inside a string, and pytest collects none of them.
-    assert _node_ref_failure(here, "matched") == "file has no test by that name"
+    assert _node_ref_failure(here, "test_nested_or_indented") == (
+        "file has no test by that name"
+    )
+    # ...and only a collectible *name* counts. `_dated_register_lines` is
+    # a real column-0 def in this very file, and pytest collects nothing
+    # by that id — so resolving it would be a false pass.
+    assert "not a collectible test name" in _node_ref_failure(
+        here, "_dated_register_lines"
+    )
+    assert "not a collectible test name" in _node_ref_failure(
+        here, "matched"
+    )
 
     # PATH_REF cannot reach a node id's closing backtick, so the two
     # patterns do not double-cover. A widening of PATH_REF breaks this.

@@ -2041,8 +2041,20 @@ new tests could not pass in a fresh repo (they skip now, verified by
 running the export); and the section escape's cost — it opts a whole
 section out of the *path* gate too — was unstated.
 
-Mutations now **seven**, M6 and M7 added by the read: the gutted scan,
-and a bare-filename citation renamed.
+**Codex then found the half the cold read missed.** Its two P2 findings
+were against the pre-fix commit and one was already closed — the
+parametrised ids with spaces, slashes and colons it flagged are matched
+and rejected as of that push. The other was not, and the cold read had
+only found half of it: anchoring `def` at column 0 fixed *where* the
+definition sits but nothing checked *what it is called*, so a column-0
+helper resolved — `tests/…::override_get_current_user` passed the gate
+while `pytest --collect-only` on it exits 4. The name must now start
+with `test`, pytest's `python_functions` default and not overridden
+here. Node-id syntax means *a thing pytest collects*, so a name that
+cannot be one is a broken citation.
+
+Mutations now **eight**: M6 the gutted scan, M7 a renamed bare-filename
+citation, M8 a column-0 non-test def cited as a node id.
 
 ### Out of scope
 
