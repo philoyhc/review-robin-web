@@ -173,10 +173,8 @@ def parse_relationship_csv(
             continue
 
         # not-identity: a roster Status enum from a CSV cell, not an email.
-        # ``_cell`` already returns "" for a blank or absent column, so the
-        # ``or "active"`` is the whole default; an earlier ``if status_raw
-        # == ""`` branch below this line could never fire and is gone
-        # (19S Item 4 rung 2).
+        # Blank or absent column ⇒ ``active``: ``_cell`` returns "" for
+        # both, so the ``or`` is the whole default.
         status_raw = (_cell(raw, "Status") or "active").strip().lower()
         if status_raw not in ROSTER_STATUSES:
             issues.append(
@@ -194,10 +192,14 @@ def parse_relationship_csv(
             continue
 
         # 19S Item 4 row 9 — reserve the pair only now, on a row that has
-        # passed every check. Reserving it at the duplicate test above let
-        # a row rejected further down consume its own key, so a later valid
-        # row for the same pair was reported as a duplicate of a row that
-        # never parsed and the pair survived in neither.
+        # passed every check, so ``seen_pairs`` holds exactly the pairs in
+        # ``parsed`` and ``prior_index`` always names a row the caller can
+        # see in ``ParseResult.rows``. Reserving it at the duplicate test
+        # above let a row rejected further down consume its own key, and a
+        # later valid row for the same pair was then told it duplicated a
+        # row that never parsed. **No import lost a pair either way** —
+        # every error is blocking and all three callers refuse the whole
+        # file — so the defect was the misleading message, not data.
         seen_pairs[(reviewer.id, reviewee.id)] = index
 
         parsed.append(

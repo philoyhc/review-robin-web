@@ -148,7 +148,7 @@ def test_parse_duplicate_pair(db: Session) -> None:
     assert result.issues[0].row_number == 2
 
 
-def test_a_rejected_row_does_not_reserve_its_pair(db: Session) -> None:
+def test_parse_rejected_row_does_not_reserve_its_pair(db: Session) -> None:
     """A row that fails a later check must not consume its pair key.
 
     19S Item 4 row 9. ``seen_pairs`` was written *before* the
@@ -156,8 +156,9 @@ def test_a_rejected_row_does_not_reserve_its_pair(db: Session) -> None:
     **and** kept its ``(reviewer_id, reviewee_id)`` key. A second row
     naming the same pair with a valid status was then rejected as a
     duplicate of a row that never parsed — a misleading error on the
-    row that was not the problem, with the pair reaching
-    ``ParseResult`` from neither. Found by a ``spec-writer``
+    row that was not the problem. **Not a data-loss bug**: every issue
+    is blocking and all three callers refuse the whole file, so no
+    import lost a pair either way. Found by a ``spec-writer``
     verification pass over the rung-1 register; the twelve-case probe
     missed it because no case combined two failure modes in one file.
     """
@@ -172,7 +173,7 @@ def test_a_rejected_row_does_not_reserve_its_pair(db: Session) -> None:
         csv_body, reviewers=[alice], reviewees=[carol]
     )
 
-    # The valid second row survives: the pair is not lost.
+    # The valid second row is the one that parses.
     assert len(result.rows) == 1
     assert result.rows[0].reviewer_id == alice.id
     assert result.rows[0].reviewee_id == carol.id
@@ -182,7 +183,10 @@ def test_a_rejected_row_does_not_reserve_its_pair(db: Session) -> None:
     assert len(result.issues) == 1
     assert result.issues[0].row_number == 1
     assert result.issues[0].field == "Status"
-    assert "Duplicate pair" not in result.issues[0].message
+    # Stated over the whole list: the point is that *no* duplicate error
+    # fires, and on the pre-fix code ``issues[0]`` was the Status issue
+    # too, so indexing row 0 would have passed on a revert.
+    assert not any("Duplicate pair" in i.message for i in result.issues)
 
 
 def test_parse_invalid_status(db: Session) -> None:
