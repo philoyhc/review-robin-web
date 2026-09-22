@@ -793,7 +793,7 @@ by design. Rung 3 discloses rather than assuming a figure.
 
 ---
 
-## Item 4 — spell out what `spec/csv_contracts.md` §3.2 actually describes
+## Item 4 — spell out what `spec/csv_contracts.md` §3.2 actually describes — ✅ **closed 2026-09-22**
 
 **Promoted from Item 1 entry E8's first half** on the author's ruling,
 2026-09-22: this is **its own investigation**, not a two-line fix.
@@ -992,10 +992,45 @@ rung 1 and 2b are prose and this is the item's only build rung:
   **112** and ten rows in `dda459f`, which edited both documents and
   left the figures.
 
-**Rung 2b is the eight remaining prose dispositions** — §3.2 and §5,
-per row. Row 7 (an `inactive` member importing silently) is the one
-that needs a product answer before a spec one; absent that, 2b
-documents the current behavior rather than changing it, and says so.
+**2026-09-22 — rung 2b closed the item: all ten rows dispositioned,
+nine of them spec edits.** §3.2 gained the real parse and save
+signatures, `reviewees.email_or_identifier` and the non-email fold,
+case-insensitive `Status`, three new paragraphs — *a row yields at most
+one issue*, *per-row detection, all-or-nothing save*, *roster status is
+not checked* — and §5's `_parse_email` row lost its false claim about
+this importer. **No second code change fell out**: row 9 was the only
+one, and rung 2a took it.
+
+**Row 7 is documented, not decided.** §3.2 now states that an
+`inactive` member imports, and says explicitly that whether it *should*
+is an open product question — so the spec records behavior without
+converting an unexamined default into stated intent.
+
+**Intended vs done.** Intended: an investigation then an adjudication,
+two rungs. Done: three rungs, ten rows not eight, one code fix, and
+**five separate review passes** — a Codex review on rung 1, a
+`spec-writer` verification of the register, a `diff-reviewer` cold read
+of the cumulative diff, a second Codex review, and a `spec-writer`
+verification of 2b's own edits.
+
+**What the reads found, because this is the figure the practice audit
+wants.** Rung 1's Codex pass: one reclassification (row 4 was not a
+contradiction). The register's `spec-writer` pass: **two new findings**,
+one of them a live bug, plus three corrected asides. The cumulative
+cold read: **nine findings**, including that rung 2a's fix falsified a
+§3.2 sentence the PR body claimed it did not, and that the fix's own
+comment alleged data loss that cannot occur. The second Codex pass:
+**two**, both introduced by the commit before it. Every one was verified
+before action; none was taken on trust.
+
+**The item's own recurring defect was citation staleness — three
+incidents.** Four wrong line numbers in rung 1, three re-broken by rung
+2a when it moved those lines, and a test node ID left pointing at a
+pre-rename name. The third is the only mechanically checkable one, and
+it is **recorded as a candidate rather than built here**: a gate reading
+pytest node IDs out of live prose and asserting each collects needs no
+allowlist and would be green from its first commit, which is
+`docs/unenforced_conventions.md` §2's bar.
 
 ### PR ladder
 
@@ -1014,8 +1049,10 @@ documents the current behavior rather than changing it, and says so.
      in the rung that changed the behavior rather than deferred. An
      earlier draft of this line said *"no spec edit"*, which the cold
      read disproved.
-   - **2b — the eight remaining prose dispositions.** §3.2 and §5, per
-     row. **Must not** re-open questions rung 1 answered.
+   - **2b — the nine remaining dispositions.** ✅ **Done 2026-09-22.**
+     §3.2 rewritten and one §5 row corrected; **every one a spec edit**,
+     no second code change. Row 7 documented as an open *product*
+     question rather than as intent.
 
 ### Definition of done
 
@@ -1053,8 +1090,11 @@ documents the current behavior rather than changing it, and says so.
 - `guide/findings_2026-09-22_csv_contracts.md` — the register rung 1
   produced: the eight answers, eight divergences, three code
   observations (Item 4).
-- `spec/csv_contracts.md` — §3.2 aligned to the code, or each retained
-  claim explained, per rung 2's adjudication (Item 4).
+- `spec/csv_contracts.md` — **§3.2 aligned to the code** (signatures,
+  the identifier column, `Status` case, and three paragraphs on
+  one-issue-per-row, all-or-nothing save and unchecked roster status)
+  **and §5's `_parse_email` row corrected**, per rungs 2a and 2b
+  (Item 4).
 - `docs/status.md` — row when the item lands (Item 4).
 
 ---
