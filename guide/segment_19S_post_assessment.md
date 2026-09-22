@@ -476,6 +476,58 @@ All figures taken 2026-09-22 at `92f7aff`.
 
 No schema, no migration, no route, no template, no `app/` change.
 
+### Status
+
+**2026-09-22 — rung 1 landed the module; the cold read found the item's
+own subject in it.** `tests/unit/test_index_currency.py`, four checks,
+**23 tests**, suite 4,639 → 4,662. The ladder held: rung 1 touched
+neither `guide/todo_master.md` nor `docs/status.md`.
+
+**Three of the four checks or their guards saw nothing when first
+written**, which is exactly what §1.8 exists to catch and the reason
+this item was the one to adopt it:
+
+- **The G1 mutation was inert.** Renaming a heading to
+  ``19R-removed`` left the check green — ``-`` is a non-word character,
+  so ``^### Segment 19R\b`` still matched. Caught before the read, by
+  the mutation failing to fail.
+- **The same hole was still in G1's pattern, with a live instance.**
+  ``### Segment 12C-1`` satisfies plan id ``12C``, whose own plan has no
+  heading. `id_pattern` uses ``(?![\w-])`` now, and the boundary test
+  covers the hyphen case rather than only the letter case it had.
+- **The G3 mutation was inert twice.** It first inserted its row
+  *first*, where `max(rows)` and ``rows[0]`` agree; the second draft
+  appended after the section's last *line*, a ``---`` rule occurring 18
+  times in the file, so ``replace(..., 1)`` put the row outside the
+  table. It splices by offset now, with a synthetic
+  newest-in-the-middle case beside it.
+- **The `**Plan:**` recogniser matched this repo's prose about itself**
+  — ``\s*`` let ``no `**Plan:**` pointer under`` capture
+  `` pointer under ``, and that false positive is what satisfied G4's
+  floor, so the floor passed while every real pointer could have been
+  reformatted away. ``\s+`` now, and the live floor asserts each
+  capture's *shape* rather than only the count.
+- **The floors were slack enough to absorb a narrowing.** At a floor of
+  30, tightening `_PR_REF` to four digits dropped 16 three-digit
+  headings out of G2's subject and still left 33. Floors sit just below
+  the measured counts now.
+
+**Seven mutations, all caught** (the harness re-runs the suite against a
+mutated copy of the module): G3's `max`, G2's running maximum, a
+narrowed `_PR_REF`, the id boundary, the pointer's whitespace, and a
+no-op G1 and G4.
+
+**Two published figures were wrong and are corrected**: the legacy count
+was *34* and is **52** by G1's own criterion, and the non-declaring
+headings were *33 predating the convention* and are **35, not all of
+which predate it**. Both were repeated into `docs/status.md`, which
+rung 2 fixes with the rest of its alignment.
+
+**Reads: one**, on this rung, since rung 2 is doc-only and this is the
+item's last build rung (`CLAUDE.md`, "Two cold readers"). It returned
+ten findings; the three above that made a check vacuous were the ones
+worth the read, and every one of them is the class 19R produced four of.
+
 ### PR ladder
 
 1. **Rung 1 — the module.** Lands `tests/unit/test_index_currency.py`
