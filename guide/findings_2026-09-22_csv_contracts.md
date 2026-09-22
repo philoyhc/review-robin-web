@@ -120,3 +120,24 @@ reviewee with a non-email identifier), then call
 `parse_relationship_csv` per row above and read `rows`, `is_blocked`
 and each issue's `(row_number, field, message)`. No database is needed
 — the parser touches none.
+
+## One more row, found later and not fixed here
+
+**Row 11 — the `SelfReview` column's stated source is the retired
+one.** Found 2026-09-22 by 19S **Item 3**'s `spec-writer` pass, which
+was looking at a different subsystem. `spec/csv_contracts.md` §5's
+column table says `SelfReview` is *"Computed via
+`is_self_review(reviewer, reviewee)`"*. It is not: the extract reads
+the canonical `Assignment.is_self_review` column
+(`app/services/extracts/responses_extract.py`), and the code's own
+comment there records the pair-level call as **retired for being wrong
+on group-scoped rows** — where it returns `False` for the member rows
+of a self-review group. So the spec names, as the mechanism, the exact
+call the code rejected.
+
+**Predates this register** — the column-read landed in PR 1/2 of
+`guide/archive/self_review_consolidate.md`, several segments before
+19S — and it is **not fixed here**: this is `§5`, not the `§3.2` the
+Item 4 investigation scoped, and an unrelated one-line correction does
+not belong in Item 3's PR. Logged so it has a home in the document that
+owns what is wrong in this file.

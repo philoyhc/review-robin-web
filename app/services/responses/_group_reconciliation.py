@@ -47,13 +47,20 @@ from app.schemas.responses import ResponseUpsert
 class GroupKeyable(Protocol):
     """What :func:`group_keys` reads off an assignment row.
 
-    Five attributes, and nothing else — stated as a protocol rather
-    than as ``Assignment`` because 19S Item 3 needed the same
-    computation over a column-tuple projection
+    Five attributes — stated as a protocol rather than as
+    ``Assignment`` because 19S Item 3 needed the same computation over
+    a column-tuple projection
     (``app.services.assignments.AssignmentPair``) to stop the
-    self-review recompute re-materialising the whole session as
+    self-review recompute re-materializing the whole session as
     entities. ``Assignment`` satisfies it structurally, so both
     shapes go through one function rather than a variant each.
+
+    **Documentation-grade, not enforced.** The repo runs ``ruff`` and
+    ``pytest``, no type checker, so nothing fails if a caller stops
+    satisfying this or if the function starts reading a sixth
+    attribute. The five were verified by hand against
+    :func:`_group_key_by_assignment` and :func:`group_keys` when this
+    was written; treat it as a claim to re-check, not a guarantee.
 
     ``reviewee`` is the one that makes this a projection and not a
     tuple of ids: the group-boundary spec names reviewee fields

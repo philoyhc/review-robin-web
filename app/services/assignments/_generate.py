@@ -522,18 +522,22 @@ def _materialise_one_instrument(
         db.execute(delete(Assignment).where(Assignment.id.in_(delete_ids)))
 
     # Insert newly eligible pairs. Bulk Core, matching the delete
-    # half above: at the 200 x 200 bench the ORM form built 80,000
-    # Python objects per instrument and about a minute of the measured
-    # cost was that construction rather than SQL
-    # (``guide/app_responsiveness.md`` Finding 4, 19S Item 3).
+    # half above: the ORM form built one Python object per pair —
+    # 40,000 per instrument at the 200 x 200 / 2-instrument bench,
+    # 80,000 across the session — and object construction, not SQL,
+    # was the measured cost (``guide/app_responsiveness.md`` Finding 4,
+    # 19S Item 3, which measured Prepare 26.7 s -> 13.1 s over this
+    # change and the recompute below).
     #
-    # ``is_self_review`` is deliberately omitted: passing the rows as
-    # executemany parameter dicts compiles the column's Python-side
-    # ``default=False`` into the statement, and the
+    # ``is_self_review`` is deliberately omitted: the statement
+    # compiles the column's Python-side ``default=False`` in, and the
     # ``recompute_self_review_classification`` below is what raises it.
-    # The rows land with no identity-map entries, so that pass and the
+    # The rows land with **no identity-map entries** — the INSERT goes
+    # out on the connection here, so that pass and the
     # ``verify_self_review_classification`` in ``replace_assignments``
-    # see them through the ``db.flush()`` below — pinned by
+    # see them by re-reading the transaction, not through the unit of
+    # work. (The ``db.flush()`` below is for the to-keep ``include``
+    # write-back, not for these rows.) Pinned by
     # ``tests/unit/test_replace_assignments_bulk_insert.py``.
     #
     # The emptiness guard is load-bearing, not defensive: an empty

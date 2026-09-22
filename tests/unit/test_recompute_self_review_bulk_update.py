@@ -17,13 +17,21 @@ Three properties have to survive that, and each has a test here:
    whole-group rule makes the two branches of the rule differ. The
    count is the half that needs the stored flag in the projection; the
    classification is the half that needs the ``Reviewee``.
-2. **One statement, not one per row.** The point of the change.
+2. **No ``Assignment`` entity is built.** This is the point of the
+   change, and it is what the first draft of this module got wrong: it
+   asserted *one UPDATE statement rather than one per row*, which the
+   pre-19S code already satisfied — SQLAlchemy's unit of work batches
+   same-shape UPDATEs into one executemany, so all six tests here
+   passed against a full revert of both rungs (found by the item's cold
+   read). The statement count is still asserted, as a guard against a
+   future per-row rewrite, but the discriminating assertion is the
+   entity-load count.
 3. **The identity map keeps up.** ``verify_self_review_classification``
    still reads entities, so a bulk UPDATE that left an already-loaded
    ``Assignment`` stale would make it report drift that is not there.
    SQLAlchemy is pinned only as ``sqlalchemy>=2.0`` in
    ``pyproject.toml``, so this is asserted rather than assumed: an
-   upgrade that stops synchronising the ORM bulk-UPDATE-by-primary-key
+   upgrade that stops synchronizing the ORM bulk-UPDATE-by-primary-key
    form fails here instead of in the regenerate path.
 """
 from __future__ import annotations
@@ -39,12 +47,15 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services.assignments._self_review import (
+from app.services.assignments import (
     is_self_review,
     recompute_self_review_classification,
     verify_self_review_classification,
 )
-from app.services.instruments import encode_group_kind, ensure_default_instrument
+from app.services.instruments import (
+    encode_group_kind,
+    ensure_default_instrument,
+)
 from app.services.responses import group_keys
 
 
@@ -213,11 +224,73 @@ def test_projection_gives_the_same_answer_as_the_entity_version(
     ) == 0
 
 
+def test_recompute_builds_no_assignment_entities(db: Session) -> None:
+    """The recompute materializes no ``Assignment`` and no ``Reviewer``,
+    and one ``Reviewee`` per reviewee rather than one per row.
+
+    The discriminating test for rung 2: the pre-19S recompute selected
+    ``(Assignment, Reviewer, Reviewee)`` and loads **6** ``Assignment``
+    plus **2** ``Reviewer`` entities on this fixture, where the
+    projection loads none of either. Counted through the ORM ``load``
+    event, which fires once per entity actually constructed from a row
+    — not through the identity map, which holds weak references and so
+    reports zero either way once the rows go out of scope.
+
+    The ``Reviewee`` count is the other half: 3 for 6 rows is the
+    primary-key dedupe that ``AssignmentPair`` relies on when it keeps
+    the reviewee as an entity, so a session's reviewee count bounds the
+    instances however many assignments join to them.
+    """
+    review_session, _ = _seed_group_scoped(db)
+    db.flush()
+
+    loads = {"Assignment": 0, "Reviewer": 0, "Reviewee": 0}
+
+    def _counter(name: str):  # type: ignore[no-untyped-def]
+        def handler(target, context):  # type: ignore[no-untyped-def]
+            loads[name] += 1
+
+        return handler
+
+    handlers = [
+        (Assignment, _counter("Assignment")),
+        (Reviewer, _counter("Reviewer")),
+        (Reviewee, _counter("Reviewee")),
+    ]
+    for entity, handler in handlers:
+        event.listen(entity, "load", handler)
+    try:
+        changed = recompute_self_review_classification(
+            db, session_id=review_session.id
+        )
+    finally:
+        for entity, handler in handlers:
+            event.remove(entity, "load", handler)
+
+    assert changed == 2, "Alice's two rows about her own group"
+    assert loads["Assignment"] == 0, (
+        "the projection replaced the Assignment entities — the pre-19S "
+        f"version loads 6 here, this loaded {loads['Assignment']}"
+    )
+    assert loads["Reviewer"] == 0, "Reviewer.email is projected as a scalar"
+    assert loads["Reviewee"] == 3, (
+        "one Reviewee instance per reviewee, not per assignment row "
+        f"(6 rows, 3 reviewees, {loads['Reviewee']} loaded)"
+    )
+
+
 def test_changed_rows_go_out_as_one_statement(
     db: Session, engine: Engine
 ) -> None:
     """The write is one bulk UPDATE, not one per changed row — and a
-    recompute with nothing to change issues none."""
+    recompute with nothing to change issues none.
+
+    Not a discriminating test: the entity-mutation loop this replaced
+    also issued one statement, because the unit of work batches
+    same-shape UPDATEs. It stands as a regression guard against a
+    future rewrite that loops per row, which is the plausible way to
+    lose this.
+    """
     review_session, _ = _seed_group_scoped(db)
 
     updates: list[str] = []
@@ -251,7 +324,7 @@ def test_bulk_update_keeps_loaded_entities_in_step(db: Session) -> None:
     ``verify_self_review_classification`` reports no drift.
 
     This pins SQLAlchemy's ORM bulk-UPDATE-by-primary-key
-    synchronisation, which the version pin (``>=2.0``) does not. If it
+    synchronization, which the version pin (``>=2.0``) does not. If it
     ever stops holding, the recompute needs an explicit expiry and
     this test is where that shows up — rather than as an
     ``AssertionError`` out of the regenerate path.

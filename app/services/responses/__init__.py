@@ -49,6 +49,7 @@ from ._core import (
 )
 from ._group_reconciliation import (
     group_key_for_pair,
+    GroupKeyable,
     group_keys,
     reconcile_group_responses_for_relationship_change,
     reconcile_group_responses_for_tag_change,
@@ -83,6 +84,7 @@ __all__ = [
     "validate_value",
     # _group_reconciliation
     "group_key_for_pair",
+    "GroupKeyable",
     "group_keys",
     "reconcile_group_responses_for_relationship_change",
     "reconcile_group_responses_for_tag_change",

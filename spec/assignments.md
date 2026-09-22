@@ -435,11 +435,15 @@ instrument rules the whole group out, not just the `(R, R)`
 cell.
 
 The canonical computation surface is
-`assignments.classify_self_review(db, session_id=, rows=)` in
-`app/services/assignments/`; on individual-scoped
-instruments it collapses to the per-row
-`is_self_review(reviewer, reviewee)` test, and on group-
-scoped instruments it applies the whole-group rule.
+`assignments.classify_self_review_pairs(db, session_id=, pairs=)`
+in `app/services/assignments/`; on individual-scoped
+instruments it collapses to a per-row identity test on the
+reviewer's email against the reviewee's identifier, and on
+group-scoped instruments it applies the whole-group rule.
+`assignments.classify_self_review(db, session_id=, rows=)` is
+the entity-shaped adapter over it, for callers that already
+hold `(Assignment, Reviewer, Reviewee)` triples; the rule is
+stated once, in the pair form.
 
 **Source of truth — `Assignment.is_self_review` column.**
 The boolean column on the `assignments` table persists the
@@ -465,9 +469,11 @@ rationale for consolidating on the column is recorded in
 Pair-level `is_self_review(reviewer, reviewee)` survives as
 a helper for the rule-engine desugar paths that operate on
 **unsaved pair candidates** (where no `Assignment` row
-exists yet), and as the inner per-row test inside
-`classify_self_review`'s individual-scoped arm. Callers that
-have an `Assignment` row in hand should read the column.
+exists yet). The individual-scoped arm applies the same
+identity test over the two strings rather than the two
+entities, because the write path projects columns rather
+than loading them (19S Item 3). Callers that have an
+`Assignment` row in hand should read the column.
 
 ## Group-scoped fan-out
 
@@ -1025,9 +1031,10 @@ Prepare step — then for each instrument:
    - **To-keep.** Pairs surviving both passes. Their
      responses survive untouched, but their
      `Assignment.include` is **recomputed, not preserved**.
-     `_generate.py:345-347` sets the expected value to
+     `_diff_one_instrument` sets the expected value to
      `self_reviews_active` for a self-review pair and `True`
-     for every other pair, and `:462-466` writes it back
+     for every other pair, and `_materialise_one_instrument`'s
+     to-keep loop writes it back
      whenever it differs from the stored one — so an
      operator's manual Inactivate on a non-self pair is reset
      to `True` on the next Generate. That reset is the

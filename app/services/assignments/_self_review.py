@@ -2,13 +2,15 @@
 recompute invariant + the breakdown reporters.
 
 Single canonical computation surface (per
-``guide/self_review_consolidate.md``). Every write site (Assignment
-creation / fan-out / recompute) and the PR-1 backfill route through
-:func:`classify_self_review` so the rule lives in exactly one place.
+``guide/archive/self_review_consolidate.md``). The rule body is
+:func:`classify_self_review_pairs`; every write site (Assignment
+creation / fan-out / recompute) and the PR-1 backfill reach it, either
+directly or through the entity-shaped :func:`classify_self_review`
+adapter, so the rule lives in exactly one place.
 """
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import NamedTuple
 
 from sqlalchemy import func, select, update
@@ -54,12 +56,14 @@ class AssignmentPair(NamedTuple):
     """The projection of an assignment row that the self-review rule
     and the group-key computation actually read.
 
-    Six slots, traced 19S Item 3: the group key needs ``id``,
+Seven slots, traced 19S Item 3: the group key needs ``id``,
     ``instrument_id``, ``reviewer_id``, ``reviewee_id`` and the
     ``Reviewee`` (boundary tags are read off it); the pair test needs
     the reviewer's email; and ``is_self_review`` carries the **stored**
     value so the recompute can report how many rows it changed without
-    re-reading them.
+    re-reading them. (Six is the count of ``Assignment`` attributes the
+    two passes read; this class also carries a ``Reviewer`` column, so
+    the two figures are not the same one.)
 
     Deliberately duck-compatible with ``Assignment`` on the five
     attributes ``app.services.responses.group_keys`` reads, so that
@@ -157,16 +161,18 @@ def classify_self_review(
       *every* assignment in the group is flagged, not just the
       ``(R, R)`` cell.
 
-    Single canonical computation surface — every write site
-    (Assignment creation / fan-out / recompute) and the PR-1 backfill
-    route through this function so the rule lives in exactly one
-    place. See ``guide/self_review_consolidate.md``.
-
     Entity-shaped adapter over :func:`classify_self_review_pairs`,
     which holds the rule. Callers that already have the three entities
     keep this signature; the recompute, which projects columns rather
-    than loading 80,000 ``Assignment`` objects (19S Item 3), calls the
-    pair form directly.
+    than loading an ``Assignment`` per row (19S Item 3), calls the pair
+    form directly. Either way the rule is stated once — see
+    ``guide/archive/self_review_consolidate.md``.
+
+    Note the adapter is not free: it builds one
+    :class:`AssignmentPair` per row on top of whatever entities the
+    caller already loaded. On ``verify_self_review_classification``,
+    the whole-session pass 19S Item 3 deliberately left alone, that is
+    ~40 ms at the 200 x 200 bench against a 13 s Prepare.
     """
     return classify_self_review_pairs(
         db,
@@ -190,7 +196,7 @@ def classify_self_review_pairs(
     db: Session,
     *,
     session_id: int,
-    pairs: list[AssignmentPair],
+    pairs: Sequence[AssignmentPair],
 ) -> dict[int, bool]:
     """The canonical self-review rule, over :class:`AssignmentPair`
     projections rather than entities.
@@ -277,7 +283,7 @@ def recompute_self_review_classification(
 
     **Column tuples in, one bulk statement out** (19S Item 3). This
     pass runs once per instrument inside a regenerate and used to
-    re-materialise the whole session as ``(Assignment, Reviewer,
+    re-materialize the whole session as ``(Assignment, Reviewer,
     Reviewee)`` entities — at the 200 x 200 bench, 80,000 objects per
     call for the sake of one boolean each. It now selects the
     :class:`AssignmentPair` projection and writes the rows that

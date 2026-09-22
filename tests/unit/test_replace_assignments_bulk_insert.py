@@ -21,6 +21,12 @@ read the stored column through a **column-tuple select** rather than
 through an entity: the ``db`` fixture builds its session with
 ``expire_on_commit=False``, so an entity attribute can answer from the
 identity map and never reach the row the insert actually wrote.
+
+Three of the four therefore pass against the pre-19S ORM insert **by
+design** — they were written and run green before it changed. The
+fourth, ``test_the_insert_constructs_no_assignment_objects``, is the
+one the change owns; it was added after the item's cold read pointed
+out that nothing here would notice a revert.
 """
 from __future__ import annotations
 
@@ -36,9 +42,7 @@ from app.db.models import (
     User,
 )
 from app.services import assignments
-from app.services.assignments._self_review import (
-    verify_self_review_classification,
-)
+from app.services.assignments import verify_self_review_classification
 from app.services.instruments import ensure_default_instrument
 
 
@@ -150,10 +154,12 @@ def test_regenerate_with_nothing_to_insert_issues_no_insert(
 ) -> None:
     """An empty ``diff.to_insert`` issues no insert statement.
 
-    A Core ``insert()`` handed an empty list of parameter dicts is an
-    error on some dialects rather than a no-op, so the guard in front
-    of it is load-bearing in a way the ``for`` loop it replaces was
-    not.
+    The guard in front of it is load-bearing in a way the ``for`` loop
+    it replaces was not, and measured to be worse than "defensive": an
+    empty parameter list does not no-op, it compiles a **single-row**
+    insert of nothing but the defaults and fails the ``NOT NULL`` on
+    ``session_id`` — on SQLite, here and now, not merely "on some
+    dialects".
     """
     user, review_session = _seed(db)
     assignments.replace_assignments(
@@ -187,6 +193,46 @@ def test_regenerate_with_nothing_to_insert_issues_no_insert(
     ], "a no-op reconcile writes no assignment rows"
 
 
+def test_the_insert_constructs_no_assignment_objects(db: Session) -> None:
+    """A regenerate builds no ``Assignment`` objects at all.
+
+    The discriminating test for this rung, and the one the other three
+    are not: they pin properties the ORM insert *also* had — which is
+    deliberate, since they were written to pass before the insert
+    changed — so a full revert leaves them green. This one is the
+    change itself. Counted through the mapper ``init`` event, which
+    fires once per construction: the pre-19S loop builds one per pair
+    (**4** on this fixture), the Core insert builds none.
+
+    The measured cost was that construction, not the unit of work
+    (``guide/app_responsiveness.md`` Finding 4), which is also why
+    ``bulk_save_objects`` and ``add_all`` were rejected: both would
+    leave this count at 4.
+    """
+    user, review_session = _seed(db)
+    built: list[Assignment] = []
+
+    def _on_init(target, args, kwargs):  # type: ignore[no-untyped-def]
+        built.append(target)
+
+    event.listen(Assignment, "init", _on_init)
+    try:
+        assignments.replace_assignments(
+            db,
+            review_session=review_session,
+            user=user,
+            correlation_id="corr-objects",
+        )
+    finally:
+        event.remove(Assignment, "init", _on_init)
+
+    assert _stored_flags(db, review_session.id), "rows were written"
+    assert built == [], (
+        "the pre-19S loop builds one Assignment per pair, 4 here; the "
+        f"Core insert builds none, this built {len(built)}"
+    )
+
+
 def test_core_inserted_row_starts_false_then_is_recomputed(
     db: Session,
 ) -> None:
@@ -194,12 +240,12 @@ def test_core_inserted_row_starts_false_then_is_recomputed(
     lands on the column's Python-side ``default=False`` and the
     recompute is what raises it.
 
-    Pinned because the two Core insert forms differ here: passing a
-    list of dicts as executemany parameters applies Python-side column
-    defaults, and a row written without them would violate the
-    column's ``nullable=False``. Asserted by regenerating with the
-    self-review pair excluded, so the three rows the rule does emit
-    are ones the recompute has no reason to raise.
+    Pinned because a row written without the default would violate the
+    column's ``nullable=False``. Both Core insert forms compile it in,
+    measured — an earlier draft of this docstring and of the plan said
+    they differ here, and they do not. Asserted by regenerating with
+    the self-review pair excluded, so the three rows the rule does
+    emit are ones the recompute has no reason to raise.
     """
     user, review_session = _seed(db)
 
