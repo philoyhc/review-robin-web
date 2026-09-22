@@ -190,6 +190,28 @@
           </label>
         </div>
       </div>
+      {# Tags (19S Item 6). **Scaffold — the input is inert**: it is
+         deliberately not named, so the browser does not submit it and
+         ``POST /operator/sessions`` cannot see it. Rung 2 gives it
+         ``name="tags"`` — matching the lobby's own field, so one habit
+         works on both surfaces — and calls ``session_tags.set_tags``
+         after the staged Quick Setup uploads, of which the settings CSV
+         is the last. That ordering is what makes a typed tag beat a
+         settings CSV's ``session_tags[]`` rows, per the plan's
+         `Semantics`; nothing here writes anything yet.
+
+         ``form=`` is omitted for the same reason the name is: it is
+         what would associate the control with the create form. #}
+      <div class="card" id="session-tags">
+        <h3 style="margin-top: 0;">Tags</h3>
+        <p class="muted">
+          Comma-separated, and editable later from the sessions list.
+        </p>
+        <label for="tags">Tags (optional)</label>
+        <input type="text" id="tags"
+               autocomplete="off"
+               placeholder="e.g. pilot, 2026, engineering">
+      </div>
     </div>
   </div>
 
