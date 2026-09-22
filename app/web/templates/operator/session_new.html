@@ -190,18 +190,14 @@
           </label>
         </div>
       </div>
-      {# Tags (19S Item 6). **Scaffold — the input is inert**: it is
-         deliberately not named, so the browser does not submit it and
-         ``POST /operator/sessions`` cannot see it. Rung 2 gives it
-         ``name="tags"`` — matching the lobby's own field, so one habit
-         works on both surfaces — and calls ``session_tags.set_tags``
-         after the staged Quick Setup uploads, of which the settings CSV
-         is the last. That ordering is what makes a typed tag beat a
-         settings CSV's ``session_tags[]`` rows, per the plan's
-         `Semantics`; nothing here writes anything yet.
-
-         ``form=`` is omitted for the same reason the name is: it is
-         what would associate the control with the create form. #}
+      {# Tags (19S Item 6 rung 2 — now live). ``name="tags"`` matches
+         the lobby's own field, so one habit works on both surfaces, and
+         ``form=`` associates the control with the create form it is
+         rendered outside of. ``POST /operator/sessions`` calls
+         ``session_tags.set_tags`` **after** the staged Quick Setup
+         uploads, of which the settings CSV is the last — that ordering
+         is what makes a typed tag beat a settings CSV's
+         ``session_tags[]`` rows, per the plan's `Semantics`. #}
       <div class="card" id="session-tags">
         <h3 style="margin-top: 0;" id="session-tags-heading">Tags (optional)</h3>
         <p class="muted">
@@ -211,7 +207,8 @@
            its accessible name from it rather than from a second
            "Tags (optional)" above the box. ``aria-labelledby`` over
            ``aria-label`` so the two cannot drift apart. #}
-        <input type="text" id="tags"
+        <input type="text" id="tags" name="tags"
+               form="create-session-form"
                aria-labelledby="session-tags-heading"
                autocomplete="off"
                placeholder="e.g. pilot, 2026, engineering">
