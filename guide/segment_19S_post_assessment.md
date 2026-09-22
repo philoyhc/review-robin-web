@@ -146,10 +146,15 @@ path resolves and a `§N` exists, not whether a count is current.
 **The two `guide/todo_master.md` gaps are fixed** (2026-09-22, on the
 author's instruction, in their own slice rather than in the close):
 19P and 19Q have `## Done` entries written from their archived plans,
-and the section is sorted — nine blocks moved, every one byte-identical,
-and the rule's own blind spot is now stated where the rule lives, since
-a heading declaring no PR cannot be placed by it. The fix also found a
-**third** instance a line from the second: 19O's entry ended *"the
+and the section is sorted — nine blocks relocated, fifteen at a new
+index once the knock-on is counted, **fourteen of the fifteen
+byte-identical** and the fifteenth deliberately edited; the rule's own
+blind spot is now stated where the rule lives, since a heading declaring
+no PR cannot be placed by it. **That summary was wrong in its first
+draft** and is itself an E5 instance: it claimed nine and claimed every
+moved block unchanged, from a check run mid-edit whose own output had
+named the exception. The fix also found a
+**third** E4 instance a line from the second: 19O's entry ended *"the
 segment stays open"* under a heading reading `✅ closed`.
 
 **The entry stays open, because the gate does not exist.** Three
