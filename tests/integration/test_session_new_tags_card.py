@@ -48,8 +48,17 @@ def test_the_tags_card_renders_below_user_interface_settings(
     assert ui_pos < tags_pos, "Tags sits below User interface settings"
 
     card = _card(body)
-    assert "<h3" in card and "Tags</h3>" in card
+    assert "Tags (optional)</h3>" in card, (
+        "the heading carries the (optional) qualifier — it is the "
+        "field's visible label, not a section title above a second one"
+    )
     assert "Comma-separated" in card, "the copy says how to type two"
+    # The heading being the label is load-bearing for accessibility:
+    # there is no <label> element, so the input's accessible name comes
+    # from it. If the id or the reference is dropped, the box becomes an
+    # unlabelled text input rather than merely an untidy one.
+    assert 'id="session-tags-heading"' in card
+    assert 'aria-labelledby="session-tags-heading"' in card
 
 
 def test_the_tags_input_is_inert(client: TestClient) -> None:

@@ -203,12 +203,16 @@
          ``form=`` is omitted for the same reason the name is: it is
          what would associate the control with the create form. #}
       <div class="card" id="session-tags">
-        <h3 style="margin-top: 0;">Tags</h3>
+        <h3 style="margin-top: 0;" id="session-tags-heading">Tags (optional)</h3>
         <p class="muted">
           Comma-separated, and editable later from the sessions list.
         </p>
-        <label for="tags">Tags (optional)</label>
+        {# The heading is the field's visible label, so the input takes
+           its accessible name from it rather than from a second
+           "Tags (optional)" above the box. ``aria-labelledby`` over
+           ``aria-label`` so the two cannot drift apart. #}
         <input type="text" id="tags"
+               aria-labelledby="session-tags-heading"
                autocomplete="off"
                placeholder="e.g. pilot, 2026, engineering">
       </div>
