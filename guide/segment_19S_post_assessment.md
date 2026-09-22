@@ -659,15 +659,20 @@ cheaper one to move and the safer one to leave.
   `id`, `instrument_id`, `reviewer_id`, `reviewee_id`, the `Reviewee`
   and `is_self_review`.
 - **The `group_keys` coupling is one attribute, and it is the trap.**
-  `_group_key_by_assignment` reads `assignment.reviewee`
-  (`app/services/responses/_group_reconciliation.py:123`) — a
+  `_group_key_by_assignment` reads `assignment.reviewee` — a
   many-to-one lazy load that resolves from the identity map **only
   because the same query loaded every `Reviewee`**. Column tuples remove
-  that attribute, so the reviewee is passed explicitly;
-  `classify_self_review` already holds it. `group_keys` needs a variant
-  taking ids + reviewees. Everything else it reads is `id`,
-  `instrument_id`, `reviewer_id` and `reviewee_id`
-  (`_group_reconciliation.py:122`).
+  that attribute, so the reviewee is passed explicitly. Everything else
+  it reads is `id`, `instrument_id`, `reviewer_id` and `reviewee_id`.
+  **Rung 2 corrects the remedy**: the plan said `group_keys` "needs a
+  variant taking ids + reviewees", and it needed no variant. Those five
+  attributes are *all* it reads, so a projection carrying them goes
+  through the existing function unchanged — what was actually needed
+  was the honest type. `GroupKeyable`, a `Protocol` naming the five,
+  now annotates `group_keys` and `_group_key_by_assignment`;
+  `Assignment` satisfies it structurally and so does
+  `AssignmentPair`. One function, two shapes, rather than two
+  functions.
 - **The existing verify pass is rung 2's oracle.** It recomputes
   independently and **raises `AssertionError` in a test env** on drift
   (`_generate.py:1088`), so every test that regenerates assignments
@@ -743,11 +748,14 @@ by design. Rung 3 discloses rather than assuming a figure.
    computation. **Cumulative-diff base for the item's cold read:
    `05145da`** (the `main` commit rung 1 branched from — the read runs
    at rung 2 per `CLAUDE.md`'s per-item cadence).
-2. **Rung 2 — the recompute pass.** `group_keys` gains its
-   ids-and-reviewees variant, `recompute_self_review_classification`
-   drops to a column-tuple select and a Core bulk `update`. **Must not
-   change** the classification rule or the verify pass — the existing
-   in-test `AssertionError` on drift is the oracle.
+2. **Rung 2 — the recompute pass.** ✅ done 2026-09-22.
+   `recompute_self_review_classification` drops to a column-tuple
+   select and an ORM bulk `update`; `group_keys` gains the
+   `GroupKeyable` protocol rather than the planned variant (see
+   `Semantics`). The classification rule and the verify pass are
+   unchanged — the rule moved to `classify_self_review_pairs` with
+   `classify_self_review` as the entity adapter over it, so it is
+   still stated once.
 3. **Rung 3 — re-take Finding 4, or disclose that it could not be
    re-taken.** `guide/app_responsiveness.md` Finding 4 gains the
    post-fix figure beside its 20.0 s; with no loopback Postgres
@@ -805,9 +813,33 @@ So the oracle the plan leaned on covers misclassification, not absence;
 rung 1's column-tuple row count is what covers the second, and that is
 the test's justification for existing.
 
-Reads: none yet. Rung 1 is a code rung inside the ladder, so the
-`diff-reviewer` read is owed **once at rung 2** over
-`git diff 05145da..HEAD`.
+**Rung 2 done, 2026-09-22.** Intended: the recompute stops
+re-materialising the session as entities. Done: an `AssignmentPair`
+projection (`id`, `instrument_id`, `reviewer_id`, `reviewee_id`,
+`Reviewer.email`, the `Reviewee`, the stored flag), the rule lifted
+into `classify_self_review_pairs` with `classify_self_review` kept as
+the entity adapter over it, and the changed rows written as one ORM
+bulk `UPDATE` keyed by primary key. Two of the three
+materialisations are gone; the verify pass is the deferred third.
+
+Two things the plan did not anticipate, both recorded above or here:
+
+- **No `group_keys` variant was needed** — a `Protocol` was. See
+  `Semantics`.
+- **The ORM bulk `UPDATE` by primary key keeps the identity map in
+  step**, measured. The plan assumed "with no entity there is nothing
+  to mutate", which is true of the *write* but would have left an
+  already-loaded `Assignment` stale — and
+  `verify_self_review_classification` still reads entities, so it
+  would have reported drift that was not there. SQLAlchemy
+  synchronises this form, so no explicit expiry was added. The pin is
+  only `sqlalchemy>=2.0`, so the behaviour is **asserted** rather than
+  relied on silently:
+  `tests/unit/test_recompute_self_review_bulk_update.py::test_bulk_update_keeps_loaded_entities_in_step`.
+
+Reads: the item's one `diff-reviewer` read runs at this rung over
+`git diff 05145da..HEAD`, per `CLAUDE.md`'s per-item cadence. Rung 3
+changes no code, so this is the last build rung.
 
 ### Out of scope
 

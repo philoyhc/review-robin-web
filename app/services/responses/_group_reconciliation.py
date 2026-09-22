@@ -29,6 +29,9 @@ The core ``_core.py`` module reads from this slice
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Protocol
+
 from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.orm import Session
 
@@ -39,6 +42,39 @@ from app.db.models import (
     Reviewee,
 )
 from app.schemas.responses import ResponseUpsert
+
+
+class GroupKeyable(Protocol):
+    """What :func:`group_keys` reads off an assignment row.
+
+    Five attributes, and nothing else — stated as a protocol rather
+    than as ``Assignment`` because 19S Item 3 needed the same
+    computation over a column-tuple projection
+    (``app.services.assignments.AssignmentPair``) to stop the
+    self-review recompute re-materialising the whole session as
+    entities. ``Assignment`` satisfies it structurally, so both
+    shapes go through one function rather than a variant each.
+
+    ``reviewee`` is the one that makes this a projection and not a
+    tuple of ids: the group-boundary spec names reviewee fields
+    dynamically, so :func:`group_key_for_pair` reaches it by
+    ``getattr``.
+    """
+
+    @property
+    def id(self) -> int: ...
+
+    @property
+    def instrument_id(self) -> int: ...
+
+    @property
+    def reviewer_id(self) -> int: ...
+
+    @property
+    def reviewee_id(self) -> int: ...
+
+    @property
+    def reviewee(self) -> Reviewee: ...
 
 
 def _session_position_map(
@@ -71,7 +107,7 @@ def _group_instrument_ids(db: Session, instrument_ids: set[int]) -> set[int]:
 def _group_key_by_assignment(
     db: Session,
     *,
-    assignments: list[Assignment],
+    assignments: Sequence[GroupKeyable],
     group_instrument_ids: set[int],
     session_id: int,
 ) -> dict[int, tuple[str, ...]]:
@@ -162,7 +198,7 @@ def group_key_for_pair(
 
 
 def group_keys(
-    db: Session, *, assignments: list[Assignment], session_id: int
+    db: Session, *, assignments: Sequence[GroupKeyable], session_id: int
 ) -> dict[int, tuple[str, ...]]:
     """Group key per assignment on a group-scoped instrument.
 
@@ -172,6 +208,10 @@ def group_keys(
     instruments with no boundary tag map to the empty key ``()``.
     The reviewer surface uses this to partition a reviewer's rows
     into one group row per distinct key.
+
+    Takes anything satisfying :class:`GroupKeyable` — an
+    ``Assignment`` entity, or the ``AssignmentPair`` projection the
+    self-review recompute builds (19S Item 3).
     """
     return _group_key_by_assignment(
         db,

@@ -67,7 +67,9 @@ from ._generate import (
 )
 from ._self_review import (
     _self_review_assignment_ids,  # noqa: F401
+    AssignmentPair,
     classify_self_review,
+    classify_self_review_pairs,
     count_self_review_candidates,
     count_self_reviews_in_assignments,
     is_self_review,
@@ -81,10 +83,12 @@ from ._shared import _is_active, _is_test_env  # noqa: F401
 
 __all__ = [
     "PAIR_PREVIEW_LIMIT",
+    "AssignmentPair",
     "ReconcileImpact",
     "assignment_fields_with_data",
     "bulk_set_assignment_include",
     "classify_self_review",
+    "classify_self_review_pairs",
     "count_pairs",
     "count_self_review_candidates",
     "count_self_reviews_in_assignments",
