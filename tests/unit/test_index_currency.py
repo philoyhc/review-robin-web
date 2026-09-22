@@ -32,7 +32,10 @@ tree cannot show that it would fail.
 from __future__ import annotations
 
 import re
+import tempfile
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 TODO_PATH = REPO / "guide" / "todo_master.md"
@@ -50,6 +53,38 @@ ARCHIVE_DIR = REPO / "guide" / "archive"
 #: *no allowlist* bar survives — the same shape the pre-16 filter takes
 #: in this item's plan.
 LEGACY_BEFORE_SEGMENT = 16
+
+#: The first plan whose ``Blast radius`` sections must state **when**
+#: their numbers were taken (19S Item 5; author's ruling 2026-09-22 that
+#: the cutoff is a segment comparison, not a date). A *date* cutoff would
+#: need ``git log`` per section to decide whether a section is in scope,
+#: because a section carries no date until this very convention gives it
+#: one — circular. A segment id is in the filename.
+#:
+#: Sorted as ``(leading number, remainder)`` so ``19R`` < ``19S`` < ``20``:
+#: one comparison rather than a list of the 93 legacy sections, the shape
+#: `LEGACY_BEFORE_SEGMENT` already set.
+#:
+#: **19S, not the next segment, deliberately.** All 7 of 19S's sections
+#: already carry an anchor, so the check covers real sections from its
+#: first commit instead of covering nothing — a guard whose fixture
+#: reaches no case is the vacuity `docs/unenforced_conventions.md` §1.6
+#: concedes and §1.8 exists to catch.
+ANCHOR_REQUIRED_FROM = (19, "S")
+
+#: A ``Blast radius`` heading at segment (``##``) or item (``###``)
+#: level. 97 of the corpus's 100 are item-level.
+_BLAST_HEADING = re.compile(r"^#{2,3} Blast radius", re.M)
+
+#: The anchor itself: a backticked short sha, or an ISO date. Both forms
+#: are already in use — *"Taken 2026-09-22 at `92f7aff`"*.
+_ANCHOR = re.compile(r"`[0-9a-f]{7,40}`|\b20\d\d-\d\d-\d\d\b")
+
+#: How far past the heading the anchor may sit, in **non-blank** lines.
+#: Two rather than one so a wrapped opening sentence still counts;
+#: measured 2026-09-22, one and two give the identical 69 of 100, so the
+#: extra line buys tolerance without buying false positives.
+_ANCHOR_WINDOW = 2
 
 #: A ``## Done`` entry heading. The section also carries ``### P0 —``
 #: style audit headings and a few non-segment scopes; only the PR
@@ -293,6 +328,88 @@ def _todo_sections() -> tuple[str, str]:
 
 def _archived_plan_names() -> list[str]:
     return [p.name for p in ARCHIVE_DIR.glob("segment_*.md")]
+
+
+def plan_sort_key(identifier: str) -> tuple[int, str]:
+    """``"19S"`` -> ``(19, "S")``, so plan ids order as a reader expects.
+
+    ``19R`` < ``19S`` < ``19T`` < ``20``, and ``12A-2`` sorts after
+    ``12A``. Raises rather than guessing on an id with no leading digits:
+    every archived plan has them (checked 2026-09-22), and a silent
+    fallback would drop a plan out of G5's scope without saying so.
+    """
+    match = re.match(r"(\d+)(.*)", identifier)
+    if match is None:
+        raise AssertionError(f"plan id with no leading number: {identifier!r}")
+    return (int(match.group(1)), match.group(2))
+
+
+def blast_radius_sections(text: str) -> list[tuple[int, list[str]]]:
+    """Every ``Blast radius`` section as ``(heading line index, body)``.
+
+    The body runs to the next heading of any level, so a section's
+    opening lines are read from the section itself rather than from a
+    fixed number of lines that a table could push past.
+    """
+    lines = text.split("\n")
+    found: list[tuple[int, list[str]]] = []
+    for index, line in enumerate(lines):
+        if not _BLAST_HEADING.match(line):
+            continue
+        body: list[str] = []
+        for following in lines[index + 1 :]:
+            if re.match(r"^#{1,6} ", following):
+                break
+            body.append(following)
+        found.append((index, body))
+    return found
+
+
+def section_is_anchored(body: list[str]) -> bool:
+    """Whether a ``Blast radius`` body states when it was measured."""
+    seen = 0
+    for line in body:
+        if not line.strip():
+            continue
+        if _ANCHOR.search(line):
+            return True
+        seen += 1
+        if seen >= _ANCHOR_WINDOW:
+            return False
+    return False
+
+
+def _plan_files() -> list[Path]:
+    """Every segment plan, live and archived.
+
+    **Archived ones included on purpose**: 19S will archive, and a scan
+    of only ``guide/`` would quietly stop covering it on the day it
+    moved — the failure mode G5 exists to prevent, applied to G5.
+    """
+    return sorted(
+        p
+        for directory in (REPO / "guide", ARCHIVE_DIR)
+        for p in directory.glob("segment_*.md")
+        if _PLAN_NAME.match(p.name)
+    )
+
+
+def unanchored_sections(paths: list[Path] | None = None) -> list[tuple[str, int]]:
+    """**G5** — in-scope ``Blast radius`` sections stating no anchor.
+
+    In scope is ``plan_sort_key(id) >= ANCHOR_REQUIRED_FROM``. Returns
+    ``(plan filename, 1-based heading line)`` per offender.
+    """
+    offenders: list[tuple[str, int]] = []
+    for path in paths if paths is not None else _plan_files():
+        identifier = segment_id(path.name)
+        assert identifier is not None, path.name
+        if plan_sort_key(identifier) < ANCHOR_REQUIRED_FROM:
+            continue
+        for index, body in blast_radius_sections(path.read_text()):
+            if not section_is_anchored(body):
+                offenders.append((path.name, index + 1))
+    return offenders
 
 
 def test_every_modern_archived_plan_has_a_done_entry() -> None:
@@ -649,3 +766,145 @@ def test_g4_fails_when_a_queued_plan_is_archived() -> None:
     assert queued_archived_plans(mutated) == [
         "guide/archive/segment_19S_post_assessment.md"
     ]
+
+
+def test_g5_every_in_scope_blast_radius_states_its_anchor() -> None:
+    """**G5** — a `Blast radius` section from `ANCHOR_REQUIRED_FROM` on
+    says when its numbers were taken (19S Item 5).
+
+    Without an anchor a re-run cannot tell a stale number from a tree
+    that has legitimately moved, so the comparison the convention exists
+    for is impossible. 162 of 171 rows in the corpus are re-runnable
+    exactly as written; the missing piece was never runnability.
+    """
+    offenders = unanchored_sections()
+    assert offenders == [], (
+        "`Blast radius` section with no commit or date to measure "
+        "against: " + ", ".join(f"{name}:{line}" for name, line in offenders)
+    )
+
+
+def test_g5_sees_the_sections_it_claims_to_cover() -> None:
+    """The live floor: G5's scope is non-empty and every section in it
+    is anchored.
+
+    A recogniser that matched no heading would satisfy the check above
+    by seeing nothing — `docs/unenforced_conventions.md` §1.6's vacuity,
+    and the reason `ANCHOR_REQUIRED_FROM` is 19S rather than the next
+    segment. Measured 2026-09-22: 7 in-scope sections, all anchored,
+    against 93 legacy ones excluded.
+    """
+    in_scope = [
+        (path.name, index)
+        for path in _plan_files()
+        if plan_sort_key(segment_id(path.name) or "0") >= ANCHOR_REQUIRED_FROM
+        for index, _ in blast_radius_sections(path.read_text())
+    ]
+    assert len(in_scope) >= 7, f"G5 covers only {len(in_scope)} sections"
+
+    every = [
+        s
+        for path in _plan_files()
+        for s in blast_radius_sections(path.read_text())
+    ]
+    assert len(every) >= 95, f"only {len(every)} `Blast radius` sections seen"
+
+
+def test_g5_excludes_the_legacy_corpus_and_that_exclusion_is_load_bearing() -> None:
+    """Legacy sections are not checked, and some of them would fail.
+
+    If every legacy section happened to be anchored the cutoff would be
+    decorative; 30 of the 93 are not, so it carries weight. Asserted
+    rather than assumed, the way G1's filter is.
+    """
+    legacy_unanchored = [
+        (path.name, index + 1)
+        for path in _plan_files()
+        if plan_sort_key(segment_id(path.name) or "0") < ANCHOR_REQUIRED_FROM
+        for index, body in blast_radius_sections(path.read_text())
+        if not section_is_anchored(body)
+    ]
+    assert legacy_unanchored, (
+        "no legacy section lacks an anchor, so the cutoff is decorative"
+    )
+    # …and none of them reaches G5.
+    assert unanchored_sections() == []
+
+
+def test_plan_sort_key_orders_within_and_across_segment_numbers() -> None:
+    assert plan_sort_key("19R") < plan_sort_key("19S")
+    assert plan_sort_key("19S") < plan_sort_key("19T")
+    assert plan_sort_key("19T") < plan_sort_key("20")
+    assert plan_sort_key("12A") < plan_sort_key("12A-2")
+    assert plan_sort_key("9Z") < plan_sort_key("10A")
+
+
+def test_plan_sort_key_refuses_an_id_with_no_leading_number() -> None:
+    """A silent fallback would drop a plan out of scope without saying
+    so, which is the shape of defect this module is for."""
+    with pytest.raises(AssertionError):
+        plan_sort_key("template")
+
+
+def test_section_is_anchored_accepts_both_forms_and_only_near_the_heading() -> None:
+    assert section_is_anchored(["Taken 2026-09-22 at `92f7aff`."])
+    assert section_is_anchored(["", "Measured at `9b32a9f`."])
+    assert section_is_anchored(["Taken 2026-09-22."])
+    # Two non-blank lines of grace, and no more: an anchor buried below a
+    # table is not an opening statement of when the numbers were taken.
+    assert section_is_anchored(["intro", "second line 2026-09-22"])
+    assert not section_is_anchored(["intro", "second", "third 2026-09-22"])
+    assert not section_is_anchored(["| what | count |", "|---|---|"])
+    # A sha needs its backticks: a bare hex-looking word is not a claim.
+    assert not section_is_anchored(["Taken at 92f7aff."])
+
+
+def test_blast_radius_sections_stop_at_the_next_heading() -> None:
+    text = "\n".join(
+        [
+            "### Blast radius (measured)",
+            "",
+            "Taken 2026-09-22 at `abcdef1`.",
+            "",
+            "### PR ladder",
+            "",
+            "1. Rung 1 — 2026-09-23 is not this section's anchor.",
+        ]
+    )
+    found = blast_radius_sections(text)
+    assert len(found) == 1
+    index, body = found[0]
+    assert index == 0
+    assert "PR ladder" not in "\n".join(body)
+    assert "2026-09-23" not in "\n".join(body)
+
+
+def test_g5_fails_when_an_in_scope_section_loses_its_anchor() -> None:
+    """The mutation `docs/unenforced_conventions.md` §1.8 asks for.
+
+    Strips the anchor from a real in-scope section and asserts G5
+    reports it — run against a temporary copy so the check is proved
+    against the corpus it guards rather than a synthetic one.
+    """
+    plan = REPO / "guide" / "segment_19S_post_assessment.md"
+    original = plan.read_text()
+    sections = blast_radius_sections(original)
+    assert sections, "19S has no `Blast radius` section to mutate"
+
+    lines = original.split("\n")
+    index, _ = sections[0]
+    # Blank the anchor out of the section's opening lines.
+    for offset in range(index + 1, min(index + 6, len(lines))):
+        lines[offset] = _ANCHOR.sub("REDACTED", lines[offset])
+    mutated = "\n".join(lines)
+    assert mutated != original, "the mutation changed nothing"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        copy = Path(tmp) / plan.name
+        copy.write_text(mutated)
+        offenders = unanchored_sections([copy])
+
+    assert offenders, "G5 passed a section whose anchor was removed"
+    assert offenders[0][0] == plan.name
+    # The unmutated file still passes, so the mutation is what failed it.
+    assert unanchored_sections([plan]) == []

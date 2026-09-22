@@ -1131,13 +1131,24 @@ written down, in a column the convention already asks for.
 
 | what | count |
 |---|---:|
-| `Blast radius` sections | **98** |
+| `Blast radius` sections | **100** |
 | rows citing a re-runnable command | **171** of 175 |
 | runnable exactly as written | **162** |
-| sections stating a sha or date to measure against | **45** (46%) |
+| sections stating a sha or date to measure against | **69** (69%) |
+
+**The anchor figure is a correction.** This table said **45 (46%)** of
+98 when the item was planned. Re-measured 2026-09-22 at `6682431` under
+the definition rung 1 has now put in code — an anchor on one of the
+first two non-blank lines — it is **69 of 100**, and no reading of
+*"stating a sha or date"* reproduces 45: a sha anywhere gives 66, a
+date anywhere 50, either anywhere 75, a date in the opening lines 41.
+The gap is real but **31 sections, not 53**. It strengthens the
+decision rather than weakening it: the convention is already observed
+in most of the corpus, so the check codifies practice instead of
+imposing it.
 
 **The blocker is not runnability — it is the missing anchor.** 162 rows
-could be re-run today, but in 53 of 98 sections a differing answer is
+could be re-run today, but in 31 of 100 sections a differing answer is
 indistinguishable from the tree having legitimately moved, because the
 row never said *when* its number was true. A re-run against those is
 noise, and a noisy check is the shape `constitution.md` VI says gets
@@ -1168,9 +1179,19 @@ one comparison, not by a list of 53 exceptions.
 - **An anchor is a 7–40 character hex sha or an ISO date** in the
   section's opening lines. Both forms are already in use — Items 3 and
   4 above write *"Taken 2026-09-22 at `92f7aff`"*.
-- **Only sections whose heading lands on or after the cutoff are
-  checked.** Before it, 53 sections have no anchor and back-filling one
-  would mean inventing a date — the defect this item is about.
+- **The cutoff is a segment comparison** (author's ruling,
+  2026-09-22), `ANCHOR_REQUIRED_FROM = (19, "S")`, sorted as
+  ``(leading number, remainder)`` so ``19R`` < ``19S`` < ``20``. A
+  *date* cutoff was the alternative and is circular: deciding whether a
+  section is in scope would need to know when it landed, and a section
+  carries no date until this convention gives it one — `git log` per
+  section, for a question the filename answers.
+- **19S, not the next segment.** All **7** of 19S's sections already
+  carry an anchor, so the check covers real sections from its first
+  commit. A cutoff one segment later would have covered **0** —
+  green, and vacuous, which is what §1.6 concedes and §1.8 catches.
+  **93** legacy sections are excluded, **30** of them unanchored, so
+  the exclusion is load-bearing rather than decorative.
 - **A template command stays legal** — nine rows carry a
   `<placeholder>` and record *how* a number was taken, which is worth
   more than one that happens to run. The anchor is the requirement, not
@@ -1185,9 +1206,10 @@ one comparison, not by a list of 53 exceptions.
 - **Anchor before re-run** (2026-09-22) — the measurement inverted the
   expected order: the commands are re-runnable, the comparison point is
   what is missing.
-- **A date cutoff, not an allowlist** (2026-09-22) — one comparison,
-  per Item 2's accepted precedent; a list of 53 legacy sections would
-  breach §2's bar.
+- **A segment cutoff, not a date and not an allowlist** (author's
+  ruling, 2026-09-22) — one tuple comparison on the filename. A date
+  needed `git log` per section to answer what the filename already
+  answers; a list of the 93 legacy sections would breach §2's bar.
 - **The check joins Item 2's module** (2026-09-22) — same subject, *is
   this hand-written claim checkable*, and a second module would split
   one gate list across two docstrings.
@@ -1197,19 +1219,59 @@ one comparison, not by a list of 53 exceptions.
 
 ### Blast radius (measured)
 
-Taken 2026-09-22 at `b8aeaa8`. The corpus figures are in `Opportunity`;
-what this item would *touch* is two prose files and one test module —
-`grep -n "Blast radius" .claude/skills/segment-plan/SKILL.md
+Taken 2026-09-22 at `6682431`. The corpus figures are in
+`Opportunity`; what this item *touched* is two prose files and one test
+module — `grep -n "Blast radius" .claude/skills/segment-plan/SKILL.md
 guide/segment_plan_template.md` — with **0** production LOC. At the
-cutoff the check covers **0** sections, rising as plans land, and
-excludes the **53** unanchored legacy ones.
+cutoff the check covers **7** sections across **110** plans scanned
+(live and archived), and excludes **93** legacy ones, **30** of them
+unanchored.
+
+### Status
+
+**2026-09-22 — rung 1 landed: G5, the anchor convention, and a figure
+correction.** `tests/unit/test_index_currency.py` gains **G5** and 8
+tests, 23 → **31** in the module; suite 4,663 → 4,671. Two prose files
+carry the convention. **0** production LOC.
+
+**The cutoff is 19S on the author's ruling**, and picking its *value*
+is what kept the check from being vacuous. The plan had said the check
+would cover **0** sections at the cutoff, rising as plans land. Measured
+instead: all **7** of 19S's sections already carry an anchor, so 19S
+covers real sections from the first commit. A cutoff one segment later
+would have been green by seeing nothing — the shape §1.6 concedes and
+§1.8 exists to catch, in the very item that cites both.
+
+**Three mutations, all caught**, against the real corpus rather than a
+synthetic one: a recogniser that can never fail (3 tests red), a
+heading pattern that matches nothing (4 red — the live floor), and a
+cutoff past every plan so the scope empties (2 red). The anchor-strip
+mutation runs G5 over a temporary copy of 19S's own plan.
+
+**The archived corpus is scanned on purpose.** 19S will archive, and a
+scan of only `guide/` would quietly stop covering it the day it moved —
+G5's own failure mode applied to G5. 110 plans scanned.
+
+**A published figure was wrong and is corrected in `Opportunity`.** The
+anchor count was **45 of 98 (46%)** and is **69 of 100 (69%)** under the
+definition now in code; no reading of *"stating a sha or date"*
+reproduces 45 (66 / 50 / 75 / 41 for the four obvious ones). The gap is
+**31 sections, not 53** — which strengthens the decision, since the
+convention turns out to be mostly observed and the check codifies
+practice rather than imposing it. Fourth figure correction of the day,
+and the first found by re-measuring in order to *write the code* rather
+than by a reviewer.
+
+**Rung 2 is unchanged and unstarted** — whether the re-run gets built,
+decided against the anchored corpus rather than against a guess.
 
 ### PR ladder
 
-1. **Rung 1 — the anchor, and the check that keeps it.** The convention
-   in the `segment-plan` skill and the blank template; the check beside
-   Item 2's, green from its first commit because it covers nothing yet.
-   **Must not** back-fill an anchor onto any existing section.
+1. **Rung 1 — the anchor, and the check that keeps it.** ✅ **Done
+   2026-09-22.** The convention in the `segment-plan` skill and the
+   blank template; **G5** beside Item 2's G1–G4, green from its first
+   commit because 19S's seven sections were already anchored. No
+   anchor was back-filled onto any existing section.
 2. **Rung 2 — decide the re-run on the anchored corpus, and record the
    answer either way.** Once anchored sections exist, ask whether
    re-running their commands at close is worth building; a negative
@@ -1258,8 +1320,11 @@ excludes the **53** unanchored legacy ones.
 
 ### Doc impact
 
-- `.claude/skills/segment-plan/SKILL.md` — "Measuring blast radius"
-  asks for the commit or date the numbers were taken at (Item 5).
+- `tests/unit/test_index_currency.py` — **G5** joins G1–G4: an
+  in-scope `Blast radius` section states its anchor (Item 5).
+- `.claude/skills/segment-plan/SKILL.md` — the `Blast radius` row asks
+  for the commit or date the numbers were taken at, and names the check
+  (Item 5).
 - `guide/segment_plan_template.md` — the blank `Blast radius` block
   carries the anchor line (Item 5).
 - `docs/status.md` — row when the item lands (Item 5).

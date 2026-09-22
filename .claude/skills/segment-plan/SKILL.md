@@ -40,7 +40,7 @@ These sections, in this order. Two are machine-read and must use these exact hea
 | Decision | `## Decision` | no | The converged design, **and the alternative rejected, with the reason**. A decision without a named alternative is a description. |
 | Semantics | `## Semantics` | no | Per mechanism, the boundaries: empty input, absent column, retired value, concurrent edit. Contract-level thinking before it reaches the spec. |
 | Judgment calls | `## Judgment calls — decided` | no | Choices that could have gone either way, one line each with its reason. Grows during the build; that is its purpose. |
-| Blast radius | `## Blast radius (measured)` | no | Files, routes, templates, tests and specs touched, **counted before the first slice is cut**, with the command that produced each count. |
+| Blast radius | `## Blast radius (measured)` | no | Files, routes, templates, tests and specs touched, **counted before the first slice is cut**, with the command that produced each count. **Open with the commit or date the counts were taken at** — *"Taken 2026-09-22 at `92f7aff`."* A number with no anchor cannot be re-run later, because a differing answer is indistinguishable from the tree having moved. Checked from segment **19S** on by `tests/unit/test_index_currency.py` (19S Item 5). |
 | PR ladder | `## PR ladder` | no | Numbered slices, each independently shippable and leaving the codebase coherent. For UI, the scaffold PR is first. Each rung names what it lands and what it must not touch. |
 | Definition of done | `## Definition of done` | no | Every line checkable by a command or a named artefact. Ends with the five close lines. |
 | Open questions | `## Open questions` | no | Each with who or what decides it. Empty is fine; absent is not. |
