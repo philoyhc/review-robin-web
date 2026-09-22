@@ -1127,30 +1127,44 @@ have no other side in the tree, and §1.7 concedes the first already.
 Claims that **cite their own command** do have one: the command is
 written down, in a column the convention already asks for.
 
-**Measured 2026-09-22 at `b8aeaa8`**, over every live and archived plan:
+Over every live and archived plan. **Each row states its own vintage**,
+because two were re-measured when rung 1 pinned the definition and two
+were not — which is the defect this item is about, so the table shows
+it rather than hiding it under one header:
 
-| what | count |
-|---|---:|
-| `Blast radius` sections | **100** |
-| rows citing a re-runnable command | **171** of 175 |
-| runnable exactly as written | **162** |
-| sections stating a sha or date to measure against | **69** (69%) |
+| what | count | taken at |
+|---|---:|---|
+| `Blast radius` sections | **100** | `840a2c0` |
+| sections stating when they were measured | **67** (67%) | `840a2c0` |
+| rows citing a re-runnable command | **171** of 175 | `b8aeaa8`, **not re-derived** |
+| runnable exactly as written | **162** | `b8aeaa8`, **not re-derived** |
 
-**The anchor figure is a correction.** This table said **45 (46%)** of
-98 when the item was planned. Re-measured 2026-09-22 at `6682431` under
-the definition rung 1 has now put in code — an anchor on one of the
-first two non-blank lines — it is **69 of 100**, and no reading of
-*"stating a sha or date"* reproduces 45: a sha anywhere gives 66, a
-date anywhere 50, either anywhere 75, a date in the opening lines 41.
-The gap is real but **31 sections, not 53**. It strengthens the
-decision rather than weakening it: the convention is already observed
-in most of the corpus, so the check codifies practice instead of
-imposing it.
+**The anchor figure is a correction, and the definition is why it
+moved.** The table said **45 of 98 (46%)** when the item was planned.
+No reading of *"stating a sha or date"* reproduces 45 — a sha anywhere
+gives 66, a date anywhere 50, either anywhere 75, a date in the opening
+lines 41 — so the old number is not re-derivable and is replaced rather
+than reconciled. The new one moved twice more as rung 1 pinned the rule
+in code: **69** under *sha-or-date in the opening two lines*, then
+**67** once a date had to share its line with *taken* or *measured*
+(cold read, 2026-09-22 — a bare prose date is not a measurement point).
+**67 of 100 is the figure the check itself computes**, which is the only
+one that can be re-derived.
+
+**The denominator moved too, and not only by growth.** 98 → 100 nets
+four new sections against `guide/segment_plan_template.md`'s two
+leaving the population when `_PLAN_NAME` began excluding it. So the two
+denominators are not the same measurement, and the correction is not a
+pure numerator change.
+
+The gap is **33 sections, not 53**. It strengthens the decision rather
+than weakening it: the convention is already observed in two thirds of
+the corpus, so the check codifies practice instead of imposing it.
 
 **The blocker is not runnability — it is the missing anchor.** 162 rows
-could be re-run today, but in 31 of 100 sections a differing answer is
-indistinguishable from the tree having legitimately moved, because the
-row never said *when* its number was true. A re-run against those is
+could be re-run at `b8aeaa8`, but in **33 of 100** sections a differing
+answer is indistinguishable from the tree having legitimately moved,
+because the row never said *when* its number was true. A re-run against those is
 noise, and a noisy check is the shape `constitution.md` VI says gets
 argued with, raised, then disabled.
 
@@ -1160,7 +1174,7 @@ argued with, raised, then disabled.
 states the commit or date it was measured at, and a check enforces that
 on sections landing from the cutoff onward.
 
-**Rejected: re-running the commands now.** On 53 of 98 sections nothing
+**Rejected: re-running the commands now.** On 33 of 100 sections nothing
 says *when*, so the check would report the passage of time as drift —
 and the two E5 instances a re-run would have caught were both *within* a
 slice, where the anchor is what makes the comparison possible.
@@ -1170,15 +1184,28 @@ slice, where the anchor is what makes the comparison possible.
 measurement says this half can be, cheaply, and a rule nobody has
 written belongs in §2 — this item is that writing.
 
-**Scoped by a date cutoff, not an allowlist**, which is the shape the
-author already accepted for Item 2's G1: the legacy half is excluded by
-one comparison, not by a list of 53 exceptions.
+**Scoped by a segment cutoff, not an allowlist** (author's ruling,
+2026-09-22), which is the shape already accepted for Item 2's G1: the
+legacy half is excluded by one comparison, not by a list of 93
+exceptions. A *date* cutoff was the alternative and is circular — see
+`Semantics`.
 
 ### Semantics
 
-- **An anchor is a 7–40 character hex sha or an ISO date** in the
-  section's opening lines. Both forms are already in use — Items 3 and
-  4 above write *"Taken 2026-09-22 at `92f7aff`"*.
+- **An anchor is a backticked 7–40 character hex sha, or an ISO date on
+  a line that also says *taken* or *measured***, within the section's
+  first two non-blank lines. Both forms are already in use — the
+  sections above write *"Taken 2026-09-22 at `92f7aff`"*. **The verb
+  requirement came from the cold read**: a bare ISO date passes as an
+  anchor while stating no measurement point, and **344 of the corpus's
+  3,109 sections (11%)** open with exactly that shape. **0** `Blast
+  radius` sections do, so it is pinned on the shape rather than on an
+  instance.
+- **What the scan cannot see, per §1.6's own habit** — a heading at `#`
+  or `####`; an anchor written into the heading text; an anchor past two
+  non-blank lines; a non-ISO date; an unbackticked sha; a plan filename
+  with no leading digits. **0** instances of each today, and the list is
+  in the module beside the constant.
 - **The cutoff is a segment comparison** (author's ruling,
   2026-09-22), `ANCHOR_REQUIRED_FROM = (19, "S")`, sorted as
   ``(leading number, remainder)`` so ``19R`` < ``19S`` < ``20``. A
@@ -1190,7 +1217,7 @@ one comparison, not by a list of 53 exceptions.
   carry an anchor, so the check covers real sections from its first
   commit. A cutoff one segment later would have covered **0** —
   green, and vacuous, which is what §1.6 concedes and §1.8 catches.
-  **93** legacy sections are excluded, **30** of them unanchored, so
+  **93** legacy sections are excluded, **33** of them unanchored, so
   the exclusion is load-bearing rather than decorative.
 - **A template command stays legal** — nine rows carry a
   `<placeholder>` and record *how* a number was taken, which is worth
@@ -1219,51 +1246,66 @@ one comparison, not by a list of 53 exceptions.
 
 ### Blast radius (measured)
 
-Taken 2026-09-22 at `6682431`. The corpus figures are in
+Taken 2026-09-22 at `840a2c0`. The corpus figures are in
 `Opportunity`; what this item *touched* is two prose files and one test
 module — `grep -n "Blast radius" .claude/skills/segment-plan/SKILL.md
 guide/segment_plan_template.md` — with **0** production LOC. At the
 cutoff the check covers **7** sections across **110** plans scanned
-(live and archived), and excludes **93** legacy ones, **30** of them
+(live and archived), and excludes **93** legacy ones, **33** of them
 unanchored.
 
 ### Status
 
-**2026-09-22 — rung 1 landed: G5, the anchor convention, and a figure
-correction.** `tests/unit/test_index_currency.py` gains **G5** and 8
-tests, 23 → **31** in the module; suite 4,663 → 4,671. Two prose files
-carry the convention. **0** production LOC.
+**2026-09-22 — rung 1 landed, and the cold read found nine things
+worth fixing in it.** `tests/unit/test_index_currency.py` gains **G5**
+and 9 tests, 23 → **32** in the module; suite 4,663 → **4,672**. Two
+prose files carry the convention. **0** production LOC.
+`close_check 19S.5` exits 0.
 
-**The cutoff is 19S on the author's ruling**, and picking its *value*
-is what kept the check from being vacuous. The plan had said the check
-would cover **0** sections at the cutoff, rising as plans land. Measured
-instead: all **7** of 19S's sections already carry an anchor, so 19S
-covers real sections from the first commit. A cutoff one segment later
-would have been green by seeing nothing — the shape §1.6 concedes and
-§1.8 exists to catch, in the very item that cites both.
+**The cutoff's value is the design, and it is in `Semantics`.** What
+belongs here instead is that the plan predicted G5 would cover **0**
+sections and it covers **7** — a guard passing by seeing nothing is
+what §1.6 concedes and §1.8 catches, in the item that cites both.
 
-**Three mutations, all caught**, against the real corpus rather than a
-synthetic one: a recogniser that can never fail (3 tests red), a
-heading pattern that matches nothing (4 red — the live floor), and a
-cutoff past every plan so the scope empties (2 red). The anchor-strip
-mutation runs G5 over a temporary copy of 19S's own plan.
+**Five mutations, all caught**, two of them added by the cold read:
 
-**The archived corpus is scanned on purpose.** 19S will archive, and a
-scan of only `guide/` would quietly stop covering it the day it moved —
-G5's own failure mode applied to G5. 110 plans scanned.
+| mutation | tests red |
+|---|---:|
+| a recogniser that can never fail | 4 |
+| a heading pattern that matches nothing | 4 |
+| a cutoff past every plan, so the scope empties | 2 |
+| `#{2,3}` narrowed to `###`, dropping the 3 segment-level sections | 1 |
+| a bare prose date accepted as an anchor | 2 |
 
-**A published figure was wrong and is corrected in `Opportunity`.** The
-anchor count was **45 of 98 (46%)** and is **69 of 100 (69%)** under the
-definition now in code; no reading of *"stating a sha or date"*
-reproduces 45 (66 / 50 / 75 / 41 for the four obvious ones). The gap is
-**31 sections, not 53** — which strengthens the decision, since the
-convention turns out to be mostly observed and the check codifies
-practice rather than imposing it. Fourth figure correction of the day,
-and the first found by re-measuring in order to *write the code* rather
-than by a reviewer.
+**The last two are the read's.** The total-count floor **absorbed** the
+`###` narrowing — 97 of 100 clears any plausible total — so the two
+heading levels are now pinned separately. And `_ANCHOR` accepted any
+ISO date in the opening lines, a shape **344 of 3,109 sections (11%)**
+exhibit; a date now has to share its line with *taken* or *measured*.
+
+**Seven more, all acted on.** The module docstring still said *four
+invariants*. `unanchored_sections` took paths and did its own I/O,
+breaking the module's stated design and forcing a `tempfile` round-trip
+— it takes `(name, text)` pairs now, like its four siblings, and the
+mutation runs in memory. `segment_id(...) or "0"` was the silent
+fallback `plan_sort_key`'s own docstring forbids. `## Decision` still
+specified a *date* cutoff three paragraphs from the bullet that had
+been corrected to a segment one, and the superseded **53** survived in
+four more places. §1.6 was cited five times without its own habit
+discharged, so the blind spots are now listed beside the constant. And
+the convention had gone into the section *table* while the plan
+committed it to *"Measuring blast radius"* — it is in both now, rather
+than the `Doc impact` bullet being edited to match what was done.
+
+**The anchored figure moved twice more, and that is the definition
+being pinned rather than flailing**: 30 unanchored under a loose
+four-line window, 31 at two non-blank lines, **33** once a date needed
+its verb. `Opportunity` publishes 67 of 100 with **per-row vintage**,
+because two of its four rows were re-measured and two were not — the
+item's own subject, so the table states it.
 
 **Rung 2 is unchanged and unstarted** — whether the re-run gets built,
-decided against the anchored corpus rather than against a guess.
+decided against the anchored corpus rather than a guess.
 
 ### PR ladder
 
@@ -1284,7 +1326,7 @@ decided against the anchored corpus rather than against a guess.
 - The check fails a `Blast radius` section landing after the cutoff with
   no anchor, demonstrated by a mutation per
   `docs/unenforced_conventions.md` §1.8.
-- It passes the 53 legacy sections untouched, asserted rather than
+- It passes the **93** legacy sections untouched, asserted rather than
   assumed.
 - `.claude/skills/segment-plan/SKILL.md` and
   `guide/segment_plan_template.md` both ask for the anchor.
@@ -1315,16 +1357,18 @@ decided against the anchored corpus rather than against a guess.
 
 - **E5's process half** — *did the read run* (§1.7's already), *is this
   feasible*, *what is left to do*. No other side to compare against.
-- **Back-filling anchors** onto the 53 legacy sections.
+- **Back-filling anchors** onto the 93 legacy sections, 33 of which
+  have none.
 - **The four classes already homed** — §1.4, §1.5, §1.6.
 
 ### Doc impact
 
 - `tests/unit/test_index_currency.py` — **G5** joins G1–G4: an
   in-scope `Blast radius` section states its anchor (Item 5).
-- `.claude/skills/segment-plan/SKILL.md` — the `Blast radius` row asks
-  for the commit or date the numbers were taken at, and names the check
-  (Item 5).
+- `.claude/skills/segment-plan/SKILL.md` — **"Measuring blast radius"**
+  asks for the commit or date the numbers were taken at, and the
+  section-table row names the check. Both, because a plan author
+  follows the how-to section and a reader checks the table (Item 5).
 - `guide/segment_plan_template.md` — the blank `Blast radius` block
   carries the anchor line (Item 5).
 - `docs/status.md` — row when the item lands (Item 5).

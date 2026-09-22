@@ -1,4 +1,4 @@
-"""Four invariants over the repo's hand-maintained indexes — 19S Item 2.
+"""Five invariants over the repo's hand-maintained indexes — 19S Items 2 and 5.
 
 `tests/unit/test_doc_references.py` asks whether a path resolves and
 whether a `§N` names a real section. Nothing asked whether a *count* or
@@ -14,7 +14,12 @@ caught by a person reading (19S Item 1, entry E4):
 * 19O's entry ended *"the segment stays open"* under a heading reading
   ``✅ closed``.
 
-The four checks below are the subset that is derivable without judging
+**G5 joined them at 19S Item 5**, over a different hand-maintained
+claim in the same family: a `Blast radius` section that records a count
+without recording *when* it was true, so a later re-run cannot tell a
+stale number from a tree that has legitimately moved.
+
+The five checks below are the subset that is derivable without judging
 prose, and each passed on the tree when it was written — which is
 `docs/unenforced_conventions.md` §2's bar for a check worth writing.
 The residue that is *not* derivable stays conceded at §1.4 / §1.5: no
@@ -32,7 +37,6 @@ tree cannot show that it would fail.
 from __future__ import annotations
 
 import re
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -76,15 +80,38 @@ ANCHOR_REQUIRED_FROM = (19, "S")
 #: level. 97 of the corpus's 100 are item-level.
 _BLAST_HEADING = re.compile(r"^#{2,3} Blast radius", re.M)
 
-#: The anchor itself: a backticked short sha, or an ISO date. Both forms
-#: are already in use — *"Taken 2026-09-22 at `92f7aff`"*.
-_ANCHOR = re.compile(r"`[0-9a-f]{7,40}`|\b20\d\d-\d\d-\d\d\b")
+#: The anchor: a backticked short sha, **or** an ISO date on a line that
+#: also says it was taken or measured. Both forms are already in use —
+#: *"Taken 2026-09-22 at `92f7aff`"*.
+#:
+#: **The verb is not decoration.** A bare ISO date in the opening lines
+#: passes as an anchor while stating no measurement point at all, and
+#: that shape is common: **344 of the corpus's 3,109 sections (11%)**
+#: open with one — *"✅ Shipped 2026-05-04"*, *"on the author's ruling,
+#: 2026-09-22"*. No `Blast radius` section exhibits it today (**0** live
+#: false positives), so the requirement was added on the shape rather
+#: than on an instance — cold read, 2026-09-22. All 7 in-scope sections
+#: satisfy it; the descriptive corpus figure moves 69 → 67.
+_SHA = re.compile(r"`[0-9a-f]{7,40}`")
+_ISO_DATE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
+_TAKEN = re.compile(r"\b[Tt]aken\b|\b[Mm]easured\b")
 
 #: How far past the heading the anchor may sit, in **non-blank** lines.
 #: Two rather than one so a wrapped opening sentence still counts;
-#: measured 2026-09-22, one and two give the identical 69 of 100, so the
+#: measured 2026-09-22, one and two give the identical count, so the
 #: extra line buys tolerance without buying false positives.
 _ANCHOR_WINDOW = 2
+
+#: What this scan **cannot** see, stated because
+#: `docs/unenforced_conventions.md` §1.6 asks a clean measurement to name
+#: the shape it would miss rather than only the population it covered:
+#: a `Blast radius` heading at `#` or `####`; an anchor written into the
+#: heading text itself (`### Blast radius (measured at 92f7aff)`), which
+#: `blast_radius_sections` begins reading one line too late to see; an
+#: anchor more than `_ANCHOR_WINDOW` non-blank lines down; a date in any
+#: non-ISO form; a sha without backticks; and a plan filename with no
+#: leading digits, which `_PLAN_NAME` drops before `plan_sort_key` can
+#: object. **0** instances of each today.
 
 #: A ``## Done`` entry heading. The section also carries ``### P0 —``
 #: style audit headings and a few non-segment scopes; only the PR
@@ -366,12 +393,17 @@ def blast_radius_sections(text: str) -> list[tuple[int, list[str]]]:
 
 
 def section_is_anchored(body: list[str]) -> bool:
-    """Whether a ``Blast radius`` body states when it was measured."""
+    """Whether a ``Blast radius`` body states when it was measured.
+
+    A backticked sha counts on its own; a date has to appear on a line
+    that also says *taken* or *measured*, so a section opening on an
+    unrelated ISO date does not pass as an anchor. See `_SHA`.
+    """
     seen = 0
     for line in body:
         if not line.strip():
             continue
-        if _ANCHOR.search(line):
+        if _SHA.search(line) or (_ISO_DATE.search(line) and _TAKEN.search(line)):
             return True
         seen += 1
         if seen >= _ANCHOR_WINDOW:
@@ -385,6 +417,13 @@ def _plan_files() -> list[Path]:
     **Archived ones included on purpose**: 19S will archive, and a scan
     of only ``guide/`` would quietly stop covering it on the day it
     moved — the failure mode G5 exists to prevent, applied to G5.
+
+    ``_PLAN_NAME`` drops a filename with no leading digits. That is the
+    silent drop `plan_sort_key` refuses to make, moved to where it is
+    visible: the only such file today is ``segment_plan_template.md``,
+    and the floor in
+    `test_g5_sees_the_sections_it_claims_to_cover` is what would notice
+    if the filter ever swallowed a real plan.
     """
     return sorted(
         p
@@ -394,21 +433,36 @@ def _plan_files() -> list[Path]:
     )
 
 
-def unanchored_sections(paths: list[Path] | None = None) -> list[tuple[str, int]]:
+def _plan_texts() -> list[tuple[str, str]]:
+    """``(filename, text)`` per plan — the I/O boundary, so every check
+    below takes text and can be exercised on synthetic input, which is
+    the shape this module's four other checks already have."""
+    return [(p.name, p.read_text()) for p in _plan_files()]
+
+
+def in_g5_scope(filename: str) -> bool:
+    """Whether a plan's ``Blast radius`` sections must carry an anchor."""
+    identifier = segment_id(filename)
+    assert identifier is not None, f"not a plan filename: {filename!r}"
+    return plan_sort_key(identifier) >= ANCHOR_REQUIRED_FROM
+
+
+def unanchored_sections(
+    named_texts: list[tuple[str, str]] | None = None,
+) -> list[tuple[str, int]]:
     """**G5** — in-scope ``Blast radius`` sections stating no anchor.
 
-    In scope is ``plan_sort_key(id) >= ANCHOR_REQUIRED_FROM``. Returns
-    ``(plan filename, 1-based heading line)`` per offender.
+    Takes ``(filename, text)`` pairs so the check is a function of text,
+    like its four siblings; the default reads the corpus. Returns
+    ``(filename, 1-based heading line)`` per offender.
     """
     offenders: list[tuple[str, int]] = []
-    for path in paths if paths is not None else _plan_files():
-        identifier = segment_id(path.name)
-        assert identifier is not None, path.name
-        if plan_sort_key(identifier) < ANCHOR_REQUIRED_FROM:
+    for name, text in named_texts if named_texts is not None else _plan_texts():
+        if not in_g5_scope(name):
             continue
-        for index, body in blast_radius_sections(path.read_text()):
+        for index, body in blast_radius_sections(text):
             if not section_is_anchored(body):
-                offenders.append((path.name, index + 1))
+                offenders.append((name, index + 1))
     return offenders
 
 
@@ -785,29 +839,49 @@ def test_g5_every_in_scope_blast_radius_states_its_anchor() -> None:
 
 
 def test_g5_sees_the_sections_it_claims_to_cover() -> None:
-    """The live floor: G5's scope is non-empty and every section in it
-    is anchored.
+    """The live floor: G5's scope is non-empty, and the heading
+    recogniser reaches **both** heading levels.
 
-    A recogniser that matched no heading would satisfy the check above
-    by seeing nothing — `docs/unenforced_conventions.md` §1.6's vacuity,
-    and the reason `ANCHOR_REQUIRED_FROM` is 19S rather than the next
-    segment. Measured 2026-09-22: 7 in-scope sections, all anchored,
-    against 93 legacy ones excluded.
+    A recogniser that matched no heading would satisfy G5 by seeing
+    nothing — `docs/unenforced_conventions.md` §1.6's vacuity, and the
+    reason `ANCHOR_REQUIRED_FROM` is 19S rather than the next segment.
+    Measured 2026-09-22: 7 in-scope sections against 93 legacy.
+
+    The two levels are pinned **separately**. A floor on the total
+    absorbs a narrowing to `###` only: dropping `##` loses 3 of 100 and
+    97 clears any plausible total floor — measured, cold read
+    2026-09-22, and this repo has a documented history of floors
+    absorbing narrowings.
     """
+    texts = _plan_texts()
     in_scope = [
-        (path.name, index)
-        for path in _plan_files()
-        if plan_sort_key(segment_id(path.name) or "0") >= ANCHOR_REQUIRED_FROM
-        for index, _ in blast_radius_sections(path.read_text())
+        (name, index)
+        for name, text in texts
+        if in_g5_scope(name)
+        for index, _ in blast_radius_sections(text)
     ]
     assert len(in_scope) >= 7, f"G5 covers only {len(in_scope)} sections"
 
-    every = [
-        s
-        for path in _plan_files()
-        for s in blast_radius_sections(path.read_text())
-    ]
-    assert len(every) >= 95, f"only {len(every)} `Blast radius` sections seen"
+    every = [s for _, text in texts for s in blast_radius_sections(text)]
+    assert len(every) >= 98, f"only {len(every)} `Blast radius` sections seen"
+
+    item_level = sum(
+        1
+        for _, text in texts
+        for line in text.split("\n")
+        if line.startswith("### Blast radius")
+    )
+    segment_level = sum(
+        1
+        for _, text in texts
+        for line in text.split("\n")
+        if line.startswith("## Blast radius")
+    )
+    assert item_level >= 95, f"only {item_level} item-level sections seen"
+    assert segment_level >= 3, (
+        f"only {segment_level} segment-level (`##`) sections seen — the "
+        "recogniser has narrowed to item level"
+    )
 
 
 def test_g5_excludes_the_legacy_corpus_and_that_exclusion_is_load_bearing() -> None:
@@ -818,10 +892,10 @@ def test_g5_excludes_the_legacy_corpus_and_that_exclusion_is_load_bearing() -> N
     rather than assumed, the way G1's filter is.
     """
     legacy_unanchored = [
-        (path.name, index + 1)
-        for path in _plan_files()
-        if plan_sort_key(segment_id(path.name) or "0") < ANCHOR_REQUIRED_FROM
-        for index, body in blast_radius_sections(path.read_text())
+        (name, index + 1)
+        for name, text in _plan_texts()
+        if not in_g5_scope(name)
+        for index, body in blast_radius_sections(text)
         if not section_is_anchored(body)
     ]
     assert legacy_unanchored, (
@@ -850,13 +924,31 @@ def test_section_is_anchored_accepts_both_forms_and_only_near_the_heading() -> N
     assert section_is_anchored(["Taken 2026-09-22 at `92f7aff`."])
     assert section_is_anchored(["", "Measured at `9b32a9f`."])
     assert section_is_anchored(["Taken 2026-09-22."])
+    assert section_is_anchored(["Measured 2026-09-22 over the archive."])
     # Two non-blank lines of grace, and no more: an anchor buried below a
     # table is not an opening statement of when the numbers were taken.
-    assert section_is_anchored(["intro", "second line 2026-09-22"])
-    assert not section_is_anchored(["intro", "second", "third 2026-09-22"])
+    assert section_is_anchored(["intro", "second line taken 2026-09-22"])
+    assert not section_is_anchored(["intro", "second", "taken 2026-09-22"])
     assert not section_is_anchored(["| what | count |", "|---|---|"])
     # A sha needs its backticks: a bare hex-looking word is not a claim.
     assert not section_is_anchored(["Taken at 92f7aff."])
+
+
+def test_a_bare_prose_date_is_not_an_anchor() -> None:
+    """The false-positive shape the cold read quantified at 11% of all
+    sections: a date that states no measurement point.
+
+    0 `Blast radius` sections exhibit it today, so this pins the rule
+    rather than a live instance — which is the point, since the next
+    section written is where it would appear.
+    """
+    assert not section_is_anchored(["✅ Shipped 2026-05-04."])
+    assert not section_is_anchored(
+        ["Promoted from Item 1 on the author's ruling, 2026-09-22."]
+    )
+    assert not section_is_anchored(["(round 3, 2026-05-01)"])
+    # …and the same date with the verb is an anchor.
+    assert section_is_anchored(["Taken 2026-05-01."])
 
 
 def test_blast_radius_sections_stop_at_the_next_heading() -> None:
@@ -886,25 +978,30 @@ def test_g5_fails_when_an_in_scope_section_loses_its_anchor() -> None:
     reports it — run against a temporary copy so the check is proved
     against the corpus it guards rather than a synthetic one.
     """
-    plan = REPO / "guide" / "segment_19S_post_assessment.md"
-    original = plan.read_text()
+    name = "segment_19S_post_assessment.md"
+    original = (REPO / "guide" / name).read_text()
     sections = blast_radius_sections(original)
     assert sections, "19S has no `Blast radius` section to mutate"
 
     lines = original.split("\n")
-    index, _ = sections[0]
-    # Blank the anchor out of the section's opening lines.
-    for offset in range(index + 1, min(index + 6, len(lines))):
-        lines[offset] = _ANCHOR.sub("REDACTED", lines[offset])
+    index, body = sections[0]
+    # Blank the anchor out of the section's opening window — the same
+    # window `section_is_anchored` reads, derived from it rather than
+    # hard-coded, so narrowing one cannot leave the other behind.
+    blanked = 0
+    for offset in range(index + 1, len(lines)):
+        if not lines[offset].strip():
+            continue
+        lines[offset] = _SHA.sub("REDACTED", lines[offset])
+        lines[offset] = _TAKEN.sub("noted", lines[offset])
+        blanked += 1
+        if blanked >= _ANCHOR_WINDOW:
+            break
     mutated = "\n".join(lines)
     assert mutated != original, "the mutation changed nothing"
 
-    with tempfile.TemporaryDirectory() as tmp:
-        copy = Path(tmp) / plan.name
-        copy.write_text(mutated)
-        offenders = unanchored_sections([copy])
-
+    offenders = unanchored_sections([(name, mutated)])
     assert offenders, "G5 passed a section whose anchor was removed"
-    assert offenders[0][0] == plan.name
-    # The unmutated file still passes, so the mutation is what failed it.
-    assert unanchored_sections([plan]) == []
+    assert offenders[0][0] == name
+    # The unmutated text still passes, so the mutation is what failed it.
+    assert unanchored_sections([(name, original)]) == []

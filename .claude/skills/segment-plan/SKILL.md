@@ -72,6 +72,8 @@ Do not estimate. Run and record:
 
 Record the numbers and the commands. A blast radius that turns out wrong at build time is a finding for `## Status`, not a reason to silently revise the count.
 
+**Open the section with when you took them** — `Taken <YYYY-MM-DD> at `<sha>``, or a line saying *measured* with the date. A count with no anchor cannot be re-run later, because a differing answer is indistinguishable from the tree having legitimately moved. From segment **19S** on this is checked by `tests/unit/test_index_currency.py`; the anchor is a backticked sha, or a date on a line that also says *taken* or *measured*, within the section's first two non-blank lines. If a row's number comes from a different tree than the rest, say so **per row** rather than under one header.
+
 ## Doc impact contract
 
 One bullet per file the segment commits to changing: a backticked repo-relative path, a dash, what changes, and the item tag if the segment has items.
