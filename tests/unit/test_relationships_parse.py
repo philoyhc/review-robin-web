@@ -148,6 +148,43 @@ def test_parse_duplicate_pair(db: Session) -> None:
     assert result.issues[0].row_number == 2
 
 
+def test_a_rejected_row_does_not_reserve_its_pair(db: Session) -> None:
+    """A row that fails a later check must not consume its pair key.
+
+    19S Item 4 row 9. ``seen_pairs`` was written *before* the
+    ``Status`` check, so a first row with a bad status was dropped
+    **and** kept its ``(reviewer_id, reviewee_id)`` key. A second row
+    naming the same pair with a valid status was then rejected as a
+    duplicate of a row that never parsed — a misleading error on the
+    row that was not the problem, with the pair reaching
+    ``ParseResult`` from neither. Found by a ``spec-writer``
+    verification pass over the rung-1 register; the twelve-case probe
+    missed it because no case combined two failure modes in one file.
+    """
+
+    alice, _bob, carol, _dan = _seed(db)
+    csv_body = (
+        b"ReviewerEmail,RevieweeEmail,Status\n"
+        b"alice@example.edu,carol@example.edu,bogus\n"
+        b"alice@example.edu,carol@example.edu,active\n"
+    )
+    result = parse_relationship_csv(
+        csv_body, reviewers=[alice], reviewees=[carol]
+    )
+
+    # The valid second row survives: the pair is not lost.
+    assert len(result.rows) == 1
+    assert result.rows[0].reviewer_id == alice.id
+    assert result.rows[0].reviewee_id == carol.id
+    assert result.rows[0].status == "active"
+
+    # Exactly one issue, and it names the row that was actually wrong.
+    assert len(result.issues) == 1
+    assert result.issues[0].row_number == 1
+    assert result.issues[0].field == "Status"
+    assert "Duplicate pair" not in result.issues[0].message
+
+
 def test_parse_invalid_status(db: Session) -> None:
     alice, _bob, carol, _dan = _seed(db)
     csv_body = (

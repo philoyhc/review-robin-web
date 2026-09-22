@@ -940,8 +940,26 @@ repeat §3.2's *lowercase* claim, the `W8` label belongs to
 writing** and were corrected before the first commit, caught by
 printing every cited line rather than re-reading the file.
 
-**Rung 2 is unchanged and unstarted** — the adjudication is the
-author's call per `rrw_sdd_in_practice.md` §4.
+**2026-09-22 — rung 2a: the one code disposition, on the author's
+instruction to do rung 2.** Row 9's fix — the `seen_pairs` write moved
+to just before `parsed.append`, so only a row that passes every check
+reserves its pair. **Test written to fail first**: `rows=0` before the
+fix, `rows=1` with a single `Status` issue on row 1 after, and
+`test_parse_duplicate_pair` unchanged so a genuine duplicate still
+errors. Suite 4,662 → 4,663. The dead `if status_raw == ""` branch went
+with it, because rung 2a was rewriting that exact block — not as a
+sweep.
+
+**The rung split was not in the plan** and is recorded rather than
+quietly taken: rung 1 could not know a bug would fall out, and
+`CLAUDE.md` forbids bundling an unrelated bug fix with other work, so
+the one code disposition landed alone and the nine prose ones follow as
+2b.
+
+**Rung 2b is the nine prose dispositions** — §3.2 and §5, per row.
+Row 7 (an `inactive` member importing silently) is the one that needs a
+product answer before a spec one; absent that, 2b documents the current
+behavior rather than changing it, and says so.
 
 ### PR ladder
 
@@ -951,9 +969,14 @@ author's call per `rrw_sdd_in_practice.md` §4.
    `guide/findings_<date>_csv_contracts.md` register — the form
    `guide/README.md` defines for *found and left standing*. **Changes no
    spec and no code.**
-2. **Rung 2 — the adjudication.** Per divergence, spec or code, on the
-   author's call; the edits land here. **Must not** re-open questions
-   rung 1 answered.
+2. **Rung 2 — the adjudication**, split once rung 1 turned up a bug.
+   `CLAUDE.md` forbids bundling an unrelated bug fix with other work,
+   and rung 1 could not have known one would fall out.
+   - **2a — the one code disposition.** ✅ **Done 2026-09-22.** Row 9's
+     fix plus its test, and the dead branch in the same block. Nothing
+     else; no spec edit.
+   - **2b — the nine prose dispositions.** §3.2 and §5, per row. **Must
+     not** re-open questions rung 1 answered.
 
 ### Definition of done
 
