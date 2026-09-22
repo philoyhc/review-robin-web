@@ -340,13 +340,21 @@ upsert present, clear absent.
 
 ### 3.2 Relationships — `relationships.py`
 
-`parse_relationship_csv(content, *, reviewer_emails,
-reviewee_identifiers)` resolves the two FK columns against the
-already-loaded session rosters. Required: `ReviewerEmail`,
-`RevieweeEmail`. Optional: `PairContextTag1..3`, `Status`. The
-`PairContextTag1..3` columns may carry a `.<label>` friendly-label
-suffix (§1a); `save_relationships(..., field_labels_captured=…)`
-reconciles them.
+`parse_relationship_csv(content, *, reviewers: list[Reviewer],
+reviewees: list[Reviewee])` resolves the two FK columns against the
+already-loaded session rosters — **the roster rows themselves, not
+lists of strings**; the parser keys them by `normalize_email` and
+returns the resolved FK ids so the save step need not look them up
+again. `ReviewerEmail` matches `reviewers.email`; **`RevieweeEmail`
+matches `reviewees.email_or_identifier`**, so a reviewee carrying a
+non-email identifier (`spec/participant_model.md`'s *"confidential /
+opaque identifiers"*) resolves here too — `normalize_email` lower-cases it like
+any other key, so `ANON-007` and `anon-007` are one identity.
+
+Required: `ReviewerEmail`, `RevieweeEmail`. Optional:
+`PairContextTag1..3`, `Status`. The `PairContextTag1..3` columns may
+carry a `.<label>` friendly-label suffix (§1a);
+`save_relationships(..., field_labels_captured=…)` reconciles them.
 
 **Per-row validation:**
 
@@ -355,9 +363,34 @@ reconciles them.
 | Required cell present | Empty `ReviewerEmail` / `RevieweeEmail` → per-row error. |
 | FK resolution | `ReviewerEmail` not in session's reviewers → per-row error. Same for `RevieweeEmail`. |
 | Within-file duplicates | Same `(ReviewerEmail, RevieweeEmail)` pair twice → the second occurrence is rejected **when the first one parsed**. Detection is on the *resolved* pair, so two spellings of one address collide, and the error names the row the survivor is on. A first occurrence that fails a later check reserves nothing, so a valid second occurrence is kept instead of being reported as a duplicate of a row that never parsed (19S Item 4). |
-| Status value | `Status` must be `active` / `inactive` (lowercase) or empty (defaults to `active`). |
+| Status value | `Status` must be `active` or `inactive`, **case-insensitively and ignoring surrounding whitespace** (`  ACTIVE  ` is accepted); empty or absent defaults to `active`. |
 
-**Save:** `save_relationships(db, session, rows)` wipe-and-replace,
+**A row yields at most one issue.** The checks run in the order of the
+table above and each one `continue`s, so a row with both cells blank
+reports `ReviewerEmail` only, and a row naming an unknown reviewer *and*
+an unknown reviewee reports the reviewer only. Clearing a file with
+several problems per row can therefore take more than one upload.
+
+**Per-row detection, all-or-nothing save.** The table says where an
+error is *attached*; it does not mean valid rows import while bad ones
+are skipped. Every issue the parser raises is `Severity.error`, so
+`ParseResult.is_blocked` is true if any row failed, and **all three
+callers refuse the whole file** — the Relationships card
+(`_setup_relationships.py`), Quick Setup's slot (`_quick_setup.py`) and
+the rehydrate path (`session_rehydrate.py`, which raises rather than
+redirecting). A file with one bad row saves nothing, so `ParseResult`
+carrying both rows and issues is a report, not a partial import.
+
+**Roster status is not checked.** A row naming an `inactive` reviewer or
+reviewee resolves and imports exactly as an active one does: the parser
+filters no status and all three callers pass the unfiltered rosters. The
+saved relationship's own `Status` comes from the CSV cell, never from
+the roster member's. Whether a pair naming a soft-deleted member *should*
+import is an open product question (19S Item 4 row 7), not a documented
+intent.
+
+**Save:** `save_relationships(db, *, session, user, rows, filename,
+correlation_id, field_labels_captured=None)` wipe-and-replace,
 then call `seed_display_fields_from_assignments` — **named for
 assignments, but it reads `relationships.tag_N`**; the name is kept
 because renaming it buys a reader nothing and costs every caller.
@@ -553,7 +586,7 @@ shares. Public surface:
 | `_missing_columns_issues(fieldnames, required, source)` | Returns one `ValidationIssue` per missing required column. Called at parse time, before per-row iteration. |
 | `_cell(row, key)` | Stripped string read; returns `""` when key absent. |
 | `_none_if_blank(row, key)` | `None` when cell is empty / whitespace-only, else the stripped string. The canonical "optional cell" reader. |
-| `_parse_email(value, *, field, row_number)` | Email validation with row-context error message. Used on `ReviewerEmail`, `RevieweeEmail` (when the cell is an email), and `ReviewerEmail` / `RevieweeEmail` in the Relationships importer. |
+| `_parse_email(value, *, strict, source, row_number, field)` | Email validation with row-context error message. Used by the reviewer, reviewee and observer parsers on their `*Email` columns. **`strict` decides the non-email case**: reviewers and observers pass `strict=True`, so a cell that is not an address is rejected; reviewees pass `strict=False`, which accepts a cell with **no `@`** as an opaque identifier but still requires `EMAIL_RE` of anything containing one, so `foo@` is caught rather than imported. **Not** used by the Relationships importer, which performs no format validation at all: a malformed `ReviewerEmail` there fails FK resolution and is reported as *"Unknown reviewer"* rather than as a bad address (19S Item 4 row 10). |
 | `check_cross_table_identity(db, session_id, rows, *, kind)` | Cross-roster guard for a parsed CSV — rejects a row whose email another roster already holds under a different name. `kind` is `"reviewers"` / `"reviewees"` / `"observers"`; anything else raises, rather than returning `[]` and reporting success for an import it never checked. |
 | `cross_table_identity_conflict(db, *, session_id, kind, identifier, name)` | The single-row form, for the create / edit services, so the rule has one home and every write path reaches it. Returns the `(roster label, name)` of a holder that disagrees, or `None`. **Any** disagreement is a conflict: a mailbox that already holds two names is not satisfied by matching one of them. |
 | `is_comparable_identity(identifier, name)` | Whether a pair can disagree with another at all — an identifier with no `@`, or a row with no name, cannot. One predicate for the importers, the services and the Validate rules. |
