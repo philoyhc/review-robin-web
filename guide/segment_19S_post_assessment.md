@@ -1814,7 +1814,7 @@ Taken 2026-09-22 at `0ca204b`.
 
 ---
 
-## Item 8 — a pytest node id cited in live prose resolves
+## Item 8 — a pytest node id cited in live prose resolves — ✅ **closed 2026-09-22**
 
 **Logged 2026-09-22 on the author's instruction**, out of Item 4's own
 defect record rather than out of the assessment: that item produced
@@ -1910,16 +1910,17 @@ Taken 2026-09-22 at `9b32a9f`.
 | stale citations in `guide/archive/` | **3** of 3 | the same scan, archive corpus |
 | class-based tests in the suite | **0** | `grep -c "^class Test" tests/ -r` |
 | parametrised node-id citations, any corpus | **0** | the same scan, `\[` in the name |
-| `tests/unit/test_doc_references.py` | **~320** lines, 4 checks today | `grep -c "" tests/unit/test_doc_references.py` |
+| `tests/unit/test_doc_references.py` | **316** lines, **5** test functions (3 subjects: twins, paths, `§N`) | `grep -c "" …` / `grep -c "^def test_" …` — the plan said "4 checks"; re-measured at the build |
 | production LOC | **0** | the item adds a test only |
 
 ### PR ladder
 
-1. **Rung 1 — the check.** One test in
+1. **Rung 1 — the check.** ✅ done 2026-09-22. One test in
    `tests/unit/test_doc_references.py`, plus a mutation proving it
    fails on a renamed citation and a live floor asserting the scan sees
    the citations that exist. **Must not** widen `LIVE_PROSE` or touch
-   the path / `§N` checks.
+   the path / `§N` checks — **the constraint bound**, and decided the
+   escape question; see `Status`.
 
 ### Definition of done
 
@@ -1940,9 +1941,63 @@ Taken 2026-09-22 at `9b32a9f`.
 ### Open questions
 
 - Should a node id in a **live segment plan** be checked? `DATED_DOC`
-  excludes it today and one such citation exists. **Decided by:** the
-  author, or the first stale instance there. Recommendation: leave it,
-  since widening `LIVE_PROSE` changes a corpus three checks share.
+  excludes it today and one such citation exists — re-confirmed at the
+  build, still exactly one, in this file. **Left open deliberately**, as
+  the recommendation said: widening `LIVE_PROSE` changes a corpus three
+  checks share, and this item is scoped not to. **Decided by:** the
+  author, or the first stale instance there.
+
+### Status
+
+**✅ closed 2026-09-22**, one rung, 0 production LOC. Intended: one check
+that a cited pytest node id names a test that exists. Done, plus three
+supporting tests — a floor, a recogniser exercised outside its live
+examples, and the archive exemption asserted rather than assumed.
+
+**Every `Blast radius` figure re-took at the build**: 2 live citations
+both resolving, 3 archived citations all stale, 0 parametrised ids, 0
+class-based tests. One was wrong — the module is **5** test functions,
+not the "4 checks" the plan counted — and is corrected above.
+
+**The escape question was not in the plan, and mutation answered it.**
+The path check has an inline marker (`<!-- path-ref-ok -->`) and a
+section marker, and reusing both looked free. It is not:
+`test_no_inline_path_marker_outlives_the_reference_it_covers` computes
+coverage from *path* references alone, so a marker placed over a broken
+**node id** reads as covering nothing and turns the suite red — the
+remedy this check's own failure message offered would itself have
+failed. Teaching that check about node ids means editing a check the
+ladder scopes out, and minting a second marker with zero uses is
+mechanism ahead of need. So: the **section** escape is honoured (M5
+below proves it), there is **no inline escape**, and the failure message
+says so. The first citation that needs one is the argument for adding it.
+
+That also caught a second defect of my own: the floor asserted every
+live citation *resolves*, which contradicts the section escape — a
+legal escaped citation would have failed it. A floor that contradicts
+its own escape gets deleted the first time someone uses the escape.
+
+**Mutations run** (`docs/unenforced_conventions.md` §1.8):
+
+| mutation | caught by |
+|---|---|
+| M1 cited test renamed | the check |
+| M2 cited test *file* renamed | the check |
+| M3 recogniser matches nothing | floor + recogniser + archive |
+| M4 resolver broken open (always returns OK) | recogniser + archive |
+| M5 broken citation in a section-escaped register | **stays green**, by design |
+
+M4 is the one worth keeping: the archive test's `assert stale` doubles
+as a guard against a resolver that never reports failure, which is the
+way this check would most plausibly rot.
+
+**The residual §1.6 asks for**: a node id inside a section-escaped dated
+register — `docs/status.md`'s timeline, `guide/todo_master.md`'s
+`## Done` — is unchecked, and so is one in a live segment plan. Both are
+stated where they can be read, and the second is left open above.
+
+Reads: one code slice outside a ladder gets its own `diff-reviewer`
+read; run before this was marked ready.
 
 ### Out of scope
 

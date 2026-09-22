@@ -314,3 +314,212 @@ def test_no_section_marker_outlives_the_reference_it_covers() -> None:
         + "\n  ".join(stale)
         + "\nThe marker has outlived its reason — drop it."
     )
+
+
+# --- Node ids: `tests/…py::test_name` must name a test that exists ---
+
+#: A pytest node id in prose. The file half is anchored on ``tests/``
+#: and the name half allows ``[case]`` so a parametrised id is *matched*
+#: and then rejected with a reason, rather than skipped by the pattern
+#: and silently tolerated (19S Item 8, `Semantics`).
+#:
+#: Deliberately disjoint from :data:`PATH_REF`, which stops at the first
+#: character outside ``[A-Za-z0-9_./-]`` and so cannot reach the closing
+#: backtick of a node id — the file half of a citation is unchecked by
+#: the path check today, which is the gap this closes. Asserted below, so
+#: that a later widening of ``PATH_REF`` shows up as a decision rather
+#: than as silent double coverage.
+NODE_REF = re.compile(r"`(tests/[A-Za-z0-9_./-]+\.py)::([A-Za-z0-9_\[\]-]+)`")
+
+
+def _node_ref_failure(path: str, name: str) -> str:
+    """Why a cited node id does not resolve, or ``""`` if it does.
+
+    Resolution is by **definition name read from the file**, not by
+    ``pytest --collect-only``: collection is the authoritative answer and
+    the wrong instrument here, costing a subprocess per hit and turning
+    an unrelated collection error anywhere in the suite into this check's
+    failure (19S Item 8, `Decision`).
+
+    That substitution is exact only while every test is a module-level
+    function. The suite has **0** class-based tests
+    (``grep -rc "^class Test" tests/``), re-measured at the close; if one
+    ever lands, a citation of its method resolves here by name alone and
+    this docstring is the thing to revisit.
+    """
+    if "[" in name:
+        # Checked before the file, because it is a statement about the
+        # citation's shape rather than about the repo: a parametrised id
+        # on a missing file should say which complaint the author can
+        # act on without also fixing the other.
+        return (
+            "parametrised ids are not resolved by this check — cite the "
+            "base test name, or mark the line if the case id matters"
+        )
+    target = REPO / path
+    if not target.exists():
+        return "no such file"
+    pattern = rf"^\s*(?:async\s+)?def {re.escape(name)}\("
+    if re.search(pattern, target.read_text(), re.M) is None:
+        return "file has no test by that name"
+    return ""
+
+
+def _node_refs() -> list[tuple[str, int, str, str, str, str]]:
+    """Every node-id citation in live prose as
+    ``(doc, line, path, name, failure, cover)``, with ``cover`` one of
+    ``""`` / ``"inline"`` / ``"section"``.
+
+    The **section** escape is the path check's, reused rather than
+    duplicated: a node id is a repo reference like any other, and the
+    reason a dated register carries a stale one — ``renamed X`` — is the
+    same reason. The consequence is named rather than left implicit:
+    `docs/status.md`'s timeline and `guide/todo_master.md`'s `## Done`
+    opt out as whole sections, so a node id written *there* is not
+    checked.
+
+    There is deliberately **no inline escape**, and the reason was
+    measured rather than assumed. Reusing ``PATH_ESCAPE`` looked free and
+    is not: ``test_no_inline_path_marker_outlives_the_reference_it_covers``
+    computes its coverage from path references alone, so a marker placed
+    over a broken *node id* reads as a marker covering nothing and turns
+    the suite red — the remedy the failure message offers would itself
+    fail. Teaching that check about node ids means editing a check this
+    item is scoped not to touch (19S Item 8, `PR ladder`), and minting a
+    second marker with zero uses is mechanism ahead of need. So a
+    one-line historical citation has no escape today; the first one that
+    needs it is the argument for adding it.
+    """
+    found: list[tuple[str, int, str, str, str, str]] = []
+    for doc in LIVE_PROSE:
+        rel = str(doc.relative_to(REPO))
+        lines = doc.read_text().splitlines()
+        opted = _dated_register_lines(lines)
+        for number, line in enumerate(lines, 1):
+            for match in NODE_REF.finditer(line):
+                failure = _node_ref_failure(match.group(1), match.group(2))
+                if not failure:
+                    continue
+                cover = "section" if number in opted else ""
+                found.append(
+                    (rel, number, match.group(1), match.group(2), failure, cover)
+                )
+    return found
+
+
+def test_every_node_id_in_live_prose_names_a_test_that_exists() -> None:
+    """A cited proof must be runnable, or the reader gets a collection
+    error where they expected evidence.
+
+    The instance is 19S Item 4's: a findings register cited a test by its
+    pre-rename name, and `guide/findings_2026-09-22_csv_contracts.md` is
+    not matched by ``DATED_DOC``, so this check would have caught it.
+    The case is not the size of today's corpus — 2 citations, both
+    resolving — but that all **3** citations in `guide/archive/` are
+    stale, across two segments. Archived prose is history and stays
+    exempt; those three are the evidence that the failure mode recurs.
+    """
+    dangling = [
+        f"{rel}:{number}: `{path}::{name}` — {failure}"
+        for rel, number, path, name, failure, cover in _node_refs()
+        if not cover
+    ]
+    assert not dangling, (
+        "node ids naming no test:\n  "
+        + "\n  ".join(dangling)
+        + "\nRepoint it at the test as it is named now. A record of what "
+        "was true on its date belongs in a section already marked "
+        f"{PATH_SECTION_ESCAPE!r}, which exempts it — there is no inline "
+        "escape for a node id, deliberately; see ``_node_refs``."
+    )
+
+
+def test_the_node_id_scan_still_sees_the_citations_that_exist() -> None:
+    """A floor, so a recogniser that matches nothing cannot pass.
+
+    ``test_every_node_id_in_live_prose_names_a_test_that_exists`` is
+    satisfied by an empty scan, which is how a pattern that silently
+    stopped matching would look. Two live citations existed at the close;
+    the floor asserts the scan reaches them without pinning the count,
+    since a figure self-stales and the next legitimate citation should
+    not fail a test.
+
+    It asserts reach and **not** that every citation resolves. A draft of
+    this test did assert that, and a citation inside a section-escaped
+    dated register — legal, and exempt from the check above — made it
+    fail. A floor that contradicts its own escape is a floor that will be
+    deleted the first time someone uses the escape.
+    """
+    seen = [
+        (str(doc.relative_to(REPO)), match.group(1), match.group(2))
+        for doc in LIVE_PROSE
+        for line in doc.read_text().splitlines()
+        for match in NODE_REF.finditer(line)
+    ]
+    assert seen, (
+        "the node-id pattern matched nothing in live prose. Either every "
+        "citation was removed, or NODE_REF stopped recognising them."
+    )
+
+
+def test_the_node_id_recogniser_works_outside_its_live_examples() -> None:
+    """The recogniser tested on inputs it was not written against, per
+    `docs/unenforced_conventions.md` §1.8's third clause — two live
+    citations are too few to show a pattern recognises the right shape
+    rather than those two strings.
+    """
+    matched = lambda s: NODE_REF.findall(s)  # noqa: E731
+    assert matched("proof: `tests/unit/test_a.py::test_b`") == [
+        ("tests/unit/test_a.py", "test_b")
+    ]
+    assert matched("`tests/integration/sub/test_a.py::test_b_c-d`") == [
+        ("tests/integration/sub/test_a.py", "test_b_c-d")
+    ]
+    assert matched("two `tests/a.py::test_x` and `tests/b.py::test_y`") == [
+        ("tests/a.py", "test_x"),
+        ("tests/b.py", "test_y"),
+    ]
+    # Shapes that must NOT match: unbackticked, outside tests/, and a
+    # bare path (which is PATH_REF's job, not this one's).
+    assert matched("tests/unit/test_a.py::test_b") == []
+    assert matched("`app/services/x.py::thing`") == []
+    assert matched("`tests/unit/test_a.py`") == []
+    # A parametrised id is matched and then rejected with a reason,
+    # rather than skipped by the pattern.
+    assert matched("`tests/a.py::test_x[case]`") == [("tests/a.py", "test_x[case]")]
+    # On a file that exists, so the reason is the shape and not the path
+    # — the ordering inside ``_node_ref_failure`` is what this pins.
+    here = "tests/unit/test_doc_references.py"
+    assert "parametrised" in _node_ref_failure(here, "test_x[case]")
+    assert _node_ref_failure("tests/nope.py", "test_x") == "no such file"
+    assert _node_ref_failure(here, "test_not_here") == (
+        "file has no test by that name"
+    )
+    assert _node_ref_failure(here, "test_every_node_id_in_live_prose_names_a_test_that_exists") == ""
+    # PATH_REF cannot reach a node id's closing backtick, so the two
+    # patterns do not double-cover. A widening of PATH_REF breaks this.
+    assert PATH_REF.findall("`tests/unit/test_a.py::test_b`") == []
+
+
+def test_archived_prose_is_exempt_from_the_node_id_check() -> None:
+    """The exemption is asserted, not assumed.
+
+    `guide/archive/` carries 3 node-id citations and **none** of them
+    resolves — an archived plan records what was true, and repointing it
+    would falsify it. If the corpus ever widened to include the archive,
+    the suite would go red on history, so this states the concession
+    where it can fail rather than only in the plan's prose.
+    """
+    archived = sorted((REPO / "guide" / "archive").glob("*.md"))
+    stale = [
+        (str(doc.relative_to(REPO)), match.group(1), match.group(2))
+        for doc in archived
+        for line in doc.read_text().splitlines()
+        for match in NODE_REF.finditer(line)
+        if _node_ref_failure(match.group(1), match.group(2))
+    ]
+    assert stale, (
+        "no stale archived citations found — if the archive was cleaned "
+        "up, this test's premise is gone and it should be retired"
+    )
+    assert not any(doc in {str(p.relative_to(REPO)) for p in LIVE_PROSE} for doc, _, _ in stale)
