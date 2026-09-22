@@ -10,19 +10,23 @@ it, and carries the trigger that would promote it to a built item. An
 entry that is never promoted is not a failure of this file; losing the
 finding would have been.
 
-**Items close independently.** A promoted entry gets the full shape at
-`###` level with its own `### Doc impact` / `### Status`, as in 19R —
-so there is **no segment-level `## Doc impact`**, and
-`python3 tools/close_check.py 19S.<n>` reads that item's. `Semantics`,
-`Blast radius` and a `PR ladder` are absent rather than blank because
-each belongs to a promoted item and is measured then, not guessed now.
+**Items close independently**, each with its own `### Doc impact` and
+`### Status`, as in 19R — so there is **no segment-level `## Doc
+impact`** and `python3 tools/close_check.py 19S.1` reads Item 1's.
+
+**Item 1 is the register itself** (author's framing, 2026-09-22): the
+eight entries are one unit of work, closed when every entry has been
+promoted, rehomed or closed with its reason. **Item 2 is the first
+thing promoted out of it** — E4's gateable half.
 
 **Entry tags are stable.** `E1`–`E8` never renumber; a promoted entry
-keeps its tag and gains an item number beside it.
+keeps its tag and gains the item number beside it (E4 → Item 2).
 
 ---
 
-## Opportunity
+## Item 1 — the register of what the two end-of-window reads surfaced
+
+### Opportunity
 
 Two independent reads closed the 19M–19R window:
 `guide/codebase_assessment_22sep.md` and, from a fresh context,
@@ -47,7 +51,7 @@ files describing one rule. The failure mode is not that a finding is
 rejected; it is that nobody decides, and the only record of it archives
 with a dated snapshot.
 
-## Decision
+### Decision
 
 **A register whose entries are explicitly unscheduled**, each with its
 evidence cited by pointer and its own promotion trigger. Promotion is
@@ -67,7 +71,7 @@ for *scoped* work with a lift trigger. Most entries below are not
 scoped and two (E5, E7) have no design at all, so recording them as
 deferred scope would overstate how well they are understood.
 
-## Judgment calls — decided
+### Judgment calls — decided
 
 - **A register, not rows in `guide/todo_master.md`** (2026-09-22) —
   that file's `## Upcoming` is a committed sequence, and committing is
@@ -83,9 +87,9 @@ deferred scope would overstate how well they are understood.
   before the file was first committed; work arriving from anywhere else
   gets its own bounded plan, which is 19R's closing lesson.
 
-## Entries
+### Entries
 
-### E1 — Prepare inserts one ORM object per pair
+#### E1 — Prepare inserts one ORM object per pair
 
 20 s at the 200 × 200 / 80,000-row bench, 5.7 s at half the roster, so
 it is climbing steeply — and it is a click with no feedback, on the
@@ -99,7 +103,7 @@ before the pilot, not after* — while `guide/codex_assessment_21sep.md`
 scale crosses its trigger. **Trigger:** the author choosing between
 those two readings, or a known pilot roster size.
 
-### E2 — the bench headline is a dated fact, not a standing one
+#### E2 — the bench headline is a dated fact, not a standing one
 
 `guide/app_responsiveness.md` is written around *it was not a database
 problem* — SQL under 9% of any slow page. 19R.3 moved the counting into
@@ -109,7 +113,7 @@ move 3: re-take the bench, not the code, and ask the next performance
 question of real data. **Trigger:** deployment concluded with
 representative data — the synthetic bench cannot answer it.
 
-### E3 — the ≥1,000 LOC watchlist lives only in a document that archives
+#### E3 — the ≥1,000 LOC watchlist lives only in a document that archives
 
 Twelve modules ≥ 1,000 LOC, and `guide/codebase_assessment_22sep.md`
 §9 carries the tripwires: `app/services/validation.py` at 1,300 (+346)
@@ -128,43 +132,40 @@ entry's question is whether the tripwires need a live home**, not
 whether to split anything. **Trigger:** a module crossing its tripwire,
 or the next assessment, whichever comes first.
 
-### E4 — the hand-maintained indexes drift, and nothing gates them
+#### E4 — the hand-maintained indexes drift, and nothing gates them — ✅ **closed 2026-09-22**
 
-`guide/codebase_assessment_22sep.md` §5: `docs/status.md`'s summary
-line ran **two items behind**, missed by two consecutive closes and
-caught by a cold read.
+**Closed by splitting it**, which is what three instances made possible:
+the **gateable** half is **Item 2** below, and the **ungateable** half
+already has a live home in `docs/unenforced_conventions.md` §1.5, where
+the registry mechanism for *prose that summarises another document* is
+recorded as **proposed and rejected** (19G.1). So closing this entry
+does not archive the finding — the objection that would otherwise apply
+(E3, E8).
 
-**Found a second time at 19R's close, in a second index.**
-`guide/todo_master.md` still carried 19R under `## Upcoming` as an open
-segment with Item 5 in progress — four items stale — and retiring that
-row showed `## Done` has **no entry for 19P or 19Q**, both closed and
-archived days earlier, and that its own sort rule (*by first PR number
-ascending*) has drifted far enough that 19I (#2230) sits below 19O
-(#2382). The mechanical gates cannot see any of it: they check that a
-path resolves and a `§N` exists, not whether a count is current.
+**The three instances, all fixed.** `docs/status.md`'s summary line ran
+**two items behind**, missed by two consecutive closes and caught by a
+cold read (`guide/codebase_assessment_22sep.md` §5). `guide/todo_master.md`
+then carried 19R under `## Upcoming` as an open segment with Item 5 in
+progress while `## Done` had **no entry for 19P or 19Q**, and its own
+sort rule (*by first PR number ascending*) had drifted far enough that
+19I (#2230) sat below 19O (#2382) — the tail maintained newest-first
+for six consecutive segments. Fixed 2026-09-22: both entries written,
+nine blocks relocated, the rule's blind spot stated where the rule
+lives. The fix then found the **third**, a line from the second: 19O's
+entry ended *"the segment stays open"* under a heading reading
+`✅ closed`.
 
-**The two `guide/todo_master.md` gaps are fixed** (2026-09-22, on the
-author's instruction, in their own slice rather than in the close):
-19P and 19Q have `## Done` entries written from their archived plans,
-and the section is sorted — nine blocks relocated, fifteen at a new
-index once the knock-on is counted, **fourteen of the fifteen
-byte-identical** and the fifteenth deliberately edited; the rule's own
-blind spot is now stated where the rule lives, since a heading declaring
-no PR cannot be placed by it. **That summary was wrong in its first
-draft** and is itself an E5 instance: it claimed nine and claimed every
-moved block unchanged, from a check run mid-edit whose own output had
-named the exception. The fix also found a
-**third** E4 instance a line from the second: 19O's entry ended *"the
-segment stays open"* under a heading reading `✅ closed`.
+**And the account of that fix was itself wrong** — three figures in
+`docs/status.md`, caught by Codex on review and by re-measurement. That
+is an **E5** instance, recorded there, and it is why Item 2's definition
+of done demands a mutation per check rather than a passing run.
 
-**The entry stays open, because the gate does not exist.** Three
-instances in two indexes were each caught by a person reading, and a
-gate here would have to judge whether prose is *current* — which
-`constitution.md` VI retires rather than mechanises badly, exactly why
-19R.7 retired a standing rule nobody checked. **Trigger:** a fourth
-instance, or the author asking for a gate.
+**Pre-16 is legacy and out of scope** (author's ruling, 2026-09-22),
+which is what made the entry closable: 34 of the 67 pre-16 archived
+plans are not mentioned in `## Done` at all, and without the ruling
+"fully current" had no test.
 
-### E5 — the prose about the work is wrong more often than the work
+#### E5 — the prose about the work is wrong more often than the work
 
 Across 19R alone: nine wrong descriptions of one rule in six files
 (19R.6); a blast-radius grep whose scope excluded the directories the
@@ -181,7 +182,7 @@ am not sure what one would look like*; `guide/codex_assessment_21sep.md`
 are verified. **Logged with no design. Trigger:** a proposal specific
 enough to test.
 
-### E6 — a new guard has no evidence bar
+#### E6 — a new guard has no evidence bar
 
 `guide/codex_assessment_21sep.md` §5 proposes three pieces of evidence
 before a guard is called complete: **the fixture reaches the case, a
@@ -196,7 +197,7 @@ runs", or `constitution.md`. **Trigger:** the author's call, weighed
 against 19R.7's lesson that a standing rule nothing checks is worse
 than no rule.
 
-### E7 — plans overrun their own length budget
+#### E7 — plans overrun their own length budget
 
 `guide/codex_assessment_21sep.md` §7: 19R's plan closed at **1,541
 lines for eight items**, against the `segment-plan` skill's ~120 per
@@ -206,13 +207,14 @@ questions growing after the thinking is done — and already sets the
 budget and the compaction rule
 (`.claude/skills/segment-plan/SKILL.md`, "Length"). What is missing is
 anything that notices, and 19R's items each compacted at their own
-close and still landed here. **This file opens just past that ~250
-itself**, on eight entries and no `Status` at all — so the budget's
-stated cause is not what got it there, which is a data point for
-whatever E7 becomes. **Trigger:** same as E4, and it shares E4's
+close and still landed here. **This file is itself past that ~250**, on
+eight entries and two items with no `Status` yet, and **Item 2 came in
+at ~160 against the ~120 item budget after two deliberate trim
+passes** — so the budget's stated cause is not what got either there,
+which is a data point for whatever E7 becomes. **Trigger:** same as E4, and it shares E4's
 objection — measuring this means judging prose.
 
-### E8 — two findings 19R recorded, did not fix, and has now archived
+#### E8 — two findings 19R recorded, did not fix, and has now archived
 
 19R Item 4 closed with *two findings recorded, not fixed*, both
 pre-existing and deliberately not bundled into a defect fix. Re-found
@@ -239,7 +241,7 @@ this case. **Trigger:** none needed for the first — it is a one-line
 adjudication whenever the author reaches it; the second is a bounded
 item whenever the gate is next touched.
 
-## Open questions
+### Open questions
 
 - Does E1 follow the 22 September read (fix before the pilot) or the
   Codex read (wait for pilot scale)? **Decided by:** the author.
@@ -253,7 +255,7 @@ item whenever the gate is next touched.
   **Decided by:** this segment's own close, which has to say what became
   of each entry.
 
-## Out of scope
+### Out of scope
 
 - **Email dispatch.** Nothing sends; Segment 14B owns it, blocked on
   institutional Azure provisioning. Not a finding.
@@ -272,14 +274,185 @@ item whenever the gate is next touched.
   `guide/segment_18Q_blob.md`).
 - **Splitting any module.** E3 is about where the tripwires live.
 
-## Definition of done
+### Definition of done
 
 - Every entry is either promoted to an item, moved to a named home with
   the pointer recorded here, or closed with the reason it was not
   taken — no entry left merely unread.
 - Each promoted item carries its own `### Doc impact` and `### Status`.
 - `## Doc impact` section present and current
-- `python3 tools/close_check.py 19S.<n>` exits 0; any warning adjudicated
+- `python3 tools/close_check.py 19S.1` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
 - `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Doc impact
+
+- `docs/status.md` — a row per entry as it is promoted, rehomed or
+  closed, and the segment summary line kept current (Item 1).
+- `guide/todo_master.md` — the `## Upcoming` queue entry for this
+  segment, listing the entries and what each is waiting on (Item 1).
+
+
+---
+
+## Item 2 — gate the four index invariants a reader keeps catching by hand
+
+### Opportunity
+
+E4 above has the three instances and their dates. What they share is
+that no gate could see them: `tests/unit/test_doc_references.py` asks
+whether a path resolves and whether a `§N` exists, and nothing asks
+whether a count is **current**.
+
+Four of the invariants behind those instances are checkable without
+judging prose, need no allowlist, and **all four pass on the current
+tree** — which is exactly `docs/unenforced_conventions.md` §2's bar for
+a check worth writing. Three of the four also have a demonstrated
+instance from this week, which §2's own entries do not.
+
+### Decision
+
+One new module, `tests/unit/test_index_currency.py`, holding four
+checks:
+
+- **G1** — every archived plan whose segment number is **≥ 16** has at
+  least one `### Segment <id>` heading in `guide/todo_master.md`'s
+  `## Done`. *(Would have caught 19P and 19Q.)*
+- **G2** — `## Done` headings that declare a PR number run ascending by
+  the lowest each declares. *(Would have caught six segments of
+  newest-first drift.)*
+- **G3** — `docs/status.md`'s `**As of:**` date equals the newest date
+  in its project-timeline table. *(Would have caught the summary line
+  two items behind.)*
+- **G4** — every `**Plan:**` pointer under `## Upcoming` resolves into
+  `guide/`, not `guide/archive/`.
+
+**Rejected: spreading them across `tests/unit/test_guide_indexes.py`
+and `tests/unit/test_doc_conventions.py`** (three would fit the first,
+G3 the second). Neither module's stated subject is *is this
+hand-maintained claim current*, so `CLAUDE.md`'s gate list would
+describe neither accurately — which is how a check gets lost.
+
+**Rejected: gating the ungateable half.** Whether *"eight items"* or
+*"the segment stays open"* is current is prose judgement, and
+`docs/unenforced_conventions.md` §1.5 records that mechanism as
+proposed and **rejected** at 19G.1. E4's residue stays there.
+
+### Semantics
+
+- **A plan may have several `## Done` headings, and a heading may cover
+  several plans.** Measured: id `18R` matches both *Segment 18R* and
+  *Segment 18R Part 2*. G1 asks for **at least one**, never exactly one.
+- **Pre-16 is out of scope by ruling, as a filter not an allowlist** —
+  G1 keys on the leading segment number, so the ruling costs one
+  comparison; a list of 67 legacy plans would breach §2's bar.
+- **A plan archived unbuilt** would fail G1 while being correct. No
+  16+ instance today; the escape belongs in the plan file, not the
+  test (Open questions).
+- **G2 ties pass** — the comparison is non-strict — and **G2 reads the
+  heading only**, so a foreign *"superseded by #NNNN"* in a heading
+  would false-fire. **0 instances today**; the convention it assumes is
+  that foreign refs sit in the body.
+- **G3 takes the maximum row date**, so a row inserted out of order
+  cannot hide a stale header; a future-dated row fails, correctly.
+- **G4 keys on `**Plan:**` lines only**, because the one archived plan
+  cited under `## Upcoming` (19P, as a stub's source) is body prose and
+  must stay legal. A **dangling** path is already
+  `test_doc_references`'s; G4 catches only the *repointed but still
+  queued* case that check cannot see.
+
+### Judgment calls — decided
+
+- **One module, not four tests in two files** (2026-09-22) — the four
+  share one subject, and a check filed under someone else's docstring
+  is the one nobody re-reads.
+- **The legacy ruling is a numeric filter** (2026-09-22) — expressible
+  in one comparison, so it costs no allowlist.
+- **Each check gets a mutation test** (2026-09-22) — adopting **E6**'s
+  proposed bar on the first guard written since it was logged: the
+  fixture reaches the case, a mutation of the protected property fails,
+  and the recogniser is exercised outside its production examples. E4's
+  own fix produced a false verification summary, so a passing run is
+  not evidence here.
+
+### Blast radius (measured)
+
+All figures taken 2026-09-22 at `92f7aff`.
+
+| what | count | command |
+|---|---|---|
+| `## Done` headings | **84** | `awk '/^## Done/{d=1} /^## Upcoming/{d=0} d && /^### /' guide/todo_master.md \| wc -l` |
+| of those declaring a PR (G2's subject) | **49** | as above, filtered on `#\d{2,5}` |
+| G2 violations today | **0** | the ordering scan in this item's rung 1 |
+| archived plans: all eras / ≥ 16 (G1's subject) | **106** / **39**, of which **0** miss a `## Done` heading | `ls guide/archive/segment_*.md`, filtered on the leading number |
+| pre-16, excluded by the ruling | **67**, of which **34** are unmentioned in `## Done` | the same scan, filter removed |
+| `**Plan:**` pointers under `## Upcoming` (G4's subject) | **3**, all live | `grep -o '\*\*Plan:\*\* `[^`]*`' guide/todo_master.md` |
+| archived paths cited under `## Upcoming` in other prose | **1** (19P) | the same region, any backticked `guide/archive/` path |
+| `docs/status.md` `As of` vs newest row | equal (both 2026-09-22) | the date scan in rung 1 |
+| new production code | **0** | the item adds tests and prose only |
+
+No schema, no migration, no route, no template, no `app/` change.
+
+### PR ladder
+
+1. **Rung 1 — the module.** Lands `tests/unit/test_index_currency.py`
+   with the four checks and a mutation test for each. **Must not touch**
+   `guide/todo_master.md` or `docs/status.md` content: a check that
+   edits its own subject to go green is not a check.
+2. **Rung 2 — the doc alignment, and the close.** `CLAUDE.md` and
+   `AGENTS.md` name the module in the *"A green `ruff` is not evidence"*
+   list; `docs/unenforced_conventions.md` §1.5 gains a line that the
+   index-currency half is now enforced, as it already carries for the
+   file-level path half; `guide/todo_master.md`'s `## Done` maintenance
+   note says the two invariants are checked rather than merely asked
+   for. **Must not add checks.**
+
+### Definition of done
+
+- `pytest tests/unit/test_index_currency.py` green, and **each of the
+  four fails under a mutation of what it protects** — the four
+  mutations recorded in `### Status`.
+- G1 **with the pre-16 filter removed** reports the 34 unmentioned
+  legacy plans, proving the filter is load-bearing rather than
+  decorative.
+- `cmp -s CLAUDE.md AGENTS.md` exits 0 and both name the module.
+- `pytest -n auto` green and `ruff check .` clean, with `node` present.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19S.2` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- Where does the escape for a plan **archived unbuilt** live — a marker
+  line in the plan file, or a waiver recorded in the closing item's
+  `Status`? **Decided by:** the author, or the first such plan.
+  Recommendation: a marker in the plan, since §2's bar forbids a list
+  inside the test.
+
+### Out of scope
+
+- **Pre-16 `## Done` coverage** — legacy, author's ruling 2026-09-22.
+  34 plans unmentioned; the era used grouped headings.
+- **Judging whether a summary's content is current** —
+  `docs/unenforced_conventions.md` §1.5, mechanism already rejected.
+- **`guide/archive/README.md`'s `~Lines` column** — that file says it is
+  approximate and not kept in lockstep, so it is not drift.
+- **E7's length budget** — same prose-judging objection; it stays an
+  entry.
+
+### Doc impact
+
+- `tests/unit/test_index_currency.py` — new module, the four checks and
+  their mutation tests (Item 2).
+- `CLAUDE.md` — the *"A green `ruff` is not evidence"* list names the
+  new module (Item 2).
+- `AGENTS.md` — the byte-identical twin of the above (Item 2).
+- `docs/unenforced_conventions.md` — §1.5's *"What covers it instead"*
+  gains the index-currency half as enforced, mirroring the file-level
+  path half it already records (Item 2).
+- `guide/todo_master.md` — the `## Done` maintenance note says the
+  per-plan entry and the sort are checked (Item 2).
+- `docs/status.md` — row when the item lands (Item 2).
