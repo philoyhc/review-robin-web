@@ -347,8 +347,8 @@ lists of strings**; the parser keys them by `normalize_email` and
 returns the resolved FK ids so the save step need not look them up
 again. `ReviewerEmail` matches `reviewers.email`; **`RevieweeEmail`
 matches `reviewees.email_or_identifier`**, so a reviewee carrying a
-non-email identifier (`spec/participant_model.md`'s opaque
-identifiers) resolves here too — `normalize_email` lower-cases it like
+non-email identifier (`spec/participant_model.md`'s *"confidential /
+opaque identifiers"*) resolves here too — `normalize_email` lower-cases it like
 any other key, so `ANON-007` and `anon-007` are one identity.
 
 Required: `ReviewerEmail`, `RevieweeEmail`. Optional:
@@ -586,7 +586,7 @@ shares. Public surface:
 | `_missing_columns_issues(fieldnames, required, source)` | Returns one `ValidationIssue` per missing required column. Called at parse time, before per-row iteration. |
 | `_cell(row, key)` | Stripped string read; returns `""` when key absent. |
 | `_none_if_blank(row, key)` | `None` when cell is empty / whitespace-only, else the stripped string. The canonical "optional cell" reader. |
-| `_parse_email(value, *, field, row_number)` | Email validation with row-context error message. Used by the reviewer, reviewee and observer parsers on their `*Email` columns (reviewees and observers skip it when the cell is not an email). **Not** used by the Relationships importer, which performs no format validation at all: a malformed `ReviewerEmail` there fails FK resolution and is reported as *"Unknown reviewer"* rather than as a bad address (19S Item 4 row 10). |
+| `_parse_email(value, *, strict, source, row_number, field)` | Email validation with row-context error message. Used by the reviewer, reviewee and observer parsers on their `*Email` columns. **`strict` decides the non-email case**: reviewers and observers pass `strict=True`, so a cell that is not an address is rejected; reviewees pass `strict=False`, which accepts a cell with **no `@`** as an opaque identifier but still requires `EMAIL_RE` of anything containing one, so `foo@` is caught rather than imported. **Not** used by the Relationships importer, which performs no format validation at all: a malformed `ReviewerEmail` there fails FK resolution and is reported as *"Unknown reviewer"* rather than as a bad address (19S Item 4 row 10). |
 | `check_cross_table_identity(db, session_id, rows, *, kind)` | Cross-roster guard for a parsed CSV — rejects a row whose email another roster already holds under a different name. `kind` is `"reviewers"` / `"reviewees"` / `"observers"`; anything else raises, rather than returning `[]` and reporting success for an import it never checked. |
 | `cross_table_identity_conflict(db, *, session_id, kind, identifier, name)` | The single-row form, for the create / edit services, so the rule has one home and every write path reaches it. Returns the `(roster label, name)` of a holder that disagrees, or `None`. **Any** disagreement is a conflict: a mailbox that already holds two names is not satisfied by matching one of them. |
 | `is_comparable_identity(identifier, name)` | Whether a pair can disagree with another at all — an identifier with no `@`, or a row with no name, cannot. One predicate for the importers, the services and the Validate rules. |

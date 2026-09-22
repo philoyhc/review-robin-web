@@ -1020,8 +1020,17 @@ one of them a live bug, plus three corrected asides. The cumulative
 cold read: **nine findings**, including that rung 2a's fix falsified a
 §3.2 sentence the PR body claimed it did not, and that the fix's own
 comment alleged data loss that cannot occur. The second Codex pass:
-**two**, both introduced by the commit before it. Every one was verified
-before action; none was taken on trust.
+**two**, both introduced by the commit before it. **2b's own
+`spec-writer` pass: one false claim I had just written** — that
+reviewees *and observers* skip `_parse_email` for a non-email cell,
+where observers pass `strict=True` and reject it — plus two flags it
+was right to raise: the §5 row's own `_parse_email` signature was two
+keyword-only parameters short (pre-existing, in a row 2b was editing
+anyway, so it was fixed here on the same "already in this line" logic
+the dead branch took), and `spec/participant_model.md`'s vocabulary is
+*"confidential / opaque identifiers"*, which `CLAUDE.md`'s
+quote-the-control rule wants quoted rather than paraphrased. Every
+finding was verified before action; none was taken on trust.
 
 **The item's own recurring defect was citation staleness — three
 incidents.** Four wrong line numbers in rung 1, three re-broken by rung
