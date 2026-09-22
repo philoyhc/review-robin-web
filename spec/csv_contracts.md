@@ -354,7 +354,7 @@ reconciles them.
 |---|---|
 | Required cell present | Empty `ReviewerEmail` / `RevieweeEmail` → per-row error. |
 | FK resolution | `ReviewerEmail` not in session's reviewers → per-row error. Same for `RevieweeEmail`. |
-| Within-file duplicates | Same `(ReviewerEmail, RevieweeEmail)` pair twice → second occurrence rejected. |
+| Within-file duplicates | Same `(ReviewerEmail, RevieweeEmail)` pair twice → the second occurrence is rejected **when the first one parsed**. Detection is on the *resolved* pair, so two spellings of one address collide, and the error names the row the survivor is on. A first occurrence that fails a later check reserves nothing, so a valid second occurrence is kept instead of being reported as a duplicate of a row that never parsed (19S Item 4). |
 | Status value | `Status` must be `active` / `inactive` (lowercase) or empty (defaults to `active`). |
 
 **Save:** `save_relationships(db, session, rows)` wipe-and-replace,

@@ -880,9 +880,11 @@ rung 1 reports, which is the point of splitting them.
 
 **2026-09-22 — rung 1 landed; the output is a register, and the
 section turned out to be wrong in more places than it was right.**
-`guide/findings_2026-09-22_csv_contracts.md`, 73 lines: the eight
-`Semantics` answers with the code location that settles each, then
-**eight divergences** and three code observations. No spec, no code.
+`guide/findings_2026-09-22_csv_contracts.md` — **112 lines** at close,
+73 when first written: the eight `Semantics` answers with the code
+location that settles each, then **ten divergences** (four
+spec-vs-code, five spec-silent, one code-internal) and three code
+observations. Rung 1 itself changed no spec and no code.
 
 **Every answer was run, not read** — a throwaway probe built a
 two-reviewer / two-reviewee roster in memory and called
@@ -893,8 +895,8 @@ would have been to read the code and paraphrase it.
 
 **The finding that matters most is not the stale signature**: the save
 policy is **all-or-nothing and undocumented**. `Severity.error` is
-blocking and both callers gate on `result.is_blocked`, so one bad row
-rejects the whole file — measured, a two-row CSV with one unknown
+blocking and all three callers gate on `result.is_blocked`, so one bad
+row rejects the whole file — measured, a two-row CSV with one unknown
 reviewer returns `rows=1, blocked=True` and saves neither.
 
 **Rung 1 first filed that as a contradiction and it is not**, on a
@@ -902,9 +904,9 @@ reviewer's correction: §3.2's table is headed *Per-row validation* over
 a column headed *Detection*, so *"per-row error"* describes where an
 error is attached and the parser does exactly that. The section is
 **silent** on what the import then does. The register is five
-spec-silent rows against three spec-vs-code, and the corrected row
-forces no behavior question — partial import would be a new product
-decision, not the resolution of a divergence.
+spec-silent rows against four spec-vs-code and one code-internal, and
+the corrected row forces no behavior question — partial import would be
+a new product decision, not the resolution of a divergence.
 
 **Three claims in the section are right**, and the register says so:
 the *"already-loaded session rosters"* prose, the required / optional
@@ -940,8 +942,60 @@ repeat §3.2's *lowercase* claim, the `W8` label belongs to
 writing** and were corrected before the first commit, caught by
 printing every cited line rather than re-reading the file.
 
-**Rung 2 is unchanged and unstarted** — the adjudication is the
-author's call per `rrw_sdd_in_practice.md` §4.
+**2026-09-22 — rung 2a: the one code disposition, on the author's
+instruction to do rung 2.** Row 9's fix — the `seen_pairs` write moved
+to just before `parsed.append`, so only a row that passes every check
+reserves its pair. **Test written to fail first**: `rows=0` before the
+fix, `rows=1` with a single `Status` issue on row 1 after, and
+`test_parse_duplicate_pair` unchanged so a genuine duplicate still
+errors. Suite 4,662 → 4,663. The dead `if status_raw == ""` branch went
+with it, because rung 2a was rewriting that exact block — not as a
+sweep.
+
+**The rung split was not in the plan** and is recorded rather than
+quietly taken: rung 1 could not know a bug would fall out, and
+`CLAUDE.md` forbids bundling an unrelated bug fix with other work, so
+the one code disposition landed alone and the nine prose ones follow as
+2b.
+
+**The cold read on the item's cumulative diff found nine things, and
+one of them was material.** `diff-reviewer`, run at this rung because
+rung 1 and 2b are prose and this is the item's only build rung:
+
+- **The fix falsified a §3.2 sentence and the rung had claimed it did
+  not.** *"Same pair twice → second occurrence rejected"* is now
+  conditionally false — when the first occurrence fails a later check,
+  the **second** is the one kept. §3.2's duplicate rule is edited here,
+  in the rung that changed the behavior, rather than deferred to 2b.
+- **The fix's comment claimed data loss that cannot happen.** Every
+  issue is blocking and all three callers refuse the whole file, so no
+  import ever lost a pair; the defect was the misleading message and
+  the `prior_index` invariant. Comment, test docstring and register all
+  overstated it — the same parser-versus-import conflation the rung-1
+  review had already corrected once.
+- **Three call sites, not two.** `session_rehydrate.py:601` parses and
+  gates at `:605`. The register said *"both callers"* throughout.
+- **One test assertion was weaker than it read**, indexing `issues[0]`
+  where it meant the whole list; on the pre-fix code that index held the
+  `Status` issue too, so it would have passed a revert. Now stated over
+  the list, and the test is renamed to the file's `test_parse_*`
+  convention. Revert-resistance re-proved by reverting the fix in place.
+- **Three register citations went stale in the rung that moved the
+  lines** — the same class rung 1's own commit message boasted of
+  catching, re-broken one rung later.
+- **The register still said its rows were "left standing"** while this
+  rung actioned two, and its code-observation preamble said none was in
+  scope while one was taken. Both reworded, and the neighbour that was
+  *not* taken now says why.
+- **"73 lines" and "eight divergences" were stale in two live
+  documents** — true at `8a2adea`, false after the register grew to
+  **112** and ten rows in `dda459f`, which edited both documents and
+  left the figures.
+
+**Rung 2b is the eight remaining prose dispositions** — §3.2 and §5,
+per row. Row 7 (an `inactive` member importing silently) is the one
+that needs a product answer before a spec one; absent that, 2b
+documents the current behavior rather than changing it, and says so.
 
 ### PR ladder
 
@@ -951,9 +1005,17 @@ author's call per `rrw_sdd_in_practice.md` §4.
    `guide/findings_<date>_csv_contracts.md` register — the form
    `guide/README.md` defines for *found and left standing*. **Changes no
    spec and no code.**
-2. **Rung 2 — the adjudication.** Per divergence, spec or code, on the
-   author's call; the edits land here. **Must not** re-open questions
-   rung 1 answered.
+2. **Rung 2 — the adjudication**, split once rung 1 turned up a bug.
+   `CLAUDE.md` forbids bundling an unrelated bug fix with other work,
+   and rung 1 could not have known one would fall out.
+   - **2a — the one code disposition.** ✅ **Done 2026-09-22.** Row 9's
+     fix plus its test, the dead branch in the same block, **and
+     §3.2's duplicate rule** — the sentence the fix falsified, edited
+     in the rung that changed the behavior rather than deferred. An
+     earlier draft of this line said *"no spec edit"*, which the cold
+     read disproved.
+   - **2b — the eight remaining prose dispositions.** §3.2 and §5, per
+     row. **Must not** re-open questions rung 1 answered.
 
 ### Definition of done
 
