@@ -305,56 +305,66 @@ the joke it sounds like.
   here, the prerequisite for doing it cheaply is now a gate rather than
   a hope.
 
-### 1.11 A mutation set mutates the helpers, not only the assertion
+### 1.11 A mutation set mutates what the assertion stands on — the helpers, and the change itself
 
 - **Written down here**, 2026-09-22, out of `guide/segment_19S_post_assessment.md`
   Items 3 and 8 — both of which shipped a mutation set that satisfied
   §1.8 and still left the thing under test unguarded.
 - **The rule.** §1.8 asks that *a mutation of the protected property
-  fails*. That is necessary and not sufficient: a test also stands on
-  helpers — the scan that finds the population, the resolver that judges
-  each one — and a mutation set aimed only at the assertion never asks
-  what happens when one of those returns its **degenerate** value. The
-  habit is to name, per helper, what "found nothing" and "judged
-  everything fine" look like, and mutate to each.
-- **Two instances, one segment apart by a day.**
-  - **19S Item 8.** Five mutations, all of the check's assertion or its
-    recogniser; all five behaved. Replacing the scan `_node_refs` with
-    `return []` then left **all 9 tests green with a genuinely broken
-    citation in the repo** — the floor three of the four tests relied on
-    had re-implemented the pattern walk instead of calling the scan, so
-    it floored the pattern and not the population. Found by a cold read,
-    reproduced with a control.
-  - **19S Item 3.** Rung 2 shipped asserting *"one statement, not one
-    per row — the point of the change"*. The pre-refactor unit of work
-    also emitted exactly one executemany `UPDATE`, so the assertion
-    distinguished nothing: **all 6 tests of both rungs passed against a
-    full revert.** Neither rung had a test the change owned until one was
-    added that counts entity construction.
-- **The diagnostic that finds both in a minute**, and neither author ran
-  it: for each helper the tests call, substitute its degenerate return —
-  an empty collection, an always-empty failure string, an always-`True`
-  — and run the suite. Anything still green is a test standing on
-  nothing. It is cheaper than the mutation of the property, because
-  there are fewer helpers than properties.
+  fails*. That is necessary and not sufficient, and the two instances
+  below fail it in **different directions**, so the remedy is two
+  mutations and not one:
+  1. **Degenerate each helper the tests stand on** — the scan that finds
+     the population, the fixture that builds it, the resolver that
+     judges it. An empty collection, an always-empty failure string, an
+     always-`True`. Anything still green is a test standing on nothing.
+  2. **Revert the change itself** and run the tests unmodified. Anything
+     still green is a test that never distinguished the change from what
+     preceded it.
+  The first is cheaper than mutating the property, because there are
+  fewer helpers than properties. The second costs one `git checkout`.
+- **Instance for (1) — 19S Item 8.** Five mutations, all of the check's
+  assertion or its recognizer; all five behaved. Replacing the scan
+  `_node_refs` with `return []` then left **all 9 tests green with a
+  genuinely broken citation in the repo** — the floor three of the four
+  tests relied on had re-implemented the pattern walk instead of calling
+  the scan, so it floored the pattern and not the population.
+- **Instance for (2) — 19S Item 3.** Rung 2 shipped asserting *"one
+  statement, not one per row — the point of the change"*. The
+  pre-refactor unit of work also emitted exactly one executemany
+  `UPDATE`, so the assertion distinguished nothing: **all 6 tests of
+  both rungs passed against a full revert.** Neither rung had a test the
+  change owned until one was added that counts entity construction.
+- **Why they are listed separately, which a review caught.** A draft of
+  this entry offered the helper diagnostic as finding *both*. It does
+  not, and the difference is measurable: degenerating Item 3's
+  `_stored_flags` fails its tests **whether or not the optimization is
+  reverted**, so on Item 3 the helper diagnostic reports *guarded* and
+  is a false reassurance. Only the revert exposes it. Recording the
+  correction rather than quietly dropping the weaker half, because a
+  register whose own procedure is wrong is worse than no entry.
+- **Both instances landed the same day, 42 minutes apart** (`#2559` and
+  `#2560`), by an author who had just read §1.8 and written a mutation
+  table to satisfy it.
 - **Why not.** The same disqualifier as §1.8, one level in: a check
   would have to establish that a mutation *was tried*, and nothing in
   the tree records that. Coverage tooling does not substitute — it says
   a line ran, and the failure here is a line that runs and is not
   depended on. Mutation testing as a gate remains the wrong size for
-  this repo, per §1.8.
+  this repo, per §1.8. The revert mutation is the one a tool *could*
+  plausibly run, and it is also the one that needs a human to say what
+  "the change" is on a slice that touches five files.
 - **What covers it instead.** The definition of done of an item adding a
-  guard, extended from §1.8's wording to name the **helpers** as
-  mutation targets and not only the property. Per-item, verifiable in
-  the item, and worthless if nobody writes it — §1.8's concession
-  exactly, which is the honest thing to say about a second entry that
-  answers the first's failure with more of the same.
-- **The uncomfortable part, recorded because it is the evidence.** Both
-  instances were produced by an author who had just read §1.8 and
-  written a mutation table to satisfy it. Like §1.9's overruns, knowing
-  the rule and having just written about the rule did not produce work
-  inside it — which is what a register of unenforced conventions is for,
-  and is not an argument that this one should be enforced.
+  guard, extended from §1.8's wording to name the helpers **and the
+  revert** as mutation targets, not only the property. Per-item,
+  verifiable in the item, and worthless if nobody writes it — §1.8's
+  concession exactly, which is the honest thing to say about a second
+  entry that answers the first's failure with more of the same.
+- **The uncomfortable part, recorded because it is the evidence.** Like
+  §1.9's overruns, knowing the rule and having just written about the
+  rule did not produce work inside it — which is what a register of
+  unenforced conventions is for, and is not an argument that this one
+  should be enforced.
 
 ## 2. Enforceable but not enforced — the revisit queue
 
