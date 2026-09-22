@@ -39,6 +39,7 @@ from app.services import (
     relationships as relationships_service,
     scheduled_events,
     session_config_io,
+    session_tags,
     sessions,
 )
 from app.services import session_lifecycle as lifecycle
@@ -71,6 +72,7 @@ async def create_session(
     observers_enabled: bool = Form(default=False),
     responses_release_at: str | None = Form(default=None),
     responses_release_until: str | None = Form(default=None),
+    tags: str | None = Form(default=None),
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
     relationships_file: UploadFile | None = File(default=None),
@@ -220,9 +222,43 @@ async def create_session(
     # operator can continue filling in details in place.
     edit_url = f"{home_url}?editing=1#session-config"
 
+    def write_typed_tags() -> None:
+        """Apply the Create page's Tags box, if the operator typed one.
+
+        **Called after the settings-CSV block on every path**, which is
+        the whole mechanism: the form wins over a settings CSV's
+        ``session_tags[]`` rows by running last, not by changing
+        ``_apply_session_tags`` — that applier is wipe-and-replace and
+        is shared with ``POST /sessions/{id}/import-config`` on an
+        existing session, so narrowing it there to serve Create would
+        be the wrong seam (19S Item 6, `Semantics`).
+
+        An empty box writes **nothing** rather than an empty tag set.
+        The distinction matters because ``set_tags`` is a replace: it
+        would drop whatever a settings CSV had just applied, which is
+        the opposite of leaving the CSV unopposed. So the caller's
+        emptiness guard is load-bearing, and no ``session.tag_added``
+        event is emitted for a create with no typed tag.
+        """
+        if not (tags and tags.strip()):
+            return
+        session_tags.set_tags(
+            db,
+            review_session=review_session,
+            user=user,
+            tags=tags.split(","),
+            correlation_id=request_correlation_id(),
+        )
+
     def quick_setup_error_redirect(
         kind: str, reason: str
     ) -> RedirectResponse:
+        # The typed tags are written here too, so a failed upload does
+        # not silently discard something the operator typed on this
+        # page. Safe on every slot: a block that failed wrote no tags,
+        # and a block that never ran cannot have, so this is still
+        # "after the settings CSV" in the only sense that matters.
+        write_typed_tags()
         return RedirectResponse(
             url=(
                 f"{home_url}?quick_setup_error={kind}"
@@ -301,6 +337,8 @@ async def create_session(
         if reason is not None:
             return quick_setup_error_redirect("settings", reason)
         last_fragment = "#quick-setup-settings"
+
+    write_typed_tags()
 
     # Quick Setup uploads anchor at their fragment on Session Home;
     # a bare create (no uploads) opens the Session details card in edit
@@ -963,6 +1001,18 @@ async def _run_quick_setup_settings(
     )
     if not result.ok:
         return "parse"
+    # ``apply_session_config`` flushes but does not commit, and
+    # ``get_db`` closes without committing — so every one of this
+    # helper's three callers returned a success redirect over work that
+    # was then rolled back. Committing here matches what the other
+    # slots' savers already do (``save_reviewers`` and ``set_tags``
+    # each commit their own unit of work) and fixes all three callers
+    # at once. Found by a review of 19S Item 6 rung 2 and **not caused
+    # by it**: `main` loses the import identically. What rung 2 did was
+    # make it *conditional* — a typed tag reached ``set_tags``, whose
+    # commit saved the settings import as a side effect, so the bug
+    # only showed when the Tags box was blank.
+    db.commit()
     return None
 
 

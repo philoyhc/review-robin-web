@@ -1616,10 +1616,11 @@ ride-along is one pair.
    place with real copy and an inert input. **Must not** write anything.
    **Cumulative-diff base for the item's cold read: `c329180`** — the
    read runs at rung 2 or 3, whichever last touches `app/` or `tests/`.
-2. **Rung 2 — the write.** `set_tags` after the settings-CSV block, per
-   the ordering in `Semantics`. **Must not** change
-   `_apply_session_tags`, and **must not** add typeahead — that is
-   Item 7.
+2. **Rung 2 — the write.** ✅ done 2026-09-22. `set_tags` after the
+   settings-CSV block, per the ordering in `Semantics`. **Must not**
+   change `_apply_session_tags`, and **must not** add typeahead — that
+   is Item 7. Both held: the applier and its pinned round-trip test are
+   byte-identical.
 3. **Rung 3 — the `.btn` pair on this page**, per `CLAUDE.md`'s
    convention, asking first if either button does not fit a canonical
    role.
@@ -1682,9 +1683,90 @@ the same §1.11 habit one level down.
 
 All four `Blast radius` figures re-took at `c329180`, unchanged.
 
-Reads: none yet — rung 1 is a code rung inside a ladder, so the
-`diff-reviewer` read is owed once, at the item's last build rung, over
-`git diff c329180..HEAD`.
+**Dev slot, 2026-09-22.** The card rendered flush against User
+interface settings: `.bottom-grid .card { margin-bottom: 0; }` makes
+the *grid* own row spacing, which was complete while every cell held
+one card. Fixed in `base.html` with
+`.bottom-grid .card + .card { margin-top: 20px; }` — cards in different
+cells are not siblings, so single-card cells are untouched and the next
+stacked pair gets it free. The `<h3>` became the field's label
+("Tags (optional)") and the duplicate `<label>` went; the input takes
+its accessible name from the heading by `aria-labelledby`, since
+deleting the label outright would have left it unlabelled. Both
+`tools/theme_*.html` regenerated — the second only surfaced after the
+first was fixed, so every generator was run.
+
+**Rung 2 done, 2026-09-22.** The input is live and
+`POST /operator/sessions` calls `set_tags` after the settings block.
+Rung 1's three inertness assertions are **inverted rather than
+deleted**, so the diff shows the control going live.
+
+**One decision the plan did not make.** Ordering the write after the
+settings block left the typed tag discarded whenever an *earlier* slot
+failed and the handler returned early — the operator is sent back to
+fix a CSV and what they typed here is gone. The write now also runs in
+`quick_setup_error_redirect`, which is safe in the same sense the
+success path is: a block that failed wrote no tags, and one that never
+ran cannot have, so it is still "after the settings CSV" in the only
+sense that matters. Pinned by a test that first asserts the upload
+really failed.
+
+**Eight mutations, both §1.11 kinds.** Property: the write moved before
+the settings block (2 fail), the emptiness guard removed (1), the write
+dropped from the error path (1), and the **revert** — no write at all
+(4). Helpers: `_tags_of` → `[]` (5), `_settings_csv` → an empty bundle
+(1), `_card` → `""` (2), and `_create`'s status assertion removed —
+**0**, which is a finding on my own test rather than a pass. That
+assertion guards nothing; it is kept as a diagnostic so a rejected
+create reads as such instead of as empty tags, and the docstring now
+says so.
+
+The helper round also caught the test's CSV shape: a first draft used
+`str` for the `data_type` and a bare `help_contact` for the field,
+where the exporter writes `string` and `session.help_contact`. The
+bundle applied **nothing**, and the ordering tests passed while
+measuring nothing — which is why the empty-box case is the control:
+it asserts the CSV's tags land when unopposed, and is the only test
+that catches an inert bundle.
+
+**A review of rung 2 found a P1 that predates it, and the fix rides
+here.** `apply_session_config` flushes but never commits, and `get_db`
+closes without committing — so **all three** callers of
+`_run_quick_setup_settings` returned a success redirect over work that
+was then rolled back. Verified on `main` against a file-backed SQLite
+read through a second session: a create carrying a settings CSV
+persists the session row and **neither** the CSV's `help_contact` nor
+its tags.
+
+Rung 2 did not cause it; it made it **conditional**. A typed tag
+reached `set_tags`, whose own commit saved the settings import as a
+side effect, so the loss only showed when the box was blank —
+correctness depending on an unrelated field, which is worse than
+uniformly broken. `_run_quick_setup_settings` now commits, matching
+what every other slot's saver already does (`save_reviewers` and
+`set_tags` each commit their own unit of work) and fixing all three
+callers at once. Recorded as a **bundled fix** rather than deferred,
+and named as such.
+
+**The suite could not have caught it, and three attempts to make it
+say so are recorded in the test's docstring** — the next person will
+reach for them in the same order. Reading rows back proves nothing: the
+integration `db` fixture shares a transaction with the app, so a
+flushed row reads like a committed one. Counting `after_commit`
+**events** proves nothing: that fixture joins an external transaction,
+so a commit releasing a savepoint emits none, and a draft asserting on
+them **passed with the fix removed**. Counting commits across a whole
+create does not isolate the path: a create with a CSV takes one fewer
+baseline commit than one without, so the difference cancels at 2
+against 2 either way. The test calls the helper directly, spying on
+`Session.commit` as a **class** attribute — the route resolves its own
+session through `get_db`, so an instance patch counts nothing.
+
+That is three §1.11 failures inside one fix for a §1.11-shaped bug,
+which is the entry's own point rather than an aside.
+
+Reads: the item's one `diff-reviewer` read is owed at rung 3, the last
+build rung, over `git diff c329180..HEAD`.
 
 ### Out of scope
 
