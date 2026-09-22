@@ -876,9 +876,76 @@ Taken 2026-09-22 at `92f7aff`.
 No code change is in scope for rung 1; rung 2's size is unknown until
 rung 1 reports, which is the point of splitting them.
 
+### Status
+
+**2026-09-22 — rung 1 landed; the output is a register, and the
+section turned out to be wrong in more places than it was right.**
+`guide/findings_2026-09-22_csv_contracts.md`, 73 lines: the eight
+`Semantics` answers with the code location that settles each, then
+**eight divergences** and three code observations. No spec, no code.
+
+**Every answer was run, not read** — a throwaway probe built a
+two-reviewer / two-reviewee roster in memory and called
+`parse_relationship_csv` on twelve CSVs, one per question. That is the
+item's own subject applied to itself: §3.2's description was never
+checked, and the cheapest way to produce another unchecked description
+would have been to read the code and paraphrase it.
+
+**The finding that matters most is not the stale signature**: the save
+policy is **all-or-nothing and undocumented**. `Severity.error` is
+blocking and both callers gate on `result.is_blocked`, so one bad row
+rejects the whole file — measured, a two-row CSV with one unknown
+reviewer returns `rows=1, blocked=True` and saves neither.
+
+**Rung 1 first filed that as a contradiction and it is not**, on a
+reviewer's correction: §3.2's table is headed *Per-row validation* over
+a column headed *Detection*, so *"per-row error"* describes where an
+error is attached and the parser does exactly that. The section is
+**silent** on what the import then does. The register is five
+spec-silent rows against three spec-vs-code, and the corrected row
+forces no behavior question — partial import would be a new product
+decision, not the resolution of a divergence.
+
+**Three claims in the section are right**, and the register says so:
+the *"already-loaded session rosters"* prose, the required / optional
+column lists, and the `seed_display_fields_from_assignments` note
+including its explanation of the name.
+
+**The register is ten rows, not eight, and the last two came from a
+checker.** A `spec-writer` verification pass over the finished register
+— a reader who did not write it, `constitution.md` III — confirmed all
+eight and still found:
+
+- **Row 9, a live bug the probe missed.** `seen_pairs[…] = index` is
+  written **before** the `Status` check, so a first row with a bad
+  status is dropped *and* keeps its pair key; a later valid row for the
+  same pair is then rejected as *"Duplicate pair … also on row 1"* and
+  the pair reaches `ParseResult` from neither. Measured after the
+  report: two rows, first `Status=bogus`, second valid ⇒ `rows=0`. The
+  twelve-case probe missed it because **no case combined two failure
+  modes in one file** — a coverage shape, not an oversight in any one
+  case.
+- **Row 10, a false claim outside §3.2 and inside its subject.** §5's
+  primitives table says `_parse_email` is used on the Relationships
+  importer's columns. It is not — `relationships.py` has **0**
+  occurrences — so that importer does **no email-format validation**,
+  and a typo is reported as *"Unknown reviewer"*.
+
+It corrected three asides inside rows 1–8 as well: §3.1 does **not**
+repeat §3.2's *lowercase* claim, the `W8` label belongs to
+`spec/validate_page.md` rather than `spec/participant_model.md`, and an
+`is_blocked` citation pointed at the class rather than the property.
+
+**Four of the register's own line citations were wrong on first
+writing** and were corrected before the first commit, caught by
+printing every cited line rather than re-reading the file.
+
+**Rung 2 is unchanged and unstarted** — the adjudication is the
+author's call per `rrw_sdd_in_practice.md` §4.
+
 ### PR ladder
 
-1. **Rung 1 — the investigation.** Answers every `Semantics` question
+1. **Rung 1 — the investigation.** ✅ **Done 2026-09-22.** Answers every `Semantics` question
    with the code's behavior and its location, recorded either in this
    item or, if the list of divergences runs long, in a
    `guide/findings_<date>_csv_contracts.md` register — the form
@@ -905,9 +972,11 @@ rung 1 reports, which is the point of splitting them.
 
 ### Open questions
 
-- Does the investigation's output live in this item or in a dated
-  findings register? **Decided by:** rung 1, on the count — a handful of
-  answers belong here; a long list belongs in its own file, as 19M's did.
+- ~~Does the investigation's output live in this item or in a dated
+  findings register?~~ **Answered by the count, 2026-09-22: a
+  register.** Eight answers plus eight divergences plus three code
+  observations is not the handful that belongs inline —
+  `guide/findings_2026-09-22_csv_contracts.md`.
 
 ### Out of scope
 
@@ -919,6 +988,9 @@ rung 1 reports, which is the point of splitting them.
 
 ### Doc impact
 
+- `guide/findings_2026-09-22_csv_contracts.md` — the register rung 1
+  produced: the eight answers, eight divergences, three code
+  observations (Item 4).
 - `spec/csv_contracts.md` — §3.2 aligned to the code, or each retained
   claim explained, per rung 2's adjudication (Item 4).
 - `docs/status.md` — row when the item lands (Item 4).
