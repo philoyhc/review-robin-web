@@ -38,6 +38,10 @@ PRs landed in the global chronology.
 > segment number or completion date. Keep each segment's own
 > sub-bullets / nested PR detail together as one contiguous
 > block; only the ordering of whole blocks follows PR number.
+> **A heading that declares no PR number cannot be placed by this
+> rule** — many predate the convention. Leave those where they are;
+> the invariant to keep is that headings which *do* declare one run
+> ascending.
 
 ### P0 — Stop the bleeding (Instruments UI ↔ data drift)
 
@@ -2259,36 +2263,6 @@ Template/UX U1–U10, View V1–V6 all resolved (15 items, PRs #1987–#2003;
 R3 accepted+deferred, R1/R7 documented as justified conventions). See
 `guide/archive/consistency_audit.md`.
 
-### Guide — "Build the form (Instruments)" rewritten — ✅ done 2026-09-08 (#2190, no segment)
-
-The author supplied the section as a `.docx`; it landed in
-`app/web/templates/guide.html` with its four screencaps, taking the Guide
-from twelve to sixteen. (The "twelve screencaps" in the 19E entry below,
-and in `docs/status.md`, describe what **19E** shipped and stay as
-written — a log is true of its date.)
-
-Content is the author's. Three editorial calls worth recording:
-
-- **Two headings folded into the flow.** `Who reviews whom` became the
-  assignment-rule paragraph beside its screencap; `Optional: visibility,
-  relationships, observers` lost its visibility sentence to the new text
-  and became `Optional: relationships and observers`. Checked before
-  removing: nothing in `spec/`, `docs/` or the suite names either
-  heading, and the six inbound `#guide-…` links from the Setup pages
-  target `#guide-create_and_set_up`, the section, not the h3s.
-- **Three facts kept from the old text** that the draft uses without
-  stating: the response-field / display-field definitions, that pairs are
-  generated at Prepare rather than on the Instruments page, and the tie
-  between "counts as set up" and what the status bar's Instruments pill
-  counts.
-- **One wording change from the draft.** It read "(raw, anonymized, or
-  summarized)"; shipped as raw, `Anonymized`, `Summarized` — the app's
-  own labels — per the `CLAUDE.md` rule that prose naming a control
-  quotes the control.
-
-Verified by rendering `/guide` rather than reading the markup: 200, all
-four images served, section in order.
-
 ### Sys Admin per-row actions → canonical Secondary — ✅ done 2026-09-08 (no segment)
 
 A one-template change, recorded here rather than in a segment because it
@@ -2747,6 +2721,36 @@ bounced them.
 
 ---
 
+### Guide — "Build the form (Instruments)" rewritten — ✅ done 2026-09-08 (#2190, no segment)
+
+The author supplied the section as a `.docx`; it landed in
+`app/web/templates/guide.html` with its four screencaps, taking the Guide
+from twelve to sixteen. (The "twelve screencaps" in the 19E entry below,
+and in `docs/status.md`, describe what **19E** shipped and stay as
+written — a log is true of its date.)
+
+Content is the author's. Three editorial calls worth recording:
+
+- **Two headings folded into the flow.** `Who reviews whom` became the
+  assignment-rule paragraph beside its screencap; `Optional: visibility,
+  relationships, observers` lost its visibility sentence to the new text
+  and became `Optional: relationships and observers`. Checked before
+  removing: nothing in `spec/`, `docs/` or the suite names either
+  heading, and the six inbound `#guide-…` links from the Setup pages
+  target `#guide-create_and_set_up`, the section, not the h3s.
+- **Three facts kept from the old text** that the draft uses without
+  stating: the response-field / display-field definitions, that pairs are
+  generated at Prepare rather than on the Instruments page, and the tie
+  between "counts as set up" and what the status bar's Instruments pill
+  counts.
+- **One wording change from the draft.** It read "(raw, anonymized, or
+  summarized)"; shipped as raw, `Anonymized`, `Summarized` — the app's
+  own labels — per the `CLAUDE.md` rule that prose naming a control
+  quotes the control.
+
+Verified by rendering `/guide` rather than reading the markup: 200, all
+four images served, section in order.
+
 ### Segment 19G — Post-assessment follow-ups — ✅ complete + archived 2026-09-08 (**ten items**, PRs #2197 → #2214, all in one day; plan archived: `guide/archive/segment_19G_post_assessment.md`)
 
 *Four PRs inside that span are **not** 19G items: #2205, #2211 and #2215 are the 08sep assessment's three same-day amendments, and #2216 is the post-Azure checklist's second item. The assessment itself gives the range as starting at #2196; that PR is the participant top-bar Guide link, which shipped just before the segment opened.*
@@ -2762,183 +2766,6 @@ Opened to settle two recommended moves from `guide/archive/codebase_assessment_0
 - **Item 10 — the §5 weaknesses answered**: `guide/post_azure_todo_checklist.md` opened, the long-window `close_check` weakness downgraded on measurement (one instance, already mitigated), and the vacuity rule written down.
 
 **Three findings the plan keeps.** *A check satisfied by finding an excuse to write to a file again is a check being worked around* — the sentence that produced Item 6. *The conceded classes bite the people who conceded them*: 19G.1 introduced the broken reference Item 7 found, 19G.2's citation was Item 5's sixth fix, and 19G.7 wrote a miscount that Item 8 corrected before building on it. And **a policy recorded only in an item is a policy recorded nowhere** — the audit card's deploy-time run had been "recorded in the item" since 19C, and that item was archived.
-
----
-
-### Segment 19O — Rosters and instruments — ✅ **closed** (**eight items**; opened 2026-09-14, closed 2026-09-20; PRs #2382 → #2510; a home for operator-facing gaps on the roster and instrument setup surfaces; plan archived at `guide/archive/segment_19O_rosters_and_instruments.md`). Item 7's register closed at **sixteen entries**; **Item 8** came from the author's dev-slot pass and made `.table-scroll` universal after measuring seven of eleven operator pages pushing the document sideways.
-
-Item 1 is the self-review exclusion shortcut on the Link 3 (*Unit of review*) column of the instrument rule card. **The affordance was designed away on a premise that no longer holds.** `spec/assignments.md` § *Self-review policy* names a Link rule as one of two supported ways to suppress self-reviews; no operator can author it — the inline builder's field list is tags only and the general Rule Builder is retired. The 13A picker omitted email deliberately, *because* `excludeSelfReviews` covered the case; the picker retired 2026-05-25 and `excludeSelfReviews` was pinned `False` 2026-05-26, in the same commit that wrote the policy naming the now-unreachable rule. **The build is smaller than it looks**: `_generate.py` already computes whole-group `is_self` before deciding `pair_include`, so a per-instrument flag honored at materialization gets group correctness for free — no group-aware predicate, and none of the desugar-stage hazards the pinned flag was banned for. Lifted out of `guide/deferred_consolidated.md` Part A on the author's instruction. Four rungs; Assignments shows **"Excluded by rule"** in place of the count. **Item 2** fixed what the author found on the rendered page: the checkbox copy named the wrong unit of review because it was rendered from the *persisted* `group_kind` while the Link 3 pill cycles client-side, and the control had no heading. Its follow-up added the two clearing rules — hidden *and* cleared while any Link is `Not set`, cleared when Link 3 moves individual → group — and the close pass found the second guarantee was only half enforced, since session-config import writes the column from a different part of the bundle than the instrument rows it must agree with. **The finding both items share** is Item 1's, one layer over: *Doc impact enumerating the specs the behavior touches rather than every spec that describes the thing* — it left stale rows in `spec/roundtrip_coverage.md`, then `spec/assignments.md`, then `spec/settings_inventory.md`, each caught only by a close pass. Verified on the dev slot. **Items 3-6 are all *the page does the thing and says nothing*.** **Item 3**:
-a sent invitation made the roster un-replaceable, with no route back.
-**Item 4**: a client-side sort stranded the injected selection panel at the
-foot of the table — and, quieter, corrupted the *unsorted* restore order,
-because a panel present when `rrwOriginalIndex` is stamped shifts every
-row after it. **Item 5**: a roster delete cascaded through
-`relationships` and reported nothing; the two spec bullets it had owed
-since it shipped are paid. **Item 6** worked a register of eight loose
-ends through in two passes, the last of them the sort migration Item 4
-had deferred — all six sorting pages now listen for `rrw:sorted` and none
-defends itself. **The finding Items 4 and 6 share is about the
-instruments, not the code**: a mutation table, a proximity threshold, a
-hand-maintained page census and two successive guard regexes each proved
-less than was claimed for them, and *every one was caught by a reader
-rather than by the instrument* — the last of them on its third draft,
-which is the first that does not have to predict how a future handler
-will be spelled. **The segment stays open** for further operator-facing
-gaps on these surfaces.
-
-### Segment 19N — Assignments are always generated — ✅ **done** (**three items, all closed**; opened and closed 2026-09-13; PRs #2358 → #2377; plan archived: `guide/archive/segment_19N_generated_assignments.md`)
-
-The author ruled the contract on 2026-09-13 — *assignments are never hand-created, uploaded or edited; an operator may turn individual rows inactive, and that plus the export/import round trip is the whole manual surface.* **Item 1** found three paths writing assignment rows outside the engine, none visible as such; `app/services/` now holds exactly one `Assignment(...)` constructor, reachable only through `replace_assignments`. Sequencing was the finding and it held: the staleness signal had to come back first, because the instrument-clone workaround existed only to paper over its absence. `SC-40`, the live silent-data-loss path, is closed — a response the rules cannot place is dropped with a reason, counted in the audit event, and downloadable; `rehydrate_enabled` **stays false** on the author's broader reason, that nobody has run the pipeline on real data. **Item 3** fixed a workflow failure banner that named the action that failed from a two-branch ternary while the routes pass five values, so three of the five were announced as the wrong button. **Item 2** was `SC-45`, the identity fold, and the investigation reversed its expected answer: casefold merges `ß` with `ss` — two different mailboxes — and the gates that key decides access at made that a fail-**open**, so `normalize_email` folds with `str.lower`. It took **three verification passes** to establish the change had reached its own gates; the first found four inline folds it had missed, the second three more, and the third found none but replaced the module allowlist that had let both happen with a scan over the identity-bearing **columns**, which are a closed set. **The finding the segment keeps**, in all three items: *prose written from the surrounding prose rather than from the file it describes*. **Carried out:** `close_check`'s one-directional manifest check and `SC-44`'s rehydrate-audit question, both filed under Upcoming → Stubs.
-
-### Segment 19M — A general sweep: history out of the specs — ✅ **done** (**ten items, all closed**; opened and closed 2026-09-13; PRs #2350 → #2357; plan archived: `guide/archive/segment_19M_spec_history_sweep.md`; record: `guide/archive/sweep_2026-09-13_spec_history.md`)
-
-All **39 live `spec/*.md`** files, 22,493 lines, in six batches drawn by cross-reference density rather than line count, then four doc-only items on what the batches found. A spec says what *is*; across `spec/` they also said when things landed, what they used to be called, and what a previous draft got wrong. The rule it ran under — `rrw_sdd_in_practice.md` §4, *the spec is the contract* — has a sharp edge: a sweeper who finds spec and code disagreeing **may not quietly rewrite the spec to match**. So the output is two artefacts, not one: the record says what was *changed*, and `guide/archive/findings_2026-09-13_spec_discrepancies.md` said what was *found and left standing* — **75 discrepancies registered, none actioned by the sweep itself**. **The correction the segment could not have planned for:** every batch was briefed to write *"plain present-tense description of what ships"*, which is `docs/`'s function and not `spec/`'s. The author's mid-sweep pointer to §4 caught it, and a sweep briefed that way would have done real damage at scale. All three segment-level open questions closed on their own stated measurements — the record stayed one file at **804** lines against a ~1,000 threshold, the sweep stays `partial` and does not reset the cadence clock, and the stale-identifier class stays a footnote at **14** report lines against a ~40 threshold. **The register outlived the segment:** opened at 86 rows, closed at 86, re-audited from scratch the same day, gained 25 more under `NF-`, closed again at 25/25 across PRs **#2365 → #2377** — most of them after every 19M item had shipped. It archives alongside the plan.
-
-### Segment 19L — UX refinements — ✅ **done** (**four items, all closed**; opened 2026-09-12, closed 2026-09-13; PRs #2341 → #2349; plan archived: `guide/archive/segment_19L_ux_refinements.md`)
-
-A deliberately open-ended log for small, independently-shipping operator-UI refinements, closed on the author's instruction rather than by emptying. Each of the four was a signal that was *almost* there. The lobby marked a selection on its injected panel but **no class ever reached the source `<tr>`** (1); the fix shipped an edge *and* a fill, and the fill resolved to the same primitives as `--status-info-bg`, erasing the pills the row carried — so the fill went and a bracket replaced it (2); the archived sessions page had the same rows and none of the marking, deliberately excluded by 19L.2 and admitted by the author hours later (3); and `operator/instruments_index.html` carried a **literal NUL byte**, so the value was right, and `grep` classified the repo's largest template as binary and printed nothing (4). Three of the four were found by looking at the thing rather than at the code that makes it. **Carried out:** 19L.3's open question — whether the archived page wants the single-row expander, which today heads a lone selection *"1 sessions selected"* — to `guide/archive/new_ux_ideas.md` entry 2, still undecided. The declined bulk-expander merge stays declined.
-
-
-### Segment 19K — The 11sep assessment's three moves — ✅ **done** (**ten items — nine closed, one moved out**; item 9 moved to `guide/post_azure_todo_checklist.md` item 4 on 2026-09-12; opened 2026-09-11, closed 2026-09-12; PRs #2315 → #2335; plan archived: `guide/archive/segment_19K_assessment_moves.md`)
-
-The three next moves in `guide/archive/codebase_assessment_11sep.md` §8, and
-whatever those three produce. Same shape as 19J, which opened for an
-assessment's §8 and closed at ten items — **seven produced by the
-previous item's findings**. The allowance is stated up front this time
-rather than discovered: an item arriving from another item's findings is
-admitted, anything else gets its own segment.
-
-- **Item 1 — `close_check` cannot see a `guide/` commitment.** Its
-  `COMMITTED_PATH` regex matches `spec/` and `docs/` only, so a
-  `Doc impact` bullet naming a `guide/` path is silently dropped:
-  **67 commitments across 33 plans**, none reported. Two went unhonoured
-  in 19J alone and nothing failed. A second, narrower gap in the same
-  tool: an **uncommitted** item heading widens C3's window to the
-  segment's, so a stub passes on a sibling's edits — observed twice on
-  2026-09-11, both reported as PASS before being corrected.
-- **Item 2 — the column-chip script binds to elements a re-render
-  replaces.** **The measurement corrected the move it was recommended
-  on.** The assessment said four blocks totalling ~500 lines die with a
-  re-rendered table; reading each of `base.html`'s eight blocks rather
-  than grepping for `DOMContentLoaded` gives **one block, 127 lines**.
-  The 321-line sort block binds nothing — its headers call
-  `rrwSortHeaderClick` through an inline `onclick`, so the handler
-  arrives with the markup — and two of the four named blocks are not
-  table-relevant at all.
-- ~~**Item 3 — decide whether the Invitations / Responses N+1 gets an
-  item.**~~ **Done 2026-09-12 — decided and fixed.** The re-measurement
-  held exactly (paging had changed the HTML and not the work), and it
-  located ~99% of both pages in two call sites, so the decision came out
-  "fix it now" rather than "defer with a trigger". One prefetch per
-  session in place of one query per assignment: **40,433 → 434 and
-  80,432 → 434** at 200×200. Recorded in `spec/operations_pages.md`,
-  which is where the next reader looks.
-
-**The first finding arrived before the first build**, which is the
-argument for measuring blast radius at planning time: Item 2's premise
-was wrong by about 4×, and the correction landed in the swap assessment
-and in the codebase assessment's §1, §5 and §8 before the plan was
-written.
-
----
-
-### Segment 19J — The assessment's three moves — ✅ complete + archived 2026-09-11 (**ten items**, 2026-09-10 → 2026-09-11, PRs #2281 → #2311; plan: `guide/archive/segment_19J_assessment_moves.md`)
-
-The three recommended next moves in
-`guide/archive/codebase_assessment_10sep.md` §8, and nothing else. Same shape
-as 19G, which opened for an assessment's §8 and closed at ten items —
-**eight of them produced by the previous item's findings** rather than
-by the plan. So three is what was known at opening, not a prediction of
-the count: a fourth arriving from a finding is admitted, anything else
-gets its own segment.
-
-- **Item 1 — `spec/rrw_functional_spec.md` swept against the code.** It
-  is the canonical entry point for new readers and the only ⚠ row in
-  the snapshot: §9.7 lists an Assignments *Self-reviews card* that does
-  not exist. Three rungs — the sweep recorded first with no spec edits,
-  then the fixes, then `spec/README.md`'s currency line.
-- **Item 2 — the refinement allowance, measured rather than asserted.**
-  §7 names "+1.5k production per active week" and it is the one number
-  in that document reasoned rather than computed, under a skill whose
-  first rule is that every number comes from a command. Six sidecars
-  exist; the unit is chosen after looking, and **"there is no stable
-  term" is a permitted answer**.
-- **Item 3 — `tools/close_check.py`, split or stop mentioning it.**
-  Three snapshots have carried the same observation while the file grew
-  770 → 863 → **1,000** LOC. A three-way carve (`_manifest` /
-  `_archive` / `_sweep` over `_shared`), CLI frozen because every
-  plan's Definition of done names the invocation string.
-
-**Measuring the blast radius corrected three claims before the first
-build**, two of them from the snapshot published hours earlier — which
-is 19H's finding arriving in the next segment.
-
-- **`rrw_functional_spec.md` is not stale, and that is worse.** §5
-  called it "the least-audited live spec … 23 days stale". It has had
-  **nine edits and 1,106 changed lines** since the date it claims
-  alignment to. Every one was made by a segment editing the sections its
-  own work touched; none read the document through. The defect is
-  **piecemeal currency reading as whole-document currency**, and a
-  hand-kept alignment date in `spec/README.md` that no edit ever moved.
-- **"+1.5k per active week" is probably the wrong unit.** The two large
-  windows are **3 days each**, and one 16-day, 91-merge window added
-  **+110**.
-- **The two `close_check.py` halves do not share `last_touched_ever`.**
-  Three snapshots said they did; its only call is at line 627, inside
-  `check_manifest`. They share `REPO` and `_git` and nothing else —
-  **less coupling than the observation claimed**, which makes the split
-  cheaper than the reason given three times for not doing it. There are
-  also **three** jobs, not two: the close check (680 lines), the
-  archive baseline (60), the sweep cadence (96).
-
-**What it became, as of 2026-09-11.** Ten items, not three — and the
-opening paragraph's own prediction is the reason it is not a surprise:
-"a fourth arriving from a finding is admitted". Seven arrived that way,
-each from the one before it. The three above closed 2026-09-10; the
-rest closed 2026-09-11 except the last.
-
-- **Item 4 — navigation busy indicator.** ✅ Built from 19J.2's
-  benchmark, which found Invitations and Responses N+1 (40,433 and
-  80,432 queries at 200×200). The indicator says "working"; the N+1 is
-  explicitly *not* fixed and is recorded as such so the two are never
-  confused.
-- **Item 5 — row pagination on the seven roster pages.** ✅ Four rungs.
-  The cap became a page size; the sort moved into SQL with an explicit
-  `COLLATE "C"` after a locale-aware Postgres was found to order seven
-  names differently from the Python sort the app had always used.
-- **Item 6 — session-nav hover standardised.** ✅ One literal
-  `rgba(255,255,255,0.7)` among otherwise tokenised nav colours. Took a
-  latent `:hover` bug on disabled tabs with it.
-- **Item 7 — pills rationalization.** ✅ One pill vocabulary served two
-  jobs with `cursor: pointer` the only thing telling them apart. Four
-  rungs; an accent **edge** now means "you can act on this", and the
-  shade is reserved for it.
-- **Item 8 — the row pager keeps your place.** ✅ A `#…-table-card`
-  fragment, so a page turn lands on the table rather than the document
-  top.
-- **Item 9 — reaching a distant page in one move.** ✅ The strip's
-  reach was two pages per click whatever the roster size — 50 clicks to
-  the middle of a 40,000-row table. Replaced by a five-cell cluster;
-  the strip retired.
-- **Item 10 — does the reserved shade stop at pills and chips?** ✅
-  Promoted from 19J.7's scoped-out question. The answer is **neither**
-  of the readings the plan framed: the scope is the **ambiguity**, not
-  the element type. A pill and a chip share one rounded shape for
-  stating a fact and for offering a click, so the rule reaches any
-  class carrying that dual nature and no class without an interactive
-  twin — which is why the static `.banner-info` that prompted the item
-  was never a violation. Closed by editing one spec paragraph, as
-  predicted. Found on the way: `.btn-icon` acquired the dual nature at
-  19J.9 and the guard could not see it.
-
-**Two findings worth carrying out of this segment**, both tool gaps
-rather than plan failures, neither scheduled. `close_check`
-tracks `spec/` and `docs/` paths only, so a `guide/` commitment in a
-`Doc impact` manifest is unchecked — 19J.7's screencap row and 19J.8's
-`deferred_consolidated.md` entry both went unhonoured without failing
-anything. And C3's window for a *new* item starts at the segment's
-date, not the item's, so a fresh item can pass on a sibling's edits.
-Both are tool gaps, not plan failures; neither is scheduled.
 
 ---
 
@@ -3144,6 +2971,247 @@ standalone *Self-reviews card* on the Assignments page that does not
 exist — found by `spec-writer` at Item 12's close and left alone,
 because inventing the card is a feature decision and deleting the
 prose is a spec claim neither the author nor the code has settled.
+
+---
+
+### Segment 19J — The assessment's three moves — ✅ complete + archived 2026-09-11 (**ten items**, 2026-09-10 → 2026-09-11, PRs #2281 → #2311; plan: `guide/archive/segment_19J_assessment_moves.md`)
+
+The three recommended next moves in
+`guide/archive/codebase_assessment_10sep.md` §8, and nothing else. Same shape
+as 19G, which opened for an assessment's §8 and closed at ten items —
+**eight of them produced by the previous item's findings** rather than
+by the plan. So three is what was known at opening, not a prediction of
+the count: a fourth arriving from a finding is admitted, anything else
+gets its own segment.
+
+- **Item 1 — `spec/rrw_functional_spec.md` swept against the code.** It
+  is the canonical entry point for new readers and the only ⚠ row in
+  the snapshot: §9.7 lists an Assignments *Self-reviews card* that does
+  not exist. Three rungs — the sweep recorded first with no spec edits,
+  then the fixes, then `spec/README.md`'s currency line.
+- **Item 2 — the refinement allowance, measured rather than asserted.**
+  §7 names "+1.5k production per active week" and it is the one number
+  in that document reasoned rather than computed, under a skill whose
+  first rule is that every number comes from a command. Six sidecars
+  exist; the unit is chosen after looking, and **"there is no stable
+  term" is a permitted answer**.
+- **Item 3 — `tools/close_check.py`, split or stop mentioning it.**
+  Three snapshots have carried the same observation while the file grew
+  770 → 863 → **1,000** LOC. A three-way carve (`_manifest` /
+  `_archive` / `_sweep` over `_shared`), CLI frozen because every
+  plan's Definition of done names the invocation string.
+
+**Measuring the blast radius corrected three claims before the first
+build**, two of them from the snapshot published hours earlier — which
+is 19H's finding arriving in the next segment.
+
+- **`rrw_functional_spec.md` is not stale, and that is worse.** §5
+  called it "the least-audited live spec … 23 days stale". It has had
+  **nine edits and 1,106 changed lines** since the date it claims
+  alignment to. Every one was made by a segment editing the sections its
+  own work touched; none read the document through. The defect is
+  **piecemeal currency reading as whole-document currency**, and a
+  hand-kept alignment date in `spec/README.md` that no edit ever moved.
+- **"+1.5k per active week" is probably the wrong unit.** The two large
+  windows are **3 days each**, and one 16-day, 91-merge window added
+  **+110**.
+- **The two `close_check.py` halves do not share `last_touched_ever`.**
+  Three snapshots said they did; its only call is at line 627, inside
+  `check_manifest`. They share `REPO` and `_git` and nothing else —
+  **less coupling than the observation claimed**, which makes the split
+  cheaper than the reason given three times for not doing it. There are
+  also **three** jobs, not two: the close check (680 lines), the
+  archive baseline (60), the sweep cadence (96).
+
+**What it became, as of 2026-09-11.** Ten items, not three — and the
+opening paragraph's own prediction is the reason it is not a surprise:
+"a fourth arriving from a finding is admitted". Seven arrived that way,
+each from the one before it. The three above closed 2026-09-10; the
+rest closed 2026-09-11 except the last.
+
+- **Item 4 — navigation busy indicator.** ✅ Built from 19J.2's
+  benchmark, which found Invitations and Responses N+1 (40,433 and
+  80,432 queries at 200×200). The indicator says "working"; the N+1 is
+  explicitly *not* fixed and is recorded as such so the two are never
+  confused.
+- **Item 5 — row pagination on the seven roster pages.** ✅ Four rungs.
+  The cap became a page size; the sort moved into SQL with an explicit
+  `COLLATE "C"` after a locale-aware Postgres was found to order seven
+  names differently from the Python sort the app had always used.
+- **Item 6 — session-nav hover standardised.** ✅ One literal
+  `rgba(255,255,255,0.7)` among otherwise tokenised nav colours. Took a
+  latent `:hover` bug on disabled tabs with it.
+- **Item 7 — pills rationalization.** ✅ One pill vocabulary served two
+  jobs with `cursor: pointer` the only thing telling them apart. Four
+  rungs; an accent **edge** now means "you can act on this", and the
+  shade is reserved for it.
+- **Item 8 — the row pager keeps your place.** ✅ A `#…-table-card`
+  fragment, so a page turn lands on the table rather than the document
+  top.
+- **Item 9 — reaching a distant page in one move.** ✅ The strip's
+  reach was two pages per click whatever the roster size — 50 clicks to
+  the middle of a 40,000-row table. Replaced by a five-cell cluster;
+  the strip retired.
+- **Item 10 — does the reserved shade stop at pills and chips?** ✅
+  Promoted from 19J.7's scoped-out question. The answer is **neither**
+  of the readings the plan framed: the scope is the **ambiguity**, not
+  the element type. A pill and a chip share one rounded shape for
+  stating a fact and for offering a click, so the rule reaches any
+  class carrying that dual nature and no class without an interactive
+  twin — which is why the static `.banner-info` that prompted the item
+  was never a violation. Closed by editing one spec paragraph, as
+  predicted. Found on the way: `.btn-icon` acquired the dual nature at
+  19J.9 and the guard could not see it.
+
+**Two findings worth carrying out of this segment**, both tool gaps
+rather than plan failures, neither scheduled. `close_check`
+tracks `spec/` and `docs/` paths only, so a `guide/` commitment in a
+`Doc impact` manifest is unchecked — 19J.7's screencap row and 19J.8's
+`deferred_consolidated.md` entry both went unhonoured without failing
+anything. And C3's window for a *new* item starts at the segment's
+date, not the item's, so a fresh item can pass on a sibling's edits.
+Both are tool gaps, not plan failures; neither is scheduled.
+
+---
+
+### Segment 19K — The 11sep assessment's three moves — ✅ **done** (**ten items — nine closed, one moved out**; item 9 moved to `guide/post_azure_todo_checklist.md` item 4 on 2026-09-12; opened 2026-09-11, closed 2026-09-12; PRs #2315 → #2335; plan archived: `guide/archive/segment_19K_assessment_moves.md`)
+
+The three next moves in `guide/archive/codebase_assessment_11sep.md` §8, and
+whatever those three produce. Same shape as 19J, which opened for an
+assessment's §8 and closed at ten items — **seven produced by the
+previous item's findings**. The allowance is stated up front this time
+rather than discovered: an item arriving from another item's findings is
+admitted, anything else gets its own segment.
+
+- **Item 1 — `close_check` cannot see a `guide/` commitment.** Its
+  `COMMITTED_PATH` regex matches `spec/` and `docs/` only, so a
+  `Doc impact` bullet naming a `guide/` path is silently dropped:
+  **67 commitments across 33 plans**, none reported. Two went unhonoured
+  in 19J alone and nothing failed. A second, narrower gap in the same
+  tool: an **uncommitted** item heading widens C3's window to the
+  segment's, so a stub passes on a sibling's edits — observed twice on
+  2026-09-11, both reported as PASS before being corrected.
+- **Item 2 — the column-chip script binds to elements a re-render
+  replaces.** **The measurement corrected the move it was recommended
+  on.** The assessment said four blocks totalling ~500 lines die with a
+  re-rendered table; reading each of `base.html`'s eight blocks rather
+  than grepping for `DOMContentLoaded` gives **one block, 127 lines**.
+  The 321-line sort block binds nothing — its headers call
+  `rrwSortHeaderClick` through an inline `onclick`, so the handler
+  arrives with the markup — and two of the four named blocks are not
+  table-relevant at all.
+- ~~**Item 3 — decide whether the Invitations / Responses N+1 gets an
+  item.**~~ **Done 2026-09-12 — decided and fixed.** The re-measurement
+  held exactly (paging had changed the HTML and not the work), and it
+  located ~99% of both pages in two call sites, so the decision came out
+  "fix it now" rather than "defer with a trigger". One prefetch per
+  session in place of one query per assignment: **40,433 → 434 and
+  80,432 → 434** at 200×200. Recorded in `spec/operations_pages.md`,
+  which is where the next reader looks.
+
+**The first finding arrived before the first build**, which is the
+argument for measuring blast radius at planning time: Item 2's premise
+was wrong by about 4×, and the correction landed in the swap assessment
+and in the codebase assessment's §1, §5 and §8 before the plan was
+written.
+
+---
+
+### Segment 19L — UX refinements — ✅ **done** (**four items, all closed**; opened 2026-09-12, closed 2026-09-13; PRs #2341 → #2349; plan archived: `guide/archive/segment_19L_ux_refinements.md`)
+
+A deliberately open-ended log for small, independently-shipping operator-UI refinements, closed on the author's instruction rather than by emptying. Each of the four was a signal that was *almost* there. The lobby marked a selection on its injected panel but **no class ever reached the source `<tr>`** (1); the fix shipped an edge *and* a fill, and the fill resolved to the same primitives as `--status-info-bg`, erasing the pills the row carried — so the fill went and a bracket replaced it (2); the archived sessions page had the same rows and none of the marking, deliberately excluded by 19L.2 and admitted by the author hours later (3); and `operator/instruments_index.html` carried a **literal NUL byte**, so the value was right, and `grep` classified the repo's largest template as binary and printed nothing (4). Three of the four were found by looking at the thing rather than at the code that makes it. **Carried out:** 19L.3's open question — whether the archived page wants the single-row expander, which today heads a lone selection *"1 sessions selected"* — to `guide/archive/new_ux_ideas.md` entry 2, still undecided. The declined bulk-expander merge stays declined.
+
+
+### Segment 19M — A general sweep: history out of the specs — ✅ **done** (**ten items, all closed**; opened and closed 2026-09-13; PRs #2350 → #2357; plan archived: `guide/archive/segment_19M_spec_history_sweep.md`; record: `guide/archive/sweep_2026-09-13_spec_history.md`)
+
+All **39 live `spec/*.md`** files, 22,493 lines, in six batches drawn by cross-reference density rather than line count, then four doc-only items on what the batches found. A spec says what *is*; across `spec/` they also said when things landed, what they used to be called, and what a previous draft got wrong. The rule it ran under — `rrw_sdd_in_practice.md` §4, *the spec is the contract* — has a sharp edge: a sweeper who finds spec and code disagreeing **may not quietly rewrite the spec to match**. So the output is two artefacts, not one: the record says what was *changed*, and `guide/archive/findings_2026-09-13_spec_discrepancies.md` said what was *found and left standing* — **75 discrepancies registered, none actioned by the sweep itself**. **The correction the segment could not have planned for:** every batch was briefed to write *"plain present-tense description of what ships"*, which is `docs/`'s function and not `spec/`'s. The author's mid-sweep pointer to §4 caught it, and a sweep briefed that way would have done real damage at scale. All three segment-level open questions closed on their own stated measurements — the record stayed one file at **804** lines against a ~1,000 threshold, the sweep stays `partial` and does not reset the cadence clock, and the stale-identifier class stays a footnote at **14** report lines against a ~40 threshold. **The register outlived the segment:** opened at 86 rows, closed at 86, re-audited from scratch the same day, gained 25 more under `NF-`, closed again at 25/25 across PRs **#2365 → #2377** — most of them after every 19M item had shipped. It archives alongside the plan.
+
+### Segment 19N — Assignments are always generated — ✅ **done** (**three items, all closed**; opened and closed 2026-09-13; PRs #2358 → #2377; plan archived: `guide/archive/segment_19N_generated_assignments.md`)
+
+The author ruled the contract on 2026-09-13 — *assignments are never hand-created, uploaded or edited; an operator may turn individual rows inactive, and that plus the export/import round trip is the whole manual surface.* **Item 1** found three paths writing assignment rows outside the engine, none visible as such; `app/services/` now holds exactly one `Assignment(...)` constructor, reachable only through `replace_assignments`. Sequencing was the finding and it held: the staleness signal had to come back first, because the instrument-clone workaround existed only to paper over its absence. `SC-40`, the live silent-data-loss path, is closed — a response the rules cannot place is dropped with a reason, counted in the audit event, and downloadable; `rehydrate_enabled` **stays false** on the author's broader reason, that nobody has run the pipeline on real data. **Item 3** fixed a workflow failure banner that named the action that failed from a two-branch ternary while the routes pass five values, so three of the five were announced as the wrong button. **Item 2** was `SC-45`, the identity fold, and the investigation reversed its expected answer: casefold merges `ß` with `ss` — two different mailboxes — and the gates that key decides access at made that a fail-**open**, so `normalize_email` folds with `str.lower`. It took **three verification passes** to establish the change had reached its own gates; the first found four inline folds it had missed, the second three more, and the third found none but replaced the module allowlist that had let both happen with a scan over the identity-bearing **columns**, which are a closed set. **The finding the segment keeps**, in all three items: *prose written from the surrounding prose rather than from the file it describes*. **Carried out:** `close_check`'s one-directional manifest check and `SC-44`'s rehydrate-audit question, both filed under Upcoming → Stubs.
+
+### Segment 19O — Rosters and instruments — ✅ **closed** (**eight items**; opened 2026-09-14, closed 2026-09-20; PRs #2382 → #2510; a home for operator-facing gaps on the roster and instrument setup surfaces; plan archived at `guide/archive/segment_19O_rosters_and_instruments.md`). Item 7's register closed at **sixteen entries**; **Item 8** came from the author's dev-slot pass and made `.table-scroll` universal after measuring seven of eleven operator pages pushing the document sideways.
+
+Item 1 is the self-review exclusion shortcut on the Link 3 (*Unit of review*) column of the instrument rule card. **The affordance was designed away on a premise that no longer holds.** `spec/assignments.md` § *Self-review policy* names a Link rule as one of two supported ways to suppress self-reviews; no operator can author it — the inline builder's field list is tags only and the general Rule Builder is retired. The 13A picker omitted email deliberately, *because* `excludeSelfReviews` covered the case; the picker retired 2026-05-25 and `excludeSelfReviews` was pinned `False` 2026-05-26, in the same commit that wrote the policy naming the now-unreachable rule. **The build is smaller than it looks**: `_generate.py` already computes whole-group `is_self` before deciding `pair_include`, so a per-instrument flag honored at materialization gets group correctness for free — no group-aware predicate, and none of the desugar-stage hazards the pinned flag was banned for. Lifted out of `guide/deferred_consolidated.md` Part A on the author's instruction. Four rungs; Assignments shows **"Excluded by rule"** in place of the count. **Item 2** fixed what the author found on the rendered page: the checkbox copy named the wrong unit of review because it was rendered from the *persisted* `group_kind` while the Link 3 pill cycles client-side, and the control had no heading. Its follow-up added the two clearing rules — hidden *and* cleared while any Link is `Not set`, cleared when Link 3 moves individual → group — and the close pass found the second guarantee was only half enforced, since session-config import writes the column from a different part of the bundle than the instrument rows it must agree with. **The finding both items share** is Item 1's, one layer over: *Doc impact enumerating the specs the behavior touches rather than every spec that describes the thing* — it left stale rows in `spec/roundtrip_coverage.md`, then `spec/assignments.md`, then `spec/settings_inventory.md`, each caught only by a close pass. Verified on the dev slot. **Items 3-6 are all *the page does the thing and says nothing*.** **Item 3**:
+a sent invitation made the roster un-replaceable, with no route back.
+**Item 4**: a client-side sort stranded the injected selection panel at the
+foot of the table — and, quieter, corrupted the *unsorted* restore order,
+because a panel present when `rrwOriginalIndex` is stamped shifts every
+row after it. **Item 5**: a roster delete cascaded through
+`relationships` and reported nothing; the two spec bullets it had owed
+since it shipped are paid. **Item 6** worked a register of eight loose
+ends through in two passes, the last of them the sort migration Item 4
+had deferred — all six sorting pages now listen for `rrw:sorted` and none
+defends itself. **The finding Items 4 and 6 share is about the
+instruments, not the code**: a mutation table, a proximity threshold, a
+hand-maintained page census and two successive guard regexes each proved
+less than was claimed for them, and *every one was caught by a reader
+rather than by the instrument* — the last of them on its third draft,
+which is the first that does not have to predict how a future handler
+will be spelled. **Closed 2026-09-20** on the author's instruction, after Item 8 came
+from their dev-slot pass; further gaps on these surfaces get their own
+segment.
+
+### Segment 19P — The expander revamp — ✅ **closed + archived** (**seven items — five built, two retired unbuilt**; opened 2026-09-14, closed 2026-09-18; PRs #2393 → #2446; plan archived: `guide/archive/segment_19P_expander_revamp.md`)
+
+One measured pattern: a control sitting a grid away from the rows it acts
+on, and an expander that puts it beside them. **Items 1–3** carried it to
+the four rosters — Reviewers, Observers, Reviewees, Relationships — and
+**Item 5** to the three Operations tables, where only Assignments had a
+selection to re-house; Invitations and Responses took the toolbar alone
+and their rows stayed links.
+
+**Items 4 and 7 were retired unbuilt, each for a reason the segment
+discovered rather than assumed.** Item 4 because `spec/operations_pages.md`
+had already ruled out the multi-select column an expander would need, and
+Item 7 because its question — *should the Previews hub become the reviewer
+page?* — was answered *retire it*, becoming **19Q Item 1**, which then
+found what the stub had missed: the hub also hosts the email previews, so
+retiring it needs a home for those.
+
+**Item 6 is the one that grew**, three rungs to five, and its lesson is
+about verification rather than UI. The Invitations table's rows never
+depended on invitations — `build_invitations_rows` iterates
+`per_reviewer_progress`, whose set is `_assigned_active_reviewers`, so no
+`Invitation` decides which rows exist — but its **links did**, so before
+*Create invites* the page was a list of names going nowhere; the route is
+keyed on the reviewer now. The Invitation card then took three
+corrections in a row from two readers: the author, from the dev slot, on
+a card reporting `Email Status: not sent` for a reviewer with no
+invitation at all; Codex, on guidance telling an *ineligible* reviewer's
+operator to press a button that cannot reach them; and Codex again, on a
+delivery pill gated so that it hid the states it existed to show.
+
+---
+
+### Segment 19Q — Workflow and previews — ✅ **closed + archived** (**seven items, all closed**; opened 2026-09-17, closed 2026-09-19; PRs #2465 → #2492; plan archived: `guide/archive/segment_19Q_workflow_and_previews.md`)
+
+The workflow surfaces and the previews behind them. **Item 1** retired the
+Previews hub onto the Invitations per-reviewer drill-in; **Item 2** folded
+invitation creation into Prepare, so a prepared session no longer waits on
+a separate *Create invites*; **Item 3** brought the in-app Guide and the
+Workflow card's own copy up to both; **Item 4** fixed a button sitting
+outside its own column and stopped the card's right column reproducing the
+Validate page; **Item 6** made an instrument's operator-facing number
+per-session, keyed on **creation order rather than display position**
+because drag-and-drop already ships; **Item 7** closed a rule with one home
+only the CSV importer could reach — one mailbox under two names — and
+added four Validate rules for the rows the guards cannot retroactively
+refuse.
+
+**Item 2's defect is the one worth remembering**: the Manage Invitations
+table and *Send all* disagreed about who was in the session, two copies of
+the same join with one filtered and one not. One eligibility helper governs
+every send path now, and the monitoring layer's remaining duplicate is
+recorded in `guide/deferred_consolidated.md` rather than left implicit.
+
+**Item 5 took the author's replacement screencap set**, 19 pairs down to
+17, and found the gap that outlasts it:
+`tests/integration/test_guide_screencaps.py` checks a light/dark pair's
+**files** against each other and never its **pictures**, so four pairs
+shipped showing two different screens and seven alt texts were false while
+passing every gate. Recorded at the `.guide-figure` contract in
+`spec/ui_elements.md`, since no test can carry it.
 
 ---
 

@@ -143,12 +143,21 @@ ascending*) has drifted far enough that 19I (#2230) sits below 19O
 (#2382). The mechanical gates cannot see any of it: they check that a
 path resolves and a `§N` exists, not whether a count is current.
 
-**The tension is the entry.** A gate here would have to judge whether
-prose is *current*, and `constitution.md` VI retires rather than
-mechanises badly — which is exactly why 19R.7 retired a standing rule
-nobody checked. **Trigger:** a third instance, or the author asking for
-a gate. The two gaps found above are deliberately left unfixed here; an
-unrelated fix does not belong in a close.
+**The two `guide/todo_master.md` gaps are fixed** (2026-09-22, on the
+author's instruction, in their own slice rather than in the close):
+19P and 19Q have `## Done` entries written from their archived plans,
+and the section is sorted — nine blocks moved, every one byte-identical,
+and the rule's own blind spot is now stated where the rule lives, since
+a heading declaring no PR cannot be placed by it. The fix also found a
+**third** instance a line from the second: 19O's entry ended *"the
+segment stays open"* under a heading reading `✅ closed`.
+
+**The entry stays open, because the gate does not exist.** Three
+instances in two indexes were each caught by a person reading, and a
+gate here would have to judge whether prose is *current* — which
+`constitution.md` VI retires rather than mechanises badly, exactly why
+19R.7 retired a standing rule nobody checked. **Trigger:** a fourth
+instance, or the author asking for a gate.
 
 ### E5 — the prose about the work is wrong more often than the work
 
