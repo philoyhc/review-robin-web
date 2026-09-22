@@ -205,7 +205,10 @@ the joke it sounds like.
   Its items each compacted at their own close and it still landed there.
   19S, written after the budget was raised as a finding, opens past the
   ~250 and its Item 2 came in at ~160 against ~120 after two deliberate
-  trim passes.
+  trim passes. Its Items 3, 4 and 5, added 2026-09-22, came in at ~146,
+  ~129 and ~145 — **four consecutive items overran while the convention
+  sat here**, each written by someone who had just read it, and Item 5
+  only after two deliberate trim passes.
 - **Why not — and this one is not about feasibility.** `wc -l` over
   `guide/segment_*.md` is a check anyone could write in a line. Two
   things disqualify it. It would be **red from its first commit**, so it
