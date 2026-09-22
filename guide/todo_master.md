@@ -3322,25 +3322,30 @@ dep chains called out at the bottom of this file.
    **Plan:** `guide/segment_19S_post_assessment.md`.
    **Evidence:** `guide/codebase_assessment_22sep.md` §§5, 8 and 9, plus
    the independent cold read at `guide/codex_assessment_21sep.md`.
-   - **A register, not a queue.** Eight entries, **none scheduled**,
-     each one thing with no home of its own — seven from the two
-     end-of-window reads, an eighth from the `spec-writer` pass at
-     19R's close — with its evidence cited rather than copied, and the
-     trigger that would promote it to a full item. Both reads warned
-     against another open-ended refinement container, and one put it
-     directly: *a measurement is not automatically a backlog item*.
-   - **Promotion is the author's call**, on a named trigger. An entry
-     that is never promoted is not a failure of the register; losing
-     the finding would have been.
-   - Entries at open: Prepare's 20 s per-pair insert (**E1**), re-taking
-     the bench against real data rather than the code (**E2**), the
+   - **Item 1 — the register.** Eight entries, **none scheduled**, each
+     one thing with no home of its own: Prepare's 20 s per-pair insert
+     (**E1**), re-taking the bench against real data (**E2**), the
      ≥1,000 LOC watchlist living only in a snapshot that archives
-     (**E3**), the hand-maintained indexes drifting with nothing to
-     gate them (**E4**), prose about the work being wrong more often
-     than the work (**E5**), a new guard having no evidence bar
-     (**E6**), plans overrunning their own length budget (**E7**), and
-     the two divergences 19R recorded, did not fix, and has now
-     archived (**E8**).
+     (**E3**), the hand-maintained indexes drifting (**E4**, **closed
+     2026-09-22**), prose about the work being wrong more often than the
+     work (**E5**), a new guard having no evidence bar (**E6**), plans
+     overrunning their own length budget (**E7**), and the two
+     divergences 19R recorded, did not fix, and has now archived
+     (**E8**). A register, not a queue: both end-of-window reads warned
+     against another open-ended container, and one put it directly —
+     *a measurement is not automatically a backlog item*.
+   - **Item 2 — the four index gates** *(planned 2026-09-22, not yet
+     built)*. E4's gateable half, promoted: every archived plan from
+     segment 16 on has a `## Done` entry, those headings run ascending
+     by declared PR, `docs/status.md`'s `As of` matches its newest row,
+     and no `**Plan:**` pointer under `## Upcoming` resolves into
+     `guide/archive/`. All four pass today and each needs no allowlist,
+     which is `docs/unenforced_conventions.md` §2's bar; three have a
+     demonstrated instance behind them. Two rungs: the module, then the
+     doc alignment.
+   - **Promotion is the author's call** on a named trigger. An entry
+     never promoted is not a failure of the register; losing the
+     finding would have been.
 
 #### Stubs
 
