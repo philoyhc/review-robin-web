@@ -1238,6 +1238,16 @@ excludes the **53** unanchored legacy ones.
 
 - Does the re-run ever get built? **Decided by:** rung 2, against the
   anchored corpus rather than against this item's guess.
+- **What is the cutoff, and in what unit?** Named six times above and
+  **defined nowhere** — found 2026-09-22 when the author asked what the
+  item still needed. Rung 1 cannot be built without it, because
+  *"sections landing on or after the cutoff"* needs a way to tell when
+  a section landed, and a section carries no date until this item gives
+  it one. **Decided by:** the author. Recommendation: **a segment-number
+  comparison on the plan file**, not a date on the section — the shape
+  Item 2's `LEGACY_BEFORE_SEGMENT` already set, derivable from the
+  filename with no git archaeology and no allowlist. A date cutoff would
+  need `git log` per section to answer the same question.
 
 ### Out of scope
 
@@ -1580,3 +1590,151 @@ Taken 2026-09-22 at `0ca204b`.
   *[filter box + typeahead]*; a second typeahead in the row expander
   belongs in it (Item 7).
 - `docs/status.md` — row when the item lands (Item 7).
+
+---
+
+## Item 8 — a pytest node id cited in live prose resolves
+
+**Logged 2026-09-22 on the author's instruction**, out of Item 4's own
+defect record rather than out of the assessment: that item produced
+**three** citation-staleness incidents, and this is the one of the three
+with a clean derivation.
+
+### Opportunity
+
+`tests/unit/test_doc_references.py` already fails on a backticked repo
+path in live prose that names nothing, and on a `§N` pointer to a
+section that does not exist. It does **not** check a citation of the
+form `` `tests/…py::test_name` `` — so prose can point at a test that
+was renamed or deleted, and the reader who tries to run the cited proof
+gets a collection error instead.
+
+**It is not hypothetical, and it is not only Item 4's.** Measured
+2026-09-22 at `9b32a9f`:
+
+| corpus | citations | resolve |
+|---|---:|---|
+| live prose (the 72 files `LIVE_PROSE` already covers) | **2** | 2 |
+| `guide/archive/` | **3** | **0** |
+
+All three archived citations are stale — one in 19F's plan, two in
+`guide/archive/unfinished_business.md`. Archived prose is history and
+stays exempt, but those three are the evidence that the failure mode
+recurs across segments rather than being one rename today.
+
+**Item 4's instance was in live prose**, which is what makes this
+worth a check: `guide/findings_2026-09-22_csv_contracts.md` is not
+matched by `DATED_DOC` (`findings_` is absent from it), so the register
+citing a pre-rename test name **would have failed this gate** before a
+reviewer found it by reading.
+
+### Decision
+
+Extend `tests/unit/test_doc_references.py` with one check: every
+`` `tests/<path>.py::<name>` `` in `LIVE_PROSE` names a test that
+exists. Same module because it is the same subject — *a citation in
+live prose resolves* — and a second module would split one gate list
+across two docstrings, the reasoning Item 5 used for joining Item 2's.
+
+**Rejected: `pytest --collect-only` per citation.** It is the
+authoritative answer and the wrong instrument: it costs a subprocess per
+hit and turns an unrelated collection error anywhere in the suite into
+this check's failure.
+
+**Rejected: a new module.** See above; and `LIVE_PROSE`, `DATED_DOC`
+and the live-line filter are already there to reuse.
+
+### Semantics
+
+- **Resolution is by definition name, read from the file.** A test
+  exists when its file exists and declares `def <name>(` or
+  `async def <name>(` — sufficient today because the suite has **0**
+  class-based tests (`grep -c "^class Test" tests/`), which is the
+  assumption to re-check if one ever lands.
+- **Parametrised ids are out of shape, not out of scope.** No citation
+  anywhere carries a `[case]` suffix today (**0**), so the check need
+  not strip one; if one appears it should fail loudly rather than be
+  silently tolerated, since a wrong case id is the same defect.
+- **`guide/archive/` stays exempt**, as it is for paths: an archived
+  plan records what was true, and its three stale citations are correct
+  history. This is the concession, stated rather than discovered.
+- **The residual, named because §1.6 asks what a scan cannot see.**
+  `DATED_DOC` excludes `segment_*.md`, and one live citation sits in
+  `guide/segment_19S_post_assessment.md` — so a node id in a *live
+  segment plan* is unchecked. Widening `LIVE_PROSE` is a change to a
+  corpus three other checks share, which is not this item's to make.
+- **Green from its first commit**, which is `docs/unenforced_conventions.md`
+  §2's bar: both live citations resolve at `9b32a9f`. The check arrives
+  as a guard, not as a cleanup.
+
+### Judgment calls — decided
+
+- **Definition-name lookup over `--collect-only`** (2026-09-22) — the
+  cheap instrument that cannot be broken by an unrelated collection
+  error.
+- **Item 4's module, not a new one** (2026-09-22) — same subject as the
+  path and `§N` checks it sits beside.
+- **Two citations is thin and the item says so** (2026-09-22) — the
+  case is the demonstrated instance plus the three archived ones, not
+  the size of today's corpus. §1.6's vacuity concession is why the
+  count is published rather than implied.
+
+### Blast radius (measured)
+
+Taken 2026-09-22 at `9b32a9f`.
+
+| what | count | command |
+|---|---|---|
+| node-id citations in `LIVE_PROSE` | **2** | the scan in `Opportunity` |
+| stale citations in `guide/archive/` | **3** of 3 | the same scan, archive corpus |
+| class-based tests in the suite | **0** | `grep -c "^class Test" tests/ -r` |
+| parametrised node-id citations, any corpus | **0** | the same scan, `\[` in the name |
+| `tests/unit/test_doc_references.py` | **~320** lines, 4 checks today | `grep -c "" tests/unit/test_doc_references.py` |
+| production LOC | **0** | the item adds a test only |
+
+### PR ladder
+
+1. **Rung 1 — the check.** One test in
+   `tests/unit/test_doc_references.py`, plus a mutation proving it
+   fails on a renamed citation and a live floor asserting the scan sees
+   the citations that exist. **Must not** widen `LIVE_PROSE` or touch
+   the path / `§N` checks.
+
+### Definition of done
+
+- The check **fails under a mutation** of what it protects — a citation
+  renamed to a test that does not exist — per
+  `docs/unenforced_conventions.md` §1.8, and the mutation is recorded in
+  `### Status`.
+- A **live floor** asserts the scan finds the citations that are
+  there, so a recogniser that matches nothing cannot pass.
+- The archive exemption is asserted, not assumed: the three stale
+  archived citations do **not** fail the suite.
+- `pytest -n auto` green and `ruff check .` clean, with `node` present.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19S.8` exits 0; any warning adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added
+
+### Open questions
+
+- Should a node id in a **live segment plan** be checked? `DATED_DOC`
+  excludes it today and one such citation exists. **Decided by:** the
+  author, or the first stale instance there. Recommendation: leave it,
+  since widening `LIVE_PROSE` changes a corpus three checks share.
+
+### Out of scope
+
+- **The other two staleness classes Item 4 produced** — wrong `file:line`
+  numbers. A line number has no derivation that survives an edit
+  anywhere above it, which is why only this class became an item.
+- **Widening `LIVE_PROSE`** — see the open question.
+- **`guide/archive/`** — its three stale citations are history.
+
+### Doc impact
+
+- `tests/unit/test_doc_references.py` — the node-id check joins the
+  path and `§N` checks (Item 8).
+- `CLAUDE.md` / `AGENTS.md` — the *"A green `ruff` is not evidence"*
+  entry for that module names what it now covers (Item 8).
+- `docs/status.md` — row when the item lands (Item 8).
