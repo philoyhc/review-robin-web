@@ -1612,8 +1612,10 @@ ride-along is one pair.
 
 ### PR ladder
 
-1. **Rung 1 — the scaffold.** The half-width card in place with real
-   copy and an inert input. **Must not** write anything.
+1. **Rung 1 — the scaffold.** ✅ done 2026-09-22. The half-width card in
+   place with real copy and an inert input. **Must not** write anything.
+   **Cumulative-diff base for the item's cold read: `c329180`** — the
+   read runs at rung 2 or 3, whichever last touches `app/` or `tests/`.
 2. **Rung 2 — the write.** `set_tags` after the settings-CSV block, per
    the ordering in `Semantics`. **Must not** change
    `_apply_session_tags`, and **must not** add typeahead — that is
@@ -1650,6 +1652,39 @@ ride-along is one pair.
   the rule already in `_apply_session_metadata`, and it wins by
   ordering the write after the settings block. `Semantics` carries the
   reasoning and what it rules out. Nothing is left open.
+
+### Status
+
+**Rung 1 done, 2026-09-22.** Intended: the card, inert. Done, plus
+three tests that pin inertness as a *property* rather than as a
+comment — rung 2 inverts them by design.
+
+**Inertness has two halves and the tests assert both.** The input
+carries no `name`, so a browser does not submit it, and no
+`form="create-session-form"`, which is what associates a control
+rendered outside the `<form>` with it — every live control in this row
+has one. Either alone leaves the control half-wired, and a mutation
+adding just one is caught. A round trip through `POST /sessions`
+carrying `tags=` confirms the created session is untagged, which is the
+half no markup assertion can make.
+
+**Five mutations, and the last two are `docs/unenforced_conventions.md`
+§1.11's own diagnostic on its first slice**: the card's `_card()` helper
+degenerated to `""`, and `tags_for_sessions` to `{}`. Both caught — the
+first by the deliberate *"the control is genuinely there to be wired"*
+assertion, which exists so the two `not in` checks cannot pass on an
+empty string.
+
+`tags_for_sessions` also corrected a first draft: it keys **every** id
+it is asked about, so the empty state is an empty list and not an
+absent key. Asserted against the helper rather than assumed, which is
+the same §1.11 habit one level down.
+
+All four `Blast radius` figures re-took at `c329180`, unchanged.
+
+Reads: none yet — rung 1 is a code rung inside a ladder, so the
+`diff-reviewer` read is owed once, at the item's last build rung, over
+`git diff c329180..HEAD`.
 
 ### Out of scope
 
