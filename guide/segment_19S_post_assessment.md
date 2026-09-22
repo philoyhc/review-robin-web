@@ -1371,6 +1371,10 @@ decided against the anchored corpus rather than a guess.
   follows the how-to section and a reader checks the table (Item 5).
 - `guide/segment_plan_template.md` — the blank `Blast radius` block
   carries the anchor line (Item 5).
+- `CLAUDE.md` / `AGENTS.md` — the *"A green `ruff` is not evidence"*
+  entry for `tests/unit/test_index_currency.py` names G5 alongside
+  G1–G4, so a contributor editing a `Blast radius` section knows a gate
+  reads it (Item 5).
 - `docs/status.md` — row when the item lands (Item 5).
 
 ---
