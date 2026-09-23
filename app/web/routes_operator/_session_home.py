@@ -275,6 +275,7 @@ def _apply_session_config_form(
     observers_enabled: bool,
     responses_release_at: str | None,
     responses_release_until: str | None,
+    correlation_id: str,
 ) -> None:
     """Parse + validate + persist the session-config form fields.
 
@@ -385,7 +386,6 @@ def _apply_session_config_form(
             detail=str(exc),
         ) from exc
 
-    correlation_id = request_correlation_id()
     sessions.set_session_display_timezone(
         db,
         review_session=review_session,
@@ -442,6 +442,10 @@ def session_config_submit(
     redirects back to Session Home in **display** mode (no ``?editing``)
     — the operator saves in place instead of hopping to a child page.
     """
+    # One correlation id for the whole save, so the config events and the
+    # tag events it produces group as one request (``request_correlation_id``
+    # mints a fresh id per call).
+    correlation_id = request_correlation_id()
     _apply_session_config_form(
         db=db,
         review_session=review_session,
@@ -459,6 +463,7 @@ def session_config_submit(
         observers_enabled=observers_enabled,
         responses_release_at=responses_release_at,
         responses_release_until=responses_release_until,
+        correlation_id=correlation_id,
     )
     # 19S Item 9 Part B — the card's Tags field, written after the config
     # apply so a rejected save writes no tags either. An emptied box
@@ -473,7 +478,7 @@ def session_config_submit(
         review_session=review_session,
         user=user,
         tags=tags.split(","),
-        correlation_id=request_correlation_id(),
+        correlation_id=correlation_id,
     )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}#session-config",

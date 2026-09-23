@@ -298,6 +298,33 @@ def test_an_untouched_box_emits_no_tag_events(
     assert _tags_of(db, review_session) == ["2026", "pilot"]
 
 
+def test_one_save_is_one_correlation_id(client: TestClient, db: Session) -> None:
+    """The config events and the tag events of one save group as one
+    request. ``request_correlation_id`` mints a fresh id per call, so the
+    route mints one and hands it to both (Codex, #2569)."""
+    review_session = _create(client, db, "HOME-TAGS-CORR")
+    _tag(db, review_session, ["pilot"])
+    last = db.execute(
+        select(AuditEvent.id).order_by(AuditEvent.id.desc())
+    ).scalars().first()
+
+    response = _save(client, review_session, tags="pilot, 2026")
+    assert response.status_code == 303, response.text
+    events = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == review_session.id, AuditEvent.id > last
+        )
+    ).scalars().all()
+    kinds = {e.event_type for e in events}
+    assert "session.tag_added" in kinds, "the save changed a tag"
+    assert kinds - {"session.tag_added", "session.tag_removed"}, (
+        "and emitted a config event beside it — the rename"
+    )
+    assert len({e.correlation_id for e in events}) == 1, (
+        sorted((e.event_type, e.correlation_id) for e in events)
+    )
+
+
 def test_a_rejected_save_writes_no_tags(client: TestClient, db: Session) -> None:
     """The write runs after the config apply, so a save the card rejects
     writes nothing at all — tags included."""
