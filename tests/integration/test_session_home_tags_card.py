@@ -162,27 +162,40 @@ def test_the_card_helper_is_bounded(client: TestClient, db: Session) -> None:
     assert "data-config-save" in body[body.index(card) + len(card):]
 
 
-def test_the_card_takes_the_slot_the_owners_card_left(
+def test_the_card_sits_right_of_ui_settings_above_the_save_cluster(
     client: TestClient, db: Session
 ) -> None:
-    """19S Item 10 moved Owners out of the details card; Tags took its
-    slot, the details card's left column, with User interface settings
-    and the Save cluster in the right one (author's ruling, 2026-09-23)."""
+    """19S Item 10 moved Owners out of the details card and Tags took a
+    slot; the author then swapped the pair (2026-09-23): User interface
+    settings in the left column, Tags in the right with the Save cluster
+    under it."""
     review_session = _create(client, db, "HOME-TAGS-ORDER")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
     grid = body.find('<div class="bottom-grid"', body.find('id="session-config"'))
-    tags = body.find('id="config-tags-card"')
     ui = body.find('id="config-ui-settings-card"')
+    tags = body.find('id="config-tags-card"')
     save = body.find("data-config-save")
     assert -1 not in (grid, tags, ui, save)
-    assert grid < tags < ui < save
+    assert grid < ui < tags < save
 
     left = body.find('<div class="bottom-left">', grid)
-    right = body.rfind('<div class="bottom-left">', 0, ui)
-    assert body.rfind('<div class="bottom-left">', 0, tags) == left
-    assert left < tags < right, "Tags and UI settings share no column"
+    right = body.rfind('<div class="bottom-left">', 0, tags)
+    assert body.rfind('<div class="bottom-left">', 0, ui) == left
+    assert left < ui < right, "UI settings and Tags share no column"
     assert body.rfind('<div class="bottom-left">', 0, save) == right
+
+
+def test_the_sub_card_grid_adds_no_bottom_margin(
+    client: TestClient, db: Session
+) -> None:
+    """``.bottom-grid``'s page-level bottom margin stacked on the card's
+    padding and left the Save cluster 34px above the card's border."""
+    review_session = _create(client, db, "HOME-TAGS-GAP")
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    grid = body.find('<div class="bottom-grid"', body.find('id="session-config"'))
+
+    assert "margin-bottom: 0;" in body[grid : body.index(">", grid)]
 
 
 def test_locked_it_renders_the_lobbys_pills(

@@ -173,13 +173,56 @@
     </div>
 
     {# Half-width sub-cards inside the Session details card, below the
-       unified details block: Tags (left) + User interface settings
-       (right), with the card's Save / Cancel / Lock cluster under the
-       latter. Both follow the card-wide data-config-mode swap and save
-       with its ``config-save`` form. Tags took the left slot when the
-       Owners card left this card for its own, below the Danger Zone
-       (19S Item 10). #}
-    <div class="bottom-grid" style="margin-top: calc(var(--space-3) * 2);">
+       unified details block: User interface settings (left) + Tags
+       (right), with the card's Save / Cancel / Lock cluster under Tags.
+       Both follow the card-wide data-config-mode swap and save with its
+       ``config-save`` form. Tags took a slot here when the Owners card
+       left this card for its own, below the Danger Zone (19S Item 10),
+       and the two swapped sides on the author's ruling (2026-09-23).
+       ``margin-bottom: 0``: ``.bottom-grid`` carries a page-level bottom
+       margin, which here stacked on the card's own padding and left the
+       cluster 34px above the border, against ~18px on every other card
+       (measured in Chromium, 2026-09-23) — as the ``.page-grid`` above
+       zeroes its own. #}
+    <div class="bottom-grid" style="margin-top: calc(var(--space-3) * 2); margin-bottom: 0;">
+      {# User interface settings — left of Tags. Display mode shows the
+         current toggle states; edit mode shows the checkboxes. #}
+      <div class="bottom-left">
+        <div class="card" id="config-ui-settings-card">
+          <h3 style="margin-top: 0;">User interface settings</h3>
+          <p class="muted">Per-session toggles for the optional Setup tabs.</p>
+          {# Both items on one line in both modes at normal card body font.
+             Display mode shows an inactive (disabled) checkbox reflecting
+             the current state; edit mode shows an active checkbox. #}
+          <div class="ui-settings-row">
+            <label class="ui-setting">
+              Relationships tab and page
+              <input type="checkbox" data-display-only disabled
+                     {% if session.relationships_enabled %}checked{% endif %}>
+              {# Lock-on-data — once a roster has rows the toggle can't flip
+                 True→False (would orphan data); this card disables it, and
+                 the service-layer guard rejects the flip for direct API
+                 calls. (Said "mirror the Edit page" until 2026-09-13; that
+                 page retired in 18R Item 4.) #}
+              <input type="checkbox" name="relationships_enabled" value="true"
+                     data-edit-only data-config-input
+                     form="config-save-{{ session.id }}"
+                     {% if session.relationships_enabled %}checked{% endif %}
+                     {% if has_relationships %}disabled{% endif %}>
+            </label>
+            <label class="ui-setting">
+              Observers tab and page
+              <input type="checkbox" data-display-only disabled
+                     {% if session.observers_enabled %}checked{% endif %}>
+              <input type="checkbox" name="observers_enabled" value="true"
+                     data-edit-only data-config-input
+                     form="config-save-{{ session.id }}"
+                     {% if session.observers_enabled %}checked{% endif %}
+                     {% if has_observers %}disabled{% endif %}>
+            </label>
+          </div>
+        </div>
+      </div>
       <div class="bottom-left">
         {# Tags (19S Item 9 Part B). A field of this card that renders in
            its own card, as the UI toggles beside it do: it follows the card's
@@ -230,46 +273,7 @@
                  value="{{ session_tag_list | join(', ') }}"
                  placeholder="e.g. pilot, 2026, engineering">
         </div>
-      </div>
-      {# User interface settings — to the right of Tags. Display mode
-         shows the current toggle states; edit mode shows the checkboxes
-         (mock, inert). Mirrors the Edit page's card. #}
-      <div class="bottom-left">
-        <div class="card" id="config-ui-settings-card">
-          <h3 style="margin-top: 0;">User interface settings</h3>
-          <p class="muted">Per-session toggles for the optional Setup tabs.</p>
-          {# Both items on one line in both modes at normal card body font.
-             Display mode shows an inactive (disabled) checkbox reflecting
-             the current state; edit mode shows an active checkbox. #}
-          <div class="ui-settings-row">
-            <label class="ui-setting">
-              Relationships tab and page
-              <input type="checkbox" data-display-only disabled
-                     {% if session.relationships_enabled %}checked{% endif %}>
-              {# Lock-on-data — once a roster has rows the toggle can't flip
-                 True→False (would orphan data); this card disables it, and
-                 the service-layer guard rejects the flip for direct API
-                 calls. (Said "mirror the Edit page" until 2026-09-13; that
-                 page retired in 18R Item 4.) #}
-              <input type="checkbox" name="relationships_enabled" value="true"
-                     data-edit-only data-config-input
-                     form="config-save-{{ session.id }}"
-                     {% if session.relationships_enabled %}checked{% endif %}
-                     {% if has_relationships %}disabled{% endif %}>
-            </label>
-            <label class="ui-setting">
-              Observers tab and page
-              <input type="checkbox" data-display-only disabled
-                     {% if session.observers_enabled %}checked{% endif %}>
-              <input type="checkbox" name="observers_enabled" value="true"
-                     data-edit-only data-config-input
-                     form="config-save-{{ session.id }}"
-                     {% if session.observers_enabled %}checked{% endif %}
-                     {% if has_observers %}disabled{% endif %}>
-            </label>
-          </div>
-        </div>
-        {# Save / Cancel / Lock cluster just below the UI settings card,
+        {# Save / Cancel / Lock cluster just below the Tags card,
            flushed right (18R Item 4 Slice 3 — wired).
            - Save submits the config form (POST → Home display mode). Rendered
              enabled so no-JS works; the dirty-tracking script disables it until
