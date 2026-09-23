@@ -26,8 +26,6 @@ Exercises the Owners section, which lives on Session Home's config card
 """
 from __future__ import annotations
 
-import re
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -192,11 +190,8 @@ def test_config_owners_card_renders_add_form_when_candidates_exist(
     client: TestClient,
     bob,
 ) -> None:
-    """With a second workspace operator available, the Session Home config
-    Owners sub-card renders the Add-owner picker. Since 19S Item 10 rung 2
-    it stages rather than posts: the box is named ``owners`` and bound to
-    the card's own form, and there is no ``/owners/add`` form on the page
-    (the route stays, for the sys-admin bootstrap)."""
+    """18R Item 4 Slice 4 — with a second workspace operator available, the
+    Session Home config Owners sub-card renders the wired Add-owner form."""
     review_session = _make_session(client, db, code="own-addform")
     _seed_user(db, email="bob@example.edu")
 
@@ -214,23 +209,12 @@ def test_config_owners_card_renders_add_form_when_candidates_exist(
         '<label for="config-add-owner-email">'
         "Pick or search for a workspace operator:</label>"
     ) in card
-    assert re.search(
-        r'<input type="email" id="config-add-owner-email" name="owners"\s+'
-        rf'form="config-save-{review_session.id}"',
-        card,
+    assert 'name="target_email"' in card
+    assert (
+        f'action="/operator/sessions/{review_session.id}/owners/add"' in card
     )
-    assert "/owners/add" not in card, "Add owner stages, it no longer posts"
-    assert re.search(
-        r'class="btn secondary" type="button"\s+'
-        r'id="config-add-owner" data-owners-add hidden>Add owner',
-        card,
-    )
-    # Bob is offered as a candidate in the datalist — and so is the owner
-    # already in the table (every workspace operator, author's ruling).
-    candidates = card.split('<datalist id="config-owner-candidates">', 1)[1]
-    candidates = candidates.split("</datalist>", 1)[0]
-    assert "bob@example.edu" in candidates
-    assert "alice@example.edu" in candidates
+    # Bob is offered as a candidate in the datalist.
+    assert "bob@example.edu" in card
 
 
 def test_add_owner_target_not_in_workspace_303s_with_error(

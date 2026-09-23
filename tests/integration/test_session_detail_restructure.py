@@ -12,8 +12,6 @@ Covers:
 
 from __future__ import annotations
 
-import re
-
 from collections.abc import Callable
 
 from fastapi.testclient import TestClient
@@ -1184,19 +1182,12 @@ def test_session_config_card_has_owners_subcard(
     for col in ("<th>Email</th>", "<th>Name</th>", "<th>Role</th>", "<th>Added</th>"):
         assert col in card
     assert 'class="col-shrink">Action</th>' in card  # edit-mode Action column
-    # The creator is an owner — their email shows in the table. Since 19S
-    # Item 10 rung 2 the edit table stages: Remove is a plain button and
-    # each row carries a hidden ``owners`` input bound to the card's form,
-    # saved with the card's Save — no per-row ``/remove`` form. (Picker
-    # coverage lives in test_session_owners.)
+    # The creator is an owner — their email shows in the table, with a wired
+    # Remove form (Slice 4). (Add-owner form coverage — which needs a second
+    # workspace operator to have candidates — lives in test_session_owners.)
     assert "alice@example.edu" in card
-    assert re.search(r'type="button"\s+data-owners-remove hidden>Remove</button>', card)
-    assert re.search(
-        r'<input type="hidden" name="owners" value="alice@example\.edu"\s+'
-        rf'form="config-save-{review_session.id}">',
-        card,
-    )
-    assert "/remove\"" not in card
+    assert 'type="submit">Remove</button>' in card
+    assert "/remove\"" in card
 
     # User interface settings card sits to the right of Owners.
     assert 'id="config-ui-settings-card"' in card

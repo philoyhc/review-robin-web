@@ -199,12 +199,12 @@ def session_detail(
                 review_session.reminder_offsets,
                 session_tz,
             ),
-            # The details card's Owners sub-card: the current owners, and the
-            # Add-owner picker's candidates — every workspace operator, since
-            # owners are staged (19S Item 10).
+            # 18R Item 4 — current owners + add-candidates for the Session
+            # config card's Owners sub-card (mirrors the Edit page's Owners
+            # card: Email / Name / Role / Joined / Action + Add owner).
             "config_owners": session_owners.list_owners(db, review_session),
             "config_owner_candidates": (
-                session_owners.session_owner_candidates(db)
+                session_owners.workspace_operator_candidates(db, review_session)
             ),
             # 19S Item 9 Part B — the details card's Tags field, shown as a
             # ``.config-value`` when locked and prefilled when editing.
@@ -442,9 +442,6 @@ def session_config_submit(
     responses_release_until: str | None = Form(default=None),
     tags: str = Form(default=""),
     tags_present: str = Form(default=""),
-    owners: list[str] = Form(default=[]),
-    owners_original: list[str] = Form(default=[]),
-    owners_present: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -456,32 +453,9 @@ def session_config_submit(
     — the operator saves in place instead of hopping to a child page.
     """
     # One correlation id for the whole save, so the config events and the
-    # tag and owner events it produces group as one request
-    # (``request_correlation_id`` mints a fresh id per call).
+    # tag events it produces group as one request (``request_correlation_id``
+    # mints a fresh id per call).
     correlation_id = request_correlation_id()
-    # 19S Item 10 — the Owners card saves with the card. The page posts
-    # the owners it was rendered with (``owners_original``) beside its
-    # table (``owners``), and only the difference is applied, to the
-    # owners the session has now: a stale page does not undo another
-    # owner's change. It is resolved **before** any write, so a
-    # non-operator addition is a 422 that saves nothing else either, like
-    # every other error this Save returns. Behind an ``owners_present``
-    # marker for the reason ``tags_present`` exists: FastAPI hands an
-    # absent list and an empty one identically, and an absent set must
-    # not read as *remove every owner*. The editable check comes first,
-    # so an active session still answers 409 rather than an owner 422.
-    owner_targets = None
-    if owners_present:
-        _require_editable(review_session)
-        try:
-            owner_targets = session_owners.resolve_owner_changes(
-                db, review_session, original=owners_original, wanted=owners
-            )
-        except session_owners.OwnerOperationError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=exc.message,
-            ) from exc
     _apply_session_config_form(
         db=db,
         review_session=review_session,
@@ -517,34 +491,6 @@ def session_config_submit(
             tags=tags.split(","),
             correlation_id=correlation_id,
         )
-    if owner_targets is not None:
-        # Resolved above, so ``set_owners`` refuses only when another save
-        # changed the owners in between — after this one's config and tags
-        # have landed. Say so as a 409 rather than a bare 500.
-        try:
-            session_owners.set_owners(
-                db,
-                review_session=review_session,
-                actor=user,
-                targets=owner_targets,
-                correlation_id=correlation_id,
-            )
-        except session_owners.OwnerOperationError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "The session's other changes were saved, but its owners "
-                    f"changed while you edited them: {exc.message} Reload "
-                    "the page and try again."
-                ),
-            ) from exc
-        # Saving yourself out leaves Session Home a 404 for you, so land
-        # on the lobby instead (author's ruling, 19S Item 10).
-        if user.id not in {target.id for target in owner_targets}:
-            return RedirectResponse(
-                url="/operator/sessions",
-                status_code=status.HTTP_303_SEE_OTHER,
-            )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}#session-config",
         status_code=status.HTTP_303_SEE_OTHER,
