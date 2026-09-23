@@ -92,15 +92,15 @@ def _workspace_operators(db: Session) -> list[User]:
     )
 
 
-def workspace_operator_candidates(
-    db: Session, review_session: ReviewSession
-) -> list[User]:
-    """Workspace operators NOT yet on this session's owner list.
-    Drives the Add-owner typeahead picker."""
-    member_ids = {
-        row.user_id for row in list_owners(db, review_session)
-    }
-    return [u for u in _workspace_operators(db) if u.id not in member_ids]
+def session_owner_candidates(db: Session) -> list[User]:
+    """The Add-owner picker's candidates on Session Home (19S Item 10).
+
+    **Every** workspace operator, current owners included (author's
+    ruling, 2026-09-23): owners are staged, so one removed in the table
+    can be picked again before Save. The stager already ignores an
+    address that is in the table.
+    """
+    return _workspace_operators(db)
 
 
 def new_session_owner_candidates(db: Session, creator: User) -> list[User]:

@@ -2,8 +2,8 @@
 
    Turns an Owners card's one-at-a-time picker into a **staged** editor:
    Add owner appends a row to the owners table and Remove takes one out,
-   and nothing is written until the page's own save — Create session on
-   the Create page, the details card's Save on Session Home (Item 10).
+   and nothing is written until the form's own save — Create session on
+   the Create page, the Owners card's Save on Session Home (Item 10).
    Each staged row carries a hidden input bound to that form, so the
    rows *are* the owner set the save receives.
 
@@ -17,6 +17,21 @@
      [data-owners-add]                the Add owner button
      [data-owners-remove]             a row's Remove (a row without one is
                                       fixed, e.g. the creator on Create)
+     data-owners-self="<email>"       on the card: the signed-in operator;
+                                      removing their own row asks first
+
+   Three rules for every card, from Session Home (19S Item 10, author's
+   rulings, 2026-09-23), harmless on Create:
+
+   - **The last owner cannot be removed**: whenever one owner row is
+     left, every Remove is disabled. The server refuses an empty set too.
+   - **Removing yourself asks first**, at the click — you lose access to
+     the session once it saves. Cancelling the dialog keeps the row.
+   - **The form's reset restores the rows it was rendered with**, so
+     Session Home's Cancel (a ``type="reset"`` button) undoes staging.
+
+   **The staging buttons ship ``hidden``** and are shown here, because
+   without JavaScript they would do nothing (19S Item 10).
 
    **Without JavaScript** the email input keeps its own ``name`` and
    ``form=``, so the one address typed there submits with the page. With
@@ -26,7 +41,8 @@
    the email is operator-typed.
 
    Every change dispatches a bubbling ``change`` event, so a card that
-   tracks unsaved edits (Session Home's) sees it; Create ignores it. #}
+   gates its Save on a change (Session Home's) sees it; Create ignores
+   it. #}
 <script>
   (function () {
     document.querySelectorAll('[data-owners-stager]').forEach(function (card) {
@@ -36,7 +52,48 @@
       if (!table || !input || !add) return;
       var formId = card.getAttribute('data-owners-form');
       var fieldName = card.getAttribute('data-owners-name') || 'owners';
+      var self = (card.getAttribute('data-owners-self') || '').toLowerCase();
       var body = table.tBodies[0] || table;
+
+      // Shown only now: without JavaScript these buttons do nothing, so
+      // they ship ``hidden`` (before the rows are cloned for the reset).
+      Array.prototype.forEach.call(
+        card.querySelectorAll('[data-owners-remove], [data-owners-add]'),
+        function (button) { button.hidden = false; }
+      );
+
+      function ownerRows() {
+        return Array.prototype.filter.call(body.rows, function (row) {
+          return row.querySelector(
+            'input[type="hidden"][name="' + fieldName + '"]'
+          );
+        });
+      }
+
+      // The last owner cannot be removed: with one row left, every Remove
+      // is disabled; a second row turns them back on.
+      function syncRemoves() {
+        var lone = ownerRows().length <= 1;
+        Array.prototype.forEach.call(
+          table.querySelectorAll('[data-owners-remove]'),
+          function (remove) { remove.disabled = lone; }
+        );
+      }
+
+      // What the page was rendered with, for the form's reset.
+      var initialRows = ownerRows().map(function (row) {
+        return row.cloneNode(true);
+      });
+      var form = formId ? document.getElementById(formId) : null;
+      if (form) {
+        form.addEventListener('reset', function () {
+          ownerRows().forEach(function (row) { row.remove(); });
+          initialRows.forEach(function (row) {
+            body.appendChild(row.cloneNode(true));
+          });
+          syncRemoves();
+        });
+      }
 
       function staged() {
         return Array.prototype.map.call(
@@ -93,6 +150,7 @@
         hidden.value = email;
         action.appendChild(hidden);
         body.appendChild(row);
+        syncRemoves();
         announce(hidden);
       }
 
@@ -122,11 +180,25 @@
 
       table.addEventListener('click', function (event) {
         var remove = event.target.closest('[data-owners-remove]');
-        if (!remove) return;
+        if (!remove || remove.disabled) return;
         var row = remove.closest('tr');
-        if (row) row.remove();
+        if (!row) return;
+        var hidden = row.querySelector(
+          'input[type="hidden"][name="' + fieldName + '"]'
+        );
+        var email = hidden ? hidden.value.toLowerCase() : '';
+        if (self && email === self && !window.confirm(
+          'Remove yourself as an owner? Once you save, you will lose ' +
+          'access to this session.'
+        )) {
+          return;
+        }
+        row.remove();
+        syncRemoves();
         announce(table);
       });
+
+      syncRemoves();
     });
   })();
 </script>
