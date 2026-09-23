@@ -1636,6 +1636,12 @@ Twenty mutations ran here and three of them lied:
 became the field's label (`aria-labelledby`) and the duplicate
 `<label>` went.
 
+**The item's last open decision, ruled 2026-09-23: the failed-upload
+write stays.** A create whose Quick Setup half fails keeps the typed
+tag rather than discarding it, which is what shipped and what
+`spec/quick_setup_card_spec.md`'s failure mode already states. Nothing
+left open.
+
 **Reads: one `diff-reviewer` over `git diff c329180..HEAD` and one
 `spec-writer`, both at rung 3, plus Codex on the PR.** All three found
 real defects, and the one the first two agreed on was in prose that
@@ -2124,26 +2130,46 @@ third card for free.
 
 **Part B — a Tags card below User interface settings on Session
 Home's details card**, in that page's matching `.bottom-left` column,
-above the Save / Cancel / Lock cluster. It takes the card's existing
-dual-mode convention (`data-display-only` / `data-edit-only` /
-`data-config-input`, `form="config-save-{{ session.id }}"`) rather
-than a second mechanism.
+above the Save / Cancel / Lock cluster. **It is a field of the details
+card that happens to render in its own card**, exactly as the UI
+toggles are: same dual-mode convention, same `form="config-save-{{
+session.id }}"`, same edit window. No second mechanism and no second
+save (author's ruling, 2026-09-23). The consequence is deliberate: tags
+are editable here in **2 of 5** lifecycle states, and **the lobby stays
+the any-state tag surface** — a division of labour, not a
+contradiction.
+
+**Locked, it renders like every other field there** — a
+`.config-value` div, `data-display-only`, holding the tags
+comma-joined, em dash when there are none, as `help_contact` and
+`description` do; edit mode swaps in the `data-edit-only` input on the
+same string. The label is the card's own `<label for=…>`, not the
+`<h3>`-as-label Create uses, because here the field sits among
+fields.
 
 **Rejected for Part A: reusing `POST /sessions/{id}/owners/add`.** It
 needs a session id this page has not got — the finding the deferred
 entry preserved. Rows stage in the form and apply after
-`sessions.create_session` returns, the ordering Tags already uses, so
-the page gains no third shape.
+`create_session` returns, the ordering Tags already uses.
 
 ### Semantics
 
-- **Empty box means the opposite on the two surfaces, and that is
-  deliberate.** On Create an empty Tags box writes *nothing*, because
-  `set_tags` with an empty set is a replace that would drop what a
-  settings CSV had just applied. On Session Home it must mean *clear*,
-  matching the lobby's row expander, because there is a set to edit.
-  `spec/csv_contracts.md` § *Settings CSV — apply precedence* already
-  states both meanings; Part B is the first code to depend on it.
+- **Saving the details card rewrites the case of every tag on the
+  session, and no spec says so.** Measured 2026-09-23: `normalize_tag`
+  lowercases and **`_apply_session_tags` does not call it**, inserting
+  the CSV's value raw — so a bundle importing `Pilot` stores `Pilot`
+  while every typed tag is lowercased. Part B round-trips through
+  `set_tags`, so the first save of an otherwise untouched card turns
+  `Pilot` into `pilot`. Pre-existing, made *visible* by Part B, and the
+  same asymmetry that would put two entries in Item 7's vocabulary.
+  **Rung 1 must state which way it resolves** — match the importer, or
+  normalize on import — rather than discover it.
+- **Empty box means the opposite on the two surfaces, deliberately.**
+  On Create it writes *nothing* — `set_tags` with an empty set is a
+  replace that would drop what a settings CSV just applied. On Session
+  Home it means *clear*, matching the lobby, because there is a set to
+  edit. `spec/csv_contracts.md` § *Settings CSV — apply precedence*
+  states both; Part B is the first code to depend on it.
 - **Part B does not touch `_apply_session_config_form`.** That helper
   takes exactly the 13 non-tag fields, and Item 6 ruled tags are
   written beside the config work, not through it. The tag write is a
@@ -2166,6 +2192,13 @@ the page gains no third shape.
   (2026-09-22) — the cluster is the column's last child by convention.
 - **Two parts, one item** (2026-09-22) — they share a rule (the
   empty-box split above) and neither is a segment's worth alone.
+- **Part B rides the details card's edit window** (author's ruling,
+  2026-09-23) — `Decision` carries it.
+- **Owners' card takes a `<p class="muted">` subtitle, like the two
+  above it** (author's ruling, 2026-09-23). `spec/ui_elements.md` §8
+  read as forbidding it; measurement found the subtitle pattern in ten
+  places against 32 `.form-help` uses, with only the latter written
+  down. §8 carries the carve-out now, so Part A inherits the answer.
 
 ### Blast radius (measured)
 
@@ -2204,16 +2237,10 @@ Taken 2026-09-22 at `d4b1ba9`.
 
 ### Open questions
 
-- **Does the Session Home Tags box escape the card's `config_editing`
-  gate?** The deferred entry recorded this as the blocker and called it
-  a design call, and it is still one. The gate is `is_draft or
-  is_validated`, so inside the card tags are editable in **2 of 5**
-  lifecycle states where the lobby edits them in **any** — the two
-  surfaces then disagree about the same field. Escaping the gate means
-  the box needs its own save rather than riding
-  `form="config-save-…"`, which is the cost. **Recommendation: escape
-  it** — tags are classification, not configuration, which is why the
-  lobby never gated them. **Rung 1 is blocked on this**; Part A is not.
+None. ~~Does the Session Home Tags box escape the card's
+`config_editing` gate?~~ Answered *no* on 2026-09-23, against my
+recommendation; `Decision` carries the ruling and `Semantics` the one
+thing it does not reach. Rung 1 is unblocked.
 
 ### Out of scope
 
@@ -2224,13 +2251,15 @@ Taken 2026-09-22 at `d4b1ba9`.
 
 ### Doc impact
 
+- `spec/ui_elements.md` — §8 gains the card-subtitle carve-out and
+  the one-field-card case it decides (Item 9, ruled before the build).
 - `spec/operator_ui_concept.md` — the `/operator/sessions/new` card
   list gains Owners; Session Home's details card gains Tags (Item 9).
 - `spec/sessions_overview.md` — the tag write surfaces become four
   (Item 9).
-- `spec/session_home.md` — the details card's contents, and a control
-  escaping its edit gate if the open question resolves that way
-  (Item 9).
+- `spec/session_home.md` — the details card gains a Tags field that
+  shares the card's edit window and `config-save` form, and renders as
+  a `.config-value` when locked (Item 9).
 - `guide/deferred_consolidated.md` — the entry narrows to the button
   relocation alone (Item 9).
 - `docs/status.md` — row when the item lands (Item 9).
