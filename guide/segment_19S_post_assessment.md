@@ -2201,6 +2201,12 @@ entry preserved. Rows stage in the form and apply after
   empty-box split above) and neither is a segment's worth alone.
 - **Part B rides the details card's edit window** (author's ruling,
   2026-09-23) — `Decision` carries it.
+- **The Owners box is comma-separated, with no suggestions** (decided
+  at rung 3, 2026-09-23, open to the author). "One box of emails" left
+  the shape open; comma-separated matches the Tags box above it.
+  Session Home's picker suggests operators from a `<datalist>`, but a
+  datalist completes a whole field, which is Item 7's fork exactly — so
+  suggestions here would ride Item 7 rather than be solved twice.
 - **Owners' card takes a `<p class="muted">` subtitle, like the two
   above it** (author's ruling, 2026-09-23). `spec/ui_elements.md` §8
   read as forbidding it; measurement found the subtitle pattern in ten
@@ -2230,6 +2236,7 @@ Taken 2026-09-22 at `d4b1ba9`.
    normalizing tags.** ✅ 2026-09-23 — both halves in one rung, as
    required.
 3. **Rung 3 — Part A's scaffold**: the Owners card inert, no write.
+   ✅ 2026-09-23.
 4. **Rung 4 — Part A's write**: staged rows applied after
    `create_session`, with the two rejections surfaced — **plus one
    correlation id for the whole create** (author's ruling, 2026-09-23).
@@ -2320,6 +2327,19 @@ two events first. The rest: importer reverted, over-long tag skipped
 instead of rejected, route write reverted, write moved before the
 config apply, `name=` dropped, and the `_save`, `_tags_of` and
 `_tag_rows` helpers each degenerated.
+
+**Rung 3 done, 2026-09-23** — Part A's scaffold. The Owners card sits
+below Tags, the third card in the Create page's right-hand
+`.bottom-left`, with a `.muted` subtitle and its `<h3>` as the label.
+**Inert**: no `name`, no `form=`, and a create carrying `owners=` adds
+no co-owner. That test names a real workspace operator, because a
+non-operator would be refused anyway and pass it for the wrong reason.
+Five mutations, all caught once valid. The first run of the route-wiring
+mutation **crashed on a missing import** and failed the test on a 500,
+which reads as caught and proves nothing. Rerun without the crash, it
+fails on two owners. With the operator control degraded it passes,
+which is the evidence the control is load-bearing. **Spacing measured
+in Chromium**: Tags → Owners **20px** at 1280 and 700px.
 
 ### Out of scope
 

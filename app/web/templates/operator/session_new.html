@@ -218,6 +218,27 @@
                autocomplete="off"
                placeholder="e.g. pilot, 2026, engineering">
       </div>
+      {# Owners (19S Item 9 Part A rung 3 — scaffold, deliberately inert).
+         The creator is always the session's first owner; this box adds
+         co-owners, comma-separated like the Tags box above, because
+         there is no session yet to add them to one at a time. Session
+         Home keeps its one-at-a-time picker for a session that exists.
+         Third card in this ``.bottom-left`` column, so the column's gap
+         spaces it (``spec/ui_elements.md`` §4). The ``<h3>`` is the
+         field's label, as on the Tags card. **Inert until rung 4**: the
+         input carries no ``name`` and no ``form=``, so Create session
+         submits nothing from it. #}
+      <div class="card" id="session-owners">
+        <h3 style="margin-top: 0;" id="session-owners-heading">Owners (optional)</h3>
+        <p class="muted">
+          You are the first owner. Add workspace operators by email,
+          comma-separated.
+        </p>
+        <input type="text" id="owners"
+               aria-labelledby="session-owners-heading"
+               autocomplete="off"
+               placeholder="e.g. colleague@example.edu">
+      </div>
     </div>
   </div>
 
