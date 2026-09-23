@@ -659,27 +659,22 @@ def session_owners_save(
     the verb last, as ``owners/add`` and ``fields/save`` do
     (``spec/architecture.md`` "Route conventions").
 
-    Any lifecycle state, as the lobby's tag edit. A non-operator address
-    or removing every owner is refused before anything is written, and
-    lands back on the card with its banner. ``set_owners`` commits each
-    change as it goes, so one refused *during* the write — another save
-    changed the owners under this one — may leave earlier changes
-    applied; it lands on the banner too. Either way, if you are no longer
-    an owner afterwards you land on the sessions lobby, since Session
-    Home is then a 404 for you.
+    Any lifecycle state, as the lobby's tag edit. The save is all or
+    nothing (``apply_owner_changes``): a non-operator address, removing
+    every owner, or a clash with a concurrent save writes nothing and
+    lands back on the card with its banner. If you are not an owner
+    afterwards you land on the sessions lobby, since Session Home is
+    then a 404 for you.
     """
-    correlation_id = request_correlation_id()
     error: str | None = None
     try:
-        targets = session_owners.resolve_owner_changes(
-            db, review_session, original=owners_original, wanted=owners
-        )
-        session_owners.set_owners(
+        session_owners.apply_owner_changes(
             db,
             review_session=review_session,
             actor=user,
-            targets=targets,
-            correlation_id=correlation_id,
+            original=owners_original,
+            wanted=owners,
+            correlation_id=request_correlation_id(),
         )
     except session_owners.OwnerOperationError as exc:
         error = exc.code

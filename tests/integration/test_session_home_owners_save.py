@@ -10,9 +10,10 @@ route; the card posts to it from rung D. The contract, each pinned here:
   to the owners the session has now: a stale page neither drops an owner
   someone else added nor restores one they removed, and only additions
   are validated, so an owner who lost operator status blocks nothing;
-- the change is resolved **before** any write: a non-operator address,
-  or removing every owner, lands back on the card's banner having saved
-  nothing;
+- the delta is applied to the owner rows locked **at write time**, and
+  the save is **all or nothing**: a non-operator address, removing every
+  owner, or a clash with a concurrent save lands back on the card's
+  banner having saved nothing;
 - any lifecycle state, as the lobby's tag edit;
 - saving yourself out lands on the sessions lobby;
 - one save's owner events share one correlation id.
@@ -297,54 +298,86 @@ def test_an_owner_who_lost_operator_status_does_not_block_the_save(
     }
 
 
-def test_a_refusal_during_the_write_lands_on_the_banner(
+def test_a_refusal_mid_write_rolls_back_every_change(
     client: TestClient, db: Session, monkeypatch
 ) -> None:
-    """Another save can change the owners between the resolve and the
-    write, and ``set_owners`` then refuses. The card's banner says so
-    rather than the request failing with a 500."""
-    review_session = _create(client, db, "OWN-RACE")
-    _operator(db, "bob@example.edu")
+    """All or nothing (Codex review on #2585): a refusal after an owner
+    was added in the same save must not leave that addition behind."""
+    review_session = _create(client, db, "OWN-ATOMIC")
+    bob = _operator(db, "bob@example.edu")
+    _operator(db, "carol@example.edu")
+    session_owners.add_owner(
+        db, review_session=review_session, actor=_alice(db), target=bob
+    )
+    before = {e.id for e in _owner_events(db, review_session)}
 
     def refuse(*args, **kwargs):
         raise session_owners.OwnerOperationError(
-            code="already_owner", message="bob@example.edu is already an owner."
+            code="not_owner", message="bob@example.edu is not an owner."
         )
 
-    monkeypatch.setattr(session_owners, "set_owners", refuse)
-    response = _save(client, review_session, [CREATOR, "bob@example.edu"])
+    monkeypatch.setattr(session_owners, "_delete_owner", refuse)
+    response = _save(client, review_session, [CREATOR, "carol@example.edu"])
 
-    assert response.headers["location"] == _home(review_session, "already_owner")
+    assert response.headers["location"] == _home(review_session, "not_owner")
+    assert _owners(db, review_session) == {CREATOR, "bob@example.edu"}
+    assert {e.id for e in _owner_events(db, review_session)} == before
 
 
-def test_a_refusal_after_removing_yourself_lands_on_the_lobby(
+def test_a_concurrent_add_of_the_same_owner_writes_nothing(
     client: TestClient, db: Session, monkeypatch
 ) -> None:
-    """``set_owners`` commits each change as it goes, so a refusal
-    part-way can follow your own removal. Session Home is then a 404 for
-    you, so the lobby, not the banner (cold read, 2026-09-23)."""
-    review_session = _create(client, db, "OWN-RACE-SELF")
+    """Another save inserts bob after this one locked the rows: the
+    unique constraint refuses this one's insert, and its other change
+    (carol) is rolled back with it."""
+    review_session = _create(client, db, "OWN-DUP")
     bob = _operator(db, "bob@example.edu")
-    alice = _alice(db)
-    real_set_owners = session_owners.set_owners
+    _operator(db, "carol@example.edu")
+    session_owners.add_owner(
+        db, review_session=review_session, actor=_alice(db), target=bob
+    )
+    real_lock = session_owners._lock_owner_rows
 
-    def remove_self_then_refuse(db_, *, review_session, actor, targets, correlation_id):
-        real_set_owners(
-            db_,
-            review_session=review_session,
-            actor=actor,
-            targets=[bob],
-            correlation_id=correlation_id,
-        )
-        raise session_owners.OwnerOperationError(
-            code="already_owner", message="carol@example.edu is already an owner."
-        )
+    def lock_without_bob(db_, review_session_):
+        return [row for row in real_lock(db_, review_session_) if row.user_id != bob.id]
 
-    monkeypatch.setattr(session_owners, "set_owners", remove_self_then_refuse)
-    response = _save(client, review_session, ["bob@example.edu"])
+    monkeypatch.setattr(session_owners, "_lock_owner_rows", lock_without_bob)
+    response = _save(
+        client,
+        review_session,
+        [CREATOR, "bob@example.edu", "carol@example.edu"],
+        original=[CREATOR],
+    )
 
-    assert response.headers["location"] == "/operator/sessions"
-    assert alice.email not in _owners(db, review_session)
+    assert response.headers["location"] == _home(review_session, "already_owner")
+    assert _owners(db, review_session) == {CREATOR, "bob@example.edu"}
+
+
+def test_the_delta_applies_to_the_rows_at_write_time(
+    client: TestClient, db: Session
+) -> None:
+    """The page adds dave; carol was added after it rendered. The save
+    applies only dave, to the owners the session has at write time, so
+    carol stays (Codex review on #2585: no absolute set resolved first)."""
+    review_session = _create(client, db, "OWN-WRITE-TIME")
+    carol = _operator(db, "carol@example.edu")
+    _operator(db, "dave@example.edu")
+    session_owners.add_owner(
+        db, review_session=review_session, actor=_alice(db), target=carol
+    )
+
+    _save(
+        client,
+        review_session,
+        [CREATOR, "dave@example.edu"],
+        original=[CREATOR],
+    )
+
+    assert _owners(db, review_session) == {
+        CREATOR,
+        "carol@example.edu",
+        "dave@example.edu",
+    }
 
 
 def test_a_non_owner_is_refused(
@@ -363,15 +396,20 @@ def test_a_non_owner_is_refused(
     assert _owners(db, review_session) == {CREATOR}
 
 
-def test_resolve_owner_changes_refuses_to_remove_every_owner(
+def test_apply_owner_changes_refuses_to_remove_every_owner(
     client: TestClient, db: Session
 ) -> None:
     review_session = _create(client, db, "OWN-ALLGONE")
     try:
-        session_owners.resolve_owner_changes(
-            db, review_session, original=[CREATOR], wanted=["", "  "]
+        session_owners.apply_owner_changes(
+            db,
+            review_session=review_session,
+            actor=_alice(db),
+            original=[CREATOR],
+            wanted=["", "  "],
         )
     except session_owners.OwnerOperationError as exc:
         assert exc.code == "last_owner"
     else:
         raise AssertionError("removing every owner must be refused")
+    assert _owners(db, review_session) == {CREATOR}
