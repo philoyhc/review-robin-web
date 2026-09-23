@@ -2124,10 +2124,19 @@ third card for free.
 
 **Part B — a Tags card below User interface settings on Session
 Home's details card**, in that page's matching `.bottom-left` column,
-above the Save / Cancel / Lock cluster. It takes the card's existing
-dual-mode convention (`data-display-only` / `data-edit-only` /
-`data-config-input`, `form="config-save-{{ session.id }}"`) rather
-than a second mechanism.
+above the Save / Cancel / Lock cluster. **It is a field of the details
+card that happens to render in its own card**, exactly as the UI
+toggles are: same dual-mode convention, same `form="config-save-{{
+session.id }}"`, same edit window. No second mechanism and no second
+save (author's ruling, 2026-09-23).
+
+**Locked, it renders like every other field on that card** — a
+`.config-value` div, `data-display-only`, holding the tags comma-joined,
+and an em dash when there are none, which is what `help_contact` and
+`description` already do. Edit mode swaps in the `data-edit-only`
+input carrying the same comma-joined string. The label is the card's
+own `<label for=…>`, not the `<h3>`-as-label the Create page uses,
+because here the field sits among fields.
 
 **Rejected for Part A: reusing `POST /sessions/{id}/owners/add`.** It
 needs a session id this page has not got — the finding the deferred
@@ -2137,6 +2146,18 @@ the page gains no third shape.
 
 ### Semantics
 
+- **Saving the details card rewrites the case of every tag on the
+  session, and no spec says so.** Measured 2026-09-23:
+  `normalize_tag` lowercases, and **`_apply_session_tags` does not call
+  it** — it inserts the CSV's value raw. So a bundle importing `Pilot`
+  stores `Pilot`, while every tag typed on the lobby or on Create is
+  lowercased. Part B's editor round-trips through `set_tags`, so the
+  first save of an otherwise untouched details card silently turns
+  `Pilot` into `pilot`. The ruling above does not reach this; it is a
+  pre-existing asymmetry that Part B makes *visible*, and it is also
+  what would put `Pilot` and `pilot` in Item 7's typeahead vocabulary
+  as two entries. **Rung 1 must state which way it resolves** — match
+  the importer, or normalize on import — rather than discover it.
 - **Empty box means the opposite on the two surfaces, and that is
   deliberate.** On Create an empty Tags box writes *nothing*, because
   `set_tags` with an empty set is a replace that would drop what a
@@ -2166,6 +2187,10 @@ the page gains no third shape.
   (2026-09-22) — the cluster is the column's last child by convention.
 - **Two parts, one item** (2026-09-22) — they share a rule (the
   empty-box split above) and neither is a segment's worth alone.
+- **Part B rides the details card's edit window** (author's ruling,
+  2026-09-23) — no separate window, and locked it renders as a
+  `.config-value` like every other field there. The lobby remains the
+  any-state tag surface.
 
 ### Blast radius (measured)
 
@@ -2204,16 +2229,15 @@ Taken 2026-09-22 at `d4b1ba9`.
 
 ### Open questions
 
-- **Does the Session Home Tags box escape the card's `config_editing`
-  gate?** The deferred entry recorded this as the blocker and called it
-  a design call, and it is still one. The gate is `is_draft or
-  is_validated`, so inside the card tags are editable in **2 of 5**
-  lifecycle states where the lobby edits them in **any** — the two
-  surfaces then disagree about the same field. Escaping the gate means
-  the box needs its own save rather than riding
-  `form="config-save-…"`, which is the cost. **Recommendation: escape
-  it** — tags are classification, not configuration, which is why the
-  lobby never gated them. **Rung 1 is blocked on this**; Part A is not.
+- ~~**Does the Session Home Tags box escape the card's
+  `config_editing` gate?**~~ **Answered 2026-09-23, author's ruling:
+  no.** The editor follows the details card's edit window and gets no
+  window of its own, against my recommendation to escape it. So tags
+  are editable on this surface in **2 of 5** lifecycle states where the
+  lobby edits them in any, and **the lobby stays the any-state
+  surface** — a division of labour rather than a contradiction. Rung 1
+  is unblocked. `Semantics` carries what the ruling settles and the one
+  thing it does not.
 
 ### Out of scope
 
