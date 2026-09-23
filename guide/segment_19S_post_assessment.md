@@ -1719,6 +1719,14 @@ ruling, 2026-09-23): typeahead covers **all three** tag editors — the
 lobby, Create, and Session Home's details card — and the third is Item
 9's to build. The analysis below predates that and speaks of two.
 
+**Rung 1, 2026-09-23 — the fork is decided (author's ruling):
+typeahead completes each tag, past the first one and after every
+comma.** The per-token option (b) wins; (a), one tag per input, is
+out. `### Rung 1 — pricing` records what the remaining two choices
+cost, and both were then ruled the same day as recommended: **(b1),
+rewrite the datalist**, over **every session the operator owns,
+archived included**.
+
 ### Opportunity
 
 Two boxes, two different problems, and **the lobby's is not the one it
@@ -1759,6 +1767,59 @@ deliberate; whether a second script earns its place is a call, not an
 assumption. **Rejected: shipping (a) on the lobby alone** — the two
 boxes would then disagree about whether a comma means anything, which is
 the inconsistency Item 6 chose its delimiter to avoid.
+
+### Rung 1 — pricing
+
+Taken 2026-09-23 at `cc079a8`; #2575 changed no tag box.
+
+**Four boxes, not two.** All four take one comma-separated line:
+
+| box | page | built |
+|---|---|---|
+| row expander, `data-expander-field="tags"` | lobby | from a `<template>`, when a row opens |
+| bulk expander, `data-expander-field="bulk-tags"` | lobby | from a `<template>`, when rows are ticked |
+| `#tags` | Create | with the page |
+| `#config-tags` | Session Home | with the page, edit mode only |
+
+The two lobby boxes are built after the page loads, so a script must
+listen on the document rather than bind to inputs when the page loads.
+The archived page has no tag editor.
+
+**The query is not the cost.** Every tag on the operator's own
+sessions — a join through `session_operators`, archived included — took
+**1.48 ms median, 1.89 ms p95** over 3,009 tags on 1,003 sessions
+(SQLite, 21 runs, test client). The lobby's existing on-screen
+`vocabulary(db, ids)` took 2.59 ms on the same data. One query serves
+all four boxes.
+
+**The mechanism is.** A bare `<datalist>` completes the whole value,
+which is why (a) needed one tag per input. Two ways to complete a token:
+
+- **(b1) Rewrite the datalist.** On each keystroke, rebuild the box's
+  `<datalist>` options as *everything typed up to the last comma*, plus
+  each vocabulary tag that starts with the current token and is not
+  already in the box. Picking `alpha, beta` then completes the whole
+  line, and the browser's own popup, keyboard handling and screen-reader
+  wiring do the rest. About 40 lines of script and no CSS. Matching is
+  the browser's, and whether it matches from the start of an option or
+  anywhere in it, every option starts with what is typed. The popup
+  itself is only observable on the dev slot: headless Chromium does not
+  render a datalist's popup.
+- **(b2) A custom combobox.** An ARIA `combobox` + `listbox` drawn by the
+  page: arrow keys, Enter, Escape, `aria-activedescendant`, focus and
+  blur. Full control over look and matching, at roughly 150 lines of
+  script, new CSS in `base.html`, and keyboard and screen-reader
+  behavior the app would own rather than the browser.
+
+**Recommended: (b1)**, one shared partial that every box opts into with
+a `data-tag-typeahead` attribute, and one `<datalist>` per page fed by
+one service function. What (b1) gives up: the popup looks like the
+browser's, not the app's, and ordering is the browser's.
+
+**Scope, recommended: every session the operator owns, archived
+included**, the same list on all four boxes. Last year's tags are the
+point of suggesting at all, and the lobby filter keeps its own
+on-screen list, since it filters what is shown.
 
 ### Semantics — what rung 1 must answer
 
@@ -1801,9 +1862,10 @@ Taken 2026-09-22 at `0ca204b`.
 
 1. **Rung 1 — price the fork.** Both options against both surfaces,
    with the vocabulary query measured rather than assumed. **Writes no
-   feature code.**
-2. **Rung 2 — build the choice**, both surfaces together. **Must not**
-   land on one surface only.
+   feature code.** ✅ 2026-09-23 — `### Rung 1 — pricing`.
+2. **Rung 2 — build the choice** on all four boxes together: the
+   vocabulary query, the shared script partial, and each box opting
+   in. **Must not** land on one surface only.
 
 ### Definition of done
 
@@ -1822,16 +1884,19 @@ Taken 2026-09-22 at `0ca204b`.
 
 ### Open questions
 
-- **Native datalist with one-tag-per-input, or a per-token script?**
-  **Decided by:** the author, on rung 1's pricing.
-- **What scope is Create's vocabulary?** **Decided by:** rung 1, on the
-  measured cost.
+- ~~**Native datalist with one-tag-per-input, or a per-token
+  script?**~~ Per-token, author's ruling 2026-09-23.
+- ~~**(b1) rewrite the datalist, or (b2) a custom combobox?**~~ (b1),
+  author's ruling 2026-09-23.
+- ~~**What scope is the vocabulary?**~~ Every session the operator owns,
+  archived included, on all four boxes — author's ruling 2026-09-23.
 
 ### Out of scope
 
 - **The roster and Assignments typeaheads** (19I Items 7–9). Working,
   server-side, and a different surface.
-- **Session Home**, which has no tag box to complete (Item 6's blocker).
+- ~~**Session Home**, which has no tag box to complete~~ — it has one
+  since Item 9, and is in scope.
 - **Building the Create box** — Item 6.
 
 ### Doc impact
@@ -1839,6 +1904,9 @@ Taken 2026-09-22 at `0ca204b`.
 - `spec/sessions_overview.md` — its lobby drawing names
   *[filter box + typeahead]*; a second typeahead in the row expander
   belongs in it (Item 7).
+- `spec/session_home.md` — the Tags field completes each tag (Item 7).
+- `spec/operator_ui_concept.md` — Create's Tags card completes each tag
+  (Item 7).
 - `docs/status.md` — row when the item lands (Item 7).
 
 ---
