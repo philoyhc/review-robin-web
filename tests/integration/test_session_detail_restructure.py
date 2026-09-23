@@ -1167,29 +1167,33 @@ def test_config_card_invite_offset_shows_offset_plus_resolved_datetime(
 def test_session_config_card_has_owners_subcard(
     client: TestClient, db: Session
 ) -> None:
-    """18R Item 4 — the Session details card carries an Owners sub-card
-    (half-width, inside the card) showing the current owners; edit mode has
-    the wired add/remove UI (Slice 4). The Schedule timeline card is gone."""
+    """18R Item 4 put an Owners sub-card inside the Session details card;
+    19S Item 10 moved it to a card of its own below the Danger Zone, with
+    the same columns and the wired add / remove. The details card keeps
+    User interface settings. The Schedule timeline card is gone."""
     review_session = _make_session(client, db, code="cfg-owners")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
     config_pos = body.find('id="session-config"')
     end = body.find('window.sessionConfig', config_pos)
     card = body[config_pos:end]
+    assert 'id="owners-card"' not in card
+    assert ">Owners</h3>" not in card
 
-    assert ">Owners</h3>" in card
-    # Mirrors the Edit Owners card columns.
+    owners_pos = body.find('id="owners-card"')
+    assert owners_pos > body.find('id="danger-zone"') > end
+    owners = body[owners_pos:body.find("<script", owners_pos)]
+    assert "<h2>Owners</h2>" in owners
     for col in ("<th>Email</th>", "<th>Name</th>", "<th>Role</th>", "<th>Added</th>"):
-        assert col in card
-    assert 'class="col-shrink">Action</th>' in card  # edit-mode Action column
+        assert col in owners
+    assert 'class="col-shrink">Action</th>' in owners
     # The creator is an owner — their email shows in the table, with a wired
-    # Remove form (Slice 4). (Add-owner form coverage — which needs a second
+    # Remove form. (Add-owner form coverage — which needs a second
     # workspace operator to have candidates — lives in test_session_owners.)
-    assert "alice@example.edu" in card
-    assert 'type="submit">Remove</button>' in card
-    assert "/remove\"" in card
+    assert "alice@example.edu" in owners
+    assert 'type="submit">Remove</button>' in owners
+    assert "/remove\"" in owners
 
-    # User interface settings card sits to the right of Owners.
     assert 'id="config-ui-settings-card"' in card
     assert ">User interface settings</h3>" in card
     assert "Relationships tab and page" in card
@@ -1203,14 +1207,15 @@ def test_config_owners_error_surfaces_on_home(
     client: TestClient, db: Session
 ) -> None:
     """18R Item 4 Slice 4 — owner add/remove redirect back to Home with an
-    ``owners_error`` param; the config Owners sub-card renders the banner."""
+    ``owners_error`` param; the Owners card renders the banner, without
+    unlocking the details card (19S Item 10)."""
     review_session = _make_session(client, db, code="cfg-ownerr")
     body = client.get(
         f"/operator/sessions/{review_session.id}"
-        "?editing=1&owners_error=not_in_workspace"
+        "?owners_error=not_in_workspace"
     ).text
-    config_pos = body.find('id="session-config"')
-    card = body[config_pos:body.find("window.sessionConfig", config_pos)]
+    owners_pos = body.find('id="owners-card"')
+    card = body[owners_pos:body.find("<script", owners_pos)]
     assert 'role="alert"' in card
     assert "workspace operator allowlist" in card
 

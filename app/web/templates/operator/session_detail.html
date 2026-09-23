@@ -172,173 +172,17 @@
       </div>
     </div>
 
-    {# 18R Item 4 — half-width sub-cards inside the Session details card,
-       below the unified details block: Owners (left) + User interface
-       settings (right), both mirroring their Edit-page cards. Owners is an
-       Email / Name / Role / Added table in display mode, gaining an Action
-       (Remove) column + an Add-owner form in edit mode. Owner Add / Remove
-       (Slice 4) and the UI-settings checkboxes (Slice 3) are wired to the
-       real routes; both participate in the card-wide data-config-mode swap.
-       Owner add/remove redirect back here in edit mode (?editing=1). #}
+    {# Half-width sub-cards inside the Session details card, below the
+       unified details block: Tags (left) + User interface settings
+       (right), with the card's Save / Cancel / Lock cluster under the
+       latter. Both follow the card-wide data-config-mode swap and save
+       with its ``config-save`` form. Tags took the left slot when the
+       Owners card left this card for its own, below the Danger Zone
+       (19S Item 10). #}
     <div class="bottom-grid" style="margin-top: calc(var(--space-3) * 2);">
       <div class="bottom-left">
-        <div class="card" id="config-owners-card">
-          <h3 style="margin-top: 0;">Owners</h3>
-          <p class="muted">
-            Workspace operators with full edit access on this session. The
-            session always retains at least one owner.
-          </p>
-
-          {# Owner add/remove errors (redirected back here from the routes).
-             Shown in either mode so a redirect that lands in display mode
-             still surfaces the message. Mirrors the Edit page's banner. #}
-          {% if owners_error %}
-            <div class="card banner-scroll-target" role="alert">
-              <p>
-                {% if owners_error == "already_owner" %}
-                  That user is already an owner of this session.
-                {% elif owners_error == "not_in_workspace" %}
-                  That user isn't on the workspace operator allowlist.
-                  Admit them via <code>Admin → Accounts Management</code> first.
-                {% elif owners_error == "not_owner" %}
-                  That user isn't an owner of this session anymore.
-                {% elif owners_error == "self_only" %}
-                  As a sys-admin who isn't an owner of this session, you can
-                  only add <em>yourself</em> as an owner. Add yourself first,
-                  then add others.
-                {% else %}
-                  Couldn't apply that change ({{ owners_error }}).
-                {% endif %}
-              </p>
-            </div>
-          {% endif %}
-
-          {# Display mode — read-only owners table. #}
-          {# `.table-scroll` (base.html): a table wider than its card
-             scrolls inside the card rather than pushing the page sideways. #}
-          <div class="table-scroll">
-          <table data-display-only>
-            <tr>
-              <th>Email</th>
-              <th>Name</th>
-              <th>Role</th>
-              <th>Added</th>
-            </tr>
-            {% for owner in config_owners %}
-              <tr>
-                <td><code>{{ owner.email }}</code></td>
-                <td>{{ owner.display_name or "—" }}</td>
-                <td>{{ owner.role }}</td>
-                <td>{{ owner.joined_at | format_date }}</td>
-              </tr>
-            {% endfor %}
-          </table>
-          </div>
-
-          {# Edit mode — the same table plus an Action (Remove) column, then
-             an Add-owner form. Mock / inert for now. #}
-          <div data-edit-only>
-            {# `.table-scroll` (base.html): a table wider than its card
-               scrolls inside the card rather than pushing the page sideways. #}
-            <div class="table-scroll">
-            <table>
-              <tr>
-                <th>Email</th>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Added</th>
-                <th class="col-shrink">Action</th>
-              </tr>
-              {% for owner in config_owners %}
-                <tr>
-                  <td><code>{{ owner.email }}</code></td>
-                  <td>{{ owner.display_name or "—" }}</td>
-                  <td>{{ owner.role }}</td>
-                  <td>{{ owner.joined_at | format_date }}</td>
-                  <td class="col-shrink">
-                    <form method="post" style="display:inline"
-                          action="/operator/sessions/{{ session.id }}/owners/{{ owner.user_id }}/remove">
-                      <button class="chrome-link" type="submit">Remove</button>
-                    </form>
-                  </td>
-                </tr>
-              {% endfor %}
-            </table>
-            </div>
-
-            {% if config_owner_candidates %}
-              <form method="post"
-                    action="/operator/sessions/{{ session.id }}/owners/add"
-                    id="config-add-owner-form">
-                {# A sibling ``<label for>``, as on the Create page's picker
-                   and the config card's other fields: nesting the input in
-                   the label left 1.9px between the text and the box, against
-                   5.9px everywhere else (measured in Chromium, 2026-09-23). #}
-                <label for="config-add-owner-email">Pick or search for a workspace operator:</label>
-                <input type="email" id="config-add-owner-email"
-                       name="target_email" list="config-owner-candidates"
-                       autocomplete="off" required placeholder="email">
-                <datalist id="config-owner-candidates">
-                  {% for candidate in config_owner_candidates %}
-                    <option value="{{ candidate.email }}">{{ candidate.display_label }}</option>
-                  {% endfor %}
-                </datalist>
-                {# Submit stays enabled (no JS gate) — the ``required`` email
-                   input already blocks an empty submission, so this works
-                   without JavaScript. #}
-                <div style="display: flex; justify-content: flex-end; margin-top: var(--space-2);">
-                  <button class="btn" type="submit"
-                          id="config-add-owner-submit">Add owner</button>
-                </div>
-              </form>
-            {% else %}
-              <p class="muted" style="margin-top: var(--space-3);">
-                No other workspace operators are available to add.
-              </p>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-      {# User interface settings — to the right of Owners. Display mode
-         shows the current toggle states; edit mode shows the checkboxes
-         (mock, inert). Mirrors the Edit page's card. #}
-      <div class="bottom-left">
-        <div class="card" id="config-ui-settings-card">
-          <h3 style="margin-top: 0;">User interface settings</h3>
-          <p class="muted">Per-session toggles for the optional Setup tabs.</p>
-          {# Both items on one line in both modes at normal card body font.
-             Display mode shows an inactive (disabled) checkbox reflecting
-             the current state; edit mode shows an active checkbox. #}
-          <div class="ui-settings-row">
-            <label class="ui-setting">
-              Relationships tab and page
-              <input type="checkbox" data-display-only disabled
-                     {% if session.relationships_enabled %}checked{% endif %}>
-              {# Lock-on-data — once a roster has rows the toggle can't flip
-                 True→False (would orphan data); this card disables it, and
-                 the service-layer guard rejects the flip for direct API
-                 calls. (Said "mirror the Edit page" until 2026-09-13; that
-                 page retired in 18R Item 4.) #}
-              <input type="checkbox" name="relationships_enabled" value="true"
-                     data-edit-only data-config-input
-                     form="config-save-{{ session.id }}"
-                     {% if session.relationships_enabled %}checked{% endif %}
-                     {% if has_relationships %}disabled{% endif %}>
-            </label>
-            <label class="ui-setting">
-              Observers tab and page
-              <input type="checkbox" data-display-only disabled
-                     {% if session.observers_enabled %}checked{% endif %}>
-              <input type="checkbox" name="observers_enabled" value="true"
-                     data-edit-only data-config-input
-                     form="config-save-{{ session.id }}"
-                     {% if session.observers_enabled %}checked{% endif %}
-                     {% if has_observers %}disabled{% endif %}>
-            </label>
-          </div>
-        </div>
         {# Tags (19S Item 9 Part B). A field of this card that renders in
-           its own card, as the UI toggles above do: it follows the card's
+           its own card, as the UI toggles beside it do: it follows the card's
            display/edit swap, its edit window and its ``config-save`` form
            — no second save. Locked it shows the tags as the lobby's
            pills (below). The
@@ -386,7 +230,46 @@
                  value="{{ session_tag_list | join(', ') }}"
                  placeholder="e.g. pilot, 2026, engineering">
         </div>
-        {# Save / Cancel / Lock cluster just below the Tags card,
+      </div>
+      {# User interface settings — to the right of Tags. Display mode
+         shows the current toggle states; edit mode shows the checkboxes
+         (mock, inert). Mirrors the Edit page's card. #}
+      <div class="bottom-left">
+        <div class="card" id="config-ui-settings-card">
+          <h3 style="margin-top: 0;">User interface settings</h3>
+          <p class="muted">Per-session toggles for the optional Setup tabs.</p>
+          {# Both items on one line in both modes at normal card body font.
+             Display mode shows an inactive (disabled) checkbox reflecting
+             the current state; edit mode shows an active checkbox. #}
+          <div class="ui-settings-row">
+            <label class="ui-setting">
+              Relationships tab and page
+              <input type="checkbox" data-display-only disabled
+                     {% if session.relationships_enabled %}checked{% endif %}>
+              {# Lock-on-data — once a roster has rows the toggle can't flip
+                 True→False (would orphan data); this card disables it, and
+                 the service-layer guard rejects the flip for direct API
+                 calls. (Said "mirror the Edit page" until 2026-09-13; that
+                 page retired in 18R Item 4.) #}
+              <input type="checkbox" name="relationships_enabled" value="true"
+                     data-edit-only data-config-input
+                     form="config-save-{{ session.id }}"
+                     {% if session.relationships_enabled %}checked{% endif %}
+                     {% if has_relationships %}disabled{% endif %}>
+            </label>
+            <label class="ui-setting">
+              Observers tab and page
+              <input type="checkbox" data-display-only disabled
+                     {% if session.observers_enabled %}checked{% endif %}>
+              <input type="checkbox" name="observers_enabled" value="true"
+                     data-edit-only data-config-input
+                     form="config-save-{{ session.id }}"
+                     {% if session.observers_enabled %}checked{% endif %}
+                     {% if has_observers %}disabled{% endif %}>
+            </label>
+          </div>
+        </div>
+        {# Save / Cancel / Lock cluster just below the UI settings card,
            flushed right (18R Item 4 Slice 3 — wired).
            - Save submits the config form (POST → Home display mode). Rendered
              enabled so no-JS works; the dirty-tracking script disables it until
@@ -489,7 +372,8 @@
     })();
   </script>
 
-  {# Two-column bottom layout: Quick Setup (left) + Danger Zone (right).
+  {# Two-column bottom layout: Quick Setup (left) + Danger Zone, then
+     Owners (right).
      18R Item 4 Slice 5b — the old read-only "Session Details" metadata card
      was retired (its name / code / description / timezone / help contact all
      live on the #session-config card above; Created by / Created / Modified
@@ -574,6 +458,110 @@
             </p>
           {% endif %}
         </form>
+      </div>
+
+      {# Owners (19S Item 10) — a card of its own, half width below the
+         Danger Zone, out of the details card and its Lock / Unlock
+         (author's ruling, 2026-09-23). Always editable, in every
+         lifecycle state, as the lobby's tags are.
+
+         **Scaffold (rung B).** The Save / Cancel pair below is inert;
+         until the card's own save lands (rungs C–D), Add owner and each
+         row's Remove are still their own forms and write at once. Every
+         owners route lands back here (``#owners-card``), with any
+         ``owners_error`` as the banner below. #}
+      <div class="card" id="owners-card">
+        <h2>Owners</h2>
+        <p class="muted">
+          Workspace operators with full edit access on this session. The
+          session always retains at least one owner.
+        </p>
+
+        {% if owners_error %}
+          <div class="card banner-scroll-target" role="alert">
+            <p>
+              {% if owners_error == "already_owner" %}
+                That user is already an owner of this session.
+              {% elif owners_error == "not_in_workspace" %}
+                That user isn't on the workspace operator allowlist.
+                Admit them via <code>Admin → Accounts Management</code> first.
+              {% elif owners_error == "not_owner" %}
+                That user isn't an owner of this session anymore.
+              {% elif owners_error == "self_only" %}
+                As a sys-admin who isn't an owner of this session, you can
+                only add <em>yourself</em> as an owner. Add yourself first,
+                then add others.
+              {% else %}
+                Couldn't apply that change ({{ owners_error }}).
+              {% endif %}
+            </p>
+          </div>
+        {% endif %}
+
+        {# `.table-scroll` (base.html): a table wider than its card
+           scrolls inside the card rather than pushing the page sideways. #}
+        <div class="table-scroll">
+        <table>
+          <tr>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Added</th>
+            <th class="col-shrink">Action</th>
+          </tr>
+          {% for owner in config_owners %}
+            <tr>
+              <td><code>{{ owner.email }}</code></td>
+              <td>{{ owner.display_name or "—" }}</td>
+              <td>{{ owner.role }}</td>
+              <td>{{ owner.joined_at | format_date }}</td>
+              <td class="col-shrink">
+                <form method="post" style="display:inline"
+                      action="/operator/sessions/{{ session.id }}/owners/{{ owner.user_id }}/remove">
+                  <button class="chrome-link" type="submit">Remove</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </table>
+        </div>
+
+        {% if config_owner_candidates %}
+          <form method="post"
+                action="/operator/sessions/{{ session.id }}/owners/add"
+                id="owners-add-form">
+            {# A sibling ``<label for>``, as on the Create page's picker:
+               nesting the input in the label left 1.9px between the text
+               and the box, against 5.9px everywhere else (measured in
+               Chromium, 2026-09-23). #}
+            <label for="owners-add-email">Pick or search for a workspace operator:</label>
+            <input type="email" id="owners-add-email"
+                   name="target_email" list="owners-candidates"
+                   autocomplete="off" required placeholder="email">
+            <datalist id="owners-candidates">
+              {% for candidate in config_owner_candidates %}
+                <option value="{{ candidate.email }}">{{ candidate.display_label }}</option>
+              {% endfor %}
+            </datalist>
+            {# Secondary, as on Create (author's ruling, 2026-09-23): the
+               Workflow card holds the page's one Primary. #}
+            <div style="display: flex; justify-content: flex-end; margin-top: var(--space-2);">
+              <button class="btn secondary" type="submit"
+                      id="owners-add-submit">Add owner</button>
+            </div>
+          </form>
+        {% else %}
+          <p class="muted" style="margin-top: var(--space-3);">
+            No other workspace operators are available to add.
+          </p>
+        {% endif %}
+
+        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3);">
+          <button type="button" class="btn secondary" data-owners-save
+                  disabled aria-disabled="true">Save</button>
+          <button type="button" class="btn secondary" data-owners-cancel
+                  disabled aria-disabled="true">Cancel</button>
+        </div>
       </div>
     </div>
   </div>
