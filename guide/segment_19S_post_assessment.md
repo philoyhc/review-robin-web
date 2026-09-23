@@ -1710,11 +1710,14 @@ this commit; the first draft of this sentence guessed 150 and then
 
 ---
 
-## Item 7 — typeahead on the two tag boxes
+## Item 7 — typeahead on the tag boxes
 
 **Logged 2026-09-22 on the author's instruction**, separately from Item
 6, which builds the box this one would complete. Depends on Item 6 for
-the Create surface to exist.
+the Create surface to exist. **Sequenced after Item 9** (author's
+ruling, 2026-09-23): typeahead covers **all three** tag editors — the
+lobby, Create, and Session Home's details card — and the third is Item
+9's to build. The analysis below predates that and speaks of two.
 
 ### Opportunity
 
@@ -2143,9 +2146,10 @@ contradiction.
 `.config-value` div, `data-display-only`, holding the tags
 comma-joined, em dash when there are none, as `help_contact` and
 `description` do; edit mode swaps in the `data-edit-only` input on the
-same string. The label is the card's own `<label for=…>`, not the
-`<h3>`-as-label Create uses, because here the field sits among
-fields.
+same string. **The `<h3>` is the label**, as on Create's Tags card
+(corrected at rung 1: the plan said a `<label for=…>`, on the premise
+the field sits among fields — it sits in its own card, where a label
+under the heading repeats it, which the author rejected on Create).
 
 **Rejected for Part A: reusing `POST /sessions/{id}/owners/add`.** It
 needs a session id this page has not got — the finding the deferred
@@ -2219,14 +2223,18 @@ Taken 2026-09-22 at `d4b1ba9`.
 
 ### PR ladder
 
-1. **Rung 1 — Part B**, the smaller half and the one whose open
-   question is answered first. Scaffold then write, per `CLAUDE.md`,
-   **plus the settings-CSV importer normalizing tags** — which must
-   land in this rung or before it, never after, or the editor's first
-   save rewrites imported tags.
-2. **Rung 2 — Part A's scaffold**: the Owners card inert, no write.
-3. **Rung 3 — Part A's write**: staged rows applied after
+1. **Rung 1 — Part B's scaffold.** ✅ 2026-09-23. The card in place,
+   showing real tags when locked, its input inert. **Cumulative-diff
+   base for the item's cold read: `7022022`.**
+2. **Rung 2 — Part B's write, plus the settings-CSV importer
+   normalizing tags** — which must land in this rung or before it,
+   never after, or the editor's first save rewrites imported tags.
+3. **Rung 3 — Part A's scaffold**: the Owners card inert, no write.
+4. **Rung 4 — Part A's write**: staged rows applied after
    `create_session`, with the two rejections surfaced.
+
+Re-cut at rung 1 from three rungs to four: `CLAUDE.md` lands a new
+card as its own slice, and Item 6 did the same.
 
 ### Definition of done
 
@@ -2238,8 +2246,11 @@ Taken 2026-09-22 at `d4b1ba9`.
 - A co-owner named on Create owns the created session, and
   `not_in_workspace` / `already_owner` each reach the operator rather
   than failing silently — all asserted through the route.
-- The three-card column verified on the dev slot; layout is not
-  testable here.
+- **Each new card's gap to the card above it measured in Chromium**,
+  not asserted from the CSS (author's instruction, 2026-09-23): dump
+  the rendered page from the test client and read
+  `getBoundingClientRect()` at 1280 and 700px, as
+  `tools/css_parity_check.py` does. Then the dev slot.
 - `pytest -n auto` green, `ruff check .` clean, `node` present.
 - `tools/close_check.py 19S.9` exits 0; `spec-writer` run; `Status`
   compacted; `docs/status.md` row.
@@ -2251,15 +2262,33 @@ None. ~~Does the Session Home Tags box escape the card's
 recommendation; `Decision` carries the ruling and `Semantics` the one
 thing it does not reach. Rung 1 is unblocked.
 
+### Status
+
+**Rung 1 done, 2026-09-23** — Part B's scaffold. The Tags card sits
+below User interface settings in the details card's right-hand
+`.bottom-left`, above the Save / Cancel / Lock cluster; locked it shows
+the tags as a `.config-value`, em dash when none; unlocked, an input
+prefilled with the same string. **Inert**: no `name`, no `form=`, and a
+`POST …/config` carrying `tags=` leaves the tags alone — with a rename
+in the same request as the control, since a rejected save would also
+leave them alone. Seven tests, **six mutations, all caught**: `name`
+added, `form=` added, the route context emptied, `_card` widened to the
+page tail, the `_tag` helper degenerated, and the route wiring `tags=`
+early.
+
+**Spacing measured in Chromium** at 1280 and 700px, display and edit
+mode: UI settings → Tags **20px**, Tags → Save cluster **20px**, and the
+Create page's pair unchanged at 20px. No CSS change; the column's `gap`
+does it.
+
 ### Out of scope
 
 - **Typeahead on either new box** — Item 7, open on its own fork.
 - **The Create page's button relocation**, the deferred entry's last
   unbuilt change, independent of both parts.
 - **Owner *removal* on Create** — see the judgment call.
-- **Capitalized tags already stored** stay, unremovable from the lobby,
-  until something rewrites them. A one-off data migration would clear
-  them; the author's call, not this item's.
+- **Capitalized tags already stored** stay until something rewrites
+  them. **No migration** (author's ruling, 2026-09-23).
 
 ### Doc impact
 

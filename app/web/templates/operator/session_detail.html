@@ -336,6 +336,26 @@
             </label>
           </div>
         </div>
+        {# Tags (19S Item 9 Part B rung 1 — scaffold, deliberately inert).
+           A field of this card that renders in its own card, as the UI
+           toggles above do: it follows the card's display/edit swap and,
+           once wired, its ``config-save`` form and edit window. Locked it
+           shows the tags as a ``.config-value``, like every other field
+           on this card. The ``<h3>`` is the field's label, as on the
+           Create page's Tags card, so there is no second "Tags" above the
+           box. **Inert until the next rung**: the input carries no
+           ``name`` and no ``form=``, so Save submits nothing from it. #}
+        <div class="card" id="config-tags-card">
+          <h3 style="margin-top: 0;" id="config-tags-heading">Tags (optional)</h3>
+          <p class="muted">Comma-separated; also editable from the sessions list.</p>
+          <div class="config-value" data-display-only>{{ session_tag_list | join(", ") if session_tag_list else "—" }}</div>
+          <input type="text" id="config-tags"
+                 data-edit-only
+                 aria-labelledby="config-tags-heading"
+                 autocomplete="off"
+                 value="{{ session_tag_list | join(', ') }}"
+                 placeholder="e.g. pilot, 2026, engineering">
+        </div>
         {# Save / Cancel / Lock cluster just below the UI settings card,
            flushed right (18R Item 4 Slice 3 — wired).
            - Save submits the config form (POST → Home display mode). Rendered

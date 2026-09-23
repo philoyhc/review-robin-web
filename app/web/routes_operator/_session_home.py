@@ -35,6 +35,7 @@ from app.services import (
     responses,
     scheduled_events,
     session_owners,
+    session_tags,
     sessions,
     validation,
 )
@@ -198,6 +199,11 @@ def session_detail(
             "config_owner_candidates": (
                 session_owners.workspace_operator_candidates(db, review_session)
             ),
+            # 19S Item 9 Part B — the details card's Tags field, shown as a
+            # ``.config-value`` when locked and prefilled when editing.
+            "session_tag_list": session_tags.tags_for_sessions(
+                db, [review_session.id]
+            )[review_session.id],
             # 18R Item 4 Slice 4 — owner add/remove errors surface inline on
             # the config Owners sub-card (redirected here from the routes).
             "owners_error": owners_error,
