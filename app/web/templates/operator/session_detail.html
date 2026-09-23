@@ -270,13 +270,14 @@
               <form method="post"
                     action="/operator/sessions/{{ session.id }}/owners/add"
                     id="config-add-owner-form">
-                <label style="display: block; margin-top: var(--space-3);">
-                  Pick or search for a workspace operator:
-                  <input type="email" id="config-add-owner-email"
-                         name="target_email" list="config-owner-candidates"
-                         autocomplete="off" required placeholder="email"
-                         style="width: 100%; box-sizing: border-box;">
-                </label>
+                {# A sibling ``<label for>``, as on the Create page's picker
+                   and the config card's other fields: nesting the input in
+                   the label left 1.9px between the text and the box, against
+                   5.9px everywhere else (measured in Chromium, 2026-09-23). #}
+                <label for="config-add-owner-email">Pick or search for a workspace operator:</label>
+                <input type="email" id="config-add-owner-email"
+                       name="target_email" list="config-owner-candidates"
+                       autocomplete="off" required placeholder="email">
                 <datalist id="config-owner-candidates">
                   {% for candidate in config_owner_candidates %}
                     <option value="{{ candidate.email }}">{{ candidate.display_label }}</option>
