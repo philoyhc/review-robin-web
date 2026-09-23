@@ -1168,8 +1168,8 @@ def test_owners_left_the_session_config_card_for_their_own(
     client: TestClient, db: Session
 ) -> None:
     """18R Item 4 put an Owners sub-card inside the Session details card;
-    19S Item 10 moved it to a card of its own beside the Danger Zone (above
-    it, author's ruling 2026-09-23), with
+    19S Item 10 moved it to a card of its own, stacked above the Danger
+    Zone in one column (author's ruling 2026-09-23), with
     the same columns and the wired add / remove. The details card keeps
     User interface settings. The Schedule timeline card is gone."""
     review_session = _make_session(client, db, code="cfg-owners")

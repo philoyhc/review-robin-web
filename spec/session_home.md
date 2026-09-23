@@ -444,7 +444,8 @@ in the Workflow card's body copy when relevant.
 ### 5. Quick Setup card (bottom-left)
 
 The Quick Setup card sits in the bottom-left of Home's
-`.bottom-grid`, paired with the Danger Zone card on the right. It
+`.bottom-grid`, paired with the Owners card on the right, which sits
+level with it above the Danger Zone. It
 renders four wired slots — Reviewers, Reviewees, Relationships,
 Settings — plus a conditional Observers slot when
 `observers_enabled`. The functional spec is

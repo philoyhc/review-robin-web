@@ -222,7 +222,7 @@ def test_session_edit_save_redirects_back_to_edit(
     )
 
 
-def test_session_owners_card_is_half_width_below_the_danger_zone(
+def test_session_owners_card_is_half_width_above_the_danger_zone(
     client: TestClient, db: Session
 ) -> None:
     """Owners was a half-width sub-card inside the Session details card
