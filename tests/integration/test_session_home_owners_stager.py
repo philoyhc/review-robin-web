@@ -13,6 +13,8 @@ browser, so this file pins the markup those behaviors hang on.
 
 from __future__ import annotations
 
+import re
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -57,8 +59,10 @@ def test_the_edit_table_is_a_stager_bound_to_the_cards_form(
     )
     assert "data-owners-table" in stager
     assert "data-owners-add" in stager
-    assert f'<input type="hidden" name="owners_present" value="1"\n                   {form}>' in stager
-    assert f'value="{CREATOR}"\n                           {form}>' in stager
+    assert re.search(
+        rf'<input type="hidden" name="owners_present" value="1"\s+{form}>', stager
+    )
+    assert re.search(rf'value="{CREATOR}"\s+{form}>', stager)
 
 
 def test_the_stager_script_is_on_the_page(client: TestClient, db: Session) -> None:
@@ -69,14 +73,21 @@ def test_the_stager_script_is_on_the_page(client: TestClient, db: Session) -> No
     assert "window.confirm(" in body
 
 
-def test_the_marker_is_in_the_edit_block_only(client: TestClient, db: Session) -> None:
-    """The marker rides with the staged rows: it is rendered inside the
-    same ``data-edit-only`` block, so a card that posts the set always
-    posts the marker, and nothing else on the page posts it."""
+def test_the_marker_rides_with_the_rows_in_the_edit_block(
+    client: TestClient, db: Session
+) -> None:
+    """The marker is rendered once, inside the stager root, which is the
+    card's ``data-edit-only`` block: a card that posts the set always
+    posts the marker, and nothing else on the page does. The root being
+    ``data-edit-only`` is also what staging's dirty-marking hangs on —
+    the card's ``onEdit`` only counts events from inside such a block."""
     _, body = _session_home(client, db)
+    root = re.search(r"<div ([^>]*data-owners-stager[^>]*)>", body)
 
+    assert root is not None
+    assert "data-edit-only" in root.group(1)
     assert body.count('name="owners_present"') == 1
-    assert body.index("data-owners-stager") < body.index('name="owners_present"')
+    assert 'name="owners_present"' in _stager(body)
 
 
 def test_the_picker_box_is_not_required(client: TestClient, db: Session) -> None:
@@ -92,4 +103,4 @@ def test_the_subtitle_says_owners_save_with_the_card(
 ) -> None:
     _, body = _session_home(client, db, editing=False)
 
-    assert "changes are saved with\n            the card." in body
+    assert re.search(r"changes are saved with\s+the card\.", body)

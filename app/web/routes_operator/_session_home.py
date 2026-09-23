@@ -199,9 +199,9 @@ def session_detail(
                 review_session.reminder_offsets,
                 session_tz,
             ),
-            # 18R Item 4 — current owners + add-candidates for the Session
-            # config card's Owners sub-card (mirrors the Edit page's Owners
-            # card: Email / Name / Role / Joined / Action + Add owner).
+            # The details card's Owners sub-card: the current owners, and the
+            # Add-owner picker's candidates — every workspace operator, since
+            # owners are staged (19S Item 10).
             "config_owners": session_owners.list_owners(db, review_session),
             "config_owner_candidates": (
                 session_owners.session_owner_candidates(db)
@@ -512,13 +512,26 @@ def session_config_submit(
             correlation_id=correlation_id,
         )
     if owner_targets is not None:
-        session_owners.set_owners(
-            db,
-            review_session=review_session,
-            actor=user,
-            targets=owner_targets,
-            correlation_id=correlation_id,
-        )
+        # Resolved above, so ``set_owners`` refuses only when another save
+        # changed the owners in between — after this one's config and tags
+        # have landed. Say so as a 409 rather than a bare 500.
+        try:
+            session_owners.set_owners(
+                db,
+                review_session=review_session,
+                actor=user,
+                targets=owner_targets,
+                correlation_id=correlation_id,
+            )
+        except session_owners.OwnerOperationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "The session's other changes were saved, but its owners "
+                    f"changed while you edited them: {exc.message} Reload "
+                    "the page and try again."
+                ),
+            ) from exc
         # Saving yourself out leaves Session Home a 404 for you, so land
         # on the lobby instead (author's ruling, 19S Item 10).
         if user.id not in {target.id for target in owner_targets}:

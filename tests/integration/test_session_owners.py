@@ -220,10 +220,11 @@ def test_config_owners_card_renders_add_form_when_candidates_exist(
         card,
     )
     assert "/owners/add" not in card, "Add owner stages, it no longer posts"
-    assert (
-        'class="btn secondary" type="button"\n'
-        '                      id="config-add-owner" data-owners-add>Add owner'
-    ) in card
+    assert re.search(
+        r'class="btn secondary" type="button"\s+'
+        r'id="config-add-owner" data-owners-add>Add owner',
+        card,
+    )
     # Bob is offered as a candidate in the datalist — and so is the owner
     # already in the table (every workspace operator, author's ruling).
     candidates = card.split('<datalist id="config-owner-candidates">', 1)[1]

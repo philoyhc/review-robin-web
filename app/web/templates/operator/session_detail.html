@@ -35,10 +35,10 @@
        an instant-swap enhancement, and the Unlock/Lock/Cancel controls keep
        real ``?editing`` hrefs so no-JS degrades to navigation.
 
-       Details / Schedule / UI-settings inputs submit as one form via the HTML5
-       ``form="config-save-{id}"`` association (they can't physically nest —
-       the Owners sub-card carries its own form in a later slice). Save posts to
-       the config route (Slice 3); the fields mirror the Edit page's names. #}
+       Details / Schedule / UI-settings / Tags / Owners inputs submit as one
+       form via the HTML5 ``form="config-save-{id}"`` association (they can't
+       physically nest). Save posts to the config route (Slice 3); the fields
+       mirror the Edit page's names. The Owners rows join it since 19S Item 10. #}
     <form id="config-save-{{ session.id }}" method="post"
           action="/operator/sessions/{{ session.id }}/config"></form>
     <datalist id="config-timezone-options">
@@ -176,10 +176,9 @@
        below the unified details block: Owners (left) + User interface
        settings (right), both mirroring their Edit-page cards. Owners is an
        Email / Name / Role / Added table in display mode, gaining an Action
-       (Remove) column + an Add-owner form in edit mode. Owner Add / Remove
-       (Slice 4) and the UI-settings checkboxes (Slice 3) are wired to the
-       real routes; both participate in the card-wide data-config-mode swap.
-       Owner add/remove redirect back here in edit mode (?editing=1). #}
+       (Remove) column + an Add-owner picker in edit mode. Since 19S Item 10
+       both **stage** and save with the card's Save, like the UI-settings
+       checkboxes; both participate in the card-wide data-config-mode swap. #}
     <div class="bottom-grid" style="margin-top: calc(var(--space-3) * 2);">
       <div class="bottom-left">
         <div class="card" id="config-owners-card">

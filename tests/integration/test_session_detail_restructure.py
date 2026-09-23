@@ -12,6 +12,8 @@ Covers:
 
 from __future__ import annotations
 
+import re
+
 from collections.abc import Callable
 
 from fastapi.testclient import TestClient
@@ -1188,11 +1190,12 @@ def test_session_config_card_has_owners_subcard(
     # saved with the card's Save — no per-row ``/remove`` form. (Picker
     # coverage lives in test_session_owners.)
     assert "alice@example.edu" in card
-    assert 'type="button"\n                            data-owners-remove>Remove</button>' in card
-    assert (
-        '<input type="hidden" name="owners" value="alice@example.edu"\n'
-        f'                           form="config-save-{review_session.id}">'
-    ) in card
+    assert re.search(r'type="button"\s+data-owners-remove>Remove</button>', card)
+    assert re.search(
+        r'<input type="hidden" name="owners" value="alice@example\.edu"\s+'
+        rf'form="config-save-{review_session.id}">',
+        card,
+    )
     assert "/remove\"" not in card
 
     # User interface settings card sits to the right of Owners.

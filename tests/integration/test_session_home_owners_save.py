@@ -243,6 +243,27 @@ def test_an_unchanged_set_emits_no_owner_events(
     assert events == []
 
 
+def test_a_concurrent_owner_change_is_a_409_not_a_500(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    """``set_owners`` runs after the config apply, so if another save
+    changed the owners in between it refuses late. The route says what
+    happened rather than failing with a 500."""
+    review_session = _create(client, db, "OWN-RACE")
+    _operator(db, "bob@example.edu")
+
+    def refuse(*args, **kwargs):
+        raise session_owners.OwnerOperationError(
+            code="already_owner", message="bob@example.edu is already an owner."
+        )
+
+    monkeypatch.setattr(session_owners, "set_owners", refuse)
+    response = _save(client, review_session, owners=[CREATOR, "bob@example.edu"])
+
+    assert response.status_code == 409
+    assert "Reload the page" in response.text
+
+
 def test_resolve_owner_set_refuses_an_empty_set(db: Session) -> None:
     try:
         session_owners.resolve_owner_set(db, ["", "  "])
