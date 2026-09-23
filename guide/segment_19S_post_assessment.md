@@ -1865,7 +1865,8 @@ Taken 2026-09-22 at `0ca204b`.
    feature code.** ✅ 2026-09-23 — `### Rung 1 — pricing`.
 2. **Rung 2 — build the choice** on all four boxes together: the
    vocabulary query, the shared script partial, and each box opting
-   in. **Must not** land on one surface only.
+   in. **Must not** land on one surface only. ✅ 2026-09-23, with the
+   item's close.
 
 ### Definition of done
 
@@ -1891,6 +1892,55 @@ Taken 2026-09-22 at `0ca204b`.
 - ~~**What scope is the vocabulary?**~~ Every session the operator owns,
   archived included, on all four boxes — author's ruling 2026-09-23.
 
+### Status
+
+**Closed 2026-09-23**, two rungs: #2576 priced the fork and recorded
+the rulings; the build and this close followed in one PR. All four tag
+boxes — the lobby's row and bulk expanders, Create's Tags card and
+Session Home's Tags field — complete the tag at the end of the line,
+past the first one and after every comma, from every tag on a session
+the operator owns, archived included. `spec/sessions_overview.md`
+carries the contract; what stays here is why.
+
+- **(b1) as ruled**: the page's `<datalist id="tag-vocabulary">` is
+  rewritten on each keystroke, so the browser draws the popup. The
+  option rule is a pure function, `rrwTagOptions`, run under node like
+  the lobby filter's. `list=` is set on focus, so without JavaScript a
+  box offers nothing rather than whole-line options.
+- **The vocabulary is lowercased in the query, not trusted to be.**
+  The settings-CSV importer stored tags raw until Item 9, and no
+  migration lowercased them, so a raw `Pilot` would have been offered
+  beside `pilot` and offered again when already in the box. The cold
+  read found this; the build had trusted storage.
+- **It reads the last comma, not the caret.** Editing a tag mid-line
+  gets suggestions for the last one. The plan's (b1) said as much; the
+  spec says so rather than "each tag".
+- **Driven in Chromium** on all four boxes, the lobby's two built from
+  their templates. Headless Chromium draws no datalist popup, so the
+  popup, the keyboard and a screen reader are the dev slot's to check.
+  Whether browsers match options case-sensitively is unverified; the
+  options keep the typed case in case one does.
+- **Mutations: 9, all caught** — the service's owner filter and its
+  lowercasing, the lobby passing its on-screen list, a box not opted
+  in, a static `list=`, and four breaks of the rule.
+
+**Reads: one `diff-reviewer`, over `41809ba..` the build, and one
+`spec-writer`.** The cold read found one medium-low issue and five low:
+- **Acted on:** the raw-case vocabulary (1); the spec paragraph sitting
+  inside the filter section (2), now a Row affordances bullet; "each
+  tag" overclaiming (3); the missing implementation pointers (5); the
+  case-keeping comment claiming more than is known (6).
+- **Reworded, not changed (4):** the query does not filter on `role`,
+  like `sessions.list_for_user` which drives the lobby. Only `"owner"`
+  is ever written, so "owns" is true today; the docstring says so.
+- `spec-writer` found nothing false.
+
+**Found, not fixed:** the lobby and Archived pages throw
+`rrwSessionFilterMatches is not defined` on every load, on `main`
+before this item too. Their filter scripts call the rule while the page
+is parsing, but `base.html` defines it in a script placed after the
+content. Reported to the author, outside this item.
+
 ### Out of scope
 
 - **The roster and Assignments typeaheads** (19I Items 7–9). Working,
@@ -1901,12 +1951,14 @@ Taken 2026-09-22 at `0ca204b`.
 
 ### Doc impact
 
-- `spec/sessions_overview.md` — its lobby drawing names
-  *[filter box + typeahead]*; a second typeahead in the row expander
-  belongs in it (Item 7).
+- `spec/sessions_overview.md` — the tag boxes' typeahead, as a Row
+  affordances bullet beside the four write surfaces rather than in the
+  drawing, which shows the lobby with no expander open; and the new
+  partial and tests under Implementation pointers (Item 7).
 - `spec/session_home.md` — the Tags field completes each tag (Item 7).
 - `spec/operator_ui_concept.md` — Create's Tags card completes each tag
   (Item 7).
+- `guide/todo_master.md` — the Item 7 entry (Item 7).
 - `docs/status.md` — row when the item lands (Item 7).
 
 ---

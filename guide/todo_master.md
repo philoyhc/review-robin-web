@@ -3381,13 +3381,12 @@ dep chains called out at the bottom of this file.
      the Create page* (19R Item 9, unbuilt): one of its three changes,
      in the slot that plan gave Owners, with Owners still deferred.
      Nothing is missing underneath — `set_tags` is the whole write path.
-   - **Item 7 — typeahead on the two tag boxes** *(planned, not built)*.
-     Depends on Item 6. The lobby already computes the vocabulary and
-     already feeds a `datalist` for its **filter** box; the row
-     expander's tag input is one attribute away — **but that attribute
-     would be wrong**, because a native `datalist` completes the whole
-     field and the box is comma-separated. So the fork is a UX change or
-     a per-token script, priced in rung 1 before either is built.
+   - **Item 7 — typeahead on the tag boxes** ✅ **closed 2026-09-23**,
+     two rungs. All four comma-separated tag boxes — the lobby's row and
+     bulk expanders, Create, Session Home — complete the tag at the end
+     of the line, after every comma, by rewriting one `datalist` per
+     keystroke, from every tag on a session the operator owns, archived
+     included and lowercased.
    - **Item 8 — a pytest node id cited in live prose resolves**
      ✅ **closed 2026-09-22**, one rung, 0 production LOC. Logged out of
      Item 4's own defect record, not the assessment. `PATH_REF` cannot

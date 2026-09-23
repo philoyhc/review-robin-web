@@ -22,7 +22,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, SessionOperator, User
+from app.db.models import ReviewSession, SessionOperator, SessionTag, User
 from app.services import session_tags
 
 
@@ -104,6 +104,25 @@ def test_the_service_scopes_to_owned_sessions_archived_included(
     mine = _seed(client, db)
 
     assert session_tags.vocabulary_for_user(db, _owner(db, mine)) == EXPECTED
+
+
+def test_a_legacy_capitalized_tag_is_offered_lower_case_once(
+    client: TestClient, db: Session
+) -> None:
+    """Tags the settings-CSV importer stored raw before 19S Item 9 are
+    still in deployed data. Offered raw, ``Pilot`` would sit beside
+    ``pilot`` and be offered again when already in the box."""
+    mine = _create(client, db, "TA-LEGACY")
+    _tag(db, mine, ["pilot"])
+    other = _create(client, db, "TA-RAW")
+    db.add(SessionTag(session_id=other.id, tag="Pilot"))
+    db.add(SessionTag(session_id=other.id, tag="Cohort-A"))
+    db.commit()
+
+    assert session_tags.vocabulary_for_user(db, _owner(db, mine)) == [
+        "cohort-a",
+        "pilot",
+    ]
 
 
 def test_create_offers_the_operators_vocabulary(

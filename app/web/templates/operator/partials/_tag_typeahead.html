@@ -1,6 +1,7 @@
-{# Tag typeahead — 19S Item 7. Completes each tag in a comma-separated
-   tag box: past the first one, after every comma (author's ruling,
-   2026-09-23).
+{# Tag typeahead — 19S Item 7. Completes the tag at the end of a
+   comma-separated tag box: past the first one, after every comma
+   (author's ruling, 2026-09-23). It reads the last comma, not the
+   caret, so editing a tag mid-line gets suggestions for the last one.
 
    A bare ``<datalist>`` completes the whole value, so it would offer to
    replace ``alpha, be`` with ``beta``. This rewrites the datalist on
@@ -17,10 +18,11 @@
    what was typed.
 
    The vocabulary is ``tag_vocabulary`` — every tag on a session the
-   operator owns, archived included (``session_tags.vocabulary_for_user``).
-   The part of an option the operator typed keeps their casing so the
-   browser's match cannot miss on case; storage lowercases it through
-   ``normalize_tag``, which is also how the vocabulary was stored. #}
+   operator owns, archived included, lowercased
+   (``session_tags.vocabulary_for_user``). The part of an option the
+   operator typed keeps their casing, in case a browser matches
+   datalist options case-sensitively (unverified; a dev-slot check);
+   storage lowercases it through ``normalize_tag`` either way. #}
 <datalist id="tag-vocabulary">
   {% for tag in tag_vocabulary %}
     <option value="{{ tag }}"></option>
