@@ -2367,6 +2367,8 @@ Tags → Owners **20px** at 1280 and 700px, with a candidate present.
   unbuilt change, independent of both parts.
 - **Removing the creator on Create** — a session always keeps one
   owner, so the creator's row has no Remove. Staged co-owners do.
+- **Session Home's Owners card saving with the card** — logged as
+  **Item 10**, which reuses this item's stager script and `set_owners`.
 - **Capitalized tags already stored** stay until something rewrites
   them. **No migration** (author's ruling, 2026-09-23).
 
@@ -2393,3 +2395,75 @@ Tags → Owners **20px** at 1280 and 700px, with a candidate present.
 - `guide/deferred_consolidated.md` — the entry narrows to the button
   relocation alone (Item 9).
 - `docs/status.md` — row when the item lands (Item 9).
+
+---
+
+## Item 10 — Session Home's Owners card saves with the card
+
+**Logged 2026-09-23 on the author's instruction**, after asking how much
+work it would be to give Session Home's Owners card the save behavior
+Item 9 gives Create's. It is scoped out of Item 9 and depends on it:
+Item 9 rung 4 builds the pieces this reuses.
+
+### Opportunity
+
+The two Owners cards look the same and save differently. On Create,
+**Create session saves everything** — Add owner and Remove only stage
+rows (Item 9, author's ruling 2026-09-23). On Session Home, Add owner and
+each row's Remove are **their own forms**: they post to
+`POST /sessions/{id}/owners/add` and `…/owners/{user_id}/remove` and
+write at once, outside the details card's Save. Cancel does not undo
+an owner just added. Add owner is also a second Primary on a page whose
+Workflow card already has one.
+
+### Decision
+
+Stage owner changes on Session Home exactly as on Create, and persist
+them with the details card's Save through `POST /sessions/{id}/config`.
+Reuse Item 9 rung 4's two pieces rather than build parallel ones:
+
+- the **owners stager** script partial — rows added and removed in the
+  table, each carrying a hidden `owners` input bound to the page's form;
+- **`session_owners.set_owners`** — replaces the owner set the way
+  `set_tags` replaces tags, validating the whole set before writing.
+
+**Keep the two `/owners` routes**; they lose their only on-page caller,
+but tests use them and a non-owner sys-admin reaches `owners/add` to add
+themselves (`tests/integration/test_operator_lobby_access_gate.py`).
+
+### Semantics — what Session Home adds over Create
+
+- **Cancel must rebuild the table.** The card's Cancel is
+  `form.reset()`, which does not undo rows a script added.
+- **Staging must mark the card dirty.** A button click fires no `input`
+  event, so Save would stay disabled.
+- **A marker field.** FastAPI hands an absent form field and an empty
+  one to a route identically (rung 2's finding). Absent tags harmlessly
+  clears tags; absent owners would mean *remove every owner*, which
+  `set_owners` must refuse and a marker must prevent.
+- **Validate before any write.** Otherwise a bad email saves the name
+  and schedule and rejects the owners.
+- **No change to who may edit owners.** The picker and Remove already
+  appear only after Unlock, which exists only in draft and validated —
+  the same window `/config`'s `_require_editable` enforces.
+
+### Open questions
+
+- **How does an owner error display?** Today it is a banner on the card
+  (`owners_error`) that leaves other edits alone. Inside the card's
+  Save it becomes either `/config`'s bare 422 page, or a redirect with
+  the banner that discards the rest of the unsaved edit. Keeping the
+  edit would need the card to re-render submitted values, which it
+  cannot today. **Blocks the build.**
+
+### Out of scope
+
+- The sys-admin self-add bootstrap — unchanged, through `owners/add`.
+- Session Home's Add owner button role — it becomes Secondary with the
+  staging, as on Create, and needs no separate change.
+
+### Doc impact
+
+- `spec/session_home.md` — the Owners sub-card saves with the card
+  (Item 10).
+- `docs/status.md` — row when the item lands (Item 10).
