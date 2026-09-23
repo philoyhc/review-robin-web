@@ -2696,6 +2696,8 @@ Owners card to Create's, reusing its logic*:
   to the owner rows locked `FOR UPDATE` in one commit, rather than a
   whole set resolved first and written per owner (Codex on #2585,
   2026-09-23). `resolve_owner_changes` became `apply_owner_changes`.
+- **The Owners cards' Removes stay `chrome-link`**, not a `.btn` role
+  (author, 2026-09-23, on spec-writer's flag at the close).
 - **The scaffold kept the old per-row forms live** (rung B), so owners
   stayed editable between rungs; Codex asked for inert controls and the
   plan's rung B text decided it (2026-09-23).
