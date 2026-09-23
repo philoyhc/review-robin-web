@@ -501,6 +501,10 @@
                 Admit them via <code>Admin → Accounts Management</code> first.
               {% elif owners_error == "not_owner" %}
                 That user isn't an owner of this session anymore.
+              {% elif owners_error == "owners_changed" %}
+                Another save changed this session's owners at the same
+                time. Nothing was saved; check the owners below and try
+                again.
               {% elif owners_error == "last_owner" %}
                 A session always keeps at least one owner. Nothing was
                 saved.

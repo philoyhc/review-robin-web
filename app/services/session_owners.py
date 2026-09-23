@@ -230,11 +230,15 @@ def remove_owner(
 def _lock_owner_rows(
     db: Session, review_session: ReviewSession
 ) -> list[SessionOperator]:
-    """The session's owner rows, locked ``FOR UPDATE`` (see ``remove_owner``)."""
+    """The session's owner rows, locked ``FOR UPDATE`` (see ``remove_owner``).
+
+    In ``id`` order, so two lockers take the row locks in the same order
+    and cannot deadlock each other."""
     return list(
         db.execute(
             select(SessionOperator)
             .where(SessionOperator.session_id == review_session.id)
+            .order_by(SessionOperator.id)
             .with_for_update()
         ).scalars()
     )
@@ -322,16 +326,19 @@ def apply_owner_changes(
     nor restores one they removed, and an untouched table changes no one.
 
     The delta is applied to the owner rows **locked at write time**, not
-    resolved into a whole set beforehand, so a save that lands between
-    this one's read and write is not overwritten; an addition someone
-    already made, or a removal someone already made, is simply satisfied.
+    resolved into a whole set beforehand, so a save committed before this
+    one takes its lock is not overwritten, and an addition or removal it
+    already made is simply satisfied. Under Postgres's READ COMMITTED a
+    save committing *while* this one waits on the lock can still make it
+    refuse — a duplicate insert, or ``last_owner`` counting without the
+    other's additions — but never break the one-owner rule.
     Only the additions are validated (``resolve_owners``), so an owner
     who has since lost operator status blocks nothing.
 
     **All or nothing**: the adds, removes and their audit events share
     one commit, and any refusal rolls every one of them back — a
     non-operator address, a result with no owner left (``last_owner``),
-    or a concurrent insert of the same owner (``already_owner``).
+    or a clash with a concurrent save (``owners_changed``).
     """
 
     def _normalized(emails: list[str]) -> list[str]:
@@ -379,8 +386,8 @@ def apply_owner_changes(
     except IntegrityError as exc:
         db.rollback()
         raise OwnerOperationError(
-            code="already_owner",
-            message="Another save added the same owner at the same time.",
+            code="owners_changed",
+            message="Another save changed this session's owners at the same time.",
         ) from exc
     except OwnerOperationError:
         db.rollback()
