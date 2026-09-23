@@ -368,8 +368,9 @@ a `.bottom-left` column whose `gap` spaces them:
   card that renders in its own card**, as the toggles above do: it
   shares the card's display/edit swap, its edit window and its
   `config-save` form, with no save of its own. Locked, it shows the
-  tags comma-joined as a `.config-value` (an em dash when there are
-  none), the treatment `help_contact` and `description` have; its
+  tags as the sessions lobby's pills (`.pill .pill-count` in
+  `.session-tags`, uppercased by `.pill`), or an em dash `.config-value`
+  when there are none; unlocked, one comma-separated box. Its
   `<h3>` is the field's label. **An emptied box clears the tag set**,
   as the lobby's row expander does — the opposite of the Create
   page's box, where there is no set yet (`spec/csv_contracts.md`

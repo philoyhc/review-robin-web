@@ -2146,7 +2146,8 @@ contradiction.
 `.config-value` div, `data-display-only`, holding the tags
 comma-joined, em dash when there are none, as `help_contact` and
 `description` do; edit mode swaps in the `data-edit-only` input on the
-same string. **The `<h3>` is the label**, as on Create's Tags card
+same string. *(Superseded after the close: the locked view is the
+lobby's pills — see `Status`.)* **The `<h3>` is the label**, as on Create's Tags card
 (corrected at rung 1: the plan said a `<label for=…>`, on the premise
 the field sits among fields — it sits in its own card, where a label
 under the heading repeats it, which the author rejected on Create).
@@ -2342,6 +2343,13 @@ ones:
 `spec-writer` found my own prose overclaiming three times: a
 `set_tags` claim, the fill-blanks rule, and a "20px every card" line.
 All are fixed.
+
+**After the close, 2026-09-23 (author's ruling from the dev slot):**
+locked, Session Home's tags render as the lobby's pills rather than a
+comma-joined `.config-value`; the edit box is unchanged. The pills sit
+in a display-only wrapper, because `body.ui-v2 .session-tags`'s
+`display: flex` outranks edit mode's `display: none` on the same
+element — checked in Chromium, both modes.
 
 ### Out of scope
 
