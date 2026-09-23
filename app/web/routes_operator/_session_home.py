@@ -646,6 +646,50 @@ def _owners_redirect_url(session_id: int, error_code: str | None = None) -> str:
     return f"/operator/sessions/{session_id}#owners-card"
 
 
+@router.post("/sessions/{session_id}/owners")
+def session_owners_save(
+    owners: list[str] = Form(default=[]),
+    owners_original: list[str] = Form(default=[]),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """The Owners card's Save (19S Item 10): the table's owners, applied
+    as changes against the set the card was rendered with.
+
+    Any lifecycle state, as the lobby's tag edit. Every refusal — a
+    non-operator address, removing every owner, or another save changing
+    the owners under this one — lands back on the card with its banner;
+    nothing else on the card is left unsaved to lose. Saving yourself
+    out lands on the sessions lobby, since Session Home is then a 404.
+    """
+    correlation_id = request_correlation_id()
+    try:
+        targets = session_owners.resolve_owner_changes(
+            db, review_session, original=owners_original, wanted=owners
+        )
+        session_owners.set_owners(
+            db,
+            review_session=review_session,
+            actor=user,
+            targets=targets,
+            correlation_id=correlation_id,
+        )
+    except session_owners.OwnerOperationError as exc:
+        return RedirectResponse(
+            url=_owners_redirect_url(review_session.id, exc.code),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    if user.id not in {target.id for target in targets}:
+        return RedirectResponse(
+            url="/operator/sessions", status_code=status.HTTP_303_SEE_OTHER
+        )
+    return RedirectResponse(
+        url=_owners_redirect_url(review_session.id),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 @router.post("/sessions/{session_id}/owners/add")
 def session_owners_add(
     target_email: str = Form(...),

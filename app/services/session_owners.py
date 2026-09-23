@@ -253,6 +253,56 @@ def resolve_owners(db: Session, emails: list[str]) -> list[User]:
     return resolved
 
 
+def resolve_owner_changes(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    original: list[str],
+    wanted: list[str],
+) -> list[User]:
+    """The owner set Session Home's Owners card asks for, **as changes**.
+
+    The card posts the owners it was rendered with (``original``) beside
+    the ones its table holds now (``wanted``). Only the difference is
+    applied, to the owners the session has **now** (19S Item 10, author's
+    ruling 2026-09-23): a page left open while another owner saved
+    neither drops the owner they added nor restores one they removed,
+    and a save that never touched the table changes no owner.
+
+    Only the additions are validated with ``resolve_owners``, so an
+    existing owner who has since lost operator status (a demoted
+    sys-admin still owns what they adopted) does not block every save on
+    the session. The result must keep at least one owner, or the call
+    raises ``last_owner`` — before anything is written.
+    """
+
+    def _normalized(emails: list[str]) -> list[str]:
+        seen: list[str] = []
+        for raw in emails:
+            if raw and raw.strip():
+                email = normalize_email(raw)
+                if email not in seen:
+                    seen.append(email)
+        return seen
+
+    before = set(_normalized(original))
+    after = _normalized(wanted)
+    added = resolve_owners(db, [email for email in after if email not in before])
+    removed = before - set(after)
+    current_ids = [row.user_id for row in list_owners(db, review_session)]
+    current = [db.get(User, user_id) for user_id in current_ids]
+    targets = [
+        user for user in current if normalize_email(user.email) not in removed
+    ]
+    targets += [user for user in added if user.id not in current_ids]
+    if not targets:
+        raise OwnerOperationError(
+            code="last_owner",
+            message="A session always keeps at least one owner.",
+        )
+    return targets
+
+
 def set_owners(
     db: Session,
     *,
@@ -270,7 +320,8 @@ def set_owners(
     session always keeps one owner. Each change goes through
     ``add_owner`` / ``remove_owner``, so the audit events, the lock and
     the invariants are theirs; a target already an owner, or an owner
-    kept, emits nothing. Validate the list with ``resolve_owners`` first.
+    kept, emits nothing. Validate the list with ``resolve_owners`` (Create)
+    or ``resolve_owner_changes`` (Session Home) first.
     """
     if not targets:
         raise OwnerOperationError(
