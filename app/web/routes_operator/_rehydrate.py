@@ -194,7 +194,7 @@ def rehydrate_commit(
     roster save* is its own item, already live in
     ``tests/integration/test_upload_paths_keep_friendly_labels.py`` —
     which is where a rename of this function would fail. Recorded at
-    ``guide/segment_19S_post_assessment.md`` Item 1, entry E8.
+    ``guide/archive/segment_19S_post_assessment.md`` Item 1, entry E8.
     """
     payload = rehydrate_stash.get(db, token=token or "", user=user)
     if payload is None:
