@@ -442,6 +442,8 @@ def session_config_submit(
     responses_release_until: str | None = Form(default=None),
     tags: str = Form(default=""),
     tags_present: str = Form(default=""),
+    owners: list[str] = Form(default=[]),
+    owners_present: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -453,9 +455,27 @@ def session_config_submit(
     — the operator saves in place instead of hopping to a child page.
     """
     # One correlation id for the whole save, so the config events and the
-    # tag events it produces group as one request (``request_correlation_id``
-    # mints a fresh id per call).
+    # tag and owner events it produces group as one request
+    # (``request_correlation_id`` mints a fresh id per call).
     correlation_id = request_correlation_id()
+    # 19S Item 10 — the Owners card saves with the card. The whole owner
+    # set is resolved **before** any write, so a non-operator address is
+    # a 422 that saves nothing else either, like every other error this
+    # Save returns. Behind an ``owners_present`` marker for the reason
+    # ``tags_present`` exists: FastAPI hands an absent list and an empty
+    # one to ``owners`` identically, and an absent set must not read as
+    # *remove every owner*. The editable check comes first, so an active
+    # session still answers 409 rather than an owner 422.
+    owner_targets = None
+    if owners_present:
+        _require_editable(review_session)
+        try:
+            owner_targets = session_owners.resolve_owner_set(db, owners)
+        except session_owners.OwnerOperationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=exc.message,
+            ) from exc
     _apply_session_config_form(
         db=db,
         review_session=review_session,
@@ -491,6 +511,21 @@ def session_config_submit(
             tags=tags.split(","),
             correlation_id=correlation_id,
         )
+    if owner_targets is not None:
+        session_owners.set_owners(
+            db,
+            review_session=review_session,
+            actor=user,
+            targets=owner_targets,
+            correlation_id=correlation_id,
+        )
+        # Saving yourself out leaves Session Home a 404 for you, so land
+        # on the lobby instead (author's ruling, 19S Item 10).
+        if user.id not in {target.id for target in owner_targets}:
+            return RedirectResponse(
+                url="/operator/sessions",
+                status_code=status.HTTP_303_SEE_OTHER,
+            )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}#session-config",
         status_code=status.HTTP_303_SEE_OTHER,

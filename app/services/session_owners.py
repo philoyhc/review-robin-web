@@ -253,6 +253,24 @@ def resolve_owners(db: Session, emails: list[str]) -> list[User]:
     return resolved
 
 
+def resolve_owner_set(db: Session, emails: list[str]) -> list[User]:
+    """Validate a **whole** owner set before anything is written.
+
+    Session Home's Owners card (19S Item 10) posts the complete set, not
+    additions, so an empty result means *remove every owner* — refused
+    here, before the rest of the save writes, rather than by
+    ``set_owners`` after it. Create posts only the co-owners and keeps
+    the creator itself, so it calls ``resolve_owners`` instead.
+    """
+    targets = resolve_owners(db, emails)
+    if not targets:
+        raise OwnerOperationError(
+            code="last_owner",
+            message="A session always keeps at least one owner.",
+        )
+    return targets
+
+
 def set_owners(
     db: Session,
     *,
