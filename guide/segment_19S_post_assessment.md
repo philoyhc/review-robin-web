@@ -2602,6 +2602,22 @@ saving with the details card** (rung 1, #2581, closed unmerged) — it
 tied access control to the setup window and made an owner error cost
 the card's other unsaved edits.
 
+### Decision — amended again 2026-09-23, after the close: save at once, behind a lock
+
+**The author's rulings once the card stood on its own**: staging made
+sense only while the card sat inside the lockable details form, so
+**Add owner and each Remove save at once** (#2590) — `owners/save`,
+`apply_owner_changes`, the Save / Cancel pair and the `<noscript>`
+Remove retire. Then, against accidental edits, the card takes **a
+Lock / Unlock of its own, as Quick Setup has** (#2591): locked by
+default, an `oou_{id}` cookie, relocked on leaving Home or opening
+another session's, visual only. Placement moved twice: Owners above the
+Danger Zone (#2589), and Create's bottom row mirrors Home's (#2590).
+Kept: the last-owner disable, the self-removal confirm, the lobby after
+removing yourself. The picker now offers only operators not already
+owners. Rejected: enforcing the lock server-side — a stale locked form
+would become a new refusal code, for a guard that exists against slips.
+
 ### Semantics — what Session Home adds over Create
 
 Revised for the amended Decision; struck bullets are the first
@@ -2815,6 +2831,17 @@ both judgment calls above. The Remove table above is the baseline;
   #2585, nothing blocking — a duplicate-add test that could not fail, a
   clash reported as `already_owner`, an unordered lock.
 
+**After the close** (2026-09-23, the amended-again Decision above):
+#2589 (Owners above the Danger Zone), #2590 (Create's layout; save at
+once; the stager becomes Create's alone; a duplicate-add race reported
+as `already_owner`), #2591 (Lock / Unlock; the relock middleware now
+keeps only the path's session's cookies, which closes the same gap
+Quick Setup's `qsu_` had) and #2592 (the Guide's Create captures).
+Reads: #2590 two `diff-reviewer` reads and a `spec-writer` pass, #2591
+one of each, #2592 one — nothing blocking in any; Codex added one
+finding each on #2590 (a stale `docs/status.md` row) and #2591 (the
+cross-session relock), both fixed.
+
 **Close check**: `tools/close_check.py 19S.10` passes; its note that
 `_quick_setup` is touched with `spec/quick_setup_card_spec.md` outside
 the manifest is adjudicated — no `_quick_setup` file changed in the
@@ -2868,4 +2895,10 @@ reach the dev slot yet (2026-09-23).
   carried to the segment's last close) (Item 10).
 - `guide/post_azure_todo_checklist.md` — item 5: the browser checks
   Items 7 and 10 owe (Item 10).
+- `spec/settings_inventory.md` — "Cookies": the Owners card's `oou_`
+  unlock cookie, and both cookies kept only on their own session's
+  paths (Item 10, after the close, #2591).
+- `spec/quick_setup_card_spec.md` — the relock middleware shared with
+  the Owners card, and another session's Home relocks (Item 10, after
+  the close, #2591).
 - `docs/status.md` — row when the item lands (Item 10).
