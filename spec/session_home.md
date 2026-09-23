@@ -67,14 +67,16 @@ then a two-column bottom row.
 └──────────────────────────────────────────────────────────────┘
 ┌────────────── Session details ───────────────────────────────┐
 │  full-width; display ↔ edit swap (?editing=1)                │
-│  + Owners / UI-settings / Tags sub-cards                     │
+│  + UI-settings / Tags sub-cards                              │
 └──────────────────────────────────────────────────────────────┘
 ┌── Quick Setup ───────────┐  ┌── Danger Zone ───────────┐
 │   scaffolded bulk        │  │   Delete Data / Delete   │
+│                          │  ├──────────────────────────┤
+│                          │  │   Owners                 │
 └──────────────────────────┘  └──────────────────────────┘
 ```
 
-> **There are four cards on Home and no more.** There is no
+> **There are five cards on Home and no more.** There is no
 > standalone Edit page — session config is displayed *and* edited on
 > the Session details card, and `GET /operator/sessions/{id}/edit`
 > is a redirect to `…?editing=1#session-config`. There is no
@@ -82,17 +84,21 @@ then a two-column bottom row.
 > the config card carries those fields, and resolved fire-moments
 > show inline next to each offset. The Extract Setup card lives on
 > the **Extract data** Operations-strip tab
-> (`_extract_data_card.html`), not here; see §2.
+> (`_extract_data_card.html`), not here; see §2. The Owners card
+> (§3a) is its own, below the Danger Zone — not a sub-card of the
+> Session details card.
 
 The Workflow card sits full-width at the top of the page-card
 region, just below the chrome (same `next_action_card.html`
 partial the Operations-row pages render). The **Session details**
 card sits full-width directly below it — a display ↔ edit swap
-(see §4). Below those two full-width cards, Quick Setup and
-Danger Zone lay out as a `.bottom-grid` half-width pair.
+(see §4). Below those two full-width cards, Quick Setup pairs with
+Danger Zone + Owners as a `.bottom-grid` half-width pair; Danger
+Zone and Owners stack in that column (`.bottom-left`,
+`spec/ui_elements.md` §10).
 
 DOM source order = mobile-collapse order:
-**Workflow → Session details → Quick Setup → Danger Zone**.
+**Workflow → Session details → Quick Setup → Danger Zone → Owners**.
 Below a narrow viewport threshold the bottom pair collapses into
 a single stacked column in that same order.
 
@@ -270,7 +276,8 @@ download, which lives on the Sys Admin per-session audit-log page.
 
 The Danger Zone card (Delete Data + Delete Session) occupies the
 bottom-right of Home's `.bottom-grid`, paired with Quick Setup in the
-bottom-left (`#danger-zone`).
+bottom-left (`#danger-zone`). The Owners card (§3a) stacks below it in
+the same column.
 
 Its contents:
 
@@ -314,6 +321,16 @@ app-wide disabled-until-checked handler; with no JS the two forms
 stay independent and the server still wipes all data on session
 delete.
 
+### 3a. Owners card (below Danger Zone)
+
+A card of its own, half width, stacked below Danger Zone in the same
+`.bottom-left` column (`#owners-card`) — not a sub-card of the Session
+details card, and gated on nothing: it is always visible and editable,
+in every lifecycle state, with no `?editing=1` and no Lock / Unlock of
+its own. Full contract — the staged table, its own **Save** / **Cancel**,
+candidates, and the Create page's matching card — in
+`spec/session_owners.md`.
+
 ### 4. Session details card (full-width, below Workflow)
 
 Session config is displayed *and* edited here: this full-width card
@@ -344,18 +361,13 @@ details". Then a two-column body of config fields, each with a
   inline beside their offset; there is no separate
   Schedule-timeline card.
 
-Below the field block, a `.bottom-grid` of **sub-cards** — Owners
-in one column; User interface settings and Tags stacked in the other,
-a `.bottom-left` column whose `gap` spaces them:
+Below the field block, a `.bottom-grid` of two **sub-cards**, each its
+own `.bottom-left` column (`spec/ui_elements.md` §10) — **User
+interface settings on the left, Tags on the right** with the Save /
+Cancel / Lock cluster beneath it (author's ruling, 2026-09-23). (Owners
+left this card for one of its own, below the Danger Zone — see §3a /
+`spec/session_owners.md` — and Tags took the slot it vacated.)
 
-- **Owners** (`#config-owners-card`) —
-  display mode is a read-only Email / Name / Role / Added table;
-  edit mode gains an Action (Remove) column plus an Add-owner
-  typeahead over the workspace operator allowlist. Owner
-  add/remove POST to `/owners/add` + `/owners/{user_id}/remove`
-  and redirect back to Home in edit mode
-  (`?editing=1#config-owners-card`); `owners_error` surfaces
-  inline.
 - **User interface settings** (`#config-ui-settings-card`) — two
   checkboxes: **Relationships tab and page**
   (`relationships_enabled`) and **Observers tab and page**
@@ -365,7 +377,7 @@ a `.bottom-left` column whose `gap` spaces them:
   (`has_relationships` / `has_observers`), mirroring the
   service-layer guard against orphaning data.
 - **Tags** (`#config-tags-card`, 19S Item 9) — **a field of this
-  card that renders in its own card**, as the toggles above do: it
+  card that renders in its own card**, as the toggles beside it do: it
   shares the card's display/edit swap, its edit window and its
   `config-save` form, with no save of its own. Locked, it shows the
   tags as the sessions lobby's pills (`.pill .pill-count` in
@@ -393,7 +405,8 @@ a `.bottom-left` column whose `gap` spaces them:
   actually being editable (`is_draft` or `is_validated`) so a
   stale link on an Activated session degrades to display mode.
 - The Save / Cancel / Lock-toggle cluster sits bottom-right of
-  that column, below the Tags sub-card. **Unlock** (display mode) links to
+  that column, below the Tags sub-card (author's ruling, 2026-09-23).
+  **Unlock** (display mode) links to
   `?editing=1`; **Lock** (edit mode) drops it. **Cancel** and
   **Lock** are anchors carrying real `?editing` hrefs so no-JS
   degrades to navigation; with JS the inline `sessionConfig`
@@ -409,8 +422,9 @@ a `.bottom-left` column whose `gap` spaces them:
   never deletes assignments or responses, so the form carries no
   response-loss acknowledgement gate.
 - The Details / Schedule / UI-settings / Tags inputs submit as one form
-  via the HTML5 `form="config-save-{id}"` association (they can't
-  physically nest — the Owners sub-card carries its own form).
+  via the HTML5 `form="config-save-{id}"` association rather than a
+  literal wrapping `<form>`. The Owners card (§3a) is no longer among
+  them — it saves through its own route.
   **Save POSTs to `/operator/sessions/{id}/config`** (shared
   persistence helper `_apply_session_config_form`) and redirects
   back to Home in **display** mode (`#session-config`) — the
@@ -462,7 +476,7 @@ State-conditional copy only — the card frame is constant:
 
 ## Placeholder cards
 
-**Session Home carries no placeholder card** — all four of its cards
+**Session Home carries no placeholder card** — all five of its cards
 are wired. The pattern is documented here because it is the app's one
 shape for an inert card, and any future placeholder on any page must
 match it rather than invent a second. It is a **class, not a macro**:
@@ -499,7 +513,9 @@ The **Danger Zone** card (Delete Data + Delete Session) sits in
 Home's bottom-right (see §3). Its per-state
 availability: both Delete Data and Delete Session are active in
 `draft` / `validated` and visible-but-disabled in `ready`
-(Activated) — pause first to enable either.
+(Activated) — pause first to enable either. The **Owners** card
+(§3a) stacked below it carries no such gate — it is active in every
+lifecycle state.
 
 **Disabled treatment on Home is plain greying-out, not yellow
 lock cards.** The Workflow card carries any explanatory

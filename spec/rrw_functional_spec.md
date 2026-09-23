@@ -808,10 +808,9 @@ promotion, demotion, and removal are audit-logged.
 ### 7.4 Session ownership
 
 Each session has one or more **operator owners**. Ownership is
-managed on the **Owners** sub-card of the Session details config
-card on Session Home (visible to existing owners and admins); the
-creator can also name co-owners on Create's **Owners** card, saved
-with the session. An
+managed on Session Home's own **Owners** card (visible to existing
+owners and admins, in any session state); the creator can also name
+co-owners on Create's **Owners** card, saved with the session. An
 owner can add another allowlisted operator as a co-owner and
 remove a co-owner; the last owner cannot be removed. A non-owner
 admin can only **self-add** (the adopt bootstrap from Sessions
@@ -1045,8 +1044,7 @@ page, and `/edit` 308-redirects to
   (name, code, description, help contact, timezone, and the
   Start / End / Release-from / Release-until schedule + invite /
   reminder offsets, each showing its resolved fire moment inline),
-  plus **Owners**, **User interface settings** and **Tags**
-  sub-cards. Save
+  plus **User interface settings** and **Tags** sub-cards. Save
   POSTs to `/config` and redirects back to Home in display mode.
 - **Quick Setup card** (bottom-left of a `.bottom-grid`) — a
   bulk-import surface with one CSV upload affordance per roster /
@@ -1059,6 +1057,9 @@ page, and `/edit` 308-redirects to
   confirm-gated; any state) and **Delete Session** (removes the
   session entirely; confirm-gated; visible-but-disabled in `ready`,
   route-enforced server-side).
+- **Owners card**, stacked below Danger Zone — the session's own
+  owner set, editable in every session state with no edit window of
+  its own. `spec/session_owners.md` carries the full contract.
 
 The round-trip **setup CSV download tiles** are not on Session
 Home: they live on the Operations-strip **Extract data** tab (see
@@ -1082,9 +1083,8 @@ the only surface for session config.
   Release-until) plus the Send-invites and Send-reminders offset
   lists — each offset shown in display mode next to its resolved
   send datetime.
-- **Owners sub-card** — read-only Email / Name / Role / Added
-  table in display mode; add-owner typeahead + Remove column in
-  edit mode. Owner add/remove POST to `/owners/*`.
+- **Owners is a card of its own**, not one of this card's sub-cards
+  — see §9.3 and `spec/session_owners.md`.
 - **User interface settings sub-card** — the
   `relationships_enabled` / `observers_enabled` checkboxes, each
   lock-on-data.

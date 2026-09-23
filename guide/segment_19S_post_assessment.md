@@ -2847,6 +2847,8 @@ reach the dev slot yet (2026-09-23).
   holds an Owners sub-card; point at the new spec (Item 10, cold read).
 - `spec/architecture.md` — "Route conventions" names `owners/save`
   among the whole-set saves (Item 10, cold read).
+- `spec/visual_style_rrw.md` — Session Home's layout example gains the
+  Owners card below the Danger Zone (Item 10, spec-writer at close).
 - `spec/sessions_overview.md` — Form submission: Enter in the lobby
   form never submits, and not Save either (author's ruling on #2579,
   carried to the segment's last close) (Item 10).

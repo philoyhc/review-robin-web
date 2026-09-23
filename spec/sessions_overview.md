@@ -509,6 +509,14 @@ are confused, layer a `?skipped=N` flash on top.)
 - **Form submission.** The expander's action buttons post the
   enclosing form (including every ticked checkbox); each button
   carries its own `formaction` to route to the right handler.
+  **Enter in the form never submits it** — a browser default that
+  would otherwise fire the form's first submit button (a row or bulk
+  expander action) from an unrelated field. Two guards: the first
+  submit button in the form ships `disabled`, and a keydown guard sits
+  on every other input, since a checkbox or `datetime-local` field can
+  submit past a disabled default button in some browsers. The tag
+  boxes are exempt — their Enter picks a typeahead suggestion instead
+  (`tests/integration/test_lobby_enter_does_not_submit.py`).
 - **Empty submission.** Clicking Delete with zero rows ticked sends
   an empty `session_ids` list; the handler iterates zero times and
   303s back. Acceptable as a UX no-op.

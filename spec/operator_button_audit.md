@@ -124,6 +124,8 @@ Source: `app/web/templates/operator/session_new.html`.
 |---|---|---|---|---|---|---|
 | 14 | Session details form | Create session | `<button type="submit">` | `btn` | Primary | Posts to `POST /operator/sessions` |
 | 15 | Session details form | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the sessions lobby |
+| 186 | Owners card | Add owner | `<button type="button">` | `btn secondary` | Secondary | Stages a row via `_owners_stager_js`; the card has no save of its own — **Create session** (#14) submits the staged set. Ships `hidden`, un-hidden by the stager script (`spec/session_owners.md` §1) |
+| 187 | Owners card | Remove (per staged row) | `<button type="button">` | `chrome-link` | **Not `.btn`** — reuses the chrome nav's `chrome-link` class for an in-card control; no canonical role above covers a per-row remove yet. Removes a staged row client-side; nothing is written until **Create session**. Not present on the creator's fixed row |
 
 ---
 
@@ -183,7 +185,10 @@ by `?editing=1`; there is no Edit page to hop to.
 | 156 | Session details footer | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits `form="config-save-{id}"` to the shared `/config` POST |
 | 157 | Session details footer | Cancel | `<a>` | `btn secondary` | Secondary | Returns to `#session-config` unedited |
 | 158 | Session details footer | Lock / Unlock | `<a>` | `btn secondary` | Secondary | Two-state toggle; adds or drops `?editing=1`. Rendered `aria-disabled` with an explanatory `title` once the session is past `validated` — the lock-card recovery path, not a hidden control |
-| 159 | Owners sub-card | Add owner | `<button type="submit">` | `btn` | Primary | The one Primary on this card; the `required` input blocks an empty submit without JavaScript |
+
+The Owners card is no longer a sub-card of this one — it moved to its
+own card below the Danger Zone (19S Item 10). Its buttons, including
+#159, are in §5f.
 
 ### 5c — Quick Setup card
 
@@ -219,6 +224,20 @@ bottom-right of Home's `.bottom-grid`.
 
 These two keep the `17a` / `17b` numbers §4 lists them under, so a
 reader following either reference lands on the same pair.
+
+### 5f — Owners card (`#owners-card`)
+
+Source: `session_detail.html`, `.card#owners-card` — stacked below
+Danger Zone in the same `.bottom-left` column (19S Item 10). Always
+shown, no display/edit swap; full contract in `spec/session_owners.md`.
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 159 | Owners card | Add owner | `<button type="button">` | `btn secondary` | Secondary | Was Primary as a details-sub-card submit (pre-19S.10); now stages a row via `_owners_stager_js`, same as Create's #186. Ships `hidden`, un-hidden by the stager |
+| 188 | Owners card | Save | `<button type="submit">` | `btn secondary` | Secondary | Posts the table plus `owners_original` to `owners/save`. Rendered enabled (no-JS works); the gating script disables it until the table or the picker changes |
+| 189 | Owners card | Cancel | `<button type="reset">` | `btn secondary` | Secondary | Resets the card's own form; the stager rebuilds the table on `reset` |
+| 190 | Owners card | Remove (per row) | `<button type="button">` | `chrome-link` | **Not `.btn`** — see #187's note | Stages a row out client-side; `disabled` whenever one owner row remains; a `confirm()` first on your own row |
+| 191 | Owners card | Remove, no-JS fallback | `<button type="submit">` | `chrome-link` | **Not `.btn`** — see #187's note | `<noscript>` per-row form posting straight to the old `owners/{user_id}/remove` route, saved at once. Omitted on the last owner's row and your own |
 
 ---
 

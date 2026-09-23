@@ -189,16 +189,16 @@ row with `role="owner"` at session-create time, alongside any
 co-owners the creator staged on Create's Owners card (the same
 picker over workspace operators, saved by **Create session**;
 `spec/operator_ui_concept.md` "Create new session"). Additional
-owners are added / removed by current owners via the Owners
-sub-card on Session Home's config card in edit mode
-(`/operator/sessions/{id}?editing=1#config-owners-card`; gate and
-invariant contract in `spec/permissions.md` §4.2);
-the Add-owner picker offers any workspace operator
-(`users WHERE (is_operator OR is_sys_admin) AND NOT EXISTS
-(SELECT 1 FROM session_operators ...)`). The service-layer
-last-owner guard refuses to leave a session with zero
-owners, and the audit log carries `session.owner_added` /
-`session.owner_removed` events for every transition.
+owners are added / removed by current owners on Session Home's own
+Owners card (`#owners-card`), in every lifecycle state — no edit
+window to unlock. The picker offers **every** workspace operator,
+current owners included, since the table stages changes rather than
+writing them immediately. Full contract:
+`spec/session_owners.md`; gate and invariant contract in
+`spec/permissions.md` §4.2. The service-layer last-owner guard
+refuses to leave a session with zero owners, and the audit log
+carries `session.owner_added` / `session.owner_removed` events for
+every transition.
 
 Per-session role granularity beyond `"owner"` (e.g.
 `"viewer"` / `"deputy"`) is deferred pending pilot feedback;
