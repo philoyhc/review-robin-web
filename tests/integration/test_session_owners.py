@@ -202,6 +202,13 @@ def test_config_owners_card_renders_add_form_when_candidates_exist(
     card = body[config_pos:body.find("window.sessionConfig", config_pos)]
 
     assert 'id="config-add-owner-email"' in card
+    # A sibling label, as on Create's picker: nesting the input in the
+    # label tightened the text-to-box gap to 1.9px against 5.9px on every
+    # other field (measured in Chromium, 2026-09-23).
+    assert (
+        '<label for="config-add-owner-email">'
+        "Pick or search for a workspace operator:</label>"
+    ) in card
     assert 'name="target_email"' in card
     assert (
         f'action="/operator/sessions/{review_session.id}/owners/add"' in card
