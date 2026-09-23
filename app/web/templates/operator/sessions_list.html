@@ -98,6 +98,33 @@
   {% if sessions %}
     <form method="post" action="/operator/sessions/bulk-delete"
           id="sessions-list-form">
+      {# Enter in a text field submits its form through the form's first
+         submit button. The expanders are injected inside this form, and
+         their first submit button is "Purge and archive" (the bulk one:
+         "All tags to all"), so Enter in Name / Code / Deadline / Tags
+         archived the session. A disabled first submit button makes the
+         browser skip implicit submission altogether; every real button
+         still acts on click. Found 2026-09-23 on the dev slot. #}
+      <button type="submit" disabled hidden aria-hidden="true" tabindex="-1"
+              data-no-implicit-submit></button>
+      {# Chromium's date-time field submits on Enter by its own path,
+         past a disabled first button, so the Deadline box needs a
+         keydown guard too. Scoped to that input type: the tag box keeps
+         Enter for picking a suggestion. #}
+      <script>
+        document.getElementById("sessions-list-form").addEventListener(
+          "keydown",
+          function (event) {
+            if (
+              event.key === "Enter" &&
+              event.target.matches &&
+              event.target.matches('input[type="datetime-local"]')
+            ) {
+              event.preventDefault();
+            }
+          }
+        );
+      </script>
       <div class="card">
         {# `.table-scroll` (base.html): a table wider than its card
            scrolls inside the card rather than pushing the page sideways. #}
