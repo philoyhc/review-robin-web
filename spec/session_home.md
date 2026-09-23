@@ -69,10 +69,10 @@ then a two-column bottom row.
 │  full-width; display ↔ edit swap (?editing=1)                │
 │  + UI-settings / Tags sub-cards                              │
 └──────────────────────────────────────────────────────────────┘
-┌── Quick Setup ───────────┐  ┌── Danger Zone ───────────┐
-│   scaffolded bulk        │  │   Delete Data / Delete   │
-│                          │  ├──────────────────────────┤
-│                          │  │   Owners                 │
+┌── Quick Setup ───────────┐  ┌── Owners ────────────────┐
+│   scaffolded bulk        │  │   staged table, Save     │
+│                          │  ├── Danger Zone ───────────┤
+│                          │  │   Delete Data / Delete   │
 └──────────────────────────┘  └──────────────────────────┘
 ```
 
@@ -85,7 +85,7 @@ then a two-column bottom row.
 > show inline next to each offset. The Extract Setup card lives on
 > the **Extract data** Operations-strip tab
 > (`_extract_data_card.html`), not here; see §2. The Owners card
-> (§3a) is its own, below the Danger Zone — not a sub-card of the
+> (§3a) is its own, above the Danger Zone — not a sub-card of the
 > Session details card.
 
 The Workflow card sits full-width at the top of the page-card
@@ -93,12 +93,12 @@ region, just below the chrome (same `next_action_card.html`
 partial the Operations-row pages render). The **Session details**
 card sits full-width directly below it — a display ↔ edit swap
 (see §4). Below those two full-width cards, Quick Setup pairs with
-Danger Zone + Owners as a `.bottom-grid` half-width pair; Danger
-Zone and Owners stack in that column (`.bottom-left`,
-`spec/ui_elements.md` §10).
+Owners + Danger Zone as a `.bottom-grid` half-width pair; Owners and
+Danger Zone stack in that column, Owners on top (`.bottom-left`,
+`spec/ui_elements.md` §10; author's ruling, 2026-09-23).
 
 DOM source order = mobile-collapse order:
-**Workflow → Session details → Quick Setup → Danger Zone → Owners**.
+**Workflow → Session details → Quick Setup → Owners → Danger Zone**.
 Below a narrow viewport threshold the bottom pair collapses into
 a single stacked column in that same order.
 
@@ -276,7 +276,7 @@ download, which lives on the Sys Admin per-session audit-log page.
 
 The Danger Zone card (Delete Data + Delete Session) occupies the
 bottom-right of Home's `.bottom-grid`, paired with Quick Setup in the
-bottom-left (`#danger-zone`). The Owners card (§3a) stacks below it in
+bottom-left (`#danger-zone`). The Owners card (§3a) stacks above it in
 the same column.
 
 Its contents:
@@ -321,9 +321,9 @@ app-wide disabled-until-checked handler; with no JS the two forms
 stay independent and the server still wipes all data on session
 delete.
 
-### 3a. Owners card (below Danger Zone)
+### 3a. Owners card (above Danger Zone)
 
-A card of its own, half width, stacked below Danger Zone in the same
+A card of its own, half width, stacked above Danger Zone in the same
 `.bottom-left` column (`#owners-card`) — not a sub-card of the Session
 details card, and gated on nothing: it is always visible and editable,
 in every lifecycle state, with no `?editing=1` and no Lock / Unlock of
@@ -365,7 +365,7 @@ Below the field block, a `.bottom-grid` of two **sub-cards**, each its
 own `.bottom-left` column (`spec/ui_elements.md` §10) — **User
 interface settings on the left, Tags on the right** with the Save /
 Cancel / Lock cluster beneath it (author's ruling, 2026-09-23). (Owners
-left this card for one of its own, below the Danger Zone — see §3a /
+left this card for one of its own, above the Danger Zone — see §3a /
 `spec/session_owners.md` — and Tags took the slot it vacated.)
 
 - **User interface settings** (`#config-ui-settings-card`) — two
@@ -514,7 +514,7 @@ Home's bottom-right (see §3). Its per-state
 availability: both Delete Data and Delete Session are active in
 `draft` / `validated` and visible-but-disabled in `ready`
 (Activated) — pause first to enable either. The **Owners** card
-(§3a) stacked below it carries no such gate — it is active in every
+(§3a) stacked above it carries no such gate — it is active in every
 lifecycle state.
 
 **Disabled treatment on Home is plain greying-out, not yellow

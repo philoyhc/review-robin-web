@@ -231,7 +231,7 @@ Top-level operator lobby. A table of sessions, one row per session, columns: **N
 
 ### `/operator/sessions/{id}` — Session Home / Control Panel
 
-The per-session home. **Detailed spec: `spec/session_home.md`.** Full-width **Workflow card**, then the in-place `#session-config` card, then a `.bottom-grid` of **Quick Setup** (left) + **Danger Zone** over the **Owners** card (right, `spec/session_owners.md`) — five cards, and no Extract Data card (that lives on the Extract data Operations tab). The Workflow card (specified in `spec/workflow_card.md`) carries every lifecycle-advancing action via a single-row button layout (≤ 4 visible buttons per state) — Prepare session, Send invites, Activate session, Send reminders, Close session, Release responses, Stop releasing, Archive session, plus Revert to draft. (Create invites retired at 19Q Item 2 rung 3: Prepare creates the invitations, so the step needs no button of its own.)
+The per-session home. **Detailed spec: `spec/session_home.md`.** Full-width **Workflow card**, then the in-place `#session-config` card, then a `.bottom-grid` of **Quick Setup** (left) + the **Owners** card (`spec/session_owners.md`) over **Danger Zone** (right) — five cards, and no Extract Data card (that lives on the Extract data Operations tab). The Workflow card (specified in `spec/workflow_card.md`) carries every lifecycle-advancing action via a single-row button layout (≤ 4 visible buttons per state) — Prepare session, Send invites, Activate session, Send reminders, Close session, Release responses, Stop releasing, Archive session, plus Revert to draft. (Create invites retired at 19Q Item 2 rung 3: Prepare creates the invitations, so the step needs no button of its own.)
 
 ### `/operator/sessions/new` — Create new session
 

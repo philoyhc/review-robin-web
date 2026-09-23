@@ -1057,7 +1057,7 @@ page, and `/edit` 308-redirects to
   confirm-gated; any state) and **Delete Session** (removes the
   session entirely; confirm-gated; visible-but-disabled in `ready`,
   route-enforced server-side).
-- **Owners card**, stacked below Danger Zone — the session's own
+- **Owners card**, stacked above Danger Zone — the session's own
   owner set, editable in every session state with no edit window of
   its own. `spec/session_owners.md` carries the full contract.
 

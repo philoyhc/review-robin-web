@@ -187,7 +187,7 @@ by `?editing=1`; there is no Edit page to hop to.
 | 158 | Session details footer | Lock / Unlock | `<a>` | `btn secondary` | Secondary | Two-state toggle; adds or drops `?editing=1`. Rendered `aria-disabled` with an explanatory `title` once the session is past `validated` — the lock-card recovery path, not a hidden control |
 
 The Owners card is no longer a sub-card of this one — it moved to its
-own card below the Danger Zone (19S Item 10). Its buttons, including
+own card above the Danger Zone (19S Item 10). Its buttons, including
 #159, are in §5f.
 
 ### 5c — Quick Setup card
@@ -227,7 +227,7 @@ reader following either reference lands on the same pair.
 
 ### 5f — Owners card (`#owners-card`)
 
-Source: `session_detail.html`, `.card#owners-card` — stacked below
+Source: `session_detail.html`, `.card#owners-card` — stacked above
 Danger Zone in the same `.bottom-left` column (19S Item 10). Always
 shown, no display/edit swap; full contract in `spec/session_owners.md`.
 
