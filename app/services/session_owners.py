@@ -79,6 +79,17 @@ def list_owners(db: Session, review_session: ReviewSession) -> list[OwnerRow]:
     ]
 
 
+def _workspace_operators(db: Session) -> list[User]:
+    """Everyone ``add_owner`` would accept: operators and sys-admins."""
+    return list(
+        db.execute(
+            select(User)
+            .where((User.is_operator.is_(True)) | (User.is_sys_admin.is_(True)))
+            .order_by(User.email.asc())
+        ).scalars()
+    )
+
+
 def workspace_operator_candidates(
     db: Session, review_session: ReviewSession
 ) -> list[User]:
@@ -87,12 +98,16 @@ def workspace_operator_candidates(
     member_ids = {
         row.user_id for row in list_owners(db, review_session)
     }
-    candidates = db.execute(
-        select(User)
-        .where((User.is_operator.is_(True)) | (User.is_sys_admin.is_(True)))
-        .order_by(User.email.asc())
-    ).scalars()
-    return [u for u in candidates if u.id not in member_ids]
+    return [u for u in _workspace_operators(db) if u.id not in member_ids]
+
+
+def new_session_owner_candidates(db: Session, creator: User) -> list[User]:
+    """The Add-owner picker's candidates on the Create page (19S Item 9).
+
+    There is no session yet, so no owner list to exclude — only the
+    creator, who becomes the first owner the moment the session exists.
+    """
+    return [u for u in _workspace_operators(db) if u.id != creator.id]
 
 
 def add_owner(

@@ -218,6 +218,65 @@
                autocomplete="off"
                placeholder="e.g. pilot, 2026, engineering">
       </div>
+      {# Owners (19S Item 9 Part A rung 3 — scaffold, deliberately inert).
+         The same UX as Session Home's Owners card (author's ruling,
+         2026-09-23): the owners table, then a one-at-a-time Add-owner
+         picker suggesting workspace operators. The creator is the first
+         owner and cannot be removed — a session always keeps one. There
+         is no session yet, so rung 4 stages added rows in the form and
+         applies them after the session is created — Create session
+         saves everything, and Add owner only stages a row, which is why
+         it is an outline button and the copy says so (author's ruling,
+         2026-09-23). Third card in this
+         ``.bottom-left`` column, so the column's gap spaces it
+         (``spec/ui_elements.md`` §4). **Inert until rung 4**: the email
+         input carries no ``name`` and no ``form=``, and Add owner is a
+         plain button with nothing behind it. #}
+      <div class="card" id="session-owners">
+        <h3 style="margin-top: 0;">Owners (optional)</h3>
+        <p class="muted">
+          Workspace operators with full edit access on this session. You
+          are the first owner; anyone you add is saved when you create the
+          session.
+        </p>
+        {# `.table-scroll` (base.html): a table wider than its card
+           scrolls inside the card rather than pushing the page sideways. #}
+        <div class="table-scroll">
+        <table id="session-owners-table">
+          <tr>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Added</th>
+            <th class="col-shrink">Action</th>
+          </tr>
+          <tr>
+            <td><code>{{ user.email }}</code></td>
+            <td>{{ user.display_name or "—" }}</td>
+            <td>owner</td>
+            <td>—</td>
+            <td class="col-shrink">—</td>
+          </tr>
+        </table>
+        </div>
+        {% if new_session_owner_candidates %}
+          <label for="session-owners-email">Pick or search for a workspace operator:</label>
+          <input type="email" id="session-owners-email"
+                 list="session-owners-candidates"
+                 autocomplete="off" placeholder="email">
+          <datalist id="session-owners-candidates">
+            {% for candidate in new_session_owner_candidates %}
+              <option value="{{ candidate.email }}">{{ candidate.display_label }}</option>
+            {% endfor %}
+          </datalist>
+          <div class="card-action-row">
+            <button class="btn secondary" type="button"
+                    id="session-owners-add">Add owner</button>
+          </div>
+        {% else %}
+          <p class="muted">No other workspace operators are available to add.</p>
+        {% endif %}
+      </div>
     </div>
   </div>
 
