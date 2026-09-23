@@ -392,12 +392,12 @@ def test_the_lock_is_per_session_and_separate_from_quick_setup(
     session_b = _create(client, db, "OWN-LOCK-3B")
     _unlock(client, session_a)
 
-    body_b = _home(client, session_b)
-    assert 'class="lockable-body locked"' in _card(body_b)
     body_a = _home(client, session_a)
     assert 'class="lockable-body"' in _card(body_a)
     # Unlocking Owners leaves Quick Setup locked.
     assert 'class="quick-setup-body locked"' in body_a
+    body_b = _home(client, session_b)
+    assert 'class="lockable-body locked"' in _card(body_b)
 
 
 def test_an_add_keeps_the_card_unlocked_and_leaving_home_relocks_it(
@@ -435,3 +435,29 @@ def test_the_lock_is_visual_only(client: TestClient, db: Session) -> None:
     card = _card(_home(client, review_session))
     assert 'class="lockable-body locked"' in card
     assert "bob@example.edu" in card[card.index("<table>") : card.index("</table>")]
+
+
+def test_opening_another_sessions_home_relocks_both_cards(
+    client: TestClient, db: Session
+) -> None:
+    """Session B's Home keeps only B's unlock cookies (Codex on #2591):
+    back on A, its Owners and Quick Setup cards are locked again."""
+    session_a = _create(client, db, "OWN-LOCK-6A")
+    session_b = _create(client, db, "OWN-LOCK-6B")
+    _unlock(client, session_a)
+    client.post(
+        f"/operator/sessions/{session_a.id}/quick-setup/lock",
+        data={"action": "unlock"},
+        follow_redirects=False,
+    )
+    body_a = _home(client, session_a)
+    assert 'class="lockable-body"' in _card(body_a)
+    assert 'class="quick-setup-body"' in body_a
+
+    _unlock(client, session_b)
+    body_b = _home(client, session_b)
+    assert 'class="lockable-body"' in _card(body_b), "B keeps its own unlock"
+
+    body_a = _home(client, session_a)
+    assert 'class="lockable-body locked"' in _card(body_a)
+    assert 'class="quick-setup-body locked"' in body_a

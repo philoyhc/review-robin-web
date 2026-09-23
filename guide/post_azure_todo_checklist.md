@@ -367,7 +367,7 @@ at a keyboard.
 | The last owner cannot go | On a one-owner session | That row's Remove is disabled |
 | Removing yourself asks | Click Remove on your own row | The browser's confirm names losing access; **Cancel** posts nothing. Confirming lands on the sessions lobby |
 | Any lifecycle state | Repeat the first row on an Activated session | It saves; the details card stays locked |
-| It relocks | Unlock, add or remove an owner, then go to the lobby and back | Still unlocked after the add or remove; locked again after the lobby. Quick Setup's lock is unaffected throughout |
+| It relocks | Unlock, add or remove an owner, then go to the lobby and back; again via another session's Home | Still unlocked after the add or remove; locked again after the lobby or the other session. Quick Setup's lock is unaffected throughout |
 | Without JavaScript | Disable JavaScript, reload Session Home | Add owner and every Remove still work (plain forms); your own row's Remove skips the confirm |
 | Owners sits above the Danger Zone | Session Home, wide and narrow windows | Owners starts level with Quick Setup and the Danger Zone follows it in the right column; narrowed, the order is Quick Setup → Owners → Danger Zone |
 | Create is unchanged | Create new session → Owners, JavaScript on and off | On: Add owner stages a row and a staged row's Remove takes it out again, with no confirm; Create session saves what remains. Off: no Add owner; the picker's one address is saved with Create session |

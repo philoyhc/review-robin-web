@@ -34,8 +34,12 @@ from app.web.routes_reviewer import router as reviewer_router
 # ``_QUICK_SETUP_COOKIE_PREFIX`` and ``_OWNERS_COOKIE_PREFIX`` in
 # ``app/web/routes_operator/_shared.py``. If you rename a cookie
 # prefix in either file, update the other.
+#
+# Only the cookies of the session in the path survive: opening session
+# B's Home clears session A's, so returning to A finds both cards locked
+# (Codex on #2591; the Quick Setup cookie had the same gap).
 _UNLOCK_KEEP_COOKIE_RE = re.compile(
-    r"^/operator/sessions/\d+(?:/(?:quick-setup|owners)(?:/.*)?)?/?$"
+    r"^/operator/sessions/(\d+)(?:/(?:quick-setup|owners)(?:/.*)?)?/?$"
 )
 _UNLOCK_COOKIE_RE = re.compile(r"^(?:qsu|oou)_(\d+)$")
 
@@ -128,18 +132,18 @@ def create_app() -> FastAPI:
         request: Request, call_next
     ):
         response = await call_next(request)
-        path = request.url.path
-        if _UNLOCK_KEEP_COOKIE_RE.match(path):
-            return response
-        # Operator navigated away from Session Home (and away from
-        # the Quick Setup and Owners endpoints that own the cookies'
-        # lifecycle). Expire any ``qsu_`` / ``oou_{session_id}`` cookies
-        # the request carried so coming back to Home renders both
-        # cards locked. The cookie is set with path ``/`` (see
-        # ``app/web/routes_operator/_quick_setup.py``) so the same
-        # path here matches the browser's stored cookie.
+        keep = _UNLOCK_KEEP_COOKIE_RE.match(request.url.path)
+        kept_session_id = keep.group(1) if keep else None
+        # Expire every ``qsu_`` / ``oou_{session_id}`` cookie the request
+        # carried except the current Session Home's own: navigating away
+        # from Home (and away from the Quick Setup and Owners endpoints
+        # that own the cookies' lifecycle), or to another session's Home,
+        # relocks both cards. The cookies are set with path ``/`` (see
+        # ``app/web/routes_operator/_quick_setup.py``) so the same path
+        # here matches the browser's stored cookie.
         for cookie_name in list(request.cookies.keys()):
-            if _UNLOCK_COOKIE_RE.match(cookie_name) is None:
+            unlock = _UNLOCK_COOKIE_RE.match(cookie_name)
+            if unlock is None or unlock.group(1) == kept_session_id:
                 continue
             response.delete_cookie(key=cookie_name, path="/")
         return response

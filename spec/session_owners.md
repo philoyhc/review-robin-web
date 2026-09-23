@@ -79,8 +79,9 @@ the page's card list; this spec owns its contents.
   of Add owner) posts `owners/lock` with `action=unlock`, which sets
   the `oou_{session_id}=1` cookie (`spec/settings_inventory.md`
   "Cookies"). **Lock** clears it. The card stays unlocked across its own
-  adds and removes and relocks when the operator leaves Session Home,
-  through the navigation middleware Quick Setup's `qsu_` cookie uses.
+  adds and removes and relocks when the operator leaves Session Home
+  or opens another session's Home, through the navigation middleware
+  Quick Setup's `qsu_` cookie uses.
   The lock is **visual only**: `owners/add` and
   `owners/{user_id}/remove` don't read it, so a direct POST still saves.
 - **Table**: every current owner, Email / Name / Role / Added / a
