@@ -224,7 +224,10 @@
          picker suggesting workspace operators. The creator is the first
          owner and cannot be removed — a session always keeps one. There
          is no session yet, so rung 4 stages added rows in the form and
-         applies them after the session is created. Third card in this
+         applies them after the session is created — Create session
+         saves everything, and Add owner only stages a row, which is why
+         it is an outline button and the copy says so (author's ruling,
+         2026-09-23). Third card in this
          ``.bottom-left`` column, so the column's gap spaces it
          (``spec/ui_elements.md`` §4). **Inert until rung 4**: the email
          input carries no ``name`` and no ``form=``, and Add owner is a
@@ -233,7 +236,8 @@
         <h3 style="margin-top: 0;">Owners (optional)</h3>
         <p class="muted">
           Workspace operators with full edit access on this session. You
-          are the first owner.
+          are the first owner; anyone you add is saved when you create the
+          session.
         </p>
         {# `.table-scroll` (base.html): a table wider than its card
            scrolls inside the card rather than pushing the page sideways. #}

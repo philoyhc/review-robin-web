@@ -2209,9 +2209,12 @@ entry preserved. Rows stage in the form and apply after
   creator is the first row and cannot be removed. **Supersedes** the
   earlier call below ("one box of emails, not a staged add/remove
   table"): rows are staged in the form now, which is the "staged
-  mini-editor" the deferred entry predicted. Add owner is **Secondary**
-  here where Session Home's is Primary, because Create session is this
-  page's one Primary (`spec/ui_elements.md` §6).
+  mini-editor" the deferred entry predicted. **Create session saves
+  everything** (author's ruling, 2026-09-23): the card has no save of its
+  own, Add owner only stages a row, and the subtitle says owners are
+  saved when the session is created. That is also why Add owner is
+  **Secondary** here where Session Home's — which writes at once — is
+  Primary.
 - **Owners' card takes a `<p class="muted">` subtitle, like the two
   above it** (author's ruling, 2026-09-23). `spec/ui_elements.md` §8
   read as forbidding it; measurement found the subtitle pattern in ten

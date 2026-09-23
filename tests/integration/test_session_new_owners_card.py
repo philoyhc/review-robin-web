@@ -99,6 +99,20 @@ def test_the_card_mirrors_session_home(client: TestClient, db: Session) -> None:
     assert ">Add owner</button>" in card
 
 
+def test_the_copy_says_create_session_saves_the_owners(
+    client: TestClient, db: Session
+) -> None:
+    """Unlike Session Home, where Add owner writes at once, nothing here
+    persists until Create session — so the card says so, and Add owner is
+    an outline button rather than a second Primary beside Create session
+    (author's ruling, 2026-09-23)."""
+    _operator(db, "colleague@example.edu")
+    card = _card(client.get("/operator/sessions/new").text)
+
+    assert "saved when you create the" in card
+    assert 'class="btn secondary" type="button"' in card
+
+
 def test_the_creator_is_the_first_owner_and_cannot_be_removed(
     client: TestClient, db: Session
 ) -> None:
