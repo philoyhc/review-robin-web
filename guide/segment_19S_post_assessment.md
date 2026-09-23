@@ -2546,20 +2546,26 @@ Workflow card already has one.
 
 ### Decision
 
-Stage owner changes on Session Home exactly as on Create, and persist
-them with the details card's Save through `POST /sessions/{id}/config`.
+> **Superseded in part** by the amendment below: the owner set saves
+> through the card's own `POST /sessions/{id}/owners`, as changes
+> against the rendered set, not through `/config` with `set_owners`.
+> Struck text is the first direction; the rest stands.
+
+Stage owner changes on Session Home exactly as on Create, ~~and persist
+them with the details card's Save through `POST /sessions/{id}/config`~~.
 Reuse Item 9 rung 4's two pieces rather than build parallel ones:
 
 - the **owners stager** script partial — rows added and removed in the
   table, each carrying a hidden `owners` input bound to the page's form;
-- **`session_owners.resolve_owners`** then **`set_owners`** — the
+- **`session_owners.resolve_owners`** ~~then **`set_owners`** — the
   first validates the whole list and raises before anything is
   written; the second replaces the owner set the way `set_tags`
   replaces tags. `set_owners` does not validate on its own, so call
-  `resolve_owners` first.
+  `resolve_owners` first~~ — now called by `resolve_owner_changes` on
+  the added addresses only (amended Decision).
 
-**Keep the two `/owners` routes**; they lose their only on-page caller,
-but tests use them and a non-owner sys-admin reaches `owners/add` to add
+**Keep the two `/owners` routes**; ~~they lose their only on-page caller,
+but~~ the `<noscript>` Remove still posts to `…/remove`, tests use them and a non-owner sys-admin reaches `owners/add` to add
 themselves (`tests/integration/test_operator_lobby_access_gate.py`).
 
 **Owners get a spec of their own** (author's ruling, 2026-09-23): a new
@@ -2597,32 +2603,48 @@ the card's other unsaved edits.
 
 ### Semantics — what Session Home adds over Create
 
+Revised for the amended Decision; struck bullets are the first
+direction's.
+
 - **Cancel must rebuild the table.** The card's Cancel is
-  `form.reset()`, which does not undo rows a script added.
+  `form.reset()` on the card's own form, which does not undo rows a
+  script added.
 - **Staging must mark the card dirty.** A button click fires no `input`
-  event, so Save would stay disabled.
-- **A marker field.** FastAPI hands an absent form field and an empty
+  event, so the card's Save would stay disabled.
+- **Only this page's changes.** The route receives the staged set and
+  `owners_original`, the set the page rendered, and applies the
+  difference to the current owners — so a stale page neither re-adds
+  an owner someone else removed nor removes one they added (cold read
+  F1), and a demoted owner blocks nothing (F2). An empty result is
+  `last_owner`, the card's banner, nothing written.
+- **Any lifecycle state.** The route has no lifecycle gate, as the
+  lobby's tag edit has none (`lobby_edit_submit`).
+- ~~**A marker field.** FastAPI hands an absent form field and an empty
   one to a route identically. Item 9's close gave Tags a
   `tags_present` marker for this reason; absent owners would mean
   *remove every owner*, which `set_owners` refuses and an
-  `owners_present` marker must prevent.
-- **Validate before any write.** Otherwise a bad email saves the name
-  and schedule and rejects the owners.
-- **No change to who may edit owners.** The picker and Remove already
+  `owners_present` marker must prevent.~~ — moot: the card's form
+  always carries `owners_original`, and removing everyone is refused.
+- **Validate before any write.** A bad address in the additions writes
+  nothing, removals included.
+- ~~**No change to who may edit owners.** The picker and Remove already
   appear only after Unlock, which exists only in draft and validated —
   the same window `/config`'s `_require_editable` enforces. **The window
   is the page's, not the route's**: `owners/{user_id}/remove` has no
   lifecycle check, so a direct POST removes an owner from an `active`
   session (probed 2026-09-23). Once owners save through `/config` the
-  card is gated; the old route stays open unless Item 10 gates it too.
+  card is gated; the old route stays open unless Item 10 gates it too.~~
+  — superseded: owners are editable in every state, and the old routes
+  keep their logic.
 
 ### Remove, today — Create vs Session Home
 
 Taken 2026-09-23 at `9ac6a51` (unchanged by #2573), from `session_owners.remove_owner`,
 `_session_home.session_owners_remove`, `_owners_stager_js.html` and the
 two templates. The edge cases were run through the test client, not
-read. Item 10 makes Session Home's column read like Create's wherever
-an existing owner allows it.
+read. **This is the baseline, not the target**: the amended Decision,
+Semantics and judgment calls say what changes, and rung E writes the
+table as shipped into the new spec.
 
 | | **Create new session** | **Session Home** |
 |---|---|---|
@@ -2734,11 +2756,11 @@ Taken 2026-09-23 at `a9eca3a`.
 
 ### Open questions
 
-- ~~How does an owner error display?~~ A bare 422, by analogy with the
-  card and Create (author, 2026-09-23).
+- ~~How does an owner error display?~~ ~~A bare 422, by analogy with the
+  card and Create~~ — the card's banner (amended Decision, 2026-09-23).
 - ~~Does `owners/{user_id}/remove` take the lifecycle gate?~~ No; the
-  routes keep their logic, and the UX follows Lock / Unlock (author,
-  2026-09-23).
+  routes keep their logic ~~, and the UX follows Lock / Unlock~~; the
+  card is editable in every state (amended Decision, 2026-09-23).
 - ~~Self-removal and the last owner?~~ Warn at the click; the last
   owner's Remove is disabled (author, 2026-09-23).
 
@@ -2763,8 +2785,8 @@ into the amended Decision — plus smaller fixes that rung D re-applies.
 ### Doc impact
 
 - `spec/session_owners.md` — **new**: both Owners cards, their add and
-  remove semantics (the table above, as shipped), staging and the save
-  (Item 10).
+  remove semantics (a Create vs Session Home table of the behavior as
+  shipped, not the baseline above), staging and the save (Item 10).
 - `spec/README.md` — a row for the new spec (Item 10).
 - `spec/session_home.md` — the Owners card leaves the details card for
   its own, below the Danger Zone; Tags takes its slot; points at the new
