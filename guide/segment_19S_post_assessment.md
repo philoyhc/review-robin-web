@@ -2161,9 +2161,12 @@ entry preserved. Rows stage in the form and apply after
   while every typed tag is lowercased. Part B round-trips through
   `set_tags`, so the first save of an otherwise untouched card turns
   `Pilot` into `pilot`. Pre-existing, made *visible* by Part B, and the
-  same asymmetry that would put two entries in Item 7's vocabulary.
-  **Rung 1 must state which way it resolves** — match the importer, or
-  normalize on import — rather than discover it.
+  same asymmetry that would put two entries in Item 7's vocabulary. It
+  also strands the tag: `remove_tag("Pilot")` looks for `pilot` and
+  returns `False`, so the lobby cannot delete it (probed). **Resolved
+  2026-09-23, author's ruling: tags are lower case everywhere** — the
+  importer calls `normalize_tag`, trim and length check included, in
+  rung 1, the first code the asymmetry would bite.
 - **Empty box means the opposite on the two surfaces, deliberately.**
   On Create it writes *nothing* — `set_tags` with an empty set is a
   replace that would drop what a settings CSV just applied. On Session
@@ -2217,7 +2220,10 @@ Taken 2026-09-22 at `d4b1ba9`.
 ### PR ladder
 
 1. **Rung 1 — Part B**, the smaller half and the one whose open
-   question is answered first. Scaffold then write, per `CLAUDE.md`.
+   question is answered first. Scaffold then write, per `CLAUDE.md`,
+   **plus the settings-CSV importer normalizing tags** — which must
+   land in this rung or before it, never after, or the editor's first
+   save rewrites imported tags.
 2. **Rung 2 — Part A's scaffold**: the Owners card inert, no write.
 3. **Rung 3 — Part A's write**: staged rows applied after
    `create_session`, with the two rejections surfaced.
@@ -2226,6 +2232,9 @@ Taken 2026-09-22 at `d4b1ba9`.
 
 - A tag typed on Session Home's details card persists and **an
   emptied box clears the set**, both asserted through the route.
+- **A settings CSV importing `Pilot` stores `pilot`**, and the lobby can
+  then remove it — asserted through the route, with the revert
+  mutation run (`docs/unenforced_conventions.md` §1.11).
 - A co-owner named on Create owns the created session, and
   `not_in_workspace` / `already_owner` each reach the operator rather
   than failing silently — all asserted through the route.
@@ -2248,6 +2257,9 @@ thing it does not reach. Rung 1 is unblocked.
 - **The Create page's button relocation**, the deferred entry's last
   unbuilt change, independent of both parts.
 - **Owner *removal* on Create** — see the judgment call.
+- **Capitalized tags already stored** stay, unremovable from the lobby,
+  until something rewrites them. A one-off data migration would clear
+  them; the author's call, not this item's.
 
 ### Doc impact
 
@@ -2257,6 +2269,8 @@ thing it does not reach. Rung 1 is unblocked.
   list gains Owners; Session Home's details card gains Tags (Item 9).
 - `spec/sessions_overview.md` — the tag write surfaces become four
   (Item 9).
+- `spec/csv_contracts.md` — the settings CSV's tag section states that
+  import normalizes, as every typed surface already does (Item 9).
 - `spec/session_home.md` — the details card gains a Tags field that
   shares the card's edit window and `config-save` form, and renders as
   a `.config-value` when locked (Item 9).
