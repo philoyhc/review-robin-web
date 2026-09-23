@@ -2808,6 +2808,11 @@ both judgment calls above. The Remove table above is the baseline;
   #2585, nothing blocking — a duplicate-add test that could not fail, a
   clash reported as `already_owner`, an unordered lock.
 
+**Close check**: `tools/close_check.py 19S.10` passes; its note that
+`_quick_setup` is touched with `spec/quick_setup_card_spec.md` outside
+the manifest is adjudicated — no `_quick_setup` file changed in the
+window, and Quick Setup's owners path (`set_owners`) is untouched.
+
 Codex added three findings: the scaffold's live forms (declined, above)
 and the two the atomic save answers. **Owed in a real browser**:
 staging, Save / Cancel, the self-removal confirm, the last-owner
