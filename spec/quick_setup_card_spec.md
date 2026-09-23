@@ -15,7 +15,8 @@ Position in the Home body, top to bottom:
    separate Edit Session sub-page; every config field is edited in
    place here — see `spec/session_home.md` §4.
 3. **Quick Setup card** — bottom-left of the `.bottom-grid`,
-   paired with the Danger Zone card on the right.
+   paired with the Owners card over the Danger Zone on the right
+   (`spec/session_home.md` §3a).
 
 ### Visibility
 

@@ -367,6 +367,7 @@ at a keyboard.
 | Removing yourself asks | Click Remove on your own row | The browser's confirm names losing access; **Cancel** keeps the row. Saving yourself out lands on the sessions lobby |
 | Any lifecycle state | Repeat the first row on an Activated session | It saves; the details card stays locked |
 | Without JavaScript | Disable JavaScript, reload Session Home | No Add owner or staged Remove; a Remove on each other owner's row (not yours, not a last owner) saves at once; the picker plus Save adds one owner |
+| Owners sits above the Danger Zone | Session Home, wide and narrow windows | Owners starts level with Quick Setup and the Danger Zone follows it in the right column; narrowed, the order is Quick Setup → Owners → Danger Zone |
 | Create is unchanged | Create new session → Owners, JavaScript on and off | On: Add owner stages as before. Off: no Add owner; the picker's one address is saved with Create session |
 | The tag popup, after each comma | The lobby's row and bulk expanders, Create's Tags card, Session Home's Tags field: type `a` then `pilot, e` | A popup of your existing tags each time, completing only the tag after the last comma, never offering one already in the box |
 | The keyboard picks | In each box, arrow to a suggestion and press Enter — **Safari as well as Chromium** | Enter takes the suggestion. In the lobby's expanders it must never submit the form (#2579: Enter in the lobby form does nothing) |

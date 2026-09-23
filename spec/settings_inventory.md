@@ -67,7 +67,7 @@ for the form's button taxonomy.
 Stored on the `sessions` table. Owned by the creating operator;
 co-owners are surfaced + managed via the `session_operators`
 table (per-session permission rows, not settings — see the
-Owners card on the Session Details surface).
+Owners card on Session Home, `spec/session_owners.md`).
 
 **Surface:**
 

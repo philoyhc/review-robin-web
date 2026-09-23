@@ -222,20 +222,21 @@ def test_session_edit_save_redirects_back_to_edit(
     )
 
 
-def test_session_owners_card_is_half_width_below_the_danger_zone(
+def test_session_owners_card_is_half_width_above_the_danger_zone(
     client: TestClient, db: Session
 ) -> None:
     """Owners was a half-width sub-card inside the Session details card
     beside User interface settings; 19S Item 10 made it a half-width card
-    of its own, in the Danger Zone's column of the page's bottom grid."""
+    of its own, in the Danger Zone's column of the page's bottom grid —
+    above the Danger Zone since the author's ruling of 2026-09-23."""
     session = _create_session(client, db, code="rrw-edit-own")
     body = client.get(f"/operator/sessions/{session.id}").text
     owners = body.find('id="owners-card"')
     danger = body.find('id="danger-zone"')
     assert -1 not in (owners, danger)
-    assert danger < owners
-    column = body.rfind('<div class="bottom-left">', 0, danger)
-    assert body.rfind('<div class="bottom-left">', 0, owners) == column
+    assert owners < danger
+    column = body.rfind('<div class="bottom-left">', 0, owners)
+    assert body.rfind('<div class="bottom-left">', 0, danger) == column
     # User interface settings stays in the details card.
     assert 'id="config-ui-settings-card"' in body
     assert "User interface settings" in body

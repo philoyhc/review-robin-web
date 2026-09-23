@@ -58,7 +58,7 @@ address collapses silently in `resolve_owners` / `set_owners` before
 ## 2. Session Home's Owners card
 
 Template: `app/web/templates/operator/session_detail.html`,
-`#owners-card` — a card of its own, half width, below the Danger Zone
+`#owners-card` — a card of its own, half width, above the Danger Zone
 card (`#danger-zone`) in Home's `.bottom-grid`, **outside** the Session
 details card and its Lock / Unlock. `spec/session_home.md` places it in
 the page's card list; this spec owns its contents.

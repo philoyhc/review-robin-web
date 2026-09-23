@@ -1,8 +1,9 @@
 """Session Home's Owners card, a card of its own (19S Item 10).
 
 Rung B moved the card out of the Session details card and its Lock /
-Unlock to a half-width card below the Danger Zone, always shown and in
-every lifecycle state (author's ruling, 2026-09-23). Rung D makes it
+Unlock to a half-width card in the Danger Zone's column — above it
+since a later ruling the same day — always shown and in every lifecycle
+state (author's ruling, 2026-09-23). Rung D makes it
 stage as Create's does and save with its own **Save**:
 
 - the table is ``_owners_stager_js``'s — Add owner and Remove change the
