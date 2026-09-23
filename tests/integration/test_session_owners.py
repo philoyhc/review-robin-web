@@ -192,8 +192,8 @@ def test_config_owners_card_renders_add_form_when_candidates_exist(
     bob,
 ) -> None:
     """18R Item 4 Slice 4 — with a second workspace operator available, the
-    Session Home Owners card renders the wired Add-owner form, locked or
-    not (19S Item 10)."""
+    Session Home Owners card renders the Add-owner picker, locked or not,
+    posting with the card's own form (19S Item 10)."""
     review_session = _make_session(client, db, code="own-addform")
     _seed_user(db, email="bob@example.edu")
 
@@ -209,9 +209,12 @@ def test_config_owners_card_renders_add_form_when_candidates_exist(
         '<label for="owners-add-email">'
         "Pick or search for a workspace operator:</label>"
     ) in card
-    assert 'name="target_email"' in card
+    # The box posts with the card's own Save (19S Item 10), not to
+    # ``owners/add``.
+    assert 'name="owners"' in card
+    assert f'form="owners-save-{review_session.id}"' in card
     assert (
-        f'action="/operator/sessions/{review_session.id}/owners/add"' in card
+        f'action="/operator/sessions/{review_session.id}/owners/save"' in card
     )
     # Bob is offered as a candidate in the datalist.
     assert "bob@example.edu" in card

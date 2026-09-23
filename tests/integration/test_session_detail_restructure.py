@@ -1164,7 +1164,7 @@ def test_config_card_invite_offset_shows_offset_plus_resolved_datetime(
     assert "config-offset-row" in card
 
 
-def test_session_config_card_has_owners_subcard(
+def test_owners_left_the_session_config_card_for_their_own(
     client: TestClient, db: Session
 ) -> None:
     """18R Item 4 put an Owners sub-card inside the Session details card;
@@ -1187,12 +1187,11 @@ def test_session_config_card_has_owners_subcard(
     for col in ("<th>Email</th>", "<th>Name</th>", "<th>Role</th>", "<th>Added</th>"):
         assert col in owners
     assert 'class="col-shrink">Action</th>' in owners
-    # The creator is an owner — their email shows in the table, with a wired
-    # Remove form. (Add-owner form coverage — which needs a second
-    # workspace operator to have candidates — lives in test_session_owners.)
+    # The creator is an owner — their email shows in the table, with a
+    # staged Remove (19S Item 10). The staging itself is covered in
+    # test_session_home_owners_card.
     assert "alice@example.edu" in owners
-    assert 'type="submit">Remove</button>' in owners
-    assert "/remove\"" in owners
+    assert "data-owners-remove" in owners
 
     assert 'id="config-ui-settings-card"' in card
     assert ">User interface settings</h3>" in card

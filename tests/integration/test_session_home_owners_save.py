@@ -328,14 +328,15 @@ def test_a_concurrent_add_of_the_same_owner_writes_nothing(
     client: TestClient, db: Session, monkeypatch
 ) -> None:
     """Another save inserts bob after this one locked the rows: the
-    unique constraint refuses this one's insert, and its other change
-    (carol) is rolled back with it."""
+    unique constraint refuses this one's insert of bob, and carol —
+    inserted first, with her audit event — is rolled back with it."""
     review_session = _create(client, db, "OWN-DUP")
     bob = _operator(db, "bob@example.edu")
     _operator(db, "carol@example.edu")
     session_owners.add_owner(
         db, review_session=review_session, actor=_alice(db), target=bob
     )
+    before = {e.id for e in _owner_events(db, review_session)}
     real_lock = session_owners._lock_owner_rows
 
     def lock_without_bob(db_, review_session_):
@@ -345,12 +346,15 @@ def test_a_concurrent_add_of_the_same_owner_writes_nothing(
     response = _save(
         client,
         review_session,
-        [CREATOR, "bob@example.edu", "carol@example.edu"],
+        [CREATOR, "carol@example.edu", "bob@example.edu"],
         original=[CREATOR],
     )
 
-    assert response.headers["location"] == _home(review_session, "already_owner")
+    assert response.headers["location"] == _home(review_session, "owners_changed")
     assert _owners(db, review_session) == {CREATOR, "bob@example.edu"}
+    assert {e.id for e in _owner_events(db, review_session)} == before
+    body = client.get(response.headers["location"]).text
+    assert "Nothing was saved" in body
 
 
 def test_the_delta_applies_to_the_rows_at_write_time(
@@ -358,7 +362,9 @@ def test_the_delta_applies_to_the_rows_at_write_time(
 ) -> None:
     """The page adds dave; carol was added after it rendered. The save
     applies only dave, to the owners the session has at write time, so
-    carol stays (Codex review on #2585: no absolute set resolved first)."""
+    carol stays. A stale-page case: SQLite cannot race, so no test here
+    can tell locking at write time from resolving a set first — the
+    Codex fix on #2585 rests on the code, and on Postgres."""
     review_session = _create(client, db, "OWN-WRITE-TIME")
     carol = _operator(db, "carol@example.edu")
     _operator(db, "dave@example.edu")

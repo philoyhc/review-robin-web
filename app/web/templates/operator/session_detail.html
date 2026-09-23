@@ -465,12 +465,26 @@
          (author's ruling, 2026-09-23). Always editable, in every
          lifecycle state, as the lobby's tags are.
 
-         **Scaffold (rung B).** The Save / Cancel pair below is inert;
-         until the card's own save lands (rungs C–D), Add owner and each
-         row's Remove are still their own forms and write at once. Every
-         owners route lands back here (``#owners-card``), with any
+         Staged as on Create (the ``_owners_stager_js`` partial): Add
+         owner and Remove change only the table, whose rows each carry a
+         hidden ``owners`` input bound to this card's own form, and the
+         card's **Save** posts the table beside ``owners_original`` — the
+         set rendered here — to ``POST /sessions/{id}/owners/save``, which
+         applies only the difference. **Save** and **Cancel** wake once
+         the table or the picker changes; Cancel is the form's reset, and
+         the stager rebuilds the rows on it.
+
+         **Without JavaScript** the staging buttons stay ``hidden``: the
+         picker's box posts its one address with Save, and a
+         ``<noscript>`` Remove per row posts to the old per-row route,
+         saved at once — left off the last owner and your own row, which
+         the old route would refuse or lock you out with. Every owners
+         route lands back here (``#owners-card``), with any
          ``owners_error`` as the banner below. #}
-      <div class="card" id="owners-card">
+      {% set owners_form = "owners-save-" ~ session.id %}
+      <div class="card" id="owners-card"
+           data-owners-stager data-owners-form="{{ owners_form }}"
+           data-owners-self="{{ user.email | lower }}">
         <h2>Owners</h2>
         <p class="muted">
           Workspace operators with full edit access on this session. The
@@ -487,6 +501,10 @@
                 Admit them via <code>Admin → Accounts Management</code> first.
               {% elif owners_error == "not_owner" %}
                 That user isn't an owner of this session anymore.
+              {% elif owners_error == "owners_changed" %}
+                Another save changed this session's owners at the same
+                time. Nothing was saved; check the owners below and try
+                again.
               {% elif owners_error == "last_owner" %}
                 A session always keeps at least one owner. Nothing was
                 saved.
@@ -501,10 +519,17 @@
           </div>
         {% endif %}
 
+        <form id="{{ owners_form }}" method="post"
+              action="/operator/sessions/{{ session.id }}/owners/save">
+          {% for owner in config_owners %}
+            <input type="hidden" name="owners_original" value="{{ owner.email }}">
+          {% endfor %}
+        </form>
+
         {# `.table-scroll` (base.html): a table wider than its card
            scrolls inside the card rather than pushing the page sideways. #}
         <div class="table-scroll">
-        <table>
+        <table data-owners-table>
           <tr>
             <th>Email</th>
             <th>Name</th>
@@ -519,51 +544,53 @@
               <td>{{ owner.role }}</td>
               <td>{{ owner.joined_at | format_date }}</td>
               <td class="col-shrink">
-                <form method="post" style="display:inline"
-                      action="/operator/sessions/{{ session.id }}/owners/{{ owner.user_id }}/remove">
-                  <button class="chrome-link" type="submit">Remove</button>
-                </form>
+                <button type="button" class="chrome-link"
+                        data-owners-remove hidden>Remove</button>
+                {% if config_owners | length > 1 and owner.email | lower != user.email | lower %}
+                  <noscript>
+                    <form method="post" style="display:inline"
+                          action="/operator/sessions/{{ session.id }}/owners/{{ owner.user_id }}/remove">
+                      <button class="chrome-link" type="submit">Remove</button>
+                    </form>
+                  </noscript>
+                {% endif %}
+                <input type="hidden" name="owners" form="{{ owners_form }}"
+                       value="{{ owner.email }}">
               </td>
             </tr>
           {% endfor %}
         </table>
         </div>
 
-        {% if config_owner_candidates %}
-          <form method="post"
-                action="/operator/sessions/{{ session.id }}/owners/add"
-                id="owners-add-form">
-            {# A sibling ``<label for>``, as on the Create page's picker:
-               nesting the input in the label left 1.9px between the text
-               and the box, against 5.9px everywhere else (measured in
-               Chromium, 2026-09-23). #}
-            <label for="owners-add-email">Pick or search for a workspace operator:</label>
-            <input type="email" id="owners-add-email"
-                   name="target_email" list="owners-candidates"
-                   autocomplete="off" required placeholder="email">
-            <datalist id="owners-candidates">
-              {% for candidate in config_owner_candidates %}
-                <option value="{{ candidate.email }}">{{ candidate.display_label }}</option>
-              {% endfor %}
-            </datalist>
-            {# Secondary, as on Create (author's ruling, 2026-09-23): the
-               Workflow card holds the page's one Primary. #}
-            <div style="display: flex; justify-content: flex-end; margin-top: var(--space-2);">
-              <button class="btn secondary" type="submit"
-                      id="owners-add-submit">Add owner</button>
-            </div>
-          </form>
-        {% else %}
-          <p class="muted" style="margin-top: var(--space-3);">
-            No other workspace operators are available to add.
-          </p>
-        {% endif %}
+        {# A sibling ``<label for>``, as on the Create page's picker:
+           nesting the input in the label left 1.9px between the text and
+           the box, against 5.9px everywhere else (measured in Chromium,
+           2026-09-23). The box posts as one more ``owners`` value, so an
+           address typed and never added is saved rather than dropped. #}
+        <label for="owners-add-email">Pick or search for a workspace operator:</label>
+        <input type="email" id="owners-add-email" name="owners"
+               form="{{ owners_form }}" data-owners-email
+               list="owners-candidates" autocomplete="off" placeholder="email">
+        <datalist id="owners-candidates">
+          {% for candidate in config_owner_candidates %}
+            <option value="{{ candidate.email }}">{{ candidate.display_label }}</option>
+          {% endfor %}
+        </datalist>
+        {# Secondary, as on Create (author's ruling, 2026-09-23): it
+           stages, it does not save. #}
+        <div class="card-action-row">
+          <button class="btn secondary" type="button" id="owners-add-submit"
+                  data-owners-add hidden>Add owner</button>
+        </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3);">
-          <button type="button" class="btn secondary" data-owners-save
-                  disabled aria-disabled="true">Save</button>
-          <button type="button" class="btn secondary" data-owners-cancel
-                  disabled aria-disabled="true">Cancel</button>
+        {# Rendered enabled, so the card saves without JavaScript; the
+           script below disables both until the table or the picker
+           changes. #}
+        <div class="card-action-row">
+          <button type="submit" form="{{ owners_form }}"
+                  class="btn secondary" data-owners-save>Save</button>
+          <button type="reset" form="{{ owners_form }}"
+                  class="btn secondary" data-owners-cancel>Cancel</button>
         </div>
       </div>
     </div>
@@ -601,4 +628,38 @@
     })();
   </script>
   {% include "operator/partials/_tag_typeahead.html" %}
+  {% include "operator/partials/_owners_stager_js.html" %}
+  {# The Owners card's Save / Cancel wake only once something would
+     save: the table's owner set differs from the one rendered, or the
+     picker holds an address (it posts with Save). Cancel is the form's
+     reset; the stager rebuilds the rows on it, then this re-reads the
+     card on the next tick, after the form has reset the picker. #}
+  <script>
+    (function () {
+      var card = document.getElementById("owners-card");
+      if (!card) return;
+      var form = document.getElementById(card.getAttribute("data-owners-form"));
+      var table = card.querySelector("[data-owners-table]");
+      var input = card.querySelector("[data-owners-email]");
+      var buttons = card.querySelectorAll("[data-owners-save], [data-owners-cancel]");
+      if (!form || !table) return;
+      function ownerSet() {
+        return Array.prototype.map.call(
+          table.querySelectorAll('input[type="hidden"][name="owners"]'),
+          function (hidden) { return hidden.value.toLowerCase(); }
+        ).sort().join("\n");
+      }
+      var rendered = ownerSet();
+      function sync() {
+        var dirty = ownerSet() !== rendered || (input && input.value.trim() !== "");
+        Array.prototype.forEach.call(buttons, function (button) {
+          button.disabled = !dirty;
+        });
+      }
+      card.addEventListener("change", sync);
+      card.addEventListener("input", sync);
+      form.addEventListener("reset", function () { setTimeout(sync, 0); });
+      sync();
+    })();
+  </script>
 {% endblock %}
