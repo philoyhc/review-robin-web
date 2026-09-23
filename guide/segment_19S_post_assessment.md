@@ -2329,8 +2329,9 @@ config apply, `name=` dropped, and the `_save`, `_tags_of` and
   the one-field-card case it decides (Item 9, ruled before the build).
 - `spec/operator_ui_concept.md` — the `/operator/sessions/new` card
   list gains Owners; Session Home's details card gains Tags (Item 9).
-- `spec/sessions_overview.md` — the tag write surfaces become four
-  (Item 9).
+- `spec/sessions_overview.md` — the tag write surfaces become four;
+  its "third write surface" bullet is false from rung 2 until the close
+  rewrites it (Item 9).
 - `spec/csv_contracts.md` — the settings CSV's tag section states that
   import normalizes, as every typed surface already does (Item 9).
 - `spec/roundtrip_coverage.md` — the session-tag row notes import
@@ -2338,7 +2339,10 @@ config apply, `name=` dropped, and the `_save`, `_tags_of` and
   (Item 9).
 - `spec/session_home.md` — the details card gains a Tags field that
   shares the card's edit window and `config-save` form, and renders as
-  a `.config-value` when locked (Item 9).
+  a `.config-value` when locked. Say also that an emptied box clears
+  (the Create page's writes nothing), and that this surface is
+  draft/validated only through `_require_editable` while the lobby
+  edits tags in any state (Item 9).
 - `guide/deferred_consolidated.md` — the entry narrows to the button
   relocation alone (Item 9).
 - `docs/status.md` — row when the item lands (Item 9).
