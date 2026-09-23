@@ -393,9 +393,10 @@ the joke it sounds like.
   `.subcard-row`'s tile cards, 12px apart (the lobby's first-run card),
   and `.data-shape-card` tiles on Extract Data with an 8px `margin-top`
   — the latter read from the stylesheet, **not measured**. Both keep
-  their borders apart, so P8 holds; whether tiles should move to 20px is
-  the author's call, open. The rest of the app is unsurveyed, which is
-  §1.6's point made on this entry's own first draft.
+  their borders apart, so P8 holds, and the author ruled the same day
+  that tile rows **stay tighter** rather than take the 20px step. The
+  rest of the app is unsurveyed, which is §1.6's point made on this
+  entry's own first draft.
 - **Why not.** pytest has no layout engine. A template test can assert
   a class is present, and did — Item 6's test checks the cell is a
   `.bottom-left` — but not that the resulting gap is non-zero, because
