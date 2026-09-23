@@ -87,6 +87,11 @@ def new_session_form(
             # timeline starts empty. The template renders the block
             # only when at least one row is present.
             "schedule_timeline_rows": [],
+            # 19S Item 9 Part A — the Owners card's Add-owner picker. The
+            # creator is the first owner, so the list is everyone else.
+            "new_session_owner_candidates": (
+                session_owners.new_session_owner_candidates(db, user)
+            ),
         },
     )
 

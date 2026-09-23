@@ -1,16 +1,17 @@
 """19S Item 9 Part A rung 3 — the Owners card on Create, as a scaffold.
 
 The card renders below the Tags card, the third card in the Create
-page's right-hand ``.bottom-left`` column. The creator is always the
-first owner; the box adds co-owners, comma-separated like the Tags box,
-because there is no session yet to add them to one at a time.
+page's right-hand ``.bottom-left`` column, with **the same UX as Session
+Home's Owners card** (author's ruling, 2026-09-23): the owners table,
+then a one-at-a-time Add-owner picker suggesting workspace operators.
+The creator is the first owner, listed without a Remove action, and is
+not offered as a candidate.
 
 **This rung is deliberately inert, and these tests pin inertness as a
-property.** The input carries no ``name`` — so a browser does not submit
-it — and no ``form=`` — which is what associates a control rendered
-outside ``<form>`` with the create form. Both absences are asserted, and
-a create carrying ``owners=`` naming a real workspace operator confirms
-the route ignores it. Rung 4 inverts all three by design.
+property.** The email input carries no ``name`` and no ``form=``, and
+Add owner is a plain ``type="button"`` with nothing behind it; a create
+carrying ``owners=`` naming a real workspace operator confirms the route
+ignores it. Rung 4 stages rows and wires the write.
 """
 
 from __future__ import annotations
@@ -76,25 +77,77 @@ def test_the_card_sits_below_tags_in_the_same_column(client: TestClient) -> None
     assert body.rfind('<div class="bottom-left">', 0, owners) == column
 
 
-def test_the_card_reads_like_the_tags_card_above_it(client: TestClient) -> None:
-    """Heading as label, a ``.muted`` subtitle (``spec/ui_elements.md`` §8's
-    one-field-card case), and no second "Owners" above the box."""
+def _operator(db: Session, email: str, *, is_operator: bool = True) -> User:
+    user = User(email=email, is_operator=is_operator)
+    db.add(user)
+    db.commit()
+    return user
+
+
+def test_the_card_mirrors_session_home(client: TestClient, db: Session) -> None:
+    """Session Home's shape: heading, subtitle, the owners table with the
+    same columns, the picker's own label, and Add owner. Like Session
+    Home, the picker renders only when there is someone to add."""
+    _operator(db, "colleague@example.edu")
     card = _card(client.get("/operator/sessions/new").text)
 
     assert "Owners (optional)</h3>" in card
     assert '<p class="muted">' in card
-    assert "comma-separated" in card
-    assert "<label" not in card
-    assert 'id="session-owners-heading"' in card
-    assert 'aria-labelledby="session-owners-heading"' in card
+    for column in ("Email", "Name", "Role", "Added", "Action"):
+        assert f">{column}</th>" in card, column
+    assert "Pick or search for a workspace operator:" in card
+    assert ">Add owner</button>" in card
 
 
-def test_the_input_is_inert(client: TestClient) -> None:
+def test_the_creator_is_the_first_owner_and_cannot_be_removed(
+    client: TestClient, db: Session
+) -> None:
+    body = client.get("/operator/sessions/new").text
+    card = _card(body)
+    creator = db.execute(select(User)).scalars().first()
+
+    assert f"<code>{creator.email}</code>" in card
+    assert "<td>owner</td>" in card
+    assert "Remove" not in card, "a session always keeps one owner"
+
+
+def test_the_picker_suggests_other_workspace_operators(
+    client: TestClient, db: Session
+) -> None:
+    """Everyone ``add_owner`` would accept, minus the creator — who owns
+    the session the moment it exists. A non-operator is never offered."""
+    _operator(db, "colleague@example.edu")
+    _operator(db, "outsider@example.edu", is_operator=False)
+    card = _card(client.get("/operator/sessions/new").text)
+    creator = db.execute(
+        select(User).where(User.email != "colleague@example.edu")
+        .where(User.email != "outsider@example.edu")
+    ).scalars().first()
+
+    datalist = card[card.index("<datalist"):card.index("</datalist>")]
+    assert 'value="colleague@example.edu"' in datalist
+    assert "outsider@example.edu" not in datalist
+    assert f'value="{creator.email}"' not in datalist
+    assert 'list="session-owners-candidates"' in card
+
+
+def test_with_no_one_to_add_the_picker_says_so(client: TestClient) -> None:
     card = _card(client.get("/operator/sessions/new").text)
 
-    assert 'id="owners"' in card, "the control is genuinely there"
+    assert "No other workspace operators are available to add." in card
+    assert "<datalist" not in card
+
+
+def test_the_picker_is_inert(client: TestClient, db: Session) -> None:
+    """Both halves of inertness, asserted as absences, plus a button that
+    submits nothing. Rung 4 inverts them."""
+    _operator(db, "colleague@example.edu")
+    card = _card(client.get("/operator/sessions/new").text)
+
+    assert 'id="session-owners-email"' in card, "the control is there"
     assert 'name="owners"' not in card
     assert "form=" not in card
+    assert 'type="button"' in card and 'type="submit"' not in card
 
 
 def test_a_create_carrying_owners_adds_no_owner(

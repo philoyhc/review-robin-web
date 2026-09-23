@@ -2191,7 +2191,8 @@ entry preserved. Rows stage in the form and apply after
 
 ### Judgment calls — decided
 
-- **One box of emails, not a staged add/remove table** (2026-09-22) —
+- ~~**One box of emails, not a staged add/remove table**~~ (2026-09-22,
+  superseded 2026-09-23 by the ruling above) —
   nothing exists to remove before the session does, and the table is
   what made the deferred entry call Owners "a staged mini-editor". The
   table stays on Session Home, which is where a session has owners.
@@ -2201,12 +2202,16 @@ entry preserved. Rows stage in the form and apply after
   empty-box split above) and neither is a segment's worth alone.
 - **Part B rides the details card's edit window** (author's ruling,
   2026-09-23) — `Decision` carries it.
-- **The Owners box is comma-separated, with no suggestions** (decided
-  at rung 3, 2026-09-23, open to the author). "One box of emails" left
-  the shape open; comma-separated matches the Tags box above it.
-  Session Home's picker suggests operators from a `<datalist>`, but a
-  datalist completes a whole field, which is Item 7's fork exactly — so
-  suggestions here would ride Item 7 rather than be solved twice.
+- **Owners on Create has the same UX as Session Home** (author's
+  ruling, 2026-09-23, reversing rung 3's first draft — a comma-separated
+  box with no suggestions). The owners table, then a one-at-a-time
+  Add-owner picker whose `<datalist>` suggests workspace operators; the
+  creator is the first row and cannot be removed. **Supersedes** the
+  earlier call below ("one box of emails, not a staged add/remove
+  table"): rows are staged in the form now, which is the "staged
+  mini-editor" the deferred entry predicted. Add owner is **Secondary**
+  here where Session Home's is Primary, because Create session is this
+  page's one Primary (`spec/ui_elements.md` §6).
 - **Owners' card takes a `<p class="muted">` subtitle, like the two
   above it** (author's ruling, 2026-09-23). `spec/ui_elements.md` §8
   read as forbidding it; measurement found the subtitle pattern in ten
@@ -2237,8 +2242,11 @@ Taken 2026-09-22 at `d4b1ba9`.
    required.
 3. **Rung 3 — Part A's scaffold**: the Owners card inert, no write.
    ✅ 2026-09-23.
-4. **Rung 4 — Part A's write**: staged rows applied after
-   `create_session`, with the two rejections surfaced — **plus one
+4. **Rung 4 — Part A's write**: a small inline script stages each
+   picked operator as a table row carrying a hidden `owners` input
+   (Remove drops it); without JavaScript the email box itself submits
+   one owner. Staged rows applied after `create_session`, with the two
+   rejections surfaced — **plus one
    correlation id for the whole create** (author's ruling, 2026-09-23).
    `request_correlation_id()` mints a fresh id per call, and the Create
    route calls it for the session, each Quick Setup slot and the tag
@@ -2328,25 +2336,34 @@ instead of rejected, route write reverted, write moved before the
 config apply, `name=` dropped, and the `_save`, `_tags_of` and
 `_tag_rows` helpers each degenerated.
 
-**Rung 3 done, 2026-09-23** — Part A's scaffold. The Owners card sits
-below Tags, the third card in the Create page's right-hand
-`.bottom-left`, with a `.muted` subtitle and its `<h3>` as the label.
-**Inert**: no `name`, no `form=`, and a create carrying `owners=` adds
-no co-owner. That test names a real workspace operator, because a
-non-operator would be refused anyway and pass it for the wrong reason.
-Five mutations, all caught once valid. The first run of the route-wiring
-mutation **crashed on a missing import** and failed the test on a 500,
-which reads as caught and proves nothing. Rerun without the crash, it
-fails on two owners. With the operator control degraded it passes,
-which is the evidence the control is load-bearing. **Spacing measured
-in Chromium**: Tags → Owners **20px** at 1280 and 700px.
+**Rung 3 done, 2026-09-23** — Part A's scaffold, **built twice**. The
+first draft was a comma-separated box with no suggestions; the author
+ruled it should match Session Home, so it now mirrors that card: the
+owners table (the creator's row, no Remove) and a one-at-a-time
+Add-owner picker. Its suggestions come from a new
+`session_owners.new_session_owner_candidates` — every workspace operator
+but the creator, since there is no session yet to exclude owners of;
+`workspace_operator_candidates` now shares its base query. **Inert**:
+the email input has no `name` or `form=`, Add owner is a plain button,
+and a create carrying `owners=` adds no co-owner. That test names a
+real workspace operator, because a non-operator would be refused anyway
+and pass it for the wrong reason.
+
+Eight tests, nine mutations, all caught — markup (`name`, `form=`, a
+submit button), the candidate query (creator included, non-operators
+included), the route passing none, and the `_card` / `_operator`
+helpers. The first draft's route-wiring mutation **crashed on a missing
+import** and failed on a 500, which reads as caught and proves nothing;
+rerun cleanly it fails on two owners. **Spacing measured in Chromium**:
+Tags → Owners **20px** at 1280 and 700px, with a candidate present.
 
 ### Out of scope
 
 - **Typeahead on either new box** — Item 7, open on its own fork.
 - **The Create page's button relocation**, the deferred entry's last
   unbuilt change, independent of both parts.
-- **Owner *removal* on Create** — see the judgment call.
+- **Removing the creator on Create** — a session always keeps one
+  owner, so the creator's row has no Remove. Staged co-owners do.
 - **Capitalized tags already stored** stay until something rewrites
   them. **No migration** (author's ruling, 2026-09-23).
 
