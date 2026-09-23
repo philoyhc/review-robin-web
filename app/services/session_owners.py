@@ -277,6 +277,13 @@ def set_owners(
             code="last_owner",
             message="A session always keeps at least one owner.",
         )
+    # A target listed twice would otherwise be added twice: the first
+    # ``add_owner`` commits, the second raises ``already_owner`` — a
+    # partial write (Item 9 close, cold read L1).
+    unique: dict[int, User] = {}
+    for target in targets:
+        unique.setdefault(target.id, target)
+    targets = list(unique.values())
     current = {row.user_id for row in list_owners(db, review_session)}
     wanted = {target.id for target in targets}
     added: list[User] = []

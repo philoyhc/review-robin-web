@@ -292,8 +292,8 @@ def test_a_failed_upload_keeps_the_staged_owners(
 
 
 def test_one_create_is_one_correlation_id(client: TestClient, db: Session) -> None:
-    """Every audit event one create produces — the session, a Quick Setup
-    upload, the settings bundle, tags, owners — shares one id.
+    """Every audit event one create produces — the session, all five
+    Quick Setup slots, tags, owners — shares one id.
     ``request_correlation_id`` mints a fresh id per call, and the route
     used to call it once per step."""
     _operator(db, "colleague@example.edu")
@@ -306,9 +306,22 @@ def test_one_create_is_one_correlation_id(client: TestClient, db: Session) -> No
         "OWNERS-CORR",
         owners=["colleague@example.edu"],
         tags="pilot",
+        relationships_enabled="true",
+        observers_enabled="true",
         files={
             "reviewers_file": (
-                "r.csv", b"ReviewerName,ReviewerEmail\nR,r@example.edu\n", "text/csv"
+                "r.csv", b"ReviewerName,ReviewerEmail\nAl,al@example.edu\n", "text/csv"
+            ),
+            "reviewees_file": (
+                "e.csv", b"RevieweeName,RevieweeEmail\nCy,cy@example.edu\n", "text/csv"
+            ),
+            "relationships_file": (
+                "rel.csv",
+                b"ReviewerEmail,RevieweeEmail\nal@example.edu,cy@example.edu\n",
+                "text/csv",
+            ),
+            "observers_file": (
+                "obs.csv", b"ObserverName,ObserverEmail\nOz,oz@example.edu\n", "text/csv"
             ),
             "settings_file": ("s.csv", buf.getvalue().encode(), "text/csv"),
         },

@@ -437,6 +437,7 @@ def session_config_submit(
     responses_release_at: str | None = Form(default=None),
     responses_release_until: str | None = Form(default=None),
     tags: str = Form(default=""),
+    tags_present: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -472,19 +473,20 @@ def session_config_submit(
     )
     # 19S Item 9 Part B — the card's Tags field, written after the config
     # apply so a rejected save writes no tags either. An emptied box
-    # clears the tags, as the lobby's row expander does. So does a request
-    # with no ``tags`` field at all: FastAPI hands an empty form value and
-    # an absent one to this parameter identically, and the route already
-    # takes the card's whole state — its two checkboxes read absent as
-    # off. The card's form always sends the field. ``set_tags`` diffs, so
+    # clears the tags, as the lobby's row expander does. FastAPI hands an
+    # absent form value and an empty one to ``tags`` identically, so the
+    # card also posts a ``tags_present`` marker, and only a request
+    # carrying it writes tags: a page rendered before the field existed
+    # must not clear every tag on its first Save. ``set_tags`` diffs, so
     # a save that leaves the box untouched emits no tag events.
-    session_tags.set_tags(
-        db,
-        review_session=review_session,
-        user=user,
-        tags=tags.split(","),
-        correlation_id=correlation_id,
-    )
+    if tags_present:
+        session_tags.set_tags(
+            db,
+            review_session=review_session,
+            user=user,
+            tags=tags.split(","),
+            correlation_id=correlation_id,
+        )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}#session-config",
         status_code=status.HTTP_303_SEE_OTHER,

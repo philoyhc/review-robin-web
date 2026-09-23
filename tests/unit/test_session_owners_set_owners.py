@@ -143,3 +143,18 @@ def test_an_empty_set_is_refused_before_anything_is_removed(db: Session) -> None
         )
     assert exc.value.code == "last_owner"
     assert _owner_emails(db, review_session) == ["a@example.edu", "b@example.edu"]
+
+
+def test_a_target_listed_twice_is_added_once(db: Session) -> None:
+    """``current`` is read once, so an unowned target listed twice would
+    be added twice — the second ``add_owner`` raising ``already_owner``
+    after the first had committed."""
+    a = _user(db, "a@example.edu")
+    b = _user(db, "b@example.edu")
+    review_session = _owned_session(db, a, "SET-DUP")
+
+    added, _ = session_owners.set_owners(
+        db, review_session=review_session, actor=a, targets=[a, b, b]
+    )
+    assert [u.id for u in added] == [b.id]
+    assert _owner_emails(db, review_session) == ["a@example.edu", "b@example.edu"]
