@@ -1679,3 +1679,39 @@ That is a design call, and it is the reason Create came first.
 already opens `session_new.html` — the page also owes a `.btn` role
 audit on 8 inline-styled buttons (`grep -c 'style="[^"]*"'`), which
 would ride along.
+
+### The lobby's filter box matches tags the chip strip already filters (author, 2026-09-23)
+
+Noticed by the author at 19S's close. The Sessions lobby and the
+Archived page each carry **two tag filters**:
+- the `Sessions` card's chip strip, with AND/OR modes and a remembered
+  selection;
+- the Filter box, whose rule `rrwSessionFilterMatches` (`base.html`)
+  matches name or code by substring, **or any tag by whole value**
+  (`spec/sessions_overview.md` "Sort / filter / search").
+
+The two are ANDed. So with the `pilot` chip on, typing `2026` keeps rows
+whose name or code contains it *or* that carry a `2026` tag, and neither
+control says which. The box's typeahead also lists tags **before** names
+and codes (`views.sessions_filter_options`, capped by
+`SEARCH_TAG_OPTIONS_CAP`), so a long tag list sits ahead of the
+sessions.
+
+**Recommended when taken up:** the box matches name and code only.
+- Drop the tag half of the rule and of the typeahead, with its cap.
+- Change the placeholder, `Filter by name, code, or tag`, on both pages.
+
+The roster and operations filters in `spec/setup_pages.md` keep their
+tag rule, because they have no chips. Case against: typing a tag beats
+hunting for its chip among dozens.
+
+**Blast radius, taken 2026-09-23 at `77afe8c`:**
+- **The rule:** 3 templates (`base.html`, `sessions_list.html`,
+  `sessions_archived.html`), plus 2 test files
+  (`grep -rln rrwSessionFilterMatches app tests`).
+- **The typeahead:** 21 references to it or its cap in 4 files
+  (`grep -rn 'SEARCH_TAG_OPTIONS_CAP\|sessions_filter_options' app tests`).
+- **Specs:** `spec/sessions_overview.md`.
+
+**Lift trigger:** an operator confused by a filtered lobby, or the next
+change that opens the lobby's Filter card.
