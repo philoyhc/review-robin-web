@@ -48,20 +48,23 @@ def test_new_session_page_renders_quick_setup_card(
     assert 'id="quick-setup-assignments"' not in body
 
 
-def test_new_session_bottom_row_quick_setup_left_ui_settings_right(
+def test_new_session_bottom_row_ui_settings_over_quick_setup_left(
     client: TestClient,
 ) -> None:
-    """18R Item 4 follow-up — the create page mirrors Session Home's bottom
-    row: Quick Setup (left) and User interface settings (right) sit side by
-    side, and the UI-settings card uses Home's ``.ui-settings-row`` /
+    """The create page's bottom row approximates Session Home's
+    placements (author's ruling, 2026-09-23): User interface settings
+    over Quick Setup in the left column, Tags over Owners in the right.
+    The UI-settings card uses Home's ``.ui-settings-row`` /
     ``.ui-setting`` primitives (not the old one-off flex layout)."""
     body = client.get("/operator/sessions/new").text
 
     quick_pos = body.find('id="quick-setup"')
     ui_pos = body.find('id="user-interface-settings"')
-    assert -1 not in (quick_pos, ui_pos)
-    # Quick Setup comes first (bottom-left), UI settings second (right).
-    assert quick_pos < ui_pos
+    tags_pos = body.find('id="session-tags"')
+    assert -1 not in (quick_pos, ui_pos, tags_pos)
+    # UI settings first, Quick Setup under it, both before the right
+    # column's Tags.
+    assert ui_pos < quick_pos < tags_pos
 
     ui_card = body[ui_pos:]
     assert 'class="ui-settings-row"' in ui_card

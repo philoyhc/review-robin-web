@@ -81,14 +81,14 @@ def test_the_card_helper_is_bounded(client: TestClient) -> None:
 def test_the_card_sits_below_tags_in_the_same_column(client: TestClient) -> None:
     body = client.get("/operator/sessions/new").text
 
-    ui = body.find('id="user-interface-settings"')
     tags = body.find('id="session-tags"')
     owners = body.find('id="session-owners"')
-    assert -1 not in (ui, tags, owners)
-    assert ui < tags < owners
+    assert -1 not in (tags, owners)
+    assert tags < owners
 
-    # One .bottom-left column holds all three, so its gap spaces them.
-    column = body.rfind('<div class="bottom-left">', 0, ui)
+    # The right .bottom-left column holds Tags then Owners, so its gap
+    # spaces them (author's ruling, 2026-09-23).
+    column = body.rfind('<div class="bottom-left">', 0, tags)
     assert column != -1
     assert body.rfind('<div class="bottom-left">', 0, owners) == column
 

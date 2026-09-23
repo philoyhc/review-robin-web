@@ -20,9 +20,11 @@ audit events; this spec owns the two cards' shape and staging.
 ## 1. Create's Owners card
 
 Template: `app/web/templates/operator/session_new.html`, `#session-owners`
-— third card in the page's right-hand `.bottom-left` column, below Tags
-(`spec/ui_elements.md` §10; `spec/operator_ui_concept.md` "Create new
-session").
+— second card in the page's right-hand `.bottom-left` column, below Tags;
+the left column holds User interface settings over Quick Setup, so the
+page approximates Session Home's placements (author's ruling,
+2026-09-23; `spec/ui_elements.md` §10; `spec/operator_ui_concept.md`
+"Create new session").
 
 - **Table**: the creator's row first (Email / Name / Role "owner" /
   Added "—"), no Remove — a session always keeps its first owner. Rows
