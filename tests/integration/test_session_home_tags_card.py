@@ -207,6 +207,23 @@ def test_locked_it_renders_the_lobbys_pills(
     assert 'aria-labelledby="config-tags-heading"' in card
 
 
+def test_the_subtitle_shows_only_while_editing(
+    client: TestClient, db: Session
+) -> None:
+    """The subtitle describes the comma-separated box, so it is
+    ``data-edit-only``: locked, the card is its heading and the pills.
+    The CSS does the hiding; the attribute on a locked page is what a
+    server-side test can pin."""
+    review_session = _create(client, db, "HOME-TAGS-SUBTITLE")
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    assert 'data-config-mode="display"' in body, "the page is locked"
+    assert (
+        '<p class="muted" data-edit-only>Comma-separated; also editable '
+        "from the sessions list.</p>"
+    ) in _card(body)
+
+
 def test_an_untagged_session_shows_an_em_dash(
     client: TestClient, db: Session
 ) -> None:
