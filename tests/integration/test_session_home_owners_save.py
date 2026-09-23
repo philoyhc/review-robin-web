@@ -1,5 +1,5 @@
-"""The Owners card's save route, ``POST /sessions/{id}/owners`` (19S
-Item 10 rung C).
+"""The Owners card's save route, ``POST /sessions/{id}/owners/save``
+(19S Item 10 rung C).
 
 Session Home's Owners card stages owners as Create's does and saves them
 with its own Save (author's ruling, 2026-09-23). This rung lands the
@@ -89,7 +89,7 @@ def _save(
     if original is None:
         original = sorted(_owners(object_session(review_session), review_session))
     return client.post(
-        f"/operator/sessions/{review_session.id}/owners",
+        f"/operator/sessions/{review_session.id}/owners/save",
         data={"owners": owners, "owners_original": original},
         follow_redirects=False,
     )
@@ -317,6 +317,36 @@ def test_a_refusal_during_the_write_lands_on_the_banner(
     assert response.headers["location"] == _home(review_session, "already_owner")
 
 
+def test_a_refusal_after_removing_yourself_lands_on_the_lobby(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    """``set_owners`` commits each change as it goes, so a refusal
+    part-way can follow your own removal. Session Home is then a 404 for
+    you, so the lobby, not the banner (cold read, 2026-09-23)."""
+    review_session = _create(client, db, "OWN-RACE-SELF")
+    bob = _operator(db, "bob@example.edu")
+    alice = _alice(db)
+    real_set_owners = session_owners.set_owners
+
+    def remove_self_then_refuse(db_, *, review_session, actor, targets, correlation_id):
+        real_set_owners(
+            db_,
+            review_session=review_session,
+            actor=actor,
+            targets=[bob],
+            correlation_id=correlation_id,
+        )
+        raise session_owners.OwnerOperationError(
+            code="already_owner", message="carol@example.edu is already an owner."
+        )
+
+    monkeypatch.setattr(session_owners, "set_owners", remove_self_then_refuse)
+    response = _save(client, review_session, ["bob@example.edu"])
+
+    assert response.headers["location"] == "/operator/sessions"
+    assert alice.email not in _owners(db, review_session)
+
+
 def test_a_non_owner_is_refused(
     client: TestClient, db: Session, make_client, bob
 ) -> None:
@@ -324,7 +354,7 @@ def test_a_non_owner_is_refused(
     bob_client = make_client(bob)
 
     response = bob_client.post(
-        f"/operator/sessions/{review_session.id}/owners",
+        f"/operator/sessions/{review_session.id}/owners/save",
         data={"owners": [CREATOR, "bob@example.edu"], "owners_original": [CREATOR]},
         follow_redirects=False,
     )

@@ -646,7 +646,7 @@ def _owners_redirect_url(session_id: int, error_code: str | None = None) -> str:
     return f"/operator/sessions/{session_id}#owners-card"
 
 
-@router.post("/sessions/{session_id}/owners")
+@router.post("/sessions/{session_id}/owners/save")
 def session_owners_save(
     owners: list[str] = Form(default=[]),
     owners_original: list[str] = Form(default=[]),
@@ -655,15 +655,21 @@ def session_owners_save(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """The Owners card's Save (19S Item 10): the table's owners, applied
-    as changes against the set the card was rendered with.
+    as changes against the set the card was rendered with. The path puts
+    the verb last, as ``owners/add`` and ``fields/save`` do
+    (``spec/architecture.md`` "Route conventions").
 
-    Any lifecycle state, as the lobby's tag edit. Every refusal — a
-    non-operator address, removing every owner, or another save changing
-    the owners under this one — lands back on the card with its banner;
-    nothing else on the card is left unsaved to lose. Saving yourself
-    out lands on the sessions lobby, since Session Home is then a 404.
+    Any lifecycle state, as the lobby's tag edit. A non-operator address
+    or removing every owner is refused before anything is written, and
+    lands back on the card with its banner. ``set_owners`` commits each
+    change as it goes, so one refused *during* the write — another save
+    changed the owners under this one — may leave earlier changes
+    applied; it lands on the banner too. Either way, if you are no longer
+    an owner afterwards you land on the sessions lobby, since Session
+    Home is then a 404 for you.
     """
     correlation_id = request_correlation_id()
+    error: str | None = None
     try:
         targets = session_owners.resolve_owner_changes(
             db, review_session, original=owners_original, wanted=owners
@@ -676,16 +682,14 @@ def session_owners_save(
             correlation_id=correlation_id,
         )
     except session_owners.OwnerOperationError as exc:
-        return RedirectResponse(
-            url=_owners_redirect_url(review_session.id, exc.code),
-            status_code=status.HTTP_303_SEE_OTHER,
-        )
-    if user.id not in {target.id for target in targets}:
+        error = exc.code
+    owner_ids = {row.user_id for row in session_owners.list_owners(db, review_session)}
+    if user.id not in owner_ids:
         return RedirectResponse(
             url="/operator/sessions", status_code=status.HTTP_303_SEE_OTHER
         )
     return RedirectResponse(
-        url=_owners_redirect_url(review_session.id),
+        url=_owners_redirect_url(review_session.id, error),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
