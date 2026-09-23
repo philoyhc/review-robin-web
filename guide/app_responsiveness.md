@@ -490,7 +490,7 @@ see the block at the top of this finding.
 ### The lobby scales with sessions, and it scales well
 
 The lobby renders every non-archived session with no pager and no cap —
-the property `guide/roster_search_filter.md` turns on. Its axis is session
+the property `guide/archive/roster_search_filter.md` turns on. Its axis is session
 count, not roster size, so it gets its own fixture
 (`bench_roster_scale.py seed-lobby`) of near-empty sessions:
 
@@ -510,7 +510,7 @@ In real Chromium (`--executable-path /opt/pw-browsers/chromium-1194/…`),
 at 1,003 sessions / 805 rendered rows / 18,200 DOM nodes: a cold load is
 **811 ms** end to end, `domInteractive` at 398 ms, and **one keystroke in
 the Filter box costs 5 ms**. The client-side filter that
-`roster_search_filter.md` declined to extend to the rosters is, on its own
+`guide/archive/roster_search_filter.md` declined to extend to the rosters is, on its own
 page, essentially free — 805 rows filtered to 80 within a frame. The
 lobby's only real exposure is the 1.58 MB it sends to get there, which is
 finding 5.
@@ -701,7 +701,7 @@ slower than no rule) is the argument for it.
    to review is not crazy; the conditions under which a thousand are
    each asked to do it are rare. The pilot's own sessions are 154. The
    bench above is set at 200 × 200 full matrix on that basis, and
-   `guide/roster_search_filter.md` — which left the same question open —
+   `guide/archive/roster_search_filter.md` — which left the same question open —
    can take the same answer.*
 2. **Is the staleness verdict worth its price on every page?** It is
    displayed on Assignments and Validate. The other four pages build the

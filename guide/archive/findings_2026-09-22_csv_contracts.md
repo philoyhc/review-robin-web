@@ -141,3 +141,6 @@ call the code rejected.
 Item 4 investigation scoped, and an unrelated one-line correction does
 not belong in Item 3's PR. Logged so it has a home in the document that
 owns what is wrong in this file.
+
+✅ **Fixed 2026-09-23**, when this register was archived (#2594): §5's
+`SelfReview` row now names the stored column and states both rules.

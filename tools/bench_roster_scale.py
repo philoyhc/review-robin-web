@@ -314,7 +314,7 @@ def seed_lobby(args: argparse.Namespace) -> None:
     """Add N sessions owned by the bench operator — the lobby's own axis.
 
     The lobby renders every non-archived session the operator can see, with
-    no pager and no cap (`guide/roster_search_filter.md` explains why the
+    no pager and no cap (`guide/archive/roster_search_filter.md` explains why the
     client-side Filter can work there and not on a roster). Its cost
     therefore scales with **session count**, not roster size, which is a
     different question from everything else this tool measures — so the

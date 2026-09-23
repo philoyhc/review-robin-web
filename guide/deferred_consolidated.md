@@ -1715,3 +1715,35 @@ hunting for its chip among dozens.
 
 **Lift trigger:** an operator confused by a filtered lobby, or the next
 change that opens the lobby's Filter card.
+
+### The roster `Search:` boxes as client-side filters, now that rosters are small (author, 2026-09-23)
+
+`guide/archive/roster_search_filter.md` (2026-09-20) asked what it
+would take to give the seven server-side `Search:` boxes the Sessions
+lobby's client-side Filter:
+- the four rosters, Assignments, Invitations and Responses;
+- keeping each page's typeahead and its `Status:` pre-filter.
+
+Its finding was that they are different controls. A roster filters in
+Python *before* cutting a 200-row page, so a filter running in the
+browser would search one page, while the typeahead suggests values from
+the whole roster. The investigation recommended none of its three
+options and left one question to decide between them: **how large is a
+real roster?** "If real rosters are in the low hundreds, option A stops
+being exotic and the investigation's conclusion changes."
+
+**The author has since answered it.** About **100 × 100** is the likely
+upper limit, and the benchmark is set at 200 × 200
+(`guide/app_responsiveness.md`, open question 1, 2026-09-21). At that
+size a whole roster fits on one page, so its option A, rendering every
+row and filtering in the browser, is viable. Nobody has asked for the
+conversion. It was archived on 2026-09-23, and this entry keeps its open
+question live.
+
+**Also carried, independent of the conversion:** each of the three
+matching rules is tested on its own. Those are `rrwSessionFilterMatches`
+(JS), `_matches_row` (Python) and Assignments' SQL. Nothing asserts
+that they agree with each other.
+
+**Lift trigger:** an operator asking for keystroke-live filtering on a
+roster, or the next change that reworks a roster's pager.
