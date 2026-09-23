@@ -4,16 +4,19 @@ The row and bulk expanders are injected inside ``#sessions-list-form``.
 Enter in a text field submits its form through the form's first submit
 button, which was the row expander's **Purge and archive** (the bulk
 expander's: **All tags to all**). So Enter in Name, Code, Deadline or
-Tags archived the ticked session (found 2026-09-23 on the dev slot).
+Tags — or on a ticked row, purge or "Yes, delete" checkbox — archived
+the ticked session, with a ticked purge box irreversibly (found
+2026-09-23 on the dev slot; the checkboxes by the fix's cold read).
 
 Two guards, each pinned here because a browser test cannot run in the
-suite (both were driven in Chromium when written):
+suite (both were driven in Chromium on every field and checkbox):
 
-- a **disabled first submit button**, which makes the browser skip
-  implicit submission for text fields, including the tag box, whose
-  Enter must stay free to pick a typeahead suggestion;
-- a **keydown guard on date-time inputs**, because Chromium's
-  date-time field submits on Enter past a disabled first button.
+- a **disabled first submit button**, which stops implicit submission
+  from text fields. It is what protects the tag boxes, whose Enter must
+  stay free to pick a typeahead suggestion;
+- a **keydown guard on every other input** in the form, because
+  Chromium lets checkboxes and date-time fields submit past a disabled
+  first button, and Safari may skip a disabled default button entirely.
 """
 
 from __future__ import annotations
@@ -38,9 +41,17 @@ def _form(body: str) -> str:
     return body[start : body.index("</form>", start)]
 
 
+#: Any submit button, however written: a ``<button>`` that is not
+#: ``type="button"`` or ``"reset"`` (``submit`` is the default), or an
+#: ``<input type="submit">``.
+SUBMIT = re.compile(
+    r'<button\b(?![^>]*type="(?:button|reset)")[^>]*>|<input[^>]*type="submit"[^>]*>'
+)
+
+
 def test_the_forms_first_submit_button_is_disabled(client: TestClient) -> None:
     form = _form(_lobby(client))
-    first = re.search(r'<button type="submit"[^>]*>', form)
+    first = SUBMIT.search(form)
 
     assert first is not None
     assert "disabled" in first.group(0), (
@@ -50,21 +61,26 @@ def test_the_forms_first_submit_button_is_disabled(client: TestClient) -> None:
     assert "data-no-implicit-submit" in first.group(0)
 
 
-def test_the_expanders_sit_after_it_in_the_same_form(client: TestClient) -> None:
-    """The guard only works if the expanders are injected inside this
-    form, after the disabled button — the premise of the fix."""
+def test_the_expanders_are_injected_into_this_form(client: TestClient) -> None:
+    """The guards only reach the expanders because the script injects
+    them into this form's table, after the disabled button, and the row
+    checkboxes are the form's own."""
     body = _lobby(client)
 
-    assert body.index("data-no-implicit-submit") < body.index(
-        'formaction="/operator/sessions/bulk-archive"'
-    )
+    assert 'document.querySelector("#sessions-list-form table")' in body
     assert "sessions-list-select-row" in _form(body)
 
 
-def test_date_time_inputs_have_an_enter_guard(client: TestClient) -> None:
+def test_every_input_but_the_tag_box_has_an_enter_guard(
+    client: TestClient,
+) -> None:
+    """Checkboxes and date-time fields submit past a disabled first
+    button in Chromium, so the guard covers every input — except the
+    tag boxes, which the disabled button already covers and whose Enter
+    picks a typeahead suggestion."""
     form = _form(_lobby(client))
 
     assert 'getElementById("sessions-list-form")' in form
     assert 'event.key === "Enter"' in form
-    assert "input[type=\"datetime-local\"]" in form
+    assert 'matches("input:not([data-tag-typeahead])")' in form
     assert "event.preventDefault()" in form
