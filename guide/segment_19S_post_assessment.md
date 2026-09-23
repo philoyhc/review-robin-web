@@ -2615,23 +2615,95 @@ an existing owner allows it.
 | **Confirmation** | None. | None. |
 | **Without JavaScript** | Nothing to remove: staging needs the script, and the email box submits one address. | Works: it is a plain form. |
 
+### Judgment calls — decided
+
+Author's rulings, 2026-09-23, on the direction *conform Session Home's
+Owners card to Create's, reusing its logic*:
+
+- **An owner error is a bare 422**, like every other error the details
+  card's Save returns (bad timezone, schedule order, scheduling) and
+  like Create's Owners card — not a redirect with the `owners_error`
+  banner. The analogy decided it.
+- **Who may edit owners follows Lock / Unlock.** Saving through
+  `/config` puts owners behind `_require_editable`, the same
+  draft-or-validated window as the rest of the card. **The old `/owners`
+  routes keep their current logic**, the ungated remove included; only
+  the page stops calling them.
+- **Removing yourself warns at the click** — a confirm dialog on your
+  own row's Remove; cancel keeps the row. Save stays silent.
+- **The last owner's Remove is inactive**: disabled whenever one row is
+  left, staged removals included. `set_owners` refusing an empty set is
+  the server's backstop.
+- **Saving yourself out lands on the sessions lobby**, not the 404 that
+  Session Home now is for you.
+- **The picker suggests every workspace operator**, current owners
+  included, so a staged-out owner can be re-added; the stager already
+  ignores a duplicate.
+- **Add owner is Secondary**, as on Create: it stages, it does not save.
+
+### Blast radius (measured)
+
+Taken 2026-09-23 at `a9eca3a`.
+
+| what | count | command |
+|---|---|---|
+| templates rendering Session Home's Owners card | **1**, `session_detail.html` | `grep -rln 'config-owners-card\|config-add-owner' app/web/templates` |
+| on-page callers of the `/owners` routes | **2**, both in that template | `grep -rn 'owners/add\|owners/{{' app/web/templates` |
+| tests touching the routes, the card or `owners_error` | **4** | `grep -rln 'owners/add\|owners/.*remove\|config-owners-card\|config-add-owner\|owners_error' tests` |
+| specs and docs naming an Owners card | **10** | `grep -rln -i 'owners card\|owners sub-card\|config-owners-card\|Owners (optional)' spec docs` |
+| `workspace_operator_candidates` callers | **1**, `_session_home.py` | `grep -rn 'workspace_operator_candidates(' app` |
+| `resolve_owners` / `set_owners` callers | **2**, both Create | `grep -rn 'set_owners(\|resolve_owners(' app --include=*.py` |
+| templates including the stager | **1**, `session_new.html` | `grep -rln '_owners_stager_js' app/web/templates` |
+
+### PR ladder
+
+1. **Rung 1 — the save path, with the page unchanged.** `POST
+   /sessions/{id}/config` accepts `owners` behind an `owners_present`
+   marker, resolves them before any write (422 on a non-operator), and
+   applies `set_owners` after the config apply, under the request's one
+   correlation id; saving yourself out redirects to the lobby. Nothing
+   on the page posts `owners` yet, so the old per-row forms keep working
+   — no window where owners cannot be edited. **Base SHA for the item's
+   cold read: recorded in this rung's PR body.**
+2. **Rung 2 — the page switches to the stager.** The card drops its two
+   per-row forms for `_owners_stager_js`, bound to the config form; Add
+   owner becomes Secondary; the picker offers every workspace operator.
+   The stager gains what Session Home adds over Create: the marker, the
+   last-row disable, the self-removal confirm, and rebuilding the table
+   on the form's `reset` (Cancel). Last build rung: `diff-reviewer` over
+   the item's cumulative diff.
+3. **Rung 3 — the specs and the close.** `spec/session_owners.md` from
+   the table above as shipped, the pointers to it, and the item's close.
+
+### Definition of done
+
+- A Session Home save carrying `owners_present` replaces the owner set,
+  and one without it leaves owners alone — asserted through the route.
+- A non-operator address is a 422 that writes nothing, name and
+  schedule included — asserted through the route.
+- Saving yourself out redirects to `/operator/sessions` — asserted.
+- Outside draft and validated the card's Save refuses owners with the
+  rest of the card (409), and the old routes behave as before — the
+  existing `tests/integration/test_session_owners.py` still passes.
+- The stager on Session Home: last-row Remove disabled, self-removal
+  confirm, Cancel restores the table, staging marks the card dirty —
+  driven in Chromium, and whatever is testable pinned.
+- `pytest -n auto` green and `ruff check .` clean, with `node` present.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19S.10` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
 ### Open questions
 
-- **How does an owner error display?** Today it is a banner on the card
-  (`owners_error`) that leaves other edits alone. Inside the card's
-  Save it becomes either `/config`'s bare 422 page, or a redirect with
-  the banner that discards the rest of the unsaved edit. Keeping the
-  edit would need the card to re-render submitted values, which it
-  cannot today. **Blocks the build.**
-- **Does `owners/{user_id}/remove` take the lifecycle gate?** It loses
-  its on-page caller but stays reachable. Gating it with
-  `_require_editable` closes the `active` hole in the table above;
-  leaving it open keeps the sys-admin-adjacent tests as they are.
-- **Self-removal and the last owner on Session Home.** Should removing
-  yourself warn you first, since you land on a 404? Should the last
-  owner's Remove be hidden rather than answered with a 409? Both change
-  once removal is staged: `set_owners` refuses an empty set, so the
-  refusal would come from Save.
+- ~~How does an owner error display?~~ A bare 422, by analogy with the
+  card and Create (author, 2026-09-23).
+- ~~Does `owners/{user_id}/remove` take the lifecycle gate?~~ No; the
+  routes keep their logic, and the UX follows Lock / Unlock (author,
+  2026-09-23).
+- ~~Self-removal and the last owner?~~ Warn at the click; the last
+  owner's Remove is disabled (author, 2026-09-23).
 
 ### Out of scope
 
@@ -2650,8 +2722,12 @@ an existing owner allows it.
 - `spec/operator_ui_concept.md` — Create's Owners paragraph points at
   the new spec (Item 10).
 - `spec/permissions.md` — §4.2 keeps the gates and refusals, gains
-  Create's path and whatever the lifecycle question decides (Item 10).
+  Create's path and Session Home's save path; the old routes unchanged
+  (Item 10).
 - `spec/operator_button_audit.md` — §3 gains Create's Add owner
   (Secondary) and the staged rows' Remove, missing since Item 9; row
   159 becomes Secondary (Item 10).
+- `spec/sessions_overview.md` — Form submission: Enter in the lobby
+  form never submits, and not Save either (author's ruling on #2579,
+  carried to the segment's last close) (Item 10).
 - `docs/status.md` — row when the item lands (Item 10).
