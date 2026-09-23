@@ -63,7 +63,7 @@ Read those three authority statements together and they contradict each other: t
 
 Three features of the model carry more weight than they look:
 
-- **Archives are records, not contracts.** Everything under an `archive/` is excluded from the documentation gates (Section 6.3) and kept for its reasoning, not for behavior. Specs can therefore be consolidated and retired freely without losing the reasoning behind them, and without a retired spec ever being mistaken for a live one. An archived spec's header names the spec that supersedes it.
+- **Archives are records, not contracts.** Everything under an `archive/` is exempt from the content gates (Section 6.3): its paths, pointers and labels are not checked, and only the indexes that list it are. It is kept for its reasoning, not for behavior. Specs can therefore be consolidated and retired freely without losing the reasoning behind them, and without a retired spec ever being mistaken for a live one. An archived spec's header names the spec that supersedes it.
 - **The functional spec is an entry point, not a monolith.** Its §19 "Reading guide" maps each subject to the per-page or per-subsystem spec that carries the implementation-level contract (Section 6.2).
 - **What is decided but not scheduled has one home.** `guide/deferred_consolidated.md` holds every scoped-but-unscheduled item, each with the trigger that would lift it back into a plan. A finding that is not acted on is recorded there rather than left in a closed plan's margins, where compaction would lose it.
 
@@ -82,7 +82,7 @@ Two sections are what the popular shapes lack:
 Four things about how plans are used matter more than their shape:
 
 - **Plan-to-build is hours, not weeks.** A plan is not a phase gate. It is the thinking, written down, so that the agent building slice 3 has the same intent as the one that built slice 1. 19C Item 1 was planned and shipped on the same day, 2026-08-20 (#2010).
-- **Plans are revised by the build, and say so.** A `Status` block records what the ladder became and why; an amended `Decision` is annotated beside the original rather than rewritten over it. Segment 19S Item 10 is the fullest example. Its first ladder was struck after rung 1 (#2581, closed unmerged), and the re-cut ladder shipped. The author then changed the design twice more after the item closed. Each change is recorded as an amendment, so the plan still shows what was intended, what was done, and why they differ. That is the plan behaving as a spec-anchored artifact rather than a spec-first one.
+- **Plans are revised by the build, and say so.** A `Status` block records what the ladder became and why; an amended `Decision` is annotated beside the original rather than rewritten over it. Segment 19S Item 10 is the fullest example. Its first ladder was struck once its second rung had been built (rung 1, #2581, closed unmerged), and a re-cut ladder shipped. After the item closed, the author changed the design twice more, and a second amendment records both. The plan still shows what was intended, what was done, and why they differ. That is the plan behaving as a spec-anchored artifact rather than a spec-first one.
 - **Plans have a length budget, because the record of the build outgrew the build.** Across 19A–19M, plans ran 370 to 4,840 lines, and one item reached 951. Measured over one 377-line item, every section written at planning time came in under 50 lines, while `Status` ran 110 and a closed `Open questions` block 61. The skill now sets budgets: under ~250 lines for a plan and ~120 for an item. `Status` is compacted at the close into intended-versus-done, and an answered open question collapses to its answer.
 - **Consequential UI lands scaffold-first.** A new page, card or navigation affordance lands in its own PR as a static placeholder: real copy and layout, inert controls. The surface is agreed on the placeholder, so the PRs that wire it carry no UI churn. It is the UI-shaped version of writing the contract before the implementation. It is also the practice's one foothold on the defect class nothing else reaches (Section 6.6): layout is agreed by a human at the one moment it is cheapest to change.
 
@@ -131,12 +131,13 @@ Neither half makes the exit *mechanical*, and the distinction matters. The close
 
 ### 6.3 A convention becomes a failing test, not a paragraph
 
-**Decision.** Where a convention can be derived from something the repository itself states, enforce it with a test that reads that thing, so the check cannot go stale when it changes. The source can be a code constant, the route table or the file tree. The gates, by what they read:
+**Decision.** Where a convention can be derived from something the repository itself states, enforce it with a test that reads that thing, so the check cannot go stale when it changes. The source can be a code constant, the route table or the file tree. The main gates, by what they read:
 
 - **Code constants.**
   - The `EVENT_SCHEMAS` audit-envelope allowlist: strict in tests, log-and-write-through in production.
-  - `tests/unit/test_doc_conventions.py`, nine checks. Examples: every lifecycle table in a live spec agrees with `DISPLAY_LABELS`, and the retired button vocabulary is not prescribed in live prose.
-- **The route table.** `tests/unit/test_spec_coverage.py` maps all 29 routing modules to the specs that govern them (`app/web/spec_registry.py`) and fails on one that has none.
+  - `tests/unit/test_doc_conventions.py`, nine checks, most of them against code constants. Examples: every lifecycle table in a live spec agrees with `DISPLAY_LABELS`, and the retired button vocabulary is not prescribed in live prose.
+  - `tests/unit/test_practice_kit.py`: the practice kit's manifest, the tree and the setup document agree.
+- **The route table.** `tests/unit/test_spec_coverage.py` maps each of the 29 feature routing modules to the specs that govern them (`app/web/spec_registry.py`; three infrastructure modules are exempt) and fails on one that has none.
 - **The file tree and the documents' own structure.**
   - `tests/unit/test_doc_references.py` checks that `CLAUDE.md` and `AGENTS.md` are byte-identical, and that every anchored path, every `§N` pointer and every cited pytest node id in live prose resolves.
   - `tests/unit/test_guide_indexes.py` requires a README row for every `guide/` document, live or archived.
@@ -147,7 +148,7 @@ Neither half makes the exit *mechanical*, and the distinction matters. The close
 
 The remedy was the `EVENT_SCHEMAS` idiom applied a second time: the rule lives in code, so drift fails the suite. It caught five live violations on its first run. The later gates follow the same idiom.
 
-**A gate must be proved to catch what it claims.** Segment 19R produced four guards that passed while seeing less than they claimed. So an item that adds a guard now puts in its definition of done that each check fails under a mutation of what it protects, with the mutations recorded in its `Status`. That bar is itself a convention left unenforced on purpose: a check could only confirm that a mutation was *mentioned* (`docs/unenforced_conventions.md` §1.8). The bar caught the first item that adopted it, 19S Item 2: three of the four index checks first saw less than they claimed. One mutation was inert because `-` is a non-word character, so `19R-removed` still matched `^### Segment 19R\b`, and a live heading was quietly relying on that hole.
+**A gate must be proved to catch what it claims.** Segment 19R produced four guards that passed while seeing less than they claimed. So an item that adds a guard can adopt an evidence bar in its definition of done. Before a guard is called complete, its fixture reaches the case, a mutation of the protected property fails, and its recognizer is exercised beyond the current examples. The bar is adopted item by item rather than as a standing rule, and it is left unenforced on purpose, because a check could only confirm that a mutation was *mentioned* (`docs/unenforced_conventions.md` §1.8). The first item to adopt it, 19S Item 2, was caught by it and by its cold read together: three of the four index checks first saw less than they claimed. One mutation was inert because `-` is a non-word character, so `19R-removed` still matched `^### Segment 19R\b`, and a live heading was quietly relying on that hole.
 
 **Trade-off.** A gate checks only what is derivable. It verifies *agreement* where the repository states something to agree with; it cannot judge *adequacy*. The coverage gate shows the limit well. Neither of the two missing Tier-1 specs would have tripped it, because both surfaces *had* sections in `spec/operator_ui_concept.md` and lacked only a dedicated contract. It detects a surface with no spec, not a spec that says too little.
 
@@ -160,9 +161,9 @@ One more consequence is operational: **a green `ruff` is not evidence**. Most of
 **Decision.** A change is read by something other than what wrote it. Two readers are checked-in agent definitions under `.claude/agents/`, read-only by construction and separate from whichever agent wrote the code:
 
 - **`spec-writer`** updates `spec/` to match what shipped **at a close**, may write only under `spec/`, and must "flag drift … rather than silently rewriting". Outside a close it verifies and reports.
-- **`diff-reviewer`** reads a PR diff cold, with no prior context, and checks it against the governing spec. It reports three things: claims in the commit message the diff does not support, scope beyond the stated purpose, and nothing at all if nothing is wrong. Its charter says "inventing findings to look thorough makes you worse than no reviewer". It carries no model pin, deliberately, because a reviewer should not be capped at a smaller model than the author.
+- **`diff-reviewer`** reads a PR diff cold, with no prior context, and checks it against the governing spec. Among other things, it reports claims in the commit message that the diff does not support and scope beyond the stated purpose, and it reports nothing at all if nothing is wrong. Its charter says "inventing findings to look thorough makes you worse than no reviewer". It carries no model pin, deliberately, because a reviewer should not be capped at a smaller model than the author.
 
-A third reader is external. Codex reviews a pull request when it is marked ready, which puts a different vendor's model on the diff. It commented on 159 pull requests opened since 2026-09-14, against 213 merged in that window. From June to 2026-09-13 the figures were 64 against 658.
+A third reader is external: Codex, a different vendor's model, reviews pull requests automatically. Its own summary comment names the triggers as a PR opened for review or a draft marked ready. It commented on 159 pull requests opened since 2026-09-14, against 213 merged in that window. From June to 2026-09-13 the figures were 64 against 658. It reads most slices, not all of them.
 
 **Why.** This is SDD's second core claim, that maker and checker must be separate, arrived at from RRW's own defect history. The audit classified the thirty most recent fix commits. Six (20%) were documentation corrections a spec reader would have caught. Nine (30%) were logic bugs, several "discovered by review-like activity rather than by the suite". One was a case-insensitive-email P0 found by a fresh reader who thought of the case, and fixed with 265 lines of new tests. Before the readers existed, "a diff goes from written to merged with nothing reading it". The readers close that gap for two of the three defect classes.
 
@@ -175,26 +176,26 @@ One caveat: the checklist was written after the defect was known, so this shows 
 **The cadence was measured into shape.** A reader works only when run, and the history of this decision is the history of finding out what "when run" costs.
 
 - **Unrun.** From 2026-09-06 to 2026-09-14, 70 pull requests named `spec-writer` and none named `diff-reviewer`. The reader validated above had not read a diff since the arc that created it. `spec-writer`, chartered for the close, had become the per-rung reader by default. The two were then given separate cadences.
-- **Per rung: effective and too dear.** The per-rung read ran from 2026-09-14, and a merge-history audit measured it four days later (`tools/pace_audit.py`).
-  - **Cost.** A slice carrying a read took a median 49 minutes merge to merge, against 23 without. The median slice went from 25 minutes to 44, and in-PR iteration from about 8 minutes to 23.
+- **Per rung: effective and too dear.** The per-rung read ran from 2026-09-14, and a merge-history audit measured it four days later, recorded here on 2026-09-19 (`tools/pace_audit.py`).
+  - **Cost.** A slice carrying a read took a median 49 minutes merge to merge, against 23 without. The median slice went from 25 minutes to 44, and in-PR iteration from about 8 minutes to 23. Codex was reading every slice in the same week, so both readers are in those figures.
   - **Catch.** Of 78 response commits, 58 changed code or tests and fixed live defects. The 20 that changed only prose described the author overclaiming in a plan or a close.
-- **Per item: the ruling.** On the author's ruling of 2026-09-18, `diff-reviewer` reads once per item, on the item's cumulative diff. A code slice outside any ladder still takes its own read, and a prose-only slice takes none (`CLAUDE.md` "Where work runs"). Under it, at `3559c7a7`, over 134 slices:
+- **Per item: the ruling.** On the author's ruling of 2026-09-18, `diff-reviewer` reads once per item, on the item's cumulative diff. A code slice outside any ladder still takes its own read, and a prose-only slice takes none (`CLAUDE.md` "Where work runs"). Its first re-take, over #2460–#2492, had iteration back to about **10** minutes and slices carrying a read down from 69% to 30%. Under it, at `3559c7a7`, over 134 slices:
   - the median cycle is **31** minutes;
-  - **44%** of slices carry a response to a read;
-  - a product slice with one takes **38** minutes against **27** without, so a read costs about 11 minutes, paid once per item rather than once per rung.
+  - **44%** of slices carry a response to a read, from either the cold read or Codex;
+  - a product slice with one takes **38** minutes against **27** without. A round of reading and responding therefore costs about 11 minutes, and the cold-read half of it is paid once per item rather than once per rung.
 
 **What the cadence does not touch.** A whole-history audit on 2026-09-20 separated three step changes in the median slice:
 - from **11** to **17** minutes between Segment 1 and 19C, as the suite grew and CI lengthened;
 - to **22** on 2026-09-04, when the doc and test gates arrived;
-- to **44** under the per-rung reads, recovered to about **30** by the per-item cadence.
+- to **44** under the per-rung reads, with Codex also reading every slice, then down to about **30** under the per-item cadence.
 
-Under all three sits *turn*, the time from the previous merge to a slice's first commit. Turn is a flat floor of about 8–10 minutes in every era, and it does not scale with the slice's size.
+Under all three sits *turn*, the time from the previous merge to a slice's first commit. That audit found turn a flat floor, a median of 8–10 minutes in every era, that barely scales with the slice's size. Re-taken at `3559c7a7`, the median under the per-item cadence is 8.2 minutes.
 
-To split turn into the wait for an instruction and the build before the first commit, one campaign stamped slices' first commits with an `Instruction-Received` trailer. Across 37 stamped slices, *wait* is a median **1.9** minutes and *build* **5.8**. So the floor is mostly the agent's own work before it commits: loading context, reading the plan, running the gates. No cadence rule touches that, and none should.
+To split turn into the wait for an instruction and the build before the first commit, a campaign stamped slices' first commits with an `Instruction-Received` trailer. It ran over #2495–#2516, and its first reading, n=14, had *wait* at a median 3.5 minutes and *build* at 3.0. With the lost stamps recovered (below), the reading reversed. Today, across 37 stamped slices, *wait* is a median **1.9** minutes and *build* **5.8**. So the floor is mostly the agent's own work before it commits: loading context, reading the plan, running the gates. No cadence rule touches that, and none should.
 
-The campaign had a lesson of its own. Git reads trailers only from a message's last block, so 21 of the first 37 stamps, written in a paragraph of their own, were silently discarded. Stamping is therefore a campaign run when a figure is being re-taken, not a standing rule (`CLAUDE.md` "Where work runs").
+The campaign had a lesson of its own. Git reads trailers only from a message's last block, so 21 of the first 37 stamps, written in a paragraph of their own, were silently discarded. Since 2026-09-22, `tools/pace_audit.py` has read the line anywhere in the message, which recovered them. Nothing catches a slice that omits the line. Stamping is therefore a campaign run when a figure is being re-taken, not a standing rule (`CLAUDE.md` "Where work runs").
 
-**Trade-off.** Each read costs the author about eleven minutes, and it happens only because the agent runs it. A skipped read leaves no trace except that its item's `Status` records no findings, so the per-item record of reads and findings is how the next audit re-measures whether the cadence holds.
+**Trade-off.** Each round of reading costs about eleven minutes, and the cold read happens only because the agent runs it. A skipped read leaves no trace except that its item's `Status` records no findings, so the per-item record of reads and findings is how the next audit re-measures whether the cadence holds.
 
 ### 6.5 Periodic sweeps and snapshots, not continuous synchronization
 
@@ -211,9 +212,9 @@ The snapshots have paid. One fixed two real logic bugs with regression tests. Th
 
 ### 6.6 The human is the verifier of last resort — and there is no autonomous loop
 
-**Decision.** End-to-end verification of anything the test suite cannot exercise is done by the author looking at it. That covers templates, redirects, layout, in-browser JS and real auth. It normally happens on the Azure dev slot after deploy. While the dev slot has been out of reach (September 2026), it has happened on localhost, with each check that is still owed carried in `guide/post_azure_todo_checklist.md`. A PR description must say what was not verified rather than claim that it was.
+**Decision.** End-to-end verification of anything the test suite cannot exercise is done by the author looking at it. That covers templates, redirects, layout, in-browser JS and real auth. It happens on the Azure dev slot after deploy. When the author cannot reach the dev slot, each check still owed is carried in `guide/post_azure_todo_checklist.md` until it can be made. A PR description must say what was not verified rather than claim that it was.
 
-Nothing in the practice acts on the codebase unattended. An agent watches the pull requests it opens and acts on CI failures and review comments between the author's instructions. But nothing starts new work on its own, and no agent merges; the author merges.
+No agent runs unattended. An agent follows a pull request it opened through CI and review, under the instruction that opened it. It does not start new work on its own, and it does not merge; the author merges.
 
 **Why.** Half of RRW's real defects live where no reader can see them. The audit's census put **fifteen of thirty** fix commits (50%) in the browser-only class: caption selectability, a 4 px misalignment, a keypress toggling a card, all "touching only templates and `tools/`". Against SDD's central claim that specs catch what unit tests cannot, this is the class *neither* catches, because a layout has no machine-checkable definition of done.
 
@@ -225,7 +226,7 @@ The loop-engineering threshold for running autonomously is a machine-checkable d
 
 ### 6.7 The reasoning travels with the change
 
-**Decision.** Commit messages and PR bodies carry the *reasoning* — what was found, what was measured, why the obvious alternative was not taken — and not only the change. Plans record what was intended and what was done. Dated documents such as audits and assessments are annotated rather than silently rewritten. A standing document like this one is rewritten as a whole when it drifts, with its history left to git. The merge policy is written in `CONTRIBUTING.md` rather than enforced by branch protection, after measurement showed it was already followed: wait for the Postgres job when the diff touches `alembic/`, `app/db/` or any querying service; merge ahead of it for docs and dev tooling.
+**Decision.** Commit messages and PR bodies carry the *reasoning* — what was found, what was measured, why the obvious alternative was not taken — and not only the change. Plans record what was intended and what was done. Dated documents such as audits and assessments are annotated rather than silently rewritten. The merge policy is written in `CONTRIBUTING.md` rather than enforced by branch protection, after measurement showed it was already followed: wait for the Postgres job when the diff touches `alembic/`, `app/db/` or any querying service; merge ahead of it for docs and dev tooling.
 
 **Why.** The failure mode the vibe-coding literature names most sharply is "debugging code *nobody fully wrote or owns*". RRW's mitigation is that the intent is recoverable. The audit reconstructed a three-month-old drift's frequency evidence from commit messages alone, "precisely because of that". It is the same principle as the audit-event envelope on every mutating service (design rationale §6.7), applied to the codebase instead of the data: defensibility by construction. Writing the merge policy down rather than enforcing it comes from the same instinct. The audit found the judgment was sound, and one paragraph "survives a second contributor or a six-month gap" where branch protection would have added ceremony to a process that did not need it.
 
@@ -257,7 +258,7 @@ SDD's central claim is that specs catch what unit tests structurally cannot. Aga
 | Defect class | Share | What catches it in RRW |
 |---|---|---|
 | Documentation drift: spec says one thing, code does another | 6 (20%) | The gates where the repository states something to derive a check from; `diff-reviewer` and `spec-writer` otherwise; the sweeps last |
-| Logic bugs that landed with regression tests | 9 (30%) | The suite for the regression; a separate reader (`diff-reviewer` per item, Codex per PR, an assessment) for the discovery |
+| Logic bugs that landed with regression tests | 9 (30%) | The suite for the regression; a separate reader (`diff-reviewer` per item, Codex on most PRs, an assessment) for the discovery |
 | Browser-only: layout, selection, keypress, template JS | 15 (50%) | The author, looking. Nothing else |
 
 The claim holds for the first class and half-holds for the second. For the largest class it is simply not the relevant mechanism, and a practice that pretended otherwise would be worse for it.
@@ -277,7 +278,7 @@ Where the practice is measurably behind:
 
 ## 9. Where the practice sits now
 
-Read against the four shapes in Section 2, RRW is **spec-anchored with a phase rule**: plans lead in, specs settle out, ship-state is recorded, and disputes are settled in `spec/`. It is **mechanized at the seams** where the repository states something a check can be derived from, it asks each new gate to prove itself by mutation, and it has shown it will retire a convention rather than mechanize it badly. It has **separate readers** on a cadence measured into shape: one cold read per item, and an external model on every PR. And it has a **human verifier** where nothing else can look, held deliberately rather than as a stopgap.
+Read against the four shapes in Section 2, RRW is **spec-anchored with a phase rule**: plans lead in, specs settle out, ship-state is recorded, and disputes are settled in `spec/`. It is **mechanized at the seams** where the repository states something a check can be derived from, it asks each new gate to prove itself by mutation, and it has shown it will retire a convention rather than mechanize it badly. It has **separate readers** on a cadence measured into shape: one cold read per item, and an external model reading most PRs. And it has a **human verifier** where nothing else can look, held deliberately rather than as a stopgap.
 
 The practice audit's verdict was that RRW is "ahead on the thing that is hardest to retrofit and behind on the thing that is cheapest to fix". It was ahead because a spec set, a layered document model and a habit of writing reasoning down were there from the first commit and cannot be bolted on later. It was behind because the specific gates, the reviewer and the merge policy were each a file, and each was written in an afternoon once the evidence pointed at it.
 
@@ -299,7 +300,7 @@ RRW practices a form of spec-driven development in which **plans carry intent in
 | Spec before code | On day one, literally; thereafter *plan* before code, *spec* after | First-day commit order 2026-04-27; spec co-change 21% (31% recent) against plan co-change 30% (76% recent) over first-parent merges; the #2047 → #2062 arc |
 | Requirements / design / tasks | One plan per scope, items within it: Opportunity → Decision → Judgment calls → Blast radius (measured) → PR ladder → Definition of done → Doc impact → Status | `guide/segment_plan_template.md`; `.claude/skills/segment-plan/SKILL.md`; `guide/archive/segment_19S_post_assessment.md` Item 10 |
 | Spec catches drift tests cannot | A gate derived from what the repository states, where it states something; elsewhere a separate reader; last, the sweeps | The gates in §6.3; `app/services/audit.py` `EVENT_SCHEMAS`; 6/30 fix commits were doc drift |
-| Maker and checker separate | `spec-writer` (at a close; reports divergence otherwise), `diff-reviewer` (cold, report-only, no model pin, once per item) and Codex on every PR marked ready. Validated retrospectively: run cold at `9b9cc457`, `diff-reviewer` found Codex's P0.2 (`ab043317`) 25 days early | `.claude/agents/`; `CLAUDE.md` "Where work runs"; `python3 tools/pace_audit.py --cut 2460` |
+| Maker and checker separate | `spec-writer` (at a close; reports divergence otherwise), `diff-reviewer` (cold, report-only, no model pin, once per item) and Codex, automatic on most PRs. Validated retrospectively: run cold at `9b9cc457`, `diff-reviewer` found Codex's P0.2 (`ab043317`) 25 days early | `.claude/agents/`; `CLAUDE.md` "Where work runs"; `python3 tools/pace_audit.py --cut 2460`; the Codex search in the note below |
 | Machine-checkable definition of done | For code and specs, yes: 4,800 tests on two dialects plus the gates. For UI, no: the author, looking | 15/30 fix commits browser-only; `CLAUDE.md` "Where work runs"; `guide/post_azure_todo_checklist.md` |
 | Spec coverage enforced | For absence, yes: every routing module registered, every mapped spec a live file, the declared-debt baseline empty. Adequacy, no | `tests/unit/test_spec_coverage.py`; `app/web/spec_registry.py`; `constitution.md` II |
 | Living spec, continuously synced | Periodic instead: 19 + 3 dated assessments in two model lineages, drift sweeps on a cadence, registers for what they surface | `guide/archive/codebase_assessment_*.md`; `tools/close_check.py --stale`; `docs/practice-audit-2026-09-04.md` §2 |
@@ -311,7 +312,7 @@ RRW practices a form of spec-driven development in which **plans carry intent in
 
 - **Spec folder size:** `ls spec/*.md | wc -l; cat spec/*.md | wc -l`.
 - **Archive counts:** `ls guide/archive/segment_*.md | wc -l`.
-- **Co-change rates:** classify each `git log origin/main --first-parent --merges` commit by the paths in `git diff --name-only <sha>^1 <sha>`. A live spec is under `spec/` but not `spec/archive/`; a live plan document is under `guide/` but not `guide/archive/`. The same classifier run at `376c9605` reproduces the 2026-09-04 figures.
+- **Co-change rates:** classify each `git log origin/main --first-parent --merges` commit by the paths in `git diff --name-only <sha>^1 <sha>`. A live spec is under `spec/` but not `spec/archive/`; a live plan document is under `guide/` but not `guide/archive/`. The same classifier run at `376c9605` reproduces the 2026-09-04 percentages; its raw counts differ from that day's by at most three.
 - **Test count:** `pytest --collect-only -q`.
 - **Cadence figures:** `python3 tools/pace_audit.py --cut 2460`.
 - **Churn and duplication:** `python3 tools/code_metrics.py`.
