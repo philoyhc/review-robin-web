@@ -1935,11 +1935,18 @@ carries the contract; what stays here is why.
   is ever written, so "owns" is true today; the docstring says so.
 - `spec-writer` found nothing false.
 
-**Found, not fixed:** the lobby and Archived pages throw
-`rrwSessionFilterMatches is not defined` on every load, on `main`
-before this item too. Their filter scripts call the rule while the page
-is parsing, but `base.html` defines it in a script placed after the
-content. Reported to the author, outside this item.
+**Found here, fixed outside the item (#2577):** the lobby and Archived
+pages threw `rrwSessionFilterMatches is not defined` on every load, on
+`main` before this item too — their filter scripts call the rule while
+the page is parsing, and `base.html` defined it in a script after the
+content. It now sits in `<head>`; the Archive had been ignoring a saved
+tag filter on reload.
+
+**One DoD line is still owed: the dev slot.** The popup, the keyboard
+(including whether Enter picks an option or submits the lobby's bulk
+form) and a screen reader cannot be seen headless, so the keyboard
+check the DoD asks for has not been made. Everything else in the DoD
+is met.
 
 ### Out of scope
 
