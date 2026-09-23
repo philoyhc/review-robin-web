@@ -218,7 +218,7 @@ the operation-level mappings.
 | `last_admin`, `owns_sessions`, `still_owner`, `sole_owner`, `protected_super_admin` | **409** | same |
 | `last_owner` on remove-owner (old per-row route) | **409** | `_session_home.session_owners_remove` |
 | every other owner error on the old per-row routes (`not_in_workspace`, `already_owner`, `not_owner`, `self_only`) | **303** back to Session Home with `?owners_error=<code>` | same |
-| any refusal on the Owners card's own save (`not_in_workspace`, `last_owner`, `owners_changed`, `not_owner`) — including `last_owner`, unlike the old route above | **303** back to `#owners-card` with `?owners_error=<code>`; nothing written | `_session_home.session_owners_save` |
+| any refusal on the Owners card's own save (`not_in_workspace`, `last_owner`, `owners_changed`) — including `last_owner`, unlike the old route above; a stale removal is a no-op there, not `not_owner` | **303** back to `#owners-card` with `?owners_error=<code>`; nothing written | `_session_home.session_owners_save` |
 | `not_in_workspace` on Create's Owners card — checked before the session exists, so nothing is created | **422** | `_quick_setup.create_session` |
 | Lifecycle refusals (`_require_editable`, `not_draft`, `locked`, …) | **409** (or 400 for missing acknowledgements) | `_shared.py`; contract in `spec/lifecycle.md` |
 

@@ -205,15 +205,17 @@ Session Home is then a 404 for them.
 ## 7. The old `/owners` routes — kept
 
 `POST /owners/add` and `POST /owners/{user_id}/remove` are not retired.
-Three callers keep them live:
+Three things keep them live:
 
 - **The `<noscript>` Remove** on Session Home's card (§6), for the
   no-JS path.
-- **The sys-admin self-add bootstrap**
-  (`tests/integration/test_operator_lobby_access_gate.py`): a
-  non-owner sys-admin reaching a session through Diagnostics "Manage"
-  adopts by POSTing `owners/add` for themselves (`self_only` refuses
-  any other target for that caller).
+- **The relaxed self-add**: `owners/add` is one of the two routes a
+  non-owner sys-admin may reach (`require_sys_admin_or_session_operator`),
+  self-only — `self_only` refuses any other target for that caller.
+  `tests/integration/test_operator_lobby_access_gate.py` pins it. No
+  page posts there: Diagnostics **Manage** adopts through
+  `POST /operator/sys-admin/sessions/{id}/adopt`, which calls
+  `add_owner` directly.
 - **`tests/integration/test_session_owners.py`**, which exercises them
   directly.
 
