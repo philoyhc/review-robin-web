@@ -2793,6 +2793,11 @@ then gave the card a Save of its own, and the ladder was re-cut
   candidate (#2586).
 - **E** `spec/session_owners.md` and this close.
 
+Beside the ladder, #2587 swapped the details card's two sub-cards (UI
+settings left, Tags right) and removed a doubled bottom margin under
+its Save cluster — the author's ruling after rung D, with a read of its
+own (nothing blocking).
+
 **Diverged from the plan**: the route name, and the save's atomicity —
 both judgment calls above. The Remove table above is the baseline;
 `spec/session_owners.md` §3 carries the one as shipped.
@@ -2833,8 +2838,10 @@ reach the dev slot yet (2026-09-23).
   shipped, not the baseline above), staging and the save (Item 10).
 - `spec/README.md` — a row for the new spec (Item 10).
 - `spec/session_home.md` — the Owners card leaves the details card for
-  its own, below the Danger Zone; Tags takes its slot; points at the new
-  spec (Item 10).
+  its own, below the Danger Zone; Tags takes a slot, then swaps sides
+  with User interface settings (UI settings left, Tags right with the
+  Save cluster under it — author's ruling, 2026-09-23, #2587); points at
+  the new spec (Item 10).
 - `spec/operator_ui_concept.md` — Create's Owners paragraph points at
   the new spec (Item 10).
 - `spec/permissions.md` — §4.2 gains Create's path and the card's
