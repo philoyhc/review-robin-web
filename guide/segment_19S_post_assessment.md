@@ -2146,7 +2146,8 @@ contradiction.
 `.config-value` div, `data-display-only`, holding the tags
 comma-joined, em dash when there are none, as `help_contact` and
 `description` do; edit mode swaps in the `data-edit-only` input on the
-same string. **The `<h3>` is the label**, as on Create's Tags card
+same string. *(Superseded after the close: the locked view is the
+lobby's pills — see `Status`.)* **The `<h3>` is the label**, as on Create's Tags card
 (corrected at rung 1: the plan said a `<label for=…>`, on the premise
 the field sits among fields — it sits in its own card, where a label
 under the heading repeats it, which the author rejected on Create).

@@ -192,8 +192,10 @@ def test_locked_it_renders_the_lobbys_pills(
     _tag(db, review_session, ["pilot", "2026"])
     card = _card(client.get(f"/operator/sessions/{review_session.id}").text)
 
+    # Nested, not merely following: the wrapper must hold the pills, or
+    # they stay visible in edit mode.
+    assert re.search(r'<div data-display-only>\s*<div class="session-tags">', card)
     display = card.split("<div data-display-only>", 1)[1].split("<input", 1)[0]
-    assert '<div class="session-tags">' in display
     assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', display) == [
         "2026",
         "pilot",
