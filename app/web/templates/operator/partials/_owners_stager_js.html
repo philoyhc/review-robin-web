@@ -1,9 +1,11 @@
-{# Owners stager — 19S Item 9 Part A, written for Item 10 to reuse.
+{# Owners stager — 19S Item 9 Part A. **Create's Owners card only**:
+   Session Home's card staged with it for a while (19S Item 10), until
+   the author ruled that there each Add owner and Remove saves at once
+   (2026-09-23).
 
    Turns an Owners card's one-at-a-time picker into a **staged** editor:
    Add owner appends a row to the owners table and Remove takes one out,
-   and nothing is written until the form's own save — Create session on
-   the Create page, the Owners card's Save on Session Home (Item 10).
+   and nothing is written until the form's own save — Create session.
    Each staged row carries a hidden input bound to that form, so the
    rows *are* the owner set the save receives.
 
@@ -20,15 +22,15 @@
      data-owners-self="<email>"       on the card: the signed-in operator;
                                       removing their own row asks first
 
-   Three rules for every card, from Session Home (19S Item 10, author's
-   rulings, 2026-09-23), harmless on Create:
+   Three rules from Session Home's staged days (19S Item 10, author's
+   rulings, 2026-09-23), kept because they are harmless on Create:
 
    - **The last owner cannot be removed**: whenever one owner row is
      left, every Remove is disabled. The server refuses an empty set too.
    - **Removing yourself asks first**, at the click — you lose access to
      the session once it saves. Canceling the dialog keeps the row.
-   - **The form's reset restores the rows it was rendered with**, so
-     Session Home's Cancel (a ``type="reset"`` button) undoes staging.
+   - **The form's reset restores the rows it was rendered with**, so a
+     ``type="reset"`` Cancel would undo staging.
 
    **The staging buttons ship ``hidden``** and are shown here, because
    without JavaScript they would do nothing (19S Item 10).
@@ -41,8 +43,7 @@
    the email is operator-typed.
 
    Every change dispatches a bubbling ``change`` event, so a card that
-   gates its Save on a change (Session Home's) sees it; Create ignores
-   it. #}
+   gates its Save on a change can see it; Create ignores it. #}
 <script>
   (function () {
     document.querySelectorAll('[data-owners-stager]').forEach(function (card) {

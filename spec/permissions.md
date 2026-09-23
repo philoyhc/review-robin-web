@@ -184,7 +184,6 @@ Full card + staging contract: `spec/session_owners.md`.
 | Action | Route | Gate | Guards | Audit event |
 |---|---|---|---|---|
 | Create's owners | `POST /operator/sessions` | router-level `require_operator` (no session to own yet) | `not_in_workspace` on any staged address — **422**, nothing created | `session.owner_added` per co-owner |
-| Save owners (Session Home's card) | `POST /operator/sessions/{id}/owners/save` | `require_session_operator` | any lifecycle state; applies only the changes against the rendered `owners_original`; `not_in_workspace` (an added address), `last_owner` (result would be empty), `owners_changed` (clash with a concurrent save) — all land back on the card's banner, nothing written | `session.owner_added` / `session.owner_removed` |
 | Add owner | `POST /operator/sessions/{id}/owners/add` | `require_sys_admin_or_session_operator` | `not_in_workspace` (target lacks both flags — admit them first), `already_owner`; handler-level `self_only` for a non-owner sys-admin | `session.owner_added` |
 | Remove owner | `POST …/owners/{user_id}/remove` | `require_session_operator` | `not_owner`, `last_owner` (would leave zero owners; the owner set is locked `FOR UPDATE` before counting so two concurrent removals cannot both pass) | `session.owner_removed` |
 | Adopt (sys-admin self-add) | `POST /operator/sys-admin/sessions/{id}/adopt` | `require_sys_admin` | idempotent; `already_owner` swallowed | `session.owner_added` |
@@ -192,11 +191,10 @@ Full card + staging contract: `spec/session_owners.md`.
 The creator is inserted as the inaugural owner inside
 `sessions.create_session`; a clone inserts the cloner as owner of the
 new session (`session_clone`). Self-removal is allowed when another
-owner remains. `owners/add` and `owners/{user_id}/remove` keep their
-original gates and no lifecycle check — Session Home's card calls
-neither directly; its own Save (`owners/save`) applies the whole delta
-itself, and a `<noscript>` per-row Remove is the only on-page caller
-left of the old remove route (`spec/session_owners.md` §7).
+owner remains, and redirects to the sessions lobby. `owners/add` and
+`owners/{user_id}/remove` carry no lifecycle check; Session Home's
+Owners card posts to them directly, each action saving at once (author's
+ruling, 2026-09-23; `spec/session_owners.md` §2 and §7).
 
 ---
 
@@ -216,9 +214,8 @@ the operation-level mappings.
 | `self_action` | **400** | `_sys_admin._handle_toggle` |
 | `requires_super_admin` | **403** | same |
 | `last_admin`, `owns_sessions`, `still_owner`, `sole_owner`, `protected_super_admin` | **409** | same |
-| `last_owner` on remove-owner (old per-row route) | **409** | `_session_home.session_owners_remove` |
-| every other owner error on the old per-row routes (`not_in_workspace`, `already_owner`, `not_owner`, `self_only`) | **303** back to Session Home with `?owners_error=<code>` | same |
-| any refusal on the Owners card's own save (`not_in_workspace`, `last_owner`, `owners_changed`) — including `last_owner`, unlike the old route above; a stale removal is a no-op there, not `not_owner` | **303** back to `#owners-card` with `?owners_error=<code>`; nothing written | `_session_home.session_owners_save` |
+| `last_owner` on remove-owner | **409** (the card disables that Remove, so only a direct POST or a concurrent remove reaches it) | `_session_home.session_owners_remove` |
+| every other owner error on `owners/add` / `owners/{user_id}/remove` (`not_in_workspace`, `already_owner`, `not_owner`, `self_only`) | **303** back to `#owners-card` with `?owners_error=<code>` | same |
 | `not_in_workspace` on Create's Owners card — checked before the session exists, so nothing is created | **422** | `_quick_setup.create_session` |
 | Lifecycle refusals (`_require_editable`, `not_draft`, `locked`, …) | **409** (or 400 for missing acknowledgements) | `_shared.py`; contract in `spec/lifecycle.md` |
 

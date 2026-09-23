@@ -30,7 +30,6 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, SessionOperator, User
@@ -92,15 +91,15 @@ def _workspace_operators(db: Session) -> list[User]:
     )
 
 
-def session_owner_candidates(db: Session) -> list[User]:
-    """The Add-owner picker's candidates on Session Home (19S Item 10).
-
-    **Every** workspace operator, current owners included (author's
-    ruling, 2026-09-23): owners are staged, so one removed in the table
-    can be picked again before Save. The stager already ignores an
-    address that is in the table.
-    """
-    return _workspace_operators(db)
+def session_owner_candidates(
+    db: Session, review_session: ReviewSession
+) -> list[User]:
+    """The Add-owner picker's candidates on Session Home: workspace
+    operators not already owners. Add owner saves at once (author's
+    ruling, 2026-09-23), so an existing owner would only be refused
+    ``already_owner``."""
+    owner_ids = {row.user_id for row in list_owners(db, review_session)}
+    return [u for u in _workspace_operators(db) if u.id not in owner_ids]
 
 
 def new_session_owner_candidates(db: Session, creator: User) -> list[User]:
@@ -306,94 +305,6 @@ def resolve_owners(db: Session, emails: list[str]) -> list[User]:
     return resolved
 
 
-def apply_owner_changes(
-    db: Session,
-    *,
-    review_session: ReviewSession,
-    actor: User,
-    original: list[str],
-    wanted: list[str],
-    correlation_id: str | None = None,
-) -> None:
-    """Save Session Home's Owners card **as changes**, in one transaction.
-
-    The card posts the owners it was rendered with (``original``) beside
-    the ones its table holds now (``wanted``). Only the difference is
-    applied (19S Item 10, author's ruling 2026-09-23): addresses added in
-    the table are added, addresses removed from it are removed, and every
-    other owner is left as the session has it **now** — so a page left
-    open while another owner saved neither drops the owner they added
-    nor restores one they removed, and an untouched table changes no one.
-
-    The delta is applied to the owner rows **locked at write time**, not
-    resolved into a whole set beforehand, so a save committed before this
-    one takes its lock is not overwritten, and an addition or removal it
-    already made is simply satisfied. Under Postgres's READ COMMITTED a
-    save committing *while* this one waits on the lock can still make it
-    refuse — a duplicate insert, or ``last_owner`` counting without the
-    other's additions — but never break the one-owner rule.
-    Only the additions are validated (``resolve_owners``), so an owner
-    who has since lost operator status blocks nothing.
-
-    **All or nothing**: the adds, removes and their audit events share
-    one commit, and any refusal rolls every one of them back — a
-    non-operator address, a result with no owner left (``last_owner``),
-    or a clash with a concurrent save (``owners_changed``).
-    """
-
-    def _normalized(emails: list[str]) -> list[str]:
-        seen: list[str] = []
-        for raw in emails:
-            if raw and raw.strip():
-                email = normalize_email(raw)
-                if email not in seen:
-                    seen.append(email)
-        return seen
-
-    before = _normalized(original)
-    after = _normalized(wanted)
-    additions = resolve_owners(db, [email for email in after if email not in before])
-    removals = {email for email in before if email not in after}
-    try:
-        rows = {row.user_id: row for row in _lock_owner_rows(db, review_session)}
-        for target in additions:
-            if target.id not in rows:
-                rows[target.id] = _insert_owner(
-                    db,
-                    review_session=review_session,
-                    actor=actor,
-                    target=target,
-                    correlation_id=correlation_id,
-                )
-        for user_id, row in list(rows.items()):
-            target = db.get(User, user_id)
-            if normalize_email(target.email) in removals:
-                _delete_owner(
-                    db,
-                    review_session=review_session,
-                    actor=actor,
-                    target=target,
-                    row=row,
-                    correlation_id=correlation_id,
-                )
-                del rows[user_id]
-        if not rows:
-            raise OwnerOperationError(
-                code="last_owner",
-                message="A session always keeps at least one owner.",
-            )
-        db.commit()
-    except IntegrityError as exc:
-        db.rollback()
-        raise OwnerOperationError(
-            code="owners_changed",
-            message="Another save changed this session's owners at the same time.",
-        ) from exc
-    except OwnerOperationError:
-        db.rollback()
-        raise
-
-
 def set_owners(
     db: Session,
     *,
@@ -412,8 +323,7 @@ def set_owners(
     ``add_owner`` / ``remove_owner``, so the audit events, the lock and
     the invariants are theirs; a target already an owner, or an owner
     kept, emits nothing. Validate the list with ``resolve_owners`` (Create)
-    first. Session Home's card saves changes instead, through
-    ``apply_owner_changes``.
+    first.
     """
     if not targets:
         raise OwnerOperationError(

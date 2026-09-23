@@ -234,11 +234,12 @@ shown, no display/edit swap; full contract in `spec/session_owners.md`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 159 | Owners card | Add owner | `<button type="button">` | `btn secondary` | Secondary | Was Primary as a details-sub-card submit (pre-19S.10); now stages a row via `_owners_stager_js`, same as Create's #186. Ships `hidden`, un-hidden by the stager |
-| 188 | Owners card | Save | `<button type="submit">` | `btn secondary` | Secondary | Posts the table plus `owners_original` to `owners/save`. Rendered enabled (no-JS works); the gating script disables it until the table or the picker changes |
-| 189 | Owners card | Cancel | `<button type="reset">` | `btn secondary` | Secondary | Resets the card's own form; the stager rebuilds the table on `reset` |
-| 190 | Owners card | Remove (per row) | `<button type="button">` | `chrome-link` | **Not `.btn`** — see #187's note | Stages a row out client-side; `disabled` whenever one owner row remains; a `confirm()` first on your own row |
-| 191 | Owners card | Remove, no-JS fallback | `<button type="submit">` | `chrome-link` | **Not `.btn`** — see #187's note | `<noscript>` per-row form posting straight to the old `owners/{user_id}/remove` route, saved at once. Omitted on the last owner's row and your own |
+| 159 | Owners card | Add owner | `<button type="submit">` | `btn secondary` | Secondary | Posts the picker's address to `owners/add` and saves at once (author's ruling, 2026-09-23). Was Primary as a details-sub-card submit before 19S.10 |
+| 190 | Owners card | Remove (per row) | `<button type="submit">` | `chrome-link` | **Not `.btn`** — see #187's note | Its own form per row, posting to `owners/{user_id}/remove`; saves at once. `disabled` when one owner remains; your own row's form asks first (`confirm()` on submit) |
+
+Rows 188, 189 and 191 — the card's staged **Save**, **Cancel** and a
+`<noscript>` Remove fallback — retired with the staging on the author's
+ruling of 2026-09-23; the numbers are not reused.
 
 ---
 
