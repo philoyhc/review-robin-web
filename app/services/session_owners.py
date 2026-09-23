@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, SessionOperator, User
@@ -139,6 +140,27 @@ def add_owner(
             code="already_owner",
             message=f"{target.email} is already an owner of this session.",
         )
+    row = _insert_owner(
+        db,
+        review_session=review_session,
+        actor=actor,
+        target=target,
+        correlation_id=correlation_id,
+    )
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def _insert_owner(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    actor: User,
+    target: User,
+    correlation_id: str | None,
+) -> SessionOperator:
+    """Insert the owner row and its audit event; the caller commits."""
     row = SessionOperator(
         session_id=review_session.id,
         user_id=target.id,
@@ -158,8 +180,6 @@ def add_owner(
         refs={"target_user_id": target.id},
         correlation_id=correlation_id,
     )
-    db.commit()
-    db.refresh(row)
     return row
 
 
@@ -179,11 +199,7 @@ def remove_owner(
     # invariant atomic on Postgres (the deployed dialect); SQLite
     # ignores ``FOR UPDATE`` silently — fine for tests, no
     # concurrency to race in-process.
-    locked_rows = db.execute(
-        select(SessionOperator)
-        .where(SessionOperator.session_id == review_session.id)
-        .with_for_update()
-    ).scalars().all()
+    locked_rows = _lock_owner_rows(db, review_session)
     target_row = next(
         (r for r in locked_rows if r.user_id == target.id), None
     )
@@ -200,7 +216,41 @@ def remove_owner(
                 "second owner before removing this one."
             ),
         )
-    db.delete(target_row)
+    _delete_owner(
+        db,
+        review_session=review_session,
+        actor=actor,
+        target=target,
+        row=target_row,
+        correlation_id=correlation_id,
+    )
+    db.commit()
+
+
+def _lock_owner_rows(
+    db: Session, review_session: ReviewSession
+) -> list[SessionOperator]:
+    """The session's owner rows, locked ``FOR UPDATE`` (see ``remove_owner``)."""
+    return list(
+        db.execute(
+            select(SessionOperator)
+            .where(SessionOperator.session_id == review_session.id)
+            .with_for_update()
+        ).scalars()
+    )
+
+
+def _delete_owner(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    actor: User,
+    target: User,
+    row: SessionOperator,
+    correlation_id: str | None,
+) -> None:
+    """Delete the owner row and write its audit event; the caller commits."""
+    db.delete(row)
     db.flush()
     audit.write_event(
         db,
@@ -209,12 +259,11 @@ def remove_owner(
         actor_user_id=actor.id,
         session=review_session,
         payload=audit.snapshot(
-            {"user_id": target.id, "email": target.email, "role": target_row.role}
+            {"user_id": target.id, "email": target.email, "role": row.role}
         ),
         refs={"target_user_id": target.id},
         correlation_id=correlation_id,
     )
-    db.commit()
 
 
 def resolve_owners(db: Session, emails: list[str]) -> list[User]:
@@ -253,6 +302,91 @@ def resolve_owners(db: Session, emails: list[str]) -> list[User]:
     return resolved
 
 
+def apply_owner_changes(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    actor: User,
+    original: list[str],
+    wanted: list[str],
+    correlation_id: str | None = None,
+) -> None:
+    """Save Session Home's Owners card **as changes**, in one transaction.
+
+    The card posts the owners it was rendered with (``original``) beside
+    the ones its table holds now (``wanted``). Only the difference is
+    applied (19S Item 10, author's ruling 2026-09-23): addresses added in
+    the table are added, addresses removed from it are removed, and every
+    other owner is left as the session has it **now** — so a page left
+    open while another owner saved neither drops the owner they added
+    nor restores one they removed, and an untouched table changes no one.
+
+    The delta is applied to the owner rows **locked at write time**, not
+    resolved into a whole set beforehand, so a save that lands between
+    this one's read and write is not overwritten; an addition someone
+    already made, or a removal someone already made, is simply satisfied.
+    Only the additions are validated (``resolve_owners``), so an owner
+    who has since lost operator status blocks nothing.
+
+    **All or nothing**: the adds, removes and their audit events share
+    one commit, and any refusal rolls every one of them back — a
+    non-operator address, a result with no owner left (``last_owner``),
+    or a concurrent insert of the same owner (``already_owner``).
+    """
+
+    def _normalized(emails: list[str]) -> list[str]:
+        seen: list[str] = []
+        for raw in emails:
+            if raw and raw.strip():
+                email = normalize_email(raw)
+                if email not in seen:
+                    seen.append(email)
+        return seen
+
+    before = _normalized(original)
+    after = _normalized(wanted)
+    additions = resolve_owners(db, [email for email in after if email not in before])
+    removals = {email for email in before if email not in after}
+    try:
+        rows = {row.user_id: row for row in _lock_owner_rows(db, review_session)}
+        for target in additions:
+            if target.id not in rows:
+                rows[target.id] = _insert_owner(
+                    db,
+                    review_session=review_session,
+                    actor=actor,
+                    target=target,
+                    correlation_id=correlation_id,
+                )
+        for user_id, row in list(rows.items()):
+            target = db.get(User, user_id)
+            if normalize_email(target.email) in removals:
+                _delete_owner(
+                    db,
+                    review_session=review_session,
+                    actor=actor,
+                    target=target,
+                    row=row,
+                    correlation_id=correlation_id,
+                )
+                del rows[user_id]
+        if not rows:
+            raise OwnerOperationError(
+                code="last_owner",
+                message="A session always keeps at least one owner.",
+            )
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise OwnerOperationError(
+            code="already_owner",
+            message="Another save added the same owner at the same time.",
+        ) from exc
+    except OwnerOperationError:
+        db.rollback()
+        raise
+
+
 def set_owners(
     db: Session,
     *,
@@ -270,7 +404,9 @@ def set_owners(
     session always keeps one owner. Each change goes through
     ``add_owner`` / ``remove_owner``, so the audit events, the lock and
     the invariants are theirs; a target already an owner, or an owner
-    kept, emits nothing. Validate the list with ``resolve_owners`` first.
+    kept, emits nothing. Validate the list with ``resolve_owners`` (Create)
+    first. Session Home's card saves changes instead, through
+    ``apply_owner_changes``.
     """
     if not targets:
         raise OwnerOperationError(
