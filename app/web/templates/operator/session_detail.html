@@ -349,7 +349,10 @@
            precedence*). #}
         <div class="card" id="config-tags-card">
           <h3 style="margin-top: 0;" id="config-tags-heading">Tags (optional)</h3>
-          <p class="muted">Comma-separated; also editable from the sessions list.</p>
+          <p class="muted" data-edit-only>Comma-separated; also editable from the sessions list.</p>
+          {# The subtitle above is edit-only: it describes the box, and
+             locked there is no box — just the pills (author's ruling,
+             2026-09-23). #}
           {# Locked, the tags are the lobby's pills (author's ruling,
              2026-09-23), not a comma-joined ``.config-value``; the edit
              box stays comma-separated. The wrapper carries
