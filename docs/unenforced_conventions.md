@@ -366,6 +366,51 @@ the joke it sounds like.
   unenforced conventions is for, and is not an argument that this one
   should be enforced.
 
+---
+
+### 1.12 Two visible card borders never touch
+
+- **Written down at** `spec/visual_style_general.md` P8, with the value
+  (20px) on that file's spacing scale and this app's mechanism in
+  `spec/ui_elements.md` §4. Author's rule, 2026-09-23.
+- **The instance.** 19S Item 6 put a second card under an existing one
+  in a `.bottom-grid` cell. `.bottom-grid .card` zeroes `margin-bottom`
+  so the grid owns spacing, which was complete while every cell held one
+  card — and the two rendered flush. The suite was green; the dev slot
+  caught it. The item's later cold read then caught the fix reaching for
+  a new app-wide rule instead of `.bottom-left`, which is the second way
+  this goes wrong.
+- **The survey, 2026-09-23**, taken in Chromium at 1280px from test-client
+  output of Session Home (edit and display) and the Create page: every
+  card-to-card gap **20px** — top-level and nested, above/below and side
+  by side; grid gaps between regions inside the details card **20px**;
+  card padding **16px**. One value differs: the last field block to the
+  row of nested cards inside the details card is **24px**. Noted, not
+  changed.
+- **What the survey could not see.** It measured two pages. The first
+  draft of this entry and of P8 said *every* card gap was 20px, and the
+  `spec-writer` pass on this slice found two tile patterns that are not:
+  `.subcard-row`'s tile cards, 12px apart (the lobby's first-run card),
+  and `.data-shape-card` tiles on Extract Data with an 8px `margin-top`
+  — the latter read from the stylesheet, **not measured**. Both keep
+  their borders apart, so P8 holds, and the author ruled the same day
+  that tile rows **stay tighter** rather than take the 20px step. The
+  rest of the app is unsurveyed, which is §1.6's point made on this
+  entry's own first draft.
+- **Why not.** pytest has no layout engine. A template test can assert
+  a class is present, and did — Item 6's test checks the cell is a
+  `.bottom-left` — but not that the resulting gap is non-zero, because
+  which rule wins on an element is decided by the browser. A class check
+  guards one known mechanism, not the rule: the next page could space
+  its cards another way, or break them another way.
+  A browser in CI would enforce the rule itself, and is a new dependency
+  and a new failure mode for one rule.
+- **What covers it instead.** Measuring the gap when a card is added:
+  dump the rendered page from the test client and read
+  `getBoundingClientRect()` in Chromium, as `tools/css_parity_check.py`
+  does, at 1280 and 700px. Then the dev slot. 19S Item 9's definition of
+  done requires it for its own cards; nothing requires it anywhere else.
+
 ## 2. Enforceable but not enforced — the revisit queue
 
 None of these needs an allowlist, and each would pass on the current
