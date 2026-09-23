@@ -188,6 +188,11 @@ classes.
 > card by measuring its gap to the card above in a browser, not by
 > reading the CSS — `docs/unenforced_conventions.md` §1.12 says why no
 > test does it.
+> **Tiles grouped inside one card are tighter, and not yet ruled on.**
+> `.subcard-row` spaces its tile cards 12px apart (`--space-3`; the
+> lobby's first-run card), and `.data-shape-card` tiles on Extract Data
+> carry an 8px `margin-top`. Neither touches, so neither breaks P8; whether
+> they should move to 20px is open.
 
 > **`.card.lock` (warning-framed, lifecycle-locked)** — `.card`'s shape
 > with `--card-warning-bg` fill and `--card-warning-border` border (the
@@ -962,10 +967,11 @@ that owns them. Each is stated in full above; none is decided here.
 - **Pills inline in copy.** Confirm labels wrap count phrases as
   `.pill-empty` chips so the eye lands on the numbers without bolding the
   whole sentence.
-- **Cards never touch** (`visual_style_general.md` P8). Every card gap
-  is 20px, set by a wrapper's `gap` or a bare card's `margin-bottom`;
-  two cards stacked in one grid cell go in a `.bottom-left`. Stated in
-  full in §4.
+- **Cards never touch** (`visual_style_general.md` P8). Cards on a page,
+  and cards in a grid inside a card, are 20px apart — set by a wrapper's
+  `gap` or a bare card's `margin-bottom`; two cards stacked in one grid
+  cell go in a `.bottom-left`. Tiles grouped inside a card are tighter.
+  Stated in full in §4.
 - **`.bottom-grid` for natural-height pairs.** When two cards in a
   two-column layout do not carry the same weight, prefer `.bottom-grid`
   over `.page-grid`; `.page-grid`'s equal-height stretch is for the
