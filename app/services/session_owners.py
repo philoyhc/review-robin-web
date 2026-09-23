@@ -29,11 +29,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, SessionOperator, User
 from app.services import audit
+from app.services.email_identity import normalize_email
 
 
 @dataclass(frozen=True)
@@ -214,3 +215,90 @@ def remove_owner(
         correlation_id=correlation_id,
     )
     db.commit()
+
+
+def resolve_owners(db: Session, emails: list[str]) -> list[User]:
+    """Validate a desired owner list before anything is written.
+
+    19S Item 9 (Create) and Item 10 (Session Home) stage owner rows in a
+    form and save them with the page, so the whole list is checked up
+    front: one bad email must refuse the save, not land half of it.
+    Blank entries are skipped, case is folded and duplicates collapse,
+    in the order given. Every email must be a user ``add_owner`` would
+    accept — a workspace operator or sys-admin — or the call raises
+    ``not_in_workspace`` naming it. An empty result is returned as-is;
+    ``set_owners`` refuses it.
+    """
+    resolved: list[User] = []
+    seen: set[int] = set()
+    for raw in emails:
+        if not raw or not raw.strip():
+            continue
+        email = normalize_email(raw)
+        target = db.execute(
+            select(User).where(func.lower(User.email) == email)
+        ).scalar_one_or_none()
+        if target is None or not (target.is_operator or target.is_sys_admin):
+            raise OwnerOperationError(
+                code="not_in_workspace",
+                message=(
+                    f"{raw.strip()} is not on the workspace operator "
+                    "allowlist. Admit them via the Admin → Accounts "
+                    "Management page first."
+                ),
+            )
+        if target.id not in seen:
+            seen.add(target.id)
+            resolved.append(target)
+    return resolved
+
+
+def set_owners(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    actor: User,
+    targets: list[User],
+    correlation_id: str | None = None,
+) -> tuple[list[User], list[User]]:
+    """Replace a session's owner set with ``targets``; return (added, removed).
+
+    The owners counterpart of ``session_tags.set_tags``. It **adds before
+    it removes**, so the set never passes through zero and
+    ``remove_owner``'s last-owner guard is never the thing that stops a
+    valid replacement. An empty ``targets`` is refused outright — a
+    session always keeps one owner. Each change goes through
+    ``add_owner`` / ``remove_owner``, so the audit events, the lock and
+    the invariants are theirs; a target already an owner, or an owner
+    kept, emits nothing. Validate the list with ``resolve_owners`` first.
+    """
+    if not targets:
+        raise OwnerOperationError(
+            code="last_owner",
+            message="A session always keeps at least one owner.",
+        )
+    current = {row.user_id for row in list_owners(db, review_session)}
+    wanted = {target.id for target in targets}
+    added: list[User] = []
+    for target in targets:
+        if target.id not in current:
+            add_owner(
+                db,
+                review_session=review_session,
+                actor=actor,
+                target=target,
+                correlation_id=correlation_id,
+            )
+            added.append(target)
+    removed: list[User] = []
+    for user_id in sorted(current - wanted):
+        target = db.get(User, user_id)
+        remove_owner(
+            db,
+            review_session=review_session,
+            actor=actor,
+            target=target,
+            correlation_id=correlation_id,
+        )
+        removed.append(target)
+    return added, removed

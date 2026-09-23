@@ -1,0 +1,132 @@
+{# Owners stager — 19S Item 9 Part A, written for Item 10 to reuse.
+
+   Turns an Owners card's one-at-a-time picker into a **staged** editor:
+   Add owner appends a row to the owners table and Remove takes one out,
+   and nothing is written until the page's own save — Create session on
+   the Create page, the details card's Save on Session Home (Item 10).
+   Each staged row carries a hidden input bound to that form, so the
+   rows *are* the owner set the save receives.
+
+   The card declares its wiring; the script hard-codes no page:
+
+     [data-owners-stager]             the card
+       data-owners-form="<form id>"   the form the rows submit with
+       data-owners-name="owners"      the field name (default "owners")
+     [data-owners-table]              the owners table
+     [data-owners-email]              the picker's email input
+     [data-owners-add]                the Add owner button
+     [data-owners-remove]             a row's Remove (a row without one is
+                                      fixed, e.g. the creator on Create)
+
+   **Without JavaScript** the email input keeps its own ``name`` and
+   ``form=``, so the one address typed there submits with the page. With
+   JavaScript that still holds for an address typed and never added,
+   which is kept rather than silently dropped. Rows are built with
+   ``createElement`` and ``textContent`` — never ``innerHTML`` — because
+   the email is operator-typed.
+
+   Every change dispatches a bubbling ``change`` event, so a card that
+   tracks unsaved edits (Session Home's) sees it; Create ignores it. #}
+<script>
+  (function () {
+    document.querySelectorAll('[data-owners-stager]').forEach(function (card) {
+      var table = card.querySelector('[data-owners-table]');
+      var input = card.querySelector('[data-owners-email]');
+      var add = card.querySelector('[data-owners-add]');
+      if (!table || !input || !add) return;
+      var formId = card.getAttribute('data-owners-form');
+      var fieldName = card.getAttribute('data-owners-name') || 'owners';
+      var body = table.tBodies[0] || table;
+
+      function staged() {
+        return Array.prototype.map.call(
+          table.querySelectorAll('input[type="hidden"][name="' + fieldName + '"]'),
+          function (hidden) { return hidden.value.toLowerCase(); }
+        );
+      }
+
+      function labelFor(email) {
+        var list = input.list;
+        if (!list) return '';
+        for (var i = 0; i < list.options.length; i += 1) {
+          var option = list.options[i];
+          if (option.value.toLowerCase() === email.toLowerCase()) {
+            return option.textContent.trim();
+          }
+        }
+        return '';
+      }
+
+      function cell(row, text) {
+        var td = document.createElement('td');
+        if (text !== undefined) td.textContent = text;
+        row.appendChild(td);
+        return td;
+      }
+
+      function announce(target) {
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      function addRow(email) {
+        var row = document.createElement('tr');
+        row.setAttribute('data-owners-row', '');
+        var code = document.createElement('code');
+        code.textContent = email;
+        cell(row).appendChild(code);
+        var label = labelFor(email);
+        cell(row, label && label.toLowerCase() !== email.toLowerCase() ? label : '—');
+        cell(row, 'owner');
+        cell(row, '—');
+        var action = cell(row);
+        action.className = 'col-shrink';
+        var remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'chrome-link';
+        remove.setAttribute('data-owners-remove', '');
+        remove.textContent = 'Remove';
+        action.appendChild(remove);
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = fieldName;
+        if (formId) hidden.setAttribute('form', formId);
+        hidden.value = email;
+        action.appendChild(hidden);
+        body.appendChild(row);
+        announce(hidden);
+      }
+
+      add.addEventListener('click', function () {
+        var email = input.value.trim();
+        if (!email) {
+          input.focus();
+          return;
+        }
+        if (!input.checkValidity()) {
+          input.reportValidity();
+          return;
+        }
+        if (staged().indexOf(email.toLowerCase()) === -1) addRow(email);
+        input.value = '';
+        input.focus();
+      });
+
+      // Enter in the picker adds the address rather than submitting the
+      // whole page with it half-entered.
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          add.click();
+        }
+      });
+
+      table.addEventListener('click', function (event) {
+        var remove = event.target.closest('[data-owners-remove]');
+        if (!remove) return;
+        var row = remove.closest('tr');
+        if (row) row.remove();
+        announce(table);
+      });
+    });
+  })();
+</script>

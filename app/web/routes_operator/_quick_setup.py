@@ -39,6 +39,7 @@ from app.services import (
     relationships as relationships_service,
     scheduled_events,
     session_config_io,
+    session_owners,
     session_tags,
     sessions,
 )
@@ -73,6 +74,7 @@ async def create_session(
     responses_release_at: str | None = Form(default=None),
     responses_release_until: str | None = Form(default=None),
     tags: str | None = Form(default=None),
+    owners: list[str] = Form(default=[]),
     reviewers_file: UploadFile | None = File(default=None),
     reviewees_file: UploadFile | None = File(default=None),
     relationships_file: UploadFile | None = File(default=None),
@@ -187,6 +189,24 @@ async def create_session(
             detail=str(exc),
         ) from exc
 
+    # 19S Item 9 Part A — the Owners card's staged rows, validated before
+    # the session exists: one email that is not a workspace operator
+    # refuses the create with nothing written, as every other field on
+    # this form does. Applied after the session is created, below.
+    try:
+        owner_targets = session_owners.resolve_owners(db, owners)
+    except session_owners.OwnerOperationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=exc.message,
+        ) from exc
+
+    # One correlation id for the whole create, so every audit event it
+    # produces — the session, each Quick Setup slot, tags, owners — groups
+    # as one request. ``request_correlation_id`` mints a fresh id per call
+    # (19S Item 9 rung 4; Session Home's save got the same fix in rung 2).
+    correlation_id = request_correlation_id()
+
     payload = SessionCreate(
         name=name,
         code=code,
@@ -206,7 +226,7 @@ async def create_session(
         db,
         user=user,
         payload=payload,
-        correlation_id=request_correlation_id(),
+        correlation_id=correlation_id,
     )
 
     # If the operator staged any Quick Setup uploads on the new-session
@@ -247,7 +267,26 @@ async def create_session(
             review_session=review_session,
             user=user,
             tags=tags.split(","),
-            correlation_id=request_correlation_id(),
+            correlation_id=correlation_id,
+        )
+
+    def write_staged_owners() -> None:
+        """Apply the Owners card's staged rows (19S Item 9 Part A).
+
+        The creator is always in the set, so they can never be staged
+        out: a session keeps its first owner. Validated before the
+        session was created, so this cannot fail on an email. Runs on
+        every path the Tags box does — a failed upload keeps what the
+        operator staged, as it keeps what they typed.
+        """
+        if not owner_targets:
+            return
+        session_owners.set_owners(
+            db,
+            review_session=review_session,
+            actor=user,
+            targets=[user, *owner_targets],
+            correlation_id=correlation_id,
         )
 
     def quick_setup_error_redirect(
@@ -259,6 +298,7 @@ async def create_session(
         # and a block that never ran cannot have, so this is still
         # "after the settings CSV" in the only sense that matters.
         write_typed_tags()
+        write_staged_owners()
         return RedirectResponse(
             url=(
                 f"{home_url}?quick_setup_error={kind}"
@@ -281,6 +321,7 @@ async def create_session(
             existing_count_fn=csv_imports.existing_reviewer_count,
             parse_fn=csv_imports.parse_reviewer_csv,
             save_fn=csv_imports.save_reviewers,
+            correlation_id=correlation_id,
         )
         if reason is not None:
             return quick_setup_error_redirect("reviewers", reason)
@@ -298,6 +339,7 @@ async def create_session(
             existing_count_fn=csv_imports.existing_reviewee_count,
             parse_fn=csv_imports.parse_reviewee_csv,
             save_fn=csv_imports.save_reviewees,
+            correlation_id=correlation_id,
         )
         if reason is not None:
             return quick_setup_error_redirect("reviewees", reason)
@@ -310,6 +352,7 @@ async def create_session(
             review_session=review_session,
             user=user,
             db=db,
+            correlation_id=correlation_id,
         )
         if reason is not None:
             return quick_setup_error_redirect("relationships", reason)
@@ -322,6 +365,7 @@ async def create_session(
             review_session=review_session,
             user=user,
             db=db,
+            correlation_id=correlation_id,
         )
         if reason is not None:
             return quick_setup_error_redirect("observers", reason)
@@ -333,12 +377,14 @@ async def create_session(
             review_session=review_session,
             user=user,
             db=db,
+            correlation_id=correlation_id,
         )
         if reason is not None:
             return quick_setup_error_redirect("settings", reason)
         last_fragment = "#quick-setup-settings"
 
     write_typed_tags()
+    write_staged_owners()
 
     # Quick Setup uploads anchor at their fragment on Session Home;
     # a bare create (no uploads) opens the Session details card in edit
@@ -583,6 +629,7 @@ async def _run_quick_setup_relationships(
     review_session: ReviewSession,
     user: User,
     db: Session,
+    correlation_id: str | None = None,
 ) -> str | None:
     """Reusable Relationships-slot pipeline shared by the per-slot
     route and the consolidated ``submit-all`` handler. Returns the
@@ -612,7 +659,7 @@ async def _run_quick_setup_relationships(
         user=user,
         rows=result.rows,
         filename=file.filename or "",
-        correlation_id=request_correlation_id(),
+        correlation_id=correlation_id or request_correlation_id(),
         # Quick Setup is a thin shell over the per-entity primitives
         # (`spec/csv_contracts.md`), so the header's friendly labels
         # reconcile here exactly as they do on the Relationships card
@@ -671,6 +718,7 @@ async def _run_quick_setup_observers(
     review_session: ReviewSession,
     user: User,
     db: Session,
+    correlation_id: str | None = None,
 ) -> str | None:
     """Reusable Observers-slot pipeline shared by the per-slot
     route and the consolidated ``submit-all`` handler. Returns the
@@ -716,7 +764,7 @@ async def _run_quick_setup_observers(
         user=user,
         rows=result.rows,
         filename=file.filename or "",
-        correlation_id=request_correlation_id(),
+        correlation_id=correlation_id or request_correlation_id(),
     )
     return None
 
@@ -733,6 +781,7 @@ async def _run_quick_setup_import(
     existing_count_fn,
     parse_fn,
     save_fn,
+    correlation_id: str | None = None,
 ) -> str | None:
     """Reusable parse / save pipeline shared by the per-slot routes
     and the consolidated ``submit-all`` handler. Returns the
@@ -776,7 +825,7 @@ async def _run_quick_setup_import(
         user=user,
         rows=result.rows,
         filename=file.filename or "",
-        correlation_id=request_correlation_id(),
+        correlation_id=correlation_id or request_correlation_id(),
         # Same reason as the relationships helper above: this is the
         # only save site behind five upload routes, and the labels it
         # drops cannot be recovered from anywhere else.
@@ -975,6 +1024,7 @@ async def _run_quick_setup_settings(
     review_session: ReviewSession,
     user: User,
     db: Session,
+    correlation_id: str | None = None,
 ) -> str | None:
     """Reusable Settings-slot pipeline shared by the per-slot
     route, the submit-all handler, and the create-session
@@ -997,7 +1047,7 @@ async def _run_quick_setup_settings(
         review_session,
         rows,
         user=user,
-        correlation_id=request_correlation_id(),
+        correlation_id=correlation_id or request_correlation_id(),
     )
     if not result.ok:
         return "parse"

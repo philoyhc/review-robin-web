@@ -2249,7 +2249,7 @@ Taken 2026-09-22 at `d4b1ba9`.
    picked operator as a table row carrying a hidden `owners` input
    (Remove drops it); without JavaScript the email box itself submits
    one owner. Staged rows applied after `create_session`, with the two
-   rejections surfaced — **plus one
+   rejections surfaced. ✅ 2026-09-23 — **plus one
    correlation id for the whole create** (author's ruling, 2026-09-23).
    `request_correlation_id()` mints a fresh id per call, and the Create
    route calls it for the session, each Quick Setup slot and the tag
@@ -2359,6 +2359,37 @@ helpers. The first draft's route-wiring mutation **crashed on a missing
 import** and failed on a 500, which reads as caught and proves nothing;
 rerun cleanly it fails on two owners. **Spacing measured in Chromium**:
 Tags → Owners **20px** at 1280 and 700px, with a candidate present.
+
+**Rung 4 done, 2026-09-23** — owners on Create save with Create
+session, built for Item 10 to reuse. **`session_owners.resolve_owners`**
+validates the whole list first (blanks skipped, case folded,
+duplicates collapsed, anyone `add_owner` would refuse raises
+`not_in_workspace`); **`set_owners`** replaces the set, adding before
+it removes so a session never passes through zero, and refusing an empty
+set outright. The route resolves the list **before** creating the
+session — a bad address is a 422 with nothing written, like every other
+field on the form — then applies it with the creator always kept, on
+the failed-upload path too, as Tags does. **One correlation id for the
+whole create**: the route mints it once and hands it to the session,
+each Quick Setup slot, tags and owners; the slot helpers take it as an
+optional parameter, so their other callers still mint their own. The
+**`_owners_stager_js`** partial stages rows declared by data attributes
+on the card, builds them with `textContent` only, and announces each
+change as a bubbling `change` event for Item 10's dirty tracking.
+
+**Driven in Chromium**, since pytest has no JavaScript runtime: add
+takes the name from the suggestion list and clears the box; a
+different-case duplicate is ignored; Enter adds instead of submitting;
+an invalid address is refused; Remove works and the creator's row has
+none; an address typed and never added still submits. No page errors.
+
+**Twelve mutations, ten caught first time.** Both survivors were tests
+passing on something else. An empty set on a one-owner session trips
+`remove_owner`'s own guard, so the test passed without `set_owners`';
+with two owners the unguarded case is a partial write, and the test
+now uses two. And `name="owners"` anywhere in the card was satisfied by
+the creator row's hidden input, so the email box's name could go
+unnoticed; the assertion now reads the box itself.
 
 ### Out of scope
 
