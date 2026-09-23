@@ -52,11 +52,12 @@ def _add_bob(db: Session, review_session: ReviewSession) -> User:
     return bob
 
 
-def _card(body: str) -> str:
-    """The Owners card's markup, opening tag to its closing one, by a
-    ``<div>`` depth scan (the Tags card test's helper)."""
-    anchor = body.find('id="owners-card"')
-    assert anchor != -1, "the Owners card is missing from Session Home"
+def _card(body: str, marker: str = 'id="owners-card"') -> str:
+    """The ``<div>`` carrying ``marker`` — by default the Owners card —
+    opening tag to its closing one, by a depth scan (the Tags card
+    test's helper)."""
+    anchor = body.find(marker)
+    assert anchor != -1, f"{marker} is missing"
     start = body.rfind("<div", 0, anchor)
     depth = 0
     i = start
@@ -158,6 +159,8 @@ def test_add_owner_is_a_form_to_owners_add(client: TestClient, db: Session) -> N
     assert 'name="target_email"' in picker and "required" in picker
     add = _tag(card, 'id="owners-add-submit"')
     assert 'class="btn secondary"' in add and 'type="submit"' in add
+    # Outside its form, beside the lock toggle: ``form=`` is its only link.
+    assert 'form="owners-add-form"' in add
     assert "hidden" not in add
 
 
@@ -324,8 +327,25 @@ def test_the_card_renders_locked_by_default(client: TestClient, db: Session) -> 
     assert "disabled" in _tag(card, 'id="owners-add-submit"')
     # The toggle itself stays live, outside the greyed body.
     assert "disabled" not in _tag(card, 'id="owners-lock-toggle"')
-    body_end = card.index('id="owners-card-body"')
-    assert card.index('id="owners-lock-toggle"') > card.index("</table>", body_end)
+    greyed = _card(card, 'id="owners-card-body"')
+    assert 'id="owners-add-email"' in greyed
+    assert 'id="owners-lock-toggle"' not in greyed
+    # Its form posts the unlock.
+    lock_form = card[card.rfind("<form", 0, card.index('id="owners-lock-toggle"')) :]
+    lock_form = lock_form[: lock_form.index("</form>")]
+    assert f'action="/operator/sessions/{review_session.id}/owners/lock"' in lock_form
+    assert 'name="action"' in lock_form and 'value="unlock"' in lock_form
+
+
+def test_locked_the_last_owners_remove_still_names_the_last_owner_rule(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _create(client, db, "OWN-LOCK-1B")
+    card = _card(_home(client, review_session))
+
+    remove = re.search(r"<button class=\"chrome-link\" type=\"submit\"[^>]*>", card)
+    assert remove and "at least one owner" in remove.group(0)
+    assert "Unlock the card" not in remove.group(0)
 
 
 def test_unlock_enables_the_card_and_lock_restores_it(
@@ -350,10 +370,10 @@ def test_unlock_enables_the_card_and_lock_restores_it(
     assert _toggle(card) == "Lock"
     assert "disabled" not in _tag(card, 'id="owners-add-email"')
     assert "disabled" not in _tag(card, 'id="owners-add-submit"')
-    assert all(
-        "disabled" not in b
-        for b in re.findall(r"<button class=\"chrome-link\" type=\"submit\"[^>]*>", card)
-    )
+    removes = re.findall(r"<button class=\"chrome-link\" type=\"submit\"[^>]*>", card)
+    assert len(removes) == 2
+    assert all("disabled" not in b for b in removes)
+    assert 'value="lock"' in card
 
     client.post(
         f"/operator/sessions/{review_session.id}/owners/lock",

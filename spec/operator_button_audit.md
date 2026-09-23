@@ -234,7 +234,7 @@ shown, no display/edit swap; full contract in `spec/session_owners.md`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 159 | Owners card | Add owner | `<button type="submit">` | `btn secondary` | Secondary | Posts the picker's address to `owners/add` and saves at once (author's ruling, 2026-09-23). Was Primary as a details-sub-card submit before 19S.10 |
+| 159 | Owners card | Add owner | `<button type="submit" form="owners-add-form">` | `btn secondary` | Secondary | Posts the picker's address to `owners/add` and saves at once (author's ruling, 2026-09-23). Sits in the card's action row outside its form, beside Lock / Unlock (#192), and is `disabled` while the card is locked. Was Primary as a details-sub-card submit before 19S.10 |
 | 190 | Owners card | Remove (per row) | `<button type="submit">` | `chrome-link` | **Not `.btn`** — see #187's note | Its own form per row, posting to `owners/{user_id}/remove`; saves at once. `disabled` when one owner remains and while the card is locked; your own row's form asks first (`confirm()` on submit) |
 | 192 | Owners card | Lock / Unlock | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle, as Quick Setup's #32; posts `owners/lock`. Right of Add owner (#159), which it disables along with the picker and every Remove while locked (author's ruling, 2026-09-23) |
 
