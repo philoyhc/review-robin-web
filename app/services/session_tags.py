@@ -8,10 +8,10 @@ it in later 18A slices.
 """
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, SessionTag, User
+from app.db.models import ReviewSession, SessionOperator, SessionTag, User
 from app.services import audit
 
 MAX_TAG_LENGTH = 64
@@ -60,6 +60,37 @@ def vocabulary(db: Session, session_ids: list[int]) -> list[str]:
         .where(SessionTag.session_id.in_(session_ids))
         .distinct()
         .order_by(SessionTag.tag)
+    ).scalars().all()
+    return list(rows)
+
+
+def vocabulary_for_user(db: Session, user: User) -> list[str]:
+    """Every distinct tag on a session ``user`` owns, archived included,
+    sorted — the suggestions behind the four tag editors' typeahead
+    (19S Item 7: the lobby's row and bulk expanders, Create, and Session
+    Home). Wider than :func:`vocabulary`, which is scoped to the rows a
+    lobby view shows because it feeds that view's filter strip.
+
+    One join through ``session_operators``, measured at 1.5 ms over 3,009
+    tags on 1,003 sessions (19S Item 7 rung 1). It does not filter on
+    ``role``, like :func:`app.services.sessions.list_for_user` which
+    drives the lobby; only ``"owner"`` is ever written today.
+
+    **Lowercased here, not trusted to be.** Every editor stores through
+    :func:`normalize_tag`, but the settings-CSV importer stored tags raw
+    until 19S Item 9, and no migration lowercased what it wrote. A raw
+    ``Pilot`` would be offered beside ``pilot``, and offered again when
+    already in the box (Item 7 cold read, finding 1)."""
+    tag = func.lower(SessionTag.tag)
+    rows = db.execute(
+        select(tag)
+        .join(
+            SessionOperator,
+            SessionOperator.session_id == SessionTag.session_id,
+        )
+        .where(SessionOperator.user_id == user.id)
+        .distinct()
+        .order_by(tag)
     ).scalars().all()
     return list(rows)
 

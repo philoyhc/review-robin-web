@@ -266,6 +266,24 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   bailed-out create does not silently discard what was typed.
   `spec/csv_contracts.md` § *Settings CSV — apply precedence*
   owns that rule, and both meanings of an empty box.
+- **The tag boxes complete the tag being typed (19S Item 7).** The
+  four comma-separated tag boxes — the row expander's and the bulk
+  expander's here, Create's Tags card and Session Home's Tags field —
+  share one typeahead, `operator/partials/_tag_typeahead.html`, which
+  each box opts into with `data-tag-typeahead`. It completes **the tag
+  at the end of the line, past the first one and after every comma**:
+  on every keystroke it rewrites the page's
+  `<datalist id="tag-vocabulary">` so each option is everything up to
+  that tag followed by a tag that starts with it and is not already in
+  the box. It reads the last comma, not the caret, so editing a tag
+  mid-line gets suggestions for the last one. The browser draws the
+  popup. The suggestions are **every tag on a session the operator
+  owns, archived included**, lowercased
+  (`session_tags.vocabulary_for_user`) — wider than the filter box's
+  list, which stays scoped to the rows shown because it filters them.
+  `list=` is set on focus, so without JavaScript a box offers nothing
+  rather than whole-line options. The option rule, `rrwTagOptions`, is
+  executed by `tests/integration/test_tag_typeahead_rule.py`.
 - **Purging unlinks the email outbox.** Both purge modes delete rows
   that `email_outbox` references — invitations under either, reviewers
   under `rosters` — so each clears those foreign keys before the delete
@@ -525,7 +543,11 @@ are confused, layer a `?skipped=N` flash on top.)
   - `lobby_edit_submit` — POST `/operator/sessions/{id}/lobby-edit`.
   - `clone_session_submit` — POST `/operator/sessions/{id}/clone`.
 - **Templates:** `app/web/templates/operator/sessions_list.html`,
-  `sessions_archived.html`.
+  `sessions_archived.html`; the tag boxes' typeahead,
+  `app/web/templates/operator/partials/_tag_typeahead.html`, shared
+  with Create and Session Home (tests:
+  `tests/integration/test_tag_typeahead.py`,
+  `tests/integration/test_tag_typeahead_rule.py`).
 - **Services:** `app/services/session_tags.py`,
   `app/services/session_clone.py`, `app/services/session_purge.py`.
 - **Sort plumbing:** `views.decode_cookie_sort_spec` /

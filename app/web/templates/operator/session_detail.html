@@ -382,7 +382,7 @@
                  data-edit-only data-config-input
                  form="config-save-{{ session.id }}"
                  aria-labelledby="config-tags-heading"
-                 autocomplete="off"
+                 data-tag-typeahead autocomplete="off"
                  value="{{ session_tag_list | join(', ') }}"
                  placeholder="e.g. pilot, 2026, engineering">
         </div>
@@ -609,4 +609,5 @@
       });
     })();
   </script>
+  {% include "operator/partials/_tag_typeahead.html" %}
 {% endblock %}

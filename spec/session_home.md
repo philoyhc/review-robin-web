@@ -370,9 +370,10 @@ a `.bottom-left` column whose `gap` spaces them:
   `config-save` form, with no save of its own. Locked, it shows the
   tags as the sessions lobby's pills (`.pill .pill-count` in
   `.session-tags`, uppercased by `.pill`), or an em dash `.config-value`
-  when there are none; unlocked, one comma-separated box, with a
-  `.muted` subtitle that shows only while editing because it describes
-  the box. Its
+  when there are none; unlocked, one comma-separated box that completes
+  the tag at the end of the line as it is typed (the shared tag
+  typeahead, `spec/sessions_overview.md`), with a `.muted` subtitle that shows only
+  while editing because it describes the box. Its
   `<h3>` is the field's label. **An emptied box clears the tag set**,
   as the lobby's row expander does — the opposite of the Create
   page's box, where there is no set yet (`spec/csv_contracts.md`
