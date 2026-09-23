@@ -968,10 +968,11 @@ that owns them. Each is stated in full above; none is decided here.
   `.pill-empty` chips so the eye lands on the numbers without bolding the
   whole sentence.
 - **Cards never touch** (`visual_style_general.md` P8). Cards on a page,
-  and cards in a grid inside a card, are 20px apart — set by a wrapper's
-  `gap` or a bare card's `margin-bottom`; two cards stacked in one grid
-  cell go in a `.bottom-left`. Tiles grouped inside a card are tighter.
-  Stated in full in §4.
+  and the cards a card divides its content into (Session Home's details
+  card), are 20px apart — set by a wrapper's `gap` or a bare card's
+  `margin-bottom`; two cards stacked in one grid cell go in a
+  `.bottom-left`. Tile rows inside a card (`.subcard-row`, 12px) are the
+  open exception. Stated in full in §4.
 - **`.bottom-grid` for natural-height pairs.** When two cards in a
   two-column layout do not carry the same weight, prefer `.bottom-grid`
   over `.page-grid`; `.page-grid`'s equal-height stretch is for the
