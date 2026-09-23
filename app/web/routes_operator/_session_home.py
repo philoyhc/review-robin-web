@@ -204,7 +204,7 @@ def session_detail(
             # card: Email / Name / Role / Joined / Action + Add owner).
             "config_owners": session_owners.list_owners(db, review_session),
             "config_owner_candidates": (
-                session_owners.workspace_operator_candidates(db, review_session)
+                session_owners.session_owner_candidates(db)
             ),
             # 19S Item 9 Part B — the details card's Tags field, shown as a
             # ``.config-value`` when locked and prefilled when editing.
