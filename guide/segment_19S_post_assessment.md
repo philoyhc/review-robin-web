@@ -1946,7 +1946,8 @@ tag filter on reload.
 (including whether Enter picks an option or submits the lobby's bulk
 form) and a screen reader cannot be seen headless, so the keyboard
 check the DoD asks for has not been made. Everything else in the DoD
-is met.
+is met. **Carried to `guide/post_azure_todo_checklist.md` item 5**
+(2026-09-23): the author cannot reach the dev slot yet.
 
 ### Out of scope
 
@@ -2526,7 +2527,7 @@ element — checked in Chromium, both modes.
 
 ---
 
-## Item 10 — Session Home's Owners card saves with the card
+## Item 10 — Session Home's Owners card saves with the card — ✅ **closed 2026-09-23**
 
 **Logged 2026-09-23 on the author's instruction**, after asking how much
 work it would be to give Session Home's Owners card the save behavior
@@ -2688,6 +2689,18 @@ Owners card to Create's, reusing its logic*:
 - **No-JS removal is a `<noscript>` fallback** to the old per-row route,
   saved at once; left out on the last owner and your own row
   (2026-09-23, of three options priced).
+- **The route is `owners/save`**, not the planned bare `owners`: the
+  verb goes last, as `owners/add` and `fields/save` do
+  (`spec/architecture.md` "Route conventions"; cold read, 2026-09-23).
+- **The save is all or nothing, applied at write time**: the delta goes
+  to the owner rows locked `FOR UPDATE` in one commit, rather than a
+  whole set resolved first and written per owner (Codex on #2585,
+  2026-09-23). `resolve_owner_changes` became `apply_owner_changes`.
+- **The Owners cards' Removes stay `chrome-link`**, not a `.btn` role
+  (author, 2026-09-23, on spec-writer's flag at the close).
+- **The scaffold kept the old per-row forms live** (rung B), so owners
+  stayed editable between rungs; Codex asked for inert controls and the
+  plan's rung B text decided it (2026-09-23).
 
 ### Blast radius (measured)
 
@@ -2724,7 +2737,8 @@ Taken 2026-09-23 at `a9eca3a`.
    card to its own half-width card below the Danger Zone, and Tags takes
    its slot. Always shown, with inert **Save** / **Cancel**; the old
    per-row forms keep owners editable until rung D.
-3. **Rung C — the save route.** `POST /sessions/{id}/owners`: the staged
+3. **Rung C — the save route.** `POST /sessions/{id}/owners` (shipped
+   as `owners/save`, Status): the staged
    set as changes against the rendered one, in any lifecycle state;
    errors back to the card's banner; saving yourself out lands on the
    lobby. Reuses the first ladder's `resolve_owner_changes`.
@@ -2766,15 +2780,52 @@ Taken 2026-09-23 at `a9eca3a`.
 
 ### Status
 
-**Direction changed 2026-09-23, after rung 2 was built.** Rung 1
-(`/config` carrying the owner set) was pushed as #2581 and closed
-unmerged; rung 2 and the cold read's fixes were built and never
-pushed. The branch restores `app/` and `tests/` to `main` in the commit
-that lands this revision, so no PR carries them; the history keeps
-them to reuse. The cold read over both (one read) found a stale page
-undoing another owner's change (F1), a demoted owner blocking every
-save (F2) and no removal without JavaScript (F3) — all three carried
-into the amended Decision — plus smaller fixes that rung D re-applies.
+**Closed 2026-09-23**, after one change of direction. The first ladder
+saved owners with the details card (#2581, closed unmerged); the author
+then gave the card a Save of its own, and the ladder was re-cut
+(#2582). What shipped:
+
+- **A** `.btn[hidden]` hides (#2583).
+- **B** the card moves below the Danger Zone and Tags takes its slot,
+  Save / Cancel inert, the old forms live (#2584).
+- **C** `POST /sessions/{id}/owners/save`, change-only, all or nothing,
+  any state, the lobby when you are no longer an owner (#2585).
+- **D** the card stages with Create's stager, Save / Cancel wake on a
+  change, the three rulings, `<noscript>` Remove, every operator a
+  candidate (#2586).
+- **E** `spec/session_owners.md` and this close.
+
+Beside the ladder, #2587 swapped the details card's two sub-cards (UI
+settings left, Tags right) and removed a doubled bottom margin under
+its Save cluster — the author's ruling after rung D, with a read of its
+own (nothing blocking).
+
+**Diverged from the plan**: the route name, and the save's atomicity —
+both judgment calls above. The Remove table above is the baseline;
+`spec/session_owners.md` §3 carries the one as shipped.
+
+**Reads.** Three cold reads for the item, against one planned:
+
+- the first direction's (F1–F3, carried into the amended Decision);
+- the item's read at rung D over `d814085..`, nothing blocking — a route
+  name, an overclaimed commit message, Save staying awake after a
+  duplicate add, an inline style, and five specs missing from Doc
+  impact (added below);
+- a second, narrower read over the fixes that followed Codex's review of
+  #2585, nothing blocking — a duplicate-add test that could not fail, a
+  clash reported as `already_owner`, an unordered lock.
+
+**Close check**: `tools/close_check.py 19S.10` passes; its note that
+`_quick_setup` is touched with `spec/quick_setup_card_spec.md` outside
+the manifest is adjudicated — no `_quick_setup` file changed in the
+window, and Quick Setup's owners path (`set_owners`) is untouched.
+
+Codex added three findings: the scaffold's live forms (declined, above)
+and the two the atomic save answers. **Owed in a real browser**:
+staging, Save / Cancel, the self-removal confirm, the last-owner
+disable and the page with JavaScript off — **carried to
+`guide/post_azure_todo_checklist.md` item 5**, since the author cannot
+reach the dev slot yet (2026-09-23).
 
 ### Out of scope
 
@@ -2789,17 +2840,32 @@ into the amended Decision — plus smaller fixes that rung D re-applies.
   shipped, not the baseline above), staging and the save (Item 10).
 - `spec/README.md` — a row for the new spec (Item 10).
 - `spec/session_home.md` — the Owners card leaves the details card for
-  its own, below the Danger Zone; Tags takes its slot; points at the new
-  spec (Item 10).
+  its own, below the Danger Zone; Tags takes a slot, then swaps sides
+  with User interface settings (UI settings left, Tags right with the
+  Save cluster under it — author's ruling, 2026-09-23, #2587); points at
+  the new spec (Item 10).
 - `spec/operator_ui_concept.md` — Create's Owners paragraph points at
   the new spec (Item 10).
 - `spec/permissions.md` — §4.2 gains Create's path and the card's
-  `POST /sessions/{id}/owners`, editable in any state; the old routes
+  `POST /sessions/{id}/owners/save`, editable in any state, its
+  refusals; Add owner's "config card, edit mode" goes; the old routes
   unchanged (Item 10).
 - `spec/operator_button_audit.md` — §3 gains Create's Add owner
-  (Secondary) and the staged rows' Remove, missing since Item 9; row
-  159 becomes Secondary (Item 10).
+  (Secondary) and the staged rows' Remove, missing since Item 9; the
+  Owners card's Save, Cancel and `<noscript>` Remove; row 159 becomes
+  Secondary (Item 10).
+- `spec/audience_and_identity_model.md` — §4b: owners are edited on
+  Session Home's own Owners card (`#owners-card`), any state, and the
+  picker offers every workspace operator (Item 10, cold read).
+- `spec/rrw_functional_spec.md` — the Session details card no longer
+  holds an Owners sub-card; point at the new spec (Item 10, cold read).
+- `spec/architecture.md` — "Route conventions" names `owners/save`
+  among the whole-set saves (Item 10, cold read).
+- `spec/visual_style_rrw.md` — Session Home's layout example gains the
+  Owners card below the Danger Zone (Item 10, spec-writer at close).
 - `spec/sessions_overview.md` — Form submission: Enter in the lobby
   form never submits, and not Save either (author's ruling on #2579,
   carried to the segment's last close) (Item 10).
+- `guide/post_azure_todo_checklist.md` — item 5: the browser checks
+  Items 7 and 10 owe (Item 10).
 - `docs/status.md` — row when the item lands (Item 10).
