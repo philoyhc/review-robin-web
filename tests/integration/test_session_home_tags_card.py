@@ -162,23 +162,27 @@ def test_the_card_helper_is_bounded(client: TestClient, db: Session) -> None:
     assert "data-config-save" in body[body.index(card) + len(card):]
 
 
-def test_the_card_sits_below_ui_settings_and_above_the_save_cluster(
+def test_the_card_takes_the_slot_the_owners_card_left(
     client: TestClient, db: Session
 ) -> None:
+    """19S Item 10 moved Owners out of the details card; Tags took its
+    slot, the details card's left column, with User interface settings
+    and the Save cluster in the right one (author's ruling, 2026-09-23)."""
     review_session = _create(client, db, "HOME-TAGS-ORDER")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    ui = body.find('id="config-ui-settings-card"')
+    grid = body.find('<div class="bottom-grid"', body.find('id="session-config"'))
     tags = body.find('id="config-tags-card"')
+    ui = body.find('id="config-ui-settings-card"')
     save = body.find("data-config-save")
-    assert -1 not in (ui, tags, save)
-    assert ui < tags < save
+    assert -1 not in (grid, tags, ui, save)
+    assert grid < tags < ui < save
 
-    # Same .bottom-left column as the UI settings card, so the column's
-    # gap spaces the pair (spec/ui_elements.md §10) — no new CSS.
-    column = body.rfind('<div class="bottom-left">', 0, ui)
-    assert column != -1
-    assert body.rfind('<div class="bottom-left">', 0, tags) == column
+    left = body.find('<div class="bottom-left">', grid)
+    right = body.rfind('<div class="bottom-left">', 0, ui)
+    assert body.rfind('<div class="bottom-left">', 0, tags) == left
+    assert left < tags < right, "Tags and UI settings share no column"
+    assert body.rfind('<div class="bottom-left">', 0, save) == right
 
 
 def test_locked_it_renders_the_lobbys_pills(

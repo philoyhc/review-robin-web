@@ -213,8 +213,8 @@ def session_detail(
             )[review_session.id],
             # 19S Item 7 — the Tags field's typeahead.
             "tag_vocabulary": session_tags.vocabulary_for_user(db, user),
-            # 18R Item 4 Slice 4 — owner add/remove errors surface inline on
-            # the config Owners sub-card (redirected here from the routes).
+            # Owner add/remove errors, the Owners card's banner
+            # (redirected here from the routes; 19S Item 10).
             "owners_error": owners_error,
             # 18R Item 4 Slice 3 — edit-mode wiring for the Session details
             # card. ``config_editing`` is the canonical server state (from
@@ -632,20 +632,18 @@ def session_revert_to_draft(
 
 
 def _owners_redirect_url(session_id: int, error_code: str | None = None) -> str:
-    # 18R Item 4 Slice 4 — owner add/remove now land back on Session Home's
-    # config card in edit mode (``?editing=1``), scrolled to the Owners
-    # sub-card, instead of the (soon-retired) Edit page.
-    base = f"/operator/sessions/{session_id}?editing=1#config-owners-card"
+    # Owner add/remove land back on Session Home's Owners card. 19S Item
+    # 10 moved it out of the details card, so no ``?editing=1``: the
+    # card is editable without unlocking the details.
     if error_code:
-        # Anchor stays at the end; the query params sit before the #.
         from urllib.parse import quote
 
+        # Anchor stays at the end; the query param sits before the #.
         return (
             f"/operator/sessions/{session_id}"
-            f"?editing=1&owners_error={quote(error_code, safe='')}"
-            "#config-owners-card"
+            f"?owners_error={quote(error_code, safe='')}#owners-card"
         )
-    return base
+    return f"/operator/sessions/{session_id}#owners-card"
 
 
 @router.post("/sessions/{session_id}/owners/add")

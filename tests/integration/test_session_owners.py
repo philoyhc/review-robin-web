@@ -1,7 +1,8 @@
 """Coverage for Segment 16B PR 2 — per-session owner management.
 
-Exercises the Owners section, which lives on Session Home's config card
-(``#config-owners-card``) since 18R Item 4 retired the Edit page:
+Exercises the Owners section, which lives on Session Home since 18R
+Item 4 retired the Edit page — its own card (``#owners-card``) since
+19S Item 10:
 
 - Owner can add another workspace operator as a co-owner.
 - Owner can remove a non-self owner.
@@ -75,11 +76,11 @@ def test_edit_page_renders_owners_section_for_owner(
     client: TestClient,
 ) -> None:
     review_session = _make_session(client, db, code="own-1")
-    # 18R Item 4 — owners live on Session Home's config Owners sub-card.
-    response = client.get(f"/operator/sessions/{review_session.id}?editing=1")
+    # Owners live on Session Home's Owners card, no unlock needed.
+    response = client.get(f"/operator/sessions/{review_session.id}")
     assert response.status_code == 200
-    # Owners sub-card present; creator (alice) is the single owner.
-    assert 'id="config-owners-card"' in response.text
+    # Owners card present; creator (alice) is the single owner.
+    assert 'id="owners-card"' in response.text
     assert "alice@example.edu" in response.text
 
 
@@ -131,10 +132,10 @@ def test_sys_admin_non_member_denied_edit_until_adopt(
     assert adopt.status_code == 303
     assert adopt.headers["location"] == f"/operator/sessions/{review_session.id}"
 
-    # Now an owner → Home renders with the Owners sub-card.
-    response = bob_client.get(f"/operator/sessions/{review_session.id}?editing=1")
+    # Now an owner → Home renders with the Owners card.
+    response = bob_client.get(f"/operator/sessions/{review_session.id}")
     assert response.status_code == 200
-    assert 'id="config-owners-card"' in response.text
+    assert 'id="owners-card"' in response.text
 
 
 # --- Add owner --------------------------------------------------------------
@@ -158,10 +159,10 @@ def test_add_owner_inserts_session_operator_and_emits_audit(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    # 18R Item 4 Slice 4 — owner add/remove now land on Session Home's config
-    # card in edit mode (was the Edit page's #owners anchor).
+    # Owner add/remove land on Session Home's Owners card — its own card
+    # since 19S Item 10, so the details card stays locked.
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}?editing=1#config-owners-card"
+        f"/operator/sessions/{review_session.id}#owners-card"
     )
 
     bob_row = db.execute(
@@ -191,22 +192,21 @@ def test_config_owners_card_renders_add_form_when_candidates_exist(
     bob,
 ) -> None:
     """18R Item 4 Slice 4 — with a second workspace operator available, the
-    Session Home config Owners sub-card renders the wired Add-owner form."""
+    Session Home Owners card renders the wired Add-owner form, locked or
+    not (19S Item 10)."""
     review_session = _make_session(client, db, code="own-addform")
     _seed_user(db, email="bob@example.edu")
 
-    body = client.get(
-        f"/operator/sessions/{review_session.id}?editing=1"
-    ).text
-    config_pos = body.find('id="session-config"')
-    card = body[config_pos:body.find("window.sessionConfig", config_pos)]
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+    owners_pos = body.find('id="owners-card"')
+    card = body[owners_pos:body.find("<script", owners_pos)]
 
-    assert 'id="config-add-owner-email"' in card
+    assert 'id="owners-add-email"' in card
     # A sibling label, as on Create's picker: nesting the input in the
     # label tightened the text-to-box gap to 1.9px against 5.9px on every
     # other field (measured in Chromium, 2026-09-23).
     assert (
-        '<label for="config-add-owner-email">'
+        '<label for="owners-add-email">'
         "Pick or search for a workspace operator:</label>"
     ) in card
     assert 'name="target_email"' in card
