@@ -561,7 +561,10 @@ everywhere, so "you can click this" reads the same way on every control.
 > subtitle and the field's helper text describe the same thing — the
 > Tags card on the Create page and on Session Home, whose `<h3>` doubles
 > as the field's accessible label. **Those take the subtitle**, so a
-> column of such cards reads uniformly rather than alternating. (Create's
+> column of such cards reads uniformly rather than alternating. On
+> Session Home that holds in edit mode only: the Tags subtitle is
+> `data-edit-only`, because it describes the box and a locked card has
+> none — only the pills (author's ruling, 2026-09-23). (Create's
 > Owners card takes one too, but is not this case: it holds a table and
 > a picker, and the picker has its own `<label for>`.) Eleven of the
 > twelve above are subtitles; the twelfth, `validation_results.html`'s *"No
