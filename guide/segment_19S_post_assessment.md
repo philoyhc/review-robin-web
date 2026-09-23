@@ -2231,7 +2231,12 @@ Taken 2026-09-22 at `d4b1ba9`.
    required.
 3. **Rung 3 — Part A's scaffold**: the Owners card inert, no write.
 4. **Rung 4 — Part A's write**: staged rows applied after
-   `create_session`, with the two rejections surfaced.
+   `create_session`, with the two rejections surfaced — **plus one
+   correlation id for the whole create** (author's ruling, 2026-09-23).
+   `request_correlation_id()` mints a fresh id per call, and the Create
+   route calls it for the session, each Quick Setup slot and the tag
+   write; the owner writes this rung adds would make it worse. Session
+   Home's save was fixed the same way in rung 2 (#2569, Codex).
 
 Re-cut at rung 1 from three rungs to four: `CLAUDE.md` lands a new
 card as its own slice, and Item 6 did the same.
@@ -2243,6 +2248,8 @@ card as its own slice, and Item 6 did the same.
 - **A settings CSV importing `Pilot` stores `pilot`**, and the lobby can
   then remove it — asserted through the route, with the revert
   mutation run (`docs/unenforced_conventions.md` §1.11).
+- **Every audit event one create produces shares one correlation id**
+  — session, uploads, tags and owners — asserted through the route.
 - A co-owner named on Create owns the created session, and
   `not_in_workspace` / `already_owner` each reach the operator rather
   than failing silently — all asserted through the route.
