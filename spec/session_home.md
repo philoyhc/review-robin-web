@@ -70,7 +70,7 @@ then a two-column bottom row.
 │  + UI-settings / Tags sub-cards                              │
 └──────────────────────────────────────────────────────────────┘
 ┌── Quick Setup ───────────┐  ┌── Owners ────────────────┐
-│   scaffolded bulk        │  │   staged table, Save     │
+│   bulk CSV uploads       │  │   add / remove at once   │
 │                          │  ├── Danger Zone ───────────┤
 │                          │  │   Delete Data / Delete   │
 └──────────────────────────┘  └──────────────────────────┘

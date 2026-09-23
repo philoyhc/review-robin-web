@@ -272,9 +272,9 @@ def _delete_owner(
 def resolve_owners(db: Session, emails: list[str]) -> list[User]:
     """Validate a desired owner list before anything is written.
 
-    19S Item 9 (Create) and Item 10 (Session Home) stage owner rows in a
-    form and save them with the page, so the whole list is checked up
-    front: one bad email must refuse the save, not land half of it.
+    Create's Owners card (19S Item 9) stages owner rows in a form and
+    saves them with the page, so the whole list is checked up front: one
+    bad email must refuse the save, not land half of it.
     Blank entries are skipped, case is folded and duplicates collapse,
     in the order given. Every email must be a user ``add_owner`` would
     accept — a workspace operator or sys-admin — or the call raises
