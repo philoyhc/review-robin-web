@@ -375,6 +375,6 @@ at a keyboard.
 | The keyboard picks | In each box, arrow to a suggestion and press Enter — **Safari as well as Chromium** | Enter takes the suggestion. In the lobby's expanders it must never submit the form (#2579: Enter in the lobby form does nothing) |
 | A screen reader | VoiceOver or NVDA on one box | The suggestions are announced as a list |
 
-**Where this came from.** `guide/segment_19S_post_assessment.md` Item 10
+**Where this came from.** `guide/archive/segment_19S_post_assessment.md` Item 10
 and Item 7, both closed with this check owed; each `### Status` points
 here. Settling a row is a dated line there, not a reopening.

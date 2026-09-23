@@ -176,7 +176,7 @@ the joke it sounds like.
 
 ### 1.8 A new guard states the three things that make it evidence
 
-- **Written down at** `guide/segment_19S_post_assessment.md` Item 1
+- **Written down at** `guide/archive/segment_19S_post_assessment.md` Item 1
   entry **E6**, proposed by `guide/codex_assessment_21sep.md` §5; adopted
   per-item at 19S.2 rather than as a standing rule.
 - **The rule.** Before a guard is called complete: the fixture reaches
@@ -208,7 +208,7 @@ the joke it sounds like.
 
 - **Written down at** `.claude/skills/segment-plan/SKILL.md` "Length"
   (~250 lines a segment, ~120 an item); raised as
-  `guide/segment_19S_post_assessment.md` Item 1 entry **E7**, from
+  `guide/archive/segment_19S_post_assessment.md` Item 1 entry **E7**, from
   `guide/codex_assessment_21sep.md` §7.
 - **The instance.** 19R's plan closed at **1,541 lines for eight items**.
   Its items each compacted at their own close and it still landed there.
@@ -240,7 +240,7 @@ the joke it sounds like.
 
 ### 1.10 A `Blast radius` row's number is re-run against its anchor
 
-- **Written down at** `guide/segment_19S_post_assessment.md` Item 5,
+- **Written down at** `guide/archive/segment_19S_post_assessment.md` Item 5,
   whose rung 1 built the prerequisite — a section must now state the
   commit or date it was measured at, checked by G5 in
   `tests/unit/test_index_currency.py`. Rung 2 was to decide, **on the
@@ -307,7 +307,7 @@ the joke it sounds like.
 
 ### 1.11 A mutation set mutates what the assertion stands on — the helpers, and the change itself
 
-- **Written down here**, 2026-09-22, out of `guide/segment_19S_post_assessment.md`
+- **Written down here**, 2026-09-22, out of `guide/archive/segment_19S_post_assessment.md`
   Items 3 and 8 — both of which shipped a mutation set that satisfied
   §1.8 and still left the thing under test unguarded.
 - **The rule.** §1.8 asks that *a mutation of the protected property
@@ -476,7 +476,7 @@ decision not to.
 grows, that is a signal the practice is accumulating rules faster than
 checks. (It said *two* until 2026-09-22, having missed §2.3's arrival —
 the growth its own sentence calls a signal went unrecorded, which is the
-class `guide/segment_19S_post_assessment.md` Item 2 gates for two
+class `guide/archive/segment_19S_post_assessment.md` Item 2 gates for two
 hand-maintained indexes and §1.5 leaves to a habit for the rest.)
 
 **Not a replacement for `docs/practice-audit-2026-09-04.md` §2.** That

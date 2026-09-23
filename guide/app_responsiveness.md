@@ -117,7 +117,7 @@ that the existence of a measured candidate not be turned into a queue,
 so one is promoted to an item only when pilot scale or an operator
 report crosses its stated trigger. Prepare's insert is the exception
 under discussion, logged as entry **E1** of
-`guide/segment_19S_post_assessment.md`.
+`guide/archive/segment_19S_post_assessment.md`.
 
 - ~~**Bulk-insert the generated pairs.**~~ *Done 2026-09-22 as 19S
   Item 3, which also took the self-review recompute — Finding 4 has the

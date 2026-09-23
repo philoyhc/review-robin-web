@@ -3258,7 +3258,7 @@ both end-of-window reads asked it to stop being that —
 `guide/codebase_assessment_22sep.md` §8 ranks the close **first of
 three moves**. The measured-but-unscheduled candidates stay in
 `guide/app_responsiveness.md`; what the reads surfaced with no home is
-logged in `guide/segment_19S_post_assessment.md` as a register.
+logged in `guide/archive/segment_19S_post_assessment.md` as a register.
 
 **The lesson, recorded across eight `Status` blocks:** *a claim is worth
 what the command proving it is worth.* Blast-radius greps defeated by an
@@ -3267,6 +3267,38 @@ recognising nothing, a parity golden pinning SQLite row ids, and a close
 that claimed a cold read had run before the change in the same commit
 whose body said it was still running. Every one caught by a reader or a
 run, none by re-reading.
+
+---
+
+### Segment 19S — Post-assessment register — ✅ **closed + archived** (**ten items, all closed**; opened 2026-09-22, closed 2026-09-23; PRs #2544 → #2592; plan archived: `guide/archive/segment_19S_post_assessment.md`)
+
+Opened as **a register, not a queue**, for what the 22 September reads
+(`guide/codebase_assessment_22sep.md`, `guide/codex_assessment_21sep.md`)
+surfaced with no home, then used by the author for a tags-and-owners
+run. Items close independently, each with its own `Doc impact` /
+`Status`.
+
+- **Items 1–5 and 8 — the reads' findings.** The register's eight
+  entries all disposed of (Item 1); four index invariants gated in
+  `tests/unit/test_index_currency.py` (Item 2); Prepare's per-pair
+  insert and recompute made bulk, **26.7 s → 13.1 s** (Item 3);
+  `spec/csv_contracts.md` §3.2 rewritten against the code after an
+  investigation found it wrong in more places than right (Item 4); a
+  `Blast radius` must say when its numbers were taken (Item 5); a
+  pytest node id cited in live prose must resolve (Item 8).
+- **Items 6, 7, 9, 10 — tags and owners.** A session can be tagged when
+  it is created (6); every tag box completes the tag after each comma
+  (7); Create gains an Owners card that stages and saves with **Create
+  session**, and Session Home a Tags field (9); Session Home's Owners
+  card leaves the details card for one of its own, now above the Danger
+  Zone, in any lifecycle state — first with its own **Save**, then,
+  on the author's rulings after the close, saving each Add owner and
+  Remove at once behind a Lock / Unlock like Quick Setup's (10,
+  #2589 → #2592, `spec/session_owners.md`).
+
+**Owed:** the browser checks for Items 7 and 10 are
+`guide/post_azure_todo_checklist.md` item 5 — the author cannot reach
+the dev slot yet.
 
 ---
 
@@ -3324,81 +3356,6 @@ dep chains called out at the bottom of this file.
    covered by the operator's own broadcast email (participant model
    = roster + sign-in); the real gap is targeted reminders. Rationale
    in the plan's Status section.
-
-2. **19S — Post-assessment register (open segment).**
-   **Plan:** `guide/segment_19S_post_assessment.md`.
-   **Evidence:** `guide/codebase_assessment_22sep.md` §§5, 8 and 9, plus
-   the independent cold read at `guide/codex_assessment_21sep.md`.
-   - **Item 1 — the register**, eight entries, **all eight disposed of**
-     as of 2026-09-22. Closed: the hand-maintained indexes (**E4**, split —
-     gateable half to Item 2, residue to
-     `docs/unenforced_conventions.md` §1.5), the bench headline
-     outliving its own correction (**E2**), a guard's evidence bar
-     (**E6** → §1.8), the plan length budget (**E7** → §1.9), and the
-     two findings 19R archived (**E8** — first half to Item 4, second
-     half to a comment on `rehydrate_commit`). **Retired:** the ≥1,000
-     LOC watchlist (**E3**) — the author's ruling that it is *not really
-     a tripwire but just part of the judgment of codebase assessments*.
-     **Promoted:** Prepare's per-pair insert (**E1** → Item 3) and
-     prose about the work being wrong more often than the work
-     (**E5** → Item 5). Every entry is disposed of, and **Item 1 closed
-     2026-09-22** on that basis.
-   - **Item 2 — the four index gates** ✅ **closed 2026-09-22**. Every
-     archived plan from segment 16 on has a `## Done` entry, those
-     headings ascend by declared PR, `docs/status.md`'s `As of` matches
-     its newest row, and no `**Plan:**` pointer under `## Upcoming`
-     resolves into `guide/archive/`. All four pass today and need no
-     allowlist, which is `docs/unenforced_conventions.md` §2's bar.
-   - **Item 3 — Prepare's per-pair insert** ✅ **closed 2026-09-22**,
-     three rungs, and **widened to the self-review recompute** on the
-     author's ruling after a trace found the insert was one of three
-     full ORM materialisations. A bulk insert replaces
-     `db.add(Assignment(...))` per pair and the recompute drops to a
-     column projection plus one bulk `UPDATE`; the read-only verify
-     pass is the deferred third. **Prepare measured 26.7 s → 13.1 s**
-     — the bench *was* re-takeable in the build container, which the
-     plan had said it was not.
-   - **Item 4 — what `spec/csv_contracts.md` §3.2 actually describes**
-     ✅ **closed 2026-09-22**. An **investigation**, on the author's
-     ruling, not the signature rename it looks like: the prose beside
-     the wrong signature is correct, and the four per-row rules beside
-     it have never been checked against the code. Behavior first,
-     adjudication second.
-   - **Item 5 — a `Blast radius` row records a number, not when it was
-     true** ✅ **closed 2026-09-22**. E5 promoted, and narrower than its
-     title: of its seven instances four are already homed in
-     `docs/unenforced_conventions.md` §§1.4–1.6, and the residue splits
-     into claims that cite their own command and claims about the
-     process. Measured over 111 plans: **98** `Blast radius` sections,
-     **162** rows runnable exactly as written, but only **45** stating a
-     sha or date to compare against — so the item builds the missing
-     anchor, not the re-run.
-   - **Item 6 — a session can be tagged when it is created**
-     *(planned, not built)*. A half-width Tag card below the User
-     interface settings card on `session_new.html`, which carries **0**
-     tag mentions today so a session is born untagged. **Supersedes**
-     `guide/deferred_consolidated.md`'s *Tags, Owners and a typeahead on
-     the Create page* (19R Item 9, unbuilt): one of its three changes,
-     in the slot that plan gave Owners, with Owners still deferred.
-     Nothing is missing underneath — `set_tags` is the whole write path.
-   - **Item 7 — typeahead on the tag boxes** ✅ **closed 2026-09-23**,
-     two rungs. All four comma-separated tag boxes — the lobby's row and
-     bulk expanders, Create, Session Home — complete the tag at the end
-     of the line, after every comma, by rewriting one `datalist` per
-     keystroke, from every tag on a session the operator owns, archived
-     included and lowercased.
-   - **Item 8 — a pytest node id cited in live prose resolves**
-     ✅ **closed 2026-09-22**, one rung, 0 production LOC. Logged out of
-     Item 4's own defect record, not the assessment. `PATH_REF` cannot
-     reach a node id's closing backtick, so a citation of the form
-     `` `tests/…py::test_name` `` was wholly unchecked — file half
-     included. The case is not the 7 live citations, all resolving, but
-     the **3** in `guide/archive/` that are all stale across two
-     segments. Missing from this list until the close, which is the
-     drift class the segment is about.
-   - **Promotion is the author's call** on a named trigger. An entry
-     never promoted is not a failure of the register; losing the
-     finding would have been.
 
 #### Stubs
 

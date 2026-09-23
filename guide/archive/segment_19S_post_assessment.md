@@ -1,5 +1,14 @@
 # Segment 19S — the post-assessment register
 
+> **Closed and archived 2026-09-23.** Ten items, all closed, PRs
+> **#2544 → #2588**; `tools/close_check.py 19S.1` … `19S.10` each exit
+> 0. Items 1–5 and 8 answered the 22 September reads; Items 6, 7, 9
+> and 10 are the tags-and-owners run the author added — tags at
+> creation, a typeahead on every tag box, Owners on Create, and Session
+> Home's Owners card with a Save of its own (`spec/session_owners.md`).
+> The browser checks Items 7 and 10 owe live in
+> `guide/post_azure_todo_checklist.md` item 5.
+
 **Opened:** 2026-09-22 · **Theme:** one home for what the end-of-window
 reads surfaced and nothing else owns · **Related:**
 `guide/codebase_assessment_22sep.md`, `guide/codex_assessment_21sep.md`
@@ -1710,7 +1719,7 @@ this commit; the first draft of this sentence guessed 150 and then
 
 ---
 
-## Item 7 — typeahead on the tag boxes
+## Item 7 — typeahead on the tag boxes — ✅ **closed 2026-09-23**
 
 **Logged 2026-09-22 on the author's instruction**, separately from Item
 6, which builds the box this one would complete. Depends on Item 6 for
@@ -2231,7 +2240,7 @@ citation, M8 a column-0 non-test def cited as a node id.
 
 ---
 
-## Item 9 — Owners on Create, and Tags on Session Home
+## Item 9 — Owners on Create, and Tags on Session Home — ✅ **closed 2026-09-23**
 
 **Logged 2026-09-22 on the author's instruction**, in two parts. Both were
 `Out of scope` on Item 6 and deferred before it; this item promotes
