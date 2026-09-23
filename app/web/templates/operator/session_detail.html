@@ -469,7 +469,7 @@
          owner and Remove change only the table, whose rows each carry a
          hidden ``owners`` input bound to this card's own form, and the
          card's **Save** posts the table beside ``owners_original`` — the
-         set rendered here — to ``POST /sessions/{id}/owners``, which
+         set rendered here — to ``POST /sessions/{id}/owners/save``, which
          applies only the difference. **Save** and **Cancel** wake once
          the table or the picker changes; Cancel is the form's reset, and
          the stager rebuilds the rows on it.
@@ -516,7 +516,7 @@
         {% endif %}
 
         <form id="{{ owners_form }}" method="post"
-              action="/operator/sessions/{{ session.id }}/owners">
+              action="/operator/sessions/{{ session.id }}/owners/save">
           {% for owner in config_owners %}
             <input type="hidden" name="owners_original" value="{{ owner.email }}">
           {% endfor %}
@@ -582,7 +582,7 @@
         {# Rendered enabled, so the card saves without JavaScript; the
            script below disables both until the table or the picker
            changes. #}
-        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3);">
+        <div class="card-action-row">
           <button type="submit" form="{{ owners_form }}"
                   class="btn secondary" data-owners-save>Save</button>
           <button type="reset" form="{{ owners_form }}"

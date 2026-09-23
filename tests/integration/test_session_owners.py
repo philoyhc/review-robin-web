@@ -214,7 +214,7 @@ def test_config_owners_card_renders_add_form_when_candidates_exist(
     assert 'name="owners"' in card
     assert f'form="owners-save-{review_session.id}"' in card
     assert (
-        f'action="/operator/sessions/{review_session.id}/owners"' in card
+        f'action="/operator/sessions/{review_session.id}/owners/save"' in card
     )
     # Bob is offered as a candidate in the datalist.
     assert "bob@example.edu" in card

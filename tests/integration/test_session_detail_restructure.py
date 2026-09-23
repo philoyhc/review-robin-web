@@ -1164,7 +1164,7 @@ def test_config_card_invite_offset_shows_offset_plus_resolved_datetime(
     assert "config-offset-row" in card
 
 
-def test_session_config_card_has_owners_subcard(
+def test_owners_left_the_session_config_card_for_their_own(
     client: TestClient, db: Session
 ) -> None:
     """18R Item 4 put an Owners sub-card inside the Session details card;

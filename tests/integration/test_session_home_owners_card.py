@@ -7,7 +7,7 @@ stage as Create's does and save with its own **Save**:
 
 - the table is ``_owners_stager_js``'s — Add owner and Remove change the
   table only, and each row carries a hidden ``owners`` input bound to
-  the card's own form, which posts to ``POST /sessions/{id}/owners``
+  the card's own form, which posts to ``POST /sessions/{id}/owners/save``
   beside ``owners_original``, the set rendered here;
 - **Save** and **Cancel** wake once the table or the picker changes;
   Cancel is the form's reset, which the stager answers by rebuilding
@@ -136,7 +136,7 @@ def test_the_card_is_a_stager_bound_to_its_own_form(
     )
     assert re.search(
         rf'<form id="{form_id}" method="post"\s+'
-        rf'action="/operator/sessions/{review_session.id}/owners">',
+        rf'action="/operator/sessions/{review_session.id}/owners/save">',
         card,
     )
     # Each row's owner, bound to the card's form: the rows are the set.
@@ -181,6 +181,9 @@ def test_save_submits_the_card_and_cancel_resets_it(
     for tag in (save, cancel):
         assert 'class="btn secondary"' in tag
         assert "disabled" not in tag
+    # The card's last child, so ``.card-action-row`` (ui_elements §10).
+    row = card[card.rfind("<div", 0, card.index("data-owners-save")) :]
+    assert row.startswith('<div class="card-action-row">')
 
 
 def test_the_gating_script_is_on_the_page(client: TestClient, db: Session) -> None:
@@ -193,6 +196,10 @@ def test_the_gating_script_is_on_the_page(client: TestClient, db: Session) -> No
     gate = body[body.index('document.getElementById("owners-card")') :]
     assert 'form.addEventListener("reset"' in gate
     assert "button.disabled = !dirty" in gate
+    # Emptying the picker after an add announces itself, so an address
+    # already in the table leaves Save asleep (cold read, 2026-09-23).
+    assert "input.value = '';\n" in body
+    assert "announce(input);" in body
 
 
 def test_the_staging_buttons_ship_hidden(client: TestClient, db: Session) -> None:
