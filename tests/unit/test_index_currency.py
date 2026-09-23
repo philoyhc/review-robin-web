@@ -539,7 +539,9 @@ def test_the_checks_see_the_corpus_they_claim_to_cover() -> None:
     assert len(declaring) >= 45, f"only {len(declaring)} declare a PR"
     assert len(modern) >= 38, f"only {len(modern)} archived plans are modern"
     pointers = plan_pointers(upcoming)
-    assert len(pointers) >= 3, f"only {len(pointers)} `**Plan:**` pointers"
+    # 2, not 3, since 19S closed (2026-09-23): the queue holds 14B and
+    # 20. A close floor, as above — it falls with the queue it measures.
+    assert len(pointers) >= 2, f"only {len(pointers)} `**Plan:**` pointers"
     for path in pointers:
         assert path.startswith("guide/") and path.endswith(".md"), (
             f"`**Plan:**` captured {path!r}, which is not a plan path — "
@@ -811,15 +813,16 @@ def test_g3_finds_the_newest_row_wherever_it_sits() -> None:
 
 
 def test_g4_fails_when_a_queued_plan_is_archived() -> None:
+    """Repoints the first live ``**Plan:**`` pointer into the archive.
+    Derived rather than named: the named pointer (19S's) left the queue
+    when 19S closed, and the mutation went with it."""
     _, upcoming = _todo_sections()
-    victim = "`guide/segment_19S_post_assessment.md`"
-    assert victim in upcoming, "19S's pointer moved; re-pick the mutation"
-    mutated = upcoming.replace(
-        victim, "`guide/archive/segment_19S_post_assessment.md`", 1
-    )
-    assert queued_archived_plans(mutated) == [
-        "guide/archive/segment_19S_post_assessment.md"
-    ]
+    pointers = plan_pointers(upcoming)
+    assert pointers, "no `**Plan:**` pointer under Upcoming to mutate"
+    victim = pointers[0]
+    archived = "guide/archive/" + victim.rsplit("/", 1)[-1]
+    mutated = upcoming.replace(f"`{victim}`", f"`{archived}`", 1)
+    assert queued_archived_plans(mutated) == [archived]
 
 
 def test_g5_every_in_scope_blast_radius_states_its_anchor() -> None:
@@ -979,7 +982,9 @@ def test_g5_fails_when_an_in_scope_section_loses_its_anchor() -> None:
     against the corpus it guards rather than a synthetic one.
     """
     name = "segment_19S_post_assessment.md"
-    original = (REPO / "guide" / name).read_text()
+    # Wherever it lives — `guide/` while open, `guide/archive/` since.
+    (path,) = [p for p in _plan_files() if p.name == name]
+    original = path.read_text()
     sections = blast_radius_sections(original)
     assert sections, "19S has no `Blast radius` section to mutate"
 
