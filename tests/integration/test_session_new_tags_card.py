@@ -203,7 +203,7 @@ def test_the_card_helper_is_bounded(client: TestClient) -> None:
     assert "getElementById" not in card
 
 
-def test_the_two_stacked_cards_use_the_documented_column_primitive(
+def test_both_columns_use_the_documented_column_primitive(
     client: TestClient,
 ) -> None:
     """Both `.bottom-grid` cells are `.bottom-left` columns.
