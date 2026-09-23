@@ -2435,6 +2435,13 @@ Reuse Item 9 rung 4's two pieces rather than build parallel ones:
 but tests use them and a non-owner sys-admin reaches `owners/add` to add
 themselves (`tests/integration/test_operator_lobby_access_gate.py`).
 
+**Owners get a spec of their own** (author's ruling, 2026-09-23): a new
+`spec/session_owners.md` holding both cards — Create's and Session
+Home's — side by side, with the remove table below as its core.
+Today the contract is spread over six specs, a passage each;
+`spec/permissions.md` keeps the gates and refusals, and the others
+point at the new file instead of restating the cards.
+
 ### Semantics — what Session Home adds over Create
 
 - **Cancel must rebuild the table.** The card's Cancel is
@@ -2450,7 +2457,36 @@ themselves (`tests/integration/test_operator_lobby_access_gate.py`).
   and schedule and rejects the owners.
 - **No change to who may edit owners.** The picker and Remove already
   appear only after Unlock, which exists only in draft and validated —
-  the same window `/config`'s `_require_editable` enforces.
+  the same window `/config`'s `_require_editable` enforces. **The window
+  is the page's, not the route's**: `owners/{user_id}/remove` has no
+  lifecycle check, so a direct POST removes an owner from an `active`
+  session (probed 2026-09-23). Once owners save through `/config` the
+  card is gated; the old route stays open unless Item 10 gates it too.
+
+### Remove, today — Create vs Session Home
+
+Taken 2026-09-23 at `9ac6a51` (unchanged by #2573), from `session_owners.remove_owner`,
+`_session_home.session_owners_remove`, `_owners_stager_js.html` and the
+two templates. The edge cases were run through the test client, not
+read. Item 10 makes Session Home's column read like Create's wherever
+an existing owner allows it.
+
+| | **Create new session** | **Session Home** |
+|---|---|---|
+| **Where it shows** | On each staged co-owner row. The creator's row has none (`—`). | On every owner row, your own included. Edit mode only. |
+| **Element** | `<button type="button" class="chrome-link">`, built by the stager script. | `<button type="submit" class="chrome-link">` in its own `<form>`, one per row. |
+| **A click** | Takes the row out of the table. Nothing is written. | POSTs `…/owners/{user_id}/remove`, which deletes the `session_operators` row at once. |
+| **Saved by** | Nothing on its own. **Create session** submits whatever rows remain. | Itself. The details card's Save plays no part. |
+| **Undo** | Pick the address again. Leaving the page discards all staging. | None. Cancel cannot restore a removed owner; Add owner can. |
+| **Other unsaved edits** | Untouched. The page does not reload. | Lost. The page reloads in edit mode at `#config-owners-card`. |
+| **Removing yourself** | Impossible: the creator's row is fixed. | Allowed while another owner remains. The redirect then **404s** with no explanation, because you no longer own the session. |
+| **The last owner** | Cannot arise: the creator is always kept (`[creator, *staged]`). | The link still shows. A click gives a **bare 409** page, not the card's banner. The owner set is locked `FOR UPDATE` while counting, so two removes cannot both pass. |
+| **Lifecycle** | No session yet. | The link shows only in draft and validated. **The route does not check**, so a direct POST removes an owner from an `active` session. |
+| **Who may** | The creator. | Any owner, removing any owner, the creator included. A non-owner sys-admin gets a 403 and must adopt first. |
+| **A stale target** | Not applicable. | `not_owner`: a 303 back with the `owners_error` banner. |
+| **Audit** | None. A staged row that is removed was never written. | `session.owner_removed`, a snapshot of the row, with its own correlation id. |
+| **Confirmation** | None. | None. |
+| **Without JavaScript** | Nothing to remove: staging needs the script, and the email box submits one address. | Works: it is a plain form. |
 
 ### Open questions
 
@@ -2460,6 +2496,15 @@ themselves (`tests/integration/test_operator_lobby_access_gate.py`).
   the banner that discards the rest of the unsaved edit. Keeping the
   edit would need the card to re-render submitted values, which it
   cannot today. **Blocks the build.**
+- **Does `owners/{user_id}/remove` take the lifecycle gate?** It loses
+  its on-page caller but stays reachable. Gating it with
+  `_require_editable` closes the `active` hole in the table above;
+  leaving it open keeps the sys-admin-adjacent tests as they are.
+- **Self-removal and the last owner on Session Home.** Should removing
+  yourself warn you first, since you land on a 404? Should the last
+  owner's Remove be hidden rather than answered with a 409? Both change
+  once removal is staged: `set_owners` refuses an empty set, so the
+  refusal would come from Save.
 
 ### Out of scope
 
@@ -2469,6 +2514,17 @@ themselves (`tests/integration/test_operator_lobby_access_gate.py`).
 
 ### Doc impact
 
-- `spec/session_home.md` — the Owners sub-card saves with the card
+- `spec/session_owners.md` — **new**: both Owners cards, their add and
+  remove semantics (the table above, as shipped), staging and the save
   (Item 10).
+- `spec/README.md` — a row for the new spec (Item 10).
+- `spec/session_home.md` — the Owners sub-card saves with the card, and
+  points at the new spec (Item 10).
+- `spec/operator_ui_concept.md` — Create's Owners paragraph points at
+  the new spec (Item 10).
+- `spec/permissions.md` — §4.2 keeps the gates and refusals, gains
+  Create's path and whatever the lifecycle question decides (Item 10).
+- `spec/operator_button_audit.md` — §3 gains Create's Add owner
+  (Secondary) and the staged rows' Remove, missing since Item 9; row
+  159 becomes Secondary (Item 10).
 - `docs/status.md` — row when the item lands (Item 10).
