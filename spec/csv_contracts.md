@@ -169,7 +169,7 @@ The file has two parts:
 | Instrument (2) | `InstrumentName` (the positional id `instrument_{n}` — the operator's typed name is not exported), `InstrumentShortLabel` |
 | Field context (3) | `FieldKey`, `FieldLabel`, `ResponseType` |
 | Value (1) | `Value` (empty cell ⇒ reviewer cleared the field) |
-| Self-review (1) | `SelfReview` — uppercase `TRUE` / `FALSE` per Excel idiom. Computed via `is_self_review(reviewer, reviewee)` (case-insensitive email match; `FALSE` for non-email reviewee identifiers). |
+| Self-review (1) | `SelfReview` — uppercase `TRUE` / `FALSE` per Excel idiom. Read from the assignment's stored `Assignment.is_self_review` column: on individual-scoped instruments a case-insensitive match of the reviewer's email against the reviewee's email-or-identifier; on group-scoped instruments the whole-group rule (every member row of a group the reviewer belongs to counts). |
 | Lifecycle (3) | `SavedAt`, `SubmittedAt`, `Version` |
 | Instrument flavour (1) | `InstrumentFlavour` — derived `per-reviewee` / `group-scoped`. **Appended last, not grouped with the other instrument columns**, so the preceding 20 column indices stay stable for analyst pipelines that read by position. |
 

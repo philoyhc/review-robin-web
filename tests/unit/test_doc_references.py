@@ -511,11 +511,13 @@ def test_every_node_id_in_live_prose_names_a_test_that_exists() -> None:
     error where they expected evidence.
 
     The instance is 19S Item 4's: a findings register cited a test by its
-    pre-rename name, and `guide/archive/findings_2026-09-22_csv_contracts.md` is
-    not matched by ``DATED_DOC``, so this check would have caught it.
-    The case is not the size of the live corpus — 7 resolvable citations,
-    all resolving — but that all **3** citations in `guide/archive/` are
-    stale, across two segments. Archived prose is history and stays
+    pre-rename name while it sat live in ``guide/`` (since archived to
+    `guide/archive/findings_2026-09-22_csv_contracts.md`), where
+    ``DATED_DOC`` does not match it, so this check would have caught it.
+    The case is not the size of the live corpus — 6 resolvable citations
+    at its archiving (7 when this check landed),
+    all resolving — but that all **3** citations then in `guide/archive/`
+    were stale, across two segments. Archived prose is history and stays
     exempt; those three are the evidence that the failure mode recurs.
     """
     dangling = [
