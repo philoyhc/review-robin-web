@@ -462,8 +462,9 @@ at the bottom-right and renders in every editable-conceivable
 state on Session Home (`draft` / `validated` / `ready`); the card
 defaults to locked so the operator must explicitly Unlock before
 any setup change. Lock state lives in a per-session `HttpOnly`
-cookie scoped to `/operator/sessions/{id}` (`qsu_{session_id}=1`
-when unlocked).
+cookie (`qsu_{session_id}=1` when unlocked, path `/` so the
+navigation middleware can expire it anywhere; `spec/settings_inventory.md`
+"Cookies").
 
 State-conditional copy only — the card frame is constant:
 
