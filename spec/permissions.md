@@ -32,7 +32,7 @@ membership:
 | **Operator** | `users.is_operator` | env bootstrap on first sign-in (`OPERATOR_EMAILS`), or an admin's *Admit* | an admin's *Revoke* (refused while the user still owns any session) |
 | **Admin** (`sys_admin`) | `users.is_sys_admin` | env bootstrap (`SYS_ADMIN_EMAILS`), or a **super-admin's** *Promote* | a super-admin's *Demote* (refused for the last admin) |
 | **Super-admin** | *derived*, never stored — email ∈ `SUPER_ADMIN_EMAILS` (`app/auth/roles.py::is_super_admin`, case-insensitive) | deployer config only | deployer config only; no in-app path may demote, revoke or remove one |
-| **Session owner** | a `session_operators` row (`role="owner"`) | session create (the creator), clone (the cloner), an owner's *Add owner*, or a sys-admin's audited self-add | an owner's *Remove owner* (refused for the last owner) |
+| **Session owner** | a `session_operators` row (`role="owner"`) | session create (the creator, plus any co-owners named on Create's Owners card), clone (the cloner), an owner's *Add owner*, or a sys-admin's audited self-add | an owner's *Remove owner* (refused for the last owner) |
 
 **Nesting.** Every gate treats admin as implying operator
 (`is_operator OR is_sys_admin`), and a super-admin **self-heals** to
@@ -210,6 +210,7 @@ the operation-level mappings.
 | `last_admin`, `owns_sessions`, `still_owner`, `sole_owner`, `protected_super_admin` | **409** | same |
 | `last_owner` on remove-owner | **409** | `_session_home.session_owners_remove` |
 | every other owner error (`not_in_workspace`, `already_owner`, `not_owner`, `self_only`) | **303** back to Session Home with `?owners_error=<code>` | same |
+| `not_in_workspace` on Create's Owners card — checked before the session exists, so nothing is created | **422** | `_quick_setup.create_session` |
 | Lifecycle refusals (`_require_editable`, `not_draft`, `locked`, …) | **409** (or 400 for missing acknowledgements) | `_shared.py`; contract in `spec/lifecycle.md` |
 
 **Why every session-scoped refusal is a bare 404.** Splitting them —

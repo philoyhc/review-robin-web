@@ -17,9 +17,9 @@ The semantics the route owns, each pinned below:
   rejected save writes no tags either;
 - an **emptied** box clears the set, as the lobby's row expander does
   (the Create page's empty box writes nothing — there is no set yet);
-- a request carrying **no** ``tags`` field clears them too — FastAPI
-  cannot tell absent from empty, and the route's checkboxes already read
-  absent as off;
+- a request without the card's ``tags_present`` marker leaves them
+  alone — FastAPI cannot tell an absent field from an empty one, and a
+  page rendered before the field existed must not clear every tag;
 - a save that leaves the box untouched emits no tag events.
 
 The settings-CSV importer is normalized in the same rung, because this
@@ -85,6 +85,9 @@ def _save(
         "display_timezone": display_timezone,
         **extra,
     }
+    if "tags" in extra:
+        # What the card sends alongside its Tags field (cold read M3).
+        data["tags_present"] = "1"
     return client.post(
         f"/operator/sessions/{review_session.id}/config",
         data=data,
@@ -256,17 +259,14 @@ def test_an_emptied_box_clears_the_tags(client: TestClient, db: Session) -> None
     assert _tags_of(db, review_session) == []
 
 
-def test_a_save_carrying_no_tags_field_clears_them_like_the_toggles(
+def test_a_save_from_a_page_without_the_tags_field_leaves_them_alone(
     client: TestClient, db: Session
 ) -> None:
-    """Absent reads as empty, deliberately, and this pins it.
-
-    FastAPI hands an absent form value and an empty one to the route
-    identically, so the two cannot be told apart without a marker field.
-    The route already takes the card's whole state — its checkboxes read
-    absent as off — and the card's form always sends ``tags``, so the tags
-    follow the same convention rather than a special case.
-    """
+    """A page rendered before the Tags field existed — a tab left open
+    across a deploy — posts neither ``tags`` nor its marker. FastAPI would
+    read that as an emptied box, so without the marker its first Save
+    would clear every tag (Item 9 close, cold read M3). It now leaves
+    them alone, while the rest of the save still lands."""
     review_session = _create(client, db, "HOME-TAGS-ABSENT")
     _tag(db, review_session, ["pilot"])
 
@@ -274,7 +274,18 @@ def test_a_save_carrying_no_tags_field_clears_them_like_the_toggles(
     assert response.status_code == 303, response.text
     db.refresh(review_session)
     assert review_session.name == "Renamed", "the save went through"
-    assert _tags_of(db, review_session) == []
+    assert _tags_of(db, review_session) == ["pilot"]
+
+
+def test_the_card_posts_the_marker_beside_the_field(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _create(client, db, "HOME-TAGS-MARKER")
+    card = _card(
+        client.get(f"/operator/sessions/{review_session.id}?editing=1").text
+    )
+    assert 'name="tags_present"' in card
+    assert f'form="config-save-{review_session.id}"' in card
 
 
 def test_an_untouched_box_emits_no_tag_events(

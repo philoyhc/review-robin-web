@@ -539,7 +539,8 @@ anywhere: the rule lived only in
 returned nothing.
 
 **All 13 non-tag fields on the Create form also appear in the
-Settings CSV** (tags are the fourteenth, below),
+Settings CSV** (tags are the fourteenth, below; the Owners card is
+access control, not a setting, and has no CSV counterpart),
 and `POST /operator/sessions` always applies the CSV *after* creating
 the session — so the file runs last and `_apply_session_metadata`
 decides per field by one of two rules:

@@ -1610,7 +1610,11 @@ fixture count, not the two-line call site.
 > that this entry preserved: that Owners cannot reuse its own routes,
 > and that the config card's `config_editing` gate would make tags
 > editable in 2 of 5 lifecycle states where the lobby edits them in
-> any.
+> any. **Item 9 built both, 2026-09-23**: Owners are staged on Create
+> and applied after `create_session` (the contract below, as
+> predicted), and Session Home's Tags follow the card's gate — the
+> author's ruling, so the two surfaces disagree on purpose
+> (`spec/sessions_overview.md`).
 >
 > **What is left here is change 2 alone** — moving Cancel / Create
 > session to the foot of the right column. It rides whatever next

@@ -351,6 +351,13 @@
           <h3 style="margin-top: 0;" id="config-tags-heading">Tags (optional)</h3>
           <p class="muted">Comma-separated; also editable from the sessions list.</p>
           <div class="config-value" data-display-only>{{ session_tag_list | join(", ") if session_tag_list else "—" }}</div>
+          {# The marker says "this form carries the Tags field". Without
+             it, a page rendered before the field existed — a tab left open
+             across a deploy — would post no ``tags`` at all, which FastAPI
+             hands the route as an empty box, and its first Save would
+             clear every tag (Item 9 close, cold read M3). #}
+          <input type="hidden" name="tags_present" value="1"
+                 form="config-save-{{ session.id }}">
           <input type="text" id="config-tags" name="tags"
                  data-edit-only data-config-input
                  form="config-save-{{ session.id }}"
@@ -359,7 +366,7 @@
                  value="{{ session_tag_list | join(', ') }}"
                  placeholder="e.g. pilot, 2026, engineering">
         </div>
-        {# Save / Cancel / Lock cluster just below the UI settings card,
+        {# Save / Cancel / Lock cluster just below the Tags card,
            flushed right (18R Item 4 Slice 3 — wired).
            - Save submits the config form (POST → Home display mode). Rendered
              enabled so no-JS works; the dirty-tracking script disables it until

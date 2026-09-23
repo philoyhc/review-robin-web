@@ -173,7 +173,7 @@
     <div>
       {% include "operator/partials/_quick_setup_card.html" %}
     </div>
-    {# Two cards stacked in one cell, so the cell is a ``.bottom-left``
+    {# Three cards stacked in one cell, so the cell is a ``.bottom-left``
        flex column — the documented primitive for exactly this
        (`spec/ui_elements.md` §10). Cards inside ``.bottom-grid`` carry
        no ``margin-bottom`` by design (§4), so the column's ``gap`` is
@@ -218,7 +218,7 @@
                autocomplete="off"
                placeholder="e.g. pilot, 2026, engineering">
       </div>
-      {# Owners (19S Item 9 Part A rung 3 — scaffold, deliberately inert).
+      {# Owners (19S Item 9 Part A).
          The same UX as Session Home's Owners card (author's ruling,
          2026-09-23): the owners table, then a one-at-a-time Add-owner
          picker suggesting workspace operators. The creator is the first
@@ -229,10 +229,12 @@
          it is an outline button and the copy says so (author's ruling,
          2026-09-23). Third card in this
          ``.bottom-left`` column, so the column's gap spaces it
-         (``spec/ui_elements.md`` §4). **Inert until rung 4**: the email
-         input carries no ``name`` and no ``form=``, and Add owner is a
-         plain button with nothing behind it. #}
-      <div class="card" id="session-owners">
+         (``spec/ui_elements.md`` §4). **Live since rung 4**: the
+         ``_owners_stager_js`` partial stages rows, each with a hidden
+         ``owners`` input bound to the create form; without JavaScript
+         the email box submits the one address typed into it. #}
+      <div class="card" id="session-owners"
+           data-owners-stager data-owners-form="create-session-form">
         <h3 style="margin-top: 0;">Owners (optional)</h3>
         <p class="muted">
           Workspace operators with full edit access on this session. You
@@ -242,7 +244,7 @@
         {# `.table-scroll` (base.html): a table wider than its card
            scrolls inside the card rather than pushing the page sideways. #}
         <div class="table-scroll">
-        <table id="session-owners-table">
+        <table id="session-owners-table" data-owners-table>
           <tr>
             <th>Email</th>
             <th>Name</th>
@@ -255,13 +257,15 @@
             <td>{{ user.display_name or "—" }}</td>
             <td>owner</td>
             <td>—</td>
-            <td class="col-shrink">—</td>
+            <td class="col-shrink">—<input type="hidden" name="owners"
+                   form="create-session-form" value="{{ user.email }}"></td>
           </tr>
         </table>
         </div>
         {% if new_session_owner_candidates %}
           <label for="session-owners-email">Pick or search for a workspace operator:</label>
-          <input type="email" id="session-owners-email"
+          <input type="email" id="session-owners-email" name="owners"
+                 form="create-session-form" data-owners-email
                  list="session-owners-candidates"
                  autocomplete="off" placeholder="email">
           <datalist id="session-owners-candidates">
@@ -271,7 +275,7 @@
           </datalist>
           <div class="card-action-row">
             <button class="btn secondary" type="button"
-                    id="session-owners-add">Add owner</button>
+                    id="session-owners-add" data-owners-add>Add owner</button>
           </div>
         {% else %}
           <p class="muted">No other workspace operators are available to add.</p>
@@ -280,6 +284,7 @@
     </div>
   </div>
 
+  {% include "operator/partials/_owners_stager_js.html" %}
   {% include "operator/partials/_schedule_ordering_js.html" %}
   {% include "operator/partials/_timezone_preview.html" %}
 {% endblock %}

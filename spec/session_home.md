@@ -67,7 +67,7 @@ then a two-column bottom row.
 └──────────────────────────────────────────────────────────────┘
 ┌────────────── Session details ───────────────────────────────┐
 │  full-width; display ↔ edit swap (?editing=1)                │
-│  + Owners / UI-settings sub-cards                            │
+│  + Owners / UI-settings / Tags sub-cards                     │
 └──────────────────────────────────────────────────────────────┘
 ┌── Quick Setup ───────────┐  ┌── Danger Zone ───────────┐
 │   scaffolded bulk        │  │   Delete Data / Delete   │
@@ -344,8 +344,9 @@ details". Then a two-column body of config fields, each with a
   inline beside their offset; there is no separate
   Schedule-timeline card.
 
-Below the field block, a half-width `.bottom-grid` pair of
-**sub-cards**:
+Below the field block, a `.bottom-grid` of **sub-cards** — Owners
+in one column; User interface settings and Tags stacked in the other,
+a `.bottom-left` column whose `gap` spaces them:
 
 - **Owners** (`#config-owners-card`) —
   display mode is a read-only Email / Name / Role / Added table;
@@ -363,6 +364,23 @@ Below the field block, a half-width `.bottom-grid` pair of
   disabled once the corresponding roster has rows
   (`has_relationships` / `has_observers`), mirroring the
   service-layer guard against orphaning data.
+- **Tags** (`#config-tags-card`, 19S Item 9) — **a field of this
+  card that renders in its own card**, as the toggles above do: it
+  shares the card's display/edit swap, its edit window and its
+  `config-save` form, with no save of its own. Locked, it shows the
+  tags comma-joined as a `.config-value` (an em dash when there are
+  none), the treatment `help_contact` and `description` have; its
+  `<h3>` is the field's label. **An emptied box clears the tag set**,
+  as the lobby's row expander does — the opposite of the Create
+  page's box, where there is no set yet (`spec/csv_contracts.md`
+  § *Settings CSV — apply precedence*). The card also posts a
+  `tags_present` marker, and **only a save carrying it writes
+  tags**: FastAPI hands an absent field and an empty one to the
+  route identically, and a page rendered before the field existed
+  must not clear every tag on its first Save. Because `/config`
+  refuses a non-editable session, this surface edits tags in draft
+  and validated only; the lobby edits them in any state
+  (`spec/sessions_overview.md`).
 
 **Edit affordance behavior:**
 
@@ -371,7 +389,7 @@ Below the field block, a half-width `.bottom-grid` pair of
   actually being editable (`is_draft` or `is_validated`) so a
   stale link on an Activated session degrades to display mode.
 - The Save / Cancel / Lock-toggle cluster sits bottom-right of
-  the UI-settings sub-card. **Unlock** (display mode) links to
+  that column, below the Tags sub-card. **Unlock** (display mode) links to
   `?editing=1`; **Lock** (edit mode) drops it. **Cancel** and
   **Lock** are anchors carrying real `?editing` hrefs so no-JS
   degrades to navigation; with JS the inline `sessionConfig`
@@ -386,13 +404,17 @@ Below the field block, a half-width `.bottom-grid` pair of
   / schedule / help contact / timezone) is non-destructive: it
   never deletes assignments or responses, so the form carries no
   response-loss acknowledgement gate.
-- The Details / Schedule / UI-settings inputs submit as one form
+- The Details / Schedule / UI-settings / Tags inputs submit as one form
   via the HTML5 `form="config-save-{id}"` association (they can't
   physically nest — the Owners sub-card carries its own form).
   **Save POSTs to `/operator/sessions/{id}/config`** (shared
   persistence helper `_apply_session_config_form`) and redirects
   back to Home in **display** mode (`#session-config`) — the
-  operator saves in place instead of hopping to a child page.
+  operator saves in place instead of hopping to a child page. The
+  tag write runs **after** the config apply, so a save the card
+  rejects writes no tags either, and every audit event one save
+  produces shares one correlation id (the `audit_events`
+  `correlation_id` column, one value per request).
 - `GET /operator/sessions/{id}/edit` exists only as a **308
   permanent redirect** to `…?editing=1#session-config` for stale
   bookmarks. It keeps the `require_session_operator` gate, so a
