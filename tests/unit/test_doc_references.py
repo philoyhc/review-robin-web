@@ -511,7 +511,7 @@ def test_every_node_id_in_live_prose_names_a_test_that_exists() -> None:
     error where they expected evidence.
 
     The instance is 19S Item 4's: a findings register cited a test by its
-    pre-rename name, and `guide/findings_2026-09-22_csv_contracts.md` is
+    pre-rename name, and `guide/archive/findings_2026-09-22_csv_contracts.md` is
     not matched by ``DATED_DOC``, so this check would have caught it.
     The case is not the size of the live corpus — 7 resolvable citations,
     all resolving — but that all **3** citations in `guide/archive/` are
