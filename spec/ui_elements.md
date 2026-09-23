@@ -177,6 +177,17 @@ classes.
 > wrapper still carries the base `margin-bottom`** and spaces itself —
 > which is what stacks consecutive top-level cards on the sys-admin
 > pages.
+> **All of that exists to deliver `visual_style_general.md` P8: two
+> visible card borders never touch.** The mechanism differs by context —
+> the wrapper's `gap` inside `.page-grid` / `.bottom-grid`, the card's
+> own `margin-bottom` outside one — and the value is 20px in both.
+> **Two cards stacked in one cell of a `.bottom-grid` need
+> `.bottom-left`** (§10), the flex column whose `gap` spaces them. In a
+> plain `<div>` cell the zeroed margin leaves them flush, which is how
+> the Create page's Tags card first rendered (19S Item 6). Check a new
+> card by measuring its gap to the card above in a browser, not by
+> reading the CSS — `docs/unenforced_conventions.md` §1.12 says why no
+> test does it.
 
 > **`.card.lock` (warning-framed, lifecycle-locked)** — `.card`'s shape
 > with `--card-warning-bg` fill and `--card-warning-border` border (the
@@ -951,6 +962,10 @@ that owns them. Each is stated in full above; none is decided here.
 - **Pills inline in copy.** Confirm labels wrap count phrases as
   `.pill-empty` chips so the eye lands on the numbers without bolding the
   whole sentence.
+- **Cards never touch** (`visual_style_general.md` P8). Every card gap
+  is 20px, set by a wrapper's `gap` or a bare card's `margin-bottom`;
+  two cards stacked in one grid cell go in a `.bottom-left`. Stated in
+  full in §4.
 - **`.bottom-grid` for natural-height pairs.** When two cards in a
   two-column layout do not carry the same weight, prefer `.bottom-grid`
   over `.page-grid`; `.page-grid`'s equal-height stretch is for the

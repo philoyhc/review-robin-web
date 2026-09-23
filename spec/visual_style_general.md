@@ -22,6 +22,8 @@ This document is app-agnostic. It defines the design system itself: principles, 
 
 **P7 — Recovery actions adopt the card's color family.** When an action lives inside a card whose color carries the meaning (a lock card, a danger zone), the action picks up that family rather than reasserting its own. A Primary blue button inside an amber lock card clashes; an outline-amber button continues the card's framing. Same logic for outline-red destructive buttons inside the danger zone. The card already says "this region needs care" — the action shouldn't have to repeat the color story in a different language.
 
+**P8 — Cards never touch.** Two visible card borders are never contiguous. Every pair of cards — stacked, side by side, or nested inside another card — keeps a clear gap between their borders. The gap is what tells the reader these are separate things: borders that meet read as one shape with a line through it. The value is the between-cards step in **Spacing** below. Check it by measuring the rendered page, not by reading the stylesheet: which rule wins on a given element is only visible in a browser.
+
 ---
 
 ## Color palette
@@ -106,10 +108,11 @@ App-specific uses of these accents (e.g., assigning `accent-blue` to a particula
 
 ## Spacing
 
-A 4px base grid. Spacing values: 4, 8, 12, 16, 24, 32, 48, 64. Stick to these; off-grid spacing creates the subtle visual noise that makes a UI feel sloppy.
+A 4px base grid. Spacing values: 4, 8, 12, 16, 20, 24, 32, 48, 64. Stick to these; off-grid spacing creates the subtle visual noise that makes a UI feel sloppy.
 
 - **Tight (4–8px)** — between a label and its input, between a badge and surrounding text.
 - **Normal (12–16px)** — internal padding of cards, gaps between adjacent controls in a row.
+- **Between cards (20px)** — between sibling cards, stacked or side by side, and between regions of a card laid out as a grid. One step wider than the 16px card padding this app uses, so separate cards sit further apart than content does from its own card's edge (**P8**). Added to the scale 2026-09-23 on the author's ruling: the app had used 20px for every card gap all along, and the list above omitted it.
 - **Loose (24–32px)** — between major sections of a page, between chrome and page content.
 - **Page (48–64px)** — top of page to first content, between distinct page regions.
 
