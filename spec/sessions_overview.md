@@ -418,6 +418,23 @@ counted in **sessions**, each contributing up to two options, so a
 capped session never keeps one spelling of its identity and loses the
 other.
 
+**The tag editors complete each tag (19S Item 7).** The four
+comma-separated tag boxes — the row expander's and the bulk expander's
+here, Create's Tags card and Session Home's Tags field — share one
+typeahead, `operator/partials/_tag_typeahead.html`, which each box
+opts into with `data-tag-typeahead`. It completes **each tag, past the
+first one and after every comma**: on every keystroke it rewrites the
+page's `<datalist id="tag-vocabulary">` so each option is everything
+typed up to the current tag followed by a tag that starts with it and
+is not already in the box. The browser draws the popup. The
+suggestions are **every tag on a session the operator owns, archived
+included** (`session_tags.vocabulary_for_user`) — wider than the filter
+box's list, which stays scoped to the rows shown because it filters
+them. `list=` is set on focus, so without JavaScript a box offers
+nothing rather than whole-line options. The option rule,
+`rrwTagOptions`, is executed by
+`tests/integration/test_tag_typeahead_rule.py`.
+
 **Names and codes are offered as themselves**, not as the
 `"Name (handle)"` label the roster surfaces use. That label works there
 because the server exact-matches the parenthesized handle when the

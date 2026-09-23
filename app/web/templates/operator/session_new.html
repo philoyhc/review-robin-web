@@ -215,7 +215,7 @@
         <input type="text" id="tags" name="tags"
                form="create-session-form"
                aria-labelledby="session-tags-heading"
-               autocomplete="off"
+               data-tag-typeahead autocomplete="off"
                placeholder="e.g. pilot, 2026, engineering">
       </div>
       {# Owners (19S Item 9 Part A).
@@ -285,6 +285,7 @@
   </div>
 
   {% include "operator/partials/_owners_stager_js.html" %}
+  {% include "operator/partials/_tag_typeahead.html" %}
   {% include "operator/partials/_schedule_ordering_js.html" %}
   {% include "operator/partials/_timezone_preview.html" %}
 {% endblock %}

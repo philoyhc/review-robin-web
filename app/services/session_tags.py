@@ -11,7 +11,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, SessionTag, User
+from app.db.models import ReviewSession, SessionOperator, SessionTag, User
 from app.services import audit
 
 MAX_TAG_LENGTH = 64
@@ -58,6 +58,30 @@ def vocabulary(db: Session, session_ids: list[int]) -> list[str]:
     rows = db.execute(
         select(SessionTag.tag)
         .where(SessionTag.session_id.in_(session_ids))
+        .distinct()
+        .order_by(SessionTag.tag)
+    ).scalars().all()
+    return list(rows)
+
+
+def vocabulary_for_user(db: Session, user: User) -> list[str]:
+    """Every distinct tag on a session ``user`` owns, archived included,
+    sorted — the suggestions behind the four tag editors' typeahead
+    (19S Item 7: the lobby's row and bulk expanders, Create, and Session
+    Home). Wider than :func:`vocabulary`, which is scoped to the rows a
+    lobby view shows because it feeds that view's filter strip.
+
+    One join through ``session_operators``; measured at 1.5 ms over
+    3,009 tags on 1,003 sessions (19S Item 7 rung 1). Values are stored
+    through :func:`normalize_tag`, so every suggestion is one the editors
+    can store unchanged."""
+    rows = db.execute(
+        select(SessionTag.tag)
+        .join(
+            SessionOperator,
+            SessionOperator.session_id == SessionTag.session_id,
+        )
+        .where(SessionOperator.user_id == user.id)
         .distinct()
         .order_by(SessionTag.tag)
     ).scalars().all()

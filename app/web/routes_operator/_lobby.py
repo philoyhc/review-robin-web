@@ -108,6 +108,10 @@ def list_sessions(
             "lobby_stats": lobby_stats,
             "tags_by_session": session_tags.tags_for_sessions(db, session_ids),
             "lobby_tags": lobby_tags,
+            # 19S Item 7 — the row and bulk expanders' tag typeahead.
+            # Wider than ``lobby_tags``, which feeds the filter strip and
+            # so stays scoped to the rows shown.
+            "tag_vocabulary": session_tags.vocabulary_for_user(db, user),
             "filter_options": views.sessions_filter_options(
                 review_sessions, lobby_tags
             ),

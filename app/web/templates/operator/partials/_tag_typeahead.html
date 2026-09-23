@@ -1,0 +1,84 @@
+{# Tag typeahead — 19S Item 7. Completes each tag in a comma-separated
+   tag box: past the first one, after every comma (author's ruling,
+   2026-09-23).
+
+   A bare ``<datalist>`` completes the whole value, so it would offer to
+   replace ``alpha, be`` with ``beta``. This rewrites the datalist on
+   every keystroke instead (option (b1) in the plan): each option is
+   everything typed so far up to the current tag, followed by a
+   vocabulary tag that starts with it and is not already in the box.
+   Picking one completes the whole line, and the browser keeps its own
+   popup, keyboard handling and screen-reader wiring.
+
+   A box opts in with ``data-tag-typeahead``. The script listens on the
+   document, because the lobby's two boxes are built from ``<template>``s
+   after load. ``list=`` is set on focus, so without JavaScript a box has
+   no suggestions at all rather than whole-value ones that would replace
+   what was typed.
+
+   The vocabulary is ``tag_vocabulary`` — every tag on a session the
+   operator owns, archived included (``session_tags.vocabulary_for_user``).
+   The part of an option the operator typed keeps their casing so the
+   browser's match cannot miss on case; storage lowercases it through
+   ``normalize_tag``, which is also how the vocabulary was stored. #}
+<datalist id="tag-vocabulary">
+  {% for tag in tag_vocabulary %}
+    <option value="{{ tag }}"></option>
+  {% endfor %}
+</datalist>
+<script>
+  // The options for a box holding ``value``: everything up to the tag
+  // being typed, then each vocabulary tag that starts with it, is not
+  // already in the box, and is not exactly what is typed (so a finished
+  // tag closes the popup). A pure function of its two arguments, so
+  // ``tests/integration/test_tag_typeahead_rule.py`` runs it under node.
+  function rrwTagOptions(value, vocabulary) {
+    var comma = value.lastIndexOf(",");
+    var head = value.slice(0, comma + 1);
+    var rest = value.slice(comma + 1);
+    var lead = rest.match(/^\s*/)[0];
+    var typed = rest.slice(lead.length);
+    var token = typed.toLowerCase();
+    var taken = head.split(",").map(function (tag) {
+      return tag.trim().toLowerCase();
+    });
+    var options = [];
+    vocabulary.forEach(function (tag) {
+      if (taken.indexOf(tag) !== -1) return;
+      if (tag.indexOf(token) !== 0 || tag === token) return;
+      options.push(head + lead + typed + tag.slice(typed.length));
+    });
+    return options;
+  }
+
+  (function () {
+    var list = document.getElementById("tag-vocabulary");
+    if (!list) return;
+    var vocabulary = Array.prototype.map.call(list.options, function (option) {
+      return option.value;
+    });
+    list.textContent = "";
+
+    function refresh(input) {
+      list.textContent = "";
+      rrwTagOptions(input.value, vocabulary).forEach(function (value) {
+        var option = document.createElement("option");
+        option.value = value;
+        list.appendChild(option);
+      });
+    }
+
+    function isTagBox(target) {
+      return target && target.matches && target.matches("[data-tag-typeahead]");
+    }
+
+    document.addEventListener("focusin", function (event) {
+      if (!isTagBox(event.target)) return;
+      event.target.setAttribute("list", "tag-vocabulary");
+      refresh(event.target);
+    });
+    document.addEventListener("input", function (event) {
+      if (isTagBox(event.target)) refresh(event.target);
+    });
+  })();
+</script>

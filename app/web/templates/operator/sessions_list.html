@@ -236,7 +236,8 @@
                 <input type="datetime-local" data-expander-field="deadline">
               </label>
               <label class="exp-field-tags">Tags
-                <input type="text" data-expander-field="tags">
+                <input type="text" data-expander-field="tags"
+                       data-tag-typeahead autocomplete="off">
               </label>
             </div>
             <div class="session-expander-actions exp-actions-right">
@@ -283,7 +284,8 @@
             <div class="session-expander-fields exp-fields-right">
               <label class="exp-field-bulk-tags">Tags
                 <input type="text" name="tags"
-                       data-expander-field="bulk-tags">
+                       data-expander-field="bulk-tags"
+                       data-tag-typeahead autocomplete="off">
               </label>
             </div>
             <div class="session-expander-actions exp-actions-right">
@@ -910,6 +912,7 @@
         refresh();
       })();
     </script>
+    {% include "operator/partials/_tag_typeahead.html" %}
   {% else %}
     {# Segment 19E rung 3 — the lobby first-run card.
 

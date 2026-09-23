@@ -92,6 +92,8 @@ def new_session_form(
             "new_session_owner_candidates": (
                 session_owners.new_session_owner_candidates(db, user)
             ),
+            # 19S Item 7 — the Tags box's typeahead.
+            "tag_vocabulary": session_tags.vocabulary_for_user(db, user),
         },
     )
 
@@ -209,6 +211,8 @@ def session_detail(
             "session_tag_list": session_tags.tags_for_sessions(
                 db, [review_session.id]
             )[review_session.id],
+            # 19S Item 7 — the Tags field's typeahead.
+            "tag_vocabulary": session_tags.vocabulary_for_user(db, user),
             # 18R Item 4 Slice 4 — owner add/remove errors surface inline on
             # the config Owners sub-card (redirected here from the routes).
             "owners_error": owners_error,
