@@ -2,9 +2,10 @@
 
 The card renders below User interface settings in the details card's
 right-hand ``.bottom-left`` column, above the Save / Cancel / Lock
-cluster. Locked it shows the session's tags as a ``.config-value``, like
-every other field on that card; unlocked it shows a text input
-prefilled with the same comma-joined string.
+cluster. Locked it shows the session's tags as the lobby's pills
+(an em dash ``.config-value`` when there are none, like the card's other
+empty fields); unlocked it shows a text input prefilled with the tags
+comma-joined.
 
 **Rung 2 wires it to the card's own save.** The input joins the
 ``config-save`` form, so it rides the card's edit window and Save — no
@@ -31,6 +32,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -179,16 +181,24 @@ def test_the_card_sits_below_ui_settings_and_above_the_save_cluster(
     assert body.rfind('<div class="bottom-left">', 0, tags) == column
 
 
-def test_locked_it_renders_like_the_other_fields(
+def test_locked_it_renders_the_lobbys_pills(
     client: TestClient, db: Session
 ) -> None:
-    """A ``.config-value``, display-only, holding the tags comma-joined —
-    the treatment ``help_contact`` and ``description`` already have."""
+    """One ``.pill.pill-count`` per tag inside ``.session-tags`` — the
+    sessions lobby's own markup (author's ruling, 2026-09-23) — under a
+    display-only wrapper, since ``.session-tags``'s ``display: flex``
+    would outrank edit mode's ``display: none`` on the same element."""
     review_session = _create(client, db, "HOME-TAGS-LOCKED")
     _tag(db, review_session, ["pilot", "2026"])
     card = _card(client.get(f"/operator/sessions/{review_session.id}").text)
 
-    assert '<div class="config-value" data-display-only>2026, pilot</div>' in card
+    display = card.split("<div data-display-only>", 1)[1].split("<input", 1)[0]
+    assert '<div class="session-tags">' in display
+    assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', display) == [
+        "2026",
+        "pilot",
+    ]
+    assert "2026, pilot" not in display, "no longer comma-joined"
     assert "Tags (optional)</h3>" in card
     # The heading is the label; there is no second "Tags" above the box.
     assert "<label" not in card

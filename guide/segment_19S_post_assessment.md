@@ -2343,6 +2343,13 @@ ones:
 `set_tags` claim, the fill-blanks rule, and a "20px every card" line.
 All are fixed.
 
+**After the close, 2026-09-23 (author's ruling from the dev slot):**
+locked, Session Home's tags render as the lobby's pills rather than a
+comma-joined `.config-value`; the edit box is unchanged. The pills sit
+in a display-only wrapper, because `body.ui-v2 .session-tags`'s
+`display: flex` outranks edit mode's `display: none` on the same
+element — checked in Chromium, both modes.
+
 ### Out of scope
 
 - **Typeahead on either new box** — Item 7, open on its own fork.

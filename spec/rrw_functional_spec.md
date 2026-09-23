@@ -1088,8 +1088,8 @@ the only surface for session config.
 - **User interface settings sub-card** — the
   `relationships_enabled` / `observers_enabled` checkboxes, each
   lock-on-data.
-- **Tags sub-card** — the session's tags, comma-separated, in
-  display mode; one text box in edit mode, saved with the card's
+- **Tags sub-card** — the session's tags as pills, like the
+  sessions lobby's, in display mode; one text box in edit mode, saved with the card's
   **Save** (emptying the box clears them). Tags are stored lower
   case.
 - **Save** POSTs to `/operator/sessions/{id}/config` and redirects

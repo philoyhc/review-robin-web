@@ -350,7 +350,23 @@
         <div class="card" id="config-tags-card">
           <h3 style="margin-top: 0;" id="config-tags-heading">Tags (optional)</h3>
           <p class="muted">Comma-separated; also editable from the sessions list.</p>
-          <div class="config-value" data-display-only>{{ session_tag_list | join(", ") if session_tag_list else "—" }}</div>
+          {# Locked, the tags are the lobby's pills (author's ruling,
+             2026-09-23), not a comma-joined ``.config-value``; the edit
+             box stays comma-separated. The wrapper carries
+             ``data-display-only`` because ``body.ui-v2 .session-tags``
+             sets ``display: flex`` and outranks the edit-mode
+             ``display: none`` on the same element. #}
+          {% if session_tag_list %}
+            <div data-display-only>
+              <div class="session-tags">
+                {% for tag in session_tag_list %}
+                  <span class="pill pill-count">{{ tag }}</span>
+                {% endfor %}
+              </div>
+            </div>
+          {% else %}
+            <div class="config-value" data-display-only>—</div>
+          {% endif %}
           {# The marker says "this form carries the Tags field". Without
              it, a page rendered before the field existed — a tab left open
              across a deploy — would post no ``tags`` at all, which FastAPI
