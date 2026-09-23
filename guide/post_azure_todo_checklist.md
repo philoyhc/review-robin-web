@@ -340,3 +340,38 @@ it.)
   rather than left implicit.
 - Whatever is built after that is scoped as its own item in a live
   segment; this entry is the evidence, not the build.
+
+---
+
+## 5. Verify Session Home's Owners card and the tag typeahead in a browser
+
+**Status:** open. Blocked on a deploy — the **dev slot is enough**, and
+the author cannot reach it yet (2026-09-23). A browser against
+`localhost` settles every row too; they are here because a browser
+settles them and headless Chromium did not.
+
+**What.** Segment 19S Item 10 gave Session Home's Owners card its own
+staged Save (`spec/session_owners.md`), and Item 7 put a typeahead on
+the four tag boxes. The suite pins their markup; headless Chromium
+drove the scripts, but draws no datalist popup and was never a person
+at a keyboard.
+
+**Done when** each has been seen, in a real browser:
+
+| Check | How | Passes when |
+|---|---|---|
+| Owners stage, then save | Session Home → Owners card: add an operator, remove another, then **Save** | Nothing changes until Save; after it, the card shows exactly those two changes and the banner is absent |
+| Save and Cancel wake on a change | Same card, fresh page | Both disabled at rest; typing an address or staging a row wakes them; picking an address already in the table leaves them asleep |
+| Cancel undoes staging | Stage an add and a remove, then **Cancel** | The table is back to the page's owners, the picker is empty, Save and Cancel are asleep |
+| The last owner cannot go | On a one-owner session, or after staging the others out | That row's Remove is disabled |
+| Removing yourself asks | Click Remove on your own row | The browser's confirm names losing access; **Cancel** keeps the row. Saving yourself out lands on the sessions lobby |
+| Any lifecycle state | Repeat the first row on an Activated session | It saves; the details card stays locked |
+| Without JavaScript | Disable JavaScript, reload Session Home | No Add owner or staged Remove; a Remove on each other owner's row (not yours, not a last owner) saves at once; the picker plus Save adds one owner |
+| Create is unchanged | Create new session → Owners, JavaScript on and off | On: Add owner stages as before. Off: no Add owner; the picker's one address is saved with Create session |
+| The tag popup, after each comma | The lobby's row and bulk expanders, Create's Tags card, Session Home's Tags field: type `a` then `pilot, e` | A popup of your existing tags each time, completing only the tag after the last comma, never offering one already in the box |
+| The keyboard picks | In each box, arrow to a suggestion and press Enter — **Safari as well as Chromium** | Enter takes the suggestion. In the lobby's expanders it must never submit the form (#2579: Enter in the lobby form does nothing) |
+| A screen reader | VoiceOver or NVDA on one box | The suggestions are announced as a list |
+
+**Where this came from.** `guide/segment_19S_post_assessment.md` Item 10
+and Item 7, both closed with this check owed; each `### Status` points
+here. Settling a row is a dated line there, not a reopening.
