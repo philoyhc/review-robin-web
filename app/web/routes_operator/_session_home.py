@@ -200,11 +200,10 @@ def session_detail(
                 session_tz,
             ),
             # The Owners card: the current owners, and the Add-owner
-            # picker's candidates — every workspace operator, since owners
-            # are staged (19S Item 10).
+            # picker's candidates — operators not already owners.
             "config_owners": session_owners.list_owners(db, review_session),
             "config_owner_candidates": (
-                session_owners.session_owner_candidates(db)
+                session_owners.session_owner_candidates(db, review_session)
             ),
             # 19S Item 9 Part B — the details card's Tags field, shown as a
             # ``.config-value`` when locked and prefilled when editing.
@@ -646,49 +645,6 @@ def _owners_redirect_url(session_id: int, error_code: str | None = None) -> str:
     return f"/operator/sessions/{session_id}#owners-card"
 
 
-@router.post("/sessions/{session_id}/owners/save")
-def session_owners_save(
-    owners: list[str] = Form(default=[]),
-    owners_original: list[str] = Form(default=[]),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    """The Owners card's Save (19S Item 10): the table's owners, applied
-    as changes against the set the card was rendered with. The path puts
-    the verb last, as ``owners/add`` and ``fields/save`` do
-    (``spec/architecture.md`` "Route conventions").
-
-    Any lifecycle state, as the lobby's tag edit. The save is all or
-    nothing (``apply_owner_changes``): a non-operator address, removing
-    every owner, or a clash with a concurrent save writes nothing and
-    lands back on the card with its banner. If you are not an owner
-    afterwards you land on the sessions lobby, since Session Home is
-    then a 404 for you.
-    """
-    error: str | None = None
-    try:
-        session_owners.apply_owner_changes(
-            db,
-            review_session=review_session,
-            actor=user,
-            original=owners_original,
-            wanted=owners,
-            correlation_id=request_correlation_id(),
-        )
-    except session_owners.OwnerOperationError as exc:
-        error = exc.code
-    owner_ids = {row.user_id for row in session_owners.list_owners(db, review_session)}
-    if user.id not in owner_ids:
-        return RedirectResponse(
-            url="/operator/sessions", status_code=status.HTTP_303_SEE_OTHER
-        )
-    return RedirectResponse(
-        url=_owners_redirect_url(review_session.id, error),
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
 @router.post("/sessions/{session_id}/owners/add")
 def session_owners_add(
     target_email: str = Form(...),
@@ -773,6 +729,12 @@ def session_owners_remove(
         return RedirectResponse(
             url=_owners_redirect_url(review_session.id, exc.code),
             status_code=status.HTTP_303_SEE_OTHER,
+        )
+    # Removing yourself leaves Session Home a 404 for you, so land on the
+    # sessions lobby instead (19S Item 10, author's ruling).
+    if target.id == actor.id:
+        return RedirectResponse(
+            url="/operator/sessions", status_code=status.HTTP_303_SEE_OTHER
         )
     return RedirectResponse(
         url=_owners_redirect_url(review_session.id),

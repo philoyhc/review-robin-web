@@ -182,12 +182,10 @@ verb-first to name the kind (`instruments/add-group`,
 sub-collections — this is a deliberate, documented divergence
 (consistency-audit R7).
 
-**Whole-set saves end in `/save`, verb last**: `owners/save`
-(Session Home's Owners card posts its staged table as changes
-against the rendered set) and `instruments/{id}/fields/save` (the
-Band 1 + Link 3 + visibility whole-form save) both follow this
-shape, distinct from the per-item `{collection}/add` /
-`{collection}/{id}/remove` routes above.
+**Whole-set saves end in `/save`, verb last**:
+`instruments/{id}/fields/save` (the Band 1 + Link 3 + visibility
+whole-form save) follows this shape, distinct from the per-item
+`{collection}/add` / `{collection}/{id}/remove` routes above.
 
 **Error redisplay.** A failed **row create / edit** re-renders its page
 inline with the validation message in the form banner (`edit_error` →

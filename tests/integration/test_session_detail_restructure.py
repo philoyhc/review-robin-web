@@ -1190,10 +1190,9 @@ def test_owners_left_the_session_config_card_for_their_own(
         assert col in owners
     assert 'class="col-shrink">Action</th>' in owners
     # The creator is an owner — their email shows in the table, with a
-    # staged Remove (19S Item 10). The staging itself is covered in
-    # test_session_home_owners_card.
+    # Remove that saves at once (covered in test_session_home_owners_card).
     assert "alice@example.edu" in owners
-    assert "data-owners-remove" in owners
+    assert "/remove\"" in owners
 
     assert 'id="config-ui-settings-card"' in card
     assert ">User interface settings</h3>" in card

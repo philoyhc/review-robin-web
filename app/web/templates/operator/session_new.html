@@ -157,27 +157,24 @@
     })();
   </script>
 
-  {# Bottom row — mirrors Session Home's frozen layout: Quick Setup
-     (left) + User interface settings (right), side by side.
-     (18R Item 4 follow-up — Quick Setup moved up next to the details
-     form; UI settings moved to the right and re-styled to match Home's
-     ``.ui-settings-row`` / ``.ui-setting`` primitives.)
+  {# Bottom row — mirrors Session Home's placements (author's ruling,
+     2026-09-23): the left column is User interface settings then Quick
+     Setup, the right column Tags then Owners — as Home carries UI
+     settings left of Tags in its details card, and Owners above the
+     Danger Zone beside Quick Setup. Each column is a ``.bottom-left``
+     flex column, the documented primitive for stacked cards
+     (`spec/ui_elements.md` §10); cards inside ``.bottom-grid`` carry no
+     ``margin-bottom`` by design (§4), so the column's ``gap`` is the
+     only thing that spaces them.
 
-     Both cards' inputs associate with ``create-session-form`` above via
-     the HTML ``form=`` attribute, so any uploads / rule-set selection and
-     the two toggles submit alongside the session details and feed
-     ``POST /operator/sessions`` after the session row is created. There's
-     no session row yet, so Quick Setup is always unlocked (counts 0) and
-     neither toggle is ever locked-on-data. #}
+     Every card's inputs associate with ``create-session-form`` above via
+     the HTML ``form=`` attribute, so any uploads, the two toggles,
+     the tags and the owners submit alongside the
+     session details and feed ``POST /operator/sessions`` after the
+     session row is created. There's no session row yet, so Quick Setup
+     is always unlocked (counts 0) and neither toggle is ever
+     locked-on-data. #}
   <div class="bottom-grid">
-    <div>
-      {% include "operator/partials/_quick_setup_card.html" %}
-    </div>
-    {# Three cards stacked in one cell, so the cell is a ``.bottom-left``
-       flex column — the documented primitive for exactly this
-       (`spec/ui_elements.md` §10). Cards inside ``.bottom-grid`` carry
-       no ``margin-bottom`` by design (§4), so the column's ``gap`` is
-       the only thing that spaces them. #}
     <div class="bottom-left">
       <div class="card" id="user-interface-settings">
         <h3 style="margin-top: 0;">User interface settings</h3>
@@ -195,6 +192,9 @@
           </label>
         </div>
       </div>
+      {% include "operator/partials/_quick_setup_card.html" %}
+    </div>
+    <div class="bottom-left">
       {# Tags (19S Item 6 rung 2 — now live). ``name="tags"`` matches
          the lobby's own field, so one habit works on both surfaces, and
          ``form=`` associates the control with the create form it is
@@ -227,9 +227,9 @@
          applies them after the session is created — Create session
          saves everything, and Add owner only stages a row, which is why
          it is an outline button and the copy says so (author's ruling,
-         2026-09-23). Third card in this
-         ``.bottom-left`` column, so the column's gap spaces it
-         (``spec/ui_elements.md`` §4). **Live since rung 4**: the
+         2026-09-23). Second card in the right
+         ``.bottom-left`` column, under Tags, so the column's gap spaces
+         it (``spec/ui_elements.md`` §4). **Live since rung 4**: the
          ``_owners_stager_js`` partial stages rows, each with a hidden
          ``owners`` input bound to the create form; without JavaScript
          the email box submits the one address typed into it. #}

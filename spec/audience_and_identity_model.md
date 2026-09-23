@@ -191,9 +191,8 @@ picker over workspace operators, saved by **Create session**;
 `spec/operator_ui_concept.md` "Create new session"). Additional
 owners are added / removed by current owners on Session Home's own
 Owners card (`#owners-card`), in every lifecycle state — no edit
-window to unlock. The picker offers **every** workspace operator,
-current owners included, since the table stages changes rather than
-writing them immediately. Full contract:
+window to unlock — each Add owner and Remove saving at once. The
+picker offers workspace operators not already owners. Full contract:
 `spec/session_owners.md`; gate and invariant contract in
 `spec/permissions.md` §4.2. The service-layer last-owner guard
 refuses to leave a session with zero owners, and the audit log

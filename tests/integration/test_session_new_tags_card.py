@@ -203,10 +203,10 @@ def test_the_card_helper_is_bounded(client: TestClient) -> None:
     assert "getElementById" not in card
 
 
-def test_the_two_stacked_cards_use_the_documented_column_primitive(
+def test_both_columns_use_the_documented_column_primitive(
     client: TestClient,
 ) -> None:
-    """The right-hand `.bottom-grid` cell is a `.bottom-left` column.
+    """Both `.bottom-grid` cells are `.bottom-left` columns.
 
     Cards inside `.bottom-grid` carry no ``margin-bottom``
     (`spec/ui_elements.md` §4), so a plain ``<div>`` cell renders two
@@ -221,12 +221,17 @@ def test_the_two_stacked_cards_use_the_documented_column_primitive(
 
     grid = body.find('class="bottom-grid"')
     assert grid != -1
-    cell = body.rfind('<div class="bottom-left">', grid, body.find('id="session-tags"'))
-    assert cell != -1, (
-        "the cell holding both cards is a .bottom-left flex column"
-    )
+    # Right column: Tags, then Owners.
+    right = body.rfind('<div class="bottom-left">', grid, body.find('id="session-tags"'))
+    assert right != -1, "the cell holding Tags is a .bottom-left flex column"
+    assert body.rfind(
+        '<div class="bottom-left">', grid, body.find('id="session-owners"')
+    ) == right, "the column wraps both cards, not just Tags"
+    # Left column: User interface settings, then Quick Setup.
     ui_pos = body.find('id="user-interface-settings"')
-    assert cell < ui_pos, "the column wraps both cards, not just Tags"
+    left = body.rfind('<div class="bottom-left">', grid, ui_pos)
+    assert grid < left < ui_pos < right
+    assert body.rfind('<div class="bottom-left">', grid, body.find('id="quick-setup"')) == left
 
 
 def test_the_tags_input_is_wired_to_the_create_form(
