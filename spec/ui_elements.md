@@ -549,19 +549,22 @@ everywhere, so "you can click this" reads the same way on every control.
 > field's input and is read with it. A line directly under a card's own
 > `<h2>` / `<h3>`, describing what the card is for, is a different
 > element: it precedes every control in the card and belongs to none of
-> them. Ten lines in `app/web/templates` sit in that position
+> them. Twelve lines in `app/web/templates` sit in that position
 > (`grep -rn -A1 '<h[23][ >]' app/web/templates --include='*.html' |
-> grep 'p class="muted"'`), against 32 `class="form-help"`, so both
+> grep 'p class="muted"'`, taken 2026-09-23 at Item 9's close), against
+> 32 `class="form-help"`, so both
 > treatments were already in use and only one of them was written down.
 > Stated 2026-09-23 (19S Item 9, author's ruling) after the Create
 > page's Tags card was read as violating the rule above.
 >
 > **The ambiguous case is a card holding exactly one field**, where the
 > subtitle and the field's helper text describe the same thing — the
-> Create page's Tags and Owners cards, whose `<h3>` doubles as the
-> field's accessible label. **Those take the subtitle**, so a column of
-> such cards reads uniformly rather than alternating. Nine of the ten
-> above are subtitles; the tenth, `validation_results.html`'s *"No
+> Tags card on the Create page and on Session Home, whose `<h3>` doubles
+> as the field's accessible label. **Those take the subtitle**, so a
+> column of such cards reads uniformly rather than alternating. (Create's
+> Owners card takes one too, but is not this case: it holds a table and
+> a picker, and the picker has its own `<label for>`.) Eleven of the
+> twelve above are subtitles; the twelfth, `validation_results.html`'s *"No
 > issues match the current severity filter."*, is an empty-state line
 > under an `<h2>` and is neither.
 

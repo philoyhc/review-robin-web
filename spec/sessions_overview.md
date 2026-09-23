@@ -248,21 +248,24 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   Ticking two or more rows opens the `bulk-expander` instead — bulk
   tag add/remove (`bulk-tags`), bulk purge-and-archive, and a
   gated bulk Delete.
-- **Tags have a third write surface, and it is not on this page.**
-  The lobby's two — the row expander's `{id}/lobby-edit` and the
-  toolbar's `bulk-tags` — were the only ones until 19S Item 6 put a
-  **Tags box on the Create page**, so a session can be born tagged
-  instead of coming back here to be classified. The box writes through
-  `session_tags.set_tags`, the same whole-set replace the row expander
-  uses, so it is not additive — only the toolbar's `bulk-tags` is,
-  through `add_tag` / `remove_tag`. Where a create also carries a
+- **Tags have four write surfaces, two of them off this page.** The
+  lobby's two — the row expander's `{id}/lobby-edit` and the toolbar's
+  `bulk-tags` — were the only ones until 19S Item 6 put a **Tags box on
+  the Create page**, so a session can be born tagged, and 19S Item 9
+  put a **Tags field on Session Home's details card**. The box, the
+  field and the row expander all write through `session_tags.set_tags`,
+  a whole-set replace, so none of them is additive — only the toolbar's
+  `bulk-tags` is, through `add_tag` / `remove_tag`. **The surfaces are
+  gated differently, deliberately**: the lobby edits tags in any
+  lifecycle state, while Session Home's field rides the details card's
+  edit window and `/config` refuses anything but draft and validated —
+  the lobby stays the any-state surface. Where a create also carries a
   settings CSV, the typed box wins: `POST /operator/sessions` calls
   `set_tags` **after** the staged Quick Setup uploads, of which the
   settings bundle is the last — and on a *failed* upload too, so a
   bailed-out create does not silently discard what was typed.
   `spec/csv_contracts.md` § *Settings CSV — apply precedence*
-  owns that rule and why it is ordering rather than a second
-  precedence philosophy.
+  owns that rule, and both meanings of an empty box.
 - **Purging unlinks the email outbox.** Both purge modes delete rows
   that `email_outbox` references — invitations under either, reviewers
   under `rosters` — so each clears those foreign keys before the delete

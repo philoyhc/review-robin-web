@@ -809,7 +809,9 @@ promotion, demotion, and removal are audit-logged.
 
 Each session has one or more **operator owners**. Ownership is
 managed on the **Owners** sub-card of the Session details config
-card on Session Home (visible to existing owners and admins). An
+card on Session Home (visible to existing owners and admins); the
+creator can also name co-owners on Create's **Owners** card, saved
+with the session. An
 owner can add another allowlisted operator as a co-owner and
 remove a co-owner; the last owner cannot be removed. A non-owner
 admin can only **self-add** (the adopt bootstrap from Sessions
@@ -1013,9 +1015,13 @@ help contact, and session tags.
 
 The form **gates submit on Name + Code** being non-empty, and also
 carries the User-interface settings toggles
-(`relationships_enabled` / `observers_enabled`) and the schedule
-fields. On submit, the session is created as `draft`, the operator
-is set as the first owner, and the operator lands on **Session
+(`relationships_enabled` / `observers_enabled`), the schedule
+fields, and an **Owners** card: the creator plus any workspace
+operators the creator stages there, saved by **Create session**
+(the card has no save of its own). An address that is not a
+workspace operator refuses the whole submit. On submit, the session
+is created as `draft`, the operator is set as the first owner
+alongside any staged co-owners, and the operator lands on **Session
 Home** — where the Session details config card (`?editing=1`) is
 the surface for filling in any remaining fields. The Sessions-lobby
 Clone action lands on Session Home the same way.
@@ -1039,7 +1045,8 @@ page, and `/edit` 308-redirects to
   (name, code, description, help contact, timezone, and the
   Start / End / Release-from / Release-until schedule + invite /
   reminder offsets, each showing its resolved fire moment inline),
-  plus **Owners** and **User interface settings** sub-cards. Save
+  plus **Owners**, **User interface settings** and **Tags**
+  sub-cards. Save
   POSTs to `/config` and redirects back to Home in display mode.
 - **Quick Setup card** (bottom-left of a `.bottom-grid`) — a
   bulk-import surface with one CSV upload affordance per roster /
@@ -1081,6 +1088,10 @@ the only surface for session config.
 - **User interface settings sub-card** — the
   `relationships_enabled` / `observers_enabled` checkboxes, each
   lock-on-data.
+- **Tags sub-card** — the session's tags, comma-separated, in
+  display mode; one text box in edit mode, saved with the card's
+  **Save** (emptying the box clears them). Tags are stored lower
+  case.
 - **Save** POSTs to `/operator/sessions/{id}/config` and redirects
   back to Home in display mode. Editing metadata is
   non-destructive (never touches assignments or responses), so

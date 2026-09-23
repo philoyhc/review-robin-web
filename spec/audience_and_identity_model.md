@@ -185,7 +185,10 @@ Multi-tenancy + system-wide settings remain forward-looking.
 ### 4b. Per-session owner delegation
 
 The session creator becomes the inaugural `session_operators`
-row with `role="owner"` at session-create time. Additional
+row with `role="owner"` at session-create time, alongside any
+co-owners the creator staged on Create's Owners card (the same
+picker over workspace operators, saved by **Create session**;
+`spec/operator_ui_concept.md` "Create new session"). Additional
 owners are added / removed by current owners via the Owners
 sub-card on Session Home's config card in edit mode
 (`/operator/sessions/{id}?editing=1#config-owners-card`; gate and

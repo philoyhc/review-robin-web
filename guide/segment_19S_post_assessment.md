@@ -2176,7 +2176,9 @@ entry preserved. Rows stage in the form and apply after
   replace that would drop what a settings CSV just applied. On Session
   Home it means *clear*, matching the lobby, because there is a set to
   edit. `spec/csv_contracts.md` § *Settings CSV — apply precedence*
-  states both; Part B is the first code to depend on it.
+  states both; Part B is the first code to depend on it. An **absent**
+  field is neither: a hidden `tags_present` marker tells the route the
+  form carried the box, and without it the tags are left alone.
 - **Part B does not touch `_apply_session_config_form`.** That helper
   takes exactly the 13 non-tag fields, and Item 6 ruled tags are
   written beside the config work, not through it. The tag write is a
@@ -2187,7 +2189,10 @@ entry preserved. Rows stage in the form and apply after
   owner #1 from `sessions.py`. And **`workspace_operator_candidates`
   needs a session** to exclude current owners; on Create the list is
   every workspace operator but the creator, a narrower query the
-  service gains rather than a new service.
+  service gains rather than a new service. **As built, only
+  `not_in_workspace` can reach the operator** (a 422): duplicates and
+  the creator collapse silently, so `already_owner` never occurs on
+  Create.
 
 ### Judgment calls — decided
 
@@ -2248,8 +2253,8 @@ Taken 2026-09-22 at `d4b1ba9`.
 4. **Rung 4 — Part A's write**: a small inline script stages each
    picked operator as a table row carrying a hidden `owners` input
    (Remove drops it); without JavaScript the email box itself submits
-   one owner. Staged rows applied after `create_session`, with the two
-   rejections surfaced. ✅ 2026-09-23 — **plus one
+   one owner. Staged rows applied after `create_session`, with
+   `not_in_workspace` surfaced. ✅ 2026-09-23 — **plus one
    correlation id for the whole create** (author's ruling, 2026-09-23).
    `request_correlation_id()` mints a fresh id per call, and the Create
    route calls it for the session, each Quick Setup slot and the tag
@@ -2269,8 +2274,9 @@ card as its own slice, and Item 6 did the same.
 - **Every audit event one create produces shares one correlation id**
   — session, uploads, tags and owners — asserted through the route.
 - A co-owner named on Create owns the created session, and
-  `not_in_workspace` / `already_owner` each reach the operator rather
-  than failing silently — all asserted through the route.
+  `not_in_workspace` reaches the operator rather than failing silently
+  — asserted through the route. (`already_owner` cannot occur on
+  Create; see `Semantics`.)
 - **Each new card's gap to the card above it measured in Chromium**,
   not asserted from the CSS (author's instruction, 2026-09-23): dump
   the rendered page from the test client and read
@@ -2289,107 +2295,53 @@ thing it does not reach. Rung 1 is unblocked.
 
 ### Status
 
-**Rung 1 done, 2026-09-23** — Part B's scaffold. The Tags card sits
-below User interface settings in the details card's right-hand
-`.bottom-left`, above the Save / Cancel / Lock cluster; locked it shows
-the tags as a `.config-value`, em dash when none; unlocked, an input
-prefilled with the same string. **Inert**: no `name`, no `form=`, and a
-`POST …/config` carrying `tags=` leaves the tags alone — with a rename
-in the same request as the control, since a rejected save would also
-leave them alone. Seven tests, **six mutations, all caught**: `name`
-added, `form=` added, the route context emptied, `_card` widened to the
-page tail, the `_tag` helper degenerated, and the route wiring `tags=`
-early.
+**Closed 2026-09-23**, four rungs: #2567, #2569, #2570 and #2571. Session Home's details
+card carries a Tags field inside its edit window; Create carries an
+Owners card that stages rows and saves with **Create session**; the
+settings-CSV importer lowercases tags; one create or one Session Home
+save is one correlation id. Specs carry the contracts
+(`spec/session_home.md`, `spec/operator_ui_concept.md`,
+`spec/permissions.md`); what stays here is why.
 
-**Spacing measured in Chromium** at 1280 and 700px, display and edit
-mode: UI settings → Tags **20px**, Tags → Save cluster **20px**, and the
-Create page's pair unchanged at 20px. No CSS change; the column's `gap`
-does it.
+- **Absent is not empty.** FastAPI hands an absent form field and an
+  empty one to an optional parameter identically. Rung 2 shipped
+  *absent clears*; the cold read showed a tab rendered before the
+  deploy would then wipe every tag on its first Save, so the close
+  added the `tags_present` marker. Item 10 needs the same for owners.
+- **Owners are validated before the session exists**, so a bad address
+  is a 422 with nothing written, like every other field on the form.
+  `set_owners` adds before it removes and refuses an empty set.
+- **The stager script is Item 10's**: `_owners_stager_js` builds rows
+  with `textContent` only and fires a bubbling `change` for dirty
+  tracking. Driven in Chromium (pytest has no JavaScript runtime): add,
+  case-insensitive dedupe, Enter, invalid address, Remove, and a typed
+  but unadded address still submitting. No page errors.
+- **Spacing measured in Chromium**, 1280 and 700px: every new card sits
+  20px from the one above; no CSS change.
+- **Mutations: 36 across the rungs, 32 caught first time.** Every
+  survivor was a test passing on something else — a 0 == 0 event
+  counter, an empty set tripping `remove_owner`'s own guard, the
+  creator's hidden input satisfying `name="owners"`, and a mutation
+  that crashed on a missing import and so read as caught. Each test now
+  fails on the revert it names.
 
-**Rung 2 done, 2026-09-23** — the Tags field saves with the details
-card, and the settings-CSV importer normalizes. Rung 1's two inertness
-tests are **inverted rather than deleted**. The write runs after the
-config apply, so a save the card rejects (a 422, tested with a bad
-timezone) writes no tags either; an emptied box clears; an untouched
-box emits no tag events, because `set_tags` diffs.
+**Reads: one `diff-reviewer`, over `7022022..HEAD`, plus `spec-writer`
+at the close.** The cold read found three medium issues and five low
+ones:
+- **Acted on:** M3, the marker; M1, the `already_owner` overclaim in
+  the DoD; M2, `spec/permissions.md` gaining Create's 422; L1,
+  `set_owners` deduplicating its targets; L3, Item 10's wording; L4,
+  stale template comments and the §8 count, re-taken as 12; L5, the
+  correlation test covering all five slots.
+- **Declined:** L2, which asked to move *creator always kept* and
+  *empty is a no-op* into the service. Both belong to how the Create
+  page composes `set_owners` — the creator is the page's fixed first
+  row — and Item 10 replaces the whole set, so there is nothing for it
+  to restate.
 
-**One thing the plan did not foresee: absent reads as empty.** The
-first draft left tags alone when the request carried no `tags` field,
-and its own test caught that it also left them alone when the box was
-*emptied* — FastAPI hands an absent form value and an empty one to an
-optional parameter identically, both `None`. Telling them apart needs a
-marker field. The route already takes the card's whole state (its two
-checkboxes read absent as off) and the card's form always sends the
-field, so the tags follow the same convention: absent or empty clears.
-A test pins it.
-
-**The importer**: `normalize_tag` on each `session_tags[]` value —
-lowercased, trimmed, duplicates collapsed, blanks skipped. An over-long
-value is now a **parse error** refusing the bundle, where it used to
-reach a 64-character column raw; skipping it silently, as the lobby
-does, was the alternative, and a file the operator can fix earns a
-message instead. Through the routes: a bundle importing `Pilot` stores
-`pilot`, and the lobby's bulk remove then deletes it.
-
-**Nine mutations, eight caught first time.** The survivor was a helper:
-a tag-event counter stuck at zero passed the "untouched box emits
-nothing" test by comparing 0 with 0. The test now asserts the setup's
-two events first. The rest: importer reverted, over-long tag skipped
-instead of rejected, route write reverted, write moved before the
-config apply, `name=` dropped, and the `_save`, `_tags_of` and
-`_tag_rows` helpers each degenerated.
-
-**Rung 3 done, 2026-09-23** — Part A's scaffold, **built twice**. The
-first draft was a comma-separated box with no suggestions; the author
-ruled it should match Session Home, so it now mirrors that card: the
-owners table (the creator's row, no Remove) and a one-at-a-time
-Add-owner picker. Its suggestions come from a new
-`session_owners.new_session_owner_candidates` — every workspace operator
-but the creator, since there is no session yet to exclude owners of;
-`workspace_operator_candidates` now shares its base query. **Inert**:
-the email input has no `name` or `form=`, Add owner is a plain button,
-and a create carrying `owners=` adds no co-owner. That test names a
-real workspace operator, because a non-operator would be refused anyway
-and pass it for the wrong reason.
-
-Eight tests, nine mutations, all caught — markup (`name`, `form=`, a
-submit button), the candidate query (creator included, non-operators
-included), the route passing none, and the `_card` / `_operator`
-helpers. The first draft's route-wiring mutation **crashed on a missing
-import** and failed on a 500, which reads as caught and proves nothing;
-rerun cleanly it fails on two owners. **Spacing measured in Chromium**:
-Tags → Owners **20px** at 1280 and 700px, with a candidate present.
-
-**Rung 4 done, 2026-09-23** — owners on Create save with Create
-session, built for Item 10 to reuse. **`session_owners.resolve_owners`**
-validates the whole list first (blanks skipped, case folded,
-duplicates collapsed, anyone `add_owner` would refuse raises
-`not_in_workspace`); **`set_owners`** replaces the set, adding before
-it removes so a session never passes through zero, and refusing an empty
-set outright. The route resolves the list **before** creating the
-session — a bad address is a 422 with nothing written, like every other
-field on the form — then applies it with the creator always kept, on
-the failed-upload path too, as Tags does. **One correlation id for the
-whole create**: the route mints it once and hands it to the session,
-each Quick Setup slot, tags and owners; the slot helpers take it as an
-optional parameter, so their other callers still mint their own. The
-**`_owners_stager_js`** partial stages rows declared by data attributes
-on the card, builds them with `textContent` only, and announces each
-change as a bubbling `change` event for Item 10's dirty tracking.
-
-**Driven in Chromium**, since pytest has no JavaScript runtime: add
-takes the name from the suggestion list and clears the box; a
-different-case duplicate is ignored; Enter adds instead of submitting;
-an invalid address is refused; Remove works and the creator's row has
-none; an address typed and never added still submits. No page errors.
-
-**Twelve mutations, ten caught first time.** Both survivors were tests
-passing on something else. An empty set on a one-owner session trips
-`remove_owner`'s own guard, so the test passed without `set_owners`';
-with two owners the unguarded case is a partial write, and the test
-now uses two. And `name="owners"` anywhere in the card was satisfied by
-the creator row's hidden input, so the email box's name could go
-unnoticed; the assertion now reads the box itself.
+`spec-writer` found my own prose overclaiming three times: a
+`set_tags` claim, the fill-blanks rule, and a "20px every card" line.
+All are fixed.
 
 ### Out of scope
 
@@ -2425,6 +2377,16 @@ unnoticed; the assertion now reads the box itself.
   edits tags in any state (Item 9).
 - `guide/deferred_consolidated.md` — the entry narrows to the button
   relocation alone (Item 9).
+- `spec/permissions.md` — Create's `not_in_workspace` is a 422, and
+  ownership is also acquired on Create (Item 9, cold read M2).
+- `spec/rrw_functional_spec.md` — §7.4, §9.2 and §9.4 gain Create's
+  Owners card and Session Home's Tags (Item 9).
+- `spec/audience_and_identity_model.md` — §4b gains the Create-time
+  owners (Item 9).
+- `spec/quick_setup_card_spec.md` — owners, like tags, run after the
+  last slot and survive a bail-out (Item 9).
+- `spec/settings_inventory.md` — the Owners card has no CSV
+  counterpart (Item 9).
 - `docs/status.md` — row when the item lands (Item 9).
 
 ---
@@ -2455,8 +2417,11 @@ Reuse Item 9 rung 4's two pieces rather than build parallel ones:
 
 - the **owners stager** script partial — rows added and removed in the
   table, each carrying a hidden `owners` input bound to the page's form;
-- **`session_owners.set_owners`** — replaces the owner set the way
-  `set_tags` replaces tags, validating the whole set before writing.
+- **`session_owners.resolve_owners`** then **`set_owners`** — the
+  first validates the whole list and raises before anything is
+  written; the second replaces the owner set the way `set_tags`
+  replaces tags. `set_owners` does not validate on its own, so call
+  `resolve_owners` first.
 
 **Keep the two `/owners` routes**; they lose their only on-page caller,
 but tests use them and a non-owner sys-admin reaches `owners/add` to add
@@ -2469,9 +2434,10 @@ themselves (`tests/integration/test_operator_lobby_access_gate.py`).
 - **Staging must mark the card dirty.** A button click fires no `input`
   event, so Save would stay disabled.
 - **A marker field.** FastAPI hands an absent form field and an empty
-  one to a route identically (rung 2's finding). Absent tags harmlessly
-  clears tags; absent owners would mean *remove every owner*, which
-  `set_owners` must refuse and a marker must prevent.
+  one to a route identically. Item 9's close gave Tags a
+  `tags_present` marker for this reason; absent owners would mean
+  *remove every owner*, which `set_owners` refuses and an
+  `owners_present` marker must prevent.
 - **Validate before any write.** Otherwise a bad email saves the name
   and schedule and rejects the owners.
 - **No change to who may edit owners.** The picker and Remove already
