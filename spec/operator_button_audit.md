@@ -124,7 +124,7 @@ Source: `app/web/templates/operator/session_new.html`.
 |---|---|---|---|---|---|---|
 | 14 | Session details form | Create session | `<button type="submit">` | `btn` | Primary | Posts to `POST /operator/sessions` |
 | 15 | Session details form | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the sessions lobby |
-| 186 | Owners card | Add owner | `<button type="button">` | `btn secondary` | Secondary | Stages a row via `_owners_stager_js`; the card has no save of its own — **Create session** (#14) submits the staged set. Ships `hidden`, un-hidden by the stager script (`spec/session_owners.md` §1) |
+| 186 | Owners card | Add owner | `<button type="button">` | `btn secondary` | Secondary | Stages a row via `_owners_stager_js`; the card has no save of its own — **Create session** (#14) submits the staged set. Ships `hidden`, un-hidden by the stager script (`spec/session_owners.md` §3) |
 | 187 | Owners card | Remove (per staged row) | `<button type="button">` | `chrome-link` | **Not `.btn`, kept deliberately** — reuses the chrome nav's `chrome-link` class for an in-card control; no canonical role above covers a per-row remove, and the author ruled on 2026-09-23 that the Owners cards' Removes (#187, #190) stay `chrome-link` rather than take one. Removes a staged row client-side; nothing is written until **Create session**. Not present on the creator's fixed row |
 
 ---

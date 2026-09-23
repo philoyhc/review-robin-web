@@ -94,7 +94,7 @@ the page's card list; this spec owns its contents.
 
 ---
 
-## 3. The stager (shared partial)
+## 3. The stager (Create's partial)
 
 `app/web/templates/operator/partials/_owners_stager_js.html`, included
 by **Create only** — Session Home's card staged with it until the
@@ -148,7 +148,8 @@ dropped.
   `FOR UPDATE` before counting, so two concurrent removes cannot leave
   a session ownerless (`last_owner`). Two concurrent adds of one address both
   pass `add_owner`'s check; `uq_session_user` refuses the second insert,
-  which `add_owner` reports as `already_owner` rather than a 500.
+  which `add_owner` reports as `already_owner` rather than a 500 once
+  it sees the other row; any other integrity failure still raises.
 
 ---
 

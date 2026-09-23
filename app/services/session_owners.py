@@ -137,7 +137,8 @@ def add_owner(
         raise already
     # Two adds of the same address can both pass the check above; the
     # ``uq_session_user`` constraint refuses the second, which is then
-    # the same refusal rather than a 500.
+    # the same refusal rather than a 500. Any other integrity failure
+    # (a session or user purged meanwhile) still raises.
     try:
         with db.begin_nested():
             row = _insert_owner(
@@ -148,7 +149,9 @@ def add_owner(
                 correlation_id=correlation_id,
             )
     except IntegrityError:
-        raise already from None
+        if _is_owner(db, review_session, target):
+            raise already from None
+        raise
     db.commit()
     db.refresh(row)
     return row
