@@ -1636,6 +1636,12 @@ Twenty mutations ran here and three of them lied:
 became the field's label (`aria-labelledby`) and the duplicate
 `<label>` went.
 
+**The item's last open decision, ruled 2026-09-23: the failed-upload
+write stays.** A create whose Quick Setup half fails keeps the typed
+tag rather than discarding it, which is what shipped and what
+`spec/quick_setup_card_spec.md`'s failure mode already states. Nothing
+left open.
+
 **Reads: one `diff-reviewer` over `git diff c329180..HEAD` and one
 `spec-writer`, both at rung 3, plus Codex on the PR.** All three found
 real defects, and the one the first two agreed on was in prose that
@@ -2191,6 +2197,13 @@ the page gains no third shape.
   2026-09-23) — no separate window, and locked it renders as a
   `.config-value` like every other field there. The lobby remains the
   any-state tag surface.
+- **Owners' card takes a `<p class="muted">` subtitle, like the two
+  above it** (author's ruling, 2026-09-23). Raised because
+  `spec/ui_elements.md` §8 read as forbidding it; measurement found a
+  card-subtitle pattern in ten places against 32 `.form-help` uses,
+  with only the latter written down. §8 now carries the carve-out and
+  names the one-field card as the case it decides, so Part A inherits
+  the answer rather than re-opening it.
 
 ### Blast radius (measured)
 
@@ -2248,6 +2261,8 @@ Taken 2026-09-22 at `d4b1ba9`.
 
 ### Doc impact
 
+- `spec/ui_elements.md` — §8 gains the card-subtitle carve-out and
+  the one-field-card case it decides (Item 9, ruled before the build).
 - `spec/operator_ui_concept.md` — the `/operator/sessions/new` card
   list gains Owners; Session Home's details card gains Tags (Item 9).
 - `spec/sessions_overview.md` — the tag write surfaces become four
