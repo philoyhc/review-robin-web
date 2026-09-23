@@ -31,6 +31,9 @@
      Session Home's Cancel and Lock (both ``form.reset()``) undo staging
      as they undo every other field.
 
+   **The staging buttons ship ``hidden``** and are shown here, because
+   without JavaScript they would do nothing (19S Item 10 cold read F3).
+
    **Without JavaScript** the email input keeps its own ``name`` and
    ``form=``, so the one address typed there submits with the page. With
    JavaScript that still holds for an address typed and never added,
@@ -51,6 +54,13 @@
       var fieldName = card.getAttribute('data-owners-name') || 'owners';
       var self = (card.getAttribute('data-owners-self') || '').toLowerCase();
       var body = table.tBodies[0] || table;
+
+      // Shown only now: without JavaScript these buttons do nothing, so
+      // they ship ``hidden`` (before the rows are cloned for the reset).
+      Array.prototype.forEach.call(
+        card.querySelectorAll('[data-owners-remove], [data-owners-add]'),
+        function (button) { button.hidden = false; }
+      );
 
       function ownerRows() {
         return Array.prototype.filter.call(body.rows, function (row) {

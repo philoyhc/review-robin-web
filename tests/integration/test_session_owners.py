@@ -222,7 +222,7 @@ def test_config_owners_card_renders_add_form_when_candidates_exist(
     assert "/owners/add" not in card, "Add owner stages, it no longer posts"
     assert re.search(
         r'class="btn secondary" type="button"\s+'
-        r'id="config-add-owner" data-owners-add>Add owner',
+        r'id="config-add-owner" data-owners-add hidden>Add owner',
         card,
     )
     # Bob is offered as a candidate in the datalist — and so is the owner

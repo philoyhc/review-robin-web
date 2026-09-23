@@ -42,8 +42,8 @@ def _session_home(client: TestClient, db: Session, *, editing: bool = True) -> t
 
 def _stager(body: str) -> str:
     start = body.index("data-owners-stager")
-    end = body.index("data-owners-add>Add owner", start)
-    return body[start:end + len("data-owners-add>Add owner")]
+    end = body.index(">Add owner</button>", start)
+    return body[start:end + len(">Add owner</button>")]
 
 
 def test_the_edit_table_is_a_stager_bound_to_the_cards_form(
@@ -63,6 +63,11 @@ def test_the_edit_table_is_a_stager_bound_to_the_cards_form(
         rf'<input type="hidden" name="owners_present" value="1"\s+{form}>', stager
     )
     assert re.search(rf'value="{CREATOR}"\s+{form}>', stager)
+    # What the page was rendered with, so the route applies only this
+    # page's changes (cold read F1).
+    assert re.search(
+        rf'name="owners_original" value="{CREATOR}"\s+{form}>', stager
+    )
 
 
 def test_the_stager_script_is_on_the_page(client: TestClient, db: Session) -> None:
@@ -104,3 +109,55 @@ def test_the_subtitle_says_owners_save_with_the_card(
     _, body = _session_home(client, db, editing=False)
 
     assert re.search(r"changes are saved with\s+the card\.", body)
+
+
+def _second_owner(client: TestClient, db: Session, review_session: ReviewSession) -> str:
+    """Make bob a co-owner and return the edit-mode page."""
+    from app.db.models import User
+    from app.services import session_owners
+
+    bob = User(email="bob@example.edu", is_operator=True)
+    db.add(bob)
+    db.commit()
+    alice = db.execute(select(User).where(User.email == CREATOR)).scalar_one()
+    session_owners.add_owner(db, review_session=review_session, actor=alice, target=bob)
+    return client.get(f"/operator/sessions/{review_session.id}?editing=1").text
+
+
+def test_the_staging_buttons_ship_hidden_and_the_stager_shows_them(
+    client: TestClient, db: Session
+) -> None:
+    """Without JavaScript a staging button does nothing, so it is
+    rendered ``hidden`` and the stager un-hides it (cold read F3)."""
+    _, body = _session_home(client, db)
+    stager = _stager(body)
+
+    assert re.search(r"data-owners-remove hidden>Remove</button>", stager)
+    assert re.search(r"data-owners-add hidden>Add owner</button>", stager)
+    assert "button.hidden = false;" in body
+
+
+def test_without_javascript_other_owners_can_be_removed(
+    client: TestClient, db: Session
+) -> None:
+    """The <noscript> fallback posts to the old per-row route — for
+    another owner only: not your own row, which nothing could warn about."""
+    review_session, _ = _session_home(client, db)
+    body = _second_owner(client, db, review_session)
+    fallbacks = re.findall(r"<noscript>(.*?)</noscript>", body, re.S)
+    removes = [f for f in fallbacks if "/owners/" in f]
+
+    assert len(removes) == 1, "bob's row only, not alice's own"
+    assert re.search(
+        rf'action="/operator/sessions/{review_session.id}/owners/\d+/remove"',
+        removes[0],
+    )
+    assert 'type="submit">Remove</button>' in removes[0]
+
+
+def test_without_javascript_the_last_owner_has_no_remove(
+    client: TestClient, db: Session
+) -> None:
+    _, body = _session_home(client, db)
+
+    assert "/remove\"" not in body

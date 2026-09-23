@@ -1190,7 +1190,7 @@ def test_session_config_card_has_owners_subcard(
     # saved with the card's Save — no per-row ``/remove`` form. (Picker
     # coverage lives in test_session_owners.)
     assert "alice@example.edu" in card
-    assert re.search(r'type="button"\s+data-owners-remove>Remove</button>', card)
+    assert re.search(r'type="button"\s+data-owners-remove hidden>Remove</button>', card)
     assert re.search(
         r'<input type="hidden" name="owners" value="alice@example\.edu"\s+'
         rf'form="config-save-{review_session.id}">',

@@ -443,6 +443,7 @@ def session_config_submit(
     tags: str = Form(default=""),
     tags_present: str = Form(default=""),
     owners: list[str] = Form(default=[]),
+    owners_original: list[str] = Form(default=[]),
     owners_present: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -458,19 +459,24 @@ def session_config_submit(
     # tag and owner events it produces group as one request
     # (``request_correlation_id`` mints a fresh id per call).
     correlation_id = request_correlation_id()
-    # 19S Item 10 — the Owners card saves with the card. The whole owner
-    # set is resolved **before** any write, so a non-operator address is
-    # a 422 that saves nothing else either, like every other error this
-    # Save returns. Behind an ``owners_present`` marker for the reason
-    # ``tags_present`` exists: FastAPI hands an absent list and an empty
-    # one to ``owners`` identically, and an absent set must not read as
-    # *remove every owner*. The editable check comes first, so an active
-    # session still answers 409 rather than an owner 422.
+    # 19S Item 10 — the Owners card saves with the card. The page posts
+    # the owners it was rendered with (``owners_original``) beside its
+    # table (``owners``), and only the difference is applied, to the
+    # owners the session has now: a stale page does not undo another
+    # owner's change. It is resolved **before** any write, so a
+    # non-operator addition is a 422 that saves nothing else either, like
+    # every other error this Save returns. Behind an ``owners_present``
+    # marker for the reason ``tags_present`` exists: FastAPI hands an
+    # absent list and an empty one identically, and an absent set must
+    # not read as *remove every owner*. The editable check comes first,
+    # so an active session still answers 409 rather than an owner 422.
     owner_targets = None
     if owners_present:
         _require_editable(review_session)
         try:
-            owner_targets = session_owners.resolve_owner_set(db, owners)
+            owner_targets = session_owners.resolve_owner_changes(
+                db, review_session, original=owners_original, wanted=owners
+            )
         except session_owners.OwnerOperationError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
