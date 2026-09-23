@@ -1009,7 +1009,7 @@ page has no section of its own.
 
 The Create Session form (`/operator/sessions/new`) asks for the
 core metadata: name, code, timezone, deadline, description,
-help contact.
+help contact, and session tags.
 
 The form **gates submit on Name + Code** being non-empty, and also
 carries the User-interface settings toggles
