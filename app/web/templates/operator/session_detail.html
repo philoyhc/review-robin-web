@@ -415,8 +415,9 @@
          ``owners/{user_id}/remove``, plain forms that work without
          JavaScript. The last owner's Remove is disabled; your own row's
          asks first, and removing yourself lands you on the sessions
-         lobby. Every owners route lands back here (``#owners-card``),
-         with any ``owners_error`` as the banner below. #}
+         lobby. Otherwise both routes land back here (``#owners-card``),
+         a refusal as the ``owners_error`` banner below — all but
+         ``last_owner``, a bare 409, since that Remove is disabled. #}
       <div class="card" id="owners-card">
         <h2>Owners</h2>
         <p class="muted">
@@ -434,8 +435,6 @@
                 Admit them via <code>Admin → Accounts Management</code> first.
               {% elif owners_error == "not_owner" %}
                 That user isn't an owner of this session anymore.
-              {% elif owners_error == "last_owner" %}
-                A session always keeps at least one owner.
               {% elif owners_error == "self_only" %}
                 As a sys-admin who isn't an owner of this session, you can
                 only add <em>yourself</em> as an owner. Add yourself first,

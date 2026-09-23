@@ -125,7 +125,7 @@ def test_the_card_has_no_save_cancel_or_staging(
         "<noscript>",
     ):
         assert gone not in card, gone
-    assert "_owners_stager_js" not in body
+    # The stager's own script, not merely its markers: the include is gone.
     assert "document.querySelectorAll('[data-owners-stager]')" not in body
 
 
@@ -257,6 +257,18 @@ def test_candidates_are_operators_not_already_owners(
     assert 'value="carol@example.edu"' in datalist
     assert f'value="{CREATOR}"' not in datalist
     assert 'value="bob@example.edu"' not in datalist
+
+
+def test_with_no_candidates_left_the_card_says_so(
+    client: TestClient, db: Session
+) -> None:
+    """The creator is the workspace's only operator: nobody to add."""
+    review_session = _create(client, db, "OWN-CARD-11")
+    card = _card(_home(client, review_session))
+
+    assert "Every workspace operator is already an owner." in card
+    assert 'id="owners-add-form"' not in card
+    assert "<datalist" not in card
 
 
 def test_create_ships_its_add_owner_hidden_too(

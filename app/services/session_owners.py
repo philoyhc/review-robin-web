@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, SessionOperator, User
@@ -128,27 +129,41 @@ def add_owner(
                 "Management page first."
             ),
         )
-    existing = db.execute(
-        select(SessionOperator).where(
-            SessionOperator.session_id == review_session.id,
-            SessionOperator.user_id == target.id,
-        )
-    ).scalar_one_or_none()
-    if existing is not None:
-        raise OwnerOperationError(
-            code="already_owner",
-            message=f"{target.email} is already an owner of this session.",
-        )
-    row = _insert_owner(
-        db,
-        review_session=review_session,
-        actor=actor,
-        target=target,
-        correlation_id=correlation_id,
+    already = OwnerOperationError(
+        code="already_owner",
+        message=f"{target.email} is already an owner of this session.",
     )
+    if _is_owner(db, review_session, target):
+        raise already
+    # Two adds of the same address can both pass the check above; the
+    # ``uq_session_user`` constraint refuses the second, which is then
+    # the same refusal rather than a 500.
+    try:
+        with db.begin_nested():
+            row = _insert_owner(
+                db,
+                review_session=review_session,
+                actor=actor,
+                target=target,
+                correlation_id=correlation_id,
+            )
+    except IntegrityError:
+        raise already from None
     db.commit()
     db.refresh(row)
     return row
+
+
+def _is_owner(db: Session, review_session: ReviewSession, user: User) -> bool:
+    return (
+        db.execute(
+            select(SessionOperator.id).where(
+                SessionOperator.session_id == review_session.id,
+                SessionOperator.user_id == user.id,
+            )
+        ).first()
+        is not None
+    )
 
 
 def _insert_owner(

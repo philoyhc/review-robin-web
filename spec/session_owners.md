@@ -89,8 +89,8 @@ the page's card list; this spec owns its contents.
 - **Errors** are the card's own banner: a redirect back to
   `#owners-card`, `?owners_error=<code>` appended when there is one.
   Codes rendered: `already_owner`, `not_in_workspace`, `not_owner`,
-  `last_owner`, `self_only`, else a generic "couldn't apply that
-  change" naming the code.
+  `self_only`, else a generic "couldn't apply that change" naming the
+  code. `last_owner` is not among them: it is a bare 409 (§5).
 
 ---
 
@@ -109,23 +109,18 @@ by **Create only** — Session Home's card staged with it until the
 | `data-owners-email` | the picker's `<input type="email">` |
 | `data-owners-add` | the Add-owner button |
 | `data-owners-remove` | a row's Remove (absent on a fixed row — Create's creator) |
-| `data-owners-self="<email>"` | the signed-in operator, so their own row's Remove asks first |
 
-Three rules, from Session Home's staged days (author's rulings,
-2026-09-23), kept because they are harmless on Create where they never
-trigger:
-
-1. **The last owner's Remove is disabled** whenever one owner row
-   remains, staged removals included.
-2. **Removing your own row asks first** — a `confirm()` at the click;
-   canceling keeps the row.
-3. **The form's `reset` restores the rows it was rendered with.**
+Session Home's staged card added a last-owner guard, a confirm on
+removing yourself, a form-`reset` restore and a `change` event per
+edit. Create reaches none of them — its creator row is fixed and it has
+no reset or Save to gate — so they were retired with that card's
+staging (author's ruling, 2026-09-23: staging made sense only while the
+card sat inside the lockable Session details form).
 
 Rows are built with `createElement` + `textContent`, never `innerHTML`
-— the email is operator-typed. Every add/remove dispatches a bubbling
-`change`, so a card gating a Save on a change could see it; Create
-ignores it. **The staging buttons ship `hidden`** and the
-script un-hides them — without JavaScript they would do nothing.
+— the email is operator-typed. **The staging buttons ship `hidden`**
+and the script un-hides them — without JavaScript they would do
+nothing.
 
 **Without JavaScript**: the picker's `<input>` keeps its own `name`
 and `form=`, so the one address typed there submits with **Create
@@ -151,7 +146,9 @@ dropped.
   Session Home's card: each validates, writes one row and its audit
   event, and commits. `remove_owner` locks the owner rows
   `FOR UPDATE` before counting, so two concurrent removes cannot leave
-  a session ownerless (`last_owner`).
+  a session ownerless (`last_owner`). Two concurrent adds of one address both
+  pass `add_owner`'s check; `uq_session_user` refuses the second insert,
+  which `add_owner` reports as `already_owner` rather than a 500.
 
 ---
 
@@ -184,7 +181,7 @@ since Session Home is then a 404 for you.
 | **A click** | Takes the row out of the table. Nothing is written. | Deletes the owner row at once. On your own row, a `confirm()` first; canceling posts nothing. |
 | **Saved by** | Nothing on its own. **Create session** submits whatever rows remain. | Itself. |
 | **Undo** | Pick the address again. Leaving the page discards all staging. | Add the owner back with **Add owner** — they are a candidate again. |
-| **Other unsaved edits** | Untouched — Remove never posts. | None to lose: the card holds nothing unsaved, and the details card is a separate form. |
+| **Other unsaved edits** | Untouched — Remove never posts. | Lost: the post reloads the page, so an unlocked details card's unsaved edits go with it. The Owners card itself holds nothing unsaved. |
 | **Removing yourself** | Impossible: the creator's row carries no Remove. | Allowed while another owner remains; confirmed at the click; redirects to `/operator/sessions`. |
 | **The last owner** | Cannot arise — the creator is always kept (`[creator, *staged]`). | Remove renders `disabled`; a direct POST is a bare **409** (`last_owner`), the owner rows locked `FOR UPDATE` while counting. |
 | **Lifecycle** | No session yet. | Any state — neither the card nor the route carries a lifecycle gate. |
