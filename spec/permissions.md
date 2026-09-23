@@ -186,6 +186,7 @@ Full card + staging contract: `spec/session_owners.md`.
 | Create's owners | `POST /operator/sessions` | router-level `require_operator` (no session to own yet) | `not_in_workspace` on any staged address — **422**, nothing created | `session.owner_added` per co-owner |
 | Add owner | `POST /operator/sessions/{id}/owners/add` | `require_sys_admin_or_session_operator` | `not_in_workspace` (target lacks both flags — admit them first), `already_owner`; handler-level `self_only` for a non-owner sys-admin | `session.owner_added` |
 | Remove owner | `POST …/owners/{user_id}/remove` | `require_session_operator` | `not_owner`, `last_owner` (would leave zero owners; the owner set is locked `FOR UPDATE` before counting so two concurrent removals cannot both pass) | `session.owner_removed` |
+| Owners card Lock / Unlock | `POST …/owners/lock` | `require_session_operator` | none — sets or clears the `oou_{id}` cookie; writes nothing | none |
 | Adopt (sys-admin self-add) | `POST /operator/sys-admin/sessions/{id}/adopt` | `require_sys_admin` | idempotent; `already_owner` swallowed | `session.owner_added` |
 
 The creator is inserted as the inaugural owner inside
@@ -194,7 +195,9 @@ new session (`session_clone`). Self-removal is allowed when another
 owner remains, and redirects to the sessions lobby. `owners/add` and
 `owners/{user_id}/remove` carry no lifecycle check; Session Home's
 Owners card posts to them directly, each action saving at once (author's
-ruling, 2026-09-23; `spec/session_owners.md` §2 and §7).
+ruling, 2026-09-23; `spec/session_owners.md` §2 and §7). Neither reads
+the card's Lock / Unlock cookie, which is a guard against accidental
+edits and not a permission.
 
 ---
 

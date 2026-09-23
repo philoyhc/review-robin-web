@@ -69,14 +69,27 @@ details card and its Lock / Unlock. `spec/session_home.md` places it in
 the page's card list; this spec owns its contents.
 
 - **Always visible, in every lifecycle state.** No `?editing=1`, no
-  display/edit swap — the card renders one way, locked or not
-  (`spec/session_home.md`'s Session details card is the surface that
-  swaps; this one doesn't).
+  display/edit swap — the card renders one way whatever the details
+  card's state (`spec/session_home.md`'s Session details card is the
+  surface that swaps; this one doesn't).
+- **Lock / Unlock, as on Quick Setup** (author's ruling, 2026-09-23,
+  against accidental edits). The card renders **locked** by default:
+  the body (`.lockable-body.locked`) greys, and the picker, Add owner
+  and every Remove are `disabled`. **Unlock** (`.btn.secondary`, right
+  of Add owner) posts `owners/lock` with `action=unlock`, which sets
+  the `oou_{session_id}=1` cookie (`spec/settings_inventory.md`
+  "Cookies"). **Lock** clears it. The card stays unlocked across its own
+  adds and removes and relocks when the operator leaves Session Home
+  or opens another session's Home, through the navigation middleware
+  Quick Setup's `qsu_` cookie uses.
+  The lock is **visual only**: `owners/add` and
+  `owners/{user_id}/remove` don't read it, so a direct POST still saves.
 - **Table**: every current owner, Email / Name / Role / Added / a
   **Remove** per row, your own included. Each Remove is its own form
   posting to `owners/{user_id}/remove` and saves at once. It is
-  `disabled` when one owner remains; on your own row the form asks
-  first (`window.confirm` on submit).
+  `disabled` when one owner remains (locked or not) and while the card
+  is locked; on your own row the form asks first (`window.confirm` on
+  submit).
 - **Add owner** (`.btn.secondary`, `type="submit"`) posts the picker's
   address (`target_email`, `required`) to `owners/add` and saves at
   once. Plain forms throughout, so the card needs no JavaScript.
@@ -160,11 +173,13 @@ dropped.
 | `POST /operator/sessions` (Create) | router-level `require_operator` (no session to own yet) | n/a | `owners` (repeated) |
 | `POST /operator/sessions/{id}/owners/add` | `require_sys_admin_or_session_operator` | any state | `target_email` |
 | `POST /operator/sessions/{id}/owners/{user_id}/remove` | `require_session_operator` | any state | — |
+| `POST /operator/sessions/{id}/owners/lock` | `require_session_operator` | any state | `action` (`unlock` sets the cookie; anything else clears it) |
 
 Full gate/refusal/status-code/audit-event contract:
 `spec/permissions.md` §4.2 and §5.
 
-Both per-action routes redirect to `_owners_redirect_url`:
+All three redirect to `_owners_redirect_url`. `owners/lock` only ever
+lands on `#owners-card`. The two per-action routes go to
 `#owners-card` on success, `?owners_error=<code>#owners-card` on a
 refusal — except `last_owner` on remove, a bare 409 (the card disables
 that Remove, so only a direct POST or a concurrent remove reaches it),
@@ -179,7 +194,7 @@ since Session Home is then a 404 for you.
 |---|---|---|
 | **Where it shows** | On each staged co-owner row. The creator's row has none. | On every owner row, your own included. |
 | **Element** | `<button type="button" class="chrome-link" data-owners-remove>`, built by the stager. | `<button type="submit" class="chrome-link">` in its own `<form>` per row, posting to `owners/{user_id}/remove`. |
-| **A click** | Takes the row out of the table. Nothing is written. | Deletes the owner row at once. On your own row, a `confirm()` first; canceling posts nothing. |
+| **A click** | Takes the row out of the table. Nothing is written. | Deletes the owner row at once. On your own row, a `confirm()` first; canceling posts nothing. Locked by default: **Unlock** first. |
 | **Saved by** | Nothing on its own. **Create session** submits whatever rows remain. | Itself. |
 | **Undo** | Pick the address again. Leaving the page discards all staging. | Add the owner back with **Add owner** — they are a candidate again. |
 | **Other unsaved edits** | Untouched — Remove never posts. | Lost: the post reloads the page, so an unlocked details card's unsaved edits go with it. The Owners card itself holds nothing unsaved. |

@@ -1058,8 +1058,8 @@ page, and `/edit` 308-redirects to
   session entirely; confirm-gated; visible-but-disabled in `ready`,
   route-enforced server-side).
 - **Owners card**, stacked above Danger Zone — the session's own
-  owner set, editable in every session state with no edit window of
-  its own. `spec/session_owners.md` carries the full contract.
+  owner set, editable in every session state, guarded by its own
+  Lock / Unlock against accidental edits. `spec/session_owners.md` carries the full contract.
 
 The round-trip **setup CSV download tiles** are not on Session
 Home: they live on the Operations-strip **Extract data** tab (see

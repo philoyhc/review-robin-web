@@ -2219,12 +2219,17 @@
          Unlock button sits in .quick-setup-card-footer outside
          this wrapper so it stays vivid. Distinct from
          .card.disabled (which greys the whole card on Activated
-         sessions and never has a Lock button). */
-      body.ui-v2 .quick-setup-body.locked {
+         sessions and never has a Lock button). .lockable-body is the
+         same greying for another card with its own Lock / Unlock —
+         Session Home's Owners card (19S). */
+      body.ui-v2 .quick-setup-body.locked,
+      body.ui-v2 .lockable-body.locked {
         opacity: 0.55;
       }
       body.ui-v2 .quick-setup-body.locked,
-      body.ui-v2 .quick-setup-body.locked * {
+      body.ui-v2 .quick-setup-body.locked *,
+      body.ui-v2 .lockable-body.locked,
+      body.ui-v2 .lockable-body.locked * {
         cursor: not-allowed;
       }
       body.ui-v2 .quick-setup-card-footer {

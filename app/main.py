@@ -21,22 +21,27 @@ from app.web.routes_operator import router as operator_router
 from app.web.routes_reviewer import router as reviewer_router
 
 
-# Paths whose responses should NOT clear the operator's
-# ``qsu_{session_id}=1`` cookie — Session Home itself + every
-# ``/quick-setup/...`` endpoint (lock toggle, file submits). Every
-# other path clears the cookie so navigating away from Home (whether
-# to another operator page like ``/operator/settings``, the sessions
-# lobby ``/operator/sessions``, or ``/about``) and returning relocks
-# the Quick Setup card.
+# Paths whose responses should NOT clear the operator's per-session
+# unlock cookies — ``qsu_{session_id}=1`` (Quick Setup) and
+# ``oou_{session_id}=1`` (Owners, 19S) — Session Home itself plus every
+# ``/quick-setup/...`` and ``/owners/...`` endpoint (lock toggles, file
+# submits, owner adds and removes). Every other path clears both, so
+# navigating away from Home (whether to another operator page like
+# ``/operator/settings``, the sessions lobby ``/operator/sessions``, or
+# ``/about``) and returning relocks both cards.
 #
-# The ``qsu_`` literal in ``_QUICK_SETUP_COOKIE_RE`` mirrors
-# ``_QUICK_SETUP_COOKIE_PREFIX`` in
-# ``app/web/routes_operator/_shared.py``. If you rename the cookie
+# The ``qsu`` / ``oou`` literals in ``_UNLOCK_COOKIE_RE`` mirror
+# ``_QUICK_SETUP_COOKIE_PREFIX`` and ``_OWNERS_COOKIE_PREFIX`` in
+# ``app/web/routes_operator/_shared.py``. If you rename a cookie
 # prefix in either file, update the other.
-_QUICK_SETUP_KEEP_COOKIE_RE = re.compile(
-    r"^/operator/sessions/\d+(?:/quick-setup(?:/.*)?)?/?$"
+#
+# Only the cookies of the session in the path survive: opening session
+# B's Home clears session A's, so returning to A finds both cards locked
+# (Codex on #2591; the Quick Setup cookie had the same gap).
+_UNLOCK_KEEP_COOKIE_RE = re.compile(
+    r"^/operator/sessions/(\d+)(?:/(?:quick-setup|owners)(?:/.*)?)?/?$"
 )
-_QUICK_SETUP_COOKIE_RE = re.compile(r"^qsu_(\d+)$")
+_UNLOCK_COOKIE_RE = re.compile(r"^(?:qsu|oou)_(\d+)$")
 
 
 class _RevalidatingStaticFiles(StaticFiles):
@@ -123,22 +128,22 @@ def create_app() -> FastAPI:
         return RedirectResponse(url="/me", status_code=303)
 
     @app.middleware("http")
-    async def reset_quick_setup_unlock_on_navigation(
+    async def reset_card_unlocks_on_navigation(
         request: Request, call_next
     ):
         response = await call_next(request)
-        path = request.url.path
-        if _QUICK_SETUP_KEEP_COOKIE_RE.match(path):
-            return response
-        # Operator navigated away from Session Home (and away from
-        # the Quick Setup endpoints that own the cookie's
-        # lifecycle). Expire any ``qsu_{session_id}`` cookies the
-        # request carried so coming back to Home renders the card
-        # locked. The cookie is set with path ``/`` (see
-        # ``app/web/routes_operator/_quick_setup.py``) so the same
-        # path here matches the browser's stored cookie.
+        keep = _UNLOCK_KEEP_COOKIE_RE.match(request.url.path)
+        kept_session_id = keep.group(1) if keep else None
+        # Expire every ``qsu_`` / ``oou_{session_id}`` cookie the request
+        # carried except the current Session Home's own: navigating away
+        # from Home (and away from the Quick Setup and Owners endpoints
+        # that own the cookies' lifecycle), or to another session's Home,
+        # relocks both cards. The cookies are set with path ``/`` (see
+        # ``app/web/routes_operator/_quick_setup.py``) so the same path
+        # here matches the browser's stored cookie.
         for cookie_name in list(request.cookies.keys()):
-            if _QUICK_SETUP_COOKIE_RE.match(cookie_name) is None:
+            unlock = _UNLOCK_COOKIE_RE.match(cookie_name)
+            if unlock is None or unlock.group(1) == kept_session_id:
                 continue
             response.delete_cookie(key=cookie_name, path="/")
         return response

@@ -190,8 +190,8 @@ co-owners the creator staged on Create's Owners card (the same
 picker over workspace operators, saved by **Create session**;
 `spec/operator_ui_concept.md` "Create new session"). Additional
 owners are added / removed by current owners on Session Home's own
-Owners card (`#owners-card`), in every lifecycle state — no edit
-window to unlock — each Add owner and Remove saving at once. The
+Owners card (`#owners-card`), in every lifecycle state, behind its own
+Lock / Unlock (visual only) — each Add owner and Remove saving at once. The
 picker offers workspace operators not already owners. Full contract:
 `spec/session_owners.md`; gate and invariant contract in
 `spec/permissions.md` §4.2. The service-layer last-owner guard

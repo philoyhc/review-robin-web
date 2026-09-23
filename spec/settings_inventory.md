@@ -346,7 +346,8 @@ preference stored?" finds the answer quickly.
 
 | Cookie | Scope | Purpose |
 |---|---|---|
-| `qsu_{session_id}=1` | path `/`, `HttpOnly`, `SameSite=Lax` | Quick Setup card unlock state. Set by `POST /operator/sessions/{id}/quick-setup/lock?action=unlock`; cleared by a Starlette middleware in `app/main.py` whenever the operator navigates anywhere that isn't Session Home or a `/operator/sessions/{id}/quick-setup/...` endpoint (so leaving Home for the lobby, operator settings, or `/about` relocks the card on return). The path is `/` so the cookie is visible on every subsequent request — without that, navigations outside `/operator/sessions/{id}/` couldn't observe and clear the cookie. |
+| `qsu_{session_id}=1` | path `/`, `HttpOnly`, `SameSite=Lax` | Quick Setup card unlock state. Set by `POST /operator/sessions/{id}/quick-setup/lock?action=unlock`; cleared by a Starlette middleware in `app/main.py` whenever the operator navigates anywhere that isn't **this session's** Home or one of its `/operator/sessions/{id}/quick-setup/...` or `/owners/...` endpoints (so leaving Home for the lobby, operator settings, `/about` or another session's Home relocks the card on return). The path is `/` so the cookie is visible on every subsequent request — without that, navigations outside `/operator/sessions/{id}/` couldn't observe and clear the cookie. |
+| `oou_{session_id}=1` | path `/`, `HttpOnly`, `SameSite=Lax` | Session Home Owners card unlock state (19S, the `qsu_` cookie's twin). Set by `POST /operator/sessions/{id}/owners/lock` with `action=unlock`; cleared by the same middleware, which keeps both cookies on the same paths — this session's Home and its `/quick-setup/...` and `/owners/...` endpoints. Visual only — the owners routes don't read it (`spec/session_owners.md` §2). |
 | `rrw-sort-{surface}-{session_id}[-{instrument_id}]` | path `/{operator\|reviewer}/sessions/{id}`, `SameSite=Lax`, 1-year Max-Age, **not** `HttpOnly` | Per-(browser, session, table) sort spec for any opt-in `<table data-rrw-sortable="...">`. Carries JSON `[{"key": "...", "dir": "asc|desc"}, ...]` in cascade order (max 3 entries; malformed JSON / unknown keys silently drop), **percent-encoded** by the browser (`encodeURIComponent`), so the SSR decoders must `unquote()` before `json.loads` (see `spec/sort_by_reviewee.md`). Surfaces: `rs` (reviewer-surface, one cookie per instrument), `reviewers` / `reviewees` / `relationships` / `assignments` / `invitations` / `responses` (operator setup + operations tables, one cookie per page). The three Setup tables also offer an `updated_at` sort key. Written by `_rrwWriteCookie` in `base.html` on every click; read by the JS on `DOMContentLoaded` to seed badges + by the route layer at render time so the initial HTML lands in the persisted order (no JS-reorder flicker). Clearing the sort writes an expired cookie. |
 
 ### `localStorage` (per browser, per origin; survives sessions)
@@ -604,8 +605,8 @@ rules, and the round-trip stability contract).
   load flow.
 - `app/services/email_templates.py` — `OVERRIDE_KEYS` +
   `RESPONSES_RECEIVED_ENABLED_KEY`.
-- `app/main.py` — Quick Setup unlock-cookie navigation
-  middleware (mirrors the `qsu_` prefix in
+- `app/main.py` — the Quick Setup and Owners unlock-cookie
+  navigation middleware (mirrors the `qsu_` and `oou_` prefixes in
   `app/web/routes_operator/_shared.py`).
 - `spec/csv_contracts.md` — the CSV export / import contract
   referenced by §10.

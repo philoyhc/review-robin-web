@@ -51,6 +51,8 @@ from app.web.deps import (
 from app.web.routes_operator._shared import (
     _REVERT_RETURN_TO,
     _lifecycle_error_response,
+    _owners_cookie_name,
+    _owners_unlocked,
     _quick_setup_unlocked,
     _redirect_url,
     _require_editable,
@@ -215,6 +217,7 @@ def session_detail(
             # Owner add/remove errors, the Owners card's banner
             # (redirected here from the routes; 19S Item 10).
             "owners_error": owners_error,
+            "owners_unlocked": _owners_unlocked(request, review_session),
             # 18R Item 4 Slice 3 — edit-mode wiring for the Session details
             # card. ``config_editing`` is the canonical server state (from
             # ``?editing=1``), gated on the session actually being editable so a
@@ -643,6 +646,34 @@ def _owners_redirect_url(session_id: int, error_code: str | None = None) -> str:
             f"?owners_error={quote(error_code, safe='')}#owners-card"
         )
     return f"/operator/sessions/{session_id}#owners-card"
+
+
+@router.post("/sessions/{session_id}/owners/lock")
+def session_owners_lock_toggle(
+    action: str = Form(...),
+    review_session: ReviewSession = Depends(require_session_operator),
+) -> RedirectResponse:
+    """Flip the Owners card's per-session lock cookie (the Quick Setup
+    card's toggle, ``quick_setup_lock_toggle``, applied to Owners).
+
+    ``action="unlock"`` sets ``oou_{id}=1``; anything else clears it.
+    The lock is a guard against accidental edits, not a permission:
+    ``owners/add`` and ``owners/{user_id}/remove`` do not read it.
+    Path ``/`` so the navigation middleware in ``app/main.py`` can
+    expire it on leaving Session Home, relocking the card.
+    """
+    redirect = RedirectResponse(
+        url=_owners_redirect_url(review_session.id),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+    cookie_name = _owners_cookie_name(review_session.id)
+    if action == "unlock":
+        redirect.set_cookie(
+            key=cookie_name, value="1", path="/", httponly=True, samesite="lax"
+        )
+    else:
+        redirect.delete_cookie(key=cookie_name, path="/")
+    return redirect
 
 
 @router.post("/sessions/{session_id}/owners/add")

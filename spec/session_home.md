@@ -70,7 +70,7 @@ then a two-column bottom row.
 │  + UI-settings / Tags sub-cards                              │
 └──────────────────────────────────────────────────────────────┘
 ┌── Quick Setup ───────────┐  ┌── Owners ────────────────┐
-│   bulk CSV uploads       │  │   add / remove at once   │
+│   bulk CSV uploads       │  │   add / remove; Unlock   │
 │                          │  ├── Danger Zone ───────────┤
 │                          │  │   Delete Data / Delete   │
 └──────────────────────────┘  └──────────────────────────┘
@@ -325,10 +325,13 @@ delete.
 
 A card of its own, half width, stacked above Danger Zone in the same
 `.bottom-left` column (`#owners-card`) — not a sub-card of the Session
-details card, and gated on nothing: it is always visible and editable,
-in every lifecycle state, with no `?editing=1` and no Lock / Unlock of
-its own. **Add owner and each Remove save at once** — no Save or
-Cancel (author's ruling, 2026-09-23). Full contract — the table, the
+details card, and gated on no lifecycle state: it is always visible,
+in every state, with no `?editing=1`. It has a **Lock / Unlock of its
+own, as Quick Setup does** (author's ruling, 2026-09-23, against
+accidental edits): locked by default, the `oou_{session_id}` cookie
+when unlocked, relocked on leaving Home, visual only. **Add owner and
+each Remove save at once** — no Save or Cancel (author's ruling,
+2026-09-23). Full contract — the table, the
 candidates, and the Create page's matching card, which stages instead
 — in `spec/session_owners.md`.
 
@@ -459,8 +462,9 @@ at the bottom-right and renders in every editable-conceivable
 state on Session Home (`draft` / `validated` / `ready`); the card
 defaults to locked so the operator must explicitly Unlock before
 any setup change. Lock state lives in a per-session `HttpOnly`
-cookie scoped to `/operator/sessions/{id}` (`qsu_{session_id}=1`
-when unlocked).
+cookie (`qsu_{session_id}=1` when unlocked, path `/` so the
+navigation middleware can expire it anywhere; `spec/settings_inventory.md`
+"Cookies").
 
 State-conditional copy only — the card frame is constant:
 
