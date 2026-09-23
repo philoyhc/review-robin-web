@@ -656,6 +656,72 @@ def test_round_trip_carries_session_tags(db: Session) -> None:
     assert tags == {"pilot", "cohort-a"}
 
 
+def _dst_tags(db: Session, review_session: ReviewSession) -> set[str]:
+    from app.db.models import SessionTag
+
+    db.expire_all()
+    return {
+        t.tag
+        for t in db.execute(
+            select(SessionTag).where(SessionTag.session_id == review_session.id)
+        ).scalars()
+    }
+
+
+def _tag_rows(*values: str) -> list[Row]:
+    return [
+        Row(field=f"session_tags[{i}].tag", value=v, data_type="string")
+        for i, v in enumerate(values)
+    ]
+
+
+def test_imported_tags_are_normalized_like_typed_ones(db: Session) -> None:
+    """19S Item 9 — tags are lower case everywhere. Case folded, spaces
+    trimmed, and two spellings of one tag collapse to one row."""
+    dst = _bare_session(db, code="tag-norm")
+    result = apply_session_config(
+        db,
+        review_session=dst,
+        rows=_tag_rows("Pilot", "  Cohort-A ", "pilot"),
+        user=_user(db, email="tag-norm@e.edu"),
+    )
+    assert result.errors == []
+    assert _dst_tags(db, dst) == {"pilot", "cohort-a"}
+
+
+def test_a_blank_imported_tag_is_skipped(db: Session) -> None:
+    """Whitespace-only reads as empty, which was already skipped."""
+    dst = _bare_session(db, code="tag-blank")
+    result = apply_session_config(
+        db,
+        review_session=dst,
+        rows=_tag_rows("   ", "pilot"),
+        user=_user(db, email="tag-blank@e.edu"),
+    )
+    assert result.errors == []
+    assert _dst_tags(db, dst) == {"pilot"}
+
+
+def test_an_over_long_imported_tag_rejects_the_bundle(db: Session) -> None:
+    """A tag past the column's 64 characters used to reach the insert raw.
+    Now it is a parse error, so the whole bundle is refused with a message
+    and the destination keeps what it had."""
+    from app.db.models import SessionTag
+
+    dst = _bare_session(db, code="tag-long")
+    db.add(SessionTag(session_id=dst.id, tag="kept"))
+    db.flush()
+    result = apply_session_config(
+        db,
+        review_session=dst,
+        rows=_tag_rows("x" * 65, "pilot"),
+        user=_user(db, email="tag-long@e.edu"),
+    )
+    assert result.errors, "the bundle is rejected"
+    assert any("session_tags[]" in str(e) for e in result.errors)
+    assert _dst_tags(db, dst) == {"kept"}
+
+
 def test_round_trip_carries_band1_touched_links(db: Session) -> None:
     """18P PR D2 — Instrument.band1_touched_links round-trips."""
     src = _session(db, code="rt-b1-src")

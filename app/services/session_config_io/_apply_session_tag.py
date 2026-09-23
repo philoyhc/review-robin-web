@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, SessionTag
+from app.services.session_tags import normalize_tag
 
 from ._apply_shared import _RX_SESSION_TAG, _ParsedConfig, _ParseError
 
@@ -23,8 +24,20 @@ def _apply_session_tag_kv(
     attr = match.group(2)
     if attr != "tag":
         raise _ParseError(f"unknown session_tags[] attribute {attr!r}")
-    if value and value not in plan.session_tags:
-        plan.session_tags.append(value)
+    # 19S Item 9: tags are lower case everywhere, so an imported tag is
+    # normalized exactly as a typed one is — lowercased, trimmed, length-
+    # checked. Before this, ``Pilot`` was stored raw while every typed
+    # surface lowercased, and the lobby could not remove it. A blank value
+    # is skipped as before; an over-long one rejects the bundle with a
+    # message, rather than reaching a 64-character column raw.
+    if not value.strip():
+        return
+    try:
+        tag = normalize_tag(value)
+    except ValueError as exc:
+        raise _ParseError(f"session_tags[] value {value!r}: {exc}") from exc
+    if tag not in plan.session_tags:
+        plan.session_tags.append(tag)
 
 
 def _apply_session_tags(

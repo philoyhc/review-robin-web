@@ -543,6 +543,20 @@ Create is therefore immune to the wipe above; `import-config` on an
 existing session is **not**, and that remains an open hazard rather
 than a solved one.
 
+**Imported tags are normalized exactly as typed ones are** (19S Item 9,
+2026-09-23 — tags are lower case everywhere). Each `session_tags[]`
+value goes through `session_tags.normalize_tag`: lowercased, trimmed,
+and two spellings of one tag collapse to one row. A blank or
+whitespace-only value is skipped; one longer than the 64-character
+column is a **parse error**, so the whole bundle is refused with a
+message rather than reaching the insert raw. Before this, `Pilot` was
+stored as written while every typed surface lowercased — and the
+lobby's remove, which normalizes what it is asked for, could not delete
+it. **Rows already stored with capitals are not migrated** (author's
+ruling): they stay until something rewrites them, and saving Session
+Home's details card is one such thing, since its Tags field writes
+through `set_tags`.
+
 **The force-apply path re-runs no cross-field ordering check, and that
 is safe rather than overlooked.** `POST /operator/sessions` validates
 End ≥ Start and Release-from ≥ End before creating; the CSV then

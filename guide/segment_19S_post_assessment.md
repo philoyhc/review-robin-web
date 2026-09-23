@@ -2227,11 +2227,16 @@ Taken 2026-09-22 at `d4b1ba9`.
    showing real tags when locked, its input inert. **Cumulative-diff
    base for the item's cold read: `7022022`.**
 2. **Rung 2 — Part B's write, plus the settings-CSV importer
-   normalizing tags** — which must land in this rung or before it,
-   never after, or the editor's first save rewrites imported tags.
+   normalizing tags.** ✅ 2026-09-23 — both halves in one rung, as
+   required.
 3. **Rung 3 — Part A's scaffold**: the Owners card inert, no write.
 4. **Rung 4 — Part A's write**: staged rows applied after
-   `create_session`, with the two rejections surfaced.
+   `create_session`, with the two rejections surfaced — **plus one
+   correlation id for the whole create** (author's ruling, 2026-09-23).
+   `request_correlation_id()` mints a fresh id per call, and the Create
+   route calls it for the session, each Quick Setup slot and the tag
+   write; the owner writes this rung adds would make it worse. Session
+   Home's save was fixed the same way in rung 2 (#2569, Codex).
 
 Re-cut at rung 1 from three rungs to four: `CLAUDE.md` lands a new
 card as its own slice, and Item 6 did the same.
@@ -2243,6 +2248,8 @@ card as its own slice, and Item 6 did the same.
 - **A settings CSV importing `Pilot` stores `pilot`**, and the lobby can
   then remove it — asserted through the route, with the revert
   mutation run (`docs/unenforced_conventions.md` §1.11).
+- **Every audit event one create produces shares one correlation id**
+  — session, uploads, tags and owners — asserted through the route.
 - A co-owner named on Create owns the created session, and
   `not_in_workspace` / `already_owner` each reach the operator rather
   than failing silently — all asserted through the route.
@@ -2281,6 +2288,39 @@ mode: UI settings → Tags **20px**, Tags → Save cluster **20px**, and the
 Create page's pair unchanged at 20px. No CSS change; the column's `gap`
 does it.
 
+**Rung 2 done, 2026-09-23** — the Tags field saves with the details
+card, and the settings-CSV importer normalizes. Rung 1's two inertness
+tests are **inverted rather than deleted**. The write runs after the
+config apply, so a save the card rejects (a 422, tested with a bad
+timezone) writes no tags either; an emptied box clears; an untouched
+box emits no tag events, because `set_tags` diffs.
+
+**One thing the plan did not foresee: absent reads as empty.** The
+first draft left tags alone when the request carried no `tags` field,
+and its own test caught that it also left them alone when the box was
+*emptied* — FastAPI hands an absent form value and an empty one to an
+optional parameter identically, both `None`. Telling them apart needs a
+marker field. The route already takes the card's whole state (its two
+checkboxes read absent as off) and the card's form always sends the
+field, so the tags follow the same convention: absent or empty clears.
+A test pins it.
+
+**The importer**: `normalize_tag` on each `session_tags[]` value —
+lowercased, trimmed, duplicates collapsed, blanks skipped. An over-long
+value is now a **parse error** refusing the bundle, where it used to
+reach a 64-character column raw; skipping it silently, as the lobby
+does, was the alternative, and a file the operator can fix earns a
+message instead. Through the routes: a bundle importing `Pilot` stores
+`pilot`, and the lobby's bulk remove then deletes it.
+
+**Nine mutations, eight caught first time.** The survivor was a helper:
+a tag-event counter stuck at zero passed the "untouched box emits
+nothing" test by comparing 0 with 0. The test now asserts the setup's
+two events first. The rest: importer reverted, over-long tag skipped
+instead of rejected, route write reverted, write moved before the
+config apply, `name=` dropped, and the `_save`, `_tags_of` and
+`_tag_rows` helpers each degenerated.
+
 ### Out of scope
 
 - **Typeahead on either new box** — Item 7, open on its own fork.
@@ -2296,13 +2336,20 @@ does it.
   the one-field-card case it decides (Item 9, ruled before the build).
 - `spec/operator_ui_concept.md` — the `/operator/sessions/new` card
   list gains Owners; Session Home's details card gains Tags (Item 9).
-- `spec/sessions_overview.md` — the tag write surfaces become four
-  (Item 9).
+- `spec/sessions_overview.md` — the tag write surfaces become four;
+  its "third write surface" bullet is false from rung 2 until the close
+  rewrites it (Item 9).
 - `spec/csv_contracts.md` — the settings CSV's tag section states that
   import normalizes, as every typed surface already does (Item 9).
+- `spec/roundtrip_coverage.md` — the session-tag row notes import
+  lowercases, so a legacy capitalized tag comes back lower case
+  (Item 9).
 - `spec/session_home.md` — the details card gains a Tags field that
   shares the card's edit window and `config-save` form, and renders as
-  a `.config-value` when locked (Item 9).
+  a `.config-value` when locked. Say also that an emptied box clears
+  (the Create page's writes nothing), and that this surface is
+  draft/validated only through `_require_editable` while the lobby
+  edits tags in any state (Item 9).
 - `guide/deferred_consolidated.md` — the entry narrows to the button
   relocation alone (Item 9).
 - `docs/status.md` — row when the item lands (Item 9).

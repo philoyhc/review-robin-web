@@ -1,4 +1,4 @@
-"""19S Item 9 Part B rung 1 — the Tags card on Session Home, as a scaffold.
+"""19S Item 9 Part B — the Tags card on Session Home's details card.
 
 The card renders below User interface settings in the details card's
 right-hand ``.bottom-left`` column, above the Save / Cancel / Lock
@@ -6,22 +6,37 @@ cluster. Locked it shows the session's tags as a ``.config-value``, like
 every other field on that card; unlocked it shows a text input
 prefilled with the same comma-joined string.
 
-**This rung is deliberately inert, and these tests pin inertness as a
-property.** The input carries no ``name`` — so a browser does not submit
-it — and no ``form=`` — which is what associates a control rendered
-outside ``<form>`` with the card's ``config-save`` form. Either alone
-would leave the control half-wired, so both absences are asserted, and a
-round trip through ``POST /sessions/{id}/config`` carrying ``tags=``
-confirms the route ignores it. Rung 2 inverts all three by design.
+**Rung 2 wires it to the card's own save.** The input joins the
+``config-save`` form, so it rides the card's edit window and Save — no
+second mechanism. Rung 1's two inertness assertions are inverted here
+rather than deleted, so the diff shows the control going live.
+
+The semantics the route owns, each pinned below:
+
+- a typed set is written, normalized, after the config apply — so a
+  rejected save writes no tags either;
+- an **emptied** box clears the set, as the lobby's row expander does
+  (the Create page's empty box writes nothing — there is no set yet);
+- a request carrying **no** ``tags`` field clears them too — FastAPI
+  cannot tell absent from empty, and the route's checkboxes already read
+  absent as off;
+- a save that leaves the box untouched emits no tag events.
+
+The settings-CSV importer is normalized in the same rung, because this
+editor's first save would otherwise rewrite any tag imported with
+capitals; those tests close the file.
 """
 
 from __future__ import annotations
+
+import csv
+import io
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, User
+from app.db.models import AuditEvent, ReviewSession, User
 from app.services import session_tags
 
 
@@ -40,6 +55,64 @@ def _create(client: TestClient, db: Session, code: str) -> ReviewSession:
 def _tag(db: Session, review_session: ReviewSession, tags: list[str]) -> None:
     user = db.execute(select(User)).scalars().first()
     session_tags.set_tags(db, review_session=review_session, user=user, tags=tags)
+
+
+def _tags_of(db: Session, review_session: ReviewSession) -> list[str]:
+    return session_tags.tags_for_sessions(db, [review_session.id])[
+        review_session.id
+    ]
+
+
+def _save(
+    client: TestClient,
+    review_session: ReviewSession,
+    *,
+    name: str = "Renamed",
+    display_timezone: str = "",
+    **extra: str,
+):
+    """POST the details card's Save, with ``tags=`` only when given.
+
+    Every caller renames the session in the same request and then asserts
+    the rename landed, or that it did not: a rejected save also leaves the
+    tags alone, so without that control a "tags unchanged" assertion passes
+    for the wrong reason.
+    """
+    data = {
+        "name": name,
+        "code": review_session.code,
+        "description": "",
+        "display_timezone": display_timezone,
+        **extra,
+    }
+    return client.post(
+        f"/operator/sessions/{review_session.id}/config",
+        data=data,
+        follow_redirects=False,
+    )
+
+
+def _tag_events(db: Session, review_session: ReviewSession) -> int:
+    return len(
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == review_session.id,
+                AuditEvent.event_type.in_(
+                    ["session.tag_added", "session.tag_removed"]
+                ),
+            )
+        ).scalars().all()
+    )
+
+
+def _settings_csv(tags: list[str]) -> bytes:
+    """A settings bundle in the exporter's own shape, carrying only tags."""
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(("field", "value", "data_type"))
+    for i, tag in enumerate(tags):
+        writer.writerow((f"session_tags[{i}].tag", tag, "string"))
+    return buf.getvalue().encode("utf-8")
 
 
 def _card(body: str) -> str:
@@ -140,46 +213,169 @@ def test_unlocked_the_input_is_prefilled(client: TestClient, db: Session) -> Non
     assert "data-edit-only" in card
 
 
-def test_the_input_is_inert(client: TestClient, db: Session) -> None:
-    """Both halves of inertness, asserted as absences. Rung 2 inverts
-    them, so the diff shows the control going live."""
-    review_session = _create(client, db, "HOME-TAGS-INERT")
+def test_the_input_is_wired_to_the_config_form(
+    client: TestClient, db: Session
+) -> None:
+    """The inversion of rung 1's inertness assertion, kept in that shape
+    so the diff shows the control going live: a ``name`` is what a browser
+    submits, and ``form=`` is what associates a control rendered outside
+    ``<form>`` with the card's save."""
+    review_session = _create(client, db, "HOME-TAGS-WIRED")
     card = _card(
         client.get(f"/operator/sessions/{review_session.id}?editing=1").text
     )
 
-    assert 'id="config-tags"' in card, "the control is genuinely there"
-    assert 'name="tags"' not in card
-    assert "form=" not in card
+    assert 'id="config-tags"' in card
+    assert 'name="tags"' in card
+    assert f'form="config-save-{review_session.id}"' in card
 
 
-def test_saving_the_card_with_a_tags_field_changes_nothing(
+def test_saving_the_card_writes_the_tags(client: TestClient, db: Session) -> None:
+    review_session = _create(client, db, "HOME-TAGS-WRITE")
+    _tag(db, review_session, ["pilot"])
+
+    response = _save(client, review_session, tags="Beta,  alpha ,beta")
+    assert response.status_code == 303, response.text
+    db.refresh(review_session)
+    assert review_session.name == "Renamed", "the save went through"
+    assert _tags_of(db, review_session) == ["alpha", "beta"], (
+        "a replace, normalized: pilot dropped, case and spaces folded, "
+        "the duplicate collapsed"
+    )
+
+
+def test_an_emptied_box_clears_the_tags(client: TestClient, db: Session) -> None:
+    """The lobby's meaning, not the Create page's: there is a set to edit."""
+    review_session = _create(client, db, "HOME-TAGS-CLEAR")
+    _tag(db, review_session, ["pilot", "2026"])
+
+    response = _save(client, review_session, tags="")
+    assert response.status_code == 303, response.text
+    db.refresh(review_session)
+    assert review_session.name == "Renamed"
+    assert _tags_of(db, review_session) == []
+
+
+def test_a_save_carrying_no_tags_field_clears_them_like_the_toggles(
     client: TestClient, db: Session
 ) -> None:
-    """The half no markup assertion can make: even a request that does
-    carry ``tags=`` leaves the session's tags as they were.
+    """Absent reads as empty, deliberately, and this pins it.
 
-    The rename is the control. A 303 alone would also be what a rejected
-    save returns, and a rejected save leaves tags alone for the wrong
-    reason — so the test first establishes the save really happened.
+    FastAPI hands an absent form value and an empty one to the route
+    identically, so the two cannot be told apart without a marker field.
+    The route already takes the card's whole state — its checkboxes read
+    absent as off — and the card's form always sends ``tags``, so the tags
+    follow the same convention rather than a special case.
     """
-    review_session = _create(client, db, "HOME-TAGS-POST")
+    review_session = _create(client, db, "HOME-TAGS-ABSENT")
     _tag(db, review_session, ["pilot"])
+
+    response = _save(client, review_session)
+    assert response.status_code == 303, response.text
+    db.refresh(review_session)
+    assert review_session.name == "Renamed", "the save went through"
+    assert _tags_of(db, review_session) == []
+
+
+def test_an_untouched_box_emits_no_tag_events(
+    client: TestClient, db: Session
+) -> None:
+    """Saving the card for another field resubmits the prefilled tags;
+    ``set_tags`` diffs, so nothing is added, removed or audited."""
+    review_session = _create(client, db, "HOME-TAGS-QUIET")
+    _tag(db, review_session, ["pilot", "2026"])
+    before = _tag_events(db, review_session)
+    # The control: tagging the session emitted two events, so the counter
+    # can see them. Without it, a counter stuck at zero passes this test
+    # by comparing 0 with 0 — the mutation run found exactly that.
+    assert before == 2
+
+    response = _save(client, review_session, tags="2026, pilot")
+    assert response.status_code == 303, response.text
+    db.refresh(review_session)
+    assert review_session.name == "Renamed"
+    assert _tag_events(db, review_session) == before
+    assert _tags_of(db, review_session) == ["2026", "pilot"]
+
+
+def test_one_save_is_one_correlation_id(client: TestClient, db: Session) -> None:
+    """The config events and the tag events of one save group as one
+    request. ``request_correlation_id`` mints a fresh id per call, so the
+    route mints one and hands it to both (Codex, #2569)."""
+    review_session = _create(client, db, "HOME-TAGS-CORR")
+    _tag(db, review_session, ["pilot"])
+    last = db.execute(
+        select(AuditEvent.id).order_by(AuditEvent.id.desc())
+    ).scalars().first()
+
+    response = _save(client, review_session, tags="pilot, 2026")
+    assert response.status_code == 303, response.text
+    events = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == review_session.id, AuditEvent.id > last
+        )
+    ).scalars().all()
+    kinds = {e.event_type for e in events}
+    assert "session.tag_added" in kinds, "the save changed a tag"
+    assert kinds - {"session.tag_added", "session.tag_removed"}, (
+        "and emitted a config event beside it — the rename"
+    )
+    assert len({e.correlation_id for e in events}) == 1, (
+        sorted((e.event_type, e.correlation_id) for e in events)
+    )
+
+
+def test_a_rejected_save_writes_no_tags(client: TestClient, db: Session) -> None:
+    """The write runs after the config apply, so a save the card rejects
+    writes nothing at all — tags included."""
+    review_session = _create(client, db, "HOME-TAGS-REJECT")
+    _tag(db, review_session, ["pilot"])
+
+    response = _save(
+        client, review_session, display_timezone="Not/AZone", tags="other"
+    )
+    assert response.status_code == 422, response.text
+    db.refresh(review_session)
+    assert review_session.name == "Tagged", "the save was rejected"
+    assert _tags_of(db, review_session) == ["pilot"]
+
+
+# --- The importer: tags are lower case everywhere --------------------------
+
+
+def test_a_settings_csv_tag_is_stored_lower_case_and_the_lobby_can_remove_it(
+    client: TestClient, db: Session
+) -> None:
+    """Both halves of the defect, through the routes.
+
+    Before this rung the importer stored ``Pilot`` raw, and the lobby's
+    remove — which normalizes what it is asked for — looked for ``pilot``,
+    found nothing and left the tag in place.
+    """
     response = client.post(
-        f"/operator/sessions/{review_session.id}/config",
-        data={
-            "name": "Renamed",
-            "code": "HOME-TAGS-POST",
-            "description": "",
-            "display_timezone": "",
-            "tags": "other, stuff",
+        "/operator/sessions",
+        data={"name": "Imported", "code": "HOME-TAGS-IMPORT", "description": ""},
+        files={
+            "settings_file": (
+                "s.csv", _settings_csv(["Pilot", "  Cohort-A "]), "text/csv"
+            )
         },
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    assert "error" not in response.headers["location"]
-    db.refresh(review_session)
-    assert review_session.name == "Renamed", "the save went through"
-    assert session_tags.tags_for_sessions(db, [review_session.id])[
-        review_session.id
-    ] == ["pilot"]
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "HOME-TAGS-IMPORT")
+    ).scalar_one()
+    assert _tags_of(db, review_session) == ["cohort-a", "pilot"]
+
+    removed = client.post(
+        "/operator/sessions/bulk-tags",
+        data={
+            "session_ids": [str(review_session.id)],
+            "tags": "Pilot",
+            "op": "remove",
+        },
+        follow_redirects=False,
+    )
+    assert removed.status_code == 303, removed.text
+    assert _tags_of(db, review_session) == ["cohort-a"]
