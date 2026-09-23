@@ -1,11 +1,14 @@
 # Segment 19S — the post-assessment register
 
 > **Closed and archived 2026-09-23.** Ten items, all closed, PRs
-> **#2544 → #2588**; `tools/close_check.py 19S.1` … `19S.10` each exit
+> **#2544 → #2592**; `tools/close_check.py 19S.1` … `19S.10` each exit
 > 0. Items 1–5 and 8 answered the 22 September reads; Items 6, 7, 9
 > and 10 are the tags-and-owners run the author added — tags at
 > creation, a typeahead on every tag box, Owners on Create, and Session
-> Home's Owners card with a Save of its own (`spec/session_owners.md`).
+> Home's Owners card on its own, saving each Add owner and Remove at
+> once behind a Lock / Unlock like Quick Setup's — its Save of its own
+> retired after Item 10 closed (Item 10's second Decision amendment;
+> `spec/session_owners.md`).
 > The browser checks Items 7 and 10 owe live in
 > `guide/post_azure_todo_checklist.md` item 5.
 
