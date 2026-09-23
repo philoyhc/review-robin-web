@@ -113,7 +113,7 @@ is silently ignored on apply rather than failing the import.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `tag` | ⚠️ | ✅ | `session_tags[i].tag` in the Settings CSV, wipe-and-replace; clone copies them. **One import path overrides the bundle**: a Settings CSV uploaded through the Create page alongside a non-empty Tags box loses its `session_tags[]` rows, because the typed box writes after the bundle by design (`spec/csv_contracts.md` § *Settings CSV — apply precedence*). Every other path round-trips them unconditionally, the empty box included. |
+| `tag` | ⚠️ | ✅ | `session_tags[i].tag` in the Settings CSV, wipe-and-replace; clone copies them. **One import path overrides the bundle**: a Settings CSV uploaded through the Create page alongside a non-empty Tags box loses its `session_tags[]` rows, because the typed box writes after the bundle by design (`spec/csv_contracts.md` § *Settings CSV — apply precedence*). Every other path round-trips them unconditionally, the empty box included. **Import lowercases** (19S Item 9), so a tag stored with capitals before that change comes back lower case. |
 
 ### Populations — reviewers / reviewees / observers / relationships
 
