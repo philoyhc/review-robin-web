@@ -417,7 +417,13 @@
          asks first, and removing yourself lands you on the sessions
          lobby. Otherwise both routes land back here (``#owners-card``),
          a refusal as the ``owners_error`` banner below — all but
-         ``last_owner``, a bare 409, since that Remove is disabled. #}
+         ``last_owner``, a bare 409, since that Remove is disabled.
+
+         **Lock / Unlock, as on Quick Setup** (author's ruling,
+         2026-09-23, against accidental edits): the card renders locked —
+         body greyed, picker and every Remove disabled — until
+         ``owners/lock`` sets the ``oou_{id}`` cookie, and leaving Home
+         relocks it. Visual only: the owners routes don't read it. #}
       <div class="card" id="owners-card">
         <h2>Owners</h2>
         <p class="muted">
@@ -446,6 +452,9 @@
           </div>
         {% endif %}
 
+        {% set owners_locked = not owners_unlocked %}
+        <div class="lockable-body{% if owners_locked %} locked{% endif %}"
+             id="owners-card-body">
         {# `.table-scroll` (base.html): a table wider than its card
            scrolls inside the card rather than pushing the page sideways. #}
         <div class="table-scroll">
@@ -471,7 +480,9 @@
                       onsubmit="return window.confirm('Remove yourself as an owner? You will lose access to this session.');"{% endif %}>
                   <button class="chrome-link" type="submit"
                           {% if config_owners | length <= 1 %}disabled
-                          title="A session always keeps at least one owner."{% endif %}>Remove</button>
+                          title="A session always keeps at least one owner."
+                          {%- elif owners_locked %}disabled
+                          title="Unlock the card to change owners."{% endif %}>Remove</button>
                 </form>
               </td>
             </tr>
@@ -489,24 +500,37 @@
             <label for="owners-add-email">Pick or search for a workspace operator:</label>
             <input type="email" id="owners-add-email" name="target_email"
                    list="owners-candidates" autocomplete="off" required
-                   placeholder="email">
+                   placeholder="email"{% if owners_locked %} disabled{% endif %}>
             <datalist id="owners-candidates">
               {% for candidate in config_owner_candidates %}
                 <option value="{{ candidate.email }}">{{ candidate.display_label }}</option>
               {% endfor %}
             </datalist>
-            {# Secondary, as on Create (author's ruling, 2026-09-23): the
-               Workflow card holds the page's one Primary. #}
-            <div class="card-action-row">
-              <button class="btn secondary" type="submit"
-                      id="owners-add-submit">Add owner</button>
-            </div>
           </form>
         {% else %}
           <p class="muted" style="margin-top: var(--space-3);">
             Every workspace operator is already an owner.
           </p>
         {% endif %}
+        </div>
+
+        {# Add owner, then Lock / Unlock, right-flush — Quick Setup's
+           footer order. Add owner sits outside its form (``form=``) so
+           the toggle's own form is a sibling, not nested. Secondary, as
+           on Create (author's ruling, 2026-09-23): the Workflow card
+           holds the page's one Primary. #}
+        <div class="card-action-row">
+          {% if config_owner_candidates %}
+            <button class="btn secondary" type="submit" form="owners-add-form"
+                    id="owners-add-submit"{% if owners_locked %} disabled{% endif %}>Add owner</button>
+          {% endif %}
+          <form method="post" action="/operator/sessions/{{ session.id }}/owners/lock">
+            <input type="hidden" name="action"
+                   value="{% if owners_locked %}unlock{% else %}lock{% endif %}">
+            <button class="btn secondary" type="submit"
+                    id="owners-lock-toggle">{% if owners_locked %}Unlock{% else %}Lock{% endif %}</button>
+          </form>
+        </div>
       </div>
 
       <div class="card danger-zone" id="danger-zone">

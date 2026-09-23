@@ -441,7 +441,7 @@ def _require_instrument_editable(review_session: ReviewSession) -> None:
 # ------------------------------------------------------------------ #
 # Quick Setup cookie naming.
 #
-# The companion regex ``_QUICK_SETUP_COOKIE_RE`` lives in
+# The companion regex ``_UNLOCK_COOKIE_RE`` lives in
 # ``app/main.py`` and drives the navigation middleware that expires
 # the unlock cookie when the operator leaves Session Home. If you
 # rename the prefix here, update the regex literal there too — both
@@ -465,6 +465,26 @@ def _quick_setup_unlocked(
     return (
         request.cookies.get(_quick_setup_cookie_name(review_session.id)) == "1"
     )
+
+
+# Owners card lock cookie (Session Home), the Quick Setup cookie's twin:
+# the card renders locked until the operator unlocks it, and the same
+# navigation middleware in ``app/main.py`` relocks it on leaving Home
+# (``_UNLOCK_COOKIE_RE`` there mirrors this prefix too).
+_OWNERS_COOKIE_PREFIX = "oou"
+
+
+def _owners_cookie_name(session_id: int) -> str:
+    return f"{_OWNERS_COOKIE_PREFIX}_{session_id}"
+
+
+def _owners_unlocked(request: Request, review_session: ReviewSession) -> bool:
+    """``True`` when the operator's last Owners lock-toggle was Unlock.
+
+    Read from the per-session cookie set by
+    ``POST /sessions/{id}/owners/lock``. Absent ⇒ default locked.
+    """
+    return request.cookies.get(_owners_cookie_name(review_session.id)) == "1"
 
 
 # ------------------------------------------------------------------ #
