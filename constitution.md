@@ -25,16 +25,17 @@ design — and an exit held by convention, not mechanism. A missing plan is
 self-revealing (there is nothing to build from); a missing spec edit is
 silent. Drift not noticed at the close survives it.
 
-## II. A convention becomes a failing test only where a code constant exists to derive it from
+## II. A convention becomes a failing test only where the repository states something to derive it from
 
-Where a rule can be read from a constant in the code — an enum, a label
-map, a schema allowlist — enforce it with a test that reads that constant,
-so the check cannot go stale when the constant changes. Where no constant
-exists, the rule stays prose, read by a person or a reader (III).
-Vigilance fails at exactly the things vigilance is structurally bad at;
-a derived test does not.
+Where a rule can be read from something the repository itself states,
+enforce it with a test that reads that thing, so the check cannot go
+stale when it changes. The source can be a constant in the code (an enum,
+a label map, a schema allowlist), the route table, or the file tree and
+the documents' own structure. Where nothing states it, the rule stays
+prose, read by a person or a reader (III). Vigilance fails at exactly the
+things vigilance is structurally bad at; a derived test does not.
 
-*Trade-off.* A gate sees only what a constant can name. The route table
+*Trade-off.* A gate sees only what the repository names. The route table
 names every routing surface, so a surface with no spec at all is caught
 (`tests/unit/test_spec_coverage.py`, 2026-09-05); nothing names what a
 spec must *contain*, so one that exists and says too little still passes.
@@ -117,8 +118,8 @@ that gets argued with, raised, then disabled leaves the practice worse
 than the paragraph did.
 
 *Trade-off.* Some real conventions stay unenforced. The list of them
-should be short, written down, and revisited when a constant appears
-that would make one derivable (II). It is
+should be short, written down, and revisited when the repository comes
+to state something that would make one derivable (II). It is
 `docs/unenforced_conventions.md` — written 2026-09-08, having been
 promised by this paragraph and absent until then.
 

@@ -182,7 +182,7 @@ reject it.
 - **`guide/codebase_assessment_*.md`** — latest code-vs-spec snapshot.
 - **`guide/deferred_consolidated.md`** — everything scoped but not scheduled.
 - **`docs/practice-audit-2026-09-04.md`** — what gates a merge here, and which conventions are enforced by a check rather than by noticing.
-- **`constitution.md`** — the six rules every change is held to (plan in / spec out; constant-derived gates only; maker ≠ checker; human verifier, no autonomous loop; reasoning travels with the change; retire rather than mechanise badly). Derived from `rrw_sdd_in_practice.md` §6.
+- **`constitution.md`** — the six rules every change is held to (plan in / spec out; gates derived only from what the repository states; maker ≠ checker; human verifier, no autonomous loop; reasoning travels with the change; retire rather than mechanise badly). Derived from `rrw_sdd_in_practice.md` §6.
 - **`docs/security_posture.md`** / **`docs/database.md`** — deeper dives on those subsystems.
 - **`docs/local_setup.md`** / **`docs/deployment_dev.md`** — developer setup and dev-deploy notes.
 
@@ -245,7 +245,7 @@ reject it.
   a reader or CI. Otherwise don't; a slice without it is not wrong.
   **If you do stamp, put the trailer in the commit message's final
   block, beside `Co-Authored-By`**, so git's own trailer parser sees it:
-  21 of the first 38 stamps sat in a paragraph of their own and were
+  21 of the first 37 stamps sat in a paragraph of their own and were
   lost to that parser (19R Item 7). `tools/pace_audit.py` has read the
   line anywhere in the message since 2026-09-22, so a misplaced stamp
   still counts there; no gate checks a missing one.

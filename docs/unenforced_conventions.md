@@ -3,8 +3,8 @@
 **The list `constitution.md` VI promises.** Article VI says a rule that
 cannot be checked cleanly *"is dropped, or left as guidance, and the
 decision is recorded"*, and its trade-off asks that the resulting list be
-*"short, written down, and revisited when a constant appears that would
-make one derivable"*. Until 2026-09-08 no such list existed, so every
+*"short, written down, and revisited when the repository comes to state
+something that would make one derivable"*. Until 2026-09-08 no such list existed, so every
 concession looked identical to an oversight.
 
 Two sections, because they need opposite treatment. **§1 is the list
