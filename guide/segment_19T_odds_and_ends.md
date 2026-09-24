@@ -334,3 +334,57 @@ defect in the change. It found three gaps, all fixed in #2603:
 - `guide/post_azure_todo_checklist.md` — browser check: Cancel, then Lock,
   leaves the action row live (Item 2).
 - `docs/status.md` — row when the item closes (Item 2).
+
+---
+
+## Item 3 — Small fixes register
+
+**Opened 2026-09-24 on the author's instruction.** A register item for
+one-line fixes too small for an item of their own. It stays open for more
+entries and closes when the author says. Each entry has the defect, the
+fix and its PR, and the checks the ladder owes are the same per entry: a
+test, a `diff-reviewer` read on any code, and Doc impact.
+
+### Entry 1 — the Delete confirm checkbox dirtied the card
+
+- **Defect.** The dirty tracker listens for `input` / `change` card-wide,
+  and the Delete confirm checkbox sits inside the card. Ticking it enabled
+  Save and Cancel with nothing to save. It also made Delete, a form post,
+  trip the `beforeunload` "Leave site?" prompt on a clean card. Unticking
+  didn't clear it. Found by Item 2's read. It predates 19T.
+- **Fix.** The tracker's `input` / `change` handler skips targets inside
+  `[data-delete-confirm]`. Chromium: ticking leaves the card clean with
+  Delete live; a row edit still dirties it.
+
+### Blast radius (measured)
+
+Taken 2026-09-24 at `48b21d05`.
+- Entry 1: one listener pair in `instruments_index.html`
+  (`grep -n "addEventListener('change', markDirty" …`, 1 hit).
+
+### Definition of done
+
+- Every entry has its fix merged and a test that fails without it.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- None.
+
+### Status
+
+**Open** (2026-09-24). Entry 1 is fixed. Its `diff-reviewer` read found
+no defect: no other listener dirties the card from the checkbox, the
+attribute sits only on checkboxes, Delete still enables, and the test fails
+on the old template.
+
+### Doc impact
+
+- `spec/instruments.md` — Save-when-dirty: the Delete confirm checkbox
+  doesn't count as an edit (Item 3, entry 1).
+- `docs/status.md` — row when the item closes (Item 3).
+

@@ -8425,3 +8425,31 @@ def test_lock_strips_the_editing_param(
     set_lock = body[start : body.index("\n          };", start)]
     assert "lockUrl.searchParams.delete('editing');" in set_lock
     assert "window.history.replaceState(" in set_lock
+
+
+# --------------------------------------------------------------------------- #
+# 19T Item 3 entry 1 — the Delete confirm checkbox doesn't dirty the card
+# --------------------------------------------------------------------------- #
+
+
+def test_delete_confirm_checkbox_does_not_mark_the_card_dirty(
+    client: TestClient, db: Session
+) -> None:
+    """The dirty tracker's input / change listeners skip the Delete
+    confirm checkbox: ticking it enabled Save and Cancel and made Delete
+    trip the leave-page prompt on a clean card."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-delete-confirm"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    # The checkbox carries the marker the listener skips.
+    assert f'data-delete-confirm="{new_model.id}"' in body
+    start = body.index("function markDirtyFromField(ev) {")
+    fn = body[start : body.index("\n            }", start)]
+    assert "t.closest('[data-delete-confirm]')" in fn
+    assert "instrumentCard.addEventListener('input', markDirtyFromField);" in body
+    assert "instrumentCard.addEventListener('change', markDirtyFromField);" in body
+    assert "instrumentCard.addEventListener('input', markDirty);" not in body
+    assert "instrumentCard.addEventListener('change', markDirty);" not in body
