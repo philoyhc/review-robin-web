@@ -1753,7 +1753,10 @@ roster, or the next change that reworks a roster's pager.
 The author explored basic branching: fields that can be answered only when
 another field's answer meets a condition. One level, one branch per parent,
 several fields per branch. The rulings, recommended storage and measured
-cost are in `guide/response_field_branching.md`, as two items:
+cost are in `guide/response_field_branching.md`, as three items, built in
+the order 3, 1, 2:
+- Item 3 reorders on the Band 3 rows and retires the response pills and
+  ✓, moving the display pills into Band 3, about 4 PRs;
 - Item 1 is branching with optional governed fields, about 7–8 PRs;
 - Item 2 is required governed fields, about 2 more, with Item 1 built to
   prepare for it.
