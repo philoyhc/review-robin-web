@@ -2530,10 +2530,9 @@
           }
           // POST the operator's Band 2 selections + Band 3
           // response-field row data to the band2-state route.
-          // Pill selection is read from aria-pressed; response
-          // field rows are matched to pills via data-row-key so
-          // only ✓'d rows persist. Best-effort: failures are
-          // logged but don't surface to the operator.
+          // Pill selection is read from aria-pressed; each response
+          // field row is matched to its pill via data-row-key, and
+          // every named row persists, ✓'d or not (see below).
           // Segment 18R Item 2 PR 5b — this now STAGES the Band 2 state
           // (field pills + response-field rows) into the hidden
           // ``band2_state_snapshot`` input and marks the card dirty,
@@ -4077,8 +4076,9 @@
              on subsequent saves); the X button drops the row and
              its pill (never the last row). Each row's `+` inserts a
              blank row below it. Save persists the rows in row order. #}
-          {# Render one row per persisted response field and nothing
-             more: a blank row appears only on "+". Each row's
+          {# Render one row per persisted response field; a blank row
+             appears on a row's "+", or at load when there are none.
+             Each row's
              data-row-key matches the paired pill's data-row-key
              (``rf_<idx>`` for saved rows, or a fresh ``rf_N`` from
              the row counter for a row "+" added). #}
@@ -4504,11 +4504,11 @@
         //
         //   ✓ disabled when: name is empty, OR bounds are invalid
         //     for the picked data_type.
-        //   X disabled only when the server-side
-        //     has_responses flag is set (template renders the
-        //     ``disabled`` attribute on initial load; JS preserves
-        //     that state since has_responses can only change on
-        //     a page reload anyway).
+        //   X disabled when: it is the only row left (19T Item 1),
+        //     OR the server-side has_responses flag is set
+        //     (template renders the ``disabled`` attribute on
+        //     initial load; JS preserves that state since
+        //     has_responses can only change on a page reload).
         window.newModelRfRecomputeActionStates = window.newModelRfRecomputeActionStates || function (row) {
           if (!row) { return; }
           var nameInput = row.querySelector('[data-new-model-rf-name]');
@@ -4802,8 +4802,7 @@
           window.newModelRfRecomputeActionStates(row);
         };
         // X on a row: remove the row + its paired pill if saved.
-        // The last row goes too; "+" is the one way to get a blank
-        // row back (19T Item 1).
+        // The last row stays (19T Item 1): its X is disabled.
         window.newModelRfDeleteRow = window.newModelRfDeleteRow || function (btn) {
           var row = btn.closest('[data-new-model-rf-row]');
           if (!row) { return; }

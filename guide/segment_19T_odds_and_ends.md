@@ -81,7 +81,8 @@ single "+" and its last-row rule:
   are excluded, since they already propagate on click.
 - **A blank or invalid row** keeps ✓ disabled, as today: no name, or
   `newModelRfValidateShape` fails.
-- **Zero rows.** "+" must work with no row to clone. Today it clones the
+- **Zero rows.** (Superseded by the amendment: a card with none renders
+  one blank row.) "+" must work with no row to clone. Today it clones the
   first row, so it will build from a `<template>` instead.
 - **A "+" row left blank at Save** is already dropped: `serializeRow`
   returns `null` for a nameless row.
@@ -146,6 +147,10 @@ findings, all acted on in #2599:
 - **The amber marker dropped on an invalid edit.** It now means "differs
   from the pill", independent of validity.
 
+Rung 2b's own read (`d555ecca..HEAD`, #2600) found no defects, only stale
+comments and a stale Doc impact, all fixed there. That makes two reads
+for the item.
+
 Carried from rung 1: on main, toggling R or ≡ alone leaves Save disabled.
 R's stage call sits behind a `typeof` guard that is always false, and
 neither button is in the dirty-tracking click list. Also, the first
@@ -180,7 +185,7 @@ pending listener. Rung 2 removes that listener.
 - ✓ is enabled only for a named, valid row with no pill or with
   preview-bearing values that differ from its pill; R and ≡ never enable it.
 - Band 3 renders `grid-template-columns: 2fr 3fr`.
-- `spec/instruments.md` states all three.
+- `spec/instruments.md` states all of the above.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19T.1` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -200,10 +205,13 @@ pending listener. Rung 2 removes that listener.
 
 ### Doc impact
 
-- `spec/instruments.md` — Band 3: no starter row, and "+" adds one; the ✓
-  row states the two purposes and the enable rule; the 2 : 3 split (Item 1).
+- `spec/instruments.md` — Band 3: no starter row except one blank row at
+  zero fields; a "+" per row inserting below; the last row's X inactive; the
+  ✓ row's two purposes and enable rule; R / ≡ enabling Save; ✓, Save and a
+  pill drag following row order; the 2 : 3 split (Item 1).
 - `guide/post_azure_todo_checklist.md` — browser checks for the ✓ enable
-  rule, "+" / Cancel and the split (Item 1).
+  rule, a row's "+" and Cancel, the last row, row order through ✓ / Save /
+  drag, R / ≡ alone enabling Save, and the split (Item 1).
 - `app/web/static/guide/instrument-card-fields-and-visibility.png` — retaken
   with its `-dark` twin on the dev slot: the capture shows the 1 : 1 split
   and the blank row (Item 1).
