@@ -2142,6 +2142,14 @@
                 pill.setAttribute('data-locked-on', disabled ? 'false' : 'true');
                 pill.classList.toggle('pill-count', !disabled);
                 pill.style.opacity = disabled ? '0.4' : '';
+                // The server-rendered "Always shown" tooltip is false for
+                // Email on a group row, which has no email.
+                if (!pill.hasAttribute('data-title-on')) {
+                  pill.setAttribute('data-title-on', pill.title);
+                }
+                pill.title = disabled
+                  ? 'Not shown on group rows: ' + pill.getAttribute('data-label')
+                  : pill.getAttribute('data-title-on');
                 return;
               }
               pill.setAttribute('aria-disabled', disabled ? 'true' : 'false');

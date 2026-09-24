@@ -377,7 +377,9 @@ test, a `diff-reviewer` read on any code, and Doc impact.
   shown; group-scoped, Email is not shown.** The reviewer surface already
   behaves that way: a group row has no display-field columns, only a tag
   line plus member names (`_group_collapse.py`), so Email's flag is moot
-  there, and the Band 2 pill drops out in grouped mode.
+  there, and the Band 2 pill drops out in grouped mode. Its tooltip then
+  reads "Not shown on group rows" (the author's ask), restored in
+  Individual.
 - **Its read found a defect in the fix.** Grouped mode disables and
   unselects the Email pill, since a group row has no email, and nothing
   re-selected it on the way back to Individual. The lock then blocked the

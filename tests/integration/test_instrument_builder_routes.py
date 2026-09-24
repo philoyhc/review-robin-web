@@ -8508,5 +8508,8 @@ def test_locked_display_pills_cannot_be_unselected(
     refresh = body[start : body.index("\n          }\n", start)]
     locked = refresh[refresh.index("if (pill.getAttribute('data-locked') === 'true') {"):]
     assert "pill.setAttribute('data-locked-on', disabled ? 'false' : 'true');" in locked
+    # ...and swaps the "Always shown" tooltip while it is off.
+    assert "? 'Not shown on group rows: ' + pill.getAttribute('data-label')" in locked
+    assert ": pill.getAttribute('data-title-on');" in locked
     # It returns before any control state is written.
     assert locked.index("return;") < locked.index("pill.setAttribute('aria-disabled'")
