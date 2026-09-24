@@ -3357,6 +3357,13 @@ dep chains called out at the bottom of this file.
    = roster + sign-in); the real gap is targeted reminders. Rationale
    in the plan's Status section.
 
+2. **19T — Odds and ends (open segment).** Small operator-UI adjustments
+   the author logs one at a time, each an item that closes on its own.
+   **Plan:** `guide/segment_19T_odds_and_ends.md`.
+   - **Item 1 — Instruments:** ✓ enabled only to add or update a field's
+     pill and preview; no standing blank response-field row; Band 3
+     split 2 : 3.
+
 #### Stubs
 
 - ~~**Regenerate `spec/operator_button_audit.md` §§4–5**~~ *(filed 2026-09-08 by
