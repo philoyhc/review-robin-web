@@ -1753,7 +1753,7 @@ roster, or the next change that reworks a roster's pager.
 The author explored basic branching: fields that can be answered only when
 another field's answer meets a condition. One level, one branch per parent,
 several fields per branch. The rulings, recommended storage and measured
-cost are in `guide/advance_instruments.md`, as three items, built in
+cost are in `guide/advanced_instruments.md`, as three items, built in
 the order 3, 1, 2:
 - Item 3 reorders on the Band 3 rows and retires the response pills and
   ✓, moving the display pills into Band 3, about 4 PRs;
