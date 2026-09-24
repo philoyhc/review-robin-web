@@ -378,3 +378,39 @@ at a keyboard.
 **Where this came from.** `guide/archive/segment_19S_post_assessment.md` Item 10
 and Item 7, both closed with this check owed; each `### Status` points
 here. Settling a row is a dated line there, not a reopening.
+
+## 6. Verify the Instruments response-field rows and action row in a browser
+
+**Status:** open. Blocked on a deploy; the **dev slot is enough**
+(2026-09-24).
+
+**What.** Segment 19T Items 1 and 2 reworked Band 3's response-field rows:
+- a "+" on each row;
+- the last row kept;
+- ✓ enabled only when the row differs from its pill;
+- R and ≡ saved by Save alone;
+- row-ordered ✓, Save and pill drag;
+- the 2 : 3 split.
+
+They also stopped an open card (`?editing`) from disabling the action row.
+The suite pins the markup, and headless Chromium drove the rows on a
+rendered page. Neither was a person on the live app.
+
+**Done when** each has been seen on the dev slot, card unlocked:
+
+| Check | How | Passes when |
+|---|---|---|
+| The rows | Open an instrument card | One row per saved field, no blank row; "+" heads each row; X is red; Band 3 splits 2 : 3 |
+| "+" inserts below | "+" on the first of two rows | A blank row appears between them, cursor in its name |
+| ✓ follows the row | Type in a saved row's name, then type it back | ✓ lights, then greys again |
+| ✓ places the pill | Name the inserted row, ✓ | Its pill and preview column land between the other two, selected |
+| R and ≡ alone | Toggle R on a saved field, nothing else | Save enables; after Save and a reload, the field's required state stuck |
+| Save without ✓ | Change a Max, Save, don't ✓ | The preview's constraint line shows the new Max; ✓ is off |
+| Order persists | Insert a row between two, name it, Save (no ✓), reload | It sits between them |
+| The last row stays | Delete rows down to one | That row's X is disabled |
+| Cancel removes a new row | "+", then Cancel and confirm | The blank row is gone |
+| An open card doesn't lock the row | Edit, Cancel (URL now `?editing=`), then Lock | Replicate, +Instrument and +Page break stay live; the URL loses `?editing` |
+
+**Where this came from.** `guide/segment_19T_odds_and_ends.md` Items 1
+and 2, each closed with this check owed. Settling a row is a dated line
+there, not a reopening.

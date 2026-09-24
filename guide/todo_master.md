@@ -3360,11 +3360,12 @@ dep chains called out at the bottom of this file.
 2. **19T — Odds and ends (open segment).** Small operator-UI adjustments
    the author logs one at a time, each an item that closes on its own.
    **Plan:** `guide/segment_19T_odds_and_ends.md`.
-   - **Item 1 — Instruments:** ✓ enabled only to add or update a field's
-     pill and preview; no standing blank response-field row; Band 3
-     split 2 : 3.
-   - **Item 2 — Instruments:** an open card (`?editing`) no longer disables
-     Replicate, Delete, +Instrument or +Page break; Lock strips `?editing`.
+   - ~~**Item 1 — Instruments:** response-field rows.~~ **Closed
+     2026-09-24.** ✓ only adds or updates a pill; "+" on each row; row
+     order through ✓, Save and drag; Band 3 split 2 : 3.
+   - ~~**Item 2 — Instruments:** an open card disabling the action row.~~
+     **Closed 2026-09-24.** `?editing` no longer disables it, and Lock
+     strips `?editing`.
 
 #### Stubs
 
