@@ -1,4 +1,9 @@
-# Response-field branching — design record
+# Advanced instruments — design record
+
+Response-field work beyond today's builder: reordering on the Band 3 rows
+with the response pills retired (Item 3), and branching between response
+fields (Items 1 and 2). It was logged as response_field_branching.md and
+renamed on 2026-09-24, once Item 3 widened it past branching.
 
 **Logged 2026-09-24 on the author's instruction. Not scheduled:** there is
 no immediate plan to build it. This file keeps the author's rulings and
