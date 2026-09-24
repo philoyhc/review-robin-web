@@ -181,6 +181,23 @@ empty, only while its branch is open for that assignment. When the
 branch is closed it is neither required nor missing, and Item 1's
 invariant means it holds no value.
 
+**And a required governed field needs a required parent** (Codex's review
+of this record, 2026-09-24). An assignment with no required fields counts
+as complete only when it has at least one response row: `row_count > 0`
+in both rollups in `app/services/monitoring.py`. So with an optional,
+unanswered parent, the branch closes, and an instrument whose only
+required fields are governed could be submitted with zero rows. It would
+then read as untouched: incomplete on the dashboards, and still
+reminded. A required parent is answered at every submit, so there is
+always a row. The builder offers R on a governed field only while its
+parent's R is on, and turning the parent's R off clears it on the
+branch; `set_band2_state` and the settings-CSV importer enforce the same.
+**Rejected: a durable submission marker** on the assignment. It would fix
+this for every instrument, but it changes what "complete" means in every
+rollup and the parity oracle. A zero-row submit on an instrument with no
+required fields at all already reads as untouched today; that predates
+branching and stays out of scope.
+
 **The blocks.** Everything that counts required fields as a fixed number
 per instrument must count per assignment instead.
 
@@ -246,11 +263,19 @@ per instrument must count per assignment instead.
     correct. The data-shape extract's `assigned` denominator stays as
     Item 1 left it (optional).
 12. **The Item 1 guards on `required`** (pre-positioning 5) are removed:
-    the builder's R, `set_band2_state` and the settings-CSV importer.
+    the builder's R, `set_band2_state` and the settings-CSV importer. In
+    their place goes the required-parent rule above, in the same three
+    spots.
 
 **Recommendation:** route (a) for blocks 6 and 7. Keep (b) in reserve in
 case a large session with required governed fields proves slow. About
-**2 PRs**:
-- the branch-open function wired into blocks 1–5, with 10 and 12;
-- the monitoring routing, the parity oracle and the reminder tests
-  (6–9).
+**2 PRs**, ordered so that each one deploys safely on its own (Codex's
+review, 2026-09-24):
+- **first**, the branch-open function wired into blocks 1–5 and 10, with
+  Item 1's guards **still in place**, so no operator can yet mark a
+  governed field required. The tests build required governed fields
+  directly;
+- **second**, the monitoring routing, the parity oracle and the reminder
+  tests (6–9), **with block 12**. The guards come off in the same PR that
+  teaches the rollups, so no deployed state counts a closed branch as
+  missing.
