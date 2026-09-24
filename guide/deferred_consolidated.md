@@ -1753,12 +1753,13 @@ roster, or the next change that reworks a roster's pager.
 The author explored basic branching: fields that can be answered only when
 another field's answer meets a condition. One level, one branch per parent,
 several fields per branch. The rulings, recommended storage and measured
-cost are in `guide/response_field_branching.md`.
+cost are in `guide/response_field_branching.md`, as two items:
+- Item 1 is branching with optional governed fields, about 7–8 PRs;
+- Item 2 is required governed fields, about 2 more, with Item 1 built to
+  prepare for it.
 
 **Off the roadmap because** it amends a stated out-of-scope line in
-`spec/rrw_functional_spec.md` and costs about 7–8 PRs. Required governed
-fields would add a later segment of their own, reworking the monitoring
-rollups and their parity oracle. **No immediate plan to build** (author).
+`spec/rrw_functional_spec.md`. **No immediate plan to build** (author).
 
 **Lift trigger:** the author scheduling it, or an operator asking for
 conditional questions.
