@@ -8464,9 +8464,10 @@ def test_locked_display_pills_cannot_be_unselected(
     client: TestClient, db: Session
 ) -> None:
     """Name and Email are always shown on the reviewer surface (the server
-    refuses to hide them), so their Band 2 pills carry ``data-locked`` and
-    the toggle ignores a click on one. Other display pills stay
-    toggleable."""
+    refuses to hide them), so their Band 2 pills render as static labels —
+    no ``tag-chip`` edge, no button role, no tab stop, no click handler —
+    and carry their selection in ``data-locked-on``, which both selection
+    readers accept. Other display pills stay toggleable."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-locked-pills"
     )
@@ -8477,23 +8478,35 @@ def test_locked_display_pills_cannot_be_unselected(
     pills = {
         m.group(1): m.group(0)
         for m in re.finditer(
-            r'<span class="pill tag-chip[^>]*?data-key="([^"]+)"[^>]*>', card
+            r'<span class="pill[^>]*?data-new-model-band2-pill(?![-\w])'
+            r'[^>]*?data-key="([^"]+)"[^>]*>',
+            card,
         )
     }
     for key in ("reviewee.name", "reviewee.email_or_identifier"):
-        assert 'data-locked="true"' in pills[key], key
-        assert "Always shown" in pills[key], key
-    assert 'data-locked="true"' not in pills["reviewee.tag_1"]
-    start = body.index("window.newModelToggleBand2Pill = function (pill) {")
-    toggle = body[start : body.index("\n          };", start)]
-    guard = "if (pill.getAttribute('data-locked') === 'true') { return; }"
-    assert guard in toggle
-    # The guard runs before the pill flips.
-    assert toggle.index(guard) < toggle.index("pill.setAttribute('aria-pressed'")
-    # Grouped mode may disable (and unselect) a locked pill — Email has no
-    # group value — so refreshPillStates re-selects it once it's enabled
-    # again, since its own click is ignored.
+        pill = pills[key]
+        assert pill.startswith('<span class="pill pill-count"'), key
+        assert 'data-locked="true" data-locked-on="true"' in pill, key
+        assert "Always shown" in pill, key
+        for control in ("tag-chip", "role=", "tabindex=", "aria-pressed=", "onclick="):
+            assert control not in pill, (key, control)
+    tag_1 = pills["reviewee.tag_1"]
+    assert "data-locked" not in tag_1
+    assert 'role="button"' in tag_1
+    assert 'onclick="newModelToggleBand2Pill(this)"' in tag_1
+    # Both readers of the display selection (selectedPills and the Save
+    # stager) count a locked-on pill; none reads aria-pressed alone.
+    either = (
+        "'[data-new-model-band2-pill][aria-pressed=\"true\"], "
+        "[data-new-model-band2-pill][data-locked-on=\"true\"]'"
+    )
+    assert body.count(either) >= 2
+    assert "'[data-new-model-band2-pill][aria-pressed=\"true\"]'" not in body
+    # Grouped mode switches a locked pill off when it has no group value
+    # (Email), and back on in Individual — its only state change.
     start = body.index("function refreshPillStates(card) {")
     refresh = body[start : body.index("\n          }\n", start)]
-    assert "if (!disabled && pill.getAttribute('data-locked') === 'true'" in refresh
-    assert "pill.setAttribute('aria-pressed', 'true');" in refresh
+    locked = refresh[refresh.index("if (pill.getAttribute('data-locked') === 'true') {"):]
+    assert "pill.setAttribute('data-locked-on', disabled ? 'false' : 'true');" in locked
+    # It returns before any control state is written.
+    assert locked.index("return;") < locked.index("pill.setAttribute('aria-disabled'")

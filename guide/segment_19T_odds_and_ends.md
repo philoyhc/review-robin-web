@@ -381,6 +381,17 @@ test, a `diff-reviewer` read on any code, and Doc impact.
   Individual, brings Email back selected. The read's inline-style note is
   taken too: the pill's `style` goes, since `refreshPillStates` sets the
   cursor on load.
+- **Codex's review: a locked pill still presented as a control** — button
+  role, tab stop, `aria-pressed`, the `tag-chip` accent edge — while
+  ignoring every click. It now renders as a static `pill pill-count`, with
+  none of those and no click handler (`spec/ui_elements.md` "Label or
+  control": a static pill carries no edge). `data-locked-on` holds its
+  selection instead of `aria-pressed`. `refreshPillStates` flips it
+  (grouped mode switches Email off), and both selection readers — the
+  preview's `selectedPills` and the Save stager — accept it. That
+  retires the re-select above. Chromium: Name and Email have no role or
+  tab stop and stay in the staged keys; Email drops out in grouped mode
+  and returns in Individual; Tag 1 still toggles.
 
 ### Blast radius (measured)
 
@@ -419,6 +430,6 @@ on the old template.
 
 - `spec/instruments.md` — Save-when-dirty: the Delete confirm checkbox
   doesn't count as an edit (Item 3, entry 1); the Name and Email pills
-  are always selected and ignore clicks (Item 3, entry 2).
+  render as static labels, always selected (Item 3, entry 2).
 - `docs/status.md` — row when the item closes (Item 3).
 
