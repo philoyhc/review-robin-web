@@ -7972,3 +7972,103 @@ def test_import_guard_leaves_a_fully_configured_instrument_alone(
     rule_set = db.get(SessionRuleSet, new_model.rule_set_id)
     assert cleared == 0
     assert rule_set.exclude_self_reviews is True
+
+
+# --------------------------------------------------------------------------- #
+# 19T Item 1 rung 1 — no standing blank row; "+" from a <template>; 2 : 3
+# --------------------------------------------------------------------------- #
+
+
+def _band3_rows_and_template(body: str, instrument_id: int) -> tuple[str, str]:
+    """Split one card's Band 3 into the live rows container and the
+    ``<template>`` "+" clones from."""
+    card = _card_slice(body, instrument_id)
+    rows_start = card.index("data-new-model-rf-rows")
+    tpl_start = card.index("<template data-new-model-rf-row-template>")
+    tpl_end = card.index("</template>", tpl_start)
+    return card[rows_start:tpl_start], card[tpl_start:tpl_end]
+
+
+def test_band3_renders_only_persisted_rows_no_blank_starter(
+    client: TestClient, db: Session
+) -> None:
+    """The template renders one row per persisted response field and
+    no trailing blank row; the one blank row on the page sits inside
+    the ``<template>``, outside the document."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-no-blank-row"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    rows, template = _band3_rows_and_template(body, new_model.id)
+    persisted = len(new_model.response_fields)
+    assert persisted == 2  # the seeded Rating + Comments
+    assert rows.count("<div data-new-model-rf-row") == persisted
+    # Every live row carries a field name; none is a blank starter.
+    assert rows.count('value="Rating"') == 1
+    assert rows.count('value="Comments"') == 1
+    # The template holds exactly one blank row, with no row key —
+    # "+" assigns one from the counter.
+    assert template.count("<div data-new-model-rf-row") == 1
+    assert "data-row-key" not in template
+    assert "value=" not in template.split("<select", 1)[0]
+
+
+def test_band3_add_row_clones_the_template_not_the_first_row(
+    client: TestClient, db: Session
+) -> None:
+    """"+" must work with zero rows, so it clones the template's row
+    rather than the first live row; X removes even the last row."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-add-from-template"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    start = body.index("window.newModelRfAddRow =")
+    add_fn = body[start : body.index("\n        };", start)]
+    assert "tpl.content.querySelector('[data-new-model-rf-row]')" in add_fn
+    assert "rows.querySelector('[data-new-model-rf-row]')" not in add_fn
+    start = body.index("window.newModelRfDeleteRow =")
+    delete_fn = body[start : body.index("\n        };", start)]
+    assert "row.remove();" in delete_fn
+    assert "selectedIndex = 0" not in delete_fn
+
+
+def test_band3_splits_visibility_and_response_fields_two_to_three(
+    client: TestClient, db: Session
+) -> None:
+    """Band 3 gives Visibility 2/5 and Response fields 3/5."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-band3-split"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    card = _card_slice(body, new_model.id)
+    band3 = card[card.index("<div data-new-model-band3") :]
+    band3_open = band3[: band3.index(">")]
+    assert "grid-template-columns: 2fr 3fr;" in band3_open
+
+
+def test_band3_row_handlers_reach_the_stager_through_its_window_handle(
+    client: TestClient, db: Session
+) -> None:
+    """``saveBand2State`` is local to the Band 2 closure; the Band 3 row
+    handlers live in a later ``<script>``. A bare call there threw a
+    ReferenceError (measured in Chromium, 2026-09-24), so X left a row
+    with a pill in place. They call the window handle instead."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-stager-handle"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    assert "window.newModelStageBand2State = saveBand2State;" in body
+    rf_script = body[body.index("window.newModelRfRequiredChanged =") :]
+    rf_script = rf_script[: rf_script.index("</script>")]
+    for name in ("newModelRfSaveRow", "newModelRfDeleteRow"):
+        start = rf_script.index(f"window.{name} =")
+        fn = rf_script[start : rf_script.index("\n        };", start)]
+        assert "window.newModelStageBand2State(band2);" in fn, name

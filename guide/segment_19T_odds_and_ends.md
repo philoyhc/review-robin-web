@@ -100,6 +100,25 @@ Taken 2026-09-24 at `b705245d`.
   "trailing empty starter row" sentence, and the ✓ row of the button table
   (`grep -n 'starter row\|✓\*\* button\|Visibility, Response fields'`).
 
+### Status
+
+**2026-09-24, rung 1.** The item's diff base is `de83af9d`, main before
+rung 1; the ladder's `b705245d` was the measuring tree. Chromium found two
+defects on main, both in rung 1's path:
+- **X threw.** `saveBand2State` is local to the Band 2 closure, while ✓
+  and X call it from a later `<script>`. The `ReferenceError` left a row
+  that has a pill in place and skipped ✓'s pending-flag clear. It is now
+  reached through `window.newModelStageBand2State`, and X removes the row
+  before staging, so the row is not staged back.
+- **X is live on a blank row.** Without a standing row, a "+" row needs
+  a way out besides Cancel.
+
+Moved to rung 2: on main, toggling R or ≡ alone leaves Save disabled.
+R's stage call sits behind a `typeof` guard that is always false, and
+neither button is in the dirty-tracking click list. Also, the first
+keystroke leaves ✓ off, because the inline recompute runs before the card's
+pending listener. Rung 2 removes that listener.
+
 ### PR ladder
 
 1. **The blank row and the split.** Drop the trailing row. "+" builds from

@@ -2629,6 +2629,12 @@
               window.newModelMarkCardDirty(instrumentCard);
             }
           }
+          // 19T Item 1 — the Band 3 row handlers (✓, X) live in a
+          // later ``<script>``, outside this closure; they reach the
+          // stager through this handle. A bare ``saveBand2State`` call
+          // there threw a ReferenceError, so X never removed a row
+          // with a pill and ✓ never cleared the row's pending flag.
+          window.newModelStageBand2State = saveBand2State;
           // Segment 18R Item 2 PR 4 — the per-field help ✎/✓ editor
           // retires. The help box is a plain textarea when the card is
           // unlocked (edited inline, staged into the pill's
@@ -2688,8 +2694,8 @@
             // Scope the lookup to the band2 card so it covers both
             // the JS-rebuilt and the initial server-rendered DOM.
             // Count Band 3 rows that have a saved paired pill —
-            // the trailing empty starter row has no pill and
-            // shouldn't contribute to the counts.
+            // a blank row "+" added has no pill and shouldn't
+            // contribute to the counts.
             var pills = band2.querySelectorAll(
               '[data-new-model-band2-pill][data-source-type="response"]'
             );
@@ -3953,7 +3959,7 @@
               title="Click to cycle">{{ _b3_mode_labels.get(_current, "—") }}</span>
       {% endmacro %}
       <div data-new-model-band3 data-lock-region
-           style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+           style="display: grid; grid-template-columns: 2fr 3fr; gap: 16px;
                   align-items: stretch;"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
         <div data-new-model-vp-form
@@ -4061,12 +4067,11 @@
              on subsequent saves); the X button drops the row and
              its pill. The `+` button below the rows spawns a new
              empty row. Pure UX — nothing persists across reload. #}
-          {# Render one row per persisted response field, plus an
-             empty starter row at the end so the operator can keep
-             typing. Each row's data-row-key matches the paired
-             pill's data-row-key (``rf_<idx>`` for saved rows, or
-             a fresh ``rf_N`` from the row counter for the
-             trailing empty row). #}
+          {# Render one row per persisted response field and nothing
+             more: a blank row appears only on "+". Each row's
+             data-row-key matches the paired pill's data-row-key
+             (``rf_<idx>`` for saved rows, or a fresh ``rf_N`` from
+             the row counter for a row "+" added). #}
           {% set _rfs = _band2.response_fields %}
           {% set _next_idx = (_rfs | length) %}
           <div data-new-model-rf-rows
@@ -4171,11 +4176,14 @@
                         title="{% if rf.has_responses %}Cannot delete — this field has saved responses{% else %}Delete this row (and its paired pill, if saved){% endif %}">X</button>
               </div>
             {% endfor %}
-            {# Trailing empty row so the operator can start typing
-               a new field without first clicking +. Its data-row-key
-               reuses the row counter so successive + clicks bump it. #}
+          </div>
+          {# 19T Item 1 — no standing blank row. "+" clones this
+             template's row and gives it a fresh data-row-key from the
+             rows container's counter; Cancel's discard reload removes
+             an unsaved one. Its markup sits outside the document, so
+             the row selectors above never match it. #}
+          <template data-new-model-rf-row-template>
             <div data-new-model-rf-row
-                 data-row-key="rf_{{ _next_idx }}"
                  style="display: flex; flex-wrap: nowrap; gap: 8px;
                         align-items: center; width: 100%;
                         margin-bottom: 8px;">
@@ -4251,7 +4259,7 @@
                       onclick="newModelRfDeleteRow(this)"
                       title="Delete this row (and its paired pill, if saved)">X</button>
             </div>
-          </div>
+          </template>
           <div style="display: flex; justify-content: flex-end;
                       margin-top: 4px;">
             <button type="button" class="btn secondary"
@@ -4457,8 +4465,7 @@
         //
         //   ✓ disabled when: name is empty, OR bounds are invalid
         //     for the picked data_type.
-        //   X disabled when: name is empty (empty awaiting-fill
-        //     row — nothing to delete), OR the server-side
+        //   X disabled only when the server-side
         //     has_responses flag is set (template renders the
         //     ``disabled`` attribute on initial load; JS preserves
         //     that state since has_responses can only change on
@@ -4528,22 +4535,16 @@
               );
             }
           }
+          // 19T Item 1 — X stays live on a blank row: with no
+          // standing blank row, a row "+" added is removed by X.
           if (deleteBtn && !hasResponses) {
-            if (!name) {
-              deleteBtn.setAttribute('disabled', '');
-              deleteBtn.setAttribute('aria-disabled', 'true');
-              deleteBtn.setAttribute(
-                'title',
-                'Empty row — nothing to delete.'
-              );
-            } else {
-              deleteBtn.removeAttribute('disabled');
-              deleteBtn.removeAttribute('aria-disabled');
-              deleteBtn.setAttribute(
-                'title',
-                'Delete this row (and its paired pill, if saved)'
-              );
-            }
+            deleteBtn.removeAttribute('disabled');
+            deleteBtn.removeAttribute('aria-disabled');
+            deleteBtn.setAttribute(
+              'title',
+              name ? 'Delete this row (and its paired pill, if saved)'
+                   : 'Remove this empty row'
+            );
           }
         };
         // ``oninput`` on every editable name / bound input — fires
@@ -4563,38 +4564,28 @@
           window.newModelRfRecomputeActionStates(row);
         });
         // ---- Add response field rows (Band 3) ----------------
-        // The "+" below the rows clones the first row's DOM,
-        // resets every input + the data-row-key, and appends.
+        // The "+" below the rows clones the row inside the Band 3
+        // ``<template>`` (19T Item 1), so it works from zero rows,
+        // gives it a fresh data-row-key, and appends.
         window.newModelRfAddRow = window.newModelRfAddRow || function (btn) {
-          var rows = btn.closest('div').previousElementSibling;
-          // The button sits in a flex-end wrapper directly after
-          // the rows container — walk to the actual rows container.
-          if (!rows || !rows.matches('[data-new-model-rf-rows]')) {
-            var card = btn.closest('div');
-            rows = (card && card.previousElementSibling) || null;
-            if (!rows || !rows.matches('[data-new-model-rf-rows]')) {
-              rows = (btn.closest('[id^="instrument-"]') || document)
-                .querySelector('[data-new-model-rf-rows]');
-            }
-          }
-          if (!rows) { return; }
-          var first = rows.querySelector('[data-new-model-rf-row]');
+          var band3 = btn.closest('[data-new-model-band3]');
+          var rows = band3 ? band3.querySelector('[data-new-model-rf-rows]') : null;
+          var tpl = band3 ? band3.querySelector('[data-new-model-rf-row-template]') : null;
+          if (!rows || !tpl) { return; }
+          var first = tpl.content.querySelector('[data-new-model-rf-row]');
           if (!first) { return; }
           var counter = parseInt(rows.getAttribute('data-new-model-rf-row-counter') || '1', 10) + 1;
           rows.setAttribute('data-new-model-rf-row-counter', counter);
           var clone = first.cloneNode(true);
           clone.setAttribute('data-row-key', 'rf_' + counter);
-          // Reset every input + the data-type select to defaults.
-          clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
-          clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
           rows.appendChild(clone);
           // Re-sync bound visibility on the new row's select
           // (its default is "string" → Min + Max).
           var sel = clone.querySelector('[data-new-model-rf-data-type]');
           if (sel) { window.newModelRfSyncBounds(sel); }
           // Re-evaluate action-button enabled state on the clone —
-          // a freshly-added empty row should have ✓ + X disabled
-          // until the operator types a name.
+          // a freshly-added empty row has ✓, R and ≡ disabled until
+          // the operator types a name.
           window.newModelRfRecomputeActionStates(clone);
           var nameInput = clone.querySelector('[data-new-model-rf-name]');
           if (nameInput) { nameInput.focus(); }
@@ -4686,7 +4677,7 @@
           if (window.newModelUpdateIntroProgress) {
             window.newModelUpdateIntroProgress(band2);
           }
-          saveBand2State(band2);
+          window.newModelStageBand2State(band2);
           // Segment 18R Item 2 PR 5c — the row is now reflected in the
           // preview with no pending edits; clear the pending flag and
           // recompute so ✓ greys out until the row changes again.
@@ -4694,14 +4685,17 @@
           window.newModelRfRecomputeActionStates(row);
         };
         // X on a row: remove the row + its paired pill if saved.
-        // If this was the only row, leave one empty row in its
-        // place so the operator still has a surface to type into.
+        // The last row goes too; "+" is the one way to get a blank
+        // row back (19T Item 1).
         window.newModelRfDeleteRow = window.newModelRfDeleteRow || function (btn) {
           var row = btn.closest('[data-new-model-rf-row]');
           if (!row) { return; }
           var rowKey = row.getAttribute('data-row-key');
-          var rows = row.parentElement;
           var instrumentCard = btn.closest('[id^="instrument-"]');
+          // Remove the row before staging: the stager also captures
+          // named rows with no pill, so a row still in the DOM would
+          // be staged back as an unselected field.
+          row.remove();
           var band2 = instrumentCard
             ? instrumentCard.querySelector('[data-new-model-band2]')
             : null;
@@ -4718,17 +4712,7 @@
             if (window.newModelUpdateIntroProgress) {
               window.newModelUpdateIntroProgress(band2);
             }
-            saveBand2State(band2);
-          }
-          // If this was the last row, leave a clean empty row in
-          // place so the operator has a surface to type into.
-          if (rows && rows.querySelectorAll('[data-new-model-rf-row]').length <= 1) {
-            row.querySelectorAll('input').forEach(function (i) { i.value = ''; });
-            row.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
-            var sel = row.querySelector('[data-new-model-rf-data-type]');
-            if (sel) { window.newModelRfSyncBounds(sel); }
-          } else {
-            row.remove();
+            window.newModelStageBand2State(band2);
           }
         };
         window.newModelToggleAudience = window.newModelToggleAudience || function (btn) {
