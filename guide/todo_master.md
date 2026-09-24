@@ -3363,6 +3363,8 @@ dep chains called out at the bottom of this file.
    - **Item 1 — Instruments:** ✓ enabled only to add or update a field's
      pill and preview; no standing blank response-field row; Band 3
      split 2 : 3.
+   - **Item 2 — Instruments:** an open card (`?editing`) no longer disables
+     Replicate, Delete, +Instrument or +Page break; Lock strips `?editing`.
 
 #### Stubs
 

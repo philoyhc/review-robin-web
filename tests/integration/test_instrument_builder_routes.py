@@ -8351,3 +8351,77 @@ def test_save_persists_response_fields_in_the_order_sent(
         key=lambda f: f.order,
     )
     assert [f.label for f in fields] == ["Rating", "Notes", "Comments"]
+
+
+# --------------------------------------------------------------------------- #
+# 19T Item 2 — ``?editing`` no longer locks the action rows
+# --------------------------------------------------------------------------- #
+
+
+def test_open_card_no_longer_disables_the_action_rows(
+    client: TestClient, db: Session
+) -> None:
+    """Under ``?editing=<id>`` every card's Replicate, Delete, +Instrument
+    and +Page break stay live, and so does a page-break ×. Nothing on the
+    page cleared ``?editing`` (Save is a fetch; Cancel reloads into it),
+    so the old disable trapped the operator."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-editing-live"
+    )
+    url = (
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    )
+    body = client.get(url).text
+    assert "Save or cancel the open instrument edit first." not in body
+    assert "Save or cancel this instrument's edits first." not in body
+    instrument_ids = [
+        i.id for i in db.execute(
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
+        ).scalars()
+    ]
+    assert len(instrument_ids) == 2
+
+    def tag_before(html: str, label: str) -> str:
+        end = html.index(label)
+        return html[html.rindex("<button", 0, end) : end]
+
+    for iid in instrument_ids:
+        card = _card_slice(body, iid)
+        for label in (">Replicate</button>", ">+Instrument</button>"):
+            assert " disabled" not in tag_before(card, label), (iid, label)
+        # Delete waits only on its confirm checkbox: the live submit
+        # button (``data-delete-btn``) renders, not the dead one.
+        assert f'data-delete-btn="{iid}"' in card, iid
+    # +Page break on the first card: no break follows it yet, so only the
+    # open card could have disabled it. (The last card's stays off: a
+    # break can't trail the last instrument.)
+    first = _card_slice(body, instrument_ids[0])
+    assert " disabled" not in tag_before(first, ">+Page break</button>")
+
+    # With a break before the second card, its × stays live too.
+    second = db.get(Instrument, instrument_ids[1])
+    second.starts_new_page = True
+    db.commit()
+    body = client.get(url).text
+    start = body.index(f'data-instrument-page-break-delete="{instrument_ids[1]}"')
+    x_tag = body[start : body.index(">", start)]
+    assert "disabled" not in x_tag
+
+
+def test_lock_strips_the_editing_param(
+    client: TestClient, db: Session
+) -> None:
+    """An in-page Lock drops ``?editing=<this card>`` from the URL, so a
+    reload lands locked."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-lock-strips"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    start = body.index("window.newModelSetLock = ")
+    set_lock = body[start : body.index("\n          };", start)]
+    assert "lockUrl.searchParams.delete('editing');" in set_lock
+    assert "window.history.replaceState(" in set_lock

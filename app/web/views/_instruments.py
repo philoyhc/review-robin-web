@@ -811,7 +811,6 @@ def build_instruments_context(
         "is_configured_by_instrument": is_configured_by_instrument,
         "saved_instrument_id": saved,
         "rf_save_error": rf_save_error,
-        "is_some_instrument_editing": editing_instrument_id is not None,
         "sort_save_error": sort_save_error,
         "sort_save_error_instrument_id": sort_save_error_instrument_id,
         "breadcrumbs": breadcrumbs.operator_session_child(
