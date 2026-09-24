@@ -113,7 +113,25 @@ defects on main, both in rung 1's path:
 - **X is live on a blank row.** Without a standing row, a "+" row needs
   a way out besides Cancel.
 
-Moved to rung 2: on main, toggling R or ≡ alone leaves Save disabled.
+**Rung 2.** The measurement answered the open question: the pill carried
+the name, R, ≡, help text and width, but the preview re-read type and
+bounds from the row on every rebuild. So the pill now carries the pushed
+type and bounds (`data-rf-*`), and the preview reads them from there.
+✓ compares the row's name, type and the bounds that type shows against the
+pill, and the row's amber marker follows ✓. A pill ✓ creates starts
+selected, so the column joins the preview, as the Decision says. R and ≡
+stage through the window handle, so Save enables on its own.
+
+`diff-reviewer` read `de83af9d..HEAD` once, at rung 2, and made three
+findings, all acted on in #2599:
+- **Save without ✓ left the pill stale.** Save persists the row as typed
+  and doesn't reload, so the preview kept the old bounds and ✓ stayed lit.
+  A successful Save now syncs every paired pill to its row.
+- **The Guide screencap shows the old layout.** Added to Doc impact.
+- **The amber marker dropped on an invalid edit.** It now means "differs
+  from the pill", independent of validity.
+
+Carried from rung 1: on main, toggling R or ≡ alone leaves Save disabled.
 R's stage call sits behind a `typeof` guard that is always false, and
 neither button is in the dirty-tracking click list. Also, the first
 keystroke leaves ✓ off, because the inline recompute runs before the card's
@@ -149,9 +167,9 @@ pending listener. Rung 2 removes that listener.
 
 ### Open questions
 
-- **Which attributes does the preview read from the pill and which from the
-  row** (name, type, bounds, list options)? This decides the comparison.
-  Measured in rung 2.
+- ~~Which attributes does the preview read from the pill, and which from
+  the row?~~ The name from the pill; type and bounds from the row, until
+  rung 2 moved them onto the pill (Status).
 
 ### Out of scope
 
@@ -164,4 +182,7 @@ pending listener. Rung 2 removes that listener.
   row states the two purposes and the enable rule; the 2 : 3 split (Item 1).
 - `guide/post_azure_todo_checklist.md` — browser checks for the ✓ enable
   rule, "+" / Cancel and the split (Item 1).
+- `app/web/static/guide/instrument-card-fields-and-visibility.png` — retaken
+  with its `-dark` twin on the dev slot: the capture shows the 1 : 1 split
+  and the blank row (Item 1).
 - `docs/status.md` — row when the item closes (Item 1).

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import json
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -5970,9 +5971,8 @@ def test_pr5c_button_state_matrix_and_shape_css_ship(
 ) -> None:
     """Segment 18R Item 2 PR 5c — the Response-Field row button-state
     matrix + the disabled-shape-input treatment ship: R/≡ gate on a
-    blank row; ✓ greys once the field is already in the preview with no
-    pending edits; and the frozen shape controls get a visibly-disabled
-    style."""
+    blank row; ✓ greys once the row matches its pill; and the frozen
+    shape controls get a visibly-disabled style."""
     review_session, _new_model = _new_model_with_tags(
         client, db, code="pr5c-matrix"
     )
@@ -5982,10 +5982,10 @@ def test_pr5c_button_state_matrix_and_shape_css_ship(
     # R / ≡ blank-row gate.
     assert "_blankRowGate(requiredBtn" in body
     assert "'Enter a field name first.'" in body
-    # ✓ "already in the preview, nothing to push" gate rides the paired
-    # pill + the per-row pending flag.
-    assert "Already in the preview" in body
-    assert "data-row-pending" in body
+    # ✓ greys when the row matches its pill (19T Item 1 replaced the
+    # pending flag with that comparison).
+    assert "The pill and preview already match this row." in body
+    assert "newModelRfRowDiffersFromPill(row, pairedPill)" in body
     # Disabled-shape inputs (frozen type / bounds) look inactive.
     assert "[data-new-model-rf-data-type]:disabled" in body
     assert "[data-new-model-rf-bound]:disabled" in body
@@ -6524,7 +6524,7 @@ def test_band3_row_pending_visual_css_ships_in_base(
 ) -> None:
     """Wave 4 PR 3 — the per-row pending visual (subtle amber
     left-border + tinted background on Band 3 rows whose inputs
-    have been edited but not yet committed via ✓) lives in
+    differ from their pill, so ✓ has something to push) lives in
     base.html as a global rule keyed by ``data-row-pending="true"``
     on the row element."""
     review_session, new_model = _new_model_with_tags(
@@ -6535,9 +6535,9 @@ def test_band3_row_pending_visual_css_ships_in_base(
     ).text
     # CSS selector ships in the inline base.html stylesheet.
     assert '[data-new-model-rf-row][data-row-pending="true"]' in body
-    # JS handler that sets / clears the pending attribute is on
-    # the page and lives inside the dirty-tracking init function.
-    assert "data-row-pending" in body
+    # The row recompute sets / clears the attribute from the ✓ rule
+    # (19T Item 1), not a keystroke listener.
+    assert "row.setAttribute('data-row-pending', 'true');" in body
 
 
 # --------------------------------------------------------------------------- #
@@ -8072,3 +8072,158 @@ def test_band3_row_handlers_reach_the_stager_through_its_window_handle(
         start = rf_script.index(f"window.{name} =")
         fn = rf_script[start : rf_script.index("\n        };", start)]
         assert "window.newModelStageBand2State(band2);" in fn, name
+
+
+# --------------------------------------------------------------------------- #
+# 19T Item 1 rung 2 — ✓ by comparison; R and ≡ stage for Save
+# --------------------------------------------------------------------------- #
+
+
+def _rf_script(body: str) -> str:
+    start = body.index("window.newModelRfRequiredChanged =")
+    return body[start : body.index("</script>", start)]
+
+
+def _rf_fn(body: str, name: str) -> str:
+    script = _rf_script(body)
+    start = script.index(f"window.{name} =")
+    return script[start : script.index("\n        };", start)]
+
+
+def test_response_pill_carries_the_shape_the_preview_shows(
+    client: TestClient, db: Session
+) -> None:
+    """Each server-rendered response pill carries the saved type and
+    bounds, so the preview reads what ✓ last pushed, not the live row,
+    and ✓ can compare the row against it."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-pill-shape"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    card = _card_slice(body, new_model.id)
+    pills = {
+        m.group(1): m.group(0)
+        for m in re.finditer(
+            r'<span class="pill tag-chip[^>]*?data-label="([^"]*)"\s+'
+            r'data-source-type="response"[^>]*>',
+            card,
+        )
+    }
+    assert set(pills) == {"Rating", "Comments"}
+    # Rating is Integer 1–5 step 1, Comments String 0–2000 (the seed);
+    # the pill carries the same values the row's inputs render.
+    assert 'data-rf-data-type="integer"' in pills["Rating"]
+    assert 'data-rf-min="1"' in pills["Rating"]
+    assert 'data-rf-max="5"' in pills["Rating"]
+    assert 'data-rf-step="1"' in pills["Rating"]
+    assert 'data-rf-data-type="string"' in pills["Comments"]
+    assert 'data-rf-max="2000"' in pills["Comments"]
+    assert 'data-rf-list=""' in pills["Comments"]
+    # The preview builders read the pill, never the row.
+    for fn in ("function buildResponseFieldPreviewCell", "function buildConstraints"):
+        start = body.index(fn)
+        src = body[start : body.index("\n          }\n", start)]
+        assert "newModelRfPillShape(pill)" in src
+        assert "[data-new-model-rf-row]" not in src
+
+
+def test_tick_enables_by_comparison_not_a_pending_flag(
+    client: TestClient, db: Session
+) -> None:
+    """✓ is on with no pill, or when the row's name, type or shown
+    bounds differ from the pill; a keystroke no longer sets a sticky
+    flag. The tooltip names the pill and preview, never Save."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-tick-compare"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
+    assert "newModelRfRowDiffersFromPill(row, pairedPill)" in recompute
+    assert "getAttribute('data-row-pending')" not in recompute
+    assert "'Update this field\\'s pill and preview column'" in recompute
+    assert "'Add this field\\'s pill and preview column'" in recompute
+    assert "Save this response field" not in body
+    differs = _rf_fn(body, "newModelRfRowDiffersFromPill")
+    assert "string: ['min', 'max']" in differs
+    assert "list: ['list']" in differs
+    # No keystroke listener flags a row any more.
+    assert "ev.target.closest('[data-new-model-rf-row]')" not in body
+
+
+def test_tick_writes_the_pill_shape_and_selects_a_new_pill(
+    client: TestClient, db: Session
+) -> None:
+    """✓ copies the row's type and bounds onto the pill, and a pill it
+    creates starts selected, so the field's column joins the preview."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-tick-writes"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    save_row = _rf_fn(body, "newModelRfSaveRow")
+    assert "window.newModelRfSyncPill(row, pill);" in save_row
+    sync = _rf_fn(body, "newModelRfSyncPill")
+    for attr in ("data-label", "data-rf-data-type", "data-rf-min",
+                 "data-rf-max", "data-rf-step", "data-rf-list"):
+        assert f"pill.setAttribute('{attr}'" in sync
+    assert "pill.setAttribute('aria-pressed', 'true');" in save_row
+    assert "pill.setAttribute('aria-pressed', 'false');" not in save_row
+
+
+def test_required_and_help_toggles_stage_for_save(
+    client: TestClient, db: Session
+) -> None:
+    """R and ≡ stage the Band 2 state, which marks the card dirty, so
+    Save persists a toggle made on its own; neither needs ✓."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-r-help-stage"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    for name in ("newModelRfRequiredChanged", "newModelRfHelpVisibleChanged"):
+        fn = _rf_fn(body, name)
+        assert "window.newModelStageBand2State(band2);" in fn, name
+        assert "typeof saveBand2State" not in fn, name
+
+
+def test_save_success_brings_every_pill_up_to_its_row(
+    client: TestClient, db: Session
+) -> None:
+    """Save persists each row as typed, ✓'d or not, and does not reload.
+    Its success handler copies every paired row onto its pill and
+    rebuilds the preview, so the preview and ✓ match what was saved
+    (diff-reviewer finding, 2026-09-24)."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-save-sync"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    start = body.index("window.newModelOnSaveSuccess =")
+    on_success = body[start : body.index("\n          };", start)]
+    assert "window.newModelRfSyncPill(row, pill);" in on_success
+    assert "window.newModelRefreshBand2(b2);" in on_success
+    assert "window.newModelRfRecomputeActionStates(row);" in on_success
+
+
+def test_row_marker_follows_the_pill_comparison_not_validity(
+    client: TestClient, db: Session
+) -> None:
+    """The amber marker shows whenever the row differs from its pill (or
+    is a named row with no pill), so an invalid edit still shows while
+    ✓ is off."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-marker"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
+    assert "? window.newModelRfRowDiffersFromPill(row, markPill)" in recompute
+    assert "if (differs) {" in recompute
