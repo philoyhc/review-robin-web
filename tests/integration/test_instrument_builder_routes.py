@@ -8500,6 +8500,7 @@ def test_locked_display_pills_cannot_be_unselected(
     assert "data-locked" not in tag_1
     assert 'role="button"' in tag_1
     assert 'onclick="newModelToggleBand2Pill(this)"' in tag_1
+    assert 'title="Click to include / drag to reorder ' in tag_1
     # Both readers of the display selection (selectedPills and the Save
     # stager) count a locked-on pill; none reads aria-pressed alone.
     either = (
