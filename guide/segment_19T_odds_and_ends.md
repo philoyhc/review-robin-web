@@ -310,6 +310,12 @@ defect in the change. It found three gaps, all fixed in #2603:
 - the nav-guard comment and Semantics wrongly said Save sets the
   intentional-nav flag.
 
+`spec-writer` at close raised two flags, both adjudicated:
+- `spec/operator_button_audit.md` row 57 still described Lock as `?editing`
+  and a disabled `<button>` under an edit lock. The close restated it.
+- The spec never gave the page-break × an editing condition, so the Doc
+  impact claim was dropped.
+
 ### Out of scope
 
 - The legacy no-JS routes that redirect to `?editing`. They now only keep a
@@ -321,11 +327,10 @@ defect in the change. It found three gaps, all fixed in #2603:
 
 ### Doc impact
 
-- `spec/instruments.md` — Replicate / +Instrument / Delete and the page-break
-  × lose the "another instrument is being edited" condition; Lock strips
-  `?editing` (Item 2).
+- `spec/instruments.md` — Replicate / +Instrument / Delete lose the "another
+  instrument is being edited" condition; Lock strips `?editing` (Item 2).
 - `spec/operator_button_audit.md` — the Replicate and Delete rows lose their
-  "edit lock" gating (Item 2).
+  "edit lock" gating; row 57 (Lock / Unlock) restated (Item 2).
 - `guide/post_azure_todo_checklist.md` — browser check: Cancel, then Lock,
   leaves the action row live (Item 2).
 - `docs/status.md` — row when the item closes (Item 2).

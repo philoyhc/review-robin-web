@@ -467,8 +467,10 @@ everywhere, so "you can click this" reads the same way on every control.
 > above; an inline `style` on a button is a defect, because a role that
 > lives in one template's markup cannot be restyled from `base.html`. The
 > role assignments that recur: a danger-zone form's submit is
-> `.btn.destructive`, and a row-level delete / add inside a field builder
-> is `.btn-icon.danger` / `.btn-icon.action`.
+> `.btn.destructive`, and a row-level delete / add inside a field
+> builder is `.btn.destructive` / `.btn.secondary` — the Instruments
+> page's Band 1 rule/unit X and Band 3's response-field X and "+"
+> (author's ruling, 2026-09-24: Band 3 matches Band 1).
 
 ### 7. Tables
 

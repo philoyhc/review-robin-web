@@ -849,27 +849,48 @@ qualify, the trailing `... + N more` collapses the overflow.
 
 The **Visibility** half is the 3 × 2 audience × window chip grid;
 `spec/visibility_policy.md` is its contract and this section does not
-restate it.
+restate it. The band splits `grid-template-columns: 2fr 3fr` —
+Visibility 2/5, Response fields 3/5 — weighted toward the response-field
+row's larger control set.
 
-The **Response fields** half is a stack of inline editor rows — one per
-Response Field, plus a trailing empty starter row so the operator can
-keep typing without first clicking `+`. Each row defines one
-typed input control the reviewer fills in on the surface form.
+The **Response fields** half is a stack of inline editor rows, one per
+saved Response Field. **No standing blank row**: a card with no saved
+fields renders one blank row instead (from a `<template>`), so there is
+always a "+" to press; deleting down to one row leaves that row rather
+than none.
 
 Each row is a single horizontal flex strip with the following
 controls (left → right):
 
 | Control | Bound to | Notes |
 |---|---|---|
+| **+** button | — | Inserts a blank row directly below this one. |
 | Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Drives the paired Band 2 pill's label on save. |
 | Type (`<select>`) | `_inline_data_type` | `String / Integer / Decimal / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. Disabled when the row has saved responses; the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
 | Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_options` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
-| **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. |
-| **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field above the reviewer-surface preview table. The help-text *text* is edited in a plain `help_text` textarea on the help card (shown when the instrument card is unlocked, `data-lock-only` read view when locked) that binds to the `dfsave-{id}` form, so the text commits with the bulk Save rather than a per-field ✎/✓ POST. |
-| **✓** button | — | Saves *this row's* current values back into the paired Band 2 pill (creating the pill on first save, updating its label / metadata on subsequent saves). Pure UX — nothing persists across reload until the card-wide bulk Save runs. |
-| **X** button | — | Drops this row and its paired pill. Disabled when the row has saved responses; the title pins the reason. |
+| **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. Mirrors onto the paired pill when one exists and stages Band 2 state either way, so Save alone persists a toggle — ✓ is never needed. |
+| **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field above the reviewer-surface preview table. The help-text *text* is edited in a plain `help_text` textarea on the help card (shown when the instrument card is unlocked, `data-lock-only` read view when locked) that binds to the `dfsave-{id}` form, so the text commits with the bulk Save rather than a per-field ✎/✓ POST. Like R, it mirrors onto the pill and stages Band 2 state live — ✓ is never needed here either. |
+| **✓** button | — | Does two things and nothing else: on a row with no pill, creates one (selected, so its column joins the reviewer-surface preview); on a row whose name, type, or type-shown bounds (`min`/`max` for String, `min`/`max`/`step` for Integer/Decimal, `list` for List) differ from its pill, updates the pill. Enabled only then, and only for a named, shape-valid row — tooltip "Add" or "Update this field's pill and preview column"; "The pill and preview already match this row." when off. Pure UX — nothing persists until the card-wide bulk Save runs; a successful Save syncs every paired pill back to its row. |
+| **X** button (`.btn.destructive`) | — | Drops this row and its paired pill, matching Band 1's rule/unit X. Disabled when the row has saved responses (title pins the reason), or when it is the only row left. |
 
-Below the row stack, a `+` button spawns another empty row.
+**A row's amber marker (`data-row-pending`) means "differs from its
+pill"** — or a named row with no pill — regardless of validity: an
+invalid edit still shows the marker, and retyping a value back to what
+the pill already holds clears it (and ✓ with it).
+
+**The pill carries the pushed shape.** ✓ (and a successful Save) write
+the row's name, type and bounds onto the pill's `data-rf-data-type` /
+`-min` / `-max` / `-step` / `-list`; the preview cell and the
+constraint line read the pill, never the live row, so an unsaved edit
+never leaks into the reviewer-surface preview.
+
+**Order follows the rows.** ✓ inserts a new pill immediately before
+the pill of the nearest row below it — a "+" between A and B, ticked,
+gives pills A, C, B; the bulk Save serializes Band 3 rows in row order
+(a named, never-✓'d row persists unselected, in place); and dragging a
+response pill in Band 2 moves its row to match, so the two orders never
+disagree.
+
 The whole card's bulk Save form (form id `dfsave-{iid}`)
 POSTs to the consolidated
 `POST /sessions/{sid}/instruments/{iid}/save` endpoint — one
@@ -878,11 +899,7 @@ snapshots, and column widths together. The page drives no other
 save endpoint except `/fields/save`, its no-JS fallback; the
 per-concern routes `/band2-state`, `/column-widths`,
 `/display-fields/order` and `/identity` remain available to
-fixture and programmatic callers only. It persists every row in its current
-order; row order on save mirrors the **Band 2 pill order**, so
-drag-reordering the response pills in Band 2 is the
-operator-facing reorder affordance (there is no per-row drag
-handle on Band 3 itself).
+fixture and programmatic callers only.
 
 #### Per-field visibility lives on the Band 2 pill
 
@@ -986,8 +1003,8 @@ Bottom row of the card, right-aligned, in this order:
   contract as Save.
 - **Replicate** — clones this instrument's contents into a new
   card slotted immediately after it. POSTs to
-  `/sessions/{sid}/instruments/{iid}/replicate`. Disabled when
-  another instrument is being edited.
+  `/sessions/{sid}/instruments/{iid}/replicate`. Disabled only when
+  the session is not editable.
 - **Delete** — destructive. Form-submit button gated on a
   delete-confirm checkbox rendered just below the row:
   *"Yes, delete **{label}** and its associated assignments
@@ -997,19 +1014,22 @@ Bottom row of the card, right-aligned, in this order:
   `Instrument #{loop.index}` until 19Q Item 6: the display
   position, which moves under a drag; it ignored `short_label`, so
   a named instrument was confirmed under a name nobody chose; and
-  `#` is reserved for the reviewer-facing heading. Disabled when:
-  - this is the only instrument in the session, or
-  - another instrument is being edited.
+  `#` is reserved for the reviewer-facing heading. Disabled when
+  this is the only instrument in the session, or the session is not
+  editable.
 - **+Instrument** — spawns a new instrument with default
   Identity + empty Bands 1+2+3 immediately after this card.
   POSTs to `/sessions/{sid}/instruments/add-new-model` with
   `after={iid}`. Same disable conditions as Replicate, and the
   only affordance that creates an instrument.
-- **Lock / Unlock** — flips between view and edit mode by
-  adding / removing `?editing={iid}` from the URL. Save +
-  Lock are independent: Save doesn't lock, so the operator can
-  keep editing after a Save. Both disabled whenever the session
-  is not editable — `ready`, `expired` or `archived`.
+- **Lock / Unlock** — flips between view and edit mode. The anchors'
+  `?editing={iid}` hrefs are the no-JS fallback; the in-page toggle
+  stays on the current URL, and an in-page **Lock** strips `?editing`
+  from it via `history.replaceState`, so a reload lands locked rather
+  than back in edit mode. Save + Lock are independent: Save doesn't
+  lock, so the operator can keep editing after a Save. Both disabled
+  whenever the session is not editable — `ready`, `expired` or
+  `archived`.
 
 #### Save / Lock interaction
 
@@ -1038,6 +1058,11 @@ Bottom row of the card, right-aligned, in this order:
   `/save` the tracker resets in place with no reload (the
   full-page redirect only happens on the no-JS `/fields/save`
   fallback).
+- **Leaving with a dirty card.** A page-wide `beforeunload` guard
+  warns before navigating away while any card is dirty — the reason
+  Replicate, Delete, +Instrument and +Page break need no lock-driven
+  disable of their own: a form post from one of them is a navigation
+  the guard already catches.
 
 ## Add / Replicate / Delete
 
