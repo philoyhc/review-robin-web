@@ -8166,9 +8166,11 @@ def test_tick_writes_the_pill_shape_and_selects_a_new_pill(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     save_row = _rf_fn(body, "newModelRfSaveRow")
-    for attr in ("data-rf-data-type", "data-rf-min", "data-rf-max",
-                 "data-rf-step", "data-rf-list"):
-        assert f"pill.setAttribute('{attr}'" in save_row
+    assert "window.newModelRfSyncPill(row, pill);" in save_row
+    sync = _rf_fn(body, "newModelRfSyncPill")
+    for attr in ("data-label", "data-rf-data-type", "data-rf-min",
+                 "data-rf-max", "data-rf-step", "data-rf-list"):
+        assert f"pill.setAttribute('{attr}'" in sync
     assert "pill.setAttribute('aria-pressed', 'true');" in save_row
     assert "pill.setAttribute('aria-pressed', 'false');" not in save_row
 
@@ -8188,3 +8190,40 @@ def test_required_and_help_toggles_stage_for_save(
         fn = _rf_fn(body, name)
         assert "window.newModelStageBand2State(band2);" in fn, name
         assert "typeof saveBand2State" not in fn, name
+
+
+def test_save_success_brings_every_pill_up_to_its_row(
+    client: TestClient, db: Session
+) -> None:
+    """Save persists each row as typed, ✓'d or not, and does not reload.
+    Its success handler copies every paired row onto its pill and
+    rebuilds the preview, so the preview and ✓ match what was saved
+    (diff-reviewer finding, 2026-09-24)."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-save-sync"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    start = body.index("window.newModelOnSaveSuccess =")
+    on_success = body[start : body.index("\n          };", start)]
+    assert "window.newModelRfSyncPill(row, pill);" in on_success
+    assert "window.newModelRefreshBand2(b2);" in on_success
+    assert "window.newModelRfRecomputeActionStates(row);" in on_success
+
+
+def test_row_marker_follows_the_pill_comparison_not_validity(
+    client: TestClient, db: Session
+) -> None:
+    """The amber marker shows whenever the row differs from its pill (or
+    is a named row with no pill), so an invalid edit still shows while
+    ✓ is off."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-marker"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
+    assert "? window.newModelRfRowDiffersFromPill(row, markPill)" in recompute
+    assert "if (differs) {" in recompute

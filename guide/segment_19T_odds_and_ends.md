@@ -122,6 +122,15 @@ pill, and the row's amber marker follows ✓. A pill ✓ creates starts
 selected, so the column joins the preview, as the Decision says. R and ≡
 stage through the window handle, so Save enables on its own.
 
+`diff-reviewer` read `de83af9d..HEAD` once, at rung 2, and made three
+findings, all acted on in #2599:
+- **Save without ✓ left the pill stale.** Save persists the row as typed
+  and doesn't reload, so the preview kept the old bounds and ✓ stayed lit.
+  A successful Save now syncs every paired pill to its row.
+- **The Guide screencap shows the old layout.** Added to Doc impact.
+- **The amber marker dropped on an invalid edit.** It now means "differs
+  from the pill", independent of validity.
+
 Carried from rung 1: on main, toggling R or ≡ alone leaves Save disabled.
 R's stage call sits behind a `typeof` guard that is always false, and
 neither button is in the dirty-tracking click list. Also, the first
@@ -173,4 +182,7 @@ pending listener. Rung 2 removes that listener.
   row states the two purposes and the enable rule; the 2 : 3 split (Item 1).
 - `guide/post_azure_todo_checklist.md` — browser checks for the ✓ enable
   rule, "+" / Cancel and the split (Item 1).
+- `app/web/static/guide/instrument-card-fields-and-visibility.png` — retaken
+  with its `-dark` twin on the dev slot: the capture shows the 1 : 1 split
+  and the blank row (Item 1).
 - `docs/status.md` — row when the item closes (Item 1).

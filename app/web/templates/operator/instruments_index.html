@@ -3667,6 +3667,22 @@
             // later Save doesn't carry a stale acknowledged_drop.
             var b2 = card.querySelector('[data-new-model-band2]');
             if (b2) { b2.removeAttribute('data-band2-ack-drop'); }
+            // 19T Item 1 — Save persisted each row as typed, ✓'d or
+            // not, and there is no reload; bring every paired pill up
+            // to its row so the preview and ✓ match what was saved.
+            if (b2 && window.newModelRfSyncPill) {
+              card.querySelectorAll('[data-new-model-rf-row]').forEach(function (row) {
+                var key = row.getAttribute('data-row-key');
+                var pill = key && b2.querySelector(
+                  '[data-new-model-band2-pill][data-row-key="' + key + '"]'
+                );
+                if (pill) { window.newModelRfSyncPill(row, pill); }
+              });
+              if (window.newModelRefreshBand2) { window.newModelRefreshBand2(b2); }
+              card.querySelectorAll('[data-new-model-rf-row]').forEach(function (row) {
+                window.newModelRfRecomputeActionStates(row);
+              });
+            }
             var banner = card.querySelector('[data-save-error-banner]');
             if (banner) {
               banner.hidden = true;
@@ -4549,12 +4565,23 @@
                   : 'Add this field\'s pill and preview column'
               );
             }
-            // The row's amber marker now means exactly "✓ has
-            // something to push".
-            if (reason) {
-              row.removeAttribute('data-row-pending');
-            } else {
+            // The row's amber marker means "differs from its pill"
+            // (or a named row with no pill), valid or not, so an
+            // invalid edit still shows even while ✓ is off.
+            var markRowKey = row.getAttribute('data-row-key');
+            var markCard = row.closest('[id^="instrument-"]');
+            var markPill = (markRowKey && markCard)
+              ? markCard.querySelector(
+                  '[data-new-model-band2-pill][data-row-key="' + markRowKey + '"]'
+                )
+              : null;
+            var differs = markPill
+              ? window.newModelRfRowDiffersFromPill(row, markPill)
+              : !!name;
+            if (differs) {
               row.setAttribute('data-row-pending', 'true');
+            } else {
+              row.removeAttribute('data-row-pending');
             }
           }
           // 19T Item 1 — X stays live on a blank row: with no
@@ -4612,6 +4639,25 @@
           var nameInput = clone.querySelector('[data-new-model-rf-name]');
           if (nameInput) { nameInput.focus(); }
         };
+        // 19T Item 1 — copy a row's name, type and bounds onto its
+        // pill, which is what the preview and ✓'s comparison read.
+        // ✓ calls it for one row; a successful Save calls it for
+        // every paired row, since Save persisted the rows as typed.
+        window.newModelRfSyncPill = window.newModelRfSyncPill || function (row, pill) {
+          var shape = window.newModelRfRowShape(row);
+          if (shape.name) {
+            pill.setAttribute('data-label', shape.name);
+            pill.setAttribute('data-source-field', shape.name);
+            pill.setAttribute('title', 'Click to include / drag to reorder ' + shape.name);
+            pill.innerHTML = '<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>' + shape.name
+              .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          }
+          pill.setAttribute('data-rf-data-type', shape.dataType);
+          pill.setAttribute('data-rf-min', shape.min);
+          pill.setAttribute('data-rf-max', shape.max);
+          pill.setAttribute('data-rf-step', shape.step);
+          pill.setAttribute('data-rf-list', shape.list);
+        };
         // ✓ on a row: read values, create-or-update the paired
         // pill in Band 2 keyed by this row's data-row-key, and
         // copy the row's name, type and bounds onto it for the
@@ -4633,17 +4679,11 @@
           if (!band2) { return; }
           var pillsRow = band2.querySelector('[data-new-model-band2-pills]');
           if (!pillsRow) { return; }
-          // If the pill already exists (saved before, now being
-          // updated), just refresh its label / data-source-field;
-          // otherwise create a new pill after the `||` divider.
+          // Create the pill after the `||` divider if the row has
+          // none yet; either way ``newModelRfSyncPill`` below copies
+          // the row's name, type and bounds onto it.
           var pill = pillsRow.querySelector('[data-new-model-band2-pill][data-row-key="' + rowKey + '"]');
-          if (pill) {
-            pill.setAttribute('data-label', fieldName);
-            pill.setAttribute('data-source-field', fieldName);
-            pill.setAttribute('title', 'Click to include / drag to reorder ' + fieldName);
-            pill.innerHTML = '<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>' + fieldName
-              .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          } else {
+          if (!pill) {
             // Drop the `||` divider in if it isn't already there.
             var divider = pillsRow.querySelector('[data-new-model-band2-pills-divider]');
             if (!divider) {
@@ -4694,14 +4734,7 @@
               .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             pillsRow.appendChild(pill);
           }
-          // The pill carries what the preview shows; the row's
-          // recompute compares against it.
-          var shape = window.newModelRfRowShape(row);
-          pill.setAttribute('data-rf-data-type', shape.dataType);
-          pill.setAttribute('data-rf-min', shape.min);
-          pill.setAttribute('data-rf-max', shape.max);
-          pill.setAttribute('data-rf-step', shape.step);
-          pill.setAttribute('data-rf-list', shape.list);
+          window.newModelRfSyncPill(row, pill);
           // Rebuild the preview so the new label, type and bounds
           // surface at once.
           if (window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
