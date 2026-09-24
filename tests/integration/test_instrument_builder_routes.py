@@ -5864,9 +5864,11 @@ def test_pr5b_band2_staging_wiring_ships(
     # saveBand2State stages into the snapshot (no immediate POST).
     assert "[data-new-model-band2-state-snapshot]" in body
     assert "window.newModelMarkCardDirty(instrumentCard)" in body
-    # Lost-edit fix: orphan named rows without a paired chip are
-    # serialized too.
-    assert "serializeRow(row, null)" in body
+    # Lost-edit fix: every row is serialized, paired chip or not
+    # (``pill`` is null for a named row never ✓'d); 19T Item 1 made
+    # it one pass in row order.
+    assert "var rf = serializeRow(row, pill);" in body
+    assert "if (!name) { return null; }" in body
 
 
 def test_new_response_field_column_width_persists_via_save(
@@ -8018,15 +8020,15 @@ def test_band3_renders_only_persisted_rows_no_blank_starter(
 def test_band3_add_row_clones_the_template_not_the_first_row(
     client: TestClient, db: Session
 ) -> None:
-    """"+" must work with zero rows, so it clones the template's row
-    rather than the first live row; X removes even the last row."""
+    """"+" clones the template's row rather than a live row, and X
+    removes a row outright rather than blanking it."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-add-from-template"
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
-    start = body.index("window.newModelRfAddRow =")
+    start = body.index("window.newModelRfInsertRow =")
     add_fn = body[start : body.index("\n        };", start)]
     assert "tpl.content.querySelector('[data-new-model-rf-row]')" in add_fn
     assert "rows.querySelector('[data-new-model-rf-row]')" not in add_fn
@@ -8227,3 +8229,121 @@ def test_row_marker_follows_the_pill_comparison_not_validity(
     recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
     assert "? window.newModelRfRowDiffersFromPill(row, markPill)" in recompute
     assert "if (differs) {" in recompute
+
+
+# --------------------------------------------------------------------------- #
+# 19T Item 1 rung 2b — per-row "+", the last row stays, row order rules
+# --------------------------------------------------------------------------- #
+
+
+def test_every_band3_row_has_a_plus_ahead_of_its_other_buttons(
+    client: TestClient, db: Session
+) -> None:
+    """Each row, and the template row, carries its own "+" before R;
+    the single "+" under the list is gone."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-row-plus"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    rows, template = _band3_rows_and_template(body, new_model.id)
+    card = _card_slice(body, new_model.id)
+    plus = 'onclick="newModelRfAddRow(this)"'
+    assert card.count(plus) == 3  # 2 rows + the template
+    assert rows.count(plus) == 2
+    assert template.count(plus) == 1
+    for chunk in rows.split("<div data-new-model-rf-row")[1:] + [template]:
+        assert chunk.index("data-new-model-rf-add") < chunk.index(
+            "data-new-model-rf-required"
+        )
+    assert "Add another response field row" not in body
+    insert = _rf_fn(body, "newModelRfInsertRow")
+    assert "after.insertAdjacentElement('afterend', clone);" in insert
+    # A card with no saved fields gets one blank row at load.
+    assert "window.newModelRfInsertRow(band3, null);" in _rf_script(body)
+
+
+def test_the_last_band3_row_cannot_be_deleted(
+    client: TestClient, db: Session
+) -> None:
+    """X is inactive on the only row left, and the delete handler
+    refuses a stale click on it."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-last-row"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
+    assert "if (siblings <= 1) {" in recompute
+    assert "'The last response field row stays.'" in recompute
+    delete_fn = _rf_fn(body, "newModelRfDeleteRow")
+    guard = "querySelectorAll('[data-new-model-rf-row]').length <= 1"
+    assert guard in delete_fn
+    assert delete_fn.index(guard) < delete_fn.index("row.remove();")
+
+
+def test_tick_save_and_drag_follow_band3_row_order(
+    client: TestClient, db: Session
+) -> None:
+    """✓ inserts a new pill before the pill of the nearest row below it;
+    the stager serializes in row order in one pass; a response-pill drag
+    moves its row as well."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-row-order"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    save_row = _rf_fn(body, "newModelRfSaveRow")
+    assert "row.nextElementSibling" in save_row
+    assert "pillsRow.insertBefore(pill, beforePill);" in save_row
+    start = body.index("function saveBand2State(card, opts) {")
+    stager = body[start : body.index("\n          }\n", start)]
+    assert "seenRowKeys" not in stager
+    assert "var rf = serializeRow(row, pill);" in stager
+    start = body.index("window.newModelBand2Drop = function")
+    drop = body[start : body.index("\n          };", start)]
+    assert "targetRow.parentNode.insertBefore(dragRow, targetRow);" in drop
+
+
+def test_save_persists_response_fields_in_the_order_sent(
+    client: TestClient, db: Session
+) -> None:
+    """The stager sends rows in row order, so a field inserted between
+    Rating and Comments saves between them, ticked or not."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-save-order"
+    )
+    ids = {rf.label: rf.id for rf in new_model.response_fields}
+    snapshot = json.dumps(
+        {
+            "selected_display_keys": [],
+            "response_fields": [
+                {"id": ids["Rating"], "name": "Rating", "data_type": "integer",
+                 "selected": True, "min": "1", "max": "5", "step": "1"},
+                {"name": "Notes", "data_type": "string", "selected": False,
+                 "min": "", "max": "", "step": "", "list_options": ""},
+                {"id": ids["Comments"], "name": "Comments", "data_type": "string",
+                 "selected": True, "min": "0", "max": "2000"},
+            ],
+        }
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/save",
+        data={"band2_state_snapshot": snapshot},
+        follow_redirects=False,
+    )
+    assert response.status_code == 200, response.text
+    db.expire_all()
+    fields = sorted(
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == new_model.id
+            )
+        ).scalars(),
+        key=lambda f: f.order,
+    )
+    assert [f.label for f in fields] == ["Rating", "Notes", "Comments"]

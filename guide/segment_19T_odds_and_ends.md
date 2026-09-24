@@ -58,6 +58,21 @@ The flag answers "was this row touched", not "does this row differ from its
 pill", which is the author's rule. A comparison is the only thing that greys
 ✓ again when an edit is typed back.
 
+**Amendment (2026-09-24, the author, after rung 2).** It supersedes point 2's
+single "+" and its last-row rule:
+- **A "+" on every row**, ahead of R, inserts a blank row directly below
+  that row. The single "+" under the list goes.
+- **The last row cannot be deleted**: X is inactive while one row is left.
+  So a card with no saved fields renders one blank row, or it would have
+  no "+" at all.
+- **Order follows the rows.** ✓ on a row inserted between A and B puts
+  its pill between theirs (A, C, B), and Save persists the rows in row
+  order. Today Save writes pill order and appends un-ticked rows last,
+  and dragging a response pill leaves its row where it was. So a
+  response-pill drag now also moves its row. The author accepts rows that
+  catch up only on reload; the move is here because Save now reads row
+  order, so without it Save would undo a drag.
+
 ### Semantics
 
 - **"Differs"** compares the row's current values with what its pill and
@@ -66,7 +81,8 @@ pill", which is the author's rule. A comparison is the only thing that greys
   are excluded, since they already propagate on click.
 - **A blank or invalid row** keeps ✓ disabled, as today: no name, or
   `newModelRfValidateShape` fails.
-- **Zero rows.** "+" must work with no row to clone. Today it clones the
+- **Zero rows.** (Superseded by the amendment: a card with none renders
+  one blank row.) "+" must work with no row to clone. Today it clones the
   first row, so it will build from a `<template>` instead.
 - **A "+" row left blank at Save** is already dropped: `serializeRow`
   returns `null` for a nameless row.
@@ -79,8 +95,8 @@ pill", which is the author's rule. A comparison is the only thing that greys
 
 - ✓ keeps staging into `band2_state_snapshot` and marking the card dirty.
   That is not persisting, and Save still owns the write (2026-09-24).
-- Deleting the last row removes it outright; "+" is the one way to get a
-  blank row (2026-09-24).
+- ~~Deleting the last row removes it outright.~~ Superseded by the
+  amendment: the last row stays (2026-09-24).
 
 ### Blast radius (measured)
 
@@ -131,6 +147,10 @@ findings, all acted on in #2599:
 - **The amber marker dropped on an invalid edit.** It now means "differs
   from the pill", independent of validity.
 
+Rung 2b's own read (`d555ecca..HEAD`, #2600) found no defects, only stale
+comments and a stale Doc impact, all fixed there. That makes two reads
+for the item.
+
 Carried from rung 1: on main, toggling R or ≡ alone leaves Save disabled.
 R's stage call sits behind a `typeof` guard that is always false, and
 neither button is in the dirty-tracking click list. Also, the first
@@ -148,17 +168,24 @@ pending listener. Rung 2 removes that listener.
    Tests pin the enable rule's markup; Chromium drives the behavior. This
    is the item's last build rung, so `diff-reviewer` reads the cumulative
    diff from `b705245d`.
+2b. **The amendment** (added 2026-09-24). Per-row "+", the last row kept,
+   row-ordered ✓ and Save, and a pill drag that moves its row. It reopens
+   `app/`, so it takes its own `diff-reviewer` read on its diff.
 3. **Close.** `spec/instruments.md`, the browser checks, a `docs/status.md`
    row and `spec-writer`.
 
 ### Definition of done
 
-- No trailing blank row renders; "+" adds one from zero rows; Cancel's
-  reload removes it.
+- ~~No trailing blank row renders; "+" adds one from zero rows.~~ Only
+  saved rows render, or one blank row when there are none. Each row's "+"
+  inserts below it, and Cancel's reload removes an unsaved row.
+- X is inactive on the only row left.
+- ✓ places a new pill in row order; Save persists row order; a response-pill
+  drag moves its row.
 - ✓ is enabled only for a named, valid row with no pill or with
   preview-bearing values that differ from its pill; R and ≡ never enable it.
 - Band 3 renders `grid-template-columns: 2fr 3fr`.
-- `spec/instruments.md` states all three.
+- `spec/instruments.md` states all of the above.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19T.1` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -178,10 +205,13 @@ pending listener. Rung 2 removes that listener.
 
 ### Doc impact
 
-- `spec/instruments.md` — Band 3: no starter row, and "+" adds one; the ✓
-  row states the two purposes and the enable rule; the 2 : 3 split (Item 1).
+- `spec/instruments.md` — Band 3: no starter row except one blank row at
+  zero fields; a "+" per row inserting below; the last row's X inactive; the
+  ✓ row's two purposes and enable rule; R / ≡ enabling Save; ✓, Save and a
+  pill drag following row order; the 2 : 3 split (Item 1).
 - `guide/post_azure_todo_checklist.md` — browser checks for the ✓ enable
-  rule, "+" / Cancel and the split (Item 1).
+  rule, a row's "+" and Cancel, the last row, row order through ✓ / Save /
+  drag, R / ≡ alone enabling Save, and the split (Item 1).
 - `app/web/static/guide/instrument-card-fields-and-visibility.png` — retaken
   with its `-dark` twin on the dev slot: the capture shows the 1 : 1 split
   and the blank row (Item 1).
