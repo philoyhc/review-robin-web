@@ -120,44 +120,37 @@ Taken 2026-09-24 at `b705245d`.
 
 ### Status
 
-**2026-09-24, rung 1.** The item's diff base is `de83af9d`, main before
-rung 1; the ladder's `b705245d` was the measuring tree. Chromium found two
-defects on main, both in rung 1's path:
-- **X threw.** `saveBand2State` is local to the Band 2 closure, while ✓
-  and X call it from a later `<script>`. The `ReferenceError` left a row
-  that has a pill in place and skipped ✓'s pending-flag clear. It is now
-  reached through `window.newModelStageBand2State`, and X removes the row
-  before staging, so the row is not staged back.
-- **X is live on a blank row.** Without a standing row, a "+" row needs
-  a way out besides Cancel.
+**Closed 2026-09-24** (#2598, #2599, #2600, #2601; the capture in #2602).
+The item's diff base was `de83af9d`, main before rung 1.
 
-**Rung 2.** The measurement answered the open question: the pill carried
-the name, R, ≡, help text and width, but the preview re-read type and
-bounds from the row on every rebuild. So the pill now carries the pushed
-type and bounds (`data-rf-*`), and the preview reads them from there.
-✓ compares the row's name, type and the bounds that type shows against the
-pill, and the row's amber marker follows ✓. A pill ✓ creates starts
-selected, so the column joins the preview, as the Decision says. R and ≡
-stage through the window handle, so Save enables on its own.
+**What the ladder became.** Rungs 1 and 2 shipped as planned. The
+author's amendment added rung 2b (per-row "+", the last row kept,
+row-ordered ✓, Save and drag), then a follow-up moved "+" to the head of
+the row and made X red. The close took Item 2's close with it.
 
-`diff-reviewer` read `de83af9d..HEAD` once, at rung 2, and made three
-findings, all acted on in #2599:
-- **Save without ✓ left the pill stale.** Save persists the row as typed
-  and doesn't reload, so the preview kept the old bounds and ✓ stayed lit.
-  A successful Save now syncs every paired pill to its row.
-- **The Guide screencap shows the old layout.** Added to Doc impact.
-- **The amber marker dropped on an invalid edit.** It now means "differs
-  from the pill", independent of validity.
+**Decisions confirmed at build:**
+- The open question: the preview read the name from the pill but type
+  and bounds from the live row on every rebuild. So the pill now carries
+  the pushed shape (`data-rf-*`), the preview reads it, and ✓ compares
+  the row with it.
+- A pill that ✓ creates starts selected, so its column joins the preview.
+- The amber marker means "differs from the pill", valid or not.
+- A successful Save syncs every paired pill to its row, since Save persists
+  rows as typed and doesn't reload.
+- R and ≡ stage for Save; ✓ is never needed for them.
 
-Rung 2b's own read (`d555ecca..HEAD`, #2600) found no defects, only stale
-comments and a stale Doc impact, all fixed there. That makes two reads
-for the item.
+**Defects on main, found in Chromium and fixed:**
+- ✓ and X called `saveBand2State` from outside its closure, so X never
+  removed a row that had a pill. They now reach it through
+  `window.newModelStageBand2State`.
+- R and ≡ alone never enabled Save.
+- The first keystroke left ✓ off.
 
-Carried from rung 1: on main, toggling R or ≡ alone leaves Save disabled.
-R's stage call sits behind a `typeof` guard that is always false, and
-neither button is in the dirty-tracking click list. Also, the first
-keystroke leaves ✓ off, because the inline recompute runs before the card's
-pending listener. Rung 2 removes that listener.
+**Reads.** Three `diff-reviewer` reads:
+- the cumulative read at rung 2 found Save-without-✓ staleness, the stale
+  Guide capture and the marker, all fixed;
+- rung 2b's read found stale prose;
+- the "+" / X read found no defects, and its §6 note went to Doc impact.
 
 ### PR ladder
 
@@ -309,9 +302,9 @@ Taken 2026-09-24 at `cdbc6c96`.
 
 ### Status
 
-**2026-09-24.** The fix and the log landed together (#2603). One
-`diff-reviewer` read found no defect in the change. It found three gaps,
-all fixed in #2603:
+**Closed 2026-09-24** (#2603, closed with Item 1). It shipped as planned:
+the fix and the log landed together. One `diff-reviewer` read found no
+defect in the change. It found three gaps, all fixed in #2603:
 - the test's +Page break check passed without the fix, and now pins it;
 - `spec/operator_button_audit.md` was missing from Doc impact;
 - the nav-guard comment and Semantics wrongly said Save sets the
