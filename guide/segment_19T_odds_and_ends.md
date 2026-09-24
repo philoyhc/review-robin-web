@@ -372,7 +372,12 @@ test, a `diff-reviewer` read on any code, and Doc impact.
   `newModelToggleBand2Pill` ignores a click on one. Chromium: clicking
   Name or Email leaves both selected with Save off, while Tag 1 still
   toggles and its column goes. The author named Name; Email is locked by
-  the same server rule, so it gets the same lock.
+  the same server rule, so it gets the same lock. **The author's ruling
+  (2026-09-24): individually scoped, Name and Email are both always
+  shown; group-scoped, Email is not shown.** The reviewer surface already
+  behaves that way: a group row has no display-field columns, only a tag
+  line plus member names (`_group_collapse.py`), so Email's flag is moot
+  there, and the Band 2 pill drops out in grouped mode.
 - **Its read found a defect in the fix.** Grouped mode disables and
   unselects the Email pill, since a group row has no email, and nothing
   re-selected it on the way back to Individual. The lock then blocked the
