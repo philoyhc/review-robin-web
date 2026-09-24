@@ -92,6 +92,12 @@ def is_locked_display_source(source_type: str, source_field: str) -> bool:
     return (source_type, source_field) in _LOCKED_DISPLAY_SOURCES
 
 
+def locked_display_position(source_type: str, source_field: str) -> int | None:
+    """The fixed 0-based slot of a locked Display Fields row (Name 0,
+    Email 1), or ``None`` for a row that isn't locked."""
+    return _LOCKED_DISPLAY_ORDER.get((source_type, source_field))
+
+
 class LockedDisplayFieldError(ValueError):
     """Raised when a locked Display Fields row (Name / Email) is the
     target of an operation that's not permitted on locked rows

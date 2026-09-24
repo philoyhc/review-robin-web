@@ -368,7 +368,8 @@ test, a `diff-reviewer` read on any code, and Doc impact.
   first".
 - **Fix.** The view marks locked display fields (`locked`, from
   `is_locked_display_source`). Their pills carry `data-locked="true"`, a
-  default cursor and an "Always shown — pinned first" tooltip, and
+  default cursor and an "Always shown — pinned first" tooltip ("pinned
+  second" for Email, at the author's ask), and
   `newModelToggleBand2Pill` ignores a click on one. Chromium: clicking
   Name or Email leaves both selected with Save off, while Tag 1 still
   toggles and its column goes. The author named Name; Email is locked by

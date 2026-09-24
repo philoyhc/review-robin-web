@@ -1949,7 +1949,7 @@
                     ondrop="newModelBand2Drop(event)"
                     {% endif %}
                     {% if not field.locked %}onclick="newModelToggleBand2Pill(this)"{% endif %}
-                    title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Always shown — pinned first: ' }}{{ field.label }}">{% if field.reorderable %}<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{% endif %}{{ field.label }}</span>
+                    title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Always shown — pinned ' ~ field.pinned ~ ': ' }}{{ field.label }}">{% if field.reorderable %}<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{% endif %}{{ field.label }}</span>
             {% endfor %}
             {# Server-render the `||` divider + response pills
                from the persisted band2_state.response_fields list.

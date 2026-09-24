@@ -476,6 +476,12 @@ def _new_model_band2_state(
                 "locked": instruments_service.is_locked_display_source(
                     f.source_type, f.source_field
                 ),
+                # Its tooltip's slot word: Name "first", Email "second".
+                "pinned": _PINNED_WORDS.get(
+                    instruments_service.locked_display_position(
+                        f.source_type, f.source_field
+                    )
+                ),
             }
         )
     identity_width_px = (instrument.column_widths or {}).get("identity")
@@ -592,6 +598,9 @@ def _new_model_band2_state(
         # cascade order (Segment 13B PR 2 contract).
         "sort_spec": sort_spec,
     }
+
+
+_PINNED_WORDS: dict[int | None, str] = {0: "first", 1: "second"}
 
 
 def _is_selectable_in_group(source_type: str, source_field: str) -> bool:

@@ -8490,6 +8490,12 @@ def test_locked_display_pills_cannot_be_unselected(
         assert "Always shown" in pill, key
         for control in ("tag-chip", "role=", "tabindex=", "aria-pressed=", "onclick="):
             assert control not in pill, (key, control)
+    # Each tooltip names the slot the server pins it to.
+    assert 'title="Always shown — pinned first: Name"' in pills["reviewee.name"]
+    assert (
+        'title="Always shown — pinned second: Email"'
+        in pills["reviewee.email_or_identifier"]
+    )
     tag_1 = pills["reviewee.tag_1"]
     assert "data-locked" not in tag_1
     assert 'role="button"' in tag_1
