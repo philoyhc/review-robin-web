@@ -8453,3 +8453,40 @@ def test_delete_confirm_checkbox_does_not_mark_the_card_dirty(
     assert "instrumentCard.addEventListener('change', markDirtyFromField);" in body
     assert "instrumentCard.addEventListener('input', markDirty);" not in body
     assert "instrumentCard.addEventListener('change', markDirty);" not in body
+
+
+# --------------------------------------------------------------------------- #
+# 19T Item 3 entry 2 — Name / Email pills can't be unselected
+# --------------------------------------------------------------------------- #
+
+
+def test_locked_display_pills_cannot_be_unselected(
+    client: TestClient, db: Session
+) -> None:
+    """Name and Email are always shown on the reviewer surface (the server
+    refuses to hide them), so their Band 2 pills carry ``data-locked`` and
+    the toggle ignores a click on one. Other display pills stay
+    toggleable."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-locked-pills"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    card = _card_slice(body, new_model.id)
+    pills = {
+        m.group(1): m.group(0)
+        for m in re.finditer(
+            r'<span class="pill tag-chip[^>]*?data-key="([^"]+)"[^>]*>', card
+        )
+    }
+    for key in ("reviewee.name", "reviewee.email_or_identifier"):
+        assert 'data-locked="true"' in pills[key], key
+        assert "Always shown" in pills[key], key
+    assert 'data-locked="true"' not in pills["reviewee.tag_1"]
+    start = body.index("window.newModelToggleBand2Pill = function (pill) {")
+    toggle = body[start : body.index("\n          };", start)]
+    guard = "if (pill.getAttribute('data-locked') === 'true') { return; }"
+    assert guard in toggle
+    # The guard runs before the pill flips.
+    assert toggle.index(guard) < toggle.index("pill.setAttribute('aria-pressed'")

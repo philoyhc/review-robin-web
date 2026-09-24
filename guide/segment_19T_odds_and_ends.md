@@ -356,11 +356,36 @@ test, a `diff-reviewer` read on any code, and Doc impact.
   `[data-delete-confirm]`. Chromium: ticking leaves the card clean with
   Delete live; a row edit still dirties it.
 
+### Entry 2 — the Name and Email pills could be unselected
+
+- **Defect** (the author, 2026-09-24). Name and Email are locked display
+  fields, always shown on the reviewer surface: `update_display_field`
+  refuses to hide them, and `_sync_display_field_visibility` skips them.
+  But their Band 2 pills toggled like any other. Unselecting one dropped
+  its preview column and enabled Save, while nothing changed on save or on
+  the reviewer surface, and a reload showed the pill selected again. The
+  pill never had a selection lock; its tooltip already read "pinned
+  first".
+- **Fix.** The view marks locked display fields (`locked`, from
+  `is_locked_display_source`). Their pills carry `data-locked="true"`, a
+  default cursor and an "Always shown — pinned first" tooltip, and
+  `newModelToggleBand2Pill` ignores a click on one. Chromium: clicking
+  Name or Email leaves both selected with Save off, while Tag 1 still
+  toggles and its column goes. The author named Name; Email is locked by
+  the same server rule, so it gets the same lock.
+
 ### Blast radius (measured)
 
 Taken 2026-09-24 at `48b21d05`.
 - Entry 1: one listener pair in `instruments_index.html`
   (`grep -n "addEventListener('change', markDirty" …`, 1 hit).
+
+Taken 2026-09-24 at `eb4bdf23`, for entry 2:
+- the display-pill markup and `newModelToggleBand2Pill`, in
+  `instruments_index.html`;
+- the Band 2 field dict in `app/web/views/_instruments.py`;
+- `is_locked_display_source`, 2 locked sources
+  (`grep -n "_LOCKED_DISPLAY_SOURCES" app/services/instruments/_display_fields.py`).
 
 ### Definition of done
 
@@ -377,7 +402,7 @@ Taken 2026-09-24 at `48b21d05`.
 
 ### Status
 
-**Open** (2026-09-24). Entry 1 is fixed. Its `diff-reviewer` read found
+**Open** (2026-09-24). Entries 1 and 2 are fixed. Entry 1's `diff-reviewer` read found
 no defect: no other listener dirties the card from the checkbox, the
 attribute sits only on checkboxes, Delete still enables, and the test fails
 on the old template.
@@ -385,6 +410,7 @@ on the old template.
 ### Doc impact
 
 - `spec/instruments.md` — Save-when-dirty: the Delete confirm checkbox
-  doesn't count as an edit (Item 3, entry 1).
+  doesn't count as an edit (Item 3, entry 1); the Name and Email pills
+  are always selected and ignore clicks (Item 3, entry 2).
 - `docs/status.md` — row when the item closes (Item 3).
 

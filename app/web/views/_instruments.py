@@ -470,6 +470,12 @@ def _new_model_band2_state(
                 "reorderable": not instruments_service.is_locked_display_source(
                     f.source_type, f.source_field
                 ),
+                # 19T Item 3 entry 2 — Name / Email are always shown on
+                # the reviewer surface (``update_display_field`` refuses
+                # to hide them), so their pill can't be unselected.
+                "locked": instruments_service.is_locked_display_source(
+                    f.source_type, f.source_field
+                ),
             }
         )
     identity_width_px = (instrument.column_widths or {}).get("identity")

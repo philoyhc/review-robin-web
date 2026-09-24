@@ -1929,6 +1929,7 @@
                     data-display-field-id="{{ field.display_field_id }}"
                     data-width="{{ field.width_px or '' }}"
                     data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
+                    {% if field.locked %}data-locked="true" style="cursor: default;"{% endif %}
                     {% if field.reorderable %}
                     draggable="true"
                     ondragstart="newModelBand2DragStart(event)"
@@ -1937,7 +1938,7 @@
                     ondrop="newModelBand2Drop(event)"
                     {% endif %}
                     onclick="newModelToggleBand2Pill(this)"
-                    title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Click to include — pinned first ' }}{{ field.label }}">{% if field.reorderable %}<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{% endif %}{{ field.label }}</span>
+                    title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Always shown — pinned first: ' }}{{ field.label }}">{% if field.reorderable %}<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{% endif %}{{ field.label }}</span>
             {% endfor %}
             {# Server-render the `||` divider + response pills
                from the persisted band2_state.response_fields list.
@@ -2125,7 +2126,9 @@
               var disabled = grouped && !groupOk;
               pill.setAttribute('aria-disabled', disabled ? 'true' : 'false');
               pill.style.opacity = disabled ? '0.4' : '';
-              pill.style.cursor = disabled ? 'not-allowed' : 'pointer';
+              pill.style.cursor = disabled
+                ? 'not-allowed'
+                : (pill.getAttribute('data-locked') === 'true' ? 'default' : 'pointer');
               if (disabled && pill.getAttribute('aria-pressed') === 'true') {
                 pill.setAttribute('aria-pressed', 'false');
                 pill.classList.remove('is-selected');
@@ -2997,6 +3000,10 @@
           }
           window.newModelToggleBand2Pill = function (pill) {
             if (pill.getAttribute('aria-disabled') === 'true') { return; }
+            // 19T Item 3 entry 2 — a locked pill (Name / Email) is always
+            // shown: the server keeps it visible whatever the payload
+            // says, so letting it toggle off only made the preview lie.
+            if (pill.getAttribute('data-locked') === 'true') { return; }
             var pressed = pill.getAttribute('aria-pressed') === 'true';
             var next = !pressed;
             // Segment 18K PR 4 — visibility-drop confirm guard.
