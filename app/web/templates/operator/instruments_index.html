@@ -3370,9 +3370,17 @@
             }
             // Band 1 form inputs ride the dfsave form via
             // ``form="dfsave-<id>"``. Their input / change events
-            // bubble through the instrument card.
-            instrumentCard.addEventListener('input', markDirty);
-            instrumentCard.addEventListener('change', markDirty);
+            // bubble through the instrument card. 19T Item 3 entry 1 —
+            // except the Delete confirm checkbox: it belongs to the
+            // delete form, Save persists nothing of it, and marking the
+            // card dirty made Delete trip the leave-page prompt.
+            function markDirtyFromField(ev) {
+              var t = ev && ev.target;
+              if (t && t.closest && t.closest('[data-delete-confirm]')) { return; }
+              markDirty();
+            }
+            instrumentCard.addEventListener('input', markDirtyFromField);
+            instrumentCard.addEventListener('change', markDirtyFromField);
             // Band 3 row actions (tick / X / +) compose the row
             // payload the dfsave pipeline persists. They're
             // ``<button type="button">`` so they don't fire
