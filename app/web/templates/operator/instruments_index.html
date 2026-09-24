@@ -1929,7 +1929,7 @@
                     data-display-field-id="{{ field.display_field_id }}"
                     data-width="{{ field.width_px or '' }}"
                     data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
-                    {% if field.locked %}data-locked="true" style="cursor: default;"{% endif %}
+                    {% if field.locked %}data-locked="true"{% endif %}
                     {% if field.reorderable %}
                     draggable="true"
                     ondragstart="newModelBand2DragStart(event)"
@@ -2133,6 +2133,16 @@
                 pill.setAttribute('aria-pressed', 'false');
                 pill.classList.remove('is-selected');
                 pill.classList.remove('pill-count');
+              }
+              // 19T Item 3 entry 2 — a locked pill (Name / Email) is always
+              // selected unless grouped mode disables it (Email: a group
+              // row has no email). Re-select it on the way back to
+              // Individual, since its own click is ignored.
+              if (!disabled && pill.getAttribute('data-locked') === 'true'
+                  && pill.getAttribute('aria-pressed') !== 'true') {
+                pill.setAttribute('aria-pressed', 'true');
+                pill.classList.add('is-selected');
+                pill.classList.add('pill-count');
               }
             });
           }

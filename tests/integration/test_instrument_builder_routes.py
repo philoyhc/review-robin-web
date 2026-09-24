@@ -8490,3 +8490,10 @@ def test_locked_display_pills_cannot_be_unselected(
     assert guard in toggle
     # The guard runs before the pill flips.
     assert toggle.index(guard) < toggle.index("pill.setAttribute('aria-pressed'")
+    # Grouped mode may disable (and unselect) a locked pill — Email has no
+    # group value — so refreshPillStates re-selects it once it's enabled
+    # again, since its own click is ignored.
+    start = body.index("function refreshPillStates(card) {")
+    refresh = body[start : body.index("\n          }\n", start)]
+    assert "if (!disabled && pill.getAttribute('data-locked') === 'true'" in refresh
+    assert "pill.setAttribute('aria-pressed', 'true');" in refresh
