@@ -1916,9 +1916,21 @@
                       margin-top: 16px;">
             {% for field in _band2.fields %}
               {% set _selected = field.key in _band2.selected_display_keys %}
+              {# 19T Item 3 entry 2 — a locked field (Name / Email) is always
+                 shown, so its pill is a static label, not a control: no
+                 ``tag-chip`` (and so no accent edge), no button role, no
+                 tab stop, no click handler. ``data-locked-on`` carries
+                 its selection in place of ``aria-pressed``, which only a
+                 button may carry; grouped mode can switch it off (Email
+                 has no group value). #}
+              {% if field.locked %}
+              <span class="pill pill-count"
+                    data-locked="true" data-locked-on="true"
+              {% else %}
               <span class="pill tag-chip{% if _selected %} pill-count is-selected{% endif %}"
                     role="button" tabindex="0"
                     aria-pressed="{{ 'true' if _selected else 'false' }}"
+              {% endif %}
                     data-new-model-band2-pill
                     data-key="{{ field.key }}"
                     data-label="{{ field.label }}"
@@ -1936,8 +1948,8 @@
                     ondragover="newModelBand2DragOver(event)"
                     ondrop="newModelBand2Drop(event)"
                     {% endif %}
-                    onclick="newModelToggleBand2Pill(this)"
-                    title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Click to include — pinned first ' }}{{ field.label }}">{% if field.reorderable %}<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{% endif %}{{ field.label }}</span>
+                    {% if not field.locked %}onclick="newModelToggleBand2Pill(this)"{% endif %}
+                    title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Always shown — pinned ' ~ field.pinned ~ ': ' }}{{ field.label }}">{% if field.reorderable %}<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{% endif %}{{ field.label }}</span>
             {% endfor %}
             {# Server-render the `||` divider + response pills
                from the persisted band2_state.response_fields list.
@@ -2123,6 +2135,23 @@
             card.querySelectorAll('[data-new-model-band2-pill]').forEach(function (pill) {
               var groupOk = pill.getAttribute('data-selectable-in-group') === 'true';
               var disabled = grouped && !groupOk;
+              // 19T Item 3 entry 2 — a locked pill is a static label: it is
+              // on unless grouped mode rules it out (Email has no group
+              // value), and it carries no control state.
+              if (pill.getAttribute('data-locked') === 'true') {
+                pill.setAttribute('data-locked-on', disabled ? 'false' : 'true');
+                pill.classList.toggle('pill-count', !disabled);
+                pill.style.opacity = disabled ? '0.4' : '';
+                // The server-rendered "Always shown" tooltip is false for
+                // Email on a group row, which has no email.
+                if (!pill.hasAttribute('data-title-on')) {
+                  pill.setAttribute('data-title-on', pill.title);
+                }
+                pill.title = disabled
+                  ? 'Not shown on group rows: ' + pill.getAttribute('data-label')
+                  : pill.getAttribute('data-title-on');
+                return;
+              }
               pill.setAttribute('aria-disabled', disabled ? 'true' : 'false');
               pill.style.opacity = disabled ? '0.4' : '';
               pill.style.cursor = disabled ? 'not-allowed' : 'pointer';
@@ -2135,7 +2164,9 @@
           }
           function selectedPills(card) {
             var sel = [];
-            card.querySelectorAll('[data-new-model-band2-pill][aria-pressed="true"]').forEach(function (p) {
+            card.querySelectorAll(
+              '[data-new-model-band2-pill][aria-pressed="true"], [data-new-model-band2-pill][data-locked-on="true"]'
+            ).forEach(function (p) {
               sel.push({
                 key: p.getAttribute('data-key'),
                 label: p.getAttribute('data-label'),
@@ -2549,7 +2580,9 @@
             }
             var instrumentCard = card.closest('[id^="instrument-"]');
             var selectedDisplayKeys = [];
-            card.querySelectorAll('[data-new-model-band2-pill][aria-pressed="true"]').forEach(function (pill) {
+            card.querySelectorAll(
+              '[data-new-model-band2-pill][aria-pressed="true"], [data-new-model-band2-pill][data-locked-on="true"]'
+            ).forEach(function (pill) {
               if (pill.getAttribute('data-source-type') !== 'response') {
                 selectedDisplayKeys.push(pill.getAttribute('data-key'));
               }
@@ -2997,6 +3030,11 @@
           }
           window.newModelToggleBand2Pill = function (pill) {
             if (pill.getAttribute('aria-disabled') === 'true') { return; }
+            // 19T Item 3 entry 2 — a locked pill (Name / Email) renders
+            // with no click handler; this guard only backstops a stray
+            // call, since the server keeps it visible whatever the
+            // payload says.
+            if (pill.getAttribute('data-locked') === 'true') { return; }
             var pressed = pill.getAttribute('aria-pressed') === 'true';
             var next = !pressed;
             // Segment 18K PR 4 — visibility-drop confirm guard.

@@ -145,11 +145,18 @@ def test_the_chips_the_rule_targets_are_really_on_the_page(
     # The boundary matters: ``data-new-model-band2-pills-divider`` — the
     # ``||`` between the display and response pills — shares the prefix,
     # and without it the divider is counted as a pill that lost its class.
-    band2 = re.findall(
-        r'<span class="([^"]*)"[^>]*data-new-model-band2-pill(?![-\w])',
-        instruments,
-    )
+    # The whole opening tag, so an attribute on either side of the marker
+    # is seen.
+    band2 = [
+        (m.group(1), m.group(0))
+        for m in re.finditer(r'<span class="([^"]*)"[^>]*>', instruments)
+        if re.search(r"data-new-model-band2-pill(?![-\w])", m.group(0))
+    ]
     assert band2, "no Band 2 pill rendered on Instruments"
-    # Every Band 2 pill carries tag-chip, which is why the rule needs no
-    # `[data-new-model-band2-pill]` selector of its own.
-    assert all("tag-chip" in classes for classes in band2)
+    # Every clickable Band 2 pill carries tag-chip, which is why the rule
+    # needs no `[data-new-model-band2-pill]` selector of its own. The
+    # locked Name / Email pills are static labels (19T Item 3 entry 2) and
+    # must not wear the edge; `test_locked_display_pills_cannot_be_unselected`
+    # renders them.
+    for classes, tag in band2:
+        assert ("tag-chip" in classes) is not ('data-locked="true"' in tag), tag

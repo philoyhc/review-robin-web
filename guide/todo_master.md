@@ -3367,7 +3367,8 @@ dep chains called out at the bottom of this file.
      **Closed 2026-09-24.** `?editing` no longer disables it, and Lock
      strips `?editing`.
    - **Item 3 — Small fixes register (open).** Entry 1: the Delete confirm
-     checkbox no longer marks the card dirty.
+     checkbox no longer marks the card dirty. Entry 2: the Name and Email
+     pills can't be unselected.
 
 #### Stubs
 

@@ -8453,3 +8453,74 @@ def test_delete_confirm_checkbox_does_not_mark_the_card_dirty(
     assert "instrumentCard.addEventListener('change', markDirtyFromField);" in body
     assert "instrumentCard.addEventListener('input', markDirty);" not in body
     assert "instrumentCard.addEventListener('change', markDirty);" not in body
+
+
+# --------------------------------------------------------------------------- #
+# 19T Item 3 entry 2 — Name / Email pills can't be unselected
+# --------------------------------------------------------------------------- #
+
+
+def test_locked_display_pills_cannot_be_unselected(
+    client: TestClient, db: Session
+) -> None:
+    """Name and Email are always shown on the reviewer surface (the server
+    refuses to hide them), so their Band 2 pills render as static labels —
+    no ``tag-chip`` edge, no button role, no tab stop, no click handler —
+    and carry their selection in ``data-locked-on``, which both selection
+    readers accept. Other display pills stay toggleable."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-locked-pills"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    card = _card_slice(body, new_model.id)
+    pills = {
+        m.group(1): m.group(0)
+        for m in re.finditer(
+            r'<span class="pill[^>]*?data-new-model-band2-pill(?![-\w])'
+            r'[^>]*?data-key="([^"]+)"[^>]*>',
+            card,
+        )
+    }
+    for key in ("reviewee.name", "reviewee.email_or_identifier"):
+        pill = pills[key]
+        assert pill.startswith('<span class="pill pill-count"'), key
+        assert 'data-locked="true" data-locked-on="true"' in pill, key
+        assert "Always shown" in pill, key
+        for control in ("tag-chip", "role=", "tabindex=", "aria-pressed=", "onclick="):
+            assert control not in pill, (key, control)
+    # Each tooltip names the slot the server pins it to.
+    assert 'title="Always shown — pinned first: Name"' in pills["reviewee.name"]
+    assert (
+        'title="Always shown — pinned second: Email"'
+        in pills["reviewee.email_or_identifier"]
+    )
+    tag_1 = pills["reviewee.tag_1"]
+    assert "data-locked" not in tag_1
+    assert 'role="button"' in tag_1
+    assert 'onclick="newModelToggleBand2Pill(this)"' in tag_1
+    assert 'title="Click to include / drag to reorder ' in tag_1
+    # Both readers of the display selection (selectedPills and the Save
+    # stager) count a locked-on pill; none reads aria-pressed alone.
+    either = (
+        "'[data-new-model-band2-pill][aria-pressed=\"true\"], "
+        "[data-new-model-band2-pill][data-locked-on=\"true\"]'"
+    )
+    assert body.count(either) >= 2
+    assert "'[data-new-model-band2-pill][aria-pressed=\"true\"]'" not in body
+    # Grouped mode switches a locked pill off when it has no group value
+    # (Email), and back on in Individual — its only state change.
+    start = body.index("function refreshPillStates(card) {")
+    refresh = body[start : body.index("\n          }\n", start)]
+    locked = refresh[refresh.index("if (pill.getAttribute('data-locked') === 'true') {"):]
+    assert "pill.setAttribute('data-locked-on', disabled ? 'false' : 'true');" in locked
+    # ...and swaps the "Always shown" tooltip while it is off.
+    assert "? 'Not shown on group rows: ' + pill.getAttribute('data-label')" in locked
+    assert ": pill.getAttribute('data-title-on');" in locked
+    # The original is saved once, before the first overwrite, so a page
+    # that loads grouped still restores "Always shown" in Individual.
+    save = "if (!pill.hasAttribute('data-title-on')) {"
+    assert locked.index(save) < locked.index("pill.title = disabled")
+    # It returns before any control state is written.
+    assert locked.index("return;") < locked.index("pill.setAttribute('aria-disabled'")

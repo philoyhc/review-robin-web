@@ -356,11 +356,68 @@ test, a `diff-reviewer` read on any code, and Doc impact.
   `[data-delete-confirm]`. Chromium: ticking leaves the card clean with
   Delete live; a row edit still dirties it.
 
+### Entry 2 — the Name and Email pills could be unselected
+
+- **Defect** (the author, 2026-09-24). Name and Email are locked display
+  fields, always shown on the reviewer surface: `update_display_field`
+  refuses to hide them, and `_sync_display_field_visibility` skips them.
+  But their Band 2 pills toggled like any other. Unselecting one dropped
+  its preview column and enabled Save, while nothing changed on save or on
+  the reviewer surface, and a reload showed the pill selected again. The
+  pill never had a selection lock; its tooltip already read "pinned
+  first".
+- **Fix.** The view marks locked display fields (`locked`, from
+  `is_locked_display_source`). Their pills carry `data-locked="true"`, a
+  default cursor and an "Always shown — pinned first" tooltip ("pinned
+  second" for Email, at the author's ask), and
+  `newModelToggleBand2Pill` ignores a click on one. Chromium: clicking
+  Name or Email leaves both selected with Save off, while Tag 1 still
+  toggles and its column goes. The author named Name; Email is locked by
+  the same server rule, so it gets the same lock. **The author's ruling
+  (2026-09-24): individually scoped, Name and Email are both always
+  shown; group-scoped, Email is not shown.** The reviewer surface already
+  behaves that way: a group row has no display-field columns, only a tag
+  line plus member names (`_group_collapse.py`), so Email's flag is moot
+  there, and the Band 2 pill drops out in grouped mode. Its tooltip then
+  reads "Not shown on group rows" (the author's ask), restored in
+  Individual.
+- **Its read found a defect in the fix.** Grouped mode disables and
+  unselects the Email pill, since a group row has no email, and nothing
+  re-selected it on the way back to Individual. The lock then blocked the
+  click that used to restore it. `refreshPillStates` now re-selects a
+  locked pill whenever it isn't disabled. Chromium: grouped, then
+  Individual, brings Email back selected. The read's inline-style note is
+  taken too: the pill's inline `style` goes.
+- **Codex's review: a locked pill still presented as a control** — button
+  role, tab stop, `aria-pressed`, the `tag-chip` accent edge — while
+  ignoring every click. It now renders as a static `pill pill-count`, with
+  none of those and no click handler (`spec/ui_elements.md` "Label or
+  control": a static pill carries no edge). `data-locked-on` holds its
+  selection instead of `aria-pressed`. `refreshPillStates` flips it
+  (grouped mode switches Email off), and both selection readers — the
+  preview's `selectedPills` and the Save stager — accept it. That
+  retires the re-select above. Chromium: Name and Email have no role or
+  tab stop and stay in the staged keys; Email drops out in grouped mode
+  and returns in Individual; Tag 1 still toggles. Its own read found no
+  defect; it caught `test_chip_edge.py`'s pill scan reading only the
+  attributes before the marker (it now reads the whole tag) and `spec/ui_elements.md`'s "every Band 2 pill" is
+  `.tag-chip`, now a Doc impact bullet.
+
 ### Blast radius (measured)
 
 Taken 2026-09-24 at `48b21d05`.
 - Entry 1: one listener pair in `instruments_index.html`
   (`grep -n "addEventListener('change', markDirty" …`, 1 hit).
+
+Taken 2026-09-24 at `eb4bdf23`, for entry 2:
+- the display-pill markup and `newModelToggleBand2Pill`, in
+  `instruments_index.html`;
+- the Band 2 field dict in `app/web/views/_instruments.py`;
+- `is_locked_display_source`, 2 locked sources
+  (`grep -n "_LOCKED_DISPLAY_SOURCES" app/services/instruments/_display_fields.py`).
+- The static-label follow-up adds `refreshPillStates` and the two
+  selection readers (`grep -c 'data-locked-on="true"' …instruments_index.html`,
+  2 selectors) and `tests/integration/test_chip_edge.py`.
 
 ### Definition of done
 
@@ -377,7 +434,7 @@ Taken 2026-09-24 at `48b21d05`.
 
 ### Status
 
-**Open** (2026-09-24). Entry 1 is fixed. Its `diff-reviewer` read found
+**Open** (2026-09-24). Entries 1 and 2 are fixed. Entry 1's `diff-reviewer` read found
 no defect: no other listener dirties the card from the checkbox, the
 attribute sits only on checkboxes, Delete still enables, and the test fails
 on the old template.
@@ -385,6 +442,10 @@ on the old template.
 ### Doc impact
 
 - `spec/instruments.md` — Save-when-dirty: the Delete confirm checkbox
-  doesn't count as an edit (Item 3, entry 1).
+  doesn't count as an edit (Item 3, entry 1); the Name and Email pills
+  render as static labels, always selected (Item 3, entry 2).
+- `spec/ui_elements.md` — "Label or control": `.tag-chip` covers every
+  clickable Band 2 pill, not the locked Name / Email labels (Item 3,
+  entry 2).
 - `docs/status.md` — row when the item closes (Item 3).
 

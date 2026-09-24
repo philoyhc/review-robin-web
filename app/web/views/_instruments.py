@@ -470,6 +470,18 @@ def _new_model_band2_state(
                 "reorderable": not instruments_service.is_locked_display_source(
                     f.source_type, f.source_field
                 ),
+                # 19T Item 3 entry 2 — Name / Email are always shown on
+                # the reviewer surface (``update_display_field`` refuses
+                # to hide them), so their pill can't be unselected.
+                "locked": instruments_service.is_locked_display_source(
+                    f.source_type, f.source_field
+                ),
+                # Its tooltip's slot word: Name "first", Email "second".
+                "pinned": _PINNED_WORDS.get(
+                    instruments_service.locked_display_position(
+                        f.source_type, f.source_field
+                    )
+                ),
             }
         )
     identity_width_px = (instrument.column_widths or {}).get("identity")
@@ -586,6 +598,9 @@ def _new_model_band2_state(
         # cascade order (Segment 13B PR 2 contract).
         "sort_spec": sort_spec,
     }
+
+
+_PINNED_WORDS: dict[int | None, str] = {0: "first", 1: "second"}
 
 
 def _is_selectable_in_group(source_type: str, source_field: str) -> bool:
