@@ -8511,5 +8511,9 @@ def test_locked_display_pills_cannot_be_unselected(
     # ...and swaps the "Always shown" tooltip while it is off.
     assert "? 'Not shown on group rows: ' + pill.getAttribute('data-label')" in locked
     assert ": pill.getAttribute('data-title-on');" in locked
+    # The original is saved once, before the first overwrite, so a page
+    # that loads grouped still restores "Always shown" in Individual.
+    save = "if (!pill.hasAttribute('data-title-on')) {"
+    assert locked.index(save) < locked.index("pill.title = disabled")
     # It returns before any control state is written.
     assert locked.index("return;") < locked.index("pill.setAttribute('aria-disabled'")
