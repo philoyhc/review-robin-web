@@ -3022,9 +3022,10 @@
           }
           window.newModelToggleBand2Pill = function (pill) {
             if (pill.getAttribute('aria-disabled') === 'true') { return; }
-            // 19T Item 3 entry 2 — a locked pill (Name / Email) is always
-            // shown: the server keeps it visible whatever the payload
-            // says, so letting it toggle off only made the preview lie.
+            // 19T Item 3 entry 2 — a locked pill (Name / Email) renders
+            // with no click handler; this guard only backstops a stray
+            // call, since the server keeps it visible whatever the
+            // payload says.
             if (pill.getAttribute('data-locked') === 'true') { return; }
             var pressed = pill.getAttribute('aria-pressed') === 'true';
             var next = !pressed;

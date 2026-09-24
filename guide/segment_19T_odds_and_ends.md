@@ -379,8 +379,7 @@ test, a `diff-reviewer` read on any code, and Doc impact.
   click that used to restore it. `refreshPillStates` now re-selects a
   locked pill whenever it isn't disabled. Chromium: grouped, then
   Individual, brings Email back selected. The read's inline-style note is
-  taken too: the pill's `style` goes, since `refreshPillStates` sets the
-  cursor on load.
+  taken too: the pill's inline `style` goes.
 - **Codex's review: a locked pill still presented as a control** — button
   role, tab stop, `aria-pressed`, the `tag-chip` accent edge — while
   ignoring every click. It now renders as a static `pill pill-count`, with
@@ -391,7 +390,10 @@ test, a `diff-reviewer` read on any code, and Doc impact.
   preview's `selectedPills` and the Save stager — accept it. That
   retires the re-select above. Chromium: Name and Email have no role or
   tab stop and stay in the staged keys; Email drops out in grouped mode
-  and returns in Individual; Tag 1 still toggles.
+  and returns in Individual; Tag 1 still toggles. Its own read found no
+  defect; it caught `test_chip_edge.py`'s pill scan reading only the
+  attributes before the marker (it now reads the whole tag) and `spec/ui_elements.md`'s "every Band 2 pill" is
+  `.tag-chip`, now a Doc impact bullet.
 
 ### Blast radius (measured)
 
@@ -405,6 +407,9 @@ Taken 2026-09-24 at `eb4bdf23`, for entry 2:
 - the Band 2 field dict in `app/web/views/_instruments.py`;
 - `is_locked_display_source`, 2 locked sources
   (`grep -n "_LOCKED_DISPLAY_SOURCES" app/services/instruments/_display_fields.py`).
+- The static-label follow-up adds `refreshPillStates` and the two
+  selection readers (`grep -c 'data-locked-on="true"' …instruments_index.html`,
+  2 selectors) and `tests/integration/test_chip_edge.py`.
 
 ### Definition of done
 
@@ -431,5 +436,8 @@ on the old template.
 - `spec/instruments.md` — Save-when-dirty: the Delete confirm checkbox
   doesn't count as an edit (Item 3, entry 1); the Name and Email pills
   render as static labels, always selected (Item 3, entry 2).
+- `spec/ui_elements.md` — "Label or control": `.tag-chip` covers every
+  clickable Band 2 pill, not the locked Name / Email labels (Item 3,
+  entry 2).
 - `docs/status.md` — row when the item closes (Item 3).
 
