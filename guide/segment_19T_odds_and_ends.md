@@ -60,8 +60,10 @@ pill", which is the author's rule. A comparison is the only thing that greys
 
 **Amendment (2026-09-24, the author, after rung 2).** It supersedes point 2's
 single "+" and its last-row rule:
-- **A "+" on every row**, ahead of R, inserts a blank row directly below
-  that row. The single "+" under the list goes.
+- **A "+" on every row** inserts a blank row directly below that row. It
+  heads the row, before the name field, and X is the red `destructive`
+  button, as in Band 1 (the author, after rung 2b). The single "+" under
+  the list goes.
 - **The last row cannot be deleted**: X is inactive while one row is left.
   So a card with no saved fields renders one blank row, or it would have
   no "+" at all.
@@ -206,7 +208,8 @@ pending listener. Rung 2 removes that listener.
 ### Doc impact
 
 - `spec/instruments.md` — Band 3: no starter row except one blank row at
-  zero fields; a "+" per row inserting below; the last row's X inactive; the
+  zero fields; a "+" per row, at its head, inserting below; X in the red
+  `destructive` role and inactive on the last row; the
   ✓ row's two purposes and enable rule; R / ≡ enabling Save; ✓, Save and a
   pill drag following row order; the 2 : 3 split (Item 1).
 - `guide/post_azure_todo_checklist.md` — browser checks for the ✓ enable
@@ -215,4 +218,7 @@ pending listener. Rung 2 removes that listener.
 - `app/web/static/guide/instrument-card-fields-and-visibility.png` — retaken
   with its `-dark` twin on the dev slot: the capture shows the 1 : 1 split
   and the blank row (Item 1).
+- `spec/ui_elements.md` — §6's note puts a field builder's row delete / add
+  on `.btn-icon.danger` / `.action`, but Band 1's X and now Band 3's are
+  `btn destructive`: reconcile the note with the author's ruling (Item 1).
 - `docs/status.md` — row when the item closes (Item 1).
