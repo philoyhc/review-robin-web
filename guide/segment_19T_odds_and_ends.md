@@ -60,8 +60,10 @@ pill", which is the author's rule. A comparison is the only thing that greys
 
 **Amendment (2026-09-24, the author, after rung 2).** It supersedes point 2's
 single "+" and its last-row rule:
-- **A "+" on every row**, ahead of R, inserts a blank row directly below
-  that row. The single "+" under the list goes.
+- **A "+" on every row** inserts a blank row directly below that row. It
+  heads the row, before the name field, and X is the red `destructive`
+  button, as in Band 1 (the author, after rung 2b). The single "+" under
+  the list goes.
 - **The last row cannot be deleted**: X is inactive while one row is left.
   So a card with no saved fields renders one blank row, or it would have
   no "+" at all.

@@ -4102,6 +4102,11 @@
                    style="display: flex; flex-wrap: nowrap; gap: 8px;
                           align-items: center; width: 100%;
                           margin-bottom: 8px;">
+                <button type="button" class="btn secondary"
+                        data-new-model-rf-add
+                        style="flex: 0 0 auto; padding: 4px 10px;"
+                        onclick="newModelRfAddRow(this)"
+                        title="Add a response field below this one">+</button>
                 <input type="text"
                        data-new-model-rf-name
                        placeholder="Response field"
@@ -4156,11 +4161,6 @@
                          {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                          style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type != 'list' %} display: none;{% endif %}">
                 </div>
-                <button type="button" class="btn secondary"
-                        data-new-model-rf-add
-                        style="flex: 0 0 auto; padding: 4px 10px;"
-                        onclick="newModelRfAddRow(this)"
-                        title="Add a response field below this one">+</button>
                 <button type="button"
                         class="btn{% if not rf.required %} secondary{% endif %}"
                         data-new-model-rf-required
@@ -4183,7 +4183,7 @@
                         style="flex: 0 0 auto; padding: 4px 10px;"
                         onclick="newModelRfSaveRow(this)"
                         title="Add this field's pill and preview column">✓</button>
-                <button type="button" class="btn secondary"
+                <button type="button" class="btn destructive"
                         data-new-model-rf-delete
                         {% if rf.has_responses %}disabled aria-disabled="true"{% endif %}
                         style="flex: 0 0 auto; padding: 4px 10px;"
@@ -4203,6 +4203,11 @@
                  style="display: flex; flex-wrap: nowrap; gap: 8px;
                         align-items: center; width: 100%;
                         margin-bottom: 8px;">
+              <button type="button" class="btn secondary"
+                      data-new-model-rf-add
+                      style="flex: 0 0 auto; padding: 4px 10px;"
+                      onclick="newModelRfAddRow(this)"
+                      title="Add a response field below this one">+</button>
               <input type="text"
                      data-new-model-rf-name
                      placeholder="Response field"
@@ -4247,11 +4252,6 @@
                        oninput="newModelRfFieldChanged(this)"
                        style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
               </div>
-              <button type="button" class="btn secondary"
-                      data-new-model-rf-add
-                      style="flex: 0 0 auto; padding: 4px 10px;"
-                      onclick="newModelRfAddRow(this)"
-                      title="Add a response field below this one">+</button>
               <button type="button"
                       class="btn secondary"
                       data-new-model-rf-required
@@ -4274,7 +4274,7 @@
                       style="flex: 0 0 auto; padding: 4px 10px;"
                       onclick="newModelRfSaveRow(this)"
                       title="Add this field's pill and preview column">✓</button>
-              <button type="button" class="btn secondary"
+              <button type="button" class="btn destructive"
                       data-new-model-rf-delete
                       style="flex: 0 0 auto; padding: 4px 10px;"
                       onclick="newModelRfDeleteRow(this)"

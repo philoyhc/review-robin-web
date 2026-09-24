@@ -8239,8 +8239,8 @@ def test_row_marker_follows_the_pill_comparison_not_validity(
 def test_every_band3_row_has_a_plus_ahead_of_its_other_buttons(
     client: TestClient, db: Session
 ) -> None:
-    """Each row, and the template row, carries its own "+" before R;
-    the single "+" under the list is gone."""
+    """Each row, and the template row, carries its own "+" at its head;
+    the single "+" under the list is gone; X is destructive (red)."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-row-plus"
     )
@@ -8254,9 +8254,13 @@ def test_every_band3_row_has_a_plus_ahead_of_its_other_buttons(
     assert rows.count(plus) == 2
     assert template.count(plus) == 1
     for chunk in rows.split("<div data-new-model-rf-row")[1:] + [template]:
+        # "+" heads the row, ahead of the name input; X is the red
+        # destructive button, as Band 1's rule / unit X.
         assert chunk.index("data-new-model-rf-add") < chunk.index(
-            "data-new-model-rf-required"
+            "data-new-model-rf-name"
         )
+        x_start = chunk.index("data-new-model-rf-delete")
+        assert 'class="btn destructive"' in chunk[chunk.rindex("<button", 0, x_start) : x_start]
     assert "Add another response field row" not in body
     insert = _rf_fn(body, "newModelRfInsertRow")
     assert "after.insertAdjacentElement('afterend', clone);" in insert
