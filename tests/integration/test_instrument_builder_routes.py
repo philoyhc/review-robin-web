@@ -8368,38 +8368,46 @@ def test_open_card_no_longer_disables_the_action_rows(
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-editing-live"
     )
-    new_model.starts_new_page = True
-    db.commit()
-    body = client.get(
+    url = (
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
-    ).text
+    )
+    body = client.get(url).text
     assert "Save or cancel the open instrument edit first." not in body
     assert "Save or cancel this instrument's edits first." not in body
     instrument_ids = [
         i.id for i in db.execute(
-            select(Instrument).where(Instrument.session_id == review_session.id)
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
         ).scalars()
     ]
     assert len(instrument_ids) == 2
+
+    def tag_before(html: str, label: str) -> str:
+        end = html.index(label)
+        return html[html.rindex("<button", 0, end) : end]
+
     for iid in instrument_ids:
         card = _card_slice(body, iid)
         for label in (">Replicate</button>", ">+Instrument</button>"):
-            end = card.index(label)
-            tag = card[card.rindex("<button", 0, end) : end]
-            assert " disabled" not in tag, (iid, label)
+            assert " disabled" not in tag_before(card, label), (iid, label)
         # Delete waits only on its confirm checkbox: the live submit
         # button (``data-delete-btn``) renders, not the dead one.
         assert f'data-delete-btn="{iid}"' in card, iid
-    start = body.index(f'data-instrument-page-break-delete="{new_model.id}"')
+    # +Page break on the first card: no break follows it yet, so only the
+    # open card could have disabled it. (The last card's stays off: a
+    # break can't trail the last instrument.)
+    first = _card_slice(body, instrument_ids[0])
+    assert " disabled" not in tag_before(first, ">+Page break</button>")
+
+    # With a break before the second card, its × stays live too.
+    second = db.get(Instrument, instrument_ids[1])
+    second.starts_new_page = True
+    db.commit()
+    body = client.get(url).text
+    start = body.index(f'data-instrument-page-break-delete="{instrument_ids[1]}"')
     x_tag = body[start : body.index(">", start)]
     assert "disabled" not in x_tag
-    # +Page break stays off only for its placement rules: it is live on the
-    # first card, and off on the last (a break can't trail it).
-    first = _card_slice(body, instrument_ids[0] if instrument_ids[0] != new_model.id
-                        else instrument_ids[1])
-    end = first.index(">+Page break</button>")
-    pb_tag = first[first.rindex("<button", 0, end) : end]
-    assert "Save or cancel" not in pb_tag
 
 
 def test_lock_strips_the_editing_param(

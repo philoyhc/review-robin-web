@@ -263,8 +263,9 @@ on clean cards too.
 
 ### Semantics
 
-- A dirty card and a form post: the `beforeunload` confirm fires. Cancel
-  and Save set the intentional-nav flag, as before.
+- A dirty card and a form post: the `beforeunload` confirm fires. Only the
+  discard reload (Cancel, a dirty Lock) sets the intentional-nav flag. Save
+  is a fetch and never leaves the page.
 - The page-wide "one unlocked card" rule (Unlock on a second card) is
   untouched.
 
@@ -276,7 +277,10 @@ Taken 2026-09-24 at `cdbc6c96`.
   its title, and the page-break ×
   (`grep -rn is_some_instrument_editing app/`).
 - `spec/instruments.md`: the Replicate / +Instrument disable lists
-  (`grep -n "being edited" spec/instruments.md`).
+  (`grep -n "being edited" spec/instruments.md`);
+  `spec/operator_button_audit.md` rows 54–55, "edit lock"
+  (`grep -n "edit lock\|edit-lock" spec/operator_button_audit.md`). The
+  second was missed at logging and found by the item's read.
 - No test pins the rule (`grep -rn "open instrument edit" tests/`).
 
 ### PR ladder
@@ -303,16 +307,32 @@ Taken 2026-09-24 at `cdbc6c96`.
 
 - None.
 
+### Status
+
+**2026-09-24.** The fix and the log landed together (#2603). One
+`diff-reviewer` read found no defect in the change. It found three gaps,
+all fixed in #2603:
+- the test's +Page break check passed without the fix, and now pins it;
+- `spec/operator_button_audit.md` was missing from Doc impact;
+- the nav-guard comment and Semantics wrongly said Save sets the
+  intentional-nav flag.
+
 ### Out of scope
 
 - The legacy no-JS routes that redirect to `?editing`. They now only keep a
   card open.
+- Ticking a card's Delete confirm checkbox marks the card dirty, because the
+  tracker listens for `change` card-wide. So Delete on a clean card still
+  gets the leave-page prompt. This predates the item; the read flagged it
+  (2026-09-24).
 
 ### Doc impact
 
 - `spec/instruments.md` — Replicate / +Instrument / Delete and the page-break
   × lose the "another instrument is being edited" condition; Lock strips
   `?editing` (Item 2).
+- `spec/operator_button_audit.md` — the Replicate and Delete rows lose their
+  "edit lock" gating (Item 2).
 - `guide/post_azure_todo_checklist.md` — browser check: Cancel, then Lock,
   leaves the action row live (Item 2).
 - `docs/status.md` — row when the item closes (Item 2).

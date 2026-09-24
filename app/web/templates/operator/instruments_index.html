@@ -3784,9 +3784,9 @@
           }
           // Segment 18R Item 2 PR 2 — nav-away guard. Warn before
           // leaving the page while any card carries unsaved (un-Saved)
-          // edits. Wired once. Save (form submit) and Cancel (reload)
-          // set window._newModelIntentionalNav so their deliberate
-          // navigation doesn't self-trigger the warning.
+          // edits. Wired once. The discard reload (Cancel, and Lock on a
+          // dirty card) sets window._newModelIntentionalNav so it doesn't
+          // self-trigger the warning; Save is a fetch and never leaves.
           function _newModelWireNavGuard() {
             if (window._newModelNavGuardWired) { return; }
             window._newModelNavGuardWired = true;
