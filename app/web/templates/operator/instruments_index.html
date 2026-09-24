@@ -674,8 +674,8 @@
                   class="page-break-card-delete"
                   data-instrument-page-break-delete="{{ instrument.id }}"
                   aria-label="Remove page break"
-                  {% if not can_edit or is_some_instrument_editing %}disabled
-                    title="{% if not can_edit %}{{ lock_action }} to remove page breaks.{% else %}Save or cancel the open instrument edit first.{% endif %}"
+                  {% if not can_edit %}disabled
+                    title="{{ lock_action }} to remove page breaks."
                   {% endif %}>&times;</button>
         </form>
       </div>
@@ -3525,6 +3525,17 @@
             // consistent with how the other controls keep their edited
             // state while locked.
             if (locked) { window.newModelSyncTextViews(card); }
+            // 19T Item 2 — an in-page Lock drops ``?editing=<this card>``
+            // from the URL, so a reload lands locked rather than back in
+            // the server's edit mode.
+            if (locked && window.history && window.history.replaceState) {
+              var lockUrl = new URL(window.location.href);
+              if (lockUrl.searchParams.get('editing')
+                  === card.getAttribute('data-instrument-card')) {
+                lockUrl.searchParams.delete('editing');
+                window.history.replaceState(window.history.state, '', lockUrl.href);
+              }
+            }
           };
           // Segment 18R Item 2 PR 4 — copy the short-label + description
           // input values into their read-only view elements (shown when
@@ -4866,13 +4877,13 @@
       <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-default);">
 
       {# Section E — action row + delete-confirm checkbox. #}
-      {% set add_delete_disabled = not can_edit or is_some_instrument_editing %}
+      {# 19T Item 2 — an open card (``?editing``) no longer disables
+         the action row: the nav-away guard already warns before these
+         form posts discard unsaved edits, and nothing on the page
+         cleared ``?editing`` (Save is a fetch, Cancel reloads into it). #}
+      {% set add_delete_disabled = not can_edit %}
       {% if not can_edit %}
         {% set add_delete_disabled_title = lock_action ~ " to add or delete instruments." %}
-      {% elif is_some_instrument_editing and not is_editing %}
-        {% set add_delete_disabled_title = "Save or cancel the open instrument edit first." %}
-      {% elif is_editing %}
-        {% set add_delete_disabled_title = "Save or cancel this instrument's edits first." %}
       {% else %}
         {% set add_delete_disabled_title = "" %}
       {% endif %}

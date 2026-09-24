@@ -222,3 +222,97 @@ pending listener. Rung 2 removes that listener.
   on `.btn-icon.danger` / `.action`, but Band 1's X and now Band 3's are
   `btn destructive`: reconcile the note with the author's ruling (Item 1).
 - `docs/status.md` — row when the item closes (Item 1).
+
+---
+
+## Item 2 — Instruments: `?editing` no longer locks the action rows
+
+**Logged 2026-09-24 on the author's report.**
+
+### Opportunity
+
+With `?editing=<id>` in the URL, every card's Replicate, Delete,
++Instrument and +Page break, and the page-break ×, render disabled. The
+tooltips say "Save or cancel … first", but neither gets the page out of
+that state:
+- Save is a fetch, with no reload;
+- Cancel's discard reload re-adds `?editing` to keep the card unlocked;
+- the in-page Lock leaves the URL alone.
+
+The rule comes from 10D Slice 5 (`11c5a730`, 2026-05-02), when edit mode
+was only the server's `?editing` and a form post silently lost unsaved
+edits. It also held a mutual lock against the Response Type Definitions
+row editor, which has since retired. 18R Item 2 then added the client lock
+layer and the nav-away guard, but kept the rule. An in-page Unlock
+never sets `?editing`, so the same unlocked card disables nothing that
+way. `spec/instruments.md` states the rule for Replicate and +Instrument
+("another instrument is being edited").
+
+### Decision
+
+**An open card no longer disables anything.** The disable conditions keep
+only their other reasons: a session that can't be edited, the only
+instrument, and the page-break placement rules. The nav-away guard
+(`beforeunload` on a dirty card, 18R Item 2 PR 2) already warns before
+these form posts discard unsaved edits. **Lock strips `?editing`** from
+the URL with `history.replaceState`, so a reload lands locked.
+
+**Rejected: disabling the four in-page while any card is unlocked.** That
+keeps a rule the leave-page guard already covers, and it disables work
+on clean cards too.
+
+### Semantics
+
+- A dirty card and a form post: the `beforeunload` confirm fires. Cancel
+  and Save set the intentional-nav flag, as before.
+- The page-wide "one unlocked card" rule (Unlock on a second card) is
+  untouched.
+
+### Blast radius (measured)
+
+Taken 2026-09-24 at `cdbc6c96`.
+- `is_some_instrument_editing`: 1 view key (`app/web/views/_instruments.py`)
+  and 3 template uses in `instruments_index.html`: the action-row disable,
+  its title, and the page-break ×
+  (`grep -rn is_some_instrument_editing app/`).
+- `spec/instruments.md`: the Replicate / +Instrument disable lists
+  (`grep -n "being edited" spec/instruments.md`).
+- No test pins the rule (`grep -rn "open instrument edit" tests/`).
+
+### PR ladder
+
+1. **The fix.** Drop the editing condition and the view key; Lock strips
+   `?editing`. Tests pin the enabled buttons under `?editing` and the
+   strip. It takes a `diff-reviewer` read.
+2. **Close**, together with Item 1's.
+
+### Definition of done
+
+- Under `?editing=<id>`, Replicate, Delete, +Instrument, +Page break and
+  the page-break × render enabled, unless one of their other reasons
+  applies.
+- Lock leaves the URL without `?editing`.
+- `spec/instruments.md` drops "another instrument is being edited".
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.2` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- The legacy no-JS routes that redirect to `?editing`. They now only keep a
+  card open.
+
+### Doc impact
+
+- `spec/instruments.md` — Replicate / +Instrument / Delete and the page-break
+  × lose the "another instrument is being edited" condition; Lock strips
+  `?editing` (Item 2).
+- `guide/post_azure_todo_checklist.md` — browser check: Cancel, then Lock,
+  leaves the action row live (Item 2).
+- `docs/status.md` — row when the item closes (Item 2).
