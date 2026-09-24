@@ -58,6 +58,21 @@ The flag answers "was this row touched", not "does this row differ from its
 pill", which is the author's rule. A comparison is the only thing that greys
 ✓ again when an edit is typed back.
 
+**Amendment (2026-09-24, the author, after rung 2).** It supersedes point 2's
+single "+" and its last-row rule:
+- **A "+" on every row**, ahead of R, inserts a blank row directly below
+  that row. The single "+" under the list goes.
+- **The last row cannot be deleted**: X is inactive while one row is left.
+  So a card with no saved fields renders one blank row, or it would have
+  no "+" at all.
+- **Order follows the rows.** ✓ on a row inserted between A and B puts
+  its pill between theirs (A, C, B), and Save persists the rows in row
+  order. Today Save writes pill order and appends un-ticked rows last,
+  and dragging a response pill leaves its row where it was. So a
+  response-pill drag now also moves its row. The author accepts rows that
+  catch up only on reload; the move is here because Save now reads row
+  order, so without it Save would undo a drag.
+
 ### Semantics
 
 - **"Differs"** compares the row's current values with what its pill and
@@ -79,8 +94,8 @@ pill", which is the author's rule. A comparison is the only thing that greys
 
 - ✓ keeps staging into `band2_state_snapshot` and marking the card dirty.
   That is not persisting, and Save still owns the write (2026-09-24).
-- Deleting the last row removes it outright; "+" is the one way to get a
-  blank row (2026-09-24).
+- ~~Deleting the last row removes it outright.~~ Superseded by the
+  amendment: the last row stays (2026-09-24).
 
 ### Blast radius (measured)
 
@@ -148,13 +163,20 @@ pending listener. Rung 2 removes that listener.
    Tests pin the enable rule's markup; Chromium drives the behavior. This
    is the item's last build rung, so `diff-reviewer` reads the cumulative
    diff from `b705245d`.
+2b. **The amendment** (added 2026-09-24). Per-row "+", the last row kept,
+   row-ordered ✓ and Save, and a pill drag that moves its row. It reopens
+   `app/`, so it takes its own `diff-reviewer` read on its diff.
 3. **Close.** `spec/instruments.md`, the browser checks, a `docs/status.md`
    row and `spec-writer`.
 
 ### Definition of done
 
-- No trailing blank row renders; "+" adds one from zero rows; Cancel's
-  reload removes it.
+- ~~No trailing blank row renders; "+" adds one from zero rows.~~ Only
+  saved rows render, or one blank row when there are none. Each row's "+"
+  inserts below it, and Cancel's reload removes an unsaved row.
+- X is inactive on the only row left.
+- ✓ places a new pill in row order; Save persists row order; a response-pill
+  drag moves its row.
 - ✓ is enabled only for a named, valid row with no pill or with
   preview-bearing values that differ from its pill; R and ≡ never enable it.
 - Band 3 renders `grid-template-columns: 2fr 3fr`.

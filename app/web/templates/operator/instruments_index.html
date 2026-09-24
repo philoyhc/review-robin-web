@@ -2599,25 +2599,20 @@
               return rf;
             }
             var responseFields = [];
-            var seenRowKeys = {};
-            // ✓'d fields — from the preview chips, matched to their rows.
-            card.querySelectorAll('[data-new-model-band2-pill][data-source-type="response"]').forEach(function (pill) {
-              var rowKey = pill.getAttribute('data-row-key');
-              if (!rowKey || !instrumentCard) { return; }
-              var row = instrumentCard.querySelector('[data-new-model-rf-row][data-row-key="' + rowKey + '"]');
-              if (!row) { return; }
-              var rf = serializeRow(row, pill);
-              if (rf) { responseFields.push(rf); seenRowKeys[rowKey] = true; }
-            });
-            // Segment 18R Item 2 PR 5b — lost-edit fix: also capture
-            // named response-field rows typed but never ✓'d (no paired
-            // chip). They persist as unselected fields on Save instead
-            // of being silently dropped.
+            // 19T Item 1 — one pass in Band 3 row order, which is the
+            // field order Save persists: a row "+" inserted between A
+            // and B saves as A, C, B. Each row carries its paired pill
+            // (selection, width, help text) when it has one; a named
+            // row never ✓'d persists as an unselected field (Segment
+            // 18R Item 2 PR 5b's lost-edit fix). A response-pill drag
+            // moves its row too, so the two orders agree.
             if (instrumentCard) {
               instrumentCard.querySelectorAll('[data-new-model-rf-row]').forEach(function (row) {
                 var rowKey = row.getAttribute('data-row-key');
-                if (rowKey && seenRowKeys[rowKey]) { return; }
-                var rf = serializeRow(row, null);
+                var pill = rowKey
+                  ? card.querySelector('[data-new-model-band2-pill][data-row-key="' + rowKey + '"]')
+                  : null;
+                var rf = serializeRow(row, pill);
                 if (rf) { responseFields.push(rf); }
               });
             }
@@ -3265,6 +3260,20 @@
               if (pillRegion(dragSource) === 'display') {
                 saveBand2DisplayFieldOrder(band2Card);
               } else {
+                // 19T Item 1 — Save persists Band 3 row order, so move
+                // the dragged field's row before the target's row too.
+                var dragCard = band2Card.closest('[id^="instrument-"]');
+                var dragRow = dragCard && dragCard.querySelector(
+                  '[data-new-model-rf-row][data-row-key="'
+                  + dragSource.getAttribute('data-row-key') + '"]'
+                );
+                var targetRow = dragCard && dragCard.querySelector(
+                  '[data-new-model-rf-row][data-row-key="'
+                  + target.getAttribute('data-row-key') + '"]'
+                );
+                if (dragRow && targetRow && dragRow !== targetRow) {
+                  targetRow.parentNode.insertBefore(dragRow, targetRow);
+                }
                 saveBand2State(band2Card);
               }
               rebuildPreview(band2Card);
@@ -4066,8 +4075,8 @@
              saves the row's values into a paired pill on Band 2
              (creating the pill on first save, updating its label
              on subsequent saves); the X button drops the row and
-             its pill. The `+` button below the rows spawns a new
-             empty row. Pure UX — nothing persists across reload. #}
+             its pill (never the last row). Each row's `+` inserts a
+             blank row below it. Save persists the rows in row order. #}
           {# Render one row per persisted response field and nothing
              more: a blank row appears only on "+". Each row's
              data-row-key matches the paired pill's data-row-key
@@ -4147,6 +4156,11 @@
                          {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                          style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type != 'list' %} display: none;{% endif %}">
                 </div>
+                <button type="button" class="btn secondary"
+                        data-new-model-rf-add
+                        style="flex: 0 0 auto; padding: 4px 10px;"
+                        onclick="newModelRfAddRow(this)"
+                        title="Add a response field below this one">+</button>
                 <button type="button"
                         class="btn{% if not rf.required %} secondary{% endif %}"
                         data-new-model-rf-required
@@ -4178,11 +4192,12 @@
               </div>
             {% endfor %}
           </div>
-          {# 19T Item 1 — no standing blank row. "+" clones this
-             template's row and gives it a fresh data-row-key from the
-             rows container's counter; Cancel's discard reload removes
-             an unsaved one. Its markup sits outside the document, so
-             the row selectors above never match it. #}
+          {# 19T Item 1 — no standing blank row. A row's "+" clones
+             this template's row below it with a fresh data-row-key from
+             the rows container's counter; a card with no saved fields
+             gets one clone at load, so there is always a "+" to press.
+             Cancel's discard reload removes an unsaved row. Its markup
+             sits outside the document, so row selectors never match it. #}
           <template data-new-model-rf-row-template>
             <div data-new-model-rf-row
                  style="display: flex; flex-wrap: nowrap; gap: 8px;
@@ -4232,6 +4247,11 @@
                        oninput="newModelRfFieldChanged(this)"
                        style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
               </div>
+              <button type="button" class="btn secondary"
+                      data-new-model-rf-add
+                      style="flex: 0 0 auto; padding: 4px 10px;"
+                      onclick="newModelRfAddRow(this)"
+                      title="Add a response field below this one">+</button>
               <button type="button"
                       class="btn secondary"
                       data-new-model-rf-required
@@ -4261,14 +4281,6 @@
                       title="Delete this row (and its paired pill, if saved)">X</button>
             </div>
           </template>
-          <div style="display: flex; justify-content: flex-end;
-                      margin-top: 4px;">
-            <button type="button" class="btn secondary"
-                    data-new-model-rf-add
-                    style="padding: 4px 10px;"
-                    onclick="newModelRfAddRow(this)"
-                    title="Add another response field row">+</button>
-          </div>
         </div>
       </div>
       <script>
@@ -4584,16 +4596,25 @@
               row.removeAttribute('data-row-pending');
             }
           }
-          // 19T Item 1 — X stays live on a blank row: with no
-          // standing blank row, a row "+" added is removed by X.
+          // 19T Item 1 — X is live on any row, blank ones included,
+          // except the only row left: the last row stays.
           if (deleteBtn && !hasResponses) {
-            deleteBtn.removeAttribute('disabled');
-            deleteBtn.removeAttribute('aria-disabled');
-            deleteBtn.setAttribute(
-              'title',
-              name ? 'Delete this row (and its paired pill, if saved)'
-                   : 'Remove this empty row'
-            );
+            var siblings = row.parentElement
+              ? row.parentElement.querySelectorAll('[data-new-model-rf-row]').length
+              : 1;
+            if (siblings <= 1) {
+              deleteBtn.setAttribute('disabled', '');
+              deleteBtn.setAttribute('aria-disabled', 'true');
+              deleteBtn.setAttribute('title', 'The last response field row stays.');
+            } else {
+              deleteBtn.removeAttribute('disabled');
+              deleteBtn.removeAttribute('aria-disabled');
+              deleteBtn.setAttribute(
+                'title',
+                name ? 'Delete this row (and its paired pill, if saved)'
+                     : 'Remove this empty row'
+              );
+            }
           }
         };
         // ``oninput`` on every editable name / bound input — fires
@@ -4613,32 +4634,50 @@
           window.newModelRfRecomputeActionStates(row);
         });
         // ---- Add response field rows (Band 3) ----------------
-        // The "+" below the rows clones the row inside the Band 3
-        // ``<template>`` (19T Item 1), so it works from zero rows,
-        // gives it a fresh data-row-key, and appends.
-        window.newModelRfAddRow = window.newModelRfAddRow || function (btn) {
-          var band3 = btn.closest('[data-new-model-band3]');
+        // 19T Item 1 — every row carries a "+" that inserts a blank
+        // row directly below it, cloned from the Band 3 ``<template>``
+        // with a fresh data-row-key. ``after`` null appends (the
+        // blank row a card with no saved fields gets at load).
+        window.newModelRfInsertRow = window.newModelRfInsertRow || function (band3, after) {
           var rows = band3 ? band3.querySelector('[data-new-model-rf-rows]') : null;
           var tpl = band3 ? band3.querySelector('[data-new-model-rf-row-template]') : null;
-          if (!rows || !tpl) { return; }
+          if (!rows || !tpl) { return null; }
           var first = tpl.content.querySelector('[data-new-model-rf-row]');
-          if (!first) { return; }
+          if (!first) { return null; }
           var counter = parseInt(rows.getAttribute('data-new-model-rf-row-counter') || '1', 10) + 1;
           rows.setAttribute('data-new-model-rf-row-counter', counter);
           var clone = first.cloneNode(true);
           clone.setAttribute('data-row-key', 'rf_' + counter);
-          rows.appendChild(clone);
+          if (after && after.parentElement === rows) {
+            after.insertAdjacentElement('afterend', clone);
+          } else {
+            rows.appendChild(clone);
+          }
           // Re-sync bound visibility on the new row's select
           // (its default is "string" → Min + Max).
           var sel = clone.querySelector('[data-new-model-rf-data-type]');
           if (sel) { window.newModelRfSyncBounds(sel); }
-          // Re-evaluate action-button enabled state on the clone —
-          // a freshly-added empty row has ✓, R and ≡ disabled until
-          // the operator types a name.
-          window.newModelRfRecomputeActionStates(clone);
-          var nameInput = clone.querySelector('[data-new-model-rf-name]');
+          // Every row's X depends on the row count, so recompute all.
+          rows.querySelectorAll('[data-new-model-rf-row]').forEach(function (r) {
+            window.newModelRfRecomputeActionStates(r);
+          });
+          return clone;
+        };
+        window.newModelRfAddRow = window.newModelRfAddRow || function (btn) {
+          var row = btn.closest('[data-new-model-rf-row]');
+          var clone = window.newModelRfInsertRow(
+            btn.closest('[data-new-model-band3]'), row
+          );
+          var nameInput = clone && clone.querySelector('[data-new-model-rf-name]');
           if (nameInput) { nameInput.focus(); }
         };
+        // A card with no saved fields gets one blank row, so there is
+        // a "+" to press and a row X can never remove.
+        document.querySelectorAll('[data-new-model-band3]').forEach(function (band3) {
+          if (!band3.querySelector('[data-new-model-rf-rows] [data-new-model-rf-row]')) {
+            window.newModelRfInsertRow(band3, null);
+          }
+        });
         // 19T Item 1 — copy a row's name, type and bounds onto its
         // pill, which is what the preview and ✓'s comparison read.
         // ✓ calls it for one row; a successful Save calls it for
@@ -4732,7 +4771,23 @@
             pill.setAttribute('title', 'Click to include / drag to reorder ' + fieldName);
             pill.innerHTML = '<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>' + fieldName
               .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            pillsRow.appendChild(pill);
+            // 19T Item 1 — the pill goes in row order: before the pill
+            // of the nearest row below that has one, else last. So ✓
+            // on C, inserted between A and B, gives pills A, C, B.
+            var beforePill = null;
+            for (var nxt = row.nextElementSibling; nxt && !beforePill; nxt = nxt.nextElementSibling) {
+              var nxtKey = nxt.getAttribute('data-row-key');
+              if (nxtKey) {
+                beforePill = pillsRow.querySelector(
+                  '[data-new-model-band2-pill][data-row-key="' + nxtKey + '"]'
+                );
+              }
+            }
+            if (beforePill) {
+              pillsRow.insertBefore(pill, beforePill);
+            } else {
+              pillsRow.appendChild(pill);
+            }
           }
           window.newModelRfSyncPill(row, pill);
           // Rebuild the preview so the new label, type and bounds
@@ -4752,6 +4807,12 @@
         window.newModelRfDeleteRow = window.newModelRfDeleteRow || function (btn) {
           var row = btn.closest('[data-new-model-rf-row]');
           if (!row) { return; }
+          var rows = row.parentElement;
+          // The last row stays (19T Item 1): X is disabled on it, and
+          // this guard covers a stale click.
+          if (rows && rows.querySelectorAll('[data-new-model-rf-row]').length <= 1) {
+            return;
+          }
           var rowKey = row.getAttribute('data-row-key');
           var instrumentCard = btn.closest('[id^="instrument-"]');
           // Remove the row before staging: the stager also captures
@@ -4775,6 +4836,11 @@
               window.newModelUpdateIntroProgress(band2);
             }
             window.newModelStageBand2State(band2);
+          }
+          if (rows) {
+            rows.querySelectorAll('[data-new-model-rf-row]').forEach(function (r) {
+              window.newModelRfRecomputeActionStates(r);
+            });
           }
         };
         window.newModelToggleAudience = window.newModelToggleAudience || function (btn) {
