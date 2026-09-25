@@ -71,7 +71,7 @@ def test_every_file_has_a_header_and_at_least_one_row(template_set) -> None:
     for template in templates_in(template_set):
         rows = template_rows(template_set, template)
 
-        assert rows[0] == template_header(template)
+        assert rows[0] == template_header(template, template_set.labels)
         assert len(rows) > 1
         assert all(len(r) == len(template.header) for r in rows[1:])
 
@@ -85,12 +85,14 @@ def test_every_labelled_header_cell_splits_back(template_set) -> None:
     back unsplit, so this assertion is what would catch it."""
     for template in templates_in(template_set):
         for cell, column in zip(
-            template_header(template), template.header, strict=True
+            template_header(template, template_set.labels),
+            template.header,
+            strict=True,
         ):
             split_column, label = field_label_csv.split_header(cell)
 
             assert split_column == column, cell
-            assert label == LABELS.get(column), cell
+            assert label == template_set.labels.get(column), cell
 
 
 @ALL_SETS
@@ -117,7 +119,7 @@ def test_the_relationship_rows_reference_the_roster_rows(template_set) -> None:
         r["RevieweeEmail"] for r in template_set.rows["reviewees"]
     }
 
-    for pair in template_set.rows["relationships"]:
+    for pair in template_set.rows.get("relationships", ()):
         assert pair["ReviewerEmail"] in reviewer_emails, pair
         assert pair["RevieweeEmail"] in reviewee_emails, pair
 
@@ -132,7 +134,7 @@ def test_observer_tags_carry_no_suffix() -> None:
     assert "ObserverTag1" not in LABELS
     assert "ObserverTag1" in template_header(observers)
     for template_set in SETS:
-        for row in template_set.rows["observers"]:
+        for row in template_set.rows.get("observers", ()):
             assert row["ObserverTag1"] == "Tutor"
 
 
@@ -173,7 +175,7 @@ def test_the_zip_holds_every_file_and_parses_as_csv(template_set) -> None:
         text = archive.read(template.filename).decode("utf-8")
         parsed = list(csv.reader(io.StringIO(text)))
 
-        assert parsed[0] == list(template_header(template))
+        assert parsed[0] == list(template_header(template, template_set.labels))
         assert len(parsed) == len(template_set.rows[template.key]) + 1
 
 
@@ -206,3 +208,59 @@ def test_no_demo_pair_is_a_self_review() -> None:
 
     for pair in demo.rows["relationships"]:
         assert pair["ReviewerEmail"] != pair["RevieweeEmail"], pair
+
+
+# --------------------------------------------------------------------------- #
+# The full-size set — 19T Item 4
+# --------------------------------------------------------------------------- #
+
+
+def test_the_full_set_is_154_people_seen_twice() -> None:
+    """Symmetric at a realistic class size: the same 154 addresses as
+    reviewers and reviewees, the stand-in operator among them, and no
+    relationships or observers file."""
+    full = set_by_key("full")
+    reviewers = [r["ReviewerEmail"] for r in full.rows["reviewers"]]
+    reviewees = [r["RevieweeEmail"] for r in full.rows["reviewees"]]
+
+    assert len(reviewers) == len(set(reviewers)) == 154
+    assert reviewers == reviewees
+    assert "operator@example.edu" in reviewers
+    assert set(full.rows) == {"reviewers", "reviewees"}
+    names = [r["ReviewerName"] for r in full.rows["reviewers"]]
+    assert names == [r["RevieweeName"] for r in full.rows["reviewees"]]
+
+
+def test_the_full_set_tags_are_tutor_group_and_team() -> None:
+    """Eleven groups of fourteen, three teams each numbered across the
+    class, a tutor per group — and all three tag columns labelled."""
+    full = set_by_key("full")
+    rows = full.rows["reviewees"]
+    groups = {r["RevieweeTag2"] for r in rows}
+    teams = {r["RevieweeTag3"] for r in rows}
+
+    assert groups == {f"TW{n:02d}" for n in range(1, 12)}
+    assert teams == {f"Team {n}" for n in range(1, 34)}
+    for group in groups:
+        members = [r for r in rows if r["RevieweeTag2"] == group]
+        assert len(members) == 14, group
+        assert len({r["RevieweeTag1"] for r in members}) == 1, group
+    # A team never straddles two groups.
+    for team in teams:
+        assert len({r["RevieweeTag2"] for r in rows if r["RevieweeTag3"] == team}) == 1
+    reviewees = next(t for t in TEMPLATES if t.key == "reviewees")
+    assert template_header(reviewees, full.labels)[2:5] == (
+        "RevieweeTag1.Tutor",
+        "RevieweeTag2.Group",
+        "RevieweeTag3.Team",
+    )
+
+
+def test_only_the_full_reviewees_carry_photo_links() -> None:
+    full = set_by_key("full")
+
+    assert all(r["PhotoLink"] == "" for r in full.rows["reviewers"])
+    assert all(
+        r["PhotoLink"].startswith(f"https://{EXAMPLE_DOMAIN}/photos/")
+        for r in full.rows["reviewees"]
+    )

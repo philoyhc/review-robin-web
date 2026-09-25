@@ -3370,6 +3370,9 @@ dep chains called out at the bottom of this file.
      entries: the Delete confirm checkbox no longer dirties the card; the
      Name and Email pills are static labels; Band 2's visibility preview
      repaints on a Band 3 Visibility edit.
+   - **Item 4 — A full-size sample roster download (open).** 154 people in
+     both rosters, Tutor / Group / Team tags, linked from the Guide beside
+     the demo session.
 
 #### Stubs
 

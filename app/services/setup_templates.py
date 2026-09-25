@@ -9,6 +9,13 @@ lobby first-run card — so nothing here takes a ``ReviewSession``.
   Setup it builds a session that reaches ``validated`` with no
   configuration, which is asserted end-to-end in
   ``tests/integration/test_setup_template_download.py``.
+- **full** (19T Item 4): the two roster files at a realistic class size —
+  154 people in eleven tutorial groups, with ``operator@example.edu``
+  among them so the operator can open the reviewer surface as
+  themselves. Its tags are Tutor / Group / Team, labelled on all three
+  columns (:attr:`TemplateSet.labels`). It carries no relationships,
+  observers or rule, so a session built from it pairs everyone with
+  everyone until the operator sets one.
 
 Neither set carries a ``settings.csv``. It is not an omission: a new
 session is seeded with a default instrument (``ensure_default_instrument``)
@@ -59,7 +66,7 @@ from __future__ import annotations
 import io
 import zipfile
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.services.extracts import stream_csv
 from app.services.extracts.observers_extract import HEADER as OBSERVERS_HEADER
@@ -132,6 +139,8 @@ class TemplateSet:
     key: str
     zip_name: str
     rows: Mapping[str, tuple[Mapping[str, str], ...]]
+    #: The ``<Column>.<label>`` suffixes this set's headers carry.
+    labels: Mapping[str, str] = field(default_factory=lambda: LABELS)
 
 
 #: Reading order matches Quick Setup's slot order: rosters first, then
@@ -268,7 +277,104 @@ _DEMO = TemplateSet(
     },
 )
 
-SETS: tuple[TemplateSet, ...] = (_STARTER, _DEMO)
+#: **full** — the rosters at a realistic class size (19T Item 4). The
+#: cohort is generated, not listed: 153 students plus the operator, in
+#: eleven tutorial groups of fourteen, each split into teams of 5 / 5 / 4.
+#: Teams are numbered across the class, so a team names its group.
+_FULL_FIRST = (
+    "Aisha", "Ben", "Chen", "Diego", "Emma", "Farah", "George", "Hana",
+    "Ivan", "Julia", "Kwame", "Lena", "Mateo", "Nadia", "Omar", "Priya",
+    "Quinn", "Rafael", "Sofia", "Tariq", "Uma", "Victor", "Wen", "Ximena",
+    "Yusuf", "Zara", "Amir", "Bianca", "Caleb", "Dina", "Elias", "Fatima",
+    "Gabriel", "Helena", "Idris", "Jasmine", "Kenji", "Leila", "Marcus",
+    "Noor", "Oliver", "Paula", "Ravi", "Sara", "Tomas", "Valentina",
+    "William", "Yara", "Zain", "Alice", "Bruno", "Clara", "Daniel",
+    "Esther", "Felix", "Grace", "Hugo", "Isla", "Jonah", "Kira",
+)
+_FULL_LAST = (
+    "Khan", "Carter", "Wei", "Alvarez", "Novak", "Haddad", "Mensah", "Sato",
+    "Petrov", "Rossi", "Owusu", "Fischer", "Silva", "Rahman", "Ali",
+    "Sharma", "Nguyen", "Costa", "Moreau", "Aziz", "Patel", "Ivanova",
+    "Zhang", "Reyes", "Demir", "Okafor", "Lindqvist", "Kowalski", "Tanaka",
+    "Hughes", "Banerjee", "Duarte", "Park", "Nielsen", "Mwangi", "Russo",
+    "Yilmaz", "Cohen", "Andersen", "Bakr",
+)
+_FULL_TUTORS = (
+    "Margaret Liu", "Samuel Adeyemi", "Rosa Martinez", "Thomas Becker",
+    "Anjali Rao", "Daniel O'Brien",
+)
+_FULL_OPERATOR = ("Operator Example", "operator@example.edu")
+_FULL_GROUP_SIZE = 14
+_FULL_GROUPS = 11
+
+
+def _full_cohort() -> tuple[tuple[str, str, str, str, str], ...]:
+    """``(name, email, tutor, group, team)`` for all 154, operator first.
+
+    Names pair ``_FULL_FIRST[i % 60]`` with a surname offset by the lap,
+    so no pairing repeats across the 153 and no randomness is involved:
+    the file is the same on every request.
+    """
+    people = [_FULL_OPERATOR]
+    for i in range(_FULL_GROUP_SIZE * _FULL_GROUPS - 1):
+        first = _FULL_FIRST[i % len(_FULL_FIRST)]
+        last = _FULL_LAST[(i // len(_FULL_FIRST) + 3 * i) % len(_FULL_LAST)]
+        people.append((f"{first} {last}", _email(f"{first} {last}")))
+    cohort = []
+    for index, (name, email) in enumerate(people):
+        group = index // _FULL_GROUP_SIZE + 1
+        position = index % _FULL_GROUP_SIZE
+        team_in_group = 0 if position < 5 else (1 if position < 10 else 2)
+        cohort.append((
+            name,
+            email,
+            _FULL_TUTORS[(group - 1) // 2],
+            f"TW{group:02d}",
+            f"Team {(group - 1) * 3 + team_in_group + 1}",
+        ))
+    return tuple(cohort)
+
+
+def _full_row(
+    prefix: str, person: tuple[str, str, str, str, str], photo: bool
+) -> dict[str, str]:
+    name, email, tutor, group, team = person
+    return {
+        f"{prefix}Name": name,
+        f"{prefix}Email": email,
+        f"{prefix}Tag1": tutor,
+        f"{prefix}Tag2": group,
+        f"{prefix}Tag3": team,
+        "PhotoLink": (
+            f"https://{EXAMPLE_DOMAIN}/photos/{email.split('@')[0]}.jpg"
+            if photo else ""
+        ),
+        "Status": "active",
+    }
+
+
+_FULL = TemplateSet(
+    key="full",
+    zip_name="review-robin-sample-rosters-154.zip",
+    rows={
+        "reviewers": tuple(
+            _full_row("Reviewer", p, photo=False) for p in _full_cohort()
+        ),
+        "reviewees": tuple(
+            _full_row("Reviewee", p, photo=True) for p in _full_cohort()
+        ),
+    },
+    labels={
+        "ReviewerTag1": "Tutor",
+        "ReviewerTag2": "Group",
+        "ReviewerTag3": "Team",
+        "RevieweeTag1": "Tutor",
+        "RevieweeTag2": "Group",
+        "RevieweeTag3": "Team",
+    },
+)
+
+SETS: tuple[TemplateSet, ...] = (_STARTER, _DEMO, _FULL)
 
 
 def set_by_key(key: str) -> TemplateSet:
@@ -284,15 +390,18 @@ def templates_in(template_set: TemplateSet) -> tuple[SetupTemplate, ...]:
     return tuple(t for t in TEMPLATES if t.key in template_set.rows)
 
 
-def template_header(template: SetupTemplate) -> tuple[str, ...]:
-    """``template``'s header row, with :data:`LABELS` suffixes attached.
+def template_header(
+    template: SetupTemplate, labels: Mapping[str, str] = LABELS
+) -> tuple[str, ...]:
+    """``template``'s header row, with ``labels`` suffixes attached
+    (:data:`LABELS` unless a set brings its own).
 
     Mirrors ``field_label_csv.labeled_header``'s ``f"{column}.{label}"``
     join, but reads its labels from a constant instead of a session's
     overrides — these templates are generic and have no session.
     """
     return tuple(
-        f"{column}.{LABELS[column]}" if column in LABELS else column
+        f"{column}.{labels[column]}" if column in labels else column
         for column in template.header
     )
 
@@ -315,7 +424,7 @@ def template_rows(
 ) -> list[tuple[str, ...]]:
     """``[header, *body]`` — the whole file."""
     return [
-        template_header(template),
+        template_header(template, template_set.labels),
         *(row_tuple(template, row) for row in template_set.rows[template.key]),
     ]
 

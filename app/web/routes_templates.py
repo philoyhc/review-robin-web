@@ -63,3 +63,12 @@ def download_demo_session(
     """The demo set — a populated cohort that reaches ``validated``."""
     del user  # required for the auth gate; the payload is user-independent
     return _zip_response("demo")
+
+
+@router.get("/templates/full.zip")
+def download_full_rosters(
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> Response:
+    """The full-size set — two 154-row rosters (19T Item 4)."""
+    del user  # required for the auth gate; the payload is user-independent
+    return _zip_response("full")
