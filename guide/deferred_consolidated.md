@@ -1753,13 +1753,15 @@ roster, or the next change that reworks a roster's pager.
 The author explored basic branching: fields that can be answered only when
 another field's answer meets a condition. One level, one branch per parent,
 several fields per branch. The rulings, recommended storage and measured
-cost are in `guide/advanced_instruments.md`, as three items, built in
-the order 3, 1, 2:
+cost are in `guide/advanced_instruments.md`, as four items; 3, 1 and 2
+are built in that order:
 - Item 3 reorders on the Band 3 rows and retires the response pills and
   ✓, moving the display pills into Band 3, about 4 PRs;
 - Item 1 is branching with optional governed fields, about 7–8 PRs;
 - Item 2 is required governed fields, about 2 more, with Item 1 built to
-  prepare for it.
+  prepare for it;
+- Item 4 (2026-09-25) moves the Visibility editor into Band 2's card and
+  gives display fields a Band 3 table, about 6–7 PRs in two halves.
 
 **Off the roadmap because** it amends a stated out-of-scope line in
 `spec/rrw_functional_spec.md`. **No immediate plan to build** (author).

@@ -1,8 +1,9 @@
 # Advanced instruments — design record
 
 Response-field work beyond today's builder: reordering on the Band 3 rows
-with the response pills retired (Item 3), and branching between response
-fields (Items 1 and 2). It was logged as response_field_branching.md and
+with the response pills retired (Item 3), branching between response
+fields (Items 1 and 2), and visibility in Band 2's card with display fields
+as a Band 3 table (Item 4). It was logged as response_field_branching.md and
 renamed on 2026-09-24, once Item 3 widened it past branching.
 
 **Logged 2026-09-24 on the author's instruction. Not scheduled:** there is
@@ -12,13 +13,17 @@ scheduled, it becomes a segment plan (`guide/segment_plan_template.md`);
 until then its entry in `guide/deferred_consolidated.md` Part C points
 here.
 
-Three items, **built in the order 3, 1, 2**:
+Four items. **Items 3, 1 and 2 are built in that order**; Item 4's place
+is open (its open questions recommend one):
 - **Item 3**: reordering on the Band 3 rows and retiring the response
   pills. It is logged last but is built first (author, 2026-09-24),
   because branching's order and visibility rules are simpler once order
   lives only on rows.
 - **Item 1**: branching, with governed fields that are never required.
 - **Item 2**: required governed fields.
+- **Item 4** (2026-09-25): the Visibility editor folds into Band 2's "Who
+  can see what you wrote" card, and Band 3's freed column hosts a
+  display-fields table, so Band 2's pills retire entirely.
 
 Item 1 is built so that Item 2 relaxes a rule rather than reworks it;
 "Pre-positioning for Item 2" says how. Item 3 changes some of Item 1's
@@ -326,7 +331,8 @@ branching would have to keep the two in step.
    accepts that.
 4. **The display-field pills move into Band 3**, under a new **Display
    fields** header styled like **Response fields**, with the pills on the
-   next line. Band 2 keeps only the preview.
+   next line. Band 2 keeps only the preview. *Superseded by Item 4
+   (2026-09-25): display fields become a table in Band 3's left column.*
 
 **Rejected: whole-row drag.** Rows are full of inputs, so dragging a row
 fights text selection and focus. Buttons work from the keyboard and are
@@ -391,3 +397,123 @@ About 4 PRs:
    Band 3.
 4. Close: the specs, the Guide captures and the browser checks.
 
+
+## Item 4 — Visibility in Band 2's card; display fields as a Band 3 table
+
+**Logged 2026-09-25 on the author's instruction;** build order open.
+
+### Opportunity
+
+Visibility is authored in Band 3's table and previewed in Band 2's "Who
+can see what you wrote (other than admin)" card: one setting in two
+places, which 19T Item 3 entry 3 had to patch with a live repaint.
+Display fields are chosen by Band 2 pills, ordered by drag, and labeled
+on another page.
+
+### Decision (author, 2026-09-25, taking the recommendations)
+
+1. **One card in Band 2's intro grid.** Locked, it is exactly the
+   reviewer's card. Unlocked, it is the editor: the four clickable cells
+   become cycle chips, and the fixed cells stay plain labels. It uses the
+   same locked / unlocked swap as the description box beside it.
+2. **The Observers row shows only while unlocked**, below a thin divider,
+   with a note: "Observers are shown here for setup only; reviewers don't
+   see this row."
+3. **Row labels:** "You" when locked; "You (reviewer)", "Reviewees" and
+   "Observers" when unlocked. The heading stays the reviewer's.
+4. **Band 3's freed left column hosts Display fields**, beside Response
+   fields, rather than above them (Item 3's decision 4). The display pills
+   in Band 2 retire. With Item 3 retiring the response pills too, Band 2's
+   pill row goes entirely.
+5. **The display-fields editor** is still to be specified, but tends
+   toward a table with a row per display field:
+   - up / down buttons (Item 3's stack);
+   - select / unselect, except Name and Email (19T Item 3 entry 2's
+     rule);
+   - an editable friendly label;
+   - and more, decided when it is scheduled.
+6. **The Guide text** changes in the build; the author retakes the two
+   instrument captures.
+
+**Rejected:** keeping Band 3's table with the repaint (one setting in
+two places); Observers always on the card (no longer the reviewer's view).
+
+### Semantics
+
+- **Visibility needs no server change.** The hidden inputs keep
+  `form="dfsave-<id>"`, and `/save` reads them wherever they sit.
+  Entry 3's repaint retires, because the preview is now the editor.
+- **The fixed cells stay labels:** Reviewers are shown raw responses while
+  the session runs, and Reviewees see "—" then. Observers' "Session
+  ongoing" still cycles only between "—" and "Anonymized summaries".
+- **The display-fields table lists the populated sources**, as the chips
+  do today:
+  - Name and Email are pinned first and second, with no up / down and no
+    unselect. Up is inactive on the row below them.
+  - Order persists through `/save`'s `display_field_order_snapshot` and
+    `reorder_display_fields`. Selection persists through
+    `selected_display_keys`.
+  - Column width stays a resize in the preview.
+- **Friendly labels are session-wide today** (`field_labels`, read by
+  `display_field_label`). The per-instrument label column was retired in
+  15A and is dead data, so a label edited here changes every instrument's
+  column. See the open questions.
+- **Preview order:** the display rows in table order, then the active
+  response rows in row order.
+
+### Effect on Item 3
+
+- **Decision 4 is superseded.** The display fields become the left-column
+  table, not pills above Response fields.
+- **Item 3's rung 3** keeps "retire the response pills and ✓". Its "move
+  the display pills" step becomes Item 4's display-fields half.
+
+### Cost (measured 2026-09-25 at `19db0330`)
+
+- **Template** (`app/web/templates/operator/instruments_index.html`):
+  - 38 lines name the visibility editor:
+    `grep -c 'data-new-model-vp-\|newModelCycleVisibilityCell\|b3_mode_cycle\|b3_static_pill'`;
+  - about 13 read the display pills: `data-locked`,
+    `data-display-field-id`, and the non-response pill filters.
+- **View:** the card needs the clickable / fixed state and the Observers
+  row. `build_reviewer_visibility_rows` also feeds the reviewer surface,
+  so its output stays as it is, and the operator's extras come from
+  `band3_visibility_by_instrument`, which is already in context.
+- **Server:** none for visibility or order. For labels, none if they stay
+  session-wide; a per-instrument label means reviving that column in the
+  service and on the reviewer surface.
+- **Tests:** 3 files name Band 3's visibility markup, and 2 name the
+  Band 2 pills.
+- **Specs:**
+  - `spec/instruments.md`: Band 2, the chip row, and Band 3's
+    "Visibility + Response fields";
+  - `spec/visibility_policy.md`: the Band 3 editor and Band 2 preview
+    rows;
+  - `spec/ui_elements.md`: "Label or control".
+- **The Guide:** both instrument captures and their text.
+
+### Shape of the build, when scheduled
+
+Two halves, each scaffold-first (CLAUDE.md):
+- **A. Visibility, about 3 PRs:**
+  1. the unlocked card's layout, inert, with Band 3's table still in
+     place;
+  2. the chips and hidden inputs wired into the card, with Band 3's table
+     and entry 3's repaint removed;
+  3. the close.
+- **B. Display fields, about 3–4 PRs:**
+  1. the table in Band 3's left column, inert, beside the live pills;
+  2. selection, order and labels wired;
+  3. the display pills retired;
+  4. the close.
+
+### Open questions
+
+- **Build order.** Recommended: A first, since it depends on nothing; and
+  B in place of Item 3's display-pill step, since both retire Band 2
+  pills. The author decides when it is scheduled.
+- **Friendly labels.** Recommended: keep them session-wide and say so in
+  the table ("applies to every instrument"), rather than reviving the
+  per-instrument column that 15A retired.
+- **The table's other columns** (width, source name, others) are settled
+  when it is scheduled.

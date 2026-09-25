@@ -3366,9 +3366,9 @@ dep chains called out at the bottom of this file.
    - ~~**Item 2 — Instruments:** an open card disabling the action row.~~
      **Closed 2026-09-24.** `?editing` no longer disables it, and Lock
      strips `?editing`.
-   - **Item 3 — Small fixes register (open).** Entry 1: the Delete confirm
-     checkbox no longer marks the card dirty. Entry 2: the Name and Email
-     pills can't be unselected. Entry 3: Band 2's visibility preview
+   - ~~**Item 3 — Small fixes register.**~~ **Closed 2026-09-25.** Three
+     entries: the Delete confirm checkbox no longer dirties the card; the
+     Name and Email pills are static labels; Band 2's visibility preview
      repaints on a Band 3 Visibility edit.
 
 #### Stubs

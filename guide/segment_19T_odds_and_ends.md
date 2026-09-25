@@ -426,8 +426,17 @@ callers (`grep -rn "build_reviewer_visibility_rows(" app/`).
 
 ### Status
 
-**Open** (2026-09-25). Entries 1, 2 and 3 are fixed. Entry 1's read found
-no defect.
+**Closed 2026-09-25** on the author's instruction, with three entries
+(#2605, #2609, #2610 and this close). Each has a test that fails without
+its fix. **Reads: six**, one per code push after the first: entry 1's
+found nothing; entry 2's four found a stranded Email in grouped mode, a
+chip-edge scan that could not see `data-locked`, and two test gaps;
+entry 3's found stale prose and a label-map gap. Codex found entry 2's
+locked pills still presented as controls, and entry 3's item over its
+line budget. **Scope that moved:** the author's ruling split Email by
+instrument scope, and entry 3 found `spec/visibility_policy.md`'s reviewer
+card stale. Browser checks are owed in
+`guide/post_azure_todo_checklist.md` item 6.
 
 ### Doc impact
 

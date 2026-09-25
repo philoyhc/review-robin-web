@@ -612,8 +612,10 @@ and nothing in a screencap.
 shade** (`--blue-strong` / `--blue-glow` — see
 `spec/color_tokens.md` "Deliberate couplings"). That covers
 `.tag-chip` — which is every lobby tag filter, every column toggle and
-every Instruments Band 2 pill — plus the lobby's Clear and AND/OR chips.
-Static pills carry no edge.
+every *clickable* Instruments Band 2 pill — plus the lobby's Clear
+and AND/OR chips. Static pills carry no edge: the locked Name /
+Email pills on the Instruments Band 2 chip row (`spec/instruments.md`
+"Chip row") render as static labels, not `.tag-chip` controls.
 
 Three rules make that work:
 
