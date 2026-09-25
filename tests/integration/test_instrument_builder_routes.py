@@ -5017,6 +5017,18 @@ def test_integer_field_refuses_fractional_bounds(
             assert response.json()["errors"][0]["message"] == (
                 "Step must be a number."
             )
+    # Every bound and every type, including String (its Min crashed
+    # ``int()`` too) and a List row's hidden bounds.
+    for data_type, lo, hi, message in (
+        ("integer", "-inf", "5", "Min must be a number."),
+        ("decimal", "1", "nan", "Max must be a number."),
+        ("string", "nan", "100", "Min must be a number."),
+        ("string", "0", "inf", "Max length must be a number."),
+        ("list", "nan", "", "Min must be a number."),
+    ):
+        response = _post(data_type, lo, hi, "")
+        assert response.status_code == 422, (data_type, lo, hi)
+        assert response.json()["errors"][0]["message"] == message
     # Whole numbers written with a trailing ``.0`` are still whole.
     assert _post("integer", "1.0", "5", "1").status_code == 200
     assert _post("decimal", "1", "5", "0.5").status_code == 200

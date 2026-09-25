@@ -689,9 +689,11 @@ their tests in 2 files (`grep -rln --include=*.py "steps of" tests/`).
 ### Status
 
 **Open.** Entry 1 in #2620 (one read: no code defect; plan gaps fixed).
-Entry 2 follows it (one read: no defect; it narrowed the server's
-exemption to fields with responses, aligned the client's check order and
-kept small steps out of scientific notation). **Owed:** the Guide's `instrument-card-preview`
+Entry 2 in #2621 (two reads: the first narrowed the server's exemption
+to fields with responses, aligned the client's check order and kept small
+steps out of scientific notation; the second, on Codex's non-finite-bound
+500, extended the refusal to String and List rows, where a String Min of
+"nan" crashed from the UI too). **Owed:** the Guide's `instrument-card-preview`
 capture shows the pill without its `*`; the author retakes it with
 `guide/advanced_instruments.md` Items 4–5's captures, which redo the card.
 
@@ -702,7 +704,8 @@ capture shows the pill without its `*`; the author retakes it with
   (Item 6, entry 1).
 - `spec/instruments.md` — "Inline bounds": an Integer field takes
   whole-number Min, Max and Step, except a stored field with responses
-  whose bounds are unchanged (Item 6, entry 2).
+  whose bounds are unchanged; on every type a non-finite bound ("nan",
+  "inf") is refused as not a number (Item 6, entry 2).
 - `spec/reviewer-surface.md` — the constraint line and placeholder print
   Decimal bounds as entered (Item 6, entry 2).
 - `docs/status.md` — row when the item closes (Item 6).

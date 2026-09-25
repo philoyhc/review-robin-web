@@ -4523,6 +4523,8 @@
             return null;
           }
           if (dataType === 'string') {
+            var sm = parseNum(val('min'));
+            if (sm !== null && isNaN(sm)) { return 'Min must be a number.'; }
             var ml = parseNum(val('max'));
             if (ml !== null && isNaN(ml)) { return 'Max length must be a number.'; }
             if (ml !== null && ml <= 0) {

@@ -392,15 +392,19 @@ def _validate_response_field_shape(rf: dict[str, Any]) -> str | None:
     max_length (carried on the ``max`` slot) must be > 0 when set.
     """
     data_type = rf.get("data_type", "string")
+    # "nan", "inf" and an overflowing "1e309" parse as floats but are
+    # not bounds; refuse them on every type before anything converts
+    # them or stores them (a 500 from ``int()`` before; Codex on #2621).
+    for key, label in (("min", "Min"), ("max", "Max"), ("step", "Step")):
+        value = _band2_parse_float(rf.get(key))
+        if value is not None and not math.isfinite(value):
+            if data_type == "string" and key == "max":
+                label = "Max length"
+            return f"{label} must be a number."
     if data_type in ("integer", "decimal"):
         min_ = _band2_parse_float(rf.get("min"))
         max_ = _band2_parse_float(rf.get("max"))
         step = _band2_parse_float(rf.get("step"))
-        # "nan", "inf" and an overflowing "1e309" parse as floats but
-        # are not bounds; refuse them before anything converts them.
-        for label, value in (("Min", min_), ("Max", max_), ("Step", step)):
-            if value is not None and not math.isfinite(value):
-                return f"{label} must be a number."
         if min_ is not None and max_ is not None and max_ < min_:
             return "Max must be at least Min."
         if step is not None and step <= 0:
