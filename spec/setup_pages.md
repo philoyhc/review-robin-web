@@ -1289,6 +1289,10 @@ Its panel holds the tag-label editor over the `Danger Zone` on the
 left, `Upload Reviewers` on the right, and `Lock` beneath the upload
 card. The suppression predicate is `is_editable`.
 
+CSV header copy lists `ReviewerName`, `ReviewerEmail` required;
+`ProfileLink`, `ReviewerTag1..3`, `Status` optional (§3.1 in
+`spec/csv_contracts.md`).
+
 ### Preview table
 
 | # | Column | Toggle? | Notes |
@@ -1325,7 +1329,7 @@ panel holds the tag-label editor over the `Danger Zone` on the left,
 the suppression predicate is `is_editable`.
 
 CSV header copy lists `RevieweeName`, `RevieweeEmail` required;
-`PhotoLink`, `RevieweeTag1..3`, `Status` optional.
+`ProfileLink`, `RevieweeTag1..3`, `Status` optional.
 
 *This section said "same shape as Reviewers" until 19P.1, then stated
 the pre-move shape outright because Reviewers no longer had it. Both

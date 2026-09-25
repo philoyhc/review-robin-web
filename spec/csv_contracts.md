@@ -109,7 +109,7 @@ is byte-stable.
 | 3 | `ReviewerTag1` | `reviewer.tag_1` | Optional on import. Empty cell ⇒ NULL. |
 | 4 | `ReviewerTag2` | `reviewer.tag_2` | Same. |
 | 5 | `ReviewerTag3` | `reviewer.tag_3` | Same. |
-| 6 | `PhotoLink` | `reviewer.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. Mirrors the Reviewees `PhotoLink` column. |
+| 6 | `ProfileLink` | `reviewer.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. Mirrors the Reviewees `ProfileLink` column. |
 | 7 | `Status` | `reviewer.status` | `active` / `inactive`. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
 
 **Row order:** active rows first (`status='active'`), then by
@@ -124,7 +124,7 @@ is byte-stable.
 | 3 | `RevieweeTag1` | `reviewee.tag_1` | Optional. |
 | 4 | `RevieweeTag2` | `reviewee.tag_2` | Optional. |
 | 5 | `RevieweeTag3` | `reviewee.tag_3` | Optional. |
-| 6 | `PhotoLink` | `reviewee.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. |
+| 6 | `ProfileLink` | `reviewee.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. |
 | 7 | `Status` | `reviewee.status` | `active` / `inactive`. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
 
 **Row order:** active rows first, then by `name`, then by
@@ -324,8 +324,12 @@ banner-error.
 | Cross-roster identity | `check_cross_table_identity` rejects a row whose email is already held in **another roster under a different name**. Same email + same name is allowed and common — one person is often both reviewer and reviewee, which is the self-review case. Three-way since 19Q Item 7: each roster is compared against the other two, observers included. |
 
 **Optional columns:** any of `ReviewerTag1..3`, `RevieweeTag1..3`,
-`PhotoLink` may be absent. An absent column is `None` for every
-row; an empty cell is `None` for that row. `Status` is
+`ProfileLink` may be absent. An absent column is `None` for every
+row; an empty cell is `None` for that row. The legacy `PhotoLink`
+header is still accepted on import, indefinitely — `_profile_link`
+in `app/services/csv_imports.py` reads `ProfileLink` first and falls
+back to `PhotoLink`; a non-blank `ProfileLink` wins when a file
+carries both. `Status` is
 also optional — blank/absent ⇒ `active`; `active` / `inactive` only,
 else a per-row error. The `*Tag1..3` columns may also carry a
 `.<label>` friendly-label suffix (§1a).
@@ -730,7 +734,7 @@ Six tutors each take two groups, except the last, who takes one.
 `operator@example.edu` is among the 154 because it is the default
 `FAKE_AUTH_EMAIL` — signed in locally under `ALLOW_FAKE_AUTH`, the
 operator is also a reviewer and reviewee of a session built from this
-set. Only reviewees carry a `PhotoLink`, a placeholder under
+set. Only reviewees carry a `ProfileLink`, a placeholder under
 `example.edu`.
 
 **No set carries a `settings.csv`, and none is needed.** A new

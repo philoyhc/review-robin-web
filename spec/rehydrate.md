@@ -199,9 +199,13 @@ the handler resolves files by name.
 | File | Header (must match) | Provides |
 |---|---|---|
 | `*_settings.csv` | `field,value,data_type` (`session_config_io._rows.HEADER`) | All config: session metadata, instruments + fields, rule sets, email overrides, data shapes |
-| `*_reviewers.csv` | `ReviewerName,ReviewerEmail,ReviewerTag1..3,PhotoLink` | Reviewer population (tag columns may carry a `.<label>` friendly-label suffix) |
-| `*_reviewees.csv` | `RevieweeName,RevieweeEmail,RevieweeTag1..3,PhotoLink` | Reviewee population (tag columns may carry a `.<label>` friendly-label suffix) |
+| `*_reviewers.csv` | `ReviewerName,ReviewerEmail,ReviewerTag1..3,ProfileLink` | Reviewer population (tag columns may carry a `.<label>` friendly-label suffix) |
+| `*_reviewees.csv` | `RevieweeName,RevieweeEmail,RevieweeTag1..3,ProfileLink` | Reviewee population (tag columns may carry a `.<label>` friendly-label suffix) |
 | `*_responses.csv` | the 21-column responses header (`responses_extract.HEADER`) | The response data + `SavedAt`/`SubmittedAt`/`Version` |
+
+Bundles exported before `ProfileLink`'s rename still re-import: rehydrate
+runs the roster files through the same parsers as Setup upload, and those
+accept the legacy `PhotoLink` header too (§3.1 in `spec/csv_contracts.md`).
 
 **Required conditionally** (presence also *sets the feature toggle* — see
 [§6.2](#62-apply-settings)):
