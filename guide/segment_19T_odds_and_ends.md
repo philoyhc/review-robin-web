@@ -403,6 +403,28 @@ test, a `diff-reviewer` read on any code, and Doc impact.
   attributes before the marker (it now reads the whole tag) and `spec/ui_elements.md`'s "every Band 2 pill" is
   `.tag-chip`, now a Doc impact bullet.
 
+### Entry 3 — Band 2's visibility preview went stale on a Band 3 edit
+
+- **Defect** (the author, 2026-09-25). Band 2's "Who can see what you
+  wrote (other than admin)" card is rendered once, server-side, from
+  saved policy rows (`build_reviewer_visibility_rows`). A Band 3
+  Visibility cycle wrote only its hidden input; Save is a no-reload
+  fetch and Lock doesn't reload either, so the card showed the old modes
+  until a reload, even after a successful Save.
+- **Fix.** Each row now carries its `audience` slug, and each mode cell
+  carries `data-new-model-vp-preview-cell="<audience>-<window>"`.
+  `newModelCycleVisibilityCell` repaints the matching cell in the same
+  card, with the same label map, so the card previews unsaved edits the
+  way the pills preview the table. Cancel's discard reload puts it back.
+  Observers aren't on the card, so their cycles repaint nothing.
+  Chromium: cycling You and Reviewees "Responses released" repaints
+  those cells and dirties the card; an Observers cycle and the other
+  card are untouched.
+- **Found alongside:** `spec/visibility_policy.md`'s reviewer-card row
+  says three rows including Observers, labeled "Summarized responses".
+  The code renders two rows and says "Anonymized summaries". Now a Doc
+  impact bullet.
+
 ### Blast radius (measured)
 
 Taken 2026-09-24 at `48b21d05`.
@@ -419,6 +441,12 @@ Taken 2026-09-24 at `eb4bdf23`, for entry 2:
   selection readers (`grep -c 'data-locked-on="true"' …instruments_index.html`,
   2 selectors) and `tests/integration/test_chip_edge.py`.
 
+Taken 2026-09-25 at `65f0595b`, for entry 3:
+- the Band 2 card's two mode cells and `newModelCycleVisibilityCell`, in
+  `instruments_index.html`;
+- `build_reviewer_visibility_rows`, 2 callers — this card and the
+  reviewer surface (`grep -rn "build_reviewer_visibility_rows(" app/`).
+
 ### Definition of done
 
 - Every entry has its fix merged and a test that fails without it.
@@ -434,7 +462,7 @@ Taken 2026-09-24 at `eb4bdf23`, for entry 2:
 
 ### Status
 
-**Open** (2026-09-24). Entries 1 and 2 are fixed. Entry 1's `diff-reviewer` read found
+**Open** (2026-09-25). Entries 1, 2 and 3 are fixed. Entry 1's `diff-reviewer` read found
 no defect: no other listener dirties the card from the checkbox, the
 attribute sits only on checkboxes, Delete still enables, and the test fails
 on the old template.
@@ -447,5 +475,10 @@ on the old template.
 - `spec/ui_elements.md` — "Label or control": `.tag-chip` covers every
   clickable Band 2 pill, not the locked Name / Email labels (Item 3,
   entry 2).
+- `spec/instruments.md` — Band 2's "Who can see what you wrote" card
+  repaints live from Band 3's Visibility cycle (Item 3, entry 3).
+- `spec/visibility_policy.md` — the reviewer-surface card is two rows
+  (You / Reviewees), and `summarized` reads "Anonymized summaries"
+  (Item 3, entry 3).
 - `docs/status.md` — row when the item closes (Item 3).
 

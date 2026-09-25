@@ -1864,8 +1864,12 @@
                     {% for vp in _vp_preview_rows %}
                       <tr>
                         <td style="padding: 4px 8px;">{{ vp.audience_label }}</td>
-                        <td style="padding: 4px 8px;">{{ vp.while_ongoing_label }}</td>
-                        <td style="padding: 4px 8px;">{{ vp.after_release_label }}</td>
+                        {# 19T Item 3 entry 3 — Band 3's Visibility cycle
+                           repaints these cells live (``newModelCycleVisibilityCell``). #}
+                        <td style="padding: 4px 8px;"
+                            data-new-model-vp-preview-cell="{{ vp.audience }}-while_ongoing">{{ vp.while_ongoing_label }}</td>
+                        <td style="padding: 4px 8px;"
+                            data-new-model-vp-preview-cell="{{ vp.audience }}-after_release">{{ vp.after_release_label }}</td>
                       </tr>
                     {% endfor %}
                   </tbody>
@@ -5805,6 +5809,15 @@
         );
         if (input) input.value = nextSlug;
       }
+      // 19T Item 3 entry 3 — mirror the change into Band 2's "Who can
+      // see what you wrote" preview, which the server renders once
+      // from saved state. Observers aren't on that card, so their
+      // cycles find no cell. Cancel's discard reload puts it back.
+      var card = chip.closest('[data-instrument-card]');
+      var cell = card && card.querySelector(
+        '[data-new-model-vp-preview-cell="' + audience + '-' + window_ + '"]'
+      );
+      if (cell) cell.textContent = _VP_CELL_LABELS[nextSlug] || nextSlug;
     };
   </script>
 {% endblock %}

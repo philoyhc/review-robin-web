@@ -985,8 +985,9 @@ def build_reviewer_visibility_rows(
     ``Reviewees``), label strings for each window. Returns
     ``{instrument_id: [row, ...]}``.
 
-    Each row dict carries ``audience_label`` /
-    ``while_ongoing_label`` / ``after_release_label``. Audiences
+    Each row dict carries ``audience`` (the policy audience slug) /
+    ``audience_label`` / ``while_ongoing_label`` /
+    ``after_release_label``. Audiences
     with no persisted policy row fall back to
     :data:`_BAND3_VISIBILITY_DEFAULTS`. The display labels mirror
     the operator-side ``Raw responses`` / ``Anonymized
@@ -1026,6 +1027,7 @@ def build_reviewer_visibility_rows(
                 )
             rows.append(
                 {
+                    "audience": audience,
                     "audience_label": label,
                     "while_ongoing_label": _REVIEWER_VP_MODE_LABELS[wo_mode],
                     "after_release_label": _REVIEWER_VP_MODE_LABELS[ar_mode],
