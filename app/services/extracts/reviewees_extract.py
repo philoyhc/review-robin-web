@@ -8,7 +8,7 @@ and the Quick Setup card without conversion.
 
 The ``ProfileLink`` column (``PhotoLink`` before 19T Item 5, still
 accepted on import) maps to ``Reviewee.profile_link``
-(matches the importer at ``csv_imports.parse_reviewee_csv:336``).
+(matches the importer, ``csv_imports.parse_reviewee_csv``).
 
 Plan: ``guide/segment_12A-1_export.md`` PR 2.
 """

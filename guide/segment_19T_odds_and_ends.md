@@ -600,14 +600,18 @@ files):
 
 ### Status
 
-**Open** (2026-09-25). Built in the same PR as this entry.
+**Open** (2026-09-25). Built in the same PR as this entry. Its read found
+no defect: every roster import path (Setup, Quick Setup, rehydrate) runs
+through the two parsers and gets the fallback. It found the Reviewers
+upload card never listing the link column, though the importer reads it
+(now listed), plus stale test names and line references (fixed).
 
 ### Doc impact
 
 - `spec/csv_contracts.md` — §2.1 / §2.2 headers, §3.1's optional
   columns (with the legacy alias), and §5a's sample set (Item 5).
 - `spec/rehydrate.md` — the roster header lines (Item 5).
-- `spec/setup_pages.md` — the Reviewees upload card's optional columns
-  (Item 5).
+- `spec/setup_pages.md` — both upload cards' optional columns: Reviewees
+  renamed, Reviewers now listing `ProfileLink` (Item 5).
 - `spec/rrw_functional_spec.md` — the roster CSV headers (Item 5).
 - `docs/status.md` — row when the item closes (Item 5).
