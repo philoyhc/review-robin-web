@@ -1753,13 +1753,13 @@ roster, or the next change that reworks a roster's pager.
 The author explored basic branching: fields that can be answered only when
 another field's answer meets a condition. One level, one branch per parent,
 several fields per branch. The rulings, recommended storage and measured
-cost are in `guide/advanced_instruments.md`, as four items built in the
-order 3, 4, 1, 2:
+cost are in `guide/advanced_instruments.md`, as five items built in the
+order 3, 4, 5, 1, 2:
 - Item 3 reorders on the Band 3 rows and retires the response pills and
   ✓, about 4 PRs;
-- Item 4 moves the Visibility editor into Band 2's card and gives display
-  fields a Band 3 table, retiring Band 2's pills, about 6–7 PRs in two
-  halves;
+- Item 4 moves the Visibility editor into Band 2's card, about 3 PRs;
+- Item 5 gives display fields a table in the column Item 4 frees,
+  retiring Band 2's pills, about 4 PRs;
 - Item 1 is branching with optional governed fields, about 7–8 PRs;
 - Item 2 is required governed fields, about 2 more, with Item 1 built to
   prepare for it.
