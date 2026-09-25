@@ -205,6 +205,11 @@ Item 4 leaves Band 3's left column empty beside Response fields.
 3. **An up arrow button** and 4. **a down arrow button**, for ordering,
    on every row except Name and Email.
 
+**Band 3's columns become one third and two thirds** (today `2fr 3fr`,
+to `1fr 2fr`): the display-field table is narrower than the Visibility
+table it replaces, and Response fields gain the width (the author,
+2026-09-25).
+
 **Changes show in Band 2's preview at once**, and **persist only through
 the instrument card's Save**, as every other card edit does.
 
@@ -251,6 +256,9 @@ preview, as today).
 - **Tests:** 2 files name the Band 2 pills
   (`tests/integration/test_instrument_builder_routes.py`,
   `tests/integration/test_chip_edge.py`).
+- **The re-split:** one style attribute, pinned by one assertion in
+  `tests/integration/test_instrument_builder_routes.py` and one line of
+  `spec/instruments.md` (Band 3's layout).
 - **Specs:** `spec/instruments.md` (the chip row) and
   `spec/ui_elements.md` ("Label or control").
 - **The Guide:** the instrument captures, retaken once with Item 4's.
@@ -258,7 +266,8 @@ preview, as today).
 ### Shape of the build, when scheduled
 
 About 4 PRs, scaffold-first:
-1. the table in Band 3's left column, inert, beside the live pills;
+1. the table in Band 3's left column, inert, beside the live pills, with
+   the columns re-split to `1fr 2fr`;
 2. checkbox and arrows wired, with the preview repainting and Save
    persisting;
 3. the display pills retired;
