@@ -4482,7 +4482,8 @@
           function parseNum(text) {
             if (text === '') { return null; }
             var v = parseFloat(text);
-            return isNaN(v) ? NaN : v;
+            // "Infinity" and "1e309" parse; the server refuses them.
+            return isFinite(v) ? v : NaN;
           }
           if (dataType === 'integer' || dataType === 'decimal') {
             var mn = parseNum(val('min'));

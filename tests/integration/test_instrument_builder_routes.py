@@ -5008,6 +5008,15 @@ def test_integer_field_refuses_fractional_bounds(
         assert response.status_code == 422, (lo, hi, by)
         message = response.json()["errors"][0]["message"]
         assert "whole-number" in message and "Decimal" in message
+    # Non-finite bounds are refused as input, not converted (a 500
+    # before: ``int(nan)`` / ``int(inf)`` raised). Codex on #2621.
+    for data_type in ("integer", "decimal"):
+        for bad in ("nan", "inf", "1e309"):
+            response = _post(data_type, "1", "5", bad)
+            assert response.status_code == 422, (data_type, bad)
+            assert response.json()["errors"][0]["message"] == (
+                "Step must be a number."
+            )
     # Whole numbers written with a trailing ``.0`` are still whole.
     assert _post("integer", "1.0", "5", "1").status_code == 200
     assert _post("decimal", "1", "5", "0.5").status_code == 200

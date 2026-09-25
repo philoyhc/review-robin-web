@@ -29,6 +29,7 @@ dependency is one-way.
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -395,6 +396,11 @@ def _validate_response_field_shape(rf: dict[str, Any]) -> str | None:
         min_ = _band2_parse_float(rf.get("min"))
         max_ = _band2_parse_float(rf.get("max"))
         step = _band2_parse_float(rf.get("step"))
+        # "nan", "inf" and an overflowing "1e309" parse as floats but
+        # are not bounds; refuse them before anything converts them.
+        for label, value in (("Min", min_), ("Max", max_), ("Step", step)):
+            if value is not None and not math.isfinite(value):
+                return f"{label} must be a number."
         if min_ is not None and max_ is not None and max_ < min_:
             return "Max must be at least Min."
         if step is not None and step <= 0:
