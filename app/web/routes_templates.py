@@ -1,4 +1,4 @@
-"""Setup CSV template downloads — Segment 19E rungs 4 and 5.
+"""Setup CSV template downloads — Segment 19E rungs 4 and 5, 19T Item 4.
 
 One route per set, each serving generic roster templates as a zip. It is
 deliberately **not session-scoped**: the two surfaces that offer it (the
@@ -32,7 +32,7 @@ router = APIRouter()
 
 
 def _zip_response(set_key: str) -> Response:
-    """``Response`` rather than ``StreamingResponse``: both archives are
+    """``Response`` rather than ``StreamingResponse``: every archive is
     a few kilobytes built in memory, so there is nothing to stream and a
     plain body lets Starlette set ``Content-Length``."""
     template_set = set_by_key(set_key)
@@ -63,3 +63,12 @@ def download_demo_session(
     """The demo set — a populated cohort that reaches ``validated``."""
     del user  # required for the auth gate; the payload is user-independent
     return _zip_response("demo")
+
+
+@router.get("/templates/full.zip")
+def download_full_rosters(
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> Response:
+    """The full-size set — two 154-row rosters (19T Item 4)."""
+    del user  # required for the auth gate; the payload is user-independent
+    return _zip_response("full")

@@ -452,3 +452,88 @@ card stale. Browser checks are owed in
   "Anonymized summaries" (Item 3, entry 3).
 - `docs/status.md` — row when the item closes (Item 3).
 
+
+---
+
+## Item 4 — A full-size sample roster download
+
+**Logged 2026-09-25 on the author's instruction.**
+
+### Opportunity
+
+The Guide's only sample data is the six-student demo session. The author
+had a 154-person roster generated earlier to exercise the app at a real
+class size, but it was never kept in the repo.
+
+### Decision (author, 2026-09-25)
+
+- **A second download beside the demo**, not a replacement: "download the
+  full-size sample rosters" in the Guide's Sample session card, served at
+  `/templates/full.zip`.
+- **Two files**, `reviewers.csv` and `reviewees.csv`: the same 154 people
+  in each, `operator@example.edu` among them.
+- **Tags:** Tutor (mock names), Group (`TW01`–`TW11`), Team (`Team 1`–
+  `Team 33`), labelled on all three columns. Only reviewees carry a
+  photo link, a placeholder on `example.edu`.
+- **No relationships, observers or rule, and no pairing guidance** in the
+  Guide. A session built from them pairs everyone with everyone until the
+  operator sets a rule.
+
+**Rejected:** replacing the demo. Its walkthrough and round-trip test
+depend on a six-person session, and Full Matrix on 154 people is 23,716
+assignments.
+
+### Semantics
+
+- **Generated, not stored**, like the other two sets
+  (`app/services/setup_templates.py`): the headers are the extracts' own
+  tuples, and the rows come from fixed name lists with no randomness, so
+  the file is the same on every request.
+- **Eleven groups of fourteen**, each split into teams of 5 / 5 / 4.
+  Teams are numbered across the class, so a team names its group. Six
+  tutors each take two groups, except the last, who takes one.
+- **Each set now brings its own labels** (`TemplateSet.labels`, default
+  `LABELS`). The starter and demo sets keep Tag 3 bare, as before.
+
+### Blast radius (measured)
+
+Taken 2026-09-25 at `39122e06`:
+- `app/services/setup_templates.py` (the set) and
+  `app/web/routes_templates.py` (one route);
+- `app/web/templates/guide.html`, one paragraph in the Sample session
+  card;
+- `tests/unit/test_setup_templates.py`: three set-wide tests assumed
+  every set had four files and the shared labels;
+  `tests/integration/test_setup_template_download.py`: new route, parse
+  and Guide tests.
+
+### Definition of done
+
+- The download parses with no issues: 154 rows per file, and three
+  labels captured.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- None.
+
+### Status
+
+**Open** (2026-09-25). Built in the same PR as this entry. Its read found
+no functional defect: stale set-count prose, the operator row's purpose
+(it is the default `FAKE_AUTH_EMAIL`, so it only stands in for the
+operator under local fake auth), two specs missing from Doc impact, and
+two test gaps (tutor spread, the new route's auth), all fixed.
+
+### Doc impact
+
+- `spec/csv_contracts.md` — §5a: a third set, the full-size rosters, and
+  its route; §6's surface mapping gains the Guide's full download
+  (Item 4).
+- `spec/operator_ui_concept.md` — the "Sample session card" paragraph
+  offers the full download beside the demo (Item 4).
+- `docs/status.md` — row when the item closes (Item 4).

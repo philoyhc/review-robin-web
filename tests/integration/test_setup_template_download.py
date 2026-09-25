@@ -350,3 +350,63 @@ def test_the_lobby_first_run_card_does_not_offer_the_demo_set(
 
     assert 'id="lobby-first-run"' in body
     assert DEMO_URL not in body
+
+
+# --------------------------------------------------------------------------- #
+# The full-size set — 19T Item 4
+# --------------------------------------------------------------------------- #
+
+FULL_URL = "/templates/full.zip"
+
+
+def test_the_full_route_requires_authentication() -> None:
+    real_settings = Settings(allow_fake_auth=False)
+
+    def override(request: Request) -> AuthenticatedUser:
+        return resolve_current_user(request, real_settings)
+
+    app.dependency_overrides[get_current_user] = override
+    try:
+        response = TestClient(app).get(FULL_URL)
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 401
+
+
+def test_the_full_route_serves_its_own_zip(client: TestClient) -> None:
+    response = client.get(FULL_URL)
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/zip"
+    assert set_by_key("full").zip_name in response.headers["content-disposition"]
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        assert sorted(archive.namelist()) == ["reviewees.csv", "reviewers.csv"]
+
+
+def test_the_full_rosters_parse_with_no_issues_and_their_labels() -> None:
+    files = _files("full")
+
+    reviewers = csv_imports.parse_reviewer_csv(files["reviewers.csv"])
+    reviewees = csv_imports.parse_reviewee_csv(files["reviewees.csv"])
+
+    for result in (reviewers, reviewees):
+        assert result.issues == []
+        assert len(result.rows) == 154
+    assert reviewers.field_labels == {
+        ("reviewer", "tag_1"): "Tutor",
+        ("reviewer", "tag_2"): "Group",
+        ("reviewer", "tag_3"): "Team",
+    }
+    assert reviewees.field_labels == {
+        ("reviewee", "tag_1"): "Tutor",
+        ("reviewee", "tag_2"): "Group",
+        ("reviewee", "tag_3"): "Team",
+    }
+
+
+def test_the_guide_offers_the_full_download(client: TestClient) -> None:
+    body = client.get("/guide").text
+
+    assert f'href="{FULL_URL}"' in body
+    assert "154 people" in body
