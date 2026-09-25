@@ -25,6 +25,7 @@ from app.db.models import (
     ReviewSession,
     SessionRuleSet,
 )
+from app.web.views._instruments import _REVIEWER_VP_MODE_LABELS
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -8524,3 +8525,61 @@ def test_locked_display_pills_cannot_be_unselected(
     assert locked.index(save) < locked.index("pill.title = disabled")
     # It returns before any control state is written.
     assert locked.index("return;") < locked.index("pill.setAttribute('aria-disabled'")
+
+
+def test_band3_visibility_cycle_repaints_band2_preview_card(
+    client: TestClient, db: Session
+) -> None:
+    """19T Item 3 entry 3 — Band 2's "Who can see what you wrote" card is
+    server-rendered from saved policy rows, and Save is a no-reload
+    fetch, so it went stale until a reload. Its mode cells now carry
+    the (audience, window) key Band 3's cycle chip writes, and the
+    cycle handler repaints the matching cell."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t-vp-preview"
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    card = _card_slice(body, new_model.id)
+    # ``[a-z_]`` only, so the script's own selector string (the last
+    # card's slice runs to the end of the page) isn't counted.
+    cells = re.findall(r'data-new-model-vp-preview-cell="([a-z_]+-[a-z_]+)"', card)
+    # You (peer_reviewer) and Reviewees, both windows; the card omits
+    # Observers, so an observer cycle has no cell to repaint.
+    assert sorted(cells) == [
+        "peer_reviewer-after_release",
+        "peer_reviewer-while_ongoing",
+        "reviewee-after_release",
+        "reviewee-while_ongoing",
+    ]
+    # Every cell Band 3 can cycle for those audiences has its mirror.
+    cycled = re.findall(
+        r'data-new-model-vp-cycle-audience="([^"]+)"\s+'
+        r'data-new-model-vp-cycle-window="([^"]+)"',
+        card,
+    )
+    assert cycled, "no Band 3 cycle chip rendered"
+    for audience, window in cycled:
+        if audience != "observer":
+            assert f"{audience}-{window}" in cells
+    start = body.index("window.newModelCycleVisibilityCell = function (chip) {")
+    cycle = body[start : body.index("\n    };", start)]
+    assert (
+        "'[data-new-model-vp-preview-cell=\"' + audience + '-' + window_ + '\"]'"
+        in cycle
+    )
+    assert "cell.textContent = _VP_CELL_LABELS[nextSlug] || nextSlug;" in cycle
+    # A repainted cell must read like a fresh render: the page's label
+    # map and the server's are the same words.
+    start = body.index("var _VP_CELL_LABELS = {")
+    client_map = dict(
+        re.findall(
+            r'"([a-z]*)": "([^"]+)"',
+            body[start : body.index("};", start)],
+        )
+    )
+    server_map = {
+        (slug or ""): label for slug, label in _REVIEWER_VP_MODE_LABELS.items()
+    }
+    assert client_map == server_map

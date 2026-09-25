@@ -985,15 +985,15 @@ def build_reviewer_visibility_rows(
     ``Reviewees``), label strings for each window. Returns
     ``{instrument_id: [row, ...]}``.
 
-    Each row dict carries ``audience_label`` /
-    ``while_ongoing_label`` / ``after_release_label``. Audiences
+    Each row dict carries ``audience`` (the policy audience slug) /
+    ``audience_label`` / ``while_ongoing_label`` /
+    ``after_release_label``. Audiences
     with no persisted policy row fall back to
-    :data:`_BAND3_VISIBILITY_DEFAULTS`. The display labels mirror
-    the operator-side ``Raw responses`` / ``Anonymized
-    responses`` / ``Summarized responses`` / ``—`` vocabulary so
-    the reviewer reads the same words the operator authored
-    against — except that ``summarized`` renders as "Anonymized
-    summaries" to read more naturally to non-operators. Observers
+    :data:`_BAND3_VISIBILITY_DEFAULTS`. The display labels are
+    the Band 3 cycle chips' own words (``Raw responses`` /
+    ``Anonymized responses`` / ``Anonymized summaries`` / ``—``), so
+    the reviewer reads what the operator authored against and the
+    Band 2 preview's live repaint matches a fresh render. Observers
     are intentionally omitted — they're internal admin-side
     viewers and the reviewer doesn't need to reason about them
     (the card's heading suffix "(other than admin)" makes that
@@ -1026,6 +1026,7 @@ def build_reviewer_visibility_rows(
                 )
             rows.append(
                 {
+                    "audience": audience,
                     "audience_label": label,
                     "while_ongoing_label": _REVIEWER_VP_MODE_LABELS[wo_mode],
                     "after_release_label": _REVIEWER_VP_MODE_LABELS[ar_mode],

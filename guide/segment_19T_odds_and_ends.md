@@ -359,65 +359,57 @@ test, a `diff-reviewer` read on any code, and Doc impact.
 ### Entry 2 — the Name and Email pills could be unselected
 
 - **Defect** (the author, 2026-09-24). Name and Email are locked display
-  fields, always shown on the reviewer surface: `update_display_field`
-  refuses to hide them, and `_sync_display_field_visibility` skips them.
-  But their Band 2 pills toggled like any other. Unselecting one dropped
-  its preview column and enabled Save, while nothing changed on save or on
-  the reviewer surface, and a reload showed the pill selected again. The
-  pill never had a selection lock; its tooltip already read "pinned
-  first".
-- **Fix.** The view marks locked display fields (`locked`, from
-  `is_locked_display_source`). Their pills carry `data-locked="true"`, a
-  default cursor and an "Always shown — pinned first" tooltip ("pinned
-  second" for Email, at the author's ask), and
-  `newModelToggleBand2Pill` ignores a click on one. Chromium: clicking
-  Name or Email leaves both selected with Save off, while Tag 1 still
-  toggles and its column goes. The author named Name; Email is locked by
-  the same server rule, so it gets the same lock. **The author's ruling
-  (2026-09-24): individually scoped, Name and Email are both always
-  shown; group-scoped, Email is not shown.** The reviewer surface already
-  behaves that way: a group row has no display-field columns, only a tag
-  line plus member names (`_group_collapse.py`), so Email's flag is moot
-  there, and the Band 2 pill drops out in grouped mode. Its tooltip then
-  reads "Not shown on group rows" (the author's ask), restored in
+  fields: the server refuses to hide them. Their Band 2 pills still
+  toggled, so unselecting one dropped its preview column and enabled
+  Save for a change the server ignored.
+- **Fix** (#2609). The view marks them `locked`, and they render as
+  static `pill pill-count` labels — no `tag-chip` edge, role, tab stop,
+  `aria-pressed` or click handler, per Codex's review and
+  `spec/ui_elements.md` "Label or control". `data-locked-on` carries the
+  selection, and `selectedPills` and the Save stager both read it. The
+  tooltip names the slot: "Always shown — pinned first" (Name) / "pinned
+  second" (Email).
+- **The author's ruling:** individually scoped, Name and Email are both
+  always shown; group-scoped, Email is not. The reviewer surface already
+  agrees (a group row is a tag line plus member names,
+  `_group_collapse.py`), so `refreshPillStates` switches Email off in
+  grouped mode, with a "Not shown on group rows" tooltip, and back on in
   Individual.
-- **Its read found a defect in the fix.** Grouped mode disables and
-  unselects the Email pill, since a group row has no email, and nothing
-  re-selected it on the way back to Individual. The lock then blocked the
-  click that used to restore it. `refreshPillStates` now re-selects a
-  locked pill whenever it isn't disabled. Chromium: grouped, then
-  Individual, brings Email back selected. The read's inline-style note is
-  taken too: the pill's inline `style` goes.
-- **Codex's review: a locked pill still presented as a control** — button
-  role, tab stop, `aria-pressed`, the `tag-chip` accent edge — while
-  ignoring every click. It now renders as a static `pill pill-count`, with
-  none of those and no click handler (`spec/ui_elements.md` "Label or
-  control": a static pill carries no edge). `data-locked-on` holds its
-  selection instead of `aria-pressed`. `refreshPillStates` flips it
-  (grouped mode switches Email off), and both selection readers — the
-  preview's `selectedPills` and the Save stager — accept it. That
-  retires the re-select above. Chromium: Name and Email have no role or
-  tab stop and stay in the staged keys; Email drops out in grouped mode
-  and returns in Individual; Tag 1 still toggles. Its own read found no
-  defect; it caught `test_chip_edge.py`'s pill scan reading only the
-  attributes before the marker (it now reads the whole tag) and `spec/ui_elements.md`'s "every Band 2 pill" is
-  `.tag-chip`, now a Doc impact bullet.
+- **Reads (4):** the first found grouped mode stranding Email unselected
+  behind the lock (the static label retires it); the second, the
+  chip-edge scan reading only the attributes before the marker; the last
+  two, test gaps only. Chromium checked each step.
+
+### Entry 3 — Band 2's visibility preview went stale on a Band 3 edit
+
+- **Defect** (the author, 2026-09-25). Band 2's "Who can see what you
+  wrote" card is rendered once from saved policy rows. A Band 3
+  Visibility cycle wrote only a hidden input, and neither Save (a fetch)
+  nor Lock reloads, so the card kept the old modes until a reload.
+- **Fix** (#2610). Each row carries its `audience`, each mode cell a
+  `data-new-model-vp-preview-cell` key, and `newModelCycleVisibilityCell`
+  repaints the matching cell with the same labels; a test pins the page's
+  and the server's label maps equal. Cancel's reload restores it;
+  Observers aren't on the card. Chromium: You / Reviewees cycles repaint
+  and dirty the card; Observers and other cards are untouched. Its read
+  found no defect.
+- **Found alongside:** `spec/visibility_policy.md` describes the reviewer
+  card as three rows labeled "Summarized responses"; the code renders two
+  labeled "Anonymized summaries". A Doc impact bullet.
 
 ### Blast radius (measured)
 
-Taken 2026-09-24 at `48b21d05`.
-- Entry 1: one listener pair in `instruments_index.html`
-  (`grep -n "addEventListener('change', markDirty" …`, 1 hit).
+Taken 2026-09-24 at `48b21d05`: entry 1 — one listener pair in
+`instruments_index.html` (`grep -n "addEventListener('change', markDirty" …`).
 
-Taken 2026-09-24 at `eb4bdf23`, for entry 2:
-- the display-pill markup and `newModelToggleBand2Pill`, in
-  `instruments_index.html`;
-- the Band 2 field dict in `app/web/views/_instruments.py`;
-- `is_locked_display_source`, 2 locked sources
-  (`grep -n "_LOCKED_DISPLAY_SOURCES" app/services/instruments/_display_fields.py`).
-- The static-label follow-up adds `refreshPillStates` and the two
-  selection readers (`grep -c 'data-locked-on="true"' …instruments_index.html`,
-  2 selectors) and `tests/integration/test_chip_edge.py`.
+Taken 2026-09-24 at `eb4bdf23`: entry 2 — the display-pill markup, its
+toggle, `refreshPillStates` and the two selection readers in
+`instruments_index.html`; the Band 2 field dict; 2 locked sources
+(`grep -n "_LOCKED_DISPLAY_SOURCES" app/services/instruments/_display_fields.py`).
+
+Taken 2026-09-25 at `65f0595b`: entry 3 — the card's mode cells and
+`newModelCycleVisibilityCell`; `build_reviewer_visibility_rows`, 2
+callers (`grep -rn "build_reviewer_visibility_rows(" app/`).
 
 ### Definition of done
 
@@ -434,10 +426,8 @@ Taken 2026-09-24 at `eb4bdf23`, for entry 2:
 
 ### Status
 
-**Open** (2026-09-24). Entries 1 and 2 are fixed. Entry 1's `diff-reviewer` read found
-no defect: no other listener dirties the card from the checkbox, the
-attribute sits only on checkboxes, Delete still enables, and the test fails
-on the old template.
+**Open** (2026-09-25). Entries 1, 2 and 3 are fixed. Entry 1's read found
+no defect.
 
 ### Doc impact
 
@@ -447,5 +437,9 @@ on the old template.
 - `spec/ui_elements.md` — "Label or control": `.tag-chip` covers every
   clickable Band 2 pill, not the locked Name / Email labels (Item 3,
   entry 2).
+- `spec/visibility_policy.md` — the "Band 2 preview" row: the card
+  repaints live from Band 3's Visibility cycle; the reviewer-surface
+  card row: two rows (You / Reviewees), and `summarized` reads
+  "Anonymized summaries" (Item 3, entry 3).
 - `docs/status.md` — row when the item closes (Item 3).
 
