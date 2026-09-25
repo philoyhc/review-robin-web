@@ -3373,8 +3373,9 @@ dep chains called out at the bottom of this file.
    - ~~**Item 4 — A full-size sample roster download.**~~ **Closed
      2026-09-25.** 154 people in both rosters, Tutor / Group / Team tags,
      linked from the Guide beside the demo session.
-   - **Item 5 — `PhotoLink` becomes `ProfileLink` (open).** The roster CSV
-     column's new name; the importer still accepts the old one.
+   - ~~**Item 5 — `PhotoLink` becomes `ProfileLink`.**~~ **Closed
+     2026-09-25.** The roster CSV column's new name; the importer still
+     accepts the old one.
 
 #### Stubs
 
