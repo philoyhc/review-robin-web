@@ -986,8 +986,11 @@ The client mirror, `newModelRfValidateShape`, gates the row's ✓
 button with the same messages in the same order — non-finite bounds,
 then the Integer/Decimal rules, then the whole-number rule with its
 has-responses exemption (read off the row's `data-has-responses`
-attribute) — and applies the same non-finite check to a String row's
-Min as well as its Max.
+attribute). **It checks only the bounds the row's type shows**:
+Min, Max and Step for Integer / Decimal, Min and Max for String, none
+for List. A type switch hides the other inputs without clearing them,
+and the server checks them all, so a non-finite value typed and then
+hidden passes ✓ and is refused at Save, naming the field.
 
 #### Type presets
 
