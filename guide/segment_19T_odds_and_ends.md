@@ -688,14 +688,19 @@ their tests in 2 files (`grep -rln --include=*.py "steps of" tests/`).
 
 ### Status
 
-**Open.** Entry 1 in #2620 (one read: no code defect; plan gaps fixed).
-Entry 2 in #2621 (two reads: the first narrowed the server's exemption
-to fields with responses, aligned the client's check order and kept small
-steps out of scientific notation; the second, on Codex's non-finite-bound
-500, extended the refusal to String and List rows, where a String Min of
-"nan" crashed from the UI too). **Owed:** the Guide's `instrument-card-preview`
-capture shows the pill without its `*`; the author retakes it with
-`guide/advanced_instruments.md` Items 4–5's captures, which redo the card.
+**Closed 2026-09-25** on the author's instruction, with two entries
+(#2620, #2621 and this close). Each has a test that fails without its fix.
+**Reads: three**, one on entry 1 and two on entry 2. Entry 1's found no
+code defect, only plan gaps. Entry 2's first narrowed the server's
+exemption to fields with responses, aligned the check order and kept small
+steps out of scientific notation. The second extended Codex's non-finite
+refusal, a 500 on "nan" or "inf", from Integer and Decimal to every type:
+a String Min of "nan" crashed from the UI too. **Scope that moved:** the
+non-finite refusal, which the ruling didn't name. **Owed:** the Guide's
+`instrument-card-preview` capture shows the pill without its `*`; the
+author retakes it with `guide/advanced_instruments.md` Items 4–5's
+captures. Browser checks are in `guide/post_azure_todo_checklist.md`
+item 6.
 
 ### Doc impact
 

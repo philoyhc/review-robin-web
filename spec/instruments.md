@@ -954,10 +954,22 @@ Bounds are inline on each row. The service-side validator is
 `data_type` — the same four values the Bounds row above uses, not
 response-type display names — and enforces:
 
+- **Every type, checked first:** a non-finite Min, Max or Step
+  (`nan`, `inf`, or an overflowing literal like `1e309` — all parse as
+  a float but none is a usable bound) is refused as
+  "<Min|Max|Step> must be a number." (`"Max length must be a number."`
+  for a String row's Max).
 - `Integer` / `Decimal`: `max >= min` when both are set; `step > 0`;
   and `step <= max - min` when all three are set, so the field has at
   least two valid values rather than only `min`. Equality is accepted
   (`min=0, max=1, step=1` is a useful Boolean-like field).
+- `Integer` only, checked after the rules above: Min, Max and Step
+  must each be a whole number — "Integer fields take whole-number Min,
+  Max and Step. Choose Decimal for steps like 0.5." A stored field is
+  exempt when it has responses and its type and bounds are unchanged
+  from what's stored, since those bounds are locked and refusing them
+  would block every Save of the card; a stored field without
+  responses meets the rule on its next Save.
 - `String`: the `max` slot is read as `max_length` and must be `> 0`
   when set.
 - `List`: at least one option once blanks are trimmed.
@@ -969,6 +981,16 @@ specified once and never built, so do not read them as shipped.
 A row that doesn't satisfy its type's contract fails the bulk
 save with a 422 and an inline banner pinning the per-row error.
 The page re-renders with the operator's edits intact.
+
+The client mirror, `newModelRfValidateShape`, gates the row's ✓
+button with the same messages in the same order — non-finite bounds,
+then the Integer/Decimal rules, then the whole-number rule with its
+has-responses exemption (read off the row's `data-has-responses`
+attribute). **It checks only the bounds the row's type shows**:
+Min, Max and Step for Integer / Decimal, Min and Max for String, none
+for List. A type switch hides the other inputs without clearing them,
+and the server checks them all, so a non-finite value typed and then
+hidden passes ✓ and is refused at Save, naming the field.
 
 #### Type presets
 
