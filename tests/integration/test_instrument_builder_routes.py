@@ -4979,6 +4979,83 @@ def test_step_must_be_at_most_max_minus_min(
     assert response.status_code == 422
 
 
+def test_integer_field_refuses_fractional_bounds(
+    client: TestClient, db: Session
+) -> None:
+    """19T Item 6 entry 2 — an Integer field's ``validation`` block
+    casts its bounds with ``int``, so a Step of 0.5 used to land as 0
+    and show "steps of 0" above the reviewer table. The save refuses a
+    fractional Min, Max or Step on an Integer field and names Decimal;
+    a Decimal field takes the same bounds."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="int-fraction"
+    )
+    url = (
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state"
+    )
+
+    def _post(data_type: str, lo: str, hi: str, by: str):
+        # A fresh name each time: a row without an id is a new row.
+        return client.post(url, json={"response_fields": [{
+            "name": f"Score {data_type} {lo} {hi} {by}",
+            "data_type": data_type,
+            "min": lo, "max": hi, "step": by, "selected": True,
+        }]})
+
+    for lo, hi, by in (("1", "5", "0.5"), ("1.5", "5", "1"), ("1", "4.5", "1")):
+        response = _post("integer", lo, hi, by)
+        assert response.status_code == 422, (lo, hi, by)
+        message = response.json()["errors"][0]["message"]
+        assert "whole-number" in message and "Decimal" in message
+    # Whole numbers written with a trailing ``.0`` are still whole.
+    assert _post("integer", "1.0", "5", "1").status_code == 200
+    assert _post("decimal", "1", "5", "0.5").status_code == 200
+
+    # A field already stored with a fractional Integer step (saved
+    # before this rule) keeps saving while its shape is unchanged —
+    # its bounds lock once it has responses, so refusing it would
+    # block every Save of the card. Changing its shape meets the rule.
+    assert _post("integer", "1", "5", "1").status_code == 200
+    db.expire_all()
+    field = db.scalars(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == new_model.id,
+            InstrumentResponseField.label == "Score integer 1 5 1",
+        )
+    ).one()
+    field._inline_step = 0.5
+    db.commit()
+    renamed = client.post(url, json={"response_fields": [{
+        "id": field.id, "name": "Score renamed", "data_type": "integer",
+        "min": "1", "max": "5", "step": "0.5", "selected": True,
+    }]})
+    assert renamed.status_code == 200
+    reshaped = client.post(url, json={"response_fields": [{
+        "id": field.id, "name": "Score renamed", "data_type": "integer",
+        "min": "1", "max": "4", "step": "0.5", "selected": True,
+    }]})
+    assert reshaped.status_code == 422
+    assert "whole-number" in reshaped.json()["errors"][0]["message"]
+
+
+def test_integer_whole_bounds_rule_is_mirrored_client_side(
+    client: TestClient, db: Session
+) -> None:
+    """19T Item 6 entry 2 — the Band 3 row's ✓ gate mirrors the
+    server's whole-number rule, exempting a row with responses (its
+    bounds are locked)."""
+    review_session, _ = _new_model_with_tags(client, db, code="int-fraction-js")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    assert (
+        "'Integer fields take whole-number Min, Max and Step. "
+        "Choose Decimal for steps like 0.5.'"
+    ) in body
+    assert "row.getAttribute('data-has-responses') !== 'true'" in body
+
+
 def test_wave3_prii_shape_change_blocked_when_responses_exist(
     client: TestClient, db: Session
 ) -> None:

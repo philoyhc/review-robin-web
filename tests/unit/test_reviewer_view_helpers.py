@@ -164,16 +164,22 @@ def _field(*, data_type: str, validation: dict | None) -> SimpleNamespace:
             {"min": 0, "max": 100, "step": 1},
             "0 to 100, steps of 1",
         ),
-        # Decimal — `{min} to {max}, steps of {step}`, one decimal place
+        # Decimal — `{min} to {max}, steps of {step}`, as entered: no
+        # trailing `.0`, and no rounding (19T Item 6 entry 2).
         (
             "Decimal",
             {"min": 1.0, "max": 5.0, "step": 0.5},
-            "1.0 to 5.0, steps of 0.5",
+            "1 to 5, steps of 0.5",
         ),
         (
             "Decimal",
             {"min": 1.0, "max": 5.0, "step": 0.1},
-            "1.0 to 5.0, steps of 0.1",
+            "1 to 5, steps of 0.1",
+        ),
+        (
+            "Decimal",
+            {"min": 1.5, "max": 4.75, "step": 0.25},
+            "1.5 to 4.75, steps of 0.25",
         ),
         # List rows have no shape hint to surface.
         ("List", {"choices": ["Yes", "No"]}, ""),
@@ -202,7 +208,12 @@ def test_placeholder_for_field_table(
         (
             "Decimal",
             {"min": 1.0, "max": 5.0, "step": 0.5},
-            "1.0-5.0, steps of 0.5",
+            "1-5, steps of 0.5",
+        ),
+        (
+            "Decimal",
+            {"min": 0.0, "max": 1.0, "step": 0.05},
+            "0-1, steps of 0.05",
         ),
         # String drops the ``steps of`` suffix.
         ("String", {"min_length": 0, "max_length": 100}, "0-100 char"),

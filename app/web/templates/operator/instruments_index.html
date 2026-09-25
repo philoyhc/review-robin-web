@@ -4491,6 +4491,16 @@
             if (mn !== null && isNaN(mn)) { return 'Min must be a number.'; }
             if (mx !== null && isNaN(mx)) { return 'Max must be a number.'; }
             if (st !== null && isNaN(st)) { return 'Step must be a number.'; }
+            // 19T Item 6 entry 2 — mirrors the server's whole-number
+            // rule for Integer bounds. A row with responses is exempt:
+            // its bounds are locked, so the operator couldn't fix them.
+            if (dataType === 'integer'
+                && row.getAttribute('data-has-responses') !== 'true'
+                && [mn, mx, st].some(function (v) {
+              return v !== null && v !== Math.floor(v);
+            })) {
+              return 'Integer fields take whole-number Min, Max and Step. Choose Decimal for steps like 0.5.';
+            }
             if (mn !== null && mx !== null && mx < mn) {
               return 'Max must be at least Min.';
             }

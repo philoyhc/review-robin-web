@@ -182,7 +182,8 @@ def placeholder_for_field(field: InstrumentResponseField) -> str:
             return (
                 f"{int(min_)} to {int(max_)}, steps of {int(step)}"
             )
-        return f"{min_:.1f} to {max_:.1f}, steps of {step:.1f}"
+        lo, hi, by = (_format_band2_bound(v) for v in (min_, max_, step))
+        return f"{lo} to {hi}, steps of {by}"
     return ""
 
 
@@ -208,7 +209,8 @@ def constraint_summary_for_field(field: InstrumentResponseField) -> str:
             return ""
         if data_type == "Integer":
             return f"{int(min_)}-{int(max_)}, steps of {int(step)}"
-        return f"{min_:.1f}-{max_:.1f}, steps of {step:.1f}"
+        lo, hi, by = (_format_band2_bound(v) for v in (min_, max_, step))
+        return f"{lo}-{hi}, steps of {by}"
     # List rows are omitted from the constraint summary — the
     # ``<select>`` already constrains the choice in the input itself.
     return ""

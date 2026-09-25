@@ -647,6 +647,16 @@ closes when the author says.
   whose Min, Max or Step is not a whole number, and name Decimal as the
   type for steps like 0.5. Decimal summaries print their bounds as
   entered.
+- **Fix.** `_integer_bounds_error` in `_band2.py` refuses the save (422,
+  naming the field), and `newModelRfValidateShape` gates ✓ with the same
+  words. A field stored before the rule passes while its type and bounds
+  are unchanged: they lock once it has responses, so refusing it would
+  block every Save of the card. The client skips a row with responses for
+  the same reason. The two summary helpers in `views/_instruments.py`
+  print Decimal bounds through `_format_band2_bound`: "1-5, steps of 0.5",
+  "0-1, steps of 0.25", as the Band 2 preview already did.
+- **Not covered:** a Settings CSV import writes bounds without any shape
+  check (Max below Min passes too); that predates 19T.
 
 ### Blast radius (measured)
 
@@ -654,6 +664,12 @@ Taken 2026-09-25 at `ed0ce1a6`: entry 1 — 3 renders of the pill
 (`grep -rn "Required items completed" app/web/templates`), 4 test
 assertions in 2 files (`grep -rn "Required items completed" tests/`), 2
 lines of `spec/reviewer-surface.md`.
+
+Taken 2026-09-25 at `3a7bf069`: entry 2 — 1 server validator and its
+client mirror, 5 hits
+(`grep -rn --include=*.py --include=*.html "_validate_response_field_shape\|newModelRfValidateShape(" app/`);
+2 summary helpers (`grep -n "steps of" app/web/views/_instruments.py`);
+their tests in 2 files (`grep -rln --include=*.py "steps of" tests/`).
 
 ### Definition of done
 
@@ -670,8 +686,8 @@ lines of `spec/reviewer-surface.md`.
 
 ### Status
 
-**Open.** Entry 1 in its PR (one read: no code defect; plan gaps fixed).
-Entry 2 is ruled and next. **Owed:** the Guide's `instrument-card-preview`
+**Open.** Entry 1 in #2620 (one read: no code defect; plan gaps fixed).
+Entry 2 follows it. **Owed:** the Guide's `instrument-card-preview`
 capture shows the pill without its `*`; the author retakes it with
 `guide/advanced_instruments.md` Items 4–5's captures, which redo the card.
 
@@ -680,4 +696,9 @@ capture shows the pill without its `*`; the author retakes it with
 - `spec/reviewer-surface.md` — "Above the table" and "Visible progress":
   the pill reads `*Required items completed`, echoing the header marker
   (Item 6, entry 1).
+- `spec/instruments.md` — "Inline bounds": an Integer field takes
+  whole-number Min, Max and Step, except a stored field whose shape is
+  unchanged (Item 6, entry 2).
+- `spec/reviewer-surface.md` — the constraint line and placeholder print
+  Decimal bounds as entered (Item 6, entry 2).
 - `docs/status.md` — row when the item closes (Item 6).
