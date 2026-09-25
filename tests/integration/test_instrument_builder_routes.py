@@ -4597,7 +4597,10 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     # just the chips currently toggled on in the preview. All 3
     # fields contribute to "All items"; the 2 marked
     # ``required=True`` (Rating + Bonus) contribute to "Required".
-    assert "Required items completed: 0/<span data-new-model-intro-required-count>2</span>" in flat
+    assert "*Required items completed: 0/<span data-new-model-intro-required-count>2</span>" in flat
+    # 19T Item 6 entry 1 — the ``*`` echoes the required marker on
+    # the column headers, in the rebuild the preview JS renders too.
+    assert "'*Required items completed: 0/'" in flat
     assert "All items completed: 0/<span data-new-model-intro-all-count>3</span>" in flat
     # Required pill is warning (2 required, 0 done). All pill is
     # neutral count.
@@ -4686,7 +4689,7 @@ def test_band2_intro_card_marks_required_pill_success_when_no_required_fields(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
     flat = " ".join(body.split())
-    assert "Required items completed: 0/<span data-new-model-intro-required-count>0</span>" in flat
+    assert "*Required items completed: 0/<span data-new-model-intro-required-count>0</span>" in flat
     intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
     intro_block = flat[intro_idx : intro_idx + 2500]
     assert 'class="pill pill-success"' in intro_block
