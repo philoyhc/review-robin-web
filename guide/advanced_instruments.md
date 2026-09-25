@@ -430,7 +430,10 @@ on another page.
    - up / down buttons (Item 3's stack);
    - select / unselect, except Name and Email (19T Item 3 entry 2's
      rule);
-   - an editable friendly label;
+   - no label editing: friendly labels are session-wide (the author,
+     2026-09-25: they describe the one roster every instrument shares),
+     so the table shows the session's label and they are edited on the
+     roster pages;
    - and more, decided when it is scheduled.
 6. **The Guide text** changes in the build; the author retakes the two
    instrument captures.
@@ -454,10 +457,9 @@ two places); Observers always on the card (no longer the reviewer's view).
     `reorder_display_fields`. Selection persists through
     `selected_display_keys`.
   - Column width stays a resize in the preview.
-- **Friendly labels are session-wide today** (`field_labels`, read by
-  `display_field_label`). The per-instrument label column was retired in
-  15A and is dead data, so a label edited here changes every instrument's
-  column. See the open questions.
+- **Friendly labels stay session-wide** (`field_labels`, read by
+  `display_field_label`). The per-instrument label column retired in 15A
+  stays dead.
 - **Preview order:** the display rows in table order, then the active
   response rows in row order.
 
@@ -479,9 +481,7 @@ two places); Observers always on the card (no longer the reviewer's view).
   row. `build_reviewer_visibility_rows` also feeds the reviewer surface,
   so its output stays as it is, and the operator's extras come from
   `band3_visibility_by_instrument`, which is already in context.
-- **Server:** none for visibility or order. For labels, none if they stay
-  session-wide; a per-instrument label means reviving that column in the
-  service and on the reviewer surface.
+- **Server:** none for visibility, order or labels.
 - **Tests:** 3 files name Band 3's visibility markup, and 2 name the
   Band 2 pills.
 - **Specs:**
@@ -512,8 +512,7 @@ Two halves, each scaffold-first (CLAUDE.md):
 - **Build order.** Recommended: A first, since it depends on nothing; and
   B in place of Item 3's display-pill step, since both retire Band 2
   pills. The author decides when it is scheduled.
-- **Friendly labels.** Recommended: keep them session-wide and say so in
-  the table ("applies to every instrument"), rather than reviving the
-  per-instrument column that 15A retired.
+- ~~**Friendly labels.**~~ Settled 2026-09-25: session-wide only, never per
+  instrument.
 - **The table's other columns** (width, source name, others) are settled
   when it is scheduled.
