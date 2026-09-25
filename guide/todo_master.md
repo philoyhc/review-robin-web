@@ -3376,9 +3376,10 @@ dep chains called out at the bottom of this file.
    - ~~**Item 5 — `PhotoLink` becomes `ProfileLink`.**~~ **Closed
      2026-09-25.** The roster CSV column's new name; the importer still
      accepts the old one.
-   - **Item 6 — Small fixes register, second batch** (open). The Required
-     pill reads "*Required items completed"; an Integer field refuses a
-     fractional step.
+   - ~~**Item 6 — Small fixes register, second batch.**~~ **Closed
+     2026-09-25.** The Required pill reads "*Required items completed"; an
+     Integer field refuses a fractional step, and no bound takes "nan" or
+     "inf".
 
 #### Stubs
 
