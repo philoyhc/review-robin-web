@@ -353,7 +353,7 @@ def test_instrument_card_shows_completion_pills(
     rae_client = make_client(rae)
 
     fresh = rae_client.get(f"/me/sessions/{review_session.id}/1").text
-    assert "Required items completed: 0/1" in fresh
+    assert "*Required items completed: 0/1" in fresh
     assert "All items completed: 0/2" in fresh
 
     rae_client.post(
@@ -362,7 +362,7 @@ def test_instrument_card_shows_completion_pills(
         follow_redirects=False,
     )
     after = rae_client.get(f"/me/sessions/{review_session.id}/1").text
-    assert "Required items completed: 1/1" in after
+    assert "*Required items completed: 1/1" in after
     assert "All items completed: 1/2" in after
 
 

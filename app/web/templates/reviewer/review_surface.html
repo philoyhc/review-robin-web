@@ -293,7 +293,7 @@
             {% if group.completion %}
               <p class="rs-instrument-progress">
                 <span class="pill {% if group.completion.required_done == group.completion.required_total %}pill-success{% else %}pill-warning{% endif %}">
-                  Required items completed: {{ group.completion.required_done }}/{{ group.completion.required_total }}
+                  *Required items completed: {{ group.completion.required_done }}/{{ group.completion.required_total }}
                 </span>
                 <span class="pill {% if group.completion.all_done == group.completion.all_total %}pill-success{% else %}pill-count{% endif %}">
                   All items completed: {{ group.completion.all_done }}/{{ group.completion.all_total }}

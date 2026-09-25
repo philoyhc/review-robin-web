@@ -616,3 +616,68 @@ test names and line references (fixed). Codex found nothing.
   renamed, Reviewers now listing `ProfileLink` (Item 5).
 - `spec/rrw_functional_spec.md` — the roster CSV headers (Item 5).
 - `docs/status.md` — row when the item closes (Item 5).
+
+---
+
+## Item 6 — Small fixes register, second batch
+
+**Opened 2026-09-25 on the author's instruction**, with Item 3's shape: one
+entry per defect, each with its own PR, test and `diff-reviewer` read. It
+closes when the author says.
+
+### Entry 1 — the Required pill doesn't name its marker
+
+- **Defect** (the author, 2026-09-25). Required response fields carry a
+  `*` on their column header, but the pill counting them reads "Required
+  items completed", so nothing ties the two together.
+- **Fix.** The pill reads "*Required items completed" in all three places
+  it renders: Band 2's preview (the server render and the JS rebuild) and
+  the reviewer surface, which the operator's reviewer preview shares.
+  "All items completed" is unchanged.
+
+### Entry 2 — a fractional step on an Integer field shows as 0
+
+- **Defect** (the author, 2026-09-25). An Integer field saved with Step
+  0.5 shows "(1-5, steps of 0)" above the reviewer table. The
+  `validation` block casts its bounds with `int`, so 0.5 becomes 0, and
+  the reviewer can enter only whole numbers anyway. Found alongside: a
+  Decimal field's summary rounds to one place, so a step of 0.25 reads
+  "0.2" and a max of 4.75 reads "4.8".
+- **The author's ruling:** reject it. ✓ and Save refuse an Integer field
+  whose Min, Max or Step is not a whole number, and name Decimal as the
+  type for steps like 0.5. Decimal summaries print their bounds as
+  entered.
+
+### Blast radius (measured)
+
+Taken 2026-09-25 at `ed0ce1a6`: entry 1 — 3 renders of the pill
+(`grep -rn "Required items completed" app/web/templates`), 4 test
+assertions in 2 files (`grep -rn "Required items completed" tests/`), 2
+lines of `spec/reviewer-surface.md`.
+
+### Definition of done
+
+- Every entry has its fix merged and a test that fails without it.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.6` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- None.
+
+### Status
+
+**Open.** Entry 1 in its PR (one read: no code defect; plan gaps fixed).
+Entry 2 is ruled and next. **Owed:** the Guide's `instrument-card-preview`
+capture shows the pill without its `*`; the author retakes it with
+`guide/advanced_instruments.md` Items 4–5's captures, which redo the card.
+
+### Doc impact
+
+- `spec/reviewer-surface.md` — "Above the table" and "Visible progress":
+  the pill reads `*Required items completed`, echoing the header marker
+  (Item 6, entry 1).
+- `docs/status.md` — row when the item closes (Item 6).

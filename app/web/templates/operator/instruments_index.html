@@ -1902,7 +1902,7 @@
                  data-new-model-intro-progress
                  {% if _all_count == 0 %}hidden{% endif %}>
                 <span class="pill {% if _required_count == 0 %}pill-success{% else %}pill-warning{% endif %}"
-                      data-new-model-intro-required-pill>Required items completed: 0/<span data-new-model-intro-required-count>{{ _required_count }}</span></span>
+                      data-new-model-intro-required-pill>*Required items completed: 0/<span data-new-model-intro-required-count>{{ _required_count }}</span></span>
                 <span class="pill pill-count"
                       data-new-model-intro-all-pill>All items completed: 0/<span data-new-model-intro-all-count>{{ _all_count }}</span></span>
               </p>
@@ -2953,7 +2953,7 @@
               + hiddenAttr + '>'
               + '<span class="pill ' + reqClass + '"'
               +   ' data-new-model-intro-required-pill>'
-              +   'Required items completed: 0/'
+              +   '*Required items completed: 0/'
               +   '<span data-new-model-intro-required-count>' + requiredCount + '</span>'
               + '</span>'
               + '<span class="pill pill-count"'
