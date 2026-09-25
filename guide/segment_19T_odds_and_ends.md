@@ -600,11 +600,12 @@ files):
 
 ### Status
 
-**Open** (2026-09-25). Built in the same PR as this entry. Its read found
-no defect: every roster import path (Setup, Quick Setup, rehydrate) runs
-through the two parsers and gets the fallback. It found the Reviewers
-upload card never listing the link column, though the importer reads it
-(now listed), plus stale test names and line references (fixed).
+**Closed 2026-09-25** on the author's instruction (#2615 and this close),
+as decided. One `diff-reviewer` read found no defect: every roster
+import path (Setup, Quick Setup, rehydrate) runs through the two parsers
+and gets the fallback. It found the Reviewers upload card never listing
+the link column, though the importer read it (now listed), plus stale
+test names and line references (fixed). Codex found nothing.
 
 ### Doc impact
 

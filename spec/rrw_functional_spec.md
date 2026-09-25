@@ -1920,10 +1920,10 @@ exception, called out on the file's surface).
 ### 12.2 Per-entity files
 
 - **Reviewers.csv** — `ReviewerName, ReviewerEmail,
-  ReviewerTag1, ReviewerTag2, ReviewerTag3, PhotoLink, Status`.
+  ReviewerTag1, ReviewerTag2, ReviewerTag3, ProfileLink, Status`.
   Active rows first, then by name, then by email.
 - **Reviewees.csv** — `RevieweeName, RevieweeEmail,
-  RevieweeTag1, RevieweeTag2, RevieweeTag3, PhotoLink, Status`.
+  RevieweeTag1, RevieweeTag2, RevieweeTag3, ProfileLink, Status`.
   Same sort discipline.
 - **Relationships.csv** — `ReviewerEmail, RevieweeEmail,
   PairContextTag1, PairContextTag2, PairContextTag3, Status`.
