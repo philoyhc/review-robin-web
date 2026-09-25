@@ -723,7 +723,7 @@ suite against a `postgres:16` service container).
 | `GET /operator/sessions/{id}/responses/{reviewee_id}/detail` | reviewee drill-in scaffold from the Responses table (Segment 11C Part 1) |
 | `GET /operator/sessions/{id}/export/settings.csv` | Settings extract (Segment 12A-1 PR 1) — 3-column CSV `key,value,...`; emits `session.settings_extracted` |
 | `GET /operator/sessions/{id}/export/reviewers.csv` | Reviewers extract (12A-1 PR 2) — column shape matches `parse_reviewer_csv` so files round-trip; emits `session.reviewers_extracted` |
-| `GET /operator/sessions/{id}/export/reviewees.csv` | Reviewees extract (12A-1 PR 2) — column shape matches `parse_reviewee_csv` (incl. `PhotoLink`); emits `session.reviewees_extracted` |
+| `GET /operator/sessions/{id}/export/reviewees.csv` | Reviewees extract (12A-1 PR 2) — column shape matches `parse_reviewee_csv` (incl. `ProfileLink`, which import also accepts as the legacy `PhotoLink`); emits `session.reviewees_extracted` |
 | `GET /operator/sessions/{id}/export/relationships.csv` | Relationships extract (12A-3 PR 1) — 6-column CSV (`ReviewerEmail` / `RevieweeEmail` / `PairContextTag1..3` / `Status`) matching `parse_relationship_csv`; round-trips with the importer shipped by 15D PR 1; emits `session.relationships_extracted` |
 | `GET /operator/sessions/{id}/export/responses.csv` | Responses extract (12A-1 PR 4 + 4a) — 20-column wide CSV streamed via `yield_per(1000)`; lifecycle (saved / submitted / version) + uppercase `TRUE` / `FALSE` `SelfReview` flag; emits `session.responses_extracted` |
 | `GET /operator/sessions/{id}/export/audit_log.csv` | Audit-events extract (12B PR 1) — 8-column wide CSV (`EventType` / `Severity` / `Summary` / `ActorEmail` / `CorrelationId` / `CreatedAt` / `DetailJson`) with the canonical Segment 11K detail envelope JSON-encoded in the trailing column; LEFT JOIN against `users` for ActorEmail; streamed via `yield_per(1000)`; emits `session.audit_log_extracted`. **No operator-facing UI surface today** — the Extract Data tile retired in 12B PR 2 (#789); the route relocates to the Sys Admin page when Segment 16A ships |
@@ -790,7 +790,8 @@ The Cancel link on the surface is just `<a>` back to `GET /me/sessions/{id}` —
 
 - **CSV upload** with required `ReviewerName/ReviewerEmail` (or
   `RevieweeName/RevieweeEmail`); optional `Tag1/2/3` for future
-  RuleBased; optional `PhotoLink` on reviewees.
+  RuleBased; optional `ProfileLink` on both rosters (the legacy
+  `PhotoLink` header is still accepted on import).
 - **One-shot replace** with explicit confirm checkbox when the session
   already has rows. CSV files cap at 1 MiB / 5000 rows. Unknown
   columns are silently ignored. UTF-8 with BOM tolerated.
