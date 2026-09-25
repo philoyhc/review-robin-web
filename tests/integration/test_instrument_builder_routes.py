@@ -5013,9 +5013,9 @@ def test_integer_field_refuses_fractional_bounds(
     assert _post("decimal", "1", "5", "0.5").status_code == 200
 
     # A field already stored with a fractional Integer step (saved
-    # before this rule) keeps saving while its shape is unchanged —
-    # its bounds lock once it has responses, so refusing it would
-    # block every Save of the card. Changing its shape meets the rule.
+    # before this rule) meets the rule on its next Save — unless it has
+    # responses, which lock its bounds: refusing it then would block
+    # every Save of the card with nothing the operator could change.
     assert _post("integer", "1", "5", "1").status_code == 200
     db.expire_all()
     field = db.scalars(
@@ -5026,17 +5026,36 @@ def test_integer_field_refuses_fractional_bounds(
     ).one()
     field._inline_step = 0.5
     db.commit()
-    renamed = client.post(url, json={"response_fields": [{
-        "id": field.id, "name": "Score renamed", "data_type": "integer",
-        "min": "1", "max": "5", "step": "0.5", "selected": True,
-    }]})
-    assert renamed.status_code == 200
-    reshaped = client.post(url, json={"response_fields": [{
-        "id": field.id, "name": "Score renamed", "data_type": "integer",
-        "min": "1", "max": "4", "step": "0.5", "selected": True,
-    }]})
-    assert reshaped.status_code == 422
-    assert "whole-number" in reshaped.json()["errors"][0]["message"]
+
+    def _rename() -> object:
+        return client.post(url, json={"response_fields": [{
+            "id": field.id, "name": "Score renamed", "data_type": "integer",
+            "min": "1", "max": "5", "step": "0.5", "selected": True,
+        }]})
+
+    refused = _rename()
+    assert refused.status_code == 422
+    assert "whole-number" in refused.json()["errors"][0]["message"]
+
+    reviewer = db.scalars(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).first()
+    reviewee = db.scalars(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).first()
+    assignment = Assignment(
+        session_id=review_session.id,
+        instrument_id=new_model.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(Response(
+        assignment_id=assignment.id, response_field_id=field.id, value="3",
+    ))
+    db.commit()
+    assert _rename().status_code == 200
 
 
 def test_integer_whole_bounds_rule_is_mirrored_client_side(

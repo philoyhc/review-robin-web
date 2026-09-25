@@ -20,6 +20,7 @@ Source range in pre-PR-6 ``_legacy.py``: lines 38-335.
 from __future__ import annotations
 
 import math
+from decimal import Decimal
 from dataclasses import dataclass
 from typing import Any
 
@@ -156,7 +157,10 @@ def _format_band2_bound(value: float) -> str:
     ``"1.0"`` — matches what the operator would have typed."""
     if value == int(value):
         return str(int(value))
-    return str(value)
+    # ``repr`` is the shortest string that round-trips; formatting it
+    # through ``Decimal`` keeps a small step out of scientific notation
+    # ("0.00001", not "1e-05").
+    return format(Decimal(repr(value)), "f")
 
 
 def placeholder_for_field(field: InstrumentResponseField) -> str:

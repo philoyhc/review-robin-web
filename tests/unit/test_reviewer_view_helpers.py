@@ -215,6 +215,12 @@ def test_placeholder_for_field_table(
             {"min": 0.0, "max": 1.0, "step": 0.05},
             "0-1, steps of 0.05",
         ),
+        # A small step stays out of scientific notation.
+        (
+            "Decimal",
+            {"min": 0.0, "max": 0.001, "step": 0.00001},
+            "0-0.001, steps of 0.00001",
+        ),
         # String drops the ``steps of`` suffix.
         ("String", {"min_length": 0, "max_length": 100}, "0-100 char"),
         # List rows are intentionally omitted from the summary line.

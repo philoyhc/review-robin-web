@@ -352,15 +352,17 @@ def _band2_rf_id(rf: dict[str, Any]) -> int | None:
 
 
 def _integer_bounds_error(
+    db: Session,
     rf: dict[str, Any],
     stored: InstrumentResponseField | None,
 ) -> str | None:
     """19T Item 6 entry 2 — refuse a fractional Min, Max or Step on an
     Integer field. Its ``validation`` block casts bounds with ``int``,
     so a Step of 0.5 would land as 0, and the reviewer could enter
-    whole numbers only. A field whose type and bounds match what is
-    stored passes unchanged: its bounds are locked once it has
-    responses, so refusing it would block every Save of the card."""
+    whole numbers only. One exemption: a stored field with responses
+    whose type and bounds are unchanged. Its bounds are locked, so
+    refusing it would block every Save of the card with nothing the
+    operator could do about it."""
     if rf.get("data_type") != "integer":
         return None
     bounds = tuple(
@@ -373,7 +375,7 @@ def _integer_bounds_error(
         stored._inline_min,
         stored._inline_max,
         stored._inline_step,
-    ) == ("Integer", *bounds):
+    ) == ("Integer", *bounds) and _response_count_for_field(db, stored.id):
         return None
     return INTEGER_WHOLE_BOUNDS_MESSAGE
 
@@ -503,7 +505,7 @@ def _sync_response_fields_to_db(
     stored_by_id = {f.id: f for f in instrument.response_fields}
     for rf in sanitised_rfs:
         msg = _validate_response_field_shape(rf) or _integer_bounds_error(
-            rf, stored_by_id.get(_band2_rf_id(rf))
+            db, rf, stored_by_id.get(_band2_rf_id(rf))
         )
         if msg is not None:
             shape_errors.append((rf["name"], msg))

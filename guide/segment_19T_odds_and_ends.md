@@ -649,12 +649,14 @@ closes when the author says.
   entered.
 - **Fix.** `_integer_bounds_error` in `_band2.py` refuses the save (422,
   naming the field), and `newModelRfValidateShape` gates ✓ with the same
-  words. A field stored before the rule passes while its type and bounds
-  are unchanged: they lock once it has responses, so refusing it would
-  block every Save of the card. The client skips a row with responses for
-  the same reason. The two summary helpers in `views/_instruments.py`
-  print Decimal bounds through `_format_band2_bound`: "1-5, steps of 0.5",
-  "0-1, steps of 0.25", as the Band 2 preview already did.
+  words, checked after the existing rules on both sides. One exemption,
+  on both sides: a stored field with responses and unchanged bounds,
+  since those bounds are locked and refusing them would block every Save
+  of the card. A stored field without responses meets the rule on its
+  next Save. The two summary helpers in `views/_instruments.py` print
+  Decimal bounds through `_format_band2_bound`, unrounded and without a
+  trailing `.0` or scientific notation: "1-5, steps of 0.5", "0-1, steps
+  of 0.25", as the Band 2 preview already did.
 - **Not covered:** a Settings CSV import writes bounds without any shape
   check (Max below Min passes too); that predates 19T.
 
@@ -687,7 +689,9 @@ their tests in 2 files (`grep -rln --include=*.py "steps of" tests/`).
 ### Status
 
 **Open.** Entry 1 in #2620 (one read: no code defect; plan gaps fixed).
-Entry 2 follows it. **Owed:** the Guide's `instrument-card-preview`
+Entry 2 follows it (one read: no defect; it narrowed the server's
+exemption to fields with responses, aligned the client's check order and
+kept small steps out of scientific notation). **Owed:** the Guide's `instrument-card-preview`
 capture shows the pill without its `*`; the author retakes it with
 `guide/advanced_instruments.md` Items 4–5's captures, which redo the card.
 
@@ -697,8 +701,8 @@ capture shows the pill without its `*`; the author retakes it with
   the pill reads `*Required items completed`, echoing the header marker
   (Item 6, entry 1).
 - `spec/instruments.md` — "Inline bounds": an Integer field takes
-  whole-number Min, Max and Step, except a stored field whose shape is
-  unchanged (Item 6, entry 2).
+  whole-number Min, Max and Step, except a stored field with responses
+  whose bounds are unchanged (Item 6, entry 2).
 - `spec/reviewer-surface.md` — the constraint line and placeholder print
   Decimal bounds as entered (Item 6, entry 2).
 - `docs/status.md` — row when the item closes (Item 6).
