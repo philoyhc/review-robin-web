@@ -20,6 +20,7 @@ Source range in pre-PR-6 ``_legacy.py``: lines 38-335.
 from __future__ import annotations
 
 import math
+from decimal import Decimal
 from dataclasses import dataclass
 from typing import Any
 
@@ -156,7 +157,10 @@ def _format_band2_bound(value: float) -> str:
     ``"1.0"`` — matches what the operator would have typed."""
     if value == int(value):
         return str(int(value))
-    return str(value)
+    # ``repr`` is the shortest string that round-trips; formatting it
+    # through ``Decimal`` keeps a small step out of scientific notation
+    # ("0.00001", not "1e-05").
+    return format(Decimal(repr(value)), "f")
 
 
 def placeholder_for_field(field: InstrumentResponseField) -> str:
@@ -182,7 +186,8 @@ def placeholder_for_field(field: InstrumentResponseField) -> str:
             return (
                 f"{int(min_)} to {int(max_)}, steps of {int(step)}"
             )
-        return f"{min_:.1f} to {max_:.1f}, steps of {step:.1f}"
+        lo, hi, by = (_format_band2_bound(v) for v in (min_, max_, step))
+        return f"{lo} to {hi}, steps of {by}"
     return ""
 
 
@@ -208,7 +213,8 @@ def constraint_summary_for_field(field: InstrumentResponseField) -> str:
             return ""
         if data_type == "Integer":
             return f"{int(min_)}-{int(max_)}, steps of {int(step)}"
-        return f"{min_:.1f}-{max_:.1f}, steps of {step:.1f}"
+        lo, hi, by = (_format_band2_bound(v) for v in (min_, max_, step))
+        return f"{lo}-{hi}, steps of {by}"
     # List rows are omitted from the constraint summary — the
     # ``<select>`` already constrains the choice in the input itself.
     return ""

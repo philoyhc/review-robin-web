@@ -4482,7 +4482,8 @@
           function parseNum(text) {
             if (text === '') { return null; }
             var v = parseFloat(text);
-            return isNaN(v) ? NaN : v;
+            // "Infinity" and "1e309" parse; the server refuses them.
+            return isFinite(v) ? v : NaN;
           }
           if (dataType === 'integer' || dataType === 'decimal') {
             var mn = parseNum(val('min'));
@@ -4508,9 +4509,22 @@
             ) {
               return 'Step must be at most (Max − Min) so the field has at least two valid values.';
             }
+            // 19T Item 6 entry 2 — mirrors the server's whole-number
+            // rule for Integer bounds, checked after the rules above as
+            // the server checks it. A row with responses is exempt:
+            // its bounds are locked, so the operator couldn't fix them.
+            if (dataType === 'integer'
+                && row.getAttribute('data-has-responses') !== 'true'
+                && [mn, mx, st].some(function (v) {
+              return v !== null && v !== Math.floor(v);
+            })) {
+              return 'Integer fields take whole-number Min, Max and Step. Choose Decimal for steps like 0.5.';
+            }
             return null;
           }
           if (dataType === 'string') {
+            var sm = parseNum(val('min'));
+            if (sm !== null && isNaN(sm)) { return 'Min must be a number.'; }
             var ml = parseNum(val('max'));
             if (ml !== null && isNaN(ml)) { return 'Max length must be a number.'; }
             if (ml !== null && ml <= 0) {

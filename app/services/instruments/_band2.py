@@ -29,6 +29,7 @@ dependency is one-way.
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -334,6 +335,52 @@ def _band2_parse_float(value: Any) -> float | None:
         return None
 
 
+INTEGER_WHOLE_BOUNDS_MESSAGE = (
+    "Integer fields take whole-number Min, Max and Step. "
+    "Choose Decimal for steps like 0.5."
+)
+
+
+def _band2_rf_id(rf: dict[str, Any]) -> int | None:
+    """The stored row id a band2_state entry names, or None for a new
+    row. The id arrives as an int or a digit string."""
+    rf_id_raw = rf.get("id")
+    if isinstance(rf_id_raw, int):
+        return rf_id_raw
+    if isinstance(rf_id_raw, str) and rf_id_raw.strip().isdigit():
+        return int(rf_id_raw)
+    return None
+
+
+def _integer_bounds_error(
+    db: Session,
+    rf: dict[str, Any],
+    stored: InstrumentResponseField | None,
+) -> str | None:
+    """19T Item 6 entry 2 — refuse a fractional Min, Max or Step on an
+    Integer field. Its ``validation`` block casts bounds with ``int``,
+    so a Step of 0.5 would land as 0, and the reviewer could enter
+    whole numbers only. One exemption: a stored field with responses
+    whose type and bounds are unchanged. Its bounds are locked, so
+    refusing it would block every Save of the card with nothing the
+    operator could do about it."""
+    if rf.get("data_type") != "integer":
+        return None
+    bounds = tuple(
+        _band2_parse_float(rf.get(k)) for k in ("min", "max", "step")
+    )
+    if all(v is None or v == int(v) for v in bounds):
+        return None
+    if stored is not None and (
+        stored._inline_data_type,
+        stored._inline_min,
+        stored._inline_max,
+        stored._inline_step,
+    ) == ("Integer", *bounds) and _response_count_for_field(db, stored.id):
+        return None
+    return INTEGER_WHOLE_BOUNDS_MESSAGE
+
+
 def _validate_response_field_shape(rf: dict[str, Any]) -> str | None:
     """Wave 3 PR ii — check a sanitised band2_state response-field
     entry against the locked-decision-11 authoring rules. Returns
@@ -345,6 +392,15 @@ def _validate_response_field_shape(rf: dict[str, Any]) -> str | None:
     max_length (carried on the ``max`` slot) must be > 0 when set.
     """
     data_type = rf.get("data_type", "string")
+    # "nan", "inf" and an overflowing "1e309" parse as floats but are
+    # not bounds; refuse them on every type before anything converts
+    # them or stores them (a 500 from ``int()`` before; Codex on #2621).
+    for key, label in (("min", "Min"), ("max", "Max"), ("step", "Step")):
+        value = _band2_parse_float(rf.get(key))
+        if value is not None and not math.isfinite(value):
+            if data_type == "string" and key == "max":
+                label = "Max length"
+            return f"{label} must be a number."
     if data_type in ("integer", "decimal"):
         min_ = _band2_parse_float(rf.get("min"))
         max_ = _band2_parse_float(rf.get("max"))
@@ -456,8 +512,11 @@ def _sync_response_fields_to_db(
     # payload (atomic save) when any entry has nonsensical bounds,
     # mirroring the locked-decision-11 contract.
     shape_errors: list[tuple[str, str]] = []
+    stored_by_id = {f.id: f for f in instrument.response_fields}
     for rf in sanitised_rfs:
-        msg = _validate_response_field_shape(rf)
+        msg = _validate_response_field_shape(rf) or _integer_bounds_error(
+            db, rf, stored_by_id.get(_band2_rf_id(rf))
+        )
         if msg is not None:
             shape_errors.append((rf["name"], msg))
     if shape_errors:
@@ -472,12 +531,7 @@ def _sync_response_fields_to_db(
     seen_ids: set[int] = set()
 
     for order_idx, rf in enumerate(sanitised_rfs):
-        rf_id_raw = rf.get("id")
-        rf_id: int | None = None
-        if isinstance(rf_id_raw, int):
-            rf_id = rf_id_raw
-        elif isinstance(rf_id_raw, str) and rf_id_raw.strip().isdigit():
-            rf_id = int(rf_id_raw)
+        rf_id = _band2_rf_id(rf)
 
         if rf_id is not None and rf_id in existing_by_id:
             field = existing_by_id[rf_id]

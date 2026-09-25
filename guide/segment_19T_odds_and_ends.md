@@ -647,6 +647,18 @@ closes when the author says.
   whose Min, Max or Step is not a whole number, and name Decimal as the
   type for steps like 0.5. Decimal summaries print their bounds as
   entered.
+- **Fix.** `_integer_bounds_error` in `_band2.py` refuses the save (422,
+  naming the field), and `newModelRfValidateShape` gates ✓ with the same
+  words, checked after the existing rules on both sides. One exemption,
+  on both sides: a stored field with responses and unchanged bounds,
+  since those bounds are locked and refusing them would block every Save
+  of the card. A stored field without responses meets the rule on its
+  next Save. The two summary helpers in `views/_instruments.py` print
+  Decimal bounds through `_format_band2_bound`, unrounded and without a
+  trailing `.0` or scientific notation: "1-5, steps of 0.5", "0-1, steps
+  of 0.25", as the Band 2 preview already did.
+- **Not covered:** a Settings CSV import writes bounds without any shape
+  check (Max below Min passes too); that predates 19T.
 
 ### Blast radius (measured)
 
@@ -654,6 +666,12 @@ Taken 2026-09-25 at `ed0ce1a6`: entry 1 — 3 renders of the pill
 (`grep -rn "Required items completed" app/web/templates`), 4 test
 assertions in 2 files (`grep -rn "Required items completed" tests/`), 2
 lines of `spec/reviewer-surface.md`.
+
+Taken 2026-09-25 at `3a7bf069`: entry 2 — 1 server validator and its
+client mirror, 5 hits
+(`grep -rn --include=*.py --include=*.html "_validate_response_field_shape\|newModelRfValidateShape(" app/`);
+2 summary helpers (`grep -n "steps of" app/web/views/_instruments.py`);
+their tests in 2 files (`grep -rln --include=*.py "steps of" tests/`).
 
 ### Definition of done
 
@@ -670,8 +688,12 @@ lines of `spec/reviewer-surface.md`.
 
 ### Status
 
-**Open.** Entry 1 in its PR (one read: no code defect; plan gaps fixed).
-Entry 2 is ruled and next. **Owed:** the Guide's `instrument-card-preview`
+**Open.** Entry 1 in #2620 (one read: no code defect; plan gaps fixed).
+Entry 2 in #2621 (two reads: the first narrowed the server's exemption
+to fields with responses, aligned the client's check order and kept small
+steps out of scientific notation; the second, on Codex's non-finite-bound
+500, extended the refusal to String and List rows, where a String Min of
+"nan" crashed from the UI too). **Owed:** the Guide's `instrument-card-preview`
 capture shows the pill without its `*`; the author retakes it with
 `guide/advanced_instruments.md` Items 4–5's captures, which redo the card.
 
@@ -680,4 +702,10 @@ capture shows the pill without its `*`; the author retakes it with
 - `spec/reviewer-surface.md` — "Above the table" and "Visible progress":
   the pill reads `*Required items completed`, echoing the header marker
   (Item 6, entry 1).
+- `spec/instruments.md` — "Inline bounds": an Integer field takes
+  whole-number Min, Max and Step, except a stored field with responses
+  whose bounds are unchanged; on every type a non-finite bound ("nan",
+  "inf") is refused as not a number (Item 6, entry 2).
+- `spec/reviewer-surface.md` — the constraint line and placeholder print
+  Decimal bounds as entered (Item 6, entry 2).
 - `docs/status.md` — row when the item closes (Item 6).
