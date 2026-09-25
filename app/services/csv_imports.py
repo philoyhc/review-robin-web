@@ -170,6 +170,14 @@ def _none_if_blank(row: dict[str, str], key: str) -> str | None:
     return value or None
 
 
+def _profile_link(row: dict[str, str]) -> str | None:
+    """The roster's profile link, from ``ProfileLink`` or, failing that,
+    the legacy ``PhotoLink`` header (19T Item 5 renamed the column; files
+    and exported bundles written before it still import). A non-blank
+    ``ProfileLink`` wins when a file carries both."""
+    return _none_if_blank(row, "ProfileLink") or _none_if_blank(row, "PhotoLink")
+
+
 # Segment 18P PR C — the roster soft-delete states, shared by the
 # reviewer / reviewee / observer parsers. Mirrors
 # ``reviewers._VALID_STATUSES``.
@@ -335,7 +343,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
             ReviewerImportRow(
                 name=name,
                 email=email,
-                profile_link=_none_if_blank(raw, "PhotoLink"),
+                profile_link=_profile_link(raw),
                 tag_1=_none_if_blank(raw, "ReviewerTag1"),
                 tag_2=_none_if_blank(raw, "ReviewerTag2"),
                 tag_3=_none_if_blank(raw, "ReviewerTag3"),
@@ -438,7 +446,7 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
             RevieweeImportRow(
                 name=name,
                 email_or_identifier=identifier,
-                profile_link=_none_if_blank(raw, "PhotoLink"),
+                profile_link=_profile_link(raw),
                 tag_1=_none_if_blank(raw, "RevieweeTag1"),
                 tag_2=_none_if_blank(raw, "RevieweeTag2"),
                 tag_3=_none_if_blank(raw, "RevieweeTag3"),

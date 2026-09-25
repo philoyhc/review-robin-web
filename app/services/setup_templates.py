@@ -181,7 +181,7 @@ def _student_row(prefix: str, name: str, tutor: str, group: str) -> dict[str, st
         f"{prefix}Tag1": tutor,
         f"{prefix}Tag2": group,
         f"{prefix}Tag3": "",
-        "PhotoLink": "",
+        "ProfileLink": "",
         "Status": "active",
     }
 
@@ -340,7 +340,7 @@ def _full_cohort() -> tuple[tuple[str, str, str, str, str], ...]:
 
 
 def _full_row(
-    prefix: str, person: tuple[str, str, str, str, str], photo: bool
+    prefix: str, person: tuple[str, str, str, str, str], profile: bool
 ) -> dict[str, str]:
     name, email, tutor, group, team = person
     return {
@@ -349,9 +349,9 @@ def _full_row(
         f"{prefix}Tag1": tutor,
         f"{prefix}Tag2": group,
         f"{prefix}Tag3": team,
-        "PhotoLink": (
-            f"https://{EXAMPLE_DOMAIN}/photos/{email.split('@')[0]}.jpg"
-            if photo else ""
+        "ProfileLink": (
+            f"https://{EXAMPLE_DOMAIN}/profiles/{email.split('@')[0]}"
+            if profile else ""
         ),
         "Status": "active",
     }
@@ -362,10 +362,10 @@ _FULL = TemplateSet(
     zip_name="review-robin-sample-rosters-154.zip",
     rows={
         "reviewers": tuple(
-            _full_row("Reviewer", p, photo=False) for p in _full_cohort()
+            _full_row("Reviewer", p, profile=False) for p in _full_cohort()
         ),
         "reviewees": tuple(
-            _full_row("Reviewee", p, photo=True) for p in _full_cohort()
+            _full_row("Reviewee", p, profile=True) for p in _full_cohort()
         ),
     },
     labels={

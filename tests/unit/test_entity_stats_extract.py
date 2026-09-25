@@ -225,7 +225,7 @@ def test_headers_are_pinned() -> None:
         "RevieweeTag1",
         "RevieweeTag2",
         "RevieweeTag3",
-        "PhotoLink",
+        "ProfileLink",
         "ReviewersDraft",
         "ReviewersSubmitted",
         "FieldsAnsweredDraft",

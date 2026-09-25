@@ -32,7 +32,7 @@ CARDS = {
     "reviewees": (
         ["RevieweeName", "RevieweeEmail"],
         [
-            "PhotoLink",
+            "ProfileLink",
             "RevieweeTag1",
             "RevieweeTag2",
             "RevieweeTag3",

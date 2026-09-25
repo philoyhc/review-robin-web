@@ -68,7 +68,7 @@ REVIEWEE_STATS_HEADER: tuple[str, ...] = (
     "RevieweeTag1",
     "RevieweeTag2",
     "RevieweeTag3",
-    "PhotoLink",
+    "ProfileLink",
     "ReviewersDraft",
     "ReviewersSubmitted",
     "FieldsAnsweredDraft",

@@ -23,9 +23,9 @@ def test_valid_reviewer_csv_parses_two_rows() -> None:
     assert result.rows[1].tag_1 is None
 
 
-def test_valid_reviewer_csv_with_photolink_populates_profile_link() -> None:
+def test_valid_reviewer_csv_with_profilelink_populates_profile_link() -> None:
     csv_text = (
-        "ReviewerName,ReviewerEmail,PhotoLink\n"
+        "ReviewerName,ReviewerEmail,ProfileLink\n"
         "Carol,carol@example.edu,https://example.edu/c.jpg\n"
         "Dan,dan@example.edu,\n"
     )
@@ -79,9 +79,9 @@ def test_reviewer_invalid_emails_are_blocking() -> None:
     assert {i.row_number for i in bad} == {1, 2, 3}
 
 
-def test_valid_reviewee_csv_with_photolink_populates_profile_link() -> None:
+def test_valid_reviewee_csv_with_profilelink_populates_profile_link() -> None:
     csv_text = (
-        "RevieweeName,RevieweeEmail,PhotoLink\n"
+        "RevieweeName,RevieweeEmail,ProfileLink\n"
         "Carol,carol@example.edu,https://example.edu/c.jpg\n"
         "Dan,dan-2026,\n"
     )
@@ -92,6 +92,37 @@ def test_valid_reviewee_csv_with_photolink_populates_profile_link() -> None:
     assert result.rows[0].profile_link == "https://example.edu/c.jpg"
     assert result.rows[1].profile_link is None
     assert result.rows[1].email_or_identifier == "dan-2026"
+
+
+def test_the_legacy_photolink_header_still_imports() -> None:
+    """19T Item 5 renamed the column to `ProfileLink`. Files and exported
+    bundles written before it carry `PhotoLink`, and still import."""
+    reviewers = parse_reviewer_csv(_b(
+        "ReviewerName,ReviewerEmail,PhotoLink\n"
+        "Carol,carol@example.edu,https://example.edu/c.jpg\n"
+    ))
+    reviewees = parse_reviewee_csv(_b(
+        "RevieweeName,RevieweeEmail,PhotoLink\n"
+        "Dan,dan@example.edu,https://example.edu/d.jpg\n"
+    ))
+
+    assert reviewers.issues == [] and reviewees.issues == []
+    assert reviewers.rows[0].profile_link == "https://example.edu/c.jpg"
+    assert reviewees.rows[0].profile_link == "https://example.edu/d.jpg"
+
+
+def test_profilelink_wins_over_photolink_when_both_are_present() -> None:
+    """A non-blank `ProfileLink` wins; a blank one falls back to the
+    legacy column rather than erasing it."""
+    result = parse_reviewee_csv(_b(
+        "RevieweeName,RevieweeEmail,ProfileLink,PhotoLink\n"
+        "Erin,erin@example.edu,https://example.edu/new.jpg,https://example.edu/old.jpg\n"
+        "Finn,finn@example.edu,,https://example.edu/old.jpg\n"
+    ))
+
+    assert result.issues == []
+    assert result.rows[0].profile_link == "https://example.edu/new.jpg"
+    assert result.rows[1].profile_link == "https://example.edu/old.jpg"
 
 
 def test_reviewee_non_email_identifier_is_accepted() -> None:

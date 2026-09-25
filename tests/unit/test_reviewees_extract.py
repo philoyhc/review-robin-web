@@ -2,7 +2,7 @@
 Segment 12A-1 PR 2.
 
 Mirror of ``test_reviewers_extract`` for the reviewee shape,
-including the ``PhotoLink`` column matching the importer at
+including the ``ProfileLink`` column matching the importer at
 ``app.services.csv_imports.parse_reviewee_csv``.
 """
 
@@ -114,7 +114,7 @@ def test_active_rows_lead_then_alphabetical(db: Session) -> None:
 def test_round_trip_through_existing_importer(db: Session) -> None:
     """Extract → upload → parsed rows match. Pins the contract
     that export feeds the upload flow without conversion. The
-    ``PhotoLink`` header lines up with
+    ``ProfileLink`` header lines up with
     ``parse_reviewee_csv:336`` — a rename on either side fails
     this test."""
 

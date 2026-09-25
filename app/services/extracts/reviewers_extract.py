@@ -6,8 +6,9 @@ matches the existing reviewer importer
 round-trips with the upload flow on the Reviewers Manage page
 and the Quick Setup card without conversion.
 
-The ``PhotoLink`` column maps to ``Reviewer.profile_link``,
-mirroring ``reviewees_extract.PhotoLink`` per participant-model
+The ``ProfileLink`` column (``PhotoLink`` before 19T Item 5, still
+accepted on import) maps to ``Reviewer.profile_link``,
+mirroring ``reviewees_extract.ProfileLink`` per participant-model
 upgrade §3.9 (Reviewer / Reviewee parity).
 
 Both ``status="active"`` and ``status="inactive"`` rows are
@@ -40,7 +41,7 @@ HEADER: tuple[str, ...] = (
     "ReviewerTag1",
     "ReviewerTag2",
     "ReviewerTag3",
-    "PhotoLink",
+    "ProfileLink",
     # Segment 18P PR C — active / inactive soft-delete state. The
     # importer reads it back (blank / absent → active), so an
     # inactive reviewer round-trips as inactive.

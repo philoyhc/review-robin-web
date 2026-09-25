@@ -73,7 +73,7 @@ def reviewee_fields_with_data(db: Session, session_id: int) -> list[str]:
     if slot_has_data(
         db, session_id=session_id, column=Reviewee.profile_link
     ):
-        labels.append("PhotoLink")
+        labels.append("ProfileLink")
     for slot in (1, 2, 3):
         if slot_has_data(
             db, session_id=session_id, column=getattr(Reviewee, f"tag_{slot}")

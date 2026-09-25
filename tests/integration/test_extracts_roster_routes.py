@@ -61,7 +61,7 @@ def _seed_roster(client: TestClient, review_session: ReviewSession) -> None:
             "file": (
                 "e.csv",
                 (
-                    "RevieweeName,RevieweeEmail,RevieweeTag1,PhotoLink\n"
+                    "RevieweeName,RevieweeEmail,RevieweeTag1,ProfileLink\n"
                     "Carol,carol@example.edu,design,https://example.edu/c.jpg\n"
                     "Dan,dan@example.edu,,\n"
                 ).encode("utf-8"),
@@ -99,7 +99,7 @@ def test_reviewers_route_streams_csv_with_canonical_filename(
         "ReviewerTag1",
         "ReviewerTag2",
         "ReviewerTag3",
-        "PhotoLink",
+        "ProfileLink",
         "Status",
     ]
     body = rows[1:]
@@ -178,7 +178,7 @@ def test_reviewees_route_streams_csv_with_canonical_filename(
         "RevieweeTag1",
         "RevieweeTag2",
         "RevieweeTag3",
-        "PhotoLink",
+        "ProfileLink",
         "Status",
     ]
 

@@ -262,11 +262,11 @@ def test_the_full_set_tags_are_tutor_group_and_team() -> None:
     )
 
 
-def test_only_the_full_reviewees_carry_photo_links() -> None:
+def test_only_the_full_reviewees_carry_profile_links() -> None:
     full = set_by_key("full")
 
-    assert all(r["PhotoLink"] == "" for r in full.rows["reviewers"])
+    assert all(r["ProfileLink"] == "" for r in full.rows["reviewers"])
     assert all(
-        r["PhotoLink"].startswith(f"https://{EXAMPLE_DOMAIN}/photos/")
+        r["ProfileLink"].startswith(f"https://{EXAMPLE_DOMAIN}/profiles/")
         for r in full.rows["reviewees"]
     )
