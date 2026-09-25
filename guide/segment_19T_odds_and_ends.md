@@ -523,11 +523,13 @@ Taken 2026-09-25 at `39122e06`:
 
 ### Status
 
-**Open** (2026-09-25). Built in the same PR as this entry. Its read found
-no functional defect: stale set-count prose, the operator row's purpose
-(it is the default `FAKE_AUTH_EMAIL`, so it only stands in for the
-operator under local fake auth), two specs missing from Doc impact, and
-two test gaps (tutor spread, the new route's auth), all fixed.
+**Closed 2026-09-25** on the author's instruction (#2613 and this close),
+as decided. One `diff-reviewer` read found no functional defect: stale
+set-count prose, an overclaim about the operator row (it is the default
+`FAKE_AUTH_EMAIL`, so it stands in for the operator only under local
+fake auth), two specs missing from Doc impact, and two test gaps, all
+fixed. Codex found nothing. The Quick Setup upload is owed on the dev
+slot (`guide/post_azure_todo_checklist.md` item 6).
 
 ### Doc impact
 

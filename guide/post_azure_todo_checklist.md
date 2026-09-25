@@ -417,7 +417,8 @@ rendered page. Neither was a person on the live app.
 | Name and Email are labels | Click and Tab through Band 2's pills | Name / Email never toggle or take focus, tooltips "pinned first" / "pinned second"; they sit well beside the selected tag pills |
 | Email on group rows | Switch Unit to Group, then back | Email dims with "Not shown on group rows", then returns |
 | Visibility preview repaints | Cycle You's "Responses released" in Band 3, Save, Lock, reload | Band 2's card changes on the click and still reads the same after the reload |
+| Full-size sample rosters | Guide → Sample session → full-size download; upload both files in Quick Setup on a new session | 154 reviewers and reviewees, tag columns Tutor / Group / Team, a Profile column on Reviewees |
 
-**Where this came from.** `guide/segment_19T_odds_and_ends.md` Items 1,
-2 and 3, each closed with this check owed. Settling a row is a dated line
+**Where this came from.** `guide/segment_19T_odds_and_ends.md` Items 1–4,
+each closed with this check owed. Settling a row is a dated line
 there, not a reopening.

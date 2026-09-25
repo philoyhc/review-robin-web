@@ -487,6 +487,9 @@ session, attach all four files in Quick Setup, Prepare, then look around a
 populated session. A `.muted` line notes that everyone in it is fictional on
 `@example.edu`, that the session should be archived when done, and that the
 tag labels rename the session's tag columns as the setup templates do. The
+same card also offers `GET /templates/full.zip` — the rosters at a realistic
+class size (154 people, `reviewers.csv` and `reviewees.csv` only), for trying
+the app at scale rather than walking through the six-student demo. The
 card is **not** repeated on the lobby first-run card: that card is for someone
 about to set up for real, and the sample session is a detour needing room to
 explain. Contract: `spec/csv_contracts.md` §5a.
