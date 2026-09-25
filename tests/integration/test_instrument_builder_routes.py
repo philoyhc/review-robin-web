@@ -25,6 +25,7 @@ from app.db.models import (
     ReviewSession,
     SessionRuleSet,
 )
+from app.web.views._instruments import _REVIEWER_VP_MODE_LABELS
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -8569,3 +8570,16 @@ def test_band3_visibility_cycle_repaints_band2_preview_card(
         in cycle
     )
     assert "cell.textContent = _VP_CELL_LABELS[nextSlug] || nextSlug;" in cycle
+    # A repainted cell must read like a fresh render: the page's label
+    # map and the server's are the same words.
+    start = body.index("var _VP_CELL_LABELS = {")
+    client_map = dict(
+        re.findall(
+            r'"([a-z]*)": "([^"]+)"',
+            body[start : body.index("};", start)],
+        )
+    )
+    server_map = {
+        (slug or ""): label for slug, label in _REVIEWER_VP_MODE_LABELS.items()
+    }
+    assert client_map == server_map

@@ -419,7 +419,9 @@ test, a `diff-reviewer` read on any code, and Doc impact.
   Observers aren't on the card, so their cycles repaint nothing.
   Chromium: cycling You and Reviewees "Responses released" repaints
   those cells and dirties the card; an Observers cycle and the other
-  card are untouched.
+  card are untouched. Its read found no defect; its nits are taken: a
+  test pins the server and client label maps equal, and the builder's
+  docstring no longer claims "Summarized responses".
 - **Found alongside:** `spec/visibility_policy.md`'s reviewer-card row
   says three rows including Observers, labeled "Summarized responses".
   The code renders two rows and says "Anonymized summaries". Now a Doc
@@ -475,10 +477,9 @@ on the old template.
 - `spec/ui_elements.md` — "Label or control": `.tag-chip` covers every
   clickable Band 2 pill, not the locked Name / Email labels (Item 3,
   entry 2).
-- `spec/instruments.md` — Band 2's "Who can see what you wrote" card
-  repaints live from Band 3's Visibility cycle (Item 3, entry 3).
-- `spec/visibility_policy.md` — the reviewer-surface card is two rows
-  (You / Reviewees), and `summarized` reads "Anonymized summaries"
-  (Item 3, entry 3).
+- `spec/visibility_policy.md` — the "Band 2 preview" row: the card
+  repaints live from Band 3's Visibility cycle; the reviewer-surface
+  card row: two rows (You / Reviewees), and `summarized` reads
+  "Anonymized summaries" (Item 3, entry 3).
 - `docs/status.md` — row when the item closes (Item 3).
 
