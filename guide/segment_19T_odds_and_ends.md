@@ -523,10 +523,17 @@ Taken 2026-09-25 at `39122e06`:
 
 ### Status
 
-**Open** (2026-09-25). Built in the same PR as this entry.
+**Open** (2026-09-25). Built in the same PR as this entry. Its read found
+no functional defect: stale set-count prose, the operator row's purpose
+(it is the default `FAKE_AUTH_EMAIL`, so it only stands in for the
+operator under local fake auth), two specs missing from Doc impact, and
+two test gaps (tutor spread, the new route's auth), all fixed.
 
 ### Doc impact
 
 - `spec/csv_contracts.md` — §5a: a third set, the full-size rosters, and
-  its route (Item 4).
+  its route; §6's surface mapping gains the Guide's full download
+  (Item 4).
+- `spec/operator_ui_concept.md` — the "Sample session card" paragraph
+  offers the full download beside the demo (Item 4).
 - `docs/status.md` — row when the item closes (Item 4).

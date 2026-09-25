@@ -1,6 +1,6 @@
-"""Setup CSV templates — Segment 19E rungs 4 and 5.
+"""Setup CSV templates — Segment 19E rungs 4 and 5, and 19T Item 4.
 
-Two downloadable sets of roster CSVs, both generic and both served from
+Three downloadable sets of roster CSVs, all generic and all served from
 surfaces that render **before a session exists** — the Guide and the
 lobby first-run card — so nothing here takes a ``ReviewSession``.
 
@@ -10,14 +10,17 @@ lobby first-run card — so nothing here takes a ``ReviewSession``.
   configuration, which is asserted end-to-end in
   ``tests/integration/test_setup_template_download.py``.
 - **full** (19T Item 4): the two roster files at a realistic class size —
-  154 people in eleven tutorial groups, with ``operator@example.edu``
-  among them so the operator can open the reviewer surface as
-  themselves. Its tags are Tutor / Group / Team, labelled on all three
-  columns (:attr:`TemplateSet.labels`). It carries no relationships,
-  observers or rule, so a session built from it pairs everyone with
-  everyone until the operator sets one.
+  154 people in eleven tutorial groups. ``operator@example.edu`` is among
+  them because it is the default ``FAKE_AUTH_EMAIL``: signed in locally
+  under ``ALLOW_FAKE_AUTH``, the operator is also a reviewer and reviewee
+  of the session. Deployed, Easy Auth supplies a real address and the row
+  is one more fictional person. Its tags are Tutor / Group / Team,
+  labeled on all three columns (:attr:`TemplateSet.labels`). It carries
+  no relationships, observers or rule, so a session built from it pairs
+  everyone with everyone until the operator sets one. Its rows are
+  generated from fixed name lists rather than written out.
 
-Neither set carries a ``settings.csv``. It is not an omission: a new
+No set carries a ``settings.csv``. It is not an omission: a new
 session is seeded with a default instrument (``ensure_default_instrument``)
 whose new-model rule defaults to Full Matrix, so rosters alone reach
 ``validated``. A settings file would also be the one artefact here that
@@ -26,7 +29,7 @@ live session rather than a row-shaped roster.
 
 **Headers are derived, never authored.** Each template's header is the
 ``HEADER`` tuple of the extract that already serialises that file, held
-by reference, so a column added to a roster extract appears in both sets
+by reference, so a column added to a roster extract appears in every set
 on the next request. The importer's own contract tests pin those tuples
 against the parsers, which makes them the right thing to copy.
 
@@ -35,8 +38,9 @@ against the parsers, which makes them the right thing to copy.
 templates have no session to read overrides from, so these are examples —
 but the suffix grammar is the one thing about roster CSVs an operator
 cannot guess, and a template that demonstrates it teaches more than one
-that avoids it. Tag 3 stays bare, so the sets show labelling as per
-column and optional.
+that avoids it. In the starter and demo sets Tag 3 stays bare, so they
+show labelling as per column and optional; the full set labels all three
+(Tutor / Group / Team).
 
 The consequence is live: on import a labelled header **sets** that slot's
 override (``field_labels.apply_captured_labels``), so uploading a
@@ -51,7 +55,7 @@ would not split on import and the whole cell would be read as an unknown
 column name. :func:`template_header` is asserted against ``split_header``
 in the tests, which is the public check for exactly that.
 
-**Both sets are one scenario, scaled.** Students peer-reviewing each
+**The starter and demo sets are one scenario, scaled.** Students peer-reviewing each
 other inside a tutorial group: the starter set is one pair with their
 tutor observing, the demo set is two groups of three with both tutors
 observing. Every roster row is a person who appears as both reviewer and

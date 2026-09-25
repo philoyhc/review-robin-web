@@ -233,7 +233,7 @@ def test_the_full_set_is_154_people_seen_twice() -> None:
 
 def test_the_full_set_tags_are_tutor_group_and_team() -> None:
     """Eleven groups of fourteen, three teams each numbered across the
-    class, a tutor per group — and all three tag columns labelled."""
+    class, a tutor per group — and all three tag columns labeled."""
     full = set_by_key("full")
     rows = full.rows["reviewees"]
     groups = {r["RevieweeTag2"] for r in rows}
@@ -245,6 +245,12 @@ def test_the_full_set_tags_are_tutor_group_and_team() -> None:
         members = [r for r in rows if r["RevieweeTag2"] == group]
         assert len(members) == 14, group
         assert len({r["RevieweeTag1"] for r in members}) == 1, group
+    # Six tutors: five take two groups, the last takes one.
+    per_tutor = sorted(
+        sum(1 for r in rows if r["RevieweeTag1"] == tutor)
+        for tutor in {r["RevieweeTag1"] for r in rows}
+    )
+    assert per_tutor == [14, 28, 28, 28, 28, 28]
     # A team never straddles two groups.
     for team in teams:
         assert len({r["RevieweeTag2"] for r in rows if r["RevieweeTag3"] == team}) == 1

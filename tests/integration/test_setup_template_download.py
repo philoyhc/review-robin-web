@@ -359,6 +359,21 @@ def test_the_lobby_first_run_card_does_not_offer_the_demo_set(
 FULL_URL = "/templates/full.zip"
 
 
+def test_the_full_route_requires_authentication() -> None:
+    real_settings = Settings(allow_fake_auth=False)
+
+    def override(request: Request) -> AuthenticatedUser:
+        return resolve_current_user(request, real_settings)
+
+    app.dependency_overrides[get_current_user] = override
+    try:
+        response = TestClient(app).get(FULL_URL)
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 401
+
+
 def test_the_full_route_serves_its_own_zip(client: TestClient) -> None:
     response = client.get(FULL_URL)
 
