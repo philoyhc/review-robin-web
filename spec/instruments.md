@@ -805,8 +805,23 @@ session's roster:
   in the form payload and `set_instrument_display_fields`
   reconciles on the server.
 
-The chip row gates on `is_editing`. View mode renders the chips
-as static "selected" pills (no toggle affordance).
+**Name and Email are locked** — the server refuses to hide them
+— so their pills render as static `pill pill-count` labels rather
+than `.tag-chip` controls, in both view and edit mode: always
+selected, not clickable, not in the tab order, and carrying no
+chip edge (`spec/ui_elements.md` "Label or control"). Their
+tooltips name the pinned slot: "Always shown — pinned first:
+Name" / "Always shown — pinned second: Email". In grouped unit
+mode, Email drops out — a group row has no email; it shows the
+tag line plus member names (see "Group-flavor preview" below) —
+and its tooltip reads "Not shown on group rows: Email"; it
+returns in Individual mode. **The rule:** an individually scoped
+instrument always shows both Name and Email; a group-scoped
+instrument never shows Email.
+
+The chip row gates on `is_editing`. View mode renders the
+(non-locked) chips as static "selected" pills (no toggle
+affordance).
 
 #### Preview row
 
@@ -1057,7 +1072,10 @@ Bottom row of the card, right-aligned, in this order:
   that enables them on first change. On a successful JSON
   `/save` the tracker resets in place with no reload (the
   full-page redirect only happens on the no-JS `/fields/save`
-  fallback).
+  fallback). The Delete confirm checkbox (`[data-delete-confirm]`)
+  is excluded from the tracker: ticking it doesn't count as an
+  edit, so it neither enables Save/Cancel nor trips the leave-page
+  guard below on an otherwise-clean card.
 - **Leaving with a dirty card.** A page-wide `beforeunload` guard
   warns before navigating away while any card is dirty — the reason
   Replicate, Delete, +Instrument and +Page break need no lock-driven
