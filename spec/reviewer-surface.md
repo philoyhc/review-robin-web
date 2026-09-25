@@ -420,10 +420,18 @@ per-field min/max/step "constraints" reminders
 completion status alongside the formatting reminders. An *item*
 is one response cell (one field for one reviewee):
 
-- `Required items completed: {N}/{M}` — required field-cells filled
-  vs total (`.pill-success` when `N == M`, else `.pill-warning`).
+- `*Required items completed: {N}/{M}` — required field-cells filled
+  vs total (`.pill-success` when `N == M`, else `.pill-warning`). The
+  leading `*` echoes the ` *` marker on a required column's header
+  ("Columns" above).
 - `All items completed: {P}/{Q}` — every response cell filled vs
   total (`.pill-success` when `P == Q`, else `.pill-count`).
+
+The `.rs-constraints` reminder and the numeric input's placeholder /
+`title` print an Integer or Decimal field's Min, Max and Step as
+entered — no rounding, no trailing `.0`, no scientific notation
+(`constraint_summary_for_field` / `placeholder_for_field` /
+`_format_band2_bound`, `app/web/views/_instruments.py`).
 
 `_surface_context` adds a `completion` dict per instrument group
 (`required_done` / `required_total` / `all_done` / `all_total`);
@@ -1384,7 +1392,7 @@ compatible either way:
   view-adapter change — and the same payload would also feed a
   JS-driven grid unchanged, should one ever be adopted.
 - **Visible progress.** The session-wide status pill plus the
-  per-instrument `Required items completed` / `All items completed`
+  per-instrument `*Required items completed` / `All items completed`
   pills carry it (see "Session-wide status pill" and "Above the table"
   above). The action row is ordered Save / Cancel / Submit / divider /
   page navigation.
