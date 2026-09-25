@@ -418,7 +418,9 @@ def test_the_reviewees_index_lists_a_column_only_where_it_is_populated(
     rs = _mk(client, db, "up-prof")
     _seed(db, rs.id, "reviewees", n=4, profiles=0)
     card = _card(_get(client, rs, "reviewees"), "reviewees")
-    assert "Profile" not in card, "an unpopulated column is listed"
+    # The column readout reads "Profile (n)"; the upload card's own help
+    # text names the `ProfileLink` CSV column, which is not a readout.
+    assert not re.search(r"Profile \(\d+\)", card), "an unpopulated column is listed"
 
     rs2 = _mk(client, db, "up-prof2")
     _seed(db, rs2.id, "reviewees", n=4, profiles=2)

@@ -129,7 +129,7 @@ def test_reviewees_page_renders_canonical_labels_on_identity_slots(
     appears for these slots."""
     review_session = _make_session(client, db, "fl-revee-identity")
     csv = (
-        "RevieweeName,RevieweeEmail,PhotoLink\n"
+        "RevieweeName,RevieweeEmail,ProfileLink\n"
         "Carol,carol@example.edu,https://example.org/c.png\n"
     )
     client.post(
@@ -392,7 +392,7 @@ def test_reviewees_chips_use_the_builtin_friendly_defaults(
         files={
             "file": (
                 "e.csv",
-                b"RevieweeName,RevieweeEmail,PhotoLink,RevieweeTag1\n"
+                b"RevieweeName,RevieweeEmail,ProfileLink,RevieweeTag1\n"
                 b"Carol,carol@example.edu,"
                 b"https://example.edu/c.jpg,cohort-a\n",
                 "text/csv",
@@ -406,7 +406,7 @@ def test_reviewees_chips_use_the_builtin_friendly_defaults(
     assert _chip_label(body, "profile") == "Profile"
     assert _chip_label(body, "tag-1") == "Tag 1"
     chips = _chip_row(body)
-    assert "PhotoLink" not in chips
+    assert "ProfileLink" not in chips
     assert "RevieweeTag1" not in chips
 
 

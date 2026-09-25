@@ -57,7 +57,7 @@ _DEFAULT_DISPLAY_LABELS: dict[tuple[str, str], str] = {
 _CSV_COL_TO_SOURCE: dict[str, tuple[str, str]] = {
     "RevieweeName": ("reviewee", "name"),
     "RevieweeEmail": ("reviewee", "email_or_identifier"),
-    "PhotoLink": ("reviewee", "profile_link"),
+    "ProfileLink": ("reviewee", "profile_link"),
     "RevieweeTag1": ("reviewee", "tag_1"),
     "RevieweeTag2": ("reviewee", "tag_2"),
     "RevieweeTag3": ("reviewee", "tag_3"),

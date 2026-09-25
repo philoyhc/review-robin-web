@@ -6,8 +6,9 @@ matches the existing reviewee importer
 round-trips with the upload flow on the Reviewees Manage page
 and the Quick Setup card without conversion.
 
-The ``PhotoLink`` column maps to ``Reviewee.profile_link``
-(matches the importer at ``csv_imports.parse_reviewee_csv:336``).
+The ``ProfileLink`` column (``PhotoLink`` before 19T Item 5, still
+accepted on import) maps to ``Reviewee.profile_link``
+(matches the importer, ``csv_imports.parse_reviewee_csv``).
 
 Plan: ``guide/segment_12A-1_export.md`` PR 2.
 """
@@ -34,7 +35,7 @@ HEADER: tuple[str, ...] = (
     "RevieweeTag1",
     "RevieweeTag2",
     "RevieweeTag3",
-    "PhotoLink",
+    "ProfileLink",
     # Segment 18P PR C — active / inactive soft-delete state. The
     # importer reads it back (blank / absent → active), so an
     # inactive reviewee round-trips as inactive.

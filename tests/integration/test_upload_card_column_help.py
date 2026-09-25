@@ -27,12 +27,12 @@ from app.services import setup_templates
 CARDS = {
     "reviewers": (
         ["ReviewerName", "ReviewerEmail"],
-        ["ReviewerTag1", "ReviewerTag2", "ReviewerTag3", "Status"],
+        ["ProfileLink", "ReviewerTag1", "ReviewerTag2", "ReviewerTag3", "Status"],
     ),
     "reviewees": (
         ["RevieweeName", "RevieweeEmail"],
         [
-            "PhotoLink",
+            "ProfileLink",
             "RevieweeTag1",
             "RevieweeTag2",
             "RevieweeTag3",

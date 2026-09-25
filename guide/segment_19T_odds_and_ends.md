@@ -539,3 +539,79 @@ slot (`guide/post_azure_todo_checklist.md` item 6).
 - `spec/operator_ui_concept.md` — the "Sample session card" paragraph
   offers the full download beside the demo (Item 4).
 - `docs/status.md` — row when the item closes (Item 4).
+
+---
+
+## Item 5 — The roster CSV column `PhotoLink` becomes `ProfileLink`
+
+**Logged 2026-09-25 on the author's instruction.**
+
+### Opportunity
+
+The link column is `profile_link` in the schema and "Profile" / "Profile
+link" on every screen, but the roster CSV header still reads `PhotoLink`,
+the one name that assumes the link is a photo.
+
+### Decision (author, 2026-09-25)
+
+- **Exports and templates write `ProfileLink`**, on both rosters and in the
+  entity-stats extract.
+- **The importer accepts both names, indefinitely**, so operators' files
+  and bundles exported before the rename still import. A non-blank
+  `ProfileLink` wins when a file carries both.
+- **The sample data follows**: the full-size set writes `ProfileLink`, and
+  its placeholder links move from `/photos/<name>.jpg` to
+  `/profiles/<name>`.
+
+**Rejected:** a cutoff for `PhotoLink`. Reading it costs one line; refusing
+it would break old files for no gain.
+
+### Semantics
+
+- No schema change and no migration: only the header name moves.
+- **The one break is outside the app**: anything reading an exported CSV
+  by the `PhotoLink` header, such as a spreadsheet formula or a script.
+- Found alongside: `_CSV_COL_TO_SOURCE` and `display_source_presence` have
+  no live callers. They are renamed rather than deleted, which is out of
+  scope here.
+
+### Blast radius (measured)
+
+Taken 2026-09-25 at `10ddf970` (`grep -rn "PhotoLink" app/`, 13 lines, 8
+files):
+- the importer (`csv_imports.py`, 2 reads) and three extract headers;
+- the setup templates, `_CSV_COL_TO_SOURCE`, the coverage list, and the
+  Reviewees upload card's column help;
+- 8 test files, 16 lines; 5 specs.
+
+### Definition of done
+
+- A test pins the legacy header importing, and one pins `ProfileLink`
+  winning over it.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.5` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- None.
+
+### Status
+
+**Open** (2026-09-25). Built in the same PR as this entry. Its read found
+no defect: every roster import path (Setup, Quick Setup, rehydrate) runs
+through the two parsers and gets the fallback. It found the Reviewers
+upload card never listing the link column, though the importer reads it
+(now listed), plus stale test names and line references (fixed).
+
+### Doc impact
+
+- `spec/csv_contracts.md` — §2.1 / §2.2 headers, §3.1's optional
+  columns (with the legacy alias), and §5a's sample set (Item 5).
+- `spec/rehydrate.md` — the roster header lines (Item 5).
+- `spec/setup_pages.md` — both upload cards' optional columns: Reviewees
+  renamed, Reviewers now listing `ProfileLink` (Item 5).
+- `spec/rrw_functional_spec.md` — the roster CSV headers (Item 5).
+- `docs/status.md` — row when the item closes (Item 5).

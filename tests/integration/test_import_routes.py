@@ -316,13 +316,13 @@ def test_cross_table_reviewee_non_email_identifier_never_collides(
     assert response.status_code == 303
 
 
-def test_reviewee_import_persists_with_photolink(
+def test_reviewee_import_persists_with_profilelink(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db)
 
     csv_body = (
-        "RevieweeName,RevieweeEmail,PhotoLink,RevieweeTag1\n"
+        "RevieweeName,RevieweeEmail,ProfileLink,RevieweeTag1\n"
         "Carol,carol@example.edu,https://example.edu/c.jpg,cohort-A\n"
         "Dan,dan-2026,,\n"
     ).encode("utf-8")
@@ -675,12 +675,12 @@ def test_reviewers_page_renders_tag_columns_with_visibility_toggles(
     assert ">senior</td>" in body
 
 
-def test_reviewees_page_lists_imported_rows_with_photolink(
+def test_reviewees_page_lists_imported_rows_with_profilelink(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="e-list")
     csv_body = (
-        b"RevieweeName,RevieweeEmail,PhotoLink\n"
+        b"RevieweeName,RevieweeEmail,ProfileLink\n"
         b"Carol,carol@example.edu,https://example.edu/c.jpg\n"
         b"Dan,dan-2026,\n"
     )
