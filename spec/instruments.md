@@ -807,9 +807,11 @@ session's roster:
 
 **Name and Email are locked** — the server refuses to hide them
 — so their pills render as static `pill pill-count` labels rather
-than `.tag-chip` controls, in both view and edit mode: always
-selected, not clickable, not in the tab order, and carrying no
-chip edge (`spec/ui_elements.md` "Label or control"). Their
+than `.tag-chip` controls, in both view and edit mode: not
+clickable, not in the tab order, and carrying no chip edge
+(`spec/ui_elements.md` "Label or control"). Each is selected
+whenever it applies to the instrument's unit mode — Name always,
+Email only in Individual mode (below). Their
 tooltips name the pinned slot: "Always shown — pinned first:
 Name" / "Always shown — pinned second: Email". In grouped unit
 mode, Email drops out — a group row has no email; it shows the
