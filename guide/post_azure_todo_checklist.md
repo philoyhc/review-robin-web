@@ -379,7 +379,7 @@ at a keyboard.
 and Item 7, both closed with this check owed; each `### Status` points
 here. Settling a row is a dated line there, not a reopening.
 
-## 6. Verify the Instruments response-field rows and action row in a browser
+## 6. Verify the Instruments response-field rows, action row and small fixes in a browser
 
 **Status:** open. Blocked on a deploy; the **dev slot is enough**
 (2026-09-24).
@@ -393,6 +393,9 @@ here. Settling a row is a dated line there, not a reopening.
 - the 2 : 3 split.
 
 They also stopped an open card (`?editing`) from disabling the action row.
+Item 3 made the Name and Email pills static labels, kept Delete's confirm
+checkbox from dirtying the card, and made Band 2's "Who can see what you
+wrote" card repaint on a Band 3 Visibility edit.
 The suite pins the markup, and headless Chromium drove the rows on a
 rendered page. Neither was a person on the live app.
 
@@ -410,7 +413,11 @@ rendered page. Neither was a person on the live app.
 | The last row stays | Delete rows down to one | That row's X is disabled |
 | Cancel removes a new row | "+", then Cancel and confirm | The blank row is gone |
 | An open card doesn't lock the row | Edit, Cancel (URL now `?editing=`), then Lock | Replicate, +Instrument and +Page break stay live; the URL loses `?editing` |
+| Delete's checkbox is clean | Tick the Delete confirm box on a clean card | Save stays off; Delete leaves without a "Leave site?" prompt |
+| Name and Email are labels | Click and Tab through Band 2's pills | Name / Email never toggle or take focus, tooltips "pinned first" / "pinned second"; they sit well beside the selected tag pills |
+| Email on group rows | Switch Unit to Group, then back | Email dims with "Not shown on group rows", then returns |
+| Visibility preview repaints | Cycle You's "Responses released" in Band 3, Save, Lock, reload | Band 2's card changes on the click and still reads the same after the reload |
 
-**Where this came from.** `guide/segment_19T_odds_and_ends.md` Items 1
-and 2, each closed with this check owed. Settling a row is a dated line
+**Where this came from.** `guide/segment_19T_odds_and_ends.md` Items 1,
+2 and 3, each closed with this check owed. Settling a row is a dated line
 there, not a reopening.
