@@ -198,7 +198,9 @@ Item 4 leaves Band 3's left column empty beside Response fields.
 
 **A table in Band 3's left column**, one row per display field, with
 **no header row**. Each row, left to right:
-1. **An Active checkbox**, on every row except Name and Email.
+1. **An Active checkbox** on every row. On Name and Email it is
+   disabled: it shows whether the column is showing, and the operator
+   cannot change it (the author, 2026-09-25).
 2. **The display field**, by its session-wide friendly label.
 3. **An up arrow button** and 4. **a down arrow button**, for ordering,
    on every row except Name and Email.
@@ -216,9 +218,10 @@ preview, as today).
 ### Semantics
 
 - **Rows are the populated display sources**, as the pills are today.
-- **Name and Email** are always the first two rows, with no checkbox and
-  no arrows (19T Item 3 entry 2). In grouped unit mode Email is shown as
-  not applying, since a group row has no email.
+- **Name and Email** are always the first two rows, with a disabled
+  checkbox and no arrows (19T Item 3 entry 2). Name's is always checked.
+  Email's is checked in individual unit mode and unchecked in grouped,
+  since a group row has no email.
 - **Active** is `visible`: unchecking drops the column from the preview
   and, once saved, from the reviewer surface. In grouped mode the fields
   a group row can't show (Email, Profile, the pair-context fields, per
