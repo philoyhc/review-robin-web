@@ -701,7 +701,9 @@ def test_add_new_model_creates_instrument(
     assert "Who is being reviewed" in body  # Band 1 Link 2 column
     assert "Unit of review" in body  # Band 1 Link 3 column
     assert "Preview review instrument" in body  # Band 2 heading
-    assert "Visibility" in body  # Band 3 left-column table title
+    # Visibility is edited in Band 2's card (19T Item 7).
+    assert "Who can see what you wrote (other than admin)</h3>" in body
+    assert "data-new-model-vp-editor" in body
     # Wave 5 PR 5.3 — "New model" pill retired (every instrument is
     # now the same shape).
 

@@ -110,7 +110,7 @@ def valid_modes_for_cell(
     audience: str, window: str
 ) -> frozenset[str | None]:
     """Return the set of allowed modes for the ``(audience,
-    window)`` cell in the Band 3 editor. Includes ``None`` when
+    window)`` cell in the visibility editor. Includes ``None`` when
     "off in this window" is a permitted state. Used by the
     editor / view-adapter to drive the chip cycle, and by the
     service-layer validator below."""
@@ -317,7 +317,7 @@ def _validate_per_window(
     observer_tag: str | None,
 ) -> None:
     """Per-(audience, window) cell validation for the redesigned
-    Band 3 editor. Same error codes as :func:`_validate` so the
+    visibility editor. Same error codes as :func:`_validate` so the
     route translates uniformly to 422."""
     if audience not in AUDIENCES:
         raise VisibilityPolicyError(

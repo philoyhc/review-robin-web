@@ -91,7 +91,7 @@ _VP_WINDOWS: tuple[str, ...] = ("while_ongoing", "after_release")
 
 
 def _view_policy_cell_errors(plan: _ParsedConfig) -> list[ApplyError]:
-    """Refuse a visibility cell the Band 3 editor would refuse.
+    """Refuse a visibility cell the visibility editor would refuse.
 
     Two writers create ``instrument_view_policies`` rows.
     ``visibility_policies.upsert_policy`` validates the

@@ -780,8 +780,9 @@ Taken 2026-09-26 at `13ba5ec4`:
 
 1. **Scaffold** (this rung): the plan, and the unlocked card's layout with
    labels in place of chips. Band 3's table stays the working editor.
-2. **Wire:** the chips and hidden inputs in the card, and Band 3's table,
-   entry 3's repaint and the scaffold labels removed. The Guide paragraph is
+2. **Wire:** the chips and hidden inputs in the card, and Band 3's table
+   ~~, entry 3's repaint~~ and the scaffold labels removed (the repaint
+   stays; see Semantics). The Guide paragraph is
    updated. This is the item's last build rung, so the item's one
    `diff-reviewer` read happens here, over the cumulative diff from
    `13ba5ec4`.
@@ -814,7 +815,19 @@ Observers divider was an inline style, and it is now `row-group-start` in
   `tests/integration/test_band3_static_pills.py` reads the card's editor
   and expects two fixed labels, not five.
 - Three intro-card tests read a fixed character window that the card
-  outgrew; they now anchor on the element they check.
+  outgrew. Two now anchor on the element they check, and one reads a
+  wider window.
+- **The item's read** (rung 2, over `13ba5ec4..HEAD`) found no regression
+  in Save, lock, Cancel or the dirty tracker; the editor has Band 3's guard
+  (an inert lock region unless editing). It found, and rung 2 fixed:
+  - the sys-admin audit card sent operators to "Band 3's editor";
+  - two assertions passing on unrelated page text;
+  - the hidden inputs rendering only when the reviewer's rows existed;
+  - the Guide paragraph sitting under the wrong figure;
+  - this plan's ladder still retiring the repaint.
+  **Found, not fixed:** the cycle chips don't answer Enter or Space, and
+  each chip is announced only by its mode, not its audience or window. Both
+  gaps predate the move.
 
 ### Doc impact
 
@@ -826,6 +839,8 @@ Observers divider was an inline style, and it is now `row-group-start` in
 - `spec/operator_ui_concept.md` — the visibility grid audit's "Band 3
   editor" becomes the instrument card's visibility editor (Item 7).
 - `spec/permissions.md` — the same wording in the sys-admin row (Item 7).
+- `spec/ui_elements.md` — §10: `row-group-start`, the heavier rule above a
+  row that starts a new group (Item 7).
 - `guide/advanced_instruments.md` — Item 4 points to this item as built
   (Item 7).
 - `docs/status.md` — row when the item closes (Item 7).

@@ -1887,10 +1887,13 @@
                Observers row is intentionally omitted, matching
                the reviewer surface. #}
             {% set _vp_preview_rows = (band2_preview_visibility_rows_by_instrument or {}).get(instrument.id, []) %}
-            {% if _vp_preview_rows %}
+            {# Rendered unconditionally: the card holds the editor's hidden
+               inputs, which Save must always send (19T Item 7). Only the
+               locked table depends on the reviewer's rows. #}
               <div class="card rs-instrument-card"
                    data-new-model-band2-vp-preview-card>
                 <h3 style="margin: 0 0 8px 0;">Who can see what you wrote (other than admin)</h3>
+                {% if _vp_preview_rows %}
                 {# `.table-scroll` (base.html): a table wider than its card
                    scrolls inside the card rather than pushing the page sideways.
                    19T Item 7 — locked, the card is the reviewer's; unlocked,
@@ -1920,6 +1923,7 @@
                   </tbody>
                 </table>
                 </div>
+                {% endif %}
                 {# 19T Item 7 — the visibility editor, shown while the card
                    is unlocked. The cells that can change are cycle chips
                    (``b3_mode_cycle``); the fixed ones stay labels. The
@@ -2014,7 +2018,6 @@
                 </table>
                 </div>
               </div>
-            {% endif %}
           </div>
           {# Response field details now live as editable rows
              inside Band 3's "Response fields" section — the
