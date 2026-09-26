@@ -131,6 +131,35 @@ def test_submit_drops_a_closed_branch_before_stamping(db: Session) -> None:
     assert _answers(db, assignment.id) == {"rating": "3"}
 
 
+def test_a_blocked_submit_audits_the_answer_it_removed(db: Session) -> None:
+    """A submit blocked on a missing required field still commits its
+    drafts, among them a closed branch's deletion, which is audited as the
+    draft save it amounts to (Codex on #2640). Clearing the required parent
+    both blocks the submit and closes the branch."""
+    op, reviewer, review_session, assignment = _seed(db)
+    _branch_default_instrument(db, assignment)
+    _save(db, op, reviewer, review_session, assignment, rating="5", comments="Why")
+    result = responses_service.submit(
+        db,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=op,
+        upserts=[
+            ResponseUpsert(assignment_id=assignment.id, field_key="rating", value="")
+        ],
+        correlation_id="corr",
+    )
+    assert result.submitted is False and result.missing
+    assert _answers(db, assignment.id) == {}
+    event = db.execute(
+        select(AuditEvent)
+        .where(AuditEvent.event_type == "responses.saved")
+        .order_by(AuditEvent.id.desc())
+    ).scalars().first()
+    assert event.detail["counts"]["branch_answers_removed"] == 1
+    assert "submit blocked" in event.summary
+
+
 def test_no_branch_changes_nothing(db: Session) -> None:
     op, reviewer, review_session, assignment = _seed(db)
     _save(db, op, reviewer, review_session, assignment, rating="2", comments="x")

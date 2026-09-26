@@ -507,7 +507,7 @@ def submit(
         group_key_by_assignment=group_key_by_assignment,
     )
 
-    _apply_upserts(
+    written = _apply_upserts(
         db,
         upserts=valid_upserts,
         assignment_index=assignment_index,
@@ -519,9 +519,34 @@ def submit(
         db, {u.assignment_id for u in valid_upserts}
     )
 
+    def _audit_blocked_drafts() -> None:
+        """A blocked submit still commits its draft writes. When they
+        deleted a closed branch's answer, record it as the draft save it
+        amounts to, so the deletion is never unaudited (Codex on #2640)."""
+        if not removed:
+            return
+        audit.write_event(
+            db,
+            event_type="responses.saved",
+            summary=(
+                f"Saved {written} {pluralize(written, 'response')} "
+                "(draft, submit blocked)"
+            ),
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.counts(
+                assignments_touched=len({u.assignment_id for u in upserts}),
+                responses_saved=written,
+                branch_answers_removed=removed,
+            ),
+            refs={"reviewer_id": reviewer.id},
+            correlation_id=correlation_id,
+        )
+
     if errors:
         # Persist the valid draft writes; surface the bad ones so the
         # reviewer can fix and retry without losing their other typing.
+        _audit_blocked_drafts()
         db.commit()
         return SubmitResult(
             submitted=False, missing=[], errors=errors, submitted_count=0
@@ -538,6 +563,7 @@ def submit(
     if missing:
         # Persist the draft writes that landed before the missing
         # check; they're useful for the user even on a blocked submit.
+        _audit_blocked_drafts()
         db.commit()
         return SubmitResult(
             submitted=False, missing=missing, errors=[], submitted_count=0
