@@ -8169,10 +8169,13 @@ def test_band3_add_row_clones_the_template_not_the_first_row(
     assert "selectedIndex = 0" not in delete_fn
 
 
-def test_band3_splits_visibility_and_response_fields_two_to_three(
+def test_band3_splits_display_and_response_fields_one_to_two(
     client: TestClient, db: Session
 ) -> None:
-    """Band 3 gives Visibility 2/5 and Response fields 3/5."""
+    """Band 3 gives the display-field table 1/3 and Response fields 2/3
+    (19T Item 8; it was Visibility 2/5 and Response fields 3/5). The left
+    track's minimum is 0, so a long unbroken field label scrolls inside
+    its column rather than widening it (Codex on #2629)."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-band3-split"
     )
@@ -8182,7 +8185,7 @@ def test_band3_splits_visibility_and_response_fields_two_to_three(
     card = _card_slice(body, new_model.id)
     band3 = card[card.index("<div data-new-model-band3") :]
     band3_open = band3[: band3.index(">")]
-    assert "grid-template-columns: 2fr 3fr;" in band3_open
+    assert "grid-template-columns: minmax(0, 1fr) 2fr;" in band3_open
 
 
 def test_band3_row_handlers_reach_the_stager_through_its_window_handle(
@@ -8683,6 +8686,15 @@ def test_band3_visibility_cycle_repaints_band2_preview_card(
         in cycle
     )
     assert "cell.textContent = _VP_CELL_LABELS[nextSlug] || nextSlug;" in cycle
+    # 19T Item 8 — each locked cell's mode is a pill that only shows it,
+    # and the key sits on the pill, so the repaint keeps the pill.
+    # The whole opening tag: no chip class, role, tabindex or handler.
+    keyed = re.findall(
+        r'<span class="pill pill-count"\s+'
+        r'data-new-model-vp-preview-cell="[a-z_]+-[a-z_]+">',
+        card,
+    )
+    assert len(keyed) == 4
     # A repainted cell must read like a fresh render: the page's label
     # map and the server's are the same words.
     start = body.index("var _VP_CELL_LABELS = {")
@@ -8800,9 +8812,17 @@ def test_band2_visibility_card_is_the_editor(
 def _df_rows(flat: str, instrument_id: int) -> list[str]:
     """The display-field table's rows in Band 3 (19T Item 8)."""
     card = _card_slice(flat, instrument_id)
-    start = card.index("<table data-new-model-df-table")
+    start = card.index("<table class=\"table-compact\" data-new-model-df-table")
     table = card[start : card.index("</table>", start)]
     return re.findall(r"<tr data-new-model-df-row.*?</tr>", table)
+
+
+def _df_label(row: str) -> str:
+    """A display-field row's field name, which is a pill that only shows
+    it: no chip, no handler (19T Item 8)."""
+    return re.search(
+        r'<td><span class="pill pill-count">([^<]+)</span></td>', row
+    ).group(1)
 
 
 def test_band3_display_field_table(
@@ -8821,7 +8841,7 @@ def test_band3_display_field_table(
     url = f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     flat = " ".join(client.get(url).text.split())
     rows = _df_rows(flat, new_model.id)
-    labels = [re.search(r"<td[^>]*>([^<]+)</td>", r).group(1) for r in rows]
+    labels = [_df_label(r) for r in rows]
     # The display order: Name and Email pinned first and second.
     assert labels == ["Name", "Email", "Tag 1", "Tag 2"]
     # Each row carries the field's data the preview and Save read.
@@ -8831,7 +8851,11 @@ def test_band3_display_field_table(
                      "data-display-field-id", "data-width", "data-reorderable"):
             assert f"{attr}=" in row, attr
     card = _card_slice(flat, new_model.id)
-    assert "<thead" not in card[card.index("<table data-new-model-df-table") :].split("</table>")[0]
+    assert "<thead" not in card[card.index("<table class=\"table-compact\" data-new-model-df-table") :].split("</table>")[0]
+    # Compact rows, not the response-field rows' spacing (base.html).
+    assert "body.ui-v2 table.table-compact td { padding: var(--space-1) var(--space-2); }" in flat.replace(
+        "body.ui-v2 table.table-compact th, ", ""
+    )
 
     def _disabled(tag: str) -> bool:
         return " disabled" in tag
@@ -8869,7 +8893,7 @@ def test_band3_display_field_table(
     db.commit()
     flat = " ".join(client.get(url).text.split())
     boxes = {
-        re.search(r"<td[^>]*>([^<]+)</td>", r).group(1): re.search(
+        _df_label(r): re.search(
             r'<input type="checkbox"[^>]*>', r
         ).group(0)
         for r in _df_rows(flat, new_model.id)
@@ -8883,7 +8907,7 @@ def test_band3_display_field_table(
     db.commit()
     flat = " ".join(client.get(url).text.split())
     boxes = {
-        re.search(r"<td[^>]*>([^<]+)</td>", r).group(1): re.search(
+        _df_label(r): re.search(
             r'<input type="checkbox"[^>]*>', r
         ).group(0)
         for r in _df_rows(flat, new_model.id)

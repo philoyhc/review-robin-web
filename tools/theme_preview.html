@@ -2924,6 +2924,13 @@
       body.ui-v2 tr.row-group-start > td {
         border-top: 2px solid var(--border-default);
       }
+      /* A table whose rows sit close together, like the padding the
+         instrument card's visibility tables give each cell (19T Item 8:
+         Band 3's display-field table). */
+      body.ui-v2 table.table-compact th,
+      body.ui-v2 table.table-compact td {
+        padding: var(--space-1) var(--space-2);
+      }
       /* ===== 19P.1 — the roster card and its Unlock panel =====
          Page-agnostic primitives, so they live here rather than as a
          template <style> block, and `body.ui-v2`-scoped like every rule
