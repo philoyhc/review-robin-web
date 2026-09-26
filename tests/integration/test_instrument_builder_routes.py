@@ -8686,14 +8686,13 @@ def test_band3_visibility_cycle_repaints_band2_preview_card(
     assert "cell.textContent = _VP_CELL_LABELS[nextSlug] || nextSlug;" in cycle
     # 19T Item 8 — each locked cell's mode is a pill that only shows it,
     # and the key sits on the pill, so the repaint keeps the pill.
+    # The whole opening tag: no chip class, role, tabindex or handler.
     keyed = re.findall(
-        r'<(\w+) class="([^"]*)"\s+data-new-model-vp-preview-cell="[a-z_]+-[a-z_]+"',
+        r'<span class="pill pill-count"\s+'
+        r'data-new-model-vp-preview-cell="[a-z_]+-[a-z_]+">',
         card,
     )
     assert len(keyed) == 4
-    for tag, classes in keyed:
-        assert tag == "span"
-        assert classes == "pill pill-count"
     # A repainted cell must read like a fresh render: the page's label
     # map and the server's are the same words.
     start = body.index("var _VP_CELL_LABELS = {")

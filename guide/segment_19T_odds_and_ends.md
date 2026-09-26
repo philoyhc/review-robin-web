@@ -876,6 +876,7 @@ and no arrows. Changes show in Band 2's preview at once and persist only
 through the card's Save. Band 2's display pills retire once the table
 works. **Band 3 keeps its `2fr 3fr` split for now** (the author,
 2026-09-26); the design record's `1fr 2fr` re-split is deferred.
+*(Rung 4 made it `1fr 2fr` on the author's later ruling; see `Status`.)*
 **Rejected:** pills above Response fields in Band 3 (the design record's
 first draft, superseded by the column Item 7 freed).
 
@@ -922,7 +923,9 @@ Taken 2026-09-26 at `20f8eb3a`:
 
 ### Open questions
 
-- None.
+- Should the reviewer's own "Who can see what you wrote" card show its
+  modes as pills too, as the operator's locked card now does (rung 4)?
+  The author decides; until then the two differ in style only.
 
 ### Status
 
@@ -957,6 +960,7 @@ Rung 3 fixed what it raised:
 - the empty-state `—` counted display fields;
 - the table's inline styles, which now use `base.html`'s table rules and
   `.col-shrink`.
+
 Codex's one finding, that the Guide said Email always shows, was fixed
 in rung 3 (#2628).
 
@@ -968,6 +972,7 @@ in rung 3 (#2628).
   a display-only pill;
 - **Band 3 re-splits to `1fr 2fr`**, the design record's split, which the
   Decision above had deferred.
+
 The rung reopens `app/` after the read, so it takes its own.
 **The close waits** on the author.
 
@@ -981,6 +986,9 @@ The rung reopens `app/` after the read, so it takes its own.
   display-field rows with display-only name pills, and the locked
   Visibility table's mode pills (Item 8).
 - `spec/ui_elements.md` — also the `table-compact` class (Item 8).
+- `spec/visibility_policy.md` — the operator's locked card shows the
+  reviewer's rows as mode pills, where the reviewer's card is plain text
+  (Item 8).
 - `guide/advanced_instruments.md` — Item 5 and the header point to this
   item as the build (Item 8).
 - `app/web/templates/guide.html` — the preview paragraph sends display
