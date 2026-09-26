@@ -425,10 +425,22 @@
                     {% if data_type in ('Integer', 'Decimal') %}{% set col_class = 'rs-narrow' %}
                     {% elif data_type == 'String' and max_len > 100 %}{% set col_class = 'rs-textlong' %}{% endif %}
                   {% endif %}
-                  <td{% if col_class %} class="{{ col_class }}"{% endif %}
-                      data-sort-value="{{ cell.value or '' }}">
+                  {# 19T Item 10 — a governed field sits in a closed branch
+                     until its parent's answer meets the condition: muted
+                     and disabled, so a value typed before it closed stays
+                     visible, greyed, and isn't sent (Save deletes it if
+                     the branch is still closed). The parent cell carries
+                     the condition; the script below re-judges it as the
+                     reviewer answers. #}
+                  {% set cell_classes = [col_class] if col_class else [] %}
+                  {% if not cell.branch_open %}{% set cell_classes = cell_classes + ["rs-branch-closed"] %}{% endif %}
+                  <td{% if cell_classes %} class="{{ cell_classes | join(' ') }}"{% endif %}
+                      data-sort-value="{{ cell.value or '' }}"
+                      {% if cell.field.branch_op and row.accepting %}data-rs-branch-parent="{{ cell.field.field_key }}" data-rs-branch-op="{{ cell.field.branch_op }}" data-rs-branch-value="{{ cell.field.branch_value or '' }}"{% endif %}
+                      {% if cell.governed_by and row.accepting %}data-rs-governed-by="{{ cell.governed_by }}"{% endif %}
+                      {% if cell.branch_hint %}title="{{ cell.branch_hint }}"{% endif %}>
                     {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}
-                    {% set disabled_attr = "" if row.accepting else "disabled" %}
+                    {% set disabled_attr = "" if row.accepting and cell.branch_open else "disabled" %}
                     {# Each response control names its column and row
                        so a screen-reader user hears "{field} for
                        {reviewee}" rather than an unlabelled box. #}
@@ -634,6 +646,67 @@
             recomputeStepValidity(event.target);
           }
         });
+      })();
+    </script>
+  {% endif %}
+
+  {% if any_accepting %}
+    {# 19T Item 10 — open and close a row's governed cells as the
+       reviewer answers the parent. Mirrors ``branch_is_open`` in
+       ``app/services/responses/_branching.py``: an empty or
+       non-numeric answer closes a numeric branch; "is" matches any of
+       the listed options. The server re-judges on Save and deletes a
+       closed branch's answer, so this only keeps the page honest. #}
+    <script>
+      (function () {
+        function isOpen(op, value, raw) {
+          raw = (raw || "").trim();
+          if (!op || raw === "") { return false; }
+          if (op === "is") {
+            return value.split(",").map(function (item) {
+              return item.trim();
+            }).indexOf(raw) >= 0;
+          }
+          var a = Number(raw);
+          var b = Number((value || "").trim());
+          if (!isFinite(a) || !isFinite(b) || (value || "").trim() === "") {
+            return false;
+          }
+          if (op === "eq") { return a === b; }
+          if (op === "ne") { return a !== b; }
+          if (op === "gt") { return a > b; }
+          if (op === "ge") { return a >= b; }
+          if (op === "lt") { return a < b; }
+          if (op === "le") { return a <= b; }
+          return false;
+        }
+        function sync(parentCell) {
+          var control = parentCell.querySelector("input, select, textarea");
+          var open = isOpen(
+            parentCell.dataset.rsBranchOp,
+            parentCell.dataset.rsBranchValue || "",
+            control ? control.value : ""
+          );
+          var row = parentCell.closest("tr");
+          if (!row) { return; }
+          row.querySelectorAll(
+            '[data-rs-governed-by="' + parentCell.dataset.rsBranchParent + '"]'
+          ).forEach(function (cell) {
+            cell.classList.toggle("rs-branch-closed", !open);
+            cell.querySelectorAll("input, select, textarea").forEach(function (c) {
+              c.disabled = !open;
+            });
+          });
+        }
+        function onEdit(event) {
+          var cell = event.target.closest
+            ? event.target.closest("[data-rs-branch-parent]")
+            : null;
+          if (cell) { sync(cell); }
+        }
+        document.querySelectorAll("[data-rs-branch-parent]").forEach(sync);
+        document.addEventListener("input", onEdit);
+        document.addEventListener("change", onEdit);
       })();
     </script>
   {% endif %}

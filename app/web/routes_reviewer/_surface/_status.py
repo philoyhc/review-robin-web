@@ -112,13 +112,18 @@ def _group_completion(group_rows: list[dict], fields: list) -> GroupCompletion:
     required_done = required_total - sum(
         r.get("missing_count", 0) for r in group_rows
     )
-    all_total = len(fields) * n_rows
-    all_done = sum(
-        1
+    # 19T Item 10 — a governed cell whose branch is closed can't be
+    # answered, so it is not an item: counting it would hold "All items"
+    # short of complete for good. Required counts are untouched, since a
+    # governed field is never required (Item 2 changes that).
+    open_cells = [
+        cell
         for r in group_rows
         for cell in r.get("cells", [])
-        if (cell.get("value") or "").strip()
-    )
+        if cell.get("branch_open", True)
+    ]
+    all_total = len(open_cells)
+    all_done = sum(1 for cell in open_cells if (cell.get("value") or "").strip())
     return GroupCompletion(
         required_done=required_done,
         required_total=required_total,

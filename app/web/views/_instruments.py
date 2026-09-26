@@ -191,6 +191,25 @@ def placeholder_for_field(field: InstrumentResponseField) -> str:
     return ""
 
 
+def branch_condition_label(parent: InstrumentResponseField) -> str:
+    """19T Item 10 — a parent's branch condition as a reviewer reads it,
+    "Rating ≥ 4" or "Colour is Red or Blue", for the hint on a closed
+    governed cell. The operator tokens map to the symbols the builder
+    shows (``app.services.responses.NUMERIC_OPS``)."""
+    from app.services.responses import LIST_OP, NUMERIC_OPS
+
+    op, value = parent.branch_op or "", (parent.branch_value or "").strip()
+    if op == LIST_OP:
+        options = [o.strip() for o in value.split(",") if o.strip()]
+        joined = (
+            ", ".join(options[:-1]) + " or " + options[-1]
+            if len(options) > 1
+            else "".join(options)
+        )
+        return f"{parent.label} is {joined}"
+    return f"{parent.label} {NUMERIC_OPS.get(op, op)} {value}"
+
+
 def constraint_summary_for_field(field: InstrumentResponseField) -> str:
     """Short ``min-max[, steps of step]`` summary used in the
     above-table constraint row on the reviewer surface. Distinct from
