@@ -18,6 +18,10 @@ from ._apply_shared import (
     _ParseError,
 )
 from ._rows import Row
+from app.services.instruments._response_fields import (
+    DEFAULT_RESPONSE_FIELDS,
+    _inline_kwargs_from_default_spec,
+)
 
 # The Band 3 per-cell rules live with the editor's validator; the import
 # borrows them rather than keeping a second copy. `_PER_CELL_VALID_MODES`
@@ -33,6 +37,11 @@ from app.services.visibility_policies import (
 # orchestrator ``_apply.py``; defined here to keep the dependency
 # graph acyclic.
 from dataclasses import dataclass
+
+# 19T Item 10 — the type a response field without a data_type imports as.
+_DEFAULT_DATA_TYPE = _inline_kwargs_from_default_spec(DEFAULT_RESPONSE_FIELDS[0])[
+    "_inline_data_type"
+]
 
 
 @dataclass(frozen=True)
@@ -85,7 +94,90 @@ def _parse_rows(rows: list[Row]) -> tuple[_ParsedConfig, list[ApplyError]]:
     # error list orders parse errors first.
     errors.extend(_cross_row_errors(plan))
     errors.extend(_view_policy_cell_errors(plan))
+    errors.extend(_branch_errors(plan))
     return plan, errors
+
+
+@dataclass
+class _PlannedField:
+    """A parsed response field in the shape the branching rules read
+    (``app.services.responses.BranchField``), keyed by its CSV position."""
+
+    id: int
+    label: str
+    order: int
+    required: bool
+    branch_parent_id: int | None
+    branch_op: str | None
+    branch_value: str | None
+    _inline_data_type: str | None
+    _inline_list_csv: str | None
+
+
+def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
+    """19T Item 10 — each instrument's parsed fields against the
+    branching rules, before anything is applied: a ``branch_parent``
+    names a ``field_key`` of the same instrument, and the fields keep one
+    level, a non-String parent with a valid condition, no governed field
+    required, and a branch directly after its parent. A file that breaks
+    one is refused with the rule named rather than applied with the branch
+    dropped."""
+    from app.services.responses import branch_structure_errors
+
+    errors: list[ApplyError] = []
+    for n, instrument in sorted(plan.instruments.items()):
+        specs = sorted(instrument.response_fields.items())
+        # Any of the three branch cells, so a lone ``branch_value`` is an
+        # orphaned condition refused here, not stored (Codex on #2642).
+        if not any(
+            rf.branch_parent or rf.branch_op or rf.branch_value for _, rf in specs
+        ):
+            continue
+        position_by_key = {rf.field_key: m for m, rf in specs if rf.field_key}
+        planned: list[_PlannedField] = []
+        for m, rf in specs:
+            parent_position = None
+            if rf.branch_parent:
+                parent_position = position_by_key.get(rf.branch_parent)
+                if parent_position is None:
+                    errors.append(
+                        ApplyError(
+                            row_number=0,
+                            field=(
+                                f"instruments[{n}].response_fields[{m}]"
+                                ".branch_parent"
+                            ),
+                            message=(
+                                f"no response field {rf.branch_parent!r} on "
+                                "this instrument"
+                            ),
+                        )
+                    )
+                    continue
+            planned.append(
+                _PlannedField(
+                    id=m,
+                    label=rf.label or rf.field_key or f"response_fields[{m}]",
+                    order=m,
+                    required=rf.required,
+                    branch_parent_id=parent_position,
+                    branch_op=rf.branch_op,
+                    branch_value=rf.branch_value,
+                    # An absent data_type imports as the default field's
+                    # (``_apply_instruments``), so it is judged as one.
+                    _inline_data_type=rf.data_type or _DEFAULT_DATA_TYPE,
+                    _inline_list_csv=rf.list_csv,
+                )
+            )
+        errors.extend(
+            ApplyError(
+                row_number=0,
+                field=f"instruments[{n}].response_fields",
+                message=f"{label}: {msg}",
+            )
+            for label, msg in branch_structure_errors(planned)
+        )
+    return errors
 
 _VP_WINDOWS: tuple[str, ...] = ("while_ongoing", "after_release")
 

@@ -336,30 +336,43 @@ def replicate_instrument(
             InstrumentResponseField.instrument_id == source.id
         )
     ).scalars()
+    # 19T Item 10 — a governed field's parent is re-pointed at the
+    # parent's copy once every field has one; the condition is copied
+    # with the parent.
+    copy_of: dict[int, InstrumentResponseField] = {}
+    governed: list[tuple[InstrumentResponseField, int]] = []
     for field in source_fields:
-        db.add(
-            InstrumentResponseField(
-                instrument_id=instrument.id,
-                field_key=field.field_key,
-                label=field.label,
-                required=field.required,
-                order=field.order,
-                validation=(
-                    dict(field.validation)
-                    if field.validation is not None
-                    else None
-                ),
-                help_text=field.help_text,
-                help_text_visible=field.help_text_visible,
-                visible=field.visible,
-                _inline_data_type=field._inline_data_type,
-                _inline_response_type=field._inline_response_type,
-                _inline_min=field._inline_min,
-                _inline_max=field._inline_max,
-                _inline_step=field._inline_step,
-                _inline_list_csv=field._inline_list_csv,
-            )
+        copy = InstrumentResponseField(
+            instrument_id=instrument.id,
+            field_key=field.field_key,
+            label=field.label,
+            required=field.required,
+            order=field.order,
+            validation=(
+                dict(field.validation)
+                if field.validation is not None
+                else None
+            ),
+            help_text=field.help_text,
+            help_text_visible=field.help_text_visible,
+            visible=field.visible,
+            _inline_data_type=field._inline_data_type,
+            _inline_response_type=field._inline_response_type,
+            _inline_min=field._inline_min,
+            _inline_max=field._inline_max,
+            _inline_step=field._inline_step,
+            _inline_list_csv=field._inline_list_csv,
+            branch_op=field.branch_op,
+            branch_value=field.branch_value,
         )
+        db.add(copy)
+        copy_of[field.id] = copy
+        if field.branch_parent_id is not None:
+            governed.append((copy, field.branch_parent_id))
+    if governed:
+        db.flush()  # populate the copies' ids
+        for copy, source_parent_id in governed:
+            copy.branch_parent_id = copy_of[source_parent_id].id
     source_displays = db.execute(
         select(InstrumentDisplayField).where(
             InstrumentDisplayField.instrument_id == source.id

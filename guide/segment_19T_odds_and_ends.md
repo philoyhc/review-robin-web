@@ -1396,7 +1396,19 @@ and isn't sent, so Save's rule deletes it if the branch is still closed.
 closed cell, which can't be answered, so a row could never read
 complete; it now counts open cells only. The operator rollups count
 required fields alone, which a governed field never is, so they are
-unaffected.
+unaffected. Rung 4 is #2641.
+
+**Rung 5 lands the round-trips.** The settings CSV carries three rows per
+response field, `branch_parent` (the parent's `field_key`, since ids don't
+survive an export), `branch_op` and `branch_value`, and the import resolves
+the parent within the instrument. **The rules are checked at parse time**
+(`_apply_parse._branch_errors`), so a broken branch is a named error and
+nothing applies: an unknown parent, a required governed field, a String
+parent, a condition that doesn't fit. Checking at apply time, as the plan
+implied, would have raised past Quick Setup's result handling as a 500.
+Replicate instrument copies the condition and re-points the parent at its
+copy; session clone has since rung 2. **Doc impact gains**
+`spec/settings_inventory.md`, which lists the per-field CSV attributes.
 
 ### Doc impact
 
@@ -1406,6 +1418,7 @@ unaffected.
 - `spec/csv_contracts.md` — §3.3's parent, operator and value attributes (Item 10).
 - `spec/extract_data.md` — the by-instrument metadata's conditions; a governed field exports blank (Item 10).
 - `spec/roundtrip_coverage.md` — the new columns through clone, Replicate and the settings CSV (Item 10).
+- `spec/settings_inventory.md` — §4's per-response-field attributes gain `branch_parent` / `branch_op` / `branch_value` (Item 10, added at rung 5).
 - `spec/architecture.md` — `InstrumentResponseField`'s branch columns (Item 10).
 - `guide/advanced_instruments.md` — Item 1 points to this item as the build (Item 10).
 - `docs/status.md` — row when the item closes (Item 10).

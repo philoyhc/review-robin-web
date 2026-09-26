@@ -412,6 +412,7 @@ def _response_field_rows(instrument: Instrument, n: int) -> list[Row]:
     fields = sorted(
         instrument.response_fields, key=lambda f: (f.order, f.id)
     )
+    by_id = {f.id: f for f in fields}
     for m, field in enumerate(fields, start=1):
         prefix = f"instruments[{n}].response_fields[{m}]"
         rows.append(Row(f"{prefix}.field_key", _str(field.field_key), "string"))
@@ -462,6 +463,21 @@ def _response_field_rows(instrument: Instrument, n: int) -> list[Row]:
             )
         )
         rows.append(Row(f"{prefix}.visible", _bool(field.visible), "boolean"))
+        # 19T Item 10 — branching. The parent goes by ``field_key``,
+        # since ids don't survive an export; the condition rides on the
+        # parent as an operator token and a value.
+        parent = by_id.get(field.branch_parent_id)
+        rows.append(
+            Row(
+                f"{prefix}.branch_parent",
+                _str(parent.field_key if parent else None),
+                "string",
+            )
+        )
+        rows.append(Row(f"{prefix}.branch_op", _str(field.branch_op), "enum"))
+        rows.append(
+            Row(f"{prefix}.branch_value", _str(field.branch_value), "string")
+        )
     return rows
 
 

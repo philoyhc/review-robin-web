@@ -50,6 +50,12 @@ class _ResponseFieldSpec:
     step: float | None = None
     list_csv: str | None = None
     visible: bool = True
+    # 19T Item 10 — branching. A governed field names its parent by
+    # ``field_key`` (ids don't survive an export); the parent carries the
+    # condition's operator token and value.
+    branch_parent: str | None = None
+    branch_op: str | None = None
+    branch_value: str | None = None
 
 
 @dataclass
