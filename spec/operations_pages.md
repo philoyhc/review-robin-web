@@ -538,7 +538,7 @@ both are pinned by
 an assignment complete only when it also carries a `submitted_at`, so a
 saved draft is progress to a reviewer and not yet coverage to a
 reviewee; and it counts every `required` field whether or not it is
-`visible`, so a field the operator has un-pinned still weighs on
+`visible`, so a field the operator has made inactive still weighs on
 coverage. A reviewer with `status` other than `active` is dropped from
 Invitations and still counted here.
 

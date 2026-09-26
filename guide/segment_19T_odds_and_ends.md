@@ -1143,8 +1143,10 @@ committing after Save. Rung 6 reopened `app/` and took two: a labelled
 starter row saved as a field nobody wrote, new fields recreated for want
 of ids, and two answers to a cleared name; then a saved default that
 could still move, a borrowed default that never came back, and a
-spaces-only name hiding the default. The close's one-value grid change
-took the fourth. **Codex** found two: a never-✓'d saved row kept a ticked,
+spaces-only name hiding the default. The close took the fourth, for its
+grid change: nothing breaks, but four specs (three outside Doc impact,
+now added) still described chips and pills, and three checklist rows could not pass
+without ✓; all fixed in the close. **Codex** found two: a never-✓'d saved row kept a ticked,
 fixed Active box (#2633), and Save committed the blank placeholder
 (#2636).
 
@@ -1168,4 +1170,7 @@ and the author's retake of the Guide's instrument captures.
   item as the build, and record the 2026-09-26 layout rulings (Item 9).
 - `app/web/templates/guide.html` — the preview paragraph; the author
   retakes the instrument captures (Item 9).
+- `spec/rrw_functional_spec.md` — Band 2 and Band 3's summary: no chip row, the two tables (Item 9, added at close by its read).
+- `spec/reviewer-surface.md` — the dropped-fields notice names inactive fields, not un-pinned chips (Item 9, added at close).
+- `spec/operations_pages.md` — "un-pinned" becomes "made inactive" (Item 9, added at close).
 - `docs/status.md` — row when the item closes (Item 9).

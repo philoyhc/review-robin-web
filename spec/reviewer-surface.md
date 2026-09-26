@@ -839,8 +839,8 @@ In preview mode:
   for a reviewer who exists renders nothing.
 - **The dropped-fields notice renders here too** (19P.6 rung 2b).
   *"Some saved responses are no longer collected: …"* names fields the
-  reviewer has an answer on whose Band 2 chip the operator has since
-  un-pinned. It was suppressed in `preview_mode` when this surface was
+  reviewer has an answer on that the operator has since made inactive
+  (the row's Active checkbox in Band 3; the field's `visible`). It was suppressed in `preview_mode` when this surface was
   a pre-launch preview only — nothing is saved there, so nothing can be
   dropped — and that stopped being true once the surface was also used
   to inspect a real reviewer, where a dropped field is exactly what the

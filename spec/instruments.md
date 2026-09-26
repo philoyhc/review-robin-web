@@ -74,11 +74,10 @@ The on-page model maps onto these:
   vs Group). Together these define **the assignment rule** for
   this instrument (`SessionRuleSet` row materialised lazily on
   first non-empty filter).
-- **Band 2.** Display fields the reviewer sees alongside each
-  row (Name + Email are always rendered; the operator picks
-  additional reviewee / pair-context tag fields by clicking
-  chips). A preview row renders inline so the operator sees
-  what the reviewer will see.
+- **Band 2.** A preview row of what the reviewer sees alongside
+  each row: the display fields (Name + Email always, plus the
+  reviewee / pair-context tag fields the operator picks in Band 3's
+  display-field table) and the response fields.
 - **Band 3.** Response fields — typed input controls the
   reviewer fills in. Each row carries its own inline
   `data_type` + `min` / `max` / `step` / `list_options`; there is
@@ -216,7 +215,7 @@ Order of stripes (each separated by a horizontal rule):
 │ Who does the review │ Who is being reviewed │ Unit of review   │
 │  (three columns, vertical rules between)                       │
 ├────────────────────────────────────────────────────────────────┤
-│ Band 2 — display-field chips + preview row                     │
+│ Band 2 — preview row                                           │
 ├────────────────────────────────────────────────────────────────┤
 │ Band 3 — response-field table                                  │
 ├────────────────────────────────────────────────────────────────┤
