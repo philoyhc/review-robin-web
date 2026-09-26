@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    AuditEvent,
     Instrument,
     InstrumentResponseField,
     Response,
@@ -131,6 +132,33 @@ def test_deleting_the_last_governed_field_deletes_the_condition(
     db.expire_all()
     assert db.get(InstrumentResponseField, comments_id) is None
     assert (rating.branch_op, rating.branch_value) == (None, None)
+    # The cleared condition is audited on the parent (Codex on #2639).
+    event = db.execute(
+        select(AuditEvent)
+        .where(AuditEvent.event_type == "instrument.field_updated")
+        .order_by(AuditEvent.id.desc())
+    ).scalars().first()
+    assert event.detail["changes"] == {
+        "branch_op": ["ge", None], "branch_value": ["4", None]
+    }
+    assert event.detail["refs"]["response_field_id"] == rating.id
+
+
+def test_deleting_a_parent_with_its_whole_branch_in_one_save_is_bottom_up(
+    client: TestClient, db: Session
+) -> None:
+    """Deleting the last governed field and then the parent in one edit is
+    the bottom-up order the builder allows: once the branch is gone the
+    parent's X comes back, so one Save sends neither."""
+    review_session, instrument, rating, comments = _branched(client, db, "19t10-both")
+    ids = (rating.id, comments.id)
+    response = _save(
+        client, review_session, instrument,
+        _rfs(instrument, Rating=None, Comments=None),
+    )
+    assert response.status_code == 200, response.text
+    db.expire_all()
+    assert all(db.get(InstrumentResponseField, i) is None for i in ids)
 
 
 def test_governed_answers_lock_the_branch_fields(

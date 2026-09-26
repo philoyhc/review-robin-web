@@ -694,9 +694,11 @@ def _sync_response_fields_to_db(
     }
     _apply_branch_rules(
         db,
+        instrument=instrument,
         existing_by_id=existing_by_id,
         new_fields=new_fields,
         to_delete=to_delete,
+        actor=actor,
     )
     for rf_id in to_delete:
         field = existing_by_id[rf_id]
@@ -708,9 +710,11 @@ def _sync_response_fields_to_db(
 def _apply_branch_rules(
     db: Session,
     *,
+    instrument: Instrument,
     existing_by_id: dict[int, InstrumentResponseField],
     new_fields: list[InstrumentResponseField],
     to_delete: set[int],
+    actor: User,
 ) -> None:
     """19T Item 10 — hold a Band 3 save to the branching rules.
 
@@ -718,7 +722,9 @@ def _apply_branch_rules(
     governs a field, and once any field in a branch has responses the
     branch's fields can't be removed. A parent whose last governed field
     goes loses its condition, since a branch is its condition plus at
-    least one field. Then the saved state is checked whole
+    least one field, and that change is audited as the parent's
+    ``instrument.field_updated`` (Codex on #2639). Then the saved state is
+    checked whole
     (``branch_structure_errors``): a governed field made required, a
     parent turned String, or List options that drop an option its
     condition names are refused, as is a new field inserted inside a
@@ -735,6 +741,7 @@ def _apply_branch_rules(
         if field.branch_parent_id is not None:
             governed_by_parent.setdefault(field.branch_parent_id, []).append(field)
     errors: list[tuple[str, str]] = []
+    cleared: list[tuple[InstrumentResponseField, str | None, str | None]] = []
     for parent_id, governed in governed_by_parent.items():
         parent = existing_by_id.get(parent_id)
         going = [f for f in governed if f.id in to_delete]
@@ -751,6 +758,8 @@ def _apply_branch_rules(
         if parent.id in to_delete and staying:
             errors.append((parent.label, "Delete its branch first."))
         elif not staying:
+            if parent.id not in to_delete:
+                cleared.append((parent, parent.branch_op, parent.branch_value))
             parent.branch_op = None
             parent.branch_value = None
     if errors:
@@ -761,6 +770,23 @@ def _apply_branch_rules(
     )
     if errors:
         raise InvalidResponseFieldShapeError(errors)
+    for parent, old_op, old_value in cleared:
+        audit.write_event(
+            db,
+            event_type="instrument.field_updated",
+            summary=(
+                f"Cleared the branch condition on field '{parent.label}' of "
+                f"instrument {_instrument_label(instrument)}, with its last "
+                "governed field"
+            ),
+            actor_user_id=actor.id if actor else None,
+            session=instrument.session,
+            payload=audit.changes(
+                {"branch_op": [old_op, None], "branch_value": [old_value, None]}
+            ),
+            refs={"instrument_id": instrument.id, "response_field_id": parent.id},
+            context={"field_key": parent.field_key},
+        )
 
 
 def _sync_display_field_visibility(
