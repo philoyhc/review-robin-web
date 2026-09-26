@@ -1232,6 +1232,9 @@ The record's Rulings and Pre-positioning 1–7 apply. Added here:
 - **An invalid condition** (no value, a non-number on a numeric parent,
   an option the parent's list doesn't have) is refused by Save, naming
   the field, as a bad bound is.
+- **A condition with no governed field** can't be stored: the service
+  clears a parent's `branch_op` / `branch_value` when its last governed
+  field goes, so storage matches the page's one-unit rule (answer 1).
 
 ### Blast radius (measured)
 
@@ -1273,7 +1276,7 @@ configured condition go unenforced.
    row, governed rows), and ⑂ shows its three states; all inert.
 7. **Builder wired:** `set_band2_state` takes row keys, parents and the
    condition; ⑂, the condition row, "+" and ▲ ▼ inside a branch, the
-   Active cascade, R off inside a branch, X rules, the stager and the
+   Active cascade, R off inside a branch, the X and lock rules, the stager and the
    preview.
 8. **Exports and fixtures:** the by-instrument extract's metadata states
    each condition; the monitoring parity fixture gains a branched
@@ -1295,32 +1298,39 @@ configured condition go unenforced.
 
 ### Open questions
 
-All six answered by the author, 2026-09-26:
-1. **Deleting top-down is blocked; delete bottom-up.** A parent's X is
-   disabled while it has a branch, and the condition row's X while the
-   branch has governed rows. Every governed row's X is live, the last
-   one included. This supersedes the record's "the last field in a
-   branch can't be deleted; deleting the branch deletes every field it
-   governs".
-2. **String and a branch exclude each other**: ⑂ is inactive on a String
-   row, and String is disabled in a parent's type select.
-3. **Active cascades both ways**: unticking a parent writes `visible =
+All answered by the author, 2026-09-26:
+1. **A branch is one unit: its condition and at least one governed
+   field.** ⑂ creates both. The condition row has no X; the last governed
+   row's X deletes that row and the condition together ("Delete this field
+   and its branch"). A parent's X is disabled while it has a branch, so
+   deletion runs bottom-up. No empty branch exists on the page or in
+   storage. This supersedes the record's "the last field in a branch
+   can't be deleted; deleting the branch deletes every field it governs".
+2. **The condition row carries a "+"**, which adds a governed field at the
+   top of the branch; a governed row's "+" adds one below itself.
+3. **String and a branch exclude each other**: ⑂ is inactive on a String
+   row, and String is disabled in a parent's type select. Other type
+   changes keep the condition, which turns amber and is refused by Save
+   if it no longer fits.
+4. **⑂ works on an answered field** that isn't String: a new branch
+   changes no saved answer.
+5. **The lock is on governed answers only.** Once any governed field has
+   responses, the condition and the branch's membership lock: every
+   governed row's X, the "+"s inside the branch, and the condition's
+   controls. Answers on the parent alone lock nothing about the branch
+   (the parent's own type and bounds lock as today). This narrows the
+   record's "on the parent or any governed field", so a branch added to
+   an answered field can still be adjusted after its first Save.
+6. **Active cascades both ways**: unticking a parent writes `visible =
    False` onto every governed field, and re-ticking it re-ticks them all.
-4. **A value the page closes is kept, greyed out**, and comes back if the
+7. **A value the page closes is kept, greyed out**, and comes back if the
    branch reopens; Save deletes it if the branch is still closed.
-5. **Governed fields show muted**: as muted columns in Band 2's preview,
+8. **Governed fields show muted**: as muted columns in Band 2's preview,
    and on the reviewer surface as muted cells nobody can answer until the
    branch's condition is met.
-6. **The extract's `assigned` count stays as is**, and
+9. **The extract's `assigned` count stays as is**, and
    `spec/extract_data.md` says it can't tell "not applicable" from
    "skipped", in line with the record's "no N/A marker".
-
-### Judgment calls — decided
-
-- **A branch left with no governed rows** (answer 1 allows it on the
-  page) is refused by Save, naming the parent: "Add a field to the branch
-  or delete it." Dropping it silently would discard a condition the
-  operator wrote. (2026-09-26)
 
 ### Out of scope
 

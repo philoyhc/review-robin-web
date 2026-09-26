@@ -327,6 +327,8 @@ Item 9):
   alike, in the same boxes: name, type, bounds, R, ≡, ▲, ▼, X.
 - **The condition row** starts after the bar: *If the above* [operator]
   [value] *then show the below*, with the branch's X in the X column.
+  *(Amended 2026-09-26, 19T Item 10: no X; a "+" that adds a governed
+  field at the top of the branch.)*
 - **Inside a branch** R is inactive (governed fields are never required
   here), ▲ is off on the first governed row and ▼ on the last, and ▲ ▼ on
   the parent moves the whole group.
@@ -348,9 +350,10 @@ first ruled on Band 2's pills, which Items 3 and 5 retire).*
   another field to the branch.
 - **The last field in a branch can't be deleted.** Deleting the branch
   (the condition row's X) deletes every field it governs. *(Superseded
-  2026-09-26, 19T Item 10: delete bottom-up. A parent's X is disabled
-  while it has a branch, and the branch's X while it has governed rows;
-  every governed row's X is live.)*
+  2026-09-26, 19T Item 10: a branch is its condition plus at least one
+  governed field. The condition row has no X; the last governed row's X
+  deletes it and the condition together, and a parent's X is disabled
+  while it has a branch.)*
 
 **Order.** A branch's fields follow their parent in the rows, and in the
 preview, and may be reordered among themselves with Item 3's up / down:
@@ -375,7 +378,9 @@ preview, and may be reordered among themselves with Item 3's up / down:
   never reaches an export.
 - **Once responses exist,** on the parent or any governed field, the
   condition and the branch's membership lock. This matches today's
-  type / bounds lock (`has_responses`).
+  type / bounds lock (`has_responses`). *(Narrowed 2026-09-26, 19T Item
+  10: governed answers only, so a branch added to an answered field can
+  still be adjusted.)*
 - **Unchecking the parent's Active hides its whole branch** (Item 3's
   checkbox). A governed row's Active can't be checked while its parent's
   is off.
