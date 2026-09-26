@@ -1766,7 +1766,8 @@ order 3, 4, 5, 1, 2:
   prepare for it.
 
 **Items 3–5 are builder rework, built on the roadmap one at a time**:
-Item 4 shipped as 19T Item 7 (2026-09-26), and Item 5 is next. **Branching
+Item 4 shipped as 19T Item 7 (2026-09-26), and Item 5 is being built as
+19T Item 8. **Branching
 itself, Items 1 and 2, stays off the roadmap** because it amends a stated
 out-of-scope line in `spec/rrw_functional_spec.md`. **No immediate plan to
 build it** (author).

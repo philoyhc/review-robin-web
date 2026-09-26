@@ -933,6 +933,6 @@ Taken 2026-09-26 at `20f8eb3a`:
   table, and Band 2's chip row loses its display pills (Item 8).
 - `spec/ui_elements.md` — "Label or control": the locked Name / Email
   pills give way to the table's disabled checkboxes (Item 8).
-- `guide/advanced_instruments.md` — Item 5 points to this item as built
-  (Item 8).
+- `guide/advanced_instruments.md` — Item 5 and the header point to this
+  item as the build (Item 8).
 - `docs/status.md` — row when the item closes (Item 8).
