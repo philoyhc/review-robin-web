@@ -3380,6 +3380,9 @@ dep chains called out at the bottom of this file.
      2026-09-25.** The Required pill reads "*Required items completed"; an
      Integer field refuses a fractional step, and no bound takes "nan" or
      "inf".
+   - **Item 7 — Visibility edited in Band 2's card** (open).
+     `guide/advanced_instruments.md` Item 4: the "Who can see what you
+     wrote" card becomes the editor when unlocked; Band 3's table retires.
 
 #### Stubs
 

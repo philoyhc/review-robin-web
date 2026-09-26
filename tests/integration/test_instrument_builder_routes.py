@@ -4640,7 +4640,7 @@ def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
     flat = " ".join(body.split())
     intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
     assert intro_idx != -1
-    intro_block = flat[intro_idx : intro_idx + 3000]
+    intro_block = flat[intro_idx : intro_idx + 6000]
     # Heading still renders (#2: Reflection — source seed
     # instrument is #1). 2026-05-28 follow-on dropped the
     # explicit ``style="font-weight: inherit;"`` on the view
@@ -4691,8 +4691,11 @@ def test_band2_intro_card_marks_required_pill_success_when_no_required_fields(
     flat = " ".join(body.split())
     assert "*Required items completed: 0/<span data-new-model-intro-required-count>0</span>" in flat
     intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
-    intro_block = flat[intro_idx : intro_idx + 2500]
-    assert 'class="pill pill-success"' in intro_block
+    # Anchor on the pill itself: the card above it grew (19T Item 7).
+    pill_idx = flat.find("data-new-model-intro-required-pill", intro_idx)
+    assert pill_idx != -1
+    pill_tag = flat[flat.rfind("<span", 0, pill_idx) : pill_idx]
+    assert 'class="pill pill-success"' in pill_tag
 
 
 def test_band2_intro_description_is_lock_driven_swap(
@@ -8703,3 +8706,71 @@ def test_band3_visibility_cycle_repaints_band2_preview_card(
         (slug or ""): label for slug, label in _REVIEWER_VP_MODE_LABELS.items()
     }
     assert client_map == server_map
+
+
+def test_band2_visibility_card_carries_the_editor_layout(
+    client: TestClient, db: Session
+) -> None:
+    """19T Item 7 rung 1 — the "Who can see what you wrote" card keeps
+    the reviewer's table for a locked card and gains the unlocked
+    editor's layout: "You (reviewer)", "Reviewees" and, below a divider,
+    "Observers" with its note, each cell showing the saved mode. A
+    scaffold: the cells are labels until rung 2 wires them."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t7-vp-editor"
+    )
+    saved = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "peer_reviewer_while_ongoing_mode": "raw",
+            "peer_reviewer_after_release_mode": "raw",
+            "reviewee_while_ongoing_mode": "",
+            "reviewee_after_release_mode": "anonymized",
+            "observer_while_ongoing_mode": "summarized",
+            "observer_after_release_mode": "raw",
+        },
+        follow_redirects=False,
+    )
+    assert saved.status_code == 303
+    flat = " ".join(
+        client.get(
+            f"/operator/sessions/{review_session.id}"
+            f"/instruments?editing={new_model.id}"
+        ).text.split()
+    )
+    card = _card_slice(flat, new_model.id)
+    band2 = card[card.index("data-new-model-band2-vp-preview-card") :]
+    # Locked: the reviewer's table, no Observers.
+    locked = band2[
+        band2.index('<div class="table-scroll" data-lock-only>') :
+        band2.index("data-new-model-vp-editor")
+    ]
+    assert ">You<" in locked and ">Reviewees<" in locked
+    assert "Observers" not in locked
+    # Unlocked: the editor, shown by the lock layer's swap.
+    assert '<div class="table-scroll" data-unlock-only data-new-model-vp-editor>' in band2
+    start = band2.index("data-new-model-vp-editor")
+    editor = band2[start : band2.index("</table>", start)]
+    labels = re.findall(r"<tr[^>]*> <td[^>]*>([^<]+)</td>", editor)
+    assert labels == [
+        "You (reviewer)",
+        "Reviewees",
+        "Observers",
+        "Observers are shown here for setup only; reviewers don't see this row.",
+    ]
+    assert re.search(
+        r'<tr data-new-model-vp-observers-row style="border-top: 2px solid', editor
+    )
+    # Each cell reads the saved mode; the fixed cells are Band 3's.
+    assert re.findall(r'<span class="pill pill-count"[^>]*>([^<]+)</span>', editor) == [
+        "Raw responses",
+        "Raw responses",
+        "—",
+        "Anonymized responses",
+        "Anonymized summaries",
+        "Raw responses",
+    ]
+    # Rung 1 is inert: no control in the editor yet.
+    assert "tag-chip" not in editor
+    assert "onclick" not in editor

@@ -1792,6 +1792,48 @@
              column-render concern; the progress numbers a
              reviewer would see are based on every response field
              attached to the instrument. #}
+          {# The visibility state and the cycle-chip macros sit here, above
+             Band 2's intro grid, because the "Who can see what you wrote"
+             card uses them (19T Item 7) as well as Band 3's table. #}
+          {% set _b3vis = (band3_visibility_by_instrument or {}).get(instrument.id, {}) %}
+          {%- set _pr = _b3vis.get("peer_reviewer", {"while_ongoing_mode": "raw", "after_release_mode": None}) -%}
+          {%- set _re = _b3vis.get("reviewee", {"while_ongoing_mode": None, "after_release_mode": None}) -%}
+          {%- set _ob = _b3vis.get("observer", {"while_ongoing_mode": None, "after_release_mode": None}) -%}
+          {% set _b3_mode_labels = {
+                "": "—",
+                "raw": "Raw responses",
+                "anonymized": "Anonymized responses",
+                "summarized": "Anonymized summaries",
+          } %}
+          {# A label, not a control (19J.7 rung 1). This macro used to
+             carry ``tag-chip is-selected`` — the *identical* class string
+             to ``b3_mode_cycle`` below it, so the five fixed cells were
+             indistinguishable from the clickable ones, and ``tag-chip``'s
+             ``cursor: pointer`` aimed the one affordance the pill
+             vocabulary has at the cells that do nothing. Dropping the two
+             classes also takes the reserved accent shade
+             (``is-selected`` → ``--selected-bg``) off an inert element,
+             which is the rule the rest of Item 7 builds on. #}
+          {% macro b3_static_pill(label) %}
+            <span class="pill pill-count"
+                  title="Fixed">{{ label }}</span>
+          {% endmacro %}
+          {% macro b3_mode_cycle(audience, window, slugs, current_mode) %}
+            {# Cycle chip for a (audience, window) cell. ``slugs`` is
+               the ordered list of allowed values (with ``""`` for
+               "off"); the chip rotates through them on click and
+               writes the matching hidden input. Labels are looked
+               up client-side in the JS ``_VP_CELL_LABELS`` map. #}
+            {% set _current = current_mode or "" %}
+            <span class="pill pill-count tag-chip is-selected"
+                  role="button" tabindex="0"
+                  data-new-model-vp-cycle-audience="{{ audience }}"
+                  data-new-model-vp-cycle-window="{{ window }}"
+                  data-new-model-vp-cycle-slugs="{{ slugs | join('|') }}"
+                  data-new-model-vp-current-slug="{{ _current }}"
+                  onclick="newModelCycleVisibilityCell(this)"
+                  title="Click to cycle">{{ _b3_mode_labels.get(_current, "—") }}</span>
+          {% endmacro %}
           {% set _rf_list = _band2.response_fields or [] %}
           {% set _all_count = (_rf_list | list | length) %}
           {% set _required_count = (_rf_list | selectattr('required') | list | length) %}
@@ -1850,8 +1892,10 @@
                    data-new-model-band2-vp-preview-card>
                 <h3 style="margin: 0 0 8px 0;">Who can see what you wrote (other than admin)</h3>
                 {# `.table-scroll` (base.html): a table wider than its card
-                   scrolls inside the card rather than pushing the page sideways. #}
-                <div class="table-scroll">
+                   scrolls inside the card rather than pushing the page sideways.
+                   19T Item 7 — locked, the card is the reviewer's; unlocked,
+                   the editor below replaces it (the description box's swap). #}
+                <div class="table-scroll" data-lock-only>
                 <table style="width: 100%; border-collapse: collapse;">
                   <thead>
                     <tr style="text-align: left;">
@@ -1872,6 +1916,48 @@
                             data-new-model-vp-preview-cell="{{ vp.audience }}-after_release">{{ vp.after_release_label }}</td>
                       </tr>
                     {% endfor %}
+                  </tbody>
+                </table>
+                </div>
+                {# 19T Item 7 rung 1 — the unlocked editor's layout, a
+                   scaffold: the cells that will cycle are labels until
+                   rung 2 wires them, and Band 3's table stays the editor
+                   meanwhile. Observers show here only, below a divider. #}
+                {% macro vp_scaffold_pill(mode) %}
+                  <span class="pill pill-count"
+                        title="Set in Band 3's Visibility table for now">{{ _b3_mode_labels.get(mode or "", "—") }}</span>
+                {% endmacro %}
+                <div class="table-scroll" data-unlock-only
+                     data-new-model-vp-editor>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="text-align: left;">
+                      <th style="padding: 4px 8px; width: 28%;" class="muted">Audience</th>
+                      <th style="padding: 4px 8px; width: 36%;" class="muted">Session ongoing</th>
+                      <th style="padding: 4px 8px; width: 36%;" class="muted">Responses released</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="padding: 4px 8px;">You (reviewer)</td>
+                      <td style="padding: 4px 8px;">{{ b3_static_pill("Raw responses") }}</td>
+                      <td style="padding: 4px 8px;">{{ vp_scaffold_pill(_pr.after_release_mode) }}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 4px 8px;">Reviewees</td>
+                      <td style="padding: 4px 8px;">{{ b3_static_pill("—") }}</td>
+                      <td style="padding: 4px 8px;">{{ vp_scaffold_pill(_re.after_release_mode) }}</td>
+                    </tr>
+                    <tr data-new-model-vp-observers-row
+                        style="border-top: 2px solid var(--border-default);">
+                      <td style="padding: 4px 8px;">Observers</td>
+                      <td style="padding: 4px 8px;">{{ vp_scaffold_pill(_ob.while_ongoing_mode) }}</td>
+                      <td style="padding: 4px 8px;">{{ vp_scaffold_pill(_ob.after_release_mode) }}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="3" class="muted"
+                          style="padding: 4px 8px; font-size: 0.85em;">Observers are shown here for setup only; reviewers don't see this row.</td>
+                    </tr>
                   </tbody>
                 </table>
                 </div>
@@ -3989,45 +4075,6 @@
 
          The Save button posts hidden inputs the chip JS keeps
          in sync. See ``spec/visibility_policy.md``. #}
-      {% set _b3vis = (band3_visibility_by_instrument or {}).get(instrument.id, {}) %}
-      {%- set _pr = _b3vis.get("peer_reviewer", {"while_ongoing_mode": "raw", "after_release_mode": None}) -%}
-      {%- set _re = _b3vis.get("reviewee", {"while_ongoing_mode": None, "after_release_mode": None}) -%}
-      {%- set _ob = _b3vis.get("observer", {"while_ongoing_mode": None, "after_release_mode": None}) -%}
-      {% set _b3_mode_labels = {
-            "": "—",
-            "raw": "Raw responses",
-            "anonymized": "Anonymized responses",
-            "summarized": "Anonymized summaries",
-      } %}
-      {# A label, not a control (19J.7 rung 1). This macro used to
-         carry ``tag-chip is-selected`` — the *identical* class string
-         to ``b3_mode_cycle`` below it, so the five fixed cells were
-         indistinguishable from the clickable ones, and ``tag-chip``'s
-         ``cursor: pointer`` aimed the one affordance the pill
-         vocabulary has at the cells that do nothing. Dropping the two
-         classes also takes the reserved accent shade
-         (``is-selected`` → ``--selected-bg``) off an inert element,
-         which is the rule the rest of Item 7 builds on. #}
-      {% macro b3_static_pill(label) %}
-        <span class="pill pill-count"
-              title="Fixed">{{ label }}</span>
-      {% endmacro %}
-      {% macro b3_mode_cycle(audience, window, slugs, current_mode) %}
-        {# Cycle chip for a (audience, window) cell. ``slugs`` is
-           the ordered list of allowed values (with ``""`` for
-           "off"); the chip rotates through them on click and
-           writes the matching hidden input. Labels are looked
-           up client-side in the JS ``_VP_CELL_LABELS`` map. #}
-        {% set _current = current_mode or "" %}
-        <span class="pill pill-count tag-chip is-selected"
-              role="button" tabindex="0"
-              data-new-model-vp-cycle-audience="{{ audience }}"
-              data-new-model-vp-cycle-window="{{ window }}"
-              data-new-model-vp-cycle-slugs="{{ slugs | join('|') }}"
-              data-new-model-vp-current-slug="{{ _current }}"
-              onclick="newModelCycleVisibilityCell(this)"
-              title="Click to cycle">{{ _b3_mode_labels.get(_current, "—") }}</span>
-      {% endmacro %}
       <div data-new-model-band3 data-lock-region
            style="display: grid; grid-template-columns: 2fr 3fr; gap: 16px;
                   align-items: stretch;"
