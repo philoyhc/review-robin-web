@@ -821,19 +821,6 @@ them. A cycle also repaints the locked table's matching pill
 (`data-new-model-vp-preview-cell`) — the live repaint 19T Item 3 entry 3
 added, kept because Save is a fetch and never reloads.
 
-#### Chip row
-
-Below the intro card, a horizontal scrollable row holds one chip per
-saved response field. Display fields moved off this row onto Band 3's
-display-field table below when `guide/advanced_instruments.md` Item 5
-retired their chips (19T Item 8) — see "Display-field table". Clicking a
-chip toggles whether its column appears in the preview row below;
-dragging reorders it and moves its paired Band 3 response-field row to
-match (see "Response fields" below for the order and Save mechanics).
-
-The chip row gates on `is_editing`. View mode renders the chips as
-static "selected" pills (no toggle affordance).
-
 #### Display-field table
 
 Band 3's left column (`data-new-model-band3-left`) is a headerless,
@@ -852,8 +839,9 @@ Each row holds:
   selection;
 - the field's session-wide label as a display-only pill (`pill
   pill-count`, no click handler);
-- ▲ / ▼ `.btn-icon` move buttons, absent on a locked row. An unticked
-  row can still be moved.
+- ▲ / ▼ `btn secondary btn-short` move buttons (not `.btn-icon` —
+  `spec/ui_elements.md` §10), absent on a locked row. An unticked row
+  can still be moved.
 
 **Name and Email are locked**: a ticked, disabled checkbox, no move
 buttons, and a tooltip naming the pinned slot — "Always shown — pinned
@@ -862,9 +850,8 @@ group-scoped instrument**, a field a group row can't show — Email
 included — renders unticked and disabled, tooltip "Not shown on group
 rows"; Name is always selectable in group mode and stays ticked (see
 "Group-flavor preview" below). Every other row's tooltip is "Show this
-column". The locked Name / Email pills the chip row used to carry give
-way to these disabled checkboxes (`spec/ui_elements.md` "Label or
-control").
+column". These disabled checkboxes carry the locked-field affordance
+Band 2's chip row used to (`spec/ui_elements.md` "Label or control").
 
 #### Preview row
 
@@ -884,8 +871,8 @@ persist as integer pixels per column key into
 - `df_<display_field_id>` — each operator-chosen display field.
 - `rf_<response_field_id>` — each Band 3 response-field column
   (keyed by name for a not-yet-saved field, re-keyed to id on
-  save; carried on the Band 2 pill's `data-width` and folded in
-  by `set_band2_state`).
+  save; carried on the row's `data-width` and folded in by
+  `set_band2_state`).
 
 Widths never POST on their own. A resize stages the live widths
 into a hidden `column_widths_snapshot` input (JSON); the bulk
@@ -905,80 +892,95 @@ qualify, the trailing `... + N more` collapses the overflow.
 
 ### Response fields
 
-Band 3 splits `grid-template-columns: minmax(0, 1fr) 2fr` — one third
-display fields, two thirds response fields. The left track's `0`
+Band 3 splits `grid-template-columns: minmax(0, 1fr) 4fr` — a fifth
+display fields, four fifths response fields (the author, 2026-09-26;
+one third / two thirds before Item 9's table). The left track's `0`
 minimum lets a long field label scroll inside its `.table-scroll`
-rather than widening the column past its third. The left column holds
+rather than widening the column past its fifth. The left column holds
 the display-field table above; the right column, below, is the
-response-field editor.
+response-field table.
 
-The right column is a stack of inline editor rows, one per
-saved Response Field. **No standing blank row**: a card with no saved
-fields renders one blank row instead (from a `<template>`), so there is
-always a "+" to press; deleting down to one row leaves that row rather
-than none.
+**The right column is a table** (`rf-table`, `spec/ui_elements.md`
+§10): one `<tbody data-new-model-rf-group>` per field, each holding its
+`<tr data-new-model-rf-row>`, ruled under the group and not inside it —
+so a governed field (branching, `guide/advanced_instruments.md` Item 1)
+can later join its parent's `<tbody>` as one ruled group without
+reworking this table. **The row is the response-field model**, the same
+contract the display-field table's row carries (see "Display-field
+table" above): its state — selection, the name and shape last
+committed, column width, help text, response count — lives on the
+`<tr>`, read everywhere (the preview, the stager, Save) through one
+function, `rfRows`. **No standing blank row**: a card with no saved
+fields renders one blank, unlabelled placeholder row instead — not a
+field until the operator types into it — so there is always a "+" to
+press; deleting down to one row leaves that row rather than none.
 
-Each row is a single horizontal flex strip with the following
-controls (left → right):
+Each row holds, left to right:
 
 | Control | Bound to | Notes |
 |---|---|---|
-| **+** button | — | Inserts a blank row directly below this one. |
-| Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Drives the paired Band 2 pill's label on save. |
+| **Active** checkbox | `InstrumentResponseField.visible` | The field's selection — whether it renders on the reviewer surface, the reviewer summary and the reviewer-record CSV (see below). Unticking a field with saved responses asks to confirm first — "Hide … from the reviewer surface?", naming the response count and that the data is preserved for audit. An inactive row is not dimmed. |
+| **+** button | — | Inserts a new row (its own `<tbody>` group) directly after this one's, seeded with the next default label (see "A field's default label" below). |
+| (empty column) | — | Held for a governed row's fork control (`guide/advanced_instruments.md` Item 1); empty until that item ships. |
+| Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Empty until typed — see "A field's default label" below. |
 | Type (`<select>`) | `_inline_data_type` | `String / Integer / Decimal / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. Disabled when the row has saved responses; the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
 | Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_options` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
-| **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. Mirrors onto the paired pill when one exists and stages Band 2 state either way, so Save alone persists a toggle — ✓ is never needed. |
-| **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field above the reviewer-surface preview table. The help-text *text* is edited in a plain `help_text` textarea on the help card (shown when the instrument card is unlocked, `data-lock-only` read view when locked) that binds to the `dfsave-{id}` form, so the text commits with the bulk Save rather than a per-field ✎/✓ POST. Like R, it mirrors onto the pill and stages Band 2 state live — ✓ is never needed here either. |
-| **✓** button | — | Does two things and nothing else: on a row with no pill, creates one (selected, so its column joins the reviewer-surface preview); on a row whose name, type, or type-shown bounds (`min`/`max` for String, `min`/`max`/`step` for Integer/Decimal, `list` for List) differ from its pill, updates the pill. Enabled only then, and only for a named, shape-valid row — tooltip "Add" or "Update this field's pill and preview column"; "The pill and preview already match this row." when off. Pure UX — nothing persists until the card-wide bulk Save runs; a successful Save syncs every paired pill back to its row. |
-| **X** button (`.btn.destructive`) | — | Drops this row and its paired pill, matching Band 1's rule/unit X. Disabled when the row has saved responses (title pins the reason), or when it is the only row left. |
+| **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. Stages Band 2 state directly, so Save alone persists a toggle. |
+| **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field above the reviewer-surface preview table. The help-text *text* is a plain `help_text` textarea on that card (shown when the instrument card is unlocked, `data-lock-only` read view when locked), bound to the `dfsave-{id}` form, so it commits with the bulk Save. Stages Band 2 state directly, like R. |
+| **▲ / ▼** | — | Full-size `btn secondary` buttons (not `btn-short` — that size is the display-field table's, see "Display-field table" above) that swap this row's `<tbody>` group with its neighbour. They move a **group**, not a row; a governed row moves within its group under Item 1's build. |
+| **X** button (`.btn.destructive`) | — | Drops this row (its `<tbody>`), matching Band 1's rule/unit X. Disabled when the row has saved responses (title pins the reason), or when it is the only row left. |
 
-**A row's amber marker (`data-row-pending`) means "differs from its
-pill"** — or a named row with no pill — regardless of validity: an
-invalid edit still shows the marker, and retyping a value back to what
-the pill already holds clears it (and ✓ with it).
+**A row commits to the preview by itself** whenever its live name and
+shape are valid and differ from what it last committed — checked on
+every keystroke and type change, so a half-typed bound never reaches
+the preview. Committing writes the row's `data-label` /
+`data-rf-data-type` / `-min` / `-max` / `-step` / `-list` attributes,
+which the preview cell and the constraint line always read, never the
+live inputs, so an unsaved edit never leaks into the reviewer-surface
+preview. An invalid or not-yet-valid row keeps its last committed shape
+and is marked with an amber left edge (`data-row-pending`); the reason
+is the row's tooltip, which also names what the preview shows
+meanwhile. A brand-new row starts selected.
 
-**The pill carries the pushed shape.** ✓ (and a successful Save) write
-the row's name, type and bounds onto the pill's `data-rf-data-type` /
-`-min` / `-max` / `-step` / `-list`; the preview cell and the
-constraint line read the pill, never the live row, so an unsaved edit
-never leaks into the reviewer-surface preview.
+**A field's default label** is the next "Field N" no row goes by, shown
+muted as the empty name box's placeholder
+(`table.rf-table td.rf-name input::placeholder`,
+`spec/ui_elements.md` §10) — the name the field goes by everywhere a
+name is read (the preview, the pending marker, the auto-commit, and
+what Save sends) while the box is empty, so Save never drops a field
+for want of a name; only X deletes one. Clearing a typed name brings
+the default back. → or Enter in an empty box, or typing into it, takes
+the name as typed, shown in normal style thereafter. **A saved field's
+default never moves** — editing another row's name can't rename it —
+and a saved "Field N" reloads as a typed name in normal style, since
+nothing records that it was ever a default (the author's ruling,
+2026-09-26).
 
-**Order follows the rows.** ✓ inserts a new pill immediately before
-the pill of the nearest row below it — a "+" between A and B, ticked,
-gives pills A, C, B; the bulk Save serializes Band 3 rows in row order
-(a named, never-✓'d row persists unselected, in place); and dragging a
-response pill in Band 2 moves its row to match, so the two orders never
-disagree.
+**A "+" row lives only on the page until a successful Save**: it
+commits to the preview at once, but the card turns unsaved, and
+Cancel's discard reload drops it.
+
+**Order follows the rows.** ▲ ▼ swap a row's `<tbody>` group with its
+neighbour; "+" inserts a new group directly after the pressed row's;
+the bulk Save serializes rows in row order (a named, uncommitted row
+persists unselected, in place).
 
 The whole card's bulk Save form (form id `dfsave-{iid}`)
 POSTs to the consolidated
 `POST /sessions/{sid}/instruments/{iid}/save` endpoint — one
 request carries identity, Band 1, the Band 2/Band 3 state
-snapshots, and column widths together. The page drives no other
-save endpoint except `/fields/save`, its no-JS fallback; the
-per-concern routes `/band2-state`, `/column-widths`,
-`/display-fields/order` and `/identity` remain available to
-fixture and programmatic callers only.
+snapshots, and column widths together (its JSON response is detailed
+under "Save" in "Action row" below). The page drives no other save
+endpoint except `/fields/save`, its no-JS fallback; the per-concern
+routes `/band2-state`, `/column-widths`, `/display-fields/order` and
+`/identity` remain available to fixture and programmatic callers only.
 
-#### Per-field visibility lives on the Band 2 pill
-
-`InstrumentResponseField.visible` — the flag that decides
-whether the field renders on the reviewer surface — is
-**toggled from the paired Band 2 pill**, not from Band 3. A
-response field's pill in the Band 2 chip row carries
-`data-source-type="response"`; clicking the pill flips its
-`aria-pressed` / `is-selected` state, and on bulk Save
-`bulk_save_fields` writes the new selected state through to
-`InstrumentResponseField.visible`
-(`app/services/instruments/_band2.py:_sync_response_fields_to_db`,
-the dual-write helper).
-
-The reviewer surface form, the reviewer summary HTML, and the
-reviewer-record CSV all filter response fields by
-`visible.is_(True)` — un-pinning a chip drops the column from
-every reviewer-facing render in one step. The Response Field
-row in Band 3 stays present (so its bounds / help text remain
-editable); only the chip + the reviewer-side renders react.
+`InstrumentResponseField.visible` — read live off each row's Active
+checkbox — is what the reviewer surface form, the reviewer summary
+HTML and the reviewer-record CSV filter response fields by
+(`visible.is_(True)`): unticking Active drops the column from every
+reviewer-facing render in one step, while the row itself stays present
+in Band 3 so its bounds and help text remain editable.
 
 **The operator's reviewer-side counts filter it too** (19R Item 3):
 `monitoring.per_reviewer_progress` excludes an invisible `required`
@@ -1024,15 +1026,17 @@ A row that doesn't satisfy its type's contract fails the bulk
 save with a 422 and an inline banner pinning the per-row error.
 The page re-renders with the operator's edits intact.
 
-The client mirror, `newModelRfValidateShape`, gates the row's ✓
-button with the same messages in the same order — non-finite bounds,
-then the Integer/Decimal rules, then the whole-number rule with its
+The client mirror, `newModelRfValidateShape`, gates a row's auto-commit
+with the same messages in the same order — non-finite bounds, then the
+Integer/Decimal rules, then the whole-number rule with its
 has-responses exemption (read off the row's `data-has-responses`
-attribute). **It checks only the bounds the row's type shows**:
+attribute) — and the failing message is what the row's pending-marker
+tooltip shows. **It checks only the bounds the row's type shows**:
 Min, Max and Step for Integer / Decimal, Min and Max for String, none
 for List. A type switch hides the other inputs without clearing them,
 and the server checks them all, so a non-finite value typed and then
-hidden passes ✓ and is refused at Save, naming the field.
+hidden still commits client-side and is refused at Save, naming the
+field.
 
 #### Type presets
 
@@ -1075,8 +1079,12 @@ Bottom row of the card, right-aligned, in this order:
   setup pills are drawn from — `is_configured` for this
   instrument, and `instruments_configured` / `instrument_count`
   for the session — which the client repaints (see **Status
-  pills** above). On a 422 the summary banner renders with
-  edits intact and no pill moves.
+  pills** above), and `response_field_ids`, the saved response
+  fields' ids in row order, which the client keys onto the rows
+  it sent so a new field's next Save updates it instead of
+  recreating it under a fresh id (and losing its column width;
+  see "Response fields" above). On a 422 the summary banner
+  renders with edits intact and no pill moves.
   The `/fields/save` 303-redirect form action stays as the
   no-JS fallback.
 - **Cancel** — only in edit mode. Reloads the same edit-mode
