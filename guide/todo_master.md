@@ -3392,6 +3392,10 @@ dep chains called out at the bottom of this file.
      2026-09-26.** `guide/advanced_instruments.md` Item 3: a table with an
      Active checkbox and ▲ ▼ replaces the response pills and ✓; added
      fields default to a muted "Field N"; Band 3 splits 1 : 4.
+   - **Item 10 — Branching between response fields** (open, planned).
+     `guide/advanced_instruments.md` Item 1: ⑂ on an Integer, Decimal or
+     List field opens a branch of optional governed fields, shown only
+     when the parent's answer meets a condition.
 
 #### Stubs
 

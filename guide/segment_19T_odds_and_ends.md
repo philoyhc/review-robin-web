@@ -1175,3 +1175,178 @@ and the author's retake of the Guide's instrument captures.
 - `spec/reviewer-surface.md` — the dropped-fields notice names inactive fields, not un-pinned chips (Item 9, added at close).
 - `spec/operations_pages.md` — "un-pinned" becomes "made inactive" (Item 9, added at close).
 - `docs/status.md` — row when the item closes (Item 9).
+
+## Item 10 — Branching between response fields, governed fields optional
+
+**Opened 2026-09-26 on the author's instruction**: `guide/advanced_instruments.md`
+Item 1, built on Items 7–9 as they shipped. The design record holds the
+rulings (structure, order, conditions, governed fields), the recommended
+storage, the settled layout and the pre-positioning for its Item 2. This
+block holds what Items 7–9 changed underneath them, the author's
+2026-09-26 answers on what the record left open, and the ladder.
+
+### Opportunity
+
+An instrument can't ask a follow-up only when an answer calls for one:
+every response field is a column every reviewer fills or skips.
+`spec/rrw_functional_spec.md` lists branching logic as out of scope, and
+no conditional-display concept exists to extend (the design record's
+Cost).
+
+### Decision
+
+The design record's Item 1, as ruled, on Item 9's table. What Items 7–9
+settle or change:
+- **The table is already shaped for it** (Item 9's pre-positioning): a
+  field is a `<tr>` in a group `<tbody>`, ▲ ▼ move groups, the ⑂ column
+  is held, and Active and R are computed in one recompute. A branch's
+  condition row and governed `<tr>`s join the parent's group.
+- **The stager sends row keys and a parent reference** (Item 9 point 6),
+  and `set_band2_state` resolves the parent by row key, since a branch
+  can name a parent the same Save creates. Save already returns
+  `response_field_ids` in order.
+- **No ✓:** the condition row reaches the preview by itself once valid,
+  and is marked amber with the reason otherwise, like a field row.
+- **Default labels:** ⑂ creates the branch with one governed field named
+  by the next free "Field N", and a governed row's "+" adds another the
+  same way.
+- **Band 3 is now 1 : 4**, so the right column has room for the extra
+  column and the condition row's controls.
+- **Storage as the record recommends**: `branch_parent_id` (self FK),
+  `branch_op` and `branch_value` on `InstrumentResponseField`.
+
+**Rejected: its own segment**, which the record's "Shape of the build"
+assumed. The author placed it in 19T; the ladder below keeps the same
+cut points.
+
+### Semantics
+
+The record's Rulings and Pre-positioning 1–7 apply. Added here:
+- **A branch-open function** in `app/services/responses/` takes the
+  parent field and its answer (per group row on a group-scoped
+  instrument); the save rule, the surface and later Item 2 call it.
+- **"A closed branch holds no value"** is enforced in all three writers
+  of `Response` rows: `_apply_upserts` (save and submit), the group
+  fan-out (`_group_reconciliation.py`) and the responses import
+  (`responses_import.py`).
+- **An invalid condition** (no value, a non-number on a numeric parent,
+  an option the parent's list doesn't have) is refused by Save, naming
+  the field, as a bad bound is.
+- **A condition with no governed field** can't be stored: the service
+  clears a parent's `branch_op` / `branch_value` when its last governed
+  field goes, so storage matches the page's one-unit rule (answer 1).
+
+### Blast radius (measured)
+
+Taken 2026-09-26 at `9487de5b`:
+- `InstrumentResponseField(` constructors to teach the new columns: 8 in
+  6 files (`grep -rn "InstrumentResponseField(" app/ --include=*.py`):
+  `_band2.py`, `_instrument_crud.py` (3), `_response_fields.py` (2),
+  `session_clone.py`, `_apply_instrument.py`.
+- Writers of `Response` rows: 3 (`_core.py`, `_group_reconciliation.py`,
+  `responses_import.py`).
+- The reviewer surface: `_context.py` (641 lines),
+  `review_surface.html` (693), `_group_collapse.py` (85).
+- `set_band2_state(` call sites: 3 (`grep -rn "set_band2_state(" app/`).
+- The ⑂ cell: 2 lines in `instruments_index.html`
+  (`grep -c data-new-model-rf-fork-cell`).
+- Specs: `spec/instruments.md`, `spec/reviewer-surface.md`,
+  `spec/csv_contracts.md` §3.3, `spec/extract_data.md`,
+  `spec/rrw_functional_spec.md`, `spec/roundtrip_coverage.md`,
+  `spec/architecture.md`.
+
+### PR ladder
+
+The item's cumulative `diff-reviewer` read runs at rung 8, from
+`9487de5b`. **Enforcement lands before any way to author a branch**
+(Codex on #2638): the save rule and the reviewer surface precede the
+round-trips and the builder, so no deployment between rungs lets a
+configured condition go unenforced.
+1. **The plan** (this rung, prose only).
+2. **Model and service:** the migration, the branch-open function, the
+   applicable-fields helper, and validation (one level, one branch per
+   parent, no String parent, `required` false on a governed field, the
+   condition). `set_band2_state` still refuses branch keys. No UI.
+3. **The save rule:** the invariant in all three writers.
+4. **The reviewer surface:** muted governed cells nobody can answer
+   while the branch is closed, live JS on the parent's input, group rows; tested on branches built in fixtures.
+5. **Round-trips:** settings CSV (§3.3), session clone (remap through
+   `response_field_map`), Replicate instrument.
+6. **Builder scaffold:** saved branches render as groups (bar, condition
+   row, governed rows), and ⑂ shows its three states; all inert.
+7. **Builder wired:** `set_band2_state` takes row keys, parents and the
+   condition; ⑂, the condition row, "+" and ▲ ▼ inside a branch, the
+   Active cascade, R off inside a branch, the X and lock rules, the stager and the
+   preview.
+8. **Exports and fixtures:** the by-instrument extract's metadata states
+   each condition; the monitoring parity fixture gains a branched
+   instrument (Pre-positioning 7).
+9. **Close**, with the `spec/rrw_functional_spec.md` amendment.
+
+### Definition of done
+
+- A branch built in Band 3 saves, reloads, round-trips through the
+  settings CSV, clone and Replicate, and closes governed cells on the
+  reviewer surface; a closed branch's values are deleted on save.
+- `tests/integration/test_monitoring_rollup_parity.py` passes with a
+  branched instrument and unchanged counts.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.10` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+All answered by the author, 2026-09-26:
+1. **A branch is one unit: its condition and at least one governed
+   field.** ⑂ creates both. The condition row has no X; the last governed
+   row's X deletes that row and the condition together ("Delete this field
+   and its branch"). A parent's X is disabled while it has a branch, so
+   deletion runs bottom-up. No empty branch exists on the page or in
+   storage. This supersedes the record's "the last field in a branch
+   can't be deleted; deleting the branch deletes every field it governs".
+2. **The condition row carries a "+"**, which adds a governed field at the
+   top of the branch; a governed row's "+" adds one below itself.
+3. **String and a branch exclude each other**: ⑂ is inactive on a String
+   row, and String is disabled in a parent's type select. Other type
+   changes keep the condition, which turns amber and is refused by Save
+   if it no longer fits.
+4. **⑂ works on an answered field** that isn't String: a new branch
+   changes no saved answer.
+5. **The lock is on governed answers only.** Once any governed field has
+   responses, the condition and the branch's membership lock: every
+   governed row's X, the "+"s inside the branch, and the condition's
+   controls. Answers on the parent alone lock nothing about the branch
+   (the parent's own type and bounds lock as today). This narrows the
+   record's "on the parent or any governed field", so a branch added to
+   an answered field can still be adjusted after its first Save.
+6. **Active cascades both ways**: unticking a parent writes `visible =
+   False` onto every governed field, and re-ticking it re-ticks them all.
+7. **A value the page closes is kept, greyed out**, and comes back if the
+   branch reopens; Save deletes it if the branch is still closed.
+8. **Governed fields show muted**: as muted columns in Band 2's preview,
+   and on the reviewer surface as muted cells nobody can answer until the
+   branch's condition is met.
+9. **The extract's `assigned` count stays as is**, and
+   `spec/extract_data.md` says it can't tell "not applicable" from
+   "skipped", in line with the record's "no N/A marker".
+
+### Out of scope
+
+- **Required governed fields**: `guide/advanced_instruments.md` Item 2,
+  after this item.
+- **Nested branches, a branch per parent beyond one, String parents**:
+  ruled out by the record.
+
+### Doc impact
+
+- `spec/rrw_functional_spec.md` — branching leaves the out-of-scope line; the builder and surface summaries gain it (Item 10).
+- `spec/instruments.md` — the branch group, ⑂, the condition row, the rules inside a branch, and the stager's row keys and parent reference (Item 10).
+- `spec/reviewer-surface.md` — inactive governed cells, the live parent input, group rows (Item 10).
+- `spec/csv_contracts.md` — §3.3's parent, operator and value attributes (Item 10).
+- `spec/extract_data.md` — the by-instrument metadata's conditions; a governed field exports blank (Item 10).
+- `spec/roundtrip_coverage.md` — the new columns through clone, Replicate and the settings CSV (Item 10).
+- `spec/architecture.md` — `InstrumentResponseField`'s branch columns (Item 10).
+- `guide/advanced_instruments.md` — Item 1 points to this item as the build (Item 10).
+- `docs/status.md` — row when the item closes (Item 10).

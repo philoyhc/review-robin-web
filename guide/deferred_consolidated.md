@@ -1748,30 +1748,15 @@ that they agree with each other.
 **Lift trigger:** an operator asking for keystroke-live filtering on a
 roster, or the next change that reworks a roster's pager.
 
-### Branching between response fields (author, 2026-09-24)
+### Required governed fields (author, 2026-09-24)
 
-The author explored basic branching: fields that can be answered only when
-another field's answer meets a condition. One level, one branch per parent,
-several fields per branch. The rulings, recommended storage and measured
-cost are in `guide/advanced_instruments.md`, as five items built in the
-order 3, 4, 5, 1, 2:
-- Item 3 reorders on the Band 3 rows and retires the response pills and
-  ✓, about 4 PRs;
-- Item 4 moves the Visibility editor into Band 2's card, about 3 PRs
-  (built 2026-09-26 as 19T Item 7);
-- Item 5 gives display fields a table in the column Item 4 frees,
-  retiring Band 2's pills, about 4 PRs (built 2026-09-26 as 19T Item 8);
-- Item 1 is branching with optional governed fields, about 7–8 PRs;
-- Item 2 is required governed fields, about 2 more, with Item 1 built to
-  prepare for it.
+`guide/advanced_instruments.md` Item 2: a governed field inside a branch
+that is required while its branch is open. The record's other four items
+are built or scheduled: Items 3, 4 and 5 shipped as 19T Items 9, 7 and 8,
+and Item 1, branching with optional governed fields, is 19T Item 10. Item
+2 needs no migration, and Item 1 is built to prepare for it; the twelve
+places a static required count becomes per-assignment, and the
+recommended route, are in the record.
 
-**Items 3–5 are builder rework, built on the roadmap one at a time**:
-Item 4 shipped as 19T Item 7, Item 5 as 19T Item 8 and Item 3 as 19T
-Item 9 (all 2026-09-26). **Branching
-itself, Items 1 and 2, stays off the roadmap** because it amends a stated
-out-of-scope line in `spec/rrw_functional_spec.md`. **No immediate plan to
-build it** (author).
-
-**Lift trigger:** the author scheduling it, or an operator asking for
-conditional questions.
+**Lift trigger:** 19T Item 10 closing, and the author scheduling it.
 
