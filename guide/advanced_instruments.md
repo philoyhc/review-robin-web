@@ -304,6 +304,27 @@ and 5):
   [value] *then show the below*, and an X that deletes the branch;
 - the governed rows sit indented under a bar.
 
+**The layout, settled 2026-09-26** over mock-ups on Item 3's table (19T
+Item 9):
+- **⑂ sits just after +**, in a column of its own: outline where a branch
+  can be added (an Integer, Decimal or List field with none), **selected**
+  (filled, like a pressed R) on a parent with a branch, and inactive on a
+  String field.
+- **A branch and its parent are one ruled group**, one `<tbody>` with a
+  rule under it and none inside it, so the table's rules separate groups,
+  not rows.
+- **The bar runs down from the parent's checkbox**, in the checkbox
+  column. A governed row shifts one column right before the name: its
+  checkbox sits in the + column and its + in the ⑂ column, under the
+  parent's ⑂. It has no ⑂ of its own, since a branch can't nest.
+- **From the field name onward every row aligns**, parent and governed
+  alike, in the same boxes: name, type, bounds, R, ≡, ▲, ▼, X.
+- **The condition row** starts after the bar: *If the above* [operator]
+  [value] *then show the below*, with the branch's X in the X column.
+- **Inside a branch** R is inactive (governed fields are never required
+  here), ▲ is off on the first governed row and ▼ on the last, and ▲ ▼ on
+  the parent moves the whole group.
+
 **A branch is open** for an assignment when its parent is answered and
 the answer satisfies the condition. Otherwise it is **closed**.
 

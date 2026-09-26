@@ -1004,9 +1004,10 @@ The design record's Decision stands, with the 2026-09-26 layout rulings:
   parent's `<tbody>` as one ruled group.
 - **Each row reads:** Active checkbox, +, an empty ⑂ column, name, type,
   bounds, R, ≡, ▲, ▼, X. The ⑂ column is held now so branching doesn't
-  shift the row; its button, its selected state on a parent, the condition
-  row, and a bar down from the parent's checkbox with each governed row's
-  + under the parent's ⑂ are design record Item 1's.
+  shift the row. Its button and the rest of the branch layout are design
+  record Item 1's, where the 2026-09-26 mock-ups are recorded: a governed
+  row puts its checkbox in the + column and its + in the ⑂ column, so
+  **every row aligns from the name onward**, parent and governed alike.
 - **▲ ▼ are full-size square buttons**, ▲ then ▼, like the row's other
   buttons, not the record's half-height stack; the right column has room.
 - **The Active checkbox** is bound to `visible`; unticking a field with
