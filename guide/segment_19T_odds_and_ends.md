@@ -1020,10 +1020,10 @@ bound boxes up in columns.
 
 ### Semantics
 
-The design record's Item 3 "Semantics" apply. For the table: a row is its
-`<tbody data-new-model-rf-row>`, so every `closest`, sibling insert and
-row count the page already makes keeps working; the "+" template clones
-a `<tbody>`.
+The design record's Item 3 "Semantics" apply. For the table (since rung
+5): a field is a `<tr data-new-model-rf-row>`, which carries its state,
+inside a group `<tbody data-new-model-rf-group>`; the "+" template clones
+a group. See "Pre-positioning", point 1.
 
 ### Pre-positioning for Items 1 and 2 (the author, 2026-09-26)
 
