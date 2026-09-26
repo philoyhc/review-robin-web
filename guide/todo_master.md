@@ -3384,9 +3384,10 @@ dep chains called out at the bottom of this file.
      2026-09-26.** `guide/advanced_instruments.md` Item 4: the "Who can see
      what you wrote" card is the editor when unlocked; Band 3's table is
      gone.
-   - **Item 8 — Display fields as a Band 3 table** (open).
-     `guide/advanced_instruments.md` Item 5: a headerless table in Band 3's
-     left column replaces Band 2's display pills.
+   - ~~**Item 8 — Display fields as a Band 3 table.**~~ **Closed
+     2026-09-26.** `guide/advanced_instruments.md` Item 5: a compact
+     headerless table in Band 3's left third replaces Band 2's display
+     pills.
 
 #### Stubs
 
