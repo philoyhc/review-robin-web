@@ -1020,31 +1020,39 @@ bound boxes up in columns.
 
 ### Semantics
 
-The design record's Item 3 "Semantics" apply. For the table: a row is its
-`<tbody data-new-model-rf-row>`, so every `closest`, sibling insert and
-row count the page already makes keeps working; the "+" template clones
-a `<tbody>`.
+The design record's Item 3 "Semantics" apply. For the table (since rung
+5): a field is a `<tr data-new-model-rf-row>`, which carries its state,
+inside a group `<tbody data-new-model-rf-group>`; the "+" template clones
+a group. See "Pre-positioning", point 1.
 
 ### Pre-positioning for Items 1 and 2 (the author, 2026-09-26)
 
 Built so branching (design record Item 1) and required governed fields
 (Item 2) add to this item rather than rework it:
-1. **A group is a `<tbody>`**, ruled under it (rung 1): a branch joins its
-   parent's `<tbody>`, so the rules already separate groups.
+1. **A group is a `<tbody data-new-model-rf-group>` and a field is its
+   `<tr data-new-model-rf-row>`**, which carries the field's state (rung 5;
+   rungs 1–4 put the state on the `<tbody>`). A branch adds its governed
+   `<tr>`s to its parent's group, and the rule under the group separates
+   groups, not fields.
 2. **The ⑂ column is held** just after + (rung 1), so a governed row can
    shift one column and still align from the name onward.
-3. **▲ ▼ move a `<tbody>`**, not a `<tr>` (rung 3): a parent will carry its
+3. **▲ ▼ move a group**, not a row (rung 3; by group since rung 5), and "+"
+   inserts a new group after the pressed row's: a parent will carry its
    branch unchanged. Moving a governed `<tr>` within its group is Item 1's.
-4. **One row reader**, `rfRows(card)` (rung 2), as `dfRows` is for display
-   fields: every consumer (the preview, the stager, the widths, the Active
-   and R rules) reads rows through it, in document order. Item 1 adds a
-   row's parent there, by row key, since new rows have no id before Save.
+4. **One reader for field state**, `rfRows(card)` (rung 2), as `dfRows` is
+   for display fields: the preview, the stager, the widths, the help
+   cards and the counts read rows through it, in document order. The
+   structural handlers (▲ ▼, X, "+", the recompute's arrow and X states)
+   work on groups (`newModelRfGroupSibling`). Item 1 adds a row's parent
+   to the state rows carry.
 5. **Active and R states computed in one place**, the row recompute
    (`newModelRfRecomputeActionStates`), per row (rungs 2–3): Item 1 makes
    R inactive inside a branch and cascades a parent's Active there, and
    Item 2 lifts the R rule there.
-6. **The stager sends rows in row order with their keys** (rung 3), so a
-   later `branch_parent` attribute can name a row the same Save creates.
+6. **The stager sends rows in row order** (rung 3). It does not send row
+   keys, and `set_band2_state` would drop them: Item 1 adds a row key and
+   a parent reference to the payload and the service, so a branch can
+   name a parent the same Save creates.
 The record's service-layer pre-positioning for Item 2 (one branch-open
 function, the applicable-fields helper) belongs to Item 1's build.
 
@@ -1072,7 +1080,8 @@ Taken 2026-09-26 at `134953aa`:
    Save, the confirm on a field with responses.
 4. **Retire** the response pills and ✓; the item's cumulative
    `diff-reviewer` read runs here, from `134953aa`.
-5. **Close.**
+5. ~~**Close.**~~ Became acting on the read, since rung 4 merged first;
+   the close is rung 6, after the author's on-screen check.
 
 ### Definition of done
 
@@ -1128,9 +1137,29 @@ valid and differ from what it last committed, so a half-typed bound never
 reaches the preview. An invalid row keeps its last committed shape in the
 preview and is marked amber, with the reason as its tooltip. A new row
 starts selected, its Active checkbox live. The "hide this field?" confirm
-now points to Active. **Found at build:** the amber marker had drawn
-nothing since rung 1, because a `<tbody>` draws no box-shadow; it now
-sits on the row's cells. The in-app Guide's two instrument paragraphs
+now points to Active. **Found at build:** the marker's amber left edge had
+not drawn since rung 1, because a `<tbody>` draws no box-shadow; it now
+sits on the row's cells. Rung 4 is #2634, merged before the item's read
+returned.
+
+**Rung 5 acts on the item's read** (over `134953aa..HEAD`; no defect that
+loses or corrupts saved data):
+- **The field moves to a `<tr>`** inside a group `<tbody>`, as
+  pre-positioning point 1 now says; the read found the state on the
+  `<tbody>` would have made Item 1 move it across every reader.
+- Points 4 and 6 overclaimed and are reworded to what the code does.
+- A cancelled "hide this field?" confirm no longer marks the card dirty
+  (the card's dirty listener skips the Active checkbox; its setter stages).
+- A Quick fill preset's passing `preset:` value is never committed.
+- The marker's tooltip says what the preview shows meanwhile, and that a
+  field saved without a name is removed.
+- After Save, a row whose name was cleared (Save removed its field) drops
+  its committed state and leaves the preview; a new row the client finds
+  invalid but the server accepts stays uncommitted instead of committing
+  the rejected text.
+- ▲ ▼ keep focus on a live arrow; dead help-edit-mode code, the rows'
+  inline button padding and stale comments (and `_band2.py`'s docstring)
+  go; stale test names and a vacuous test loop are fixed. The in-app Guide's two instrument paragraphs
 describe the tables, not the pills and ✓.
 
 ### Doc impact
@@ -1138,9 +1167,13 @@ describe the tables, not the pills and ✓.
 - `spec/instruments.md` — Band 3's response-field table, the Active
   checkbox and ▲ ▼; the pills' per-field visibility section and the ✓ row
   retire (Item 9).
-- `spec/operator_button_audit.md` — ✓ retires; ▲ ▼ join the row (Item 9).
+- `spec/operator_button_audit.md` — ✓ retires; the Active checkbox and
+  ▲ ▼ join the row; the display-field arrows become Secondary (Item 9).
 - `spec/ui_elements.md` — the response-field table's grouped rules
-  (`rf-table`) and the short button size (`btn-short`) in §10 (Item 9).
+  (`rf-table`) and the short button size (`btn-short`) in §10, and §6's
+  `.btn-icon` row, which no longer covers either table's ▲ ▼ (Item 9).
+- `spec/instruments.md` — also the display-field table's ▲ ▼ as
+  `btn secondary btn-short`, not `.btn-icon` (Item 9).
 - `guide/advanced_instruments.md` — Item 3 and the header point to this
   item as the build, and record the 2026-09-26 layout rulings (Item 9).
 - `app/web/templates/guide.html` — the preview paragraph; the author

@@ -57,7 +57,9 @@ branching would have to keep the two in step.
 ### Decision (author, 2026-09-24)
 
 1. **Up / down buttons on each response-field row**: two half-height
-   buttons stacked vertically, together taking one button's space. They
+   buttons stacked vertically, together taking one button's space.
+   *(Superseded 2026-09-26: full-size ▲ then ▼, like the row's other
+   buttons — 19T Item 9's Decision.)* They
    sit at the end of the row, **before X**. Up is inactive on the top row,
    down on the bottom row. No drag.
 2. **An "Active" checkbox at the row head**, bound to `visible`.

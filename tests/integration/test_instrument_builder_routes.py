@@ -1375,8 +1375,8 @@ def test_new_model_band2_state_round_trip(
     assert 'data-new-model-band2-pills-divider' not in flat
     # Saved response rows hydrate with the saved labels and selection
     # (the pills retired in 19T Item 9).
-    assert re.search(r'<tbody data-new-model-rf-row [^>]*data-selected="true" data-label="Rating"', flat)
-    assert re.search(r'<tbody data-new-model-rf-row [^>]*data-selected="false" data-label="Comments"', flat)
+    assert re.search(r'<tr data-new-model-rf-row [^>]*data-selected="true" data-label="Rating"', flat)
+    assert re.search(r'<tr data-new-model-rf-row [^>]*data-selected="false" data-label="Comments"', flat)
     # Band 3 Response field rows are pre-populated with the saved
     # values.
     assert 'value="Rating"' in flat
@@ -2302,7 +2302,7 @@ def test_new_model_response_field_width_persists_on_band2_state(
     ).text
     flat = " ".join(body.split())
     card = _card_slice(flat, new_model.id)
-    row = re.search(r'<tbody data-new-model-rf-row data-row-key="rf_0".*?>', card).group(0)
+    row = re.search(r'<tr data-new-model-rf-row data-row-key="rf_0".*?>', card).group(0)
     assert 'data-width="1200"' in row
 
 
@@ -8127,13 +8127,13 @@ def test_band3_renders_only_persisted_rows_no_blank_starter(
     rows, template = _band3_rows_and_template(body, new_model.id)
     persisted = len(new_model.response_fields)
     assert persisted == 2  # the seeded Rating + Comments
-    assert rows.count("<tbody data-new-model-rf-row") == persisted
+    assert rows.count("<tr data-new-model-rf-row") == persisted
     # Every live row carries a field name; none is a blank starter.
     assert rows.count('value="Rating"') == 1
     assert rows.count('value="Comments"') == 1
     # The template holds exactly one blank row, with no row key —
     # "+" assigns one from the counter.
-    assert template.count("<tbody data-new-model-rf-row") == 1
+    assert template.count("<tr data-new-model-rf-row") == 1
     assert "data-row-key" not in template
     assert "value=" not in template.split("<select", 1)[0]
 
@@ -8151,11 +8151,11 @@ def test_band3_add_row_clones_the_template_not_the_first_row(
     ).text
     start = body.index("window.newModelRfInsertRow =")
     add_fn = body[start : body.index("\n        };", start)]
-    assert "tpl.content.querySelector('[data-new-model-rf-row]')" in add_fn
+    assert "tpl.content.querySelector('[data-new-model-rf-group]')" in add_fn
     assert "rows.querySelector('[data-new-model-rf-row]')" not in add_fn
     start = body.index("window.newModelRfDeleteRow =")
     delete_fn = body[start : body.index("\n        };", start)]
-    assert "row.remove();" in delete_fn
+    assert "(group || row).remove();" in delete_fn
     assert "selectedIndex = 0" not in delete_fn
 
 
@@ -8217,9 +8217,9 @@ def test_response_row_carries_the_shape_the_preview_shows(
     client: TestClient, db: Session
 ) -> None:
     """Each server-rendered response-field row carries the saved type and
-    bounds as its committed state, so the preview reads what ✓ last
-    pushed, not the live inputs, and ✓ can compare the inputs against it.
-    19T Item 9 moved this off the pill, which now carries none of it."""
+    bounds as its committed state, so the preview reads what the row last
+    committed, not the live inputs, and the automatic commit can compare
+    the inputs against it (19T Item 9; the pill carried it before)."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-pill-shape"
     )
@@ -8231,7 +8231,7 @@ def test_response_row_carries_the_shape_the_preview_shows(
     heads = {
         m.group(1): m.group(0)
         for m in re.finditer(
-            r'<tbody data-new-model-rf-row [^>]*?data-label="([^"]*)"[^>]*>', rows
+            r'<tr data-new-model-rf-row [^>]*?data-label="([^"]*)"[^>]*>', rows
         )
     }
     assert set(heads) == {"Rating", "Comments"}
@@ -8244,10 +8244,9 @@ def test_response_row_carries_the_shape_the_preview_shows(
     assert 'data-rf-data-type="string"' in heads["Comments"]
     assert 'data-rf-max="2000"' in heads["Comments"]
     assert 'data-rf-list=""' in heads["Comments"]
-    card = _card_slice(flat, new_model.id)
-    for pill in re.findall(r'<span class="pill tag-chip[^>]*data-source-type="response"[^>]*>', card):
-        assert "data-rf-" not in pill and "data-width" not in pill
-        assert "data-help-text" not in pill and "data-response-count" not in pill
+    # 19T Item 9 — each row is a <tr> in its own group <tbody>, ruled
+    # underneath; a branch will later join its parent's group.
+    assert rows.count("<tbody data-new-model-rf-group> <tr data-new-model-rf-row ") == 2
     # The preview builders read the row's committed state, never a pill.
     for fn in ("function buildResponseFieldPreviewCell", "function buildConstraints"):
         start = body.index(fn)
@@ -8307,14 +8306,14 @@ def test_commit_writes_the_row_and_a_new_row_starts_selected(
         assert f"row.setAttribute('{attr}'" in commit
     assert "pill" not in commit
     _rows, template = _band3_rows_and_template(body, new_model.id)
-    assert "<tbody data-new-model-rf-row data-selected=\"true\">" in template
+    assert "<tr data-new-model-rf-row data-selected=\"true\">" in template
 
 
 def test_required_and_help_toggles_stage_for_save(
     client: TestClient, db: Session
 ) -> None:
     """R and ≡ stage the Band 2 state, which marks the card dirty, so
-    Save persists a toggle made on its own; neither needs ✓."""
+    Save persists a toggle made on its own; neither needs a commit."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-r-help-stage"
     )
@@ -8327,13 +8326,13 @@ def test_required_and_help_toggles_stage_for_save(
         assert "typeof saveBand2State" not in fn, name
 
 
-def test_save_success_brings_every_pill_up_to_its_row(
+def test_save_success_commits_every_named_row(
     client: TestClient, db: Session
 ) -> None:
-    """Save persists each row as typed, ✓'d or not, and does not reload.
-    Its success handler copies every paired row onto its pill and
-    rebuilds the preview, so the preview and ✓ match what was saved
-    (diff-reviewer finding, 2026-09-24)."""
+    """Save persists each named row as typed and does not reload. Its
+    success handler commits every named row and rebuilds the preview, so
+    the preview and the Active checkbox match what was saved
+    (diff-reviewer finding, 2026-09-24; rows since 19T Item 9)."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-save-sync"
     )
@@ -8346,7 +8345,12 @@ def test_save_success_brings_every_pill_up_to_its_row(
     # A named row never ✓'d was saved hidden, so it commits unselected
     # (19T Item 9, Codex on #2633); a blank row stays uncommitted.
     assert "row.setAttribute('data-selected', 'false');" in on_success
-    assert "if (!(nameInput && nameInput.value.trim())) { return; }" in on_success
+    # A row saved with no name lost its field: it drops its committed
+    # state (and id), so the preview drops its column (the item's read).
+    assert "['data-committed', 'data-rf-id', 'data-label', 'data-rf-data-type'," in on_success
+    # A never-committed row the client finds invalid stays uncommitted
+    # rather than committing the rejected text.
+    assert "if (window.newModelRfValidateShape(row)) { return; }" in on_success
     assert "window.newModelRefreshBand2(b2);" in on_success
     assert "window.newModelRfRecomputeActionStates(row);" in on_success
 
@@ -8369,9 +8373,14 @@ def test_row_marker_follows_validity(
     assert "? window.newModelRfValidateShape(row)" in recompute
     assert ": (committed ? 'Enter a field name.' : null);" in recompute
     assert "row.setAttribute('data-row-pending', 'true');" in recompute
-    assert "row.setAttribute('title', reason + ' The preview keeps the last valid shape.');" in recompute
+    # The tooltip says what the preview shows meanwhile, and that a
+    # nameless field goes on Save.
+    for tail in ("' Saving without a name removes this field.'",
+                 "' The preview keeps the last valid shape.'",
+                 "' The preview shows this field once it is valid.'"):
+        assert tail in recompute, tail
     flat = " ".join(body.split())
-    assert '[data-new-model-rf-row][data-row-pending="true"] > tr > td:first-child { box-shadow: inset 3px 0 0 0 var(--row-pending-marker); }' in flat
+    assert '[data-new-model-rf-row][data-row-pending="true"] > td:first-child { box-shadow: inset 3px 0 0 0 var(--row-pending-marker); }' in flat
 
 
 # --------------------------------------------------------------------------- #
@@ -8396,7 +8405,7 @@ def test_every_band3_row_has_a_plus_ahead_of_its_other_buttons(
     assert card.count(plus) == 3  # 2 rows + the template
     assert rows.count(plus) == 2
     assert template.count(plus) == 1
-    for chunk in rows.split("<tbody data-new-model-rf-row")[1:] + [template]:
+    for chunk in rows.split("<tr data-new-model-rf-row")[1:] + [template]:
         # "+" heads the row, ahead of the name input; X is the red
         # destructive button, as Band 1's rule / unit X.
         assert chunk.index("data-new-model-rf-add") < chunk.index(
@@ -8406,7 +8415,8 @@ def test_every_band3_row_has_a_plus_ahead_of_its_other_buttons(
         assert 'class="btn destructive"' in chunk[chunk.rindex("<button", 0, x_start) : x_start]
     assert "Add another response field row" not in body
     insert = _rf_fn(body, "newModelRfInsertRow")
-    assert "after.insertAdjacentElement('afterend', clone);" in insert
+    # 19T Item 9 — a new field is a new group after the pressed row's.
+    assert "afterGroup.insertAdjacentElement('afterend', group);" in insert
     # A card with no saved fields gets one blank row at load.
     assert "window.newModelRfInsertRow(band3, null);" in _rf_script(body)
 
@@ -8428,7 +8438,7 @@ def test_the_last_band3_row_cannot_be_deleted(
     delete_fn = _rf_fn(body, "newModelRfDeleteRow")
     guard = "querySelectorAll('[data-new-model-rf-row]').length <= 1"
     assert guard in delete_fn
-    assert delete_fn.index(guard) < delete_fn.index("row.remove();")
+    assert delete_fn.index(guard) < delete_fn.index("(group || row).remove();")
 
 
 def test_save_follows_band3_row_order(
@@ -9028,7 +9038,7 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
         "body.ui-v2 table.rf-table > tbody > tr > td { padding: var(--space-1); border-bottom: 0; }",
     ):
         assert rule in flat, rule
-    chunks = rows.split("<tbody data-new-model-rf-row")[1:]
+    chunks = rows.split("<tr data-new-model-rf-row")[1:]
     assert len(chunks) == 2
     order = (
         "data-new-model-rf-active",
@@ -9073,13 +9083,13 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
 
 
 def test_band3_response_rows_are_the_model(client: TestClient, db: Session) -> None:
-    """19T Item 9 rung 2 — the response-field rows carry what their pills
-    carried (committed, selected, the ✓'d name and shape, width, help
-    text, response count), and every reader goes through ``rfRows``: the
+    """19T Item 9 — the response-field rows carry the field's state
+    (committed, selected, the committed name and shape, width, help text,
+    response count), and every state reader goes through ``rfRows``: the
     preview's selection, the help cards, the constraints and progress
-    counts, the width writer and collector, the stager, the pill click's
-    confirm, and Save's re-commit. No reader takes state off a pill; the
-    pill is a control that mirrors its row until rung 4 retires it."""
+    counts, the width writer and collector, the stager, the Active
+    checkbox's confirm, and Save's re-commit. ▲ ▼, X and "+" act on the
+    row's group instead."""
     review_session, new_model = _new_model_with_tags(client, db, code="19t9-rows-model")
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
@@ -9126,7 +9136,7 @@ def test_band3_response_rows_are_the_model(client: TestClient, db: Session) -> N
         assert "data-new-model-band2-pill" not in _rf_fn(body, name), name
     # The rows reader is the table's direct rows, in order.
     assert (
-        "instrumentCard.querySelectorAll('[data-new-model-rf-rows] > [data-new-model-rf-row]')"
+        "instrumentCard.querySelectorAll('[data-new-model-rf-rows] [data-new-model-rf-row]')"
         in body
     )
 
@@ -9147,11 +9157,19 @@ def test_band3_response_rows_active_and_arrows_are_wired(
     active = _rf_fn(body, "newModelRfToggleActive")
     assert "window.newModelRfSetSelected(band2, row, box.checked)" in active
     assert "box.checked = !box.checked;" in active
+    # A cancelled confirm leaves the card clean: the dirty listener skips
+    # the checkbox, whose setter stages (and dirties) only when accepted.
+    assert "if (t && t.closest && t.closest('[data-new-model-rf-active]')) { return; }" in body
+    # A Quick fill preset is never committed as a type.
+    validate = _rf_fn(body, "newModelRfValidateShape")
+    assert "['string', 'integer', 'decimal', 'list'].indexOf(dataType) < 0" in validate
     move = _rf_fn(body, "newModelRfMove")
-    assert "other.parentNode.insertBefore(row, up ? other : other.nextSibling);" in move
+    # ▲ ▼ move the row's group, and keep focus on a live arrow.
+    assert "other.parentNode.insertBefore(group, up ? other : other.nextSibling);" in move
+    assert "if (target && !target.disabled) { target.focus(); }" in move
     assert "window.newModelStageBand2State(band2);" in move
     assert "window.newModelRfRecomputeActionStates(r);" in move
     recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
     assert "activeBox.checked = row.getAttribute('data-selected') === 'true';" in recompute
     assert "activeBox.disabled" not in recompute
-    assert "btn.disabled = !_rfRowSibling(row, up);" in recompute
+    assert "btn.disabled = !(group && window.newModelRfGroupSibling(group, up));" in recompute

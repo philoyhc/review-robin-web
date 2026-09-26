@@ -638,15 +638,14 @@
         );
       }
       /*
-       * 19T Item 9 — a Band 3 response-field row whose live name or
-       * shape is invalid, so the preview keeps its last valid shape: an
-       * amber left edge and a pale fill. The row is a <tbody>, which
-       * draws no box-shadow, so the marker sits on its cells.
+       * 19T Item 9 — a Band 3 response-field row (a <tr>) whose live
+       * name or shape is invalid: an amber left edge and a pale fill,
+       * on its cells, since a table row draws no box-shadow.
        */
-      [data-new-model-rf-row][data-row-pending="true"] > tr > td {
+      [data-new-model-rf-row][data-row-pending="true"] > td {
         background: rgba(254, 243, 199, 0.5);
       }
-      [data-new-model-rf-row][data-row-pending="true"] > tr > td:first-child {
+      [data-new-model-rf-row][data-row-pending="true"] > td:first-child {
         box-shadow: inset 3px 0 0 0 var(--row-pending-marker);
       }
       .muted { color: var(--text-subtle); }
@@ -2910,8 +2909,8 @@
       body.ui-v2 table.rf-table td.rf-name { width: 20%; }
       body.ui-v2 table.rf-table td.rf-type { width: 15%; }
       /* A shorter button for a compact table row (19T Item 9, on the
-         author's ruling): the same role and outline, sized to sit inside
-         the row's 22px pill so the row keeps its height. First user:
+         author's ruling): the same role and outline, 19px tall, so a
+         32px row with a 22px name pill keeps its height. First user:
          the display-field table's ▲ ▼. */
       body.ui-v2 .btn.btn-short {
         padding: 0 6px;
