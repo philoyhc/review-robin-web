@@ -89,12 +89,11 @@ def set_band2_state(
     ``state`` is the JSON blob described in the
     ``e7c2b4d9a3f1_add_instruments_band2_state`` migration docstring:
 
-    - ``selected_display_keys``: list of canonical pill identifiers
-      (``"reviewee.name"`` etc.) the operator has toggled into the
+    - ``selected_display_keys``: list of canonical display-field keys
+      (``"reviewee.name"`` etc.) the operator has ticked into the
       preview row. Unknown keys are dropped silently.
-    - ``response_fields``: ordered list of dicts describing each
-      response-field row the operator has committed (via the ✓
-      button). Each dict carries ``name`` (str, required, ≤255
+    - ``response_fields``: ordered list of dicts, one per named
+      response-field row on Band 3's table, in row order. Each dict carries ``name`` (str, required, ≤255
       chars), ``data_type`` (one of ``string`` / ``integer`` /
       ``decimal`` / ``list``), ``min`` / ``max`` / ``step`` /
       ``list_options`` (str, optional), and ``selected`` (bool).
