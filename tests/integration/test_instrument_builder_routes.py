@@ -8137,13 +8137,13 @@ def test_band3_renders_only_persisted_rows_no_blank_starter(
     rows, template = _band3_rows_and_template(body, new_model.id)
     persisted = len(new_model.response_fields)
     assert persisted == 2  # the seeded Rating + Comments
-    assert rows.count("<div data-new-model-rf-row") == persisted
+    assert rows.count("<tbody data-new-model-rf-row") == persisted
     # Every live row carries a field name; none is a blank starter.
     assert rows.count('value="Rating"') == 1
     assert rows.count('value="Comments"') == 1
     # The template holds exactly one blank row, with no row key —
     # "+" assigns one from the counter.
-    assert template.count("<div data-new-model-rf-row") == 1
+    assert template.count("<tbody data-new-model-rf-row") == 1
     assert "data-row-key" not in template
     assert "value=" not in template.split("<select", 1)[0]
 
@@ -8387,7 +8387,7 @@ def test_every_band3_row_has_a_plus_ahead_of_its_other_buttons(
     assert card.count(plus) == 3  # 2 rows + the template
     assert rows.count(plus) == 2
     assert template.count(plus) == 1
-    for chunk in rows.split("<div data-new-model-rf-row")[1:] + [template]:
+    for chunk in rows.split("<tbody data-new-model-rf-row")[1:] + [template]:
         # "+" heads the row, ahead of the name input; X is the red
         # destructive button, as Band 1's rule / unit X.
         assert chunk.index("data-new-model-rf-add") < chunk.index(
@@ -8991,3 +8991,64 @@ def test_band3_display_field_table_group_off_field(
     box = _profile_box()
     assert " checked" not in box and " disabled" in box
     assert 'title="Not shown on group rows"' in box
+
+
+def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> None:
+    """19T Item 9 rung 1 — Band 3's response fields are a table
+    (``guide/advanced_instruments.md`` Item 3): one ``<tbody>`` per field,
+    ruled underneath in ``base.html`` so a branch can later join its
+    parent's group (Item 1). Each row reads Active, +, the held ⑂ column,
+    name, type, bounds, R, ≡, ✓, ▲, ▼, X. The scaffold's Active checkbox
+    shows ``visible`` and ▲ ▼ are disabled; the pills and ✓ stay the
+    working editor."""
+    review_session, new_model = _new_model_with_tags(client, db, code="19t9-rf-table")
+    comments = next(f for f in new_model.response_fields if f.label == "Comments")
+    comments.visible = False
+    db.commit()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    flat = " ".join(body.split())
+    rows, template = _band3_rows_and_template(flat, new_model.id)
+    card = _card_slice(flat, new_model.id)
+    assert '<div class="table-scroll"> <table class="rf-table" data-new-model-rf-rows' in card
+    for rule in (
+        "body.ui-v2 table.rf-table > tbody { border-bottom: 1px solid var(--border-default); }",
+        "body.ui-v2 table.rf-table > tbody > tr > td { padding: var(--space-1); border-bottom: 0; }",
+    ):
+        assert rule in flat, rule
+    chunks = rows.split("<tbody data-new-model-rf-row")[1:]
+    assert len(chunks) == 2
+    order = (
+        "data-new-model-rf-active",
+        "data-new-model-rf-add",
+        "data-new-model-rf-fork-cell",
+        "data-new-model-rf-name",
+        "data-new-model-rf-data-type",
+        "data-new-model-rf-bounds-wrap",
+        "data-new-model-rf-required",
+        "data-new-model-rf-help-visible",
+        "data-new-model-rf-save",
+        'data-new-model-rf-move="up"',
+        'data-new-model-rf-move="down"',
+        "data-new-model-rf-delete",
+    )
+    for chunk in chunks + [template]:
+        row = chunk.split("</tbody>")[0]
+        positions = [row.index(marker) for marker in order]
+        assert positions == sorted(positions)
+        # One cell per control, so every row lines up column by column.
+        assert row.count("<td") == len(order)
+        assert '<td class="col-shrink" data-new-model-rf-fork-cell></td>' in row
+        for move in re.findall(r'<button[^>]*data-new-model-rf-move="(?:up|down)"[^>]*>', row):
+            assert " disabled" in move
+            assert "onclick" not in move
+    boxes = {
+        re.search(r'value="([^"]+)"', c.split("data-new-model-rf-name", 1)[1]).group(1):
+        re.search(r'<input type="checkbox" data-new-model-rf-active[^>]*>', c).group(0)
+        for c in chunks
+    }
+    assert " checked" in boxes["Rating"] and " disabled" in boxes["Rating"]
+    assert " checked" not in boxes["Comments"] and " disabled" in boxes["Comments"]
+    # The pills and ✓ are still the editor in this rung.
+    assert card.count('onclick="newModelRfSaveRow(this)"') == 3
