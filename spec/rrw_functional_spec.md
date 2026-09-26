@@ -1219,9 +1219,8 @@ most one instrument unlocked at a time). Its stripes:
   **Instrument assignment rule**; "Band 1" is the shorthand this
   spec and the code use for it. There is no separate Rule Builder
   page — the rule is authored here or nowhere.)
-- **Band 2 — Display fields + preview** — a chip row of populated
-  display-field sources (Reviewee Name / Email always shown; the
-  rest opt-in) plus a live preview of one sample reviewee row, with
+- **Band 2 — Preview** — a live preview of one sample reviewee row
+  (display fields, then response fields), with
   drag-resizable column widths and the instrument description
   (lock-driven edit swap). Band 2 also carries the "Who can see what
   you wrote" card: locked, the reviewer's read-only view of the
@@ -1230,14 +1229,17 @@ most one instrument unlocked at a time). Its stripes:
   Session-ongoing / Responses-released) picking Raw / Anonymized /
   Summarized (or off) per audience per window (see
   [§5.16](#516-visibility-policy)).
-- **Band 3 — Response fields** — a stack of inline editor rows,
-  one per response field: Name, **Type** (`String / Integer /
-  Decimal / List` + a Quick-fill List presets `<optgroup>`),
-  inline bounds (`min` / `max` / `step` or `list_options`),
-  Required toggle, help-text toggle. Type + bounds lock once the
-  field has saved responses. Per-field surface visibility is
-  toggled from the paired Band 2 pill. Band 3's left column is empty
-  until the display-field table fills it.
+- **Band 3 — Display and response fields** — two tables, a fifth and
+  four fifths of the band. The left picks and orders the display fields
+  (Reviewee Name / Email always shown; the populated tag sources
+  opt-in). The right is the response-field table, one row per field:
+  an Active checkbox (per-field surface visibility), Name, **Type**
+  (`String / Integer / Decimal / List` + a Quick-fill List presets
+  `<optgroup>`), inline bounds (`min` / `max` / `step` or
+  `list_options`), Required toggle, help-text toggle, ▲ ▼ for order.
+  Type + bounds lock once the field has saved responses. Both tables
+  show in the preview at once and persist with the card's Save
+  (`spec/instruments.md`).
 - **Action row** — Save / Cancel (edit only) / Replicate / Delete
   (confirm-gated; blocked when only one instrument) / **+Instrument**
   / **+Page break** / Lock-Unlock. One bulk Save commits identity,

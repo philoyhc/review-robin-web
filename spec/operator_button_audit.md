@@ -418,14 +418,24 @@ per instrument card.
 | 56b | Bottom action row | +Page break | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/{iid}/page-break/create` (sets `starts_new_page=true` on the successor). Same Secondary role as +Instrument. Disabled on the last instrument, when the successor already carries a break, or past the editable window. |
 | 57 | Bottom action row | Lock / Unlock | `<a>` | `btn secondary` | Secondary | The gating toggle, both anchors always rendered and swapped in-page by the client lock layer; their `?editing=<id>` hrefs are the no-JS fallback. An in-page Lock strips `?editing` from the URL. Clicking Lock with a dirty Save prompts `confirm()`. Marked disabled (`.disabled`, `aria-disabled`) only when the session is not editable. Same footer shape as the Quick Setup card's. |
 
-### 9c — Per-field type and bounds — in the Band 3 row
+### 9c — Row controls — Band 3's display-field and response-field tables
 
 **There is no Response Type Definitions card**, and no
 `response_type_definitions` table behind one. Per-field type, bounds
 and list options live inline on `InstrumentResponseField`'s
-`_inline_*` columns and are edited directly in the Band 3 row (Type
-select, Min / Max / Step inputs, List options text, R / ≡ / ✓ / X
-buttons) — see `spec/instruments.md` "Band 3 — Response fields".
+`_inline_*` columns and are edited directly in the response-field row
+(Type select, Min / Max / Step inputs, List options text, R / ≡ / X
+buttons) — see `spec/instruments.md` "Response fields". **✓ retired**
+(19T Item 9): a row commits to the preview by itself once its live name
+and shape are valid.
+
+Both tables' rows carry an Active checkbox and ▲ ▼ move buttons, both
+`btn secondary`. The bindings differ: a response-field row's checkbox is
+the field's `InstrumentResponseField.visible`; a display-field row's puts
+its key in the instrument's `selected_display_keys`. The response-field row's ▲ ▼
+are full-size, like its other row buttons; the display-field row's are
+the short size, `btn secondary btn-short` (19T Item 9, on the author's
+ruling) — see `spec/instruments.md` "Display-field table".
 
 ---
 

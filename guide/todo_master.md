@@ -3388,9 +3388,10 @@ dep chains called out at the bottom of this file.
      2026-09-26.** `guide/advanced_instruments.md` Item 5: a compact
      headerless table in Band 3's left third replaces Band 2's display
      pills.
-   - **Item 9 — Response fields as a Band 3 table** (open).
-     `guide/advanced_instruments.md` Item 3: the rows become a table with
-     an Active checkbox and ▲ ▼; the response pills and ✓ retire.
+   - ~~**Item 9 — Response fields as a Band 3 table.**~~ **Closed
+     2026-09-26.** `guide/advanced_instruments.md` Item 3: a table with an
+     Active checkbox and ▲ ▼ replaces the response pills and ✓; added
+     fields default to a muted "Field N"; Band 3 splits 1 : 4.
 
 #### Stubs
 
