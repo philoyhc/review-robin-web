@@ -7118,6 +7118,9 @@ def test_19h1_save_returns_setup_state_for_both_pills(
         "is_configured": True,
         "instruments_configured": 1,
         "instrument_count": 2,
+        "response_field_ids": [
+            rf.id for rf in sorted(new_model.response_fields, key=lambda f: f.order)
+        ],
     }
 
     # And back: no touched links in the submit clears the gate.
@@ -7128,6 +7131,9 @@ def test_19h1_save_returns_setup_state_for_both_pills(
         "is_configured": False,
         "instruments_configured": 0,
         "instrument_count": 2,
+        "response_field_ids": [
+            rf.id for rf in sorted(new_model.response_fields, key=lambda f: f.order)
+        ],
     }
 
 
@@ -8343,8 +8349,13 @@ def test_save_success_commits_every_named_row(
     on_success = body[start : body.index("\n          };", start)]
     assert "window.newModelRfCommitRow(row);" in on_success
     # A named row never ✓'d was saved hidden, so it commits unselected
-    # (19T Item 9, Codex on #2633); a blank row stays uncommitted.
+    # (19T Item 9, Codex on #2633).
     assert "row.setAttribute('data-selected', 'false');" in on_success
+    # Save's returned ids go onto the rows it sent, so a new field's next
+    # Save updates it rather than recreating it (the rung's read).
+    assert "var savedIds = data && data.response_field_ids;" in on_success
+    assert "savedIds.length === sentRows.length" in on_success
+    assert "return !!window.newModelRfSaveName(row);" in on_success
     # A row whose name box is empty was saved under its default label
     # (19T Item 9, the author's ruling), which it gets back first.
     assert "window.newModelRfRestoreDefaultName(row);" in on_success
@@ -8417,7 +8428,7 @@ def test_every_band3_row_has_a_plus_ahead_of_its_other_buttons(
     # 19T Item 9 — a new field is a new group after the pressed row's.
     assert "afterGroup.insertAdjacentElement('afterend', group);" in insert
     # A card with no saved fields gets one blank row at load.
-    assert "window.newModelRfInsertRow(band3, null);" in _rf_script(body)
+    assert "window.newModelRfInsertRow(band3, null, true);" in _rf_script(body)
 
 
 def test_the_last_band3_row_cannot_be_deleted(
@@ -8499,6 +8510,10 @@ def test_save_persists_response_fields_in_the_order_sent(
         key=lambda f: f.order,
     )
     assert [f.label for f in fields] == ["Rating", "Notes", "Comments"]
+    # 19T Item 9 — Save returns the fields' ids in order, so the page can
+    # put the new field's id on its row and the next Save updates it
+    # rather than recreating it.
+    assert response.json()["response_field_ids"] == [f.id for f in fields]
 
 
 # --------------------------------------------------------------------------- #
@@ -9182,7 +9197,7 @@ def test_added_response_fields_get_a_default_label(
     the default back when the box loses focus, and the stager falls back
     to it, so Save never drops a field for want of a name: only X
     deletes. "+" commits the new field at once, with its name selected; a
-    card with no fields gets one committed starter row, unstaged."""
+    card with no fields gets a blank, unlabelled placeholder instead."""
     review_session, new_model = _new_model_with_tags(client, db, code="19t9-defaults")
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
@@ -9191,11 +9206,14 @@ def test_added_response_fields_get_a_default_label(
     assert "while (used['Field ' + n]) { n += 1; }" in default
     restore = _rf_fn(body, "newModelRfRestoreDefaultName")
     assert "if (!input || input.value.trim()) { return false; }" in restore
+    assert "var label = window.newModelRfDefaultFor(row);" in restore
     assert "row.setAttribute('data-default-label', label);" in restore
     assert "window.newModelRfRestoreDefaultName(row)" in _rf_fn(body, "newModelRfNameChanged")
     rows, template = _band3_rows_and_template(body, new_model.id)
-    assert rows.count('onchange="newModelRfNameChanged(this)"') == 2
-    assert template.count('onchange="newModelRfNameChanged(this)"') == 1
+    # On blur, which fires even when a typed-then-deleted name leaves no
+    # ``change`` (the rung's browser check).
+    assert rows.count('onblur="newModelRfNameChanged(this)"') == 2
+    assert template.count('onblur="newModelRfNameChanged(this)"') == 1
     insert = _rf_fn(body, "newModelRfInsertRow")
     assert "clone.setAttribute('data-default-label', label);" in insert
     add = _rf_fn(body, "newModelRfAddRow")
@@ -9203,10 +9221,18 @@ def test_added_response_fields_get_a_default_label(
     assert "nameInput.select();" in add
     start = body.index("function saveBand2State(card, opts) {")
     stager = body[start : body.index("\n          }\n", start)]
-    assert "|| row.getAttribute('data-default-label')" in stager
-    # The starter row commits without staging, so the card stays clean.
-    script = _rf_script(body)
-    start = script.index("var starter = window.newModelRfInsertRow(band3, null);")
-    starter = script[start : script.index("});", start)]
-    assert "window.newModelRfCommitRow(starter);" in starter
-    assert "newModelStageBand2State" not in starter
+    # Save and leaving the box pick a cleared name the same way.
+    assert "var name = window.newModelRfSaveName(row);" in stager
+    # The stager reads the label; it never writes the page.
+    save_name = _rf_fn(body, "newModelRfSaveName")
+    assert "|| window.newModelRfDefaultFor(row);" in save_name
+    assert "input.value =" not in save_name
+    # A stored default another row has taken is replaced.
+    default_for = _rf_fn(body, "newModelRfDefaultFor")
+    assert "return (!label || taken) ? window.newModelRfDefaultLabel(rows) : label;" in default_for
+    # The load-time row on a card with no fields is a blank placeholder:
+    # no label, not committed, so Save skips it until the operator types
+    # in it (the rung's read: a labelled starter met the setup gates).
+    assert "window.newModelRfInsertRow(band3, null, true);" in _rf_script(body)
+    assert "if (!placeholder) {" in insert
+    assert "&& row.getAttribute('data-committed') !== 'true') { return ''; }" in default_for

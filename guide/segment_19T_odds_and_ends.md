@@ -1140,8 +1140,9 @@ preview and is marked amber, with the reason as its tooltip. A new row
 starts selected, its Active checkbox live. The "hide this field?" confirm
 now points to Active. **Found at build:** the marker's amber left edge had
 not drawn since rung 1, because a `<tbody>` draws no box-shadow; it now
-sits on the row's cells. Rung 4 is #2634, merged before the item's read
-returned.
+sits on the row's cells. The in-app Guide's two instrument paragraphs
+describe the tables, not the pills and ✓. Rung 4 is #2634, merged before
+the item's read returned.
 
 **Rung 5 acts on the item's read** (over `134953aa..HEAD`; no defect that
 loses or corrupts saved data):
@@ -1152,26 +1153,34 @@ loses or corrupts saved data):
 - A cancelled "hide this field?" confirm no longer marks the card dirty
   (the card's dirty listener skips the Active checkbox; its setter stages).
 - A Quick fill preset's passing `preset:` value is never committed.
-- The marker's tooltip says what the preview shows meanwhile, and that a
-  field saved without a name is removed.
-- After Save, a row whose name was cleared (Save removed its field) drops
-  its committed state and leaves the preview; a new row the client finds
-  invalid but the server accepts stays uncommitted instead of committing
-  the rejected text.
+- The marker's tooltip says what the preview shows meanwhile.
+- A new row the client finds invalid but the server accepts stays
+  uncommitted after Save instead of committing the rejected text.
+- ▲ ▼ keep focus on a live arrow; dead help-edit-mode code, the rows'
+  inline button padding and stale comments (and `_band2.py`'s docstring)
+  go; stale test names and a vacuous test loop are fixed.
+
 Rung 5 is #2635.
 
 **Rung 6: on the author's ruling, every added response field gets a
 default label**, the next "Field N" no row uses (`newModelRfDefaultLabel`).
-Clearing a name puts the row's default back when the box loses focus,
-and the stager falls back to it, so Save never drops a field for want of
-a name: only X deletes. "+" commits the new field at once, its name
-selected; a card with no fields opens with a committed "Field 1",
-unstaged, so the card stays clean. This replaces rung 5's handling of a
-row saved with its name cleared.
-- ▲ ▼ keep focus on a live arrow; dead help-edit-mode code, the rows'
-  inline button padding and stale comments (and `_band2.py`'s docstring)
-  go; stale test names and a vacuous test loop are fixed. The in-app Guide's two instrument paragraphs
-describe the tables, not the pills and ✓.
+Clearing a name puts the row's default back, whether the box loses focus
+or Save runs first (`newModelRfSaveName`, which reads it without writing
+the page; the box restores on `blur`, since a typed-then-deleted name fires
+no `change`), so Save never drops a field for
+want of a name: only X deletes. "+" commits the new field at once, its
+name selected. A saved field's cleared name gets the next free "Field N";
+a stored default another row has since taken is replaced. This replaces
+rung 5's handling of a row saved with its name cleared. The rung's read
+found three more, fixed in the rung:
+- a labelled starter row on a card with no fields was saved as a field
+  nobody wrote, and met the setup gates; it is a blank, unlabelled
+  placeholder again, not a field until the operator types in it;
+- Save returned no ids, so a new field's next reload-free Save sent it
+  id-less and recreated it under a new id and key (and lost its width);
+  Save now returns `response_field_ids` in order, and the rows it sent
+  take them;
+- this Status block had folded rung 5's notes into rung 6.
 
 ### Doc impact
 
