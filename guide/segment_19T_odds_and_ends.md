@@ -925,7 +925,15 @@ Taken 2026-09-26 at `20f8eb3a`:
 
 ### Status
 
-**Open.** Rung 1 in its PR.
+**Open.** Rung 1 is #2626. Rung 2 wires the table **onto the display
+pills, which stay the model**: their DOM order is the display order and
+their pressed state the selection, and the preview, the stager and Save
+all read them. A checkbox toggles its pill (`newModelDfToggle`), an arrow
+moves it and stages the order (`newModelDfMove`), and `rebuildPreview`
+mirrors the pills back into the table (`syncDfTable`), so a pill click, a
+drag or a unit-mode switch keeps the table in step. **Rung 3's choice:**
+retiring the pills means the rows must carry the model; building that on
+the rows rather than hiding the pills is the plan.
 
 ### Doc impact
 
