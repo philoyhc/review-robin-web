@@ -714,3 +714,104 @@ item 6.
 - `spec/reviewer-surface.md` — the constraint line and placeholder print
   Decimal bounds as entered (Item 6, entry 2).
 - `docs/status.md` — row when the item closes (Item 6).
+
+---
+
+## Item 7 — Visibility edited in Band 2's card
+
+**Opened 2026-09-26 on the author's instruction**: `guide/advanced_instruments.md`
+Item 4, built ahead of its Item 3 because it doesn't touch the pills. The
+design record holds the rulings. This block holds the build.
+
+### Opportunity
+
+Visibility is set in Band 3's table and previewed in Band 2's "Who can see
+what you wrote (other than admin)" card. That is one setting in two places,
+which 19T Item 3 entry 3 had to patch with a live repaint.
+
+### Decision (the author, 2026-09-25, taking the recommendations)
+
+The card is both the preview and the editor. **Locked**, it is the
+reviewer's card. **Unlocked**, the cells that can change are cycle chips,
+the fixed cells stay labels, and the rows read "You (reviewer)",
+"Reviewees" and, below a thin divider, "Observers", with the note
+"Observers are shown here for setup only; reviewers don't see this row."
+Band 3's Visibility table retires. **Rejected:** keeping Band 3's table with
+the repaint (one setting in two places), and Observers on the locked card
+(no longer the reviewer's view).
+
+**Band 3 keeps its `2fr 3fr` split for now** (the author, 2026-09-26). Its
+left column stays empty until Item 5's display-field table fills it, and
+the `1fr 2fr` re-split waits for Item 5.
+
+### Semantics
+
+- **No server change.** The six hidden inputs keep `form="dfsave-<id>"` and
+  move into the card, and `/save` reads them wherever they sit.
+- **The lock swap is the description box's.** The editor is
+  `data-unlock-only` and the reviewer's table `data-lock-only`, so a locked
+  card shows no Observers row and no chips.
+- **Entry 3's repaint retires**, because the card is now the editor. A cycle
+  writes its hidden input and dirties the card through the existing
+  card-wide click listener. Cancel's reload restores the saved modes.
+- **The cycle sets don't change:** You (reviewer) is fixed at Raw while the
+  session runs, and after release cycles —, Raw, Anonymized summaries.
+  Reviewees are fixed at — while it runs, and cycle all four after release.
+  Observers cycle — and Anonymized summaries while it runs, and all four
+  after release.
+
+### Blast radius (measured)
+
+Taken 2026-09-26 at `13ba5ec4`:
+- 38 template lines name the editor
+  (`grep -c 'data-new-model-vp-\|newModelCycleVisibilityCell\|b3_mode_cycle\|b3_static_pill' app/web/templates/operator/instruments_index.html`);
+- 4 test files
+  (`grep -rln --include=*.py 'data-new-model-vp-\|newModelCycleVisibilityCell\|b3_mode_cycle\|b3_static_pill\|Who can see what you wrote' tests/`);
+- 4 specs name Band 3's editor or the card
+  (`grep -rln "Who can see what you wrote\|Band 3.*Visibility\|Visibility.*Band 3" spec/`);
+- the Guide's visibility paragraph and two instrument captures
+  (`grep -n -i "visibility" app/web/templates/guide.html`).
+
+### PR ladder
+
+1. **Scaffold** (this rung): the plan, and the unlocked card's layout with
+   labels in place of chips. Band 3's table stays the working editor.
+2. **Wire:** the chips and hidden inputs in the card, and Band 3's table,
+   entry 3's repaint and the scaffold labels removed. The Guide paragraph is
+   updated. This is the item's last build rung, so the item's one
+   `diff-reviewer` read happens here, over the cumulative diff from
+   `13ba5ec4`.
+3. **Close.**
+
+### Definition of done
+
+- A locked card shows the reviewer's two rows. An unlocked card cycles the
+  four live cells, and Save persists them.
+- Band 3 has no Visibility table, and nothing names `data-new-model-vp-preview-cell`.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.7` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- None.
+
+### Status
+
+**Open.** Rung 1 in its PR.
+
+### Doc impact
+
+- `spec/instruments.md` — Band 2's card is the visibility editor when
+  unlocked, and Band 3's "Visibility + Response fields" loses its
+  Visibility half (Item 7).
+- `spec/visibility_policy.md` — the Band 3 editor and Band 2 preview rows
+  become one card (Item 7).
+- `spec/operator_ui_concept.md` — the visibility grid audit's "Band 3
+  editor" becomes the instrument card's visibility editor (Item 7).
+- `spec/permissions.md` — the same wording in the sys-admin row (Item 7).
+- `guide/advanced_instruments.md` — Item 4 points to this item as built
+  (Item 7).
+- `docs/status.md` — row when the item closes (Item 7).
