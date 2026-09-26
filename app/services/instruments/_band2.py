@@ -73,6 +73,31 @@ _BAND2_RF_BOUND_KEYS: tuple[str, ...] = (
     "step",
     "list_options",
 )
+# 19T Item 10 — a response-field entry naming a branch. Refused until the
+# builder rung wires branch authoring, so no Save stores a condition
+# before the save rule and the reviewer surface enforce it (Codex on
+# #2638).
+BRANCHES_NOT_YET_EDITABLE_MESSAGE = "Branches can't be set from this card yet."
+
+
+def _refuse_branch_keys(state: Any) -> None:
+    """Raise when any response-field entry carries a ``branch_*`` key."""
+    from app.services.instruments._response_fields import (
+        InvalidResponseFieldShapeError,
+    )
+
+    raw_rfs = state.get("response_fields") if isinstance(state, dict) else None
+    if not isinstance(raw_rfs, list):
+        return
+    errors = [
+        (str(raw.get("name") or "").strip() or "A response field",
+         BRANCHES_NOT_YET_EDITABLE_MESSAGE)
+        for raw in raw_rfs
+        if isinstance(raw, dict)
+        and any(str(key).startswith("branch_") for key in raw)
+    ]
+    if errors:
+        raise InvalidResponseFieldShapeError(errors)
 
 
 def set_band2_state(
@@ -106,6 +131,7 @@ def set_band2_state(
     No-op saves (the merged payload matches what's already
     persisted) skip the audit + lifecycle side effects.
     """
+    _refuse_branch_keys(state)
     sanitised: dict[str, Any] = {}
     existing = instrument.band2_state or {}
     # Field-presence semantics: every top-level key in band2_state
@@ -528,6 +554,7 @@ def _sync_response_fields_to_db(
         f.field_key for f in instrument.response_fields
     }
     seen_ids: set[int] = set()
+    new_fields: list[InstrumentResponseField] = []
 
     for order_idx, rf in enumerate(sanitised_rfs):
         rf_id = _band2_rf_id(rf)
@@ -546,6 +573,7 @@ def _sync_response_fields_to_db(
             db.flush()  # populate field.id
             used_field_keys.add(field.field_key)
             rf["id"] = field.id
+            new_fields.append(field)
 
         seen_ids.add(field.id)
 
@@ -661,13 +689,104 @@ def _sync_response_fields_to_db(
     # intercept by checking for attached Response rows first and
     # raising so the route surfaces the error rather than letting
     # the operator nuke saved response data invisibly.
-    for rf_id in previous_json_ids - seen_ids:
-        field = existing_by_id.get(rf_id)
-        if field is None:
-            continue
+    to_delete = {
+        rf_id for rf_id in previous_json_ids - seen_ids if rf_id in existing_by_id
+    }
+    _apply_branch_rules(
+        db,
+        instrument=instrument,
+        existing_by_id=existing_by_id,
+        new_fields=new_fields,
+        to_delete=to_delete,
+        actor=actor,
+    )
+    for rf_id in to_delete:
+        field = existing_by_id[rf_id]
         if field.responses:
             raise ResponsesPresentError(len(field.responses))
         db.delete(field)
+
+
+def _apply_branch_rules(
+    db: Session,
+    *,
+    instrument: Instrument,
+    existing_by_id: dict[int, InstrumentResponseField],
+    new_fields: list[InstrumentResponseField],
+    to_delete: set[int],
+    actor: User,
+) -> None:
+    """19T Item 10 — hold a Band 3 save to the branching rules.
+
+    Branches are deleted bottom-up: a parent can't go while it still
+    governs a field, and once any field in a branch has responses the
+    branch's fields can't be removed. A parent whose last governed field
+    goes loses its condition, since a branch is its condition plus at
+    least one field, and that change is audited as the parent's
+    ``instrument.field_updated`` (Codex on #2639). Then the saved state is
+    checked whole
+    (``branch_structure_errors``): a governed field made required, a
+    parent turned String, or List options that drop an option its
+    condition names are refused, as is a new field inserted inside a
+    branch it isn't part of. Raises
+    :class:`InvalidResponseFieldShapeError`; the caller's transaction is
+    not committed."""
+    from app.services.instruments._response_fields import (
+        InvalidResponseFieldShapeError,
+    )
+    from app.services.responses import branch_structure_errors
+
+    governed_by_parent: dict[int, list[InstrumentResponseField]] = {}
+    for field in existing_by_id.values():
+        if field.branch_parent_id is not None:
+            governed_by_parent.setdefault(field.branch_parent_id, []).append(field)
+    errors: list[tuple[str, str]] = []
+    cleared: list[tuple[InstrumentResponseField, str | None, str | None]] = []
+    for parent_id, governed in governed_by_parent.items():
+        parent = existing_by_id.get(parent_id)
+        going = [f for f in governed if f.id in to_delete]
+        staying = [f for f in governed if f.id not in to_delete]
+        if going and any(_response_count_for_field(db, f.id) for f in governed):
+            errors.extend(
+                (f.label, "Its branch has saved responses, so the branch's "
+                 "fields can't change.")
+                for f in going
+            )
+            continue
+        if parent is None:
+            continue
+        if parent.id in to_delete and staying:
+            errors.append((parent.label, "Delete its branch first."))
+        elif not staying:
+            if parent.id not in to_delete:
+                cleared.append((parent, parent.branch_op, parent.branch_value))
+            parent.branch_op = None
+            parent.branch_value = None
+    if errors:
+        raise InvalidResponseFieldShapeError(errors)
+    errors = branch_structure_errors(
+        [f for f in existing_by_id.values() if f.id not in to_delete]
+        + new_fields
+    )
+    if errors:
+        raise InvalidResponseFieldShapeError(errors)
+    for parent, old_op, old_value in cleared:
+        audit.write_event(
+            db,
+            event_type="instrument.field_updated",
+            summary=(
+                f"Cleared the branch condition on field '{parent.label}' of "
+                f"instrument {_instrument_label(instrument)}, with its last "
+                "governed field"
+            ),
+            actor_user_id=actor.id if actor else None,
+            session=instrument.session,
+            payload=audit.changes(
+                {"branch_op": [old_op, None], "branch_value": [old_value, None]}
+            ),
+            refs={"instrument_id": instrument.id, "response_field_id": parent.id},
+            context={"field_key": parent.field_key},
+        )
 
 
 def _sync_display_field_visibility(

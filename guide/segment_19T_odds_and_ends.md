@@ -1332,12 +1332,46 @@ All answered by the author, 2026-09-26:
    `spec/extract_data.md` says it can't tell "not applicable" from
    "skipped", in line with the record's "no N/A marker".
 
+### Judgment calls — decided
+
+- **Operators are stored as tokens** (`eq`, `ne`, `gt`, `ge`, `lt`, `le`,
+  `is`), not symbols: a settings-CSV cell starting with `=` or `>` is a
+  formula to spreadsheet software. The builder shows the symbols.
+  (2026-09-26)
+- **`branch_parent_id` is `ON DELETE SET NULL`**, so deleting an
+  instrument's fields in any order passes Postgres's foreign-key check;
+  the service, not the database, refuses deleting a parent with a branch.
+  (2026-09-26)
+- **The per-field routes refuse a branched instrument** (edit, delete,
+  move, insert under `/fields/…`, which no page renders): each acts on one
+  field and can't keep a branch's rules. (2026-09-26)
+- **A branch's fields directly follow their parent in field order**, a
+  structure rule, so a field inserted inside a branch it isn't part of is
+  refused on Save. (2026-09-26)
+
 ### Out of scope
 
 - **Required governed fields**: `guide/advanced_instruments.md` Item 2,
   after this item.
 - **Nested branches, a branch per parent beyond one, String parents**:
   ruled out by the record.
+
+### Status
+
+**Open.** Rung 1 is #2638. The cumulative read's base is `9487de5b`.
+
+**Rung 2 lands the model and the rules, inert.** The migration adds the
+three columns (round-tripped on SQLite and on a local Postgres 16). The
+rules live in `app/services/responses/_branching.py`: `condition_error`,
+`branch_is_open`, `applicable_field_ids` and `branch_structure_errors`.
+The card's Save (`set_band2_state`) refuses any `branch_*` key and holds
+stored branches to the rules: bottom-up deletion, the governed-answers
+lock, the condition cleared with its last field, and the whole-state
+check. **Moved forward from rung 5:** session clone re-points a governed
+field's parent at the parent's clone, since its generic column copy would
+otherwise point the clone at the source session's field. **Beyond the
+ladder:** the per-field routes refuse a branched instrument (Judgment
+calls).
 
 ### Doc impact
 

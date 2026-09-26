@@ -267,6 +267,28 @@ class InvalidResponseFieldShapeError(Exception):
         self.errors = errors
 
 
+class BranchedInstrumentError(Exception):
+    """19T Item 10 — the per-field routes (edit, delete, move, insert)
+    act on one field and can't keep a branch's rules: a parent deleted
+    under its fields, a governed field made required or moved out of its
+    branch. They refuse an instrument that has a branch; its fields are
+    edited on the instrument card, whose Save checks the branch whole."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This instrument has branches; edit its response fields on "
+            "the instrument card."
+        )
+
+
+def _refuse_if_branched(instrument: Instrument) -> None:
+    if any(
+        f.branch_parent_id is not None or f.branch_op
+        for f in instrument.response_fields
+    ):
+        raise BranchedInstrumentError()
+
+
 def slugify_field_key(label: str) -> str:
     """Derive a default field_key from an operator-typed label.
 
@@ -673,6 +695,7 @@ def add_default_response_field(
     If ``after_field_id`` is given, the new field slots immediately
     after that one and bumps subsequent ``order`` values; otherwise
     appends at the end."""
+    _refuse_if_branched(instrument)
     lifecycle.invalidate_if_validated(
         db,
         review_session=instrument.session,
@@ -818,6 +841,7 @@ def update_response_field(
         raise ValueError("Label is required.")
 
     instrument = field.instrument
+    _refuse_if_branched(instrument)
     lifecycle.invalidate_if_validated(
         db,
         review_session=instrument.session,
@@ -875,6 +899,7 @@ def delete_response_field(
     actor: User,
 ) -> None:
     instrument = field.instrument
+    _refuse_if_branched(instrument)
     response_count = _response_count_for_field(db, field.id)
 
     if response_count > 0 and not confirm:
@@ -932,6 +957,7 @@ def move_response_field(
         raise ValueError("direction must be 'up' or 'down'")
 
     instrument = field.instrument
+    _refuse_if_branched(instrument)
     fields = _ordered_fields(db, instrument)
     old_keys = [f.field_key for f in fields]
     index = next((i for i, f in enumerate(fields) if f.id == field.id), None)
