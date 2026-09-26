@@ -13,8 +13,9 @@ Five items that rework the Instruments page's builder:
 
 **Logged 2026-09-24 and 2026-09-25 on the author's instruction. Being
 built one item at a time:** Item 4 shipped first as 19T Item 7
-(2026-09-26), ahead of Item 3 because it doesn't touch the pills. Item 5
-is being built as 19T Item 8. The rest is not scheduled. This file keeps the
+(2026-09-26), ahead of Item 3 because it doesn't touch the pills, and
+Item 5 as 19T Item 8 (2026-09-26). Item 3 is next. The rest is not
+scheduled. This file keeps the
 author's rulings and the measured cost, so the build can start from them.
 When it is scheduled, it becomes a segment plan
 (`guide/segment_plan_template.md`); until then its entry in
@@ -188,8 +189,10 @@ About 3 PRs, scaffold-first (CLAUDE.md):
 
 ## Item 5 — Display fields as a Band 3 table
 
-**Being built as 19T Item 8** (opened 2026-09-26); the build is tracked
-there.
+**Built 2026-09-26 as 19T Item 8** (#2626–#2629). The build went as
+below, and on the author's later rulings also made the name cells and the
+locked Visibility card's modes display-only pills, compacted the rows, and
+re-split Band 3 to one third / two thirds.
 
 **Logged 2026-09-25 on the author's instruction. Built third, straight
 after Item 4, into the column it frees.** Split out of Item 4, which

@@ -923,61 +923,40 @@ Taken 2026-09-26 at `20f8eb3a`:
 
 ### Open questions
 
-- Should the reviewer's own "Who can see what you wrote" card show its
-  modes as pills too, as the operator's locked card now does (rung 4)?
-  The author decides; until then the two differ in style only.
+- **Open at close, the author's to decide:** should the reviewer's own "Who
+  can see what you wrote" card show its modes as pills too, as the
+  operator's locked card does since rung 4? Until then the two differ in
+  style only; `spec/visibility_policy.md` records the difference.
 
 ### Status
 
-**Open.** Rung 1 is #2626. Rung 2 wires the table **onto the display
-pills, which stay the model**: their DOM order is the display order and
-their pressed state the selection, and the preview, the stager and Save
-all read them. A checkbox toggles its pill (`newModelDfToggle`), an arrow
-moves it and stages the order (`newModelDfMove`), and `rebuildPreview`
-mirrors the pills back into the table (`syncDfTable`), so a pill click, a
-drag or a unit-mode switch keeps the table in step. Rung 2 is #2627;
-Codex moved its arrows onto the canonical `.btn-icon` role.
+**Closed 2026-09-26** on the author's instruction (#2626 scaffold, #2627
+wire, #2628 retire, #2629 adjustments, and this close). The ladder ran as
+planned, plus one rung:
+- **Rung 2 wired the table onto the pills**, which stayed the model until
+  rung 3 retired them. The rows are now the model: order is display order,
+  a checkbox is selection, each row carries the field's data, and every
+  former pill reader (preview, group-mode refresh, widths, the Save
+  stager, the order stager, the sample refresh) reads them through
+  `dfRows`. Band 2 keeps only the response pills.
+- **Rung 4, the author's adjustments** before the close: the locked
+  Visibility card shows its modes as display-only pills, the display-field
+  table is compact (`table-compact`) with display-only name pills, and
+  Band 3 re-splits to one third / two thirds, which the Decision had
+  deferred. The left track is `minmax(0, 1fr)`, so a long label scrolls
+  in its column (Codex, #2629).
 
-**Rung 3 retires the display pills** (the author, 2026-09-26: retire them,
-and hold the close for adjustments). The rows are now the model: each
-carries the field's data (label, source, sample value, width, display
-id), a checkbox is its selection, and row order is display order. Every
-former pill reader reads the rows through `dfRows`: the preview, the
-group-mode refresh, the column-width resize and collector, the Save
-stager's selected keys, the display-order stager and the sample refresh.
-Band 2 keeps only the response pills, and the `||` divider is gone. Item
-3 entry 2's locked-pill test now pins Name and Email's fixed checkboxes.
+**Reads: two.** The item's cumulative read (rung 3, over
+`323c5157..HEAD`) found no correctness defect; rung 3 fixed the untested
+server-rendered tick, the Guide still naming the pills, dead code, the
+empty-state count and inline styles. Rung 4 reopened `app/` and took its
+own: no defect; it tightened the pill test and raised the open question
+above. **Codex** found two more: the Guide saying Email always shows, and
+the unshrinkable grid track. Both fixed.
 
-**The item's read** (rung 3, over `323c5157..HEAD`) found no correctness
-defect: every former pill reader reads the rows, Save's locked and
-group-off cases match the pills', and the lock region and first load hold.
-Rung 3 fixed what it raised:
-- the server-rendered tick was untested; tests now pin selection and a
-  group-off field that isn't locked (Profile);
-- the in-app Guide still sent display fields to the pills;
-- dead code: the drag handlers' display branch, the locked-pill guard, the
-  divider and stale comments;
-- the empty-state `—` counted display fields;
-- the table's inline styles, which now use `base.html`'s table rules and
-  `.col-shrink`.
-
-Codex's one finding, that the Guide said Email always shows, was fixed
-in rung 3 (#2628).
-
-**Rung 4 is the author's adjustments** (2026-09-26):
-- the locked Visibility table shows each mode as a pill that only shows
-  it, as the editor's fixed cells do; the repaint key moves onto the pill;
-- the display-field table is compact (`table-compact`, `base.html`)
-  rather than aligned with the response-field rows, and each field name is
-  a display-only pill;
-- **Band 3 re-splits to `1fr 2fr`**, the design record's split, which the
-  Decision above had deferred.
-  Codex (#2629): the left track is `minmax(0, 1fr)`, since a long
-  unbroken label otherwise widened it past a third (1735px against 337px
-  at 1400px wide); now it scrolls in its `.table-scroll`.
-
-The rung reopens `app/` after the read, so it takes its own.
-**The close waits** on the author.
+**Owed:** browser checks in `guide/post_azure_todo_checklist.md` item 6,
+and the author's retake of the Guide's instrument captures and their alt
+text.
 
 ### Doc impact
 

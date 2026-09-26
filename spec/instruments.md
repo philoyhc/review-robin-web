@@ -796,8 +796,11 @@ The "Who can see what you wrote (other than admin)" card sits beside the
 intro card in Band 2's grid, and is both the reviewer-surface preview and
 the visibility editor — the same locked / unlocked swap as the
 description box beside it (19T Item 7). **Locked**, it renders the
-reviewer's own two-row table (`data-lock-only`) — see "Reviewer-surface
-transparency card" in `spec/visibility_policy.md` §6. **Unlocked**, it is
+reviewer's own two-row table (`data-lock-only`), each mode as a
+display-only pill (`pill pill-count`, carrying
+`data-new-model-vp-preview-cell`) rather than plain text — see
+"Reviewer-surface transparency card" in `spec/visibility_policy.md` §6.
+**Unlocked**, it is
 the editor (`data-unlock-only`, `data-new-model-vp-editor`
 `data-new-model-vp-form`): three rows, "You (reviewer)", "Reviewees" and,
 below a `row-group-start` divider (`spec/ui_elements.md` §10),
@@ -814,44 +817,54 @@ editor lived in Band 3's table, which this card retires.
 
 The six `*_mode` hidden inputs ride the card's `dfsave-{id}` form and
 render unconditionally, whatever the lock state, so Save always carries
-them. A cycle also repaints the locked table's matching cell
+them. A cycle also repaints the locked table's matching pill
 (`data-new-model-vp-preview-cell`) — the live repaint 19T Item 3 entry 3
 added, kept because Save is a fetch and never reloads.
 
 #### Chip row
 
-Below the intro card, a horizontal scrollable row of chip
-buttons — one per populated display-field option in the
-session's roster:
+Below the intro card, a horizontal scrollable row holds one chip per
+saved response field. Display fields moved off this row onto Band 3's
+display-field table below when `guide/advanced_instruments.md` Item 5
+retired their chips (19T Item 8) — see "Display-field table". Clicking a
+chip toggles whether its column appears in the preview row below;
+dragging reorders it and moves its paired Band 3 response-field row to
+match (see "Response fields" below for the order and Save mechanics).
 
-- Per-side prefix tag: `Reviewee.Name`, `Reviewee.Email`,
-  `Reviewee.tag1 / 2 / 3` (when populated),
-  `Pair.tag1 / 2 / 3` (when populated).
-- Clicking a chip toggles whether its column appears in the
-  preview row below. Toggling is local DOM only; the bulk Save
-  picks up the new selection set from `selected_display_keys`
-  in the form payload and `set_instrument_display_fields`
-  reconciles on the server.
+The chip row gates on `is_editing`. View mode renders the chips as
+static "selected" pills (no toggle affordance).
 
-**Name and Email are locked** — the server refuses to hide them
-— so their pills render as static `pill pill-count` labels rather
-than `.tag-chip` controls, in both view and edit mode: not
-clickable, not in the tab order, and carrying no chip edge
-(`spec/ui_elements.md` "Label or control"). Each is selected
-whenever it applies to the instrument's unit mode — Name always,
-Email only in Individual mode (below). Their
-tooltips name the pinned slot: "Always shown — pinned first:
-Name" / "Always shown — pinned second: Email". In grouped unit
-mode, Email drops out — a group row has no email; it shows the
-tag line plus member names (see "Group-flavor preview" below) —
-and its tooltip reads "Not shown on group rows: Email"; it
-returns in Individual mode. **The rule:** an individually scoped
-instrument always shows both Name and Email; a group-scoped
-instrument never shows Email.
+#### Display-field table
 
-The chip row gates on `is_editing`. View mode renders the
-(non-locked) chips as static "selected" pills (no toggle
-affordance).
+Band 3's left column (`data-new-model-band3-left`) is a headerless,
+compact (`table-compact`, `spec/ui_elements.md` §10) table
+(`data-new-model-df-table`), one row per display field
+(`data-new-model-df-row`), in display order. **The row is the
+display-field model**: order is display order, and the row's checkbox is
+its selection — both read live by Band 2's preview and persisted only
+through the card's Save (`dfRows` in
+`app/web/templates/operator/instruments_index.html`). An edit shows in
+the preview at once.
+
+Each row holds:
+
+- an **Active** checkbox (`data-new-model-df-active`) — the field's
+  selection;
+- the field's session-wide label as a display-only pill (`pill
+  pill-count`, no click handler);
+- ▲ / ▼ `.btn-icon` move buttons, absent on a locked row. An unticked
+  row can still be moved.
+
+**Name and Email are locked**: a ticked, disabled checkbox, no move
+buttons, and a tooltip naming the pinned slot — "Always shown — pinned
+first" (Name) / "Always shown — pinned second" (Email). **On a
+group-scoped instrument**, a field a group row can't show — Email
+included — renders unticked and disabled, tooltip "Not shown on group
+rows"; Name is always selectable in group mode and stays ticked (see
+"Group-flavor preview" below). Every other row's tooltip is "Show this
+column". The locked Name / Email pills the chip row used to carry give
+way to these disabled checkboxes (`spec/ui_elements.md` "Label or
+control").
 
 #### Preview row
 
@@ -892,11 +905,12 @@ qualify, the trailing `... + N more` collapses the overflow.
 
 ### Response fields
 
-Band 3 splits `grid-template-columns: 2fr 3fr`. **The left column is
-empty**: Visibility moved to Band 2's visibility card above (19T Item 7)
-and the left column awaits `guide/advanced_instruments.md` Item 5's
-display-field table. The split itself is unchanged until Item 5 re-ratios
-it.
+Band 3 splits `grid-template-columns: minmax(0, 1fr) 2fr` — one third
+display fields, two thirds response fields. The left track's `0`
+minimum lets a long field label scroll inside its `.table-scroll`
+rather than widening the column past its third. The left column holds
+the display-field table above; the right column, below, is the
+response-field editor.
 
 The right column is a stack of inline editor rows, one per
 saved Response Field. **No standing blank row**: a card with no saved

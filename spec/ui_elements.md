@@ -613,9 +613,13 @@ shade** (`--blue-strong` / `--blue-glow` — see
 `spec/color_tokens.md` "Deliberate couplings"). That covers
 `.tag-chip` — which is every lobby tag filter, every column toggle and
 every *clickable* Instruments Band 2 pill — plus the lobby's Clear
-and AND/OR chips. Static pills carry no edge: the locked Name /
-Email pills on the Instruments Band 2 chip row (`spec/instruments.md`
-"Chip row") render as static labels, not `.tag-chip` controls.
+and AND/OR chips. Static pills carry no edge: 19T Item 8 retired the
+locked Name / Email pills the Band 2 chip row used to carry, in favor of
+the display-field table's disabled, ticked checkboxes
+(`spec/instruments.md` "Display-field table") — that table's own
+field-label pill, and the Visibility card's locked mode cells
+(`spec/instruments.md` "Visibility card"), are the same static,
+no-click-handler pattern.
 
 Three rules make that work:
 
@@ -687,6 +691,7 @@ One row per primitive. Colours and spacing come from tokens throughout.
 | `.table-scroll` (`overflow-x: auto`) | A wide table's overflow stays inside its card instead of scrolling the page. **Every table sits in one** — see below |
 | `.col-divider` (`border-top: 1px solid var(--border-default)`) | A horizontal rule **inside** a column, marking that what follows shares the column for space rather than belonging to what precedes it. Takes the same `--border-default` as the vertical rules between columns, so the two read as one system — that match is the point, and a divider drawn from another token would say the wrong thing. Today: the self-review exclusion checkbox under Link 3 of the Instrument assignment rule card, which is not a unit-of-review setting and must not read as a third Link 3 state (`spec/instruments.md` § *Self-review exclusion*). **Use it only where a reader would otherwise misattribute the control to the block above**; a rule between two things that do belong together is noise |
 | `row-group-start` (`tr.row-group-start > td { border-top: 2px solid var(--border-default); }`) | A heavier rule above a **table row** that starts a new group, where the table already separates every row with 1px. First user: the Observers row of an instrument's visibility editor (`spec/instruments.md` § *Visibility card*, 19T Item 7) |
+| `table-compact` (`body.ui-v2 table.table-compact th, td { padding: var(--space-1) var(--space-2); }`) | A table whose rows sit closer together than the default cell padding gives. First user: Band 3's display-field table (`spec/instruments.md` § *Display-field table*, 19T Item 8) |
 | `.chip-group` | One labelled group of chips inside a `.col-chip-row`, so a row carrying several groups wraps **between** them rather than stranding a label from its chips |
 | `.col-chip-row.is-grouped` | The modifier a chip row takes **when its chips are in `.chip-group` boxes**: it swaps the parent's `gap` for a wider `column-gap` between the groups. A `gap` applies on both axes, so a wrapped second line arrived indented against the line above it; a column-gap is between-items-on-a-line by definition and cannot. A **modifier and not a change to `.col-chip-row`**, because the four roster rows put their label and chips directly in the row — widening the gap there would space a label from its own chips. Assignments is the only caller (19P.5 rung 1 moved its three groups into the half-width left pane, where they stopped fitting on one line) |
 | `.col-chip-row` (+ `[data-col-toggles-for]`, `[data-col-toggle]`, `[data-rrw-col-toggles]`) | The column-visibility chips above a table. A chip is `role="button" tabindex="0"` and toggles `col-hidden-{slot}` on the table it names; each page maps its own slots to its own column classes, so the slot vocabulary is not fixed here. The storage key lives on the **table** (`[data-rrw-col-toggles]`) and a page may carry several chip rows against one table, grouping its slots. **Both behaviours are delegated on `document`**: a chip rendered after load works with no registration, because the handler resolves its row, table and storage key from the event target with `closest`. **A re-rendered table card must call two hooks** — `window._rrwHydrateColToggles()` to restore the operator's saved columns, and `_rrwHydrateFromCookies()` to repaint the sort badges — because delegation keeps a chip *clickable* while the server re-renders it all-visible, and neither state is in the markup |
