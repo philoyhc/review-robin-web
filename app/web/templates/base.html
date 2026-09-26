@@ -2948,6 +2948,21 @@
       body.ui-v2 table.table-compact td {
         padding: var(--space-1) var(--space-2);
       }
+      /* Band 3's response-field table (19T Item 9). One <tbody> per
+         field, ruled underneath and not inside, so a branch can later
+         join its parent's <tbody> as one ruled group
+         (guide/advanced_instruments.md Item 1). The name and type
+         columns take fixed shares; the bounds take the rest. */
+      body.ui-v2 table.rf-table > tbody > tr > td {
+        padding: var(--space-1);
+        border-bottom: 0;
+      }
+      body.ui-v2 table.rf-table > tbody {
+        border-bottom: 1px solid var(--border-default);
+      }
+      body.ui-v2 table.rf-table .btn { padding: 4px 10px; }
+      body.ui-v2 table.rf-table td.rf-name { width: 20%; }
+      body.ui-v2 table.rf-table td.rf-type { width: 15%; }
       /* ===== 19P.1 — the roster card and its Unlock panel =====
          Page-agnostic primitives, so they live here rather than as a
          template <style> block, and `body.ui-v2`-scoped like every rule

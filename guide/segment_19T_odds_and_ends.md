@@ -1025,6 +1025,29 @@ The design record's Item 3 "Semantics" apply. For the table: a row is its
 row count the page already makes keeps working; the "+" template clones
 a `<tbody>`.
 
+### Pre-positioning for Items 1 and 2 (the author, 2026-09-26)
+
+Built so branching (design record Item 1) and required governed fields
+(Item 2) add to this item rather than rework it:
+1. **A group is a `<tbody>`**, ruled under it (rung 1): a branch joins its
+   parent's `<tbody>`, so the rules already separate groups.
+2. **The ⑂ column is held** just after + (rung 1), so a governed row can
+   shift one column and still align from the name onward.
+3. **▲ ▼ move a `<tbody>`**, not a `<tr>` (rung 3): a parent will carry its
+   branch unchanged. Moving a governed `<tr>` within its group is Item 1's.
+4. **One row reader**, `rfRows(card)` (rung 2), as `dfRows` is for display
+   fields: every consumer (the preview, the stager, the widths, the Active
+   and R rules) reads rows through it, in document order. Item 1 adds a
+   row's parent there, by row key, since new rows have no id before Save.
+5. **Active and R states computed in one place**, the row recompute
+   (`newModelRfRecomputeActionStates`), per row (rungs 2–3): Item 1 makes
+   R inactive inside a branch and cascades a parent's Active there, and
+   Item 2 lifts the R rule there.
+6. **The stager sends rows in row order with their keys** (rung 3), so a
+   later `branch_parent` attribute can name a row the same Save creates.
+The record's service-layer pre-positioning for Item 2 (one branch-open
+function, the applicable-fields helper) belongs to Item 1's build.
+
 ### Blast radius (measured)
 
 Taken 2026-09-26 at `134953aa`:
@@ -1069,7 +1092,10 @@ Taken 2026-09-26 at `134953aa`:
 
 ### Status
 
-**Open.** Rung 1 is this PR.
+**Open.** Rung 1 is this PR: the plan, the author's branching layout in
+the design record's Item 1, and the table. It also rewords Band 2's
+header comment, which still described display-field chips (flagged by
+Item 8's close pass).
 
 ### Doc impact
 
