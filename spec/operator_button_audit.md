@@ -429,8 +429,10 @@ buttons) — see `spec/instruments.md` "Response fields". **✓ retired**
 (19T Item 9): a row commits to the preview by itself once its live name
 and shape are valid.
 
-Both tables' rows carry an Active checkbox (bound to `visible`) and
-▲ ▼ move buttons, both `btn secondary`. The response-field row's ▲ ▼
+Both tables' rows carry an Active checkbox and ▲ ▼ move buttons, both
+`btn secondary`. The bindings differ: a response-field row's checkbox is
+the field's `InstrumentResponseField.visible`; a display-field row's puts
+its key in the instrument's `selected_display_keys`. The response-field row's ▲ ▼
 are full-size, like its other row buttons; the display-field row's are
 the short size, `btn secondary btn-short` (19T Item 9, on the author's
 ruling) — see `spec/instruments.md` "Display-field table".

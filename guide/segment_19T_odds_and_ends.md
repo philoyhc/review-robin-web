@@ -1148,7 +1148,8 @@ grid change: nothing breaks, but four specs (three outside Doc impact,
 now added) still described chips and pills, and three checklist rows could not pass
 without ✓; all fixed in the close. **Codex** found two: a never-✓'d saved row kept a ticked,
 fixed Active box (#2633), and Save committed the blank placeholder
-(#2636).
+(#2636); on the close, the button audit gave the display-field checkbox
+the response-field binding (#2637).
 
 **Owed:** browser checks in `guide/post_azure_todo_checklist.md` item 6,
 and the author's retake of the Guide's instrument captures.
