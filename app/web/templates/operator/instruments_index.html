@@ -2059,51 +2059,20 @@
                style="display: flex; flex-wrap: wrap; gap: 8px;
                       align-items: center; justify-content: flex-end;
                       margin-top: 16px;">
-            {% for field in _band2.fields %}
-              {% set _selected = field.key in _band2.selected_display_keys %}
-              {# 19T Item 3 entry 2 — a locked field (Name / Email) is always
-                 shown, so its pill is a static label, not a control: no
-                 ``tag-chip`` (and so no accent edge), no button role, no
-                 tab stop, no click handler. ``data-locked-on`` carries
-                 its selection in place of ``aria-pressed``, which only a
-                 button may carry; grouped mode can switch it off (Email
-                 has no group value). #}
-              {% if field.locked %}
-              <span class="pill pill-count"
-                    data-locked="true" data-locked-on="true"
-              {% else %}
-              <span class="pill tag-chip{% if _selected %} pill-count is-selected{% endif %}"
-                    role="button" tabindex="0"
-                    aria-pressed="{{ 'true' if _selected else 'false' }}"
-              {% endif %}
-                    data-new-model-band2-pill
-                    data-key="{{ field.key }}"
-                    data-label="{{ field.label }}"
-                    data-source-type="{{ field.source_type }}"
-                    data-source-field="{{ field.source_field }}"
-                    data-value="{{ field.value or '' }}"
-                    data-selectable-in-group="{{ 'true' if field.selectable_in_group else 'false' }}"
-                    data-display-field-id="{{ field.display_field_id }}"
-                    data-width="{{ field.width_px or '' }}"
-                    data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
-                    {% if field.reorderable %}
-                    draggable="true"
-                    ondragstart="newModelBand2DragStart(event)"
-                    ondragend="newModelBand2DragEnd(event)"
-                    ondragover="newModelBand2DragOver(event)"
-                    ondrop="newModelBand2Drop(event)"
-                    {% endif %}
-                    {% if not field.locked %}onclick="newModelToggleBand2Pill(this)"{% endif %}
-                    title="{{ 'Click to include / drag to reorder ' if field.reorderable else 'Always shown — pinned ' ~ field.pinned ~ ': ' }}{{ field.label }}">{% if field.reorderable %}<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{% endif %}{{ field.label }}</span>
-            {% endfor %}
+            {# 19T Item 8 — the display pills retired: Band 3's
+               display-field table carries display fields now. Only the
+               response pills remain here (``guide/advanced_instruments.md``
+               Item 3 retires them). #}
             {# Server-render the `||` divider + response pills
                from the persisted band2_state.response_fields list.
                Each entry's index gives a stable per-render key
                (``rf_<idx>``) that both the row and the pill share
                so the JS save / delete handlers can find them. #}
             {% if _band2.response_fields %}
+              {# The divider stays as the anchor new response pills are
+                 placed after, hidden now that nothing sits before it. #}
               <span class="new-model-band2-pills-divider"
-                    data-new-model-band2-pills-divider
+                    data-new-model-band2-pills-divider hidden
                     aria-hidden="true">||</span>
               {% for rf in _band2.response_fields %}
                 {% set _key = 'rf_' ~ loop.index0 %}
@@ -2277,26 +2246,23 @@
           // can't be toggled and lose their selection.
           function refreshPillStates(card) {
             var grouped = unitMode(card) === 'grouped';
+            // 19T Item 8 — a display field a group row can't show is
+            // unticked and fixed in grouped mode; Name and Email are
+            // always fixed, and ticked unless grouped mode rules them
+            // out (Email has no group value).
+            dfRows(card).forEach(function (row) {
+              var box = row.querySelector('[data-new-model-df-active]');
+              if (!box) { return; }
+              var off = grouped && row.getAttribute('data-selectable-in-group') !== 'true';
+              var locked = row.getAttribute('data-locked') === 'true';
+              if (locked) { box.checked = !off; }
+              else if (off) { box.checked = false; }
+              box.disabled = locked || off;
+              box.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');
+            });
             card.querySelectorAll('[data-new-model-band2-pill]').forEach(function (pill) {
               var groupOk = pill.getAttribute('data-selectable-in-group') === 'true';
               var disabled = grouped && !groupOk;
-              // 19T Item 3 entry 2 — a locked pill is a static label: it is
-              // on unless grouped mode rules it out (Email has no group
-              // value), and it carries no control state.
-              if (pill.getAttribute('data-locked') === 'true') {
-                pill.setAttribute('data-locked-on', disabled ? 'false' : 'true');
-                pill.classList.toggle('pill-count', !disabled);
-                pill.style.opacity = disabled ? '0.4' : '';
-                // The server-rendered "Always shown" tooltip is false for
-                // Email on a group row, which has no email.
-                if (!pill.hasAttribute('data-title-on')) {
-                  pill.setAttribute('data-title-on', pill.title);
-                }
-                pill.title = disabled
-                  ? 'Not shown on group rows: ' + pill.getAttribute('data-label')
-                  : pill.getAttribute('data-title-on');
-                return;
-              }
               pill.setAttribute('aria-disabled', disabled ? 'true' : 'false');
               pill.style.opacity = disabled ? '0.4' : '';
               pill.style.cursor = disabled ? 'not-allowed' : 'pointer';
@@ -2307,10 +2273,37 @@
               }
             });
           }
+          // 19T Item 8 — the display fields are Band 3's table rows, in
+          // display order, each checkbox its selection. ``card`` is the
+          // Band 2 element; the table sits in the same instrument card.
+          function dfRows(card) {
+            var instrumentCard = card.closest('[id^="instrument-"]');
+            return instrumentCard
+              ? Array.prototype.slice.call(
+                  instrumentCard.querySelectorAll('[data-new-model-df-row]')
+                )
+              : [];
+          }
+          function dfRowOn(row) {
+            var box = row.querySelector('[data-new-model-df-active]');
+            return !!(box && box.checked);
+          }
           function selectedPills(card) {
             var sel = [];
+            dfRows(card).filter(dfRowOn).forEach(function (row) {
+              sel.push({
+                key: row.getAttribute('data-key'),
+                label: row.getAttribute('data-label'),
+                sourceType: row.getAttribute('data-source-type'),
+                sourceField: row.getAttribute('data-source-field'),
+                value: row.getAttribute('data-value') || '',
+                displayFieldId: row.getAttribute('data-display-field-id') || '',
+                width: parseInt(row.getAttribute('data-width') || '', 10) || 0,
+                required: false,
+              });
+            });
             card.querySelectorAll(
-              '[data-new-model-band2-pill][aria-pressed="true"], [data-new-model-band2-pill][data-locked-on="true"]'
+              '[data-new-model-band2-pill][aria-pressed="true"]'
             ).forEach(function (p) {
               sel.push({
                 key: p.getAttribute('data-key'),
@@ -2649,8 +2642,10 @@
                   card.setAttribute('data-new-model-band2-identity-width', lastWidth);
                 } else if (key.indexOf('df_') === 0) {
                   var fid = key.slice(3);
-                  var pill = card.querySelector('[data-new-model-band2-pill][data-display-field-id="' + fid + '"]');
-                  if (pill) { pill.setAttribute('data-width', lastWidth); }
+                  var dfRow = dfRows(card).filter(function (r) {
+                    return r.getAttribute('data-display-field-id') === fid;
+                  })[0];
+                  if (dfRow) { dfRow.setAttribute('data-width', lastWidth); }
                 } else if (isResponse) {
                   var rkey = key.slice(5);
                   var rpill = card.querySelector('[data-new-model-band2-pill][data-response-key="' + rkey + '"]');
@@ -2677,10 +2672,13 @@
             var widths = {};
             var identityW = parseInt(card.getAttribute('data-new-model-band2-identity-width') || '', 10);
             if (identityW > 0) { widths.identity = identityW; }
-            card.querySelectorAll('[data-new-model-band2-pill]').forEach(function (pill) {
-              var fid = pill.getAttribute('data-display-field-id');
-              var w = parseInt(pill.getAttribute('data-width') || '', 10);
+            dfRows(card).forEach(function (row) {
+              var fid = row.getAttribute('data-display-field-id');
+              var w = parseInt(row.getAttribute('data-width') || '', 10);
               if (fid && w > 0) { widths['df_' + fid] = w; }
+            });
+            card.querySelectorAll('[data-new-model-band2-pill]').forEach(function (pill) {
+              var w = parseInt(pill.getAttribute('data-width') || '', 10);
               // Wave 3 PR iii — response-column widths under
               // rf_<db_id> keys, mirroring the df_<id> shape.
               // Pills without a data-rf-id (unsaved rows) skip.
@@ -2724,13 +2722,8 @@
               card.setAttribute('data-band2-ack-drop', 'true');
             }
             var instrumentCard = card.closest('[id^="instrument-"]');
-            var selectedDisplayKeys = [];
-            card.querySelectorAll(
-              '[data-new-model-band2-pill][aria-pressed="true"], [data-new-model-band2-pill][data-locked-on="true"]'
-            ).forEach(function (pill) {
-              if (pill.getAttribute('data-source-type') !== 'response') {
-                selectedDisplayKeys.push(pill.getAttribute('data-key'));
-              }
+            var selectedDisplayKeys = dfRows(card).filter(dfRowOn).map(function (row) {
+              return row.getAttribute('data-key');
             });
             // Serialize one response-field row into the payload shape.
             // ``pill`` is the paired preview chip when the row has been
@@ -3329,7 +3322,9 @@
               // the new sample's matching field. partitionedSampleNames
               // uses the wrapper sample-name override to pick the
               // group containing this sample.
-              band2.querySelectorAll('[data-new-model-band2-pill][data-source-type="reviewee"]').forEach(function (pill) {
+              dfRows(band2).filter(function (row) {
+                return row.getAttribute('data-source-type') === 'reviewee';
+              }).forEach(function (pill) {
                 var field = pill.getAttribute('data-source-field');
                 if (field && Object.prototype.hasOwnProperty.call(sample, field)) {
                   pill.setAttribute('data-value', sample[field] || '');
@@ -3463,79 +3458,42 @@
               rebuildPreview(band2Card);
             }
           };
-          // 19T Item 8 — Band 3's display-field table. The display pills
-          // stay the model (DOM order is the display order, aria-pressed
-          // the selection), so the table's controls act on the pills and
-          // syncDfTable mirrors them back; rebuildPreview calls it after
-          // every pill, table or unit-mode change.
-          function dfBand2(el) {
-            var instrumentCard = el.closest('[id^="instrument-"]');
-            return instrumentCard && instrumentCard.querySelector('[data-new-model-band2]');
-          }
-          function dfDisplayPills(band2) {
-            return Array.prototype.slice.call(band2.querySelectorAll(
-              '[data-new-model-band2-pill]:not([data-source-type="response"])'
-            ));
-          }
-          function dfPillFor(band2, row) {
-            return band2.querySelector(
-              '[data-new-model-band2-pill][data-key="' + row.getAttribute('data-key') + '"]'
-            );
-          }
+          // 19T Item 8 — Band 3's display-field table is the display
+          // model (``dfRows``): a checkbox is a field's selection and the
+          // row order its display order. Up is off on the first movable
+          // row (just below Email), down on the last; an unticked row can
+          // still move. ``rebuildPreview`` refreshes the arrows.
           function syncDfTable(band2) {
-            var instrumentCard = band2.closest('[id^="instrument-"]');
-            var table = instrumentCard && instrumentCard.querySelector('[data-new-model-df-table]');
-            if (!table) { return; }
-            var tbody = table.querySelector('tbody');
-            var movable = [];
-            dfDisplayPills(band2).forEach(function (pill) {
-              var row = tbody.querySelector(
-                '[data-new-model-df-row][data-key="' + pill.getAttribute('data-key') + '"]'
-              );
-              if (!row) { return; }
-              tbody.appendChild(row);
-              var locked = pill.getAttribute('data-locked') === 'true';
-              var off = locked
-                ? pill.getAttribute('data-locked-on') !== 'true'
-                : pill.getAttribute('aria-disabled') === 'true';
-              var box = row.querySelector('[data-new-model-df-active]');
-              if (box) {
-                box.checked = !off && (locked || pill.getAttribute('aria-pressed') === 'true');
-                box.disabled = locked || off;
-                box.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');
-              }
-              if (row.querySelector('[data-new-model-df-move]')) { movable.push(row); }
+            var movable = dfRows(band2).filter(function (row) {
+              return !!row.querySelector('[data-new-model-df-move]');
             });
-            // Up is off on the first movable row (just below Email),
-            // down on the last; an unticked row can still be moved.
             movable.forEach(function (row, i) {
               row.querySelector('[data-new-model-df-move="up"]').disabled = i === 0;
               row.querySelector('[data-new-model-df-move="down"]').disabled = i === movable.length - 1;
             });
           }
+          function dfBand2(el) {
+            var instrumentCard = el.closest('[id^="instrument-"]');
+            return instrumentCard && instrumentCard.querySelector('[data-new-model-band2]');
+          }
           window.newModelDfToggle = function (box) {
             var band2 = dfBand2(box);
-            var row = box.closest('[data-new-model-df-row]');
-            var pill = band2 && row && dfPillFor(band2, row);
-            if (!pill) { return; }
-            if ((pill.getAttribute('aria-pressed') === 'true') !== box.checked) {
-              window.newModelToggleBand2Pill(pill);
-            }
-            syncDfTable(band2);
+            if (!band2) { return; }
+            rebuildPreview(band2);
+            saveBand2State(band2);
           };
           window.newModelDfMove = function (btn) {
             var band2 = dfBand2(btn);
             var row = btn.closest('[data-new-model-df-row]');
-            var pill = band2 && row && dfPillFor(band2, row);
-            if (!pill) { return; }
-            var list = dfDisplayPills(band2).filter(function (p) {
-              return p.getAttribute('data-reorderable') === 'true';
+            if (!band2 || !row) { return; }
+            var movable = dfRows(band2).filter(function (r) {
+              return r.getAttribute('data-reorderable') === 'true';
             });
-            var i = list.indexOf(pill);
+            var i = movable.indexOf(row);
             var up = btn.getAttribute('data-new-model-df-move') === 'up';
-            var other = list[up ? i - 1 : i + 1];
+            var other = movable[up ? i - 1 : i + 1];
             if (i < 0 || !other) { return; }
-            other.parentNode.insertBefore(pill, up ? other : other.nextSibling);
+            other.parentNode.insertBefore(row, up ? other : other.nextSibling);
             saveBand2DisplayFieldOrder(band2);
             rebuildPreview(band2);
             // Keep focus on the arrow the operator pressed, or its
@@ -3559,8 +3517,9 @@
           function saveBand2DisplayFieldOrder(card) {
             if (!card) { return; }
             var orderedIds = [];
-            card.querySelectorAll('[data-new-model-band2-pill][data-reorderable="true"]').forEach(function (pill) {
-              var id = parseInt(pill.getAttribute('data-display-field-id') || '', 10);
+            dfRows(card).forEach(function (row) {
+              if (row.getAttribute('data-reorderable') !== 'true') { return; }
+              var id = parseInt(row.getAttribute('data-display-field-id') || '', 10);
               if (id > 0) { orderedIds.push(id); }
             });
             var snapshot = card.querySelector('[data-new-model-band2-display-order-snapshot]');
@@ -4201,11 +4160,12 @@
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
         {# 19T Item 8 — the display-field table
            (``guide/advanced_instruments.md`` Item 5). One row per display
-           field, no header row: Active checkbox, field, up, down. The
-           table drives Band 2's display pills, which stay the model the
-           preview and Save read (``newModelDfToggle`` /
-           ``newModelDfMove``), and ``syncDfTable`` mirrors the pills back
-           after every preview rebuild. Name and Email have a checkbox
+           field, no header row: Active checkbox, field, up, down. The rows
+           are the display-field model: their order is the display order,
+           each checkbox its selection, and each row carries the field's
+           data (label, source, sample value, width) that the preview and
+           Save read (``dfRows`` and friends). Band 2's display pills are
+           retired. Name and Email have a checkbox
            that only shows their state, and no arrows; on a group-scoped
            instrument the fields a group row can't show are unticked and
            fixed. An unticked row can still be moved. #}
@@ -4219,7 +4179,17 @@
                 {% set _group_off = _saved_unit_mode == "grouped" and not field.selectable_in_group %}
                 {% set _on = (field.locked or field.key in _band2.selected_display_keys) and not _group_off %}
                 {% set _title_on = ('Always shown — pinned ' ~ field.pinned) if field.locked else 'Show this column' %}
-                <tr data-new-model-df-row data-key="{{ field.key }}" style="height: 40px;">
+                <tr data-new-model-df-row data-key="{{ field.key }}"
+                    data-label="{{ field.label }}"
+                    data-source-type="{{ field.source_type }}"
+                    data-source-field="{{ field.source_field }}"
+                    data-value="{{ field.value or '' }}"
+                    data-selectable-in-group="{{ 'true' if field.selectable_in_group else 'false' }}"
+                    data-display-field-id="{{ field.display_field_id }}"
+                    data-width="{{ field.width_px or '' }}"
+                    data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
+                    {% if field.locked %}data-locked="true"{% endif %}
+                    style="height: 40px;">
                   <td style="padding: 4px 8px; width: 1%;">
                     <input type="checkbox" data-new-model-df-active
                            {% if field.locked or _group_off %}disabled{% endif %}
@@ -4929,6 +4899,7 @@
               divider.className = 'new-model-band2-pills-divider';
               divider.setAttribute('data-new-model-band2-pills-divider', '');
               divider.setAttribute('aria-hidden', 'true');
+              divider.hidden = true;
               divider.textContent = '||';
               pillsRow.appendChild(divider);
             }

@@ -8592,70 +8592,51 @@ def test_delete_confirm_checkbox_does_not_mark_the_card_dirty(
 # --------------------------------------------------------------------------- #
 
 
-def test_locked_display_pills_cannot_be_unselected(
+def test_locked_display_fields_cannot_be_unselected(
     client: TestClient, db: Session
 ) -> None:
     """Name and Email are always shown on the reviewer surface (the server
-    refuses to hide them), so their Band 2 pills render as static labels —
-    no ``tag-chip`` edge, no button role, no tab stop, no click handler —
-    and carry their selection in ``data-locked-on``, which both selection
-    readers accept. Other display pills stay toggleable."""
+    refuses to hide them). 19T Item 3 entry 2 made their Band 2 pills
+    static labels; since 19T Item 8 retired the display pills, their rows
+    in Band 3's display-field table carry a ticked, disabled checkbox and
+    no arrows, and every other display field stays toggleable."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-locked-pills"
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
-    card = _card_slice(body, new_model.id)
-    pills = {
-        m.group(1): m.group(0)
-        for m in re.finditer(
-            r'<span class="pill[^>]*?data-new-model-band2-pill(?![-\w])'
-            r'[^>]*?data-key="([^"]+)"[^>]*>',
-            card,
-        )
+    flat = " ".join(body.split())
+    card = _card_slice(flat, new_model.id)
+    # No display pill survives in Band 2; only response pills remain.
+    assert re.findall(r'data-new-model-band2-pill data-key="reviewee\.', card) == []
+    rows = {
+        re.search(r'data-key="([^"]+)"', r).group(1): r
+        for r in _df_rows(flat, new_model.id)
     }
-    for key in ("reviewee.name", "reviewee.email_or_identifier"):
-        pill = pills[key]
-        assert pill.startswith('<span class="pill pill-count"'), key
-        assert 'data-locked="true" data-locked-on="true"' in pill, key
-        assert "Always shown" in pill, key
-        for control in ("tag-chip", "role=", "tabindex=", "aria-pressed=", "onclick="):
-            assert control not in pill, (key, control)
-    # Each tooltip names the slot the server pins it to.
-    assert 'title="Always shown — pinned first: Name"' in pills["reviewee.name"]
-    assert (
-        'title="Always shown — pinned second: Email"'
-        in pills["reviewee.email_or_identifier"]
-    )
-    tag_1 = pills["reviewee.tag_1"]
+    for key, slot in (("reviewee.name", "first"), ("reviewee.email_or_identifier", "second")):
+        row = rows[key]
+        assert 'data-locked="true"' in row, key
+        box = re.search(r'<input type="checkbox"[^>]*>', row).group(0)
+        assert " checked" in box and " disabled" in box, key
+        # The tooltip names the slot the server pins it to.
+        assert f'title="Always shown — pinned {slot}"' in box, key
+        assert "data-new-model-df-move" not in row, key
+    tag_1 = rows["reviewee.tag_1"]
     assert "data-locked" not in tag_1
-    assert 'role="button"' in tag_1
-    assert 'onclick="newModelToggleBand2Pill(this)"' in tag_1
-    assert 'title="Click to include / drag to reorder ' in tag_1
-    # Both readers of the display selection (selectedPills and the Save
-    # stager) count a locked-on pill; none reads aria-pressed alone.
-    either = (
-        "'[data-new-model-band2-pill][aria-pressed=\"true\"], "
-        "[data-new-model-band2-pill][data-locked-on=\"true\"]'"
-    )
-    assert body.count(either) >= 2
-    assert "'[data-new-model-band2-pill][aria-pressed=\"true\"]'" not in body
-    # Grouped mode switches a locked pill off when it has no group value
-    # (Email), and back on in Individual — its only state change.
+    box = re.search(r'<input type="checkbox"[^>]*>', tag_1).group(0)
+    assert " disabled" not in box
+    # Grouped mode unticks and fixes a field with no group value (Email)
+    # and restores Name / Email's tooltip in Individual.
     start = body.index("function refreshPillStates(card) {")
     refresh = body[start : body.index("\n          }\n", start)]
-    locked = refresh[refresh.index("if (pill.getAttribute('data-locked') === 'true') {"):]
-    assert "pill.setAttribute('data-locked-on', disabled ? 'false' : 'true');" in locked
-    # ...and swaps the "Always shown" tooltip while it is off.
-    assert "? 'Not shown on group rows: ' + pill.getAttribute('data-label')" in locked
-    assert ": pill.getAttribute('data-title-on');" in locked
-    # The original is saved once, before the first overwrite, so a page
-    # that loads grouped still restores "Always shown" in Individual.
-    save = "if (!pill.hasAttribute('data-title-on')) {"
-    assert locked.index(save) < locked.index("pill.title = disabled")
-    # It returns before any control state is written.
-    assert locked.index("return;") < locked.index("pill.setAttribute('aria-disabled'")
+    assert "if (locked) { box.checked = !off; }" in refresh
+    assert "else if (off) { box.checked = false; }" in refresh
+    assert "box.disabled = locked || off;" in refresh
+    assert (
+        "box.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');"
+        in refresh
+    )
 
 
 def test_band3_visibility_cycle_repaints_band2_preview_card(
@@ -8842,15 +8823,14 @@ def test_band3_display_field_table(
     flat = " ".join(client.get(url).text.split())
     rows = _df_rows(flat, new_model.id)
     labels = [re.search(r"<td[^>]*>([^<]+)</td>", r).group(1) for r in rows]
-    # The pills' order: Name and Email pinned first and second.
-    pills = re.findall(
-        r'data-new-model-band2-pill data-key="[^"]+" data-label="([^"]+)" '
-        r'data-source-type="(?!response)',
-        _card_slice(flat, new_model.id),
-    )
-    assert labels == pills
-    assert labels[:2] == ["Name", "Email"]
-    assert len(labels) >= 4
+    # The display order: Name and Email pinned first and second.
+    assert labels == ["Name", "Email", "Tag 1", "Tag 2"]
+    # Each row carries the field's data the preview and Save read.
+    for row in rows:
+        for attr in ("data-label", "data-source-type", "data-source-field",
+                     "data-value", "data-selectable-in-group",
+                     "data-display-field-id", "data-width", "data-reorderable"):
+            assert f"{attr}=" in row, attr
     card = _card_slice(flat, new_model.id)
     assert "<thead" not in card[card.index("<table data-new-model-df-table") :].split("</table>")[0]
 
@@ -8891,22 +8871,32 @@ def test_band3_display_field_table(
     assert 'title="Not shown on group rows"' in boxes["Email"]
 
 
-def test_band3_display_field_table_drives_the_pills(
+def test_band3_display_field_rows_are_the_model(
     client: TestClient, db: Session
 ) -> None:
-    """19T Item 8 rung 2 — the table's handlers act on the display pills,
-    which stay the model the preview and Save read, and the preview
-    rebuild mirrors the pills back into the table."""
+    """19T Item 8 rung 3 — Band 2's display pills are retired, so every
+    reader of the display fields reads Band 3's rows (``dfRows``): the
+    preview's selection, the Save stager's selected keys, the display
+    order, the column widths and the sample row's values."""
     review_session, _ = _new_model_with_tags(client, db, code="19t8-df-js")
     body = client.get(f"/operator/sessions/{review_session.id}/instruments").text
-    start = body.index("window.newModelDfToggle = function (box) {")
-    toggle = body[start : body.index("\n          };", start)]
-    assert "window.newModelToggleBand2Pill(pill);" in toggle
-    start = body.index("window.newModelDfMove = function (btn) {")
-    move = body[start : body.index("\n          };", start)]
-    assert "other.parentNode.insertBefore(pill, up ? other : other.nextSibling);" in move
+
+    def _fn(head: str, tail: str = "\n          }") -> str:
+        start = body.index(head)
+        return body[start : body.index(tail, start)]
+
+    assert "dfRows(card).filter(dfRowOn).forEach(function (row) {" in _fn(
+        "function selectedPills(card) {"
+    )
+    assert "var selectedDisplayKeys = dfRows(card).filter(dfRowOn).map(" in body
+    order = _fn("function saveBand2DisplayFieldOrder(card) {")
+    assert "dfRows(card).forEach(function (row) {" in order
+    assert "if (row.getAttribute('data-reorderable') !== 'true') { return; }" in order
+    assert "dfRows(card).forEach(function (row) {" in _fn("function saveBand2Widths(card) {")
+    assert "return row.getAttribute('data-source-type') === 'reviewee';" in body
+    move = _fn("window.newModelDfMove = function (btn) {", "\n          };")
+    assert "other.parentNode.insertBefore(row, up ? other : other.nextSibling);" in move
     assert "saveBand2DisplayFieldOrder(band2);" in move
-    assert "rebuildPreview(band2);" in move
-    start = body.index("function rebuildPreview(card) {")
-    rebuild = body[start : body.index("\n          }", start)]
-    assert "syncDfTable(card);" in rebuild
+    toggle = _fn("window.newModelDfToggle = function (box) {", "\n          };")
+    assert "saveBand2State(band2);" in toggle
+    assert "syncDfTable(card);" in _fn("function rebuildPreview(card) {")

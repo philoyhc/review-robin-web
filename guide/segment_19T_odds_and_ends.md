@@ -931,9 +931,19 @@ their pressed state the selection, and the preview, the stager and Save
 all read them. A checkbox toggles its pill (`newModelDfToggle`), an arrow
 moves it and stages the order (`newModelDfMove`), and `rebuildPreview`
 mirrors the pills back into the table (`syncDfTable`), so a pill click, a
-drag or a unit-mode switch keeps the table in step. **Rung 3's choice:**
-retiring the pills means the rows must carry the model; building that on
-the rows rather than hiding the pills is the plan.
+drag or a unit-mode switch keeps the table in step. Rung 2 is #2627;
+Codex moved its arrows onto the canonical `.btn-icon` role.
+
+**Rung 3 retires the display pills** (the author, 2026-09-26: retire them,
+and hold the close for adjustments). The rows are now the model: each
+carries the field's data (label, source, sample value, width, display
+id), a checkbox is its selection, and row order is display order. Every
+former pill reader reads the rows through `dfRows`: the preview, the
+group-mode refresh, the column-width resize and collector, the Save
+stager's selected keys, the display-order stager and the sample refresh.
+Band 2 keeps only the response pills, with the `||` divider hidden but
+kept as their anchor. Item 3 entry 2's locked-pill test now pins Name
+and Email's fixed checkboxes. **The close waits** on the author.
 
 ### Doc impact
 
