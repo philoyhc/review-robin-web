@@ -11,8 +11,10 @@ Five items that rework the Instruments page's builder:
   are never required;
 - **Item 2**: required governed fields.
 
-**Logged 2026-09-24 and 2026-09-25 on the author's instruction. Not
-scheduled:** there is no immediate plan to build it. This file keeps the
+**Logged 2026-09-24 and 2026-09-25 on the author's instruction. Being
+built one item at a time:** Item 4 shipped first as 19T Item 7
+(2026-09-26), ahead of Item 3 because it doesn't touch the pills, and
+Item 5 follows as 19T Item 8. The rest is not scheduled. This file keeps the
 author's rulings and the measured cost, so the build can start from them.
 When it is scheduled, it becomes a segment plan
 (`guide/segment_plan_template.md`); until then its entry in
@@ -118,8 +120,10 @@ About 4 PRs:
 
 ## Item 4 — Visibility in Band 2's card
 
-**Logged 2026-09-25 on the author's instruction. Built second, after
-Item 3.**
+**Logged 2026-09-25 on the author's instruction. Built 2026-09-26 as
+19T Item 7** (#2623, #2624), ahead of Item 3. The build kept entry 3's
+repaint, since Save doesn't reload the locked table, and kept Band 3's
+`2fr 3fr` split for Item 5 to settle; the rest is as below.
 
 ### Opportunity
 

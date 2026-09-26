@@ -397,7 +397,8 @@ Item 3 made the Name and Email pills static labels, kept Delete's confirm
 checkbox from dirtying the card, and made Band 2's "Who can see what you
 wrote" card repaint on a Band 3 Visibility edit. Item 6 put a `*` on the
 Required pill, refused fractional Integer bounds and printed Decimal
-bounds as entered.
+bounds as entered. Item 7 moved the visibility editor into Band 2's "Who
+can see what you wrote" card.
 The suite pins the markup, and headless Chromium drove the rows on a
 rendered page. Neither was a person on the live app.
 
@@ -422,8 +423,9 @@ rendered page. Neither was a person on the live app.
 | The Required pill's `*` | Open an instrument card with a required field; open the reviewer preview | Both pills read "*Required items completed", legible in capitals beside the `*` headers |
 | Integer steps are whole | On an Integer row, set Step 0.5 | ✓ is off with "Integer fields take whole-number Min, Max and Step. Choose Decimal for steps like 0.5."; Save refuses it naming the field; switched to Decimal, ✓ lights |
 | Decimal bounds as entered | Decimal row 0–1, Step 0.25, Save; open the reviewer preview | The line above the table reads "0-1, steps of 0.25" |
+| Visibility in the card | Unlock an instrument; cycle Reviewees' "Responses released" and Observers' "Session ongoing"; Save; Lock | Unlocked, the card shows You (reviewer) / Reviewees / Observers with the note, and Band 3 has no Visibility table. After Save and Lock, the locked card shows the new Reviewees mode and no Observers row; a reload keeps both changes |
 | Full-size sample rosters | Guide → Sample session → full-size download; upload both files in Quick Setup on a new session | 154 reviewers and reviewees, tag columns Tutor / Group / Team, a Profile column on Reviewees |
 
-**Where this came from.** `guide/segment_19T_odds_and_ends.md` Items 1–4 and 6,
+**Where this came from.** `guide/segment_19T_odds_and_ends.md` Items 1–4, 6 and 7,
 each closed with this check owed. Settling a row is a dated line
 there, not a reopening.
