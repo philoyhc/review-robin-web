@@ -853,3 +853,86 @@ author's retake of the Guide's two instrument captures.
 - `spec/roundtrip_coverage.md` — "the Band 3 grid" becomes the visibility
   grid (Item 7; the same pass).
 - `docs/status.md` — row when the item closes (Item 7).
+
+---
+
+## Item 8 — Display fields as a Band 3 table
+
+**Opened 2026-09-26 on the author's instruction**: `guide/advanced_instruments.md`
+Item 5, straight after Item 7 into the column it freed. The design record
+holds the rulings and semantics. This block holds the build.
+
+### Opportunity
+
+Display fields are chosen with Band 2's pills and ordered by dragging them.
+Item 7 left Band 3's left column empty beside Response fields.
+
+### Decision (the author, 2026-09-25 and 2026-09-26)
+
+**A headerless table in Band 3's left column**, one row per display field:
+an Active checkbox, the field's session-wide label, and up / down buttons.
+Name and Email have a checkbox that shows their state and can't be changed,
+and no arrows. Changes show in Band 2's preview at once and persist only
+through the card's Save. Band 2's display pills retire once the table
+works. **Band 3 keeps its `2fr 3fr` split for now** (the author,
+2026-09-26); the design record's `1fr 2fr` re-split is deferred.
+**Rejected:** pills above Response fields in Band 3 (the design record's
+first draft, superseded by the column Item 7 freed).
+
+### Semantics
+
+The design record's Item 5 "Semantics" apply unchanged. For this rung: the
+rows follow `_band2.fields`, the pills' own order and source. On a
+group-scoped instrument (`group_kind` set), the fields a group row can't
+show render unticked, Email included.
+
+### Blast radius (measured)
+
+Taken 2026-09-26 at `20f8eb3a`:
+- 28 template lines read the display pills
+  (`grep -c 'data-locked\|data-display-field-id\|selectedPills\|refreshPillStates\|newModelBand2Drag' app/web/templates/operator/instruments_index.html`);
+- 2 test files name the Band 2 pills
+  (`grep -rln --include=*.py "data-new-model-band2-pill\|data-locked" tests/`);
+- the specs the design record names: `spec/instruments.md` and
+  `spec/ui_elements.md`;
+- the Guide's pill sentence and instrument captures.
+
+### PR ladder
+
+1. **Scaffold** (this rung): the plan, and the table with every control
+   disabled. Band 2's pills stay the working editor.
+2. **Wire:** checkboxes and arrows live, repainting the preview and
+   dirtying the card, with Save persisting through the existing display
+   order and selection.
+3. **Retire** Band 2's display pills; the item's cumulative
+   `diff-reviewer` read runs here, from the main commit rung 1 was cut
+   from.
+4. **Close.**
+
+### Definition of done
+
+- Band 3's table sets display-field order and selection, live in the
+  preview and saved by Save, and Band 2 has no display pills.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.8` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- None.
+
+### Status
+
+**Open.** Rung 1 in its PR.
+
+### Doc impact
+
+- `spec/instruments.md` — Band 3's left column holds the display-field
+  table, and Band 2's chip row loses its display pills (Item 8).
+- `spec/ui_elements.md` — "Label or control": the locked Name / Email
+  pills give way to the table's disabled checkboxes (Item 8).
+- `guide/advanced_instruments.md` — Item 5 and the header point to this
+  item as the build (Item 8).
+- `docs/status.md` — row when the item closes (Item 8).

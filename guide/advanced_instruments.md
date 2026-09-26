@@ -14,7 +14,7 @@ Five items that rework the Instruments page's builder:
 **Logged 2026-09-24 and 2026-09-25 on the author's instruction. Being
 built one item at a time:** Item 4 shipped first as 19T Item 7
 (2026-09-26), ahead of Item 3 because it doesn't touch the pills. Item 5
-is next, on the author's instruction. The rest is not scheduled. This file keeps the
+is being built as 19T Item 8. The rest is not scheduled. This file keeps the
 author's rulings and the measured cost, so the build can start from them.
 When it is scheduled, it becomes a segment plan
 (`guide/segment_plan_template.md`); until then its entry in
@@ -187,6 +187,9 @@ About 3 PRs, scaffold-first (CLAUDE.md):
 3. the close.
 
 ## Item 5 — Display fields as a Band 3 table
+
+**Being built as 19T Item 8** (opened 2026-09-26); the build is tracked
+there.
 
 **Logged 2026-09-25 on the author's instruction. Built third, straight
 after Item 4, into the column it frees.** Split out of Item 4, which

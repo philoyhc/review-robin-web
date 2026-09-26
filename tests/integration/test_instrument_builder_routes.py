@@ -8815,3 +8815,66 @@ def test_band2_visibility_card_is_the_editor(
     assert "data-new-model-vp-" not in band3.split("Response fields</h3>")[0]
     assert ">Visibility</h3>" not in card
     assert card.count("data-new-model-vp-form data-new-model-instrument-id=") == 1
+
+
+def _df_rows(flat: str, instrument_id: int) -> list[str]:
+    """The display-field table's rows in Band 3 (19T Item 8)."""
+    card = _card_slice(flat, instrument_id)
+    start = card.index("<table data-new-model-df-table")
+    table = card[start : card.index("</table>", start)]
+    return re.findall(r"<tr data-new-model-df-row.*?</tr>", table)
+
+
+def test_band3_display_field_table_scaffold(
+    client: TestClient, db: Session
+) -> None:
+    """19T Item 8 rung 1 — Band 3's left column carries the display-field
+    table (``guide/advanced_instruments.md`` Item 5): one headerless row
+    per display field in the pills' order, with an Active checkbox, the
+    field, and up / down buttons. Name and Email have a checkbox that
+    only shows their state and no arrows. A scaffold: every control is
+    disabled while Band 2's pills stay the editor."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t8-df-table"
+    )
+    url = f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    flat = " ".join(client.get(url).text.split())
+    rows = _df_rows(flat, new_model.id)
+    labels = [re.search(r"<td[^>]*>([^<]+)</td>", r).group(1) for r in rows]
+    # The pills' order: Name and Email pinned first and second.
+    pills = re.findall(
+        r'data-new-model-band2-pill data-key="[^"]+" data-label="([^"]+)" '
+        r'data-source-type="(?!response)',
+        _card_slice(flat, new_model.id),
+    )
+    assert labels == pills
+    assert labels[:2] == ["Name", "Email"]
+    assert len(labels) > 2
+    card = _card_slice(flat, new_model.id)
+    assert "<thead" not in card[card.index("<table data-new-model-df-table") :].split("</table>")[0]
+    for label, row in zip(labels, rows):
+        box = re.search(r'<input type="checkbox"[^>]*>', row).group(0)
+        # Rung 1 is inert.
+        assert " disabled" in box, label
+        assert all(" disabled" in b for b in re.findall(r"<button[^>]*>", row)), label
+        arrows = re.findall(r'aria-label="Move [^"]+ (up|down)"', row)
+        if label in ("Name", "Email"):
+            assert arrows == [], label
+            assert " checked" in box, label
+        else:
+            assert arrows == ["up", "down"], label
+
+    # A group-scoped instrument: Email has no group value, so its box is
+    # unticked; Name stays ticked.
+    new_model.group_kind = "r1"
+    db.commit()
+    flat = " ".join(client.get(url).text.split())
+    boxes = {
+        re.search(r"<td[^>]*>([^<]+)</td>", r).group(1): re.search(
+            r'<input type="checkbox"[^>]*>', r
+        ).group(0)
+        for r in _df_rows(flat, new_model.id)
+    }
+    assert " checked" in boxes["Name"]
+    assert " checked" not in boxes["Email"]
+    assert 'title="Not shown on group rows"' in boxes["Email"]
