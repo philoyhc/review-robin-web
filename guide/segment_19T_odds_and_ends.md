@@ -979,3 +979,107 @@ text.
 - `spec/instruments.md` — also the tooltips: "Always shown — pinned first"
   and "Not shown on group rows", without the field name (Item 8).
 - `docs/status.md` — row when the item closes (Item 8).
+
+## Item 9 — Response fields as a Band 3 table; the response pills retire
+
+**Opened 2026-09-26 on the author's instruction**: `guide/advanced_instruments.md`
+Item 3, after Item 8. The design record holds the 2026-09-24 rulings and
+the semantics. This block holds the build and the author's 2026-09-26
+layout rulings, reached over five mock-ups.
+
+### Opportunity
+
+Band 2's response pills duplicate the Band 3 rows: each carries the
+field's on/off, its order, the preview column's label, width and help
+text, the R / ≡ mirrors, the shape ✓ pushed, and the response count
+behind the "hide this field?" confirm. Save already reads row order (Item
+1). Branching (design record Item 1) would have to keep the two in step.
+
+### Decision (the author, 2026-09-24 and 2026-09-26)
+
+The design record's Decision stands, with the 2026-09-26 layout rulings:
+- **Response fields become a table**, like Item 8's display-field table
+  but taller: one `<tbody>` per field with a 1px rule under it and no rule
+  inside it, so a branch (design record Item 1) can later join its
+  parent's `<tbody>` as one ruled group.
+- **Each row reads:** Active checkbox, +, an empty ⑂ column, name, type,
+  bounds, R, ≡, ▲, ▼, X. The ⑂ column is held now so branching doesn't
+  shift the row; its button, its selected state on a parent, the condition
+  row, and a bar down from the parent's checkbox with each governed row's
+  + under the parent's ⑂ are design record Item 1's.
+- **▲ ▼ are full-size square buttons**, ▲ then ▼, like the row's other
+  buttons, not the record's half-height stack; the right column has room.
+- **The Active checkbox** is bound to `visible`; unticking a field with
+  responses keeps today's confirm; an inactive row is not dimmed.
+- **✓ and the response pills retire.** The preview reads the rows.
+
+**Rejected:** a rule under each flex row. It draws the lines, but a
+branch needs rows grouped under one rule, and a table lines the name and
+bound boxes up in columns.
+
+### Semantics
+
+The design record's Item 3 "Semantics" apply. For the table: a row is its
+`<tbody data-new-model-rf-row>`, so every `closest`, sibling insert and
+row count the page already makes keeps working; the "+" template clones
+a `<tbody>`.
+
+### Blast radius (measured)
+
+Taken 2026-09-26 at `134953aa`:
+- `app/web/templates/operator/instruments_index.html`: 29 lines name a
+  row (`grep -c 'data-new-model-rf-row'`), 26 a response pill
+  (`grep -c 'data-new-model-band2-pill'`), 8 ✓
+  (`grep -c 'newModelRfSaveRow\|data-new-model-rf-save'`);
+- 2 test files name the rows, the pills or ✓
+  (`grep -rln --include=*.py "data-new-model-rf-row\|data-new-model-band2-pill\|data-new-model-rf-save\|newModelRfSaveRow" tests/`);
+- the specs: `spec/instruments.md`, `spec/operator_button_audit.md`,
+  `spec/ui_elements.md`;
+- the Guide's instrument captures and preview paragraph.
+
+### PR ladder
+
+1. **Scaffold** (this rung): the plan, and the rows as the table, with
+   the Active checkbox and ▲ ▼ rendered but disabled, and the ⑂ column
+   empty. The pills and ✓ stay the working editor.
+2. **Rows carry the pill state** (label, width, help text, response
+   count, `visible`) and the preview reads them. No visible change.
+3. **Wire** the Active checkbox and ▲ ▼: live in the preview, staged for
+   Save, the confirm on a field with responses.
+4. **Retire** the response pills and ✓; the item's cumulative
+   `diff-reviewer` read runs here, from `134953aa`.
+5. **Close.**
+
+### Definition of done
+
+- Band 3's response-field table sets order and on/off, live in the
+  preview and saved by Save; Band 2 has no pills and the rows no ✓.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.9` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+- **Item 8's display-field arrows** as short bordered buttons (19px,
+  inside the 22px pill, so the compact rows keep 32px), mocked up
+  2026-09-26: the author decides.
+
+### Status
+
+**Open.** Rung 1 is this PR.
+
+### Doc impact
+
+- `spec/instruments.md` — Band 3's response-field table, the Active
+  checkbox and ▲ ▼; the pills' per-field visibility section and the ✓ row
+  retire (Item 9).
+- `spec/operator_button_audit.md` — ✓ retires; ▲ ▼ join the row (Item 9).
+- `spec/ui_elements.md` — the response-field table's grouped rules, if
+  they become a class (Item 9).
+- `guide/advanced_instruments.md` — Item 3 and the header point to this
+  item as the build, and record the 2026-09-26 layout rulings (Item 9).
+- `app/web/templates/guide.html` — the preview paragraph; the author
+  retakes the instrument captures (Item 9).
+- `docs/status.md` — row when the item closes (Item 9).

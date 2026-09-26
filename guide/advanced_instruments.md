@@ -14,8 +14,8 @@ Five items that rework the Instruments page's builder:
 **Logged 2026-09-24 and 2026-09-25 on the author's instruction. Being
 built one item at a time:** Item 4 shipped first as 19T Item 7
 (2026-09-26), ahead of Item 3 because it doesn't touch the pills, and
-Item 5 as 19T Item 8 (2026-09-26). Item 3 is next. The rest is not
-scheduled. This file keeps the
+Item 5 as 19T Item 8 (2026-09-26). Item 3 is being built as 19T Item 9.
+The rest is not scheduled. This file keeps the
 author's rulings and the measured cost, so the build can start from them.
 When it is scheduled, it becomes a segment plan
 (`guide/segment_plan_template.md`); until then its entry in
@@ -35,7 +35,10 @@ logged in, kept because other documents cite them:
 
 ## Item 3 — Reorder on the rows; retire the response pills
 
-**Logged 2026-09-24 on the author's instruction. Built first.**
+**Logged 2026-09-24 on the author's instruction. Being built as 19T
+Item 9** (opened 2026-09-26), after Items 4 and 5. The author's
+2026-09-26 layout rulings — a table, full-size ▲ ▼, a ⑂ column held for
+branching — are in that item's Decision.
 
 ### Opportunity
 
