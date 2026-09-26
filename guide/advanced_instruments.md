@@ -188,6 +188,9 @@ About 3 PRs, scaffold-first (CLAUDE.md):
 
 ## Item 5 — Display fields as a Band 3 table
 
+**Being built as 19T Item 8** (opened 2026-09-26); the build is tracked
+there.
+
 **Logged 2026-09-25 on the author's instruction. Built third, straight
 after Item 4, into the column it frees.** Split out of Item 4, which
 first carried it as a half.
