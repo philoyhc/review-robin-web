@@ -2908,6 +2908,13 @@
       body.ui-v2 table.rf-table .btn { padding: 4px 10px; }
       body.ui-v2 table.rf-table td.rf-name { width: 20%; }
       body.ui-v2 table.rf-table td.rf-type { width: 15%; }
+      /* An empty name box shows the field's default label ("Field N")
+         muted, as its placeholder: the name the field goes by until the
+         operator types one (19T Item 9, on the author's ruling). */
+      body.ui-v2 table.rf-table td.rf-name input::placeholder {
+        color: var(--text-subtle);
+        opacity: 1;
+      }
       /* A shorter button for a compact table row (19T Item 9, on the
          author's ruling): the same role and outline, 19px tall, so a
          32px row with a 22px name pill keeps its height. First user:

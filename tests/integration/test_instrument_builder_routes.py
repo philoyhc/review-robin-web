@@ -8359,8 +8359,9 @@ def test_save_success_commits_every_named_row(
     # The untouched placeholder is skipped, not committed (Codex on #2636).
     assert "if (!window.newModelRfSaveName(row)) { return; }" in on_success
     # A row whose name box is empty was saved under its default label
-    # (19T Item 9, the author's ruling), which it gets back first.
-    assert "window.newModelRfRestoreDefaultName(row);" in on_success
+    # (19T Item 9, the author's ruling), which it keeps showing muted:
+    # Save never writes the default into the box.
+    assert "input.value" not in on_success
     # A never-committed row the client finds invalid stays uncommitted
     # rather than committing the rejected text.
     assert "if (window.newModelRfValidateShape(row)) { return; }" in on_success
@@ -8385,9 +8386,9 @@ def test_row_marker_follows_validity(
     recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
     assert "? window.newModelRfValidateShape(row)" in recompute
     assert "row.setAttribute('data-row-pending', 'true');" in recompute
-    # The tooltip says what the preview shows meanwhile; an empty name
-    # says it goes back to its default label.
-    for tail in ("'Enter a field name; left empty, it goes back to its default label.'",
+    # The tooltip says what the preview shows meanwhile; the untouched
+    # placeholder on a card with no fields asks for a name.
+    for tail in ("'Type a name to add this field.'",
                  "' The preview keeps the last valid shape.'",
                  "' The preview shows this field once it is valid.'"):
         assert tail in recompute, tail
@@ -9194,47 +9195,70 @@ def test_band3_response_rows_active_and_arrows_are_wired(
 def test_added_response_fields_get_a_default_label(
     client: TestClient, db: Session
 ) -> None:
-    """19T Item 9, on the author's ruling — every added response field gets
-    a default label, the next "Field N" no row uses; clearing a name puts
-    the default back when the box loses focus, and the stager falls back
-    to it, so Save never drops a field for want of a name: only X
-    deletes. "+" commits the new field at once, with its name selected; a
-    card with no fields gets a blank, unlabelled placeholder instead."""
+    """19T Item 9, on the author's rulings — every added response field has
+    a default label, the next "Field N" no row goes by, shown muted as the
+    empty name box's placeholder until the operator types a name. Clearing
+    a name brings it back; taking it with → or Enter (or typing it) makes
+    it a typed name. The empty box goes by the default in the preview and
+    on Save, so Save never drops a field for want of a name: only X
+    deletes. A card with no fields gets a blank, unlabelled placeholder."""
     review_session, new_model = _new_model_with_tags(client, db, code="19t9-defaults")
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     default = _rf_fn(body, "newModelRfDefaultLabel")
+    assert "used[window.newModelRfSaveName(row)] = true;" in default
     assert "while (used['Field ' + n]) { n += 1; }" in default
-    restore = _rf_fn(body, "newModelRfRestoreDefaultName")
-    assert "if (!input || input.value.trim()) { return false; }" in restore
-    assert "var label = window.newModelRfDefaultFor(row);" in restore
-    assert "row.setAttribute('data-default-label', label);" in restore
-    assert "window.newModelRfRestoreDefaultName(row)" in _rf_fn(body, "newModelRfNameChanged")
+    # The default is the box's placeholder, never its value: muted until
+    # the operator types.
+    sync = _rf_fn(body, "newModelRfSyncDefaults")
+    assert "if (input) { input.placeholder = label; }" in sync
+    assert "input.value =" not in sync
+    # A default another row goes by is replaced; one still free is kept.
+    assert "if (label && !used[label]) { apply(row, label); } else { needs.push(row); }" in sync
+    # A name edit re-syncs every default and commits the rows it changed.
+    changed = _rf_fn(body, "newModelRfFieldChanged")
+    assert "var changed = window.newModelRfSyncDefaults(" in changed
+    assert "window.newModelRfMaybeCommit(other);" in changed
+    # → or Enter in an empty box takes the default as a typed name.
+    key = _rf_fn(body, "newModelRfNameKey")
+    assert "if (event.key !== 'ArrowRight' && event.key !== 'Enter') { return; }" in key
+    assert "if (input.value) { return; }" in key
+    assert "input.value = label;" in key
     rows, template = _band3_rows_and_template(body, new_model.id)
-    # On blur, which fires even when a typed-then-deleted name leaves no
-    # ``change`` (the rung's browser check).
-    assert rows.count('onblur="newModelRfNameChanged(this)"') == 2
-    assert template.count('onblur="newModelRfNameChanged(this)"') == 1
+    assert rows.count('onkeydown="newModelRfNameKey(this, event)"') == 2
+    assert template.count('onkeydown="newModelRfNameKey(this, event)"') == 1
+    assert "onblur=" not in rows + template
     insert = _rf_fn(body, "newModelRfInsertRow")
-    assert "clone.setAttribute('data-default-label', label);" in insert
+    assert "clone.setAttribute('data-default-label', window.newModelRfDefaultLabel(rows));" in insert
+    assert "window.newModelRfSyncDefaults(rows);" in insert
     add = _rf_fn(body, "newModelRfAddRow")
     assert "window.newModelRfMaybeCommit(clone);" in add
-    assert "nameInput.select();" in add
+    # The row goes by its typed name, else its default: the preview's
+    # shape, the controls and the auto-commit all read it.
+    save_name = _rf_fn(body, "newModelRfSaveName")
+    assert "? (row.getAttribute('data-default-label') || '') : '';" in save_name
+    assert "input.value =" not in save_name
+    assert "name: window.newModelRfSaveName(row)," in _rf_fn(body, "newModelRfRowShape")
+    assert "if (!window.newModelRfSaveName(row)) { return; }" in _rf_fn(
+        body, "newModelRfMaybeCommit"
+    )
     start = body.index("function saveBand2State(card, opts) {")
     stager = body[start : body.index("\n          }\n", start)]
-    # Save and leaving the box pick a cleared name the same way.
     assert "var name = window.newModelRfSaveName(row);" in stager
-    # The stager reads the label; it never writes the page.
-    save_name = _rf_fn(body, "newModelRfSaveName")
-    assert "|| window.newModelRfDefaultFor(row);" in save_name
-    assert "input.value =" not in save_name
-    # A stored default another row has taken is replaced.
-    default_for = _rf_fn(body, "newModelRfDefaultFor")
-    assert "return (!label || taken) ? window.newModelRfDefaultLabel(rows) : label;" in default_for
     # The load-time row on a card with no fields is a blank placeholder:
     # no label, not committed, so Save skips it until the operator types
     # in it (the rung's read: a labelled starter met the setup gates).
     assert "window.newModelRfInsertRow(band3, null, true);" in _rf_script(body)
     assert "if (!placeholder) {" in insert
-    assert "&& row.getAttribute('data-committed') !== 'true') { return ''; }" in default_for
+    is_field = _rf_fn(body, "newModelRfIsField")
+    assert "return !!row.getAttribute('data-default-label')" in is_field
+    assert "|| row.getAttribute('data-committed') === 'true';" in is_field
+    # The muted style.
+    assert "table.rf-table td.rf-name input::placeholder" in body
+    # A new row lives only on the page until a successful Save (the
+    # author's ruling): none of the row functions talks to the server.
+    for name in ("newModelRfAddRow", "newModelRfInsertRow",
+                 "newModelRfSyncDefaults", "newModelRfNameKey",
+                 "newModelRfMaybeCommit"):
+        assert "fetch(" not in _rf_fn(body, name), name

@@ -1186,6 +1186,19 @@ Codex (#2636): Save's success handler committed the untouched placeholder
 (an empty name passes shape validation), so the next Save stored it as a
 "Field N"; it now skips any row Save did not send.
 
+The author's follow-up rulings (in #2636): the default shows **muted, as
+the empty box's placeholder**, until a name is typed, and clearing a name
+always brings it back that way. Taking the default with → or Enter, or
+typing it, makes it a typed name in normal style. The box stays empty, so
+the row goes by its default everywhere a name is read
+(`newModelRfSaveName`: the preview, the marker, the auto-commit and the
+stager), and `newModelRfSyncDefaults` re-assigns defaults on each name
+edit, committing any row whose default moved. This supersedes the
+`blur` restore and the selected name above. A saved label reloads as a
+typed name, since nothing records that it was a default. As before, a
+new row lives only on the page (the card turns unsaved; Cancel drops it)
+until a successful Save.
+
 ### Doc impact
 
 - `spec/instruments.md` — Band 3's response-field table, the Active

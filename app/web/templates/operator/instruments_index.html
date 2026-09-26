@@ -2688,10 +2688,10 @@
             // will refuse it) sends unselected.
             function serializeRow(row) {
               var committed = rfRowCommitted(row);
-              // 19T Item 9 — a cleared name gets its default label back,
-              // as leaving the box does, so Save never drops a field for
-              // want of a name; only X deletes. The untouched placeholder
-              // has none and is skipped.
+              // 19T Item 9 — an empty name box saves as the row's default
+              // label, which it shows muted, so Save never drops a field
+              // for want of a name; only X deletes. The untouched
+              // placeholder has none and is skipped.
               var name = window.newModelRfSaveName(row);
               if (!name) { return null; }
               var typeSelect = row.querySelector('[data-new-model-rf-data-type]');
@@ -3743,8 +3743,6 @@
             // 19T Item 1 — Save persisted each named row as typed, and
             // there is no reload, so bring every row to what was saved
             // (19T Item 9):
-            //   - a row whose name box is empty (Save sent its default
-            //     label) gets that label back first;
             //   - a named row never committed was saved hidden (``selected``
             //     false, Codex on #2633); it commits unselected if its shape
             //     is valid here, and otherwise stays marked, uncommitted;
@@ -3766,7 +3764,6 @@
                 // The untouched placeholder wasn't sent and stays one
                 // (Codex on #2636).
                 if (!window.newModelRfSaveName(row)) { return; }
-                window.newModelRfRestoreDefaultName(row);
                 if (row.getAttribute('data-committed') !== 'true') {
                   row.setAttribute('data-selected', 'false');
                   if (window.newModelRfValidateShape(row)) { return; }
@@ -4132,7 +4129,7 @@
                 <input type="text"
                        data-new-model-rf-name
                        placeholder="Response field"
-                       onblur="newModelRfNameChanged(this)"
+                       onkeydown="newModelRfNameKey(this, event)"
                        value="{{ rf.name }}"
                        oninput="newModelRfFieldChanged(this)"
                        style="width: 100%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
@@ -4245,7 +4242,7 @@
               <input type="text"
                      data-new-model-rf-name
                      placeholder="Response field"
-                     onblur="newModelRfNameChanged(this)"
+                     onkeydown="newModelRfNameKey(this, event)"
                      oninput="newModelRfFieldChanged(this)"
                      style="width: 100%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
               </td>
@@ -4511,13 +4508,98 @@
           }
           return null;
         };
+        // 19T Item 9 — every added response field has a default label, the
+        // next "Field N" no row uses, kept on the row
+        // (``data-default-label``). While the name box is empty the default
+        // shows muted, as the box's placeholder, and is the field's name:
+        // the preview shows it and Save sends it, so no field goes for want
+        // of a name and only X deletes one. Clearing a name brings it back.
+        // Typing the default, or taking it with → or Enter, makes it a
+        // typed name, shown normally until cleared.
+        // A row that is a field: committed, or given a default by "+". The
+        // blank placeholder on a card with no fields is neither until the
+        // operator types in it (then it commits).
+        window.newModelRfIsField = window.newModelRfIsField || function (row) {
+          return !!row.getAttribute('data-default-label')
+            || row.getAttribute('data-committed') === 'true';
+        };
+        // The name a row goes by: its typed name, else its default if it is
+        // a field. Reads only; empty only for the untouched placeholder,
+        // which the stager skips.
+        window.newModelRfSaveName = window.newModelRfSaveName || function (row) {
+          var input = row.querySelector('[data-new-model-rf-name]');
+          var typed = (input && input.value || '').trim();
+          if (typed) { return typed; }
+          return window.newModelRfIsField(row)
+            ? (row.getAttribute('data-default-label') || '') : '';
+        };
+        // The next "Field N" no row goes by.
+        window.newModelRfDefaultLabel = window.newModelRfDefaultLabel || function (rows) {
+          var used = {};
+          if (rows) {
+            rows.querySelectorAll('[data-new-model-rf-row]').forEach(function (row) {
+              used[window.newModelRfSaveName(row)] = true;
+            });
+          }
+          var n = 1;
+          while (used['Field ' + n]) { n += 1; }
+          return 'Field ' + n;
+        };
+        // Give every field whose box is empty a default no other row goes
+        // by, keeping the one it has where it can, and show it as the
+        // box's placeholder. Returns the rows whose default changed, so
+        // the caller can commit them to the preview.
+        window.newModelRfSyncDefaults = window.newModelRfSyncDefaults || function (rows) {
+          var changed = [];
+          if (!rows) { return changed; }
+          var all = Array.prototype.slice.call(
+            rows.querySelectorAll('[data-new-model-rf-row]')
+          );
+          function typed(row) {
+            var input = row.querySelector('[data-new-model-rf-name]');
+            return (input && input.value || '').trim();
+          }
+          var used = {};
+          all.forEach(function (row) { if (typed(row)) { used[typed(row)] = true; } });
+          var needs = [];
+          function apply(row, label) {
+            used[label] = true;
+            if (row.getAttribute('data-default-label') !== label) {
+              row.setAttribute('data-default-label', label);
+              changed.push(row);
+            }
+            var input = row.querySelector('[data-new-model-rf-name]');
+            if (input) { input.placeholder = label; }
+          }
+          all.forEach(function (row) {
+            if (typed(row) || !window.newModelRfIsField(row)) { return; }
+            var label = row.getAttribute('data-default-label');
+            if (label && !used[label]) { apply(row, label); } else { needs.push(row); }
+          });
+          needs.forEach(function (row) {
+            var n = 1;
+            while (used['Field ' + n]) { n += 1; }
+            apply(row, 'Field ' + n);
+          });
+          return changed;
+        };
+        // → or Enter in an empty box takes the default as a typed name.
+        window.newModelRfNameKey = window.newModelRfNameKey || function (input, event) {
+          if (event.key !== 'ArrowRight' && event.key !== 'Enter') { return; }
+          if (input.value) { return; }
+          var row = input.closest('[data-new-model-rf-row]');
+          var label = row && window.newModelRfSaveName(row);
+          if (!label) { return; }
+          event.preventDefault();
+          input.value = label;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        };
         // 19T Item 1 — the row's live name, type and bounds, in the shape
         // ``newModelRfCommittedShape`` reads off the row's committed state.
         window.newModelRfRowShape = window.newModelRfRowShape || function (row) {
-          var nameInput = row.querySelector('[data-new-model-rf-name]');
           var typeSel = row.querySelector('[data-new-model-rf-data-type]');
           var shape = {
-            name: (nameInput && nameInput.value || '').trim(),
+            name: window.newModelRfSaveName(row),
             dataType: typeSel ? typeSel.value : 'string',
             min: '', max: '', step: '', list: '',
           };
@@ -4564,8 +4646,7 @@
         };
         window.newModelRfRecomputeActionStates = window.newModelRfRecomputeActionStates || function (row) {
           if (!row) { return; }
-          var nameInput = row.querySelector('[data-new-model-rf-name]');
-          var name = (nameInput && nameInput.value || '').trim();
+          var name = window.newModelRfSaveName(row);
           var deleteBtn = row.querySelector('[data-new-model-rf-delete]');
           var requiredBtn = row.querySelector('[data-new-model-rf-required]');
           var helpBtn = row.querySelector('[data-new-model-rf-help-visible]');
@@ -4592,7 +4673,7 @@
           var committed = row.getAttribute('data-committed') === 'true';
           var reason = name
             ? window.newModelRfValidateShape(row)
-            : 'Enter a field name; left empty, it goes back to its default label.';
+            : 'Type a name to add this field.';
           if (reason) {
             row.setAttribute('data-row-pending', 'true');
             // What the preview shows meanwhile: the last valid shape of a
@@ -4644,10 +4725,19 @@
         // recompute on each keystroke so the marker and X reflect the
         // live state without waiting for blur, then commits the row to
         // the preview if its shape is valid (19T Item 9).
+        // 19T Item 9 — a name edit can free or take another row's
+        // default, so defaults are re-synced first and any row whose
+        // default changed commits too.
         window.newModelRfFieldChanged = window.newModelRfFieldChanged || function (input) {
           var row = input.closest('[data-new-model-rf-row]');
+          var changed = window.newModelRfSyncDefaults(
+            row.closest('[data-new-model-rf-rows]')
+          );
           window.newModelRfRecomputeActionStates(row);
           window.newModelRfMaybeCommit(row);
+          changed.forEach(function (other) {
+            if (other !== row) { window.newModelRfMaybeCommit(other); }
+          });
         };
         // Sync each row on page load so the initial data-type pick
         // shows the right bounds. (Default is String → min, max.)
@@ -4664,63 +4754,6 @@
         // fresh data-row-key. ``after`` null appends; ``placeholder``
         // leaves it unlabelled (the blank row a card with no saved fields
         // gets at load).
-        // 19T Item 9 — every added response field gets a default label, the
-        // next "Field N" no row uses, kept on the row
-        // (``data-default-label``). Clearing a name puts it back when the
-        // box loses focus (on ``blur``, which fires even when ``change``
-        // doesn't), and Save sends the same label, so no field goes for
-        // want of a name and only X deletes one.
-        window.newModelRfDefaultLabel = window.newModelRfDefaultLabel || function (rows) {
-          var used = {};
-          if (rows) {
-            rows.querySelectorAll('[data-new-model-rf-name]').forEach(function (input) {
-              used[(input.value || '').trim()] = true;
-            });
-          }
-          var n = 1;
-          while (used['Field ' + n]) { n += 1; }
-          return 'Field ' + n;
-        };
-        // The label an empty name goes back to: the row's stored default,
-        // unless another row has since taken it, else the next free one.
-        // Empty for the blank placeholder on a card with no fields, which
-        // is not a field until the operator types in it (then it commits).
-        // Reads only; ``newModelRfRestoreDefaultName`` writes it.
-        window.newModelRfDefaultFor = window.newModelRfDefaultFor || function (row) {
-          var input = row.querySelector('[data-new-model-rf-name]');
-          if (!row.getAttribute('data-default-label')
-              && row.getAttribute('data-committed') !== 'true') { return ''; }
-          var rows = row.closest('[data-new-model-rf-rows]');
-          var label = row.getAttribute('data-default-label');
-          var taken = label && rows && Array.prototype.some.call(
-            rows.querySelectorAll('[data-new-model-rf-name]'),
-            function (other) { return other !== input && other.value.trim() === label; }
-          );
-          return (!label || taken) ? window.newModelRfDefaultLabel(rows) : label;
-        };
-        window.newModelRfRestoreDefaultName = window.newModelRfRestoreDefaultName || function (row) {
-          var input = row && row.querySelector('[data-new-model-rf-name]');
-          if (!input || input.value.trim()) { return false; }
-          var label = window.newModelRfDefaultFor(row);
-          if (!label) { return false; }
-          row.setAttribute('data-default-label', label);
-          input.value = label;
-          return true;
-        };
-        // The name a row saves under: its typed name, or, when the box is
-        // empty, the label leaving the box would put back. Reads only, so
-        // staging never changes the page; empty only for the untouched
-        // placeholder, which the stager skips.
-        window.newModelRfSaveName = window.newModelRfSaveName || function (row) {
-          var input = row.querySelector('[data-new-model-rf-name]');
-          return (input && input.value || '').trim() || window.newModelRfDefaultFor(row);
-        };
-        window.newModelRfNameChanged = window.newModelRfNameChanged || function (input) {
-          var row = input.closest('[data-new-model-rf-row]');
-          if (window.newModelRfRestoreDefaultName(row)) {
-            window.newModelRfFieldChanged(input);
-          }
-        };
         window.newModelRfInsertRow = window.newModelRfInsertRow || function (band3, after, placeholder) {
           var rows = band3 ? band3.querySelector('[data-new-model-rf-rows]') : null;
           var tpl = band3 ? band3.querySelector('[data-new-model-rf-row-template]') : null;
@@ -4735,9 +4768,7 @@
           var clone = group.querySelector('[data-new-model-rf-row]');
           clone.setAttribute('data-row-key', 'rf_' + counter);
           if (!placeholder) {
-            var label = window.newModelRfDefaultLabel(rows);
-            clone.setAttribute('data-default-label', label);
-            clone.querySelector('[data-new-model-rf-name]').value = label;
+            clone.setAttribute('data-default-label', window.newModelRfDefaultLabel(rows));
           }
           var afterGroup = after ? after.closest('[data-new-model-rf-group]') : null;
           if (afterGroup && afterGroup.parentElement === rows) {
@@ -4749,6 +4780,7 @@
           // (its default is "string" → Min + Max).
           var sel = clone.querySelector('[data-new-model-rf-data-type]');
           if (sel) { window.newModelRfSyncBounds(sel); }
+          window.newModelRfSyncDefaults(rows);
           // Every row's X depends on the row count, so recompute all.
           rows.querySelectorAll('[data-new-model-rf-row]').forEach(function (r) {
             window.newModelRfRecomputeActionStates(r);
@@ -4762,7 +4794,7 @@
           );
           if (clone) { window.newModelRfMaybeCommit(clone); }
           var nameInput = clone && clone.querySelector('[data-new-model-rf-name]');
-          if (nameInput) { nameInput.focus(); nameInput.select(); }
+          if (nameInput) { nameInput.focus(); }
         };
         // 19T Item 1 — commit a row: copy its live name, type and bounds
         // into its committed state, which is what the preview reads (19T
@@ -4788,8 +4820,7 @@
         // the reason as the row's tooltip.
         window.newModelRfMaybeCommit = window.newModelRfMaybeCommit || function (row) {
           if (!row) { return; }
-          var nameInput = row.querySelector('[data-new-model-rf-name]');
-          if (!(nameInput && nameInput.value.trim())) { return; }
+          if (!window.newModelRfSaveName(row)) { return; }
           if (window.newModelRfValidateShape(row)) { return; }
           if (row.getAttribute('data-committed') === 'true'
               && !window.newModelRfRowDiffersFromCommitted(row)) { return; }
