@@ -127,7 +127,11 @@ def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
     errors: list[ApplyError] = []
     for n, instrument in sorted(plan.instruments.items()):
         specs = sorted(instrument.response_fields.items())
-        if not any(rf.branch_parent or rf.branch_op for _, rf in specs):
+        # Any of the three branch cells, so a lone ``branch_value`` is an
+        # orphaned condition refused here, not stored (Codex on #2642).
+        if not any(
+            rf.branch_parent or rf.branch_op or rf.branch_value for _, rf in specs
+        ):
             continue
         position_by_key = {rf.field_key: m for m, rf in specs if rf.field_key}
         planned: list[_PlannedField] = []

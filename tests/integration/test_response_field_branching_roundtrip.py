@@ -151,6 +151,16 @@ def test_the_settings_csv_refuses_a_broken_branch(db: Session) -> None:
             rows.append(Row(path, value, "boolean"))
         result = apply_session_config(db, review_session, rows)
         assert [e.message for e in result.errors] == messages, path
+    # A lone branch_value, with no operator and no governed field, is an
+    # orphaned condition (Codex on #2642).
+    result = apply_session_config(
+        db, review_session,
+        [r for r in _rows()
+         if not r.field.endswith(("branch_op", "branch_parent"))],
+    )
+    assert [e.message for e in result.errors] == [
+        "Rating: Its branch condition governs no field."
+    ]
     result = apply_session_config(
         db, review_session,
         [Row(r.field, "gte", r.data_type) if r.field.endswith("branch_op") else r

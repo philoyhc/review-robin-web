@@ -232,7 +232,10 @@ def _apply_branches(
     held the file to the branching rules (``_apply_parse._branch_errors``),
     so a broken branch is a named row error, not a failed apply; the
     checks here only guard that contract."""
-    if not any(spec.branch_parent or spec.branch_op for spec, _ in created):
+    if not any(
+        spec.branch_parent or spec.branch_op or spec.branch_value
+        for spec, _ in created
+    ):
         return
     db.flush()  # populate ids
     by_key = {field.field_key: field for _, field in created}
