@@ -4232,17 +4232,15 @@
                   <td style="padding: 4px 8px;">{{ field.label }}</td>
                   <td style="padding: 4px 8px; width: 1%; white-space: nowrap;">
                     {% if not field.locked %}
-                      <button type="button" class="btn secondary"
+                      <button type="button" class="btn-icon"
                               data-new-model-df-move="up"
                               {% if loop.previtem is not defined or loop.previtem.locked %}disabled{% endif %}
-                              style="padding: 4px 10px;"
                               aria-label="Move {{ field.label }} up"
                               title="Move up"
                               onclick="newModelDfMove(this)">▲</button>
-                      <button type="button" class="btn secondary"
+                      <button type="button" class="btn-icon"
                               data-new-model-df-move="down"
                               {% if loop.last %}disabled{% endif %}
-                              style="padding: 4px 10px;"
                               aria-label="Move {{ field.label }} down"
                               title="Move down"
                               onclick="newModelDfMove(this)">▼</button>
