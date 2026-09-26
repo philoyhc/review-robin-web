@@ -2891,6 +2891,35 @@
       body.ui-v2 table.rf-table .btn { padding: 4px 10px; }
       body.ui-v2 table.rf-table td.rf-name { width: 20%; }
       body.ui-v2 table.rf-table td.rf-type { width: 15%; }
+      /* A branch in Band 3's response-field table (19T Item 10). The bar
+         runs down the checkbox column from the parent's checkbox through
+         its condition and governed rows; the condition row reads "If the
+         above [operator] [value] then show the below". */
+      body.ui-v2 table.rf-table td.rf-branch-bar,
+      body.ui-v2 table.rf-table td.rf-branch-bar-start { position: relative; }
+      body.ui-v2 table.rf-table td.rf-branch-bar::before,
+      body.ui-v2 table.rf-table td.rf-branch-bar-start::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        border-left: 2px solid var(--btn-primary-border);
+      }
+      body.ui-v2 table.rf-table td.rf-branch-bar-start::before { top: 70%; }
+      body.ui-v2 table.rf-table td.rf-condition-cell {
+        font-size: var(--fs-small);
+        color: var(--text-subtle);
+      }
+      body.ui-v2 table.rf-table td.rf-condition-cell { white-space: nowrap; }
+      body.ui-v2 table.rf-table td.rf-condition-cell select,
+      body.ui-v2 table.rf-table td.rf-condition-cell input {
+        display: inline-block;
+        width: auto;
+        padding: 4px 8px;
+        margin: 0 4px;
+      }
+      body.ui-v2 table.rf-table td.rf-condition-cell input { width: 12em; }
       /* A governed response cell whose branch is closed (19T Item 10):
          muted, its control disabled until the parent's answer opens it.
          The cell's title names the condition. */

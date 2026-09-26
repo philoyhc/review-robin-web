@@ -1409,6 +1409,22 @@ implied, would have raised past Quick Setup's result handling as a 500.
 Replicate instrument copies the condition and re-points the parent at its
 copy; session clone has since rung 2. **Doc impact gains**
 `spec/settings_inventory.md`, which lists the per-field CSV attributes.
+Rung 5 is #2642; Codex's finding (a lone `branch_value` skipped both
+guards) is fixed there.
+
+**Rung 6 lands the builder scaffold.** The view groups Band 3's rows
+(`views._response_field_groups`): a field on its own, or a parent with
+its condition and governed fields, one `<tbody>` each. A governed row
+shifts one column before the name (the bar in the checkbox column, its
+checkbox in +'s, its + in ⑂'s); the condition row reads "If the above
+[operator] [value] then show the below" with its "+" in ⑂'s column and
+no X. ⑂ shows its three states (selected on a parent, outline on a
+number or List field, inactive on String), the "+" template row
+included. Every branch control carries `data-new-model-rf-branch-inert`,
+which the row recompute keeps disabled, so nothing about a branch can
+be edited yet: ⑂, the condition, a governed row's Active, +, R, ▲ ▼ and
+X, and a parent's Active and X ("Delete its branch first"). A parent's
+▲ ▼ and "+" work as before, moving or following the whole group.
 
 ### Doc impact
 
