@@ -42,6 +42,7 @@ from app.db.models import (
     Reviewee,
 )
 from app.schemas.responses import ResponseUpsert
+from app.services.responses._branch_rule import drop_closed_branch_answers
 
 
 class GroupKeyable(Protocol):
@@ -290,6 +291,7 @@ def _refan_group_responses(
         ).append(sib)
 
     written = 0
+    refanned: set[int] = set()
     for target in targets:
         if target.instrument_id not in group_instrument_ids:
             continue
@@ -335,8 +337,13 @@ def _refan_group_responses(
                 )
             )
             written += 1
+            refanned.add(target.id)
     if written:
         db.flush()
+        # 19T Item 10 — the copies came from a sibling that already held
+        # to the rule; checked here too, since every writer goes through
+        # the one rule.
+        drop_closed_branch_answers(db, refanned)
     return written
 
 
