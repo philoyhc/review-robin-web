@@ -2303,18 +2303,18 @@ def test_new_model_response_field_width_persists_on_band2_state(
     assert _band2_rfs(new_model)[0]["width_px"] == 1200
 
     # Template renders the stored width as data-width on the
-    # response pill — the preview-builder JS picks it up to set
-    # the response column's <col style="width: Npx">.
+    # response-field row (19T Item 9; it was the pill) — the
+    # preview-builder JS picks it up to set the response column's
+    # <col style="width: Npx">.
     body = client.get(
         f"/operator/sessions/{review_session.id}"
         f"/instruments?editing={new_model.id}"
     ).text
     assert 'data-source-type="response"' in body
-    # The data-width attribute on the response pill should carry
-    # the saved width.
     flat = " ".join(body.split())
-    assert 'data-row-key="rf_0" data-response-key="rf_0"' in flat
-    assert 'data-width="1200"' in flat
+    card = _card_slice(flat, new_model.id)
+    row = re.search(r'<tbody data-new-model-rf-row data-row-key="rf_0".*?>', card).group(0)
+    assert 'data-width="1200"' in row
 
 
 # --------------------------------------------------------------------------- #
@@ -5995,10 +5995,11 @@ def test_pr5b_band2_staging_wiring_ships(
     # saveBand2State stages into the snapshot (no immediate POST).
     assert "[data-new-model-band2-state-snapshot]" in body
     assert "window.newModelMarkCardDirty(instrumentCard)" in body
-    # Lost-edit fix: every row is serialized, paired chip or not
-    # (``pill`` is null for a named row never ✓'d); 19T Item 1 made
-    # it one pass in row order.
-    assert "var rf = serializeRow(row, pill);" in body
+    # Lost-edit fix: every row is serialized, committed or not (a
+    # named row never ✓'d saves unselected); 19T Item 1 made it one
+    # pass in row order, 19T Item 9 reads it off the rows.
+    assert "var rf = serializeRow(row);" in body
+    assert "selected: rfRowOn(row)," in body
     assert "if (!name) { return null; }" in body
 
 
@@ -6088,15 +6089,16 @@ def test_pr7_dead_inline_editor_handlers_swept(
 def test_stage_band2_sends_response_column_width_px(
     client: TestClient, db: Session
 ) -> None:
-    """The stager includes ``width_px`` (from the pill's data-width) so
-    a new field's width has a persistence path."""
+    """The stager includes ``width_px`` (from the row's data-width, the
+    pill's before 19T Item 9) so a new field's width has a persistence
+    path."""
     review_session, _new_model = _new_model_with_tags(
         client, db, code="width-px-wiring"
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    assert "rf.width_px = pillWidth" in body
+    assert "rf.width_px = rowWidth" in body
 
 
 def test_pr5c_button_state_matrix_and_shape_css_ship(
@@ -6115,10 +6117,11 @@ def test_pr5c_button_state_matrix_and_shape_css_ship(
     # R / ≡ blank-row gate.
     assert "_blankRowGate(requiredBtn" in body
     assert "'Enter a field name first.'" in body
-    # ✓ greys when the row matches its pill (19T Item 1 replaced the
-    # pending flag with that comparison).
+    # ✓ greys when the row matches what it committed (19T Item 1
+    # replaced the pending flag with that comparison; 19T Item 9 moved
+    # it off the pill).
     assert "The pill and preview already match this row." in body
-    assert "newModelRfRowDiffersFromPill(row, pairedPill)" in body
+    assert "window.newModelRfRowDiffersFromCommitted(row)" in body
     # Disabled-shape inputs (frozen type / bounds) look inactive.
     assert "[data-new-model-rf-data-type]:disabled" in body
     assert "[data-new-model-rf-bound]:disabled" in body
@@ -8226,43 +8229,47 @@ def _rf_fn(body: str, name: str) -> str:
     return script[start : script.index("\n        };", start)]
 
 
-def test_response_pill_carries_the_shape_the_preview_shows(
+def test_response_row_carries_the_shape_the_preview_shows(
     client: TestClient, db: Session
 ) -> None:
-    """Each server-rendered response pill carries the saved type and
-    bounds, so the preview reads what ✓ last pushed, not the live row,
-    and ✓ can compare the row against it."""
+    """Each server-rendered response-field row carries the saved type and
+    bounds as its committed state, so the preview reads what ✓ last
+    pushed, not the live inputs, and ✓ can compare the inputs against it.
+    19T Item 9 moved this off the pill, which now carries none of it."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-pill-shape"
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
-    card = _card_slice(body, new_model.id)
-    pills = {
+    flat = " ".join(body.split())
+    rows, _template = _band3_rows_and_template(flat, new_model.id)
+    heads = {
         m.group(1): m.group(0)
         for m in re.finditer(
-            r'<span class="pill tag-chip[^>]*?data-label="([^"]*)"\s+'
-            r'data-source-type="response"[^>]*>',
-            card,
+            r'<tbody data-new-model-rf-row [^>]*?data-label="([^"]*)"[^>]*>', rows
         )
     }
-    assert set(pills) == {"Rating", "Comments"}
+    assert set(heads) == {"Rating", "Comments"}
     # Rating is Integer 1–5 step 1, Comments String 0–2000 (the seed);
-    # the pill carries the same values the row's inputs render.
-    assert 'data-rf-data-type="integer"' in pills["Rating"]
-    assert 'data-rf-min="1"' in pills["Rating"]
-    assert 'data-rf-max="5"' in pills["Rating"]
-    assert 'data-rf-step="1"' in pills["Rating"]
-    assert 'data-rf-data-type="string"' in pills["Comments"]
-    assert 'data-rf-max="2000"' in pills["Comments"]
-    assert 'data-rf-list=""' in pills["Comments"]
-    # The preview builders read the pill, never the row.
+    # the row carries the same values its inputs render.
+    for attr in ('data-committed="true"', 'data-selected="true"',
+                 'data-rf-data-type="integer"', 'data-rf-min="1"',
+                 'data-rf-max="5"', 'data-rf-step="1"'):
+        assert attr in heads["Rating"], attr
+    assert 'data-rf-data-type="string"' in heads["Comments"]
+    assert 'data-rf-max="2000"' in heads["Comments"]
+    assert 'data-rf-list=""' in heads["Comments"]
+    card = _card_slice(flat, new_model.id)
+    for pill in re.findall(r'<span class="pill tag-chip[^>]*data-source-type="response"[^>]*>', card):
+        assert "data-rf-" not in pill and "data-width" not in pill
+        assert "data-help-text" not in pill and "data-response-count" not in pill
+    # The preview builders read the row's committed state, never a pill.
     for fn in ("function buildResponseFieldPreviewCell", "function buildConstraints"):
         start = body.index(fn)
         src = body[start : body.index("\n          }\n", start)]
-        assert "newModelRfPillShape(pill)" in src
-        assert "[data-new-model-rf-row]" not in src
+        assert "newModelRfCommittedShape(row)" in src
+        assert "data-new-model-band2-pill" not in src
 
 
 def test_tick_enables_by_comparison_not_a_pending_flag(
@@ -8278,23 +8285,24 @@ def test_tick_enables_by_comparison_not_a_pending_flag(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
-    assert "newModelRfRowDiffersFromPill(row, pairedPill)" in recompute
+    assert "!window.newModelRfRowDiffersFromCommitted(row)" in recompute
     assert "getAttribute('data-row-pending')" not in recompute
     assert "'Update this field\\'s pill and preview column'" in recompute
     assert "'Add this field\\'s pill and preview column'" in recompute
     assert "Save this response field" not in body
-    differs = _rf_fn(body, "newModelRfRowDiffersFromPill")
+    differs = _rf_fn(body, "newModelRfRowDiffersFromCommitted")
     assert "string: ['min', 'max']" in differs
     assert "list: ['list']" in differs
     # No keystroke listener flags a row any more.
     assert "ev.target.closest('[data-new-model-rf-row]')" not in body
 
 
-def test_tick_writes_the_pill_shape_and_selects_a_new_pill(
+def test_tick_commits_the_row_and_selects_a_new_field(
     client: TestClient, db: Session
 ) -> None:
-    """✓ copies the row's type and bounds onto the pill, and a pill it
-    creates starts selected, so the field's column joins the preview."""
+    """✓ commits the row's name, type and bounds onto the row (the pill
+    before 19T Item 9), and a row committed for the first time starts
+    selected, so the field's column joins the preview."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-tick-writes"
     )
@@ -8302,11 +8310,13 @@ def test_tick_writes_the_pill_shape_and_selects_a_new_pill(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     save_row = _rf_fn(body, "newModelRfSaveRow")
-    assert "window.newModelRfSyncPill(row, pill);" in save_row
-    sync = _rf_fn(body, "newModelRfSyncPill")
+    assert "window.newModelRfCommitRow(row);" in save_row
+    commit = _rf_fn(body, "newModelRfCommitRow")
+    assert "row.setAttribute('data-committed', 'true');" in commit
     for attr in ("data-label", "data-rf-data-type", "data-rf-min",
                  "data-rf-max", "data-rf-step", "data-rf-list"):
-        assert f"pill.setAttribute('{attr}'" in sync
+        assert f"row.setAttribute('{attr}'" in commit
+    assert "row.setAttribute('data-selected', 'true');" in save_row
     assert "pill.setAttribute('aria-pressed', 'true');" in save_row
     assert "pill.setAttribute('aria-pressed', 'false');" not in save_row
 
@@ -8343,17 +8353,17 @@ def test_save_success_brings_every_pill_up_to_its_row(
     ).text
     start = body.index("window.newModelOnSaveSuccess =")
     on_success = body[start : body.index("\n          };", start)]
-    assert "window.newModelRfSyncPill(row, pill);" in on_success
+    assert "window.newModelRfCommitRow(row);" in on_success
     assert "window.newModelRefreshBand2(b2);" in on_success
     assert "window.newModelRfRecomputeActionStates(row);" in on_success
 
 
-def test_row_marker_follows_the_pill_comparison_not_validity(
+def test_row_marker_follows_the_committed_comparison_not_validity(
     client: TestClient, db: Session
 ) -> None:
-    """The amber marker shows whenever the row differs from its pill (or
-    is a named row with no pill), so an invalid edit still shows while
-    ✓ is off."""
+    """The amber marker shows whenever the row differs from what it
+    committed (or is a named row not yet committed), so an invalid edit
+    still shows while ✓ is off."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-marker"
     )
@@ -8361,7 +8371,7 @@ def test_row_marker_follows_the_pill_comparison_not_validity(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
-    assert "? window.newModelRfRowDiffersFromPill(row, markPill)" in recompute
+    assert "? window.newModelRfRowDiffersFromCommitted(row)" in recompute
     assert "if (differs) {" in recompute
 
 
@@ -8440,7 +8450,8 @@ def test_tick_save_and_drag_follow_band3_row_order(
     start = body.index("function saveBand2State(card, opts) {")
     stager = body[start : body.index("\n          }\n", start)]
     assert "seenRowKeys" not in stager
-    assert "var rf = serializeRow(row, pill);" in stager
+    assert "var rf = serializeRow(row);" in stager
+    assert "rfRows(card).forEach(function (row) {" in stager
     start = body.index("window.newModelBand2Drop = function")
     drop = body[start : body.index("\n          };", start)]
     assert "targetRow.parentNode.insertBefore(dragRow, targetRow);" in drop
@@ -9052,3 +9063,58 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
     assert " checked" not in boxes["Comments"] and " disabled" in boxes["Comments"]
     # The pills and ✓ are still the editor in this rung.
     assert card.count('onclick="newModelRfSaveRow(this)"') == 3
+
+
+def test_band3_response_rows_are_the_model(client: TestClient, db: Session) -> None:
+    """19T Item 9 rung 2 — the response-field rows carry what their pills
+    carried (committed, selected, the ✓'d name and shape, width, help
+    text, response count), and every reader goes through ``rfRows``: the
+    preview's selection, the help cards, the constraints and progress
+    counts, the width writer and collector, the stager, the pill click's
+    confirm, and Save's re-commit. No reader takes state off a pill; the
+    pill is a control that mirrors its row until rung 4 retires it."""
+    review_session, new_model = _new_model_with_tags(client, db, code="19t9-rows-model")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+
+    def fn(signature: str) -> str:
+        start = body.index(signature)
+        return body[start : body.index("\n          }\n", start)]
+
+    readers = {
+        "function selectedPills(card) {": "rfRows(card).filter(rfRowOn)",
+        "function helpVisibleResponsePills(card) {": "rfRows(card).filter(rfRowOn)",
+        "function buildConstraints(card) {": "rfRows(card).filter(rfRowOn)",
+        "function buildProgressPills(card) {": "rfRows(card).filter(rfRowCommitted)",
+        "function saveBand2Widths(card) {": "rfRows(card).filter(rfRowCommitted)",
+        "function saveBand2State(card, opts) {": "rfRows(card).forEach(function (row) {",
+        "function buildResponseFieldPreviewCell(card, r) {": "rfRowByKey(card, r.key)",
+    }
+    for signature, read in readers.items():
+        src = fn(signature)
+        assert read in src, signature
+        assert "data-new-model-band2-pill" not in src, signature
+    start = body.index("window.newModelBand2ResizeStart = function (event) {")
+    resize = body[start : body.index("\n          };", start)]
+    assert "var rfRow = rfRowByKey(card, key.slice(5));" in resize
+    assert "data-new-model-band2-pill" not in resize
+    start = body.index("window.newModelToggleBand2Pill = function (pill) {")
+    toggle = body[start : body.index("\n          };", start)]
+    assert "row.getAttribute('data-response-count')" in toggle
+    assert "row.setAttribute('data-selected', next ? 'true' : 'false');" in toggle
+    start = body.index("window.newModelHelpCardInput =")
+    help_input = body[start : body.index("\n          };", start)]
+    assert "row.setAttribute('data-help-text', ta.value);" in help_input
+    start = body.index("window.newModelUpdateIntroProgress =")
+    progress = body[start : body.index("\n          };", start)]
+    assert "window.newModelRfRows(band2)" in progress
+    assert "data-new-model-band2-pill" not in progress
+    # R and ≡ no longer mirror onto a pill; the row's button is read.
+    for name in ("newModelRfRequiredChanged", "newModelRfHelpVisibleChanged"):
+        assert "data-new-model-band2-pill" not in _rf_fn(body, name), name
+    # The rows reader is the table's direct rows, in order.
+    assert (
+        "instrumentCard.querySelectorAll('[data-new-model-rf-rows] > [data-new-model-rf-row]')"
+        in body
+    )

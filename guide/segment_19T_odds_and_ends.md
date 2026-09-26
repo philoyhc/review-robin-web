@@ -1095,7 +1095,19 @@ Taken 2026-09-26 at `134953aa`:
 **Open.** Rung 1 is this PR: the plan, the author's branching layout in
 the design record's Item 1, and the table. It also rewords Band 2's
 header comment, which still described display-field chips (flagged by
-Item 8's close pass).
+Item 8's close pass). Rung 1 is #2631.
+
+**Rung 2 moves the pill state onto the rows.** A row carries its field's
+committed state: `data-committed` (saved or ✓'d), `data-selected`, the
+name and shape last ✓'d (`data-label`, `data-rf-*`), width, help text and
+response count; R and ≡ are read off the row's buttons. Every reader goes
+through `rfRows`: the preview's selection, help cards, constraints and
+progress counts, the width writer and collector, the stager, the pill
+click's confirm, and Save's re-commit. ✓ commits a row
+(`newModelRfCommitRow`, was `newModelRfSyncPill`), and its comparison is
+the row against its own committed state
+(`newModelRfRowDiffersFromCommitted`). The pills are a control that
+mirrors its row, carrying only what the click and drag read.
 
 ### Doc impact
 
