@@ -293,7 +293,7 @@ def _surface_context(
         )
         if not show_values:
             any_closed_with_hidden_values = True
-        cells = []
+        values: dict[int, str] = {}
         for field in fields:
             existing = response_rows.get((assignment.id, field.id))
             value = (existing.value or "") if existing else ""
@@ -304,11 +304,33 @@ def _surface_context(
                 override = bad_values.get((assignment.id, field.field_key))
                 if override is not None:
                     value = override
+            values[field.id] = value
+        # 19T Item 10 — a governed field can be answered only while its
+        # branch is open, judged on the values as the page shows them
+        # (the page's script re-judges as the parent changes). A closed
+        # governed cell renders muted and disabled, with the condition
+        # that opens it as its hint.
+        open_ids = responses_service.applicable_field_ids(fields, values)
+        field_by_id = {f.id: f for f in fields}
+        cells = []
+        for field in fields:
+            parent = (
+                field_by_id.get(field.branch_parent_id)
+                if field.branch_parent_id is not None
+                else None
+            )
             cells.append(
                 {
                     "field": field,
-                    "value": value if show_values else "",
+                    "value": values[field.id] if show_values else "",
                     "placeholder": views.placeholder_for_field(field),
+                    "governed_by": parent.field_key if parent else "",
+                    "branch_open": field.id in open_ids,
+                    "branch_hint": (
+                        "Opens when " + views.branch_condition_label(parent)
+                        if parent
+                        else ""
+                    ),
                 }
             )
         is_complete, missing_count, latest_submitted = (

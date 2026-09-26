@@ -1380,7 +1380,23 @@ Save and submit (after `_apply_upserts`) and the group re-fan call
 leaves them. The save's `responses.saved` counts gain
 `branch_answers_removed` when one goes. The responses import filters with
 `closed_governed_field_ids` before inserting, so each answer it can't
-keep is a reported drop rather than a silent one.
+keep is a reported drop rather than a silent one. Rung 3 is #2640;
+Codex's finding (a blocked submit committed a branch deletion unaudited)
+is fixed there.
+
+**Rung 4 lands the reviewer surface.** Each cell carries whether its
+branch is open, judged by `applicable_field_ids` on the values the page
+shows. A closed governed cell renders muted (`td.rs-branch-closed`) and
+disabled, titled with the condition that opens it
+(`views.branch_condition_label`: "Opens when Rating ≥ 4"). An inline
+script re-judges each parent as the reviewer answers, mirroring
+`branch_is_open`; a disabled control keeps its value visible, greyed,
+and isn't sent, so Save's rule deletes it if the branch is still closed.
+**Found at build:** the page's "All items completed" pill counted a
+closed cell, which can't be answered, so a row could never read
+complete; it now counts open cells only. The operator rollups count
+required fields alone, which a governed field never is, so they are
+unaffected.
 
 ### Doc impact
 
