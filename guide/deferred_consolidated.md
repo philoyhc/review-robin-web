@@ -1757,15 +1757,19 @@ cost are in `guide/advanced_instruments.md`, as five items built in the
 order 3, 4, 5, 1, 2:
 - Item 3 reorders on the Band 3 rows and retires the response pills and
   ✓, about 4 PRs;
-- Item 4 moves the Visibility editor into Band 2's card, about 3 PRs;
+- Item 4 moves the Visibility editor into Band 2's card, about 3 PRs
+  (built 2026-09-26 as 19T Item 7);
 - Item 5 gives display fields a table in the column Item 4 frees,
   retiring Band 2's pills, about 4 PRs;
 - Item 1 is branching with optional governed fields, about 7–8 PRs;
 - Item 2 is required governed fields, about 2 more, with Item 1 built to
   prepare for it.
 
-**Off the roadmap because** it amends a stated out-of-scope line in
-`spec/rrw_functional_spec.md`. **No immediate plan to build** (author).
+**Items 3–5 are builder rework, built on the roadmap one at a time**:
+Item 4 shipped as 19T Item 7 (2026-09-26), and Item 5 is next. **Branching
+itself, Items 1 and 2, stays off the roadmap** because it amends a stated
+out-of-scope line in `spec/rrw_functional_spec.md`. **No immediate plan to
+build it** (author).
 
 **Lift trigger:** the author scheduling it, or an operator asking for
 conditional questions.

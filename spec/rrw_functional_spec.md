@@ -628,7 +628,8 @@ materialisation onto assignments).
 
 Default on instrument create: no rows — an instrument is invisible
 to every participant audience until the operator opts each one in
-on the instrument card's Band 3 editor.
+in the instrument card's visibility editor (its "Who can see what
+you wrote" card, unlocked).
 
 ### 5.17 Feature toggles
 
@@ -1222,20 +1223,21 @@ most one instrument unlocked at a time). Its stripes:
   display-field sources (Reviewee Name / Email always shown; the
   rest opt-in) plus a live preview of one sample reviewee row, with
   drag-resizable column widths and the instrument description
-  (lock-driven edit swap). Band 2 also renders a read-only "Who can
-  see what you wrote" preview of the visibility policy.
+  (lock-driven edit swap). Band 2 also carries the "Who can see what
+  you wrote" card: locked, the reviewer's read-only view of the
+  visibility policy; unlocked, the **per-audience visibility-policy
+  editor** — a chip grid (You (reviewer) / Reviewees / Observers ×
+  Session-ongoing / Responses-released) picking Raw / Anonymized /
+  Summarized (or off) per audience per window (see
+  [§5.16](#516-visibility-policy)).
 - **Band 3 — Response fields** — a stack of inline editor rows,
   one per response field: Name, **Type** (`String / Integer /
   Decimal / List` + a Quick-fill List presets `<optgroup>`),
   inline bounds (`min` / `max` / `step` or `list_options`),
   Required toggle, help-text toggle. Type + bounds lock once the
   field has saved responses. Per-field surface visibility is
-  toggled from the paired Band 2 pill. Band 3 also hosts the
-  **per-audience visibility-policy editor** — a 3 × 2 chip grid
-  (Reviewers / Reviewees / Observers × Session-ongoing /
-  Responses-released) picking Raw / Anonymized / Summarized (or
-  off) per audience per window (see
-  [§5.16](#516-visibility-policy)).
+  toggled from the paired Band 2 pill. Band 3's left column is empty
+  until the display-field table fills it.
 - **Action row** — Save / Cancel (edit only) / Replicate / Delete
   (confirm-gated; blocked when only one instrument) / **+Instrument**
   / **+Page break** / Lock-Unlock. One bulk Save commits identity,

@@ -40,7 +40,7 @@ triples actually get materialised from the Band 1 rule — see
   - [Identity](#identity)
   - [Instrument assignment rule + Unit of review](#instrument-assignment-rule--unit-of-review)
   - [Preview review instrument](#preview-review-instrument)
-  - [Visibility + Response fields](#visibility--response-fields)
+  - [Response fields](#response-fields)
   - [Action row](#action-row)
 - [Add / Replicate / Delete](#add--replicate--delete)
 - [Editing flow](#editing-flow)
@@ -203,7 +203,7 @@ band numbers survive in prose and in identifiers (`band2_state`,
 |---|---|
 | Band 1 | Instrument assignment rule (+ Unit of review) |
 | Band 2 | Preview review instrument |
-| Band 3 | Visibility, Response fields |
+| Band 3 | Response fields |
 
 Order of stripes (each separated by a horizontal rule):
 
@@ -790,6 +790,34 @@ Identity edits ride the bulk-save form: one Save commits identity
 together with Band 1 and Band 3, and the page issues no separate
 `/identity` POST.
 
+#### Visibility card (right of the intro card)
+
+The "Who can see what you wrote (other than admin)" card sits beside the
+intro card in Band 2's grid, and is both the reviewer-surface preview and
+the visibility editor — the same locked / unlocked swap as the
+description box beside it (19T Item 7). **Locked**, it renders the
+reviewer's own two-row table (`data-lock-only`) — see "Reviewer-surface
+transparency card" in `spec/visibility_policy.md` §6. **Unlocked**, it is
+the editor (`data-unlock-only`, `data-new-model-vp-editor`
+`data-new-model-vp-form`): three rows, "You (reviewer)", "Reviewees" and,
+below a `row-group-start` divider (`spec/ui_elements.md` §10),
+"Observers", with the note "Observers are shown here for setup only;
+reviewers don't see this row."
+
+The four cells that can change are cycle chips (`b3_mode_cycle`), each
+rotating through the modes `spec/visibility_policy.md` §3.1 allows for
+its `(audience, window)` cell; the cycle sets themselves are not restated
+here. The two cells that can't — Reviewer / Session-ongoing (pinned to
+Raw) and Reviewees / Session-ongoing (pinned to off) — stay plain
+`b3_static_pill` labels. Both macros keep the `b3_` prefix from when the
+editor lived in Band 3's table, which this card retires.
+
+The six `*_mode` hidden inputs ride the card's `dfsave-{id}` form and
+render unconditionally, whatever the lock state, so Save always carries
+them. A cycle also repaints the locked table's matching cell
+(`data-new-model-vp-preview-cell`) — the live repaint 19T Item 3 entry 3
+added, kept because Save is a fetch and never reloads.
+
 #### Chip row
 
 Below the intro card, a horizontal scrollable row of chip
@@ -862,15 +890,15 @@ names below. Reviewees in the rule-surviving subset that share
 the sample's boundary key form the group; if more than 10
 qualify, the trailing `... + N more` collapses the overflow.
 
-### Visibility + Response fields
+### Response fields
 
-The **Visibility** half is the 3 × 2 audience × window chip grid;
-`spec/visibility_policy.md` is its contract and this section does not
-restate it. The band splits `grid-template-columns: 2fr 3fr` —
-Visibility 2/5, Response fields 3/5 — weighted toward the response-field
-row's larger control set.
+Band 3 splits `grid-template-columns: 2fr 3fr`. **The left column is
+empty**: Visibility moved to Band 2's visibility card above (19T Item 7)
+and the left column awaits `guide/advanced_instruments.md` Item 5's
+display-field table. The split itself is unchanged until Item 5 re-ratios
+it.
 
-The **Response fields** half is a stack of inline editor rows, one per
+The right column is a stack of inline editor rows, one per
 saved Response Field. **No standing blank row**: a card with no saved
 fields renders one blank row instead (from a `<template>`), so there is
 always a "+" to press; deleting down to one row leaves that row rather

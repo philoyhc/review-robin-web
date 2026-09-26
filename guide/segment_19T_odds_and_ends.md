@@ -806,28 +806,30 @@ Taken 2026-09-26 at `13ba5ec4`:
 
 ### Status
 
-**Open.** Rung 1 is #2623. Rung 2 wires the card and carries Codex's one
-finding on #2623 (the author, 2026-09-26: fix it with rung 2): the
-Observers divider was an inline style, and it is now `row-group-start` in
-`base.html`. **Found at build:**
-- Entry 3's repaint stays (see Semantics).
-- The row labels are plain text now, no longer `b3_static_pill`s, so
-  `tests/integration/test_band3_static_pills.py` reads the card's editor
-  and expects two fixed labels, not five.
-- Three intro-card tests read a fixed character window that the card
-  outgrew. Two now anchor on the element they check, and one reads a
-  wider window.
-- **The item's read** (rung 2, over `13ba5ec4..HEAD`) found no regression
-  in Save, lock, Cancel or the dirty tracker; the editor has Band 3's guard
-  (an inert lock region unless editing). It found, and rung 2 fixed:
-  - the sys-admin audit card sent operators to "Band 3's editor";
-  - two assertions passing on unrelated page text;
-  - the hidden inputs rendering only when the reviewer's rows existed;
-  - the Guide paragraph sitting under the wrong figure;
-  - this plan's ladder still retiring the repaint.
-  **Found, not fixed:** the cycle chips don't answer Enter or Space, and
-  each chip is announced only by its mode, not its audience or window. Both
-  gaps predate the move.
+**Closed 2026-09-26** on the author's instruction (#2623 scaffold, #2624
+wire, and this close). The ladder ran as planned, with two changes:
+- **Entry 3's repaint stays** (Semantics): the locked table is separate
+  markup, and Save doesn't reload it.
+- **Codex's one finding on #2623**, the Observers divider as an inline
+  style, rode rung 2 on the author's instruction. It became `row-group-start`
+  in `base.html`.
+
+**The close's `spec-writer` pass** found four more specs naming Band 3's
+editor beyond the planned five; they are in Doc impact and fixed here.
+
+**Reads: one**, the item's cumulative read over `13ba5ec4..HEAD`. It found
+no regression in Save, lock, Cancel or the dirty tracker, and the editor
+keeps Band 3's guard (an inert lock region unless editing). Rung 2 fixed
+what it found:
+- the sys-admin audit card sent operators to "Band 3's editor";
+- two assertions passed on unrelated page text;
+- the hidden inputs rendered only when the reviewer's rows existed;
+- the Guide paragraph sat under the wrong figure.
+
+**Found, not fixed:** the cycle chips don't answer Enter or Space, and each
+chip is announced only by its mode. Both gaps predate the move. **Owed:**
+browser checks in `guide/post_azure_todo_checklist.md` item 6, and the
+author's retake of the Guide's two instrument captures.
 
 ### Doc impact
 
@@ -843,4 +845,11 @@ Observers divider was an inline style, and it is now `row-group-start` in
   row that starts a new group (Item 7).
 - `guide/advanced_instruments.md` — Item 4 points to this item as built
   (Item 7).
+- `spec/rrw_functional_spec.md` — §9.6's Band 2 / Band 3 summary and
+  §5.16's default note move the visibility editor to the card (Item 7;
+  found by the close's `spec-writer` pass).
+- `spec/rehydrate.md` — the import's validation table is the visibility
+  editor's, not "the Band 3 editor's" (Item 7; the same pass).
+- `spec/roundtrip_coverage.md` — "the Band 3 grid" becomes the visibility
+  grid (Item 7; the same pass).
 - `docs/status.md` — row when the item closes (Item 7).
