@@ -83,6 +83,7 @@ from ._display_fields import (
 # ``instruments_service.InstrumentResponseField``.
 from ._response_fields import (
     DEFAULT_RESPONSE_FIELDS,
+    BranchedInstrumentError,
     FieldKeyError,
     InstrumentResponseField,
     InvalidResponseFieldShapeError,
@@ -154,6 +155,7 @@ __all__ = [
     # Everything below still lives in _legacy.py and migrates out
     # across the §12.A slice PRs.
     "DEFAULT_INSTRUMENT_NAME",
+    "BranchedInstrumentError",
     "DEFAULT_RESPONSE_FIELDS",
     "GROUP_KIND_SENTINEL",
     "DisplaySourceError",

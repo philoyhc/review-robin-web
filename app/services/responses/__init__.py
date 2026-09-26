@@ -17,6 +17,9 @@ Layout:
 - ``_group_reconciliation.py`` — Segment 13C / 18H group-scoped
   fan-out / collapse / reconcile machinery. Reads nothing from
   ``_core``; the dependency is uni-directional.
+- ``_branching.py`` — 19T Item 10: branch conditions, whether a branch
+  is open, which fields an assignment can answer, and the structure
+  rules. Pure; imports no other service.
 """
 
 from __future__ import annotations
@@ -46,6 +49,16 @@ from ._core import (
     session_response_count,
     submit,
     validate_value,
+)
+from ._branching import (
+    BRANCH_OPS,
+    LIST_OP,
+    NUMERIC_OPS,
+    PARENT_DATA_TYPES,
+    applicable_field_ids,
+    branch_is_open,
+    branch_structure_errors,
+    condition_error,
 )
 from ._group_reconciliation import (
     group_key_for_pair,
@@ -82,6 +95,15 @@ __all__ = [
     "session_response_count",
     "submit",
     "validate_value",
+    # _branching
+    "BRANCH_OPS",
+    "LIST_OP",
+    "NUMERIC_OPS",
+    "PARENT_DATA_TYPES",
+    "applicable_field_ids",
+    "branch_is_open",
+    "branch_structure_errors",
+    "condition_error",
     # _group_reconciliation
     "group_key_for_pair",
     "GroupKeyable",

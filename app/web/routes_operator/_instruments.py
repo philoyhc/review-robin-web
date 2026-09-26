@@ -212,9 +212,12 @@ def instrument_add_default_field(
 ) -> RedirectResponse:
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
-    instruments_service.add_default_response_field(
-        db, instrument=instrument, after_field_id=after, actor=user
-    )
+    try:
+        instruments_service.add_default_response_field(
+            db, instrument=instrument, after_field_id=after, actor=user
+        )
+    except instruments_service.BranchedInstrumentError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     # Preserve editing state: the ➕ button is only rendered while
     # editing, so the operator stays in editing mode after the add.
     return RedirectResponse(
@@ -252,16 +255,19 @@ def instrument_edit_field(
     _ = validation_min, validation_max  # silence unused-arg
     validation_block = field.validation
 
-    _, warning_count = instruments_service.update_response_field(
-        db,
-        field=field,
-        label=label,
-        required=required == "true",
-        validation=validation_block,
-        help_text=help_text,
-        help_text_visible=(help_text_visible == "true"),
-        actor=user,
-    )
+    try:
+        _, warning_count = instruments_service.update_response_field(
+            db,
+            field=field,
+            label=label,
+            required=required == "true",
+            validation=validation_block,
+            help_text=help_text,
+            help_text_visible=(help_text_visible == "true"),
+            actor=user,
+        )
+    except instruments_service.BranchedInstrumentError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     if warning_count > 0:
         return RedirectResponse(
@@ -295,6 +301,8 @@ def instrument_delete_field(
             confirm=(confirm == "true"),
             actor=user,
         )
+    except instruments_service.BranchedInstrumentError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except instruments_service.ResponsesPresentError as exc:
         return RedirectResponse(
             url=(
@@ -332,9 +340,12 @@ def instrument_move_field(
     if direction not in ("up", "down"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
-    instruments_service.move_response_field(
-        db, field=field, direction=direction, actor=user  # type: ignore[arg-type]
-    )
+    try:
+        instruments_service.move_response_field(
+            db, field=field, direction=direction, actor=user  # type: ignore[arg-type]
+        )
+    except instruments_service.BranchedInstrumentError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     # Preserve editing state: the ▲ / ▼ buttons are only rendered
     # while editing.
     return RedirectResponse(

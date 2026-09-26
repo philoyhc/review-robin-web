@@ -67,6 +67,22 @@ class InstrumentResponseField(Base):
     # surface read path starts filtering by ``visible=true`` in
     # PR ii.
     visible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # 19T Item 10 — branching. A governed field names its parent; the
+    # parent carries the branch's one condition (``branch_op`` is a token
+    # from ``app.services.responses.BRANCH_OPS``; ``branch_value`` a
+    # number, or List options comma-separated). One level: a parent is
+    # never governed. ``app.services.responses._branching`` owns the rules.
+    branch_parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "instrument_response_fields.id",
+            name="fk_instrument_response_fields_branch_parent_id",
+            ondelete="SET NULL",
+        ),
+        index=True,
+        nullable=True,
+    )
+    branch_op: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    branch_value: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Segment 18J Wave 2 PR i — inline bound columns (now the sole
     # source of truth for type + bounds; PR iii-b4 dropped the

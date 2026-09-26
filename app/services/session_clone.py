@@ -191,6 +191,11 @@ def clone_session(
                     **_column_values(field, skip={"id", "instrument_id"}),
                 )
             )
+        # 19T Item 10 — a governed field's parent is re-pointed at the
+        # parent's clone once every field of the instrument has one; the
+        # condition (``branch_op`` / ``branch_value``) rides the generic
+        # copy.
+        governed: list[tuple[InstrumentResponseField, int]] = []
         for field in instrument.response_fields:
             # iii-b4: response_type_id FK dropped; just clone every
             # mapped column (including the inline bounds).
@@ -198,12 +203,16 @@ def clone_session(
                 instrument_id=new_instrument.id,
                 **_column_values(
                     field,
-                    skip={"id", "instrument_id"},
+                    skip={"id", "instrument_id", "branch_parent_id"},
                 ),
             )
             db.add(new_field)
             db.flush()
             response_field_map[field.id] = new_field.id
+            if field.branch_parent_id is not None:
+                governed.append((new_field, field.branch_parent_id))
+        for new_field, source_parent_id in governed:
+            new_field.branch_parent_id = response_field_map[source_parent_id]
 
     # Field-label overrides + tags.
     for label in source.field_labels:
