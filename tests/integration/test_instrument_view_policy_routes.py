@@ -592,12 +592,14 @@ def test_instruments_page_renders_per_window_form(
     # The dedicated "Save visibility" button retired in favour of
     # the card-level Save button.
     assert "Save visibility" not in body
-    # Per-cell static-pill anchors.
-    assert "Reviewers" in body
-    assert "Reviewees" in body
-    assert "Observers" in body
-    assert "Session ongoing" in body
-    assert "Responses released" in body
+    # The editor's rows and columns, read from the editor itself rather
+    # than the whole page (19T Item 7 moved it into Band 2's card).
+    flat = " ".join(body.split())
+    start = flat.index("data-new-model-vp-editor")
+    editor = flat[start : flat.index("</table>", start)]
+    for label in ("You (reviewer)", "Reviewees", "Observers",
+                  "Session ongoing", "Responses released"):
+        assert f">{label}</" in editor, label
 
 
 def test_instruments_page_reflects_persisted_state(

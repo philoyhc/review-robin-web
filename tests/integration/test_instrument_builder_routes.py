@@ -701,7 +701,9 @@ def test_add_new_model_creates_instrument(
     assert "Who is being reviewed" in body  # Band 1 Link 2 column
     assert "Unit of review" in body  # Band 1 Link 3 column
     assert "Preview review instrument" in body  # Band 2 heading
-    assert "Visibility" in body  # Band 3 left-column table title
+    # Visibility is edited in Band 2's card (19T Item 7).
+    assert "Who can see what you wrote (other than admin)</h3>" in body
+    assert "data-new-model-vp-editor" in body
     # Wave 5 PR 5.3 — "New model" pill retired (every instrument is
     # now the same shape).
 
@@ -4603,9 +4605,15 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     assert "'*Required items completed: 0/'" in flat
     assert "All items completed: 0/<span data-new-model-intro-all-count>3</span>" in flat
     # Required pill is warning (2 required, 0 done). All pill is
-    # neutral count.
-    assert 'class="pill pill-warning"' in intro_block
-    assert 'class="pill pill-count"' in intro_block
+    # neutral count. Anchored on each pill: the visibility editor above
+    # them (19T Item 7) outgrew a fixed window.
+    def _pill_tag(marker: str) -> str:
+        idx = flat.find(marker, intro_idx)
+        assert idx != -1, marker
+        return flat[flat.rfind("<span", 0, idx) : idx]
+
+    assert 'class="pill pill-warning"' in _pill_tag("data-new-model-intro-required-pill")
+    assert 'class="pill pill-count"' in _pill_tag("data-new-model-intro-all-pill")
 
 
 def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
@@ -8656,8 +8664,10 @@ def test_band3_visibility_cycle_repaints_band2_preview_card(
     """19T Item 3 entry 3 — Band 2's "Who can see what you wrote" card is
     server-rendered from saved policy rows, and Save is a no-reload
     fetch, so it went stale until a reload. Its mode cells now carry
-    the (audience, window) key Band 3's cycle chip writes, and the
-    cycle handler repaints the matching cell."""
+    the (audience, window) key the cycle chip writes, and the cycle
+    handler repaints the matching cell. Since 19T Item 7 the chips are
+    the same card's unlocked editor, and the locked table still needs
+    the repaint."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-vp-preview"
     )
@@ -8708,14 +8718,15 @@ def test_band3_visibility_cycle_repaints_band2_preview_card(
     assert client_map == server_map
 
 
-def test_band2_visibility_card_carries_the_editor_layout(
+def test_band2_visibility_card_is_the_editor(
     client: TestClient, db: Session
 ) -> None:
-    """19T Item 7 rung 1 — the "Who can see what you wrote" card keeps
-    the reviewer's table for a locked card and gains the unlocked
-    editor's layout: "You (reviewer)", "Reviewees" and, below a divider,
-    "Observers" with its note, each cell showing the saved mode. A
-    scaffold: the cells are labels until rung 2 wires them."""
+    """19T Item 7 — the "Who can see what you wrote" card keeps the
+    reviewer's table for a locked card, and is the visibility editor
+    while unlocked: "You (reviewer)", "Reviewees" and, below a divider,
+    "Observers" with its note. The four cells that can change are cycle
+    chips on the saved mode, the six hidden inputs ride the dfsave form
+    from inside the card, and Band 3 no longer has a Visibility table."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t7-vp-editor"
     )
@@ -8748,8 +8759,12 @@ def test_band2_visibility_card_carries_the_editor_layout(
     ]
     assert ">You<" in locked and ">Reviewees<" in locked
     assert "Observers" not in locked
-    # Unlocked: the editor, shown by the lock layer's swap.
-    assert '<div class="table-scroll" data-unlock-only data-new-model-vp-editor>' in band2
+    # Unlocked: the editor, shown by the lock layer's swap, and the form
+    # the cycle handler looks its hidden inputs up in.
+    assert (
+        '<div class="table-scroll" data-unlock-only data-new-model-vp-editor '
+        'data-new-model-vp-form data-new-model-instrument-id='
+    ) in band2
     start = band2.index("data-new-model-vp-editor")
     editor = band2[start : band2.index("</table>", start)]
     labels = re.findall(r"<tr[^>]*> <td[^>]*>([^<]+)</td>", editor)
@@ -8759,18 +8774,44 @@ def test_band2_visibility_card_carries_the_editor_layout(
         "Observers",
         "Observers are shown here for setup only; reviewers don't see this row.",
     ]
-    assert re.search(
-        r'<tr data-new-model-vp-observers-row style="border-top: 2px solid', editor
+    # The divider is base.html's class, not an inline style (Codex, #2623).
+    assert '<tr class="row-group-start" data-new-model-vp-observers-row>' in editor
+    # The four cells that can change cycle from the saved mode, through
+    # the same sets Band 3's table used.
+    chips = re.findall(
+        r'data-new-model-vp-cycle-audience="([a-z_]+)" '
+        r'data-new-model-vp-cycle-window="([a-z_]+)" '
+        r'data-new-model-vp-cycle-slugs="([a-z|]*)" '
+        r'data-new-model-vp-current-slug="([a-z]*)"',
+        editor,
     )
-    # Each cell reads the saved mode; the fixed cells are Band 3's.
-    assert re.findall(r'<span class="pill pill-count"[^>]*>([^<]+)</span>', editor) == [
-        "Raw responses",
+    assert chips == [
+        ("peer_reviewer", "after_release", "|raw|summarized", "raw"),
+        ("reviewee", "after_release", "|raw|anonymized|summarized", "anonymized"),
+        ("observer", "while_ongoing", "|summarized", "summarized"),
+        ("observer", "after_release", "|raw|anonymized|summarized", "raw"),
+    ]
+    # The fixed cells stay labels.
+    assert re.findall(r'<span class="pill pill-count" title="Fixed">([^<]+)</span>', editor) == [
         "Raw responses",
         "—",
-        "Anonymized responses",
-        "Anonymized summaries",
-        "Raw responses",
     ]
-    # Rung 1 is inert: no control in the editor yet.
-    assert "tag-chip" not in editor
-    assert "onclick" not in editor
+    # The six hidden inputs sit in the card and ride the dfsave form.
+    inputs = re.findall(
+        rf'<input form="dfsave-{new_model.id}" type="hidden" name="([a-z_]+)" '
+        r'data-new-model-vp-input="[a-z_-]+" value="([a-z]*)">',
+        editor,
+    )
+    assert inputs == [
+        ("peer_reviewer_while_ongoing_mode", "raw"),
+        ("peer_reviewer_after_release_mode", "raw"),
+        ("reviewee_while_ongoing_mode", ""),
+        ("reviewee_after_release_mode", "anonymized"),
+        ("observer_while_ongoing_mode", "summarized"),
+        ("observer_after_release_mode", "raw"),
+    ]
+    # Band 3 keeps no visibility editor, and nothing else carries one.
+    band3 = card[card.index("<div data-new-model-band3 ") :]
+    assert "data-new-model-vp-" not in band3.split("Response fields</h3>")[0]
+    assert ">Visibility</h3>" not in card
+    assert card.count("data-new-model-vp-form data-new-model-instrument-id=") == 1

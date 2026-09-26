@@ -93,14 +93,15 @@
 
   {# Segment 19C Item 10 — the workspace-wide visibility-grid audit.
      Read-only by decision: clearing an offending cell is the owning
-     operator's call on that instrument's Band 3 editor. Sys-admin-only
+     operator's call on that instrument's visibility editor (the "Who can
+     see what you wrote" card, unlocked; 19T Item 7). Sys-admin-only
      because the query spans every session in the workspace. #}
   <div class="card">
     <h2>Visibility grid audit</h2>
     <p>
-      Every instrument's Band 3 grid is checked against the modes each
-      <strong>audience × window</strong> cell is allowed to carry. The Band 3
-      editor has always refused an illegal cell, and since Segment 19C Item 9
+      Every instrument's visibility grid is checked against the modes each
+      <strong>audience × window</strong> cell is allowed to carry. The
+      instrument card's visibility editor has always refused an illegal cell, and since Segment 19C Item 9
       the Settings-CSV import refuses one too — but a row written by an
       import <em>before</em> that guard is still stored, and the resolver
       honours it. The one that matters is a <strong>reviewee</strong> grant on
@@ -108,9 +109,9 @@
       review is still running.
     </p>
     <p class="muted">
-      Read-only. Clearing an offending cell is the owning operator's call, on
-      that instrument's Band 3 editor — it already refuses to author the bad
-      value.
+      Read-only. Clearing an offending cell is the owning operator's call, in
+      that instrument's <strong>Who can see what you wrote</strong> card, with
+      the card unlocked — it already refuses to author the bad value.
     </p>
 
     {% if visibility_audit_rows %}

@@ -2935,6 +2935,12 @@
         box-shadow: inset 6px 0 0 var(--selected-bg),
                     inset -6px 0 0 var(--selected-bg);
       }
+      /* A heavier rule above a row that starts a new group, where the
+         table already separates every row with 1px (19T Item 7: the
+         Observers row of an instrument's visibility editor). */
+      body.ui-v2 tr.row-group-start > td {
+        border-top: 2px solid var(--border-default);
+      }
       /* ===== 19P.1 — the roster card and its Unlock panel =====
          Page-agnostic primitives, so they live here rather than as a
          template <style> block, and `body.ui-v2`-scoped like every rule

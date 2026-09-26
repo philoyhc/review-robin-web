@@ -36,7 +36,7 @@ from app.services.visibility_policies import (
     valid_modes_for_cell,
 )
 
-# Ordered as the Band 3 editor presents them.
+# Ordered as the visibility editor presents them.
 _WINDOWS: tuple[tuple[str, str], ...] = (
     ("while_ongoing", "Session ongoing"),
     ("after_release", "Responses released"),
@@ -131,7 +131,7 @@ def _cell_finding(
 
 
 def build_visibility_audit_rows(db: Session) -> list[VisibilityAuditRow]:
-    """Every stored visibility cell that the Band 3 editor would refuse.
+    """Every stored visibility cell that the visibility editor would refuse.
 
     One query across the workspace, joined to instruments and sessions;
     the decode is in Python against a six-entry table. Empty is the
