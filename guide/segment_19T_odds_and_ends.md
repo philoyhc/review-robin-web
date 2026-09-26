@@ -1080,8 +1080,9 @@ Taken 2026-09-26 at `134953aa`:
    Save, the confirm on a field with responses.
 4. **Retire** the response pills and ✓; the item's cumulative
    `diff-reviewer` read runs here, from `134953aa`.
-5. ~~**Close.**~~ Became acting on the read, since rung 4 merged first;
-   the close is rung 6, after the author's on-screen check.
+5. ~~**Close.**~~ Became acting on the read, since rung 4 merged first.
+6. Default labels (the author's ruling); the close is rung 7, after the
+   author's on-screen check.
 
 ### Definition of done
 
@@ -1157,6 +1158,16 @@ loses or corrupts saved data):
   its committed state and leaves the preview; a new row the client finds
   invalid but the server accepts stays uncommitted instead of committing
   the rejected text.
+Rung 5 is #2635.
+
+**Rung 6: on the author's ruling, every added response field gets a
+default label**, the next "Field N" no row uses (`newModelRfDefaultLabel`).
+Clearing a name puts the row's default back when the box loses focus,
+and the stager falls back to it, so Save never drops a field for want of
+a name: only X deletes. "+" commits the new field at once, its name
+selected; a card with no fields opens with a committed "Field 1",
+unstaged, so the card stays clean. This replaces rung 5's handling of a
+row saved with its name cleared.
 - ▲ ▼ keep focus on a live arrow; dead help-edit-mode code, the rows'
   inline button padding and stale comments (and `_band2.py`'s docstring)
   go; stale test names and a vacuous test loop are fixed. The in-app Guide's two instrument paragraphs

@@ -8345,9 +8345,9 @@ def test_save_success_commits_every_named_row(
     # A named row never ✓'d was saved hidden, so it commits unselected
     # (19T Item 9, Codex on #2633); a blank row stays uncommitted.
     assert "row.setAttribute('data-selected', 'false');" in on_success
-    # A row saved with no name lost its field: it drops its committed
-    # state (and id), so the preview drops its column (the item's read).
-    assert "['data-committed', 'data-rf-id', 'data-label', 'data-rf-data-type'," in on_success
+    # A row whose name box is empty was saved under its default label
+    # (19T Item 9, the author's ruling), which it gets back first.
+    assert "window.newModelRfRestoreDefaultName(row);" in on_success
     # A never-committed row the client finds invalid stays uncommitted
     # rather than committing the rejected text.
     assert "if (window.newModelRfValidateShape(row)) { return; }" in on_success
@@ -8360,8 +8360,8 @@ def test_row_marker_follows_validity(
 ) -> None:
     """19T Item 9 — the amber marker shows while a row's live name or
     shape is invalid (the preview keeps its last valid shape), with the
-    reason as the row's tooltip; a committed row whose name is cleared
-    counts. The marker's CSS sits on the row's cells, since a <tbody>
+    reason as the row's tooltip; an empty name counts until the box
+    loses focus and gets its default label back. The marker's CSS sits on the row's cells, since a <tbody>
     draws no box-shadow."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-marker"
@@ -8371,11 +8371,10 @@ def test_row_marker_follows_validity(
     ).text
     recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
     assert "? window.newModelRfValidateShape(row)" in recompute
-    assert ": (committed ? 'Enter a field name.' : null);" in recompute
     assert "row.setAttribute('data-row-pending', 'true');" in recompute
-    # The tooltip says what the preview shows meanwhile, and that a
-    # nameless field goes on Save.
-    for tail in ("' Saving without a name removes this field.'",
+    # The tooltip says what the preview shows meanwhile; an empty name
+    # says it goes back to its default label.
+    for tail in ("'Enter a field name; left empty, it goes back to its default label.'",
                  "' The preview keeps the last valid shape.'",
                  "' The preview shows this field once it is valid.'"):
         assert tail in recompute, tail
@@ -9173,3 +9172,41 @@ def test_band3_response_rows_active_and_arrows_are_wired(
     assert "activeBox.checked = row.getAttribute('data-selected') === 'true';" in recompute
     assert "activeBox.disabled" not in recompute
     assert "btn.disabled = !(group && window.newModelRfGroupSibling(group, up));" in recompute
+
+
+def test_added_response_fields_get_a_default_label(
+    client: TestClient, db: Session
+) -> None:
+    """19T Item 9, on the author's ruling — every added response field gets
+    a default label, the next "Field N" no row uses; clearing a name puts
+    the default back when the box loses focus, and the stager falls back
+    to it, so Save never drops a field for want of a name: only X
+    deletes. "+" commits the new field at once, with its name selected; a
+    card with no fields gets one committed starter row, unstaged."""
+    review_session, new_model = _new_model_with_tags(client, db, code="19t9-defaults")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    default = _rf_fn(body, "newModelRfDefaultLabel")
+    assert "while (used['Field ' + n]) { n += 1; }" in default
+    restore = _rf_fn(body, "newModelRfRestoreDefaultName")
+    assert "if (!input || input.value.trim()) { return false; }" in restore
+    assert "row.setAttribute('data-default-label', label);" in restore
+    assert "window.newModelRfRestoreDefaultName(row)" in _rf_fn(body, "newModelRfNameChanged")
+    rows, template = _band3_rows_and_template(body, new_model.id)
+    assert rows.count('onchange="newModelRfNameChanged(this)"') == 2
+    assert template.count('onchange="newModelRfNameChanged(this)"') == 1
+    insert = _rf_fn(body, "newModelRfInsertRow")
+    assert "clone.setAttribute('data-default-label', label);" in insert
+    add = _rf_fn(body, "newModelRfAddRow")
+    assert "window.newModelRfMaybeCommit(clone);" in add
+    assert "nameInput.select();" in add
+    start = body.index("function saveBand2State(card, opts) {")
+    stager = body[start : body.index("\n          }\n", start)]
+    assert "|| row.getAttribute('data-default-label')" in stager
+    # The starter row commits without staging, so the card stays clean.
+    script = _rf_script(body)
+    start = script.index("var starter = window.newModelRfInsertRow(band3, null);")
+    starter = script[start : script.index("});", start)]
+    assert "window.newModelRfCommitRow(starter);" in starter
+    assert "newModelStageBand2State" not in starter
