@@ -977,12 +977,21 @@ async def instrument_consolidated_save(
     instrument_total, instruments_configured = (
         instruments_service.configured_counts(db, review_session.id)
     )
+    # 19T Item 9 — the saved response fields' ids, in order, so the
+    # reload-free client can put a new field's id on its row; without it
+    # the card's next Save sent the row id-less and the field was
+    # recreated under a new id and key.
+    db.refresh(instrument)
+    response_field_ids = [
+        rf.id for rf in sorted(instrument.response_fields, key=lambda f: f.order)
+    ]
     return JSONResponse(
         {
             "ok": True,
             "is_configured": instruments_service.is_configured(db, instrument),
             "instruments_configured": instruments_configured,
             "instrument_count": instrument_total,
+            "response_field_ids": response_field_ids,
         }
     )
 

@@ -1080,8 +1080,9 @@ Taken 2026-09-26 at `134953aa`:
    Save, the confirm on a field with responses.
 4. **Retire** the response pills and ✓; the item's cumulative
    `diff-reviewer` read runs here, from `134953aa`.
-5. ~~**Close.**~~ Became acting on the read, since rung 4 merged first;
-   the close is rung 6, after the author's on-screen check.
+5. ~~**Close.**~~ Became acting on the read, since rung 4 merged first.
+6. Default labels (the author's ruling); the close is rung 7, after the
+   author's on-screen check.
 
 ### Definition of done
 
@@ -1139,8 +1140,9 @@ preview and is marked amber, with the reason as its tooltip. A new row
 starts selected, its Active checkbox live. The "hide this field?" confirm
 now points to Active. **Found at build:** the marker's amber left edge had
 not drawn since rung 1, because a `<tbody>` draws no box-shadow; it now
-sits on the row's cells. Rung 4 is #2634, merged before the item's read
-returned.
+sits on the row's cells. The in-app Guide's two instrument paragraphs
+describe the tables, not the pills and ✓. Rung 4 is #2634, merged before
+the item's read returned.
 
 **Rung 5 acts on the item's read** (over `134953aa..HEAD`; no defect that
 loses or corrupts saved data):
@@ -1151,22 +1153,54 @@ loses or corrupts saved data):
 - A cancelled "hide this field?" confirm no longer marks the card dirty
   (the card's dirty listener skips the Active checkbox; its setter stages).
 - A Quick fill preset's passing `preset:` value is never committed.
-- The marker's tooltip says what the preview shows meanwhile, and that a
-  field saved without a name is removed.
-- After Save, a row whose name was cleared (Save removed its field) drops
-  its committed state and leaves the preview; a new row the client finds
-  invalid but the server accepts stays uncommitted instead of committing
-  the rejected text.
+- The marker's tooltip says what the preview shows meanwhile.
+- A new row the client finds invalid but the server accepts stays
+  uncommitted after Save instead of committing the rejected text.
 - ▲ ▼ keep focus on a live arrow; dead help-edit-mode code, the rows'
   inline button padding and stale comments (and `_band2.py`'s docstring)
-  go; stale test names and a vacuous test loop are fixed. The in-app Guide's two instrument paragraphs
-describe the tables, not the pills and ✓.
+  go; stale test names and a vacuous test loop are fixed.
+
+Rung 5 is #2635.
+
+**Rung 6: on the author's rulings, every added response field has a
+default label**, the next "Field N" no row goes by, shown **muted, as the
+empty name box's placeholder**, until a name is typed; clearing a name
+always brings it back that way, and taking it with → or Enter (or typing
+it) makes it a typed name in normal style. The row goes by its default
+wherever a name is read (`newModelRfSaveName`: the preview, the marker, the
+auto-commit, the stager), so Save never drops a field for want of a name:
+only X deletes. `newModelRfSyncDefaults` re-assigns defaults on each name
+edit and commits any row whose default moved; a saved field's default
+never moves. "+" commits the new field at once, but it lives only on the
+page (the card turns unsaved; Cancel drops it) until a successful Save. A
+saved label reloads as a typed name, since nothing records that it was a
+default. This replaces rung 5's handling of a row saved with its name
+cleared. The rung's first read found three more, fixed in the rung:
+- a labelled starter row on a card with no fields was saved as a field
+  nobody wrote, and met the setup gates; it is a blank, unlabelled
+  placeholder again, not a field until the operator types in it;
+- Save returned no ids, so a new field's next reload-free Save sent it
+  id-less and recreated it under a new id and key (and lost its width);
+  Save now returns `response_field_ids` in order, and the rows it sent
+  take them;
+- this Status block had folded rung 5's notes into rung 6.
+
+Codex (#2636): Save's success handler committed the untouched placeholder
+(an empty name passes shape validation), so the next Save stored it as a
+"Field N"; it now skips any row Save did not send.
+
+The muted placeholder came as a follow-up ruling, replacing a `blur`
+restore that wrote the label into the box. Its read found three more,
+fixed in the rung: a saved field's default could still move, so typing its
+label into another row renamed it on the next Save; a default a half-typed
+name borrowed never came back; a name of only spaces hid the default.
 
 ### Doc impact
 
 - `spec/instruments.md` — Band 3's response-field table, the Active
   checkbox and ▲ ▼; the pills' per-field visibility section and the ✓ row
-  retire (Item 9).
+  retire; a field's default label, shown muted in an empty name box and
+  taken with → or Enter (Item 9).
 - `spec/operator_button_audit.md` — ✓ retires; the Active checkbox and
   ▲ ▼ join the row; the display-field arrows become Secondary (Item 9).
 - `spec/ui_elements.md` — the response-field table's grouped rules
