@@ -1371,7 +1371,16 @@ check. **Moved forward from rung 5:** session clone re-points a governed
 field's parent at the parent's clone, since its generic column copy would
 otherwise point the clone at the source session's field. **Beyond the
 ladder:** the per-field routes refuse a branched instrument (Judgment
-calls).
+calls). Rung 2 is #2639; Codex's audit finding (a condition cleared with
+its last field went unaudited) is fixed there.
+
+**Rung 3 lands the save rule** in `app/services/responses/_branch_rule.py`.
+Save and submit (after `_apply_upserts`) and the group re-fan call
+`drop_closed_branch_answers`, which judges the answers as the write
+leaves them. The save's `responses.saved` counts gain
+`branch_answers_removed` when one goes. The responses import filters with
+`closed_governed_field_ids` before inserting, so each answer it can't
+keep is a reported drop rather than a silent one.
 
 ### Doc impact
 

@@ -54,6 +54,7 @@ from app.db.models import (
 from app.services.email_identity import normalize_email
 from app.services.extracts.responses_extract import HEADER, _group_export_index
 from app.services.instruments import _instrument_label
+from app.services.responses import closed_governed_field_ids
 
 __all__ = [
     "ResponsesFormatError",
@@ -275,8 +276,10 @@ def load_responses(
     # Stage by (assignment_id, response_field_id) — the Response unique
     # key — so a group fan-out or a duplicate row can't double-insert.
     staged: dict[tuple[int, int], Response] = {}
+    staged_from: dict[tuple[int, int], _ParsedResponseRow] = {}
 
     def _stage(
+        row: _ParsedResponseRow,
         assignment_id: int,
         field_id: int,
         value: str | None,
@@ -284,6 +287,7 @@ def load_responses(
         submitted_at: datetime | None,
         version: int,
     ) -> None:
+        staged_from[(assignment_id, field_id)] = row
         staged[(assignment_id, field_id)] = Response(
             assignment_id=assignment_id,
             response_field_id=field_id,
@@ -347,7 +351,8 @@ def load_responses(
                 continue
             for member in member_assignments:
                 _stage(
-                    member.id, field.id, value, saved_at, submitted_at, version
+                    row, member.id, field.id, value, saved_at, submitted_at,
+                    version,
                 )
             continue
 
@@ -370,8 +375,33 @@ def load_responses(
             )
             continue
         _stage(
-            assignment.id, field.id, value, saved_at, submitted_at, version
+            row, assignment.id, field.id, value, saved_at, submitted_at, version
         )
+
+    # 19T Item 10 — a closed branch holds no value: an answer to a governed
+    # field whose parent's imported answer closes its branch is dropped
+    # and reported, once per row even when the row fanned out to a group.
+    fields_by_instrument: dict[int, list[InstrumentResponseField]] = {}
+    for f in fields.values():
+        fields_by_instrument.setdefault(f.instrument_id, []).append(f)
+    instrument_by_assignment = {a.id: a.instrument_id for a in assignments}
+    answers_by_assignment: dict[int, dict[int, str | None]] = {}
+    for (assignment_id, field_id), response in staged.items():
+        answers_by_assignment.setdefault(assignment_id, {})[field_id] = (
+            response.value
+        )
+    reported: set[int] = set()
+    for assignment_id, answers in answers_by_assignment.items():
+        closed = closed_governed_field_ids(
+            fields_by_instrument.get(instrument_by_assignment[assignment_id], []),
+            answers,
+        )
+        for field_id in closed & answers.keys():
+            del staged[(assignment_id, field_id)]
+            row = staged_from[(assignment_id, field_id)]
+            if id(row) not in reported:
+                reported.add(id(row))
+                _drop(row, "its branch is closed by the parent field's answer")
 
     for response in staged.values():
         db.add(response)

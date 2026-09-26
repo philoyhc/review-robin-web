@@ -20,6 +20,7 @@ from app.db.models import (
 from app.schemas.responses import ResponseUpsert
 from app.services import audit
 from app.services.text import pluralize
+from app.services.responses._branch_rule import drop_closed_branch_answers
 from app.services.responses._group_reconciliation import (
     _expand_group_upserts,
     _group_instrument_ids,
@@ -412,17 +413,25 @@ def save_draft(
         assignment_index=assignment_index,
         field_index=field_index,
     )
+    # 19T Item 10 — a closed branch holds no value, judged on the answers
+    # as this save leaves them.
+    removed = drop_closed_branch_answers(
+        db, {u.assignment_id for u in valid_upserts}
+    )
 
+    counts: dict[str, int] = {
+        "assignments_touched": len({u.assignment_id for u in upserts}),
+        "responses_saved": written,
+    }
+    if removed:
+        counts["branch_answers_removed"] = removed
     audit.write_event(
         db,
         event_type="responses.saved",
         summary=f"Saved {written} {pluralize(written, 'response')} (draft)",
         actor_user_id=user.id,
         session=review_session,
-        payload=audit.counts(
-            assignments_touched=len({u.assignment_id for u in upserts}),
-            responses_saved=written,
-        ),
+        payload=audit.counts(**counts),
         refs={"reviewer_id": reviewer.id},
         correlation_id=correlation_id,
     )
@@ -504,6 +513,11 @@ def submit(
         assignment_index=assignment_index,
         field_index=field_index,
     )
+    # 19T Item 10 — a closed branch holds no value, judged on the answers
+    # as this submit leaves them, before anything is stamped submitted.
+    removed = drop_closed_branch_answers(
+        db, {u.assignment_id for u in valid_upserts}
+    )
 
     if errors:
         # Persist the valid draft writes; surface the bad ones so the
@@ -550,7 +564,10 @@ def submit(
         ),
         actor_user_id=user.id,
         session=review_session,
-        payload=audit.counts(submitted=submitted_count),
+        payload=audit.counts(
+            submitted=submitted_count,
+            **({"branch_answers_removed": removed} if removed else {}),
+        ),
         refs={"reviewer_id": reviewer.id},
         correlation_id=correlation_id,
     )

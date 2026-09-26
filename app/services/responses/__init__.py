@@ -20,6 +20,8 @@ Layout:
 - ``_branching.py`` — 19T Item 10: branch conditions, whether a branch
   is open, which fields an assignment can answer, and the structure
   rules. Pure; imports no other service.
+- ``_branch_rule.py`` — 19T Item 10: the save rule, "a closed branch
+  holds no value", which every writer of ``Response`` rows ends in.
 """
 
 from __future__ import annotations
@@ -50,6 +52,7 @@ from ._core import (
     submit,
     validate_value,
 )
+from ._branch_rule import closed_governed_field_ids, drop_closed_branch_answers
 from ._branching import (
     BRANCH_OPS,
     LIST_OP,
@@ -95,6 +98,9 @@ __all__ = [
     "session_response_count",
     "submit",
     "validate_value",
+    # _branch_rule
+    "closed_governed_field_ids",
+    "drop_closed_branch_answers",
     # _branching
     "BRANCH_OPS",
     "LIST_OP",
