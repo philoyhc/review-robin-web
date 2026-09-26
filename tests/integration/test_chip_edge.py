@@ -153,10 +153,10 @@ def test_the_chips_the_rule_targets_are_really_on_the_page(
         if re.search(r"data-new-model-band2-pill(?![-\w])", m.group(0))
     ]
     assert band2, "no Band 2 pill rendered on Instruments"
-    # Every clickable Band 2 pill carries tag-chip, which is why the rule
-    # needs no `[data-new-model-band2-pill]` selector of its own. The
-    # locked Name / Email pills are static labels (19T Item 3 entry 2) and
-    # must not wear the edge; `test_locked_display_pills_cannot_be_unselected`
-    # renders them.
+    # Every Band 2 pill is a clickable response pill and carries tag-chip,
+    # which is why the rule needs no `[data-new-model-band2-pill]` selector
+    # of its own. The display pills, including the static Name / Email
+    # labels, retired in 19T Item 8 (their rows are pinned by
+    # `test_locked_display_fields_cannot_be_unselected`).
     for classes, tag in band2:
-        assert ("tag-chip" in classes) is not ('data-locked="true"' in tag), tag
+        assert "tag-chip" in classes, tag
