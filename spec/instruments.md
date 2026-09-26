@@ -825,7 +825,7 @@ added, kept because Save is a fetch and never reloads.
 
 Below the intro card, a horizontal scrollable row holds one chip per
 saved response field. Display fields moved off this row onto Band 3's
-display-field table below when `guide/advanced_instruments.md` Item 3
+display-field table below when `guide/advanced_instruments.md` Item 5
 retired their chips (19T Item 8) — see "Display-field table". Clicking a
 chip toggles whether its column appears in the preview row below;
 dragging reorders it and moves its paired Band 3 response-field row to
