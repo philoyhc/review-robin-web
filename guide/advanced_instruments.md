@@ -292,7 +292,8 @@ About 4 PRs, scaffold-first:
 ## Item 1 — Branching, governed fields optional
 
 **Planned as 19T Item 10** (2026-09-26), which records what Items 7–9
-changed underneath these rulings and what is still to rule on.
+changed underneath these rulings and the author's answers on what
+they left open.
 **Logged 2026-09-24 on the author's instruction. Built fourth, on Items
 3–5.**
 
@@ -346,7 +347,10 @@ first ruled on Band 2's pills, which Items 3 and 5 retire).*
 - **More than one field per branch.** A row's "+" inside a branch adds
   another field to the branch.
 - **The last field in a branch can't be deleted.** Deleting the branch
-  (the condition row's X) deletes every field it governs.
+  (the condition row's X) deletes every field it governs. *(Superseded
+  2026-09-26, 19T Item 10: delete bottom-up. A parent's X is disabled
+  while it has a branch, and the branch's X while it has governed rows;
+  every governed row's X is live.)*
 
 **Order.** A branch's fields follow their parent in the rows, and in the
 preview, and may be reordered among themselves with Item 3's up / down:

@@ -1182,8 +1182,8 @@ and the author's retake of the Guide's instrument captures.
 Item 1, built on Items 7–9 as they shipped. The design record holds the
 rulings (structure, order, conditions, governed fields), the recommended
 storage, the settled layout and the pre-positioning for its Item 2. This
-block holds what Items 7–9 changed underneath them, what is still to
-rule on, and the ladder.
+block holds what Items 7–9 changed underneath them, the author's
+2026-09-26 answers on what the record left open, and the ladder.
 
 ### Opportunity
 
@@ -1265,8 +1265,8 @@ configured condition go unenforced.
    parent, no String parent, `required` false on a governed field, the
    condition). `set_band2_state` still refuses branch keys. No UI.
 3. **The save rule:** the invariant in all three writers.
-4. **The reviewer surface:** inactive governed cells, live JS on the
-   parent's input, group rows; tested on branches built in fixtures.
+4. **The reviewer surface:** muted governed cells nobody can answer
+   while the branch is closed, live JS on the parent's input, group rows; tested on branches built in fixtures.
 5. **Round-trips:** settings CSV (§3.3), session clone (remap through
    `response_field_map`), Replicate instrument.
 6. **Builder scaffold:** saved branches render as groups (bar, condition
@@ -1295,24 +1295,32 @@ configured condition go unenforced.
 
 ### Open questions
 
-For the author, each with a recommendation:
-1. **The parent's X while it has a branch.** Recommend disabled, "Delete
-   the branch first", as the last governed field's X is; the alternative
-   deletes the branch with it behind a confirm.
-2. **Changing a parent's type.** Recommend String disabled in a parent's
-   type select; any other change keeps the condition, which is
-   re-validated and marked amber if it no longer fits.
-3. **Re-ticking a parent's Active.** Pre-positioning 4 writes
-   `visible = False` onto its governed fields, so their own states are
-   lost. Recommend re-ticking the parent re-ticks every governed row.
-4. **A governed value the page closes before Save.** Recommend the input
-   keeps it, inactive, and it returns if the branch reopens before Save;
-   Save deletes it if the branch is still closed.
-5. **Governed columns in Band 2's preview.** Recommend plain columns,
-   since the preview's inputs are inert anyway.
-6. **The data-shape extract's `assigned` count** can't tell "not
-   applicable" from "skipped". Recommend leaving it, stated in
-   `spec/extract_data.md`, as the record's "no N/A marker" implies.
+All six answered by the author, 2026-09-26:
+1. **Deleting top-down is blocked; delete bottom-up.** A parent's X is
+   disabled while it has a branch, and the condition row's X while the
+   branch has governed rows. Every governed row's X is live, the last
+   one included. This supersedes the record's "the last field in a
+   branch can't be deleted; deleting the branch deletes every field it
+   governs".
+2. **String and a branch exclude each other**: ⑂ is inactive on a String
+   row, and String is disabled in a parent's type select.
+3. **Active cascades both ways**: unticking a parent writes `visible =
+   False` onto every governed field, and re-ticking it re-ticks them all.
+4. **A value the page closes is kept, greyed out**, and comes back if the
+   branch reopens; Save deletes it if the branch is still closed.
+5. **Governed fields show muted**: as muted columns in Band 2's preview,
+   and on the reviewer surface as muted cells nobody can answer until the
+   branch's condition is met.
+6. **The extract's `assigned` count stays as is**, and
+   `spec/extract_data.md` says it can't tell "not applicable" from
+   "skipped", in line with the record's "no N/A marker".
+
+### Judgment calls — decided
+
+- **A branch left with no governed rows** (answer 1 allows it on the
+  page) is refused by Save, naming the parent: "Add a field to the branch
+  or delete it." Dropping it silently would discard a condition the
+  operator wrote. (2026-09-26)
 
 ### Out of scope
 
