@@ -142,21 +142,15 @@ def test_the_chips_the_rule_targets_are_really_on_the_page(
     instruments = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    # The boundary matters: ``data-new-model-band2-pills-divider`` — the
-    # ``||`` between the display and response pills — shares the prefix,
-    # and without it the divider is counted as a pill that lost its class.
-    # The whole opening tag, so an attribute on either side of the marker
-    # is seen.
-    band2 = [
+    # The response pills retired in 19T Item 9 (the display pills in
+    # Item 8), so the page's clickable chips are the visibility editor's
+    # cycle chips; each carries tag-chip. No Band 2 pill remains.
+    assert not re.search(r"data-new-model-band2-pill(?![-\w])", instruments)
+    cycles = [
         (m.group(1), m.group(0))
         for m in re.finditer(r'<span class="([^"]*)"[^>]*>', instruments)
-        if re.search(r"data-new-model-band2-pill(?![-\w])", m.group(0))
+        if "data-new-model-vp-cycle-audience" in m.group(0)
     ]
-    assert band2, "no Band 2 pill rendered on Instruments"
-    # Every Band 2 pill is a clickable response pill and carries tag-chip,
-    # which is why the rule needs no `[data-new-model-band2-pill]` selector
-    # of its own. The display pills, including the static Name / Email
-    # labels, retired in 19T Item 8 (their rows are pinned by
-    # `test_locked_display_fields_cannot_be_unselected`).
-    for classes, tag in band2:
+    assert cycles, "no visibility cycle chip rendered on Instruments"
+    for classes, tag in cycles:
         assert "tag-chip" in classes, tag

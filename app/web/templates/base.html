@@ -638,66 +638,16 @@
         );
       }
       /*
-       * Band 2 pill drag-and-drop affordances. Reorderable pills
-       * (every display field except Name + Email) carry
-       * ``draggable="true"`` and show a grab cursor; the dragging
-       * pill fades; the drop target gets a thick left accent so the
-       * operator can see where the pill will land.
+       * 19T Item 9 — a Band 3 response-field row whose live name or
+       * shape is invalid, so the preview keeps its last valid shape: an
+       * amber left edge and a pale fill. The row is a <tbody>, which
+       * draws no box-shadow, so the marker sits on its cells.
        */
-      [data-new-model-band2-pill][data-reorderable="true"] {
-        cursor: grab;
-      }
-      [data-new-model-band2-pill][data-reorderable="true"]:active {
-        cursor: grabbing;
-      }
-      .new-model-band2-pill-dragging {
-        opacity: 0.4;
-      }
-      .new-model-band2-pill-drop-before {
-        box-shadow: -3px 0 0 0 var(--text-subtle);
-      }
-      /*
-       * Wave 4 PR 3 — pending visual for Band 3 response-field
-       * rows whose inputs the operator has edited but not yet
-       * committed via the ✓ button. A subtle amber left border
-       * flags the row without dominating the row's existing chrome;
-       * clears when ✓ is clicked.
-       */
-      [data-new-model-rf-row][data-row-pending="true"] {
-        box-shadow: inset 3px 0 0 0 var(--row-pending-marker);
+      [data-new-model-rf-row][data-row-pending="true"] > tr > td {
         background: rgba(254, 243, 199, 0.5);
       }
-      /*
-       * Six-dot grip glyph (⠿) rendered as the first child of every
-       * reorderable Band 2 pill. Muted by default so it doesn't
-       * dominate the label; darkens to match the pill text on hover
-       * so the affordance lights up exactly when the operator is
-       * reaching for it.
-       */
-      .new-model-band2-pill-grip {
-        display: inline-block;
-        margin-right: 6px;
-        color: var(--text-subtle);
-        font-size: 0.9em;
-        letter-spacing: -1px;
-        transition: color 0.1s ease-in-out;
-      }
-      [data-new-model-band2-pill][data-reorderable="true"]:hover
-        .new-model-band2-pill-grip {
-        color: var(--text-body);
-      }
-      /*
-       * `||` divider that sits between display pills and response
-       * pills in Band 2's pill row. Hidden until a response field
-       * is added (the JS only creates it then), so the display-only
-       * shape stays unchanged for instruments without responses.
-       */
-      .new-model-band2-pills-divider {
-        color: var(--text-subtle);
-        font-weight: bold;
-        font-size: 1.1em;
-        padding: 0 4px;
-        user-select: none;
+      [data-new-model-rf-row][data-row-pending="true"] > tr > td:first-child {
+        box-shadow: inset 3px 0 0 0 var(--row-pending-marker);
       }
       .muted { color: var(--text-subtle); }
       /*
@@ -2796,11 +2746,7 @@
          2px comes from an inset shadow rather than ``border-width`` so
          the box never changes size, and ``.pill``'s 1px transparent
          border (below) keeps a bordered chip exactly as tall as the
-         status label beside it in the same table cell.
-
-         ``[data-new-model-band2-pill]`` needs no selector of its own:
-         every clickable Band 2 pill already renders ``pill tag-chip``
-         (the locked Name / Email pills are static labels). */
+         status label beside it in the same table cell. */
       body.ui-v2 .tag-chip,
       body.ui-v2 .pill.pill-tag-clear,
       body.ui-v2 .pill.tag-mode-chip {
