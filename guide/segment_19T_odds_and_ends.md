@@ -1255,23 +1255,26 @@ Taken 2026-09-26 at `9487de5b`:
 ### PR ladder
 
 The item's cumulative `diff-reviewer` read runs at rung 8, from
-`9487de5b`.
+`9487de5b`. **Enforcement lands before any way to author a branch**
+(Codex on #2638): the save rule and the reviewer surface precede the
+round-trips and the builder, so no deployment between rungs lets a
+configured condition go unenforced.
 1. **The plan** (this rung, prose only).
 2. **Model and service:** the migration, the branch-open function, the
-   applicable-fields helper, validation (one level, one branch per parent,
-   no String parent, `required` false on a governed field, the
-   condition), and `set_band2_state` taking row keys, parents and the
-   condition. No UI.
-3. **Round-trips:** settings CSV (§3.3), session clone (remap through
+   applicable-fields helper, and validation (one level, one branch per
+   parent, no String parent, `required` false on a governed field, the
+   condition). `set_band2_state` still refuses branch keys. No UI.
+3. **The save rule:** the invariant in all three writers.
+4. **The reviewer surface:** inactive governed cells, live JS on the
+   parent's input, group rows; tested on branches built in fixtures.
+5. **Round-trips:** settings CSV (§3.3), session clone (remap through
    `response_field_map`), Replicate instrument.
-4. **Builder scaffold:** saved branches render as groups (bar, condition
+6. **Builder scaffold:** saved branches render as groups (bar, condition
    row, governed rows), and ⑂ shows its three states; all inert.
-5. **Builder wired:** ⑂, the condition row, "+" and ▲ ▼ inside a branch,
-   the Active cascade, R off inside a branch, X rules, the stager and the
+7. **Builder wired:** `set_band2_state` takes row keys, parents and the
+   condition; ⑂, the condition row, "+" and ▲ ▼ inside a branch, the
+   Active cascade, R off inside a branch, X rules, the stager and the
    preview.
-6. **The save rule:** the invariant in all three writers.
-7. **The reviewer surface:** inactive governed cells, live JS on the
-   parent's input, group rows.
 8. **Exports and fixtures:** the by-instrument extract's metadata states
    each condition; the monitoring parity fixture gains a branched
    instrument (Pre-positioning 7).
