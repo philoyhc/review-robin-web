@@ -2963,6 +2963,17 @@
       body.ui-v2 table.rf-table .btn { padding: 4px 10px; }
       body.ui-v2 table.rf-table td.rf-name { width: 20%; }
       body.ui-v2 table.rf-table td.rf-type { width: 15%; }
+      /* A shorter button for a compact table row (19T Item 9, on the
+         author's ruling): the same role and outline, sized to sit inside
+         the row's 22px pill so the row keeps its height. First user:
+         the display-field table's ▲ ▼. */
+      body.ui-v2 .btn.btn-short {
+        padding: 0 6px;
+        font-size: 0.7em;
+        line-height: 1.5;
+        min-height: 0;
+        vertical-align: middle;
+      }
       /* ===== 19P.1 — the roster card and its Unlock panel =====
          Page-agnostic primitives, so they live here rather than as a
          template <style> block, and `body.ui-v2`-scoped like every rule
