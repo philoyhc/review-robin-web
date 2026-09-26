@@ -1,7 +1,9 @@
-"""Band 3's visibility grid: labels must not wear a control's classes.
+"""The visibility grid: labels must not wear a control's classes.
 
-Segment 19J Item 7 rung 1. The grid's first column and its two fixed
-cells are rendered by ``b3_static_pill``; every other cell is a
+Segment 19J Item 7 rung 1, when the grid was Band 3's table. Since 19T
+Item 7 it is the editor in Band 2's "Who can see what you wrote" card,
+where the row labels are plain text. Its two fixed cells are rendered
+by ``b3_static_pill``; every other cell is a
 ``b3_mode_cycle`` chip the operator clicks to rotate the mode. Before
 this rung the two macros emitted the *same* class string —
 ``pill pill-count tag-chip is-selected`` — so nothing in the resting
@@ -9,8 +11,8 @@ state told them apart, and because the static one carried ``tag-chip``
 it also inherited ``cursor: pointer``, aiming the pill vocabulary's one
 affordance at the cells that do nothing.
 
-The assertions here read the **rendered elements** inside the Band 3
-region rather than searching the page for a class name. A bare
+The assertions here read the **rendered elements** inside the editor
+rather than searching the page for a class name. A bare
 ``"tag-chip" in body`` check passes on every page in the app: the class
 is defined in ``base.html``'s inline CSS, which ships with every
 response (learned the hard way three times in 19J.5).
@@ -27,11 +29,11 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
 
-#: The five cells ``b3_static_pill`` renders: three audience row
-#: labels, plus the two grid cells whose mode is not the operator's to
-#: choose (peer reviewers always see raw responses while the session is
-#: ongoing; reviewees see nothing).
-FIXED_LABELS = ["Reviewers", "Raw responses", "Reviewees", "—", "Observers"]
+#: The two cells ``b3_static_pill`` renders: the grid cells whose mode is
+#: not the operator's to choose (peer reviewers always see raw responses
+#: while the session is ongoing; reviewees see nothing). The row labels
+#: were pills too until 19T Item 7 made them plain text.
+FIXED_LABELS = ["Raw responses", "—"]
 
 
 @dataclass
@@ -90,14 +92,15 @@ def _make_session(
 
 
 def _band3_spans(client: TestClient, db: Session, *, code: str) -> list[Span]:
-    """Every ``<span class=...>`` inside the first Band 3 grid."""
+    """Every ``<span class=...>`` inside the first card's visibility
+    editor (``data-new-model-vp-editor``)."""
     review_session = _make_session(client, db, code=code)
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    start = body.index("<div data-new-model-band3")
-    # The grid is the first table in the region; the hidden mode
-    # inputs sit between the div and it.
+    start = body.index("data-new-model-vp-editor")
+    # The grid is the editor's only table; the hidden mode inputs sit
+    # between the div and it.
     end = body.index("</table>", start)
     collector = _SpanCollector()
     collector.feed(body[start:end])
@@ -107,7 +110,7 @@ def _band3_spans(client: TestClient, db: Session, *, code: str) -> list[Span]:
 def test_fixed_cells_carry_no_control_classes(
     client: TestClient, db: Session
 ) -> None:
-    """The five ``b3_static_pill`` cells are labels, and look like it."""
+    """The two ``b3_static_pill`` cells are labels, and look like it."""
     spans = _band3_spans(client, db, code="19j7-1")
     fixed = [s for s in spans if s.attrs.get("title") == "Fixed"]
 

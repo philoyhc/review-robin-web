@@ -751,9 +751,13 @@ the `1fr 2fr` re-split waits for Item 5.
 - **The lock swap is the description box's.** The editor is
   `data-unlock-only` and the reviewer's table `data-lock-only`, so a locked
   card shows no Observers row and no chips.
-- **Entry 3's repaint retires**, because the card is now the editor. A cycle
-  writes its hidden input and dirties the card through the existing
-  card-wide click listener. Cancel's reload restores the saved modes.
+- ~~**Entry 3's repaint retires**, because the card is now the editor.~~
+  **It stays** (build, 2026-09-26): the locked table is separate markup,
+  rendered once from saved state, and Save doesn't reload, so without the
+  repaint a Save then Lock would show the old modes. A cycle writes its
+  hidden input, repaints the locked table's cell, and dirties the card
+  through the existing card-wide click listener. Cancel's reload restores
+  the saved modes.
 - **The cycle sets don't change:** You (reviewer) is fixed at Raw while the
   session runs, and after release cycles —, Raw, Anonymized summaries.
   Reviewees are fixed at — while it runs, and cycle all four after release.
@@ -787,7 +791,8 @@ Taken 2026-09-26 at `13ba5ec4`:
 
 - A locked card shows the reviewer's two rows. An unlocked card cycles the
   four live cells, and Save persists them.
-- Band 3 has no Visibility table, and nothing names `data-new-model-vp-preview-cell`.
+- Band 3 has no Visibility table, and the card holds the only
+  `data-new-model-vp-form`.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19T.7` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -800,7 +805,16 @@ Taken 2026-09-26 at `13ba5ec4`:
 
 ### Status
 
-**Open.** Rung 1 in its PR.
+**Open.** Rung 1 is #2623. Rung 2 wires the card and carries Codex's one
+finding on #2623 (the author, 2026-09-26: fix it with rung 2): the
+Observers divider was an inline style, and it is now `row-group-start` in
+`base.html`. **Found at build:**
+- Entry 3's repaint stays (see Semantics).
+- The row labels are plain text now, no longer `b3_static_pill`s, so
+  `tests/integration/test_band3_static_pills.py` reads the card's editor
+  and expects two fixed labels, not five.
+- Three intro-card tests read a fixed character window that the card
+  outgrew; they now anchor on the element they check.
 
 ### Doc impact
 
