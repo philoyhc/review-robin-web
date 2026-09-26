@@ -26,6 +26,7 @@ from app.services.instruments._response_fields import (
     _validation_block_from_default_spec,
     validation_block_from_inline,
 )
+from app.services.responses import BRANCH_OPS, branch_structure_errors
 
 from ._apply_shared import (
     _RX_INSTRUMENT,
@@ -124,6 +125,19 @@ def _apply_instrument_kv(
             rf.list_csv = value or None
         elif attr == "visible":
             rf.visible = _parse_bool(value, default=True)
+        # 19T Item 10 — branching; resolved and checked once the
+        # instrument's fields exist (``_apply_branches``).
+        elif attr == "branch_parent":
+            rf.branch_parent = value or None
+        elif attr == "branch_op":
+            if value and value not in BRANCH_OPS:
+                raise _ParseError(
+                    f"unknown branch_op {value!r}; expected one of "
+                    f"{sorted(BRANCH_OPS)}"
+                )
+            rf.branch_op = value or None
+        elif attr == "branch_value":
+            rf.branch_value = value or None
         else:
             raise _ParseError(
                 f"unknown response_fields[] attribute {attr!r}"
@@ -206,6 +220,39 @@ def _apply_instrument_kv(
     else:
         raise _ParseError(f"unknown instruments[] attribute {attr!r}")
     del data_type  # unused; type-checked by parser per attr
+
+
+def _apply_branches(
+    db: Session,
+    n: int,
+    created: list[tuple[_ResponseFieldSpec, InstrumentResponseField]],
+) -> None:
+    """19T Item 10 — point each governed field at its parent, named by
+    ``field_key`` within the same instrument. The parse phase has already
+    held the file to the branching rules (``_apply_parse._branch_errors``),
+    so a broken branch is a named row error, not a failed apply; the
+    checks here only guard that contract."""
+    if not any(spec.branch_parent or spec.branch_op for spec, _ in created):
+        return
+    db.flush()  # populate ids
+    by_key = {field.field_key: field for _, field in created}
+    for spec, field in created:
+        if not spec.branch_parent:
+            continue
+        parent = by_key.get(spec.branch_parent)
+        if parent is None:
+            raise _ParseError(
+                f"instruments[{n}]: response field {field.field_key!r} "
+                f"names branch_parent {spec.branch_parent!r}, which isn't "
+                "a response field of this instrument"
+            )
+        field.branch_parent_id = parent.id
+    errors = branch_structure_errors([field for _, field in created])
+    if errors:
+        raise _ParseError(
+            f"instruments[{n}]: "
+            + "; ".join(f"{label}: {msg}" for label, msg in errors)
+        )
 
 
 def _wipe_instruments_and_dependents(
@@ -347,6 +394,9 @@ def _apply_instruments(
         default_spec = DEFAULT_RESPONSE_FIELDS[0]
         default_inline = _inline_kwargs_from_default_spec(default_spec)
         default_validation = _validation_block_from_default_spec(default_spec)
+        created_fields: list[
+            tuple[_ResponseFieldSpec, InstrumentResponseField]
+        ] = []
         for m in sorted(spec.response_fields.keys()):
             rf_spec = spec.response_fields[m]
             inline_kwargs = dict(default_inline)
@@ -371,21 +421,28 @@ def _apply_instruments(
                 )
             else:
                 validation_block = default_validation
-            db.add(
-                InstrumentResponseField(
-                    instrument_id=instrument.id,
-                    field_key=rf_spec.field_key or "",
-                    label=rf_spec.label or "",
-                    required=rf_spec.required,
-                    order=m,
-                    validation=validation_block,
-                    help_text=rf_spec.help_text,
-                    help_text_visible=rf_spec.help_text_visible,
-                    visible=rf_spec.visible,
-                    **inline_kwargs,
+            created_fields.append(
+                (
+                    rf_spec,
+                    InstrumentResponseField(
+                        instrument_id=instrument.id,
+                        field_key=rf_spec.field_key or "",
+                        label=rf_spec.label or "",
+                        required=rf_spec.required,
+                        order=m,
+                        validation=validation_block,
+                        help_text=rf_spec.help_text,
+                        help_text_visible=rf_spec.help_text_visible,
+                        visible=rf_spec.visible,
+                        branch_op=rf_spec.branch_op,
+                        branch_value=rf_spec.branch_value,
+                        **inline_kwargs,
+                    ),
                 )
             )
+            db.add(created_fields[-1][1])
             counts["response_fields"] += 1
+        _apply_branches(db, n, created_fields)
 
         # Segment 18P PR A2 — recreate the Band 3 visibility grid.
         # View policies are children of the instrument, so the
