@@ -3763,6 +3763,9 @@
                 });
               }
               window.newModelRfRows(b2).forEach(function (row) {
+                // The untouched placeholder wasn't sent and stays one
+                // (Codex on #2636).
+                if (!window.newModelRfSaveName(row)) { return; }
                 window.newModelRfRestoreDefaultName(row);
                 if (row.getAttribute('data-committed') !== 'true') {
                   row.setAttribute('data-selected', 'false');

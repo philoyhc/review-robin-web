@@ -1182,6 +1182,10 @@ found three more, fixed in the rung:
   take them;
 - this Status block had folded rung 5's notes into rung 6.
 
+Codex (#2636): Save's success handler committed the untouched placeholder
+(an empty name passes shape validation), so the next Save stored it as a
+"Field N"; it now skips any row Save did not send.
+
 ### Doc impact
 
 - `spec/instruments.md` — Band 3's response-field table, the Active

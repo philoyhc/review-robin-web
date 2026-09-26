@@ -8356,6 +8356,8 @@ def test_save_success_commits_every_named_row(
     assert "var savedIds = data && data.response_field_ids;" in on_success
     assert "savedIds.length === sentRows.length" in on_success
     assert "return !!window.newModelRfSaveName(row);" in on_success
+    # The untouched placeholder is skipped, not committed (Codex on #2636).
+    assert "if (!window.newModelRfSaveName(row)) { return; }" in on_success
     # A row whose name box is empty was saved under its default label
     # (19T Item 9, the author's ruling), which it gets back first.
     assert "window.newModelRfRestoreDefaultName(row);" in on_success
