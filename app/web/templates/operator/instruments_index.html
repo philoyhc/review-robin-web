@@ -4138,11 +4138,13 @@
       <hr style="margin: 20px 0; border: 0; border-top: 3px solid var(--border-default);">
       {# Band 3 — two columns, one third and two thirds: the
          display-field table (19T Item 8) on the left, the
-         response-fields editor on the right.
+         response-fields editor on the right. The left track's minimum
+         is 0 so a long field label scrolls in its ``.table-scroll``
+         instead of widening the column.
          Visibility moved to Band 2's "Who can see what you wrote"
          card (19T Item 7). #}
       <div data-new-model-band3 data-lock-region
-           style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px;
+           style="display: grid; grid-template-columns: minmax(0, 1fr) 2fr; gap: 16px;
                   align-items: stretch;"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
         {# 19T Item 8 — the display-field table

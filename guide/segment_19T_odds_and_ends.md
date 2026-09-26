@@ -972,6 +972,9 @@ in rung 3 (#2628).
   a display-only pill;
 - **Band 3 re-splits to `1fr 2fr`**, the design record's split, which the
   Decision above had deferred.
+  Codex (#2629): the left track is `minmax(0, 1fr)`, since a long
+  unbroken label otherwise widened it past a third (1735px against 337px
+  at 1400px wide); now it scrolls in its `.table-scroll`.
 
 The rung reopens `app/` after the read, so it takes its own.
 **The close waits** on the author.
