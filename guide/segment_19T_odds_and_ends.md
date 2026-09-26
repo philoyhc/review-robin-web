@@ -814,6 +814,9 @@ wire, and this close). The ladder ran as planned, with two changes:
   style, rode rung 2 on the author's instruction. It became `row-group-start`
   in `base.html`.
 
+**The close's `spec-writer` pass** found four more specs naming Band 3's
+editor beyond the planned five; they are in Doc impact and fixed here.
+
 **Reads: one**, the item's cumulative read over `13ba5ec4..HEAD`. It found
 no regression in Save, lock, Cancel or the dirty tracker, and the editor
 keeps Band 3's guard (an inert lock region unless editing). Rung 2 fixed
@@ -842,4 +845,11 @@ author's retake of the Guide's two instrument captures.
   row that starts a new group (Item 7).
 - `guide/advanced_instruments.md` — Item 4 points to this item as built
   (Item 7).
+- `spec/rrw_functional_spec.md` — §9.6's Band 2 / Band 3 summary and
+  §5.16's default note move the visibility editor to the card (Item 7;
+  found by the close's `spec-writer` pass).
+- `spec/rehydrate.md` — the import's validation table is the visibility
+  editor's, not "the Band 3 editor's" (Item 7; the same pass).
+- `spec/roundtrip_coverage.md` — "the Band 3 grid" becomes the visibility
+  grid (Item 7; the same pass).
 - `docs/status.md` — row when the item closes (Item 7).

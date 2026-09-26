@@ -2,7 +2,7 @@
 
 Per-instrument, per-audience grants controlling **who** can see this instrument's responses, **in what form**, and **during which window**. The schema lives on `instrument_view_policies`; the resolver consumes one row per (instrument, audience) pair at view time (no materialisation onto `assignments`).
 
-This spec is the operator-facing functional contract. The cross-cutting participant-model design lives in `guide/archive/participant_model_upgrade.md`; the per-page operator UI sits in `spec/instruments.md` (Band 3 of the instrument card).
+This spec is the operator-facing functional contract. The cross-cutting participant-model design lives in `guide/archive/participant_model_upgrade.md`; the per-page operator UI sits in `spec/instruments.md` (Band 2's visibility card).
 
 ## Scope of this policy — strictly per-pair flow
 
@@ -117,8 +117,8 @@ cells' backticked mode names intact when rewording.
 | `reviewee` | **`None` only.** A reviewee may never read responses while the review is running: the two windows mean literally *as data is coming in* and *after the review has closed*, and the second is the only one that is theirs. | `None`, `raw`, `anonymized`, `summarized`. Default `after_release`. |
 | `observer` | `None` or `summarized`. Raw / Anonymized rows are gated on `after_release` — per-row downloads during a live session carry an unfinished-data risk the summary view dodges. | `None`, `raw`, `anonymized`, `summarized`. |
 
-**Both writers enforce it, and both must.** The Band 3 editor refuses an
-illegal cell in `upsert_policy` → `_validate_per_window`; the
+**Both writers enforce it, and both must.** The instrument's visibility
+editor refuses an illegal cell in `upsert_policy` → `_validate_per_window`; the
 **Settings-CSV import** refuses it in the parse phase
 (`session_config_io/_apply_parse._view_policy_cell_errors`), naming the
 field and the legal modes, before any row is written. Checking the
@@ -191,7 +191,7 @@ instrument_view_policies
 
 ### 4.1 Default state
 
-Default on instrument create: no rows. Resolver treats a missing row as "off in both windows" — instrument is invisible to that audience. The operator opts each audience in deliberately on the Band 3 editor.
+Default on instrument create: no rows. Resolver treats a missing row as "off in both windows" — instrument is invisible to that audience. The operator opts each audience in deliberately on the instrument's visibility editor.
 
 ---
 
@@ -212,8 +212,7 @@ A no-op save (operator clicked Save with no changes) emits nothing.
 | Surface | What carries it |
 |---|---|
 | Persistence | `app/services/visibility_policies.py` — mode encoder / decoder, per-audience vocabulary, `upsert_policy`, `upsert_many`. |
-| Band 3 editor | The chip table renders hidden inputs that hitch on the card's main Save form (`form="dfsave-<id>"`); both the consolidated `POST /operator/sessions/{id}/instruments/{instrument_id}/save` and its no-JS `/fields/save` fallback read the visibility fields and call `upsert_many`, so there is no standalone visibility submit to keep in step. `build_instruments_context` carries `band3_visibility_by_instrument`. |
-| Band 2 preview of the reviewer-surface card | `build_instruments_context` carries `band2_preview_visibility_rows_by_instrument` (`build_reviewer_visibility_rows`, same rows as the reviewer surface's `visibility_rows`); the Band 2 intro grid renders the read-only "Who can see what you wrote (other than admin)" card alongside the description card, server-rendered from saved policy rows. Band 3's Visibility cycle chips (`newModelCycleVisibilityCell`) repaint the matching cell live on click, so an unsaved edit shows here before Save; Cancel's discard reload restores the saved state. Observers aren't on the card. |
+| Band 2's "Who can see what you wrote" card | One card in Band 2's intro grid is both the preview and the editor (19T Item 7; `spec/instruments.md` § *Visibility card*). Locked, it renders `band2_preview_visibility_rows_by_instrument` (`build_reviewer_visibility_rows`, same rows as the reviewer surface's `visibility_rows`) — two rows, Observers omitted. Unlocked, the chip table renders hidden inputs that hitch on the card's main Save form (`form="dfsave-<id>"`), from `band3_visibility_by_instrument`; both the consolidated `POST /operator/sessions/{id}/instruments/{instrument_id}/save` and its no-JS `/fields/save` fallback read them and call `upsert_many`, so there is no standalone visibility submit to keep in step. A cycle chip (`newModelCycleVisibilityCell`) repaints the locked table's matching cell live on click, so an unsaved edit shows there before Save; Cancel's discard reload restores the saved state. |
 | Reviewer-surface transparency card | `views.build_reviewer_visibility_rows` (in `app/web/views/_instruments.py`) + a half-width read-only "Who can see what you wrote" card in column 2 of each per-instrument intro grid on `review_surface.html`. Two rows (You / Reviewees; Observers omitted) × two windows, with the persisted mode labels (Raw responses / Anonymized responses / Anonymized summaries / —). |
 | Resolver | `app/services/visibility_policies.py::resolve_mode` reads policies and applies the scope rules. |
 | Reviewee `/results` body | `build_reviewee_results_context` renders the raw / anonymized / summarized modes, plus the Acknowledge card at the foot of the page. |
@@ -226,5 +225,5 @@ A no-op save (operator clicked Save with no changes) emits nothing.
 - `guide/archive/participant_model_upgrade.md` §3.3 — design rationale + the audience-scope table.
 - `guide/archive/participant_model_upgrade.md` Appendix A — the S / P / W implementation-phase identifier glossary, for reading the slice ids that `docs/status.md` and the segment records use (S13, cited above, is one of them).
 - `spec/participant_model.md` — cross-cutting participant-model contract; release-window columns.
-- `spec/instruments.md` — the per-instrument card layout; Band 3 visibility editor sits here.
+- `spec/instruments.md` — the per-instrument card layout; Band 2's visibility card sits here.
 - `spec/lifecycle.md` — schedule columns (`responses_release_at` / `responses_release_until`), §8.2.2 anchor-null, §8.2.7 save-time ordering.

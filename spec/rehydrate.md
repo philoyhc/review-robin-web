@@ -318,7 +318,7 @@ without keeps it; view policies fall back to defaults.
 **A bundle carrying an illegal visibility cell fails here.**
 `apply_session_config` validates each
 `instruments[n].view_policies[<audience>].*` cell against the same table
-the Band 3 editor uses (`spec/visibility_policy.md` §3.1) and returns an
+the instrument card's visibility editor uses (`spec/visibility_policy.md` §3.1) and returns an
 `ApplyError` naming the field. Rehydrate treats that like any other
 settings failure — `RehydrateError("settings.csv failed to apply: …")`,
 the whole rehydrate rolls back, and the operator gets the message. An
