@@ -1721,9 +1721,9 @@
                data-new-model-band2-widths-snapshot
                value="{{ (instrument.column_widths or {}) | tojson }}">
         {# Segment 18R Item 2 PR 5b — Band 2 state snapshot. The client
-           stageBand2State() serializes the current field pills +
-           response-field rows (including typed-but-un-✓'d rows — the
-           lost-edit fix) into this input; the consolidated /save
+           stageBand2State() serializes the display-field selection +
+           response-field rows (every named row — the lost-edit fix)
+           into this input; the consolidated /save
            applies it via set_band2_state, retiring the immediate
            /band2-state POST. Starts empty — an empty snapshot means no
            Band 2 edits to apply, so /save leaves the state untouched. #}
@@ -1733,7 +1733,8 @@
                value="">
         {# Segment 18R Item 2 PR 6 — display-field order snapshot. The
            client stages the ordered (non-locked) display-field ids here
-           on a Band 2 display-pill drag reorder; /save applies it via
+           on a display-field ▲ ▼ (Band 3's table, 19T Item 8); /save
+           applies it via
            reorder_display_fields, retiring the immediate
            /display-fields/order POST. Starts empty — empty means no
            reorder to apply. #}
@@ -1759,7 +1760,7 @@
                    name="sort_dir" value="{{ entry.dir }}">
           {% endfor %}
         </div>
-        {# Gate pill clicks / drag-resize / drag-reorder behind the
+        {# Gate column drag-resize and the help boxes behind the
            per-instrument Edit state — same pattern as Bands 1 + 3.
            ``inert`` blocks every interaction below (clicks, focus,
            native HTML5 drag); the opacity fade gives the visual
@@ -2053,55 +2054,13 @@
               </p>
             </div>
           </div>
-          {# Selector-chip row, at the bottom of Band 2 and flush-right:
-             one response-field chip per Band 3 row (display fields are
-             Band 3's table since 19T Item 8). A click toggles the
-             column in the preview table above; drag reorders. #}
-          <div data-new-model-band2-pills
-               style="display: flex; flex-wrap: wrap; gap: 8px;
-                      align-items: center; justify-content: flex-end;
-                      margin-top: 16px;">
-            {# 19T Item 8 — the display pills retired: Band 3's
-               display-field table carries display fields now. Only the
-               response pills remain here (``guide/advanced_instruments.md``
-               Item 3 retires them). #}
-            {# The response pills, one per saved field. Each entry's
-               index gives a stable per-render key (``rf_<idx>``) that
-               the row and the pill share. 19T Item 9 — the pill is a
-               control that mirrors its row: the row carries the field's
-               state (selection, shape, width, help text), which is all
-               the preview and Save read. #}
-            {% if _band2.response_fields %}
-              {% for rf in _band2.response_fields %}
-                {% set _key = 'rf_' ~ loop.index0 %}
-                <span class="pill tag-chip{% if rf.selected %} pill-count is-selected{% endif %}"
-                      role="button" tabindex="0"
-                      aria-pressed="{{ 'true' if rf.selected else 'false' }}"
-                      data-new-model-band2-pill
-                      data-key="{{ _key }}"
-                      data-label="{{ rf.name }}"
-                      data-source-type="response"
-                      data-selectable-in-group="true"
-                      data-row-key="{{ _key }}"
-                      data-reorderable="true"
-                      draggable="true"
-                      ondragstart="newModelBand2DragStart(event)"
-                      ondragend="newModelBand2DragEnd(event)"
-                      ondragover="newModelBand2DragOver(event)"
-                      ondrop="newModelBand2Drop(event)"
-                      onclick="newModelToggleBand2Pill(this)"
-                      title="Click to include / drag to reorder {{ rf.name }}"><span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{{ rf.name }}</span>
-              {% endfor %}
-            {% endif %}
-            {% if not _band2.response_fields %}
-              <span class="muted">—</span>
-            {% endif %}
-          </div>
+          {# 19T Item 9 — the response pills retired: Band 3's response-field
+             table sets each field's order and selection. #}
         </div>
       </div>
       <script>
         (function () {
-          if (window.newModelToggleBand2Pill) { return; }
+          if (window.newModelRfSetSelected) { return; }
           // Read the current Link 3 unit-of-review for a card.
           // Source of truth is the band2 wrapper's
           // ``data-new-model-band2-unit-mode`` data-attr — server
@@ -2243,18 +2202,6 @@
               box.disabled = locked || off;
               box.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');
             });
-            card.querySelectorAll('[data-new-model-band2-pill]').forEach(function (pill) {
-              var groupOk = pill.getAttribute('data-selectable-in-group') === 'true';
-              var disabled = grouped && !groupOk;
-              pill.setAttribute('aria-disabled', disabled ? 'true' : 'false');
-              pill.style.opacity = disabled ? '0.4' : '';
-              pill.style.cursor = disabled ? 'not-allowed' : 'pointer';
-              if (disabled && pill.getAttribute('aria-pressed') === 'true') {
-                pill.setAttribute('aria-pressed', 'false');
-                pill.classList.remove('is-selected');
-                pill.classList.remove('pill-count');
-              }
-            });
           }
           // 19T Item 8 — the display fields are Band 3's table rows, in
           // display order, each checkbox its selection. ``card`` is the
@@ -2272,9 +2219,9 @@
             return !!(box && box.checked);
           }
           // 19T Item 9 — the response fields are Band 3's table rows, in
-          // order. A row is ``committed`` once saved or ✓'d, and carries
-          // the state its pill used to: selection, the name and shape
-          // last ✓'d, width, help text. Every reader goes through here,
+          // order. A row is ``committed`` once saved or its shape was
+          // valid, and carries the field's state: selection, the name and
+          // shape last committed, width, help text. Every reader goes through here,
           // so branching (``guide/advanced_instruments.md`` Item 1) has
           // one place to add a row's parent.
           function rfRows(card) {
@@ -2714,11 +2661,10 @@
           }
           // POST the operator's Band 2 selections + Band 3
           // response-field row data to the band2-state route.
-          // Pill selection is read from aria-pressed; each response
-          // field row is matched to its pill via data-row-key, and
-          // every named row persists, ✓'d or not (see below).
+          // Each row's selection and state are read off the row (19T
+          // Item 9), and every named row persists (see below).
           // Segment 18R Item 2 PR 5b — this now STAGES the Band 2 state
-          // (field pills + response-field rows) into the hidden
+          // (display selections + response-field rows) into the hidden
           // ``band2_state_snapshot`` input and marks the card dirty,
           // instead of an immediate /band2-state POST. The consolidated
           // /save applies it on Save. Kept the ``saveBand2State`` name
@@ -2736,10 +2682,9 @@
               return row.getAttribute('data-key');
             });
             // Serialize one response-field row into the payload shape.
-            // A committed row (saved or ✓'d) sends its selection, width
-            // and help text; a typed-but-un-✓'d row (the lost-edit case)
-            // saves unselected (19T Item 9 — read off the row, which
-            // carries what its pill did).
+            // A committed row sends its selection, width and help text; a
+            // named row never committed (its shape is invalid, so Save
+            // will refuse it) sends unselected.
             function serializeRow(row) {
               var committed = rfRowCommitted(row);
               var nameInput = row.querySelector('[data-new-model-rf-name]');
@@ -2783,9 +2728,8 @@
             var responseFields = [];
             // 19T Item 1 — one pass in Band 3 row order, which is the
             // field order Save persists: a row "+" inserted between A
-            // and B saves as A, C, B. A named row never ✓'d persists as
-            // an unselected field (Segment 18R Item 2 PR 5b's lost-edit
-            // fix). A response-pill drag moves its row too.
+            // and B saves as A, C, B. A named row never committed sends
+            // unselected (Segment 18R Item 2 PR 5b's lost-edit fix).
             rfRows(card).forEach(function (row) {
               var rf = serializeRow(row);
               if (rf) { responseFields.push(rf); }
@@ -2803,15 +2747,14 @@
               window.newModelMarkCardDirty(instrumentCard);
             }
           }
-          // 19T Item 1 — the Band 3 row handlers (✓, X) live in a
-          // later ``<script>``, outside this closure; they reach the
-          // stager through this handle. A bare ``saveBand2State`` call
-          // there threw a ReferenceError, so X never removed a row
-          // with a pill and ✓ never cleared the row's pending flag.
+          // 19T Item 1 — the Band 3 row handlers live in a later
+          // ``<script>``, outside this closure; they reach the stager
+          // through this handle (a bare ``saveBand2State`` call there
+          // threw a ReferenceError).
           window.newModelStageBand2State = saveBand2State;
           // Segment 18R Item 2 PR 4 — the per-field help ✎/✓ editor
           // retires. The help box is a plain textarea when the card is
-          // unlocked (edited inline, staged into the pill's
+          // unlocked (edited inline, staged into the row's
           // data-help-text via oninput, committed on Save through the
           // Band 2 state flush) and rendered read-only text when the
           // card is locked. Keyed on the band2 edit-mode flag, which
@@ -2845,13 +2788,9 @@
             html += '</div>';
             return html;
           }
-          // Help-card icon-button handlers. ``data-help-edit-mode``
-          // on the paired response pill is the source of truth for
-          // edit/view mode — toggling it + calling rebuildPreview
-          // re-renders the card in the right shape. The textarea's
-          // ``oninput`` mirrors the live value onto the pill's
-          // ``data-help-text`` so a rebuild mid-edit (e.g. a sibling
-          // pill toggle) doesn't drop the typed content.
+          // The help textarea's ``oninput`` mirrors the live value onto
+          // the row's ``data-help-text`` so a rebuild mid-edit (e.g. a
+          // sibling field's Active toggle) doesn't drop the typed content.
           // Refresh the intro card's "Required items completed"
           // and "All items completed" pill counts in place. Reads
           // the current state from Band 3 rows (the source of
@@ -2943,10 +2882,10 @@
           }
           // 19T Item 1 — the committed type and bounds the preview shows
           // (``data-rf-*``): rendered from the saved field, rewritten
-          // only by the row's ✓. The preview reads them here rather than
-          // from the live inputs, so an edit reaches the preview on ✓
-          // and ✓ can tell whether the row differs from what the preview
-          // shows. 19T Item 9 — they sit on the row, not its pill.
+          // whenever the row's live shape is valid (19T Item 9,
+          // ``newModelRfMaybeCommit``). The preview reads them here
+          // rather than from the live inputs, so a half-typed bound
+          // never reaches it.
           window.newModelRfCommittedShape = function (row) {
             function a(name) { return (row.getAttribute(name) || '').trim(); }
             return {
@@ -3033,7 +2972,7 @@
           // Mirrors the reviewer surface's ``.rs-constraints`` line
           // (see ``views/_instruments.py::constraint_summary_for_field``).
           // Reads each selected row's committed data_type + bounds
-          // (``data-rf-*``, what the row last pushed with ✓).
+          // (``data-rf-*``, what the row last committed).
           function buildConstraints(card) {
             var parts = [];
             rfRows(card).filter(rfRowOn).forEach(function (row) {
@@ -3121,7 +3060,7 @@
             // operator-resized widths (``<col style="width: Npx">``)
             // and auto-distributed widths (no inline style).
             adjustPreviewTextareaRows(container);
-            // 19T Item 8 — the display-field table follows the pills.
+            // 19T Item 8 — refresh the display-field table's arrows.
             syncDfTable(card);
           }
           // Walk every textarea inside the just-rendered preview
@@ -3159,12 +3098,11 @@
             });
           }
           // 19T Item 9 — set a response field's selection on its row,
-          // from its Active checkbox or its pill. Hiding a field with
+          // from its Active checkbox. Hiding a field with
           // saved responses asks first (Segment 18K PR 4); the server
           // mirrors the check via ``ResponseFieldDropAcknowledgement``.
           // Returns false when the operator cancels, so the caller can
-          // put its control back. The pill and the checkbox mirror the
-          // row.
+          // put its control back.
           function rfSetSelected(card, row, next) {
             var acknowledgedDrop = false;
             if (!next) {
@@ -3179,7 +3117,7 @@
                   + responseCount + ' saved response' + pluralR
                   + ' will be preserved for audit but no longer appear '
                   + 'on the surface, summary, or reviewer-record CSV. '
-                  + 'Re-pin the chip later to restore the column.'
+                  + 'Tick Active again later to restore the column.'
                 );
                 if (!confirmed) { return false; }
                 acknowledgedDrop = true;
@@ -3188,38 +3126,11 @@
             row.setAttribute('data-selected', next ? 'true' : 'false');
             var box = row.querySelector('[data-new-model-rf-active]');
             if (box) { box.checked = next; }
-            var pill = card.querySelector(
-              '[data-new-model-band2-pill][data-row-key="' + row.getAttribute('data-row-key') + '"]'
-            );
-            if (pill) {
-              pill.setAttribute('aria-pressed', next ? 'true' : 'false');
-              pill.classList.toggle('is-selected', next);
-              pill.classList.toggle('pill-count', next);
-            }
             rebuildPreview(card);
             saveBand2State(card, {acknowledgedDrop: acknowledgedDrop});
             return true;
           }
           window.newModelRfSetSelected = rfSetSelected;
-          window.newModelToggleBand2Pill = function (pill) {
-            if (pill.getAttribute('aria-disabled') === 'true') { return; }
-            var card = pill.closest('[data-new-model-band2]');
-            var row = card ? rfRowByKey(card, pill.getAttribute('data-row-key')) : null;
-            if (!row) { return; }
-            rfSetSelected(card, row, pill.getAttribute('aria-pressed') !== 'true');
-          };
-          // 19T Item 9 — the pills follow the rows' order, after a row's
-          // ▲ ▼; a pill drag moves its row instead.
-          window.newModelRfSyncPillOrder = function (card) {
-            var pillsRow = card.querySelector('[data-new-model-band2-pills]');
-            if (!pillsRow) { return; }
-            rfRows(card).forEach(function (row) {
-              var pill = pillsRow.querySelector(
-                '[data-new-model-band2-pill][data-row-key="' + row.getAttribute('data-row-key') + '"]'
-              );
-              if (pill) { pillsRow.appendChild(pill); }
-            });
-          };
           window.newModelRefreshBand2 = function (card) {
             if (!card) { return; }
             refreshPillStates(card);
@@ -3355,109 +3266,6 @@
               btn.textContent = '↻ Refresh failed';
               setTimeout(function () { btn.textContent = '↻ Refresh preview'; btn.disabled = false; }, 1800);
             });
-          };
-          // Response field row management lives further down in
-          // the script — see newModelRfAddRow / newModelRfSaveRow
-          // / newModelRfDeleteRow. Skip directly to the
-          // drag-and-drop pill reorder section.
-          // ---- Drag-and-drop pill reorder ---------------------
-          // Response pills carry ``data-reorderable="true"`` and are
-          // HTML5-draggable. On drop, we move the DOM node and the
-          // matching Band 3 row, then stage the state for Save.
-          // Display fields reorder with Band 3's table arrows
-          // (19T Item 8), not here.
-          var dragSource = null;
-          window.newModelBand2DragStart = function (event) {
-            var pill = event.target.closest('[data-new-model-band2-pill]');
-            if (!pill || pill.getAttribute('data-reorderable') !== 'true') {
-              event.preventDefault();
-              return;
-            }
-            dragSource = pill;
-            pill.classList.add('new-model-band2-pill-dragging');
-            if (event.dataTransfer) {
-              event.dataTransfer.effectAllowed = 'move';
-              // Required by Firefox to actually start a drag.
-              event.dataTransfer.setData('text/plain', pill.getAttribute('data-key') || '');
-            }
-          };
-          window.newModelBand2DragEnd = function (event) {
-            if (dragSource) {
-              dragSource.classList.remove('new-model-band2-pill-dragging');
-            }
-            dragSource = null;
-            // Clear all drop-indicator highlights on dragend.
-            document.querySelectorAll('.new-model-band2-pill-drop-before')
-              .forEach(function (el) { el.classList.remove('new-model-band2-pill-drop-before'); });
-          };
-          // Pill region (display vs response) — used to keep a
-          // drag pinned to its own group so a response pill can't
-          // jump into the display section (or vice versa).
-          function pillRegion(pill) {
-            return pill.getAttribute('data-source-type') === 'response' ? 'response' : 'display';
-          }
-          window.newModelBand2DragOver = function (event) {
-            var target = event.target.closest('[data-new-model-band2-pill]');
-            if (!target || target.getAttribute('data-reorderable') !== 'true') { return; }
-            if (!dragSource || target === dragSource) { return; }
-            // Only allow dropping within the same Band 2 card.
-            if (target.closest('[data-new-model-band2]') !== dragSource.closest('[data-new-model-band2]')) {
-              return;
-            }
-            // Region guard: response pills only swap with other
-            // response pills; display pills only swap with display
-            // pills. The `||` divider stays put between the two.
-            if (pillRegion(target) !== pillRegion(dragSource)) { return; }
-            event.preventDefault();
-            if (event.dataTransfer) { event.dataTransfer.dropEffect = 'move'; }
-            // Reset previous indicators, then mark this one.
-            target.parentNode.querySelectorAll('.new-model-band2-pill-drop-before')
-              .forEach(function (el) { el.classList.remove('new-model-band2-pill-drop-before'); });
-            target.classList.add('new-model-band2-pill-drop-before');
-          };
-          window.newModelBand2Drop = function (event) {
-            var target = event.target.closest('[data-new-model-band2-pill]');
-            if (!target || !dragSource || target === dragSource) { return; }
-            // Enforce the region guard at drop too — the dragover
-            // handler skips preventDefault for cross-region targets
-            // so the browser usually rejects the drop, but be
-            // defensive here so a stray drop can't smuggle a pill
-            // across the divider.
-            if (pillRegion(target) !== pillRegion(dragSource)) { return; }
-            event.preventDefault();
-            target.classList.remove('new-model-band2-pill-drop-before');
-            // Insert the dragged pill immediately before the drop
-            // target. Operators dragging right-to-left intuitively
-            // expect "drop on X" to mean "insert before X" — same
-            // contract reviewer-surface sort uses elsewhere.
-            target.parentNode.insertBefore(dragSource, target);
-            var band2Card = target.closest('[data-new-model-band2]');
-            if (band2Card) {
-              // Only response pills remain (19T Item 8 moved display
-              // fields to Band 3's table, reordered by its arrows).
-              {
-                // 19T Item 1 — Save persists Band 3 row order, so move
-                // the dragged field's row before the target's row too.
-                var dragCard = band2Card.closest('[id^="instrument-"]');
-                var dragRow = dragCard && dragCard.querySelector(
-                  '[data-new-model-rf-row][data-row-key="'
-                  + dragSource.getAttribute('data-row-key') + '"]'
-                );
-                var targetRow = dragCard && dragCard.querySelector(
-                  '[data-new-model-rf-row][data-row-key="'
-                  + target.getAttribute('data-row-key') + '"]'
-                );
-                if (dragRow && targetRow && dragRow !== targetRow) {
-                  targetRow.parentNode.insertBefore(dragRow, targetRow);
-                }
-                // The move changes which rows are first and last.
-                rfRows(band2Card).forEach(function (row) {
-                  window.newModelRfRecomputeActionStates(row);
-                });
-                saveBand2State(band2Card);
-              }
-              rebuildPreview(band2Card);
-            }
           };
           // 19T Item 8 — Band 3's display-field table is the display
           // model (``dfRows``): a checkbox is a field's selection and the
@@ -3653,8 +3461,7 @@
             instrumentCard.addEventListener('click', function (ev) {
               var t = ev.target;
               if (!t || !t.closest) { return; }
-              if (t.closest('[data-new-model-rf-save]')
-                || t.closest('[data-new-model-rf-delete]')
+              if (t.closest('[data-new-model-rf-delete]')
                 || t.closest('[data-new-model-rf-add]')
                 || t.closest('[data-new-model-rule-mode]')
                 || t.closest('[data-new-model-unit-mode]')
@@ -3671,8 +3478,8 @@
             });
             // Wave 4 PR 3 — the per-row pending visual
             // (``data-row-pending="true"``) is set by
-            // ``newModelRfRecomputeActionStates`` whenever ✓ has
-            // something to push (19T Item 1), not by a keystroke.
+            // ``newModelRfRecomputeActionStates`` whenever a row's live
+            // shape is invalid (19T Item 9), not by a keystroke.
           };
           // Wave 4 — Cancel click handler. Discards pending unsaved
           // edits by reloading the edit-mode page so the form re-
@@ -3925,12 +3732,12 @@
             // later Save doesn't carry a stale acknowledged_drop.
             var b2 = card.querySelector('[data-new-model-band2]');
             if (b2) { b2.removeAttribute('data-band2-ack-drop'); }
-            // 19T Item 1 — Save persisted each named row as typed, ✓'d
-            // or not, and there is no reload; commit every one so the
-            // preview, ✓ and the Active checkbox match what was saved. A
-            // named row never ✓'d was saved hidden (``selected`` false),
-            // so it commits unselected, as a reload would show it (19T
-            // Item 9, Codex on #2633).
+            // 19T Item 1 — Save persisted each named row as typed, and
+            // there is no reload; commit every one so the preview and the
+            // Active checkbox match what was saved. A named row never
+            // committed was saved hidden (``selected`` false), so it
+            // commits unselected, as a reload would show it (19T Item 9,
+            // Codex on #2633).
             if (b2 && window.newModelRfCommitRow) {
               window.newModelRfRows(b2).forEach(function (row) {
                 if (row.getAttribute('data-committed') !== 'true') {
@@ -4236,21 +4043,17 @@
              one <tbody> per field so a branch can later join its parent's
              group under one rule (guide/advanced_instruments.md Item 1).
              Each row reads Active, +, a ⑂ column held for branching,
-             name, type, bounds, R, ≡, ✓, ▲, ▼, X. The Active checkbox is
-             the field's selection; ▲ ▼ move the row's <tbody>.
-             One inline editor row per response field. Each row is
-             independently editable + commitable: the ✓ button
-             saves the row's values into a paired pill on Band 2
-             (creating the pill on first save, updating its label
-             on subsequent saves); the X button drops the row and
-             its pill (never the last row). Each row's `+` inserts a
-             blank row below it. Save persists the rows in row order. #}
+             name, type, bounds, R, ≡, ▲, ▼, X. The Active checkbox is
+             the field's selection; ▲ ▼ move the row's <tbody>. A row
+             commits its name and shape to the preview whenever they are
+             valid (the pills and ✓ retired, 19T Item 9).
+             The X button drops a row (never the last row); each row's
+             `+` inserts a blank row below it. Save persists the rows in
+             row order. #}
           {# Render one row per persisted response field; a blank row
              appears on a row's "+", or at load when there are none.
-             Each row's
-             data-row-key matches the paired pill's data-row-key
-             (``rf_<idx>`` for saved rows, or a fresh ``rf_N`` from
-             the row counter for a row "+" added). #}
+             Each row's data-row-key is ``rf_<idx>`` for a saved row, or
+             a fresh ``rf_N`` from the row counter for a row "+" added. #}
           {% set _rfs = _band2.response_fields %}
           {% set _next_idx = (_rfs | length) %}
           <div class="table-scroll">
@@ -4265,12 +4068,12 @@
                  etc). Label / Required / Help stay editable.
                  ``data-new-model-rf-shape-locked="true"`` flags the
                  row for the recompute helper. #}
-              {# 19T Item 9 rung 2 — the row carries what its pill carried,
-                 as the field's committed state (what the preview shows and
-                 Save's ``selected`` / width / help text send): committed
-                 (saved or ✓'d), selected, the name and shape last ✓'d,
-                 the column width, help text and response count. The
-                 inputs hold the live edit; ✓ commits it. #}
+              {# 19T Item 9 — the row carries the field's committed state
+                 (what the preview shows and Save's ``selected`` / width /
+                 help text send): committed, selected, the name and shape
+                 last committed, the column width, help text and response
+                 count. The inputs hold the live edit, which commits
+                 whenever it is valid. #}
               <tbody data-new-model-rf-row
                    data-row-key="{{ _rkey }}"
                    {% if rf.id %}data-rf-id="{{ rf.id }}"{% endif %}
@@ -4309,7 +4112,7 @@
                        style="width: 100%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                 </td>
                 <td class="rf-type"><select data-new-model-rf-data-type
-                        onchange="newModelRfSyncBounds(this)"
+                        onchange="newModelRfTypeChanged(this)"
                         {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                         style="width: 100%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                   <option value="string" {% if rf.data_type == 'string' %}selected{% endif %}>String</option>
@@ -4375,11 +4178,6 @@
                         title="Show a help-text card for this field above the preview table"
                         aria-label="Help text visibility">≡</button></td>
                 <td class="col-shrink"><button type="button" class="btn secondary"
-                        data-new-model-rf-save
-                        style="padding: 4px 10px;"
-                        onclick="newModelRfSaveRow(this)"
-                        title="Add this field's pill and preview column">✓</button></td>
-                <td class="col-shrink"><button type="button" class="btn secondary"
                         data-new-model-rf-move="up"
                         {% if loop.first %}disabled{% endif %}
                         aria-label="Move {{ rf.name }} up" title="Move up"
@@ -4394,7 +4192,7 @@
                         {% if rf.has_responses %}disabled aria-disabled="true"{% endif %}
                         style="padding: 4px 10px;"
                         {% if not rf.has_responses %}onclick="newModelRfDeleteRow(this)"{% endif %}
-                        title="{% if rf.has_responses %}Cannot delete — this field has saved responses{% else %}Delete this row (and its paired pill, if saved){% endif %}">X</button></td>
+                        title="{% if rf.has_responses %}Cannot delete — this field has saved responses{% else %}Delete this row{% endif %}">X</button></td>
                 </tr>
               </tbody>
             {% endfor %}
@@ -4407,11 +4205,11 @@
              Cancel's discard reload removes an unsaved row. Its markup
              sits outside the document, so row selectors never match it. #}
           <template data-new-model-rf-row-template>
-            <tbody data-new-model-rf-row>
+            <tbody data-new-model-rf-row data-selected="true">
               <tr>
-              <td class="col-shrink"><input type="checkbox" data-new-model-rf-active disabled checked
+              <td class="col-shrink"><input type="checkbox" data-new-model-rf-active checked
                          aria-label="Show this field"
-                         title="Press ✓ to add this field; it starts shown"
+                         title="Show this field in the preview and to reviewers"
                          onchange="newModelRfToggleActive(this)"></td>
               <td class="col-shrink">
               <button type="button" class="btn secondary"
@@ -4428,7 +4226,7 @@
                      style="width: 100%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
               </td>
                 <td class="rf-type"><select data-new-model-rf-data-type
-                      onchange="newModelRfSyncBounds(this)"
+                      onchange="newModelRfTypeChanged(this)"
                       style="width: 100%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                 <option value="string">String</option>
                 <option value="integer">Integer</option>
@@ -4485,11 +4283,6 @@
                       title="Show a help-text card for this field above the preview table"
                       aria-label="Help text visibility">≡</button></td>
                 <td class="col-shrink"><button type="button" class="btn secondary"
-                      data-new-model-rf-save
-                      style="padding: 4px 10px;"
-                      onclick="newModelRfSaveRow(this)"
-                      title="Add this field's pill and preview column">✓</button></td>
-                <td class="col-shrink"><button type="button" class="btn secondary"
                         data-new-model-rf-move="up"
                         aria-label="Move this field up" title="Move up"
                         onclick="newModelRfMove(this)">▲</button></td>
@@ -4501,7 +4294,7 @@
                       data-new-model-rf-delete
                       style="padding: 4px 10px;"
                       onclick="newModelRfDeleteRow(this)"
-                      title="Delete this row (and its paired pill, if saved)">X</button></td>
+                      title="Delete this row">X</button></td>
               </tr>
             </tbody>
           </template>
@@ -4513,7 +4306,7 @@
         // primary/secondary style (the button is what the preview
         // reads, 19T Item 9) and triggers an immediate rebuild so the
         // * appears / disappears live. It never
-        // needs ✓: it stages the Band 2 state, which marks the
+        // needs a commit: it stages the Band 2 state, which marks the
         // card dirty, and Save persists it (19T Item 1).
         window.newModelRfRequiredChanged = window.newModelRfRequiredChanged || function (btn) {
           var row = btn.closest('[data-new-model-rf-row]');
@@ -4546,7 +4339,7 @@
         // row. Toggles the row button's primary/secondary style (the
         // button is what the preview reads, 19T Item 9) and triggers a
         // preview rebuild so the help-text card appears / disappears
-        // above the table live. Like R, it never needs ✓: it
+        // above the table live. Like R, it never needs a commit: it
         // stages, and Save persists (19T Item 1).
         window.newModelRfHelpVisibleChanged = window.newModelRfHelpVisibleChanged || function (btn) {
           var row = btn.closest('[data-new-model-rf-row]');
@@ -4606,7 +4399,7 @@
             var key = input.getAttribute('data-new-model-rf-bound');
             input.style.display = show.indexOf(key) >= 0 ? '' : 'none';
           });
-          // Re-check whether the row's ✓ / X are eligible — a
+          // Re-check the row's marker and X — a
           // data-type swap may render previously-valid bounds
           // (e.g. min=10, max=5 for String, where only max is
           // relevant) invalid for the new type, or vice versa.
@@ -4723,12 +4516,11 @@
             return a[k] !== b[k];
           });
         };
-        // Wave 3 PR ii — recompute the ✓ / X enabled state on a
-        // Band 3 row. Mirrors the requirement: both buttons
-        // disabled when there's no eligible action.
+        // Wave 3 PR ii — recompute a Band 3 row's controls and marker.
         //
-        //   ✓ disabled when: name is empty, OR bounds are invalid
-        //     for the picked data_type.
+        //   The amber marker (19T Item 9): the row's live name or shape
+        //     is invalid, so the preview still shows what the row last
+        //     committed; the reason is the row's tooltip.
         //   X disabled when: it is the only row left (19T Item 1),
         //     OR the server-side has_responses flag is set
         //     (template renders the ``disabled`` attribute on
@@ -4738,7 +4530,6 @@
           if (!row) { return; }
           var nameInput = row.querySelector('[data-new-model-rf-name]');
           var name = (nameInput && nameInput.value || '').trim();
-          var saveBtn = row.querySelector('[data-new-model-rf-save]');
           var deleteBtn = row.querySelector('[data-new-model-rf-delete]');
           var requiredBtn = row.querySelector('[data-new-model-rf-required]');
           var helpBtn = row.querySelector('[data-new-model-rf-help-visible]');
@@ -4762,66 +4553,25 @@
           _blankRowGate(
             helpBtn, 'Toggle whether the help text shows to reviewers'
           );
-          if (saveBtn) {
-            var reason = null;
-            if (!name) {
-              reason = 'Enter a field name first.';
-            } else {
-              reason = window.newModelRfValidateShape(row);
-            }
-            // 19T Item 1 — ✓ does two things: on a row not yet
-            // committed it adds its pill and preview column; on a
-            // committed row it pushes the name, type or bounds where
-            // they differ from what the preview shows. Otherwise it is
-            // off. R and ≡ never count: they act on click. Saving is
-            // Save's. 19T Item 9 — "committed" is the row's own state.
-            var committed = row.getAttribute('data-committed') === 'true';
-            if (!reason && committed
-                && !window.newModelRfRowDiffersFromCommitted(row)) {
-              reason = 'The pill and preview already match this row.';
-            }
-            if (reason) {
-              saveBtn.setAttribute('disabled', '');
-              saveBtn.setAttribute('aria-disabled', 'true');
-              saveBtn.setAttribute('title', reason);
-            } else {
-              saveBtn.removeAttribute('disabled');
-              saveBtn.removeAttribute('aria-disabled');
-              saveBtn.setAttribute(
-                'title',
-                committed
-                  ? 'Update this field\'s pill and preview column'
-                  : 'Add this field\'s pill and preview column'
-              );
-            }
-            // The row's amber marker means "differs from what it
-            // committed" (or a named row not yet committed), valid or
-            // not, so an invalid edit still shows even while ✓ is off.
-            var differs = committed
-              ? window.newModelRfRowDiffersFromCommitted(row)
-              : !!name;
-            if (differs) {
-              row.setAttribute('data-row-pending', 'true');
-            } else {
-              row.removeAttribute('data-row-pending');
-            }
+          var committed = row.getAttribute('data-committed') === 'true';
+          var reason = name
+            ? window.newModelRfValidateShape(row)
+            : (committed ? 'Enter a field name.' : null);
+          if (reason) {
+            row.setAttribute('data-row-pending', 'true');
+            row.setAttribute('title', reason + ' The preview keeps the last valid shape.');
+          } else {
+            row.removeAttribute('data-row-pending');
+            row.removeAttribute('title');
           }
           // 19T Item 9 — the Active checkbox and ▲ ▼, computed here so
           // branching (``guide/advanced_instruments.md`` Item 1) has one
-          // place to add its rules. Active follows the row's selection
-          // once the row is committed; before its first ✓ it is ticked
-          // and fixed, since ✓ adds the field selected. ▲ is off on the
-          // first row, ▼ on the last; any row can move, blank or not.
+          // place to add its rules. Active follows the row's selection;
+          // a new row starts ticked. ▲ is off on the first row, ▼ on the
+          // last; any row can move, blank or not.
           var activeBox = row.querySelector('[data-new-model-rf-active]');
           if (activeBox) {
-            var isCommitted = row.getAttribute('data-committed') === 'true';
-            activeBox.disabled = !isCommitted;
-            activeBox.checked = isCommitted
-              ? row.getAttribute('data-selected') === 'true'
-              : true;
-            activeBox.title = isCommitted
-              ? 'Show this field in the preview and to reviewers'
-              : 'Press ✓ to add this field; it starts shown';
+            activeBox.checked = row.getAttribute('data-selected') === 'true';
           }
           function _rfRowSibling(el, up) {
             var sib = up ? el.previousElementSibling : el.nextElementSibling;
@@ -4849,18 +4599,20 @@
               deleteBtn.removeAttribute('aria-disabled');
               deleteBtn.setAttribute(
                 'title',
-                name ? 'Delete this row (and its paired pill, if saved)'
+                name ? 'Delete this row'
                      : 'Remove this empty row'
               );
             }
           }
         };
         // ``oninput`` on every editable name / bound input — fires
-        // recompute on each keystroke so the ✓ / X buttons reflect
-        // the live state without waiting for blur.
+        // recompute on each keystroke so the marker and X reflect the
+        // live state without waiting for blur, then commits the row to
+        // the preview if its shape is valid (19T Item 9).
         window.newModelRfFieldChanged = window.newModelRfFieldChanged || function (input) {
           var row = input.closest('[data-new-model-rf-row]');
           window.newModelRfRecomputeActionStates(row);
+          window.newModelRfMaybeCommit(row);
         };
         // Sync each row on page load so the initial data-type pick
         // shows the right bounds. (Default is String → min, max.)
@@ -4917,10 +4669,10 @@
           }
         });
         // 19T Item 1 — commit a row: copy its live name, type and bounds
-        // into its committed state, which is what the preview and ✓'s
-        // comparison read (19T Item 9 — on the row; the pill only mirrors
-        // the name). ✓ calls it for one row; a successful Save calls it
-        // for every committed row, since Save persisted the rows as typed.
+        // into its committed state, which is what the preview reads (19T
+        // Item 9 — on the row). ``newModelRfMaybeCommit`` calls it when a
+        // row's live shape is valid and differs; a successful Save calls
+        // it for every named row, since Save persisted the rows as typed.
         window.newModelRfCommitRow = window.newModelRfCommitRow || function (row) {
           var shape = window.newModelRfRowShape(row);
           row.setAttribute('data-committed', 'true');
@@ -4930,102 +4682,39 @@
           row.setAttribute('data-rf-max', shape.max);
           row.setAttribute('data-rf-step', shape.step);
           row.setAttribute('data-rf-list', shape.list);
-          var key = row.getAttribute('data-row-key');
-          var card = row.closest('[id^="instrument-"]');
-          var pill = (key && card)
-            ? card.querySelector('[data-new-model-band2-pill][data-row-key="' + key + '"]')
-            : null;
-          if (pill && shape.name) {
-            pill.setAttribute('data-label', shape.name);
-            pill.setAttribute('title', 'Click to include / drag to reorder ' + shape.name);
-            pill.innerHTML = '<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>' + shape.name
-              .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          }
         };
-        // ✓ on a row: commit the row's name, type and bounds for the
-        // preview, and add its pill in Band 2 (keyed by the row's
-        // data-row-key) if it has none. A row committed for the first
-        // time starts selected. It persists nothing: Save does (19T
-        // Item 1).
-        window.newModelRfSaveRow = window.newModelRfSaveRow || function (btn) {
-          var row = btn.closest('[data-new-model-rf-row]');
+        // 19T Item 9 — ✓ retired: a row commits by itself whenever its
+        // live name and shape are valid and differ from what the preview
+        // shows, so a half-typed bound never reaches the preview. A row
+        // committed for the first time keeps its Active tick (a new row
+        // starts ticked). An invalid edit leaves the last committed shape
+        // in the preview and marks the row (``data-row-pending``), with
+        // the reason as the row's tooltip.
+        window.newModelRfMaybeCommit = window.newModelRfMaybeCommit || function (row) {
           if (!row) { return; }
-          var rowKey = row.getAttribute('data-row-key');
           var nameInput = row.querySelector('[data-new-model-rf-name]');
-          var fieldName = (nameInput && nameInput.value || '').trim();
-          if (!fieldName) {
-            if (nameInput) { nameInput.focus(); }
-            return;
-          }
-          var instrumentCard = btn.closest('[id^="instrument-"]');
+          if (!(nameInput && nameInput.value.trim())) { return; }
+          if (window.newModelRfValidateShape(row)) { return; }
+          if (row.getAttribute('data-committed') === 'true'
+              && !window.newModelRfRowDiffersFromCommitted(row)) { return; }
+          window.newModelRfCommitRow(row);
+          window.newModelRfRecomputeActionStates(row);
+          var instrumentCard = row.closest('[id^="instrument-"]');
           var band2 = instrumentCard
             ? instrumentCard.querySelector('[data-new-model-band2]')
             : null;
           if (!band2) { return; }
-          var pillsRow = band2.querySelector('[data-new-model-band2-pills]');
-          if (!pillsRow) { return; }
-          // Create the pill if the row has none yet; either way
-          // ``newModelRfCommitRow`` below commits the row and mirrors its
-          // name onto the pill.
-          if (row.getAttribute('data-committed') !== 'true') {
-            row.setAttribute('data-selected', 'true');
-          }
-          var pill = pillsRow.querySelector('[data-new-model-band2-pill][data-row-key="' + rowKey + '"]');
-          if (!pill) {
-            // 19T Item 1 — a new pill starts selected, so ✓ adds the
-            // field's column to the preview as well as its pill.
-            pill = document.createElement('span');
-            pill.className = 'pill tag-chip pill-count is-selected';
-            pill.setAttribute('role', 'button');
-            pill.setAttribute('tabindex', '0');
-            pill.setAttribute('aria-pressed', 'true');
-            pill.setAttribute('data-new-model-band2-pill', '');
-            pill.setAttribute('data-key', rowKey);
-            pill.setAttribute('data-label', fieldName);
-            pill.setAttribute('data-source-type', 'response');
-            pill.setAttribute('data-selectable-in-group', 'true');
-            pill.setAttribute('data-row-key', rowKey);
-            pill.setAttribute('data-reorderable', 'true');
-            pill.setAttribute('draggable', 'true');
-            pill.setAttribute('ondragstart', 'newModelBand2DragStart(event)');
-            pill.setAttribute('ondragend', 'newModelBand2DragEnd(event)');
-            pill.setAttribute('ondragover', 'newModelBand2DragOver(event)');
-            pill.setAttribute('ondrop', 'newModelBand2Drop(event)');
-            pill.setAttribute('onclick', 'newModelToggleBand2Pill(this)');
-            pill.setAttribute('title', 'Click to include / drag to reorder ' + fieldName);
-            pill.innerHTML = '<span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>' + fieldName
-              .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            // 19T Item 1 — the pill goes in row order: before the pill
-            // of the nearest row below that has one, else last. So ✓
-            // on C, inserted between A and B, gives pills A, C, B.
-            var beforePill = null;
-            for (var nxt = row.nextElementSibling; nxt && !beforePill; nxt = nxt.nextElementSibling) {
-              var nxtKey = nxt.getAttribute('data-row-key');
-              if (nxtKey) {
-                beforePill = pillsRow.querySelector(
-                  '[data-new-model-band2-pill][data-row-key="' + nxtKey + '"]'
-                );
-              }
-            }
-            if (beforePill) {
-              pillsRow.insertBefore(pill, beforePill);
-            } else {
-              pillsRow.appendChild(pill);
-            }
-          }
-          window.newModelRfCommitRow(row);
-          // Rebuild the preview so the new label, type and bounds
-          // surface at once.
           if (window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
           if (window.newModelUpdateIntroProgress) {
             window.newModelUpdateIntroProgress(band2);
           }
           window.newModelStageBand2State(band2);
-          // The pill now matches the row, so ✓ greys out until the
-          // row differs again.
-          window.newModelRfRecomputeActionStates(row);
         };
-        // X on a row: remove the row + its paired pill if saved.
+        window.newModelRfTypeChanged = window.newModelRfTypeChanged || function (select) {
+          window.newModelRfSyncBounds(select);
+          window.newModelRfMaybeCommit(select.closest('[data-new-model-rf-row]'));
+        };
+        // X on a row: remove the row.
         // The last row stays (19T Item 1): its X is disabled.
         window.newModelRfDeleteRow = window.newModelRfDeleteRow || function (btn) {
           var row = btn.closest('[data-new-model-rf-row]');
@@ -5046,8 +4735,6 @@
             ? instrumentCard.querySelector('[data-new-model-band2]')
             : null;
           if (band2 && rowKey) {
-            var pill = band2.querySelector('[data-new-model-band2-pill][data-row-key="' + rowKey + '"]');
-            if (pill) { pill.remove(); }
             if (window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
             if (window.newModelUpdateIntroProgress) {
               window.newModelUpdateIntroProgress(band2);
@@ -5061,7 +4748,8 @@
           }
         };
         // 19T Item 9 — a row's Active checkbox sets the field's selection
-        // (the pill did); cancelling the "hide this field?" confirm puts
+        // (the response pill did before 19T Item 9); cancelling the "hide
+        // this field?" confirm puts
         // the tick back.
         window.newModelRfToggleActive = window.newModelRfToggleActive || function (box) {
           var row = box.closest('[data-new-model-rf-row]');
@@ -5076,7 +4764,7 @@
         };
         // 19T Item 9 — ▲ ▼ swap a row's <tbody> with its neighbour's, so a
         // parent will carry its branch unchanged (``guide/advanced_instruments.md``
-        // Item 1). The pills and the preview follow the new order, and
+        // Item 1). The preview follows the new order, and
         // the order is staged for Save.
         window.newModelRfMove = window.newModelRfMove || function (btn) {
           var row = btn.closest('[data-new-model-rf-row]');
@@ -5096,7 +4784,6 @@
             window.newModelRfRecomputeActionStates(r);
           });
           if (band2) {
-            if (window.newModelRfSyncPillOrder) { window.newModelRfSyncPillOrder(band2); }
             if (window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
             window.newModelStageBand2State(band2);
           }

@@ -1021,21 +1021,10 @@ def test_new_model_band2_handles_session_with_no_reviewees(
     ).text
     flat = " ".join(body.split())
     assert "Preview review instrument" in flat
-    # Empty-pill-list placeholder lands inside the pill row.
-    # (The pill row sits at the bottom of Band 2, flush-right, with
-    # ``justify-content: flex-end`` and ``margin-top: 16px``.)
-    assert (
-        '<div data-new-model-band2-pills style="display: flex; flex-wrap: wrap; gap: 8px;'
-        in flat
-    )
-    assert "justify-content: flex-end" in flat
-    assert '<span class="muted">—</span>' in flat
-    # No Band 2 pills rendered. The selector substrings in the
-    # inline JS use ``data-new-model-band2-pill`` and ``data-key=``
-    # inside bracket-enclosed CSS selectors, so we look for the
-    # unique pill click handler binding instead — it only renders
-    # on actual pill spans.
-    assert "onclick=\"newModelToggleBand2Pill(this)\"" not in body
+    # The response pills and their row retired in 19T Item 9; the card
+    # renders with no response fields and no pill row.
+    assert "data-new-model-band2-pills" not in flat
+    assert "newModelToggleBand2Pill" not in body
     assert 'data-new-model-band2-sample-names=""' in flat
 
 
@@ -1384,9 +1373,10 @@ def test_new_model_band2_state_round_trip(
     assert 'data-key="reviewee.name" data-label="Name" data-source-type="reviewee" data-source-field="name"' in flat
     # The `||` divider retired with the display pills.
     assert 'data-new-model-band2-pills-divider' not in flat
-    # Saved response pills + their rows hydrate with the saved labels.
-    assert '>Rating</span>' in flat or '⠿</span>Rating</span>' in flat
-    assert '>Comments</span>' in flat or '⠿</span>Comments</span>' in flat
+    # Saved response rows hydrate with the saved labels and selection
+    # (the pills retired in 19T Item 9).
+    assert re.search(r'<tbody data-new-model-rf-row [^>]*data-selected="true" data-label="Rating"', flat)
+    assert re.search(r'<tbody data-new-model-rf-row [^>]*data-selected="false" data-label="Comments"', flat)
     # Band 3 Response field rows are pre-populated with the saved
     # values.
     assert 'value="Rating"' in flat
@@ -2310,7 +2300,6 @@ def test_new_model_response_field_width_persists_on_band2_state(
         f"/operator/sessions/{review_session.id}"
         f"/instruments?editing={new_model.id}"
     ).text
-    assert 'data-source-type="response"' in body
     flat = " ".join(body.split())
     card = _card_slice(flat, new_model.id)
     row = re.search(r'<tbody data-new-model-rf-row data-row-key="rf_0".*?>', card).group(0)
@@ -6117,10 +6106,8 @@ def test_pr5c_button_state_matrix_and_shape_css_ship(
     # R / ≡ blank-row gate.
     assert "_blankRowGate(requiredBtn" in body
     assert "'Enter a field name first.'" in body
-    # ✓ greys when the row matches what it committed (19T Item 1
-    # replaced the pending flag with that comparison; 19T Item 9 moved
-    # it off the pill).
-    assert "The pill and preview already match this row." in body
+    # ✓ retired in 19T Item 9: a valid edit commits by itself, so only
+    # the row's marker is left to compute.
     assert "window.newModelRfRowDiffersFromCommitted(row)" in body
     # Disabled-shape inputs (frozen type / bounds) look inactive.
     assert "[data-new-model-rf-data-type]:disabled" in body
@@ -8196,8 +8183,9 @@ def test_band3_row_handlers_reach_the_stager_through_its_window_handle(
 ) -> None:
     """``saveBand2State`` is local to the Band 2 closure; the Band 3 row
     handlers live in a later ``<script>``. A bare call there threw a
-    ReferenceError (measured in Chromium, 2026-09-24), so X left a row
-    with a pill in place. They call the window handle instead."""
+    ReferenceError (measured in Chromium, 2026-09-24). They call the
+    window handle instead: the automatic commit (✓'s successor, 19T Item
+    9), X and ▲ ▼."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-stager-handle"
     )
@@ -8205,12 +8193,8 @@ def test_band3_row_handlers_reach_the_stager_through_its_window_handle(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     assert "window.newModelStageBand2State = saveBand2State;" in body
-    rf_script = body[body.index("window.newModelRfRequiredChanged =") :]
-    rf_script = rf_script[: rf_script.index("</script>")]
-    for name in ("newModelRfSaveRow", "newModelRfDeleteRow"):
-        start = rf_script.index(f"window.{name} =")
-        fn = rf_script[start : rf_script.index("\n        };", start)]
-        assert "window.newModelStageBand2State(band2);" in fn, name
+    for name in ("newModelRfMaybeCommit", "newModelRfDeleteRow", "newModelRfMove"):
+        assert "window.newModelStageBand2State(band2);" in _rf_fn(body, name), name
 
 
 # --------------------------------------------------------------------------- #
@@ -8272,53 +8256,58 @@ def test_response_row_carries_the_shape_the_preview_shows(
         assert "data-new-model-band2-pill" not in src
 
 
-def test_tick_enables_by_comparison_not_a_pending_flag(
+def test_a_row_commits_when_its_shape_is_valid(
     client: TestClient, db: Session
 ) -> None:
-    """✓ is on with no pill, or when the row's name, type or shown
-    bounds differ from the pill; a keystroke no longer sets a sticky
-    flag. The tooltip names the pill and preview, never Save."""
+    """19T Item 9 — ✓ retired. A row commits its live name and shape to
+    the preview whenever they are valid and differ from what it last
+    committed, on every keystroke and type change, so a half-typed bound
+    never reaches the preview. Committing refreshes the preview and the
+    progress counts and stages for Save."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-tick-compare"
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
-    recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
-    assert "!window.newModelRfRowDiffersFromCommitted(row)" in recompute
-    assert "getAttribute('data-row-pending')" not in recompute
-    assert "'Update this field\\'s pill and preview column'" in recompute
-    assert "'Add this field\\'s pill and preview column'" in recompute
-    assert "Save this response field" not in body
+    assert "newModelRfSaveRow" not in body
+    assert "data-new-model-rf-save" not in body
+    commit = _rf_fn(body, "newModelRfMaybeCommit")
+    assert "if (window.newModelRfValidateShape(row)) { return; }" in commit
+    assert "!window.newModelRfRowDiffersFromCommitted(row)) { return; }" in commit
+    assert "window.newModelRfCommitRow(row);" in commit
+    assert "window.newModelRefreshBand2(band2)" in commit
+    assert "window.newModelUpdateIntroProgress(band2)" in commit
+    assert "window.newModelRfMaybeCommit(row);" in _rf_fn(body, "newModelRfFieldChanged")
+    assert "window.newModelRfMaybeCommit(select.closest('[data-new-model-rf-row]'));" in _rf_fn(
+        body, "newModelRfTypeChanged"
+    )
+    assert body.count('onchange="newModelRfTypeChanged(this)"') >= 2
     differs = _rf_fn(body, "newModelRfRowDiffersFromCommitted")
     assert "string: ['min', 'max']" in differs
     assert "list: ['list']" in differs
-    # No keystroke listener flags a row any more.
-    assert "ev.target.closest('[data-new-model-rf-row]')" not in body
 
 
-def test_tick_commits_the_row_and_selects_a_new_field(
+def test_commit_writes_the_row_and_a_new_row_starts_selected(
     client: TestClient, db: Session
 ) -> None:
-    """✓ commits the row's name, type and bounds onto the row (the pill
-    before 19T Item 9), and a row committed for the first time starts
-    selected, so the field's column joins the preview."""
+    """Committing copies the row's name, type and bounds into its
+    committed state; a new row (the "+" template) starts selected, so its
+    column joins the preview the moment its shape is valid."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-tick-writes"
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
-    save_row = _rf_fn(body, "newModelRfSaveRow")
-    assert "window.newModelRfCommitRow(row);" in save_row
     commit = _rf_fn(body, "newModelRfCommitRow")
     assert "row.setAttribute('data-committed', 'true');" in commit
     for attr in ("data-label", "data-rf-data-type", "data-rf-min",
                  "data-rf-max", "data-rf-step", "data-rf-list"):
         assert f"row.setAttribute('{attr}'" in commit
-    assert "row.setAttribute('data-selected', 'true');" in save_row
-    assert "pill.setAttribute('aria-pressed', 'true');" in save_row
-    assert "pill.setAttribute('aria-pressed', 'false');" not in save_row
+    assert "pill" not in commit
+    _rows, template = _band3_rows_and_template(body, new_model.id)
+    assert "<tbody data-new-model-rf-row data-selected=\"true\">" in template
 
 
 def test_required_and_help_toggles_stage_for_save(
@@ -8362,12 +8351,14 @@ def test_save_success_brings_every_pill_up_to_its_row(
     assert "window.newModelRfRecomputeActionStates(row);" in on_success
 
 
-def test_row_marker_follows_the_committed_comparison_not_validity(
+def test_row_marker_follows_validity(
     client: TestClient, db: Session
 ) -> None:
-    """The amber marker shows whenever the row differs from what it
-    committed (or is a named row not yet committed), so an invalid edit
-    still shows while ✓ is off."""
+    """19T Item 9 — the amber marker shows while a row's live name or
+    shape is invalid (the preview keeps its last valid shape), with the
+    reason as the row's tooltip; a committed row whose name is cleared
+    counts. The marker's CSS sits on the row's cells, since a <tbody>
+    draws no box-shadow."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-marker"
     )
@@ -8375,8 +8366,12 @@ def test_row_marker_follows_the_committed_comparison_not_validity(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
-    assert "? window.newModelRfRowDiffersFromCommitted(row)" in recompute
-    assert "if (differs) {" in recompute
+    assert "? window.newModelRfValidateShape(row)" in recompute
+    assert ": (committed ? 'Enter a field name.' : null);" in recompute
+    assert "row.setAttribute('data-row-pending', 'true');" in recompute
+    assert "row.setAttribute('title', reason + ' The preview keeps the last valid shape.');" in recompute
+    flat = " ".join(body.split())
+    assert '[data-new-model-rf-row][data-row-pending="true"] > tr > td:first-child { box-shadow: inset 3px 0 0 0 var(--row-pending-marker); }' in flat
 
 
 # --------------------------------------------------------------------------- #
@@ -8436,29 +8431,24 @@ def test_the_last_band3_row_cannot_be_deleted(
     assert delete_fn.index(guard) < delete_fn.index("row.remove();")
 
 
-def test_tick_save_and_drag_follow_band3_row_order(
+def test_save_follows_band3_row_order(
     client: TestClient, db: Session
 ) -> None:
-    """✓ inserts a new pill before the pill of the nearest row below it;
-    the stager serializes in row order in one pass; a response-pill drag
-    moves its row as well."""
+    """The stager serializes in row order in one pass; ▲ ▼ are the only
+    reorder (the pill drag retired in 19T Item 9)."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t-row-order"
     )
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
-    save_row = _rf_fn(body, "newModelRfSaveRow")
-    assert "row.nextElementSibling" in save_row
-    assert "pillsRow.insertBefore(pill, beforePill);" in save_row
     start = body.index("function saveBand2State(card, opts) {")
     stager = body[start : body.index("\n          }\n", start)]
     assert "seenRowKeys" not in stager
     assert "var rf = serializeRow(row);" in stager
     assert "rfRows(card).forEach(function (row) {" in stager
-    start = body.index("window.newModelBand2Drop = function")
-    drop = body[start : body.index("\n          };", start)]
-    assert "targetRow.parentNode.insertBefore(dragRow, targetRow);" in drop
+    assert "newModelBand2Drop" not in body
+    assert "newModelBand2DragStart" not in body
 
 
 def test_save_persists_response_fields_in_the_order_sent(
@@ -9019,9 +9009,9 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
     (``guide/advanced_instruments.md`` Item 3): one ``<tbody>`` per field,
     ruled underneath in ``base.html`` so a branch can later join its
     parent's group (Item 1). Each row reads Active, +, the held ⑂ column,
-    name, type, bounds, R, ≡, ✓, ▲, ▼, X. The Active checkbox shows
+    name, type, bounds, R, ≡, ▲, ▼, X. The Active checkbox shows
     ``visible``; ▲ is off on the first row and ▼ on the last (rung 3 wired
-    them); the pills and ✓ are still present until rung 4."""
+    them); ✓ retired in rung 4."""
     review_session, new_model = _new_model_with_tags(client, db, code="19t9-rf-table")
     comments = next(f for f in new_model.response_fields if f.label == "Comments")
     comments.visible = False
@@ -9049,7 +9039,6 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
         "data-new-model-rf-bounds-wrap",
         "data-new-model-rf-required",
         "data-new-model-rf-help-visible",
-        "data-new-model-rf-save",
         'data-new-model-rf-move="up"',
         'data-new-model-rf-move="down"',
         "data-new-model-rf-delete",
@@ -9072,15 +9061,15 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
     assert " checked" not in boxes["Comments"] and " disabled" not in boxes["Comments"]
     for box in boxes.values():
         assert 'onchange="newModelRfToggleActive(this)"' in box
-    # The "+" template's row isn't committed: ticked, fixed until ✓.
+    # The "+" template's row starts selected, its checkbox ticked and live.
     tpl_box = re.search(r'<input type="checkbox" data-new-model-rf-active[^>]*>', template).group(0)
-    assert " checked" in tpl_box and " disabled" in tpl_box
+    assert " checked" in tpl_box and " disabled" not in tpl_box
     ups = [re.search(r'<button[^>]*data-new-model-rf-move="up"[^>]*>', c).group(0) for c in chunks]
     downs = [re.search(r'<button[^>]*data-new-model-rf-move="down"[^>]*>', c).group(0) for c in chunks]
     assert [" disabled" in b for b in ups] == [True, False]
     assert [" disabled" in b for b in downs] == [False, True]
-    # The pills and ✓ are still the editor in this rung.
-    assert card.count('onclick="newModelRfSaveRow(this)"') == 3
+    # The pills and ✓ retired in rung 4.
+    assert "newModelRfSaveRow" not in card and "data-new-model-band2-pill" not in card
 
 
 def test_band3_response_rows_are_the_model(client: TestClient, db: Session) -> None:
@@ -9117,14 +9106,14 @@ def test_band3_response_rows_are_the_model(client: TestClient, db: Session) -> N
     resize = body[start : body.index("\n          };", start)]
     assert "var rfRow = rfRowByKey(card, key.slice(5));" in resize
     assert "data-new-model-band2-pill" not in resize
-    # The pill click and the Active checkbox share one setter (rung 3).
+    # The Active checkbox's setter (the pill click shared it until rung 4
+    # retired the pills).
     start = body.index("function rfSetSelected(card, row, next) {")
     setter = body[start : body.index("\n          }\n", start)]
     assert "row.getAttribute('data-response-count')" in setter
     assert "row.setAttribute('data-selected', next ? 'true' : 'false');" in setter
-    start = body.index("window.newModelToggleBand2Pill = function (pill) {")
-    toggle = body[start : body.index("\n          };", start)]
-    assert "rfSetSelected(card, row, pill.getAttribute('aria-pressed') !== 'true');" in toggle
+    assert "'Tick Active again later to restore the column.'" in setter
+    assert "pill" not in setter
     start = body.index("window.newModelHelpCardInput =")
     help_input = body[start : body.index("\n          };", start)]
     assert "row.setAttribute('data-help-text', ta.value);" in help_input
@@ -9146,11 +9135,11 @@ def test_band3_response_rows_active_and_arrows_are_wired(
     client: TestClient, db: Session
 ) -> None:
     """19T Item 9 rung 3 — the Active checkbox sets the field's selection
-    through the setter the pill uses (with the "hide this field?" confirm,
-    putting the tick back on cancel); ▲ ▼ move the row's ``<tbody>``, then
-    the pills follow the rows and the order is staged. The row recompute
-    owns both controls' states: Active fixed before a row's first ✓, ▲
-    off on the first row and ▼ on the last."""
+    through ``rfSetSelected`` (with the "hide this field?" confirm,
+    putting the tick back on cancel); ▲ ▼ move the row's ``<tbody>`` and
+    the order is staged. The row recompute owns both controls' states:
+    Active follows the row's selection, ▲ is off on the first row and ▼
+    on the last."""
     review_session, new_model = _new_model_with_tags(client, db, code="19t9-wired")
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
@@ -9160,12 +9149,9 @@ def test_band3_response_rows_active_and_arrows_are_wired(
     assert "box.checked = !box.checked;" in active
     move = _rf_fn(body, "newModelRfMove")
     assert "other.parentNode.insertBefore(row, up ? other : other.nextSibling);" in move
-    assert "window.newModelRfSyncPillOrder(band2)" in move
     assert "window.newModelStageBand2State(band2);" in move
+    assert "window.newModelRfRecomputeActionStates(r);" in move
     recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
-    assert "activeBox.disabled = !isCommitted;" in recompute
+    assert "activeBox.checked = row.getAttribute('data-selected') === 'true';" in recompute
+    assert "activeBox.disabled" not in recompute
     assert "btn.disabled = !_rfRowSibling(row, up);" in recompute
-    # A pill drag moves a row too, so it re-runs the recompute.
-    start = body.index("window.newModelBand2Drop = function")
-    drop = body[start : body.index("\n          };", start)]
-    assert "window.newModelRfRecomputeActionStates(row);" in drop

@@ -1119,7 +1119,19 @@ author's ruling** the display-field table's ▲ ▼ became outlined buttons
 too, in a short size (`btn-short`, `base.html`: 19px inside the 32px
 rows). Codex (#2633): a named row never ✓'d was saved hidden but kept a
 ticked, fixed Active checkbox until a reload; Save now commits every
-named row as saved, so it shows unticked at once.
+named row as saved, so it shows unticked at once. Rung 3 is #2633.
+
+**Rung 4 retires the response pills and ✓.** Band 2 loses its chip row
+and the drag handlers. A row commits by itself (`newModelRfMaybeCommit`,
+on every keystroke and type change) whenever its live name and shape are
+valid and differ from what it last committed, so a half-typed bound never
+reaches the preview. An invalid row keeps its last committed shape in the
+preview and is marked amber, with the reason as its tooltip. A new row
+starts selected, its Active checkbox live. The "hide this field?" confirm
+now points to Active. **Found at build:** the amber marker had drawn
+nothing since rung 1, because a `<tbody>` draws no box-shadow; it now
+sits on the row's cells. The in-app Guide's two instrument paragraphs
+describe the tables, not the pills and ✓.
 
 ### Doc impact
 
