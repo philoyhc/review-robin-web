@@ -1765,8 +1765,11 @@ order 3, 4, 5, 1, 2:
 - Item 2 is required governed fields, about 2 more, with Item 1 built to
   prepare for it.
 
-**Off the roadmap because** it amends a stated out-of-scope line in
-`spec/rrw_functional_spec.md`. **No immediate plan to build** (author).
+**Items 3–5 are builder rework, built on the roadmap one at a time**:
+Item 4 shipped as 19T Item 7 (2026-09-26), and Item 5 is next. **Branching
+itself, Items 1 and 2, stays off the roadmap** because it amends a stated
+out-of-scope line in `spec/rrw_functional_spec.md`. **No immediate plan to
+build it** (author).
 
 **Lift trigger:** the author scheduling it, or an operator asking for
 conditional questions.
