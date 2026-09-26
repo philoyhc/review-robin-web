@@ -3737,17 +3737,29 @@
             var b2 = card.querySelector('[data-new-model-band2]');
             if (b2) { b2.removeAttribute('data-band2-ack-drop'); }
             // 19T Item 1 — Save persisted each named row as typed, and
-            // there is no reload; commit every one so the preview and the
-            // Active checkbox match what was saved. A named row never
-            // committed was saved hidden (``selected`` false), so it
-            // commits unselected, as a reload would show it (19T Item 9,
-            // Codex on #2633).
+            // there is no reload, so bring every row to what was saved
+            // (19T Item 9):
+            //   - a row with no name was skipped, so Save removed its field;
+            //     it drops its committed state and leaves the preview, as a
+            //     blank row;
+            //   - a named row never committed was saved hidden (``selected``
+            //     false, Codex on #2633); it commits unselected if its shape
+            //     is valid here, and otherwise stays marked, uncommitted;
+            //   - every other row commits as typed.
             if (b2 && window.newModelRfCommitRow) {
               window.newModelRfRows(b2).forEach(function (row) {
+                var nameInput = row.querySelector('[data-new-model-rf-name]');
+                if (!(nameInput && nameInput.value.trim())) {
+                  ['data-committed', 'data-rf-id', 'data-label', 'data-rf-data-type',
+                   'data-rf-min', 'data-rf-max', 'data-rf-step', 'data-rf-list',
+                   'data-width', 'data-response-count', 'data-has-responses']
+                    .forEach(function (attr) { row.removeAttribute(attr); });
+                  row.setAttribute('data-selected', 'true');
+                  return;
+                }
                 if (row.getAttribute('data-committed') !== 'true') {
-                  var nameInput = row.querySelector('[data-new-model-rf-name]');
-                  if (!(nameInput && nameInput.value.trim())) { return; }
                   row.setAttribute('data-selected', 'false');
+                  if (window.newModelRfValidateShape(row)) { return; }
                 }
                 window.newModelRfCommitRow(row);
               });

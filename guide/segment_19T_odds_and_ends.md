@@ -1153,6 +1153,10 @@ loses or corrupts saved data):
 - A Quick fill preset's passing `preset:` value is never committed.
 - The marker's tooltip says what the preview shows meanwhile, and that a
   field saved without a name is removed.
+- After Save, a row whose name was cleared (Save removed its field) drops
+  its committed state and leaves the preview; a new row the client finds
+  invalid but the server accepts stays uncommitted instead of committing
+  the rejected text.
 - ▲ ▼ keep focus on a live arrow; dead help-edit-mode code, the rows'
   inline button padding and stale comments (and `_band2.py`'s docstring)
   go; stale test names and a vacuous test loop are fixed. The in-app Guide's two instrument paragraphs

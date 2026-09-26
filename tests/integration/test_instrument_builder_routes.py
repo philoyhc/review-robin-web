@@ -8345,7 +8345,12 @@ def test_save_success_commits_every_named_row(
     # A named row never ✓'d was saved hidden, so it commits unselected
     # (19T Item 9, Codex on #2633); a blank row stays uncommitted.
     assert "row.setAttribute('data-selected', 'false');" in on_success
-    assert "if (!(nameInput && nameInput.value.trim())) { return; }" in on_success
+    # A row saved with no name lost its field: it drops its committed
+    # state (and id), so the preview drops its column (the item's read).
+    assert "['data-committed', 'data-rf-id', 'data-label', 'data-rf-data-type'," in on_success
+    # A never-committed row the client finds invalid stays uncommitted
+    # rather than committing the rejected text.
+    assert "if (window.newModelRfValidateShape(row)) { return; }" in on_success
     assert "window.newModelRefreshBand2(b2);" in on_success
     assert "window.newModelRfRecomputeActionStates(row);" in on_success
 
