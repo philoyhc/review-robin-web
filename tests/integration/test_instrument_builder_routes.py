@@ -8354,6 +8354,10 @@ def test_save_success_brings_every_pill_up_to_its_row(
     start = body.index("window.newModelOnSaveSuccess =")
     on_success = body[start : body.index("\n          };", start)]
     assert "window.newModelRfCommitRow(row);" in on_success
+    # A named row never ✓'d was saved hidden, so it commits unselected
+    # (19T Item 9, Codex on #2633); a blank row stays uncommitted.
+    assert "row.setAttribute('data-selected', 'false');" in on_success
+    assert "if (!(nameInput && nameInput.value.trim())) { return; }" in on_success
     assert "window.newModelRefreshBand2(b2);" in on_success
     assert "window.newModelRfRecomputeActionStates(row);" in on_success
 

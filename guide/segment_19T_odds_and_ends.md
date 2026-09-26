@@ -1117,7 +1117,9 @@ ticked and fixed, since ✓ adds the field selected. ▲ ▼ move the row's
 drag re-runs the recompute, which owns both controls' states. **On the
 author's ruling** the display-field table's ▲ ▼ became outlined buttons
 too, in a short size (`btn-short`, `base.html`: 19px inside the 32px
-rows).
+rows). Codex (#2633): a named row never ✓'d was saved hidden but kept a
+ticked, fixed Active checkbox until a reload; Save now commits every
+named row as saved, so it shows unticked at once.
 
 ### Doc impact
 
