@@ -1162,17 +1162,20 @@ loses or corrupts saved data):
 
 Rung 5 is #2635.
 
-**Rung 6: on the author's ruling, every added response field gets a
-default label**, the next "Field N" no row uses (`newModelRfDefaultLabel`).
-Clearing a name puts the row's default back, whether the box loses focus
-or Save runs first (`newModelRfSaveName`, which reads it without writing
-the page; the box restores on `blur`, since a typed-then-deleted name fires
-no `change`), so Save never drops a field for
-want of a name: only X deletes. "+" commits the new field at once, its
-name selected. A saved field's cleared name gets the next free "Field N";
-a stored default another row has since taken is replaced. This replaces
-rung 5's handling of a row saved with its name cleared. The rung's read
-found three more, fixed in the rung:
+**Rung 6: on the author's rulings, every added response field has a
+default label**, the next "Field N" no row goes by, shown **muted, as the
+empty name box's placeholder**, until a name is typed; clearing a name
+always brings it back that way, and taking it with → or Enter (or typing
+it) makes it a typed name in normal style. The row goes by its default
+wherever a name is read (`newModelRfSaveName`: the preview, the marker, the
+auto-commit, the stager), so Save never drops a field for want of a name:
+only X deletes. `newModelRfSyncDefaults` re-assigns defaults on each name
+edit and commits any row whose default moved; a saved field's default
+never moves. "+" commits the new field at once, but it lives only on the
+page (the card turns unsaved; Cancel drops it) until a successful Save. A
+saved label reloads as a typed name, since nothing records that it was a
+default. This replaces rung 5's handling of a row saved with its name
+cleared. The rung's first read found three more, fixed in the rung:
 - a labelled starter row on a card with no fields was saved as a field
   nobody wrote, and met the setup gates; it is a blank, unlabelled
   placeholder again, not a field until the operator types in it;
@@ -1186,24 +1189,18 @@ Codex (#2636): Save's success handler committed the untouched placeholder
 (an empty name passes shape validation), so the next Save stored it as a
 "Field N"; it now skips any row Save did not send.
 
-The author's follow-up rulings (in #2636): the default shows **muted, as
-the empty box's placeholder**, until a name is typed, and clearing a name
-always brings it back that way. Taking the default with → or Enter, or
-typing it, makes it a typed name in normal style. The box stays empty, so
-the row goes by its default everywhere a name is read
-(`newModelRfSaveName`: the preview, the marker, the auto-commit and the
-stager), and `newModelRfSyncDefaults` re-assigns defaults on each name
-edit, committing any row whose default moved. This supersedes the
-`blur` restore and the selected name above. A saved label reloads as a
-typed name, since nothing records that it was a default. As before, a
-new row lives only on the page (the card turns unsaved; Cancel drops it)
-until a successful Save.
+The muted placeholder came as a follow-up ruling, replacing a `blur`
+restore that wrote the label into the box. Its read found three more,
+fixed in the rung: a saved field's default could still move, so typing its
+label into another row renamed it on the next Save; a default a half-typed
+name borrowed never came back; a name of only spaces hid the default.
 
 ### Doc impact
 
 - `spec/instruments.md` — Band 3's response-field table, the Active
   checkbox and ▲ ▼; the pills' per-field visibility section and the ✓ row
-  retire (Item 9).
+  retire; a field's default label, shown muted in an empty name box and
+  taken with → or Enter (Item 9).
 - `spec/operator_button_audit.md` — ✓ retires; the Active checkbox and
   ▲ ▼ join the row; the display-field arrows become Secondary (Item 9).
 - `spec/ui_elements.md` — the response-field table's grouped rules

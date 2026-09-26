@@ -9214,12 +9214,20 @@ def test_added_response_fields_get_a_default_label(
     sync = _rf_fn(body, "newModelRfSyncDefaults")
     assert "if (input) { input.placeholder = label; }" in sync
     assert "input.value =" not in sync
-    # A default another row goes by is replaced; one still free is kept.
-    assert "if (label && !used[label]) { apply(row, label); } else { needs.push(row); }" in sync
+    # A saved field's default is its saved name and never moves, so an
+    # edit to another row can't rename it; any other row takes the default
+    # it was first given, else the one it has, else the next free one (the
+    # rung's second read).
+    assert "if (label && row.getAttribute('data-rf-id')) { apply(row, label); return false; }" in sync
+    assert "if (first && !used[first]) { apply(row, first); }" in sync
+    assert "else if (label && !used[label]) { apply(row, label); }" in sync
+    assert "row.setAttribute('data-default-first', label);" in sync
     # A name edit re-syncs every default and commits the rows it changed.
     changed = _rf_fn(body, "newModelRfFieldChanged")
     assert "var changed = window.newModelRfSyncDefaults(" in changed
     assert "window.newModelRfMaybeCommit(other);" in changed
+    # A name of only spaces empties the box, so its default shows.
+    assert "&& input.value && !input.value.trim()) {" in changed
     # → or Enter in an empty box takes the default as a typed name.
     key = _rf_fn(body, "newModelRfNameKey")
     assert "if (event.key !== 'ArrowRight' && event.key !== 'Enter') { return; }" in key

@@ -4546,9 +4546,13 @@
           return 'Field ' + n;
         };
         // Give every field whose box is empty a default no other row goes
-        // by, keeping the one it has where it can, and show it as the
-        // box's placeholder. Returns the rows whose default changed, so
-        // the caller can commit them to the preview.
+        // by, and show it as the box's placeholder. A saved field's default
+        // is its saved name and never moves, so an edit to another row
+        // can't rename it (the rung's second read). Any other row takes,
+        // in order, the default it was first given, the one it has, or the
+        // next free one, so a default a half-typed name borrowed comes back.
+        // Returns the rows whose default changed, so the caller can commit
+        // them to the preview.
         window.newModelRfSyncDefaults = window.newModelRfSyncDefaults || function (rows) {
           var changed = [];
           if (!rows) { return changed; }
@@ -4564,6 +4568,9 @@
           var needs = [];
           function apply(row, label) {
             used[label] = true;
+            if (!row.getAttribute('data-default-first')) {
+              row.setAttribute('data-default-first', label);
+            }
             if (row.getAttribute('data-default-label') !== label) {
               row.setAttribute('data-default-label', label);
               changed.push(row);
@@ -4571,10 +4578,18 @@
             var input = row.querySelector('[data-new-model-rf-name]');
             if (input) { input.placeholder = label; }
           }
-          all.forEach(function (row) {
-            if (typed(row) || !window.newModelRfIsField(row)) { return; }
+          var loose = all.filter(function (row) {
+            if (typed(row) || !window.newModelRfIsField(row)) { return false; }
             var label = row.getAttribute('data-default-label');
-            if (label && !used[label]) { apply(row, label); } else { needs.push(row); }
+            if (label && row.getAttribute('data-rf-id')) { apply(row, label); return false; }
+            return true;
+          });
+          loose.forEach(function (row) {
+            var first = row.getAttribute('data-default-first');
+            var label = row.getAttribute('data-default-label');
+            if (first && !used[first]) { apply(row, first); }
+            else if (label && !used[label]) { apply(row, label); }
+            else { needs.push(row); }
           });
           needs.forEach(function (row) {
             var n = 1;
@@ -4730,6 +4745,12 @@
         // default changed commits too.
         window.newModelRfFieldChanged = window.newModelRfFieldChanged || function (input) {
           var row = input.closest('[data-new-model-rf-row]');
+          // A name of only spaces is no name: empty the box so its
+          // default shows (the rung's second read).
+          if (input.hasAttribute('data-new-model-rf-name')
+              && input.value && !input.value.trim()) {
+            input.value = '';
+          }
           var changed = window.newModelRfSyncDefaults(
             row.closest('[data-new-model-rf-rows]')
           );
