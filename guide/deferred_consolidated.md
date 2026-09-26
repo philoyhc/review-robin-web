@@ -1767,10 +1767,10 @@ order 3, 4, 5, 1, 2:
 
 **Items 3–5 are builder rework, built on the roadmap one at a time**:
 Item 4 shipped as 19T Item 7, Item 5 as 19T Item 8 and Item 3 as 19T
-Item 9 (all 2026-09-26). **Branching
-itself, Items 1 and 2, stays off the roadmap** because it amends a stated
-out-of-scope line in `spec/rrw_functional_spec.md`. **No immediate plan to
-build it** (author).
+Item 9 (all 2026-09-26). **Branching itself is now on the roadmap**:
+Item 1 is planned as 19T Item 10 (2026-09-26, the author), and its close
+amends the out-of-scope line in `spec/rrw_functional_spec.md`. Item 2
+stays off the roadmap until Item 1 ships.
 
 **Lift trigger:** the author scheduling it, or an operator asking for
 conditional questions.
