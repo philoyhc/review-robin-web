@@ -9077,7 +9077,11 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
         assert positions == sorted(positions)
         # One cell per control, so every row lines up column by column.
         assert row.count("<td") == len(order)
-        assert '<td class="col-shrink" data-new-model-rf-fork-cell></td>' in row
+        # 19T Item 10 — the ⑂ column holds its (still inert) button.
+        fork = re.search(
+            r'<td class="col-shrink" data-new-model-rf-fork-cell>\s*<button[^>]*>', row
+        ).group(0)
+        assert "data-new-model-rf-fork " in fork and " disabled" in fork
         for move in re.findall(r'<button[^>]*data-new-model-rf-move="(?:up|down)"[^>]*>', row):
             assert 'onclick="newModelRfMove(this)"' in move
     boxes = {
