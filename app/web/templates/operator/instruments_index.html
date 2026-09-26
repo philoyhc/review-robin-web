@@ -3158,22 +3158,14 @@
               ta.rows = textareaRowsFor(maxLenInt, colPx);
             });
           }
-          window.newModelToggleBand2Pill = function (pill) {
-            if (pill.getAttribute('aria-disabled') === 'true') { return; }
-            var pressed = pill.getAttribute('aria-pressed') === 'true';
-            var next = !pressed;
-            // Segment 18K PR 4 — visibility-drop confirm guard.
-            // Un-pinning a response chip whose backing field has
-            // saved responses drops the column from every reviewer-
-            // facing render. Confirm intent BEFORE the visual flip
-            // so a cancel leaves the UI exactly as it was. Server
-            // mirrors the check via ``ResponseFieldDropAcknowledgement``
-            // -required as defence-in-depth for forged hits.
-            // 19T Item 9 — the row holds the selection, the response
-            // count and the label; the pill mirrors the row.
-            var card = pill.closest('[data-new-model-band2]');
-            var row = card ? rfRowByKey(card, pill.getAttribute('data-row-key')) : null;
-            if (!row) { return; }
+          // 19T Item 9 — set a response field's selection on its row,
+          // from its Active checkbox or its pill. Hiding a field with
+          // saved responses asks first (Segment 18K PR 4); the server
+          // mirrors the check via ``ResponseFieldDropAcknowledgement``.
+          // Returns false when the operator cancels, so the caller can
+          // put its control back. The pill and the checkbox mirror the
+          // row.
+          function rfSetSelected(card, row, next) {
             var acknowledgedDrop = false;
             if (!next) {
               var responseCount = parseInt(
@@ -3189,21 +3181,44 @@
                   + 'on the surface, summary, or reviewer-record CSV. '
                   + 'Re-pin the chip later to restore the column.'
                 );
-                if (!confirmed) { return; }
+                if (!confirmed) { return false; }
                 acknowledgedDrop = true;
               }
             }
             row.setAttribute('data-selected', next ? 'true' : 'false');
-            pill.setAttribute('aria-pressed', next ? 'true' : 'false');
-            if (next) {
-              pill.classList.add('is-selected');
-              pill.classList.add('pill-count');
-            } else {
-              pill.classList.remove('is-selected');
-              pill.classList.remove('pill-count');
+            var box = row.querySelector('[data-new-model-rf-active]');
+            if (box) { box.checked = next; }
+            var pill = card.querySelector(
+              '[data-new-model-band2-pill][data-row-key="' + row.getAttribute('data-row-key') + '"]'
+            );
+            if (pill) {
+              pill.setAttribute('aria-pressed', next ? 'true' : 'false');
+              pill.classList.toggle('is-selected', next);
+              pill.classList.toggle('pill-count', next);
             }
             rebuildPreview(card);
             saveBand2State(card, {acknowledgedDrop: acknowledgedDrop});
+            return true;
+          }
+          window.newModelRfSetSelected = rfSetSelected;
+          window.newModelToggleBand2Pill = function (pill) {
+            if (pill.getAttribute('aria-disabled') === 'true') { return; }
+            var card = pill.closest('[data-new-model-band2]');
+            var row = card ? rfRowByKey(card, pill.getAttribute('data-row-key')) : null;
+            if (!row) { return; }
+            rfSetSelected(card, row, pill.getAttribute('aria-pressed') !== 'true');
+          };
+          // 19T Item 9 — the pills follow the rows' order, after a row's
+          // ▲ ▼; a pill drag moves its row instead.
+          window.newModelRfSyncPillOrder = function (card) {
+            var pillsRow = card.querySelector('[data-new-model-band2-pills]');
+            if (!pillsRow) { return; }
+            rfRows(card).forEach(function (row) {
+              var pill = pillsRow.querySelector(
+                '[data-new-model-band2-pill][data-row-key="' + row.getAttribute('data-row-key') + '"]'
+              );
+              if (pill) { pillsRow.appendChild(pill); }
+            });
           };
           window.newModelRefreshBand2 = function (card) {
             if (!card) { return; }
@@ -3435,6 +3450,10 @@
                 if (dragRow && targetRow && dragRow !== targetRow) {
                   targetRow.parentNode.insertBefore(dragRow, targetRow);
                 }
+                // The move changes which rows are first and last.
+                rfRows(band2Card).forEach(function (row) {
+                  window.newModelRfRecomputeActionStates(row);
+                });
                 saveBand2State(band2Card);
               }
               rebuildPreview(band2Card);
@@ -3906,14 +3925,20 @@
             // later Save doesn't carry a stale acknowledged_drop.
             var b2 = card.querySelector('[data-new-model-band2]');
             if (b2) { b2.removeAttribute('data-band2-ack-drop'); }
-            // 19T Item 1 — Save persisted each row as typed, ✓'d or
-            // not, and there is no reload; commit every committed row
-            // again so the preview and ✓ match what was saved.
+            // 19T Item 1 — Save persisted each named row as typed, ✓'d
+            // or not, and there is no reload; commit every one so the
+            // preview, ✓ and the Active checkbox match what was saved. A
+            // named row never ✓'d was saved hidden (``selected`` false),
+            // so it commits unselected, as a reload would show it (19T
+            // Item 9, Codex on #2633).
             if (b2 && window.newModelRfCommitRow) {
               window.newModelRfRows(b2).forEach(function (row) {
-                if (row.getAttribute('data-committed') === 'true') {
-                  window.newModelRfCommitRow(row);
+                if (row.getAttribute('data-committed') !== 'true') {
+                  var nameInput = row.querySelector('[data-new-model-rf-name]');
+                  if (!(nameInput && nameInput.value.trim())) { return; }
+                  row.setAttribute('data-selected', 'false');
                 }
+                window.newModelRfCommitRow(row);
               });
               if (window.newModelRefreshBand2) { window.newModelRefreshBand2(b2); }
               card.querySelectorAll('[data-new-model-rf-row]').forEach(function (row) {
@@ -4185,13 +4210,13 @@
                   <td><span class="pill pill-count">{{ field.label }}</span></td>
                   <td class="col-shrink">
                     {% if not field.locked %}
-                      <button type="button" class="btn-icon"
+                      <button type="button" class="btn secondary btn-short"
                               data-new-model-df-move="up"
                               {% if loop.previtem is not defined or loop.previtem.locked %}disabled{% endif %}
                               aria-label="Move {{ field.label }} up"
                               title="Move up"
                               onclick="newModelDfMove(this)">▲</button>
-                      <button type="button" class="btn-icon"
+                      <button type="button" class="btn secondary btn-short"
                               data-new-model-df-move="down"
                               {% if loop.last %}disabled{% endif %}
                               aria-label="Move {{ field.label }} down"
@@ -4211,8 +4236,8 @@
              one <tbody> per field so a branch can later join its parent's
              group under one rule (guide/advanced_instruments.md Item 1).
              Each row reads Active, +, a ⑂ column held for branching,
-             name, type, bounds, R, ≡, ✓, ▲, ▼, X. The Active checkbox and
-             ▲ ▼ are inert until a later rung wires them.
+             name, type, bounds, R, ≡, ✓, ▲, ▼, X. The Active checkbox is
+             the field's selection; ▲ ▼ move the row's <tbody>.
              One inline editor row per response field. Each row is
              independently editable + commitable: the ✓ button
              saves the row's values into a paired pill on Band 2
@@ -4263,10 +4288,11 @@
                    data-response-count="{{ rf.response_count or 0 }}"
                    {% if rf.has_responses %}data-has-responses="true" data-new-model-rf-shape-locked="true"{% endif %}>
                 <tr>
-                <td class="col-shrink"><input type="checkbox" data-new-model-rf-active disabled
+                <td class="col-shrink"><input type="checkbox" data-new-model-rf-active
                          {% if rf.selected %}checked{% endif %}
                          aria-label="Show {{ rf.name }}"
-                         title="Show this field (wired in a later rung)"></td>
+                         title="Show this field in the preview and to reviewers"
+                         onchange="newModelRfToggleActive(this)"></td>
                 <td class="col-shrink">
                 <button type="button" class="btn secondary"
                         data-new-model-rf-add
@@ -4354,11 +4380,15 @@
                         onclick="newModelRfSaveRow(this)"
                         title="Add this field's pill and preview column">✓</button></td>
                 <td class="col-shrink"><button type="button" class="btn secondary"
-                        data-new-model-rf-move="up" disabled
-                        title="Move up (wired in a later rung)">▲</button></td>
+                        data-new-model-rf-move="up"
+                        {% if loop.first %}disabled{% endif %}
+                        aria-label="Move {{ rf.name }} up" title="Move up"
+                        onclick="newModelRfMove(this)">▲</button></td>
                 <td class="col-shrink"><button type="button" class="btn secondary"
-                        data-new-model-rf-move="down" disabled
-                        title="Move down (wired in a later rung)">▼</button></td>
+                        data-new-model-rf-move="down"
+                        {% if loop.last %}disabled{% endif %}
+                        aria-label="Move {{ rf.name }} down" title="Move down"
+                        onclick="newModelRfMove(this)">▼</button></td>
                 <td class="col-shrink">                <button type="button" class="btn destructive"
                         data-new-model-rf-delete
                         {% if rf.has_responses %}disabled aria-disabled="true"{% endif %}
@@ -4381,7 +4411,8 @@
               <tr>
               <td class="col-shrink"><input type="checkbox" data-new-model-rf-active disabled checked
                          aria-label="Show this field"
-                         title="Show this field (wired in a later rung)"></td>
+                         title="Press ✓ to add this field; it starts shown"
+                         onchange="newModelRfToggleActive(this)"></td>
               <td class="col-shrink">
               <button type="button" class="btn secondary"
                       data-new-model-rf-add
@@ -4459,11 +4490,13 @@
                       onclick="newModelRfSaveRow(this)"
                       title="Add this field's pill and preview column">✓</button></td>
                 <td class="col-shrink"><button type="button" class="btn secondary"
-                        data-new-model-rf-move="up" disabled
-                        title="Move up (wired in a later rung)">▲</button></td>
+                        data-new-model-rf-move="up"
+                        aria-label="Move this field up" title="Move up"
+                        onclick="newModelRfMove(this)">▲</button></td>
                 <td class="col-shrink"><button type="button" class="btn secondary"
-                        data-new-model-rf-move="down" disabled
-                        title="Move down (wired in a later rung)">▼</button></td>
+                        data-new-model-rf-move="down"
+                        aria-label="Move this field down" title="Move down"
+                        onclick="newModelRfMove(this)">▼</button></td>
                 <td class="col-shrink">              <button type="button" class="btn destructive"
                       data-new-model-rf-delete
                       style="padding: 4px 10px;"
@@ -4773,6 +4806,34 @@
               row.removeAttribute('data-row-pending');
             }
           }
+          // 19T Item 9 — the Active checkbox and ▲ ▼, computed here so
+          // branching (``guide/advanced_instruments.md`` Item 1) has one
+          // place to add its rules. Active follows the row's selection
+          // once the row is committed; before its first ✓ it is ticked
+          // and fixed, since ✓ adds the field selected. ▲ is off on the
+          // first row, ▼ on the last; any row can move, blank or not.
+          var activeBox = row.querySelector('[data-new-model-rf-active]');
+          if (activeBox) {
+            var isCommitted = row.getAttribute('data-committed') === 'true';
+            activeBox.disabled = !isCommitted;
+            activeBox.checked = isCommitted
+              ? row.getAttribute('data-selected') === 'true'
+              : true;
+            activeBox.title = isCommitted
+              ? 'Show this field in the preview and to reviewers'
+              : 'Press ✓ to add this field; it starts shown';
+          }
+          function _rfRowSibling(el, up) {
+            var sib = up ? el.previousElementSibling : el.nextElementSibling;
+            while (sib && !sib.hasAttribute('data-new-model-rf-row')) {
+              sib = up ? sib.previousElementSibling : sib.nextElementSibling;
+            }
+            return sib;
+          }
+          row.querySelectorAll('[data-new-model-rf-move]').forEach(function (btn) {
+            var up = btn.getAttribute('data-new-model-rf-move') === 'up';
+            btn.disabled = !_rfRowSibling(row, up);
+          });
           // 19T Item 1 — X is live on any row, blank ones included,
           // except the only row left: the last row stays.
           if (deleteBtn && !hasResponses) {
@@ -4998,6 +5059,48 @@
               window.newModelRfRecomputeActionStates(r);
             });
           }
+        };
+        // 19T Item 9 — a row's Active checkbox sets the field's selection
+        // (the pill did); cancelling the "hide this field?" confirm puts
+        // the tick back.
+        window.newModelRfToggleActive = window.newModelRfToggleActive || function (box) {
+          var row = box.closest('[data-new-model-rf-row]');
+          var instrumentCard = box.closest('[id^="instrument-"]');
+          var band2 = instrumentCard
+            ? instrumentCard.querySelector('[data-new-model-band2]')
+            : null;
+          if (!row || !band2 || !window.newModelRfSetSelected) { return; }
+          if (!window.newModelRfSetSelected(band2, row, box.checked)) {
+            box.checked = !box.checked;
+          }
+        };
+        // 19T Item 9 — ▲ ▼ swap a row's <tbody> with its neighbour's, so a
+        // parent will carry its branch unchanged (``guide/advanced_instruments.md``
+        // Item 1). The pills and the preview follow the new order, and
+        // the order is staged for Save.
+        window.newModelRfMove = window.newModelRfMove || function (btn) {
+          var row = btn.closest('[data-new-model-rf-row]');
+          if (!row) { return; }
+          var up = btn.getAttribute('data-new-model-rf-move') === 'up';
+          var other = up ? row.previousElementSibling : row.nextElementSibling;
+          while (other && !other.hasAttribute('data-new-model-rf-row')) {
+            other = up ? other.previousElementSibling : other.nextElementSibling;
+          }
+          if (!other) { return; }
+          other.parentNode.insertBefore(row, up ? other : other.nextSibling);
+          var instrumentCard = btn.closest('[id^="instrument-"]');
+          var band2 = instrumentCard
+            ? instrumentCard.querySelector('[data-new-model-band2]')
+            : null;
+          row.parentElement.querySelectorAll('[data-new-model-rf-row]').forEach(function (r) {
+            window.newModelRfRecomputeActionStates(r);
+          });
+          if (band2) {
+            if (window.newModelRfSyncPillOrder) { window.newModelRfSyncPillOrder(band2); }
+            if (window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
+            window.newModelStageBand2State(band2);
+          }
+          btn.focus();
         };
         window.newModelToggleAudience = window.newModelToggleAudience || function (btn) {
           var selected = btn.getAttribute('data-new-model-chip-selected') !== 'true';

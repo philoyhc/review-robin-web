@@ -1086,9 +1086,8 @@ Taken 2026-09-26 at `134953aa`:
 
 ### Open questions
 
-- **Item 8's display-field arrows** as short bordered buttons (19px,
-  inside the 22px pill, so the compact rows keep 32px), mocked up
-  2026-09-26: the author decides.
+- ~~Item 8's display-field arrows as short outlined buttons?~~ **Yes**
+  (the author, 2026-09-26): `btn secondary btn-short`, built in rung 3.
 
 ### Status
 
@@ -1107,7 +1106,20 @@ click's confirm, and Save's re-commit. ✓ commits a row
 (`newModelRfCommitRow`, was `newModelRfSyncPill`), and its comparison is
 the row against its own committed state
 (`newModelRfRowDiffersFromCommitted`). The pills are a control that
-mirrors its row, carrying only what the click and drag read.
+mirrors its row, carrying only what the click and drag read. Rung 2 is
+#2632.
+
+**Rung 3 wires the Active checkbox and ▲ ▼.** The checkbox and the pill
+share one setter (`rfSetSelected`), with the "hide this field?" confirm;
+cancelling puts the tick back. Before a row's first ✓ its checkbox is
+ticked and fixed, since ✓ adds the field selected. ▲ ▼ move the row's
+`<tbody>`, then the pills follow the rows and the order is staged; a pill
+drag re-runs the recompute, which owns both controls' states. **On the
+author's ruling** the display-field table's ▲ ▼ became outlined buttons
+too, in a short size (`btn-short`, `base.html`: 19px inside the 32px
+rows). Codex (#2633): a named row never ✓'d was saved hidden but kept a
+ticked, fixed Active checkbox until a reload; Save now commits every
+named row as saved, so it shows unticked at once.
 
 ### Doc impact
 
@@ -1115,8 +1127,8 @@ mirrors its row, carrying only what the click and drag read.
   checkbox and ▲ ▼; the pills' per-field visibility section and the ✓ row
   retire (Item 9).
 - `spec/operator_button_audit.md` — ✓ retires; ▲ ▼ join the row (Item 9).
-- `spec/ui_elements.md` — the response-field table's grouped rules, if
-  they become a class (Item 9).
+- `spec/ui_elements.md` — the response-field table's grouped rules
+  (`rf-table`) and the short button size (`btn-short`) in §10 (Item 9).
 - `guide/advanced_instruments.md` — Item 3 and the header point to this
   item as the build, and record the 2026-09-26 layout rulings (Item 9).
 - `app/web/templates/guide.html` — the preview paragraph; the author

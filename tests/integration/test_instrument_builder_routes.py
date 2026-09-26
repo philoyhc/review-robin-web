@@ -8354,6 +8354,10 @@ def test_save_success_brings_every_pill_up_to_its_row(
     start = body.index("window.newModelOnSaveSuccess =")
     on_success = body[start : body.index("\n          };", start)]
     assert "window.newModelRfCommitRow(row);" in on_success
+    # A named row never ✓'d was saved hidden, so it commits unselected
+    # (19T Item 9, Codex on #2633); a blank row stays uncommitted.
+    assert "row.setAttribute('data-selected', 'false');" in on_success
+    assert "if (!(nameInput && nameInput.value.trim())) { return; }" in on_success
     assert "window.newModelRefreshBand2(b2);" in on_success
     assert "window.newModelRfRecomputeActionStates(row);" in on_success
 
@@ -8863,6 +8867,12 @@ def test_band3_display_field_table(
             assert f"{attr}=" in row, attr
     card = _card_slice(flat, new_model.id)
     assert "<thead" not in card[card.index("<table class=\"table-compact\" data-new-model-df-table") :].split("</table>")[0]
+    # 19T Item 9, on the author's ruling — the arrows are outlined
+    # buttons (the Secondary role), short enough for the compact rows.
+    arrows = re.findall(r'<button [^>]*data-new-model-df-move="(?:up|down)"', card)
+    assert len(arrows) == 4
+    assert all('class="btn secondary btn-short"' in a for a in arrows)
+    assert "body.ui-v2 .btn.btn-short { padding: 0 6px;" in flat
     # Compact rows, not the response-field rows' spacing (base.html).
     assert "body.ui-v2 table.table-compact td { padding: var(--space-1) var(--space-2); }" in flat.replace(
         "body.ui-v2 table.table-compact th, ", ""
@@ -9009,9 +9019,9 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
     (``guide/advanced_instruments.md`` Item 3): one ``<tbody>`` per field,
     ruled underneath in ``base.html`` so a branch can later join its
     parent's group (Item 1). Each row reads Active, +, the held ⑂ column,
-    name, type, bounds, R, ≡, ✓, ▲, ▼, X. The scaffold's Active checkbox
-    shows ``visible`` and ▲ ▼ are disabled; the pills and ✓ stay the
-    working editor."""
+    name, type, bounds, R, ≡, ✓, ▲, ▼, X. The Active checkbox shows
+    ``visible``; ▲ is off on the first row and ▼ on the last (rung 3 wired
+    them); the pills and ✓ are still present until rung 4."""
     review_session, new_model = _new_model_with_tags(client, db, code="19t9-rf-table")
     comments = next(f for f in new_model.response_fields if f.label == "Comments")
     comments.visible = False
@@ -9052,15 +9062,23 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
         assert row.count("<td") == len(order)
         assert '<td class="col-shrink" data-new-model-rf-fork-cell></td>' in row
         for move in re.findall(r'<button[^>]*data-new-model-rf-move="(?:up|down)"[^>]*>', row):
-            assert " disabled" in move
-            assert "onclick" not in move
+            assert 'onclick="newModelRfMove(this)"' in move
     boxes = {
         re.search(r'value="([^"]+)"', c.split("data-new-model-rf-name", 1)[1]).group(1):
         re.search(r'<input type="checkbox" data-new-model-rf-active[^>]*>', c).group(0)
         for c in chunks
     }
-    assert " checked" in boxes["Rating"] and " disabled" in boxes["Rating"]
-    assert " checked" not in boxes["Comments"] and " disabled" in boxes["Comments"]
+    assert " checked" in boxes["Rating"] and " disabled" not in boxes["Rating"]
+    assert " checked" not in boxes["Comments"] and " disabled" not in boxes["Comments"]
+    for box in boxes.values():
+        assert 'onchange="newModelRfToggleActive(this)"' in box
+    # The "+" template's row isn't committed: ticked, fixed until ✓.
+    tpl_box = re.search(r'<input type="checkbox" data-new-model-rf-active[^>]*>', template).group(0)
+    assert " checked" in tpl_box and " disabled" in tpl_box
+    ups = [re.search(r'<button[^>]*data-new-model-rf-move="up"[^>]*>', c).group(0) for c in chunks]
+    downs = [re.search(r'<button[^>]*data-new-model-rf-move="down"[^>]*>', c).group(0) for c in chunks]
+    assert [" disabled" in b for b in ups] == [True, False]
+    assert [" disabled" in b for b in downs] == [False, True]
     # The pills and ✓ are still the editor in this rung.
     assert card.count('onclick="newModelRfSaveRow(this)"') == 3
 
@@ -9099,10 +9117,14 @@ def test_band3_response_rows_are_the_model(client: TestClient, db: Session) -> N
     resize = body[start : body.index("\n          };", start)]
     assert "var rfRow = rfRowByKey(card, key.slice(5));" in resize
     assert "data-new-model-band2-pill" not in resize
+    # The pill click and the Active checkbox share one setter (rung 3).
+    start = body.index("function rfSetSelected(card, row, next) {")
+    setter = body[start : body.index("\n          }\n", start)]
+    assert "row.getAttribute('data-response-count')" in setter
+    assert "row.setAttribute('data-selected', next ? 'true' : 'false');" in setter
     start = body.index("window.newModelToggleBand2Pill = function (pill) {")
     toggle = body[start : body.index("\n          };", start)]
-    assert "row.getAttribute('data-response-count')" in toggle
-    assert "row.setAttribute('data-selected', next ? 'true' : 'false');" in toggle
+    assert "rfSetSelected(card, row, pill.getAttribute('aria-pressed') !== 'true');" in toggle
     start = body.index("window.newModelHelpCardInput =")
     help_input = body[start : body.index("\n          };", start)]
     assert "row.setAttribute('data-help-text', ta.value);" in help_input
@@ -9118,3 +9140,32 @@ def test_band3_response_rows_are_the_model(client: TestClient, db: Session) -> N
         "instrumentCard.querySelectorAll('[data-new-model-rf-rows] > [data-new-model-rf-row]')"
         in body
     )
+
+
+def test_band3_response_rows_active_and_arrows_are_wired(
+    client: TestClient, db: Session
+) -> None:
+    """19T Item 9 rung 3 — the Active checkbox sets the field's selection
+    through the setter the pill uses (with the "hide this field?" confirm,
+    putting the tick back on cancel); ▲ ▼ move the row's ``<tbody>``, then
+    the pills follow the rows and the order is staged. The row recompute
+    owns both controls' states: Active fixed before a row's first ✓, ▲
+    off on the first row and ▼ on the last."""
+    review_session, new_model = _new_model_with_tags(client, db, code="19t9-wired")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    ).text
+    active = _rf_fn(body, "newModelRfToggleActive")
+    assert "window.newModelRfSetSelected(band2, row, box.checked)" in active
+    assert "box.checked = !box.checked;" in active
+    move = _rf_fn(body, "newModelRfMove")
+    assert "other.parentNode.insertBefore(row, up ? other : other.nextSibling);" in move
+    assert "window.newModelRfSyncPillOrder(band2)" in move
+    assert "window.newModelStageBand2State(band2);" in move
+    recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
+    assert "activeBox.disabled = !isCommitted;" in recompute
+    assert "btn.disabled = !_rfRowSibling(row, up);" in recompute
+    # A pill drag moves a row too, so it re-runs the recompute.
+    start = body.index("window.newModelBand2Drop = function")
+    drop = body[start : body.index("\n          };", start)]
+    assert "window.newModelRfRecomputeActionStates(row);" in drop
