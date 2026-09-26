@@ -907,7 +907,8 @@ Taken 2026-09-26 at `20f8eb3a`:
 3. **Retire** Band 2's display pills; the item's cumulative
    `diff-reviewer` read runs here, from the main commit rung 1 was cut
    from.
-4. **Close.**
+4. ~~**Close.**~~ Became the author's adjustments (`Status`); the close
+   is rung 5.
 
 ### Definition of done
 
@@ -956,6 +957,18 @@ Rung 3 fixed what it raised:
 - the empty-state `—` counted display fields;
 - the table's inline styles, which now use `base.html`'s table rules and
   `.col-shrink`.
+Codex's one finding, that the Guide said Email always shows, was fixed
+in rung 3 (#2628).
+
+**Rung 4 is the author's adjustments** (2026-09-26):
+- the locked Visibility table shows each mode as a pill that only shows
+  it, as the editor's fixed cells do; the repaint key moves onto the pill;
+- the display-field table is compact (`table-compact`, `base.html`)
+  rather than aligned with the response-field rows, and each field name is
+  a display-only pill;
+- **Band 3 re-splits to `1fr 2fr`**, the design record's split, which the
+  Decision above had deferred.
+The rung reopens `app/` after the read, so it takes its own.
 **The close waits** on the author.
 
 ### Doc impact
@@ -964,6 +977,10 @@ Rung 3 fixed what it raised:
   table, and Band 2's chip row loses its display pills (Item 8).
 - `spec/ui_elements.md` — "Label or control": the locked Name / Email
   pills give way to the table's disabled checkboxes (Item 8).
+- `spec/instruments.md` — also Band 3's `1fr 2fr` split, the compact
+  display-field rows with display-only name pills, and the locked
+  Visibility table's mode pills (Item 8).
+- `spec/ui_elements.md` — also the `table-compact` class (Item 8).
 - `guide/advanced_instruments.md` — Item 5 and the header point to this
   item as the build (Item 8).
 - `app/web/templates/guide.html` — the preview paragraph sends display

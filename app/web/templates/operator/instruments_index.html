@@ -1913,11 +1913,14 @@
                         <td style="padding: 4px 8px;">{{ vp.audience_label }}</td>
                         {# 19T Item 3 entry 3 — the editor's cycle repaints
                            these cells live (``newModelCycleVisibilityCell``),
-                           since Save doesn't reload. #}
-                        <td style="padding: 4px 8px;"
-                            data-new-model-vp-preview-cell="{{ vp.audience }}-while_ongoing">{{ vp.while_ongoing_label }}</td>
-                        <td style="padding: 4px 8px;"
-                            data-new-model-vp-preview-cell="{{ vp.audience }}-after_release">{{ vp.after_release_label }}</td>
+                           since Save doesn't reload. 19T Item 8 — each mode
+                           is a pill that only shows it, as the editor's fixed
+                           cells are (``b3_static_pill``, less the "Fixed"
+                           tooltip). #}
+                        <td style="padding: 4px 8px;"><span class="pill pill-count"
+                            data-new-model-vp-preview-cell="{{ vp.audience }}-while_ongoing">{{ vp.while_ongoing_label }}</span></td>
+                        <td style="padding: 4px 8px;"><span class="pill pill-count"
+                            data-new-model-vp-preview-cell="{{ vp.audience }}-after_release">{{ vp.after_release_label }}</span></td>
                       </tr>
                     {% endfor %}
                   </tbody>
@@ -4131,12 +4134,13 @@
       </script>
 
       <hr style="margin: 20px 0; border: 0; border-top: 3px solid var(--border-default);">
-      {# Band 3 — two columns: the display-field table (19T Item 8)
-         on the left, the response-fields editor on the right.
+      {# Band 3 — two columns, one third and two thirds: the
+         display-field table (19T Item 8) on the left, the
+         response-fields editor on the right.
          Visibility moved to Band 2's "Who can see what you wrote"
          card (19T Item 7). #}
       <div data-new-model-band3 data-lock-region
-           style="display: grid; grid-template-columns: 2fr 3fr; gap: 16px;
+           style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px;
                   align-items: stretch;"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
         {# 19T Item 8 — the display-field table
@@ -4149,11 +4153,14 @@
            retired. Name and Email have a checkbox
            that only shows their state, and no arrows; on a group-scoped
            instrument the fields a group row can't show are unticked and
-           fixed. An unticked row can still be moved. #}
+           fixed. An unticked row can still be moved. The rows are compact
+           (``table-compact``, base.html) rather than aligned with the
+           response-field rows beside them, and each field name is a pill
+           that only shows it. #}
         <div data-new-model-band3-left>
           <h3 style="margin: 0 0 12px 0;">Display fields</h3>
           <div class="table-scroll">
-          <table data-new-model-df-table>
+          <table class="table-compact" data-new-model-df-table>
             <tbody>
               {% for field in _band2.fields %}
                 {% set _group_off = _saved_unit_mode == "grouped" and not field.selectable_in_group %}
@@ -4178,7 +4185,7 @@
                            title="{{ 'Not shown on group rows' if _group_off else _title_on }}"
                            onchange="newModelDfToggle(this)">
                   </td>
-                  <td>{{ field.label }}</td>
+                  <td><span class="pill pill-count">{{ field.label }}</span></td>
                   <td class="col-shrink">
                     {% if not field.locked %}
                       <button type="button" class="btn-icon"
