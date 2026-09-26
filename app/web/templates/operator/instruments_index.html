@@ -4084,8 +4084,19 @@
           <div class="table-scroll">
           <table class="rf-table" data-new-model-rf-rows
                data-new-model-rf-row-counter="{{ _next_idx + 1 }}">
-            {% for rf in _rfs %}
-              {% set _rkey = 'rf_' ~ loop.index0 %}
+            {# 19T Item 10 — one <tbody> per group: a field on its own, or
+               a parent with its condition row and the fields it governs
+               (``views._response_field_groups``). A governed row shifts
+               one column right before the name: the bar in the checkbox
+               column, its checkbox in the + column, its + in the ⑂
+               column; from the name onward every row aligns. The branch
+               controls are inert until the builder rung wires them. #}
+            {% for _group in _band2.response_field_groups %}
+            {% set _outer = loop %}
+            <tbody data-new-model-rf-group{% if _group.condition %} data-new-model-rf-branch{% endif %}>
+            {% for rf in _group.rows %}
+              {% set _rkey = 'rf_' ~ rf.row_index %}
+              {% set _governed = rf.branch_parent_id is not none %}
               {# Wave 3 PR ii — data_type select + bound inputs lock
                  when the row already has saved responses, so an
                  operator can't silently re-shape stored data
@@ -4099,9 +4110,10 @@
                  last committed, the column width, help text and response
                  count. The inputs hold the live edit, which commits
                  whenever it is valid. #}
-              <tbody data-new-model-rf-group>
               <tr data-new-model-rf-row
                    data-row-key="{{ _rkey }}"
+                   {% if _governed %}data-new-model-rf-governed="true"{% endif %}
+                   {% if rf.is_parent %}data-new-model-rf-parent="true"{% endif %}
                    {% if rf.id %}data-rf-id="{{ rf.id }}"{% endif %}
                    data-committed="true"
                    data-selected="{{ 'true' if rf.selected else 'false' }}"
@@ -4115,17 +4127,27 @@
                    data-help-text="{{ rf.help_text or '' }}"
                    data-response-count="{{ rf.response_count or 0 }}"
                    {% if rf.has_responses %}data-has-responses="true" data-new-model-rf-shape-locked="true"{% endif %}>
-                <td class="col-shrink"><input type="checkbox" data-new-model-rf-active
+                {% if _governed %}<td class="col-shrink rf-branch-bar"></td>{% endif %}
+                <td class="col-shrink{% if rf.is_parent %} rf-branch-bar-start{% endif %}"><input type="checkbox" data-new-model-rf-active
                          {% if rf.selected %}checked{% endif %}
+                         {% if _governed or rf.is_parent %}data-new-model-rf-branch-inert{% endif %}
                          aria-label="Show {{ rf.name }}"
                          title="Show this field in the preview and to reviewers"
                          onchange="newModelRfToggleActive(this)"></td>
                 <td class="col-shrink">
                 <button type="button" class="btn secondary"
                         data-new-model-rf-add
+                        {% if _governed %}data-new-model-rf-branch-inert{% endif %}
                         onclick="newModelRfAddRow(this)"
-                        title="Add a response field below this one">+</button></td>
-                <td class="col-shrink" data-new-model-rf-fork-cell></td>
+                        title="{% if _governed %}Add a field to the branch below this one{% else %}Add a response field below this one{% endif %}">+</button></td>
+                {% if not _governed %}
+                <td class="col-shrink" data-new-model-rf-fork-cell>
+                <button type="button"
+                        class="btn{% if not rf.is_parent %} secondary{% endif %}"
+                        data-new-model-rf-fork data-new-model-rf-branch-inert
+                        disabled aria-pressed="{{ 'true' if rf.is_parent else 'false' }}"
+                        title="{% if rf.is_parent %}This field has a branch{% elif rf.data_type == 'string' %}A String field can't have a branch{% else %}Add a branch below this field{% endif %}">⑂</button></td>
+                {% endif %}
                 <td class="rf-name">
                 <input type="text"
                        data-new-model-rf-name
@@ -4187,10 +4209,11 @@
                 <td class="col-shrink"><button type="button"
                         class="btn{% if not rf.required %} secondary{% endif %}"
                         data-new-model-rf-required
+                        {% if _governed %}data-new-model-rf-branch-inert{% endif %}
                         data-required="{{ 'true' if rf.required else 'false' }}"
                         onclick="newModelRfRequiredChanged(this)"
                         aria-pressed="{{ 'true' if rf.required else 'false' }}"
-                        title="Required for reviewers to submit (enforced from Wave 3)">R</button></td>
+                        title="{% if _governed %}A field inside a branch can't be required{% else %}Required for reviewers to submit (enforced from Wave 3){% endif %}">R</button></td>
                 <td class="col-shrink"><button type="button"
                         class="btn{% if not rf.help_text_visible %} secondary{% endif %}"
                         data-new-model-rf-help-visible
@@ -4201,21 +4224,51 @@
                         aria-label="Help text visibility">≡</button></td>
                 <td class="col-shrink"><button type="button" class="btn secondary"
                         data-new-model-rf-move="up"
-                        {% if loop.first %}disabled{% endif %}
+                        {% if _governed %}data-new-model-rf-branch-inert{% endif %}
+                        {% if _governed or _outer.first %}disabled{% endif %}
                         aria-label="Move {{ rf.name }} up" title="Move up"
                         onclick="newModelRfMove(this)">▲</button></td>
                 <td class="col-shrink"><button type="button" class="btn secondary"
                         data-new-model-rf-move="down"
-                        {% if loop.last %}disabled{% endif %}
+                        {% if _governed %}data-new-model-rf-branch-inert{% endif %}
+                        {% if _governed or _outer.last %}disabled{% endif %}
                         aria-label="Move {{ rf.name }} down" title="Move down"
                         onclick="newModelRfMove(this)">▼</button></td>
                 <td class="col-shrink">                <button type="button" class="btn destructive"
                         data-new-model-rf-delete
+                        {% if _governed or rf.is_parent %}data-new-model-rf-branch-inert{% endif %}
                         {% if rf.has_responses %}disabled aria-disabled="true"{% endif %}
                         {% if not rf.has_responses %}onclick="newModelRfDeleteRow(this)"{% endif %}
-                        title="{% if rf.has_responses %}Cannot delete — this field has saved responses{% else %}Delete this row{% endif %}">X</button></td>
+                        title="{% if rf.has_responses %}Cannot delete — this field has saved responses{% elif rf.is_parent %}Delete its branch first{% else %}Delete this row{% endif %}">X</button></td>
                 </tr>
-              </tbody>
+                {% if loop.first and _group.condition %}
+                {# The branch's condition row: after the bar, "If the
+                   above [operator] [value] then show the below". Its "+"
+                   adds a field at the top of the branch; it has no X —
+                   the branch goes with its last governed field. #}
+                <tr data-new-model-rf-condition>
+                  <td class="col-shrink rf-branch-bar"></td>
+                  <td class="col-shrink"></td>
+                  <td class="col-shrink"><button type="button" class="btn secondary"
+                          data-new-model-rf-condition-add data-new-model-rf-branch-inert disabled
+                          title="Add a field at the top of the branch">+</button></td>
+                  <td colspan="8" class="rf-condition-cell">
+                    If the above
+                    <select data-new-model-rf-condition-op data-new-model-rf-branch-inert disabled
+                            aria-label="Condition for the fields below">
+                      {% for _token, _symbol in _group.condition.ops %}
+                        <option value="{{ _token }}"{% if _token == _group.condition.op %} selected{% endif %}>{{ _symbol }}</option>
+                      {% endfor %}
+                    </select>
+                    <input type="text" data-new-model-rf-condition-value data-new-model-rf-branch-inert disabled
+                           value="{{ _group.condition.value }}"
+                           aria-label="Value the condition compares against">
+                    then show the below
+                  </td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+            </tbody>
             {% endfor %}
           </table>
           </div>
@@ -4238,7 +4291,11 @@
                       data-new-model-rf-add
                       onclick="newModelRfAddRow(this)"
                       title="Add a response field below this one">+</button></td>
-                <td class="col-shrink" data-new-model-rf-fork-cell></td>
+                <td class="col-shrink" data-new-model-rf-fork-cell>
+                <button type="button" class="btn secondary"
+                        data-new-model-rf-fork data-new-model-rf-branch-inert
+                        disabled aria-pressed="false"
+                        title="A String field can't have a branch">⑂</button></td>
                 <td class="rf-name">
               <input type="text"
                      data-new-model-rf-name
@@ -4735,6 +4792,17 @@
                      : 'Remove this empty row'
               );
             }
+          }
+          // 19T Item 10 — a branch's controls stay inert until the
+          // builder rung wires them: ⑂, the condition, and a governed
+          // row's +, R, ▲ ▼ and X, plus both rows' Active (its cascade
+          // comes with the wiring). A parent's X stays off while it has a
+          // branch, since a branch is deleted bottom-up.
+          row.querySelectorAll('[data-new-model-rf-branch-inert]').forEach(function (control) {
+            control.disabled = true;
+          });
+          if (deleteBtn && !hasResponses && row.hasAttribute('data-new-model-rf-parent')) {
+            deleteBtn.setAttribute('title', 'Delete its branch first');
           }
         };
         // ``oninput`` on every editable name / bound input — fires

@@ -324,6 +324,61 @@ def textarea_rows_for(
 # entirely in PR 5.3.
 
 
+def _response_field_groups(
+    response_fields: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """19T Item 10 — Band 3's rows as ruled groups: a field outside any
+    branch is a group of one; a parent heads its group, followed by its
+    condition and the fields it governs, which directly follow it in
+    field order (``branch_structure_errors``). Each entry gains
+    ``row_index`` (its position, for the row key), ``is_parent`` and
+    ``branch_locked`` (a governed field has responses, which locks the
+    branch's condition and membership). A group's ``condition`` carries
+    the operator choices the parent's type allows, as (token, symbol)."""
+    from app.services.responses import LIST_OP, NUMERIC_OPS
+
+    parent_ids = {
+        rf["branch_parent_id"]
+        for rf in response_fields
+        if rf.get("branch_parent_id") is not None
+    }
+    locked_parent_ids = {
+        rf["branch_parent_id"]
+        for rf in response_fields
+        if rf.get("branch_parent_id") is not None and rf.get("has_responses")
+    }
+    groups: list[dict[str, Any]] = []
+    for index, rf in enumerate(response_fields):
+        rf["row_index"] = index
+        rf["is_parent"] = rf.get("id") in parent_ids
+        parent_id = rf.get("branch_parent_id")
+        rf["branch_locked"] = (
+            parent_id in locked_parent_ids
+            if parent_id is not None
+            else rf.get("id") in locked_parent_ids
+        )
+        if parent_id is not None and groups and groups[-1]["parent_id"] == parent_id:
+            groups[-1]["rows"].append(rf)
+            continue
+        condition = None
+        if rf["is_parent"]:
+            ops = (
+                [(LIST_OP, "is")]
+                if rf["data_type"] == "list"
+                else list(NUMERIC_OPS.items())
+            )
+            condition = {
+                "op": rf["branch_op"],
+                "value": rf["branch_value"],
+                "ops": ops,
+                "locked": rf["branch_locked"],
+            }
+        groups.append(
+            {"parent_id": rf.get("id"), "rows": [rf], "condition": condition}
+        )
+    return groups
+
+
 def _new_model_band2_state(
     db: Session,
     instrument: Instrument,
@@ -548,6 +603,10 @@ def _new_model_band2_state(
             "required": rf.required,
             "help_text": rf.help_text or "",
             "help_text_visible": rf.help_text_visible,
+            # 19T Item 10 — branching (see ``response_field_groups``).
+            "branch_parent_id": rf.branch_parent_id,
+            "branch_op": rf.branch_op or "",
+            "branch_value": rf.branch_value or "",
         }
         width = column_widths_map.get(f"rf_{rf.id}")
         if width is not None:
@@ -587,6 +646,7 @@ def _new_model_band2_state(
             )
             rf["response_count"] = count
             rf["has_responses"] = count > 0
+    response_field_groups = _response_field_groups(response_fields)
     sort_spec = list(instrument.sort_display_fields or [])
     return {
         "fields": fields,
@@ -595,6 +655,7 @@ def _new_model_band2_state(
         "identity_width_px": identity_width_px,
         "selected_display_keys": selected_display_keys,
         "response_fields": response_fields,
+        "response_field_groups": response_field_groups,
         "roster": roster,
         "sample_reviewee_name": sample.name if sample is not None else "",
         # Rule-surviving group-member IDs from the last Refresh
