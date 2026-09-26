@@ -4111,7 +4111,49 @@
            style="display: grid; grid-template-columns: 2fr 3fr; gap: 16px;
                   align-items: stretch;"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
-        <div data-new-model-band3-left></div>
+        {# 19T Item 8 rung 1 — the display-field table
+           (``guide/advanced_instruments.md`` Item 5), a scaffold: every
+           control is disabled, and Band 2's pills stay the working
+           editor until rung 2 wires it. One row per display field, in
+           the pills' order, no header row: Active checkbox, field, up,
+           down. Name and Email have a checkbox that shows their state
+           and no arrows; on a group-scoped instrument the fields a group
+           row can't show are unticked. #}
+        <div data-new-model-band3-left>
+          <h3 style="margin: 0 0 12px 0;">Display fields</h3>
+          <div class="table-scroll">
+          <table data-new-model-df-table
+                 style="width: 100%; border-collapse: collapse;">
+            <tbody>
+              {% for field in _band2.fields %}
+                {% set _group_off = _saved_unit_mode == "grouped" and not field.selectable_in_group %}
+                {% set _on = (field.locked or field.key in _band2.selected_display_keys) and not _group_off %}
+                <tr data-new-model-df-row data-key="{{ field.key }}" style="height: 40px;">
+                  <td style="padding: 4px 8px; width: 1%;">
+                    <input type="checkbox" disabled
+                           {% if _on %}checked{% endif %}
+                           aria-label="Show {{ field.label }}"
+                           title="{{ ('Always shown — pinned ' ~ field.pinned) if (field.locked and not _group_off) else ('Not shown on group rows' if _group_off else 'Set with the pills in Band 2 for now') }}">
+                  </td>
+                  <td style="padding: 4px 8px;">{{ field.label }}</td>
+                  <td style="padding: 4px 8px; width: 1%; white-space: nowrap;">
+                    {% if not field.locked %}
+                      <button type="button" class="btn secondary" disabled
+                              style="padding: 4px 10px;"
+                              aria-label="Move {{ field.label }} up"
+                              title="Reorder with the pills in Band 2 for now">▲</button>
+                      <button type="button" class="btn secondary" disabled
+                              style="padding: 4px 10px;"
+                              aria-label="Move {{ field.label }} down"
+                              title="Reorder with the pills in Band 2 for now">▼</button>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+        </div>
         <div style="padding-left: 16px; border-left: 1px solid var(--border-default);">
           <h3 style="margin: 0 0 12px 0;">Response fields</h3>
           {# One inline editor row per response field. Each row is
