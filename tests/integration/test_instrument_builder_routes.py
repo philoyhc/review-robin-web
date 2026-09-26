@@ -8825,15 +8825,16 @@ def _df_rows(flat: str, instrument_id: int) -> list[str]:
     return re.findall(r"<tr data-new-model-df-row.*?</tr>", table)
 
 
-def test_band3_display_field_table_scaffold(
+def test_band3_display_field_table(
     client: TestClient, db: Session
 ) -> None:
-    """19T Item 8 rung 1 — Band 3's left column carries the display-field
-    table (``guide/advanced_instruments.md`` Item 5): one headerless row
-    per display field in the pills' order, with an Active checkbox, the
-    field, and up / down buttons. Name and Email have a checkbox that
-    only shows their state and no arrows. A scaffold: every control is
-    disabled while Band 2's pills stay the editor."""
+    """19T Item 8 — Band 3's left column carries the display-field table
+    (``guide/advanced_instruments.md`` Item 5): one headerless row per
+    display field in the pills' order, with an Active checkbox, the
+    field, and up / down buttons wired to ``newModelDfToggle`` /
+    ``newModelDfMove``. Name and Email have a checkbox that only shows
+    their state and no arrows. Up is off on the row just below Email,
+    down on the last row."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="19t8-df-table"
     )
@@ -8849,20 +8850,30 @@ def test_band3_display_field_table_scaffold(
     )
     assert labels == pills
     assert labels[:2] == ["Name", "Email"]
-    assert len(labels) > 2
+    assert len(labels) >= 4
     card = _card_slice(flat, new_model.id)
     assert "<thead" not in card[card.index("<table data-new-model-df-table") :].split("</table>")[0]
+
+    def _disabled(tag: str) -> bool:
+        return " disabled" in tag
+
+    movable = labels[2:]
     for label, row in zip(labels, rows):
         box = re.search(r'<input type="checkbox"[^>]*>', row).group(0)
-        # Rung 1 is inert.
-        assert " disabled" in box, label
-        assert all(" disabled" in b for b in re.findall(r"<button[^>]*>", row)), label
-        arrows = re.findall(r'aria-label="Move [^"]+ (up|down)"', row)
+        assert 'onchange="newModelDfToggle(this)"' in box, label
+        arrows = dict(
+            re.findall(r'data-new-model-df-move="(up|down)"(.*?)>', row)
+        )
         if label in ("Name", "Email"):
-            assert arrows == [], label
-            assert " checked" in box, label
-        else:
-            assert arrows == ["up", "down"], label
+            assert arrows == {}, label
+            assert " checked" in box and _disabled(box), label
+            continue
+        # A selectable field is live, ticked when selected.
+        assert not _disabled(box), label
+        assert set(arrows) == {"up", "down"}, label
+        assert all('onclick="newModelDfMove(this)"' in a for a in arrows.values())
+        assert _disabled(arrows["up"]) == (label == movable[0]), label
+        assert _disabled(arrows["down"]) == (label == movable[-1]), label
 
     # A group-scoped instrument: Email has no group value, so its box is
     # unticked; Name stays ticked.
@@ -8878,3 +8889,24 @@ def test_band3_display_field_table_scaffold(
     assert " checked" in boxes["Name"]
     assert " checked" not in boxes["Email"]
     assert 'title="Not shown on group rows"' in boxes["Email"]
+
+
+def test_band3_display_field_table_drives_the_pills(
+    client: TestClient, db: Session
+) -> None:
+    """19T Item 8 rung 2 — the table's handlers act on the display pills,
+    which stay the model the preview and Save read, and the preview
+    rebuild mirrors the pills back into the table."""
+    review_session, _ = _new_model_with_tags(client, db, code="19t8-df-js")
+    body = client.get(f"/operator/sessions/{review_session.id}/instruments").text
+    start = body.index("window.newModelDfToggle = function (box) {")
+    toggle = body[start : body.index("\n          };", start)]
+    assert "window.newModelToggleBand2Pill(pill);" in toggle
+    start = body.index("window.newModelDfMove = function (btn) {")
+    move = body[start : body.index("\n          };", start)]
+    assert "other.parentNode.insertBefore(pill, up ? other : other.nextSibling);" in move
+    assert "saveBand2DisplayFieldOrder(band2);" in move
+    assert "rebuildPreview(band2);" in move
+    start = body.index("function rebuildPreview(card) {")
+    rebuild = body[start : body.index("\n          }", start)]
+    assert "syncDfTable(card);" in rebuild

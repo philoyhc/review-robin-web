@@ -3138,6 +3138,8 @@
             // operator-resized widths (``<col style="width: Npx">``)
             // and auto-distributed widths (no inline style).
             adjustPreviewTextareaRows(container);
+            // 19T Item 8 — the display-field table follows the pills.
+            syncDfTable(card);
           }
           // Walk every textarea inside the just-rendered preview
           // table, measure the actual rendered width of its column
@@ -3459,6 +3461,92 @@
                 saveBand2State(band2Card);
               }
               rebuildPreview(band2Card);
+            }
+          };
+          // 19T Item 8 — Band 3's display-field table. The display pills
+          // stay the model (DOM order is the display order, aria-pressed
+          // the selection), so the table's controls act on the pills and
+          // syncDfTable mirrors them back; rebuildPreview calls it after
+          // every pill, table or unit-mode change.
+          function dfBand2(el) {
+            var instrumentCard = el.closest('[id^="instrument-"]');
+            return instrumentCard && instrumentCard.querySelector('[data-new-model-band2]');
+          }
+          function dfDisplayPills(band2) {
+            return Array.prototype.slice.call(band2.querySelectorAll(
+              '[data-new-model-band2-pill]:not([data-source-type="response"])'
+            ));
+          }
+          function dfPillFor(band2, row) {
+            return band2.querySelector(
+              '[data-new-model-band2-pill][data-key="' + row.getAttribute('data-key') + '"]'
+            );
+          }
+          function syncDfTable(band2) {
+            var instrumentCard = band2.closest('[id^="instrument-"]');
+            var table = instrumentCard && instrumentCard.querySelector('[data-new-model-df-table]');
+            if (!table) { return; }
+            var tbody = table.querySelector('tbody');
+            var movable = [];
+            dfDisplayPills(band2).forEach(function (pill) {
+              var row = tbody.querySelector(
+                '[data-new-model-df-row][data-key="' + pill.getAttribute('data-key') + '"]'
+              );
+              if (!row) { return; }
+              tbody.appendChild(row);
+              var locked = pill.getAttribute('data-locked') === 'true';
+              var off = locked
+                ? pill.getAttribute('data-locked-on') !== 'true'
+                : pill.getAttribute('aria-disabled') === 'true';
+              var box = row.querySelector('[data-new-model-df-active]');
+              if (box) {
+                box.checked = !off && (locked || pill.getAttribute('aria-pressed') === 'true');
+                box.disabled = locked || off;
+                box.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');
+              }
+              if (row.querySelector('[data-new-model-df-move]')) { movable.push(row); }
+            });
+            // Up is off on the first movable row (just below Email),
+            // down on the last; an unticked row can still be moved.
+            movable.forEach(function (row, i) {
+              row.querySelector('[data-new-model-df-move="up"]').disabled = i === 0;
+              row.querySelector('[data-new-model-df-move="down"]').disabled = i === movable.length - 1;
+            });
+          }
+          window.newModelDfToggle = function (box) {
+            var band2 = dfBand2(box);
+            var row = box.closest('[data-new-model-df-row]');
+            var pill = band2 && row && dfPillFor(band2, row);
+            if (!pill) { return; }
+            if ((pill.getAttribute('aria-pressed') === 'true') !== box.checked) {
+              window.newModelToggleBand2Pill(pill);
+            }
+            syncDfTable(band2);
+          };
+          window.newModelDfMove = function (btn) {
+            var band2 = dfBand2(btn);
+            var row = btn.closest('[data-new-model-df-row]');
+            var pill = band2 && row && dfPillFor(band2, row);
+            if (!pill) { return; }
+            var list = dfDisplayPills(band2).filter(function (p) {
+              return p.getAttribute('data-reorderable') === 'true';
+            });
+            var i = list.indexOf(pill);
+            var up = btn.getAttribute('data-new-model-df-move') === 'up';
+            var other = list[up ? i - 1 : i + 1];
+            if (i < 0 || !other) { return; }
+            other.parentNode.insertBefore(pill, up ? other : other.nextSibling);
+            saveBand2DisplayFieldOrder(band2);
+            rebuildPreview(band2);
+            // Keep focus on the arrow the operator pressed, or its
+            // sibling once the row reaches an end.
+            if (!btn.disabled) {
+              btn.focus();
+            } else {
+              var sibling = row.querySelector(
+                '[data-new-model-df-move="' + (up ? 'down' : 'up') + '"]'
+              );
+              if (sibling && !sibling.disabled) { sibling.focus(); }
             }
           };
           // Locked pills (Name, Email) are excluded — the server
@@ -4111,14 +4199,16 @@
            style="display: grid; grid-template-columns: 2fr 3fr; gap: 16px;
                   align-items: stretch;"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
-        {# 19T Item 8 rung 1 — the display-field table
-           (``guide/advanced_instruments.md`` Item 5), a scaffold: every
-           control is disabled, and Band 2's pills stay the working
-           editor until rung 2 wires it. One row per display field, in
-           the pills' order, no header row: Active checkbox, field, up,
-           down. Name and Email have a checkbox that shows their state
-           and no arrows; on a group-scoped instrument the fields a group
-           row can't show are unticked. #}
+        {# 19T Item 8 — the display-field table
+           (``guide/advanced_instruments.md`` Item 5). One row per display
+           field, no header row: Active checkbox, field, up, down. The
+           table drives Band 2's display pills, which stay the model the
+           preview and Save read (``newModelDfToggle`` /
+           ``newModelDfMove``), and ``syncDfTable`` mirrors the pills back
+           after every preview rebuild. Name and Email have a checkbox
+           that only shows their state, and no arrows; on a group-scoped
+           instrument the fields a group row can't show are unticked and
+           fixed. An unticked row can still be moved. #}
         <div data-new-model-band3-left>
           <h3 style="margin: 0 0 12px 0;">Display fields</h3>
           <div class="table-scroll">
@@ -4128,24 +4218,32 @@
               {% for field in _band2.fields %}
                 {% set _group_off = _saved_unit_mode == "grouped" and not field.selectable_in_group %}
                 {% set _on = (field.locked or field.key in _band2.selected_display_keys) and not _group_off %}
+                {% set _title_on = ('Always shown — pinned ' ~ field.pinned) if field.locked else 'Show this column' %}
                 <tr data-new-model-df-row data-key="{{ field.key }}" style="height: 40px;">
                   <td style="padding: 4px 8px; width: 1%;">
-                    <input type="checkbox" disabled
+                    <input type="checkbox" data-new-model-df-active
+                           {% if field.locked or _group_off %}disabled{% endif %}
                            {% if _on %}checked{% endif %}
                            aria-label="Show {{ field.label }}"
-                           title="{{ ('Always shown — pinned ' ~ field.pinned) if (field.locked and not _group_off) else ('Not shown on group rows' if _group_off else 'Set with the pills in Band 2 for now') }}">
+                           data-title-on="{{ _title_on }}"
+                           title="{{ 'Not shown on group rows' if _group_off else _title_on }}"
+                           onchange="newModelDfToggle(this)">
                   </td>
                   <td style="padding: 4px 8px;">{{ field.label }}</td>
                   <td style="padding: 4px 8px; width: 1%; white-space: nowrap;">
                     {% if not field.locked %}
-                      <button type="button" class="btn secondary" disabled
-                              style="padding: 4px 10px;"
+                      <button type="button" class="btn-icon"
+                              data-new-model-df-move="up"
+                              {% if loop.previtem is not defined or loop.previtem.locked %}disabled{% endif %}
                               aria-label="Move {{ field.label }} up"
-                              title="Reorder with the pills in Band 2 for now">▲</button>
-                      <button type="button" class="btn secondary" disabled
-                              style="padding: 4px 10px;"
+                              title="Move up"
+                              onclick="newModelDfMove(this)">▲</button>
+                      <button type="button" class="btn-icon"
+                              data-new-model-df-move="down"
+                              {% if loop.last %}disabled{% endif %}
                               aria-label="Move {{ field.label }} down"
-                              title="Reorder with the pills in Band 2 for now">▼</button>
+                              title="Move down"
+                              onclick="newModelDfMove(this)">▼</button>
                     {% endif %}
                   </td>
                 </tr>
