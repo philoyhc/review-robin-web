@@ -941,9 +941,22 @@ id), a checkbox is its selection, and row order is display order. Every
 former pill reader reads the rows through `dfRows`: the preview, the
 group-mode refresh, the column-width resize and collector, the Save
 stager's selected keys, the display-order stager and the sample refresh.
-Band 2 keeps only the response pills, with the `||` divider hidden but
-kept as their anchor. Item 3 entry 2's locked-pill test now pins Name
-and Email's fixed checkboxes. **The close waits** on the author.
+Band 2 keeps only the response pills, and the `||` divider is gone. Item
+3 entry 2's locked-pill test now pins Name and Email's fixed checkboxes.
+
+**The item's read** (rung 3, over `323c5157..HEAD`) found no correctness
+defect: every former pill reader reads the rows, Save's locked and
+group-off cases match the pills', and the lock region and first load hold.
+Rung 3 fixed what it raised:
+- the server-rendered tick was untested; tests now pin selection and a
+  group-off field that isn't locked (Profile);
+- the in-app Guide still sent display fields to the pills;
+- dead code: the drag handlers' display branch, the locked-pill guard, the
+  divider and stale comments;
+- the empty-state `—` counted display fields;
+- the table's inline styles, which now use `base.html`'s table rules and
+  `.col-shrink`.
+**The close waits** on the author.
 
 ### Doc impact
 
@@ -953,4 +966,9 @@ and Email's fixed checkboxes. **The close waits** on the author.
   pills give way to the table's disabled checkboxes (Item 8).
 - `guide/advanced_instruments.md` — Item 5 and the header point to this
   item as the build (Item 8).
+- `app/web/templates/guide.html` — the preview paragraph sends display
+  fields to the table; the author retakes the instrument captures, and
+  their alt text follows the retake (Item 8).
+- `spec/instruments.md` — also the tooltips: "Always shown — pinned first"
+  and "Not shown on group rows", without the field name (Item 8).
 - `docs/status.md` — row when the item closes (Item 8).

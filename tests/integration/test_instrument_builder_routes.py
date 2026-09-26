@@ -937,11 +937,11 @@ def test_new_model_band1_all_mode_clears_rules(
 def test_new_model_band2_renders_selectable_pills_with_data_attrs(
     client: TestClient, db: Session
 ) -> None:
-    """Band 2 (Preview review instrument) lists every populated display field
-    on the new-model instrument as a click-to-select chip, with
-    data-* attributes carrying the sample value the client-side
-    preview-row builder consumes. Sample data does NOT show inside
-    the pill text — pills only show the friendly label."""
+    """Every populated display field on the new-model instrument is listed
+    with data-* attributes carrying the sample value the client-side
+    preview-row builder consumes. Since 19T Item 8 they are Band 3's
+    display-field table rows, not Band 2 chips. Sample data does NOT show
+    in the row text — rows only show the friendly label."""
     review_session = _make_session(client, db, code="nm-band2")
     _seed_tag_data(db, review_session.id)
     source = _instrument(db, review_session.id)
@@ -959,18 +959,17 @@ def test_new_model_band2_renders_selectable_pills_with_data_attrs(
     assert "Preview review instrument" in flat
     assert ">Band 2<" not in flat
     assert "Sample reviewee:" not in flat
-    # Pills are click-to-toggle (role=button) and carry the
-    # canonical key + sample value as data attributes for the JS
-    # preview builder.
+    # Rows carry the canonical key + sample value as data attributes
+    # for the JS preview builder.
     assert 'data-key="reviewee.name"' in flat
     assert 'data-key="reviewee.email_or_identifier"' in flat
     assert 'data-key="reviewee.tag_1"' in flat
-    # Sample values ride on data-value (not inside the pill text).
+    # Sample values ride on data-value (not inside the row text).
     assert 'data-value="E1"' in flat
     assert 'data-value="e1@example.edu"' in flat
     assert 'data-value="Team A"' in flat
-    # All pills start unselected (aria-pressed=false).
-    assert 'aria-pressed="false"' in flat
+    # Each row's tick follows the field's saved visibility; that is pinned
+    # in ``test_band3_display_field_table``.
     # Group-selectability is encoded for the JS unit-mode flip:
     # name + tag_1 selectable in Group; email_or_identifier not.
     assert (
@@ -1381,10 +1380,10 @@ def test_new_model_band2_state_round_trip(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
     flat = " ".join(body.split())
-    # Selected display pills carry aria-pressed="true".
+    # Display fields render as Band 3's table rows (19T Item 8).
     assert 'data-key="reviewee.name" data-label="Name" data-source-type="reviewee" data-source-field="name"' in flat
-    # The `||` divider lands once response pills are present.
-    assert 'data-new-model-band2-pills-divider' in flat
+    # The `||` divider retired with the display pills.
+    assert 'data-new-model-band2-pills-divider' not in flat
     # Saved response pills + their rows hydrate with the saved labels.
     assert '>Rating</span>' in flat or '⠿</span>Rating</span>' in flat
     assert '>Comments</span>' in flat or '⠿</span>Comments</span>' in flat
@@ -8855,6 +8854,29 @@ def test_band3_display_field_table(
         assert _disabled(arrows["up"]) == (label == movable[0]), label
         assert _disabled(arrows["down"]) == (label == movable[-1]), label
 
+    # The server-rendered tick follows each field's saved visibility.
+    for label, row in zip(labels, rows):
+        if label in ("Tag 1", "Tag 2"):
+            box = re.search(r'<input type="checkbox"[^>]*>', row).group(0)
+            assert " checked" in box, label
+    tag_2 = db.scalars(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == new_model.id,
+            InstrumentDisplayField.source_field == "tag_2",
+        )
+    ).one()
+    tag_2.visible = False
+    db.commit()
+    flat = " ".join(client.get(url).text.split())
+    boxes = {
+        re.search(r"<td[^>]*>([^<]+)</td>", r).group(1): re.search(
+            r'<input type="checkbox"[^>]*>', r
+        ).group(0)
+        for r in _df_rows(flat, new_model.id)
+    }
+    assert " checked" not in boxes["Tag 2"] and " disabled" not in boxes["Tag 2"]
+    assert " checked" in boxes["Tag 1"]
+
     # A group-scoped instrument: Email has no group value, so its box is
     # unticked; Name stays ticked.
     new_model.group_kind = "r1"
@@ -8900,3 +8922,48 @@ def test_band3_display_field_rows_are_the_model(
     toggle = _fn("window.newModelDfToggle = function (box) {", "\n          };")
     assert "saveBand2State(band2);" in toggle
     assert "syncDfTable(card);" in _fn("function rebuildPreview(card) {")
+
+
+def test_band3_display_field_table_group_off_field(
+    client: TestClient, db: Session
+) -> None:
+    """19T Item 8 — on a group-scoped instrument, a display field a group
+    row can't show (Profile, which is not locked) renders unticked and
+    fixed, and ticks and frees again on an individually scoped one."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="19t8-df-group-off"
+    )
+    carol = db.scalars(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).one()
+    carol.profile_link = "https://example.edu/profiles/carol"
+    db.commit()
+    url = f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
+    # The page load lazily seeds the Profile display field.
+    client.get(url)
+
+    def _profile_box() -> str:
+        flat = " ".join(client.get(url).text.split())
+        row = next(
+            r for r in _df_rows(flat, new_model.id)
+            if 'data-source-field="profile_link"' in r
+        )
+        assert 'data-selectable-in-group="false"' in row
+        assert "data-locked" not in row
+        return re.search(r'<input type="checkbox"[^>]*>', row).group(0)
+
+    profile = db.scalars(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == new_model.id,
+            InstrumentDisplayField.source_field == "profile_link",
+        )
+    ).one()
+    profile.visible = True
+    db.commit()
+    box = _profile_box()
+    assert " checked" in box and " disabled" not in box
+    new_model.group_kind = "r1"
+    db.commit()
+    box = _profile_box()
+    assert " checked" not in box and " disabled" in box
+    assert 'title="Not shown on group rows"' in box

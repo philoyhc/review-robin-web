@@ -2049,12 +2049,10 @@
               </p>
             </div>
           </div>
-          {# Selector-chip row, moved to the bottom of Band 2 and
-             flush-right. Display-field chips first, then a ``||``
-             divider, then response-field chips (one per Band 3
-             row). Pill clicks toggle the corresponding column in
-             the preview table above; drag reorders for chips
-             that are reorderable. #}
+          {# Selector-chip row, at the bottom of Band 2 and flush-right:
+             one response-field chip per Band 3 row (display fields are
+             Band 3's table since 19T Item 8). A click toggles the
+             column in the preview table above; drag reorders. #}
           <div data-new-model-band2-pills
                style="display: flex; flex-wrap: wrap; gap: 8px;
                       align-items: center; justify-content: flex-end;
@@ -2069,11 +2067,6 @@
                (``rf_<idx>``) that both the row and the pill share
                so the JS save / delete handlers can find them. #}
             {% if _band2.response_fields %}
-              {# The divider stays as the anchor new response pills are
-                 placed after, hidden now that nothing sits before it. #}
-              <span class="new-model-band2-pills-divider"
-                    data-new-model-band2-pills-divider hidden
-                    aria-hidden="true">||</span>
               {% for rf in _band2.response_fields %}
                 {% set _key = 'rf_' ~ loop.index0 %}
                 <span class="pill tag-chip{% if rf.selected %} pill-count is-selected{% endif %}"
@@ -2110,7 +2103,7 @@
                       title="Click to include / drag to reorder {{ rf.name }}"><span class="new-model-band2-pill-grip" aria-hidden="true">⠿</span>{{ rf.name }}</span>
               {% endfor %}
             {% endif %}
-            {% if not _band2.fields and not _band2.response_fields %}
+            {% if not _band2.response_fields %}
               <span class="muted">—</span>
             {% endif %}
           </div>
@@ -2311,7 +2304,7 @@
                 sourceType: p.getAttribute('data-source-type'),
                 sourceField: p.getAttribute('data-source-field'),
                 value: p.getAttribute('data-value') || '',
-                displayFieldId: p.getAttribute('data-display-field-id') || '',
+                displayFieldId: '',
                 width: parseInt(p.getAttribute('data-width') || '', 10) || 0,
                 required: p.getAttribute('data-required') === 'true',
               });
@@ -3170,11 +3163,6 @@
           }
           window.newModelToggleBand2Pill = function (pill) {
             if (pill.getAttribute('aria-disabled') === 'true') { return; }
-            // 19T Item 3 entry 2 — a locked pill (Name / Email) renders
-            // with no click handler; this guard only backstops a stray
-            // call, since the server keeps it visible whatever the
-            // payload says.
-            if (pill.getAttribute('data-locked') === 'true') { return; }
             var pressed = pill.getAttribute('aria-pressed') === 'true';
             var next = !pressed;
             // Segment 18K PR 4 — visibility-drop confirm guard.
@@ -3358,12 +3346,11 @@
           // / newModelRfDeleteRow. Skip directly to the
           // drag-and-drop pill reorder section.
           // ---- Drag-and-drop pill reorder ---------------------
-          // Pills carrying ``data-reorderable="true"`` (every
-          // non-locked display field) are HTML5-draggable. On
-          // drop, we move the DOM node, recompute the ordered list
-          // of unlocked-pill display_field_ids, then stage it for
-          // Save (Segment 18R Item 2 PR 6). The locked Name + Email
-          // pills sit at the front and are never draggable.
+          // Response pills carry ``data-reorderable="true"`` and are
+          // HTML5-draggable. On drop, we move the DOM node and the
+          // matching Band 3 row, then stage the state for Save.
+          // Display fields reorder with Band 3's table arrows
+          // (19T Item 8), not here.
           var dragSource = null;
           window.newModelBand2DragStart = function (event) {
             var pill = event.target.closest('[data-new-model-band2-pill]');
@@ -3431,14 +3418,9 @@
             target.parentNode.insertBefore(dragSource, target);
             var band2Card = target.closest('[data-new-model-band2]');
             if (band2Card) {
-              // Display-pill reorder writes ``display_field.order``
-              // via the dedicated route. Response-pill reorder
-              // doesn't have a backing ``display_field.order``,
-              // but the new pill ordering does need to persist
-              // in band2_state — handle it via saveBand2State.
-              if (pillRegion(dragSource) === 'display') {
-                saveBand2DisplayFieldOrder(band2Card);
-              } else {
+              // Only response pills remain (19T Item 8 moved display
+              // fields to Band 3's table, reordered by its arrows).
+              {
                 // 19T Item 1 — Save persists Band 3 row order, so move
                 // the dragged field's row before the target's row too.
                 var dragCard = band2Card.closest('[id^="instrument-"]');
@@ -3507,10 +3489,10 @@
               if (sibling && !sibling.disabled) { sibling.focus(); }
             }
           };
-          // Locked pills (Name, Email) are excluded — the server
+          // Name and Email are excluded (not reorderable) — the server
           // already pins them at orders 0 and 1.
           // Segment 18R Item 2 PR 6 — stage the current display-field
-          // order (non-locked display pills, in DOM order) into the
+          // order (the reorderable table rows, 19T Item 8) into the
           // hidden snapshot input and mark the card dirty, instead of an
           // immediate /display-fields/order POST. /save applies it on
           // Save via reorder_display_fields.
@@ -4149,9 +4131,8 @@
       </script>
 
       <hr style="margin: 20px 0; border: 0; border-top: 3px solid var(--border-default);">
-      {# Band 3 — two columns. The left is empty until
-         ``guide/advanced_instruments.md`` Item 5 puts the display-field
-         table there; the right is the response-fields editor.
+      {# Band 3 — two columns: the display-field table (19T Item 8)
+         on the left, the response-fields editor on the right.
          Visibility moved to Band 2's "Who can see what you wrote"
          card (19T Item 7). #}
       <div data-new-model-band3 data-lock-region
@@ -4172,8 +4153,7 @@
         <div data-new-model-band3-left>
           <h3 style="margin: 0 0 12px 0;">Display fields</h3>
           <div class="table-scroll">
-          <table data-new-model-df-table
-                 style="width: 100%; border-collapse: collapse;">
+          <table data-new-model-df-table>
             <tbody>
               {% for field in _band2.fields %}
                 {% set _group_off = _saved_unit_mode == "grouped" and not field.selectable_in_group %}
@@ -4188,9 +4168,8 @@
                     data-display-field-id="{{ field.display_field_id }}"
                     data-width="{{ field.width_px or '' }}"
                     data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
-                    {% if field.locked %}data-locked="true"{% endif %}
-                    style="height: 40px;">
-                  <td style="padding: 4px 8px; width: 1%;">
+                    {% if field.locked %}data-locked="true"{% endif %}>
+                  <td class="col-shrink">
                     <input type="checkbox" data-new-model-df-active
                            {% if field.locked or _group_off %}disabled{% endif %}
                            {% if _on %}checked{% endif %}
@@ -4199,8 +4178,8 @@
                            title="{{ 'Not shown on group rows' if _group_off else _title_on }}"
                            onchange="newModelDfToggle(this)">
                   </td>
-                  <td style="padding: 4px 8px;">{{ field.label }}</td>
-                  <td style="padding: 4px 8px; width: 1%; white-space: nowrap;">
+                  <td>{{ field.label }}</td>
+                  <td class="col-shrink">
                     {% if not field.locked %}
                       <button type="button" class="btn-icon"
                               data-new-model-df-move="up"
@@ -4887,22 +4866,11 @@
           if (!band2) { return; }
           var pillsRow = band2.querySelector('[data-new-model-band2-pills]');
           if (!pillsRow) { return; }
-          // Create the pill after the `||` divider if the row has
-          // none yet; either way ``newModelRfSyncPill`` below copies
-          // the row's name, type and bounds onto it.
+          // Create the pill if the row has none yet; either way
+          // ``newModelRfSyncPill`` below copies the row's name, type
+          // and bounds onto it.
           var pill = pillsRow.querySelector('[data-new-model-band2-pill][data-row-key="' + rowKey + '"]');
           if (!pill) {
-            // Drop the `||` divider in if it isn't already there.
-            var divider = pillsRow.querySelector('[data-new-model-band2-pills-divider]');
-            if (!divider) {
-              divider = document.createElement('span');
-              divider.className = 'new-model-band2-pills-divider';
-              divider.setAttribute('data-new-model-band2-pills-divider', '');
-              divider.setAttribute('aria-hidden', 'true');
-              divider.hidden = true;
-              divider.textContent = '||';
-              pillsRow.appendChild(divider);
-            }
             // 19T Item 1 — a new pill starts selected, so ✓ adds the
             // field's column to the preview as well as its pill.
             pill = document.createElement('span');
@@ -4994,12 +4962,6 @@
           if (band2 && rowKey) {
             var pill = band2.querySelector('[data-new-model-band2-pill][data-row-key="' + rowKey + '"]');
             if (pill) { pill.remove(); }
-            // Drop the `||` divider if no response pills remain.
-            var remaining = band2.querySelector('[data-new-model-band2-pill][data-source-type="response"]');
-            if (!remaining) {
-              var divider = band2.querySelector('[data-new-model-band2-pills-divider]');
-              if (divider) { divider.remove(); }
-            }
             if (window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
             if (window.newModelUpdateIntroProgress) {
               window.newModelUpdateIntroProgress(band2);
