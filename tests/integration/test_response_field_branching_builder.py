@@ -1,7 +1,7 @@
-"""19T Item 10 rung 6 — the builder scaffold: a saved branch renders in
-Band 3 as one ruled group (the parent, its condition row and the fields
-it governs, under a bar), with ⑂ in its three states. The branch
-controls are inert until the builder rung wires them.
+"""19T Item 10 rungs 6–7 — the builder: a saved branch renders in Band 3
+as one ruled group (the parent, its condition row and the fields it
+governs, under a bar), with ⑂ in its three states, and the row script
+wires ⑂, the condition, and the rules inside a branch.
 
 The new-model instrument gets a branch directly: Rating (Integer) governs
 Comments while Rating ≥ 4."""
@@ -18,6 +18,7 @@ from .test_instrument_builder_routes import (
     _band2_rfs,
     _card_slice,
     _new_model_with_tags,
+    _rf_fn,
 )
 
 
@@ -84,9 +85,9 @@ def test_fork_shows_its_three_states(client: TestClient, db: Session) -> None:
     _, _, card, _ = _page(client, db, "br-builder-fork")
     parent = _row(_rows_table(card), "Rating")
     fork = re.search(r"<button[^>]*data-new-model-rf-fork[^>]*>", parent).group(0)
-    # Selected on a parent with a branch.
+    # Selected, and off, on a parent with a branch.
     assert 'class="btn"' in fork and 'aria-pressed="true"' in fork
-    assert 'title="This field has a branch"' in fork
+    assert 'title="This field has a branch"' in fork and " disabled" in fork
     _, _, card, _ = _page(client, db, "br-builder-fork-none", branched=False)
     table = _rows_table(card)
     rating = re.search(
@@ -95,12 +96,12 @@ def test_fork_shows_its_three_states(client: TestClient, db: Session) -> None:
     comments = re.search(
         r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(table, "Comments")
     ).group(0)
-    # Outline where a branch can be added; inactive on a String field.
-    assert 'class="btn secondary"' in rating
+    # Outline, and live, where a branch can be added; off on a String field.
+    assert 'class="btn secondary"' in rating and " disabled" not in rating
     assert 'title="Add a branch below this field"' in rating
+    assert 'onclick="newModelRfFork(this)"' in rating
     assert 'title="A String field can\'t have a branch"' in comments
-    # All inert until the builder rung.
-    assert all(" disabled" in b for b in (fork, rating, comments))
+    assert " disabled" in comments
 
 
 def test_the_condition_row_shows_the_saved_condition(
@@ -120,34 +121,124 @@ def test_the_condition_row_shows_the_saved_condition(
     )
 
 
-def test_branch_controls_are_inert_until_wired(
+def test_branch_controls_are_wired(client: TestClient, db: Session) -> None:
+    """Nothing is inert: the condition edits and adds, a governed row's R
+    is off, and a parent's X waits for its branch to go."""
+    _, _, card, flat = _page(client, db, "br-builder-wired")
+    assert "data-new-model-rf-branch-inert" not in flat
+    table = _rows_table(card)
+    condition = table.split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
+    assert 'onclick="newModelRfConditionAdd(this)"' in condition
+    assert 'onchange="newModelRfConditionChanged(this)"' in condition
+    assert 'oninput="newModelRfConditionChanged(this)"' in condition
+    assert " disabled" not in condition
+    governed = _row(table, "Comments")
+    r = re.search(r"<button[^>]*data-new-model-rf-required[^>]*>", governed).group(0)
+    assert " disabled" in r and "A field inside a branch can't be required" in r
+    x = re.search(r"<button[^>]*data-new-model-rf-delete[^>]*>", _row(table, "Rating"))
+    assert " disabled" in x.group(0) and 'title="Delete its branch first"' in x.group(0)
+    # The operators by parent type, for a new condition row's select.
+    ops = re.search(r"data-new-model-rf-branch-ops='([^']*)'", table).group(1)
+    assert json.loads(ops.replace("&#34;", '"')) == {
+        "numeric": [["eq", "="], ["ne", "≠"], ["gt", ">"], ["ge", "≥"],
+                    ["lt", "<"], ["le", "≤"]],
+        "list": [["is", "is"]],
+    }
+    assert "<template data-new-model-rf-condition-template>" in flat
+
+
+def test_governed_answers_lock_the_branch_on_the_page(
     client: TestClient, db: Session
 ) -> None:
-    """Marked inert, and the row recompute keeps them disabled; a
-    parent's X reads "Delete its branch first"."""
-    _, _, card, flat = _page(client, db, "br-builder-inert")
-    table = _rows_table(card)
-    governed = _row(table, "Comments")
-    for marker in ("data-new-model-rf-active", "data-new-model-rf-add",
-                   "data-new-model-rf-required", 'data-new-model-rf-move="up"',
-                   'data-new-model-rf-move="down"', "data-new-model-rf-delete"):
-        control = re.search(rf"<(?:button|input)[^>]*{marker}[^>]*>", governed).group(0)
-        assert "data-new-model-rf-branch-inert" in control, marker
-    parent = _row(table, "Rating")
-    x = re.search(r"<button[^>]*data-new-model-rf-delete[^>]*>", parent).group(0)
-    assert "data-new-model-rf-branch-inert" in x
-    assert 'title="Delete its branch first"' in x
-    r = re.search(r"<button[^>]*data-new-model-rf-required[^>]*>", governed).group(0)
-    assert "A field inside a branch can't be required" in r
-    recompute = flat[flat.index("window.newModelRfRecomputeActionStates = "):]
-    recompute = recompute[: recompute.index("window.newModelRfFieldChanged")]
-    assert "row.querySelectorAll('[data-new-model-rf-branch-inert]')" in recompute
-    assert "control.disabled = true;" in recompute
+    from sqlalchemy import select
+
+    from app.db.models import Assignment, Response, Reviewee, Reviewer
+
+    review_session, instrument, _, _ = _page(client, db, "br-builder-lock")
+    comments = next(f for f in instrument.response_fields if f.label == "Comments")
+    assignment = Assignment(
+        session_id=review_session.id,
+        reviewer_id=db.execute(
+            select(Reviewer.id).where(Reviewer.session_id == review_session.id)
+        ).scalars().first(),
+        reviewee_id=db.execute(
+            select(Reviewee.id).where(Reviewee.session_id == review_session.id)
+        ).scalars().first(),
+        instrument_id=instrument.id,
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(Response(assignment_id=assignment.id, response_field_id=comments.id, value="x"))
+    db.commit()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    table = _rows_table(_card_slice(" ".join(body.split()), instrument.id))
+    group = table.split("<tbody data-new-model-rf-group")[1]
+    assert group.startswith(' data-new-model-rf-branch data-new-model-rf-branch-locked="true">')
+    condition = group.split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
+    assert condition.count(" disabled") == 3
+
+
+def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) -> None:
+    review_session, instrument, _, flat = _page(client, db, "br-builder-js")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+
+    def _fn(_flat: str, name: str) -> str:
+        return _rf_fn(body, name)
+
+    recompute = _fn(flat, "newModelRfRecomputeActionStates")
+    for rule in (
+        "? !window.newModelRfBranchSibling(row, up)",
+        "? 'Delete its branch first'",
+        "'Delete this field and its branch'",
+        "requiredBtn.setAttribute('data-required', 'false');",
+        "if (stringOpt) { stringOpt.disabled = isParent; }",
+        "activeBox.disabled = parentHidden;",
+        "window.newModelRfRecomputeCondition(group);",
+    ):
+        assert rule in recompute, rule
+    # The condition mirrors ``condition_error``'s messages.
+    error = _fn(flat, "newModelRfConditionError")
+    for message in (
+        "A String field can't have a branch.",
+        "Choose at least one option for the branch condition.",
+        "The branch condition names an option the list doesn't have: ",
+        "Choose a comparison for the branch condition.",
+        "The branch condition needs a number.",
+    ):
+        assert message in error, message
+    # ⑂ makes the field a parent with a condition and one governed field.
+    fork = _fn(flat, "newModelRfFork")
+    assert "row.setAttribute('data-new-model-rf-parent', 'true');" in fork
+    assert "window.newModelRfNewGovernedRow(band3, cond)" in fork
+    # The last governed field's X takes the condition with it.
+    delete = _fn(flat, "newModelRfDeleteRow")
+    assert "if (cond) { cond.remove(); }" in delete
+    assert "parent.removeAttribute('data-new-model-rf-parent');" in delete
+    # The Active cascade.
+    active = _fn(flat, "newModelRfToggleActive")
+    assert "group.querySelectorAll('[data-new-model-rf-governed]')" in active
+    # The stager sends the row key, the parent by row key and the condition.
+    start = flat.index("function saveBand2State(card, opts) {")
+    stager = flat[start : flat.index("window.newModelStageBand2State = saveBand2State;")]
+    for line in (
+        "rf.row_key = row.getAttribute('data-row-key') || '';",
+        "rf.branch_parent = parentRow ? parentRow.getAttribute('data-row-key') : null;",
+        "rf.branch_op = opSel && opSel.value ? opSel.value : null;",
+        "rf.branch_value = valueInput ? valueInput.value.trim() : null;",
+    ):
+        assert line in stager, line
+    # The preview mutes a governed column.
+    assert "branchHint: row.hasAttribute('data-new-model-rf-governed')" in flat
+    assert "class=\"rs-branch-closed\"" in flat
 
 
 def test_saving_the_card_keeps_the_branch(client: TestClient, db: Session) -> None:
-    """The card's Save sends the governed row like any other, without
-    branch keys, and the branch stays stored (rung 2's rules)."""
+    """A payload without branch keys keeps the stored branch (rung 2's
+    rules): the keys are each independently present."""
     review_session, instrument, _, _ = _page(client, db, "br-builder-save")
     response = client.post(
         f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/save",

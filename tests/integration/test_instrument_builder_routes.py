@@ -8394,7 +8394,11 @@ def test_row_marker_follows_validity(
                  "' The preview shows this field once it is valid.'"):
         assert tail in recompute, tail
     flat = " ".join(body.split())
-    assert '[data-new-model-rf-row][data-row-pending="true"] > td:first-child { box-shadow: inset 3px 0 0 0 var(--row-pending-marker); }' in flat
+    assert (
+        '[data-new-model-rf-row][data-row-pending="true"] > td:first-child, '
+        '[data-new-model-rf-condition][data-row-pending="true"] > td:first-child '
+        '{ box-shadow: inset 3px 0 0 0 var(--row-pending-marker); }'
+    ) in flat
 
 
 # --------------------------------------------------------------------------- #
@@ -9077,11 +9081,11 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
         assert positions == sorted(positions)
         # One cell per control, so every row lines up column by column.
         assert row.count("<td") == len(order)
-        # 19T Item 10 — the ⑂ column holds its (still inert) button.
+        # 19T Item 10 — the ⑂ column holds its button.
         fork = re.search(
             r'<td class="col-shrink" data-new-model-rf-fork-cell>\s*<button[^>]*>', row
         ).group(0)
-        assert "data-new-model-rf-fork " in fork and " disabled" in fork
+        assert 'onclick="newModelRfFork(this)"' in fork
         for move in re.findall(r'<button[^>]*data-new-model-rf-move="(?:up|down)"[^>]*>', row):
             assert 'onclick="newModelRfMove(this)"' in move
     boxes = {
@@ -9140,7 +9144,7 @@ def test_band3_response_rows_are_the_model(client: TestClient, db: Session) -> N
     assert "data-new-model-band2-pill" not in resize
     # The Active checkbox's setter (the pill click shared it until rung 4
     # retired the pills).
-    start = body.index("function rfSetSelected(card, row, next) {")
+    start = body.index("function rfSetSelected(card, rows, next) {")
     setter = body[start : body.index("\n          }\n", start)]
     assert "row.getAttribute('data-response-count')" in setter
     assert "row.setAttribute('data-selected', next ? 'true' : 'false');" in setter
@@ -9177,7 +9181,7 @@ def test_band3_response_rows_active_and_arrows_are_wired(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
     active = _rf_fn(body, "newModelRfToggleActive")
-    assert "window.newModelRfSetSelected(band2, row, box.checked)" in active
+    assert "window.newModelRfSetSelected(band2, rows, box.checked)" in active
     assert "box.checked = !box.checked;" in active
     # A cancelled confirm leaves the card clean: the dirty listener skips
     # the checkbox, whose setter stages (and dirties) only when accepted.
@@ -9186,15 +9190,18 @@ def test_band3_response_rows_active_and_arrows_are_wired(
     validate = _rf_fn(body, "newModelRfValidateShape")
     assert "['string', 'integer', 'decimal', 'list'].indexOf(dataType) < 0" in validate
     move = _rf_fn(body, "newModelRfMove")
-    # ▲ ▼ move the row's group, and keep focus on a live arrow.
-    assert "other.parentNode.insertBefore(group, up ? other : other.nextSibling);" in move
+    # ▲ ▼ move the row's group (a governed row within its branch, 19T
+    # Item 10), and keep focus on a live arrow.
+    assert "other.parentNode.insertBefore(moving, up ? other : other.nextSibling);" in move
     assert "if (target && !target.disabled) { target.focus(); }" in move
     assert "window.newModelStageBand2State(band2);" in move
     assert "window.newModelRfRecomputeActionStates(r);" in move
     recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
     assert "activeBox.checked = row.getAttribute('data-selected') === 'true';" in recompute
-    assert "activeBox.disabled" not in recompute
-    assert "btn.disabled = !(group && window.newModelRfGroupSibling(group, up));" in recompute
+    # Only a governed row's Active is ever off (its parent is hidden,
+    # 19T Item 10).
+    assert "if (activeBox && governed) {" in recompute
+    assert ": !(group && window.newModelRfGroupSibling(group, up));" in recompute
 
 
 def test_added_response_fields_get_a_default_label(

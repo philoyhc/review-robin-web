@@ -647,6 +647,7 @@ def _new_model_band2_state(
             rf["response_count"] = count
             rf["has_responses"] = count > 0
     response_field_groups = _response_field_groups(response_fields)
+    from app.services.responses import LIST_OP, NUMERIC_OPS
     sort_spec = list(instrument.sort_display_fields or [])
     return {
         "fields": fields,
@@ -656,6 +657,12 @@ def _new_model_band2_state(
         "selected_display_keys": selected_display_keys,
         "response_fields": response_fields,
         "response_field_groups": response_field_groups,
+        # 19T Item 10 — the operators a condition offers, by the parent's
+        # type, for the builder to fill a new condition row's select.
+        "branch_ops": {
+            "numeric": [list(pair) for pair in NUMERIC_OPS.items()],
+            "list": [[LIST_OP, "is"]],
+        },
         "roster": roster,
         "sample_reviewee_name": sample.name if sample is not None else "",
         # Rule-surviving group-member IDs from the last Refresh
