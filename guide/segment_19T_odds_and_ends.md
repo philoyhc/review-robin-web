@@ -1101,99 +1101,55 @@ Taken 2026-09-26 at `134953aa`:
 
 ### Status
 
-**Open.** Rung 1 is this PR: the plan, the author's branching layout in
-the design record's Item 1, and the table. It also rewords Band 2's
-header comment, which still described display-field chips (flagged by
-Item 8's close pass). Rung 1 is #2631.
+**Closed 2026-09-26** on the author's instruction, after their on-screen
+check (#2631 scaffold, #2632 state onto the rows, #2633 wire, #2634
+retire, #2635 the read, #2636 default labels, and this close). The ladder
+ran as planned, with the close struck into acting on the read and one
+rung added:
+- **Rung 2 put the pill state on the rows**, which have been the model
+  since: every former pill reader (the preview's selection, help cards,
+  constraints and counts, the widths, the stager, Save's re-commit) reads
+  them through `rfRows`.
+- **Rung 3 wired** the Active checkbox (one setter with the pills,
+  `rfSetSelected`, keeping the "hide this field?" confirm) and ▲ ▼. On the
+  author's ruling the display-field table's ▲ ▼ became
+  `btn secondary btn-short` too.
+- **Rung 4 retired the pills and ✓.** A row commits itself
+  (`newModelRfMaybeCommit`) when its name and shape are valid and differ
+  from what it last committed; an invalid row keeps its last committed
+  shape in the preview and is marked amber, the reason as its tooltip.
+  **Found at build:** the marker had not drawn since rung 1, since a
+  `<tbody>` draws no box-shadow; it sits on the row's cells.
+- **Rung 5 acted on the item's read**: the field moved to a `<tr>` inside
+  a group `<tbody>` (pre-positioning point 1), so Item 1 won't move it
+  across every reader; points 4 and 6 were reworded to what the code does.
+- **Rung 6, the author's rulings on names.** An added field has a default
+  label, the next "Field N" no row goes by, shown muted as the empty name
+  box's placeholder and used as its name everywhere
+  (`newModelRfSaveName`); clearing a name brings it back, → or Enter (or
+  typing it) makes it a typed name in normal style, and only X deletes. A
+  saved field's default never moves, and **a saved "Field N" reloads in
+  normal style** (the author, 2026-09-26). A "+" row lives only on the
+  page until a successful Save. Save returns `response_field_ids` in
+  order, so a new field's next reload-free Save updates it.
+- **The close** carries the author's last layout ruling: Band 3 splits a
+  fifth / four fifths (`minmax(0, 1fr) 4fr`), from one third / two thirds.
 
-**Rung 2 moves the pill state onto the rows.** A row carries its field's
-committed state: `data-committed` (saved or ✓'d), `data-selected`, the
-name and shape last ✓'d (`data-label`, `data-rf-*`), width, help text and
-response count; R and ≡ are read off the row's buttons. Every reader goes
-through `rfRows`: the preview's selection, help cards, constraints and
-progress counts, the width writer and collector, the stager, the pill
-click's confirm, and Save's re-commit. ✓ commits a row
-(`newModelRfCommitRow`, was `newModelRfSyncPill`), and its comparison is
-the row against its own committed state
-(`newModelRfRowDiffersFromCommitted`). The pills are a control that
-mirrors its row, carrying only what the click and drag read. Rung 2 is
-#2632.
+**Reads: four.** The item's cumulative read (over `134953aa..HEAD`, acted
+on in rung 5) found nothing that loses saved data: the field on the
+`<tbody>`, two overclaiming points, a cancelled confirm dirtying the card,
+a Quick fill preset committing as a type, and a client-invalid new row
+committing after Save. Rung 6 reopened `app/` and took two: a labelled
+starter row saved as a field nobody wrote, new fields recreated for want
+of ids, and two answers to a cleared name; then a saved default that
+could still move, a borrowed default that never came back, and a
+spaces-only name hiding the default. The close's one-value grid change
+took the fourth. **Codex** found two: a never-✓'d saved row kept a ticked,
+fixed Active box (#2633), and Save committed the blank placeholder
+(#2636).
 
-**Rung 3 wires the Active checkbox and ▲ ▼.** The checkbox and the pill
-share one setter (`rfSetSelected`), with the "hide this field?" confirm;
-cancelling puts the tick back. Before a row's first ✓ its checkbox is
-ticked and fixed, since ✓ adds the field selected. ▲ ▼ move the row's
-`<tbody>`, then the pills follow the rows and the order is staged; a pill
-drag re-runs the recompute, which owns both controls' states. **On the
-author's ruling** the display-field table's ▲ ▼ became outlined buttons
-too, in a short size (`btn-short`, `base.html`: 19px inside the 32px
-rows). Codex (#2633): a named row never ✓'d was saved hidden but kept a
-ticked, fixed Active checkbox until a reload; Save now commits every
-named row as saved, so it shows unticked at once. Rung 3 is #2633.
-
-**Rung 4 retires the response pills and ✓.** Band 2 loses its chip row
-and the drag handlers. A row commits by itself (`newModelRfMaybeCommit`,
-on every keystroke and type change) whenever its live name and shape are
-valid and differ from what it last committed, so a half-typed bound never
-reaches the preview. An invalid row keeps its last committed shape in the
-preview and is marked amber, with the reason as its tooltip. A new row
-starts selected, its Active checkbox live. The "hide this field?" confirm
-now points to Active. **Found at build:** the marker's amber left edge had
-not drawn since rung 1, because a `<tbody>` draws no box-shadow; it now
-sits on the row's cells. The in-app Guide's two instrument paragraphs
-describe the tables, not the pills and ✓. Rung 4 is #2634, merged before
-the item's read returned.
-
-**Rung 5 acts on the item's read** (over `134953aa..HEAD`; no defect that
-loses or corrupts saved data):
-- **The field moves to a `<tr>`** inside a group `<tbody>`, as
-  pre-positioning point 1 now says; the read found the state on the
-  `<tbody>` would have made Item 1 move it across every reader.
-- Points 4 and 6 overclaimed and are reworded to what the code does.
-- A cancelled "hide this field?" confirm no longer marks the card dirty
-  (the card's dirty listener skips the Active checkbox; its setter stages).
-- A Quick fill preset's passing `preset:` value is never committed.
-- The marker's tooltip says what the preview shows meanwhile.
-- A new row the client finds invalid but the server accepts stays
-  uncommitted after Save instead of committing the rejected text.
-- ▲ ▼ keep focus on a live arrow; dead help-edit-mode code, the rows'
-  inline button padding and stale comments (and `_band2.py`'s docstring)
-  go; stale test names and a vacuous test loop are fixed.
-
-Rung 5 is #2635.
-
-**Rung 6: on the author's rulings, every added response field has a
-default label**, the next "Field N" no row goes by, shown **muted, as the
-empty name box's placeholder**, until a name is typed; clearing a name
-always brings it back that way, and taking it with → or Enter (or typing
-it) makes it a typed name in normal style. The row goes by its default
-wherever a name is read (`newModelRfSaveName`: the preview, the marker, the
-auto-commit, the stager), so Save never drops a field for want of a name:
-only X deletes. `newModelRfSyncDefaults` re-assigns defaults on each name
-edit and commits any row whose default moved; a saved field's default
-never moves. "+" commits the new field at once, but it lives only on the
-page (the card turns unsaved; Cancel drops it) until a successful Save. A
-saved label reloads as a typed name, since nothing records that it was a
-default. This replaces rung 5's handling of a row saved with its name
-cleared. The rung's first read found three more, fixed in the rung:
-- a labelled starter row on a card with no fields was saved as a field
-  nobody wrote, and met the setup gates; it is a blank, unlabelled
-  placeholder again, not a field until the operator types in it;
-- Save returned no ids, so a new field's next reload-free Save sent it
-  id-less and recreated it under a new id and key (and lost its width);
-  Save now returns `response_field_ids` in order, and the rows it sent
-  take them;
-- this Status block had folded rung 5's notes into rung 6.
-
-Codex (#2636): Save's success handler committed the untouched placeholder
-(an empty name passes shape validation), so the next Save stored it as a
-"Field N"; it now skips any row Save did not send.
-
-The muted placeholder came as a follow-up ruling, replacing a `blur`
-restore that wrote the label into the box. Its read found three more,
-fixed in the rung: a saved field's default could still move, so typing its
-label into another row renamed it on the next Save; a default a half-typed
-name borrowed never came back; a name of only spaces hid the default.
+**Owed:** browser checks in `guide/post_azure_todo_checklist.md` item 6,
+and the author's retake of the Guide's instrument captures.
 
 ### Doc impact
 

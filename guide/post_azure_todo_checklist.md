@@ -392,6 +392,10 @@ here. Settling a row is a dated line there, not a reopening.
 - row-ordered ✓, Save and pill drag;
 - the 2 : 3 split.
 
+Item 9 then retired ✓ and the response pills: the rows became a table with
+an Active checkbox and ▲ ▼, a valid row reaches the preview by itself,
+added fields default to a muted "Field N", and Band 3 splits 1 : 4.
+
 They also stopped an open card (`?editing`) from disabling the action row.
 Item 3 made the Name and Email pills static labels, kept Delete's confirm
 checkbox from dirtying the card, and made Band 2's "Who can see what you
@@ -399,7 +403,7 @@ wrote" card repaint on a Band 3 Visibility edit. Item 6 put a `*` on the
 Required pill, refused fractional Integer bounds and printed Decimal
 bounds as entered. Item 7 moved the visibility editor into Band 2's "Who
 can see what you wrote" card. Item 8 moved display fields from Band 2's
-pills to a table in Band 3's left third.
+pills to a table in Band 3's left column.
 The suite pins the markup, and headless Chromium drove the rows on a
 rendered page. Neither was a person on the live app.
 
@@ -407,15 +411,16 @@ rendered page. Neither was a person on the live app.
 
 | Check | How | Passes when |
 |---|---|---|
-| The rows | Open an instrument card | One row per saved field, no blank row; "+" heads each row; X is red; Band 3 splits 2 : 3 |
-| "+" inserts below | "+" on the first of two rows | A blank row appears between them, cursor in its name |
-| ✓ follows the row | Type in a saved row's name, then type it back | ✓ lights, then greys again |
-| ✓ places the pill | Name the inserted row, ✓ | Its pill and preview column land between the other two, selected |
+| The rows | Open an instrument card | One row per saved field in a table, a rule under each; each row reads Active, "+", an empty column, name, type, bounds, R, ≡, ▲, ▼, X; X is red; Band 3 splits 1 : 4 |
+| "+" inserts below | "+" on the first of two rows | A row appears between them, its name box showing a grayed "Field N", cursor in it; the preview gains the column |
+| Default names | In that row press →; clear the name; type "Rating" then clear it | → turns "Field N" into normal text; cleared, it shows grayed again; after Save and a reload a kept "Field N" reads as normal text |
+| The preview follows the row | Type a name; set Max below Min | The preview follows the name at once; the bad Max marks the row amber with the reason on hover, and the preview keeps the last valid shape |
+| Active and ▲ ▼ | Untick Active on a field with responses; ▲ on the second row | The "hide this field?" confirm names Active, and cancelling keeps the tick; ▲ swaps the rows and the preview columns, and Save keeps the order |
 | R and ≡ alone | Toggle R on a saved field, nothing else | Save enables; after Save and a reload, the field's required state stuck |
-| Save without ✓ | Change a Max, Save, don't ✓ | The preview's constraint line shows the new Max; ✓ is off |
-| Order persists | Insert a row between two, name it, Save (no ✓), reload | It sits between them |
+| A new field saves twice | "+", Save, rename it, Save again, reload | One field with the new name, not two |
+| Order persists | Insert a row between two, name it, Save, reload | It sits between them |
 | The last row stays | Delete rows down to one | That row's X is disabled |
-| Cancel removes a new row | "+", then Cancel and confirm | The blank row is gone |
+| Cancel removes a new row | "+", then Cancel and confirm | The new row is gone |
 | An open card doesn't lock the row | Edit, Cancel (URL now `?editing=`), then Lock | Replicate, +Instrument and +Page break stay live; the URL loses `?editing` |
 | Delete's checkbox is clean | Tick the Delete confirm box on a clean card | Save stays off; Delete leaves without a "Leave site?" prompt |
 | Name and Email are labels | Click and Tab through Band 2's pills | Name / Email never toggle or take focus, tooltips "pinned first" / "pinned second"; they sit well beside the selected tag pills |
@@ -424,11 +429,11 @@ rendered page. Neither was a person on the live app.
 | The Required pill's `*` | Open an instrument card with a required field; open the reviewer preview | Both pills read "*Required items completed", legible in capitals beside the `*` headers |
 | Integer steps are whole | On an Integer row, set Step 0.5 | ✓ is off with "Integer fields take whole-number Min, Max and Step. Choose Decimal for steps like 0.5."; Save refuses it naming the field; switched to Decimal, ✓ lights |
 | Decimal bounds as entered | Decimal row 0–1, Step 0.25, Save; open the reviewer preview | The line above the table reads "0-1, steps of 0.25" |
-| Display fields table | Unlock an instrument; untick Tag 1, move Tag 2 up with ▲, drag a preview column edge; Save; reload | Band 2 has no display pills; Band 3's left third lists Name and Email ticked and fixed, then the rest as compact rows with name pills. The preview drops Tag 1 and reorders at once; after Save and reload the order, selection and width hold, and the reviewer preview matches. On a group-scoped instrument Email is unticked and fixed |
+| Display fields table | Unlock an instrument; untick Tag 1, move Tag 2 up with ▲, drag a preview column edge; Save; reload | Band 2 has no display pills; Band 3's left column lists Name and Email ticked and fixed, then the rest as compact rows with name pills. The preview drops Tag 1 and reorders at once; after Save and reload the order, selection and width hold, and the reviewer preview matches. On a group-scoped instrument Email is unticked and fixed |
 | Visibility pills when locked | Lock an instrument card | "Who can see what you wrote" shows each mode as a pill, like the editor's fixed cells; a long display-field label scrolls inside Band 3's left column rather than widening it |
 | Visibility in the card | Unlock an instrument; cycle Reviewees' "Responses released" and Observers' "Session ongoing"; Save; Lock | Unlocked, the card shows You (reviewer) / Reviewees / Observers with the note, and Band 3 has no Visibility table. After Save and Lock, the locked card shows the new Reviewees mode and no Observers row; a reload keeps both changes |
 | Full-size sample rosters | Guide → Sample session → full-size download; upload both files in Quick Setup on a new session | 154 reviewers and reviewees, tag columns Tutor / Group / Team, a Profile column on Reviewees |
 
-**Where this came from.** `guide/segment_19T_odds_and_ends.md` Items 1–4 and 6–8,
+**Where this came from.** `guide/segment_19T_odds_and_ends.md` Items 1–4 and 6–9,
 each closed with this check owed. Settling a row is a dated line
 there, not a reopening.
