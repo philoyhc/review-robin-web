@@ -123,6 +123,38 @@ def test_a_save_creates_a_branch_by_row_key(
     }
 
 
+def test_a_saved_field_can_join_a_branch_and_leave_it(
+    client: TestClient, db: Session
+) -> None:
+    """Rung 7b's ↳ and ↰ are membership changes to fields that already
+    exist; with no responses, Save takes both."""
+    review_session, instrument = _new_model_with_tags(client, db, code="19t10-join2")
+    keyed = [{**rf, "row_key": f"rf_{i}"} for i, rf in enumerate(_rfs(instrument))]
+    parent_key = next(rf["row_key"] for rf in keyed if rf["name"] == "Rating")
+    joined = [
+        {**rf, "branch_op": "ge", "branch_value": "4"} if rf["name"] == "Rating"
+        else {**rf, "branch_parent": parent_key, "required": False}
+        if rf["name"] == "Comments" else rf
+        for rf in keyed
+    ]
+    response = _save(client, review_session, instrument, joined)
+    assert response.status_code == 200, response.text
+    db.expire_all()
+    fields = {f.label: f for f in instrument.response_fields}
+    assert fields["Comments"].branch_parent_id == fields["Rating"].id
+    detached = [
+        {**rf, "branch_parent": None, "branch_op": None, "branch_value": None}
+        for rf in joined
+    ]
+    response = _save(client, review_session, instrument, detached)
+    assert response.status_code == 200, response.text
+    db.expire_all()
+    assert all(
+        (f.branch_parent_id, f.branch_op) == (None, None)
+        for f in instrument.response_fields
+    )
+
+
 def test_the_branch_keys_are_checked(client: TestClient, db: Session) -> None:
     """Each case on an instrument of its own: a refused save's flushed
     writes are rolled back by the request in production, not by the

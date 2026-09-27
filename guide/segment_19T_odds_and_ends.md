@@ -1278,6 +1278,10 @@ configured condition go unenforced.
    condition; ⑂, the condition row, "+" and ▲ ▼ inside a branch, the
    Active cascade, R off inside a branch, the X and lock rules, the stager and the
    preview.
+7b. **Join and detach** (added 2026-09-27, on the author's instruction):
+   a button after ⑂ joins a plain row to the unit above it, or detaches
+   a governed row; +, ⑂ and it share one width. Page-only: Save already
+   holds membership changes to the rules.
 8. **Exports and fixtures:** the by-instrument extract's metadata states
    each condition; the monitoring parity fixture gains a branched
    instrument (Pre-positioning 7).
@@ -1331,6 +1335,12 @@ All answered by the author, 2026-09-26:
 9. **The extract's `assigned` count stays as is**, and
    `spec/extract_data.md` says it can't tell "not applicable" from
    "skipped", in line with the record's "no N/A marker".
+10. **Join and detach (2026-09-27).** A plain row that isn't the first,
+   has no responses and isn't a parent joins the unit above: the end of
+   an unlocked branch, or, on a plain number or List field, a new branch
+   with an empty condition. Joining turns R off. A governed row in an
+   unlocked branch detaches to directly below the branch; detaching the
+   only governed field ends the branch, as X does. Glyphs ↳ and ↰.
 
 ### Judgment calls — decided
 
@@ -1456,6 +1466,15 @@ offers **"is not"** beside "is" (token `is_not`: open when the answer is
 none of the options, closed when unanswered, as every branch is), and the
 branch bar is broader and paler (4px at 0.35 opacity). The rung 8 read
 covers it.
+
+**Rung 7b lands join and detach** (ruling 10). A button after ⑂ (↳) joins
+a plain row to the unit above, and on a governed row (↰, in the same
+column by the one-column shift) detaches it to directly below its
+branch; `newModelRfEndBranch` now ends a branch for both X and detach.
+The button's state follows the row above, so a name or type edit
+re-judges the row below. +, ⑂ and it share one width (`.rf-glyph`,
+2.25rem). No service change: Save already takes a saved field's move
+into or out of a branch and refuses what the rules refuse.
 
 ### Doc impact
 
