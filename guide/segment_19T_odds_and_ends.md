@@ -1335,7 +1335,7 @@ All answered by the author, 2026-09-26:
 ### Judgment calls — decided
 
 - **Operators are stored as tokens** (`eq`, `ne`, `gt`, `ge`, `lt`, `le`,
-  `is`), not symbols: a settings-CSV cell starting with `=` or `>` is a
+  `is`, and `is_not` from 2026-09-27), not symbols: a settings-CSV cell starting with `=` or `>` is a
   formula to spreadsheet software. The builder shows the symbols.
   (2026-09-26)
 - **`branch_parent_id` is `ON DELETE SET NULL`**, so deleting an
@@ -1449,7 +1449,13 @@ governed row's X takes the condition with it; Active cascades; R is
 off inside a branch and String off in a parent's type select; a locked
 branch (`data-new-model-rf-branch-locked`) disables its condition and
 its fields' "+" and X. The preview mutes a governed column, titled
-"Opens when …", as the surface does a closed cell.
+"Opens when …", as the surface does a closed cell. Rung 7 is #2644.
+
+**After rung 7, on the author's review (2026-09-27):** a List condition
+offers **"is not"** beside "is" (token `is_not`: open when the answer is
+none of the options, closed when unanswered, as every branch is), and the
+branch bar is broader and paler (4px at 0.35 opacity). The rung 8 read
+covers it.
 
 ### Doc impact
 
