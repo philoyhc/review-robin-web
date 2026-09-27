@@ -311,6 +311,11 @@ def _surface_context(
         # governed cell renders muted and disabled, with the condition
         # that opens it as its hint.
         open_ids = responses_service.applicable_field_ids(fields, values)
+        # 19T Item 11 — whether a cell is required now is its own fact,
+        # from its own helper, never derived from ``branch_open`` in the
+        # template: a second kind of condition (Item 13) leaves a cell
+        # enabled while it isn't required.
+        required_now_ids = responses_service.required_field_ids(fields, values)
         field_by_id = {f.id: f for f in fields}
         cells = []
         for field in fields:
@@ -326,6 +331,7 @@ def _surface_context(
                     "placeholder": views.placeholder_for_field(field),
                     "governed_by": parent.field_key if parent else "",
                     "branch_open": field.id in open_ids,
+                    "required_now": field.id in required_now_ids,
                     "branch_hint": (
                         "Opens when " + views.branch_condition_label(parent)
                         if parent
@@ -333,9 +339,10 @@ def _surface_context(
                     ),
                 }
             )
-        is_complete, missing_count, latest_submitted = (
-            responses_service.compute_row_completion(db, assignment)
-        )
+        completion = responses_service.row_completion(db, assignment)
+        is_complete = completion.is_complete
+        missing_count = completion.missing_count
+        latest_submitted = completion.latest_submitted_at
         display_cells = []
         for display_field in display_fields_by_instrument.get(
             assignment.instrument_id, []
@@ -377,6 +384,7 @@ def _surface_context(
                 "cells": cells,
                 "is_complete": is_complete,
                 "missing_count": missing_count,
+                "required_count": completion.required_count,
                 "submitted_at": latest_submitted,
                 "display_cells": display_cells,
                 "sort_values": sort_values,

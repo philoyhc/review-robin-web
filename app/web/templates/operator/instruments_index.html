@@ -1838,7 +1838,9 @@
              closed, as on the surface; the sample row is unanswered, so
              every branch is. #}
           {% set _all_count = (_rf_list | rejectattr('branch_parent_id') | list | length) %}
-          {% set _required_count = (_rf_list | selectattr('required') | list | length) %}
+          {# 19T Item 11 — nor is a required governed field required while
+             its branch is closed, as ``rfRowRequiredNow`` counts it. #}
+          {% set _required_count = (_rf_list | selectattr('required') | rejectattr('branch_parent_id') | list | length) %}
           <div class="rs-intro-grid"
                data-new-model-band2-intro-card
                data-instrument-id="{{ instrument.id }}"
@@ -2250,6 +2252,15 @@
           function rfRowRequired(row) {
             return rfRowFlag(row, '[data-new-model-rf-required]', 'data-required');
           }
+          // 19T Item 11 — whether the preview's sample row must answer a
+          // field: required, and not behind a branch, since the sample row
+          // is unanswered and so every branch is closed. The one question
+          // both progress counts ask, as ``required_field_ids`` is on the
+          // server; a second kind of condition (Item 13) changes it here.
+          function rfRowRequiredNow(row) {
+            return rfRowRequired(row) && !row.hasAttribute('data-new-model-rf-governed');
+          }
+          window.newModelRfRowRequiredNow = rfRowRequiredNow;
           function rfRowByKey(card, key) {
             return rfRows(card).filter(function (row) {
               return row.getAttribute('data-row-key') === key;
@@ -2858,10 +2869,9 @@
             var allCount = committedRows.filter(function (row) {
               return !row.hasAttribute('data-new-model-rf-governed');
             }).length;
-            var requiredCount = committedRows.filter(function (row) {
-              var r = row.querySelector('[data-new-model-rf-required]');
-              return !!(r && r.getAttribute('data-required') === 'true');
-            }).length;
+            var requiredCount = committedRows.filter(
+              window.newModelRfRowRequiredNow
+            ).length;
             var progress = band2.querySelector(
               '[data-new-model-intro-progress]'
             );
@@ -3061,7 +3071,7 @@
             var allCount = committedRows.filter(function (row) {
               return !row.hasAttribute('data-new-model-rf-governed');
             }).length;
-            var requiredCount = committedRows.filter(rfRowRequired).length;
+            var requiredCount = committedRows.filter(rfRowRequiredNow).length;
             var reqClass = requiredCount === 0 ? 'pill-success' : 'pill-warning';
             var hiddenAttr = committedRows.length === 0 ? ' hidden' : '';
             return '<p class="rs-instrument-progress"'

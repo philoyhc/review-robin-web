@@ -166,23 +166,55 @@ def applicable_field_ids(
     """The ids of the fields an assignment can answer, given its answers.
 
     A field outside any branch always applies; a governed field applies
-    while its parent's branch is open. On a group-scoped instrument the
-    caller passes the group row's answers, since the parent's answer is
-    shared across the row."""
+    while its parent applies *and* the parent's branch is open. The walk
+    goes up the whole chain, so a field under a closed ancestor is closed
+    even while a stale answer below it still meets its own condition.
+    Branches are one level deep today (19T Item 14 lifts that), where
+    this is the same answer as checking the parent alone; walking the
+    chain here is 19T Item 11's pre-positioning 3. On a group-scoped
+    instrument the caller passes the group row's answers, since the
+    parent's answer is shared across the row."""
     field_list = list(fields)
     by_id = {field.id: field for field in field_list}
-    applicable: set[int] = set()
-    for field in field_list:
+    memo: dict[int, bool] = {}
+
+    def applies(field: BranchField, seen: frozenset[int]) -> bool:
+        if field.id in memo:
+            return memo[field.id]
         parent_id = field.branch_parent_id
         if parent_id is None:
-            applicable.add(field.id)
-            continue
-        parent = by_id.get(parent_id)
-        if parent is not None and branch_is_open(
-            parent, answer_by_field_id.get(parent_id)
-        ):
-            applicable.add(field.id)
-    return applicable
+            result = True
+        else:
+            parent = by_id.get(parent_id)
+            # A missing parent, or a cycle the structure rules refuse,
+            # closes the branch rather than recursing forever.
+            result = (
+                parent is not None
+                and parent.id not in seen
+                and applies(parent, seen | {field.id})
+                and branch_is_open(parent, answer_by_field_id.get(parent_id))
+            )
+        memo[field.id] = result
+        return result
+
+    return {field.id for field in field_list if applies(field, frozenset())}
+
+
+def required_field_ids(
+    fields: Iterable[BranchField],
+    answer_by_field_id: Mapping[int, str | None],
+) -> set[int]:
+    """The ids of the fields an assignment must answer, given its answers.
+
+    A required field is required only while it applies, so a required
+    governed field behind a closed branch is neither required nor missing
+    (19T Item 11). Every required count goes through this one function
+    rather than testing ``required`` and applicability itself, so a second
+    kind of condition (Item 13), which makes a field required rather than
+    shown, changes only this (Item 11's pre-positioning 1)."""
+    field_list = list(fields)
+    applicable = applicable_field_ids(field_list, answer_by_field_id)
+    return {f.id for f in field_list if f.required and f.id in applicable}
 
 
 def branch_structure_errors(

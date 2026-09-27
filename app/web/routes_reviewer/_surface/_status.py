@@ -105,17 +105,23 @@ def _group_completion(group_rows: list[dict], fields: list) -> GroupCompletion:
     ``required_done`` is derived from each row's ``missing_count``
     (DB-accurate); ``all_done`` counts display-cell values, which
     matches what the reviewer sees on a live surface.
+
+    19T Item 11 — ``required_total`` sums each row's ``required_count``,
+    the fields that row must answer, since a required governed field
+    counts only while its branch is open. It comes from the same saved
+    state as ``missing_count``, so done never exceeds the total. A row
+    built without it counts every required field, as before.
     """
-    n_rows = len(group_rows)
     required_field_count = sum(1 for f in fields if f.required)
-    required_total = required_field_count * n_rows
+    required_total = sum(
+        r.get("required_count", required_field_count) for r in group_rows
+    )
     required_done = required_total - sum(
         r.get("missing_count", 0) for r in group_rows
     )
     # 19T Item 10 — a governed cell whose branch is closed can't be
     # answered, so it is not an item: counting it would hold "All items"
-    # short of complete for good. Required counts are untouched, since a
-    # governed field is never required (Item 2 changes that).
+    # short of complete for good.
     open_cells = [
         cell
         for r in group_rows

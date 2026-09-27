@@ -503,7 +503,10 @@ branch is closed it is neither required nor missing, and Item 1's
 invariant means it holds no value.
 
 **And a required governed field needs a required parent** (Codex's review
-of this record, 2026-09-24). An assignment with no required fields counts
+of this record, 2026-09-24). *(Replaced 2026-09-27 by 19T Item 11's
+pre-positioning 4, on the author's ruling: the instrument needs an active
+required ungoverned field, which keeps this rule's reason at any depth
+and for either kind of condition.)* An assignment with no required fields counts
 as complete only when it has at least one response row: `row_count > 0`
 in both rollups in `app/services/monitoring.py`. So with an optional,
 unanswered parent, the branch closes, and an instrument whose only

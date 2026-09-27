@@ -21,6 +21,7 @@ from app.schemas.responses import ResponseUpsert
 from app.services import audit
 from app.services.text import pluralize
 from app.services.responses._branch_rule import drop_closed_branch_answers
+from app.services.responses._branching import required_field_ids
 from app.services.responses._group_reconciliation import (
     _expand_group_upserts,
     _group_instrument_ids,
@@ -246,8 +247,7 @@ def _compute_missing_required(
                 continue
             seen_groups.add(marker)
         fields = fields_by_instrument.get(assignment.instrument_id, [])
-        required = [f for f in fields if f.required]
-        if not required:
+        if not any(f.required for f in fields):
             continue
         rows = list(
             db.execute(
@@ -255,7 +255,14 @@ def _compute_missing_required(
             ).scalars()
         )
         present_field_ids = {r.response_field_id for r in rows if (r.value or "") != ""}
-        for field in required:
+        # 19T Item 11 — a required governed field is required only while
+        # its branch is open, judged on the answers the submit leaves.
+        required_ids = required_field_ids(
+            fields, {r.response_field_id: r.value for r in rows}
+        )
+        for field in fields:
+            if field.id not in required_ids:
+                continue
             if field.id in present_field_ids:
                 continue
             missing.append(
@@ -278,15 +285,26 @@ def _compute_missing_required(
     return missing
 
 
-def compute_row_completion(
-    db: Session, assignment: Assignment
-) -> tuple[bool, int, datetime | None]:
-    """Return (is_complete, missing_required_count, latest_submitted_at)
-    for a single assignment row.
+@dataclass(frozen=True)
+class RowCompletion:
+    """One assignment row's required-field state (19T Item 11).
 
-    is_complete is True when every required field on the assignment's
-    instrument has a non-empty Response row.
-    """
+    ``required_count`` is the fields this row must answer, which varies
+    per row once a required field can sit behind a branch; the reviewer
+    page's "*Required items completed" total sums it."""
+
+    is_complete: bool
+    missing_count: int
+    required_count: int
+    latest_submitted_at: datetime | None
+
+
+def row_completion(db: Session, assignment: Assignment) -> RowCompletion:
+    """The required-field state of a single assignment row.
+
+    A row is complete when every field it must answer has a non-empty
+    Response row. A required governed field counts only while its branch
+    is open for this row's saved answers."""
     fields = list(
         db.execute(
             select(InstrumentResponseField)
@@ -295,17 +313,32 @@ def compute_row_completion(
             .order_by(InstrumentResponseField.order)
         ).scalars()
     )
-    required = [f for f in fields if f.required]
     rows = list(
         db.execute(
             select(Response).where(Response.assignment_id == assignment.id)
         ).scalars()
     )
+    required_ids = required_field_ids(
+        fields, {r.response_field_id: r.value for r in rows}
+    )
     present_field_ids = {r.response_field_id for r in rows if (r.value or "") != ""}
-    missing = sum(1 for f in required if f.id not in present_field_ids)
+    missing = sum(1 for fid in required_ids if fid not in present_field_ids)
     submitted_ats = [r.submitted_at for r in rows if r.submitted_at is not None]
-    latest = max(submitted_ats) if submitted_ats else None
-    return missing == 0, missing, latest
+    return RowCompletion(
+        is_complete=missing == 0,
+        missing_count=missing,
+        required_count=len(required_ids),
+        latest_submitted_at=max(submitted_ats) if submitted_ats else None,
+    )
+
+
+def compute_row_completion(
+    db: Session, assignment: Assignment
+) -> tuple[bool, int, datetime | None]:
+    """Return (is_complete, missing_required_count, latest_submitted_at)
+    for a single assignment row: :func:`row_completion` as a tuple."""
+    state = row_completion(db, assignment)
+    return state.is_complete, state.missing_count, state.latest_submitted_at
 
 
 @dataclass
@@ -976,8 +1009,6 @@ def rollup_parts_from_assignments(
 
     for assignment in counted:
         fields = fields_by_instrument.get(assignment.instrument_id, [])
-        required_ids = {f.id for f in fields if f.required}
-        required_total += len(required_ids)
         if responses_by_assignment is not None:
             rows = responses_by_assignment.get(assignment.id, [])
         else:
@@ -986,6 +1017,12 @@ def rollup_parts_from_assignments(
                     select(Response).where(Response.assignment_id == assignment.id)
                 ).scalars()
             )
+        # 19T Item 11 — per assignment: a required governed field counts
+        # only while its branch is open for this row's answers.
+        required_ids = required_field_ids(
+            fields, {r.response_field_id: r.value for r in rows}
+        )
+        required_total += len(required_ids)
         if rows:
             any_response = True
         present_required = {
