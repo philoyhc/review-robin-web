@@ -1668,9 +1668,10 @@ Taken 2026-09-27 at `3cec7196`:
 ### Open questions
 
 1. **Which captures the author retakes**, and whether a new one shows a
-   branch. Decides rung 2's scope. The author.
-2. **Whether Item 12 waits for Item 11**, so the Guide describes required
-   governed fields once rather than twice. The author.
+   branch. Decides rung 2's scope. The author, once Item 11 lands.
+2. ~~Whether Item 12 waits for Item 11~~ — **it waits** (author,
+   2026-09-27): the Guide describes required governed fields once, and
+   Item 12's specifics are settled after Item 11 closes.
 
 ### Out of scope
 
