@@ -165,7 +165,7 @@ def test_the_condition_reads_as_the_builder_shows_it(op, value, label) -> None:
     ("value", "is_number"),
     [("4", True), ("-2.5", True), (".5", True), ("1e3", True), (" 7 ", True),
      ("1_000", False), ("0x10", False), ("inf", False), ("nan", False),
-     ("", False), ("4.", True)],
+     ("", False), ("4.", True), ("١", False)],
 )
 def test_a_number_is_a_plain_decimal(value, is_number) -> None:
     """The cumulative read's finding 2: ``float()`` takes "1_000" and "nan"

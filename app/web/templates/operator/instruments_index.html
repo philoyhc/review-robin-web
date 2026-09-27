@@ -4851,7 +4851,7 @@
           // The service's ``DECIMAL_PATTERN``: "1_000" and "0x10" are not
           // numbers to either side.
           var text = (value || '').trim();
-          if (!/^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(text)
+          if (!/^[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$/.test(text)
               || !isFinite(Number(text))) {
             return 'The branch condition needs a number.';
           }

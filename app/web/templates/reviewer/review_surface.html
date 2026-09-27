@@ -670,7 +670,7 @@
           }
           // The service's ``DECIMAL_PATTERN``, so "1_000" or "0x10" is no
           // number here either.
-          var decimal = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/;
+          var decimal = /^[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$/;
           var b = (value || "").trim();
           if (!decimal.test(raw) || !decimal.test(b)) { return false; }
           var a = Number(raw);

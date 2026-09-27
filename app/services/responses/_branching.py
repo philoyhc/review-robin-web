@@ -66,7 +66,9 @@ def _list_items(text: str | None) -> list[str]:
 # "inf", "nan"). The builder's and the reviewer surface's scripts use the
 # same pattern before ``Number()``, so the three can't disagree on whether a
 # condition or an answer is a number (the item's cumulative read).
-DECIMAL_PATTERN = r"[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?"
+# ASCII digits only: Python's ``\d`` also matches "١" and other Unicode
+# digits, where JavaScript's doesn't (Codex on #2647).
+DECIMAL_PATTERN = r"[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
 _DECIMAL = re.compile(DECIMAL_PATTERN)
 
 
