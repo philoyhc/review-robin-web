@@ -93,6 +93,13 @@ def rollups(db: Session) -> Fixture:
     Instruments — `solo` is per-reviewee with one required and one
     optional field; `grouped` carries `group_kind = "r1"`, so it groups
     by `reviewee.tag_1` and carol + dan are one group.
+
+    Branches (19T Item 10; `guide/advanced_instruments.md` Item 1,
+    Pre-positioning 7) — each optional field is governed by its
+    instrument's required one, a List parent: `q2` shows when `q1` is
+    "yes", `g2` when `g1` is "ok". A governed field is never required, so
+    every count below is the one it was before branching: that is the pin.
+    Item 2 flips `required` on the governed fields here.
     """
     user = User(email="op-r2parity@example.edu")
     db.add(user)
@@ -149,13 +156,17 @@ def rollups(db: Session) -> Fixture:
     db.flush()
 
     q1 = InstrumentResponseField(
-        instrument_id=solo.id, field_key="q1", label="Q1", required=True, order=0
+        instrument_id=solo.id, field_key="q1", label="Q1", required=True, order=0,
+        _inline_data_type="List", _inline_list_csv="yes,no",
+        branch_op="is", branch_value="yes",
     )
     q2 = InstrumentResponseField(
         instrument_id=solo.id, field_key="q2", label="Q2", required=False, order=1
     )
     g1 = InstrumentResponseField(
-        instrument_id=grouped.id, field_key="g1", label="G1", required=True, order=0
+        instrument_id=grouped.id, field_key="g1", label="G1", required=True, order=0,
+        _inline_data_type="List", _inline_list_csv="ok,not ok",
+        branch_op="is", branch_value="ok",
     )
     g2 = InstrumentResponseField(
         instrument_id=grouped.id, field_key="g2", label="G2", required=False, order=1
@@ -164,6 +175,9 @@ def rollups(db: Session) -> Fixture:
         instrument_id=grouped2.id, field_key="h1", label="H1", required=True, order=0
     )
     db.add_all([q1, q2, g1, g2, h1])
+    db.flush()
+    q2.branch_parent_id = q1.id
+    g2.branch_parent_id = g1.id
     db.flush()
 
     def assign(reviewer, reviewee, instrument, *, include=True) -> Assignment:
@@ -262,6 +276,10 @@ def rollups(db: Session) -> Fixture:
         erin=erin,
         solo=solo,
         grouped=grouped,
+        q1=q1,
+        q2=q2,
+        g1=g1,
+        g2=g2,
         grouped2=grouped2,
         a1=a1,
         a2=a2,
@@ -819,3 +837,19 @@ def test_summary_counts_ride_on_the_reviewer_rollup(
     assert counts.opened == 1
     assert counts.submitted == 0
     assert counts.incomplete == 2
+
+
+def test_the_fixture_is_branched_and_holds_to_the_rules(rollups: Fixture) -> None:
+    """The pin needs the branches present and well formed, or it pins
+    nothing: a later edit that drops them fails here, not silently."""
+    from app.services.responses import applicable_field_ids, branch_structure_errors
+
+    assert rollups.q2.branch_parent_id == rollups.q1.id
+    assert rollups.g2.branch_parent_id == rollups.g1.id
+    for fields in ([rollups.q1, rollups.q2], [rollups.g1, rollups.g2]):
+        assert branch_structure_errors(fields) == []
+    # a3's governed answer sits in an open branch ("ok"), so the fixture
+    # obeys "a closed branch holds no value".
+    assert rollups.g2.id in applicable_field_ids(
+        [rollups.g1, rollups.g2], {rollups.g1.id: "ok"}
+    )

@@ -293,6 +293,23 @@ def test_the_row_script_joins_and_detaches(client: TestClient, db: Session) -> N
     assert "window.newModelRfSyncJoin(row);" in recompute
 
 
+def test_the_preview_counts_items_as_the_surface_does(
+    client: TestClient, db: Session
+) -> None:
+    """The cumulative read's finding 4: the sample row is unanswered, so a
+    governed field's branch is closed and it isn't an item, as the
+    surface's "All items completed" counts it."""
+    review_session, instrument, card, _ = _page(client, db, "br-builder-count")
+    assert "<span data-new-model-intro-all-count>1</span>" in card
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    skip_governed = "return !row.hasAttribute('data-new-model-rf-governed');"
+    for start in ("window.newModelUpdateIntroProgress =", "function buildProgressPills(card) {"):
+        at = body.index(start)
+        assert skip_governed in body[at : body.index("\n          }", at)], start
+
+
 def test_saving_the_card_keeps_the_branch(client: TestClient, db: Session) -> None:
     """A payload without branch keys keeps the stored branch (rung 2's
     rules): the keys are each independently present."""

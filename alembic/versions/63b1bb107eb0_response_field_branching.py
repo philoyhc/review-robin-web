@@ -6,7 +6,8 @@ Adds three nullable columns to ``instrument_response_fields``
 - ``branch_parent_id`` — on a governed field, its parent field: a
   self-referencing foreign key, ``ON DELETE SET NULL``, indexed.
 - ``branch_op`` — on a parent, the condition's operator token
-  (``eq`` / ``ne`` / ``gt`` / ``ge`` / ``lt`` / ``le`` / ``is``).
+  (``eq`` / ``ne`` / ``gt`` / ``ge`` / ``lt`` / ``le`` / ``is``, and
+  ``is_not`` from 2026-09-27; ``String(8)`` holds each).
 - ``branch_value`` — on a parent, the condition's number, or List
   options comma-separated.
 

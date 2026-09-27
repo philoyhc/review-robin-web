@@ -19,6 +19,7 @@ spreadsheet software.
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Iterable, Mapping
 from typing import Protocol
 
@@ -61,11 +62,21 @@ def _list_items(text: str | None) -> list[str]:
     return [item.strip() for item in (text or "").split(",") if item.strip()]
 
 
+# A plain decimal number, and nothing else ``float()`` would take ("1_000",
+# "inf", "nan"). The builder's and the reviewer surface's scripts use the
+# same pattern before ``Number()``, so the three can't disagree on whether a
+# condition or an answer is a number (the item's cumulative read).
+# ASCII digits only: Python's ``\d`` also matches "١" and other Unicode
+# digits, where JavaScript's doesn't (Codex on #2647).
+DECIMAL_PATTERN = r"[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
+_DECIMAL = re.compile(DECIMAL_PATTERN)
+
+
 def _finite_number(text: str | None) -> float | None:
-    try:
-        value = float((text or "").strip())
-    except ValueError:
+    stripped = (text or "").strip()
+    if not _DECIMAL.fullmatch(stripped):
         return None
+    value = float(stripped)
     return value if math.isfinite(value) else None
 
 
@@ -100,6 +111,22 @@ def condition_error(
     if _finite_number(value) is None:
         return "The branch condition needs a number."
     return None
+
+
+def condition_label(parent: BranchField) -> str:
+    """A parent's condition as people read it: "Rating ≥ 4", "Colour is Red
+    or Blue", "Colour is not Red or Blue". The reviewer surface's hint on a
+    closed cell and the by-instrument extract's metadata both use it."""
+    op, value = parent.branch_op or "", (parent.branch_value or "").strip()
+    if op in LIST_OPS:
+        options = _list_items(value)
+        joined = (
+            ", ".join(options[:-1]) + " or " + options[-1]
+            if len(options) > 1
+            else "".join(options)
+        )
+        return f"{parent.label} {LIST_OPS[op]} {joined}"
+    return f"{parent.label} {NUMERIC_OPS.get(op, op)} {value}"
 
 
 def branch_is_open(parent: BranchField, answer: str | None) -> bool:

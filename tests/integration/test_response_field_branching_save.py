@@ -419,3 +419,18 @@ def test_a_session_clone_points_the_branch_at_the_cloned_parent(
     assert (cloned["Rating"].branch_op, cloned["Rating"].branch_value) == ("ge", "4")
     assert cloned["Comments"].branch_parent_id == cloned["Rating"].id
     assert cloned["Rating"].id != rating.id
+
+
+def test_an_unknown_operator_is_refused_by_name(
+    client: TestClient, db: Session
+) -> None:
+    """The cumulative read's finding 3: refused before any flush, so a
+    long token never reaches Postgres's ``String(8)`` as a 500."""
+    review_session, instrument = _new_model_with_tags(client, db, code="19t10-op")
+    rfs = _rfs(instrument, Rating={"branch_op": "greater-than-or-equal"})
+    rfs.append({"name": "New", "data_type": "string"})
+    response = _save(client, review_session, instrument, rfs)
+    assert response.status_code == 422
+    assert response.json()["errors"] == [
+        "Rating: Choose a comparison for the branch condition."
+    ]

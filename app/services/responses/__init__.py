@@ -60,6 +60,7 @@ from ._branching import (
     PARENT_DATA_TYPES,
     applicable_field_ids,
     branch_is_open,
+    condition_label,
     branch_structure_errors,
     condition_error,
 )
@@ -108,6 +109,7 @@ __all__ = [
     "PARENT_DATA_TYPES",
     "applicable_field_ids",
     "branch_is_open",
+    "condition_label",
     "branch_structure_errors",
     "condition_error",
     # _group_reconciliation

@@ -1834,7 +1834,10 @@
                   title="Click to cycle">{{ _b3_mode_labels.get(_current, "—") }}</span>
           {% endmacro %}
           {% set _rf_list = _band2.response_fields or [] %}
-          {% set _all_count = (_rf_list | list | length) %}
+          {# 19T Item 10 — a governed field isn't an item while its branch is
+             closed, as on the surface; the sample row is unanswered, so
+             every branch is. #}
+          {% set _all_count = (_rf_list | rejectattr('branch_parent_id') | list | length) %}
           {% set _required_count = (_rf_list | selectattr('required') | list | length) %}
           <div class="rs-intro-grid"
                data-new-model-band2-intro-card
@@ -2045,7 +2048,7 @@
             <div class="rs-progress-row">
               <p class="rs-instrument-progress"
                  data-new-model-intro-progress
-                 {% if _all_count == 0 %}hidden{% endif %}>
+                 {% if not _rf_list %}hidden{% endif %}>
                 <span class="pill {% if _required_count == 0 %}pill-success{% else %}pill-warning{% endif %}"
                       data-new-model-intro-required-pill>*Required items completed: 0/<span data-new-model-intro-required-count>{{ _required_count }}</span></span>
                 <span class="pill pill-count"
@@ -2849,7 +2852,12 @@
             var committedRows = window.newModelRfRows(band2).filter(function (row) {
               return row.getAttribute('data-committed') === 'true';
             });
-            var allCount = committedRows.length;
+            // 19T Item 10 — a governed field isn't an item while its
+            // branch is closed, as on the surface (the sample row is
+            // unanswered, so every branch is).
+            var allCount = committedRows.filter(function (row) {
+              return !row.hasAttribute('data-new-model-rf-governed');
+            }).length;
             var requiredCount = committedRows.filter(function (row) {
               var r = row.querySelector('[data-new-model-rf-required]');
               return !!(r && r.getAttribute('data-required') === 'true');
@@ -2858,7 +2866,7 @@
               '[data-new-model-intro-progress]'
             );
             if (!progress) { return; }
-            if (allCount === 0) {
+            if (committedRows.length === 0) {
               progress.hidden = true;
               return;
             }
@@ -3048,10 +3056,14 @@
           // collapses to just constraints if any exist.
           function buildProgressPills(card) {
             var committedRows = rfRows(card).filter(rfRowCommitted);
-            var allCount = committedRows.length;
+            // 19T Item 10 — governed fields aren't items while their branch
+            // is closed, as ``newModelUpdateIntroProgress`` counts them.
+            var allCount = committedRows.filter(function (row) {
+              return !row.hasAttribute('data-new-model-rf-governed');
+            }).length;
             var requiredCount = committedRows.filter(rfRowRequired).length;
             var reqClass = requiredCount === 0 ? 'pill-success' : 'pill-warning';
-            var hiddenAttr = allCount === 0 ? ' hidden' : '';
+            var hiddenAttr = committedRows.length === 0 ? ' hidden' : '';
             return '<p class="rs-instrument-progress"'
               + ' data-new-model-intro-progress'
               + hiddenAttr + '>'
@@ -4836,8 +4848,11 @@
           if (['eq', 'ne', 'gt', 'ge', 'lt', 'le'].indexOf(op) < 0) {
             return 'Choose a comparison for the branch condition.';
           }
+          // The service's ``DECIMAL_PATTERN``: "1_000" and "0x10" are not
+          // numbers to either side.
           var text = (value || '').trim();
-          if (text === '' || !isFinite(Number(text))) {
+          if (!/^[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$/.test(text)
+              || !isFinite(Number(text))) {
             return 'The branch condition needs a number.';
           }
           return null;
