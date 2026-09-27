@@ -3,8 +3,10 @@ field only while its branch is open, by sending its instrument down a
 Python path ("route (a)"), and a reviewer whose only empty required field
 sits behind a closed branch is complete and is not reminded.
 
-As in rung 2, no page lets an operator mark a governed field required
-yet, so each test sets ``required`` directly."""
+As in rung 2, each test sets ``required`` directly rather than through
+the card. The shared parity fixture keeps its governed fields optional so
+its "sql" cases still reach the aggregates; this file pins required
+governed fields on both halves together."""
 
 from __future__ import annotations
 

@@ -1639,6 +1639,24 @@ ungoverned field whenever a visible governed field is required; a hidden
 governed field counts nowhere, so it needs none. `BranchField` and the
 parse phase's `_PlannedField` gain `visible`.
 
+**The cumulative read** (`diff-reviewer`, `3cec7196..b425981b`) found no
+correctness defect in the counts. Six findings:
+- **High, fixed:** rung 3's required `q2` routed `solo` to Python, so
+  the parity file's "sql" cases compared Python with Python.
+  - The fixture's governed fields go back to optional.
+  - `test_the_fixture_reaches_both_sql_aggregates` guards it.
+  - Required governed fields are pinned on both halves in
+    `test_required_governed_rollups.py`.
+  - *This amends the Definition of done's parity line.*
+- **Medium, fixed:** the gate is now pinned through `submit` on a real
+  group-scoped instrument.
+- **Low, fixed:** the CSV parse phase now hides a hidden parent's branch
+  before the rules run, as apply does.
+- **Low, fixed:** stale docstrings.
+- **Low, accepted:** routed per-reviewee instruments load as ORM rows,
+  the cost route (a) states; route (b) stays in reserve.
+- **Low, noted:** scope bundled in the plan PRs.
+
 ### PR ladder
 
 Each rung deploys safely on its own (the record, after Codex): **the
@@ -1664,8 +1682,11 @@ guards stay on until the rollups are taught**. The item's cumulative
 
 - A required governed field blocks a submit only while its branch is open;
   pinned in `tests/integration/`, group-scoped included.
-- `tests/integration/test_monitoring_rollup_parity.py` passes with its
-  governed fields required, on every implementation in its lists.
+- ~~`tests/integration/test_monitoring_rollup_parity.py` passes with its
+  governed fields required~~ *(amended at the cumulative read: the
+  fixture keeps them optional, so its "sql" cases still reach the
+  aggregates)*: `tests/integration/test_required_governed_rollups.py`
+  passes on every implementation in the parity file's lists.
 - A reviewer whose only empty required field is behind a closed branch is
   complete and not reminded; pinned.
 - Save and the settings CSV refuse a required governed field in an

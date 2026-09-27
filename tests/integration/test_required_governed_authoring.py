@@ -107,3 +107,31 @@ def test_a_required_governed_row_renders_r_pressed(
     r = re.search(r"<button[^>]*data-new-model-rf-required[^>]*>", governed).group(0)
     assert 'data-required="true"' in r and 'aria-pressed="true"' in r
     assert " disabled" not in r
+
+
+def test_both_csv_phases_see_a_hidden_parents_branch_as_hidden(db: Session) -> None:
+    """A hidden parent hides its branch on apply, so the parse phase judges
+    the governed field hidden too: a hidden required governed field needs
+    no anchor, and the two phases agree (the item's cumulative read)."""
+    source, _ = _session(db, "rg-csv-hidden-src")
+    instrument = _branched_instrument(db, source)
+    fields = _fields(db, instrument.id)
+    fields["colour"].required = True
+    fields["colour"].visible = False
+    fields["why"].required = True
+    db.flush()
+    rows = [
+        # The file says Why is visible; its hidden parent overrides it.
+        Row(r.field, "true", r.data_type)
+        if r.field.endswith("response_fields[2].visible") else r
+        for r in serialize_session_config(db, source)
+        if r.field.startswith("instruments")
+    ]
+    target, _ = _session(db, "rg-csv-hidden-dst")
+    result = apply_session_config(db, target, rows)
+    assert result.errors == []
+    copied = _fields(
+        db,
+        db.execute(select(Instrument.id).where(Instrument.session_id == target.id)).scalar_one(),
+    )
+    assert (copied["why"].required, copied["why"].visible) == (True, False)

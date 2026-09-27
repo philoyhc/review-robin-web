@@ -597,7 +597,10 @@ def per_reviewee_coverage(
     the two questions cannot differ.
 
     Only ``_classify_coverage`` stays in Python, once per reviewee —
-    bounded by the roster, not by the assignment count.
+    bounded by the roster, not by the assignment count — **except** for
+    the instruments with a required governed field (19T Item 11), which
+    ``_python_routed_coverage`` counts in Python and this merges per
+    reviewee: two queries when a session has none, four when it has.
 
     The pre-rewrite implementation is kept as
     :func:`_per_reviewee_coverage_python`, which the parity test runs

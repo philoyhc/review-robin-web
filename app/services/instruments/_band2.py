@@ -809,9 +809,9 @@ def _apply_branch_rules(
     closed one. A parent whose last governed field goes loses its
     condition, since a branch is its condition plus at least one field.
     Then the saved state is checked whole (``branch_structure_errors``):
-    a governed field made required, a parent turned String, a condition
-    that doesn't fit, or a field inside a branch it isn't part of are
-    refused. Raises :class:`InvalidResponseFieldShapeError`; the caller's
+    a required governed field with no active required field outside any
+    branch (19T Item 11), a parent turned String, a condition that doesn't
+    fit, or a field inside a branch it isn't part of are refused. Raises :class:`InvalidResponseFieldShapeError`; the caller's
     transaction is not committed. Each field whose branch changed is
     audited as its ``instrument.field_updated`` (Codex on #2639)."""
     from app.services.instruments._response_fields import (
