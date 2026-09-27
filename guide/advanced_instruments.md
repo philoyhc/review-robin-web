@@ -11,14 +11,16 @@ Six items that rework the Instruments page's builder:
   are never required;
 - **Item 2**: required governed fields;
 - **Item 6**: required-when conditions, a second level and numeric
-  ranges, explored against one scenario (2026-09-27, not scheduled).
+  ranges, explored against one scenario (2026-09-27), and logged as 19T
+  Items 12–14 the same day.
 
 **Logged 2026-09-24 and 2026-09-25 on the author's instruction. Being
 built one item at a time:** Item 4 shipped first as 19T Item 7
 (2026-09-26), ahead of Item 3 because it doesn't touch the pills, and
 Item 5 as 19T Item 8 (2026-09-26), and Item 3 as 19T Item 9
 (2026-09-26). Item 1 shipped as 19T Item 10 (2026-09-27); Item 2 is
-planned as 19T Item 11 (2026-09-27). This file keeps the
+planned as 19T Item 11 (2026-09-27), and Item 6's three extensions are
+logged as 19T Items 12–14. This file keeps the
 author's rulings and the measured cost, so the build can start from them.
 When it is scheduled, it becomes a segment plan
 (`guide/segment_plan_template.md`); until then its entry in
@@ -601,8 +603,10 @@ review, 2026-09-24):
 
 ## Item 6 — Beyond one level: required-when, a second level, ranges
 
-**Explored 2026-09-27 on the author's instruction; not scheduled.** Three
-extensions, weighed against one scenario:
+**Explored 2026-09-27 on the author's instruction. Logged the same day
+as 19T Items 12 (Q3, ranges), 13 (Q1, a second kind of condition, which
+⑂ cycles through) and 14 (Q2, two levels).** Three extensions, weighed
+against one scenario:
 1. **Familiarity** (Integer 1–5, required);
 2. **Rating**, open when Familiarity ≥ 3;
 3. **Comment**, owed when Rating is high or low.

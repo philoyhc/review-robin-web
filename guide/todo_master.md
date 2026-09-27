@@ -3399,11 +3399,20 @@ dep chains called out at the bottom of this file.
      branch of optional governed fields under an Integer, Decimal or List
      field, shown only while the parent's answer meets its condition; a
      closed branch holds no value.
-   - **Item 11 — Required governed fields** (open, planned).
-     `guide/advanced_instruments.md` Item 2: a governed field required
-     only while its branch is open, under a required parent.
-   - **Item 12 — The Guide catches up with 19T** (open, planned):
-     branching and the reviewer's view in the in-app Guide.
+   - **Item 11 — Governed fields can be set to required too** (open,
+     planned). `guide/advanced_instruments.md` Item 2: a governed field
+     required only while its branch is open, under a required parent.
+   - **Item 12 — Augmented numerical conditions** (open, stub): inside a
+     range and outside a range. `guide/advanced_instruments.md` Item 6,
+     Q3.
+   - **Item 13 — Conditional required** (open, stub): a second kind of
+     condition making the governed fields required rather than shown, ⑂
+     cycling between the two. `guide/advanced_instruments.md` Item 6, Q1.
+   - **Item 14 — Two levels of branching** (open, stub).
+     `guide/advanced_instruments.md` Item 6, Q2.
+   - **Item 15 — The Guide catches up with 19T** (open, planned; Item 12
+     until 2026-09-27): branching and the reviewer's view in the in-app
+     Guide, after Items 11–14 land.
 
 #### Stubs
 
