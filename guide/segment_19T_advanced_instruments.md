@@ -1502,10 +1502,17 @@ marker** (the record's reason: it changes "complete" in every rollup).
 
 - **The submit gate** judges the parent on the state this submit leaves,
   since the parent can change in the same submit.
-- **A hidden governed field** is filtered by `visible` already (Item 10's
-  cascade), so a hidden branch counts nowhere.
-- **The operator's "now missing" warning** when R is turned on counts only
-  assignments whose branch is open.
+- **A hidden governed field** is filtered by `visible` on the reviewer
+  side (Item 10's cascade), so a hidden branch counts nowhere there. *(Corrected at
+  the pre-build check: the reviewee side, `per_reviewee_coverage`, doesn't
+  filter `visible` — a pinned asymmetry,
+  `test_an_invisible_required_field_is_the_reviewers_third_asymmetry` —
+  so its Python route judges the branch on every field, hidden ones
+  included, and keeps that asymmetry.)*
+- ~~**The operator's "now missing" warning** when R is turned on counts
+  only assignments whose branch is open.~~ Moot: its only caller is the
+  per-field edit route, which refuses a branched instrument since Item 10
+  (the pre-build check).
 - **The column header keeps its `*`**; a closed cell drops "(required)"
   from its label and its missing mark.
 - **Reminders**: a reviewer whose only empty required field sits behind a
@@ -1525,7 +1532,9 @@ Taken 2026-09-27 at `3cec7196`:
 - Item 10's guards on `required`: 3 sites (`grep -rn "can't be required"
   app/`: `_branching.py`, and the template's server-rendered and JS
   titles); the settings-CSV parse reaches the first through
-  `branch_structure_errors`.
+  `branch_structure_errors`. *(Undercounted, found at the pre-build
+  check: the stager also forces `rf.required = false` on a governed row,
+  and ↳ join turns R off; both change in rung 4.)*
 - Tests on the required paths: 7 files (`grep -rln
   "per_reviewer_progress\|per_reviewee_coverage\|_compute_missing_required\|compute_row_completion\|rollup_parts_from_assignments"
   tests/`).
@@ -1533,14 +1542,51 @@ Taken 2026-09-27 at `3cec7196`:
   `spec/operations_pages.md` (1), `spec/instruments.md`,
   `spec/csv_contracts.md`, `spec/rrw_functional_spec.md`.
 
+### Status
+
+**Checked against the code 2026-09-27, before rung 2** (at `cfb07d7f`, on
+the author's instruction). The rulings, route (a) and the ladder hold.
+What the plan got wrong or missed:
+1. **Block 5 is moot.** `_count_now_missing_required` is reached only
+   from `update_response_field`, the per-field edit route, which refuses a
+   branched instrument since Item 10 rung 2. The card's Save has no "now
+   missing" warning at all; that gap predates branching and stays out of
+   scope.
+2. **Block 1 needs only the filter.** `submit` computes the missing list
+   after `_apply_upserts` and after `drop_closed_branch_answers`, so the
+   gate already judges the state the submit leaves; it gains
+   `applicable_field_ids` on the rows it already loads.
+3. **Block 3 rides on block 2.** `_group_completion` takes each row's
+   `missing_count` from `compute_row_completion`, and its
+   `required_total` becomes the open required cells (each cell carries
+   `branch_open` and its field since Item 10).
+4. **The reviewee side keeps its asymmetry** (Semantics, corrected): its
+   Python route passes every field, hidden ones included.
+5. **The guards are five places, not three**: `branch_structure_errors`
+   (Save and both settings-CSV phases), the R button's server-rendered
+   state and title, the recompute that forces R off, the stager's
+   `rf.required = false`, and ↳ join turning R off. After rung 4 a joined
+   row keeps its R only under a required parent.
+6. **A block the record missed:** the builder preview's "*Required items
+   completed" counts every required row, governed ones included. Its
+   sample row is unanswered, so every branch is closed there: governed
+   rows leave the required count as rung 8 took them out of "All items".
+   Rung 2.
+7. **The parity fixture's expectations change.** Flipping `q2` to
+   required opens it on a1 (`q1` is "yes") with no answer, so Alice
+   drops from 3 completed to 2, with 6 required and 3 missing. a2 (`q1`
+   empty) is the closed case. The expectations are re-derived by hand in
+   rung 3, with their arithmetic, not kept.
+
 ### PR ladder
 
 Each rung deploys safely on its own (the record, after Codex): **the
 guards stay on until the rollups are taught**. The item's cumulative
 `diff-reviewer` read runs at rung 4, from the rung-1 merge.
 1. **The plan** (this block, prose only).
-2. **The per-assignment count in Python**: blocks 1–5 and 10 on
-   `applicable_field_ids`, with Item 10's guards still on; tests build
+2. **The per-assignment count in Python**: blocks 1–4, 10 and the
+   builder preview's required count on `applicable_field_ids` (block 5
+   moot, Status 1), with Item 10's guards still on; tests build
    required governed fields directly.
 3. **The rollups**: blocks 6–9, route (a) for both sides, the parity
    oracle and fixture (Item 10's governed fields flipped to required), the
