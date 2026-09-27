@@ -193,22 +193,13 @@ def placeholder_for_field(field: InstrumentResponseField) -> str:
 
 def branch_condition_label(parent: InstrumentResponseField) -> str:
     """19T Item 10 — a parent's branch condition as a reviewer reads it,
-    "Rating ≥ 4", "Colour is Red or Blue" or "Colour is not Red or Blue",
-    for the hint on a closed governed cell. The operator tokens map to
-    the words and symbols the builder shows
-    (``app.services.responses.NUMERIC_OPS`` / ``LIST_OPS``)."""
-    from app.services.responses import LIST_OPS, NUMERIC_OPS
+    "Rating ≥ 4" or "Colour is not Red or Blue", for the hint on a closed
+    governed cell. The wording is the service's
+    (``app.services.responses.condition_label``), which the by-instrument
+    extract shares."""
+    from app.services.responses import condition_label
 
-    op, value = parent.branch_op or "", (parent.branch_value or "").strip()
-    if op in LIST_OPS:
-        options = [o.strip() for o in value.split(",") if o.strip()]
-        joined = (
-            ", ".join(options[:-1]) + " or " + options[-1]
-            if len(options) > 1
-            else "".join(options)
-        )
-        return f"{parent.label} {LIST_OPS[op]} {joined}"
-    return f"{parent.label} {NUMERIC_OPS.get(op, op)} {value}"
+    return condition_label(parent)
 
 
 def constraint_summary_for_field(field: InstrumentResponseField) -> str:

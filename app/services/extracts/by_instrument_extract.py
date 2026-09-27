@@ -190,6 +190,7 @@ def _meta_block(
 ) -> Iterable[tuple[str, ...]]:
     yield ("Instrument", fallback_instrument_label(instrument, position))
     yield ("Description", instrument.description or "")
+    by_id = {field.id: field for field in fields}
     for field in fields:
         yield ("Response field", field.label or "")
         yield ("Data Type", _data_type_label(field._inline_data_type))
@@ -201,6 +202,12 @@ def _meta_block(
             field._inline_list_csv or "",
         )
         yield ("Helptext", field.help_text or "")
+        # 19T Item 10 — a governed field states the condition that shows it;
+        # while the branch is closed its cells export blank, as a skipped
+        # field's do. A field outside any branch adds no row.
+        parent = by_id.get(field.branch_parent_id)
+        if parent is not None:
+            yield ("Shown when", responses_service.condition_label(parent))
     yield ("Number of assignments", str(_count_assignments(db, instrument)))
     pools = _decode_pools(db, instrument, review_session)
     yield ("Pool of reviewers", pools["reviewers"])

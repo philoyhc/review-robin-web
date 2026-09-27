@@ -102,6 +102,22 @@ def condition_error(
     return None
 
 
+def condition_label(parent: BranchField) -> str:
+    """A parent's condition as people read it: "Rating ≥ 4", "Colour is Red
+    or Blue", "Colour is not Red or Blue". The reviewer surface's hint on a
+    closed cell and the by-instrument extract's metadata both use it."""
+    op, value = parent.branch_op or "", (parent.branch_value or "").strip()
+    if op in LIST_OPS:
+        options = _list_items(value)
+        joined = (
+            ", ".join(options[:-1]) + " or " + options[-1]
+            if len(options) > 1
+            else "".join(options)
+        )
+        return f"{parent.label} {LIST_OPS[op]} {joined}"
+    return f"{parent.label} {NUMERIC_OPS.get(op, op)} {value}"
+
+
 def branch_is_open(parent: BranchField, answer: str | None) -> bool:
     """Whether ``parent``'s branch is open for an answer to ``parent``.
 

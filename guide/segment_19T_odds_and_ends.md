@@ -1474,7 +1474,19 @@ branch; `newModelRfEndBranch` now ends a branch for both X and detach.
 The button's state follows the row above, so a name or type edit
 re-judges the row below. +, ⑂ and it share one width (`.rf-glyph`,
 2.25rem). No service change: Save already takes a saved field's move
-into or out of a branch and refuses what the rules refuse.
+into or out of a branch and refuses what the rules refuse. Rung 7b is
+#2646; Codex's finding (a row detached from a hidden parent kept its
+Active box off) is fixed there.
+
+**Rung 8 lands the exports and the fixtures.** The by-instrument
+extract's metadata block gives each governed field a `Shown when` row
+after its Helptext ("Rating ≥ 4"); a field outside any branch adds none,
+so an unbranched instrument's extract is unchanged. The wording moved
+into the service (`responses.condition_label`), which
+`views.branch_condition_label` now delegates to, so the surface's hint
+and the export can't drift. The monitoring parity fixture branches its
+two optional fields (`q2` under a List `q1`, `g2` under a group-scoped
+`g1`), and all 24 cases pass unchanged: the pin.
 
 ### Doc impact
 
