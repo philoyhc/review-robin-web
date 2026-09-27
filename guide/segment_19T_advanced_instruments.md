@@ -1536,11 +1536,80 @@ Taken 2026-09-27 at `3cec7196`:
   (4 required-count mentions), `spec/operations_pages.md` (1), and the Doc
   impact list.
 
+### Pre-positioning for Items 12–14 (recommended)
+
+Each is cheap in the rung that already touches the code, and a rework
+later. The costing is `guide/advanced_instruments.md` Item 6. Measured at
+`37051c8e`.
+
+1. **One "required for this assignment" helper** (for Item 13).
+   - `required_field_ids(fields, answers)` goes in `_branching.py`, beside
+     `applicable_field_ids`. In this item it returns the required fields
+     among the applicable ones.
+   - Blocks 1–4, the oracle and route (a)'s Python path all call it. None
+     of them tests `required` and applicability inline.
+   - Item 13's second kind then changes this one function: its governed
+     fields always apply, and are required only while the condition holds.
+   - Lands in rungs 2–3.
+2. **Two facts per reviewer cell, not one** (for Item 13).
+   - The cell builder in `_surface/_context.py` passes `branch_open`
+     (enabled) and `required_now` (the mark) separately, each from its own
+     helper. The template never derives one from the other: Item 13's kind
+     is enabled while its condition is false (Codex on #2651).
+   - The builder preview's count takes the same shape: one script function
+     answering "required now" for a row.
+   - Lands in rung 2.
+3. **Applicability walks ancestors** (for Item 14).
+   - `applicable_field_ids` admits a field only if its parent applies
+     *and* the parent's condition holds, memoized up the chain. At one
+     level the answer is unchanged.
+   - At two levels it makes `drop_closed_branch_answers`, which is built
+     on this function, correct within a single pass. It also gives route
+     (a) and the counts depth for free.
+   - Lands in rung 2, with a unit test on a hand-built chain; the rules
+     still refuse a chain.
+   - The refused-parent hold, the reviewer script and the builder stay
+     Item 14's.
+4. **Relax the required-parent rule** to "the instrument has an active
+   required ungoverned field" (for Items 13 and 14).
+   - It keeps the rule's reason: a submit always leaves a response row.
+     Any such field guarantees that, and it must be active because the
+     submit gate skips hidden fields.
+   - It's one check in `branch_structure_errors` over the whole
+     instrument, blind to depth and to kind.
+   - The ruled form would be reworked twice. Item 13's scenario has an
+     optional parent (Rating). At Item 14, "a required parent" becomes a
+     chain.
+   - It also drops rung 4's builder cascade: R is live on every governed
+     row, and Save refuses a required governed field with no active
+     required ungoverned field, naming it.
+   - **This changes a ruling, so it is the author's call.**
+5. **Only `_branching.py` interprets a condition** (for Item 12).
+   - Item 11's counts and route (a) go through the helpers and never read
+     `branch_op`; no SQL evaluates a condition.
+   - Item 12's two operators then touch `condition_error`,
+     `condition_label`, `branch_is_open` and the two page scripts, and
+     nothing this item builds.
+   - This is a convention for rungs 2–3 and the cumulative read, not a
+     test.
+   - Found while measuring, and Item 12's to fix: the builder's script
+     hardcodes the numeric operators (`['eq', 'ne', 'gt', 'ge', 'lt',
+     'le']` in `instruments_index.html`) instead of reading
+     `data-new-model-rf-branch-ops`.
+
+**Not pre-positioned:**
+- Item 13's stored kind and the ⑂ cycle: a migration for an item not yet
+  planned.
+- Item 14's builder layout.
+
 ### Status
 
 **Checked against the code 2026-09-27, before rung 2** (at `cfb07d7f`):
 the rulings, route (a) and the ladder hold; the check's corrections are
 folded into the sections above.
+
+**Pre-positioning for Items 12–14 added 2026-09-27** on the author's
+instruction, as recommendations awaiting a ruling (open question 1).
 
 ### PR ladder
 
@@ -1572,7 +1641,8 @@ guards stay on until the rollups are taught**. The item's cumulative
 - A reviewer whose only empty required field is behind a closed branch is
   complete and not reminded; pinned.
 - Save and the settings CSV refuse a required governed field under an
-  optional parent, naming it.
+  optional parent (or, if pre-positioning 4 is taken, in an instrument
+  with no active required ungoverned field), naming it.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19T.11` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -1581,8 +1651,10 @@ guards stay on until the rollups are taught**. The item's cumulative
 
 ### Open questions
 
-None open: the record's rulings and route (a) apply. A question the build
-raises is logged here.
+1. **Which of pre-positioning 1–5 to take.** 1, 2, 3 and 5 shape how
+   rungs 2–3 are built, and the Decision is unchanged by them. 4 replaces
+   the required-parent ruling, and with it rung 4's builder cascade and
+   the CSV contract's wording. The author decides, before rung 2.
 
 ### Out of scope
 
@@ -1711,12 +1783,13 @@ Taken 2026-09-27 at `3cec7196`:
 ### Open questions
 
 1. **Which captures the author retakes**, and whether a new one shows a
-   branch. Decides rung 2's scope. The author, once Item 11 lands.
+   branch. Decides rung 2's scope. The author, once Items 11–14 land.
 2. ~~Whether this item waits for Item 11~~ — **it waits** (author,
    2026-09-27): the Guide describes required governed fields once, and
    this item's specifics are settled after Item 11 closes.
-3. **Whether it also waits for Items 12–14**, now numbered ahead of it.
-   The author.
+3. ~~Whether it also waits for Items 12–14~~ — **it waits for all of
+   them** (author, 2026-09-27), so the Guide describes 19T's instruments
+   once.
 
 ### Out of scope
 

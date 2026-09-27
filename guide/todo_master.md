@@ -3412,7 +3412,7 @@ dep chains called out at the bottom of this file.
      `guide/advanced_instruments.md` Item 6, Q2.
    - **Item 15 — The Guide catches up with 19T** (open, planned; Item 12
      until 2026-09-27): branching and the reviewer's view in the in-app
-     Guide.
+     Guide, after Items 11–14 land.
 
 #### Stubs
 
