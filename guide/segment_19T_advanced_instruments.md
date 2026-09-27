@@ -8,7 +8,8 @@ independently · **Related:** `spec/instruments.md`,
 Opened as "Odds and ends", a holding segment for small operator-UI
 adjustments (Items 1–6), and renamed 2026-09-27 on the author's
 instruction once most of its items were `guide/advanced_instruments.md`'s
-(Items 7–12). Items 4 and 5 are the two that aren't instrument work. Each
+(Items 7–15; reorganized 2026-09-27 into Items 11–15 on the author's
+instruction). Items 4 and 5 are the two that aren't instrument work. Each
 item has its own `Doc impact` and `Status`; the segment closes when every
 item has.
 
@@ -1460,7 +1461,7 @@ at spec-writer's flag.
 
 ---
 
-## Item 11 — Required governed fields
+## Item 11 — Governed fields can be set to required too
 
 **Opened 2026-09-27 on the author's instruction**: `guide/advanced_instruments.md`
 Item 2, on Item 10 as it shipped. The record holds the rule, the
@@ -1589,7 +1590,8 @@ raises is logged here.
 - **A zero-row submit on an instrument with no required fields** reading
   as untouched: predates branching (the record).
 - **A "now missing" warning on the card's Save**: none exists today.
-- **Nested branches, String parents**: ruled out by Item 10's record.
+- **Nested branches**: Item 14. **String parents**: ruled out by Item 10's
+  record.
 
 ### Doc impact
 
@@ -1603,9 +1605,50 @@ raises is logged here.
 
 ---
 
-## Item 12 — The Guide catches up with 19T
+## Item 12 — Augmented numerical conditions: inside a range, outside a range
 
-**Opened 2026-09-27 on the author's instruction** ("updates to Guide").
+**Logged 2026-09-27 on the author's instruction; a stub, details to
+follow.** An Integer or Decimal parent's condition gains two operators:
+*inside a range* and *outside a range*, each taking a low and a high
+bound. The costing is `guide/advanced_instruments.md` Item 6, Q3: light,
+and no migration, since both tokens fit `branch_op` and the pair fits
+`branch_value`.
+
+### Doc impact
+
+- `docs/status.md` — row when the item closes (Item 12).
+
+## Item 13 — Conditional required: a second kind of condition
+
+**Logged 2026-09-27 on the author's instruction; a stub, details to
+follow.** A second kind of condition: *if the condition is satisfied, the
+governed field(s) are required, else optional*. Beside it stays the kind
+Item 10 built: *if the condition is satisfied, show the governed
+field(s)*. **The ⑂ button cycles between the two kinds.** The costing is
+`guide/advanced_instruments.md` Item 6, Q1, including Codex's three
+corrections on #2651. It builds on Item 11's required counts.
+
+### Doc impact
+
+- `docs/status.md` — row when the item closes (Item 13).
+
+## Item 14 — Two levels of branching
+
+**Logged 2026-09-27 on the author's instruction; a stub, details to
+follow.** A governed field may itself be a parent, one level down. This
+lifts Item 10's one-level ruling. The costing is
+`guide/advanced_instruments.md` Item 6, Q2: the heaviest of the three,
+mostly in the builder.
+
+### Doc impact
+
+- `docs/status.md` — row when the item closes (Item 14).
+
+## Item 15 — The Guide catches up with 19T
+
+**Opened 2026-09-27 on the author's instruction** ("updates to Guide") as
+Item 12. **Renumbered 15 the same day**, when Items 12–14 were logged ahead
+of it.
 
 ### Opportunity
 
@@ -1660,7 +1703,7 @@ Taken 2026-09-27 at `3cec7196`:
   table, ✓).
 - `tests/integration/test_guide_screencaps.py` passes.
 - `## Doc impact` section present and current
-- `python3 tools/close_check.py 19T.12` exits 0; any warning adjudicated
+- `python3 tools/close_check.py 19T.15` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
 - `docs/status.md` row added; plan moved to `guide/archive/` + index row
@@ -1669,9 +1712,11 @@ Taken 2026-09-27 at `3cec7196`:
 
 1. **Which captures the author retakes**, and whether a new one shows a
    branch. Decides rung 2's scope. The author, once Item 11 lands.
-2. ~~Whether Item 12 waits for Item 11~~ — **it waits** (author,
+2. ~~Whether this item waits for Item 11~~ — **it waits** (author,
    2026-09-27): the Guide describes required governed fields once, and
-   Item 12's specifics are settled after Item 11 closes.
+   this item's specifics are settled after Item 11 closes.
+3. **Whether it also waits for Items 12–14**, now numbered ahead of it.
+   The author.
 
 ### Out of scope
 
@@ -1680,4 +1725,4 @@ Taken 2026-09-27 at `3cec7196`:
 
 ### Doc impact
 
-- `docs/status.md` — row when the item closes (Item 12).
+- `docs/status.md` — row when the item closes (Item 15).
