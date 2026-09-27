@@ -282,6 +282,10 @@ def test_the_row_script_joins_and_detaches(client: TestClient, db: Session) -> N
     # Detach lands the row directly below its branch; the last one ends it.
     assert "group.insertAdjacentElement('afterend', own);" in join
     assert "window.newModelRfEndBranch(group);" in join
+    # A detached row's Active box comes back, though its hidden parent had
+    # turned it off (Codex on #2646).
+    ungoverned = _rf_fn(body, "newModelRfMakeUngoverned")
+    assert "active.disabled = false;" in ungoverned
     # Joining a plain field starts a branch with an empty condition.
     assert "parent.setAttribute('data-new-model-rf-parent', 'true');" in join
     assert "window.newModelRfMakeGoverned(row);" in join

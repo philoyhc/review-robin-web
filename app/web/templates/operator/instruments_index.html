@@ -5099,6 +5099,13 @@
           row.removeAttribute('data-new-model-rf-governed');
           var bar = row.querySelector('td.rf-branch-bar');
           if (bar) { bar.remove(); }
+          // Its Active box was off while its parent was hidden; as a field
+          // of its own it can be shown again (Codex on #2646).
+          var active = row.querySelector('[data-new-model-rf-active]');
+          if (active) {
+            active.disabled = false;
+            active.setAttribute('title', 'Show this field in the preview and to reviewers');
+          }
           var band3 = row.closest('[data-new-model-band3]');
           var tpl = band3 && band3.querySelector('[data-new-model-rf-row-template]');
           var fork = tpl && tpl.content.querySelector('[data-new-model-rf-fork-cell]');
