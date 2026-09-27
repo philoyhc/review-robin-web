@@ -1652,6 +1652,11 @@ six findings:
 **Codex** found nothing on the code rungs. On the plan, it found the
 parity total (6 → 7) and a compaction in #2650.
 
+**Spec sweep** (`spec-writer`, at this close): the five Doc-impact specs,
+with no divergence found. **Noted, not measured:**
+`spec/operations_pages.md`'s query-count table predates route (a). The
+prose states route (a)'s bound; no measured row was added.
+
 **Browser checks owed** in `guide/post_azure_todo_checklist.md` item 6.
 
 ### PR ladder

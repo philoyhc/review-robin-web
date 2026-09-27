@@ -616,13 +616,15 @@ boundary.
 **Checked at parse time, before anything is applied**
 (`session_config_io/_apply_parse.py`'s `_branch_errors`, run against the
 same rules the builder enforces — `spec/instruments.md` § "Branching
-between response fields"): an unknown `branch_parent`, a required
-governed field, a String parent, a branch that isn't one ruled group, or
-a condition that doesn't fit its parent's type is refused with a named
-error, and the whole apply fails — never applied with the branch
-silently dropped. A lone `branch_value` with no operator and no governed
-field is refused the same way, rather than stored as an orphaned
-condition. `branch_op` is also checked against the known tokens as it's
+between response fields"): an unknown `branch_parent`, a String parent,
+a branch that isn't one ruled group, or a condition that doesn't fit its
+parent's type is refused with a named error, and the whole apply fails —
+never applied with the branch silently dropped. **A required governed
+field needs an active required field outside any branch elsewhere in
+the instrument** (19T Item 11) — refused by name otherwise, the same
+rule `branch_structure_errors` applies to Save. A lone `branch_value`
+with no operator and no governed field is refused the same way, rather
+than stored as an orphaned condition. `branch_op` is also checked against the known tokens as it's
 read, before any row is created. **A hidden parent's branch is hidden on
 import too** — a governed field imported visible under a hidden parent
 could never be answered, so import applies the same Active cascade the

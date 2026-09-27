@@ -146,10 +146,11 @@ The system does not:
   is a row × column grid. **Basic branching between two response
   fields of the same instrument is not out of scope** ([§9.6](#96-configure-instruments),
   [§10.3](#103-review-surface)): a governed field's cell answers only
-  while its parent's condition holds, within the same grid. Nested
-  branches, more than one branch per parent, a String parent, and
-  required governed fields remain out of scope
-  (`guide/advanced_instruments.md` Item 1).
+  while its parent's condition holds, within the same grid, and can be
+  **required** — required, and missing when empty, only while its
+  branch is open. Nested branches, more than one branch per parent, and
+  a String parent remain out of scope (`guide/advanced_instruments.md`
+  Item 1).
 - **Run cross-session analytics.** The lobby lists sessions; it
   does not aggregate metrics across them.
 - **Manage participants as cross-session accounts.** Reviewers and
@@ -460,8 +461,10 @@ per reviewee row.
 String), required flag, help text (+ its visibility flag),
 visibility flag, order within the instrument. A field may head a
 **branch**: an Integer, Decimal or List field carries one condition,
-and the optional fields it governs show only while its answer meets
-it (`spec/instruments.md` § *Branching between response fields*).
+and the fields it governs — required or not — show only while its
+answer meets it. A required governed field is required, and missing
+when empty, only while its branch is open (`spec/instruments.md` §
+*Branching between response fields*).
 
 **System-derived fields:** the field key (machine id, derived from
 the label); the input control that renders in each cell (text
@@ -1596,7 +1599,9 @@ the parent's condition; it stays that way live as the reviewer edits
 the parent, and the server enforces the same rule on Save (deleting a
 governed answer whose branch is closed) regardless of what the page
 shows (`spec/reviewer-surface.md` § "Branching between response
-fields").
+fields"). A governed field marked **required** is required, and blocks
+Submit when empty, only while its branch is open — closed, it demands
+nothing and carries no value.
 
 **Sortability** — every column header on the review surface is
 clickable to sort the rows by that column; Shift-click adds a

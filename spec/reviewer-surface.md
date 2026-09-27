@@ -423,14 +423,16 @@ is one response cell (one field for one reviewee):
 - `*Required items completed: {N}/{M}` — required field-cells filled
   vs total (`.pill-success` when `N == M`, else `.pill-warning`). The
   leading `*` echoes the ` *` marker on a required column's header
-  ("Columns" above).
+  ("Columns" above). `{M}` sums each row's own required-field count
+  (`responses.required_field_ids`), not a fixed per-instrument required
+  count times the row count: a required governed field (see "Branching
+  between response fields" below) counts only while its branch is open
+  for that row.
 - `All items completed: {P}/{Q}` — every response cell filled vs
   total (`.pill-success` when `P == Q`, else `.pill-count`). A governed
-  cell whose branch is closed (see "Branching between response fields"
-  below) is not an item — counting one no reviewer could ever fill
-  would hold the pill short of complete for good — so `{Q}` counts only
-  open cells. Required counts are untouched, since a governed field is
-  never required (`guide/advanced_instruments.md` Item 2 changes that).
+  cell whose branch is closed is not an item — counting one no reviewer
+  could ever fill would hold the pill short of complete for good — so
+  `{Q}` counts only open cells.
 
 The `.rs-constraints` reminder and the numeric input's placeholder /
 `title` print an Integer or Decimal field's Min, Max and Step as
@@ -440,8 +442,9 @@ entered — no rounding, no trailing `.0`, no scientific notation
 
 `_surface_context` adds a `completion` dict per instrument group
 (`required_done` / `required_total` / `all_done` / `all_total`);
-`required_done` is DB-accurate, derived from each row's
-`missing_count`. The same layout is mirrored on the operator's Band 2
+`required_total` sums each row's `required_count`, and `required_done`
+is DB-accurate, derived from each row's `missing_count`. The same
+layout is mirrored on the operator's Band 2
 preview (`spec/instruments.md` § "Branching between response fields" —
 the JS-built `buildConstraints` block share the row and rebuild
 together on every Band 3 / R toggle).
@@ -500,9 +503,10 @@ In rendered order:
    missing-required Submit attempt). There is no `show_acknowledge`
    flag — the same absence §"no checkbox" states below. Cell content is icon-only:
    - `<span class="status-icon-complete" title="Complete">✓</span>`
-     when the row's required fields are all filled.
+     when the row's required fields (open ones only — see "Branching
+     between response fields" below) are all filled.
    - `<span class="status-icon-incomplete" title="N required field
-     missing">⚠</span>` when any required field is empty.
+     missing">⚠</span>` when any of them is empty.
 
    **The icon is the whole cell — there is no per-row ``submitted
    YYYY-MM-DD HH:MM`` subtitle under it.** Submit stamps a single
@@ -602,6 +606,19 @@ refuses is **held back as an error**, not written and then deleted: the
 reviewer sees `"Kept until {parent label} is fixed."` beside the
 parent's own error, and both come back with their typed text.
 
+**A governed field can be required too.** It is required, and counts
+missing, only while its branch is open for that row
+(`responses.required_field_ids`); closed, it is neither, and holds no
+value under the rule above. The column header keeps its trailing `*`
+regardless of branch state, but a closed cell's control drops
+"(required)" from its `aria-label` — server-rendered from
+`required_now` (a fact separate from `branch_open`, carried as
+`data-rs-required`) and re-toggled live by the same inline script that
+re-judges the branch. The submit gate (below) and the per-instrument
+pill and status icon above all count a row's open required fields, not
+a fixed per-instrument set — a reviewer whose only empty required field
+sits behind a closed branch is complete and is not reminded.
+
 ### View shape
 
 The route builds the table data in `_surface_context` as
@@ -614,10 +631,11 @@ The route builds the table data in `_surface_context` as
   "rows": [
     {
       "assignment": Assignment,
-      "cells": [{"field": InstrumentResponseField, "value": str, "governed_by": str, "branch_open": bool, "branch_hint": str}, …],
+      "cells": [{"field": InstrumentResponseField, "value": str, "governed_by": str, "branch_open": bool, "required_now": bool, "branch_hint": str}, …],
       "display_cells": [{"field": …, "label": …, "value": …, "is_profile_link": bool}, …],
       "is_complete": bool,
       "missing_count": int,
+      "required_count": int,
       "submitted_at": datetime | None,
       "accepting": bool,
       "show_values": bool,
