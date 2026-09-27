@@ -15,7 +15,7 @@ Five items that rework the Instruments page's builder:
 built one item at a time:** Item 4 shipped first as 19T Item 7
 (2026-09-26), ahead of Item 3 because it doesn't touch the pills, and
 Item 5 as 19T Item 8 (2026-09-26), and Item 3 as 19T Item 9
-(2026-09-26). Item 1 is planned as 19T Item 10 (2026-09-26); Item 2 is
+(2026-09-26). Item 1 shipped as 19T Item 10 (2026-09-27); Item 2 is
 not scheduled. This file keeps the
 author's rulings and the measured cost, so the build can start from them.
 When it is scheduled, it becomes a segment plan
@@ -291,9 +291,10 @@ About 4 PRs, scaffold-first:
 
 ## Item 1 — Branching, governed fields optional
 
-**Planned as 19T Item 10** (2026-09-26), which records what Items 7–9
-changed underneath these rulings and the author's answers on what
-they left open.
+**Shipped as 19T Item 10** (closed 2026-09-27), which records what Items
+7–9 changed underneath these rulings, the author's answers on what they
+left open, and what the build added: "is not" on a List condition, and
+join ↳ / detach ↰ for an existing field.
 **Logged 2026-09-24 on the author's instruction. Built fourth, on Items
 3–5.**
 

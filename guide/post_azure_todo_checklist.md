@@ -403,7 +403,9 @@ wrote" card repaint on a Band 3 Visibility edit. Item 6 put a `*` on the
 Required pill, refused fractional Integer bounds and printed Decimal
 bounds as entered. Item 7 moved the visibility editor into Band 2's "Who
 can see what you wrote" card. Item 8 moved display fields from Band 2's
-pills to a table in Band 3's left column.
+pills to a table in Band 3's left column. Item 10 added branching: ⑂ or
+↳ puts optional governed fields under a number or List field, shown on
+the reviewer surface only while the parent's answer meets a condition.
 The suite pins the markup, and headless Chromium drove the rows on a
 rendered page. Neither was a person on the live app.
 
@@ -411,7 +413,7 @@ rendered page. Neither was a person on the live app.
 
 | Check | How | Passes when |
 |---|---|---|
-| The rows | Open an instrument card | One row per saved field in a table, a rule under each; each row reads Active, "+", an empty column, name, type, bounds, R, ≡, ▲, ▼, X; X is red; Band 3 splits 1 : 4 |
+| The rows | Open an instrument card, one with a branch | One row per saved field in a table. A plain field or a parent reads Active, "+", ⑂, ↳, name, type, bounds, R, ≡, ▲, ▼, X; a governed row shifts one column right before the name (the bar, Active, "+", ↰) and has no ⑂. A rule sits under each plain field and under each branch as a whole — the parent, its condition row and its governed rows share one. X is red; "+", ⑂ and ↳ / ↰ are one width; Band 3 splits 1 : 4 |
 | "+" inserts below | "+" on the first of two rows | A row appears between them, its name box showing a grayed "Field N", cursor in it; the preview gains the column |
 | Default names | In that row press →; clear the name; type "Rating" then clear it | → turns "Field N" into normal text; cleared, it shows grayed again; after Save and a reload a kept "Field N" reads as normal text |
 | The preview follows the row | Type a name; switch the row to Integer and set Max below Min | The preview follows the name at once; the bad Max marks the row amber with the reason on hover, and the preview keeps the last valid shape |
@@ -433,8 +435,16 @@ rendered page. Neither was a person on the live app.
 | A long display label, unlocked | Give a tag a long label; unlock an instrument | In Band 3's left fifth the row's ▲ ▼ stay reachable, scrolling with the table if the label widens it |
 | Visibility pills when locked | Lock an instrument card | "Who can see what you wrote" shows each mode as a pill, like the editor's fixed cells; a long display-field label scrolls inside Band 3's left column rather than widening it |
 | Visibility in the card | Unlock an instrument; cycle Reviewees' "Responses released" and Observers' "Session ongoing"; Save; Lock | Unlocked, the card shows You (reviewer) / Reviewees / Observers with the note, and Band 3 has no Visibility table. After Save and Lock, the locked card shows the new Reviewees mode and no Observers row; a reload keeps both changes |
+| A branch with ⑂ | ⑂ on an Integer row; type 4 in the condition | A condition row ("If the above [=] [4] then show the below") and one grayed "Field N" appear under a broad, pale bar; the condition is amber until a value is typed; the parent's X is off and String is disabled in its type select |
+| Join and detach | ↳ on a plain row just below the branch; then ↰ on it | ↳ makes it the branch's last field; ↰ puts it directly below the branch; ↰ on a branch's only field removes the condition too |
+| List conditions | A List parent with a branch; pick "is not"; name an option the list lacks | The operator offers "is" and "is not"; the missing option turns the condition amber, naming it |
+| Active cascades | Untick a parent's Active, then tick it | Its branch's rows untick and their Active boxes go off; ticking the parent restores them |
+| The branch for a reviewer | Save a branched instrument; open the reviewer preview; answer the parent under, then over, the condition | The governed cell is muted and disabled, titled "Opens when …", and opens as the answer meets the condition; text typed there greys, not clears, when the branch closes, and Save deletes it if it's still closed |
+| A refused parent keeps the text | In that preview, type an out-of-range parent value and a governed answer; Save | Both come back with their text; the governed one reads "Kept until … is fixed." |
+| A locked branch | Give a governed field a response; reopen the card | The condition, the branch's "+"s and its fields' X and ↰ are off |
+| The export's condition | Download the by-instrument bundle for a branched instrument | The governed field's metadata carries a "Shown when" row ("Rating ≥ 4") |
 | Full-size sample rosters | Guide → Sample session → full-size download; upload both files in Quick Setup on a new session | 154 reviewers and reviewees, tag columns Tutor / Group / Team, a Profile column on Reviewees |
 
-**Where this came from.** `guide/segment_19T_odds_and_ends.md` Items 1–4 and 6–9,
+**Where this came from.** `guide/segment_19T_odds_and_ends.md` Items 1–4 and 6–10,
 each closed with this check owed. Settling a row is a dated line
 there, not a reopening.

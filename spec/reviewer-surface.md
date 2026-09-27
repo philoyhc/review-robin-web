@@ -425,7 +425,12 @@ is one response cell (one field for one reviewee):
   leading `*` echoes the ` *` marker on a required column's header
   ("Columns" above).
 - `All items completed: {P}/{Q}` — every response cell filled vs
-  total (`.pill-success` when `P == Q`, else `.pill-count`).
+  total (`.pill-success` when `P == Q`, else `.pill-count`). A governed
+  cell whose branch is closed (see "Branching between response fields"
+  below) is not an item — counting one no reviewer could ever fill
+  would hold the pill short of complete for good — so `{Q}` counts only
+  open cells. Required counts are untouched, since a governed field is
+  never required (`guide/advanced_instruments.md` Item 2 changes that).
 
 The `.rs-constraints` reminder and the numeric input's placeholder /
 `title` print an Integer or Decimal field's Min, Max and Step as
@@ -436,9 +441,9 @@ entered — no rounding, no trailing `.0`, no scientific notation
 `_surface_context` adds a `completion` dict per instrument group
 (`required_done` / `required_total` / `all_done` / `all_total`);
 `required_done` is DB-accurate, derived from each row's
-`missing_count`. The same layout is mirrored on the operator's
-Band 2 preview (see `spec/instruments.md` § Band 2 — pills + the
-JS-built `buildConstraints` block share the row and rebuild
+`missing_count`. The same layout is mirrored on the operator's Band 2
+preview (`spec/instruments.md` § "Branching between response fields" —
+the JS-built `buildConstraints` block share the row and rebuild
 together on every Band 3 / R toggle).
 
 - **Help block** above the table (below the heading row), listing each
@@ -563,6 +568,40 @@ Stored values are read from `Response` rows keyed by
 `value` (or selected `<option>` for `List`, or textarea body for the
 long `String` variant).
 
+### Branching between response fields
+
+`guide/advanced_instruments.md` Item 1 (design record, built as 19T
+Item 10); the builder side is `spec/instruments.md` § "Branching between
+response fields". A **governed** field's cell can be answered only
+while its **parent**'s branch is open — judged, per row, on the values
+the page shows (`applicable_field_ids`,
+`app/services/responses/_branching.py`), so an already-answered but now
+out-of-scope value still renders. A **group row** (below) is judged on
+its representative assignment's own answers, since the group shares one
+answer to the parent.
+
+A closed governed cell renders **muted** (`td.rs-branch-closed`) and its
+input **disabled**, titled with the condition that opens it —
+`views.branch_condition_label`: `"Opens when Rating ≥ 4"`. A value the
+page closes over **stays visible, greyed, and isn't sent**, so if the
+branch is still closed when the reviewer saves, the save rule deletes
+it (see below); reopening the branch brings the greyed value back live.
+
+**A live inline script** re-judges each parent cell as the reviewer
+edits it (`input` / `change`), mirroring `branch_is_open`: an empty or
+non-numeric answer closes a numeric branch; `is` opens on any of the
+condition's listed options, `is_not` on none of them. It only keeps the
+page honest — the server re-judges on Save / Submit regardless.
+
+**The save rule**, "a closed branch holds no value"
+(`app/services/responses/_branch_rule.py`), runs after every write of
+`Response` rows — Save, Submit, the group fan-out, and the responses
+import — so a governed answer never outlives its branch closing. A
+governed value typed in the same request as a parent value Save
+refuses is **held back as an error**, not written and then deleted: the
+reviewer sees `"Kept until {parent label} is fixed."` beside the
+parent's own error, and both come back with their typed text.
+
 ### View shape
 
 The route builds the table data in `_surface_context` as
@@ -575,7 +614,7 @@ The route builds the table data in `_surface_context` as
   "rows": [
     {
       "assignment": Assignment,
-      "cells": [{"field": InstrumentResponseField, "value": str}, …],
+      "cells": [{"field": InstrumentResponseField, "value": str, "governed_by": str, "branch_open": bool, "branch_hint": str}, …],
       "display_cells": [{"field": …, "label": …, "value": …, "is_profile_link": bool}, …],
       "is_complete": bool,
       "missing_count": int,
@@ -614,7 +653,8 @@ reviewer-surface specifics:
   lowest-id member assignment is the row's **representative** —
   the response inputs key off it (`response[{rep_id}][{field}]`)
   and the write fan-out spreads the answer to every member of the
-  group.
+  group. A branch's cells (above) are judged on the representative's
+  own answers, carried into the collapsed row along with its cells.
 - **`Group` identity column** replaces the `Reviewee` column and
   the per-reviewee display columns. It is composed from the
   group's boundary tag values on one line and, when the

@@ -253,8 +253,14 @@ greys the `Zip all` button (`aria-disabled="true"` +
 1. **Meta header** — instrument identity (Instrument /
    Description / Data Type rows), per-response-field
    metadata sub-block (Response field / Data Type / Min /
-   Max / Step / List / Helptext), assignment count, pool /
-   unit-of-review / self-review configuration. Pool rule
+   Max / Step / List / Helptext / **Shown when**), assignment count, pool /
+   unit-of-review / self-review configuration. **Shown when** appears
+   only for a field governed by a branch
+   (`guide/advanced_instruments.md` Item 1), stating its parent's
+   condition in the same words the reviewer surface hints a closed cell
+   with (`responses.condition_label` — "Rating ≥ 4"); a field outside
+   any branch adds no row, so an unbranched instrument's extract is
+   unchanged. Pool rule
    rows render fields as `{source_type}.{friendly_label}`
    so the row disambiguates which side of the assignment
    owns the slot. Skipped entirely when `meta=0`.
@@ -269,7 +275,11 @@ greys the `Zip all` button (`aria-disabled="true"` +
    reviewer. Group-scoped instruments collapse to one row
    per (reviewer × group × field), same as the unified
    Responses CSV. Rows with no non-empty response cells
-   drop out when `all_rows=0`.
+   drop out when `all_rows=0`. **A governed field whose branch is
+   closed exports blank**, as a skipped one does — the save rule
+   (`spec/reviewer-surface.md` § "Branching between response fields")
+   deletes its stored value whenever the branch closes, so there is no
+   `Response` row here to read, with no separate N/A marker.
 
 **Audit event.**
 `session.by_instrument_bundle_extracted` with
@@ -360,7 +370,7 @@ suffix on every single-state extract, and emit twice on
 |---|---|
 | `ReviewerName` / `RevieweeName` | Roster name. |
 | `ReviewerEmail` / `RevieweeEmail` | Roster email / identifier. |
-| `Assigned{_self\|_noself}` | Number of response cells the entity is supposed to fill in (or have filled in about them), scoped to the in-scope instruments **AND** the chip's self-review filter. Counts at the (entity × field) cell level — see "Group-scoped semantics" below for the asymmetric dedupe rule. |
+| `Assigned{_self\|_noself}` | Number of response cells the entity is supposed to fill in (or have filled in about them), scoped to the in-scope instruments **AND** the chip's self-review filter. Counts at the (entity × field) cell level — see "Group-scoped semantics" below for the asymmetric dedupe rule. **A governed field counts the same whether its branch is open or closed** (`guide/advanced_instruments.md` Item 1): the denominator can't tell "not applicable" (the branch never opened) from "skipped" (it did, and the reviewer left it blank), and there is no separate marker for either. |
 | `Count{_self\|_noself}` | Number of those cells with a non-empty response. |
 
 On `?self_review_handling=both` the two aggregate columns

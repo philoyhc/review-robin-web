@@ -41,6 +41,7 @@ triples actually get materialised from the Band 1 rule — see
   - [Instrument assignment rule + Unit of review](#instrument-assignment-rule--unit-of-review)
   - [Preview review instrument](#preview-review-instrument)
   - [Response fields](#response-fields)
+  - [Branching between response fields](#branching-between-response-fields)
   - [Action row](#action-row)
 - [Add / Replicate / Delete](#add--replicate--delete)
 - [Editing flow](#editing-flow)
@@ -900,11 +901,11 @@ the display-field table above; the right column, below, is the
 response-field table.
 
 **The right column is a table** (`rf-table`, `spec/ui_elements.md`
-§10): one `<tbody data-new-model-rf-group>` per field, each holding its
-`<tr data-new-model-rf-row>`, ruled under the group and not inside it —
-so a governed field (branching, `guide/advanced_instruments.md` Item 1)
-can later join its parent's `<tbody>` as one ruled group without
-reworking this table. **The row is the response-field model**, the same
+§10): one `<tbody data-new-model-rf-group>` per group, ruled under the
+group and not inside it — a field on its own, or a parent with its
+condition row and the fields it governs (branching,
+["Branching between response fields"](#branching-between-response-fields)
+below). **The row is the response-field model**, the same
 contract the display-field table's row carries (see "Display-field
 table" above): its state — selection, the name and shape last
 committed, column width, help text, response count — lives on the
@@ -920,13 +921,13 @@ Each row holds, left to right:
 |---|---|---|
 | **Active** checkbox | `InstrumentResponseField.visible` | The field's selection — whether it renders on the reviewer surface, the reviewer summary and the reviewer-record CSV (see below). Unticking a field with saved responses asks to confirm first — "Hide … from the reviewer surface?", naming the response count and that the data is preserved for audit. An inactive row is not dimmed. |
 | **+** button | — | Inserts a new row (its own `<tbody>` group) directly after this one's, seeded with the next default label (see "A field's default label" below). |
-| (empty column) | — | Held for a governed row's fork control (`guide/advanced_instruments.md` Item 1); empty until that item ships. |
+| **⑂** / **↳** / **↰** | `branch_parent_id` / `branch_op` / `branch_value` | Fork, join and detach — see ["Branching between response fields"](#branching-between-response-fields) below. |
 | Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Empty until typed — see "A field's default label" below. |
 | Type (`<select>`) | `_inline_data_type` | `String / Integer / Decimal / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. Disabled when the row has saved responses; the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
 | Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_options` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
 | **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. Stages Band 2 state directly, so Save alone persists a toggle. |
 | **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field above the reviewer-surface preview table. The help-text *text* is a plain `help_text` textarea on that card (shown when the instrument card is unlocked, `data-lock-only` read view when locked), bound to the `dfsave-{id}` form, so it commits with the bulk Save. Stages Band 2 state directly, like R. |
-| **▲ / ▼** | — | Full-size `btn secondary` buttons (not `btn-short` — that size is the display-field table's, see "Display-field table" above) that swap this row's `<tbody>` group with its neighbour. They move a **group**, not a row; a governed row moves within its group under Item 1's build. |
+| **▲ / ▼** | — | Full-size `btn secondary` buttons (not `btn-short` — that size is the display-field table's, see "Display-field table" above) that swap this row's `<tbody>` group with its neighbour. They move a **group**, not a row; a governed row moves within its branch instead — see ["Branching between response fields"](#branching-between-response-fields). |
 | **X** button (`.btn.destructive`) | — | Drops this row (its `<tbody>`), matching Band 1's rule/unit X. Disabled when the row has saved responses (title pins the reason), or when it is the only row left. |
 
 **A row commits to the preview by itself** whenever its live name and
@@ -1058,6 +1059,107 @@ identity is not stored — only the resulting `data_type` +
 Adding a preset: append a `(key, label, list_options)` tuple to
 `LIST_PRESETS` in `app/services/instruments/_field_presets.py`.
 No DB migration, no template macro changes.
+
+#### Branching between response fields
+
+`guide/advanced_instruments.md` Item 1 is the design record; 19T Item 10
+built it. A **parent** field (Integer, Decimal or List — never String)
+carries a condition; the fields it **governs** can be answered only
+while the condition holds for the assignment's answer to the parent
+(`app/services/responses/_branching.py`). A branch is one ruled group:
+the parent's `<tbody data-new-model-rf-group data-new-model-rf-branch>`
+holds the parent's row, its condition row, and every field it governs,
+directly following the parent in field order. **One level** (a field
+inside a branch can't itself be a parent) and **one branch per parent**.
+
+**⑂**, just after **+**, creates a branch: outline on an Integer,
+Decimal or List field with none, selected (filled, like a pressed R) on
+a parent, and inactive on a String field ("A String field can't have a
+branch"). A governed row shifts one column right before the name — the
+bar sits in the checkbox column, its checkbox in the **+** column, its
+**+** in the ⑂ column, and it has no ⑂ of its own — so every row aligns
+from the name onward, parent and governed alike.
+
+**The condition row** reads "If the above [operator] [value] then show
+the below". Its own "+" adds a governed field at the top of the branch;
+it has no X — the branch goes with its last governed field's X ("Delete
+this field and its branch"). The operators offered follow the parent's
+type:
+
+| Parent type | Operators (token → symbol) | Value |
+|---|---|---|
+| Integer / Decimal | `eq`→`=`, `ne`→`≠`, `gt`→`>`, `ge`→`≥`, `lt`→`<`, `le`→`≤` | one number |
+| List | `is`, `is_not` (shown "is" / "is not") | one option, or several comma-separated, read as *any of* / *none of* |
+
+Operators are stored as tokens, not symbols — a settings-CSV cell
+starting with `=` or `>` reads as a formula to spreadsheet software; the
+builder shows the symbols. An unanswered parent, or an answer that
+doesn't parse against the parent's type, closes the branch.
+
+**A condition reaches the preview like a field row commits, without a
+✓**: valid, it applies at once; invalid, the condition row carries the
+same amber left-edge marker a field row does (`data-row-pending`), the
+reason its tooltip, and Save refuses it, naming the field.
+
+**Join (↳) and detach (↰)** sit after ⑂, sharing its width (`.rf-glyph`).
+A plain row that isn't the first, has no saved responses and isn't
+itself a parent can join the unit above: the end of an unlocked branch,
+or, on a plain Integer, Decimal or List field, a new branch with an
+empty condition. Joining turns **R** off. A governed row in an unlocked
+branch can detach (↰) to directly below the branch; detaching the only
+governed field ends the branch, as X does.
+
+**Inside a branch:**
+
+- **R is inactive** on a governed row — never required
+  (`guide/advanced_instruments.md` Item 2 lifts this).
+- **String is disabled** in a parent's type select. Other type changes
+  keep the condition, which turns amber and is refused by Save if it no
+  longer fits.
+- **Deletion runs bottom-up.** A parent's X is disabled while it has a
+  branch ("Delete its branch first"); the last governed row's X deletes
+  that row and the condition together.
+- **The governed-answers lock.** Once any governed field has responses,
+  the condition and the branch's membership lock — every governed row's
+  X and ↰, the "+"s inside the branch, ↳ on the row below it, and the
+  condition's controls. Answers on
+  the parent alone lock nothing about the branch; the parent's own type
+  and bounds lock as they do today (`has_responses`).
+- **Active cascades both ways.** Unticking a parent's Active writes
+  `visible = False` onto every governed field; re-ticking it re-ticks
+  them all.
+- **An answered field can't move into a branch.** ↳ is off on a row
+  with saved responses, and Save refuses the move, since the field's
+  answers could then sit in a closed branch.
+
+**Storage:** `InstrumentResponseField.branch_parent_id` (a
+self-referencing FK, `ON DELETE SET NULL`) on a governed field;
+`branch_op` (`String(8)`, one of the tokens above) and `branch_value`
+(the number, or List options comma-separated) on the parent (Alembic
+`63b1bb107eb0`). The per-field routes (edit, delete, move, insert under
+`/fields/…`) refuse a branched instrument outright — each acts on one
+field and can't keep a branch's rules; its fields are edited on the
+instrument card only.
+
+**The stager** sends every row's `row_key`, so a branch can name a
+parent the same Save creates, plus `branch_parent` (a governed row's
+parent, by row key), `branch_op` and `branch_value` (a parent's
+condition). Each of the three is **independently present**, as the
+state's other top-level keys are: an entry that omits one keeps what's
+stored, so a caller ignorant of branching can't clear it. A hidden
+parent (Active off) hides its branch server-side too, and every branch
+change is audited as the field's `instrument.field_updated`.
+
+**The preview** mutes a governed column — the reviewer surface's
+closed-cell styling (`spec/reviewer-surface.md`), titled "Opens when
+…" — since the sample reviewee is unanswered and every branch is
+therefore closed. The item count above the preview (mirroring the
+reviewer surface's "*All items completed*" pill) excludes governed
+fields for the same reason.
+
+**Out of scope:** required governed fields (`guide/advanced_instruments.md`
+Item 2), nested branches, more than one branch per parent, and a String
+parent.
 
 ### Action row
 
@@ -1195,7 +1297,8 @@ key + the `order` slot:
   `description` carried as-is).
 - Display fields (cloned in order).
 - Response fields (cloned in order — including the inline
-  bounds and the help text).
+  bounds and the help text, and a branch: the parent's condition
+  is copied and a governed field re-pointed at its parent's copy).
 - Band 1's `rule_set_id` — **shared, not deep-cloned.** The
   clone points at the same `SessionRuleSet` row. Operator edits
   on the clone's Band 1 will materialise a new `SessionRuleSet`
