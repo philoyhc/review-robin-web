@@ -1452,3 +1452,213 @@ at spec-writer's flag.
 - `spec/ui_elements.md` — §10's `rf-table` row: a branch shares one ruled `<tbody>`; the bar and `.rf-glyph` (Item 10, added at the close).
 - `guide/advanced_instruments.md` — Item 1 points to this item as the build (Item 10).
 - `docs/status.md` — row when the item closes (Item 10).
+
+---
+
+## Item 11 — Required governed fields
+
+**Opened 2026-09-27 on the author's instruction**: `guide/advanced_instruments.md`
+Item 2, on Item 10 as it shipped. The record holds the rule, the
+required-parent ruling, the twelve blocks and the recommended route;
+this block holds what Item 10 changed underneath them and the ladder.
+
+### Opportunity
+
+A field inside a branch can't be required: Item 10 holds `required`
+false on a governed field in three places (the builder's R,
+`set_band2_state` through `branch_structure_errors`, the settings-CSV
+parse). So a follow-up question that must be answered whenever it applies
+can't be asked. Everything that counts required fields counts a fixed
+number per instrument, so a required governed field would be "missing"
+behind a closed branch, blocking a submit that can't be completed.
+
+### Decision
+
+The record's Item 2, as ruled:
+- **A required governed field is required, and missing when empty, only
+  while its branch is open** for that assignment (per group row on a
+  group-scoped instrument). Closed, it is neither, and Item 10's save rule
+  means it holds no value.
+- **It needs a required parent.** R on a governed row is live only while
+  its parent's R is on; turning the parent's R off turns its branch's R
+  off. `set_band2_state` and the settings-CSV parse refuse the rest.
+- **Every per-instrument required count becomes per assignment**, judged
+  by Item 10's `applicable_field_ids`: blocks 1–5 and 10 in Python, and
+  blocks 6–7 by **route (a)**: an instrument with a required governed
+  field goes down the rollups' existing Python path, as a group-scoped one
+  does.
+
+**Rejected: route (b), a stored open-branch table**, which the SQL would
+join. It is faster on a large session but adds a table and a writer; kept
+in reserve if route (a) proves slow. **Rejected: a durable submission
+marker** (the record's reason: it changes "complete" in every rollup).
+
+### Semantics
+
+- **The submit gate** judges the parent on the state this submit leaves,
+  since the parent can change in the same submit.
+- **A hidden governed field** is filtered by `visible` already (Item 10's
+  cascade), so a hidden branch counts nowhere.
+- **The operator's "now missing" warning** when R is turned on counts only
+  assignments whose branch is open.
+- **The column header keeps its `*`**; a closed cell drops "(required)"
+  from its label and its missing mark.
+- **Reminders**: a reviewer whose only empty required field sits behind a
+  closed branch is complete and is not reminded.
+- **Exports**: `RequiredFieldsAnswered*` counts answers and stays correct;
+  the data-shape `assigned` denominator stays as Item 10 left it.
+
+### Blast radius (measured)
+
+Taken 2026-09-27 at `3cec7196`:
+- The ten functions the record's blocks 1–8 name all still exist, in 5
+  files (`grep -rln "def <name>" app/`): `_core.py` (3), `_status.py`,
+  `_response_fields.py`, `monitoring.py` (5).
+- Readers of the two rollups: 7 modules
+  (`grep -rln "per_reviewer_progress\|per_reviewee_coverage" app/`),
+  among them `scheduled_events/_reminders.py` and `invitations.py`.
+- Item 10's guards on `required`: 3 sites (`grep -rn "can't be required"
+  app/`: `_branching.py`, and the template's server-rendered and JS
+  titles); the settings-CSV parse reaches the first through
+  `branch_structure_errors`.
+- Tests on the required paths: 7 files (`grep -rln
+  "per_reviewer_progress\|per_reviewee_coverage\|_compute_missing_required\|compute_row_completion\|rollup_parts_from_assignments"
+  tests/`).
+- Specs: `spec/reviewer-surface.md` (4 required-count mentions),
+  `spec/operations_pages.md` (1), `spec/instruments.md`,
+  `spec/csv_contracts.md`, `spec/rrw_functional_spec.md`.
+
+### PR ladder
+
+Each rung deploys safely on its own (the record, after Codex): **the
+guards stay on until the rollups are taught**. The item's cumulative
+`diff-reviewer` read runs at rung 4, from the rung-1 merge.
+1. **The plan** (this block, prose only).
+2. **The per-assignment count in Python**: blocks 1–5 and 10 on
+   `applicable_field_ids`, with Item 10's guards still on; tests build
+   required governed fields directly.
+3. **The rollups**: blocks 6–9, route (a) for both sides, the parity
+   oracle and fixture (Item 10's governed fields flipped to required), the
+   reminder test. Guards still on.
+4. **Authoring**: block 12. The guards come off; the required-parent rule
+   goes into the builder's R, `set_band2_state` and the settings-CSV
+   parse. Cumulative read.
+5. **Close.**
+
+### Definition of done
+
+- A required governed field blocks a submit only while its branch is open;
+  pinned in `tests/integration/`, group-scoped included.
+- `tests/integration/test_monitoring_rollup_parity.py` passes with its
+  governed fields required, on every implementation in its lists.
+- A reviewer whose only empty required field is behind a closed branch is
+  complete and not reminded; pinned.
+- Save and the settings CSV refuse a required governed field under an
+  optional parent, naming it.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.11` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+None open: the record's rulings and route (a) apply. A question the build
+raises is logged here.
+
+### Out of scope
+
+- **Route (b)** until route (a) is measured slow on a large session.
+- **A zero-row submit on an instrument with no required fields** reading
+  as untouched: predates branching (the record).
+- **Nested branches, String parents**: ruled out by Item 10's record.
+
+### Doc impact
+
+- `spec/reviewer-surface.md` — the required counts and the submit gate per assignment; a closed cell's required mark (Item 11).
+- `spec/operations_pages.md` — the rollups count a required governed field only while its branch is open; route (a) (Item 11).
+- `spec/instruments.md` — R inside a branch and the required-parent rule; the "now missing" warning (Item 11).
+- `spec/csv_contracts.md` — §3.3: `required` on a governed field needs a required parent (Item 11).
+- `spec/rrw_functional_spec.md` — required governed fields leave the out-of-scope list (Item 11).
+- `guide/advanced_instruments.md` — Item 2 points to this item as the build (Item 11).
+- `docs/status.md` — row when the item closes (Item 11).
+
+---
+
+## Item 12 — The Guide catches up with 19T
+
+**Opened 2026-09-27 on the author's instruction** ("updates to Guide").
+
+### Opportunity
+
+The in-app Guide (`app/web/templates/guide.html`, "Build the form") was
+last brought up to date at 19T Item 9's rung 6. Since then:
+- **Branching (Item 10) is absent**: nothing names ⑂, the condition row,
+  ↳ / ↰, or what a reviewer sees in a closed branch.
+- **Two captures' alt text describes retired controls**:
+  `instrument-card-preview` still names "the draggable field pills along
+  the bottom", and `instrument-card-fields-and-visibility` "the Visibility
+  table" in the card's foot, both gone since Items 7–9.
+- **The instrument captures predate Items 7–10**; the status rows for
+  Items 6–10 each record that the author retakes them.
+- "For reviewers" says nothing of required fields or of fields that open
+  from an answer.
+
+### Decision
+
+Bring the Guide's prose up to what shipped, in its own voice and at its
+current depth: one paragraph on branching in "Build the form", a sentence
+in "For reviewers", and alt text that describes the captures the author
+supplies. **Captures are the author's**: this item replaces files the
+author retakes, and writes alt text for what they show.
+
+**Rejected: a Guide section per feature.** The Guide is a walkthrough, not
+a reference; `spec/instruments.md` carries the detail.
+
+### Blast radius (measured)
+
+Taken 2026-09-27 at `3cec7196`:
+- `app/web/templates/guide.html`: 751 lines; "Build the form" is lines
+  235–368.
+- Captures: 34 files in `app/web/static/guide/` (17 light / dark pairs);
+  the instrument card's four pairs are the ones Items 7–10 changed.
+- Tests reading the Guide: 7 files (`grep -rln "guide" tests/` over the
+  routes and captures); `tests/integration/test_guide_screencaps.py`
+  fails on a referenced-but-missing or committed-but-unreferenced file.
+
+### PR ladder
+
+1. **Prose**: branching, the reviewer's view, the stale alt text rewritten
+   to what the current captures show or marked for retake.
+2. **Captures**: the author's retaken instrument pairs swapped in, with alt
+   text matching them. Lands when the author supplies them.
+3. **Close.**
+
+### Definition of done
+
+- "Build the form" names ⑂, the condition, ↳ / ↰ and the governed rows'
+  rules in one paragraph; "For reviewers" names required and branch cells.
+- No alt text names a retired control (pills in Band 2, the Visibility
+  table, ✓).
+- `tests/integration/test_guide_screencaps.py` passes.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.12` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. **Which captures the author retakes**, and whether a new one shows a
+   branch. Decides rung 2's scope. The author.
+2. **Whether Item 12 waits for Item 11**, so the Guide describes required
+   governed fields once rather than twice. The author.
+
+### Out of scope
+
+- The Guide's other sections, beyond a sentence where 19T changed what
+  they describe.
+
+### Doc impact
+
+- `docs/status.md` — row when the item closes (Item 12).
