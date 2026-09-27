@@ -445,6 +445,6 @@ rendered page. Neither was a person on the live app.
 | The export's condition | Download the by-instrument bundle for a branched instrument | The governed field's metadata carries a "Shown when" row ("Rating ≥ 4") |
 | Full-size sample rosters | Guide → Sample session → full-size download; upload both files in Quick Setup on a new session | 154 reviewers and reviewees, tag columns Tutor / Group / Team, a Profile column on Reviewees |
 
-**Where this came from.** `guide/segment_19T_odds_and_ends.md` Items 1–4 and 6–10,
+**Where this came from.** `guide/segment_19T_advanced_instruments.md` Items 1–4 and 6–10,
 each closed with this check owed. Settling a row is a dated line
 there, not a reopening.

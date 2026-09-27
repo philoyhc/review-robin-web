@@ -1,11 +1,16 @@
-# Segment 19T — Odds and ends
+# Segment 19T — Advanced instruments
 
-**Opened:** 2026-09-24 · **Theme:** small operator-UI adjustments the author
-logs one at a time; items close independently · **Related:**
-`spec/instruments.md`, `guide/archive/segment_19S_post_assessment.md`
+**Opened:** 2026-09-24 · **Theme:** the Instruments page's builder and
+`guide/advanced_instruments.md`, built an item at a time; items close
+independently · **Related:** `spec/instruments.md`,
+`guide/archive/segment_19S_post_assessment.md`
 
-A holding segment for small, unrelated adjustments, each an item with its own
-`Doc impact` and `Status`. It closes when every item has.
+Opened as "Odds and ends", a holding segment for small operator-UI
+adjustments (Items 1–6), and renamed 2026-09-27 on the author's
+instruction once most of its items were `guide/advanced_instruments.md`'s
+(Items 7–12). Items 4 and 5 are the two that aren't instrument work. Each
+item has its own `Doc impact` and `Status`; the segment closes when every
+item has.
 
 ---
 
