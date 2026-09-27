@@ -102,6 +102,35 @@ def _invitations_by_reviewer(
     return {inv.reviewer_id: inv for inv in rows}
 
 
+def _required_governed_instrument_ids():
+    """The ids of the instruments with a required governed field, as a
+    subquery (19T Item 11).
+
+    Such a field is required only while its branch is open for an
+    assignment, and the branch is judged on the parent's answer, which
+    is ``Text``: evaluating the condition in SQL would need a numeric
+    cast that errors on Postgres over a bad value and reads it as 0 on
+    SQLite. So both rollups send these instruments down a Python path
+    built on ``responses.required_field_ids`` instead ("route (a)" in
+    ``guide/advanced_instruments.md`` Item 2). Visibility is not
+    filtered here: routing a hidden field's instrument to Python is only
+    slower, never wrong, since the Python half applies the same filters
+    as its SQL twin."""
+    return select(InstrumentResponseField.instrument_id).where(
+        InstrumentResponseField.required.is_(True),
+        InstrumentResponseField.branch_parent_id.is_not(None),
+    )
+
+
+def _python_routed_instruments():
+    """The reviewer rollup's Python half: group-scoped instruments (the
+    dedupe) and those with a required governed field (19T Item 11)."""
+    return or_(
+        Instrument.group_kind.is_not(None),
+        Instrument.id.in_(_required_governed_instrument_ids()),
+    )
+
+
 def _plain_instrument_parts(
     db: Session, session_id: int
 ) -> dict[int, responses_service.RollupParts]:
@@ -185,8 +214,11 @@ def _plain_instrument_parts(
         .where(
             Assignment.session_id == session_id,
             Assignment.include.is_(True),
-            # The group-scoped ones go down the Python path.
+            # Group-scoped instruments and those with a required
+            # governed field go down the Python path
+            # (``_python_routed_instruments``).
             Instrument.group_kind.is_(None),
+            Instrument.id.not_in(_required_governed_instrument_ids()),
         )
         .group_by(
             Assignment.id,
@@ -247,10 +279,17 @@ def _plain_instrument_parts(
     }
 
 
-def _grouped_instrument_parts(
+def _python_instrument_parts(
     db: Session, review_session: ReviewSession
 ) -> dict[int, responses_service.RollupParts]:
-    """The same, for **group-scoped instruments**, still in Python.
+    """The same, in Python, for **group-scoped instruments** and those
+    with a **required governed field** (``_python_routed_instruments``).
+
+    A required governed field is required only while its branch is open,
+    which ``rollup_parts_from_assignments`` judges per assignment through
+    ``responses.required_field_ids`` (19T Item 11). A per-reviewee
+    instrument has no group key, so it passes through the dedupe as
+    itself.
 
     The dedupe keeps one assignment per ``(instrument, group_key)``, and
     the key is a tuple of boundary tag values read off the reviewee row
@@ -260,9 +299,10 @@ def _grouped_instrument_parts(
     being subtly wrong means an operator's progress figure is subtly
     wrong. The item's open question allowed a hybrid; this is it.
 
-    **The bound is assignments on group-scoped instruments**, not the
-    session's assignments. A session that is entirely group-scoped at
-    roster scale gains nothing here — stated rather than discovered.
+    **The bound is assignments on these instruments**, not the session's
+    assignments. A session that is entirely group-scoped, or whose every
+    instrument has a required governed field, gains nothing here at
+    roster scale — stated rather than discovered.
     """
     grouped = list(
         db.execute(
@@ -276,7 +316,7 @@ def _grouped_instrument_parts(
             .where(
                 Assignment.session_id == review_session.id,
                 Assignment.include.is_(True),
-                Instrument.group_kind.is_not(None),
+                _python_routed_instruments(),
             )
             .order_by(Assignment.id)
         ).scalars()
@@ -302,11 +342,13 @@ def _grouped_instrument_parts(
     group_key_by_assignment = responses_service.group_keys(
         db, assignments=grouped, session_id=review_session.id
     )
-    # Only the grouped rows: the aggregate half has already counted
-    # every per-reviewee instrument in SQL, and loading its responses
-    # here would put back most of the ORM rows this rung removes.
+    # Only these rows: the aggregate half has already counted every
+    # other instrument in SQL, and loading its responses here would put
+    # back most of the ORM rows 19R Item 3 rung 3 removed.
     responses_by_assignment = responses_service.responses_by_assignment(
-        db, session_id=review_session.id, group_scoped_only=True
+        db,
+        session_id=review_session.id,
+        instrument_clause=_python_routed_instruments(),
     )
 
     by_reviewer: dict[int, list[Assignment]] = {}
@@ -332,7 +374,8 @@ def per_reviewer_progress(
 
     **Split by instrument kind** (19R Item 3 rung 3): per-reviewee
     instruments roll up in one aggregate query, group-scoped ones keep
-    the Python dedupe, and the two halves add. ``RollupParts`` exists
+    the Python dedupe, and the two halves add. Instruments with a
+    required governed field join the Python half (19T Item 11). ``RollupParts`` exists
     for that addition — a pill cannot be summed, because "not started"
     does not say whether the required fields were met.
 
@@ -346,7 +389,7 @@ def per_reviewer_progress(
     reviewers = _assigned_active_reviewers(db, review_session.id)
     invitations = _invitations_by_reviewer(db, review_session.id)
     plain = _plain_instrument_parts(db, review_session.id)
-    grouped = _grouped_instrument_parts(db, review_session)
+    grouped = _python_instrument_parts(db, review_session)
 
     empty = responses_service.RollupParts.empty()
     out: list[ReviewerProgress] = []
@@ -495,8 +538,10 @@ def _assignment_complete(
 
     "Complete" mirrors the reviewer-side definition: every required
     response field has a non-empty value with a non-null ``submitted_at``.
-    The second tuple element is the most recent ``submitted_at`` across
-    all response rows on the assignment (or ``None``)."""
+    A required governed field counts only while its branch is open for
+    this assignment's answers (19T Item 11). The second tuple element is
+    the most recent ``submitted_at`` across all response rows on the
+    assignment (or ``None``)."""
     if responses_by_assignment is not None:
         rows = responses_by_assignment.get(assignment.id, [])
     else:
@@ -507,7 +552,9 @@ def _assignment_complete(
         )
     if not rows:
         return False, None
-    required_ids = {f.id for f in fields if f.required}
+    required_ids = responses_service.required_field_ids(
+        fields, {r.response_field_id: r.value for r in rows}
+    )
     by_field = {r.response_field_id: r for r in rows}
     is_complete = True
     if not required_ids:
@@ -612,6 +659,9 @@ def per_reviewee_coverage(
         .where(
             Assignment.session_id == sid,
             Assignment.include.is_(True),
+            # An instrument with a required governed field is counted by
+            # ``_python_routed_coverage`` below (19T Item 11).
+            Assignment.instrument_id.not_in(_required_governed_instrument_ids()),
         )
         .group_by(
             Assignment.id,
@@ -645,6 +695,7 @@ def per_reviewee_coverage(
         .subquery()
     )
 
+    python_half = _python_routed_coverage(db, sid)
     rows = db.execute(
         select(
             Reviewee,
@@ -652,22 +703,106 @@ def per_reviewee_coverage(
             rollup.c.completed_count,
             rollup.c.last_response_at,
         )
-        .join(rollup, rollup.c.reviewee_id == Reviewee.id)
+        # Outer, so a reviewee whose only assignments are on instruments
+        # the Python half counts still gets a row.
+        .outerjoin(rollup, rollup.c.reviewee_id == Reviewee.id)
+        .where(
+            Reviewee.session_id == sid,
+            or_(
+                rollup.c.reviewee_id.is_not(None),
+                Reviewee.id.in_(_python_routed_reviewee_ids(sid)),
+            ),
+        )
         .order_by(Reviewee.email_or_identifier)
     ).all()
 
-    return [
-        RevieweeCoverage(
-            reviewee=reviewee,
-            reviewer_count=int(reviewer_count),
-            completed_count=int(completed_count),
-            pill_state=_classify_coverage(
-                int(completed_count), int(reviewer_count)
-            ),
-            last_response_at=last_response_at,
+    out: list[RevieweeCoverage] = []
+    for reviewee, reviewer_count, completed_count, last_response_at in rows:
+        reviewer_count, completed_count = int(reviewer_count or 0), int(
+            completed_count or 0
         )
-        for reviewee, reviewer_count, completed_count, last_response_at in rows
-    ]
+        extra = python_half.get(reviewee.id)
+        if extra is not None:
+            reviewer_count += extra[0]
+            completed_count += extra[1]
+            if extra[2] is not None and (
+                last_response_at is None or extra[2] > last_response_at
+            ):
+                last_response_at = extra[2]
+        out.append(
+            RevieweeCoverage(
+                reviewee=reviewee,
+                reviewer_count=reviewer_count,
+                completed_count=completed_count,
+                pill_state=_classify_coverage(completed_count, reviewer_count),
+                last_response_at=last_response_at,
+            )
+        )
+    return out
+
+
+def _python_routed_reviewee_ids(session_id: int):
+    """The reviewees with an included assignment on an instrument that
+    ``_python_routed_coverage`` counts, as a subquery."""
+    return select(Assignment.reviewee_id).where(
+        Assignment.session_id == session_id,
+        Assignment.include.is_(True),
+        Assignment.instrument_id.in_(_required_governed_instrument_ids()),
+    )
+
+
+def _python_routed_coverage(
+    db: Session, session_id: int
+) -> dict[int, tuple[int, int, datetime | None]]:
+    """``per_reviewee_coverage``'s Python half (19T Item 11): for the
+    instruments with a required governed field, per reviewee, the
+    assignment count, how many are complete, and the latest stamp.
+
+    Each assignment goes through ``_assignment_complete``, the oracle's
+    own definition, which judges a required governed field only while its
+    branch is open. Every field counts, visible or not: the reviewee side
+    doesn't filter ``visible``, an asymmetry the parity file pins
+    (``test_an_invisible_required_field_is_the_reviewers_third_asymmetry``).
+    Three queries when the session has such an instrument, one when it
+    doesn't."""
+    routed = list(
+        db.execute(
+            select(Assignment).where(
+                Assignment.session_id == session_id,
+                Assignment.include.is_(True),
+                Assignment.instrument_id.in_(_required_governed_instrument_ids()),
+            )
+        ).scalars()
+    )
+    if not routed:
+        return {}
+    fields_by_instrument: dict[int, list[InstrumentResponseField]] = {}
+    for field in db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id.in_(
+                {a.instrument_id for a in routed}
+            )
+        )
+    ).scalars():
+        fields_by_instrument.setdefault(field.instrument_id, []).append(field)
+    responses_by_assignment = responses_service.responses_by_assignment(
+        db,
+        session_id=session_id,
+        instrument_clause=Instrument.id.in_(_required_governed_instrument_ids()),
+    )
+    out: dict[int, tuple[int, int, datetime | None]] = {}
+    for assignment in routed:
+        is_complete, last_at = _assignment_complete(
+            db,
+            assignment,
+            fields_by_instrument.get(assignment.instrument_id, []),
+            responses_by_assignment,
+        )
+        count, completed, latest = out.get(assignment.reviewee_id, (0, 0, None))
+        if last_at is not None and (latest is None or last_at > latest):
+            latest = last_at
+        out[assignment.reviewee_id] = (count + 1, completed + int(is_complete), latest)
+    return out
 
 
 def _per_reviewee_coverage_python(
