@@ -193,20 +193,21 @@ def placeholder_for_field(field: InstrumentResponseField) -> str:
 
 def branch_condition_label(parent: InstrumentResponseField) -> str:
     """19T Item 10 — a parent's branch condition as a reviewer reads it,
-    "Rating ≥ 4" or "Colour is Red or Blue", for the hint on a closed
-    governed cell. The operator tokens map to the symbols the builder
-    shows (``app.services.responses.NUMERIC_OPS``)."""
-    from app.services.responses import LIST_OP, NUMERIC_OPS
+    "Rating ≥ 4", "Colour is Red or Blue" or "Colour is not Red or Blue",
+    for the hint on a closed governed cell. The operator tokens map to
+    the words and symbols the builder shows
+    (``app.services.responses.NUMERIC_OPS`` / ``LIST_OPS``)."""
+    from app.services.responses import LIST_OPS, NUMERIC_OPS
 
     op, value = parent.branch_op or "", (parent.branch_value or "").strip()
-    if op == LIST_OP:
+    if op in LIST_OPS:
         options = [o.strip() for o in value.split(",") if o.strip()]
         joined = (
             ", ".join(options[:-1]) + " or " + options[-1]
             if len(options) > 1
             else "".join(options)
         )
-        return f"{parent.label} is {joined}"
+        return f"{parent.label} {LIST_OPS[op]} {joined}"
     return f"{parent.label} {NUMERIC_OPS.get(op, op)} {value}"
 
 
@@ -335,7 +336,7 @@ def _response_field_groups(
     ``branch_locked`` (a governed field has responses, which locks the
     branch's condition and membership). A group's ``condition`` carries
     the operator choices the parent's type allows, as (token, symbol)."""
-    from app.services.responses import LIST_OP, NUMERIC_OPS
+    from app.services.responses import LIST_OPS, NUMERIC_OPS
 
     parent_ids = {
         rf["branch_parent_id"]
@@ -363,7 +364,7 @@ def _response_field_groups(
         condition = None
         if rf["is_parent"]:
             ops = (
-                [(LIST_OP, "is")]
+                list(LIST_OPS.items())
                 if rf["data_type"] == "list"
                 else list(NUMERIC_OPS.items())
             )
@@ -647,7 +648,7 @@ def _new_model_band2_state(
             rf["response_count"] = count
             rf["has_responses"] = count > 0
     response_field_groups = _response_field_groups(response_fields)
-    from app.services.responses import LIST_OP, NUMERIC_OPS
+    from app.services.responses import LIST_OPS, NUMERIC_OPS
     sort_spec = list(instrument.sort_display_fields or [])
     return {
         "fields": fields,
@@ -661,7 +662,7 @@ def _new_model_band2_state(
         # type, for the builder to fill a new condition row's select.
         "branch_ops": {
             "numeric": [list(pair) for pair in NUMERIC_OPS.items()],
-            "list": [[LIST_OP, "is"]],
+            "list": [list(pair) for pair in LIST_OPS.items()],
         },
         "roster": roster,
         "sample_reviewee_name": sample.name if sample is not None else "",

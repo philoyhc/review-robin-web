@@ -4802,7 +4802,9 @@
             return "A String field can't have a branch.";
           }
           if (dataType === 'list') {
-            if (op !== 'is') { return 'A List field\'s branch condition must be "is".'; }
+            if (op !== 'is' && op !== 'is_not') {
+              return 'A List field\'s branch condition must be "is" or "is not".';
+            }
             var chosen = items(value);
             if (chosen.length === 0) {
               return 'Choose at least one option for the branch condition.';
@@ -4824,8 +4826,8 @@
           }
           return null;
         };
-        // The operators the parent's live type allows: "is" for a List,
-        // the six comparisons for a number. A type change keeps the
+        // The operators the parent's live type allows: "is" and "is not"
+        // for a List, the six comparisons for a number. A type change keeps the
         // chosen operator where it still applies (ruling 3: the condition
         // stays, and turns amber if it no longer fits).
         window.newModelRfSyncConditionOps = window.newModelRfSyncConditionOps || function (group) {
@@ -4902,13 +4904,14 @@
           var input = cond.querySelector('[data-new-model-rf-condition-value]');
           var value = (input && input.value || '').trim();
           var label = parent.getAttribute('data-label') || '';
-          if (sel && sel.value === 'is') {
+          if (sel && (sel.value === 'is' || sel.value === 'is_not')) {
             var opts = value.split(',').map(function (s) { return s.trim(); })
               .filter(function (s) { return s.length > 0; });
             var joined = opts.length > 1
               ? opts.slice(0, -1).join(', ') + ' or ' + opts[opts.length - 1]
               : opts.join('');
-            return 'Opens when ' + label + ' is ' + joined;
+            return 'Opens when ' + label + ' '
+              + (sel.value === 'is' ? 'is' : 'is not') + ' ' + joined;
           }
           var symbol = sel && sel.selectedIndex >= 0
             ? sel.options[sel.selectedIndex].textContent : '';

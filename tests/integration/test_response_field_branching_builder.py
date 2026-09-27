@@ -111,7 +111,7 @@ def test_the_condition_row_shows_the_saved_condition(
     condition = _rows_table(card).split("<tr data-new-model-rf-condition>")[1]
     select = condition.split("</select>")[0]
     assert '<option value="ge" selected>≥</option>' in select
-    # An Integer parent offers the six comparisons, not "is".
+    # An Integer parent offers the six comparisons, not "is" / "is not".
     assert re.findall(r'<option value="(\w+)"', select) == [
         "eq", "ne", "gt", "ge", "lt", "le"
     ]
@@ -142,7 +142,7 @@ def test_branch_controls_are_wired(client: TestClient, db: Session) -> None:
     assert json.loads(ops.replace("&#34;", '"')) == {
         "numeric": [["eq", "="], ["ne", "≠"], ["gt", ">"], ["ge", "≥"],
                     ["lt", "<"], ["le", "≤"]],
-        "list": [["is", "is"]],
+        "list": [["is", "is"], ["is_not", "is not"]],
     }
     assert "<template data-new-model-rf-condition-template>" in flat
 

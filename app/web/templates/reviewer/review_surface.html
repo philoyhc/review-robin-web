@@ -655,17 +655,18 @@
        reviewer answers the parent. Mirrors ``branch_is_open`` in
        ``app/services/responses/_branching.py``: an empty or
        non-numeric answer closes a numeric branch; "is" matches any of
-       the listed options. The server re-judges on Save and deletes a
+       the listed options and "is not" none of them. The server re-judges on Save and deletes a
        closed branch's answer, so this only keeps the page honest. #}
     <script>
       (function () {
         function isOpen(op, value, raw) {
           raw = (raw || "").trim();
           if (!op || raw === "") { return false; }
-          if (op === "is") {
-            return value.split(",").map(function (item) {
+          if (op === "is" || op === "is_not") {
+            var chosen = value.split(",").map(function (item) {
               return item.trim();
             }).indexOf(raw) >= 0;
+            return op === "is" ? chosen : !chosen;
           }
           var a = Number(raw);
           var b = Number((value || "").trim());

@@ -140,7 +140,8 @@ def test_the_surface_script_mirrors_the_service_rule(
     start = body.index("function isOpen(op, value, raw)")
     script = body[start : body.index("})();", start)]
     assert 'if (!op || raw === "") { return false; }' in script
-    assert 'if (op === "is") {' in script
+    assert 'if (op === "is" || op === "is_not") {' in script
+    assert 'return op === "is" ? chosen : !chosen;' in script
     for op, js in (("eq", "==="), ("ne", "!=="), ("gt", ">"), ("ge", ">="),
                    ("lt", "<"), ("le", "<=")):
         assert f'if (op === "{op}") {{ return a {js} b; }}' in script

@@ -31,10 +31,13 @@ NUMERIC_OPS: dict[str, str] = {
     "lt": "<",
     "le": "≤",
 }
-# List parents: "is", one option or several comma-separated, read as
-# *any of*.
-LIST_OP = "is"
-BRANCH_OPS: frozenset[str] = frozenset({*NUMERIC_OPS, LIST_OP})
+# List parents: "is" or "is not", against one option or several
+# comma-separated, read as *any of* and *none of*.
+LIST_OPS: dict[str, str] = {
+    "is": "is",
+    "is_not": "is not",
+}
+BRANCH_OPS: frozenset[str] = frozenset({*NUMERIC_OPS, *LIST_OPS})
 
 # Inline ``data_type`` values a parent may have. String can't be a parent.
 PARENT_DATA_TYPES: frozenset[str] = frozenset({"Integer", "Decimal", "List"})
@@ -79,8 +82,8 @@ def condition_error(
     if data_type not in PARENT_DATA_TYPES:
         return "A String field can't have a branch."
     if data_type == "List":
-        if op != LIST_OP:
-            return "A List field's branch condition must be \"is\"."
+        if op not in LIST_OPS:
+            return "A List field's branch condition must be \"is\" or \"is not\"."
         chosen = _list_items(value)
         if not chosen:
             return "Choose at least one option for the branch condition."
@@ -108,8 +111,9 @@ def branch_is_open(parent: BranchField, answer: str | None) -> bool:
     op, value = parent.branch_op, parent.branch_value
     if not op or answer is None or not answer.strip():
         return False
-    if op == LIST_OP:
-        return answer.strip() in set(_list_items(value))
+    if op in LIST_OPS:
+        chosen = answer.strip() in set(_list_items(value))
+        return chosen if op == "is" else not chosen
     left, right = _finite_number(answer), _finite_number(value)
     if left is None or right is None:
         return False

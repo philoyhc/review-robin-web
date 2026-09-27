@@ -49,7 +49,11 @@ def _governed(**kw) -> Field:
         ("Integer", None, "eq", "", "The branch condition needs a number."),
         ("Integer", None, "eq", "inf", "The branch condition needs a number."),
         ("List", "Red,Green,Blue", "is", "Red, Blue", None),
-        ("List", "Red,Green", "eq", "Red", "A List field's branch condition must be \"is\"."),
+        ("List", "Red,Green,Blue", "is_not", "Red, Blue", None),
+        ("List", "Red,Green", "eq", "Red",
+         "A List field's branch condition must be \"is\" or \"is not\"."),
+        ("List", "Red,Green", "is_not", "Pink",
+         "The branch condition names an option the list doesn't have: Pink."),
         ("List", "Red,Green", "is", " , ", "Choose at least one option for the branch condition."),
         ("List", "Red,Green", "is", "Red, Pink",
          "The branch condition names an option the list doesn't have: Pink."),
@@ -79,6 +83,10 @@ def test_condition_error(data_type, list_csv, op, value, expected) -> None:
         ("is", "Red, Blue", "Blue", True),
         ("is", "Red, Blue", " Red ", True),
         ("is", "Red, Blue", "Green", False),
+        # …and "is not" none of them; unanswered still closes it.
+        ("is_not", "Red, Blue", "Green", True),
+        ("is_not", "Red, Blue", " Blue ", False),
+        ("is_not", "Red, Blue", "", False),
         # A field with no condition has no branch to open.
         (None, None, "3", False),
     ],
@@ -134,3 +142,20 @@ def test_a_branch_must_directly_follow_its_parent() -> None:
     assert branch_structure_errors(
         [_parent(), notes, _governed(order=2)]
     ) == [("Rating", "A branch's fields must directly follow their parent.")]
+
+
+@pytest.mark.parametrize(
+    ("op", "value", "label"),
+    [
+        ("ge", "4", "Colour ≥ 4"),
+        ("is", "Red, Blue", "Colour is Red or Blue"),
+        ("is_not", "Red, Green, Blue", "Colour is not Red, Green or Blue"),
+    ],
+)
+def test_the_condition_reads_as_the_builder_shows_it(op, value, label) -> None:
+    from types import SimpleNamespace
+
+    from app.web.views import branch_condition_label
+
+    parent = SimpleNamespace(label="Colour", branch_op=op, branch_value=value)
+    assert branch_condition_label(parent) == label

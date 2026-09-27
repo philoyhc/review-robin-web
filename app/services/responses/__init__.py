@@ -55,7 +55,7 @@ from ._core import (
 from ._branch_rule import closed_governed_field_ids, drop_closed_branch_answers
 from ._branching import (
     BRANCH_OPS,
-    LIST_OP,
+    LIST_OPS,
     NUMERIC_OPS,
     PARENT_DATA_TYPES,
     applicable_field_ids,
@@ -103,7 +103,7 @@ __all__ = [
     "drop_closed_branch_answers",
     # _branching
     "BRANCH_OPS",
-    "LIST_OP",
+    "LIST_OPS",
     "NUMERIC_OPS",
     "PARENT_DATA_TYPES",
     "applicable_field_ids",
