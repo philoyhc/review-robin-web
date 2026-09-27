@@ -15,6 +15,7 @@ from app.services.responses import (
     condition_error,
     required_field_ids,
 )
+from app.services.responses._branching import REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE
 
 
 @dataclass
@@ -23,6 +24,7 @@ class Field:
     label: str
     order: int
     required: bool = False
+    visible: bool = True
     branch_parent_id: int | None = None
     branch_op: str | None = None
     branch_value: str | None = None
@@ -120,9 +122,10 @@ def test_structure_errors_name_each_broken_rule() -> None:
     assert ("Deep", "A field inside a branch can't have a branch.") in (
         branch_structure_errors(nested)
     )
-    # Governed fields are never required (Item 2 lifts this).
+    # A required governed field needs an active required field outside
+    # any branch (19T Item 11).
     assert branch_structure_errors([_parent(), _governed(required=True)]) == [
-        ("Why", "A field inside a branch can't be required.")
+        ("Why", REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE)
     ]
     # A String parent.
     assert branch_structure_errors(
@@ -222,3 +225,28 @@ def test_a_cycle_closes_rather_than_recursing() -> None:
     second = Field(id=2, label="B", order=1, branch_parent_id=1,
                    branch_op="ge", branch_value="1")
     assert applicable_field_ids([first, second], {1: "5", 2: "5"}) == set()
+
+
+def test_a_required_governed_field_needs_an_active_required_anchor() -> None:
+    """19T Item 11, the author's ruling on its pre-positioning 4: any active
+    required field outside a branch will do, not only the parent."""
+    notes = Field(id=3, label="Notes", order=2, _inline_data_type="String")
+    # The parent itself.
+    assert branch_structure_errors([_parent(required=True), _governed(required=True)]) == []
+    # Another field, with the parent optional.
+    assert branch_structure_errors(
+        [_parent(), _governed(required=True), Field(**{**notes.__dict__, "required": True})]
+    ) == []
+    # A hidden anchor guarantees nothing: the submit gate skips it.
+    assert branch_structure_errors(
+        [_parent(required=True, visible=False), _governed(required=True)]
+    ) == [("Why", REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE)]
+    # A hidden required governed field counts nowhere, so it needs none.
+    assert branch_structure_errors(
+        [_parent(), _governed(required=True, visible=False), notes]
+    ) == []
+    # Every required governed field without an anchor is named.
+    assert branch_structure_errors(
+        [_parent(), _governed(required=True), _governed(id=3, label="How", order=2, required=True)]
+    ) == [("Why", REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE),
+          ("How", REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE)]

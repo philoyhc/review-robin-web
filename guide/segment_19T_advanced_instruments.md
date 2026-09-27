@@ -1630,6 +1630,15 @@ answer, so erin keeps her one completion. The fixture's closed branches
 all sit on assignments that are incomplete anyway, so
 `test_required_governed_rollups.py` pins a closed one that completes.
 
+**Rung 4** (2026-09-27): the guards are off. The server-rendered R, the
+recompute and the stager all leave R alone inside a branch, so ↳ keeps
+a row's R. `branch_structure_errors` replaces "can't be required" with
+`REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE`, which Save and both
+settings-CSV phases share. It needs an active (visible) required
+ungoverned field whenever a visible governed field is required; a hidden
+governed field counts nowhere, so it needs none. `BranchField` and the
+parse phase's `_PlannedField` gain `visible`.
+
 ### PR ladder
 
 Each rung deploys safely on its own (the record, after Codex): **the

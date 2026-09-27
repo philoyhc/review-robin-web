@@ -40,6 +40,12 @@ LIST_OPS: dict[str, str] = {
 }
 BRANCH_OPS: frozenset[str] = frozenset({*NUMERIC_OPS, *LIST_OPS})
 
+# 19T Item 11, the author's ruling on pre-positioning 4.
+REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE = (
+    "A field inside a branch can be required only when the instrument has "
+    "an active required field outside any branch."
+)
+
 # Inline ``data_type`` values a parent may have. String can't be a parent.
 PARENT_DATA_TYPES: frozenset[str] = frozenset({"Integer", "Decimal", "List"})
 
@@ -51,6 +57,7 @@ class BranchField(Protocol):
     label: str
     order: int
     required: bool
+    visible: bool
     branch_parent_id: int | None
     branch_op: str | None
     branch_value: str | None
@@ -225,11 +232,20 @@ def branch_structure_errors(
 
     The rules (the design record's Rulings and 19T Item 10's answers): one
     level, so a parent is never governed; a parent is an Integer, Decimal
-    or List field with a valid condition; a governed field is never
-    required (Item 2 lifts this); a condition always governs at least one
-    field, since a branch is one unit; and a branch's fields directly
-    follow their parent in field order, so no field sits inside a branch
-    it isn't part of."""
+    or List field with a valid condition; a condition always governs at
+    least one field, since a branch is one unit; and a branch's fields
+    directly follow their parent in field order, so no field sits inside a
+    branch it isn't part of.
+
+    **A required governed field needs an active required field outside
+    any branch** (19T Item 11, the author's ruling on its pre-positioning
+    4). The reviewer rollups count an assignment with no required field
+    complete only once it has a response row, and a required governed
+    field behind a closed branch isn't required; an active required
+    ungoverned field is answered at every submit, so a submit always
+    leaves a row. It holds at any depth and for any kind of condition,
+    and only a visible governed field needs it, since a hidden one counts
+    nowhere on the reviewer side."""
     field_list = list(fields)
     by_id = {field.id: field for field in field_list}
     governed_by_parent: dict[int, list[BranchField]] = {}
@@ -246,11 +262,16 @@ def branch_structure_errors(
             errors.append(
                 (field.label, "A field inside a branch can't have a branch.")
             )
-        if field.required:
-            errors.append(
-                (field.label, "A field inside a branch can't be required.")
-            )
         governed_by_parent.setdefault(parent_id, []).append(field)
+    has_anchor = any(
+        f.required and f.visible and f.branch_parent_id is None for f in field_list
+    )
+    if not has_anchor:
+        errors.extend(
+            (field.label, REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE)
+            for field in field_list
+            if field.branch_parent_id is not None and field.required and field.visible
+        )
     for field in field_list:
         has_condition = bool(field.branch_op or field.branch_value)
         if field.id in governed_by_parent:

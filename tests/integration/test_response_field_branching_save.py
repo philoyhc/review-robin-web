@@ -331,8 +331,11 @@ def test_the_saved_state_is_checked_against_the_branch_rules(
 ) -> None:
     review_session, instrument, *_ = _branched(client, db, "19t10-rules")
     cases = [
-        (_rfs(instrument, Comments={"required": True}),
-         "Comments: A field inside a branch can't be required."),
+        # 19T Item 11 — a required governed field needs an active required
+        # field outside the branch, and Rating is the only one.
+        (_rfs(instrument, Rating={"required": False}, Comments={"required": True}),
+         "Comments: A field inside a branch can be required only when the "
+         "instrument has an active required field outside any branch."),
         (_rfs(instrument, Rating={"data_type": "string", "min": "", "max": "",
                                   "step": ""}),
          "Rating: A String field can't have a branch."),

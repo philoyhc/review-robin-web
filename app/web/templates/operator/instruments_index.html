@@ -2750,7 +2750,6 @@
               if (group && row.hasAttribute('data-new-model-rf-governed')) {
                 var parentRow = group.querySelector('[data-new-model-rf-parent]');
                 rf.branch_parent = parentRow ? parentRow.getAttribute('data-row-key') : null;
-                rf.required = false;
               }
               var cond = group && row.hasAttribute('data-new-model-rf-parent')
                 ? group.querySelector('[data-new-model-rf-condition]') : null;
@@ -4318,11 +4317,10 @@
                 <td class="col-shrink"><button type="button"
                         class="btn{% if not rf.required %} secondary{% endif %}"
                         data-new-model-rf-required
-                        {% if _governed %}disabled{% endif %}
                         data-required="{{ 'true' if rf.required else 'false' }}"
                         onclick="newModelRfRequiredChanged(this)"
                         aria-pressed="{{ 'true' if rf.required else 'false' }}"
-                        title="{% if _governed %}A field inside a branch can't be required{% else %}Required for reviewers to submit (enforced from Wave 3){% endif %}">R</button></td>
+                        title="Required for reviewers to submit (enforced from Wave 3)">R</button></td>
                 <td class="col-shrink"><button type="button"
                         class="btn{% if not rf.help_text_visible %} secondary{% endif %}"
                         data-new-model-rf-help-visible
@@ -5278,8 +5276,11 @@
           // a parent's X is off while it has a branch, and the last
           // governed field's X takes the condition with it. Governed
           // answers lock the branch's membership: its fields' X and "+".
-          // A governed field is never required, and can't be shown while
-          // its parent is hidden. A parent can't turn String.
+          // A governed field can't be shown while its parent is hidden. A
+          // parent can't turn String. R is live inside a branch (19T Item
+          // 11): a required governed field is required while its branch
+          // is open, and Save refuses one in an instrument with no active
+          // required field outside a branch.
           if (deleteBtn && !hasResponses && (isParent || (governed && locked))) {
             deleteBtn.setAttribute('disabled', '');
             deleteBtn.setAttribute('aria-disabled', 'true');
@@ -5296,14 +5297,6 @@
             addBtn.setAttribute('title', locked
               ? 'Its branch has saved responses, so no field can join it'
               : 'Add a field to the branch below this one');
-          }
-          if (requiredBtn && governed) {
-            requiredBtn.setAttribute('disabled', '');
-            requiredBtn.setAttribute('aria-disabled', 'true');
-            requiredBtn.setAttribute('data-required', 'false');
-            requiredBtn.setAttribute('aria-pressed', 'false');
-            requiredBtn.classList.add('secondary');
-            requiredBtn.setAttribute('title', "A field inside a branch can't be required");
           }
           if (activeBox && governed) {
             var parentRow = group.querySelector('[data-new-model-rf-parent]');

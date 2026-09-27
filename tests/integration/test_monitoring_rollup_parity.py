@@ -855,18 +855,16 @@ def test_summary_counts_ride_on_the_reviewer_rollup(
 def test_the_fixture_is_branched_and_holds_to_the_rules(rollups: Fixture) -> None:
     """The pin needs the branches present and well formed, or it pins
     nothing: a later edit that drops them fails here, not silently. The
-    governed fields are required (19T Item 11), which the structure
-    rules still refuse until rung 4 lifts them, so only that rule's
-    error is allowed."""
+    governed fields are required (19T Item 11), which the rules allow
+    because each instrument's parent is an active required field outside
+    the branch."""
     from app.services.responses import applicable_field_ids, branch_structure_errors
 
     assert rollups.q2.branch_parent_id == rollups.q1.id
     assert rollups.g2.branch_parent_id == rollups.g1.id
     assert rollups.q2.required and rollups.g2.required
     for fields in ([rollups.q1, rollups.q2], [rollups.g1, rollups.g2]):
-        assert {reason for _, reason in branch_structure_errors(fields)} <= {
-            "A field inside a branch can't be required."
-        }
+        assert branch_structure_errors(fields) == []
     # a3's governed answer sits in an open branch ("ok"), so the fixture
     # obeys "a closed branch holds no value".
     assert rollups.g2.id in applicable_field_ids(

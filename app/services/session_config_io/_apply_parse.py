@@ -107,6 +107,7 @@ class _PlannedField:
     label: str
     order: int
     required: bool
+    visible: bool
     branch_parent_id: int | None
     branch_op: str | None
     branch_value: str | None
@@ -160,6 +161,7 @@ def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
                     label=rf.label or rf.field_key or f"response_fields[{m}]",
                     order=m,
                     required=rf.required,
+                    visible=rf.visible,
                     branch_parent_id=parent_position,
                     branch_op=rf.branch_op,
                     branch_value=rf.branch_value,
