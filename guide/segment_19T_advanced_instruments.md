@@ -1619,6 +1619,17 @@ them. `row_completion` gains a per-row `required_count`, so the pills'
 total comes from the same saved state as their missing count.
 **Cumulative-read base:** `3cec7196`, main before rung 1 merged.
 
+**Rung 3** (2026-09-27): route (a) on both sides. The reviewer SQL skips
+instruments with a required governed field, and `_python_instrument_parts`
+(was `_grouped_instrument_parts`) takes them. `per_reviewee_coverage`
+gains `_python_routed_coverage`, merged per reviewee.
+`responses_by_assignment` takes an `instrument_clause` instead of
+`group_scoped_only`. In the parity fixture, carol reads 1 of 3, `at risk`
+(`adequate` stays pinned by the invisible-field test). a8 gains a `q2`
+answer, so erin keeps her one completion. The fixture's closed branches
+all sit on assignments that are incomplete anyway, so
+`test_required_governed_rollups.py` pins a closed one that completes.
+
 ### PR ladder
 
 Each rung deploys safely on its own (the record, after Codex): **the

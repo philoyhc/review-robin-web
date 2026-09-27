@@ -581,7 +581,7 @@ def test_the_grouped_half_reads_only_grouped_work(
     assert not strays, (
         f"{len(strays)} per-reviewee assignments' responses were loaded as "
         "ORM rows by the grouped half. The aggregate half already counted "
-        "them in SQL — pass group_scoped_only=True to "
+        "them in SQL — pass instrument_clause=_python_routed_instruments() to "
         "responses_by_assignment."
     )
 

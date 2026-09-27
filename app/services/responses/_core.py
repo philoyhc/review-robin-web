@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -1056,7 +1056,10 @@ def rollup_parts_from_assignments(
 
 
 def responses_by_assignment(
-    db: Session, *, session_id: int, group_scoped_only: bool = False
+    db: Session,
+    *,
+    session_id: int,
+    instrument_clause: ColumnElement[bool] | None = None,
 ) -> dict[int, list[Response]]:
     """Every response row in a session, keyed by assignment id.
 
@@ -1083,25 +1086,26 @@ def responses_by_assignment(
     callers use ``.get(id, [])`` and read the same empty list the
     per-assignment query returned.
 
-    ``group_scoped_only`` narrows the join to assignments on
-    group-scoped instruments. The reviewer rollup's Python half
-    (``monitoring._grouped_instrument_parts``) needs exactly those
-    rows, and a session with one group instrument and a roster-scale
-    per-reviewee one would otherwise rematerialise every response the
-    aggregate half already counted in SQL (19R Item 3 rung 3, Codex
-    P1). Expressed as a join rather than an ``in_`` over ids for the
-    same reason the whole function is: the id list grows with the
-    assignment count, and SQLite's default variable limit is 999.
+    ``instrument_clause`` narrows the join to assignments on the
+    instruments it matches (a condition over ``Instrument``). The
+    rollups' Python halves (``monitoring._python_instrument_parts`` and
+    ``monitoring._python_routed_coverage``) need exactly those rows, and
+    a session with one such instrument and a roster-scale per-reviewee
+    one would otherwise rematerialise every response the aggregate half
+    already counted in SQL (19R Item 3 rung 3, Codex P1). Expressed as
+    a join rather than an ``in_`` over ids for the same reason the whole
+    function is: the id list grows with the assignment count, and
+    SQLite's default variable limit is 999.
     """
     stmt = (
         select(Response)
         .join(Assignment, Response.assignment_id == Assignment.id)
         .where(Assignment.session_id == session_id)
     )
-    if group_scoped_only:
+    if instrument_clause is not None:
         stmt = stmt.join(
             Instrument, Instrument.id == Assignment.instrument_id
-        ).where(Instrument.group_kind.is_not(None))
+        ).where(instrument_clause)
     rows = db.execute(stmt).scalars()
     out: dict[int, list[Response]] = {}
     for row in rows:
