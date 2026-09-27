@@ -1759,6 +1759,7 @@ and Item 1, branching with optional governed fields, shipped as 19T Item
 places a static required count becomes per-assignment, and the
 recommended route, are in the record.
 
-**Lift trigger:** the author scheduling it; 19T Item 10, its
-prerequisite, closed 2026-09-27.
+**Lifted 2026-09-27:** planned as 19T Item 11
+(`guide/segment_19T_advanced_instruments.md`); this entry leaves the
+ledger when that item closes.
 
