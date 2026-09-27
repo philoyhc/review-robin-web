@@ -549,6 +549,16 @@ def _sync_response_fields_to_db(
         )
         if msg is not None:
             shape_errors.append((rf["name"], msg))
+    # 19T Item 10 — an unknown operator is refused by name before anything
+    # is flushed: ``branch_op`` is ``String(8)``, which Postgres enforces and
+    # SQLite doesn't (the item's cumulative read).
+    from app.services.responses import BRANCH_OPS
+
+    shape_errors.extend(
+        (rf["name"], "Choose a comparison for the branch condition.")
+        for rf in sanitised_rfs
+        if rf.get("branch_op") and rf["branch_op"] not in BRANCH_OPS
+    )
     if shape_errors:
         raise InvalidResponseFieldShapeError(shape_errors)
 

@@ -352,8 +352,63 @@ def _split_validated(
                 ),
             )
         )
+    valid, held = _hold_answers_behind_refused_parents(
+        valid, errors, assignment_index, field_index
+    )
+    errors.extend(
+        ValidationError(
+            assignment_id=assignment.id,
+            field_key=field.field_key,
+            field_label=field.label,
+            reviewee_name=assignment.reviewee.name,
+            value=u.value,
+            message=f"Kept until {parent.label} is fixed.",
+            position=position_by_instrument_id.get(assignment.instrument_id, 0),
+        )
+        for u, assignment, field, parent in held
+    )
     errors.sort(key=lambda e: (e.position, e.reviewee_name, e.field_label))
     return valid, errors
+
+
+def _hold_answers_behind_refused_parents(
+    valid: list[ResponseUpsert],
+    errors: list[ValidationError],
+    assignment_index: dict[int, Assignment],
+    field_index: dict[tuple[int, str], InstrumentResponseField],
+) -> tuple[
+    list[ResponseUpsert],
+    list[tuple[ResponseUpsert, Assignment, InstrumentResponseField, InstrumentResponseField]],
+]:
+    """19T Item 10 — hold back a governed answer whose parent's value in the
+    same save was refused. The branch is judged on the stored answers, so
+    writing it would let the save rule delete it at once, with the parent
+    still unwritten: the reviewer's text would be lost silently (the item's
+    cumulative read). Held, it comes back to the page as an error with the
+    typed value, like the parent's."""
+    refused = {(e.assignment_id, e.field_key) for e in errors}
+    if not refused:
+        return valid, []
+    field_by_id = {field.id: field for field in field_index.values()}
+    kept: list[ResponseUpsert] = []
+    held = []
+    for u in valid:
+        assignment = assignment_index.get(u.assignment_id)
+        field = (
+            field_index.get((assignment.instrument_id, u.field_key))
+            if assignment is not None
+            else None
+        )
+        parent = (
+            field_by_id.get(field.branch_parent_id)
+            if field is not None and field.branch_parent_id is not None
+            else None
+        )
+        if parent is not None and (u.assignment_id, parent.field_key) in refused:
+            held.append((u, assignment, field, parent))
+        else:
+            kept.append(u)
+    return kept, held
 
 
 def save_draft(

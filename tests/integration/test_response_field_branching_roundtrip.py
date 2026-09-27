@@ -172,6 +172,24 @@ def test_the_settings_csv_refuses_a_broken_branch(db: Session) -> None:
     ).first() is None
 
 
+def test_the_settings_csv_hides_a_hidden_parents_branch(db: Session) -> None:
+    """The cumulative read's finding 5: a hand-edited file with a hidden
+    parent and a visible governed field imports the field hidden, as the
+    card's Active cascade would leave it."""
+    review_session, _ = _session(db, "br-csv-hidden")
+    rows = _rows() + [
+        Row("instruments[1].response_fields[1].visible", "false", "boolean"),
+        Row("instruments[1].response_fields[2].visible", "true", "boolean"),
+    ]
+    result = apply_session_config(db, review_session, rows)
+    assert result.errors == []
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    fields = _fields(db, instrument.id)
+    assert (fields["rating"].visible, fields["why"].visible) == (False, False)
+
+
 def test_replicate_instrument_copies_the_branch(db: Session) -> None:
     review_session, op = _session(db, "br-replicate")
     source = _branched_instrument(db, review_session)

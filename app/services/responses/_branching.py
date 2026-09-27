@@ -19,6 +19,7 @@ spreadsheet software.
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Iterable, Mapping
 from typing import Protocol
 
@@ -61,11 +62,19 @@ def _list_items(text: str | None) -> list[str]:
     return [item.strip() for item in (text or "").split(",") if item.strip()]
 
 
+# A plain decimal number, and nothing else ``float()`` would take ("1_000",
+# "inf", "nan"). The builder's and the reviewer surface's scripts use the
+# same pattern before ``Number()``, so the three can't disagree on whether a
+# condition or an answer is a number (the item's cumulative read).
+DECIMAL_PATTERN = r"[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?"
+_DECIMAL = re.compile(DECIMAL_PATTERN)
+
+
 def _finite_number(text: str | None) -> float | None:
-    try:
-        value = float((text or "").strip())
-    except ValueError:
+    stripped = (text or "").strip()
+    if not _DECIMAL.fullmatch(stripped):
         return None
+    value = float(stripped)
     return value if math.isfinite(value) else None
 
 

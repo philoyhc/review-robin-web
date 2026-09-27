@@ -250,6 +250,11 @@ def _apply_branches(
                 "a response field of this instrument"
             )
         field.branch_parent_id = parent.id
+        # A hidden parent hides its branch, as the card's Active cascade
+        # and its Save do (the item's cumulative read): a governed field
+        # left visible under a hidden parent could never be answered.
+        if not parent.visible:
+            field.visible = False
     errors = branch_structure_errors([field for _, field in created])
     if errors:
         raise _ParseError(

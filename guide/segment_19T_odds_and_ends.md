@@ -1488,6 +1488,18 @@ and the export can't drift. The monitoring parity fixture branches its
 two optional fields (`q2` under a List `q1`, `g2` under a group-scoped
 `g1`), and all 24 cases pass unchanged: the pin.
 
+**The item's one cumulative read** (`diff-reviewer`, `9487de5b..HEAD`,
+at rung 8) found no high or medium defect; five low findings and a nit,
+all fixed in rung 8: a governed answer typed beside a refused parent
+value is held back as an error with its text, not written and then
+deleted; one decimal pattern (`DECIMAL_PATTERN`) on the service, the
+builder and the surface, where `float()` and `Number()` disagreed on
+"1_000"; an unknown operator refused before any flush (a Postgres
+`String(8)` 500); the builder preview's item count skips governed fields
+as the surface's does; the settings-CSV import applies the Active
+cascade. The nit: the migration docstring lacked `is_not`. Codex added
+one finding per code rung on rungs 2, 3, 5 and 7b.
+
 ### Doc impact
 
 - `spec/rrw_functional_spec.md` — branching leaves the out-of-scope line; the builder and surface summaries gain it (Item 10).

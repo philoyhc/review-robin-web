@@ -160,6 +160,24 @@ def test_a_blocked_submit_audits_the_answer_it_removed(db: Session) -> None:
     assert "submit blocked" in event.summary
 
 
+def test_a_refused_parent_holds_its_governed_answer(db: Session) -> None:
+    """The cumulative read's finding 1: the parent's value is refused, so
+    the governed answer typed beside it is held too, returned as an error
+    with its value rather than written and at once deleted by the save
+    rule. A previously stored answer under a still-open branch stays."""
+    op, reviewer, review_session, assignment = _seed(db)
+    _branch_default_instrument(db, assignment)
+    _save(db, op, reviewer, review_session, assignment, rating="5", comments="old")
+    result = _save(
+        db, op, reviewer, review_session, assignment, rating="9", comments="new"
+    )
+    by_key = {e.field_key: e for e in result.errors}
+    assert set(by_key) == {"rating", "comments"}
+    assert by_key["comments"].value == "new"
+    assert by_key["comments"].message == "Kept until Rating is fixed."
+    assert _answers(db, assignment.id) == {"rating": "5", "comments": "old"}
+
+
 def test_no_branch_changes_nothing(db: Session) -> None:
     op, reviewer, review_session, assignment = _seed(db)
     _save(db, op, reviewer, review_session, assignment, rating="2", comments="x")

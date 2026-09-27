@@ -159,3 +159,29 @@ def test_the_condition_reads_as_the_builder_shows_it(op, value, label) -> None:
 
     parent = SimpleNamespace(label="Colour", branch_op=op, branch_value=value)
     assert branch_condition_label(parent) == label
+
+
+@pytest.mark.parametrize(
+    ("value", "is_number"),
+    [("4", True), ("-2.5", True), (".5", True), ("1e3", True), (" 7 ", True),
+     ("1_000", False), ("0x10", False), ("inf", False), ("nan", False),
+     ("", False), ("4.", True)],
+)
+def test_a_number_is_a_plain_decimal(value, is_number) -> None:
+    """The cumulative read's finding 2: ``float()`` takes "1_000" and "nan"
+    where the pages' ``Number()`` doesn't, so all three sides use one
+    pattern (``DECIMAL_PATTERN``)."""
+    assert (condition_error("Integer", None, "ge", value) is None) is is_number
+    assert branch_is_open(_parent(branch_op="ne", branch_value="12345"), value) is is_number
+
+
+def test_the_pages_use_the_services_number_pattern() -> None:
+    """The builder's and the surface's scripts carry the same pattern, so
+    none of the three reads "1_000" as a number."""
+    from pathlib import Path
+
+    from app.services.responses._branching import DECIMAL_PATTERN
+
+    templates = Path(__file__).resolve().parents[2] / "app/web/templates"
+    for name in ("operator/instruments_index.html", "reviewer/review_surface.html"):
+        assert f"/^{DECIMAL_PATTERN}$/" in (templates / name).read_text(), name

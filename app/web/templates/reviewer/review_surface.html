@@ -668,11 +668,14 @@
             }).indexOf(raw) >= 0;
             return op === "is" ? chosen : !chosen;
           }
+          // The service's ``DECIMAL_PATTERN``, so "1_000" or "0x10" is no
+          // number here either.
+          var decimal = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/;
+          var b = (value || "").trim();
+          if (!decimal.test(raw) || !decimal.test(b)) { return false; }
           var a = Number(raw);
-          var b = Number((value || "").trim());
-          if (!isFinite(a) || !isFinite(b) || (value || "").trim() === "") {
-            return false;
-          }
+          b = Number(b);
+          if (!isFinite(a) || !isFinite(b)) { return false; }
           if (op === "eq") { return a === b; }
           if (op === "ne") { return a !== b; }
           if (op === "gt") { return a > b; }
