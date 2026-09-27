@@ -22,9 +22,9 @@ Item 5 as 19T Item 8 (2026-09-26), and Item 3 as 19T Item 9
 as 19T Item 11 (2026-09-27), and Item 6's three extensions are
 logged as 19T Items 12–14. This file keeps the
 author's rulings and the measured cost, so the build can start from them.
-When it is scheduled, it becomes a segment plan
-(`guide/segment_plan_template.md`); until then its entry in
-`guide/deferred_consolidated.md` Part C points here. It was logged as
+Every item is now built or logged as a 19T item, so no
+`guide/deferred_consolidated.md` entry points here any more (the last
+left at 19T Item 11's close). It was logged as
 response_field_branching.md and renamed once Item 3 widened it.
 
 **Built in the order 3, 4, 5, 1, 2** (the author, 2026-09-25), and this file
