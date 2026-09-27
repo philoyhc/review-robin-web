@@ -96,7 +96,11 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
      `_self_review.py`, `_generate.py` (18O Track B carve),
      `_reconcile_cache.py` (19R Item 2 — the staleness verdict's
      content stamp).
-   - `app/services/responses/` — `_core.py`, `_group_reconciliation.py`.
+   - `app/services/responses/` — `_core.py`, `_group_reconciliation.py`,
+     `_branching.py` (branching between response fields — conditions,
+     whether a branch is open, which fields an assignment can answer;
+     pure), `_branch_rule.py` (the save invariant, "a closed branch
+     holds no value").
    - `app/services/rules/` — the pure rule engine (`engine.py`,
      `predicates.py`, `quotas.py`, `fields.py`).
    Other notable services: `session_lifecycle.py`, `validation.py`,
@@ -119,6 +123,19 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    directly rather than through a creation service.
    `app/db/models/instrument.py` is the only model that does this; the
    rule otherwise holds.
+
+   **Branching between response fields** (`InstrumentResponseField
+   .branch_parent_id` / `.branch_op` / `.branch_value`,
+   `guide/advanced_instruments.md` Item 1): `branch_parent_id` is a
+   self-referencing FK, `ON DELETE SET NULL` (Alembic `63b1bb107eb0`),
+   so deleting an instrument's fields in any order passes a Postgres FK
+   check — the service, not the database, refuses deleting a parent
+   with a branch. `branch_op` is a `String(8)` token (`eq` / `ne` / `gt`
+   / `ge` / `lt` / `le` / `is` / `is_not`), not a symbol, since a
+   settings-CSV cell starting with `=` or `>` reads as a formula to
+   spreadsheet software. The rules themselves live in
+   `app/services/responses/_branching.py` and `_branch_rule.py`, not on
+   the model.
 
 A fourth seam — **`app/web/views/`** — holds view-shape adapters that
 translate domain objects into the dataclasses / row tuples templates

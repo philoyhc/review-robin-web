@@ -1433,7 +1433,11 @@ builder allows.
 **Not verified here:** the builder, the surface and a download on the
 dev slot, owed in `guide/post_azure_todo_checklist.md` item 6.
 
-**Doc impact added at build:** `spec/settings_inventory.md` (rung 5).
+**Doc impact added at build:** `spec/settings_inventory.md` (rung 5);
+`spec/ui_elements.md` (the close: spec-writer flagged its `rf-table` row
+as stale). The close's spec pass also brought `spec/instruments.md`'s
+Replicate bullet and `spec/rrw_functional_spec.md` §5.7 up to branching,
+at spec-writer's flag.
 
 ### Doc impact
 
@@ -1445,5 +1449,6 @@ dev slot, owed in `guide/post_azure_todo_checklist.md` item 6.
 - `spec/roundtrip_coverage.md` — the new columns through clone, Replicate and the settings CSV (Item 10).
 - `spec/settings_inventory.md` — §4's per-response-field attributes gain `branch_parent` / `branch_op` / `branch_value` (Item 10, added at rung 5).
 - `spec/architecture.md` — `InstrumentResponseField`'s branch columns (Item 10).
+- `spec/ui_elements.md` — §10's `rf-table` row: a branch shares one ruled `<tbody>`; the bar and `.rf-glyph` (Item 10, added at the close).
 - `guide/advanced_instruments.md` — Item 1 points to this item as the build (Item 10).
 - `docs/status.md` — row when the item closes (Item 10).

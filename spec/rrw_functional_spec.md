@@ -142,8 +142,14 @@ The system does not:
   scoring rubrics, dashboards, normalisation, leaderboards — none
   of this lives in RRW. The export is the deliverable.
 - **Host non-tabular review forms.** Free-form questionnaire
-  builders, branching logic, or non-grid layouts are out of scope.
-  The unit of review is a row × column grid.
+  builders or non-grid layouts are out of scope. The unit of review
+  is a row × column grid. **Basic branching between two response
+  fields of the same instrument is not out of scope** ([§9.6](#96-configure-instruments),
+  [§10.3](#103-review-surface)): a governed field's cell answers only
+  while its parent's condition holds, within the same grid. Nested
+  branches, more than one branch per parent, a String parent, and
+  required governed fields remain out of scope
+  (`guide/advanced_instruments.md` Item 1).
 - **Run cross-session analytics.** The lobby lists sessions; it
   does not aggregate metrics across them.
 - **Manage participants as cross-session accounts.** Reviewers and
@@ -452,7 +458,10 @@ per reviewee row.
 / `Integer` / `Decimal` / `List`), inline bounds (`min` / `max` /
 `step` for numeric; `list_options` for List; length min/max for
 String), required flag, help text (+ its visibility flag),
-visibility flag, order within the instrument.
+visibility flag, order within the instrument. A field may head a
+**branch**: an Integer, Decimal or List field carries one condition,
+and the optional fields it governs show only while its answer meets
+it (`spec/instruments.md` § *Branching between response fields*).
 
 **System-derived fields:** the field key (machine id, derived from
 the label); the input control that renders in each cell (text
@@ -1236,8 +1245,13 @@ most one instrument unlocked at a time). Its stripes:
   an Active checkbox (per-field surface visibility), Name, **Type**
   (`String / Integer / Decimal / List` + a Quick-fill List presets
   `<optgroup>`), inline bounds (`min` / `max` / `step` or
-  `list_options`), Required toggle, help-text toggle, ▲ ▼ for order.
-  Type + bounds lock once the field has saved responses. Both tables
+  `list_options`), Required toggle, help-text toggle, ▲ ▼ for order,
+  and a fork control that turns an Integer, Decimal or List field into
+  a **branch**: a condition ("if the above compares to a value") that
+  governs one or more fields directly beneath it, answerable by the
+  reviewer only while the condition holds (`spec/instruments.md` §
+  "Branching between response fields"). Type + bounds lock once the
+  field has saved responses. Both tables
   show in the preview at once and persist with the card's Save
   (`spec/instruments.md`).
 - **Action row** — Save / Cancel (edit only) / Replicate / Delete
@@ -1575,6 +1589,14 @@ written together on Save / Submit.
 
 Display columns render as plain text (or as an anchor for
 photo / profile-link sources).
+
+**Branching** — a response field configured (Band 3) as **governed** by
+another renders muted and disabled until its parent's answer satisfies
+the parent's condition; it stays that way live as the reviewer edits
+the parent, and the server enforces the same rule on Save (deleting a
+governed answer whose branch is closed) regardless of what the page
+shows (`spec/reviewer-surface.md` § "Branching between response
+fields").
 
 **Sortability** — every column header on the review surface is
 clickable to sort the rows by that column; Shift-click adds a
