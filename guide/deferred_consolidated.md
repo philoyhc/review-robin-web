@@ -1752,11 +1752,13 @@ roster, or the next change that reworks a roster's pager.
 
 `guide/advanced_instruments.md` Item 2: a governed field inside a branch
 that is required while its branch is open. The record's other four items
-are built or scheduled: Items 3, 4 and 5 shipped as 19T Items 9, 7 and 8,
-and Item 1, branching with optional governed fields, is 19T Item 10. Item
+are built: Items 3, 4 and 5 shipped as 19T Items 9, 7 and 8,
+and Item 1, branching with optional governed fields, shipped as 19T Item
+10 (2026-09-27). Item
 2 needs no migration, and Item 1 is built to prepare for it; the twelve
 places a static required count becomes per-assignment, and the
 recommended route, are in the record.
 
-**Lift trigger:** 19T Item 10 closing, and the author scheduling it.
+**Lift trigger:** the author scheduling it; 19T Item 10, its
+prerequisite, closed 2026-09-27.
 

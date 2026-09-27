@@ -1368,137 +1368,72 @@ All answered by the author, 2026-09-26:
 
 ### Status
 
-**Open.** Rung 1 is #2638. The cumulative read's base is `9487de5b`.
+**Closed 2026-09-27.** #2638 (plan) through #2647, and this close; the
+cumulative read's base was `9487de5b`.
 
-**Rung 2 lands the model and the rules, inert.** The migration adds the
-three columns (round-tripped on SQLite and on a local Postgres 16). The
-rules live in `app/services/responses/_branching.py`: `condition_error`,
-`branch_is_open`, `applicable_field_ids` and `branch_structure_errors`.
-The card's Save (`set_band2_state`) refuses any `branch_*` key and holds
-stored branches to the rules: bottom-up deletion, the governed-answers
-lock, the condition cleared with its last field, and the whole-state
-check. **Moved forward from rung 5:** session clone re-points a governed
-field's parent at the parent's clone, since its generic column copy would
-otherwise point the clone at the source session's field. **Beyond the
-ladder:** the per-field routes refuse a branched instrument (Judgment
-calls). Rung 2 is #2639; Codex's audit finding (a condition cleared with
-its last field went unaudited) is fixed there.
+**What the ladder became.** As planned, with two slices added on the
+author's review of rung 7: #2645 ("is not" on a List condition, token
+`is_not`; the bar broader and paler) and **rung 7b**, #2646 (ruling 10:
+join ↳ and detach ↰; +, ⑂ and ↳ one width). Session clone's re-pointing
+moved forward from rung 5 to rung 2.
 
-**Rung 3 lands the save rule** in `app/services/responses/_branch_rule.py`.
-Save and submit (after `_apply_upserts`) and the group re-fan call
-`drop_closed_branch_answers`, which judges the answers as the write
-leaves them. The save's `responses.saved` counts gain
-`branch_answers_removed` when one goes. The responses import filters with
-`closed_governed_field_ids` before inserting, so each answer it can't
-keep is a reported drop rather than a silent one. Rung 3 is #2640;
-Codex's finding (a blocked submit committed a branch deletion unaudited)
-is fixed there.
+**Decisions confirmed at build:**
+- **The rules live in the service**: `app/services/responses/_branching.py`
+  (`condition_error`, `branch_is_open`, `applicable_field_ids`,
+  `branch_structure_errors`, `condition_label`, `DECIMAL_PATTERN`) and
+  `_branch_rule.py` (`drop_closed_branch_answers`,
+  `closed_governed_field_ids`). Save and submit, the group re-fan and the
+  responses import all end in them; `responses.saved` counts gain
+  `branch_answers_removed`.
+- **`set_band2_state` takes `row_key`, `branch_parent` (a row key) and
+  the condition**, so ⑂'s new parent and field save in one go. **Each
+  branch key is independently present**: an omitted key keeps what is
+  stored, so a caller knowing nothing of branches can't clear one. It
+  compares the save with the stored branches (bottom-up deletion;
+  governed answers lock condition and membership; the condition goes
+  with its last governed field), keeps a hidden parent's branch hidden,
+  and audits every branch change as the field's `instrument.field_updated`.
+- **The settings CSV** names the parent by `field_key` and checks the rules
+  at parse time (`_apply_parse._branch_errors`), since an apply-time
+  check surfaced as a 500 through Quick Setup. Clone and Replicate
+  re-point the parent.
+- **The reviewer surface** judges each cell on the values the page shows;
+  its "All items completed" pill counts open cells only, since a closed
+  cell can't be answered. The operator rollups count required fields,
+  which a governed field never is, so they are unchanged: the parity
+  fixture pins it.
+- **The by-instrument extract** gives a governed field a `Shown when` row.
 
-**Rung 4 lands the reviewer surface.** Each cell carries whether its
-branch is open, judged by `applicable_field_ids` on the values the page
-shows. A closed governed cell renders muted (`td.rs-branch-closed`) and
-disabled, titled with the condition that opens it
-(`views.branch_condition_label`: "Opens when Rating ≥ 4"). An inline
-script re-judges each parent as the reviewer answers, mirroring
-`branch_is_open`; a disabled control keeps its value visible, greyed,
-and isn't sent, so Save's rule deletes it if the branch is still closed.
-**Found at build:** the page's "All items completed" pill counted a
-closed cell, which can't be answered, so a row could never read
-complete; it now counts open cells only. The operator rollups count
-required fields alone, which a governed field never is, so they are
-unaffected. Rung 4 is #2641.
+**Beyond the plan:**
+- The per-field `/fields/…` routes, which no page renders, refuse a
+  branched instrument (409).
+- **A field with responses can't move into a branch**, since its answers
+  could then sit in a closed one; no page offers the move.
+- **A governed answer typed beside a refused parent value is held back**
+  as an error with its text ("Kept until … is fixed."), not written and
+  at once deleted by the save rule.
+- **One decimal grammar** (`DECIMAL_PATTERN`, ASCII digits) on the
+  service, the builder and the surface, where `float()` and `Number()`
+  disagreed.
+- An unknown operator is refused before any flush; the builder preview's
+  item count skips governed fields; the settings-CSV import applies the
+  Active cascade.
 
-**Rung 5 lands the round-trips.** The settings CSV carries three rows per
-response field, `branch_parent` (the parent's `field_key`, since ids don't
-survive an export), `branch_op` and `branch_value`, and the import resolves
-the parent within the instrument. **The rules are checked at parse time**
-(`_apply_parse._branch_errors`), so a broken branch is a named error and
-nothing applies: an unknown parent, a required governed field, a String
-parent, a condition that doesn't fit. Checking at apply time, as the plan
-implied, would have raised past Quick Setup's result handling as a 500.
-Replicate instrument copies the condition and re-points the parent at its
-copy; session clone has since rung 2. **Doc impact gains**
-`spec/settings_inventory.md`, which lists the per-field CSV attributes.
-Rung 5 is #2642; Codex's finding (a lone `branch_value` skipped both
-guards) is fixed there.
+**Reads.** One cumulative `diff-reviewer` read, at rung 8: no high or
+medium defect; five low findings and a nit, all fixed there (the last
+three bullets above, and the migration docstring). **Codex** found six,
+one each on rung 1 (enforcement before authoring: the ladder reordered),
+2 (the cleared condition unaudited), 3 (a blocked submit's deletion
+unaudited), 5 (a lone `branch_value` skipping both guards), 7b (a
+detached row's Active box left off) and 8 (Python's `\d` matching
+non-ASCII digits). One P2 declined and pinned with a test: deleting a
+parent and its whole branch in one save is the bottom-up order the
+builder allows.
 
-**Rung 6 lands the builder scaffold.** The view groups Band 3's rows
-(`views._response_field_groups`): a field on its own, or a parent with
-its condition and governed fields, one `<tbody>` each. A governed row
-shifts one column before the name (the bar in the checkbox column, its
-checkbox in +'s, its + in ⑂'s); the condition row reads "If the above
-[operator] [value] then show the below" with its "+" in ⑂'s column and
-no X. ⑂ shows its three states (selected on a parent, outline on a
-number or List field, inactive on String), the "+" template row
-included. Every branch control carries `data-new-model-rf-branch-inert`,
-which the row recompute keeps disabled, so nothing about a branch can
-be edited yet: ⑂, the condition, a governed row's Active, +, R, ▲ ▼ and
-X, and a parent's Active and X ("Delete its branch first"). A parent's
-▲ ▼ and "+" work as before, moving or following the whole group.
-Rung 6 is #2643.
+**Not verified here:** the builder, the surface and a download on the
+dev slot, owed in `guide/post_azure_todo_checklist.md` item 6.
 
-**Rung 7 wires the builder.** The stager sends every row's `row_key`,
-a governed row's parent by row key, and a parent's condition;
-`set_band2_state` resolves the parent after creating the save's new
-fields, so ⑂ saves in one go. **Each branch key is independently
-present**, as the state's top-level keys are: an entry that omits one
-keeps the stored value, so a caller that knows nothing of branches
-can't clear one. The service now compares the save with the stored
-branches: governed answers lock the condition as well as the
-membership, and **a field with responses can't move into a branch**
-(found at build: its answers could then sit in a closed one; no page
-offers it, since "+" and ⑂ add new fields). A hidden parent hides its
-branch on the server too. Every branch change is audited as the field's
-`instrument.field_updated`, where rung 2 audited only the cleared
-condition. On the page: ⑂ turns a number or List field into a parent
-with a condition row and one "Field N"; the condition offers the
-operators its parent's live type allows and turns amber with
-`condition_error`'s reason; "+" on the condition row or a governed row
-adds inside the branch; ▲ ▼ move a governed row within it; the last
-governed row's X takes the condition with it; Active cascades; R is
-off inside a branch and String off in a parent's type select; a locked
-branch (`data-new-model-rf-branch-locked`) disables its condition and
-its fields' "+" and X. The preview mutes a governed column, titled
-"Opens when …", as the surface does a closed cell. Rung 7 is #2644.
-
-**After rung 7, on the author's review (2026-09-27):** a List condition
-offers **"is not"** beside "is" (token `is_not`: open when the answer is
-none of the options, closed when unanswered, as every branch is), and the
-branch bar is broader and paler (4px at 0.35 opacity). The rung 8 read
-covers it.
-
-**Rung 7b lands join and detach** (ruling 10). A button after ⑂ (↳) joins
-a plain row to the unit above, and on a governed row (↰, in the same
-column by the one-column shift) detaches it to directly below its
-branch; `newModelRfEndBranch` now ends a branch for both X and detach.
-The button's state follows the row above, so a name or type edit
-re-judges the row below. +, ⑂ and it share one width (`.rf-glyph`,
-2.25rem). No service change: Save already takes a saved field's move
-into or out of a branch and refuses what the rules refuse. Rung 7b is
-#2646; Codex's finding (a row detached from a hidden parent kept its
-Active box off) is fixed there.
-
-**Rung 8 lands the exports and the fixtures.** The by-instrument
-extract's metadata block gives each governed field a `Shown when` row
-after its Helptext ("Rating ≥ 4"); a field outside any branch adds none,
-so an unbranched instrument's extract is unchanged. The wording moved
-into the service (`responses.condition_label`), which
-`views.branch_condition_label` now delegates to, so the surface's hint
-and the export can't drift. The monitoring parity fixture branches its
-two optional fields (`q2` under a List `q1`, `g2` under a group-scoped
-`g1`), and all 24 cases pass unchanged: the pin.
-
-**The item's one cumulative read** (`diff-reviewer`, `9487de5b..HEAD`,
-at rung 8) found no high or medium defect; five low findings and a nit,
-all fixed in rung 8: a governed answer typed beside a refused parent
-value is held back as an error with its text, not written and then
-deleted; one decimal pattern (`DECIMAL_PATTERN`) on the service, the
-builder and the surface, where `float()` and `Number()` disagreed on
-"1_000"; an unknown operator refused before any flush (a Postgres
-`String(8)` 500); the builder preview's item count skips governed fields
-as the surface's does; the settings-CSV import applies the Active
-cascade. The nit: the migration docstring lacked `is_not`. Codex added
-one finding per code rung on rungs 2, 3, 5 and 7b.
+**Doc impact added at build:** `spec/settings_inventory.md` (rung 5).
 
 ### Doc impact
 
