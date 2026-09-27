@@ -13,6 +13,7 @@ from app.services.responses import (
     branch_is_open,
     branch_structure_errors,
     condition_error,
+    required_field_ids,
 )
 
 
@@ -185,3 +186,39 @@ def test_the_pages_use_the_services_number_pattern() -> None:
     templates = Path(__file__).resolve().parents[2] / "app/web/templates"
     for name in ("operator/instruments_index.html", "reviewer/review_surface.html"):
         assert f"/^{DECIMAL_PATTERN}$/" in (templates / name).read_text(), name
+
+
+def test_required_fields_are_the_required_ones_that_apply() -> None:
+    """19T Item 11 — a required governed field is required only while its
+    branch is open; an optional one never is."""
+    fields = [
+        _parent(required=True),
+        _governed(required=True),
+        Field(id=3, label="Note", order=2),
+    ]
+    assert required_field_ids(fields, {1: "5"}) == {1, 2}
+    assert required_field_ids(fields, {1: "2"}) == {1}
+    assert required_field_ids(fields, {}) == {1}
+
+
+def test_applicability_walks_the_whole_chain() -> None:
+    """19T Item 11's pre-positioning 3: a field under a closed ancestor is
+    closed even while a stale answer below meets its own condition. The
+    structure rules still refuse a chain (Item 14 lifts that)."""
+    grandparent = _parent()
+    parent = _governed(branch_op="ge", branch_value="4", _inline_data_type="Integer")
+    child = Field(id=3, label="Why", order=2, branch_parent_id=2,
+                  _inline_data_type="String")
+    fields = [grandparent, parent, child]
+    assert applicable_field_ids(fields, {1: "5", 2: "5"}) == {1, 2, 3}
+    assert applicable_field_ids(fields, {1: "2", 2: "5"}) == {1}
+    assert applicable_field_ids(fields, {1: "5", 2: "2"}) == {1, 2}
+    assert branch_structure_errors(fields)
+
+
+def test_a_cycle_closes_rather_than_recursing() -> None:
+    first = Field(id=1, label="A", order=0, branch_parent_id=2,
+                  branch_op="ge", branch_value="1")
+    second = Field(id=2, label="B", order=1, branch_parent_id=1,
+                   branch_op="ge", branch_value="1")
+    assert applicable_field_ids([first, second], {1: "5", 2: "5"}) == set()

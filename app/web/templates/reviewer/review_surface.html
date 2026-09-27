@@ -437,14 +437,17 @@
                   <td{% if cell_classes %} class="{{ cell_classes | join(' ') }}"{% endif %}
                       data-sort-value="{{ cell.value or '' }}"
                       {% if cell.field.branch_op and row.accepting %}data-rs-branch-parent="{{ cell.field.field_key }}" data-rs-branch-op="{{ cell.field.branch_op }}" data-rs-branch-value="{{ cell.field.branch_value or '' }}"{% endif %}
-                      {% if cell.governed_by and row.accepting %}data-rs-governed-by="{{ cell.governed_by }}"{% endif %}
+                      {% if cell.governed_by and row.accepting %}data-rs-governed-by="{{ cell.governed_by }}"{% if cell.field.required %} data-rs-required="true"{% endif %}{% endif %}
                       {% if cell.branch_hint %}title="{{ cell.branch_hint }}"{% endif %}>
                     {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}
                     {% set disabled_attr = "" if row.accepting and cell.branch_open else "disabled" %}
                     {# Each response control names its column and row
                        so a screen-reader user hears "{field} for
                        {reviewee}" rather than an unlabelled box. #}
-                    {% set cell_aria = cell.field.label ~ " for " ~ (row.group_label if group.is_group else row.assignment.reviewee.name) ~ (" (required)" if cell.field.required else "") %}
+                    {# 19T Item 11 — "(required)" follows ``required_now``,
+                       so a required governed cell behind a closed branch
+                       doesn't announce itself as required. #}
+                    {% set cell_aria = cell.field.label ~ " for " ~ (row.group_label if group.is_group else row.assignment.reviewee.name) ~ (" (required)" if cell.required_now else "") %}
                     {# Render is driven by the field's ``data_type`` —
                        any String row with max_length > 100 gets a
                        textarea, smaller String rows get a text input,
@@ -697,8 +700,15 @@
             '[data-rs-governed-by="' + parentCell.dataset.rsBranchParent + '"]'
           ).forEach(function (cell) {
             cell.classList.toggle("rs-branch-closed", !open);
+            // 19T Item 11 — a required governed cell is required only
+            // while its branch is open, as ``required_field_ids`` judges.
+            var requiredNow = open && cell.dataset.rsRequired === "true";
             cell.querySelectorAll("input, select, textarea").forEach(function (c) {
               c.disabled = !open;
+              var label = (c.getAttribute("aria-label") || "").replace(/ \(required\)$/, "");
+              if (label) {
+                c.setAttribute("aria-label", requiredNow ? label + " (required)" : label);
+              }
             });
           });
         }

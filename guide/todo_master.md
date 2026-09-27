@@ -3401,7 +3401,8 @@ dep chains called out at the bottom of this file.
      closed branch holds no value.
    - **Item 11 — Governed fields can be set to required too** (open,
      planned). `guide/advanced_instruments.md` Item 2: a governed field
-     required only while its branch is open, under a required parent.
+     required only while its branch is open, in an instrument with an
+     active required ungoverned field.
    - **Item 12 — Augmented numerical conditions** (open, stub): inside a
      range and outside a range. `guide/advanced_instruments.md` Item 6,
      Q3.

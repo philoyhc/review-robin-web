@@ -1484,10 +1484,11 @@ The record's Item 2, as ruled:
   while its branch is open** for that assignment (per group row on a
   group-scoped instrument). Closed, it is neither, and Item 10's save rule
   means it holds no value.
-- **It needs a required parent.** R on a governed row is live only while
-  its parent's R is on; turning the parent's R off turns its branch's R
-  off, and ↳ join keeps a row's R only under a required parent.
-  `set_band2_state` and the settings-CSV parse refuse the rest.
+- ~~**It needs a required parent.**~~ **Replaced 2026-09-27 by
+  pre-positioning 4** (the author): **the instrument needs an active
+  required ungoverned field.** R is live on every governed row; Save and
+  the settings-CSV parse refuse a required governed field in an
+  instrument with none, naming it.
 - **Every per-instrument required count becomes per assignment**, judged
   by Item 10's `applicable_field_ids`: the Python counts directly, and the
   two SQL rollups by **route (a)**: an instrument with a required governed
@@ -1583,7 +1584,7 @@ later. The costing is `guide/advanced_instruments.md` Item 6. Measured at
    - It also drops rung 4's builder cascade: R is live on every governed
      row, and Save refuses a required governed field with no active
      required ungoverned field, naming it.
-   - **This changes a ruling, so it is the author's call.**
+   - **Taken by the author** 2026-09-27, replacing the ruling.
 5. **Only `_branching.py` interprets a condition** (for Item 12).
    - Item 11's counts and route (a) go through the helpers and never read
      `branch_op`; no SQL evaluates a condition.
@@ -1609,7 +1610,14 @@ the rulings, route (a) and the ladder hold; the check's corrections are
 folded into the sections above.
 
 **Pre-positioning for Items 12–14 added 2026-09-27** on the author's
-instruction, as recommendations awaiting a ruling (open question 1).
+instruction; **all five taken** the same day (the author).
+
+**Rung 2** (2026-09-27): `required_field_ids` and the chain-walking
+`applicable_field_ids` in `_branching.py`; the four counts, the reviewer
+cell's `required_now` and the builder preview's `rfRowRequiredNow` on
+them. `row_completion` gains a per-row `required_count`, so the pills'
+total comes from the same saved state as their missing count.
+**Cumulative-read base:** `3cec7196`, main before rung 1 merged.
 
 ### PR ladder
 
@@ -1627,9 +1635,9 @@ guards stay on until the rollups are taught**. The item's cumulative
    `q2` opens on a1 (`q1` "yes") unanswered and `g2` on a3 (`g1` "ok")
    answered, so Alice reads 2 completed, 7 required, 3 missing; a2 (`q1`
    empty) and a5 (no rows) are the closed cases.
-4. **Authoring**: the five guards come off; the required-parent rule goes
-   into the builder's R and ↳, `set_band2_state` and the settings-CSV
-   parse. Cumulative read.
+4. **Authoring**: the five guards come off; pre-positioning 4's rule goes
+   into `branch_structure_errors`, so Save and the settings-CSV parse
+   share it. Cumulative read.
 5. **Close.**
 
 ### Definition of done
@@ -1640,9 +1648,8 @@ guards stay on until the rollups are taught**. The item's cumulative
   governed fields required, on every implementation in its lists.
 - A reviewer whose only empty required field is behind a closed branch is
   complete and not reminded; pinned.
-- Save and the settings CSV refuse a required governed field under an
-  optional parent (or, if pre-positioning 4 is taken, in an instrument
-  with no active required ungoverned field), naming it.
+- Save and the settings CSV refuse a required governed field in an
+  instrument with no active required ungoverned field, naming it.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19T.11` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -1651,10 +1658,8 @@ guards stay on until the rollups are taught**. The item's cumulative
 
 ### Open questions
 
-1. **Which of pre-positioning 1–5 to take.** 1, 2, 3 and 5 shape how
-   rungs 2–3 are built, and the Decision is unchanged by them. 4 replaces
-   the required-parent ruling, and with it rung 4's builder cascade and
-   the CSV contract's wording. The author decides, before rung 2.
+1. ~~Which of pre-positioning 1–5 to take~~ — **all five** (the author,
+   2026-09-27). 4 replaces the required-parent ruling in the Decision.
 
 ### Out of scope
 
@@ -1669,8 +1674,8 @@ guards stay on until the rollups are taught**. The item's cumulative
 
 - `spec/reviewer-surface.md` — the required counts and the submit gate per assignment; a closed cell's required mark (Item 11).
 - `spec/operations_pages.md` — the rollups count a required governed field only while its branch is open; route (a) (Item 11).
-- `spec/instruments.md` — R inside a branch and the required-parent rule; the preview's required count (Item 11).
-- `spec/csv_contracts.md` — §3.3: `required` on a governed field needs a required parent (Item 11).
+- `spec/instruments.md` — R inside a branch and the active-required-ungoverned-field rule; the preview's required count (Item 11).
+- `spec/csv_contracts.md` — §3.3: `required` on a governed field needs an active required ungoverned field in the instrument (Item 11).
 - `spec/rrw_functional_spec.md` — required governed fields leave the out-of-scope list (Item 11).
 - `guide/advanced_instruments.md` — Item 2 points to this item as the build (Item 11).
 - `docs/status.md` — row when the item closes (Item 11).
