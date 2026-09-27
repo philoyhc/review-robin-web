@@ -1,6 +1,6 @@
 # Advanced instruments — design record
 
-Five items that rework the Instruments page's builder:
+Six items that rework the Instruments page's builder:
 - **Item 3**: reordering on the Band 3 rows, with the response pills and ✓
   retired;
 - **Item 4**: visibility edited in Band 2's card, freeing Band 3's left
@@ -9,7 +9,9 @@ Five items that rework the Instruments page's builder:
   retire entirely;
 - **Item 1**: branching between response fields, with governed fields that
   are never required;
-- **Item 2**: required governed fields.
+- **Item 2**: required governed fields;
+- **Item 6**: required-when conditions, a second level and numeric
+  ranges, explored against one scenario (2026-09-27, not scheduled).
 
 **Logged 2026-09-24 and 2026-09-25 on the author's instruction. Being
 built one item at a time:** Item 4 shipped first as 19T Item 7
@@ -596,3 +598,127 @@ review, 2026-09-24):
   tests (6–9), **with block 12**. The guards come off in the same PR that
   teaches the rollups, so no deployed state counts a closed branch as
   missing.
+
+## Item 6 — Beyond one level: required-when, a second level, ranges
+
+**Explored 2026-09-27 on the author's instruction; not scheduled.** Three
+extensions, weighed against one scenario:
+1. **Familiarity** (Integer 1–5, required);
+2. **Rating**, open when Familiarity ≥ 3;
+3. **Comment**, owed when Rating is high or low.
+
+### What the scenario needs, part by part
+
+- **"Owed when"** is Item 2 (19T Item 11): a required governed field is
+  required only while its branch is open. Comment is governed by Rating,
+  with the condition **≠ 3** (Integer) or **is not 3** (List). Both exist
+  since Item 1.
+- **"High or low"** is *outside* a range, not the "above this and below
+  that" of Q3. On a 1–5 scale, ≠ 3 already says it. A range matters only
+  on a wide Integer or Decimal scale (0–100: "below 30 or above 80").
+- **Rating gated by Familiarity** *and* parent of Comment is the second
+  level (Q2). This is the only part of the scenario today's model can't
+  express.
+
+**Without a second level**, the scenario fits one level:
+- Familiarity is required.
+- Rating is optional and ungoverned. Its helptext says "rate only if
+  familiar"; nothing enforces it.
+- Comment is required and governed by Rating ≠ 3.
+
+**But Item 2's required-parent rule refuses this:** Rating is optional.
+The rule exists so a submit always leaves a response row. Any required
+ungoverned field guarantees that, and Familiarity is one. **Relaxing
+"needs a required parent" to "needs a required ungoverned field in the
+instrument"** keeps the guarantee and admits the scenario. It's a change
+to 19T Item 11's rung-4 authoring rule, not new work.
+
+### Q1 — A condition that makes a field required, not shown
+
+**Semantics:** a branch gets a mode.
+- **Show** is Item 1: closed means unanswerable.
+- **Require** is new: the governed field is always answerable, and
+  required only while the condition holds. A mid-rating reviewer could
+  still comment.
+
+**Cost, after Item 11** (medium, about 3–4 PRs):
+- **Storage:** a `branch_mode` column, and so one migration. Encoding the
+  mode in `branch_op` (String(8)) is rejected: it would double the
+  operator vocabulary the CSV, the scripts and the extract read.
+- **Save rule:** `drop_closed_branch_answers` skips require-mode
+  branches.
+- **Reviewer surface:** the script toggles the required mark instead of
+  disabling the cell.
+- **Builder:** the condition row reads *then show* / *then require*.
+- **Every copy path** gains one attribute: the settings CSV, clone and
+  `replicate_instrument`.
+- **Extract:** "Required when" beside "Shown when".
+- **Counts:** Item 11's counts need no new code if they ask one question,
+  "is this field required for this assignment", rather than filtering
+  "required ∩ applicable" at each block. **That's cheap to pre-position in
+  Item 11 now:** one helper in `app/services/responses/_branching.py`
+  that rungs 2–3 call.
+
+### Q2 — One more level of branching
+
+Measured at `3012edbc`. Storage needs nothing: the self FK already
+allows a chain. Everything that assumes one level does:
+
+| Area | Where | What a second level needs |
+|---|---|---|
+| Rules | `branch_structure_errors` (`_branching.py`) | "A field inside a branch can't have a branch" becomes a depth limit. The contiguity check becomes recursive, since a branch's rows include its sub-branch. |
+| Open | `applicable_field_ids` | It checks the immediate parent's answer only, which is safe while the invariant holds. |
+| Save rule | `drop_closed_branch_answers` (`_branch_rule.py`), `_hold_answers_behind_refused_parents` (`_core.py`) | The drop judges answers before its own deletes, so a grandchild whose parent's answer is dropped in the same pass survives it; applicability must walk ancestors. The hold checks only the immediate parent, so it misses a grandchild behind a refused grandparent. |
+| Reviewer script | `review_surface.html` `sync` | Closing Rating must close Comment too, whatever Rating's stale input holds. The sync must cascade. |
+| Builder | `instruments_index.html` (6,503 lines, 82 "governed" mentions) | **The bulk.** Items listed below the table. |
+| Authoring rules | `_apply_branch_rules` (`_band2.py`), `_apply_branches` (the importer) | The hidden-parent cascade, the governed-answers lock and bottom-up deletion become recursive. With Item 11, so does the required chain. |
+| Tests | 7 branching files, 58 tests | The one-level pins flip; the parity fixture gains a chain. |
+
+The builder's changes, in detail:
+- The indent shifts a second time, in a 12-cell row with the condition
+  at `colspan="9"`.
+- A governed row gains ⑂.
+- ↳ / ↰ must choose a level.
+- ▲ ▼ move a subtree.
+- The Active and R cascades go two deep.
+
+**Weight:** about the size of Item 10's builder rungs, 5–7 PRs, most of
+them in the builder. **Rejected alternative:** a condition that names two
+fields (Familiarity ≥ 3 *and* Rating ≠ 3) on one level. It has the same
+save-rule and script cost, plus a condition editor that picks fields.
+
+### Q3 — Ranges on a numeric condition
+
+Two operators, both inclusive:
+- **`between`** — the "above this and below that" asked;
+- **`outside`** — its complement, which is what "high or low" means.
+
+`branch_value` holds `low,high`, which is `Text` already. Both tokens fit
+`branch_op`'s String(8), so there's **no migration**.
+
+**Cost** (light, 1–2 PRs, independent of Items 11, Q1 and Q2):
+- `condition_error`, `condition_label` ("Rating outside 2–4") and
+  `branch_is_open`;
+- the reviewer script's `isOpen`;
+- the builder's condition row: a second number box while a range
+  operator is chosen;
+- the settings CSV's operator list in `spec/csv_contracts.md`;
+- tests.
+
+### Recommendation
+
+For this scenario, in order of value per cost:
+1. **Relax Item 11's required-parent rule** to "a required ungoverned
+   field", in Item 11's rung 4. It costs nothing new, and gives the
+   scenario everything except enforcing the Familiarity gate.
+2. **Pre-position Q1 in Item 11:** its counts go through one "required
+   for this assignment" helper. Build Q1 itself only if a closed Comment
+   on a mid rating proves too strict.
+3. **Q3 when a wide scale needs it.** On a 1–5 scale, ≠ 3 or "is not"
+   already covers "high or low".
+4. **Q2 only if the Familiarity gate must be enforced** rather than
+   advised. It's the one part helptext can't cover, and the most
+   expensive.
+
+**For the author:** whether to fold 1 and 2 into 19T Item 11 before
+rung 2.
