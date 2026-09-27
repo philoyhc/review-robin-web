@@ -107,6 +107,7 @@ class _PlannedField:
     label: str
     order: int
     required: bool
+    visible: bool
     branch_parent_id: int | None
     branch_op: str | None
     branch_value: str | None
@@ -118,10 +119,10 @@ def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
     """19T Item 10 — each instrument's parsed fields against the
     branching rules, before anything is applied: a ``branch_parent``
     names a ``field_key`` of the same instrument, and the fields keep one
-    level, a non-String parent with a valid condition, no governed field
-    required, and a branch directly after its parent. A file that breaks
-    one is refused with the rule named rather than applied with the branch
-    dropped."""
+    level, a non-String parent with a valid condition, a required governed
+    field only beside an active required ungoverned one (19T Item 11), and
+    a branch directly after its parent. A file that breaks one is refused
+    with the rule named rather than applied with the branch dropped."""
     from app.services.responses import branch_structure_errors
 
     errors: list[ApplyError] = []
@@ -160,6 +161,7 @@ def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
                     label=rf.label or rf.field_key or f"response_fields[{m}]",
                     order=m,
                     required=rf.required,
+                    visible=rf.visible,
                     branch_parent_id=parent_position,
                     branch_op=rf.branch_op,
                     branch_value=rf.branch_value,
@@ -169,6 +171,15 @@ def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
                     _inline_list_csv=rf.list_csv,
                 )
             )
+        # A hidden parent hides its branch when the file is applied
+        # (``_apply_branches``), so the rules judge a governed field the
+        # same way here: both phases give ``branch_structure_errors`` the
+        # same visibility (19T Item 11's cumulative read).
+        by_position = {p.id: p for p in planned}
+        for p in planned:
+            parent = by_position.get(p.branch_parent_id)
+            if parent is not None and not parent.visible:
+                p.visible = False
         errors.extend(
             ApplyError(
                 row_number=0,

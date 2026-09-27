@@ -126,7 +126,7 @@ def test_the_condition_row_shows_the_saved_condition(
 
 def test_branch_controls_are_wired(client: TestClient, db: Session) -> None:
     """Nothing is inert: the condition edits and adds, a governed row's R
-    is off, and a parent's X waits for its branch to go."""
+    is live (19T Item 11), and a parent's X waits for its branch to go."""
     _, _, card, flat = _page(client, db, "br-builder-wired")
     assert "data-new-model-rf-branch-inert" not in flat
     table = _rows_table(card)
@@ -137,7 +137,8 @@ def test_branch_controls_are_wired(client: TestClient, db: Session) -> None:
     assert " disabled" not in condition
     governed = _row(table, "Comments")
     r = re.search(r"<button[^>]*data-new-model-rf-required[^>]*>", governed).group(0)
-    assert " disabled" in r and "A field inside a branch can't be required" in r
+    assert " disabled" not in r and "can't be required" not in r
+    assert 'onclick="newModelRfRequiredChanged(this)"' in r
     x = re.search(r"<button[^>]*data-new-model-rf-delete[^>]*>", _row(table, "Rating"))
     assert " disabled" in x.group(0) and 'title="Delete its branch first"' in x.group(0)
     # The operators by parent type, for a new condition row's select.
@@ -197,12 +198,17 @@ def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) 
         "? !window.newModelRfBranchSibling(row, up)",
         "? 'Delete its branch first'",
         "'Delete this field and its branch'",
-        "requiredBtn.setAttribute('data-required', 'false');",
         "if (stringOpt) { stringOpt.disabled = isParent; }",
         "activeBox.disabled = parentHidden;",
         "window.newModelRfRecomputeCondition(group);",
     ):
         assert rule in recompute, rule
+    # 19T Item 11 — R is live inside a branch: nothing turns it off there,
+    # and the stager sends a governed row's R as it stands.
+    assert "requiredBtn.setAttribute('data-required', 'false');" not in recompute
+    stager = body[body.index("rf.row_key = row.getAttribute('data-row-key')"):]
+    stager = stager[: stager.index("var cond = group")]
+    assert "rf.required = false" not in stager
     # The condition mirrors ``condition_error``'s messages.
     error = _fn(flat, "newModelRfConditionError")
     for message in (

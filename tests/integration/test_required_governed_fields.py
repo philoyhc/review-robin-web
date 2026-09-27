@@ -1,8 +1,8 @@
 """19T Item 11 rung 2 — a required governed field is required, and
 missing when empty, only while its branch is open, in every Python count.
 
-No page lets an operator mark a governed field required yet (the guards
-come off at rung 4), so each test sets ``required`` directly. The default
+Each test sets ``required`` directly rather than through the card (the
+card's own path is ``test_required_governed_authoring.py``). The default
 instrument's Rating (Integer 1–5, required) governs Comments while
 Rating ≥ 4, and Comments is required."""
 
@@ -295,3 +295,46 @@ def test_the_preview_doesnt_count_a_required_governed_field(
     assert "committedRows.filter(rfRowRequiredNow).length" in body
     assert "window.newModelRfRowRequiredNow" in body
 
+
+
+def test_a_group_scoped_submit_is_gated_once_per_group_row(db: Session) -> None:
+    """Through ``submit`` on a real group-scoped instrument: the parent's
+    answer fans out to every member, the gate reports the open branch's
+    empty field once for the group row, and answering it releases every
+    member (the item's cumulative read)."""
+    op, reviewer, review_session, (a1, a2), rating, comments = _seed(db)
+    instrument = a1.instrument
+    instrument.group_kind = "r1"
+    for assignment in (a1, a2):
+        assignment.reviewee.tag_1 = "Team A"
+    db.flush()
+    result = _submit(db, op, reviewer, review_session, [
+        ResponseUpsert(assignment_id=a1.id, field_key="rating", value="5"),
+    ])
+    assert result.submitted is False
+    assert [m.field_key for m in result.missing] == ["comments"]
+    # The fan-out reached a2: its branch is open (2 required), and only
+    # Comments is missing, not Rating.
+    for assignment in (a1, a2):
+        state = responses_service.row_completion(db, assignment)
+        assert (state.required_count, state.missing_count) == (2, 1)
+    result = _submit(db, op, reviewer, review_session, [
+        ResponseUpsert(assignment_id=a1.id, field_key="comments", value="why"),
+    ])
+    assert result.missing == []
+    assert result.submitted is True
+    for assignment in (a1, a2):
+        assert responses_service.row_completion(db, assignment).is_complete
+
+
+def test_a_group_scoped_closed_branch_submits(db: Session) -> None:
+    op, reviewer, review_session, (a1, a2), _, _ = _seed(db)
+    a1.instrument.group_kind = "r1"
+    for assignment in (a1, a2):
+        assignment.reviewee.tag_1 = "Team A"
+    db.flush()
+    result = _submit(db, op, reviewer, review_session, [
+        ResponseUpsert(assignment_id=a1.id, field_key="rating", value="2"),
+    ])
+    assert result.missing == []
+    assert result.submitted is True

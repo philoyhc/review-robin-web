@@ -133,7 +133,10 @@ def test_the_settings_csv_refuses_a_broken_branch(db: Session) -> None:
             "Rating: Its branch condition governs no field.",
         ),
         "instruments[1].response_fields[2].required": (
-            "true", "Why: A field inside a branch can't be required."
+            # Rating isn't required here, so nothing outside the branch is
+            # (19T Item 11).
+            "true", "Why: A field inside a branch can be required only when "
+            "the instrument has an active required field outside any branch."
         ),
         "instruments[1].response_fields[1].data_type": (
             "String", "Rating: A String field can't have a branch."

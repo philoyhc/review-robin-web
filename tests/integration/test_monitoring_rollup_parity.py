@@ -95,13 +95,19 @@ def rollups(db: Session) -> Fixture:
     by `reviewee.tag_1` and carol + dan are one group.
 
     Branches (19T Item 10; `guide/advanced_instruments.md` Item 1,
-    Pre-positioning 7) — each second field is governed by its
-    instrument's first, a List parent: `q2` shows when `q1` is "yes",
-    `g2` when `g1` is "ok". **Both are required** (19T Item 11), so each
-    counts only while its branch is open. The expectations below were
-    re-derived by hand when they turned required, not kept: `q2` is open
-    and unanswered on a1, open and answered on a8, and closed on a2 and
-    a7; `g2` is open and answered on a3 and closed on a5.
+    Pre-positioning 7) — each optional field is governed by its
+    instrument's required one, a List parent: `q2` shows when `q1` is
+    "yes", `g2` when `g1` is "ok". The governed fields stay **optional**,
+    so every count below is the one it was before branching.
+
+    **They stay optional on purpose** (19T Item 11's cumulative read). A
+    required governed field sends its instrument down both rollups'
+    Python halves, and `grouped` / `grouped2` are group-scoped, so making
+    `q2` required would route `solo` there too. The reviewer-side SQL
+    aggregate would then count nothing in this fixture, and every "sql"
+    case here would compare Python with Python. Required governed fields
+    are pinned on both halves together in
+    `tests/integration/test_required_governed_rollups.py`.
     """
     user = User(email="op-r2parity@example.edu")
     db.add(user)
@@ -163,7 +169,7 @@ def rollups(db: Session) -> Fixture:
         branch_op="is", branch_value="yes",
     )
     q2 = InstrumentResponseField(
-        instrument_id=solo.id, field_key="q2", label="Q2", required=True, order=1
+        instrument_id=solo.id, field_key="q2", label="Q2", required=False, order=1
     )
     g1 = InstrumentResponseField(
         instrument_id=grouped.id, field_key="g1", label="G1", required=True, order=0,
@@ -171,7 +177,7 @@ def rollups(db: Session) -> Fixture:
         branch_op="is", branch_value="ok",
     )
     g2 = InstrumentResponseField(
-        instrument_id=grouped.id, field_key="g2", label="G2", required=True, order=1
+        instrument_id=grouped.id, field_key="g2", label="G2", required=False, order=1
     )
     h1 = InstrumentResponseField(
         instrument_id=grouped2.id, field_key="h1", label="H1", required=True, order=0
@@ -216,10 +222,9 @@ def rollups(db: Session) -> Fixture:
         db.add(row)
         return row
 
-    # a1 submitted with `q1 = "yes"`, which opens `q2`, left unanswered;
-    # a2 submitted but with the required field left empty; a3 answered;
-    # a5, a7 untouched; a8 answered in full but belongs to the inactive
-    # reviewer.
+    # a1 answered and submitted; a2 submitted but with the required
+    # field left empty; a3 answered; a5, a7 untouched; a8 answered but
+    # belongs to the inactive reviewer.
     respond(a1, q1, "yes", submitted_at=T0)
     respond(a2, q1, "", submitted_at=T0 + timedelta(hours=1))
     # a3 carries **two** rows, and it is carol's *later* assignment.
@@ -234,7 +239,6 @@ def rollups(db: Session) -> Fixture:
     respond(a3, g1, "ok", submitted_at=T0 + timedelta(hours=6))
     respond(a3, g2, "note", submitted_at=T0 + timedelta(hours=2))
     respond(a8, q1, "yes", submitted_at=T0 + timedelta(hours=3))
-    respond(a8, q2, "why", submitted_at=T0 + timedelta(hours=3))
     # A **draft**: a value typed but never submitted. The two rollups
     # read it differently on purpose — see
     # `test_a_draft_is_complete_to_one_rollup_and_not_the_other`.
@@ -365,36 +369,31 @@ def test_a_group_counts_once_per_group_not_once_per_member(
 
 
 @reviewer_impl
-def test_alices_progress_is_two_of_five_with_three_required_missing(
+def test_alices_progress_is_two_of_four_with_two_required_missing(
     db: Session, rollups: Fixture, rollup: Callable
 ) -> None:
     """Counted units: a1, a2, a3 (for Team A on `grouped`), a5, and a9
-    (for Team A on `grouped2`). A required governed field counts only
-    while its branch is open (19T Item 11).
+    (for Team A on `grouped2`).
 
-    - a1 — `q1 = "yes"` opens `q2`, which is unanswered → 2 required,
-      1 missing, not complete.
+    - a1 — `q1 = "yes"`, required satisfied → complete.
     - a2 — `q1 = ""`, so the required field is *present but empty*,
-      which the contract counts as missing, and `q2`'s branch is closed
-      → 1 required, 1 missing, not complete.
-    - a3 — `g1 = "ok"` opens `g2`, answered "note" → 2 required, complete.
-    - a5 — no rows at all, so `g2`'s branch is closed → 1 required,
-      1 missing, not complete.
+      which the contract counts as missing → not complete, 1 missing.
+    - a3 — `g1 = "ok"` → complete.
+    - a5 — no rows at all → not complete, 1 missing.
     - a9 — `h1 = "wip"`, a draft. Non-empty, so nothing is missing and
       this rollup calls it complete; the unsubmitted row is what keeps
       the pill off `submitted`.
 
-    Seven required fields across the five units, not ten: the three
-    closed branches don't count. Three of them unmet. `in progress`
-    rather than `submitted` because a1, a2 and a5 leave required fields
-    unmet and a9 is unsubmitted, and not `not started` because three
-    units carry answers.
+    Five required fields across the five units, two of them unmet.
+    `in progress` rather than `submitted` because a2 and a5 leave
+    required fields unmet and a9 is unsubmitted, and not `not started`
+    because three units carry answers.
     """
     alice = _by_email(rollup(db, rollups.session))["alice@example.edu"]
-    assert alice.completed_count == 2
-    assert alice.required_total == 7
-    assert alice.missing_required_count == 3
-    assert alice.required_done == 4
+    assert alice.completed_count == 3
+    assert alice.required_total == 5
+    assert alice.missing_required_count == 2
+    assert alice.required_done == 3
     assert alice.pill_state == "in progress"
 
 
@@ -435,8 +434,7 @@ def test_an_excluded_row_is_not_work(
 ) -> None:
     """Bob has two assignments; a6 is `include=False`, so he carries one
     unit, unanswered — `not started`, with its one required field
-    counted as missing. `q2`'s branch is closed there, so it doesn't
-    count."""
+    counted as missing."""
     bob = _by_email(rollup(db, rollups.session))["bob@example.edu"]
     assert bob.assignment_count == 1
     assert bob.completed_count == 0
@@ -463,15 +461,13 @@ def test_reviewee_rows_are_in_identifier_order(
 
 
 @reviewee_impl
-def test_carol_is_at_risk_on_an_open_required_governed_field(
+def test_carol_is_adequately_covered(
     db: Session, rollups: Fixture, rollup: Callable
 ) -> None:
-    """a1, a3 and a9 — three assignments, one of them complete. a1's
-    `q1 = "yes"` opens `q2`, which is required and unanswered (19T Item
-    11); a3 has both of its fields answered and submitted; a9 is the
-    draft, which this rollup does **not** count. One of three is below
-    the adequate fraction, so `at risk`. (`adequate` is pinned by
-    `test_an_invisible_required_field_is_the_reviewers_third_asymmetry`.)
+    """a1, a3 and a9 — three assignments, two of them answered with the
+    required field satisfied and submitted. a9 is the draft, which this
+    rollup does **not** count. Two of three is at or above the adequate
+    fraction, so `adequate` rather than `complete` or `at risk`.
 
     a6 is `include=False` and does not count against her. Note that no
     group dedupe happens on this side: carol's two grouped assignments
@@ -479,12 +475,12 @@ def test_carol_is_at_risk_on_an_open_required_governed_field(
     """
     carol = _by_identifier(rollup(db, rollups.session))["carol@example.edu"]
     assert carol.reviewer_count == 3
-    assert carol.completed_count == 1
+    assert carol.completed_count == 2
     assert (
         carol.completed_count / carol.reviewer_count
-        < monitoring.AT_RISK_THRESHOLDS["adequate_fraction"]
+        >= monitoring.AT_RISK_THRESHOLDS["adequate_fraction"]
     )
-    assert carol.pill_state == "at risk"
+    assert carol.pill_state == "adequate"
     # +6h: a3's later row. Not +0h (a1, her first assignment with a
     # stamp) and not +2h (a3's other row).
     assert _utc_naive(carol.last_response_at) == _utc_naive(
@@ -518,10 +514,9 @@ def test_a_response_that_completes_nothing_still_reads_as_no_responses(
 def test_erin_is_at_risk_below_the_adequate_fraction(
     db: Session, rollups: Fixture, rollup: Callable
 ) -> None:
-    """One of erin's three assignments is complete: a8, whose `q1 = "yes"`
-    opens `q2`, and both are answered. The threshold is read from the
-    constant rather than written as `0.5`, so moving it moves this test
-    with it."""
+    """One of erin's three assignments is complete. The threshold is read
+    from the constant rather than written as `0.5`, so moving it moves
+    this test with it."""
     erin = _by_identifier(rollup(db, rollups.session))["erin@example.edu"]
     assert erin.reviewer_count == 3
     assert erin.completed_count == 1
@@ -581,11 +576,11 @@ def test_a_draft_is_complete_to_one_rollup_and_not_the_other(
         monitoring.per_reviewee_coverage(db, rollups.session)
     )["carol@example.edu"]
 
-    # Alice's two completions include a9; drop it and she has one.
-    assert alice.completed_count == 2
-    # Carol's three assignments include a9, and she has one completion.
+    # Alice's three completions include a9; drop it and she has two.
+    assert alice.completed_count == 3
+    # Carol's three assignments include a9, and she has two completions.
     assert carol.reviewer_count == 3
-    assert carol.completed_count == 1
+    assert carol.completed_count == 2
 
 
 def test_an_invisible_required_field_is_the_reviewers_third_asymmetry(
@@ -854,21 +849,28 @@ def test_summary_counts_ride_on_the_reviewer_rollup(
 
 def test_the_fixture_is_branched_and_holds_to_the_rules(rollups: Fixture) -> None:
     """The pin needs the branches present and well formed, or it pins
-    nothing: a later edit that drops them fails here, not silently. The
-    governed fields are required (19T Item 11), which the structure
-    rules still refuse until rung 4 lifts them, so only that rule's
-    error is allowed."""
+    nothing: a later edit that drops them fails here, not silently."""
     from app.services.responses import applicable_field_ids, branch_structure_errors
 
     assert rollups.q2.branch_parent_id == rollups.q1.id
     assert rollups.g2.branch_parent_id == rollups.g1.id
-    assert rollups.q2.required and rollups.g2.required
     for fields in ([rollups.q1, rollups.q2], [rollups.g1, rollups.g2]):
-        assert {reason for _, reason in branch_structure_errors(fields)} <= {
-            "A field inside a branch can't be required."
-        }
+        assert branch_structure_errors(fields) == []
     # a3's governed answer sits in an open branch ("ok"), so the fixture
     # obeys "a closed branch holds no value".
     assert rollups.g2.id in applicable_field_ids(
         [rollups.g1, rollups.g2], {rollups.g1.id: "ok"}
     )
+
+
+def test_the_fixture_reaches_both_sql_aggregates(
+    db: Session, rollups: Fixture
+) -> None:
+    """The "sql" cases above only compare against the oracle if this
+    fixture's per-reviewee work actually reaches the aggregates. A
+    required governed field on `solo` would route it to Python and make
+    every one of them vacuous (19T Item 11's cumulative read)."""
+    plain = monitoring._plain_instrument_parts(db, rollups.session.id)
+    assert plain[rollups.alice.id].total_assignments == 2  # a1, a2 on `solo`
+    assert rollups.bob.id in plain
+    assert not db.execute(monitoring._required_governed_instrument_ids()).first()
