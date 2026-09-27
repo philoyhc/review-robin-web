@@ -629,9 +629,14 @@ extensions, weighed against one scenario:
 **But Item 2's required-parent rule refuses this:** Rating is optional.
 The rule exists so a submit always leaves a response row. Any required
 ungoverned field guarantees that, and Familiarity is one. **Relaxing
-"needs a required parent" to "needs a required ungoverned field in the
-instrument"** keeps the guarantee and admits the scenario. It's a change
-to 19T Item 11's rung-4 authoring rule, not new work.
+"needs a required parent" to "needs an active required ungoverned field
+in the instrument"** keeps the guarantee and admits the scenario. It must
+be *active*: the submit gate skips a hidden field (pinned by
+`test_submit_skips_hidden_required_field`), so a hidden Familiarity
+guarantees nothing. The card's Save checks it every time, so it also
+refuses unchecking the last such field while a governed field is
+required (Codex on #2651). It's a change to 19T Item 11's rung-4
+authoring rule, not new work.
 
 ### Q1 — A condition that makes a field required, not shown
 
@@ -647,8 +652,17 @@ to 19T Item 11's rung-4 authoring rule, not new work.
   operator vocabulary the CSV, the scripts and the extract read.
 - **Save rule:** `drop_closed_branch_answers` skips require-mode
   branches.
-- **Reviewer surface:** the script toggles the required mark instead of
-  disabling the cell.
+- **Reviewer surface:** the server keeps the cell enabled. The cell
+  builder in `_surface/_context.py` sets `branch_open` from
+  `applicable_field_ids`, and the template renders a closed cell
+  disabled before any script runs. So applicability must know the mode:
+  a require-mode field always applies, and only its required mark
+  follows the condition. The script then toggles that mark instead of
+  disabling the cell (Codex on #2651).
+- **Changing the mode:** Require → Show would strand answers on closed
+  branches, since no response save runs to drop them. The mode joins the
+  condition in the governed-answers lock in `_apply_branch_rules`, and
+  is audited like it (Codex on #2651).
 - **Builder:** the condition row reads *then show* / *then require*.
 - **Every copy path** gains one attribute: the settings CSV, clone and
   `replicate_instrument`.
@@ -708,8 +722,8 @@ Two operators, both inclusive:
 ### Recommendation
 
 For this scenario, in order of value per cost:
-1. **Relax Item 11's required-parent rule** to "a required ungoverned
-   field", in Item 11's rung 4. It costs nothing new, and gives the
+1. **Relax Item 11's required-parent rule** to "an active required
+   ungoverned field", in Item 11's rung 4. It costs nothing new, and gives the
    scenario everything except enforcing the Familiarity gate.
 2. **Pre-position Q1 in Item 11:** its counts go through one "required
    for this assignment" helper. Build Q1 itself only if a closed Comment
