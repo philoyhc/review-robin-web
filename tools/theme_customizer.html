@@ -625,10 +625,12 @@
        * name or shape is invalid: an amber left edge and a pale fill,
        * on its cells, since a table row draws no box-shadow.
        */
-      [data-new-model-rf-row][data-row-pending="true"] > td {
+      [data-new-model-rf-row][data-row-pending="true"] > td,
+      [data-new-model-rf-condition][data-row-pending="true"] > td {
         background: rgba(254, 243, 199, 0.5);
       }
-      [data-new-model-rf-row][data-row-pending="true"] > td:first-child {
+      [data-new-model-rf-row][data-row-pending="true"] > td:first-child,
+      [data-new-model-rf-condition][data-row-pending="true"] > td:first-child {
         box-shadow: inset 3px 0 0 0 var(--row-pending-marker);
       }
       .muted { color: var(--text-subtle); }

@@ -1425,6 +1425,31 @@ which the row recompute keeps disabled, so nothing about a branch can
 be edited yet: ⑂, the condition, a governed row's Active, +, R, ▲ ▼ and
 X, and a parent's Active and X ("Delete its branch first"). A parent's
 ▲ ▼ and "+" work as before, moving or following the whole group.
+Rung 6 is #2643.
+
+**Rung 7 wires the builder.** The stager sends every row's `row_key`,
+a governed row's parent by row key, and a parent's condition;
+`set_band2_state` resolves the parent after creating the save's new
+fields, so ⑂ saves in one go. **Each branch key is independently
+present**, as the state's top-level keys are: an entry that omits one
+keeps the stored value, so a caller that knows nothing of branches
+can't clear one. The service now compares the save with the stored
+branches: governed answers lock the condition as well as the
+membership, and **a field with responses can't move into a branch**
+(found at build: its answers could then sit in a closed one; no page
+offers it, since "+" and ⑂ add new fields). A hidden parent hides its
+branch on the server too. Every branch change is audited as the field's
+`instrument.field_updated`, where rung 2 audited only the cleared
+condition. On the page: ⑂ turns a number or List field into a parent
+with a condition row and one "Field N"; the condition offers the
+operators its parent's live type allows and turns amber with
+`condition_error`'s reason; "+" on the condition row or a governed row
+adds inside the branch; ▲ ▼ move a governed row within it; the last
+governed row's X takes the condition with it; Active cascades; R is
+off inside a branch and String off in a parent's type select; a locked
+branch (`data-new-model-rf-branch-locked`) disables its condition and
+its fields' "+" and X. The preview mutes a governed column, titled
+"Opens when …", as the surface does a closed cell.
 
 ### Doc impact
 

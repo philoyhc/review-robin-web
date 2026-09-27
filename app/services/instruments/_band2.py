@@ -73,31 +73,31 @@ _BAND2_RF_BOUND_KEYS: tuple[str, ...] = (
     "step",
     "list_options",
 )
-# 19T Item 10 — a response-field entry naming a branch. Refused until the
-# builder rung wires branch authoring, so no Save stores a condition
-# before the save rule and the reviewer surface enforce it (Codex on
-# #2638).
-BRANCHES_NOT_YET_EDITABLE_MESSAGE = "Branches can't be set from this card yet."
+# 19T Item 10 — the branch keys a response-field entry may carry. Each is
+# independently present: an entry that omits one keeps the stored value,
+# so a caller that knows nothing of branches can't clear one. The card's
+# stager always sends all three.
+_BAND2_RF_BRANCH_KEYS: tuple[str, ...] = (
+    "branch_parent",
+    "branch_op",
+    "branch_value",
+)
 
 
-def _refuse_branch_keys(state: Any) -> None:
-    """Raise when any response-field entry carries a ``branch_*`` key."""
-    from app.services.instruments._response_fields import (
-        InvalidResponseFieldShapeError,
-    )
-
-    raw_rfs = state.get("response_fields") if isinstance(state, dict) else None
-    if not isinstance(raw_rfs, list):
-        return
-    errors = [
-        (str(raw.get("name") or "").strip() or "A response field",
-         BRANCHES_NOT_YET_EDITABLE_MESSAGE)
-        for raw in raw_rfs
-        if isinstance(raw, dict)
-        and any(str(key).startswith("branch_") for key in raw)
-    ]
-    if errors:
-        raise InvalidResponseFieldShapeError(errors)
+def _band2_branch_entry(raw: dict[str, Any]) -> dict[str, Any]:
+    """The branch keys ``raw`` carries, sanitised: ``row_key`` names the
+    entry, ``branch_parent`` the parent's row key, and ``branch_op`` /
+    ``branch_value`` a parent's condition. Empty means none."""
+    out: dict[str, Any] = {}
+    row_key = str(raw.get("row_key") or "").strip()[:64]
+    if row_key:
+        out["row_key"] = row_key
+    for key in _BAND2_RF_BRANCH_KEYS:
+        if key in raw:
+            value = raw.get(key)
+            text = str(value).strip()[:255] if value is not None else ""
+            out[key] = text or None
+    return out
 
 
 def set_band2_state(
@@ -122,6 +122,11 @@ def set_band2_state(
       chars), ``data_type`` (one of ``string`` / ``integer`` /
       ``decimal`` / ``list``), ``min`` / ``max`` / ``step`` /
       ``list_options`` (str, optional), and ``selected`` (bool).
+      19T Item 10 adds ``row_key`` (the row's key on the page) and the
+      branch keys: ``branch_parent`` (the parent's row key, so a branch
+      can name a parent the same Save creates), ``branch_op`` and
+      ``branch_value`` (a parent's condition). An entry that omits a
+      branch key keeps what is stored.
 
     Passing ``None`` (or a payload that reduces to empty
     selections + zero response_fields) clears ``band2_state``
@@ -131,7 +136,6 @@ def set_band2_state(
     No-op saves (the merged payload matches what's already
     persisted) skip the audit + lifecycle side effects.
     """
-    _refuse_branch_keys(state)
     sanitised: dict[str, Any] = {}
     existing = instrument.band2_state or {}
     # Field-presence semantics: every top-level key in band2_state
@@ -209,6 +213,7 @@ def set_band2_state(
                 rf["help_text"] = (
                     str(help_text_raw)[:1000] if help_text_raw is not None else ""
                 )
+                rf.update(_band2_branch_entry(raw))
                 # Wave 3 PR iii — per-response-field column width (px)
                 # moves out of band2_state JSON into the canonical
                 # ``column_widths`` dict on the instrument under
@@ -555,6 +560,22 @@ def _sync_response_fields_to_db(
     }
     seen_ids: set[int] = set()
     new_fields: list[InstrumentResponseField] = []
+    # 19T Item 10 — the branches as stored, which the rules compare the
+    # save against, and each entry's field, keyed by its row key.
+    old_branch: dict[int, tuple[int | None, str | None, str | None]] = {
+        f.id: (f.branch_parent_id, f.branch_op, f.branch_value)
+        for f in instrument.response_fields
+    }
+    entry_by_row_key = {
+        rf["row_key"]: rf for rf in sanitised_rfs if rf.get("row_key")
+    }
+    entry_by_id: dict[int, dict[str, Any]] = {}
+    for rf in sanitised_rfs:
+        entry_id = _band2_rf_id(rf)
+        if entry_id is not None:
+            entry_by_id[entry_id] = rf
+    field_by_row_key: dict[str, InstrumentResponseField] = {}
+    field_for_entry: list[InstrumentResponseField] = []
 
     for order_idx, rf in enumerate(sanitised_rfs):
         rf_id = _band2_rf_id(rf)
@@ -576,6 +597,9 @@ def _sync_response_fields_to_db(
             new_fields.append(field)
 
         seen_ids.add(field.id)
+        field_for_entry.append(field)
+        if rf.get("row_key"):
+            field_by_row_key.setdefault(rf["row_key"], field)
 
         # Update label + flags + order.
         field.label = rf["name"][:255]
@@ -594,6 +618,20 @@ def _sync_response_fields_to_db(
         # see them. Operator must acknowledge per Part 3 item 1.
         prior_visible = bool(field.visible)
         incoming_visible = bool(rf.get("selected", True))
+        # 19T Item 10 — a hidden parent hides its branch (the card's
+        # Active cascade, held here too).
+        if "branch_parent" in rf:
+            parent_entry = (
+                entry_by_row_key.get(rf["branch_parent"])
+                if rf["branch_parent"]
+                else None
+            )
+        elif field.branch_parent_id is not None:
+            parent_entry = entry_by_id.get(field.branch_parent_id)
+        else:
+            parent_entry = None
+        if parent_entry is not None and not parent_entry.get("selected"):
+            incoming_visible = False
         if (
             prior_visible
             and not incoming_visible
@@ -611,6 +649,10 @@ def _sync_response_fields_to_db(
             str(help_text_raw)[:1000] if help_text_raw else None
         )
         field.help_text_visible = bool(rf.get("help_text_visible"))
+        if "branch_op" in rf:
+            field.branch_op = rf["branch_op"]
+        if "branch_value" in rf:
+            field.branch_value = rf["branch_value"]
 
         # Inline type + bounds. Sanitised JSON uses lowercase
         # ``string`` / ``integer`` / ``decimal`` / ``list``; the
@@ -692,12 +734,29 @@ def _sync_response_fields_to_db(
     to_delete = {
         rf_id for rf_id in previous_json_ids - seen_ids if rf_id in existing_by_id
     }
+    # 19T Item 10 — point each governed field at its parent, named by row
+    # key, now that every field in the save has an id.
+    parent_errors: list[tuple[str, str]] = []
+    for rf, field in zip(sanitised_rfs, field_for_entry):
+        if "branch_parent" not in rf:
+            continue
+        if rf["branch_parent"] is None:
+            field.branch_parent_id = None
+            continue
+        parent = field_by_row_key.get(rf["branch_parent"])
+        if parent is None:
+            parent_errors.append((rf["name"], "Its branch's parent field is missing."))
+            continue
+        field.branch_parent_id = parent.id
+    if parent_errors:
+        raise InvalidResponseFieldShapeError(parent_errors)
     _apply_branch_rules(
         db,
         instrument=instrument,
         existing_by_id=existing_by_id,
         new_fields=new_fields,
         to_delete=to_delete,
+        old_branch=old_branch,
         actor=actor,
     )
     for rf_id in to_delete:
@@ -707,6 +766,18 @@ def _sync_response_fields_to_db(
         db.delete(field)
 
 
+BRANCH_LOCKED_MESSAGE = (
+    "Its branch has saved responses, so the branch's fields can't change."
+)
+BRANCH_CONDITION_LOCKED_MESSAGE = (
+    "Its branch has saved responses, so its condition can't change."
+)
+ANSWERED_FIELD_CANT_JOIN_MESSAGE = (
+    "It has saved responses, so it can't move into a branch."
+)
+_BRANCH_ATTRS: tuple[str, ...] = ("branch_parent_id", "branch_op", "branch_value")
+
+
 def _apply_branch_rules(
     db: Session,
     *,
@@ -714,78 +785,112 @@ def _apply_branch_rules(
     existing_by_id: dict[int, InstrumentResponseField],
     new_fields: list[InstrumentResponseField],
     to_delete: set[int],
+    old_branch: dict[int, tuple[int | None, str | None, str | None]],
     actor: User,
 ) -> None:
-    """19T Item 10 — hold a Band 3 save to the branching rules.
+    """19T Item 10 — hold a Band 3 save to the branching rules, comparing
+    the fields as the save leaves them with ``old_branch``, the branches
+    as stored.
 
     Branches are deleted bottom-up: a parent can't go while it still
-    governs a field, and once any field in a branch has responses the
-    branch's fields can't be removed. A parent whose last governed field
-    goes loses its condition, since a branch is its condition plus at
-    least one field, and that change is audited as the parent's
-    ``instrument.field_updated`` (Codex on #2639). Then the saved state is
-    checked whole
-    (``branch_structure_errors``): a governed field made required, a
-    parent turned String, or List options that drop an option its
-    condition names are refused, as is a new field inserted inside a
-    branch it isn't part of. Raises
-    :class:`InvalidResponseFieldShapeError`; the caller's transaction is
-    not committed."""
+    governs a field. Once any field in a branch has responses, the
+    branch's membership and condition lock; a field with responses can't
+    move into a branch either, since its answers could then sit in a
+    closed one. A parent whose last governed field goes loses its
+    condition, since a branch is its condition plus at least one field.
+    Then the saved state is checked whole (``branch_structure_errors``):
+    a governed field made required, a parent turned String, a condition
+    that doesn't fit, or a field inside a branch it isn't part of are
+    refused. Raises :class:`InvalidResponseFieldShapeError`; the caller's
+    transaction is not committed. Each field whose branch changed is
+    audited as its ``instrument.field_updated`` (Codex on #2639)."""
     from app.services.instruments._response_fields import (
         InvalidResponseFieldShapeError,
     )
     from app.services.responses import branch_structure_errors
 
-    governed_by_parent: dict[int, list[InstrumentResponseField]] = {}
-    for field in existing_by_id.values():
-        if field.branch_parent_id is not None:
-            governed_by_parent.setdefault(field.branch_parent_id, []).append(field)
-    errors: list[tuple[str, str]] = []
-    cleared: list[tuple[InstrumentResponseField, str | None, str | None]] = []
-    for parent_id, governed in governed_by_parent.items():
-        parent = existing_by_id.get(parent_id)
-        going = [f for f in governed if f.id in to_delete]
-        staying = [f for f in governed if f.id not in to_delete]
-        if going and any(_response_count_for_field(db, f.id) for f in governed):
-            errors.extend(
-                (f.label, "Its branch has saved responses, so the branch's "
-                 "fields can't change.")
-                for f in going
+    all_by_id = {**existing_by_id, **{f.id: f for f in new_fields}}
+    kept = [f for f in existing_by_id.values() if f.id not in to_delete] + new_fields
+    kept_by_id = {f.id: f for f in kept}
+
+    def governed_map(
+        pairs: list[tuple[int, int | None]],
+    ) -> dict[int, set[int]]:
+        out: dict[int, set[int]] = {}
+        for field_id, parent_id in pairs:
+            if parent_id is not None:
+                out.setdefault(parent_id, set()).add(field_id)
+        return out
+
+    old_governed = governed_map([(i, b[0]) for i, b in old_branch.items()])
+    new_governed = governed_map([(f.id, f.branch_parent_id) for f in kept])
+    answered: dict[int, bool] = {}
+
+    def has_responses(field_id: int) -> bool:
+        if field_id not in answered:
+            answered[field_id] = (
+                field_id in existing_by_id
+                and bool(_response_count_for_field(db, field_id))
             )
+        return answered[field_id]
+
+    errors: list[tuple[str, str]] = []
+    for parent_id in new_governed:
+        if parent_id in to_delete:
+            errors.append((all_by_id[parent_id].label, "Delete its branch first."))
+    for parent_id, old_ids in old_governed.items():
+        if not any(has_responses(i) for i in old_ids):
             continue
-        if parent is None:
-            continue
-        if parent.id in to_delete and staying:
-            errors.append((parent.label, "Delete its branch first."))
-        elif not staying:
-            if parent.id not in to_delete:
-                cleared.append((parent, parent.branch_op, parent.branch_value))
+        changed = old_ids ^ new_governed.get(parent_id, set())
+        errors.extend(
+            (all_by_id[i].label, BRANCH_LOCKED_MESSAGE)
+            for i in sorted(changed, key=lambda i: all_by_id[i].order)
+        )
+        parent = kept_by_id.get(parent_id)
+        if parent is not None and (parent.branch_op, parent.branch_value) != (
+            old_branch[parent_id][1:]
+        ):
+            errors.append((parent.label, BRANCH_CONDITION_LOCKED_MESSAGE))
+    for field in kept:
+        old_parent = old_branch.get(field.id, (None, None, None))[0]
+        if (
+            field.branch_parent_id is not None
+            and field.branch_parent_id != old_parent
+            and has_responses(field.id)
+        ):
+            errors.append((field.label, ANSWERED_FIELD_CANT_JOIN_MESSAGE))
+    if errors:
+        raise InvalidResponseFieldShapeError(errors)
+    for parent_id in old_governed:
+        parent = kept_by_id.get(parent_id)
+        if parent is not None and not new_governed.get(parent_id):
             parent.branch_op = None
             parent.branch_value = None
+    errors = branch_structure_errors(kept)
     if errors:
         raise InvalidResponseFieldShapeError(errors)
-    errors = branch_structure_errors(
-        [f for f in existing_by_id.values() if f.id not in to_delete]
-        + new_fields
-    )
-    if errors:
-        raise InvalidResponseFieldShapeError(errors)
-    for parent, old_op, old_value in cleared:
+    for field in kept:
+        old = old_branch.get(field.id, (None, None, None))
+        new = tuple(getattr(field, attr) for attr in _BRANCH_ATTRS)
+        changes = {
+            attr: [before, after]
+            for attr, before, after in zip(_BRANCH_ATTRS, old, new)
+            if before != after
+        }
+        if not changes:
+            continue
         audit.write_event(
             db,
             event_type="instrument.field_updated",
             summary=(
-                f"Cleared the branch condition on field '{parent.label}' of "
-                f"instrument {_instrument_label(instrument)}, with its last "
-                "governed field"
+                f"Updated the branch on field '{field.label}' of instrument "
+                f"{_instrument_label(instrument)}"
             ),
             actor_user_id=actor.id if actor else None,
             session=instrument.session,
-            payload=audit.changes(
-                {"branch_op": [old_op, None], "branch_value": [old_value, None]}
-            ),
-            refs={"instrument_id": instrument.id, "response_field_id": parent.id},
-            context={"field_key": parent.field_key},
+            payload=audit.changes(changes),
+            refs={"instrument_id": instrument.id, "response_field_id": field.id},
+            context={"field_key": field.field_key},
         )
 
 
