@@ -413,7 +413,7 @@ rendered page. Neither was a person on the live app.
 
 | Check | How | Passes when |
 |---|---|---|
-| The rows | Open an instrument card | One row per saved field in a table, a rule under each; each row reads Active, "+", ⑂, ↳, name, type, bounds, R, ≡, ▲, ▼, X; X is red; "+", ⑂ and ↳ are one width; Band 3 splits 1 : 4 |
+| The rows | Open an instrument card, one with a branch | One row per saved field in a table. A plain field or a parent reads Active, "+", ⑂, ↳, name, type, bounds, R, ≡, ▲, ▼, X; a governed row shifts one column right before the name (the bar, Active, "+", ↰) and has no ⑂. A rule sits under each plain field and under each branch as a whole — the parent, its condition row and its governed rows share one. X is red; "+", ⑂ and ↳ / ↰ are one width; Band 3 splits 1 : 4 |
 | "+" inserts below | "+" on the first of two rows | A row appears between them, its name box showing a grayed "Field N", cursor in it; the preview gains the column |
 | Default names | In that row press →; clear the name; type "Rating" then clear it | → turns "Field N" into normal text; cleared, it shows grayed again; after Save and a reload a kept "Field N" reads as normal text |
 | The preview follows the row | Type a name; switch the row to Integer and set Max below Min | The preview follows the name at once; the bad Max marks the row amber with the reason on hover, and the preview keeps the last valid shape |
