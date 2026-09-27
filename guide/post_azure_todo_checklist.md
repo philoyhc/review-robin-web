@@ -443,8 +443,10 @@ rendered page. Neither was a person on the live app.
 | A refused parent keeps the text | In that preview, type an out-of-range parent value and a governed answer; Save | Both come back with their text; the governed one reads "Kept until … is fixed." |
 | A locked branch | Give a governed field a response; reopen the card | The condition, the branch's "+"s and its fields' X and ↰ are off |
 | The export's condition | Download the by-instrument bundle for a branched instrument | The governed field's metadata carries a "Shown when" row ("Rating ≥ 4") |
+| A required governed field | Press R on a governed row; Save. Then untick R on every field outside the branch; Save | The first saves, with R pressed. The second is refused, naming the governed field: "…can be required only when the instrument has an active required field outside any branch." In the preview, the "*Required items completed" count doesn't include it |
+| Required only while open | As a reviewer, answer the parent under, then over, the condition; submit with the governed field empty each time | Under: it submits; the field's label doesn't say "(required)". Over: the label says "(required)", the pill's total grows by one, and Submit lists the field as missing. Invitations and Responses count the reviewer complete in the first case and not in the second |
 | Full-size sample rosters | Guide → Sample session → full-size download; upload both files in Quick Setup on a new session | 154 reviewers and reviewees, tag columns Tutor / Group / Team, a Profile column on Reviewees |
 
-**Where this came from.** `guide/segment_19T_advanced_instruments.md` Items 1–4 and 6–10,
+**Where this came from.** `guide/segment_19T_advanced_instruments.md` Items 1–4 and 6–11,
 each closed with this check owed. Settling a row is a dated line
 there, not a reopening.

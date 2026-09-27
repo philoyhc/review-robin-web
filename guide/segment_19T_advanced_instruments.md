@@ -1605,57 +1605,54 @@ later. The costing is `guide/advanced_instruments.md` Item 6. Measured at
 
 ### Status
 
-**Checked against the code 2026-09-27, before rung 2** (at `cfb07d7f`):
-the rulings, route (a) and the ladder hold; the check's corrections are
-folded into the sections above.
+**Closed 2026-09-27.** Five PRs: #2649 plan, #2650 check against the
+code, #2653 the Python counts, #2654 the rollups, #2655 authoring and
+the read; this close.
 
-**Pre-positioning for Items 12–14 added 2026-09-27** on the author's
-instruction; **all five taken** the same day (the author).
+**Intended vs done.** The ladder held, rung for rung. Three things moved:
+- **The required-parent rule was replaced** before rung 2 (the author,
+  taking pre-positioning 4): a visible required governed field needs an
+  active required field outside any branch. It is one check in
+  `branch_structure_errors`, shared by Save and both settings-CSV
+  phases. Rung 4 therefore dropped the planned builder cascade.
+- **All five pre-positionings were taken** (the author):
+  - `required_field_ids`, which every count asks;
+  - `required_now` beside `branch_open`;
+  - the chain-walking `applicable_field_ids`;
+  - the relaxed rule;
+  - no condition read outside `_branching.py`.
+- **The parity fixture keeps its governed fields optional**, amending the
+  Definition of done. Rung 3 made them required and re-derived its
+  expectations. The cumulative read then showed that doing so routed
+  `solo` to Python and emptied the "sql" cases. The fixture was restored
+  and is guarded by `test_the_fixture_reaches_both_sql_aggregates`.
+  Required governed fields are pinned on both halves together in
+  `test_required_governed_rollups.py`.
 
-**Rung 2** (2026-09-27): `required_field_ids` and the chain-walking
-`applicable_field_ids` in `_branching.py`; the four counts, the reviewer
-cell's `required_now` and the builder preview's `rfRowRequiredNow` on
-them. `row_completion` gains a per-row `required_count`, so the pills'
-total comes from the same saved state as their missing count.
-**Cumulative-read base:** `3cec7196`, main before rung 1 merged.
+**Decisions confirmed at build:**
+- The pills' total sums each row's `required_count` from `row_completion`,
+  the same saved state as their missing count.
+- Route (a) on both sides: `_python_instrument_parts` (was
+  `_grouped_instrument_parts`) and the new `_python_routed_coverage`.
+  `responses_by_assignment` takes an `instrument_clause`.
+- The CSV parse phase hides a hidden parent's branch before the rules
+  run, as apply does.
 
-**Rung 3** (2026-09-27): route (a) on both sides. The reviewer SQL skips
-instruments with a required governed field, and `_python_instrument_parts`
-(was `_grouped_instrument_parts`) takes them. `per_reviewee_coverage`
-gains `_python_routed_coverage`, merged per reviewee.
-`responses_by_assignment` takes an `instrument_clause` instead of
-`group_scoped_only`. In the parity fixture, carol reads 1 of 3, `at risk`
-(`adequate` stays pinned by the invisible-field test). a8 gains a `q2`
-answer, so erin keeps her one completion. The fixture's closed branches
-all sit on assignments that are incomplete anyway, so
-`test_required_governed_rollups.py` pins a closed one that completes.
+**Reads:** one cumulative `diff-reviewer` read, at rung 4, on
+`3cec7196..b425981b`. It found no correctness defect in the counts, and
+six findings:
+- the vacuous parity fixture above (high);
+- the gate unpinned through `submit` on a group instrument (medium);
+- the CSV phases' visibility (low);
+- stale docstrings (low);
+- routed instruments loading as ORM rows (low, accepted: route (a)'s
+  stated cost, with route (b) in reserve);
+- scope bundled into the plan PRs (low, noted).
 
-**Rung 4** (2026-09-27): the guards are off. The server-rendered R, the
-recompute and the stager all leave R alone inside a branch, so ↳ keeps
-a row's R. `branch_structure_errors` replaces "can't be required" with
-`REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE`, which Save and both
-settings-CSV phases share. It needs an active (visible) required
-ungoverned field whenever a visible governed field is required; a hidden
-governed field counts nowhere, so it needs none. `BranchField` and the
-parse phase's `_PlannedField` gain `visible`.
+**Codex** found nothing on the code rungs. On the plan, it found the
+parity total (6 → 7) and a compaction in #2650.
 
-**The cumulative read** (`diff-reviewer`, `3cec7196..b425981b`) found no
-correctness defect in the counts. Six findings:
-- **High, fixed:** rung 3's required `q2` routed `solo` to Python, so
-  the parity file's "sql" cases compared Python with Python.
-  - The fixture's governed fields go back to optional.
-  - `test_the_fixture_reaches_both_sql_aggregates` guards it.
-  - Required governed fields are pinned on both halves in
-    `test_required_governed_rollups.py`.
-  - *This amends the Definition of done's parity line.*
-- **Medium, fixed:** the gate is now pinned through `submit` on a real
-  group-scoped instrument.
-- **Low, fixed:** the CSV parse phase now hides a hidden parent's branch
-  before the rules run, as apply does.
-- **Low, fixed:** stale docstrings.
-- **Low, accepted:** routed per-reviewee instruments load as ORM rows,
-  the cost route (a) states; route (b) stays in reserve.
-- **Low, noted:** scope bundled in the plan PRs.
+**Browser checks owed** in `guide/post_azure_todo_checklist.md` item 6.
 
 ### PR ladder
 
@@ -1699,8 +1696,7 @@ guards stay on until the rollups are taught**. The item's cumulative
 
 ### Open questions
 
-1. ~~Which of pre-positioning 1–5 to take~~ — **all five** (the author,
-   2026-09-27). 4 replaces the required-parent ruling in the Decision.
+1. ~~Which pre-positionings to take~~: **all five** (the author).
 
 ### Out of scope
 
