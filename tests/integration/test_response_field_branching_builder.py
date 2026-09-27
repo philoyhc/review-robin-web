@@ -63,21 +63,24 @@ def test_a_branch_is_one_ruled_group(client: TestClient, db: Session) -> None:
 
 def test_rows_align_from_the_name_onward(client: TestClient, db: Session) -> None:
     """A governed row shifts one column before the name: the bar in the
-    checkbox column, its checkbox in +'s, its + in ⑂'s. Every row, the
-    condition row included, spans the table's eleven columns."""
+    checkbox column, its checkbox in +'s, its + in ⑂'s, and its detach
+    in the join column (rung 7b). Every row, the condition row included,
+    spans the table's twelve columns."""
     _, _, card, _ = _page(client, db, "br-builder-align")
     table = _rows_table(card)
     parent, governed = _row(table, "Rating"), _row(table, "Comments")
-    assert parent.count("<td") == governed.count("<td") == 11
+    assert parent.count("<td") == governed.count("<td") == 12
     governed_cells = re.findall(r"<td[^>]*>", governed)
     assert 'class="col-shrink rf-branch-bar"' in governed_cells[0]
     assert "data-new-model-rf-active" in governed.split("<td")[2]
     assert "data-new-model-rf-add" in governed.split("<td")[3]
-    assert "data-new-model-rf-name" in governed.split("<td")[4]
-    assert "data-new-model-rf-name" in parent.split("<td")[4]
+    assert "data-new-model-rf-join" in governed.split("<td")[4]
+    assert "data-new-model-rf-join" in parent.split("<td")[4]
+    assert "data-new-model-rf-name" in governed.split("<td")[5]
+    assert "data-new-model-rf-name" in parent.split("<td")[5]
     assert "data-new-model-rf-fork" not in governed
     condition = table.split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
-    assert condition.count("<td") == 4 and 'colspan="8"' in condition
+    assert condition.count("<td") == 4 and 'colspan="9"' in condition
     assert "If the above" in condition and "then show the below" in condition
 
 
@@ -86,7 +89,7 @@ def test_fork_shows_its_three_states(client: TestClient, db: Session) -> None:
     parent = _row(_rows_table(card), "Rating")
     fork = re.search(r"<button[^>]*data-new-model-rf-fork[^>]*>", parent).group(0)
     # Selected, and off, on a parent with a branch.
-    assert 'class="btn"' in fork and 'aria-pressed="true"' in fork
+    assert 'class="btn rf-glyph"' in fork and 'aria-pressed="true"' in fork
     assert 'title="This field has a branch"' in fork and " disabled" in fork
     _, _, card, _ = _page(client, db, "br-builder-fork-none", branched=False)
     table = _rows_table(card)
@@ -97,7 +100,7 @@ def test_fork_shows_its_three_states(client: TestClient, db: Session) -> None:
         r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(table, "Comments")
     ).group(0)
     # Outline, and live, where a branch can be added; off on a String field.
-    assert 'class="btn secondary"' in rating and " disabled" not in rating
+    assert 'class="btn rf-glyph secondary"' in rating and " disabled" not in rating
     assert 'title="Add a branch below this field"' in rating
     assert 'onclick="newModelRfFork(this)"' in rating
     assert 'title="A String field can\'t have a branch"' in comments
@@ -216,8 +219,10 @@ def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) 
     assert "window.newModelRfNewGovernedRow(band3, cond)" in fork
     # The last governed field's X takes the condition with it.
     delete = _fn(flat, "newModelRfDeleteRow")
-    assert "if (cond) { cond.remove(); }" in delete
-    assert "parent.removeAttribute('data-new-model-rf-parent');" in delete
+    assert "if (last) { window.newModelRfEndBranch(group); }" in delete
+    end = _fn(flat, "newModelRfEndBranch")
+    assert "if (cond) { cond.remove(); }" in end
+    assert "parent.removeAttribute('data-new-model-rf-parent');" in end
     # The Active cascade.
     active = _fn(flat, "newModelRfToggleActive")
     assert "group.querySelectorAll('[data-new-model-rf-governed]')" in active
@@ -234,6 +239,58 @@ def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) 
     # The preview mutes a governed column.
     assert "branchHint: row.hasAttribute('data-new-model-rf-governed')" in flat
     assert "class=\"rs-branch-closed\"" in flat
+
+
+def test_join_and_detach_show_their_states(client: TestClient, db: Session) -> None:
+    """Rung 7b: ↳ on a plain row, ↰ on a governed one; +, ⑂ and it share
+    one width (``.rf-glyph``)."""
+    _, _, card, flat = _page(client, db, "br-builder-join")
+    table = _rows_table(card)
+    detach = re.search(r"<button[^>]*data-new-model-rf-join[^>]*>↰", _row(table, "Comments"))
+    assert detach and 'title="Detach this field and end its branch"' in detach.group(0)
+    parent_join = re.search(r"<button[^>]*data-new-model-rf-join[^>]*>↳", _row(table, "Rating"))
+    # The first row, and a parent, can't join.
+    assert parent_join and " disabled" in parent_join.group(0)
+    for marker in ("data-new-model-rf-add", "data-new-model-rf-fork", "data-new-model-rf-join"):
+        button = re.search(rf"<button[^>]*{marker}[^>]*>", _row(table, "Rating")).group(0)
+        assert "rf-glyph" in button, marker
+    assert (
+        "body.ui-v2 table.rf-table .btn.rf-glyph { width: 2.25rem; padding-left: 0; "
+        "padding-right: 0; text-align: center; }"
+    ) in flat
+
+
+def test_the_row_script_joins_and_detaches(client: TestClient, db: Session) -> None:
+    review_session, instrument, _, _ = _page(client, db, "br-builder-join-js")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    sync = _rf_fn(body, "newModelRfSyncJoin")
+    for title in (
+        "The first field can't join a branch",
+        "A field with a branch can't join another",
+        "It has saved responses, so it can't move into a branch",
+        "Its branch has saved responses, so no field can join it",
+        "The field above is String, so it can't have a branch",
+        "Join the branch above",
+        "Start a branch on the field above with this field",
+        "Detach this field and end its branch",
+        "Move this field out of its branch",
+    ):
+        assert title in sync, title
+    join = _rf_fn(body, "newModelRfJoin")
+    # Detach lands the row directly below its branch; the last one ends it.
+    assert "group.insertAdjacentElement('afterend', own);" in join
+    assert "window.newModelRfEndBranch(group);" in join
+    # A detached row's Active box comes back, though its hidden parent had
+    # turned it off (Codex on #2646).
+    ungoverned = _rf_fn(body, "newModelRfMakeUngoverned")
+    assert "active.disabled = false;" in ungoverned
+    # Joining a plain field starts a branch with an empty condition.
+    assert "parent.setAttribute('data-new-model-rf-parent', 'true');" in join
+    assert "window.newModelRfMakeGoverned(row);" in join
+    recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
+    assert "window.newModelRfSyncJoin(row);" in recompute
 
 
 def test_saving_the_card_keeps_the_branch(client: TestClient, db: Session) -> None:

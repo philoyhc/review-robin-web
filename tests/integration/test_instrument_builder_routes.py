@@ -9066,6 +9066,7 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
         "data-new-model-rf-active",
         "data-new-model-rf-add",
         "data-new-model-rf-fork-cell",
+        "data-new-model-rf-join-cell",
         "data-new-model-rf-name",
         "data-new-model-rf-data-type",
         "data-new-model-rf-bounds-wrap",

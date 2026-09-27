@@ -2891,6 +2891,14 @@
         border-bottom: 1px solid var(--border-default);
       }
       body.ui-v2 table.rf-table .btn { padding: 4px 10px; }
+      /* +, ⑂ and join / detach (↳ ↰) share one width, so the columns
+         line up whichever glyph a row shows (the author, 2026-09-27). */
+      body.ui-v2 table.rf-table .btn.rf-glyph {
+        width: 2.25rem;
+        padding-left: 0;
+        padding-right: 0;
+        text-align: center;
+      }
       body.ui-v2 table.rf-table td.rf-name { width: 20%; }
       body.ui-v2 table.rf-table td.rf-type { width: 15%; }
       /* A branch in Band 3's response-field table (19T Item 10). The bar
