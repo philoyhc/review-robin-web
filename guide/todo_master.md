@@ -3357,9 +3357,11 @@ dep chains called out at the bottom of this file.
    = roster + sign-in); the real gap is targeted reminders. Rationale
    in the plan's Status section.
 
-2. **19T — Odds and ends (open segment).** Small operator-UI adjustments
-   the author logs one at a time, each an item that closes on its own.
-   **Plan:** `guide/segment_19T_odds_and_ends.md`.
+2. **19T — Advanced instruments (open segment; "Odds and ends" until
+   2026-09-27).** The Instruments page's builder and
+   `guide/advanced_instruments.md`, an item at a time, each closing on its
+   own; Items 1–6 were small operator-UI adjustments.
+   **Plan:** `guide/segment_19T_advanced_instruments.md`.
    - ~~**Item 1 — Instruments:** response-field rows.~~ **Closed
      2026-09-24.** ✓ only adds or updates a pill; "+" on each row; row
      order through ✓, Save and drag; Band 3 split 2 : 3.
@@ -3397,6 +3399,11 @@ dep chains called out at the bottom of this file.
      branch of optional governed fields under an Integer, Decimal or List
      field, shown only while the parent's answer meets its condition; a
      closed branch holds no value.
+   - **Item 11 — Required governed fields** (open, planned).
+     `guide/advanced_instruments.md` Item 2: a governed field required
+     only while its branch is open, under a required parent.
+   - **Item 12 — The Guide catches up with 19T** (open, planned):
+     branching and the reviewer's view in the in-app Guide.
 
 #### Stubs
 
