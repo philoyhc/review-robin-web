@@ -658,7 +658,8 @@
        reviewer answers the parent. Mirrors ``branch_is_open`` in
        ``app/services/responses/_branching.py``: an empty or
        non-numeric answer closes a numeric branch; "is" matches any of
-       the listed options and "is not" none of them. The server re-judges on Save and deletes a
+       the listed options and "is not" none of them; a range (19T Item
+       12) opens within or outside "low to high". The server re-judges on Save and deletes a
        closed branch's answer, so this only keeps the page honest. #}
     <script>
       (function () {
@@ -674,6 +675,22 @@
           // The service's ``DECIMAL_PATTERN``, so "1_000" or "0x10" is no
           // number here either.
           var decimal = /^[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$/;
+          // 19T Item 12 — a range is "low to high", both plain numbers and
+          // low strictly below high, as ``parse_range`` reads it.
+          if (op === "in_inc" || op === "in_exc" || op === "out_inc" || op === "out_exc") {
+            var parts = (value || "").trim().split(" to ");
+            if (parts.length !== 2 || !decimal.test(raw)) { return false; }
+            var lowText = parts[0].trim(), highText = parts[1].trim();
+            if (!decimal.test(lowText) || !decimal.test(highText)) { return false; }
+            var x = Number(raw), low = Number(lowText), high = Number(highText);
+            if (!isFinite(x) || !isFinite(low) || !isFinite(high) || !(low < high)) {
+              return false;
+            }
+            if (op === "in_inc") { return low <= x && x <= high; }
+            if (op === "in_exc") { return low < x && x < high; }
+            if (op === "out_inc") { return x <= low || x >= high; }
+            return x < low || x > high;
+          }
           var b = (value || "").trim();
           if (!decimal.test(raw) || !decimal.test(b)) { return false; }
           var a = Number(raw);

@@ -38,6 +38,15 @@ LIST_OPS: dict[str, str] = {
     "is": "is",
     "is_not": "is not",
 }
+# 19T Item 12 — Integer / Decimal parents can also compare against a range,
+# stored as ``low to high`` (``2 to 4``, ``-5 to -1``). "Inclusive" on
+# outside counts the ends as outside, so ``out_inc`` is the complement of
+# ``in_exc`` and ``out_exc`` of ``in_inc``. Evaluated here and by the
+# reviewer script from rung 2; not yet in ``BRANCH_OPS``, so nothing can
+# store one until the builder can show it (rung 3; Codex on #2657).
+RANGE_OPS: frozenset[str] = frozenset({"in_inc", "in_exc", "out_inc", "out_exc"})
+RANGE_SEPARATOR = " to "
+
 BRANCH_OPS: frozenset[str] = frozenset({*NUMERIC_OPS, *LIST_OPS})
 
 # 19T Item 11, the author's ruling on pre-positioning 4.
@@ -87,6 +96,19 @@ def _finite_number(text: str | None) -> float | None:
     return value if math.isfinite(value) else None
 
 
+def parse_range(text: str | None) -> tuple[float, float] | None:
+    """A range condition's ``(low, high)``, or None when ``text`` isn't one:
+    exactly two plain numbers joined by ``RANGE_SEPARATOR``, low strictly
+    below high (the author's ruling, 19T Item 12)."""
+    parts = (text or "").strip().split(RANGE_SEPARATOR)
+    if len(parts) != 2:
+        return None
+    low, high = _finite_number(parts[0]), _finite_number(parts[1])
+    if low is None or high is None or not low < high:
+        return None
+    return low, high
+
+
 def condition_error(
     data_type: str | None,
     list_csv: str | None,
@@ -125,6 +147,15 @@ def condition_label(parent: BranchField) -> str:
     or Blue", "Colour is not Red or Blue". The reviewer surface's hint on a
     closed cell and the by-instrument extract's metadata both use it."""
     op, value = parent.branch_op or "", (parent.branch_value or "").strip()
+    if op in RANGE_OPS and parse_range(value) is not None:
+        # The ends as the operator typed them ("1.50" stays "1.50").
+        low, high = (part.strip() for part in value.split(RANGE_SEPARATOR))
+        return {
+            "in_inc": f"{low} ≤ {parent.label} ≤ {high}",
+            "in_exc": f"{low} < {parent.label} < {high}",
+            "out_inc": f"{parent.label} ≤ {low} or ≥ {high}",
+            "out_exc": f"{parent.label} < {low} or > {high}",
+        }[op]
     if op in LIST_OPS:
         options = _list_items(value)
         joined = (
@@ -148,6 +179,18 @@ def branch_is_open(parent: BranchField, answer: str | None) -> bool:
     if op in LIST_OPS:
         chosen = answer.strip() in set(_list_items(value))
         return chosen if op == "is" else not chosen
+    if op in RANGE_OPS:
+        x, bounds = _finite_number(answer), parse_range(value)
+        if x is None or bounds is None:
+            return False
+        low, high = bounds
+        if op == "in_inc":
+            return low <= x <= high
+        if op == "in_exc":
+            return low < x < high
+        if op == "out_inc":
+            return x <= low or x >= high
+        return x < low or x > high
     left, right = _finite_number(answer), _finite_number(value)
     if left is None or right is None:
         return False
