@@ -277,7 +277,7 @@ def test_join_and_detach_show_their_states(client: TestClient, db: Session) -> N
         button = re.search(rf"<button[^>]*{marker}[^>]*>", _row(table, "Rating")).group(0)
         assert "rf-glyph" in button, marker
     assert (
-        "body.ui-v2 table.rf-table .btn.rf-glyph { width: 2.25rem; padding-left: 0; "
+        "body.ui-v2 table.rf-table .btn.rf-glyph { width: var(--rf-glyph-width); padding-left: 0; "
         "padding-right: 0; text-align: center; }"
     ) in flat
 

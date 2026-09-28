@@ -92,9 +92,11 @@ def test_join_and_detach_leave_room_for_one_more_button(
         assert '<td class="col-shrink rf-join-cell" data-new-model-rf-join-cell>' in _row(table, name)
     template = flat.split("<template data-new-model-rf-row-template>")[1].split("</template>")[0]
     assert '<td class="col-shrink rf-join-cell" data-new-model-rf-join-cell>' in template
-    # The cell's own padding, a 2.25rem button (``.rf-glyph``) and the two
-    # paddings between cells.
+    # The cell's own padding, a button (``.rf-glyph``'s width, one
+    # variable for both) and the two paddings between cells.
+    assert "body.ui-v2 table.rf-table { --rf-glyph-width: 2.25rem; }" in flat
+    assert "width: var(--rf-glyph-width);" in flat
     assert (
         "body.ui-v2 table.rf-table td.rf-join-cell { "
-        "padding-right: calc(2.25rem + 3 * var(--space-1)); }"
+        "padding-right: calc(var(--rf-glyph-width) + 3 * var(--space-1)); }"
     ) in flat
