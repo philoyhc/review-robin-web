@@ -168,8 +168,19 @@ def test_the_settings_csv_refuses_an_unknown_mode(db: Session) -> None:
     )]
 
 
+def test_the_settings_csv_reads_show_as_blank_on_any_field(db: Session) -> None:
+    """``show`` is Item 10's kind, the same as a blank cell, so on a field
+    with no branch it is no orphan (Codex on #2675: the contract now says
+    so)."""
+    rows = _with_mode(db, "13-csv-show-any", "instruments[1].response_fields[3].branch_mode", "show")
+    target, _ = _session(db, "13-csv-show-any-dst")
+    assert apply_session_config(db, target, rows).errors == []
+    copied = db.execute(select(Instrument).where(Instrument.session_id == target.id)).scalar_one()
+    assert _fields(db, copied.id)["notes"].branch_mode is None
+
+
 def test_the_settings_csv_refuses_a_mode_without_a_branch(db: Session) -> None:
-    """A mode on a field with no condition is an orphan, like a lone
+    """``require`` on a field with no condition is an orphan, like a lone
     ``branch_value``."""
     rows = _with_mode(db, "13-csv-orphan", "instruments[1].response_fields[3].branch_mode", "require")
     target, _ = _session(db, "13-csv-orphan-dst")

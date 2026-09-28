@@ -613,7 +613,7 @@ and 19T Item 13 a fourth:
 | `branch_parent` | the parent field's `field_key` within the same instrument — ids don't survive an export | a governed field |
 | `branch_op` | the condition operator token: `eq` / `ne` / `gt` / `ge` / `lt` / `le` (Integer / Decimal, one box) or `is` / `is_not` (List); or, a range (19T Item 12), one of the four tokens `in_inc` / `in_exc` / `out_inc` / `out_exc` | the parent |
 | `branch_value` | the condition's number, List options comma-separated, or — for a range token — `low to high` | the parent |
-| `branch_mode` | what the condition does: `require` (the governed fields are required while it holds, else optional), or blank or `show` (Item 10's kind; exported blank). Any other value is refused by name; a mode on a field with no branch is an orphan, refused as a lone `branch_value` is | the parent |
+| `branch_mode` | what the condition does: `require` (the governed fields are required while it holds, else optional), or blank or `show` (Item 10's kind; exported blank). `show` reads exactly as blank, anywhere. Any other value is refused by name; `require` on a field with no branch is an orphan, refused as a lone `branch_value` is | the parent |
 
 **A range's `branch_value`** is exactly two plain numbers joined by
 `" to "`, low strictly below high (`parse_range`,

@@ -151,6 +151,8 @@ def _apply_instrument_kv(
                     f"unknown branch_mode {value!r}; expected one of "
                     f"{sorted(BRANCH_MODES)}"
                 )
+            # ``show`` reads exactly as blank, as on the card: Item 10's
+            # kind, so only ``require`` can be an orphan (Codex on #2675).
             rf.branch_mode = value if value == BRANCH_MODE_REQUIRE else None
         else:
             raise _ParseError(
