@@ -83,6 +83,10 @@ class InstrumentResponseField(Base):
     )
     branch_op: Mapped[str | None] = mapped_column(String(8), nullable=True)
     branch_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 19T Item 13 — on a parent, what its condition does to the governed
+    # fields: ``show`` (Item 10's kind) or ``require`` (required while the
+    # condition holds, else optional). Null reads ``show``.
+    branch_mode: Mapped[str | None] = mapped_column(String(8), nullable=True)
 
     # Segment 18J Wave 2 PR i — inline bound columns (now the sole
     # source of truth for type + bounds; PR iii-b4 dropped the
