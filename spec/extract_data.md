@@ -258,9 +258,11 @@ greys the `Zip all` button (`aria-disabled="true"` +
    only for a field governed by a branch
    (`guide/advanced_instruments.md` Item 1), stating its parent's
    condition in the same words the reviewer surface hints a closed cell
-   with (`responses.condition_label` — "Rating ≥ 4"); a field outside
-   any branch adds no row, so an unbranched instrument's extract is
-   unchanged. Pool rule
+   with (`responses.condition_label` — "Rating ≥ 4", or, for a range
+   (19T Item 12), "Rating ≥ 2 and ≤ 4": the field's name first, then
+   both ends, so a negative low end can never start the cell as a
+   formula); a field outside any branch adds no row, so an unbranched
+   instrument's extract is unchanged. Pool rule
    rows render fields as `{source_type}.{friendly_label}`
    so the row disambiguates which side of the assignment
    owns the slot. Skipped entirely when `meta=0`.

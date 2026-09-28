@@ -586,7 +586,9 @@ answer to the parent.
 
 A closed governed cell renders **muted** (`td.rs-branch-closed`) and its
 input **disabled**, titled with the condition that opens it —
-`views.branch_condition_label`: `"Opens when Rating ≥ 4"`. A value the
+`views.branch_condition_label`: `"Opens when Rating ≥ 4"`, or, for a
+range (19T Item 12), `"Opens when Rating ≥ 2 and ≤ 4"` — the field's
+name first, then both ends, never `"2 ≤ Rating ≤ 4"`. A value the
 page closes over **stays visible, greyed, and isn't sent**, so if the
 branch is still closed when the reviewer saves, the save rule deletes
 it (see below); reopening the branch brings the greyed value back live.
@@ -594,8 +596,13 @@ it (see below); reopening the branch brings the greyed value back live.
 **A live inline script** re-judges each parent cell as the reviewer
 edits it (`input` / `change`), mirroring `branch_is_open`: an empty or
 non-numeric answer closes a numeric branch; `is` opens on any of the
-condition's listed options, `is_not` on none of them. It only keeps the
-page honest — the server re-judges on Save / Submit regardless.
+condition's listed options, `is_not` on none of them. A range condition
+(`in_inc` / `in_exc` / `out_inc` / `out_exc`) opens the script's `isOpen`
+the same way `branch_is_open` does: the answer parsed against `branch_value`'s
+`low to high`, low strictly below high, and **inclusive on *is outside*
+counts the ends as outside** — `out_inc` opens at the ends themselves,
+`out_exc` does not. It only keeps the page honest — the server
+re-judges on Save / Submit regardless.
 
 **The save rule**, "a closed branch holds no value"
 (`app/services/responses/_branch_rule.py`), runs after every write of

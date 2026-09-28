@@ -1819,6 +1819,11 @@ labels in the service. Compacted here: the plan's length. **Codex** on
 builder's size classes (`spec/ui_elements.md` §6), scope beyond the rung,
 owed by `CLAUDE.md`.
 
+**Spec sweep** (`spec-writer`, at this close): the five Doc-impact specs,
+with no divergence from the code. Three of its sentences were corrected
+before commit: an exponent is accepted, the amber tooltip is the error
+and not the label, and a negative low end isn't like a lone `-5`.
+
 **Browser checks owed** in `guide/post_azure_todo_checklist.md` item 6.
 
 ### PR ladder

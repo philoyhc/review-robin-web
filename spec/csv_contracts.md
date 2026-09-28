@@ -610,8 +610,26 @@ boundary.
 | Attribute | Carries | On |
 |---|---|---|
 | `branch_parent` | the parent field's `field_key` within the same instrument — ids don't survive an export | a governed field |
-| `branch_op` | the condition operator token: `eq` / `ne` / `gt` / `ge` / `lt` / `le` (Integer / Decimal) or `is` / `is_not` (List) | the parent |
-| `branch_value` | the condition's number, or List options comma-separated | the parent |
+| `branch_op` | the condition operator token: `eq` / `ne` / `gt` / `ge` / `lt` / `le` (Integer / Decimal, one box) or `is` / `is_not` (List); or, a range (19T Item 12), one of the four tokens `in_inc` / `in_exc` / `out_inc` / `out_exc` | the parent |
+| `branch_value` | the condition's number, List options comma-separated, or — for a range token — `low to high` | the parent |
+
+**A range's `branch_value`** is exactly two plain numbers joined by
+`" to "`, low strictly below high (`parse_range`,
+`app/services/responses/_branching.py`); each end is a plain decimal
+(`DECIMAL_PATTERN`, an exponent allowed), neither blank nor non-finite.
+A cell that doesn't parse is refused
+by name — `range_error`'s messages name the end at fault ("The range's
+low end needs a number.", "…high end needs a number.", "The range's low
+end must be below its high end.") rather than a generic shape complaint.
+**Import stores the canonical form**: each end stripped of surrounding
+whitespace around the one separator (`canonical_condition_value`), so a
+hand-spaced `2 to  4` round-trips as `2 to 4` and doesn't later read as a
+changed condition to the lock on an answered branch. **A negative low
+end starts the cell with `-`** (`-5 to -1`); the settings CSV has no
+formula guard for any cell (`guide/deferred_consolidated.md`). Unlike a
+lone `-5`, which a spreadsheet reads as a number, such a cell can come
+back from a spreadsheet round trip as an error value; the import then
+refuses it by name.
 
 **Checked at parse time, before anything is applied**
 (`session_config_io/_apply_parse.py`'s `_branch_errors`, run against the
