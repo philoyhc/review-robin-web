@@ -216,19 +216,24 @@ def test_a_script_built_table_has_a_wrapped_host() -> None:
         host = re.search(rf"<[a-zA-Z]+[^>]*\b{re.escape(marker)}\b[^>]*>", text)
 
         assert host, f"{name}: no element carries `{marker}`"
+        # The scroller is the host or a wrapper directly around it, and
+        # never a lock region: a locked Instruments card makes a lock
+        # region inert, and an inert scroller can't scroll (19T Item 12A).
+        locked = r"\b(?:inert|data-lock-region)\b"
         classes = re.search(r'class="([^"]*)"', host.group(0))
-        # The wrapper may sit directly around the host instead: a locked
-        # Instruments card makes the host inert, and an inert scroller
-        # can't scroll (19T Item 12A). So the wrapper itself must never
-        # be a lock region.
+        on_host = (
+            classes is not None
+            and "table-scroll" in classes.group(1).split()
+            and not re.search(locked, host.group(0))
+        )
         parent = re.search(
-            r'<div class="table-scroll"(?![^>]*\b(?:inert|data-lock-region)\b)[^>]*>\s*$',
+            rf'<div class="table-scroll"(?![^>]*{locked})[^>]*>\s*$',
             re.sub(r"\{#.*?#\}", "", text[: host.start()], flags=re.S),
         )
-        assert (classes and "table-scroll" in classes.group(1).split()) or parent, (
+        assert on_host or parent, (
             f"{name}: the host for its script-built table(s) "
-            f"(`{marker}`) has no `.table-scroll`, on it or directly "
-            f"around it:\n  {host.group(0)}"
+            f"(`{marker}`) has no `.table-scroll` that isn't a lock region, "
+            f"on it or directly around it:\n  {host.group(0)}"
         )
 
 

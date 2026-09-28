@@ -2056,7 +2056,9 @@ was fixed in its PR.
   spec's lead phrase for a script-built table, a unit test that would
   have accepted an inert wrapper, this bullet's sentence, a loose
   template comment, and a checklist row that didn't say a locked
-  preview's columns are dragged wider while unlocked.
+  preview's columns are dragged wider while unlocked. Codex then found
+  the unit check still accepted a `.table-scroll` on a locked host, the
+  shape #2669 removes; it now rejects one there too.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 
