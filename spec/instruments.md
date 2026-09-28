@@ -1137,7 +1137,9 @@ select in this order (19T Item 12):
 The first six take **one box**, one number. The last four — a
 **range** — take **two boxes with "to" between them**. A number's boxes
 are as wide as the parent row's own Min box, measured by the row script
-into `--rf-condition-box` (19T Item 12A); a List's box is as wide as
+into `--rf-condition-box` and kept in sync by a `ResizeObserver` on that
+box, so a later width change (a column drag, a window resize) still
+matches it (19T Item 12A); a List's box is as wide as
 the parent's List box. A range takes a low and a high
 number, low strictly below high. The second box shows only while the
 selected operator is one of the four; switching away from a range hides
