@@ -2909,6 +2909,11 @@
       body.ui-v2 table.rf-table td.rf-join-cell {
         padding-right: calc(2 * var(--rf-glyph-width) + 5 * var(--space-1));
       }
+      /* The table keeps a usable width on a narrow card and scrolls in
+         its .table-scroll instead: its boxes are width 100% / min-width
+         0, so without a floor they shrink to nothing before it scrolls
+         (19T Item 12A; about its width at a 1100px window). */
+      body.ui-v2 table.rf-table { min-width: 50rem; }
       body.ui-v2 table.rf-table td.rf-name { width: 20%; }
       body.ui-v2 table.rf-table td.rf-type { width: 15%; }
       /* A branch in Band 3's response-field table (19T Item 10). The bar

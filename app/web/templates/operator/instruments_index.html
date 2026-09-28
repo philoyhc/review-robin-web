@@ -4047,13 +4047,14 @@
          fifth and four fifths from 2026-09-26, one third and two thirds
          before): the
          display-field table (19T Item 8) on the left, the
-         response-fields editor on the right. The left track's minimum
-         is 0 so a long field label scrolls in its ``.table-scroll``
-         instead of widening the column.
+         response-fields editor on the right. Both tracks' minimum is 0,
+         so on a narrow card each table scrolls in its ``.table-scroll``
+         instead of widening its column (the right one's since 19T Item
+         12A, when its table took over the band and the page).
          Visibility moved to Band 2's "Who can see what you wrote"
          card (19T Item 7). #}
       <div data-new-model-band3 data-lock-region
-           style="display: grid; grid-template-columns: minmax(0, 3fr) 17fr; gap: 16px;
+           style="display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 17fr); gap: 16px;
                   align-items: stretch;"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
         {# 19T Item 8 — the display-field table

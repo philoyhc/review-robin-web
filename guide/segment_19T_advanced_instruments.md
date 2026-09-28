@@ -1913,6 +1913,10 @@ Three things read wrong in the table:
   List's operator shrinks to "is not"**, its box (the List box's width)
   and "then show the below" beside it in the operator's cell, which
   spans the rest of the row (later entries, #2665).
+- **The response-field table scrolls sideways on a narrow card**, like
+  the display fields: its track gets a `0` minimum and the table a
+  `50rem` floor, so its boxes no longer shrink to nothing (a later entry).
+  This also resolves the narrow operator select.
 - **Tooltips give the full text** the name column cuts (a later entry):
   the operator's label, with its symbol for a single-value operator, and
   the field's name. Neither shows while its row is amber, so the row's
@@ -1959,6 +1963,11 @@ Later entries, measured by hand in Chromium:
   1500px window. On a List parent the operator is 77px and its box the
   List box's 272px, right beside it, and switching back to a number
   restores the two-cell layout.
+- **The scrolling response fields:** the split holds 15 : 85 at 800px
+  (it fell to 68px : 600px, the page overflowing at 600px). The table
+  keeps 800px and scrolls, 551px shown at an 800px window; the operator
+  select is 145px at 900px (was 26px). The page's own tab strips still
+  overflow at 600px, outside this item.
 
 **Reads, one per change.** None found a high defect; every low finding
 was fixed in its PR.
