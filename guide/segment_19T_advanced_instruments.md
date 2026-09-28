@@ -1790,6 +1790,17 @@ Taken 2026-09-28 at `3a13e884`:
     the stager.
 - **Other files:** 10 test files; 8 specs mention a condition.
 
+### Status
+
+**Rung 2** (2026-09-28): the four tokens are evaluated. The pieces:
+- `RANGE_OPS`, `parse_range` and `RANGE_SEPARATOR` in `_branching.py`;
+- `branch_is_open` and `condition_label`, the label keeping each end as
+  typed;
+- the reviewer's `isOpen`, pinned to the service in node on every token.
+
+`BRANCH_OPS` and `condition_error` still refuse ranges.
+**Cumulative-read base:** `3a13e884`, main before rung 1 merged.
+
 ### PR ladder
 
 Each rung deploys safely on its own.
