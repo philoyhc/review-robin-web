@@ -1909,10 +1909,17 @@ Three things read wrong in the table:
   entry): the condition row splits into three cells, keeping twelve
   columns. The first value box drops its left margin, so it starts at the
   type column's edge and the gap after the operator matches name to type.
-- **Band 3 splits 15 : 85** (`minmax(0, 3fr) 17fr`, was 1 : 4), and **a
+- **Band 3 splits 15 : 85** (was 1 : 4), and **a
   List's operator shrinks to "is not"**, its box (the List box's width)
   and "then show the below" beside it in the operator's cell, which
   spans the rest of the row (later entries, #2665).
+- **The response-field table scrolls sideways on a narrow card**, like
+  the display fields: its track gets a `0` minimum and the table a
+  `50rem` floor, so its boxes no longer shrink to nothing (a later entry,
+  #2666). It also stops the operator select collapsing, though its widest
+  labels are still cut below about 1500px. A locked card's Band 3 is
+  inert and can't scroll, so there the track grows to the table as
+  before (`.band3-grid[inert]`).
 - **Tooltips give the full text** the name column cuts (a later entry):
   the operator's label, with its symbol for a single-value operator, and
   the field's name. Neither shows while its row is amber, so the row's
@@ -1925,14 +1932,14 @@ Three things read wrong in the table:
 The suffix keeps this list out of Item 12's check; each line is honored
 in the same PR.
 
-- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column, the first value box at the type column's edge, the tooltips, the List condition's layout, Band 3's split (Item 12A).
+- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column, the first value box at the type column's edge, the tooltips, the List condition's layout, Band 3's split and the scrolling table (Item 12A).
 - `spec/ui_elements.md` — `rf-table`: the glyphs, `td.rf-active-cell`, `td.rf-join-cell`, `td.rf-condition-lead` and `td.rf-condition-op` (Item 12A).
 - `docs/status.md` — row when the item closes (Item 12A).
 
 ### Status
 
-**Closed 2026-09-28** in five PRs: #2661; #2662, with two later
-entries; #2663, #2664 and #2665, with the rest. For
+**Closed 2026-09-28** in six PRs: #2661; #2662, with two later
+entries; #2663 to #2666, with the rest. For
 #2661, headless Chromium, run by hand
 and not repeatable by the suite, measured the condition boxes at the
 parent's Min width at 1500px and 1100px, with every checkbox centered.
@@ -1959,6 +1966,11 @@ Later entries, measured by hand in Chromium:
   1500px window. On a List parent the operator is 77px and its box the
   List box's 272px, right beside it, and switching back to a number
   restores the two-cell layout.
+- **The scrolling response fields:** the split holds 15 : 85 at 800px
+  (it fell to 68px : 600px, the page overflowing at 600px). The table
+  keeps 800px and scrolls, 551px shown at an 800px window; the operator
+  select is 145px at 900px (was 26px). The page's own tab strips still
+  overflow at 600px, outside this item.
 
 **Reads, one per change.** None found a high defect; every low finding
 was fixed in its PR.
@@ -1988,6 +2000,11 @@ was fixed in its PR.
   event. Its read found no high defect; its medium (no browser check for
   it) and lows (stale comments, the spec's order of steps, a test name)
   were fixed there.
+- **#2666:** no high finding. Its medium was fixed there: a locked card's
+  inert Band 3 could not scroll, and Chromium confirmed it, so a locked
+  card fits its table as before. The lows were the PR count, a stale grid
+  value, an overclaim about the operator select, and a doubled checklist
+  line.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 

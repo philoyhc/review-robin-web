@@ -2909,6 +2909,25 @@
       body.ui-v2 table.rf-table td.rf-join-cell {
         padding-right: calc(2 * var(--rf-glyph-width) + 5 * var(--space-1));
       }
+      /* The table keeps a usable width on a narrow card and scrolls in
+         its .table-scroll instead: its boxes are width 100% / min-width
+         0, so without a floor they shrink to nothing before it scrolls
+         (19T Item 12A; about its width at a 1100px window). */
+      body.ui-v2 table.rf-table { min-width: 50rem; }
+      /* Band 3: display fields 15%, response fields 85% (19T Item 12A).
+         Both tracks' minimum is 0, so a table on a narrow card scrolls in
+         its .table-scroll rather than widening its column. A card not
+         being edited has an inert Band 3, which can't be scrolled, so
+         there the response fields' track grows to its table (squeezed
+         but whole, with no floor), as it did before. */
+      body.ui-v2 .band3-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(0, 17fr);
+        gap: 16px;
+        align-items: stretch;
+      }
+      body.ui-v2 .band3-grid[inert] { grid-template-columns: minmax(0, 3fr) 17fr; }
+      body.ui-v2 .band3-grid[inert] table.rf-table { min-width: 0; }
       body.ui-v2 table.rf-table td.rf-name { width: 20%; }
       body.ui-v2 table.rf-table td.rf-type { width: 15%; }
       /* A branch in Band 3's response-field table (19T Item 10). The bar
