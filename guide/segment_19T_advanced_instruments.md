@@ -2034,6 +2034,9 @@ that is either closed (Show) or always optional (ungoverned).
 - **Changing the mode** joins the condition in the governed-answers lock
   in `_apply_branch_rules`, and is audited like it: Require → Show would
   strand answers on branches that are now closed.
+- **Counts:** the monitoring rollups send an instrument with a
+  require-mode parent to the answer-aware Python path, as they do one
+  with a required governed field, since the stored flag no longer says.
 - **R under Require:** the governed rows' own `required` flag is kept
   but ignored while the branch is Require, so switching back to Show
   restores what each R said. The builder greys R on those rows.
@@ -2076,7 +2079,11 @@ Taken 2026-09-28 at `256d30aa`.
 3. **The rule, then the writes.** `applicable_field_ids`,
    `required_field_ids`, `drop_closed_branch_answers`, the authoring
    rule, the surface's server render and its script, the counts and the
-   extract, tested with the mode set in the database. Then the card's
+   extract, tested with the mode set in the database. The rollups route
+   an instrument with a require-mode parent down their Python path
+   (`monitoring._required_governed_instrument_ids`), since its governed
+   rows' stored `required` may be false; with parity and reminder tests
+   (Codex on #2671). Then the card's
    save (`_band2`), with the lock and its audit, and the settings CSV
    accept `branch_mode`.
 4. **The builder wired.** The dropdown writes the mode and Save persists
