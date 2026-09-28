@@ -478,6 +478,8 @@ def _response_field_rows(instrument: Instrument, n: int) -> list[Row]:
         rows.append(
             Row(f"{prefix}.branch_value", _str(field.branch_value), "string")
         )
+        # 19T Item 13 — the parent's mode: ``require``, or blank for Show.
+        rows.append(Row(f"{prefix}.branch_mode", _str(field.branch_mode), "enum"))
     return rows
 
 

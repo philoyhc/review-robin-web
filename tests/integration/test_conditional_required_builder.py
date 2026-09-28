@@ -1,6 +1,6 @@
 """19T Item 13 rung 1 — the condition row's "then [mode]" select, as a
-scaffold: it reads "then" and a select of Show the below / Make the below
-required (else, optional), Show the only choice, and nothing reads or
+scaffold: it reads "then" and a select of Show the below / Require the below
+(else, optional), Show the only choice, and nothing reads or
 saves it until the rule lands (rung 3)."""
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ def test_the_condition_row_reads_then_and_a_mode_select(
     options = re.findall(r"<option ([^>]*)>([^<]*)</option>", select)
     assert options == [
         ('value="show" selected', "Show the below"),
-        ('value="require" disabled', "Make the below required (else, optional)"),
+        ('value="require" disabled', "Require the below (else, optional)"),
     ]
     # "then" keeps a 4px gap before the select in either layout.
     assert (

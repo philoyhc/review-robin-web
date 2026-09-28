@@ -2010,7 +2010,7 @@ that is either closed (Show) or always optional (ungoverned).
 
 - **The condition row ends "then [dropdown]"**, not "then show the
   below". Its two options: **Show the below** (Item 10's kind, the
-  default) and **Make the below required (else, optional)**. Both the
+  default) and **Require the below (else, optional)**. Both the
   number row and a List's `tr.rf-condition-list` carry it.
 - **Rejected:** the stub's "⑂ cycles between the two kinds". The author
   moved the choice into the sentence it changes; ⑂ stays fork / unfork.
@@ -2053,6 +2053,8 @@ that is either closed (Show) or always optional (ungoverned).
 
 - Show stays the default for a new branch: it is what every saved
   branch means today (2026-09-28).
+- The second option reads "Require the below (else, optional)" (the
+  author, 2026-09-28; was "Make the below required …").
 
 ### Blast radius (measured)
 
@@ -2140,6 +2142,13 @@ Taken 2026-09-28 at `256d30aa`.
   pass found its other route (a) paragraph stale (fixed there) and
   `spec/rrw_functional_spec.md` §5.7 describing Show alone, which joins
   Doc impact for when the builder can author Require (rung 4).
+- **Rung 3b (the writes):** the card's save takes `branch_mode` (Show
+  stored null), refuses an unknown one by name, locks it with the
+  condition on an answered branch, clears it when the branch ends, and
+  audits it in `instrument.field_updated`'s `changes`. The settings CSV
+  exports `require` or blank and imports `require` / `show` / blank,
+  refusing an unknown mode and an orphan one. The author renamed the
+  second option "Require the below (else, optional)" (2026-09-28).
 
 ### Open questions
 

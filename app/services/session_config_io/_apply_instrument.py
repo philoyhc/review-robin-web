@@ -27,6 +27,8 @@ from app.services.instruments._response_fields import (
     validation_block_from_inline,
 )
 from app.services.responses import (
+    BRANCH_MODE_REQUIRE,
+    BRANCH_MODES,
     BRANCH_OPS,
     branch_structure_errors,
     canonical_condition_value,
@@ -142,6 +144,16 @@ def _apply_instrument_kv(
             rf.branch_op = value or None
         elif attr == "branch_value":
             rf.branch_value = value or None
+        # 19T Item 13.
+        elif attr == "branch_mode":
+            if value and value not in BRANCH_MODES:
+                raise _ParseError(
+                    f"unknown branch_mode {value!r}; expected one of "
+                    f"{sorted(BRANCH_MODES)}"
+                )
+            # ``show`` reads exactly as blank, as on the card: Item 10's
+            # kind, so only ``require`` can be an orphan (Codex on #2675).
+            rf.branch_mode = value if value == BRANCH_MODE_REQUIRE else None
         else:
             raise _ParseError(
                 f"unknown response_fields[] attribute {attr!r}"
@@ -237,7 +249,7 @@ def _apply_branches(
     so a broken branch is a named row error, not a failed apply; the
     checks here only guard that contract."""
     if not any(
-        spec.branch_parent or spec.branch_op or spec.branch_value
+        spec.branch_parent or spec.branch_op or spec.branch_value or spec.branch_mode
         for spec, _ in created
     ):
         return
@@ -450,6 +462,7 @@ def _apply_instruments(
                         branch_value=canonical_condition_value(
                             rf_spec.branch_op, rf_spec.branch_value
                         ),
+                        branch_mode=rf_spec.branch_mode,
                         **inline_kwargs,
                     ),
                 )

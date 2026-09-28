@@ -113,6 +113,7 @@ class _PlannedField:
     branch_value: str | None
     _inline_data_type: str | None
     _inline_list_csv: str | None
+    branch_mode: str | None = None
 
 
 def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
@@ -128,10 +129,12 @@ def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
     errors: list[ApplyError] = []
     for n, instrument in sorted(plan.instruments.items()):
         specs = sorted(instrument.response_fields.items())
-        # Any of the three branch cells, so a lone ``branch_value`` is an
-        # orphaned condition refused here, not stored (Codex on #2642).
+        # Any of the branch cells, so a lone ``branch_value`` (or, from 19T
+        # Item 13, ``branch_mode``) is an orphaned condition refused here,
+        # not stored (Codex on #2642).
         if not any(
-            rf.branch_parent or rf.branch_op or rf.branch_value for _, rf in specs
+            rf.branch_parent or rf.branch_op or rf.branch_value or rf.branch_mode
+            for _, rf in specs
         ):
             continue
         position_by_key = {rf.field_key: m for m, rf in specs if rf.field_key}
@@ -169,6 +172,7 @@ def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
                     # (``_apply_instruments``), so it is judged as one.
                     _inline_data_type=rf.data_type or _DEFAULT_DATA_TYPE,
                     _inline_list_csv=rf.list_csv,
+                    branch_mode=rf.branch_mode,
                 )
             )
         # A hidden parent hides its branch when the file is applied

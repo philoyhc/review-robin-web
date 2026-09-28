@@ -78,7 +78,7 @@ responses. See `spec/rehydrate.md`.
 |---|:--:|:--:|---|
 | `field_key`, `label`, `response_type`, `required`, `help_text`, `help_text_visible`, `data_type`, `min`, `max`, `step`, `list_csv`, `visible` | ✅ | ✅ | Inline bounds carried on the response-field row |
 | `validation` (JSON) | ⚠️ | ✅ | Settings-CSV **recomputes** it from the inline bounds on import (derived, not carried); clone copies it verbatim |
-| **`branch_mode`** (19T Item 13: a parent's `show` / `require`; null reads `show`) | ❌ | ✅ | Clone and **Replicate instrument** copy it. Nothing writes it yet: the Settings CSV neither exports it nor accepts it (an import naming it is refused as an unknown attribute) until Item 13's rule lands |
+| **`branch_mode`** (19T Item 13: a parent's `show` / `require`; null reads `show`) | ✅ | ✅ | The Settings CSV exports `require` or blank and imports `require`, `show` or blank (`spec/csv_contracts.md` §3.3); clone and **Replicate instrument** copy it |
 | **`branch_parent_id`, `branch_op`, `branch_value`** (branching, `guide/advanced_instruments.md` Item 1) | ✅ | ✅ | The parent goes by `field_key` in the Settings CSV (`spec/csv_contracts.md` §3.3), since ids don't survive an export; clone re-points the parent at its own clone via `response_field_map`. **Replicate instrument** (a same-session duplicate, not a session-porting mechanism) also copies the condition and re-points the parent at its copy |
 
 ### Instrument visibility policies (`instrument_view_policies`)
