@@ -217,9 +217,17 @@ def test_a_script_built_table_has_a_wrapped_host() -> None:
 
         assert host, f"{name}: no element carries `{marker}`"
         classes = re.search(r'class="([^"]*)"', host.group(0))
-        assert classes and "table-scroll" in classes.group(1).split(), (
+        # The wrapper may sit directly around the host instead: a locked
+        # Instruments card makes the host inert, and an inert scroller
+        # can't scroll (19T Item 12A).
+        parent = re.search(
+            r'<div class="table-scroll"[^>]*>\s*$',
+            re.sub(r"\{#.*?#\}", "", text[: host.start()], flags=re.S),
+        )
+        assert (classes and "table-scroll" in classes.group(1).split()) or parent, (
             f"{name}: the host for its script-built table(s) "
-            f"(`{marker}`) has no `.table-scroll`:\n  {host.group(0)}"
+            f"(`{marker}`) has no `.table-scroll`, on it or directly "
+            f"around it:\n  {host.group(0)}"
         )
 
 

@@ -911,10 +911,9 @@ inside its `.table-scroll` on a narrow card rather than widening its
 column past its share; the response-field table keeps a `66rem` floor so
 its boxes stay usable while it scrolls (19T Item 12A). A locked card
 scrolls too: its lock regions are the two tables, not the band, since an
-inert `.table-scroll` couldn't scroll (a later 12A entry). Band 1 and
-Band 2's visibility table follow the same rule; Band 2's preview, itself
-the `.table-scroll` its script fills, stays inert and unscrollable while
-locked. The left column holds
+inert `.table-scroll` couldn't scroll (a later 12A entry). Bands 1 and
+2 follow the same rule: Band 2's preview is the lock region, its
+`.table-scroll` a plain wrapper directly around it. The left column holds
 the display-field table above; the right column, below, is the
 response-field table.
 

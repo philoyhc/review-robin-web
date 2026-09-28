@@ -1773,8 +1773,7 @@
            intro card, the visibility editor and the preview, not the
            band, so the locked "Who can see what you wrote" table, which
            holds no control, keeps a .table-scroll that scrolls (an inert
-           one can't). The preview is its own .table-scroll, so it stays
-           unscrollable while locked. #}
+           one can't). The preview's .table-scroll wraps it the same way. #}
         <div data-new-model-band2-editable>
           {# Replicate the reviewer-surface per-instrument intro
              card — short_label / description + completion-progress
@@ -2053,13 +2052,16 @@
              only — JS rebuildPreview replaces all of it on
              DOMContentLoaded + on every R / chip / Band 3 row
              toggle, picking up the help cards + constraints. #}
-          {# `.table-scroll`: this container is filled by ``rebuildPreview``
+          {# `.table-scroll`: the container is filled by ``rebuildPreview``
              with a ``table-layout: fixed`` table carrying operator-set
-             column widths, so the wrapper goes on the container — there
-             is no server-rendered <table> here to wrap. #}
-          <div data-new-model-band2-preview class="table-scroll" data-lock-region
-               {% if not is_editing %}inert aria-hidden="true"{% endif %}
-               style="margin-top: 16px;">
+             column widths, so the wrapper goes directly around the
+             container — there is no server-rendered <table> here to wrap.
+             The container, not the wrapper, is the lock region, so a
+             locked card still scrolls a table wider than the card
+             (19T Item 12A: an inert .table-scroll can't scroll). #}
+          <div class="table-scroll" style="margin-top: 16px;">
+          <div data-new-model-band2-preview data-lock-region
+               {% if not is_editing %}inert aria-hidden="true"{% endif %}>
             <div class="rs-progress-row">
               <p class="rs-instrument-progress"
                  data-new-model-intro-progress
@@ -2070,6 +2072,7 @@
                       data-new-model-intro-all-pill>All items completed: 0/<span data-new-model-intro-all-count>{{ _all_count }}</span></span>
               </p>
             </div>
+          </div>
           </div>
           {# 19T Item 9 — the response pills retired: Band 3's response-field
              table sets each field's order and selection. #}

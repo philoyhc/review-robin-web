@@ -296,7 +296,8 @@ def test_a_locked_card_scrolls_band_2s_visibility_table(
     lock regions are the intro card, the visibility editor and the
     preview, so the locked "Who can see what you wrote" table, which holds
     no control, keeps a scroller that scrolls. That card fades with the
-    intro card beside it."""
+    intro card beside it. The preview's own scroller wraps it from outside
+    (a later entry), so it scrolls too."""
     review_session, instrument, _, flat = _page(client, db, "12a-band2-scroll")
     assert (
         '[data-instrument-card][data-instrument-locked="true"] '
@@ -318,6 +319,9 @@ def test_a_locked_card_scrolls_band_2s_visibility_table(
             tag = _open_tag(band2, marker)
             assert "data-lock-region" in tag, marker
             assert ('inert aria-hidden="true"' in tag) is locked, (marker, locked)
+        # The preview's .table-scroll wraps it directly, outside its lock.
+        wrapper = band2[: band2.index("<div data-new-model-band2-preview ")]
+        assert wrapper.endswith('<div class="table-scroll" style="margin-top: 16px;"> ')
         table = _open_tag(band2, 'class="table-scroll" data-lock-only')
         assert "inert" not in table and "data-lock-region" not in table
         # Band 2 holds no control outside its three lock regions (the
