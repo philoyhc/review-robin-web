@@ -142,3 +142,18 @@ def test_the_builders_check_agrees_with_save(client: TestClient, db: Session) ->
     ]
     assert not mismatches, mismatches[:10]
     assert any(js is None for _, js in results)
+
+
+def test_no_button_on_the_page_is_inline_styled(client: TestClient, db: Session) -> None:
+    """``spec/ui_elements.md`` §6: an inline ``style`` on a button is a
+    defect. The builders' last eight moved to the Observers builder's
+    classes (Codex on #2659)."""
+    review_session, instrument, _, _ = _page(client, db, "range-no-inline")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    for tag in re.finditer(r"<button\b[^>]*>", body, re.S):
+        assert "style=" not in tag.group(0), tag.group(0)[:120]
+    source = open("app/web/templates/operator/instruments_index.html").read()
+    for tag in re.finditer(r"<button\b[^>]*>", source, re.S):
+        assert "style=" not in tag.group(0), tag.group(0)[:120]

@@ -952,13 +952,11 @@
                       {% if not _filter_on %}opacity: 0.5; pointer-events: none;{% endif %}">
             <div style="flex: 0 0 20%; display: flex;
                         align-items: center; justify-content: center; gap: 4px;">
-              <button type="button" class="btn secondary"
-                      style="padding: 4px 10px;"
+              <button type="button" class="btn secondary cohort-combinator-btn"
                       data-new-model-rule-add
                       onclick="newModelAddRule(this)"
                       title="Add rule">+</button>
-              <button type="button" class="btn secondary"
-                      style="padding: 4px 10px;"
+              <button type="button" class="btn secondary cohort-combinator-btn"
                       data-new-model-combinator-toggle
                       onclick="newModelToggleCombinator(this)"
                       title="Toggle combinator">{{ _stored_combinator }}</button>
@@ -996,8 +994,7 @@
                         <option value="{{ key }}" {% if key == _r.field %}selected{% endif %}>{{ label }}</option>
                       {% endfor %}
                     </select>
-                    <button type="button" class="btn secondary"
-                            style="padding: 4px 8px; flex-shrink: 0;"
+                    <button type="button" class="btn secondary cohort-cell-btn"
                             data-new-model-operator-cycle="{{ _ops | join('|') }}"
                             onclick="newModelCycleOperator(this)"
                             title="Toggle operator">{{ _r.op if _r.op in _ops else _ops[0] }}</button>
@@ -1042,8 +1039,7 @@
                            style="flex: 1; min-width: 0; padding: 4px; {% if _use_tag_operand %}display: none;{% endif %}"
                            value="{{ _r.operand_value }}"
                            form="dfsave-{{ instrument_id }}" name="{{ link_id }}_operand_value">
-                    <button type="button" class="btn destructive"
-                            style="padding: 4px 8px; flex-shrink: 0;"
+                    <button type="button" class="btn destructive cohort-cell-btn"
                             data-new-model-rule-remove
                             onclick="newModelRemoveRule(this)"
                             {% if _is_first %}disabled aria-disabled="true"
@@ -1153,13 +1149,11 @@
                         {% if not _link3_builder_active %}opacity: 0.5; pointer-events: none;{% endif %}">
               <div style="flex: 0 0 40%; display: flex;
                           align-items: center; justify-content: center; gap: 8px;">
-                <button type="button" class="btn secondary"
-                        style="padding: 4px 10px;"
+                <button type="button" class="btn secondary cohort-combinator-btn"
                         data-new-model-unit-add
                         onclick="newModelAddUnitCell(this)"
                         title="Add boundary tag">+</button>
-                <button type="button" class="btn secondary"
-                        style="padding: 4px 10px;"
+                <button type="button" class="btn secondary cohort-combinator-btn"
                         disabled aria-disabled="true"
                         title="Group identity marker">THE SAME</button>
               </div>
@@ -1192,9 +1186,8 @@
                           <option value="{{ key }}" {% if key == _selected_key %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                       </select>
-                      <button type="button" class="btn destructive" data-new-model-cell-action
+                      <button type="button" class="btn destructive cohort-cell-btn" data-new-model-cell-action
                               data-new-model-unit-remove
-                              style="padding: 4px 8px; flex-shrink: 0;"
                               onclick="newModelRemoveUnitCell(this)"
                               {% if _is_first %}disabled aria-disabled="true"
                               title="Cannot remove the first cell"
@@ -1701,10 +1694,9 @@
             and "link2" in instrument.band1_touched_links
             and "link3" in instrument.band1_touched_links
           ) %}
-          <button type="button" class="btn secondary"
+          <button type="button" class="btn secondary cohort-combinator-btn"
                   data-unlock-only
                   data-new-model-band2-refresh
-                  style="padding: 4px 10px;"
                   {% if not _band1_all_touched %}disabled aria-disabled="true"{% endif %}
                   onclick="newModelBand2RefreshSample(this)"
                   title="{% if _band1_all_touched %}Pick a new preview sample reviewee using the current Link 1 + Link 2 rules{% else %}Set every Band 1 link before refreshing — running on a Not-set link uses an empty filter{% endif %}">↻ Refresh sample</button>

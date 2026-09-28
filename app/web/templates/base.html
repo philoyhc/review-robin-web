@@ -3149,7 +3149,10 @@
          (0,2,2) and win on source order, being later. */
 
       /* `+` and the AND/OR toggle, in the builder's combinator column.
-         They sit in a centred row of their own, so no flex-shrink. */
+         They sit in a centred row of their own, so no flex-shrink. The
+         Instruments page's Band 1 builders share both classes, and its
+         Band 2 refresh this one (Codex on #2659: no inline-styled
+         buttons, `spec/ui_elements.md` §6). */
       body.ui-v2 button.cohort-combinator-btn {
         padding: 4px 10px;
       }
