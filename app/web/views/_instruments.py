@@ -326,8 +326,15 @@ def _response_field_groups(
     ``row_index`` (its position, for the row key), ``is_parent`` and
     ``branch_locked`` (a governed field has responses, which locks the
     branch's condition and membership). A group's ``condition`` carries
-    the operator choices the parent's type allows, as (token, symbol)."""
-    from app.services.responses import LIST_OPS, NUMERIC_OPS
+    the operator choices the parent's type allows, as (token, name,
+    symbol), spelled out for a number (19T Item 12). A range condition's
+    ``low to high`` splits into ``value`` (the low box) and ``high``."""
+    from app.services.responses import (
+        LIST_OP_CHOICES,
+        NUMERIC_OP_CHOICES,
+        RANGE_OPS,
+        RANGE_SEPARATOR,
+    )
 
     parent_ids = {
         rf["branch_parent_id"]
@@ -354,14 +361,20 @@ def _response_field_groups(
             continue
         condition = None
         if rf["is_parent"]:
-            ops = (
-                list(LIST_OPS.items())
-                if rf["data_type"] == "list"
-                else list(NUMERIC_OPS.items())
+            ops = list(
+                LIST_OP_CHOICES if rf["data_type"] == "list" else NUMERIC_OP_CHOICES
             )
+            value, high = rf["branch_value"] or "", ""
+            is_range = rf["branch_op"] in RANGE_OPS
+            if is_range and RANGE_SEPARATOR in value:
+                value, high = (
+                    part.strip() for part in value.split(RANGE_SEPARATOR, 1)
+                )
             condition = {
                 "op": rf["branch_op"],
-                "value": rf["branch_value"],
+                "value": value,
+                "high": high,
+                "is_range": is_range,
                 "ops": ops,
                 "locked": rf["branch_locked"],
             }
@@ -639,7 +652,7 @@ def _new_model_band2_state(
             rf["response_count"] = count
             rf["has_responses"] = count > 0
     response_field_groups = _response_field_groups(response_fields)
-    from app.services.responses import LIST_OPS, NUMERIC_OPS
+    from app.services.responses import LIST_OP_CHOICES, NUMERIC_OP_CHOICES, RANGE_OPS
     sort_spec = list(instrument.sort_display_fields or [])
     return {
         "fields": fields,
@@ -650,10 +663,13 @@ def _new_model_band2_state(
         "response_fields": response_fields,
         "response_field_groups": response_field_groups,
         # 19T Item 10 — the operators a condition offers, by the parent's
-        # type, for the builder to fill a new condition row's select.
+        # type, for the builder to fill a new condition row's select, as
+        # [token, name, symbol]; ``range`` names the ones taking two boxes
+        # (19T Item 12). The builder's script reads its operators here.
         "branch_ops": {
-            "numeric": [list(pair) for pair in NUMERIC_OPS.items()],
-            "list": [list(pair) for pair in LIST_OPS.items()],
+            "numeric": [list(choice) for choice in NUMERIC_OP_CHOICES],
+            "list": [list(choice) for choice in LIST_OP_CHOICES],
+            "range": sorted(RANGE_OPS),
         },
         "roster": roster,
         "sample_reviewee_name": sample.name if sample is not None else "",

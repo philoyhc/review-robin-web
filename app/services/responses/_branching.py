@@ -41,13 +41,31 @@ LIST_OPS: dict[str, str] = {
 # 19T Item 12 — Integer / Decimal parents can also compare against a range,
 # stored as ``low to high`` (``2 to 4``, ``-5 to -1``). "Inclusive" on
 # outside counts the ends as outside, so ``out_inc`` is the complement of
-# ``in_exc`` and ``out_exc`` of ``in_inc``. Evaluated here and by the
-# reviewer script from rung 2; not yet in ``BRANCH_OPS``, so nothing can
-# store one until the builder can show it (rung 3; Codex on #2657).
+# ``in_exc`` and ``out_exc`` of ``in_inc``. Accepted by Save and the
+# settings CSV from rung 3, when the builder can show one (Codex on #2657).
 RANGE_OPS: frozenset[str] = frozenset({"in_inc", "in_exc", "out_inc", "out_exc"})
 RANGE_SEPARATOR = " to "
 
-BRANCH_OPS: frozenset[str] = frozenset({*NUMERIC_OPS, *LIST_OPS})
+# The builder's select, spelled out, in the author's order (19T Item 12):
+# ``(token, name, symbol)``. The symbols are what tooltips and the extract
+# show (``condition_label``); a range's symbols sit around the label there.
+NUMERIC_OP_CHOICES: tuple[tuple[str, str, str], ...] = (
+    ("eq", "is equal to", "="),
+    ("ne", "is not equal to", "≠"),
+    ("ge", "is more than (inclusive)", "≥"),
+    ("gt", "is more than (exclusive)", ">"),
+    ("le", "is less than (inclusive)", "≤"),
+    ("lt", "is less than (exclusive)", "<"),
+    ("in_inc", "is within (inclusive)", "≤"),
+    ("in_exc", "is within (exclusive)", "<"),
+    ("out_inc", "is outside (inclusive)", "≤"),
+    ("out_exc", "is outside (exclusive)", "<"),
+)
+LIST_OP_CHOICES: tuple[tuple[str, str, str], ...] = tuple(
+    (token, name, name) for token, name in LIST_OPS.items()
+)
+
+BRANCH_OPS: frozenset[str] = frozenset({*NUMERIC_OPS, *LIST_OPS, *RANGE_OPS})
 
 # 19T Item 11, the author's ruling on pre-positioning 4.
 REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE = (
@@ -100,13 +118,26 @@ def parse_range(text: str | None) -> tuple[float, float] | None:
     """A range condition's ``(low, high)``, or None when ``text`` isn't one:
     exactly two plain numbers joined by ``RANGE_SEPARATOR``, low strictly
     below high (the author's ruling, 19T Item 12)."""
-    parts = (text or "").strip().split(RANGE_SEPARATOR)
+    parts = (text or "").split(RANGE_SEPARATOR)
     if len(parts) != 2:
         return None
     low, high = _finite_number(parts[0]), _finite_number(parts[1])
     if low is None or high is None or not low < high:
         return None
     return low, high
+
+
+def canonical_condition_value(op: str | None, value: str | None) -> str | None:
+    """``value`` as the builder sends it back: stripped, and a range's ends
+    stripped around one ``RANGE_SEPARATOR``. The settings CSV stores this, so
+    a hand-spaced ``2 to  4`` doesn't later read as a changed condition to
+    the lock on an answered branch (19T Item 12's cumulative read)."""
+    if value is None:
+        return None
+    parts = value.split(RANGE_SEPARATOR)
+    if op in RANGE_OPS and len(parts) == 2:
+        return RANGE_SEPARATOR.join(part.strip() for part in parts)
+    return value.strip() or None
 
 
 def condition_error(
@@ -135,10 +166,36 @@ def condition_error(
                 f"have: {', '.join(missing)}."
             )
         return None
+    if op in RANGE_OPS:
+        return range_error(value)
     if op not in NUMERIC_OPS:
         return "Choose a comparison for the branch condition."
     if _finite_number(value) is None:
         return "The branch condition needs a number."
+    return None
+
+
+def range_error(value: str | None) -> str | None:
+    """Why a range condition's ``low to high`` can't be stored, naming the
+    end at fault (19T Item 12), or None when ``parse_range`` reads it."""
+    parts = (value or "").split(RANGE_SEPARATOR)
+    if len(parts) == 1:
+        # Save strips the joined value, so an empty end arrives as "2 to"
+        # or "to 4"; name that end rather than the shape.
+        text = parts[0].strip()
+        if text == "to" or text.endswith(" to"):
+            parts = [text[:-2], ""]
+        elif text.startswith("to "):
+            parts = ["", text[2:]]
+    if len(parts) != 2:
+        return "The branch condition needs a range: a low and a high number."
+    low, high = _finite_number(parts[0]), _finite_number(parts[1])
+    if low is None:
+        return "The range's low end needs a number."
+    if high is None:
+        return "The range's high end needs a number."
+    if not low < high:
+        return "The range's low end must be below its high end."
     return None
 
 
@@ -148,11 +205,13 @@ def condition_label(parent: BranchField) -> str:
     closed cell and the by-instrument extract's metadata both use it."""
     op, value = parent.branch_op or "", (parent.branch_value or "").strip()
     if op in RANGE_OPS and parse_range(value) is not None:
-        # The ends as the operator typed them ("1.50" stays "1.50").
+        # The ends as the operator typed them ("1.50" stays "1.50"), after
+        # the field's name like every other condition, so a negative low end
+        # never starts an extract cell (a formula to spreadsheet software).
         low, high = (part.strip() for part in value.split(RANGE_SEPARATOR))
         return {
-            "in_inc": f"{low} ≤ {parent.label} ≤ {high}",
-            "in_exc": f"{low} < {parent.label} < {high}",
+            "in_inc": f"{parent.label} ≥ {low} and ≤ {high}",
+            "in_exc": f"{parent.label} > {low} and < {high}",
             "out_inc": f"{parent.label} ≤ {low} or ≥ {high}",
             "out_exc": f"{parent.label} < {low} or > {high}",
         }[op]

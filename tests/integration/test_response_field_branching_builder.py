@@ -113,10 +113,14 @@ def test_the_condition_row_shows_the_saved_condition(
     _, _, card, _ = _page(client, db, "br-builder-cond")
     condition = _rows_table(card).split("<tr data-new-model-rf-condition>")[1]
     select = condition.split("</select>")[0]
-    assert '<option value="ge" selected>≥</option>' in select
-    # An Integer parent offers the six comparisons, not "is" / "is not".
+    assert (
+        '<option value="ge" data-symbol="≥" selected>is more than (inclusive)</option>'
+        in select
+    )
+    # An Integer parent offers the ten spelled-out operators in the
+    # author's order (19T Item 12), not "is" / "is not".
     assert re.findall(r'<option value="(\w+)"', select) == [
-        "eq", "ne", "gt", "ge", "lt", "le"
+        "eq", "ne", "ge", "gt", "le", "lt", "in_inc", "in_exc", "out_inc", "out_exc"
     ]
     assert re.search(
         r'<input type="text" data-new-model-rf-condition-value[^>]*value="4"',
@@ -144,9 +148,19 @@ def test_branch_controls_are_wired(client: TestClient, db: Session) -> None:
     # The operators by parent type, for a new condition row's select.
     ops = re.search(r"data-new-model-rf-branch-ops='([^']*)'", table).group(1)
     assert json.loads(ops.replace("&#34;", '"')) == {
-        "numeric": [["eq", "="], ["ne", "≠"], ["gt", ">"], ["ge", "≥"],
-                    ["lt", "<"], ["le", "≤"]],
-        "list": [["is", "is"], ["is_not", "is not"]],
+        "numeric": [
+            ["eq", "is equal to", "="], ["ne", "is not equal to", "≠"],
+            ["ge", "is more than (inclusive)", "≥"],
+            ["gt", "is more than (exclusive)", ">"],
+            ["le", "is less than (inclusive)", "≤"],
+            ["lt", "is less than (exclusive)", "<"],
+            ["in_inc", "is within (inclusive)", "≤"],
+            ["in_exc", "is within (exclusive)", "<"],
+            ["out_inc", "is outside (inclusive)", "≤"],
+            ["out_exc", "is outside (exclusive)", "<"],
+        ],
+        "list": [["is", "is", "is"], ["is_not", "is not", "is not"]],
+        "range": ["in_exc", "in_inc", "out_exc", "out_inc"],
     }
     assert "<template data-new-model-rf-condition-template>" in flat
 
@@ -181,7 +195,8 @@ def test_governed_answers_lock_the_branch_on_the_page(
     group = table.split("<tbody data-new-model-rf-group")[1]
     assert group.startswith(' data-new-model-rf-branch data-new-model-rf-branch-locked="true">')
     condition = group.split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
-    assert condition.count(" disabled") == 3
+    # The operator, both boxes (19T Item 12) and the condition's "+".
+    assert condition.count(" disabled") == 4
 
 
 def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) -> None:
@@ -239,7 +254,7 @@ def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) 
         "rf.row_key = row.getAttribute('data-row-key') || '';",
         "rf.branch_parent = parentRow ? parentRow.getAttribute('data-row-key') : null;",
         "rf.branch_op = opSel && opSel.value ? opSel.value : null;",
-        "rf.branch_value = valueInput ? valueInput.value.trim() : null;",
+        "rf.branch_value = window.newModelRfConditionValue(cond);",
     ):
         assert line in stager, line
     # The preview mutes a governed column.

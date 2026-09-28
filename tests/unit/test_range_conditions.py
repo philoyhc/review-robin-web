@@ -1,9 +1,9 @@
-"""19T Item 12 rung 2 — range conditions are evaluated, not yet accepted.
+"""19T Item 12 — range conditions.
 
 ``branch_is_open`` and the reviewer script's ``isOpen`` read the four range
-tokens over a ``low to high`` value; ``condition_label`` reads them with
-symbols. ``BRANCH_OPS`` and ``condition_error`` still refuse them until the
-builder can show a range (rung 3; Codex on #2657)."""
+tokens over a ``low to high`` value (rung 2); ``condition_label`` reads them
+with symbols. ``BRANCH_OPS`` and ``condition_error`` accept them from rung 3,
+when the builder can show a range (Codex on #2657)."""
 
 from __future__ import annotations
 
@@ -94,8 +94,8 @@ def test_a_bad_range_or_answer_closes_the_branch() -> None:
 @pytest.mark.parametrize(
     ("op", "label"),
     [
-        ("in_inc", "2 ≤ Rating ≤ 4.50"),
-        ("in_exc", "2 < Rating < 4.50"),
+        ("in_inc", "Rating ≥ 2 and ≤ 4.50"),
+        ("in_exc", "Rating > 2 and < 4.50"),
         ("out_inc", "Rating ≤ 2 or ≥ 4.50"),
         ("out_exc", "Rating < 2 or > 4.50"),
     ],
@@ -104,14 +104,34 @@ def test_a_range_reads_with_symbols_and_its_ends_as_typed(op, label) -> None:
     assert condition_label(_parent(op, "2 to 4.50")) == label
 
 
-def test_ranges_are_not_accepted_yet() -> None:
-    """Rung 2 evaluates ranges but stores none: Save and the settings CSV
-    refuse the tokens until the builder can show them (rung 3)."""
-    assert RANGE_OPS == {"in_inc", "in_exc", "out_inc", "out_exc"}
-    assert not RANGE_OPS & BRANCH_OPS
+def test_ranges_are_accepted_from_rung_3() -> None:
+    """Save and the settings CSV take the four tokens once the builder can
+    show them (19T Item 12 rung 3), and name the end at fault."""
+    assert RANGE_OPS <= BRANCH_OPS
     assert all(len(op) <= 8 for op in RANGE_OPS)  # branch_op is String(8)
     for op in RANGE_OPS:
-        assert condition_error("Integer", None, op, "2 to 4") is not None
+        assert condition_error("Integer", None, op, "2 to 4") is None
+        assert condition_error("Decimal", None, op, "-1.5 to 0.5") is None
+    cases = {
+        "4": "The branch condition needs a range: a low and a high number.",
+        "2 to 4 to 6": "The branch condition needs a range: a low and a high number.",
+        " to 4": "The range's low end needs a number.",
+        "x to 4": "The range's low end needs a number.",
+        "2 to ": "The range's high end needs a number.",
+        "2 to": "The range's high end needs a number.",
+        "to 4": "The range's low end needs a number.",
+        "to": "The range's low end needs a number.",
+        "2 to inf": "The range's high end needs a number.",
+        "4 to 2": "The range's low end must be below its high end.",
+        "2 to 2": "The range's low end must be below its high end.",
+    }
+    for value, message in cases.items():
+        assert condition_error("Integer", None, "in_inc", value) == message, value
+    # A single-value operator refuses a range; a List refuses a range token.
+    assert condition_error("Integer", None, "ge", "2 to 4") == (
+        "The branch condition needs a number."
+    )
+    assert condition_error("List", "a,b", "in_inc", "2 to 4") is not None
 
 
 def _is_open_source() -> str:

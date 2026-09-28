@@ -1,5 +1,5 @@
-"""19T Item 12 rung 2 — the reviewer surface opens and titles a range
-condition. No page or CSV can store a range yet (rung 3), so the test sets
+"""19T Item 12 — the reviewer surface opens and titles a range condition
+(rung 2), and the settings CSV carries one (rung 3). The surface test sets
 one directly: Rating (Integer 1–5) governs Comments while Rating is within
 2 to 4, inclusive."""
 
@@ -44,7 +44,7 @@ def test_a_range_condition_opens_and_titles_the_cell(
     client = make_client(reviewer_user)
     body = client.get(f"/me/sessions/{review_session.id}").text
     for td in _cells(body, "comments"):
-        assert 'title="Opens when 2 ≤ Rating ≤ 4"' in td
+        assert 'title="Opens when Rating ≥ 2 and ≤ 4"' in td
     for td in _cells(body, "rating"):
         assert 'data-rs-branch-op="in_inc"' in td
         assert 'data-rs-branch-value="2 to 4"' in td
@@ -71,25 +71,69 @@ def test_a_range_condition_opens_and_titles_the_cell(
     assert all(" disabled" not in c for c in _controls(body, "comments"))
 
 
-def test_the_settings_csv_refuses_a_range_until_the_builder_shows_one(
+def test_the_settings_csv_round_trips_a_range_and_refuses_a_bad_one(
     db: Session,
 ) -> None:
-    """Rung 2 evaluates ranges but stores none (Codex on #2657): a CSV
-    naming one is refused by the parse phase, and nothing applies."""
-    from app.db.models import Instrument
-    from app.services.session_config_io import Row, apply_session_config
+    """From rung 3 a CSV carries a range (19T Item 12): each token
+    round-trips, and a bad range is refused by the end at fault, with
+    nothing applied."""
+    from app.db.models import Instrument, InstrumentResponseField
+    from app.services.session_config_io import (
+        Row,
+        apply_session_config,
+        serialize_session_config,
+    )
 
     from .test_response_field_branching_roundtrip import _rows, _session
 
-    review_session, _ = _session(db, "range-csv")
-    rows = [
-        Row(r.field, "in_inc", r.data_type) if r.field.endswith("branch_op")
-        else Row(r.field, "2 to 4", r.data_type) if r.field.endswith("branch_value")
-        else r
-        for r in _rows()
-    ]
-    result = apply_session_config(db, review_session, rows)
-    assert result.errors and result.errors[0].message.startswith("unknown branch_op 'in_inc'")
+    def with_condition(op: str, value: str) -> list[Row]:
+        return [
+            Row(r.field, op, r.data_type) if r.field.endswith("branch_op")
+            else Row(r.field, value, r.data_type) if r.field.endswith("branch_value")
+            else r
+            for r in _rows()
+        ]
+
+    for op in ("in_inc", "in_exc", "out_inc", "out_exc"):
+        source, _ = _session(db, f"range-csv-{op}")
+        assert apply_session_config(db, source, with_condition(op, "2 to 4")).errors == []
+        exported = [
+            r for r in serialize_session_config(db, source)
+            if r.field.startswith("instruments")
+        ]
+        target, _ = _session(db, f"range-csv-{op}-copy")
+        assert apply_session_config(db, target, exported).errors == []
+        rating = db.execute(
+            select(InstrumentResponseField)
+            .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
+            .where(
+                Instrument.session_id == target.id,
+                InstrumentResponseField.field_key == "rating",
+            )
+        ).scalar_one()
+        assert (rating.branch_op, rating.branch_value) == (op, "2 to 4")
+
+    # A hand-spaced range is stored as the builder sends it back, so the
+    # lock on an answered branch doesn't read it as changed (the cumulative
+    # read).
+    spaced, _ = _session(db, "range-csv-spaced")
+    assert apply_session_config(
+        db, spaced, with_condition("in_inc", " 2  to  4 ")
+    ).errors == []
     assert db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
+        select(InstrumentResponseField.branch_value)
+        .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
+        .where(
+            Instrument.session_id == spaced.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one() == "2 to 4"
+
+    bad, _ = _session(db, "range-csv-bad")
+    result = apply_session_config(db, bad, with_condition("in_inc", "4 to 2"))
+    assert [e.message for e in result.errors] == [
+        "Rating: The range's low end must be below its high end."
+    ]
+    assert db.execute(
+        select(Instrument).where(Instrument.session_id == bad.id)
     ).first() is None

@@ -1801,6 +1801,34 @@ Taken 2026-09-28 at `3a13e884`:
 `BRANCH_OPS` and `condition_error` still refuse ranges.
 **Cumulative-read base:** `3a13e884`, main before rung 1 merged.
 
+**Rung 3** (2026-09-28): ranges are accepted.
+- The server gains `NUMERIC_OP_CHOICES` (token, name, symbol), and
+  `range_error` names the end at fault. Save strips "2 to " to "2 to", so
+  it still names the high end.
+- The builder:
+  - lists the server's operators;
+  - adds the second box and "to" (`newModelRfSyncConditionRange`);
+  - joins the boxes in `newModelRfConditionValue`;
+  - titles ranges with symbols.
+- Driven in headless Chromium: the labels, showing and hiding the box,
+  the join, each amber message and the hint; no page error.
+
+**Cumulative read** (1 read, `3a13e884..` rung 3): no high findings.
+Acted on in #2659:
+- A range labels after the field's name ("Rating ≥ 2 and ≤ 4"), not
+  "2 ≤ Rating ≤ 4", so a negative low end can't start an extract cell as
+  a formula. This departs from the Decision table's label column.
+- The settings CSV stores a range as the builder sends it back
+  (`canonical_condition_value`), so a hand-spaced `2 to  4` doesn't trip
+  the lock on an answered branch.
+- The builder's check strips as Save does, and a node test pins it to
+  `condition_error` over every pair of boxes.
+- Kept: in the settings CSV, a range with a negative low end (`-5 to -1`)
+  still starts its cell with `-`. The file has no formula guard for any
+  cell (see `guide/deferred_consolidated.md`). Kept too: the select's
+  names stay in `NUMERIC_OP_CHOICES` beside the symbols, one ordered
+  table for both.
+
 ### PR ladder
 
 Each rung deploys safely on its own.

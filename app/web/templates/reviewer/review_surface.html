@@ -678,7 +678,7 @@
           // 19T Item 12 — a range is "low to high", both plain numbers and
           // low strictly below high, as ``parse_range`` reads it.
           if (op === "in_inc" || op === "in_exc" || op === "out_inc" || op === "out_exc") {
-            var parts = (value || "").trim().split(" to ");
+            var parts = (value || "").split(" to ");
             if (parts.length !== 2 || !decimal.test(raw)) { return false; }
             var lowText = parts[0].trim(), highText = parts[1].trim();
             if (!decimal.test(lowText) || !decimal.test(highText)) { return false; }
