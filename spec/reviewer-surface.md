@@ -615,6 +615,8 @@ parent holds nothing. The parent cell carries
 why a field became required (the author, 2026-09-28). Its header takes
 the `*` whatever its own `required` (`may_be_required_field_ids`), and
 the save rule never removes its answer, since nothing there is closed.
+A hidden governed field is never required under Require, and has no
+cell anyway.
 
 **The save rule**, "a closed branch holds no value"
 (`app/services/responses/_branch_rule.py`), runs after every write of
@@ -650,7 +652,7 @@ The route builds the table data in `_surface_context` as
   "rows": [
     {
       "assignment": Assignment,
-      "cells": [{"field": InstrumentResponseField, "value": str, "governed_by": str, "branch_open": bool, "required_now": bool, "branch_hint": str}, …],
+      "cells": [{"field": InstrumentResponseField, "value": str, "governed_by": str, "branch_open": bool, "required_now": bool, "may_be_required": bool, "branch_mode": str, "branch_hint": str}, …],
       "display_cells": [{"field": …, "label": …, "value": …, "is_profile_link": bool}, …],
       "is_complete": bool,
       "missing_count": int,

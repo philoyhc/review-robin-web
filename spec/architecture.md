@@ -125,7 +125,7 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    rule otherwise holds.
 
    **Branching between response fields** (`InstrumentResponseField
-   .branch_parent_id` / `.branch_op` / `.branch_value`,
+   .branch_parent_id` / `.branch_op` / `.branch_value` / `.branch_mode`,
    `guide/advanced_instruments.md` Item 1): `branch_parent_id` is a
    self-referencing FK, `ON DELETE SET NULL` (Alembic `63b1bb107eb0`),
    so deleting an instrument's fields in any order passes a Postgres FK
@@ -134,7 +134,9 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    / `ge` / `lt` / `le` / `is` / `is_not`, or — a range, 19T Item 12 —
    `in_inc` / `in_exc` / `out_inc` / `out_exc`, with `branch_value` then
    `"low to high"`), not a symbol, since a settings-CSV cell starting
-   with `=` or `>` reads as a formula to spreadsheet software. The
+   with `=` or `>` reads as a formula to spreadsheet software.
+   `branch_mode` (19T Item 13, Alembic `c4e9a1d27b58`) is `require` or
+   null, which reads Show. The
    rules themselves live in
    `app/services/responses/_branching.py` and `_branch_rule.py`, not on
    the model.

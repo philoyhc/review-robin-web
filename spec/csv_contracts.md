@@ -226,7 +226,10 @@ are still credited under `RevieweesReviewed*`.
 Reviewer stats extra columns: `RevieweesReviewedDraft/Submitted`
 (distinct reviewees with ≥1 non-empty response),
 `FieldsAnsweredDraft/Submitted`,
-`RequiredFieldsAnsweredDraft/Submitted`,
+`RequiredFieldsAnsweredDraft/Submitted` (answers to `required`
+fields; under a require-mode parent, 19T Item 13, a visible governed
+field's answer counts only where the parent's saved answer met the
+condition, whatever its own `required`, and a hidden one's never),
 `StringResponseCharsDraft/Submitted` (sum of `len(value)` over
 `String`-typed fields). Reviewee stats extra columns:
 `ReviewersDraft/Submitted` (distinct reviewers) plus the same

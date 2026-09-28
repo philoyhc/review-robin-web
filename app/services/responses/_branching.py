@@ -347,7 +347,10 @@ def required_field_ids(
 
     Under a require-mode parent (Item 13) a governed field's own
     ``required`` is ignored: it is required exactly while it applies and
-    its parent's condition holds, an unanswered parent holding nothing."""
+    its parent's condition holds, an unanswered parent holding nothing.
+    A hidden one never is: its R is grayed out in the builder, so the
+    operator couldn't otherwise stop a field no reviewer sees from being
+    owed (the cumulative read on #2676)."""
     field_list = list(fields)
     by_id = {field.id: field for field in field_list}
     applicable = applicable_field_ids(field_list, answer_by_field_id)
@@ -357,7 +360,9 @@ def required_field_ids(
             continue
         parent = by_id.get(field.branch_parent_id)
         if parent is not None and branch_mode(parent) == BRANCH_MODE_REQUIRE:
-            if branch_is_open(parent, answer_by_field_id.get(parent.id)):
+            if field.visible and branch_is_open(
+                parent, answer_by_field_id.get(parent.id)
+            ):
                 required.add(field.id)
         elif field.required:
             required.add(field.id)
@@ -367,15 +372,18 @@ def required_field_ids(
 def may_be_required_field_ids(fields: Iterable[BranchField]) -> set[int]:
     """The ids of the fields some assignment could be required to answer:
     what a "*" marks and what "has a required field" asks (19T Item 13).
-    A field under a require-mode parent may be, whatever its own
-    ``required`` says; any other field may be when it is ``required``."""
+    A visible field under a require-mode parent may be, whatever its own
+    ``required`` says, and a hidden one never is (as
+    :func:`required_field_ids`); any other field may be when it is
+    ``required``."""
     field_list = list(fields)
     by_id = {field.id: field for field in field_list}
     out: set[int] = set()
     for field in field_list:
         parent = by_id.get(field.branch_parent_id)
         if parent is not None and branch_mode(parent) == BRANCH_MODE_REQUIRE:
-            out.add(field.id)
+            if field.visible:
+                out.add(field.id)
         elif field.required:
             out.add(field.id)
     return out

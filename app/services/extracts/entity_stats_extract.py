@@ -178,9 +178,10 @@ def build_entity_stats(
         .execution_options(yield_per=1000)
     )
 
-    # 19T Item 13 — a field under a require-mode parent is required where
-    # its parent's answer meets the condition, whatever its own
-    # ``required``: so its answer counts as a required one only there.
+    # 19T Item 13 — a visible field under a require-mode parent is
+    # required where its parent's answer meets the condition, whatever its
+    # own ``required``, so its answer counts as a required one only there;
+    # a hidden one never is (``required_field_ids``).
     require_parents = {
         f.id: f
         for f in db.execute(
@@ -193,15 +194,22 @@ def build_entity_stats(
             )
         ).scalars()
     }
-    require_parent_by_field: dict[int, InstrumentResponseField] = {}
+    require_parent_by_field: dict[
+        int, tuple[InstrumentResponseField, bool]
+    ] = {}
     parent_answer: dict[tuple[int, int], str | None] = {}
     if require_parents:
-        for governed_id, parent_id in db.execute(
+        for governed_id, parent_id, visible in db.execute(
             select(
-                InstrumentResponseField.id, InstrumentResponseField.branch_parent_id
+                InstrumentResponseField.id,
+                InstrumentResponseField.branch_parent_id,
+                InstrumentResponseField.visible,
             ).where(InstrumentResponseField.branch_parent_id.in_(require_parents))
         ).all():
-            require_parent_by_field[governed_id] = require_parents[parent_id]
+            require_parent_by_field[governed_id] = (
+                require_parents[parent_id],
+                bool(visible),
+            )
         parent_answer = {
             (assignment_id, field_id): value
             for assignment_id, field_id, value in db.execute(
@@ -227,9 +235,10 @@ def build_entity_stats(
         value,
         submitted_at,
     ) in db.execute(stmt):
-        parent = require_parent_by_field.get(field_id)
-        if parent is not None:
-            required = responses_service.branch_is_open(
+        governing = require_parent_by_field.get(field_id)
+        if governing is not None:
+            parent, visible = governing
+            required = visible and responses_service.branch_is_open(
                 parent, parent_answer.get((assignment_id, parent.id))
             )
         if not value:

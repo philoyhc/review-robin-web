@@ -2029,8 +2029,8 @@ that is either closed (Show) or always optional (ungoverned).
 - **Surface:** `applicable_field_ids` treats a require-mode governed
   field as always applicable, so the server renders its cell enabled;
   `required_field_ids` adds it while the condition holds. The script
-  toggles its required mark (and the progress pills) rather than
-  disabling the cell (Codex on #2651).
+  toggles its "(required)" mark rather than disabling the cell (Codex on
+  #2651); the progress pills are server-rendered.
 - **Changing the mode** joins the condition in the governed-answers lock
   in `_apply_branch_rules`, and is audited like it: Require → Show would
   strand answers on branches that are now closed.
@@ -2039,7 +2039,9 @@ that is either closed (Show) or always optional (ungoverned).
   with a required governed field, since the stored flag no longer says.
 - **R under Require:** the governed rows' own `required` flag is kept
   but ignored while the branch is Require, so switching back to Show
-  restores what each R said. The builder greys R on those rows.
+  restores what each R said. The builder grays R on those rows. A
+  hidden governed field is never required under Require (the cumulative
+  read on #2676).
 - **Authoring:** a require-mode branch counts as a required governed
   field for Item 11's rule (an active required ungoverned field must
   exist), since an unanswered parent leaves it optional.
@@ -2100,7 +2102,8 @@ Taken 2026-09-28 at `256d30aa`.
 - On the surface a require-mode governed cell is enabled with the
   condition closed, and required, counted and gated by submit while it
   holds (rung 3 tests).
-- Changing the mode on an answered branch is refused and audited.
+- Changing the mode on an answered branch is refused; a mode change
+  that saves is audited.
 - `spec/instruments.md`, `spec/reviewer-surface.md`,
   `spec/csv_contracts.md`, `spec/extract_data.md` and
   `spec/settings_inventory.md` describe the mode.
@@ -2150,17 +2153,25 @@ Taken 2026-09-28 at `256d30aa`.
   refusing an unknown mode and an orphan one. The author renamed the
   second option "Require the below (else, optional)" (2026-09-28).
 - **Rung 4 (the builder wired):** the select shows the saved mode and
-  Save sends it; a Require branch's rows grey out R ("Required while the
+  Save sends it; a Require branch's rows gray out R ("Required while the
   condition holds"), keeping its value. The preview follows the surface:
   a Require branch's column isn't muted, is marked "*" and counts as an
   item, but not as required on the unanswered sample row. Chromium drove
   it: switching the mode back and forth restores each R, and detaching
   the last field frees it.
+- **Reads:** one cumulative `diff-reviewer` read over `76d37d27..` (on
+  #2676) found no blocking defect. It found that a hidden governed field
+  under Require was owed with no escape, since its R is grayed; now it is
+  never required or marked "*". It also found stale spec prose (storage,
+  stager, the R row, `spec/architecture.md`, the entity stats' required
+  columns, which join Doc impact), missing reminder and header tests
+  (added), and two plan overclaims (corrected). The rung's `spec-writer`
+  pass found no divergence.
 
 ### Open questions
 
 1. ~~A governed row's R under Require~~ — the condition decides for every
-   governed field; their R is greyed, titled "Required while the
+   governed field; their R is grayed, titled "Required while the
    condition holds" (the author, 2026-09-28, taking the recommendation).
 2. ~~Does the surface say why a field became required?~~ — no; the
    required mark appearing is enough (the author, 2026-09-28).
@@ -2175,11 +2186,12 @@ Taken 2026-09-28 at `256d30aa`.
 
 - `spec/instruments.md` — the condition row's "then" dropdown, the mode, its lock and audit (Item 13).
 - `spec/reviewer-surface.md` — a require-mode governed cell: always enabled, its required mark following the condition (Item 13).
-- `spec/csv_contracts.md` — the `branch_mode` column on the parent (Item 13).
+- `spec/csv_contracts.md` — the `branch_mode` column on the parent, and §2.6's `RequiredFieldsAnswered*` under a require-mode parent (Item 13).
 - `spec/extract_data.md` — "Required when" beside "Shown when" (Item 13).
 - `spec/operations_pages.md` — route (a) takes an instrument with a require-mode branch (Item 13).
 - `spec/rrw_functional_spec.md` — §5.7's branch: the condition shows the governed fields, or makes them required (Item 13).
 - `spec/settings_inventory.md` — `branch_mode` (Item 13).
+- `spec/architecture.md` — `branch_mode` beside the other branch columns (Item 13).
 - `spec/roundtrip_coverage.md` — `branch_mode`: clone and Replicate carry it, and the Settings CSV once rung 3 lands (Item 13).
 - `docs/status.md` — row when the item closes (Item 13).
 

@@ -336,11 +336,8 @@ def _surface_context(
                     "branch_open": field.id in open_ids,
                     "required_now": field.id in required_now_ids,
                     "may_be_required": field.id in may_be_required_ids,
-                    "require_mode": (
-                        parent is not None
-                        and responses_service.branch_mode(parent)
-                        == responses_service.BRANCH_MODE_REQUIRE
-                    ),
+                    # The field's own mode, read as a parent's (19T Item 13).
+                    "branch_mode": responses_service.branch_mode(field),
                     # A require-mode cell never closes, and the page says
                     # nothing of why it is required (the author, 2026-09-28).
                     "branch_hint": (
