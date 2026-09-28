@@ -221,8 +221,7 @@ def test_a_lists_condition_puts_its_box_beside_a_shrunk_operator(
     ) in flat
 
 
-
-def test_a_quick_fill_preset_keeps_a_list_conditions_operator(
+def test_a_quick_fill_preset_snaps_the_type_before_the_options_event(
     client: TestClient, db: Session
 ) -> None:
     """A Quick fill preset on a List parent used to turn "is not" into "is":

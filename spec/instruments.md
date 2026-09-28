@@ -1051,9 +1051,12 @@ List`) plus a `<optgroup>` of pre-filled List presets:
 | Agreement (Likert 5) | `list` | `Strongly agree, Agree, Neutral, Disagree, Strongly disagree` |
 | Grades | `list` | `A+, A, A-, B+, B, B-, C+, C, D+, D, F` |
 
-Picking a preset writes `data_type=list` and pre-fills the
-`list_options` input from the option's `data-preset-options`
-attribute, then snaps the select back to `List`. The preset's
+Picking a preset snaps the select back to `List` (`data_type=list`)
+and then pre-fills the `list_options` input from the option's
+`data-preset-options` attribute. The order matters for a branch
+parent: filling the options recomputes the row, and it must already
+read as a List, or a condition's "is not" is rebuilt as "is" (19T Item
+12A). The preset's
 identity is not stored — only the resulting `data_type` +
 `list_options`. The operator can edit either after picking.
 

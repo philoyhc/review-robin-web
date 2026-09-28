@@ -1985,7 +1985,9 @@ was fixed in its PR.
   found an older bug, outside this item: a Quick fill preset on a List
   parent turned "is not" into "is". On the author's instruction it was
   fixed in #2665 too: the type snaps to "list" before the options' input
-  event.
+  event. Its read found no high defect; its medium (no browser check for
+  it) and lows (stale comments, the spec's order of steps, a test name)
+  were fixed there.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 

@@ -4558,11 +4558,11 @@
           //   decimal → min, max, step
           //   list    → list
           //
-          // Quick-fill presets (value starts with "preset:") set
-          // data_type=list, pre-fill the list-options input from
-          // the picked option's ``data-preset-options`` attribute,
-          // then snap the select back to "list". The preset
-          // identity isn't stored — only the resulting list_options.
+          // Quick-fill presets (value starts with "preset:") snap the
+          // select back to "list", then pre-fill the list-options
+          // input from the picked option's ``data-preset-options``
+          // attribute. The preset identity isn't stored — only the
+          // resulting list_options.
           if (select.value && select.value.indexOf('preset:') === 0) {
             var picked = select.options[select.selectedIndex];
             var presetOptions = picked
@@ -4610,9 +4610,9 @@
         window.newModelRfValidateShape = window.newModelRfValidateShape || function (row) {
           var sel = row.querySelector('[data-new-model-rf-data-type]');
           var dataType = (sel && sel.value) || 'string';
-          // 19T Item 9 — a Quick fill preset (``preset:…``) is only a
-          // passing value while its options are copied in; a row never
-          // commits it as a type.
+          // 19T Item 9 — a Quick fill preset (``preset:…``) is never a
+          // type: ``newModelRfSyncBounds`` snaps it to "list" before
+          // anything recomputes the row, so this is a guard only.
           if (['string', 'integer', 'decimal', 'list'].indexOf(dataType) < 0) {
             return 'Pick a data type.';
           }
