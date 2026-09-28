@@ -375,6 +375,7 @@ def _response_field_groups(
                 "value": value,
                 "high": high,
                 "is_range": is_range,
+                "is_list": rf["data_type"] == "list",
                 "ops": ops,
                 "locked": rf["branch_locked"],
             }

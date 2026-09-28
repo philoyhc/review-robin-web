@@ -8182,7 +8182,7 @@ def test_band3_splits_display_and_response_fields_one_to_four(
     card = _card_slice(body, new_model.id)
     band3 = card[card.index("<div data-new-model-band3") :]
     band3_open = band3[: band3.index(">")]
-    assert "grid-template-columns: minmax(0, 1fr) 4fr;" in band3_open
+    assert "grid-template-columns: minmax(0, 3fr) 17fr;" in band3_open
 
 
 def test_band3_row_handlers_reach_the_stager_through_its_window_handle(

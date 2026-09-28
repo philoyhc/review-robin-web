@@ -1241,8 +1241,8 @@ most one instrument unlocked at a time). Its stripes:
   Session-ongoing / Responses-released) picking Raw / Anonymized /
   Summarized (or off) per audience per window (see
   [§5.16](#516-visibility-policy)).
-- **Band 3 — Display and response fields** — two tables, a fifth and
-  four fifths of the band. The left picks and orders the display fields
+- **Band 3 — Display and response fields** — two tables, 15% and
+  85% of the band. The left picks and orders the display fields
   (Reviewee Name / Email always shown; the populated tag sources
   opt-in). The right is the response-field table, one row per field:
   an Active checkbox (per-field surface visibility), Name, **Type**

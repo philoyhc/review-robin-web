@@ -10,7 +10,7 @@ import re
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from .test_instrument_builder_routes import _rf_fn
+from .test_instrument_builder_routes import _card_slice, _rf_fn
 from .test_response_field_branching_builder import _page, _row, _rows_table
 
 
@@ -168,3 +168,51 @@ def test_the_operator_and_name_boxes_carry_their_full_text_as_tooltips(
     states = _rf_fn(body, "newModelRfRecomputeActionStates")
     assert "if (typed && !reason) { nameBox.setAttribute('title', typed); }" in states
     assert "else { nameBox.removeAttribute('title'); }" in states
+
+
+def test_a_lists_condition_puts_its_box_beside_a_shrunk_operator(
+    client: TestClient, db: Session
+) -> None:
+    """The author's later 12A entry: a List condition's operator only needs
+    room for "is not", so it shrinks, and its box (the List box's width)
+    and "then show the below" follow it in the operator's cell, which
+    takes the rest of the row; a number keeps the two-cell layout."""
+    from .test_response_field_branching_save import _branched, _rfs, _save
+
+    review_session, instrument, _, _ = _branched(client, db, "12a-list-condition")
+    response = _save(client, review_session, instrument, _rfs(
+        instrument,
+        Rating={"data_type": "list", "list_options": "Agree, Neutral, Disagree",
+                "min": "", "max": "", "step": "",
+                "branch_op": "is_not", "branch_value": "Agree"},
+    ))
+    assert response.status_code == 200, response.text
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    flat = " ".join(body.split())
+    condition = _rows_table(_card_slice(flat, instrument.id)).split(
+        '<tr data-new-model-rf-condition class="rf-condition-list">'
+    )[1].split("</tr>")[0]
+    cells = condition.split("<td")[1:]
+    op = cells[4]
+    assert op.startswith(' class="rf-condition-cell rf-condition-op" colspan="8">')
+    assert op.index("<select") < op.index("data-new-model-rf-condition-value")
+    assert "<span data-new-model-rf-condition-then>then show the below</span>" in op
+    assert cells[5].startswith(' colspan="7" class="rf-condition-cell" hidden>')
+    # The script's two layouts, and the List box measured when Min hides.
+    place = _rf_fn(body, "newModelRfPlaceConditionValue")
+    assert "opCell.colSpan = isList ? 8 : 1;" in place
+    assert "rest.hidden = isList;" in place
+    size = _rf_fn(body, "newModelRfSizeCondition")
+    assert "|| (list ? list.getBoundingClientRect().width : 0);" in size
+    assert (
+        "body.ui-v2 table.rf-table tr.rf-condition-list td.rf-condition-op select "
+        "{ width: auto; }"
+    ) in flat
+
+
+def test_band_3_gives_display_fields_15_percent(client: TestClient, db: Session) -> None:
+    """The author's later 12A entry: Band 3 splits 15 : 85 (was 1 : 4)."""
+    _, _, _, flat = _page(client, db, "12a-band3-split")
+    assert "grid-template-columns: minmax(0, 3fr) 17fr;" in flat

@@ -892,11 +892,12 @@ qualify, the trailing `... + N more` collapses the overflow.
 
 ### Response fields
 
-Band 3 splits `grid-template-columns: minmax(0, 1fr) 4fr` — a fifth
-display fields, four fifths response fields (the author, 2026-09-26;
-one third / two thirds before Item 9's table). The left track's `0`
-minimum lets a long field label scroll inside its `.table-scroll`
-rather than widening the column past its fifth. The left column holds
+Band 3 splits `grid-template-columns: minmax(0, 3fr) 17fr` — 15%
+display fields, 85% response fields (the author, 2026-09-28, 19T Item
+12A; a fifth / four fifths from 2026-09-26, one third / two thirds
+before Item 9's table). The left track's `0` minimum lets a long field
+label scroll inside its `.table-scroll` rather than widening the column
+past its share. The left column holds
 the display-field table above; the right column, below, is the
 response-field table.
 
@@ -1086,7 +1087,10 @@ centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 the below". The operator sits in the name column at the name box's width,
 with "If the above" right-aligned in the join column before it
 (`td.rf-condition-lead`, `td.rf-condition-op`, 19T Item 12A); the first
-value box starts at the type column's edge. The name column cuts long
+value box starts at the type column's edge. A List's operator shrinks to
+its label ("is not"), and its box, the List box's width, and "then show
+the below" follow it in the operator's cell, which spans the rest of the
+row (`tr.rf-condition-list`; the last cell hides). The name column cuts long
 text, so the operator's tooltip gives its full label (with its symbol,
 for a single-value operator) and a name box's gives its full name;
 neither shows while its row is amber, whose reason comes first, and a

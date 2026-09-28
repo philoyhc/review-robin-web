@@ -1909,6 +1909,10 @@ Three things read wrong in the table:
   entry): the condition row splits into three cells, keeping twelve
   columns. The first value box drops its left margin, so it starts at the
   type column's edge and the gap after the operator matches name to type.
+- **Band 3 splits 15 : 85** (`minmax(0, 3fr) 17fr`, was 1 : 4), and **a
+  List's operator shrinks to "is not"**, its box (the List box's width)
+  and "then show the below" beside it in the operator's cell, which
+  spans the rest of the row (later entries, #2665).
 - **Tooltips give the full text** the name column cuts (a later entry):
   the operator's label, with its symbol for a single-value operator, and
   the field's name. Neither shows while its row is amber, so the row's
@@ -1921,14 +1925,14 @@ Three things read wrong in the table:
 The suffix keeps this list out of Item 12's check; each line is honored
 in the same PR.
 
-- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column, the first value box at the type column's edge, the tooltips (Item 12A).
+- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column, the first value box at the type column's edge, the tooltips, the List condition's layout, Band 3's split (Item 12A).
 - `spec/ui_elements.md` — `rf-table`: the glyphs, `td.rf-active-cell`, `td.rf-join-cell`, `td.rf-condition-lead` and `td.rf-condition-op` (Item 12A).
 - `docs/status.md` — row when the item closes (Item 12A).
 
 ### Status
 
-**Closed 2026-09-28** in four PRs: #2661; #2662, with two later
-entries; #2663 and #2664, with the rest. For
+**Closed 2026-09-28** in five PRs: #2661; #2662, with two later
+entries; #2663, #2664 and #2665, with the rest. For
 #2661, headless Chromium, run by hand
 and not repeatable by the suite, measured the condition boxes at the
 parent's Min width at 1500px and 1100px, with every checkbox centered.
@@ -1951,6 +1955,10 @@ Later entries, measured by hand in Chromium:
   1100px.
 - **#2664, the tooltips:** set at load, updated on change and input,
   dropped while amber, restored once fixed.
+- **#2665, the split and a List's condition:** Band 3 202px : 1146px at a
+  1500px window. On a List parent the operator is 77px and its box the
+  List box's 272px, right beside it, and switching back to a number
+  restores the two-cell layout.
 
 **Reads, one per change.** None found a high defect; every low finding
 was fixed in its PR.
