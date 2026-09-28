@@ -1915,8 +1915,8 @@ Three things read wrong in the table:
   spans the rest of the row (later entries, #2665).
 - **The response-field table scrolls sideways on a narrow card**, like
   the display fields: its track gets a `0` minimum and the table a
-  `50rem` floor, so its boxes no longer shrink to nothing (a later entry,
-  #2666). It also stops the operator select collapsing, though its widest
+  `66rem` floor (50rem in #2666, raised in #2667), so its boxes no longer
+  shrink to nothing (later entries). It also stops the operator select collapsing, though its widest
   labels are still cut below about 1500px. A locked card's Band 3 is
   inert and can't scroll, so there the track grows to the table as
   before (`.band3-grid[inert]`).
@@ -1938,8 +1938,8 @@ in the same PR.
 
 ### Status
 
-**Closed 2026-09-28** in six PRs: #2661; #2662, with two later
-entries; #2663 to #2666, with the rest. For
+**Closed 2026-09-28** in seven PRs: #2661; #2662, with two later
+entries; #2663 to #2667, with the rest. For
 #2661, headless Chromium, run by hand
 and not repeatable by the suite, measured the condition boxes at the
 parent's Min width at 1500px and 1100px, with every checkbox centered.
@@ -1967,10 +1967,16 @@ Later entries, measured by hand in Chromium:
   List box's 272px, right beside it, and switching back to a number
   restores the two-cell layout.
 - **The scrolling response fields:** the split holds 15 : 85 at 800px
-  (it fell to 68px : 600px, the page overflowing at 600px). The table
-  keeps 800px and scrolls, 551px shown at an 800px window; the operator
-  select is 145px at 900px (was 26px). The page's own tab strips still
-  overflow at 600px, outside this item.
+  (it fell to 68px : 600px, the page overflowing at 600px). #2666's
+  `50rem` floor still let Min shrink to 18px at a 1000px window before
+  the table scrolled, and the author saw no scroller there; #2667 raised
+  it to `66rem`. The page caps the table near 1146px, so the floor holds
+  from about a 1390px window down: the trade is that R, ▲ ▼ and X need a
+  sideways scroll at common laptop widths (about 90px hidden at 1280px).
+  Below about 1400px
+  the table now holds 1056px, the name box 203px and Min 70px, and
+  scrolls. The page's own tab strips still overflow at 600px, outside
+  this item.
 
 **Reads, one per change.** None found a high defect; every low finding
 was fixed in its PR.
@@ -1980,8 +1986,10 @@ was fixed in its PR.
   name box's width the closed select cuts its widest labels below a
   window of about 1500px. The author's response was #2664's tooltips; the
   closed select still cuts. The widest label needs about 169px; after
-  #2664's wider gap the room is 166px at 1500px, 137px at 1300px, 82px at
-  1100px and none at 900px, where the select is 26px wide.
+  #2664's wider gap the room was 166px at 1500px, 137px at 1300px, 82px
+  at 1100px and none at 900px (26px wide). Since #2667's floor it holds
+  about 148px below about 1390px, so the widest labels stay cut by about
+  20px but never collapse.
 - **#2663:** the medium finding, no browser check for the value box, is
   now a checklist row.
 - **#2664:** the medium finding was that a locked branch's reason was
@@ -2005,6 +2013,12 @@ was fixed in its PR.
   card fits its table as before. The lows were the PR count, a stale grid
   value, an overclaim about the operator select, and a doubled checklist
   line.
+- **#2667:** no high finding. Its first medium, the trade that R, ▲ ▼ and
+  X scroll off at common laptop widths, went to the author, who kept
+  `66rem` (2026-09-28). Its second,
+  prose that credited the floor to #2666 and miscounted the PRs, was
+  fixed there, as were its lows: the floor's comment, stale select
+  figures, and a checklist row that named no window width.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 

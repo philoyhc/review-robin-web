@@ -247,7 +247,7 @@ def test_the_response_field_table_scrolls_rather_than_squeezing(
     boxes would otherwise shrink to nothing before it scrolled."""
     _, _, card, flat = _page(client, db, "12a-rf-scroll")
     assert "grid-template-columns: minmax(0, 3fr) minmax(0, 17fr);" in flat
-    assert "body.ui-v2 table.rf-table { min-width: 50rem; }" in flat
+    assert "body.ui-v2 table.rf-table { min-width: 66rem; }" in flat
     # A locked card's Band 3 is inert and can't scroll, so its table fits
     # the column as before (the item's read).
     assert (

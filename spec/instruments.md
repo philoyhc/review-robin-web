@@ -897,7 +897,7 @@ display fields, 85% response fields (the author, 2026-09-28, 19T Item
 12A; a fifth / four fifths from 2026-09-26, one third / two thirds
 before Item 9's table). Both tracks' `0` minimum lets each table scroll
 inside its `.table-scroll` on a narrow card rather than widening its
-column past its share; the response-field table keeps a `50rem` floor so
+column past its share; the response-field table keeps a `66rem` floor so
 its boxes stay usable while it scrolls (19T Item 12A). A card not being
 edited has an inert Band 3, which can't scroll, so there the response
 fields' track grows to the table and the floor lifts, as before. The left column holds
