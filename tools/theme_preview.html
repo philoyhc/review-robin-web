@@ -2942,9 +2942,10 @@
         padding: 4px 8px;
         margin: 0 4px;
       }
-      /* A number's condition boxes match the parent's Min box, which the
-         row script measures into --rf-condition-box (19T Item 12A); a
-         List's one box, or a page without the script, keeps 12em. */
+      /* A number's condition boxes match the parent's Min box, and a
+         List's box the parent's List box, which the row script measures
+         into --rf-condition-box (19T Item 12A); a page without the
+         script keeps 12em. */
       body.ui-v2 table.rf-table td.rf-condition-cell input {
         width: var(--rf-condition-box, 12em);
         box-sizing: border-box;

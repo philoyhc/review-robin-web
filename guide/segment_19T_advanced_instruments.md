@@ -1897,7 +1897,7 @@ Three things read wrong in the table:
 - **A number's condition boxes are as wide as the parent's Min box.** The
   row script measures it into `--rf-condition-box` and follows it with a
   `ResizeObserver`, since Min is a third of a flexible column. A List's
-  one box keeps 12em. **Rejected:** moving the boxes into the bounds
+  box takes the List box's width (#2665). **Rejected:** moving the boxes into the bounds
   column, which would break the condition's sentence.
 - **Every Active checkbox is centered in its cell** (`td.rf-active-cell`).
 - **Room for two more buttons after ↰ / ↳** (later entries, same day: one,
@@ -1977,6 +1977,13 @@ was fixed in its PR.
   shows no lone symbol, which misread as "is outside (≤)". The read of
   the wider gap found only low ones: a stale comment, this record, the
   re-measured select, and one wording for the lock reason.
+- **#2665:** no high finding. The mediums were fixed there: the spec
+  still gave a List's box 12em, the call that re-lays the row was
+  unpinned, and the checklist row never asked for a List branch. The
+  lows were stale comments, the status row, `tr.rf-condition-list` in
+  `spec/ui_elements.md`, a whitespace gap, and a duplicate test. It also
+  found an older bug, outside this item: a Quick fill preset on a List
+  parent turns "is not" into "is". That went to the author.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 

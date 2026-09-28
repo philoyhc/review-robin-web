@@ -4173,7 +4173,7 @@
                         <option value="{{ _op[0] }}" data-symbol="{{ _op[2] }}"{% if _op[0] == condition.op %} selected{% endif %}>{{ _op[1] }}</option>
                       {% endfor %}
                     </select>
-                    {% if condition.is_list %}{{ _value_input }}{{ _then }}{% endif %}
+                    {% if condition.is_list %}{{ _value_input | trim }}{{ _then }}{% endif %}
                   </td>
                   <td colspan="7" class="rf-condition-cell"{% if condition.is_list %} hidden{% endif %}>
                     {% if not condition.is_list %}{{ _value_input }}{% endif %}
@@ -5008,8 +5008,8 @@
         };
         // 19T Item 12A — a number's condition boxes take the width of the
         // parent's own Min box (the author's ruling), which is a third of
-        // the bounds column and so moves with the card. A List parent
-        // hides Min, and its one box keeps the stylesheet's width.
+        // the bounds column and so moves with the card; a List's box takes
+        // the parent's List box's width, measured when Min hides.
         window.newModelRfSizeCondition = window.newModelRfSizeCondition || function (parent) {
           var min = parent.querySelector('[data-new-model-rf-bound="min"]');
           var list = parent.querySelector('[data-new-model-rf-bound="list"]');

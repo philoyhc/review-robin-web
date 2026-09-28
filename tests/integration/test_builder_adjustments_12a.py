@@ -200,7 +200,16 @@ def test_a_lists_condition_puts_its_box_beside_a_shrunk_operator(
     assert op.index("<select") < op.index("data-new-model-rf-condition-value")
     assert "<span data-new-model-rf-condition-then>then show the below</span>" in op
     assert cells[5].startswith(' colspan="7" class="rf-condition-cell" hidden>')
+    # One value box, in the operator's cell, not a second in the hidden one.
+    assert condition.count("data-new-model-rf-condition-value") == 1
+    assert "data-new-model-rf-condition-value" not in cells[5]
+    # No gap-making whitespace between the box and its text, as the script
+    # leaves none (the item's read).
+    assert '"> <span data-new-model-rf-condition-then>' not in op
     # The script's two layouts, and the List box measured when Min hides.
+    # The call that makes a fork, a join or a type change re-lay the row.
+    sync = _rf_fn(body, "newModelRfSyncConditionOps")
+    assert "window.newModelRfPlaceConditionValue(cond, isList);" in sync
     place = _rf_fn(body, "newModelRfPlaceConditionValue")
     assert "opCell.colSpan = isList ? 8 : 1;" in place
     assert "rest.hidden = isList;" in place
@@ -211,8 +220,3 @@ def test_a_lists_condition_puts_its_box_beside_a_shrunk_operator(
         "{ width: auto; }"
     ) in flat
 
-
-def test_band_3_gives_display_fields_15_percent(client: TestClient, db: Session) -> None:
-    """The author's later 12A entry: Band 3 splits 15 : 85 (was 1 : 4)."""
-    _, _, _, flat = _page(client, db, "12a-band3-split")
-    assert "grid-template-columns: minmax(0, 3fr) 17fr;" in flat
