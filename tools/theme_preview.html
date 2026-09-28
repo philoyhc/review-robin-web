@@ -2956,6 +2956,15 @@
          muted, its control disabled until the parent's answer opens it.
          The cell's title names the condition. */
       body.ui-v2 td.rs-branch-closed { opacity: 0.5; }
+      /* The condition's operator sits in the name column at the name
+         box's width, "If the above" right-aligned before it in the join
+         column, any spare room to its left (19T Item 12A). */
+      body.ui-v2 table.rf-table td.rf-condition-lead { text-align: right; }
+      body.ui-v2 table.rf-table td.rf-condition-op select {
+        width: 100%;
+        margin: 0;
+        box-sizing: border-box;
+      }
       /* An empty name box shows the field's default label ("Field N")
          muted, as its placeholder: the name the field goes by until the
          operator types one (19T Item 9, on the author's ruling). */

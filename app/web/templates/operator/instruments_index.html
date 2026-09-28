@@ -4147,8 +4147,11 @@
                           {% if condition.locked %}disabled{% endif %}
                           onclick="newModelRfConditionAdd(this)"
                           title="Add a field at the top of the branch">+</button></td>
-                  <td colspan="9" class="rf-condition-cell">
-                    If the above
+                  {# 19T Item 12A — the operator sits in the name column at the
+                     name box's width, with "If the above" right-aligned in the
+                     join column before it (the author's ruling). #}
+                  <td class="col-shrink rf-condition-cell rf-condition-lead">If the above</td>
+                  <td class="rf-condition-cell rf-condition-op">
                     <select data-new-model-rf-condition-op
                             {% if condition.locked %}disabled{% endif %}
                             onchange="newModelRfConditionChanged(this)"
@@ -4157,6 +4160,8 @@
                         <option value="{{ _op[0] }}" data-symbol="{{ _op[2] }}"{% if _op[0] == condition.op %} selected{% endif %}>{{ _op[1] }}</option>
                       {% endfor %}
                     </select>
+                  </td>
+                  <td colspan="7" class="rf-condition-cell">
                     <input type="text" data-new-model-rf-condition-value
                            {% if condition.locked %}disabled{% endif %}
                            value="{{ condition.value }}"

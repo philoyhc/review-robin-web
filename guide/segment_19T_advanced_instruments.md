@@ -1903,6 +1903,10 @@ Three things read wrong in the table:
 - **Room for one more button after ↰ / ↳** (a later entry, same day): the
   join cell's right padding (`td.rf-join-cell`), not an empty column, so
   no column index or colspan moves.
+- **The operator sits in the name column at the name box's width**, with
+  "If the above" right-aligned in the join column before it (a later
+  entry): the condition row splits into three cells, keeping twelve
+  columns.
 
 ### Doc impact — checked by hand
 
@@ -1910,7 +1914,7 @@ Three things read wrong in the table:
 The suffix keeps this list out of Item 12's check; each line is honored
 in the same PR.
 
-- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach (Item 12A).
+- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column (Item 12A).
 - `spec/ui_elements.md` — `rf-table`: the glyphs, `td.rf-active-cell` and `td.rf-join-cell` (Item 12A).
 - `docs/status.md` — row when the item closes (Item 12A).
 
@@ -1927,12 +1931,20 @@ low ones, all fixed there:
 - Item 15's prose now gives the new glyph order;
 - the checklist no longer says a List's box is wider.
 
-#2662, the room after ↰ / ↳: Chromium, by hand at 1500px, measured the
-name box two button pitches (88px) after the join button on both kinds of
-row. Its read found four low ones, all fixed there: this PR count, the Doc
-impact lines, the read count, and the gap's width, now `--rf-glyph-width`
-shared with the button. Down to a 900px window the table stayed inside
-its card with no page overflow; narrower is left to the browser check.
+#2662 carries two later entries, measured by hand in Chromium:
+- **the room after ↰ / ↳**: the name box sits two button pitches (88px)
+  after the join button on both kinds of row;
+- **the operator in the name column**: it has the name box's left edge
+  and width at 1500, 1100 and 900px.
+
+Down to a 900px window the table stayed inside its card, with no page
+overflow; narrower windows are left to the browser check.
+
+**The read of the first entry** found four low ones, all fixed:
+- this PR count;
+- the Doc impact lines;
+- the read count;
+- the gap's width, now `--rf-glyph-width`, shared with the button.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 

@@ -100,3 +100,22 @@ def test_join_and_detach_leave_room_for_one_more_button(
         "body.ui-v2 table.rf-table td.rf-join-cell { "
         "padding-right: calc(var(--rf-glyph-width) + 3 * var(--space-1)); }"
     ) in flat
+
+
+def test_the_operator_takes_the_name_column_and_the_lead_aligns_right(
+    client: TestClient, db: Session
+) -> None:
+    """The author's later 12A entry: the condition's operator sits in the
+    name column at the name box's width, with "If the above" right-aligned
+    before it."""
+    _, _, card, flat = _page(client, db, "12a-operator")
+    condition = _rows_table(card).split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
+    cells = condition.split("<td")[1:]
+    assert 'class="col-shrink rf-condition-cell rf-condition-lead">If the above</td>' in cells[3]
+    assert 'class="rf-condition-cell rf-condition-op">' in cells[4]
+    assert "<select data-new-model-rf-condition-op" in cells[4]
+    assert "body.ui-v2 table.rf-table td.rf-condition-lead { text-align: right; }" in flat
+    assert (
+        "body.ui-v2 table.rf-table td.rf-condition-op select { "
+        "width: 100%; margin: 0; box-sizing: border-box; }"
+    ) in flat
