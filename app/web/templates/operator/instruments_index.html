@@ -4176,7 +4176,16 @@
                            oninput="newModelRfConditionChanged(this)"
                            aria-label="Value the condition compares against">
                 {% endset %}
-                {% set _then %}<span data-new-model-rf-condition-then>then show the below</span>{% endset %}
+                {# 19T Item 13 — "then" and what the condition does to the
+                   fields below: shows them (Item 10's kind) or makes them
+                   required, else optional. Scaffold: Show is the only choice
+                   and nothing reads or saves the select yet. #}
+                {% set _then %}<span data-new-model-rf-condition-then>then<select data-new-model-rf-condition-mode
+                            {% if condition.locked %}disabled{% endif %}
+                            aria-label="What the condition does to the fields below">
+                      <option value="show" selected>Show the below</option>
+                      <option value="require" disabled>Make the below required (else, optional)</option>
+                    </select></span>{% endset %}
                 <tr data-new-model-rf-condition{% if condition.is_list %} class="rf-condition-list"{% endif %}>
                   <td class="col-shrink rf-branch-bar"></td>
                   <td class="col-shrink"></td>
@@ -4190,7 +4199,7 @@
                      join column before it (the author's ruling). #}
                   <td class="col-shrink rf-condition-cell rf-condition-lead">If the above</td>
                   {# A List's operator shrinks to its label, and its box (the
-                     List box's width) and "then show the below" follow it
+                     List box's width) and "then [mode]" follow it
                      in the operator's cell, which takes the rest of the row;
                      the last cell hides (19T Item 12A). #}
                   <td class="rf-condition-cell rf-condition-op"{% if condition.is_list %} colspan="8"{% endif %}>
@@ -4395,7 +4404,7 @@
                 </tr>
                 {% if loop.first and _group.condition %}
                 {# The branch's condition row: after the bar, "If the
-                   above [operator] [value] then show the below". Its "+"
+                   above [operator] [value] then [mode]". Its "+"
                    adds a field at the top of the branch; it has no X —
                    the branch goes with its last governed field. #}
                 {{ rf_condition_row(_group.condition) }}
@@ -4986,7 +4995,7 @@
         // chosen operator where it still applies (ruling 3: the condition
         // stays, and turns amber if it no longer fits).
         // 19T Item 12A — a List's operator shrinks to its label, and its
-        // box and "then show the below" follow it in the operator's cell,
+        // box and "then [mode]" follow it in the operator's cell,
         // which takes the rest of the row while the last cell hides. A
         // number's box and text sit in the last cell, the box at the type
         // column's edge. The server renders the same two layouts.
@@ -5089,7 +5098,8 @@
           var input = cond.querySelector('[data-new-model-rf-condition-value]');
           var high = cond.querySelector('[data-new-model-rf-condition-high]');
           var add = cond.querySelector('[data-new-model-rf-condition-add]');
-          [sel, input, high, add].forEach(function (c) { if (c) { c.disabled = locked; } });
+          var mode = cond.querySelector('[data-new-model-rf-condition-mode]');
+          [sel, input, high, add, mode].forEach(function (c) { if (c) { c.disabled = locked; } });
           window.newModelRfSyncConditionRange(cond);
           window.newModelRfSizeCondition(parent);
           if (add) {
