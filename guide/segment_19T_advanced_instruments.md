@@ -1801,6 +1801,18 @@ Taken 2026-09-28 at `3a13e884`:
 `BRANCH_OPS` and `condition_error` still refuse ranges.
 **Cumulative-read base:** `3a13e884`, main before rung 1 merged.
 
+**Rung 3** (2026-09-28): ranges are accepted.
+- The server gains `NUMERIC_OP_CHOICES` (token, name, symbol), and
+  `range_error` names the end at fault. Save strips "2 to " to "2 to", so
+  it still names the high end.
+- The builder:
+  - lists the server's operators;
+  - adds the second box and "to" (`newModelRfSyncConditionRange`);
+  - joins the boxes in `newModelRfConditionValue`;
+  - titles ranges with symbols.
+- Driven in headless Chromium: the labels, showing and hiding the box,
+  the join, each amber message and the hint; no page error.
+
 ### PR ladder
 
 Each rung deploys safely on its own.

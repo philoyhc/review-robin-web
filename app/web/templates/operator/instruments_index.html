@@ -2755,9 +2755,9 @@
                 ? group.querySelector('[data-new-model-rf-condition]') : null;
               if (cond) {
                 var opSel = cond.querySelector('[data-new-model-rf-condition-op]');
-                var valueInput = cond.querySelector('[data-new-model-rf-condition-value]');
                 rf.branch_op = opSel && opSel.value ? opSel.value : null;
-                rf.branch_value = valueInput ? valueInput.value.trim() : null;
+                // A range's two boxes join as "low to high" (19T Item 12).
+                rf.branch_value = window.newModelRfConditionValue(cond);
               }
               // Segment 18R Item 2 — carry the response column's width.
               // A newly-added field has no rf-id yet, so saveBand2Widths
@@ -4161,8 +4161,8 @@
                             {% if condition.locked %}disabled{% endif %}
                             onchange="newModelRfConditionChanged(this)"
                             aria-label="Condition for the fields below">
-                      {% for _token, _symbol in condition.ops %}
-                        <option value="{{ _token }}"{% if _token == condition.op %} selected{% endif %}>{{ _symbol }}</option>
+                      {% for _op in condition.ops %}
+                        <option value="{{ _op[0] }}" data-symbol="{{ _op[2] }}"{% if _op[0] == condition.op %} selected{% endif %}>{{ _op[1] }}</option>
                       {% endfor %}
                     </select>
                     <input type="text" data-new-model-rf-condition-value
@@ -4170,6 +4170,17 @@
                            value="{{ condition.value }}"
                            oninput="newModelRfConditionChanged(this)"
                            aria-label="Value the condition compares against">
+                    {# 19T Item 12 — a range takes a second box, shown only
+                       for the four range operators; the stager joins the
+                       two as "low to high". #}
+                    <span data-new-model-rf-condition-range{% if not condition.is_range %} hidden{% endif %}>
+                      to
+                      <input type="text" data-new-model-rf-condition-high
+                             {% if condition.locked %}disabled{% endif %}
+                             value="{{ condition.high }}"
+                             oninput="newModelRfConditionChanged(this)"
+                             aria-label="The range's high end">
+                    </span>
                     then show the below
                   </td>
                 </tr>
@@ -4469,7 +4480,7 @@
           {# 19T Item 10 — ⑂ inserts this condition row below its field; the
              row script fills the operators the parent's type allows. #}
           <template data-new-model-rf-condition-template>
-            {{ rf_condition_row({"op": "", "value": "", "ops": [], "locked": false}) }}
+            {{ rf_condition_row({"op": "", "value": "", "high": "", "is_range": false, "ops": [], "locked": false}) }}
           </template>
         </div>
       </div>
@@ -4827,8 +4838,44 @@
           var sib = up ? row.previousElementSibling : row.nextElementSibling;
           return sib && sib.hasAttribute('data-new-model-rf-governed') ? sib : null;
         };
+        // 19T Item 12 — the operators the server offers
+        // (``_band2.branch_ops``): ``numeric`` and ``list`` as
+        // [token, name, symbol], ``range`` the tokens taking two boxes.
+        window.newModelRfBranchOps = window.newModelRfBranchOps || function () {
+          var host = document.querySelector('[data-new-model-rf-branch-ops]');
+          try {
+            return JSON.parse(host && host.getAttribute('data-new-model-rf-branch-ops') || '{}');
+          } catch (e) { return {}; }
+        };
+        window.newModelRfIsRangeOp = window.newModelRfIsRangeOp || function (op) {
+          return (window.newModelRfBranchOps().range || []).indexOf(op) >= 0;
+        };
+        // The condition's stored value: the box, or for a range both boxes
+        // as "low to high" (``RANGE_SEPARATOR``).
+        window.newModelRfConditionValue = window.newModelRfConditionValue || function (cond) {
+          var sel = cond.querySelector('[data-new-model-rf-condition-op]');
+          var low = cond.querySelector('[data-new-model-rf-condition-value]');
+          var high = cond.querySelector('[data-new-model-rf-condition-high]');
+          var lowText = low ? low.value.trim() : '';
+          if (sel && window.newModelRfIsRangeOp(sel.value)) {
+            return lowText + ' to ' + (high ? high.value.trim() : '');
+          }
+          return lowText;
+        };
+        // Show the second box only for a range; leaving one drops its
+        // value (the plan's Semantics).
+        window.newModelRfSyncConditionRange = window.newModelRfSyncConditionRange || function (cond) {
+          var sel = cond.querySelector('[data-new-model-rf-condition-op]');
+          var span = cond.querySelector('[data-new-model-rf-condition-range]');
+          if (!span) { return; }
+          var isRange = !!(sel && window.newModelRfIsRangeOp(sel.value));
+          span.hidden = !isRange;
+          var high = span.querySelector('[data-new-model-rf-condition-high]');
+          if (!isRange && high) { high.value = ''; }
+        };
         // Why a condition can't be saved, or null: mirrors
-        // ``condition_error`` in app/services/responses/_branching.py.
+        // ``condition_error`` and ``range_error`` in
+        // app/services/responses/_branching.py.
         window.newModelRfConditionError = window.newModelRfConditionError || function (dataType, listCsv, op, value) {
           function items(text) {
             return (text || '').split(',').map(function (s) { return s.trim(); })
@@ -4853,14 +4900,32 @@
             }
             return null;
           }
-          if (['eq', 'ne', 'gt', 'ge', 'lt', 'le'].indexOf(op) < 0) {
-            return 'Choose a comparison for the branch condition.';
-          }
           // The service's ``DECIMAL_PATTERN``: "1_000" and "0x10" are not
           // numbers to either side.
+          function isNumber(t) {
+            return /^[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$/.test(t)
+              && isFinite(Number(t));
+          }
+          if (window.newModelRfIsRangeOp(op)) {
+            var parts = (value || '').split(' to ');
+            if (parts.length !== 2) {
+              return 'The branch condition needs a range: a low and a high number.';
+            }
+            var lowText = parts[0].trim(), highText = parts[1].trim();
+            if (!isNumber(lowText)) { return "The range's low end needs a number."; }
+            if (!isNumber(highText)) { return "The range's high end needs a number."; }
+            if (!(Number(lowText) < Number(highText))) {
+              return "The range's low end must be below its high end.";
+            }
+            return null;
+          }
+          var numeric = (window.newModelRfBranchOps().numeric || []).map(function (p) { return p[0]; });
+          var range = window.newModelRfBranchOps().range || [];
+          if (numeric.indexOf(op) < 0 || range.indexOf(op) >= 0) {
+            return 'Choose a comparison for the branch condition.';
+          }
           var text = (value || '').trim();
-          if (!/^[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$/.test(text)
-              || !isFinite(Number(text))) {
+          if (!isNumber(text)) {
             return 'The branch condition needs a number.';
           }
           return null;
@@ -4894,10 +4959,12 @@
             var opt = document.createElement('option');
             opt.value = p[0];
             opt.textContent = p[1];
+            opt.setAttribute('data-symbol', p[2] || p[1]);
             sel.appendChild(opt);
           });
           var keep = want.some(function (p) { return p[0] === current; });
           sel.value = keep ? current : (want.length ? want[0][0] : '');
+          window.newModelRfSyncConditionRange(cond);
         };
         // The condition row's amber marker, as a field row's: the reason
         // is its tooltip, and Save refuses the branch until it is fixed.
@@ -4909,8 +4976,10 @@
           var locked = group.getAttribute('data-new-model-rf-branch-locked') === 'true';
           var sel = cond.querySelector('[data-new-model-rf-condition-op]');
           var input = cond.querySelector('[data-new-model-rf-condition-value]');
+          var high = cond.querySelector('[data-new-model-rf-condition-high]');
           var add = cond.querySelector('[data-new-model-rf-condition-add]');
-          [sel, input, add].forEach(function (c) { if (c) { c.disabled = locked; } });
+          [sel, input, high, add].forEach(function (c) { if (c) { c.disabled = locked; } });
+          window.newModelRfSyncConditionRange(cond);
           if (add) {
             add.setAttribute('title', locked
               ? 'Its branch has saved responses, so no field can join it'
@@ -4918,7 +4987,8 @@
           }
           var shape = window.newModelRfRowShape(parent);
           var reason = window.newModelRfConditionError(
-            shape.dataType, shape.list, sel ? sel.value : '', input ? input.value : ''
+            shape.dataType, shape.list, sel ? sel.value : '',
+            window.newModelRfConditionValue(cond)
           );
           if (reason) {
             cond.setAttribute('data-row-pending', 'true');
@@ -4952,8 +5022,19 @@
             return 'Opens when ' + label + ' '
               + (sel.value === 'is' ? 'is' : 'is not') + ' ' + joined;
           }
-          var symbol = sel && sel.selectedIndex >= 0
-            ? sel.options[sel.selectedIndex].textContent : '';
+          // Symbols, as ``condition_label`` writes them (the author's
+          // ruling, 19T Item 12).
+          var option = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+          var symbol = option ? (option.getAttribute('data-symbol') || option.textContent) : '';
+          if (sel && window.newModelRfIsRangeOp(sel.value)) {
+            var high = cond.querySelector('[data-new-model-rf-condition-high]');
+            var hi = (high && high.value || '').trim();
+            if (sel.value === 'in_inc' || sel.value === 'in_exc') {
+              return 'Opens when ' + value + ' ' + symbol + ' ' + label + ' ' + symbol + ' ' + hi;
+            }
+            var other = sel.value === 'out_inc' ? '≥' : '>';
+            return 'Opens when ' + label + ' ' + symbol + ' ' + value + ' or ' + other + ' ' + hi;
+          }
           return 'Opens when ' + label + ' ' + symbol + ' ' + value;
         };
         // Make a template row a governed row: the bar in the checkbox
