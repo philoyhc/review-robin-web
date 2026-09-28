@@ -1906,7 +1906,8 @@ Three things read wrong in the table:
 - **The operator sits in the name column at the name box's width**, with
   "If the above" right-aligned in the join column before it (a later
   entry): the condition row splits into three cells, keeping twelve
-  columns.
+  columns. The first value box drops its left margin, so it starts at the
+  type column's edge and the gap after the operator matches name to type.
 
 ### Doc impact — checked by hand
 
@@ -1920,7 +1921,8 @@ in the same PR.
 
 ### Status
 
-**Closed 2026-09-28** in two PRs, #2661 and #2662 (a later entry). For
+**Closed 2026-09-28** in three PRs: #2661, then #2662 and a third for
+later entries. For
 #2661, headless Chromium, run by hand
 and not repeatable by the suite, measured the condition boxes at the
 parent's Min width at 1500px and 1100px, with every checkbox centered.
@@ -1940,6 +1942,9 @@ low ones, all fixed there:
 For the first entry, the table stayed inside its card down to a 900px
 window, with no page overflow; narrower windows are left to the browser
 check.
+
+A third PR aligned the first value box with the type column. Both
+gaps measured 8px in Chromium at 1500 and 1100px.
 
 **The read of the first entry** found four low ones, all fixed:
 - this PR count;

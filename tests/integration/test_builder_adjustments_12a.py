@@ -119,3 +119,16 @@ def test_the_operator_takes_the_name_column_and_the_lead_aligns_right(
         "body.ui-v2 table.rf-table td.rf-condition-op select { "
         "width: 100%; margin: 0; box-sizing: border-box; }"
     ) in flat
+
+
+def test_the_first_value_box_starts_at_the_type_columns_edge(
+    client: TestClient, db: Session
+) -> None:
+    """The author's later 12A entry: the gap after the operator matches the
+    one between name and type, so the first value box drops its left
+    margin and lines up with the type select."""
+    _, _, _, flat = _page(client, db, "12a-value-gap")
+    assert (
+        "body.ui-v2 table.rf-table td.rf-condition-cell "
+        "input[data-new-model-rf-condition-value] { margin-left: 0; }"
+    ) in flat

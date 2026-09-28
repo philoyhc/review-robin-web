@@ -1085,7 +1085,8 @@ centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 **The condition row** reads "If the above [operator] [value] then show
 the below". The operator sits in the name column at the name box's width,
 with "If the above" right-aligned in the join column before it
-(`td.rf-condition-lead`, `td.rf-condition-op`, 19T Item 12A). Its own "+" adds a governed field at the top of the branch;
+(`td.rf-condition-lead`, `td.rf-condition-op`, 19T Item 12A); the first
+value box starts at the type column's edge. Its own "+" adds a governed field at the top of the branch;
 it has no X — the branch goes with its last governed field's X ("Delete
 this field and its branch"). The operators offered follow the parent's
 type. A List parent picks from `is` / `is_not` (shown "is" / "is not"),
