@@ -1900,14 +1900,20 @@ Three things read wrong in the table:
   one box keeps 12em. **Rejected:** moving the boxes into the bounds
   column, which would break the condition's sentence.
 - **Every Active checkbox is centered in its cell** (`td.rf-active-cell`).
-- **Room for one more button after ↰ / ↳** (a later entry, same day): the
-  join cell's right padding (`td.rf-join-cell`), not an empty column, so
-  no column index or colspan moves.
+- **Room for two more buttons after ↰ / ↳** (later entries, same day: one,
+  then two ahead of a second level of branching): the join cell's right
+  padding (`td.rf-join-cell`), not an empty column, so no column index or
+  colspan moves.
 - **The operator sits in the name column at the name box's width**, with
   "If the above" right-aligned in the join column before it (a later
   entry): the condition row splits into three cells, keeping twelve
   columns. The first value box drops its left margin, so it starts at the
   type column's edge and the gap after the operator matches name to type.
+- **Tooltips give the full text** the name column cuts (a later entry):
+  the operator's label, with its symbol for a single-value operator, and
+  the field's name. Neither shows while its row is amber, so the row's
+  reason comes first. A locked branch's reason follows the operator's
+  label.
 
 ### Doc impact — checked by hand
 
@@ -1915,14 +1921,14 @@ Three things read wrong in the table:
 The suffix keeps this list out of Item 12's check; each line is honored
 in the same PR.
 
-- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column, the first value box at the type column's edge (Item 12A).
+- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column, the first value box at the type column's edge, the tooltips (Item 12A).
 - `spec/ui_elements.md` — `rf-table`: the glyphs, `td.rf-active-cell`, `td.rf-join-cell`, `td.rf-condition-lead` and `td.rf-condition-op` (Item 12A).
 - `docs/status.md` — row when the item closes (Item 12A).
 
 ### Status
 
-**Closed 2026-09-28** in three PRs: #2661; #2662, with two later
-entries; #2663, with a third. For
+**Closed 2026-09-28** in four PRs: #2661; #2662, with two later
+entries; #2663 and #2664, with the rest. For
 #2661, headless Chromium, run by hand
 and not repeatable by the suite, measured the condition boxes at the
 parent's Min width at 1500px and 1100px, with every checkbox centered.
@@ -1933,42 +1939,36 @@ low ones, all fixed there:
 - Item 15's prose now gives the new glyph order;
 - the checklist no longer says a List's box is wider.
 
-#2662 carries two later entries, measured by hand in Chromium:
-- **the room after ↰ / ↳**: the name box sits two button pitches (88px)
-  after the join button on both kinds of row;
-- **the operator in the name column**: it has the name box's left edge
-  and width at 1500, 1100 and 900px.
+Later entries, measured by hand in Chromium:
+- **#2662, the room after ↰ / ↳:** the name box sat two button pitches
+  (88px) after the join button on both kinds of row. #2664 widened it to
+  three (132px), room for two buttons ahead of a second level of
+  branching. The table stays inside its card down to a 900px window;
+  narrower is the browser check's.
+- **#2662, the operator in the name column:** it has the name box's left
+  edge and width at 1500, 1100 and 900px.
+- **#2663, the first value box:** both gaps measure 8px at 1500 and
+  1100px.
+- **#2664, the tooltips:** set at load, updated on change and input,
+  dropped while amber, restored once fixed.
 
-For the first entry, the table stayed inside its card down to a 900px
-window, with no page overflow; narrower windows are left to the browser
-check.
-
-#2663 aligned the first value box with the type column. Both
-gaps measured 8px in Chromium at 1500 and 1100px.
-
-**The read of the first entry** found four low ones, all fixed:
-- this PR count;
-- the Doc impact lines;
-- the read count;
-- the gap's width, now `--rf-glyph-width`, shared with the button.
-
-**The read of the second entry** found one medium issue and three low ones.
-- The low ones are fixed: `spec/ui_elements.md` and the Doc impact now
-  name the two classes, and this prose and the status row no longer
-  overclaim.
-- The medium one went to the author: at the name box's width, the closed
-  select cuts off the widest operator labels below a window of about
-  1500px. Chromium measured about 169px of text against 166, 137, 105
-  and 15px of room at 1500, 1300, 1100 and 900px.
-
-**The read of #2663** found one medium issue and four low ones, all
-fixed there:
-- the browser checklist row now asks about the value box;
-- the Doc impact line names the value box;
-- this record of the reads;
-- the PR numbering;
-- a test now pins the value box as the first control after the operator's
-  cell.
+**Reads, one per change.** None found a high defect; every low finding
+was fixed in its PR.
+- **#2662's first entry:** the gap's width now shares `--rf-glyph-width`
+  with the button.
+- **#2662's second entry:** the medium finding went to the author. At the
+  name box's width the closed select cuts its widest labels below a
+  window of about 1500px. The author's response was #2664's tooltips; the
+  closed select still cuts. The widest label needs about 169px; after
+  #2664's wider gap the room is 166px at 1500px, 137px at 1300px, 82px at
+  1100px and none at 900px, where the select is 26px wide.
+- **#2663:** the medium finding, no browser check for the value box, is
+  now a checklist row.
+- **#2664:** the medium finding was that a locked branch's reason was
+  hidden by the operator's tooltip; it now follows the label. A range
+  shows no lone symbol, which misread as "is outside (≤)". The read of
+  the wider gap found only low ones: a stale comment, this record, the
+  re-measured select, and one wording for the lock reason.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 

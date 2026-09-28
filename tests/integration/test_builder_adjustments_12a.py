@@ -81,10 +81,11 @@ def test_a_numbers_condition_boxes_follow_the_parents_min_box(
     assert "window.newModelRfSizeCondition(parent);" in recompute
 
 
-def test_join_and_detach_leave_room_for_one_more_button(
+def test_join_and_detach_leave_room_for_two_more_buttons(
     client: TestClient, db: Session
 ) -> None:
-    """The author's later 12A entry: after ↰ / ↳, space for another button
+    """The author's later 12A entries: after ↰ / ↳, space for two more
+    buttons, ahead of a second level of branching (it was one), still
     of the same width, on the server's rows and the template's."""
     _, _, card, flat = _page(client, db, "12a-join-room")
     table = _rows_table(card)
@@ -92,13 +93,13 @@ def test_join_and_detach_leave_room_for_one_more_button(
         assert '<td class="col-shrink rf-join-cell" data-new-model-rf-join-cell>' in _row(table, name)
     template = flat.split("<template data-new-model-rf-row-template>")[1].split("</template>")[0]
     assert '<td class="col-shrink rf-join-cell" data-new-model-rf-join-cell>' in template
-    # The cell's own padding, a button (``.rf-glyph``'s width, one
-    # variable for both) and the two paddings between cells.
+    # The cell's own padding, then two buttons (``.rf-glyph``'s width, one
+    # variable for both), each with the two paddings between cells.
     assert "body.ui-v2 table.rf-table { --rf-glyph-width: 2.25rem; }" in flat
     assert "width: var(--rf-glyph-width);" in flat
     assert (
         "body.ui-v2 table.rf-table td.rf-join-cell { "
-        "padding-right: calc(var(--rf-glyph-width) + 3 * var(--space-1)); }"
+        "padding-right: calc(2 * var(--rf-glyph-width) + 5 * var(--space-1)); }"
     ) in flat
 
 
@@ -141,3 +142,29 @@ def test_the_first_value_box_starts_at_the_type_columns_edge(
         "body.ui-v2 table.rf-table td.rf-condition-cell "
         "input[data-new-model-rf-condition-value] { margin-left: 0; }"
     ) in flat
+
+
+def test_the_operator_and_name_boxes_carry_their_full_text_as_tooltips(
+    client: TestClient, db: Session
+) -> None:
+    """The author's later 12A entry: the name column cuts long names and
+    operator labels, so each box's tooltip gives the full text (with a
+    single-value operator's symbol), except while its row is amber, whose reason
+    comes first."""
+    review_session, instrument, _, _ = _page(client, db, "12a-tooltips")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    title = _rf_fn(body, "newModelRfTitleOperator")
+    assert "if (!option || pending) { sel.removeAttribute('title'); return; }" in title
+    assert "label + ' (' + symbol + ')'" in title
+    recompute = _rf_fn(body, "newModelRfRecomputeCondition")
+    assert "window.newModelRfTitleOperator(sel, !!reason, locked);" in recompute
+    # A range has no lone symbol; a locked branch keeps its reason (the
+    # item's read).
+    assert "window.newModelRfIsRangeOp(sel.value) ? ''" in title
+    assert "if (locked) { title += '. ' + window.newModelRfConditionLockedMessage; }" in title
+    assert "cond.setAttribute('title', window.newModelRfConditionLockedMessage);" in recompute
+    states = _rf_fn(body, "newModelRfRecomputeActionStates")
+    assert "if (typed && !reason) { nameBox.setAttribute('title', typed); }" in states
+    assert "else { nameBox.removeAttribute('title'); }" in states
