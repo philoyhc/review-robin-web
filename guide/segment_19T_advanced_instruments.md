@@ -1987,6 +1987,9 @@ review of #2669. No high finding. Of twelve mediums, ten were fixed in
 their PR and two went to the author: the select cutting its labels, and
 the `66rem` trade. Every low was fixed in its PR, as was Codex's one
 finding (the scroller check accepted a `.table-scroll` on a locked host).
+The close's `spec-writer` pass found both specs current but one clause:
+the condition boxes follow the Min box through a `ResizeObserver`, which
+`spec/instruments.md` now says.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 
