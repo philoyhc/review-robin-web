@@ -1983,7 +1983,9 @@ was fixed in its PR.
   lows were stale comments, the status row, `tr.rf-condition-list` in
   `spec/ui_elements.md`, a whitespace gap, and a duplicate test. It also
   found an older bug, outside this item: a Quick fill preset on a List
-  parent turns "is not" into "is". That went to the author.
+  parent turned "is not" into "is". On the author's instruction it was
+  fixed in its own PR: the type snaps to "list" before the options'
+  input event.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 

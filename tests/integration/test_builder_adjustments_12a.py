@@ -220,3 +220,20 @@ def test_a_lists_condition_puts_its_box_beside_a_shrunk_operator(
         "{ width: auto; }"
     ) in flat
 
+
+
+def test_a_quick_fill_preset_keeps_a_list_conditions_operator(
+    client: TestClient, db: Session
+) -> None:
+    """A Quick fill preset on a List parent used to turn "is not" into "is":
+    the options' input event recomputed the row while the type still read
+    ``preset:…``, rebuilding the condition's operators as numbers. The type
+    snaps to "list" first now (found by the item's read of #2665)."""
+    review_session, instrument, _, _ = _page(client, db, "12a-quick-fill")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    bounds = _rf_fn(body, "newModelRfSyncBounds")
+    snap = bounds.index("select.value = 'list';")
+    fire = bounds.index("listInput.dispatchEvent(new Event('input', { bubbles: true }));")
+    assert snap < fire

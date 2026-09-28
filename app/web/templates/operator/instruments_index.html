@@ -4571,11 +4571,15 @@
             var listInput = select
               .closest('[data-new-model-rf-row]')
               .querySelector('[data-new-model-rf-bound="list"]');
+            // "list" before the options' input event: that event
+            // recomputes the row, and a branch parent read as not-a-List
+            // there would rebuild its condition's operators as numbers,
+            // turning "is not" into "is" (the 19T Item 12A read).
+            select.value = 'list';
             if (listInput) {
               listInput.value = presetOptions;
               listInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
-            select.value = 'list';
           }
           var dataType = select.value;
           var show = {
