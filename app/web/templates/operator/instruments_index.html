@@ -5039,6 +5039,18 @@
             cond.removeAttribute('data-row-pending');
             cond.removeAttribute('title');
           }
+          window.newModelRfTitleOperator(sel, !!reason);
+        };
+        // 19T Item 12A — the operator's full label (and symbol) as its
+        // tooltip, since the name column's width cuts the longer labels.
+        // Not while the condition is amber: the row's reason comes first.
+        window.newModelRfTitleOperator = window.newModelRfTitleOperator || function (sel, pending) {
+          if (!sel) { return; }
+          var option = sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+          if (!option || pending) { sel.removeAttribute('title'); return; }
+          var label = option.textContent.trim();
+          var symbol = option.getAttribute('data-symbol') || '';
+          sel.setAttribute('title', symbol && symbol !== label ? label + ' (' + symbol + ')' : label);
         };
         // "Opens when Rating ≥ 4": a governed column's hint in the
         // preview, as the reviewer surface titles a closed cell
@@ -5337,6 +5349,15 @@
           var reason = name
             ? window.newModelRfValidateShape(row)
             : 'Type a name to add this field.';
+          // 19T Item 12A — the full name as the name box's tooltip, since
+          // a narrow card cuts it; not while the row is amber, whose
+          // reason comes first.
+          var nameBox = row.querySelector('[data-new-model-rf-name]');
+          if (nameBox) {
+            var typed = nameBox.value.trim();
+            if (typed && !reason) { nameBox.setAttribute('title', typed); }
+            else { nameBox.removeAttribute('title'); }
+          }
           if (reason) {
             row.setAttribute('data-row-pending', 'true');
             // What the preview shows meanwhile: the last valid shape of a

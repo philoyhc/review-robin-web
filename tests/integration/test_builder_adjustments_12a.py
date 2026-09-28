@@ -141,3 +141,24 @@ def test_the_first_value_box_starts_at_the_type_columns_edge(
         "body.ui-v2 table.rf-table td.rf-condition-cell "
         "input[data-new-model-rf-condition-value] { margin-left: 0; }"
     ) in flat
+
+
+def test_the_operator_and_name_boxes_carry_their_full_text_as_tooltips(
+    client: TestClient, db: Session
+) -> None:
+    """The author's later 12A entry: the name column cuts long names and
+    operator labels, so each box's tooltip gives the full text (with the
+    operator's symbol), except while its row is amber, whose reason
+    comes first."""
+    review_session, instrument, _, _ = _page(client, db, "12a-tooltips")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    title = _rf_fn(body, "newModelRfTitleOperator")
+    assert "if (!option || pending) { sel.removeAttribute('title'); return; }" in title
+    assert "label + ' (' + symbol + ')'" in title
+    recompute = _rf_fn(body, "newModelRfRecomputeCondition")
+    assert "window.newModelRfTitleOperator(sel, !!reason);" in recompute
+    states = _rf_fn(body, "newModelRfRecomputeActionStates")
+    assert "if (typed && !reason) { nameBox.setAttribute('title', typed); }" in states
+    assert "else { nameBox.removeAttribute('title'); }" in states
