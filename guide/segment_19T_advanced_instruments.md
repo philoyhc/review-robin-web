@@ -1940,10 +1940,11 @@ low ones, all fixed there:
 - the checklist no longer says a List's box is wider.
 
 Later entries, measured by hand in Chromium:
-- **#2662, the room after ↰ / ↳:** the name box sits two button pitches
-  after the join button. #2664 widened it to three, room for two buttons
-  ahead of a second level of branching; the table stays inside its card
-  down to a 900px window.
+- **#2662, the room after ↰ / ↳:** the name box sat two button pitches
+  (88px) after the join button on both kinds of row. #2664 widened it to
+  three (132px), room for two buttons ahead of a second level of
+  branching. The table stays inside its card down to a 900px window;
+  narrower is the browser check's.
 - **#2662, the operator in the name column:** it has the name box's left
   edge and width at 1500, 1100 and 900px.
 - **#2663, the first value box:** both gaps measure 8px at 1500 and
@@ -1957,14 +1958,17 @@ was fixed in its PR.
   with the button.
 - **#2662's second entry:** the medium finding went to the author. At the
   name box's width the closed select cuts its widest labels below a
-  window of about 1500px (about 169px of text against 166, 137, 105 and
-  15px of room at 1500, 1300, 1100 and 900px). #2664's tooltips answer
-  it.
+  window of about 1500px. The author's response was #2664's tooltips; the
+  closed select still cuts. The widest label needs about 169px; after
+  #2664's wider gap the room is 166px at 1500px, 137px at 1300px, 82px at
+  1100px and none at 900px, where the select is 26px wide.
 - **#2663:** the medium finding, no browser check for the value box, is
   now a checklist row.
 - **#2664:** the medium finding was that a locked branch's reason was
   hidden by the operator's tooltip; it now follows the label. A range
-  shows no lone symbol, which misread as "is outside (≤)".
+  shows no lone symbol, which misread as "is outside (≤)". The read of
+  the wider gap found only low ones: a stale comment, this record, the
+  re-measured select, and one wording for the lock reason.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 

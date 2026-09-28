@@ -148,8 +148,8 @@ def test_the_operator_and_name_boxes_carry_their_full_text_as_tooltips(
     client: TestClient, db: Session
 ) -> None:
     """The author's later 12A entry: the name column cuts long names and
-    operator labels, so each box's tooltip gives the full text (with the
-    operator's symbol), except while its row is amber, whose reason
+    operator labels, so each box's tooltip gives the full text (with a
+    single-value operator's symbol), except while its row is amber, whose reason
     comes first."""
     review_session, instrument, _, _ = _page(client, db, "12a-tooltips")
     body = client.get(
@@ -163,7 +163,8 @@ def test_the_operator_and_name_boxes_carry_their_full_text_as_tooltips(
     # A range has no lone symbol; a locked branch keeps its reason (the
     # item's read).
     assert "window.newModelRfIsRangeOp(sel.value) ? ''" in title
-    assert "if (locked) { title += \". Its branch has saved responses" in title
+    assert "if (locked) { title += '. ' + window.newModelRfConditionLockedMessage; }" in title
+    assert "cond.setAttribute('title', window.newModelRfConditionLockedMessage);" in recompute
     states = _rf_fn(body, "newModelRfRecomputeActionStates")
     assert "if (typed && !reason) { nameBox.setAttribute('title', typed); }" in states
     assert "else { nameBox.removeAttribute('title'); }" in states
