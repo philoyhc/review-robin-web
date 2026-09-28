@@ -248,11 +248,31 @@ def test_the_response_field_table_scrolls_rather_than_squeezing(
     _, _, card, flat = _page(client, db, "12a-rf-scroll")
     assert "grid-template-columns: minmax(0, 3fr) minmax(0, 17fr);" in flat
     assert "body.ui-v2 table.rf-table { min-width: 66rem; }" in flat
-    # A locked card's Band 3 is inert and can't scroll, so its table fits
-    # the column as before (the item's read).
-    assert (
-        "body.ui-v2 .band3-grid[inert] { grid-template-columns: minmax(0, 3fr) 17fr; }"
-    ) in flat
-    assert "body.ui-v2 .band3-grid[inert] table.rf-table { min-width: 0; }" in flat
+    assert ".band3-grid[inert]" not in flat
     table_at = card.index('<table class="rf-table" data-new-model-rf-rows')
     assert card.rindex('<div class="table-scroll">', 0, table_at) > card.rindex("</div>", 0, table_at)
+
+
+def test_a_locked_card_locks_band_3s_tables_not_their_scrollers(
+    client: TestClient, db: Session
+) -> None:
+    """The author's later 12A entry: a locked card scrolls both Band 3
+    tables too. An inert element can't be scrolled, so the lock regions
+    are the tables themselves; the band and the ``.table-scroll`` wrappers
+    stay outside them."""
+    review_session, instrument, _, _ = _page(client, db, "12a-locked-scroll")
+    for query, locked in (("", True), (f"?editing={instrument.id}", False)):
+        body = client.get(
+            f"/operator/sessions/{review_session.id}/instruments{query}"
+        ).text
+        card = _card_slice(" ".join(body.split()), instrument.id)
+        band3 = card[card.index("<div data-new-model-band3 ") :]
+        assert band3[: band3.index(">")] == '<div data-new-model-band3 class="band3-grid"'
+        for marker in ("data-new-model-df-table", "data-new-model-rf-rows"):
+            at = band3.index(marker)
+            tag = band3[band3.rindex("<table", 0, at) : band3.index(">", at)]
+            assert "data-lock-region" in tag, marker
+            assert ('inert aria-hidden="true"' in tag) is locked, (marker, locked)
+            before = band3[: band3.rindex("<table", 0, at)]
+            assert before.rindex('<div class="table-scroll">') > before.rfind("</div>")
+            assert "inert" not in before[before.rindex('<div class="table-scroll">') :]

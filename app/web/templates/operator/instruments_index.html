@@ -13,8 +13,9 @@
        are always rendered; this layer swaps the Lock / Unlock /
        Save / Cancel cluster on the lock state and gives the
        editable regions a read-only look while locked. The `inert`
-       attribute on the band wrappers is what actually blocks
-       interaction (set server-side from is_editing, toggled by
+       attribute on the band wrappers (Band 3's tables) is what
+       actually blocks interaction (set server-side from is_editing,
+       toggled by
        newModelSetLock); the opacity here is only the visual cue.
        PR 1 is scaffold-only — persistence endpoints are untouched;
        the Lock / Unlock anchors keep their ?editing hrefs as the
@@ -4053,8 +4054,11 @@
          12A, when its table took over the band and the page).
          Visibility moved to Band 2's "Who can see what you wrote"
          card (19T Item 7). #}
-      <div data-new-model-band3 data-lock-region class="band3-grid"
-           {% if not is_editing %}inert aria-hidden="true"{% endif %}>
+      {# 19T Item 12A — Band 3's lock regions are its two tables, not
+         the band: an inert element can't be scrolled, so the tables'
+         .table-scroll wrappers stay outside the lock and a locked card
+         still scrolls a table too wide for its column. #}
+      <div data-new-model-band3 class="band3-grid">
         {# 19T Item 8 — the display-field table
            (``guide/advanced_instruments.md`` Item 5). One row per display
            field, no header row: Active checkbox, field, up, down. The rows
@@ -4072,7 +4076,8 @@
         <div data-new-model-band3-left>
           <h3 style="margin: 0 0 12px 0;">Display fields</h3>
           <div class="table-scroll">
-          <table class="table-compact" data-new-model-df-table>
+          <table class="table-compact" data-new-model-df-table data-lock-region
+                 {% if not is_editing %}inert aria-hidden="true"{% endif %}>
             <tbody>
               {% for field in _band2.fields %}
                 {% set _group_off = _saved_unit_mode == "grouped" and not field.selectable_in_group %}
@@ -4194,9 +4199,10 @@
           {% set _rfs = _band2.response_fields %}
           {% set _next_idx = (_rfs | length) %}
           <div class="table-scroll">
-          <table class="rf-table" data-new-model-rf-rows
+          <table class="rf-table" data-new-model-rf-rows data-lock-region
                data-new-model-rf-row-counter="{{ _next_idx + 1 }}"
-               data-new-model-rf-branch-ops='{{ _band2.branch_ops | tojson }}'>
+               data-new-model-rf-branch-ops='{{ _band2.branch_ops | tojson }}'
+               {% if not is_editing %}inert aria-hidden="true"{% endif %}>
             {# 19T Item 10 — one <tbody> per group: a field on its own, or
                a parent with its condition row and the fields it governs
                (``views._response_field_groups``). A governed row shifts

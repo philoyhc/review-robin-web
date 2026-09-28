@@ -1917,9 +1917,9 @@ Three things read wrong in the table:
   the display fields: its track gets a `0` minimum and the table a
   `66rem` floor (50rem in #2666, raised in #2667), so its boxes no longer
   shrink to nothing (later entries). It also stops the operator select collapsing, though its widest
-  labels are still cut below about 1500px. A locked card's Band 3 is
-  inert and can't scroll, so there the track grows to the table as
-  before (`.band3-grid[inert]`).
+  labels are still cut below about 1500px. A locked card scrolls too
+  (#2668): the lock regions are Band 3's two tables, not the band, since
+  an inert `.table-scroll` can't scroll.
 - **Tooltips give the full text** the name column cuts (a later entry):
   the operator's label, with its symbol for a single-value operator, and
   the field's name. Neither shows while its row is amber, so the row's
@@ -1938,8 +1938,8 @@ in the same PR.
 
 ### Status
 
-**Closed 2026-09-28** in seven PRs: #2661; #2662, with two later
-entries; #2663 to #2667, with the rest. For
+**Closed 2026-09-28** in eight PRs: #2661; #2662, with two later
+entries; #2663 to #2668, with the rest. For
 #2661, headless Chromium, run by hand
 and not repeatable by the suite, measured the condition boxes at the
 parent's Min width at 1500px and 1100px, with every checkbox centered.
@@ -1977,6 +1977,9 @@ Later entries, measured by hand in Chromium:
   the table now holds 1056px, the name box 203px and Min 70px, and
   scrolls. The page's own tab strips still overflow at 600px, outside
   this item.
+- **#2668, a locked card:** at an 800px window a shift-wheel over either
+  table scrolls it (200px and 83px), as on an unlocked card, and its
+  inputs take no focus.
 
 **Reads, one per change.** None found a high defect; every low finding
 was fixed in its PR.
@@ -2010,7 +2013,7 @@ was fixed in its PR.
   were fixed there.
 - **#2666:** no high finding. Its medium was fixed there: a locked card's
   inert Band 3 could not scroll, and Chromium confirmed it, so a locked
-  card fits its table as before. The lows were the PR count, a stale grid
+  card fitted its table (until #2668). The lows were the PR count, a stale grid
   value, an overclaim about the operator select, and a doubled checklist
   line.
 - **#2667:** no high finding. Its first medium, the trade that R, ▲ ▼ and
@@ -2019,6 +2022,7 @@ was fixed in its PR.
   prose that credited the floor to #2666 and miscounted the PRs, was
   fixed there, as were its lows: the floor's comment, stale select
   figures, and a checklist row that named no window width.
+- **#2668:** READ_PENDING
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 
