@@ -3408,6 +3408,10 @@ dep chains called out at the bottom of this file.
      2026-09-28.** `guide/advanced_instruments.md` Item 6, Q3: ten
      spelled-out numeric operators, within or outside a range (inclusive
      or exclusive) in two boxes, stored as `low to high`.
+   - ~~**Item 12A — Small adjustments to the response-field table.**~~
+     **Closed 2026-09-28.** Join reads ↰ and detach ↳; a number's
+     condition boxes match the parent's Min box; the Active checkbox is
+     centered in its cell.
    - **Item 13 — Conditional required** (open, stub): a second kind of
      condition making the governed fields required rather than shown, ⑂
      cycling between the two. `guide/advanced_instruments.md` Item 6, Q1.

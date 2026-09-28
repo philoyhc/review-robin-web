@@ -263,13 +263,14 @@ def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) 
 
 
 def test_join_and_detach_show_their_states(client: TestClient, db: Session) -> None:
-    """Rung 7b: ↳ on a plain row, ↰ on a governed one; +, ⑂ and it share
-    one width (``.rf-glyph``)."""
+    """Rung 7b: join on a plain row, detach on a governed one; +, ⑂ and it
+    share one width (``.rf-glyph``). Join reads ↰ and detach ↳ (the author,
+    19T Item 12A: they were the other way round)."""
     _, _, card, flat = _page(client, db, "br-builder-join")
     table = _rows_table(card)
-    detach = re.search(r"<button[^>]*data-new-model-rf-join[^>]*>↰", _row(table, "Comments"))
+    detach = re.search(r"<button[^>]*data-new-model-rf-join[^>]*>↳", _row(table, "Comments"))
     assert detach and 'title="Detach this field and end its branch"' in detach.group(0)
-    parent_join = re.search(r"<button[^>]*data-new-model-rf-join[^>]*>↳", _row(table, "Rating"))
+    parent_join = re.search(r"<button[^>]*data-new-model-rf-join[^>]*>↰", _row(table, "Rating"))
     # The first row, and a parent, can't join.
     assert parent_join and " disabled" in parent_join.group(0)
     for marker in ("data-new-model-rf-add", "data-new-model-rf-fork", "data-new-model-rf-join"):

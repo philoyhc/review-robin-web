@@ -921,7 +921,7 @@ Each row holds, left to right:
 |---|---|---|
 | **Active** checkbox | `InstrumentResponseField.visible` | The field's selection — whether it renders on the reviewer surface, the reviewer summary and the reviewer-record CSV (see below). Unticking a field with saved responses asks to confirm first — "Hide … from the reviewer surface?", naming the response count and that the data is preserved for audit. An inactive row is not dimmed. |
 | **+** button | — | Inserts a new row (its own `<tbody>` group) directly after this one's, seeded with the next default label (see "A field's default label" below). |
-| **⑂** / **↳** / **↰** | `branch_parent_id` / `branch_op` / `branch_value` | Fork, join and detach — see ["Branching between response fields"](#branching-between-response-fields) below. |
+| **⑂** / **↰** / **↳** | `branch_parent_id` / `branch_op` / `branch_value` | Fork, join and detach — see ["Branching between response fields"](#branching-between-response-fields) below. |
 | Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Empty until typed — see "A field's default label" below. |
 | Type (`<select>`) | `_inline_data_type` | `String / Integer / Decimal / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. Disabled when the row has saved responses; the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
 | Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_options` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
@@ -1078,7 +1078,9 @@ a parent, and inactive on a String field ("A String field can't have a
 branch"). A governed row shifts one column right before the name — the
 bar sits in the checkbox column, its checkbox in the **+** column, its
 **+** in the ⑂ column, and it has no ⑂ of its own — so every row aligns
-from the name onward, parent and governed alike.
+from the name onward, parent and governed alike. The checkbox sits
+centered in whichever column holds it (`td.rf-active-cell`, 19T Item
+12A).
 
 **The condition row** reads "If the above [operator] [value] then show
 the below". Its own "+" adds a governed field at the top of the branch;
@@ -1103,7 +1105,9 @@ select in this order (19T Item 12):
 | is outside (exclusive) | `out_exc` | `<` |
 
 The first six take **one box**, one number. The last four — a
-**range** — take **two boxes with "to" between them**: a low and a high
+**range** — take **two boxes with "to" between them**. A number's boxes
+are as wide as the parent row's own Min box, measured by the row script
+into `--rf-condition-box` (19T Item 12A); a List's box keeps 12em. A range takes a low and a high
 number, low strictly below high. The second box shows only while the
 selected operator is one of the four; switching away from a range hides
 the box and clears it, keeping the low box's value
@@ -1136,14 +1140,14 @@ the field's name first, then both ends — "Rating ≥ 2 and ≤ 4", "Rating
 start a hint (or an extract cell, `spec/extract_data.md`) as a
 spreadsheet formula.
 
-**Join (↳) and detach (↰)** sit after ⑂, sharing its width (`.rf-glyph`).
+**Join (↰) and detach (↳)** sit after ⑂, sharing its width (`.rf-glyph`).
 A plain row that isn't the first, has no saved responses and isn't
 itself a parent can join the unit above: the end of an unlocked branch,
 or, on a plain Integer, Decimal or List field, a new branch with an
 empty condition. Joining keeps the row's **R** (19T Item 11) — Save
 refuses the result if the row's R is now required with no anchor
 elsewhere in the instrument. A governed row in an unlocked branch can
-detach (↰) to directly below the branch; detaching the only governed
+detach (↳) to directly below the branch; detaching the only governed
 field ends the branch, as X does.
 
 **Inside a branch:**
@@ -1167,14 +1171,14 @@ field ends the branch, as X does.
   that row and the condition together.
 - **The governed-answers lock.** Once any governed field has responses,
   the condition and the branch's membership lock — every governed row's
-  X and ↰, the "+"s inside the branch, ↳ on the row below it, and the
+  X and ↳, the "+"s inside the branch, ↰ on the row below it, and the
   condition's controls. Answers on
   the parent alone lock nothing about the branch; the parent's own type
   and bounds lock as they do today (`has_responses`).
 - **Active cascades both ways.** Unticking a parent's Active writes
   `visible = False` onto every governed field; re-ticking it re-ticks
   them all.
-- **An answered field can't move into a branch.** ↳ is off on a row
+- **An answered field can't move into a branch.** ↰ is off on a row
   with saved responses, and Save refuses the move, since the field's
   answers could then sit in a closed branch.
 

@@ -1877,6 +1877,47 @@ of condition, which reuses these operators.
 - `guide/advanced_instruments.md` — Item 6 Q3 points to this item for the operators and the `low to high` value (Item 12).
 - `docs/status.md` — row when the item closes (Item 12).
 
+## Item 12A — Small adjustments to the response-field table
+
+**Logged and built 2026-09-28 on the author's instruction**, from a
+screenshot of a branch in Band 3.
+
+### Opportunity
+
+Three things read wrong in the table:
+- the join and detach glyphs point the other way from what they do;
+- a number's condition boxes are a fixed 12em, unlike the row's own boxes;
+- a governed row's Active checkbox sits left in the **+** column while a
+  plain row's looks centered.
+
+### Decision
+
+- **Join reads ↰ and detach ↳**: the glyphs swap; titles and behavior
+  stay.
+- **A number's condition boxes are as wide as the parent's Min box.** The
+  row script measures it into `--rf-condition-box` and follows it with a
+  `ResizeObserver`, since Min is a third of a flexible column. A List's
+  one box keeps 12em. **Rejected:** moving the boxes into the bounds
+  column, which would break the condition's sentence.
+- **Every Active checkbox is centered in its cell** (`td.rf-active-cell`).
+
+### Doc impact — checked by hand
+
+`tools/close_check.py` reads numbered items only, so it can't take 12A.
+The suffix keeps this list out of Item 12's check; each line is honored
+in the same PR.
+
+- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox (Item 12A).
+- `spec/ui_elements.md` — `rf-table`: the glyphs and `td.rf-active-cell` (Item 12A).
+- `docs/status.md` — row when the item closes (Item 12A).
+
+### Status
+
+**Closed 2026-09-28** in one PR, with its own `diff-reviewer` read.
+Chromium measured the condition boxes at the parent's Min width at 1500px
+and 1100px, and every checkbox centered in its cell. Browser check owed
+in `guide/post_azure_todo_checklist.md` item 6.
+
 ## Item 13 — Conditional required: a second kind of condition
 
 **Logged 2026-09-27 on the author's instruction; a stub, details to
