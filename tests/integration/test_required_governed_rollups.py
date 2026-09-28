@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import event, select
 from sqlalchemy.orm import Session
@@ -156,16 +157,21 @@ def test_the_python_halves_read_only_their_own_work(db: Session) -> None:
     assert {r.assignment_id for r in loaded} <= {rows["carol"].id, rows["dan"].id}
 
 
+@pytest.mark.parametrize("mode", [None, "require"])
 def test_a_closed_branch_isnt_reminded(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
+    mode: str | None,
 ) -> None:
     """Rae's only empty required field sits behind a closed branch, so she
-    is complete and not reminded; Sam opened his and left it empty."""
+    is complete and not reminded; Sam opened his and left it empty. Under
+    a require-mode parent (19T Item 13) the same: Rae's Rating 2 leaves
+    Comments optional, Sam's Rating 5 owes it."""
     operator = make_client(alice)
     session = _ready_session(
-        operator, db, "rg-remind", reviewers=["rae@example.edu", "sam@example.edu"]
+        operator, db, f"rg-remind-{mode or 'show'}",
+        reviewers=["rae@example.edu", "sam@example.edu"],
     )
     fields = {
         f.field_key: f
@@ -178,6 +184,7 @@ def test_a_closed_branch_isnt_reminded(
     fields["rating"].branch_op, fields["rating"].branch_value = "ge", "4"
     fields["comments"].branch_parent_id = fields["rating"].id
     fields["comments"].required = True
+    fields["rating"].branch_mode = mode
     db.commit()
 
     invitations, assignments = {}, {}

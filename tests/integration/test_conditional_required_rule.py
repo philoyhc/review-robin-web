@@ -84,6 +84,15 @@ def test_a_require_mode_field_is_required_exactly_while_the_condition_holds() ->
     ) == {1, 2}
 
 
+def test_a_hidden_require_mode_field_is_never_required() -> None:
+    """Its R is grayed out, so nothing else could stop a field no reviewer
+    sees from being owed (the cumulative read on #2676)."""
+    fields = _pair("require", governed_required=True)
+    fields[1].visible = False
+    assert responses_service.required_field_ids(fields, {1: "5"}) == {1}
+    assert responses_service.may_be_required_field_ids(fields) == {1}
+
+
 def test_may_be_required_marks_every_require_mode_field() -> None:
     mbr = responses_service.may_be_required_field_ids
     assert mbr(_pair("require")) == {1, 2}
@@ -230,6 +239,26 @@ def test_the_rollups_count_a_require_mode_field_while_its_condition_holds(
         assert (carol.completed_count, dan.completed_count) == (2, 0), name
 
 
+def test_the_rollups_never_owe_a_hidden_require_mode_field(db: Session) -> None:
+    """Hidden, Comments is owed nowhere: Dan's Rating 5 completes his row
+    on both rollups, which don't otherwise filter ``visible`` alike."""
+    review_session, rows = _require_mixed(db)
+    comments = next(
+        f for f in rows["carol"].instrument.response_fields if f.field_key == "comments"
+    )
+    comments.visible = False
+    comments.required = True
+    db.flush()
+    for name, rollup in REVIEWER_IMPLEMENTATIONS:
+        rae = _by_email(rollup(db, review_session))["rae@example.edu"]
+        assert (rae.required_total, rae.missing_required_count, rae.completed_count) == (
+            3, 0, 3
+        ), name
+    for name, rollup in REVIEWEE_IMPLEMENTATIONS:
+        by_id = _by_identifier(rollup(db, review_session))
+        assert by_id["dan@example.edu"].completed_count == 1, name
+
+
 # The reviewer surface.
 
 
@@ -322,3 +351,67 @@ def test_entity_stats_count_a_require_mode_answer_as_required_only_while_it_hold
     reviewer_header = reviewer_rows[0]
     rcol = next(i for i, h in enumerate(reviewer_header) if "equired" in h)
     assert reviewer_rows[1][rcol] == "3"
+
+
+# The reviewer summary and the reviewee's results mark "*" by
+# ``may_be_required_field_ids`` (the cumulative read on #2676).
+
+
+def test_the_summary_and_results_headers_mark_a_require_mode_field(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    from app.db.models import Instrument, InstrumentResponseField, Reviewee
+    from app.web.views._reviewee_results import build_reviewee_results_context
+    from app.web.views._reviewer_summary import build_reviewer_summary_context
+
+    from .test_reviewee_results_body import (
+        _enable_reviewee_after_release_raw,
+        _operator_user,
+        _seed_and_activate,
+        _seed_submitted_responses,
+    )
+
+    review_session = _seed_and_activate(make_client(alice), db, code="13-headers")
+    _seed_submitted_responses(db, review_session, rating_value="2")
+    _enable_reviewee_after_release_raw(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    fields = {
+        f.field_key: f
+        for f in db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
+        ).scalars()
+    }
+    fields["rating"].branch_op, fields["rating"].branch_value = "ge", "4"
+    fields["comments"].branch_parent_id = fields["rating"].id
+    fields["comments"].required = False
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalar_one()
+    reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalar_one()
+
+    def marks() -> tuple[dict[str, bool], dict[str, bool]]:
+        db.commit()
+        summary = build_reviewer_summary_context(
+            db, review_session=review_session, reviewer=reviewer
+        )
+        results = build_reviewee_results_context(
+            db, review_session=review_session, reviewee=reviewee
+        )
+        return (
+            {c.field_key: c.required for c in summary.sections[0].field_cols},
+            {c.field_key: c.required for c in results.sections[0].field_cols},
+        )
+
+    assert marks() == ({"rating": True, "comments": False},) * 2
+    fields["rating"].branch_mode = "require"
+    assert marks() == ({"rating": True, "comments": True},) * 2

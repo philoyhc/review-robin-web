@@ -938,11 +938,11 @@ Each row holds, left to right:
 |---|---|---|
 | **Active** checkbox | `InstrumentResponseField.visible` | The field's selection — whether it renders on the reviewer surface, the reviewer summary and the reviewer-record CSV (see below). Unticking a field with saved responses asks to confirm first — "Hide … from the reviewer surface?", naming the response count and that the data is preserved for audit. An inactive row is not dimmed. |
 | **+** button | — | Inserts a new row (its own `<tbody>` group) directly after this one's, seeded with the next default label (see "A field's default label" below). |
-| **⑂** / **↰** / **↳** | `branch_parent_id` / `branch_op` / `branch_value` | Fork, join and detach — see ["Branching between response fields"](#branching-between-response-fields) below. |
+| **⑂** / **↰** / **↳** | `branch_parent_id` / `branch_op` / `branch_value` / `branch_mode` | Fork, join and detach — see ["Branching between response fields"](#branching-between-response-fields) below. |
 | Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Empty until typed — see "A field's default label" below. |
 | Type (`<select>`) | `_inline_data_type` | `String / Integer / Decimal / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. Disabled when the row has saved responses; the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
 | Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_options` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
-| **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. Stages Band 2 state directly, so Save alone persists a toggle. |
+| **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. Stages Band 2 state directly, so Save alone persists a toggle. Grayed out on a row a Require branch governs, where the condition decides (see ["Branching between response fields"](#branching-between-response-fields)). |
 | **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field above the reviewer-surface preview table. The help-text *text* is a plain `help_text` textarea on that card (shown when the instrument card is unlocked, `data-lock-only` read view when locked), bound to the `dfsave-{id}` form, so it commits with the bulk Save. Stages Band 2 state directly, like R. |
 | **▲ / ▼** | — | Full-size `btn secondary` buttons (not `btn-short` — that size is the display-field table's, see "Display-field table" above) that swap this row's `<tbody>` group with its neighbour. They move a **group**, not a row; a governed row moves within its branch instead — see ["Branching between response fields"](#branching-between-response-fields). |
 | **X** button (`.btn.destructive`) | — | Drops this row (its `<tbody>`), matching Band 1's rule/unit X. Disabled when the row has saved responses (title pins the reason), or when it is the only row left. |
@@ -1103,9 +1103,9 @@ centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 12A).
 
 **The condition row** reads "If the above [operator] [value] then
-[mode]", the mode a select of **Show the below** and **Require the below
-(else, optional)** (19T Item 13; until its rule lands, Show is
-the only choice and nothing saves the select). The operator sits in the name column at the name box's width,
+[mode]", the mode a select of **Show the below** (the default) and
+**Require the below (else, optional)** (19T Item 13), which Save sends
+as the parent's `branch_mode`. The operator sits in the name column at the name box's width,
 with "If the above" right-aligned in the join column before it
 (`td.rf-condition-lead`, `td.rf-condition-op`, 19T Item 12A); the first
 value box starts at the type column's edge. A List's operator shrinks to
@@ -1201,7 +1201,11 @@ field ends the branch, as X does.
   require-mode parent (`branch_mode = require`, 19T Item 13) every
   governed field counts as required governed for this rule, and each is
   answerable whatever the parent's answer and required exactly while the
-  condition holds, its own R ignored (kept, so Show restores it). A hidden
+  condition holds, its own R ignored (kept, so Show restores it). The
+  builder grays out those rows' R, titled "Required while the condition
+  holds". A hidden governed field under Require is never required, nor
+  marked "*", anywhere — the reviewer and reviewee rollups included —
+  since its R can't be unticked to stop it being owed. A hidden
   governed field needs no anchor, since a hidden field counts nowhere
   on the reviewer side.
 - **String is disabled** in a parent's type select. Other type changes
@@ -1233,7 +1237,9 @@ self-referencing FK, `ON DELETE SET NULL`) on a governed field;
 `branch_op` (`String(8)`, one of the tokens above) and `branch_value`
 (the number, List options comma-separated, or a range's `low to high`)
 on the parent (Alembic `63b1bb107eb0`; no migration for the four range
-tokens — they fit `String(8)`). The per-field routes (edit, delete, move, insert under
+tokens — they fit `String(8)`), and `branch_mode` (`String(8)`,
+nullable: `require`, or null for Show; 19T Item 13, Alembic
+`c4e9a1d27b58`) on the parent. The per-field routes (edit, delete, move, insert under
 `/fields/…`) refuse a branched instrument outright — each acts on one
 field and can't keep a branch's rules; its fields are edited on the
 instrument card only.
@@ -1241,7 +1247,9 @@ instrument card only.
 **The stager** sends every row's `row_key`, so a branch can name a
 parent the same Save creates, plus `branch_parent` (a governed row's
 parent, by row key), `branch_op` and `branch_value` (a parent's
-condition). Each of the three is **independently present**, as the
+condition) and `branch_mode` (what it does, 19T Item 13; `show` is
+stored null, and an unknown mode is refused by name). Each of the four
+is **independently present**, as the
 state's other top-level keys are: an entry that omits one keeps what's
 stored, so a caller ignorant of branching can't clear it. A hidden
 parent (Active off) hides its branch server-side too, and every branch
@@ -1255,7 +1263,11 @@ reviewer surface's "*All items completed*" pill) excludes governed
 fields for the same reason, and so does the "*Required items
 completed*" count (`rfRowRequiredNow`, 19T Item 11): a required
 governed field isn't required while its branch is closed, and the
-sample row closes every branch.
+sample row closes every branch. A Require branch's fields (19T Item 13)
+follow the surface instead: their columns aren't muted, they count as
+items, and they are marked "*" as fields that may be required, but the
+required count leaves them out, since the unanswered sample row fails
+every condition.
 
 **Out of scope:** nested branches, more than one branch per parent, and
 a String parent.

@@ -333,8 +333,14 @@ def _response_field_groups(
     branch's condition and membership). A group's ``condition`` carries
     the operator choices the parent's type allows, as (token, name,
     symbol), spelled out for a number (19T Item 12). A range condition's
-    ``low to high`` splits into ``value`` (the low box) and ``high``."""
+    ``low to high`` splits into ``value`` (the low box) and ``high``.
+    19T Item 13 — the condition's ``mode`` is ``show`` or ``require``,
+    and a field a Require branch governs is ``require_governed``: always
+    an item, required only while the condition holds.
+    """
     from app.services.responses import (
+        BRANCH_MODE_REQUIRE,
+        BRANCH_MODE_SHOW,
         LIST_OP_CHOICES,
         NUMERIC_OP_CHOICES,
         RANGE_OPS,
@@ -351,11 +357,20 @@ def _response_field_groups(
         for rf in response_fields
         if rf.get("branch_parent_id") is not None and rf.get("has_responses")
     }
+    require_parent_ids = {
+        rf.get("id")
+        for rf in response_fields
+        if rf.get("id") in parent_ids
+        and rf.get("branch_mode") == BRANCH_MODE_REQUIRE
+    }
     groups: list[dict[str, Any]] = []
     for index, rf in enumerate(response_fields):
         rf["row_index"] = index
         rf["is_parent"] = rf.get("id") in parent_ids
         parent_id = rf.get("branch_parent_id")
+        rf["require_governed"] = (
+            parent_id is not None and parent_id in require_parent_ids
+        )
         rf["branch_locked"] = (
             parent_id in locked_parent_ids
             if parent_id is not None
@@ -383,6 +398,7 @@ def _response_field_groups(
                 "is_list": rf["data_type"] == "list",
                 "ops": ops,
                 "locked": rf["branch_locked"],
+                "mode": rf.get("branch_mode") or BRANCH_MODE_SHOW,
             }
         groups.append(
             {"parent_id": rf.get("id"), "rows": [rf], "condition": condition}
@@ -618,6 +634,8 @@ def _new_model_band2_state(
             "branch_parent_id": rf.branch_parent_id,
             "branch_op": rf.branch_op or "",
             "branch_value": rf.branch_value or "",
+            # 19T Item 13 — what the condition does; blank reads Show.
+            "branch_mode": rf.branch_mode or "",
         }
         width = column_widths_map.get(f"rf_{rf.id}")
         if width is not None:

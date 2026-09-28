@@ -461,9 +461,11 @@ per reviewee row.
 String), required flag, help text (+ its visibility flag),
 visibility flag, order within the instrument. A field may head a
 **branch**: an Integer, Decimal or List field carries one condition,
-and the fields it governs — required or not — show only while its
-answer meets it. A required governed field is required, and missing
-when empty, only while its branch is open (`spec/instruments.md` §
+and what the condition does to the fields it governs. **Show** (the
+default): they show only while its answer meets it, and a required
+governed field is required, and missing when empty, only while its
+branch is open. **Require**: they always show, and are required exactly
+while its answer meets it, else optional (`spec/instruments.md` §
 *Branching between response fields*).
 
 **System-derived fields:** the field key (machine id, derived from

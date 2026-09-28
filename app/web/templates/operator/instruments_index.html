@@ -1847,10 +1847,13 @@
           {% set _rf_list = _band2.response_fields or [] %}
           {# 19T Item 10 — a governed field isn't an item while its branch is
              closed, as on the surface; the sample row is unanswered, so
-             every branch is. #}
-          {% set _all_count = (_rf_list | rejectattr('branch_parent_id') | list | length) %}
+             every branch is. A Require branch's fields always are (19T
+             Item 13). #}
+          {% set _all_count = (_rf_list | rejectattr('branch_parent_id') | list | length)
+                              + (_rf_list | selectattr('require_governed') | list | length) %}
           {# 19T Item 11 — nor is a required governed field required while
-             its branch is closed, as ``rfRowRequiredNow`` counts it. #}
+             its branch is closed, as ``rfRowRequiredNow`` counts it; nor a
+             Require branch's field while its condition doesn't hold. #}
           {% set _required_count = (_rf_list | selectattr('required') | rejectattr('branch_parent_id') | list | length) %}
           <div class="rs-intro-grid"
                data-new-model-band2-intro-card
@@ -2270,11 +2273,30 @@
           function rfRowRequired(row) {
             return rfRowFlag(row, '[data-new-model-rf-required]', 'data-required');
           }
+          // 19T Item 13 — whether a governed row's branch requires it
+          // (its condition row reads "Require the below"), rather than
+          // shows it. Such a field is always an item, and the condition,
+          // not its R, decides whether it is required.
+          function rfRowUnderRequire(row) {
+            if (!row.hasAttribute('data-new-model-rf-governed')) { return false; }
+            var group = row.closest('[data-new-model-rf-group]');
+            var mode = group && group.querySelector('[data-new-model-rf-condition-mode]');
+            return !!(mode && mode.value === 'require');
+          }
+          window.newModelRfUnderRequire = rfRowUnderRequire;
+          // Whether a field is an item on the sample row: not behind a
+          // closed branch (19T Item 10), which every Show branch is, since
+          // the sample row is unanswered.
+          function rfRowIsItemNow(row) {
+            return !row.hasAttribute('data-new-model-rf-governed') || rfRowUnderRequire(row);
+          }
+          window.newModelRfRowIsItemNow = rfRowIsItemNow;
           // 19T Item 11 — whether the preview's sample row must answer a
           // field: required, and not behind a branch, since the sample row
-          // is unanswered and so every branch is closed. The one question
-          // both progress counts ask, as ``required_field_ids`` is on the
-          // server; a second kind of condition (Item 13) changes it here.
+          // is unanswered and so every condition fails — a Show branch is
+          // closed and a Require branch's fields optional (19T Item 13).
+          // The one question both progress counts ask, as
+          // ``required_field_ids`` is on the server.
           function rfRowRequiredNow(row) {
             return rfRowRequired(row) && !row.hasAttribute('data-new-model-rf-governed');
           }
@@ -2308,12 +2330,16 @@
                 value: '',
                 displayFieldId: '',
                 width: parseInt(row.getAttribute('data-width') || '', 10) || 0,
-                required: rfRowRequired(row),
+                // 19T Item 13 — a Require branch's field is marked "*",
+                // since it may be required, as ``may_be_required_field_ids``
+                // marks it on the surface.
+                required: rfRowUnderRequire(row) || rfRowRequired(row),
                 // 19T Item 10 — a governed column shows muted, titled with
                 // the condition that opens it: the sample row has no
-                // answers, so its branch is closed.
-                branchHint: row.hasAttribute('data-new-model-rf-governed')
-                  ? window.newModelRfBranchHint(row) : '',
+                // answers, so its branch is closed. A Require branch's
+                // column is always open.
+                branchHint: rfRowIsItemNow(row)
+                  ? '' : window.newModelRfBranchHint(row),
               });
             });
             return sel;
@@ -2764,6 +2790,7 @@
               rf.branch_parent = null;
               rf.branch_op = null;
               rf.branch_value = null;
+              rf.branch_mode = null;
               var group = row.closest('[data-new-model-rf-group]');
               if (group && row.hasAttribute('data-new-model-rf-governed')) {
                 var parentRow = group.querySelector('[data-new-model-rf-parent]');
@@ -2776,6 +2803,9 @@
                 rf.branch_op = opSel && opSel.value ? opSel.value : null;
                 // A range's two boxes join as "low to high" (19T Item 12).
                 rf.branch_value = window.newModelRfConditionValue(cond);
+                // 19T Item 13 — what the condition does to the fields below.
+                var modeSel = cond.querySelector('[data-new-model-rf-condition-mode]');
+                rf.branch_mode = modeSel && modeSel.value ? modeSel.value : null;
               }
               // Segment 18R Item 2 — carry the response column's width.
               // A newly-added field has no rf-id yet, so saveBand2Widths
@@ -2882,10 +2912,10 @@
             });
             // 19T Item 10 — a governed field isn't an item while its
             // branch is closed, as on the surface (the sample row is
-            // unanswered, so every branch is).
-            var allCount = committedRows.filter(function (row) {
-              return !row.hasAttribute('data-new-model-rf-governed');
-            }).length;
+            // unanswered, so every Show branch is).
+            var allCount = committedRows.filter(
+              window.newModelRfRowIsItemNow
+            ).length;
             var requiredCount = committedRows.filter(
               window.newModelRfRowRequiredNow
             ).length;
@@ -3085,9 +3115,7 @@
             var committedRows = rfRows(card).filter(rfRowCommitted);
             // 19T Item 10 — governed fields aren't items while their branch
             // is closed, as ``newModelUpdateIntroProgress`` counts them.
-            var allCount = committedRows.filter(function (row) {
-              return !row.hasAttribute('data-new-model-rf-governed');
-            }).length;
+            var allCount = committedRows.filter(rfRowIsItemNow).length;
             var requiredCount = committedRows.filter(rfRowRequiredNow).length;
             var reqClass = requiredCount === 0 ? 'pill-success' : 'pill-warning';
             var hiddenAttr = committedRows.length === 0 ? ' hidden' : '';
@@ -4177,14 +4205,15 @@
                            aria-label="Value the condition compares against">
                 {% endset %}
                 {# 19T Item 13 — "then" and what the condition does to the
-                   fields below: shows them (Item 10's kind) or makes them
-                   required, else optional. Scaffold: Show is the only choice
-                   and nothing reads or saves the select yet. #}
+                   fields below: shows them (Item 10's kind) or requires
+                   them, else they are optional; Save sends it as the
+                   parent's ``branch_mode``. #}
                 {% set _then %}<span data-new-model-rf-condition-then>then<select data-new-model-rf-condition-mode
                             {% if condition.locked %}disabled{% endif %}
+                            onchange="newModelRfConditionChanged(this)"
                             aria-label="What the condition does to the fields below">
-                      <option value="show" selected>Show the below</option>
-                      <option value="require" disabled>Require the below (else, optional)</option>
+                      <option value="show"{% if condition.mode != 'require' %} selected{% endif %}>Show the below</option>
+                      <option value="require"{% if condition.mode == 'require' %} selected{% endif %}>Require the below (else, optional)</option>
                     </select></span>{% endset %}
                 <tr data-new-model-rf-condition{% if condition.is_list %} class="rf-condition-list"{% endif %}>
                   <td class="col-shrink rf-branch-bar"></td>
@@ -4371,13 +4400,18 @@
                          {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                          style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type != 'list' %} display: none;{% endif %}">
                 </div></td>
+                {# 19T Item 13 — under a Require branch the condition
+                   decides, so R grays out; its own value is kept for a
+                   return to Show. #}
                 <td class="col-shrink"><button type="button"
                         class="btn{% if not rf.required %} secondary{% endif %}"
                         data-new-model-rf-required
                         data-required="{{ 'true' if rf.required else 'false' }}"
                         onclick="newModelRfRequiredChanged(this)"
                         aria-pressed="{{ 'true' if rf.required else 'false' }}"
-                        title="Required for reviewers to submit (enforced from Wave 3)">R</button></td>
+                        {% if rf.require_governed %}disabled aria-disabled="true"
+                        title="Required while the condition holds"{% else %}
+                        title="Required for reviewers to submit (enforced from Wave 3)"{% endif %}>R</button></td>
                 <td class="col-shrink"><button type="button"
                         class="btn{% if not rf.help_text_visible %} secondary{% endif %}"
                         data-new-model-rf-help-visible
@@ -4526,7 +4560,7 @@
           {# 19T Item 10 — ⑂ inserts this condition row below its field; the
              row script fills the operators the parent's type allows. #}
           <template data-new-model-rf-condition-template>
-            {{ rf_condition_row({"op": "", "value": "", "high": "", "is_range": false, "is_list": false, "ops": [], "locked": false}) }}
+            {{ rf_condition_row({"op": "", "value": "", "high": "", "is_range": false, "is_list": false, "ops": [], "locked": false, "mode": "show"}) }}
           </template>
         </div>
       </div>
@@ -5264,11 +5298,15 @@
           var nameInput = governed.querySelector('[data-new-model-rf-name]');
           if (nameInput) { nameInput.focus(); }
         };
-        // An edit to the condition's operator or value.
+        // An edit to the condition's operator, value or mode. The mode
+        // decides whether the governed rows' R applies (19T Item 13).
         window.newModelRfConditionChanged = window.newModelRfConditionChanged || function (el) {
           var group = el.closest('[data-new-model-rf-group]');
           if (!group) { return; }
           window.newModelRfRecomputeCondition(group);
+          group.querySelectorAll('[data-new-model-rf-governed]').forEach(function (r) {
+            window.newModelRfRecomputeActionStates(r);
+          });
           window.newModelRfBranchEdited(el);
         };
         // 19T Item 10 rung 7b — a branch with no governed field left ends:
@@ -5432,6 +5470,14 @@
             }
           }
           _blankRowGate(requiredBtn, 'Toggle whether this field is required');
+          // 19T Item 13 — under a Require branch the condition decides,
+          // so R grays out; its own value is kept for a return to Show.
+          if (requiredBtn && name && window.newModelRfUnderRequire
+              && window.newModelRfUnderRequire(row)) {
+            requiredBtn.setAttribute('disabled', '');
+            requiredBtn.setAttribute('aria-disabled', 'true');
+            requiredBtn.setAttribute('title', 'Required while the condition holds');
+          }
           _blankRowGate(
             helpBtn, 'Toggle whether the help text shows to reviewers'
           );

@@ -436,7 +436,7 @@
                   {% if not cell.branch_open %}{% set cell_classes = cell_classes + ["rs-branch-closed"] %}{% endif %}
                   <td{% if cell_classes %} class="{{ cell_classes | join(' ') }}"{% endif %}
                       data-sort-value="{{ cell.value or '' }}"
-                      {% if cell.field.branch_op and row.accepting %}data-rs-branch-parent="{{ cell.field.field_key }}" data-rs-branch-op="{{ cell.field.branch_op }}" data-rs-branch-value="{{ cell.field.branch_value or '' }}"{% if cell.field.branch_mode == "require" %} data-rs-branch-mode="require"{% endif %}{% endif %}
+                      {% if cell.field.branch_op and row.accepting %}data-rs-branch-parent="{{ cell.field.field_key }}" data-rs-branch-op="{{ cell.field.branch_op }}" data-rs-branch-value="{{ cell.field.branch_value or '' }}"{% if cell.branch_mode == "require" %} data-rs-branch-mode="require"{% endif %}{% endif %}
                       {% if cell.governed_by and row.accepting %}data-rs-governed-by="{{ cell.governed_by }}"{% if cell.may_be_required %} data-rs-required="true"{% endif %}{% endif %}
                       {% if cell.branch_hint %}title="{{ cell.branch_hint }}"{% endif %}>
                     {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}
