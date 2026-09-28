@@ -2982,6 +2982,12 @@
         margin: 0;
         box-sizing: border-box;
       }
+      /* The first value box starts at the type column's edge, so the gap
+         after the operator matches the one between name and type (19T
+         Item 12A). */
+      body.ui-v2 table.rf-table td.rf-condition-cell input[data-new-model-rf-condition-value] {
+        margin-left: 0;
+      }
       /* An empty name box shows the field's default label ("Field N")
          muted, as its placeholder: the name the field goes by until the
          operator types one (19T Item 9, on the author's ruling). */
