@@ -1995,16 +1995,140 @@ Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 
 ## Item 13 — Conditional required: a second kind of condition
 
-**Logged 2026-09-27 on the author's instruction; a stub, details to
-follow.** A second kind of condition: *if the condition is satisfied, the
-governed field(s) are required, else optional*. Beside it stays the kind
-Item 10 built: *if the condition is satisfied, show the governed
-field(s)*. **The ⑂ button cycles between the two kinds.** The costing is
-`guide/advanced_instruments.md` Item 6, Q1, including Codex's three
-corrections on #2651. It builds on Item 11's required counts.
+**Logged 2026-09-27; shaped 2026-09-28 on the author's instruction**,
+from a screenshot of a range branch. The costing is
+`guide/advanced_instruments.md` Item 6, Q1, with Codex's three
+corrections on #2651. It builds on Item 11's `required_field_ids`.
+
+### Opportunity
+
+A branch can only hide. Item 6's scenario wants a Comment that is
+*owed* on a high or low Rating but still *open* on a middle one: today
+that is either closed (Show) or always optional (ungoverned).
+
+### Decision
+
+- **The condition row ends "then [dropdown]"**, not "then show the
+  below". Its two options: **Show the below** (Item 10's kind, the
+  default) and **Make the below required (else, optional)**. Both the
+  number row and a List's `tr.rf-condition-list` carry it.
+- **Rejected:** the stub's "⑂ cycles between the two kinds". The author
+  moved the choice into the sentence it changes; ⑂ stays fork / unfork.
+- **Storage:** a nullable `branch_mode` on the parent (`show` /
+  `require`, null reads `show`), so one migration. **Rejected:** encoding
+  the mode in `branch_op`, which would double the operator vocabulary the
+  CSV, the scripts and the extract read (Item 6, Q1).
+
+### Semantics
+
+- **Require:** every governed field is answerable whatever the parent's
+  answer; it is required exactly while the condition holds. An
+  unanswered parent means the condition doesn't hold.
+- **Save:** `drop_closed_branch_answers` skips require-mode branches;
+  nothing there is ever closed.
+- **Surface:** `applicable_field_ids` treats a require-mode governed
+  field as always applicable, so the server renders its cell enabled;
+  `required_field_ids` adds it while the condition holds. The script
+  toggles its required mark (and the progress pills) rather than
+  disabling the cell (Codex on #2651).
+- **Changing the mode** joins the condition in the governed-answers lock
+  in `_apply_branch_rules`, and is audited like it: Require → Show would
+  strand answers on branches that are now closed.
+- **Counts:** the monitoring rollups send an instrument with a
+  require-mode parent to the answer-aware Python path, as they do one
+  with a required governed field, since the stored flag no longer says.
+- **R under Require:** the governed rows' own `required` flag is kept
+  but ignored while the branch is Require, so switching back to Show
+  restores what each R said. The builder greys R on those rows.
+- **Authoring:** a require-mode branch counts as a required governed
+  field for Item 11's rule (an active required ungoverned field must
+  exist), since an unanswered parent leaves it optional.
+- **Copies:** the settings CSV gains `branch_mode` on the parent (blank
+  reads `show`, so older bundles import unchanged); clone and
+  `replicate_instrument` carry it.
+- **Extract:** the governed field's metadata reads "Required when"
+  rather than "Shown when".
+
+### Judgment calls — decided
+
+- Show stays the default for a new branch: it is what every saved
+  branch means today (2026-09-28).
+
+### Blast radius (measured)
+
+Taken 2026-09-28 at `256d30aa`.
+
+| What | Count | Command |
+|---|---|---|
+| `app/` files naming `branch_op` | 16 | `grep -rln --include=*.py --include=*.html branch_op app` |
+| test files naming `branch_op` | 14 | `grep -rln --include=*.py branch_op tests` |
+| branching / required-governed test files | 11 | `ls tests/integration \| grep -c "branch\|required_governed\|range_cond"` |
+| specs naming `branch_op` | 6 | `grep -ln branch_op spec/*.md` |
+| templates with "then show the below" | 1 (+ `base.html` comment) | `grep -rln "then show the below" app` |
+| migrations naming `branch_op` | 1 | `grep -rln branch_op alembic/versions` |
+
+### PR ladder
+
+1. **Scaffold.** The condition row reads "then" and a dropdown with
+   both options, Show selected. The dropdown is inert: nothing reads or
+   saves it. No `app/services/`, no migration.
+2. **Storage.** Migration, model, and clone and `replicate_instrument`
+   carrying the column. **No write path accepts the mode yet**: the
+   card's save and the settings CSV ignore it, so nothing outside a test
+   can store `require` before the rule reads it (Codex on #2671).
+3. **The rule, then the writes.** `applicable_field_ids`,
+   `required_field_ids`, `drop_closed_branch_answers`, the authoring
+   rule, the surface's server render and its script, the counts and the
+   extract, tested with the mode set in the database. The rollups route
+   an instrument with a require-mode parent down their Python path
+   (`monitoring._required_governed_instrument_ids`), since its governed
+   rows' stored `required` may be false; with parity and reminder tests
+   (Codex on #2671). Then the card's
+   save (`_band2`), with the lock and its audit, and the settings CSV
+   accept `branch_mode`.
+4. **The builder wired.** The dropdown writes the mode and Save persists
+   it; the preview's required marks follow it. Last build rung: the
+   item's cumulative `diff-reviewer` read.
+5. **Close.**
+
+### Definition of done
+
+- A require-mode branch round-trips through Save, the settings CSV,
+  clone and `replicate_instrument` (tests in rungs 2 to 4).
+- On the surface a require-mode governed cell is enabled with the
+  condition closed, and required, counted and gated by submit while it
+  holds (rung 3 tests).
+- Changing the mode on an answered branch is refused and audited.
+- `spec/instruments.md`, `spec/reviewer-surface.md`,
+  `spec/csv_contracts.md`, `spec/extract_data.md` and
+  `spec/settings_inventory.md` describe the mode.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.13` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. ~~A governed row's R under Require~~ — the condition decides for every
+   governed field; their R is greyed, titled "Required while the
+   condition holds" (the author, 2026-09-28, taking the recommendation).
+2. ~~Does the surface say why a field became required?~~ — no; the
+   required mark appearing is enough (the author, 2026-09-28).
+
+### Out of scope
+
+- More than one condition per parent, or a mode per governed field:
+  one branch, one condition, one mode.
+- A second level (Item 14).
 
 ### Doc impact
 
+- `spec/instruments.md` — the condition row's "then" dropdown, the mode, its lock and audit (Item 13).
+- `spec/reviewer-surface.md` — a require-mode governed cell: always enabled, its required mark following the condition (Item 13).
+- `spec/csv_contracts.md` — the `branch_mode` column on the parent (Item 13).
+- `spec/extract_data.md` — "Required when" beside "Shown when" (Item 13).
+- `spec/settings_inventory.md` — `branch_mode` (Item 13).
 - `docs/status.md` — row when the item closes (Item 13).
 
 ## Item 14 — Two levels of branching
