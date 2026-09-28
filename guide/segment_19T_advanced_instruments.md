@@ -1792,42 +1792,34 @@ Taken 2026-09-28 at `3a13e884`:
 
 ### Status
 
-**Rung 2** (2026-09-28): the four tokens are evaluated. The pieces:
-- `RANGE_OPS`, `parse_range` and `RANGE_SEPARATOR` in `_branching.py`;
-- `branch_is_open` and `condition_label`, the label keeping each end as
-  typed;
-- the reviewer's `isOpen`, pinned to the service in node on every token.
+**Closed 2026-09-28.** #2657 plan, #2658 evaluation, #2659 authoring and
+the read; this close. The ladder held; rung 2 refused ranges until rung
+3's builder could show one (Codex on #2657). Two things moved, both from
+the cumulative read:
+- **A range labels after the field's name**: `Rating ≥ 2 and ≤ 4`, not
+  the Decision table's `2 ≤ Rating ≤ 4`, so a negative low end can't
+  start an extract cell as a formula.
+- **The settings CSV stores a range canonically**
+  (`canonical_condition_value`), so a hand-spaced one doesn't read as
+  changed to the lock on an answered branch.
 
-`BRANCH_OPS` and `condition_error` still refuse ranges.
-**Cumulative-read base:** `3a13e884`, main before rung 1 merged.
+**Decisions confirmed at build:** a range is split before it is stripped,
+in Python and both scripts, so an empty end is named. `NUMERIC_OP_CHOICES`
+is the one ordered table, and the builder reads it from the page.
+**Kept** (the recommendation at the close): a negative low end still
+starts its settings-CSV cell with `-`. The file has no formula guard for
+any cell (`guide/deferred_consolidated.md`).
 
-**Rung 3** (2026-09-28): ranges are accepted.
-- The server gains `NUMERIC_OP_CHOICES` (token, name, symbol), and
-  `range_error` names the end at fault. Save strips "2 to " to "2 to", so
-  it still names the high end.
-- The builder:
-  - lists the server's operators;
-  - adds the second box and "to" (`newModelRfSyncConditionRange`);
-  - joins the boxes in `newModelRfConditionValue`;
-  - titles ranges with symbols.
-- Driven in headless Chromium: the labels, showing and hiding the box,
-  the join, each amber message and the hint; no page error.
+**Reads:** one cumulative `diff-reviewer` read, `3a13e884..f69a4bf9`. It
+found one medium issue (the label) and six low ones. Fixed: the CSV lock,
+the builder's message, a stale comment, and the text-only builder tests (a
+node test now pins `newModelRfConditionError` to `condition_error`). Kept:
+labels in the service. Compacted here: the plan's length. **Codex** on
+#2659: the page's eight inline-styled buttons moved to the Observers
+builder's size classes (`spec/ui_elements.md` §6), scope beyond the rung,
+owed by `CLAUDE.md`.
 
-**Cumulative read** (1 read, `3a13e884..` rung 3): no high findings.
-Acted on in #2659:
-- A range labels after the field's name ("Rating ≥ 2 and ≤ 4"), not
-  "2 ≤ Rating ≤ 4", so a negative low end can't start an extract cell as
-  a formula. This departs from the Decision table's label column.
-- The settings CSV stores a range as the builder sends it back
-  (`canonical_condition_value`), so a hand-spaced `2 to  4` doesn't trip
-  the lock on an answered branch.
-- The builder's check strips as Save does, and a node test pins it to
-  `condition_error` over every pair of boxes.
-- Kept: in the settings CSV, a range with a negative low end (`-5 to -1`)
-  still starts its cell with `-`. The file has no formula guard for any
-  cell (see `guide/deferred_consolidated.md`). Kept too: the select's
-  names stay in `NUMERIC_OP_CHOICES` beside the symbols, one ordered
-  table for both.
+**Browser checks owed** in `guide/post_azure_todo_checklist.md` item 6.
 
 ### PR ladder
 
