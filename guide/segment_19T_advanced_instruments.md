@@ -2014,7 +2014,8 @@ was fixed in its PR.
   value, an overclaim about the operator select, and a doubled checklist
   line.
 - **#2667:** no high finding. Its first medium, the trade that R, ▲ ▼ and
-  X scroll off at common laptop widths, went to the author. Its second,
+  X scroll off at common laptop widths, went to the author, who kept
+  `66rem` (2026-09-28). Its second,
   prose that credited the floor to #2666 and miscounted the PRs, was
   fixed there, as were its lows: the floor's comment, stale select
   figures, and a checklist row that named no window width.
