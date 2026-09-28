@@ -2149,6 +2149,13 @@ Taken 2026-09-28 at `256d30aa`.
   exports `require` or blank and imports `require` / `show` / blank,
   refusing an unknown mode and an orphan one. The author renamed the
   second option "Require the below (else, optional)" (2026-09-28).
+- **Rung 4 (the builder wired):** the select shows the saved mode and
+  Save sends it; a Require branch's rows grey out R ("Required while the
+  condition holds"), keeping its value. The preview follows the surface:
+  a Require branch's column isn't muted, is marked "*" and counts as an
+  item, but not as required on the unanswered sample row. Chromium drove
+  it: switching the mode back and forth restores each R, and detaching
+  the last field frees it.
 
 ### Open questions
 

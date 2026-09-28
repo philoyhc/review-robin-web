@@ -143,9 +143,8 @@ def test_branch_controls_are_wired(client: TestClient, db: Session) -> None:
     assert 'onclick="newModelRfConditionAdd(this)"' in condition
     assert 'onchange="newModelRfConditionChanged(this)"' in condition
     assert 'oninput="newModelRfConditionChanged(this)"' in condition
-    # No control is disabled; the mode's Require option is, until the rule
-    # lands (19T Item 13 rung 1).
-    assert " disabled" not in condition.replace('<option value="require" disabled>', "")
+    # No control is disabled, the mode select included (19T Item 13).
+    assert " disabled" not in condition
     governed = _row(table, "Comments")
     r = re.search(r"<button[^>]*data-new-model-rf-required[^>]*>", governed).group(0)
     assert " disabled" not in r and "can't be required" not in r
@@ -203,9 +202,8 @@ def test_governed_answers_lock_the_branch_on_the_page(
     assert group.startswith(' data-new-model-rf-branch data-new-model-rf-branch-locked="true">')
     condition = group.split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
     # The operator, both boxes (19T Item 12), the condition's "+" and the
-    # mode select (19T Item 13), plus the mode's Require option, which the
-    # scaffold always disables.
-    assert condition.count(" disabled") == 6
+    # mode select (19T Item 13).
+    assert condition.count(" disabled") == 5
 
 
 def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) -> None:
@@ -266,8 +264,9 @@ def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) 
         "rf.branch_value = window.newModelRfConditionValue(cond);",
     ):
         assert line in stager, line
-    # The preview mutes a governed column.
-    assert "branchHint: row.hasAttribute('data-new-model-rf-governed')" in flat
+    # The preview mutes a governed column, unless a Require branch governs
+    # it (19T Item 13).
+    assert "branchHint: rfRowIsItemNow(row)" in flat
     assert "class=\"rs-branch-closed\"" in flat
 
 
@@ -335,10 +334,20 @@ def test_the_preview_counts_items_as_the_surface_does(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
     ).text
-    skip_governed = "return !row.hasAttribute('data-new-model-rf-governed');"
-    for start in ("window.newModelUpdateIntroProgress =", "function buildProgressPills(card) {"):
+    # One rule for both counts: a Show branch's fields aren't items, a
+    # Require branch's are (19T Item 13).
+    at = body.index("function rfRowIsItemNow(row) {")
+    item_now = body[at : body.index("\n          }", at)]
+    assert (
+        "return !row.hasAttribute('data-new-model-rf-governed') || rfRowUnderRequire(row);"
+        in item_now
+    )
+    for start, rule in (
+        ("window.newModelUpdateIntroProgress =", "window.newModelRfRowIsItemNow"),
+        ("function buildProgressPills(card) {", "committedRows.filter(rfRowIsItemNow)"),
+    ):
         at = body.index(start)
-        assert skip_governed in body[at : body.index("\n          }", at)], start
+        assert rule in body[at : body.index("\n          }", at)], start
 
 
 def test_saving_the_card_keeps_the_branch(client: TestClient, db: Session) -> None:

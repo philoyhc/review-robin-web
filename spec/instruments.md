@@ -1103,9 +1103,9 @@ centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 12A).
 
 **The condition row** reads "If the above [operator] [value] then
-[mode]", the mode a select of **Show the below** and **Require the below
-(else, optional)** (19T Item 13; until its rule lands, Show is
-the only choice and nothing saves the select). The operator sits in the name column at the name box's width,
+[mode]", the mode a select of **Show the below** (the default) and
+**Require the below (else, optional)** (19T Item 13), which Save sends
+as the parent's `branch_mode`. The operator sits in the name column at the name box's width,
 with "If the above" right-aligned in the join column before it
 (`td.rf-condition-lead`, `td.rf-condition-op`, 19T Item 12A); the first
 value box starts at the type column's edge. A List's operator shrinks to
@@ -1201,7 +1201,9 @@ field ends the branch, as X does.
   require-mode parent (`branch_mode = require`, 19T Item 13) every
   governed field counts as required governed for this rule, and each is
   answerable whatever the parent's answer and required exactly while the
-  condition holds, its own R ignored (kept, so Show restores it). A hidden
+  condition holds, its own R ignored (kept, so Show restores it). The
+  builder greys out those rows' R, titled "Required while the condition
+  holds". A hidden
   governed field needs no anchor, since a hidden field counts nowhere
   on the reviewer side.
 - **String is disabled** in a parent's type select. Other type changes
@@ -1255,7 +1257,11 @@ reviewer surface's "*All items completed*" pill) excludes governed
 fields for the same reason, and so does the "*Required items
 completed*" count (`rfRowRequiredNow`, 19T Item 11): a required
 governed field isn't required while its branch is closed, and the
-sample row closes every branch.
+sample row closes every branch. A Require branch's fields (19T Item 13)
+follow the surface instead: their columns aren't muted, they count as
+items, and they are marked "*" as fields that may be required, but the
+required count leaves them out, since the unanswered sample row fails
+every condition.
 
 **Out of scope:** nested branches, more than one branch per parent, and
 a String parent.
