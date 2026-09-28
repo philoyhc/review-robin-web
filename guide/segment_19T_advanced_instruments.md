@@ -2022,7 +2022,11 @@ was fixed in its PR.
   prose that credited the floor to #2666 and miscounted the PRs, was
   fixed there, as were its lows: the floor's comment, stale select
   figures, and a checklist row that named no window width.
-- **#2668:** READ_PENDING
+- **#2668:** no high or medium finding. The lows were fixed there: a test
+  now pins that Band 3 holds no control outside its two tables, and the
+  checklist row asks for a tab through a locked card. The read also
+  found Band 2's locked-only Visibility table inside an inert region, so
+  it can't scroll either; outside this item.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 

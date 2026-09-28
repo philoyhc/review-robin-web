@@ -276,3 +276,9 @@ def test_a_locked_card_locks_band_3s_tables_not_their_scrollers(
             before = band3[: band3.rindex("<table", 0, at)]
             assert before.rindex('<div class="table-scroll">') > before.rfind("</div>")
             assert "inert" not in before[before.rindex('<div class="table-scroll">') :]
+        # Nothing Band 3 holds outside its two tables and its templates
+        # may take input, since only the tables are locked (the item's read).
+        band3 = band3[: band3.index("<template data-new-model-rf-condition-template>")]
+        band3 = re.sub(r"<template\b.*?</template>", "", band3)
+        outside = re.sub(r"<table\b.*?</table>", "", band3)
+        assert re.search(r"<(input|button|select|textarea|a)\b", outside) is None
