@@ -248,11 +248,113 @@ def test_the_response_field_table_scrolls_rather_than_squeezing(
     _, _, card, flat = _page(client, db, "12a-rf-scroll")
     assert "grid-template-columns: minmax(0, 3fr) minmax(0, 17fr);" in flat
     assert "body.ui-v2 table.rf-table { min-width: 66rem; }" in flat
-    # A locked card's Band 3 is inert and can't scroll, so its table fits
-    # the column as before (the item's read).
-    assert (
-        "body.ui-v2 .band3-grid[inert] { grid-template-columns: minmax(0, 3fr) 17fr; }"
-    ) in flat
-    assert "body.ui-v2 .band3-grid[inert] table.rf-table { min-width: 0; }" in flat
+    assert ".band3-grid[inert]" not in flat
     table_at = card.index('<table class="rf-table" data-new-model-rf-rows')
     assert card.rindex('<div class="table-scroll">', 0, table_at) > card.rindex("</div>", 0, table_at)
+
+
+def test_a_locked_card_locks_band_3s_tables_not_their_scrollers(
+    client: TestClient, db: Session
+) -> None:
+    """The author's later 12A entry: a locked card scrolls both Band 3
+    tables too. An inert element can't be scrolled, so the lock regions
+    are the tables themselves; the band and the ``.table-scroll`` wrappers
+    stay outside them."""
+    review_session, instrument, _, _ = _page(client, db, "12a-locked-scroll")
+    for query, locked in (("", True), (f"?editing={instrument.id}", False)):
+        body = client.get(
+            f"/operator/sessions/{review_session.id}/instruments{query}"
+        ).text
+        card = _card_slice(" ".join(body.split()), instrument.id)
+        band3 = card[card.index("<div data-new-model-band3 ") :]
+        assert band3[: band3.index(">")] == '<div data-new-model-band3 class="band3-grid"'
+        for marker in ("data-new-model-df-table", "data-new-model-rf-rows"):
+            at = band3.index(marker)
+            tag = band3[band3.rindex("<table", 0, at) : band3.index(">", at)]
+            assert "data-lock-region" in tag, marker
+            assert ('inert aria-hidden="true"' in tag) is locked, (marker, locked)
+            before = band3[: band3.rindex("<table", 0, at)]
+            assert before.rindex('<div class="table-scroll">') > before.rfind("</div>")
+            assert "inert" not in before[before.rindex('<div class="table-scroll">') :]
+        # Nothing Band 3 holds outside its two tables and its templates
+        # may take input, since only the tables are locked (the item's read).
+        band3 = band3[: band3.index("<template data-new-model-rf-condition-template>")]
+        band3 = re.sub(r"<template\b.*?</template>", "", band3)
+        outside = re.sub(r"<table\b.*?</table>", "", band3)
+        assert re.search(r"<(input|button|select|textarea|a)\b", outside) is None
+
+
+def _open_tag(html: str, marker: str) -> str:
+    at = html.index(marker)
+    return html[html.rindex("<", 0, at) : html.index(">", at)]
+
+
+def test_a_locked_card_scrolls_band_2s_visibility_table(
+    client: TestClient, db: Session
+) -> None:
+    """The author's later 12A entry, after the read of Band 3's: Band 2's
+    lock regions are the intro card, the visibility editor and the
+    preview, so the locked "Who can see what you wrote" table, which holds
+    no control, keeps a scroller that scrolls. That card fades with the
+    intro card beside it."""
+    review_session, instrument, _, flat = _page(client, db, "12a-band2-scroll")
+    assert (
+        '[data-instrument-card][data-instrument-locked="true"] '
+        "[data-new-model-band2-vp-preview-card] { opacity: 0.75; }"
+    ) in flat
+    for query, locked in (("", True), (f"?editing={instrument.id}", False)):
+        body = client.get(
+            f"/operator/sessions/{review_session.id}/instruments{query}"
+        ).text
+        card = _card_slice(" ".join(body.split()), instrument.id)
+        band2 = card[card.index("<div data-new-model-band2-editable") :]
+        band2 = band2[: band2.index("<script>")]
+        assert band2.startswith("<div data-new-model-band2-editable>")
+        for marker in (
+            "data-intro-edit-block",
+            "data-new-model-vp-editor",
+            "data-new-model-band2-preview",
+        ):
+            tag = _open_tag(band2, marker)
+            assert "data-lock-region" in tag, marker
+            assert ('inert aria-hidden="true"' in tag) is locked, (marker, locked)
+        table = _open_tag(band2, 'class="table-scroll" data-lock-only')
+        assert "inert" not in table and "data-lock-region" not in table
+        # Band 2 holds no control outside its three lock regions (the
+        # item's read). Each region is cut out up to the next sibling
+        # after it: the vp card's heading, then its editor's close.
+        outside = band2[: band2.index('<div class="card rs-instrument-card" data-intro-edit-block')]
+        vp = band2[band2.index("data-new-model-band2-vp-preview-card") :]
+        outside += vp[: vp.index("data-new-model-vp-editor")]
+        after_editor = vp[vp.index("</table>", vp.index("data-new-model-vp-editor")) :]
+        outside += after_editor[: after_editor.index("data-new-model-band2-preview")]
+        for control in (r"<(input|button|select|textarea|a)\b", r'role="button"', r"tabindex"):
+            assert re.search(control, outside) is None, control
+
+
+def test_band_1_scrolls_rather_than_spilling(
+    client: TestClient, db: Session
+) -> None:
+    """The author's later 12A entry: Band 1's three columns keep a floor
+    and scroll in a ``.table-scroll`` on a narrow card, locked or not; the
+    grid inside it is the lock region, never the scroller."""
+    review_session, instrument, _, flat = _page(client, db, "12a-band1-scroll")
+    assert re.search(
+        r"body\.ui-v2 \.band1-grid \{ display: grid; "
+        r"grid-template-columns: 1fr 1fr 1fr; gap: 0; min-width: 76rem; \}",
+        flat,
+    )
+    for query, locked in (("", True), (f"?editing={instrument.id}", False)):
+        body = client.get(
+            f"/operator/sessions/{review_session.id}/instruments{query}"
+        ).text
+        card = _card_slice(" ".join(body.split()), instrument.id)
+        tag = _open_tag(card, 'class="band1-grid"')
+        assert "data-lock-region" in tag
+        assert ('inert aria-hidden="true"' in tag) is locked
+        before = card[: card.index('class="band1-grid"')]
+        assert before.endswith('<div class="table-scroll"> <div data-lock-region ')
+        # A rule's tag select gives way to a wider operator ("IS DIFFERENT
+        # FROM" spilled at every width) rather than holding half its row.
+        selects = re.findall(r'<select style="([^"]*)" form="dfsave-\d+" name="link\d_field"', card)
+        assert selects and all(s.startswith("flex: 0 1 50%;") for s in selects)

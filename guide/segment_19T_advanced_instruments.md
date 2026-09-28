@@ -1917,9 +1917,14 @@ Three things read wrong in the table:
   the display fields: its track gets a `0` minimum and the table a
   `66rem` floor (50rem in #2666, raised in #2667), so its boxes no longer
   shrink to nothing (later entries). It also stops the operator select collapsing, though its widest
-  labels are still cut below about 1500px. A locked card's Band 3 is
-  inert and can't scroll, so there the track grows to the table as
-  before (`.band3-grid[inert]`).
+  labels are still cut below about 1500px. A locked card scrolls too
+  (#2668): the lock regions are Band 3's two tables, not the band, since
+  an inert `.table-scroll` can't scroll. Band 2 follows (its intro card,
+  visibility editor and preview), so its locked visibility table can
+  scroll (its preview, itself a scroller, still can't), and **Band 1
+  scrolls too**, in a `.table-scroll` with a `76rem` floor that keeps its
+  selects usable; a rule's tag select shrinks so "IS DIFFERENT FROM"
+  never spills (later entries, same PR).
 - **Tooltips give the full text** the name column cuts (a later entry):
   the operator's label, with its symbol for a single-value operator, and
   the field's name. Neither shows while its row is amber, so the row's
@@ -1932,14 +1937,14 @@ Three things read wrong in the table:
 The suffix keeps this list out of Item 12's check; each line is honored
 in the same PR.
 
-- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column, the first value box at the type column's edge, the tooltips, the List condition's layout, Band 3's split and the scrolling table (Item 12A).
+- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column, the first value box at the type column's edge, the tooltips, the List condition's layout, Band 3's split, the scrolling tables and Band 1's scroller (Item 12A).
 - `spec/ui_elements.md` — `rf-table`: the glyphs, `td.rf-active-cell`, `td.rf-join-cell`, `td.rf-condition-lead` and `td.rf-condition-op` (Item 12A).
 - `docs/status.md` — row when the item closes (Item 12A).
 
 ### Status
 
-**Closed 2026-09-28** in seven PRs: #2661; #2662, with two later
-entries; #2663 to #2667, with the rest. For
+**Closed 2026-09-28** in eight PRs: #2661; #2662, with two later
+entries; #2663 to #2668, with the rest. For
 #2661, headless Chromium, run by hand
 and not repeatable by the suite, measured the condition boxes at the
 parent's Min width at 1500px and 1100px, with every checkbox centered.
@@ -1977,6 +1982,17 @@ Later entries, measured by hand in Chromium:
   the table now holds 1056px, the name box 203px and Min 70px, and
   scrolls. The page's own tab strips still overflow at 600px, outside
   this item.
+- **#2668, a locked card:** at an 800px window a shift-wheel over either
+  table scrolls it (200px and 83px), as on an unlocked card, and its
+  inputs take no focus. Band 1 spilled from about 1210px of band (at a
+  1100px window its button overran its divider by 18px; at 500px the page
+  overflowed by 144px); "IS DIFFERENT FROM" needed 1386px, more than the
+  page's 1364px, so it spilled at every width. With the floor it scrolls
+  from about a 1330px window down, locked or not, the page no longer
+  overflows at 500px, and "IS DIFFERENT FROM" fits with its select at
+  105px (134px beside "IS THE SAME AS"). The
+  visibility table wraps rather than overflowing down to 500px, so its
+  scroller is there for a wider label.
 
 **Reads, one per change.** None found a high defect; every low finding
 was fixed in its PR.
@@ -2010,7 +2026,7 @@ was fixed in its PR.
   were fixed there.
 - **#2666:** no high finding. Its medium was fixed there: a locked card's
   inert Band 3 could not scroll, and Chromium confirmed it, so a locked
-  card fits its table as before. The lows were the PR count, a stale grid
+  card fitted its table (until #2668). The lows were the PR count, a stale grid
   value, an overclaim about the operator select, and a doubled checklist
   line.
 - **#2667:** no high finding. Its first medium, the trade that R, ▲ ▼ and
@@ -2019,6 +2035,18 @@ was fixed in its PR.
   prose that credited the floor to #2666 and miscounted the PRs, was
   fixed there, as were its lows: the floor's comment, stale select
   figures, and a checklist row that named no window width.
+- **#2668:** no high or medium finding. The lows were fixed there: a test
+  now pins that Band 3 holds no control outside its two tables, and the
+  checklist row asks for a tab through a locked card. The read also
+  found Band 2's locked-only Visibility table inside an inert region, so
+  it couldn't scroll either; the author had it fixed in the same PR, and
+  Band 1 given a scroller. Its read found no high defect. Its two mediums
+  were fixed there: the spec claimed Band 2's preview scrolls when locked
+  (it still doesn't), and "IS DIFFERENT FROM" still spilled at the floor,
+  and at every width, so the select beside it now shrinks. The lows were
+  a window figure (1330px, not 1300), a comment split from its rule, a
+  stale comment on Band 2, the checklist's tab check, a weaker Band 2
+  test, and `spec/ui_elements.md` §10's non-table hosts.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 

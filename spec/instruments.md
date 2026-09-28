@@ -496,7 +496,13 @@ Operations-row Assignments page; **Band 1** internally, and the `band1` /
 this instrument. Three columns
 of equal width with a 1px vertical rule between them. Each column ("Link")
 is a self-contained sub-builder. The card title is bold (matching the
-other card names); the three Link labels below are unbold.
+other card names); the three Link labels below are unbold. The columns
+(`.band1-grid`) keep a `76rem` floor, which holds the rules' selects at
+a usable width, and scroll in a `.table-scroll` below it rather than
+spilling past their dividers, locked or not: the grid is the lock
+region, never its scroller. A rule's tag select shrinks from half its
+row to make room for a wider operator, so "IS DIFFERENT FROM" never
+spills either (19T Item 12A).
 
 | Column | Link (operator label) | Vocabulary |
 |---|---|---|
@@ -821,6 +827,11 @@ them. A cycle also repaints the locked table's matching pill
 (`data-new-model-vp-preview-cell`) — the live repaint 19T Item 3 entry 3
 added, kept because Save is a fetch and never reloads.
 
+Locked, the card is not inside a lock region: Band 2's are the intro
+card, this card's editor and the preview, so the locked table, which
+holds no control, keeps a `.table-scroll` that scrolls. The card fades
+with the intro card beside it (19T Item 12A).
+
 #### Display-field table
 
 Band 3's left column (`data-new-model-band3-left`) is a headerless,
@@ -898,9 +909,12 @@ display fields, 85% response fields (the author, 2026-09-28, 19T Item
 before Item 9's table). Both tracks' `0` minimum lets each table scroll
 inside its `.table-scroll` on a narrow card rather than widening its
 column past its share; the response-field table keeps a `66rem` floor so
-its boxes stay usable while it scrolls (19T Item 12A). A card not being
-edited has an inert Band 3, which can't scroll, so there the response
-fields' track grows to the table and the floor lifts, as before. The left column holds
+its boxes stay usable while it scrolls (19T Item 12A). A locked card
+scrolls too: its lock regions are the two tables, not the band, since an
+inert `.table-scroll` couldn't scroll (a later 12A entry). Band 1 and
+Band 2's visibility table follow the same rule; Band 2's preview, itself
+the `.table-scroll` its script fills, stays inert and unscrollable while
+locked. The left column holds
 the display-field table above; the right column, below, is the
 response-field table.
 

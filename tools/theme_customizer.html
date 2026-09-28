@@ -2916,20 +2916,28 @@
          floor holds it from about a 1390px window down, where it starts
          scrolling at a comfortable size, as the display fields do. */
       body.ui-v2 table.rf-table { min-width: 66rem; }
+      /* Band 1: the rule's three columns, in a .table-scroll. The 76rem
+         floor keeps the rules' selects a usable width (the middle
+         column's "IS THE SAME AS" fits beside its half-width select from
+         about 1204px); below it the band scrolls rather than spill, from
+         about a 1330px window down (19T Item 12A). */
+      body.ui-v2 .band1-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 0;
+        min-width: 76rem;
+      }
       /* Band 3: display fields 15%, response fields 85% (19T Item 12A).
          Both tracks' minimum is 0, so a table on a narrow card scrolls in
-         its .table-scroll rather than widening its column. A card not
-         being edited has an inert Band 3, which can't be scrolled, so
-         there the response fields' track grows to its table (squeezed
-         but whole, with no floor), as it did before. */
+         its .table-scroll rather than widening its column, locked or
+         not: a locked card makes the tables inert, never their
+         .table-scroll wrappers, which would then not scroll. */
       body.ui-v2 .band3-grid {
         display: grid;
         grid-template-columns: minmax(0, 3fr) minmax(0, 17fr);
         gap: 16px;
         align-items: stretch;
       }
-      body.ui-v2 .band3-grid[inert] { grid-template-columns: minmax(0, 3fr) 17fr; }
-      body.ui-v2 .band3-grid[inert] table.rf-table { min-width: 0; }
       body.ui-v2 table.rf-table td.rf-name { width: 20%; }
       body.ui-v2 table.rf-table td.rf-type { width: 15%; }
       /* A branch in Band 3's response-field table (19T Item 10). The bar
