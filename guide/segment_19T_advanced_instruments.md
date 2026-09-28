@@ -1938,127 +1938,55 @@ Three things read wrong in the table:
 The suffix keeps this list out of Item 12's check; each line is honored
 in the same PR.
 
-- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column, the first value box at the type column's edge, the tooltips, the List condition's layout, Band 3's split, the scrolling tables and Band 1's scroller (Item 12A).
-- `spec/ui_elements.md` — `rf-table`: the glyphs, `td.rf-active-cell`, `td.rf-join-cell`, `td.rf-condition-lead` and `td.rf-condition-op` (Item 12A).
+- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column, the first value box at the type column's edge, the tooltips, the List condition's layout, the Quick fill fix, Band 3's split, the scrolling tables, locked-card scrolling in all three bands and Band 1's scroller (Item 12A).
+- `spec/ui_elements.md` — `rf-table`: the glyphs, `td.rf-active-cell`, `td.rf-join-cell`, `td.rf-condition-lead`, `td.rf-condition-op` and `tr.rf-condition-list`; §10's `.table-scroll` notes (Item 12A).
 - `docs/status.md` — row when the item closes (Item 12A).
 
 ### Status
 
-**Closed 2026-09-28** in nine PRs: #2661; #2662, with two later
-entries; #2663 to #2669, with the rest. For
-#2661, headless Chromium, run by hand
-and not repeatable by the suite, measured the condition boxes at the
-parent's Min width at 1500px and 1100px, with every checkbox centered.
-**Reads:** one per PR. #2661's found no high or medium defects and four
-low ones, all fixed there:
-- a test now pins the glyphs the row script actually sets;
-- this Status now records the read;
-- Item 15's prose now gives the new glyph order;
-- the checklist no longer says a List's box is wider.
+**Closed 2026-09-28** in nine PRs, #2661 to #2669; every one after #2661
+carried later entries logged on the author's instruction. Intended: three
+fixes, the glyphs, the condition boxes' width and a centered checkbox.
+Done: those, plus the condition row's layout, tooltips, Band 3's split,
+a table that scrolls rather than squeezing, and scrolling on a locked card
+in all three bands.
 
-Later entries, measured by hand in Chromium:
-- **#2662, the room after ↰ / ↳:** the name box sat two button pitches
-  (88px) after the join button on both kinds of row. #2664 widened it to
-  three (132px), room for two buttons ahead of a second level of
-  branching. The table stays inside its card down to a 900px window;
-  narrower is the browser check's.
-- **#2662, the operator in the name column:** it has the name box's left
-  edge and width at 1500, 1100 and 900px.
-- **#2663, the first value box:** both gaps measure 8px at 1500 and
-  1100px.
-- **#2664, the tooltips:** set at load, updated on change and input,
-  dropped while amber, restored once fixed.
-- **#2665, the split and a List's condition:** Band 3 202px : 1146px at a
-  1500px window. On a List parent the operator is 77px and its box the
-  List box's 272px, right beside it, and switching back to a number
-  restores the two-cell layout.
-- **The scrolling response fields:** the split holds 15 : 85 at 800px
-  (it fell to 68px : 600px, the page overflowing at 600px). #2666's
-  `50rem` floor still let Min shrink to 18px at a 1000px window before
-  the table scrolled, and the author saw no scroller there; #2667 raised
-  it to `66rem`. The page caps the table near 1146px, so the floor holds
-  from about a 1390px window down: the trade is that R, ▲ ▼ and X need a
-  sideways scroll at common laptop widths (about 90px hidden at 1280px).
-  Below about 1400px
-  the table now holds 1056px, the name box 203px and Min 70px, and
-  scrolls. The page's own tab strips still overflow at 600px, outside
-  this item.
-- **#2668, a locked card:** at an 800px window a shift-wheel over either
-  table scrolls it (200px and 83px), as on an unlocked card, and its
-  inputs take no focus. Band 1 spilled from about 1210px of band (at a
-  1100px window its button overran its divider by 18px; at 500px the page
-  overflowed by 144px); "IS DIFFERENT FROM" needed 1386px, more than the
-  page's 1364px, so it spilled at every width. With the floor it scrolls
-  from about a 1330px window down, locked or not, the page no longer
-  overflows at 500px, and "IS DIFFERENT FROM" fits with its select at
-  105px (134px beside "IS THE SAME AS"). The
-  visibility table wraps rather than overflowing down to 500px, so its
-  scroller is there for a wider label.
-- **#2669, Band 2's preview:** with its columns widened to 300px at a
-  1100px window (1500px of table in 969px), a shift-wheel scrolls it
-  200px on a locked card as on an unlocked one; the locked preview's
-  controls take no focus.
+Decisions confirmed at build:
+- **`66rem` stays** (the author, 2026-09-28), though below about a 1390px
+  window R, ▲ ▼ and X need a sideways scroll (about 90px hidden at 1280px).
+- **The closed operator select cuts its widest labels** by about 20px below
+  a 1390px window; the author's answer was the tooltips (#2664).
+- **Lock regions are the pieces holding controls, never a scroller**
+  (#2668, #2669): an inert `.table-scroll` can't scroll. Band 3's headings
+  lose the locked fade; the visibility card keeps it by its own rule.
+- **Band 1's `76rem` floor keeps its selects usable**, and a rule's tag
+  select shrinks, since "IS DIFFERENT FROM" needed 1386px of band against
+  the page's 1364px and spilled at every width.
 
-**Reads, one per change.** None found a high defect; every low finding
-was fixed in its PR.
-- **#2662's first entry:** the gap's width now shares `--rf-glyph-width`
-  with the button.
-- **#2662's second entry:** the medium finding went to the author. At the
-  name box's width the closed select cuts its widest labels below a
-  window of about 1500px. The author's response was #2664's tooltips; the
-  closed select still cuts. The widest label needs about 169px; after
-  #2664's wider gap the room was 166px at 1500px, 137px at 1300px, 82px
-  at 1100px and none at 900px (26px wide). Since #2667's floor it holds
-  about 148px below about 1390px, so the widest labels stay cut by about
-  20px but never collapse.
-- **#2663:** the medium finding, no browser check for the value box, is
-  now a checklist row.
-- **#2664:** the medium finding was that a locked branch's reason was
-  hidden by the operator's tooltip; it now follows the label. A range
-  shows no lone symbol, which misread as "is outside (≤)". The read of
-  the wider gap found only low ones: a stale comment, this record, the
-  re-measured select, and one wording for the lock reason.
-- **#2665:** no high finding. The mediums were fixed there: the spec
-  still gave a List's box 12em, the call that re-lays the row was
-  unpinned, and the checklist row never asked for a List branch. The
-  lows were stale comments, the status row, `tr.rf-condition-list` in
-  `spec/ui_elements.md`, a whitespace gap, and a duplicate test. It also
-  found an older bug, outside this item: a Quick fill preset on a List
-  parent turned "is not" into "is". On the author's instruction it was
-  fixed in #2665 too: the type snaps to "list" before the options' input
-  event. Its read found no high defect; its medium (no browser check for
-  it) and lows (stale comments, the spec's order of steps, a test name)
-  were fixed there.
-- **#2666:** no high finding. Its medium was fixed there: a locked card's
-  inert Band 3 could not scroll, and Chromium confirmed it, so a locked
-  card fitted its table (until #2668). The lows were the PR count, a stale grid
-  value, an overclaim about the operator select, and a doubled checklist
-  line.
-- **#2667:** no high finding. Its first medium, the trade that R, ▲ ▼ and
-  X scroll off at common laptop widths, went to the author, who kept
-  `66rem` (2026-09-28). Its second,
-  prose that credited the floor to #2666 and miscounted the PRs, was
-  fixed there, as were its lows: the floor's comment, stale select
-  figures, and a checklist row that named no window width.
-- **#2668:** no high or medium finding. The lows were fixed there: a test
-  now pins that Band 3 holds no control outside its two tables, and the
-  checklist row asks for a tab through a locked card. The read also
-  found Band 2's locked-only Visibility table inside an inert region, so
-  it couldn't scroll either; the author had it fixed in the same PR, and
-  Band 1 given a scroller. Its read found no high defect. Its two mediums
-  were fixed there: the spec claimed Band 2's preview scrolls when locked
-  (it still doesn't), and "IS DIFFERENT FROM" still spilled at the floor,
-  and at every width, so the select beside it now shrinks. The lows were
-  a window figure (1330px, not 1300), a comment split from its rule, a
-  stale comment on Band 2, the checklist's tab check, a weaker Band 2
-  test, and `spec/ui_elements.md` §10's non-table hosts.
-- **#2669:** no high or medium finding. The lows were fixed there: the
-  spec's lead phrase for a script-built table, a unit test that would
-  have accepted an inert wrapper, this bullet's sentence, a loose
-  template comment, and a checklist row that didn't say a locked
-  preview's columns are dragged wider while unlocked. Codex then found
-  the unit check still accepted a `.table-scroll` on a locked host, the
-  shape #2669 removes; it now rejects one there too.
+Scope that moved: #2665's read found an older bug, a Quick fill preset
+on a List parent turning "is not" into "is", fixed there on the author's
+instruction. Band 1 and Band 2 lie outside the table this item is named
+for; they came in as later entries.
+
+Measured by hand in headless Chromium, not repeatable by the suite:
+- the condition boxes at the parent's Min width, and the operator at the
+  name box's edge and width, at 1500, 1100 and 900px; both value-box gaps
+  8px;
+- Band 3 at 202px : 1146px at a 1500px window; a List's operator 77px
+  beside its 272px box;
+- below about 1400px the response table holds 1056px, its name box 203px
+  and Min 70px; Band 1 scrolls from about 1330px, and the page no longer
+  overflows at 500px (it did by 144px);
+- on a locked card a shift-wheel scrolls both Band 3 tables (200px and
+  83px at 800px) and a widened Band 2 preview (200px at 1100px), and
+  their controls take no focus. Dragging a scrollbar can't be driven
+  headless.
+
+**Reads:** thirteen `diff-reviewer` reads, one per change, and a Codex
+review of #2669. No high finding. Of twelve mediums, ten were fixed in
+their PR and two went to the author: the select cutting its labels, and
+the `66rem` trade. Every low was fixed in its PR, as was Codex's one
+finding (the scroller check accepted a `.table-scroll` on a locked host).
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 
