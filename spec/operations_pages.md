@@ -315,12 +315,13 @@ scroll, and cost a button label to do it.
 **`Progress` and `Required Fields` are counted in SQL for
 per-reviewee instruments** (19R Item 3), rather than by loading a
 reviewer's assignments and tallying them. A reviewer's work on
-**group-scoped** instruments is still tallied in Python and added to
-that — both columns can be the sum of the two halves, and "What these
-pages cost to render" below says why the split exists. Neither figure
-nor the pill state they carry changed with it: the rewrite moved where
-the arithmetic happens, not what it says, and a parity test held the
-two implementations to the same answer while it did.
+**group-scoped instruments, and any instrument with a required governed
+field** (19T Item 11 — see "What these pages cost to render" below), is
+still tallied in Python and added to that — both columns can be the sum
+of the two halves. Neither figure nor the pill state they carry changed
+with the group-scoped split: the rewrite moved where the arithmetic
+happens, not what it says, and a parity test held the two
+implementations to the same answer while it did.
 
 One thing this table does *not* say: a `required` response field that
 is not `visible` is excluded from **both columns**, because the
@@ -609,28 +610,39 @@ per reviewee (`monitoring.per_reviewee_coverage`) **and** calls
 `monitoring.summary_counts` for one number, `incomplete_count`, which
 runs the reviewer-side pass a second time.
 
-**For a per-reviewee instrument, neither rollup reads response rows at
-all** (19R Item 3) — both count in SQL and return one row per person,
-and `per_reviewee_coverage` is that and nothing else. The paragraph
-after this one is the exception, and the only one:
-`per_reviewer_progress` still reads the response rows of *group-scoped*
-assignments, and loads those assignments themselves. What the
-aggregate path may not do is materialize a row per assignment — its
-count is a `func.count`, not a `len()` over loaded objects — and the
-measure that catches a regression there is **ORM instances loaded**,
-not queries: the implementation these replaced issued few queries and
-built every `Assignment` and `Response` in the session as an object,
-408,027 of them for one render at a 1,000 × 1,000 roster
-(`guide/app_responsiveness.md`).
+**For a per-reviewee instrument with no required governed field,
+neither rollup reads response rows at all** (19R Item 3) — both count
+in SQL and return one row per person, and `per_reviewee_coverage` is
+that and nothing else in that case. The paragraph after this one is the
+exception: `per_reviewer_progress` still reads the response rows of
+*group-scoped* assignments and any instrument with a **required
+governed field** (19T Item 11), and loads those assignments themselves;
+`per_reviewee_coverage` gains the same second path for the latter
+(`_python_routed_coverage`). What the aggregate path may not do is
+materialize a row per assignment — its count is a `func.count`, not a
+`len()` over loaded objects — and the measure that catches a regression
+there is **ORM instances loaded**, not queries: the implementation
+these replaced issued few queries and built every `Assignment` and
+`Response` in the session as an object, 408,027 of them for one render
+at a 1,000 × 1,000 roster (`guide/app_responsiveness.md`).
 
 `per_reviewer_progress` keeps one Python path, for **group-scoped
-instruments only**: a group counts once per group, and the key is
-Python's `strip()` over reviewee tags or an active `Relationship`,
-which SQL's `TRIM` does not reproduce. That half is bounded by
-group-scoped assignments — it prefetches only their response rows and
-eager-loads only their reviewees — so a session with no group
-instrument never enters it, and one that is entirely group-scoped gains
-nothing from the rewrite.
+instruments and any instrument with a required governed field**
+("route (a)", 19T Item 11): a group counts once per group, and the key
+is Python's `strip()` over reviewee tags or an active `Relationship`,
+which SQL's `TRIM` does not reproduce; an instrument with a required
+governed field is routed here because the condition it must be judged
+against is stored as `Text`, and evaluating it in SQL would need a
+numeric cast that errors in Postgres on a bad value and reads as 0 on
+SQLite. That half is bounded by these instruments' assignments — it
+prefetches only their response rows and eager-loads only their
+reviewees — so a session with none of them never enters it, and one
+where every instrument qualifies gains nothing from the rewrite.
+`per_reviewee_coverage`'s Python half is the same trade for the
+reviewee side: a per-reviewee instrument that needs it still loads its
+assignments and responses as ORM rows, the accepted cost of route (a);
+route (b), a stored open-branch table the SQL could join instead,
+stays in reserve.
 
 All three pages are now **flat in the roster**: the query count does not
 move between a 25 × 25 and a 200 × 200 session. Measured through the

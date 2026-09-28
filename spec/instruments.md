@@ -1105,14 +1105,25 @@ reason its tooltip, and Save refuses it, naming the field.
 A plain row that isn't the first, has no saved responses and isn't
 itself a parent can join the unit above: the end of an unlocked branch,
 or, on a plain Integer, Decimal or List field, a new branch with an
-empty condition. Joining turns **R** off. A governed row in an unlocked
-branch can detach (↰) to directly below the branch; detaching the only
-governed field ends the branch, as X does.
+empty condition. Joining keeps the row's **R** (19T Item 11) — Save
+refuses the result if the row's R is now required with no anchor
+elsewhere in the instrument. A governed row in an unlocked branch can
+detach (↰) to directly below the branch; detaching the only governed
+field ends the branch, as X does.
 
 **Inside a branch:**
 
-- **R is inactive** on a governed row — never required
-  (`guide/advanced_instruments.md` Item 2 lifts this).
+- **R is live** on a governed row (19T Item 11): a required governed
+  field is required, and missing when empty, only while its branch is
+  open for that assignment. Save and both settings-CSV phases refuse a
+  visible required governed field unless the instrument has an active
+  (visible) required field outside any branch, naming the field
+  (`REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE`,
+  `app/services/responses/_branching.py`) — an active required
+  ungoverned field is answered at every submit, so a submit always
+  leaves a response row for the reviewer rollups to count. A hidden
+  governed field needs no anchor, since a hidden field counts nowhere
+  on the reviewer side.
 - **String is disabled** in a parent's type select. Other type changes
   keep the condition, which turns amber and is refused by Save if it no
   longer fits.
@@ -1155,11 +1166,13 @@ closed-cell styling (`spec/reviewer-surface.md`), titled "Opens when
 …" — since the sample reviewee is unanswered and every branch is
 therefore closed. The item count above the preview (mirroring the
 reviewer surface's "*All items completed*" pill) excludes governed
-fields for the same reason.
+fields for the same reason, and so does the "*Required items
+completed*" count (`rfRowRequiredNow`, 19T Item 11): a required
+governed field isn't required while its branch is closed, and the
+sample row closes every branch.
 
-**Out of scope:** required governed fields (`guide/advanced_instruments.md`
-Item 2), nested branches, more than one branch per parent, and a String
-parent.
+**Out of scope:** nested branches, more than one branch per parent, and
+a String parent.
 
 ### Action row
 

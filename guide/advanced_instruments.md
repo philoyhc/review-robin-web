@@ -18,13 +18,13 @@ Six items that rework the Instruments page's builder:
 built one item at a time:** Item 4 shipped first as 19T Item 7
 (2026-09-26), ahead of Item 3 because it doesn't touch the pills, and
 Item 5 as 19T Item 8 (2026-09-26), and Item 3 as 19T Item 9
-(2026-09-26). Item 1 shipped as 19T Item 10 (2026-09-27); Item 2 is
-planned as 19T Item 11 (2026-09-27), and Item 6's three extensions are
+(2026-09-26). Item 1 shipped as 19T Item 10 (2026-09-27); Item 2 shipped
+as 19T Item 11 (2026-09-27), and Item 6's three extensions are
 logged as 19T Items 12–14. This file keeps the
 author's rulings and the measured cost, so the build can start from them.
-When it is scheduled, it becomes a segment plan
-(`guide/segment_plan_template.md`); until then its entry in
-`guide/deferred_consolidated.md` Part C points here. It was logged as
+Every item is now built or logged as a 19T item, so no
+`guide/deferred_consolidated.md` entry points here any more (the last
+left at 19T Item 11's close). It was logged as
 response_field_branching.md and renamed once Item 3 widened it.
 
 **Built in the order 3, 4, 5, 1, 2** (the author, 2026-09-25), and this file
@@ -491,8 +491,9 @@ About 7–8 PRs, as its own segment:
 
 ## Item 2 — Required governed fields
 
-**Planned as 19T Item 11** (2026-09-27), which records what Item 10
-changed underneath these rulings and the ladder.
+**Shipped as 19T Item 11** (closed 2026-09-27), which records what Item
+10 changed underneath these rulings, the author's replacement of the
+required-parent rule below, and route (a) as built.
 **Logged 2026-09-24** (the author: "it would be interesting to solve the
 required child field issue"). **Built last**, on Item 1, and needs no
 migration.

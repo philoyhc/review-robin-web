@@ -1748,18 +1748,3 @@ that they agree with each other.
 **Lift trigger:** an operator asking for keystroke-live filtering on a
 roster, or the next change that reworks a roster's pager.
 
-### Required governed fields (author, 2026-09-24)
-
-`guide/advanced_instruments.md` Item 2: a governed field inside a branch
-that is required while its branch is open. The record's other four items
-are built: Items 3, 4 and 5 shipped as 19T Items 9, 7 and 8,
-and Item 1, branching with optional governed fields, shipped as 19T Item
-10 (2026-09-27). Item
-2 needs no migration, and Item 1 is built to prepare for it; the twelve
-places a static required count becomes per-assignment, and the
-recommended route, are in the record.
-
-**Lifted 2026-09-27:** planned as 19T Item 11
-(`guide/segment_19T_advanced_instruments.md`); this entry leaves the
-ledger when that item closes.
-

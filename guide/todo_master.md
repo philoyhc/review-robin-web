@@ -3399,10 +3399,11 @@ dep chains called out at the bottom of this file.
      branch of optional governed fields under an Integer, Decimal or List
      field, shown only while the parent's answer meets its condition; a
      closed branch holds no value.
-   - **Item 11 — Governed fields can be set to required too** (open,
-     planned). `guide/advanced_instruments.md` Item 2: a governed field
-     required only while its branch is open, in an instrument with an
-     active required ungoverned field.
+   - ~~**Item 11 — Governed fields can be set to required too.**~~
+     **Closed 2026-09-27.** `guide/advanced_instruments.md` Item 2: a
+     governed field is required only while its branch is open, in an
+     instrument with an active required field outside any branch; the
+     rollups count it in Python (route (a)).
    - **Item 12 — Augmented numerical conditions** (open, stub): inside a
      range and outside a range. `guide/advanced_instruments.md` Item 6,
      Q3.
