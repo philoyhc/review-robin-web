@@ -1,7 +1,7 @@
 """19T Item 12A — small adjustments to Band 3's response-field table, on
-the author's instruction: join reads ↰ and detach ↳ (pinned in
-``test_join_and_detach_show_their_states``); a number's condition boxes
-take the parent's Min width; the Active checkbox is centered in its cell."""
+the author's instruction: join reads ↰ and detach ↳; a number's condition
+boxes take the parent's Min width; the Active checkbox is centered in its
+cell."""
 
 from __future__ import annotations
 
@@ -12,6 +12,33 @@ from sqlalchemy.orm import Session
 
 from .test_instrument_builder_routes import _rf_fn
 from .test_response_field_branching_builder import _page, _row, _rows_table
+
+
+def test_join_reads_the_up_arrow_and_detach_the_down_arrow(
+    client: TestClient, db: Session
+) -> None:
+    """The row script rewrites every join button's glyph at load, so the
+    glyph an operator sees is the one ``newModelRfSyncJoin`` sets: pin each
+    of its ``set(...)`` calls, and the template row's (the item's read)."""
+    review_session, instrument, _, flat = _page(client, db, "12a-glyphs")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    sync = _rf_fn(body, "newModelRfSyncJoin")
+    calls = [
+        (glyph, dq or sq)
+        for glyph, dq, sq in re.findall(r"""set\('(.)', (?:"([^"]+)"|'([^']+)')""", sync)
+    ]
+    assert len(calls) == 12, calls
+    detach_titles = {
+        "Its branch has saved responses, so its fields can't change",
+        "Detach this field and end its branch",
+        "Move this field out of its branch",
+    }
+    for glyph, title in calls:
+        assert glyph == ("↳" if title in detach_titles else "↰"), (glyph, title)
+    template = flat.split("<template data-new-model-rf-row-template>")[1].split("</template>")[0]
+    assert re.search(r"<button[^>]*data-new-model-rf-join[^>]*>↰</button>", template)
 
 
 def test_the_active_checkbox_is_centered_on_every_row(

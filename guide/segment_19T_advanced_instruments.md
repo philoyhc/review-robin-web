@@ -1913,10 +1913,17 @@ in the same PR.
 
 ### Status
 
-**Closed 2026-09-28** in one PR, with its own `diff-reviewer` read.
-Chromium measured the condition boxes at the parent's Min width at 1500px
-and 1100px, and every checkbox centered in its cell. Browser check owed
-in `guide/post_azure_todo_checklist.md` item 6.
+**Closed 2026-09-28** in one PR (#2661). Headless Chromium, run by hand
+and not repeatable by the suite, measured the condition boxes at the
+parent's Min width at 1500px and 1100px, with every checkbox centered.
+**Read:** one `diff-reviewer` read on the item's diff. It found no high or
+medium defects and four low ones, all fixed in the PR:
+- a test now pins the glyphs the row script actually sets;
+- this Status now records the read;
+- Item 15's prose now gives the new glyph order;
+- the checklist no longer says a List's box is wider.
+
+Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 
 ## Item 13 — Conditional required: a second kind of condition
 
@@ -1955,7 +1962,8 @@ of it.
 The in-app Guide (`app/web/templates/guide.html`, "Build the form") was
 last brought up to date at 19T Item 9's rung 6. Since then:
 - **Branching (Item 10) is absent**: nothing names ⑂, the condition row,
-  ↳ / ↰, or what a reviewer sees in a closed branch.
+  ↰ / ↳ (join / detach, from Item 12A), or what a reviewer sees in a
+  closed branch.
 - **Two captures' alt text describes retired controls**:
   `instrument-card-preview` still names "the draggable field pills along
   the bottom", and `instrument-card-fields-and-visibility` "the Visibility
@@ -1997,7 +2005,7 @@ Taken 2026-09-27 at `3cec7196`:
 
 ### Definition of done
 
-- "Build the form" names ⑂, the condition, ↳ / ↰ and the governed rows'
+- "Build the form" names ⑂, the condition, ↰ / ↳ and the governed rows'
   rules in one paragraph; "For reviewers" names required and branch cells.
 - No alt text names a retired control (pills in Band 2, the Visibility
   table, ✓).
