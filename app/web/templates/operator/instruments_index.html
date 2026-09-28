@@ -4043,8 +4043,9 @@
       </script>
 
       <hr style="margin: 20px 0; border: 0; border-top: 3px solid var(--border-default);">
-      {# Band 3 — two columns, a fifth and four fifths (the author,
-         2026-09-26; one third and two thirds before): the
+      {# Band 3 — two columns, 15% and 85% (the author, 2026-09-28; a
+         fifth and four fifths from 2026-09-26, one third and two thirds
+         before): the
          display-field table (19T Item 8) on the left, the
          response-fields editor on the right. The left track's minimum
          is 0 so a long field label scrolls in its ``.table-scroll``
@@ -4052,7 +4053,7 @@
          Visibility moved to Band 2's "Who can see what you wrote"
          card (19T Item 7). #}
       <div data-new-model-band3 data-lock-region
-           style="display: grid; grid-template-columns: minmax(0, 1fr) 4fr; gap: 16px;
+           style="display: grid; grid-template-columns: minmax(0, 3fr) 17fr; gap: 16px;
                   align-items: stretch;"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
         {# 19T Item 8 — the display-field table
@@ -4139,7 +4140,15 @@
              Each row's data-row-key is ``rf_<idx>`` for a saved row, or
              a fresh ``rf_N`` from the row counter for a row "+" added. #}
           {% macro rf_condition_row(condition) %}
-                <tr data-new-model-rf-condition>
+                {% set _value_input %}
+                    <input type="text" data-new-model-rf-condition-value
+                           {% if condition.locked %}disabled{% endif %}
+                           value="{{ condition.value }}"
+                           oninput="newModelRfConditionChanged(this)"
+                           aria-label="Value the condition compares against">
+                {% endset %}
+                {% set _then %}<span data-new-model-rf-condition-then>then show the below</span>{% endset %}
+                <tr data-new-model-rf-condition{% if condition.is_list %} class="rf-condition-list"{% endif %}>
                   <td class="col-shrink rf-branch-bar"></td>
                   <td class="col-shrink"></td>
                   <td class="col-shrink"><button type="button" class="btn secondary rf-glyph"
@@ -4151,7 +4160,11 @@
                      name box's width, with "If the above" right-aligned in the
                      join column before it (the author's ruling). #}
                   <td class="col-shrink rf-condition-cell rf-condition-lead">If the above</td>
-                  <td class="rf-condition-cell rf-condition-op">
+                  {# A List's operator shrinks to its label, and its box (the
+                     List box's width) and "then show the below" follow it
+                     in the operator's cell, which takes the rest of the row;
+                     the last cell hides (19T Item 12A). #}
+                  <td class="rf-condition-cell rf-condition-op"{% if condition.is_list %} colspan="8"{% endif %}>
                     <select data-new-model-rf-condition-op
                             {% if condition.locked %}disabled{% endif %}
                             onchange="newModelRfConditionChanged(this)"
@@ -4160,13 +4173,10 @@
                         <option value="{{ _op[0] }}" data-symbol="{{ _op[2] }}"{% if _op[0] == condition.op %} selected{% endif %}>{{ _op[1] }}</option>
                       {% endfor %}
                     </select>
+                    {% if condition.is_list %}{{ _value_input | trim }}{{ _then }}{% endif %}
                   </td>
-                  <td colspan="7" class="rf-condition-cell">
-                    <input type="text" data-new-model-rf-condition-value
-                           {% if condition.locked %}disabled{% endif %}
-                           value="{{ condition.value }}"
-                           oninput="newModelRfConditionChanged(this)"
-                           aria-label="Value the condition compares against">
+                  <td colspan="7" class="rf-condition-cell"{% if condition.is_list %} hidden{% endif %}>
+                    {% if not condition.is_list %}{{ _value_input }}{% endif %}
                     {# 19T Item 12 — a range takes a second box, shown only
                        for the four range operators; the stager joins the
                        two as "low to high". #}
@@ -4178,7 +4188,7 @@
                              oninput="newModelRfConditionChanged(this)"
                              aria-label="The range's high end">
                     </span>
-                    then show the below
+                    {% if not condition.is_list %}{{ _then }}{% endif %}
                   </td>
                 </tr>
           {% endmacro %}
@@ -4477,7 +4487,7 @@
           {# 19T Item 10 — ⑂ inserts this condition row below its field; the
              row script fills the operators the parent's type allows. #}
           <template data-new-model-rf-condition-template>
-            {{ rf_condition_row({"op": "", "value": "", "high": "", "is_range": false, "ops": [], "locked": false}) }}
+            {{ rf_condition_row({"op": "", "value": "", "high": "", "is_range": false, "is_list": false, "ops": [], "locked": false}) }}
           </template>
         </div>
       </div>
@@ -4548,11 +4558,11 @@
           //   decimal → min, max, step
           //   list    → list
           //
-          // Quick-fill presets (value starts with "preset:") set
-          // data_type=list, pre-fill the list-options input from
-          // the picked option's ``data-preset-options`` attribute,
-          // then snap the select back to "list". The preset
-          // identity isn't stored — only the resulting list_options.
+          // Quick-fill presets (value starts with "preset:") snap the
+          // select back to "list", then pre-fill the list-options
+          // input from the picked option's ``data-preset-options``
+          // attribute. The preset identity isn't stored — only the
+          // resulting list_options.
           if (select.value && select.value.indexOf('preset:') === 0) {
             var picked = select.options[select.selectedIndex];
             var presetOptions = picked
@@ -4561,11 +4571,15 @@
             var listInput = select
               .closest('[data-new-model-rf-row]')
               .querySelector('[data-new-model-rf-bound="list"]');
+            // "list" before the options' input event: that event
+            // recomputes the row, and a branch parent read as not-a-List
+            // there would rebuild its condition's operators as numbers,
+            // turning "is not" into "is" (the 19T Item 12A read).
+            select.value = 'list';
             if (listInput) {
               listInput.value = presetOptions;
               listInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
-            select.value = 'list';
           }
           var dataType = select.value;
           var show = {
@@ -4596,9 +4610,9 @@
         window.newModelRfValidateShape = window.newModelRfValidateShape || function (row) {
           var sel = row.querySelector('[data-new-model-rf-data-type]');
           var dataType = (sel && sel.value) || 'string';
-          // 19T Item 9 — a Quick fill preset (``preset:…``) is only a
-          // passing value while its options are copied in; a row never
-          // commits it as a type.
+          // 19T Item 9 — a Quick fill preset (``preset:…``) is never a
+          // type: ``newModelRfSyncBounds`` snaps it to "list" before
+          // anything recomputes the row, so this is a guard only.
           if (['string', 'integer', 'decimal', 'list'].indexOf(dataType) < 0) {
             return 'Pick a data type.';
           }
@@ -4941,6 +4955,28 @@
         // for a List, the ten comparisons for a number. A type change keeps the
         // chosen operator where it still applies (ruling 3: the condition
         // stays, and turns amber if it no longer fits).
+        // 19T Item 12A — a List's operator shrinks to its label, and its
+        // box and "then show the below" follow it in the operator's cell,
+        // which takes the rest of the row while the last cell hides. A
+        // number's box and text sit in the last cell, the box at the type
+        // column's edge. The server renders the same two layouts.
+        window.newModelRfPlaceConditionValue = window.newModelRfPlaceConditionValue || function (cond, isList) {
+          var opCell = cond.querySelector('.rf-condition-op');
+          var input = cond.querySelector('[data-new-model-rf-condition-value]');
+          var then = cond.querySelector('[data-new-model-rf-condition-then]');
+          var rest = opCell && opCell.nextElementSibling;
+          if (!opCell || !input || !then || !rest) { return; }
+          cond.classList.toggle('rf-condition-list', isList);
+          opCell.colSpan = isList ? 8 : 1;
+          rest.hidden = isList;
+          if (isList && input.parentNode !== opCell) {
+            opCell.appendChild(input);
+            opCell.appendChild(then);
+          } else if (!isList && input.parentNode !== rest) {
+            rest.insertBefore(input, rest.firstChild);
+            rest.appendChild(then);
+          }
+        };
         window.newModelRfSyncConditionOps = window.newModelRfSyncConditionOps || function (group) {
           var cond = group.querySelector('[data-new-model-rf-condition]');
           var parent = group.querySelector('[data-new-model-rf-parent]');
@@ -4954,6 +4990,7 @@
           } catch (e) { ops = {}; }
           var typeSel = parent.querySelector('[data-new-model-rf-data-type]');
           var isList = !!(typeSel && typeSel.value === 'list');
+          window.newModelRfPlaceConditionValue(cond, isList);
           var want = (isList ? ops.list : ops.numeric) || [];
           if (input) {
             input.placeholder = isList ? 'Option, or several comma-separated' : 'Number';
@@ -4975,10 +5012,11 @@
         };
         // 19T Item 12A — a number's condition boxes take the width of the
         // parent's own Min box (the author's ruling), which is a third of
-        // the bounds column and so moves with the card. A List parent
-        // hides Min, and its one box keeps the stylesheet's width.
+        // the bounds column and so moves with the card; a List's box takes
+        // the parent's List box's width, measured when Min hides.
         window.newModelRfSizeCondition = window.newModelRfSizeCondition || function (parent) {
           var min = parent.querySelector('[data-new-model-rf-bound="min"]');
+          var list = parent.querySelector('[data-new-model-rf-bound="list"]');
           if (!min) { return; }
           var apply = function () {
             // Only while Min's own row is the parent: a former parent that
@@ -4989,7 +5027,10 @@
             var group = min.closest('[data-new-model-rf-group]');
             var cond = group && group.querySelector('[data-new-model-rf-condition]');
             if (!cond) { return; }
-            var width = min.getBoundingClientRect().width;
+            // A number's Min, or a List's options box (19T Item 12A):
+            // whichever the parent's type shows.
+            var width = min.getBoundingClientRect().width
+              || (list ? list.getBoundingClientRect().width : 0);
             if (width > 0) {
               cond.style.setProperty('--rf-condition-box', width + 'px');
             } else {
@@ -4999,10 +5040,12 @@
           apply();
           // The card may be hidden when this runs, and the column moves
           // with the window, so follow Min's size rather than read it once.
-          if (window.ResizeObserver && !min.rfConditionObserver) {
-            min.rfConditionObserver = new ResizeObserver(apply);
-            min.rfConditionObserver.observe(min);
-          }
+          [min, list].forEach(function (box) {
+            if (box && window.ResizeObserver && !box.rfConditionObserver) {
+              box.rfConditionObserver = new ResizeObserver(apply);
+              box.rfConditionObserver.observe(box);
+            }
+          });
         };
         // The condition row's amber marker, as a field row's: the reason
         // is its tooltip, and Save refuses the branch until it is fixed.

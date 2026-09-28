@@ -8165,11 +8165,12 @@ def test_band3_add_row_clones_the_template_not_the_first_row(
     assert "selectedIndex = 0" not in delete_fn
 
 
-def test_band3_splits_display_and_response_fields_one_to_four(
+def test_band3_splits_display_and_response_fields_15_to_85(
     client: TestClient, db: Session
 ) -> None:
-    """Band 3 gives the display-field table 1/5 and Response fields 4/5
-    (the author, 2026-09-26; 19T Item 8 made it 1/3 and 2/3, from
+    """Band 3 gives the display-field table 15% and Response fields 85%
+    (the author, 2026-09-28, 19T Item 12A; 1/5 and 4/5 from 2026-09-26;
+    19T Item 8 made it 1/3 and 2/3, from
     Visibility 2/5 and Response fields 3/5). The left
     track's minimum is 0, so a long unbroken field label scrolls inside
     its column rather than widening it (Codex on #2629)."""
@@ -8182,7 +8183,7 @@ def test_band3_splits_display_and_response_fields_one_to_four(
     card = _card_slice(body, new_model.id)
     band3 = card[card.index("<div data-new-model-band3") :]
     band3_open = band3[: band3.index(">")]
-    assert "grid-template-columns: minmax(0, 1fr) 4fr;" in band3_open
+    assert "grid-template-columns: minmax(0, 3fr) 17fr;" in band3_open
 
 
 def test_band3_row_handlers_reach_the_stager_through_its_window_handle(

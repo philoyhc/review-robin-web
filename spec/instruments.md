@@ -892,11 +892,12 @@ qualify, the trailing `... + N more` collapses the overflow.
 
 ### Response fields
 
-Band 3 splits `grid-template-columns: minmax(0, 1fr) 4fr` — a fifth
-display fields, four fifths response fields (the author, 2026-09-26;
-one third / two thirds before Item 9's table). The left track's `0`
-minimum lets a long field label scroll inside its `.table-scroll`
-rather than widening the column past its fifth. The left column holds
+Band 3 splits `grid-template-columns: minmax(0, 3fr) 17fr` — 15%
+display fields, 85% response fields (the author, 2026-09-28, 19T Item
+12A; a fifth / four fifths from 2026-09-26, one third / two thirds
+before Item 9's table). The left track's `0` minimum lets a long field
+label scroll inside its `.table-scroll` rather than widening the column
+past its share. The left column holds
 the display-field table above; the right column, below, is the
 response-field table.
 
@@ -1050,9 +1051,12 @@ List`) plus a `<optgroup>` of pre-filled List presets:
 | Agreement (Likert 5) | `list` | `Strongly agree, Agree, Neutral, Disagree, Strongly disagree` |
 | Grades | `list` | `A+, A, A-, B+, B, B-, C+, C, D+, D, F` |
 
-Picking a preset writes `data_type=list` and pre-fills the
-`list_options` input from the option's `data-preset-options`
-attribute, then snaps the select back to `List`. The preset's
+Picking a preset snaps the select back to `List` (`data_type=list`)
+and then pre-fills the `list_options` input from the option's
+`data-preset-options` attribute. The order matters for a branch
+parent: filling the options recomputes the row, and it must already
+read as a List, or a condition's "is not" is rebuilt as "is" (19T Item
+12A). The preset's
 identity is not stored — only the resulting `data_type` +
 `list_options`. The operator can edit either after picking.
 
@@ -1086,7 +1090,10 @@ centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 the below". The operator sits in the name column at the name box's width,
 with "If the above" right-aligned in the join column before it
 (`td.rf-condition-lead`, `td.rf-condition-op`, 19T Item 12A); the first
-value box starts at the type column's edge. The name column cuts long
+value box starts at the type column's edge. A List's operator shrinks to
+its label ("is not"), and its box, the List box's width, and "then show
+the below" follow it in the operator's cell, which spans the rest of the
+row (`tr.rf-condition-list`; the last cell hides). The name column cuts long
 text, so the operator's tooltip gives its full label (with its symbol,
 for a single-value operator) and a name box's gives its full name;
 neither shows while its row is amber, whose reason comes first, and a
@@ -1114,7 +1121,8 @@ select in this order (19T Item 12):
 The first six take **one box**, one number. The last four — a
 **range** — take **two boxes with "to" between them**. A number's boxes
 are as wide as the parent row's own Min box, measured by the row script
-into `--rf-condition-box` (19T Item 12A); a List's box keeps 12em. A range takes a low and a high
+into `--rf-condition-box` (19T Item 12A); a List's box is as wide as
+the parent's List box. A range takes a low and a high
 number, low strictly below high. The second box shows only while the
 selected operator is one of the four; switching away from a range hides
 the box and clears it, keeping the low box's value
