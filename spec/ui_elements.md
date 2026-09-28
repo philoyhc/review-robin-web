@@ -838,10 +838,12 @@ overflowed.
 Two things the rule has to say out loud, because a template-level check
 cannot see them:
 
-- **A table built in JavaScript needs the wrapper on its host.** The
+- **A table built in JavaScript needs the wrapper on or directly around its host.** The
   Instrument card's Band 2 preview is assembled in `rebuildPreview` and
   written into `[data-new-model-band2-preview]`; there is no
-  server-rendered `<table>` to wrap, so the container carries the class.
+  server-rendered `<table>` to wrap, so the wrapper sits directly around
+  the container (on the container until 19T Item 12A, which made the
+  container a lock region).
 - **It can hold a non-table.** The Instrument card's Band 1 wraps its
   rule columns (`.band1-grid`, a `76rem` floor) in one, the first form
   layout rather than table to use it (19T Item 12A). **A locked region

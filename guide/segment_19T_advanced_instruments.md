@@ -1921,10 +1921,11 @@ Three things read wrong in the table:
   (#2668): the lock regions are Band 3's two tables, not the band, since
   an inert `.table-scroll` can't scroll. Band 2 follows (its intro card,
   visibility editor and preview), so its locked visibility table can
-  scroll (its preview, itself a scroller, still can't), and **Band 1
-  scrolls too**, in a `.table-scroll` with a `76rem` floor that keeps its
-  selects usable; a rule's tag select shrinks so "IS DIFFERENT FROM"
-  never spills (later entries, same PR).
+  scroll. **Band 1 scrolls too**, in a `.table-scroll` with a `76rem`
+  floor that keeps its selects usable; a rule's tag select shrinks so "IS
+  DIFFERENT FROM" never spills (later entries, same PR). #2669 wraps
+  Band 2's preview in a plain `.table-scroll`, so it scrolls when locked
+  as well.
 - **Tooltips give the full text** the name column cuts (a later entry):
   the operator's label, with its symbol for a single-value operator, and
   the field's name. Neither shows while its row is amber, so the row's
@@ -1943,8 +1944,8 @@ in the same PR.
 
 ### Status
 
-**Closed 2026-09-28** in eight PRs: #2661; #2662, with two later
-entries; #2663 to #2668, with the rest. For
+**Closed 2026-09-28** in nine PRs: #2661; #2662, with two later
+entries; #2663 to #2669, with the rest. For
 #2661, headless Chromium, run by hand
 and not repeatable by the suite, measured the condition boxes at the
 parent's Min width at 1500px and 1100px, with every checkbox centered.
@@ -1993,6 +1994,10 @@ Later entries, measured by hand in Chromium:
   105px (134px beside "IS THE SAME AS"). The
   visibility table wraps rather than overflowing down to 500px, so its
   scroller is there for a wider label.
+- **#2669, Band 2's preview:** with its columns widened to 300px at a
+  1100px window (1500px of table in 969px), a shift-wheel scrolls it
+  200px on a locked card as on an unlocked one; the locked preview's
+  controls take no focus.
 
 **Reads, one per change.** None found a high defect; every low finding
 was fixed in its PR.
@@ -2047,6 +2052,13 @@ was fixed in its PR.
   a window figure (1330px, not 1300), a comment split from its rule, a
   stale comment on Band 2, the checklist's tab check, a weaker Band 2
   test, and `spec/ui_elements.md` §10's non-table hosts.
+- **#2669:** no high or medium finding. The lows were fixed there: the
+  spec's lead phrase for a script-built table, a unit test that would
+  have accepted an inert wrapper, this bullet's sentence, a loose
+  template comment, and a checklist row that didn't say a locked
+  preview's columns are dragged wider while unlocked. Codex then found
+  the unit check still accepted a `.table-scroll` on a locked host, the
+  shape #2669 removes; it now rejects one there too.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 
