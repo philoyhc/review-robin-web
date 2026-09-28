@@ -1087,9 +1087,10 @@ the below". The operator sits in the name column at the name box's width,
 with "If the above" right-aligned in the join column before it
 (`td.rf-condition-lead`, `td.rf-condition-op`, 19T Item 12A); the first
 value box starts at the type column's edge. The name column cuts long
-text, so the operator's tooltip gives its full label and symbol, and a
-name box's gives its full name; neither shows while its row is amber,
-whose reason comes first. Its own "+" adds a governed field at the top of the branch;
+text, so the operator's tooltip gives its full label (with its symbol,
+for a single-value operator) and a name box's gives its full name;
+neither shows while its row is amber, whose reason comes first, and a
+locked branch's reason follows the operator's label. Its own "+" adds a governed field at the top of the branch;
 it has no X — the branch goes with its last governed field's X ("Delete
 this field and its branch"). The operators offered follow the parent's
 type. A List parent picks from `is` / `is_not` (shown "is" / "is not"),
@@ -1147,8 +1148,8 @@ start a hint (or an extract cell, `spec/extract_data.md`) as a
 spreadsheet formula.
 
 **Join (↰) and detach (↳)** sit after ⑂, sharing its width (`.rf-glyph`),
-with room after them for one more button of that width
-(`td.rf-join-cell`, 19T Item 12A).
+with room after them for two more buttons of that width, ahead of a
+second level of branching (`td.rf-join-cell`, 19T Item 12A).
 A plain row that isn't the first, has no saved responses and isn't
 itself a parent can join the unit above: the end of an unlocked branch,
 or, on a plain Integer, Decimal or List field, a new branch with an
