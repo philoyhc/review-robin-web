@@ -56,6 +56,8 @@ class _ResponseFieldSpec:
     branch_parent: str | None = None
     branch_op: str | None = None
     branch_value: str | None = None
+    # 19T Item 13 — the parent's mode; ``show`` and blank both read null.
+    branch_mode: str | None = None
 
 
 @dataclass

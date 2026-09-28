@@ -76,11 +76,13 @@ _BAND2_RF_BOUND_KEYS: tuple[str, ...] = (
 # 19T Item 10 — the branch keys a response-field entry may carry. Each is
 # independently present: an entry that omits one keeps the stored value,
 # so a caller that knows nothing of branches can't clear one. The card's
-# stager always sends all three.
+# stager always sends the first three; 19T Item 13 adds ``branch_mode``
+# (``show`` / ``require``, stored null for Show).
 _BAND2_RF_BRANCH_KEYS: tuple[str, ...] = (
     "branch_parent",
     "branch_op",
     "branch_value",
+    "branch_mode",
 )
 
 
@@ -97,6 +99,10 @@ def _band2_branch_entry(raw: dict[str, Any]) -> dict[str, Any]:
             value = raw.get(key)
             text = str(value).strip()[:255] if value is not None else ""
             out[key] = text or None
+    # 19T Item 13 — Show is stored as null, so a branch saved before the
+    # mode existed and one saved as Show read and audit the same.
+    if out.get("branch_mode") == "show":
+        out["branch_mode"] = None
     return out
 
 
@@ -125,7 +131,8 @@ def set_band2_state(
       19T Item 10 adds ``row_key`` (the row's key on the page) and the
       branch keys: ``branch_parent`` (the parent's row key, so a branch
       can name a parent the same Save creates), ``branch_op`` and
-      ``branch_value`` (a parent's condition). An entry that omits a
+      ``branch_value`` (a parent's condition), and from 19T Item 13
+      ``branch_mode`` (``show`` / ``require``). An entry that omits a
       branch key keeps what is stored.
 
     Passing ``None`` (or a payload that reduces to empty
@@ -552,12 +559,18 @@ def _sync_response_fields_to_db(
     # 19T Item 10 — an unknown operator is refused by name before anything
     # is flushed: ``branch_op`` is ``String(8)``, which Postgres enforces and
     # SQLite doesn't (the item's cumulative read).
-    from app.services.responses import BRANCH_OPS
+    from app.services.responses import BRANCH_MODES, BRANCH_OPS
 
     shape_errors.extend(
         (rf["name"], "Choose a comparison for the branch condition.")
         for rf in sanitised_rfs
         if rf.get("branch_op") and rf["branch_op"] not in BRANCH_OPS
+    )
+    # 19T Item 13 — and an unknown mode, for the same reason.
+    shape_errors.extend(
+        (rf["name"], BRANCH_MODE_UNKNOWN_MESSAGE)
+        for rf in sanitised_rfs
+        if rf.get("branch_mode") and rf["branch_mode"] not in BRANCH_MODES
     )
     if shape_errors:
         raise InvalidResponseFieldShapeError(shape_errors)
@@ -572,8 +585,8 @@ def _sync_response_fields_to_db(
     new_fields: list[InstrumentResponseField] = []
     # 19T Item 10 — the branches as stored, which the rules compare the
     # save against, and each entry's field, keyed by its row key.
-    old_branch: dict[int, tuple[int | None, str | None, str | None]] = {
-        f.id: (f.branch_parent_id, f.branch_op, f.branch_value)
+    old_branch: dict[int, tuple[int | None, str | None, str | None, str | None]] = {
+        f.id: (f.branch_parent_id, f.branch_op, f.branch_value, f.branch_mode)
         for f in instrument.response_fields
     }
     entry_by_row_key = {
@@ -663,6 +676,8 @@ def _sync_response_fields_to_db(
             field.branch_op = rf["branch_op"]
         if "branch_value" in rf:
             field.branch_value = rf["branch_value"]
+        if "branch_mode" in rf:
+            field.branch_mode = rf["branch_mode"]
 
         # Inline type + bounds. Sanitised JSON uses lowercase
         # ``string`` / ``integer`` / ``decimal`` / ``list``; the
@@ -785,7 +800,14 @@ BRANCH_CONDITION_LOCKED_MESSAGE = (
 ANSWERED_FIELD_CANT_JOIN_MESSAGE = (
     "It has saved responses, so it can't move into a branch."
 )
-_BRANCH_ATTRS: tuple[str, ...] = ("branch_parent_id", "branch_op", "branch_value")
+_BRANCH_ATTRS: tuple[str, ...] = (
+    "branch_parent_id",
+    "branch_op",
+    "branch_value",
+    "branch_mode",
+)
+# 19T Item 13.
+BRANCH_MODE_UNKNOWN_MESSAGE = "Choose what the branch condition does."
 
 
 def _apply_branch_rules(
@@ -795,7 +817,7 @@ def _apply_branch_rules(
     existing_by_id: dict[int, InstrumentResponseField],
     new_fields: list[InstrumentResponseField],
     to_delete: set[int],
-    old_branch: dict[int, tuple[int | None, str | None, str | None]],
+    old_branch: dict[int, tuple[int | None, str | None, str | None, str | None]],
     actor: User,
 ) -> None:
     """19T Item 10 — hold a Band 3 save to the branching rules, comparing
@@ -804,7 +826,8 @@ def _apply_branch_rules(
 
     Branches are deleted bottom-up: a parent can't go while it still
     governs a field. Once any field in a branch has responses, the
-    branch's membership and condition lock; a field with responses can't
+    branch's membership, condition and mode lock (the mode from 19T Item
+    13: Require → Show would strand answers on a now-closed branch); a field with responses can't
     move into a branch either, since its answers could then sit in a
     closed one. A parent whose last governed field goes loses its
     condition, since a branch is its condition plus at least one field.
@@ -857,12 +880,12 @@ def _apply_branch_rules(
             for i in sorted(changed, key=lambda i: all_by_id[i].order)
         )
         parent = kept_by_id.get(parent_id)
-        if parent is not None and (parent.branch_op, parent.branch_value) != (
-            old_branch[parent_id][1:]
-        ):
+        if parent is not None and (
+            parent.branch_op, parent.branch_value, parent.branch_mode
+        ) != old_branch[parent_id][1:]:
             errors.append((parent.label, BRANCH_CONDITION_LOCKED_MESSAGE))
     for field in kept:
-        old_parent = old_branch.get(field.id, (None, None, None))[0]
+        old_parent = old_branch.get(field.id, (None, None, None, None))[0]
         if (
             field.branch_parent_id is not None
             and field.branch_parent_id != old_parent
@@ -876,11 +899,17 @@ def _apply_branch_rules(
         if parent is not None and not new_governed.get(parent_id):
             parent.branch_op = None
             parent.branch_value = None
+            parent.branch_mode = None
+    # 19T Item 13 — a mode belongs to a condition: a field that governs
+    # nothing and has no condition keeps none.
+    for field in kept:
+        if field.id not in new_governed and not field.branch_op:
+            field.branch_mode = None
     errors = branch_structure_errors(kept)
     if errors:
         raise InvalidResponseFieldShapeError(errors)
     for field in kept:
-        old = old_branch.get(field.id, (None, None, None))
+        old = old_branch.get(field.id, (None, None, None, None))
         new = tuple(getattr(field, attr) for attr in _BRANCH_ATTRS)
         changes = {
             attr: [before, after]

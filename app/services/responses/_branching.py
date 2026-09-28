@@ -435,7 +435,11 @@ def branch_structure_errors(
             and field.visible
         )
     for field in field_list:
-        has_condition = bool(field.branch_op or field.branch_value)
+        # A mode (19T Item 13) belongs to a condition, so a lone one is an
+        # orphan too.
+        has_condition = bool(
+            field.branch_op or field.branch_value or getattr(field, "branch_mode", None)
+        )
         if field.id in governed_by_parent:
             msg = condition_error(
                 field._inline_data_type,

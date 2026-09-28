@@ -1103,8 +1103,8 @@ centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 12A).
 
 **The condition row** reads "If the above [operator] [value] then
-[mode]", the mode a select of **Show the below** and **Make the below
-required (else, optional)** (19T Item 13; until its rule lands, Show is
+[mode]", the mode a select of **Show the below** and **Require the below
+(else, optional)** (19T Item 13; until its rule lands, Show is
 the only choice and nothing saves the select). The operator sits in the name column at the name box's width,
 with "If the above" right-aligned in the join column before it
 (`td.rf-condition-lead`, `td.rf-condition-op`, 19T Item 12A); the first
@@ -1211,9 +1211,14 @@ field ends the branch, as X does.
   branch ("Delete its branch first"); the last governed row's X deletes
   that row and the condition together.
 - **The governed-answers lock.** Once any governed field has responses,
-  the condition and the branch's membership lock — every governed row's
-  X and ↳, the "+"s inside the branch, ↰ on the row below it, and the
-  condition's controls. Answers on
+  the condition, its mode (19T Item 13: Require → Show would strand
+  answers on a now-closed branch) and the branch's membership lock —
+  every governed row's X and ↳, the "+"s inside the branch, ↰ on the row
+  below it, and the condition's controls. Save refuses a changed mode
+  with the condition's message, and audits a mode change as
+  `instrument.field_updated`, like the condition's (`branch_mode` in its
+  `changes`); Show is stored null, and a branch that ends loses its
+  mode with its condition. Answers on
   the parent alone lock nothing about the branch; the parent's own type
   and bounds lock as they do today (`has_responses`).
 - **Active cascades both ways.** Unticking a parent's Active writes
