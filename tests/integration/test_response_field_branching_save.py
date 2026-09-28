@@ -126,7 +126,7 @@ def test_a_save_creates_a_branch_by_row_key(
 def test_a_saved_field_can_join_a_branch_and_leave_it(
     client: TestClient, db: Session
 ) -> None:
-    """Rung 7b's ↳ and ↰ are membership changes to fields that already
+    """Rung 7b's ↰ and ↳ are membership changes to fields that already
     exist; with no responses, Save takes both."""
     review_session, instrument = _new_model_with_tags(client, db, code="19t10-join2")
     keyed = [{**rf, "row_key": f"rf_{i}"} for i, rf in enumerate(_rfs(instrument))]

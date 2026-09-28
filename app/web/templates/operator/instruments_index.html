@@ -4125,7 +4125,7 @@
           {# 19T Item 9 — the rows are a table (`rf-table`, base.html),
              one <tbody> per field so a branch can later join its parent's
              group under one rule (guide/advanced_instruments.md Item 1).
-             Each row reads Active, +, ⑂, join (↳ / ↰, 19T Item 10),
+             Each row reads Active, +, ⑂, join (↰ / ↳, 19T Item 10),
              name, type, bounds, R, ≡, ▲, ▼, X. The Active checkbox is
              the field's selection; ▲ ▼ move the row's <tbody>. A row
              commits its name and shape to the preview whenever they are
@@ -4229,7 +4229,7 @@
                    data-response-count="{{ rf.response_count or 0 }}"
                    {% if rf.has_responses %}data-has-responses="true" data-new-model-rf-shape-locked="true"{% endif %}>
                 {% if _governed %}<td class="col-shrink rf-branch-bar"></td>{% endif %}
-                <td class="col-shrink{% if rf.is_parent %} rf-branch-bar-start{% endif %}"><input type="checkbox" data-new-model-rf-active
+                <td class="col-shrink rf-active-cell{% if rf.is_parent %} rf-branch-bar-start{% endif %}"><input type="checkbox" data-new-model-rf-active
                          {% if rf.selected %}checked{% endif %}
                          aria-label="Show {{ rf.name }}"
                          title="Show this field in the preview and to reviewers"
@@ -4249,8 +4249,8 @@
                         onclick="newModelRfFork(this)"
                         title="{% if rf.is_parent %}This field has a branch{% elif rf.data_type == 'string' %}A String field can't have a branch{% else %}Add a branch below this field{% endif %}">⑂</button></td>
                 {% endif %}
-                {# 19T Item 10 rung 7b — join the unit above (↳), or, on a
-                   governed row, detach from the branch (↰). The row script
+                {# 19T Item 10 rung 7b — join the unit above (↰), or, on a
+                   governed row, detach from the branch (↳). The row script
                    computes its state; a governed row's sits under ⑂'s
                    neighbour, the one-column shift. #}
                 <td class="col-shrink" data-new-model-rf-join-cell>
@@ -4258,7 +4258,7 @@
                         data-new-model-rf-join
                         onclick="newModelRfJoin(this)"
                         {% if _governed %}{% if rf.branch_locked %}disabled{% endif %}{% elif _outer.first or rf.is_parent or rf.has_responses %}disabled{% endif %}
-                        title="{% if _governed %}{% if rf.branch_locked %}Its branch has saved responses, so its fields can't change{% elif _group.rows | length == 2 %}Detach this field and end its branch{% else %}Move this field out of its branch{% endif %}{% else %}Join the field above{% endif %}">{% if _governed %}↰{% else %}↳{% endif %}</button></td>
+                        title="{% if _governed %}{% if rf.branch_locked %}Its branch has saved responses, so its fields can't change{% elif _group.rows | length == 2 %}Detach this field and end its branch{% else %}Move this field out of its branch{% endif %}{% else %}Join the field above{% endif %}">{% if _governed %}↳{% else %}↰{% endif %}</button></td>
                 <td class="rf-name">
                 <input type="text"
                        data-new-model-rf-name
@@ -4370,7 +4370,7 @@
           <template data-new-model-rf-row-template>
             <tbody data-new-model-rf-group>
               <tr data-new-model-rf-row data-selected="true">
-              <td class="col-shrink"><input type="checkbox" data-new-model-rf-active checked
+              <td class="col-shrink rf-active-cell"><input type="checkbox" data-new-model-rf-active checked
                          aria-label="Show this field"
                          title="Show this field in the preview and to reviewers"
                          onchange="newModelRfToggleActive(this)"></td>
@@ -4390,7 +4390,7 @@
                         data-new-model-rf-join
                         disabled
                         onclick="newModelRfJoin(this)"
-                        title="Join the field above">↳</button></td>
+                        title="Join the field above">↰</button></td>
                 <td class="rf-name">
               <input type="text"
                      data-new-model-rf-name
@@ -4968,6 +4968,37 @@
           sel.value = keep ? current : (want.length ? want[0][0] : '');
           window.newModelRfSyncConditionRange(cond);
         };
+        // 19T Item 12A — a number's condition boxes take the width of the
+        // parent's own Min box (the author's ruling), which is a third of
+        // the bounds column and so moves with the card. A List parent
+        // hides Min, and its one box keeps the stylesheet's width.
+        window.newModelRfSizeCondition = window.newModelRfSizeCondition || function (parent) {
+          var min = parent.querySelector('[data-new-model-rf-bound="min"]');
+          if (!min) { return; }
+          var apply = function () {
+            // Only while Min's own row is the parent: a former parent that
+            // joins another branch must not size that branch's condition
+            // (Codex on #2661).
+            var row = min.closest('[data-new-model-rf-row]');
+            if (!row || !row.hasAttribute('data-new-model-rf-parent')) { return; }
+            var group = min.closest('[data-new-model-rf-group]');
+            var cond = group && group.querySelector('[data-new-model-rf-condition]');
+            if (!cond) { return; }
+            var width = min.getBoundingClientRect().width;
+            if (width > 0) {
+              cond.style.setProperty('--rf-condition-box', width + 'px');
+            } else {
+              cond.style.removeProperty('--rf-condition-box');
+            }
+          };
+          apply();
+          // The card may be hidden when this runs, and the column moves
+          // with the window, so follow Min's size rather than read it once.
+          if (window.ResizeObserver && !min.rfConditionObserver) {
+            min.rfConditionObserver = new ResizeObserver(apply);
+            min.rfConditionObserver.observe(min);
+          }
+        };
         // The condition row's amber marker, as a field row's: the reason
         // is its tooltip, and Save refuses the branch until it is fixed.
         // A locked branch's condition can't change.
@@ -4982,6 +5013,7 @@
           var add = cond.querySelector('[data-new-model-rf-condition-add]');
           [sel, input, high, add].forEach(function (c) { if (c) { c.disabled = locked; } });
           window.newModelRfSyncConditionRange(cond);
+          window.newModelRfSizeCondition(parent);
           if (add) {
             add.setAttribute('title', locked
               ? 'Its branch has saved responses, so no field can join it'
@@ -5148,7 +5180,7 @@
           group.removeAttribute('data-new-model-rf-branch');
           group.removeAttribute('data-new-model-rf-branch-locked');
         };
-        // The join button (↳) on a plain row, or detach (↰) on a governed
+        // The join button (↰) on a plain row, or detach (↳) on a governed
         // row: its glyph, title and whether it applies (ruling 10). A
         // plain row joins the unit above it: the end of that branch, or a
         // new branch on a plain number or List field.
@@ -5163,39 +5195,39 @@
           }
           if (row.hasAttribute('data-new-model-rf-governed')) {
             if (group.getAttribute('data-new-model-rf-branch-locked') === 'true') {
-              set('↰', "Its branch has saved responses, so its fields can't change", true);
+              set('↳', "Its branch has saved responses, so its fields can't change", true);
             } else if (group.querySelectorAll('[data-new-model-rf-governed]').length === 1) {
-              set('↰', 'Detach this field and end its branch', false);
+              set('↳', 'Detach this field and end its branch', false);
             } else {
-              set('↰', 'Move this field out of its branch', false);
+              set('↳', 'Move this field out of its branch', false);
             }
             return;
           }
           var above = window.newModelRfGroupSibling(group, true);
           var aboveRow = above && above.querySelector('[data-new-model-rf-row]');
           if (!aboveRow) {
-            set('↳', "The first field can't join a branch", true);
+            set('↰', "The first field can't join a branch", true);
           } else if (row.hasAttribute('data-new-model-rf-parent')) {
-            set('↳', "A field with a branch can't join another", true);
+            set('↰', "A field with a branch can't join another", true);
           } else if (row.getAttribute('data-has-responses') === 'true') {
-            set('↳', "It has saved responses, so it can't move into a branch", true);
+            set('↰', "It has saved responses, so it can't move into a branch", true);
           } else if (!window.newModelRfSaveName(row)) {
-            set('↳', 'Enter a field name first.', true);
+            set('↰', 'Enter a field name first.', true);
           } else if (above.hasAttribute('data-new-model-rf-branch')) {
             if (above.getAttribute('data-new-model-rf-branch-locked') === 'true') {
-              set('↳', 'Its branch has saved responses, so no field can join it', true);
+              set('↰', 'Its branch has saved responses, so no field can join it', true);
             } else {
-              set('↳', 'Join the branch above', false);
+              set('↰', 'Join the branch above', false);
             }
           } else {
             var typeSel = aboveRow.querySelector('[data-new-model-rf-data-type]');
             var aboveType = typeSel ? typeSel.value : 'string';
             if (!window.newModelRfSaveName(aboveRow)) {
-              set('↳', 'Name the field above first.', true);
+              set('↰', 'Name the field above first.', true);
             } else if (['integer', 'decimal', 'list'].indexOf(aboveType) < 0) {
-              set('↳', "The field above is String, so it can't have a branch", true);
+              set('↰', "The field above is String, so it can't have a branch", true);
             } else {
-              set('↳', 'Start a branch on the field above with this field', false);
+              set('↰', 'Start a branch on the field above with this field', false);
             }
           }
         };
@@ -5220,7 +5252,7 @@
             joinCell.parentNode.insertBefore(fork.cloneNode(true), joinCell);
           }
         };
-        // ↳ / ↰: join the unit above, or detach from the branch.
+        // ↰ / ↳: join the unit above, or detach from the branch.
         window.newModelRfJoin = window.newModelRfJoin || function (btn) {
           var row = btn.closest('[data-new-model-rf-row]');
           var group = row && row.closest('[data-new-model-rf-group]');
