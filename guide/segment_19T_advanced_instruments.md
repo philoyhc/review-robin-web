@@ -2069,13 +2069,16 @@ Taken 2026-09-28 at `256d30aa`.
 1. **Scaffold.** The condition row reads "then" and a dropdown with
    both options, Show selected. The dropdown is inert: nothing reads or
    saves it. No `app/services/`, no migration.
-2. **Storage.** Migration, model, the card's save (`_band2`), the lock
-   and its audit, the settings CSV, clone and `replicate_instrument`.
-   Nothing reads `require` yet, so the surface still shows.
-3. **The rule.** `applicable_field_ids`, `required_field_ids`,
-   `drop_closed_branch_answers`, the authoring rule, the surface's server
-   render and its script, the counts and the extract. Tested with the
-   mode set in the database.
+2. **Storage.** Migration, model, and clone and `replicate_instrument`
+   carrying the column. **No write path accepts the mode yet**: the
+   card's save and the settings CSV ignore it, so nothing outside a test
+   can store `require` before the rule reads it (Codex on #2671).
+3. **The rule, then the writes.** `applicable_field_ids`,
+   `required_field_ids`, `drop_closed_branch_answers`, the authoring
+   rule, the surface's server render and its script, the counts and the
+   extract, tested with the mode set in the database. Then the card's
+   save (`_band2`), with the lock and its audit, and the settings CSV
+   accept `branch_mode`.
 4. **The builder wired.** The dropdown writes the mode and Save persists
    it; the preview's required marks follow it. Last build rung: the
    item's cumulative `diff-reviewer` read.
@@ -2084,7 +2087,7 @@ Taken 2026-09-28 at `256d30aa`.
 ### Definition of done
 
 - A require-mode branch round-trips through Save, the settings CSV,
-  clone and `replicate_instrument` (tests in rungs 2 and 4).
+  clone and `replicate_instrument` (tests in rungs 2 to 4).
 - On the surface a require-mode governed cell is enabled with the
   condition closed, and required, counted and gated by submit while it
   holds (rung 3 tests).
