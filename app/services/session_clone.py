@@ -193,8 +193,8 @@ def clone_session(
             )
         # 19T Item 10 — a governed field's parent is re-pointed at the
         # parent's clone once every field of the instrument has one; the
-        # condition (``branch_op`` / ``branch_value``) rides the generic
-        # copy.
+        # condition (``branch_op`` / ``branch_value``, and from 19T Item 13
+        # ``branch_mode``) rides the generic copy.
         governed: list[tuple[InstrumentResponseField, int]] = []
         for field in instrument.response_fields:
             # iii-b4: response_type_id FK dropped; just clone every

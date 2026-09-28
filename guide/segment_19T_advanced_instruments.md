@@ -2116,6 +2116,12 @@ Taken 2026-09-28 at `256d30aa`.
   and nothing else names it. Base SHA for the item's cumulative read:
   `76d37d27`. Headless Chromium at 1500px: the select is 323px and
   inside the table on a number and a List row, 4px after "then".
+- **Rung 2 (storage):** migration `c4e9a1d27b58` adds a nullable
+  `branch_mode` (`String(8)`); clone and `replicate_instrument` carry it.
+  The card's save ignores a mode and the settings CSV refuses one (an
+  unknown response-field attribute), so nothing stores `require` yet.
+  Codex on #2672: two checklist rows still quoted "then show the below";
+  fixed here. `spec/roundtrip_coverage.md` joins Doc impact.
 
 ### Open questions
 
@@ -2138,6 +2144,7 @@ Taken 2026-09-28 at `256d30aa`.
 - `spec/csv_contracts.md` — the `branch_mode` column on the parent (Item 13).
 - `spec/extract_data.md` — "Required when" beside "Shown when" (Item 13).
 - `spec/settings_inventory.md` — `branch_mode` (Item 13).
+- `spec/roundtrip_coverage.md` — `branch_mode`: clone and Replicate carry it, and the Settings CSV once rung 3 lands (Item 13).
 - `docs/status.md` — row when the item closes (Item 13).
 
 ## Item 14 — Two levels of branching

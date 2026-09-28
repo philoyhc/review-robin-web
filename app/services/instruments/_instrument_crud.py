@@ -364,6 +364,7 @@ def replicate_instrument(
             _inline_list_csv=field._inline_list_csv,
             branch_op=field.branch_op,
             branch_value=field.branch_value,
+            branch_mode=field.branch_mode,
         )
         db.add(copy)
         copy_of[field.id] = copy
