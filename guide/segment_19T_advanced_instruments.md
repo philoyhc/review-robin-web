@@ -1915,7 +1915,7 @@ Three things read wrong in the table:
   spans the rest of the row (later entries, #2665).
 - **The response-field table scrolls sideways on a narrow card**, like
   the display fields: its track gets a `0` minimum and the table a
-  `50rem` floor, so its boxes no longer shrink to nothing (a later entry,
+  `66rem` floor, so its boxes no longer shrink to nothing (a later entry,
   #2666). It also stops the operator select collapsing, though its widest
   labels are still cut below about 1500px. A locked card's Band 3 is
   inert and can't scroll, so there the track grows to the table as
@@ -1967,10 +1967,13 @@ Later entries, measured by hand in Chromium:
   List box's 272px, right beside it, and switching back to a number
   restores the two-cell layout.
 - **The scrolling response fields:** the split holds 15 : 85 at 800px
-  (it fell to 68px : 600px, the page overflowing at 600px). The table
-  keeps 800px and scrolls, 551px shown at an 800px window; the operator
-  select is 145px at 900px (was 26px). The page's own tab strips still
-  overflow at 600px, outside this item.
+  (it fell to 68px : 600px, the page overflowing at 600px). #2666's
+  `50rem` floor still let Min shrink to 18px at a 1000px window before
+  the table scrolled, and the author saw no scroller there; a later PR
+  raised it to `66rem` (the table's width at 1500px). Below about 1400px
+  the table now holds 1056px, the name box 203px and Min 70px, and
+  scrolls. The page's own tab strips still overflow at 600px, outside
+  this item.
 
 **Reads, one per change.** None found a high defect; every low finding
 was fixed in its PR.
