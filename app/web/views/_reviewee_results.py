@@ -66,6 +66,7 @@ from app.db.models import (
 from app.services import instruments as instruments_service
 from app.web.views._instruments import instrument_heading
 from app.services import relationships as relationships_service
+from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import visibility_policies
 from app.web.views._reviewer_summary import (
@@ -627,11 +628,14 @@ def build_reviewee_results_context(
             )
             for df in instrument_display_fields
         ]
+        may_be_required = responses_service.may_be_required_field_ids(fields)
         field_cols = [
             SummaryFieldCol(
                 field_key=f.field_key,
                 label=f.label,
-                required=bool(f.required),
+                # 19T Item 13 — the "*" is "may be required", which a
+                # require-mode parent grants its governed fields.
+                required=f.id in may_be_required,
                 width_px=widths_by_col_key.get(f"rf_{f.id}"),
                 is_narrow=(
                     not is_group

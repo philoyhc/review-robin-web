@@ -103,8 +103,8 @@ def _invitations_by_reviewer(
 
 
 def _required_governed_instrument_ids():
-    """The ids of the instruments with a required governed field, as a
-    subquery (19T Item 11).
+    """The ids of the instruments with a required governed field, or a
+    require-mode branch (19T Item 13), as a subquery (19T Item 11).
 
     Such a field is required only while its branch is open for an
     assignment, and the branch is judged on the parent's answer, which
@@ -117,8 +117,17 @@ def _required_governed_instrument_ids():
     slower, never wrong, since the Python half applies the same filters
     as its SQL twin."""
     return select(InstrumentResponseField.instrument_id).where(
-        InstrumentResponseField.required.is_(True),
-        InstrumentResponseField.branch_parent_id.is_not(None),
+        or_(
+            and_(
+                InstrumentResponseField.required.is_(True),
+                InstrumentResponseField.branch_parent_id.is_not(None),
+            ),
+            # 19T Item 13 — a require-mode parent makes its governed fields
+            # required while its condition holds, whatever their stored
+            # ``required`` (Codex on #2671).
+            InstrumentResponseField.branch_mode
+            == responses_service.BRANCH_MODE_REQUIRE,
+        )
     )
 
 

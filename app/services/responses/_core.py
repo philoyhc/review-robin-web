@@ -21,7 +21,10 @@ from app.schemas.responses import ResponseUpsert
 from app.services import audit
 from app.services.text import pluralize
 from app.services.responses._branch_rule import drop_closed_branch_answers
-from app.services.responses._branching import required_field_ids
+from app.services.responses._branching import (
+    may_be_required_field_ids,
+    required_field_ids,
+)
 from app.services.responses._group_reconciliation import (
     _expand_group_upserts,
     _group_instrument_ids,
@@ -247,7 +250,9 @@ def _compute_missing_required(
                 continue
             seen_groups.add(marker)
         fields = fields_by_instrument.get(assignment.instrument_id, [])
-        if not any(f.required for f in fields):
+        # 19T Item 13 — a field under a require-mode parent may be required
+        # whatever its own ``required`` says.
+        if not may_be_required_field_ids(fields):
             continue
         rows = list(
             db.execute(

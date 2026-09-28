@@ -464,11 +464,14 @@ def build_reviewer_summary_context(
             )
             for df in instrument_display_fields
         ]
+        may_be_required = responses_service.may_be_required_field_ids(fields)
         field_cols = [
             SummaryFieldCol(
                 field_key=f.field_key,
                 label=f.label,
-                required=bool(f.required),
+                # 19T Item 13 — the "*" is "may be required", which a
+                # require-mode parent grants its governed fields.
+                required=f.id in may_be_required,
                 width_px=widths_by_col_key.get(f"rf_{f.id}"),
                 is_narrow=(
                     not is_group

@@ -204,10 +204,18 @@ def _meta_block(
         yield ("Helptext", field.help_text or "")
         # 19T Item 10 — a governed field states the condition that shows it;
         # while the branch is closed its cells export blank, as a skipped
-        # field's do. A field outside any branch adds no row.
+        # field's do. A field outside any branch adds no row. Under a
+        # require-mode parent (19T Item 13) the condition makes the field
+        # required rather than shown, and its cells are never closed.
         parent = by_id.get(field.branch_parent_id)
         if parent is not None:
-            yield ("Shown when", responses_service.condition_label(parent))
+            label = (
+                "Required when"
+                if responses_service.branch_mode(parent)
+                == responses_service.BRANCH_MODE_REQUIRE
+                else "Shown when"
+            )
+            yield (label, responses_service.condition_label(parent))
     yield ("Number of assignments", str(_count_assignments(db, instrument)))
     pools = _decode_pools(db, instrument, review_session)
     yield ("Pool of reviewers", pools["reviewers"])

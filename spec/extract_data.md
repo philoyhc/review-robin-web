@@ -254,7 +254,8 @@ greys the `Zip all` button (`aria-disabled="true"` +
    Description / Data Type rows), per-response-field
    metadata sub-block (Response field / Data Type / Min /
    Max / Step / List / Helptext / **Shown when**), assignment count, pool /
-   unit-of-review / self-review configuration. **Shown when** appears
+   unit-of-review / self-review configuration. **Shown when** (or
+   **Required when**, under a require-mode parent, 19T Item 13) appears
    only for a field governed by a branch
    (`guide/advanced_instruments.md` Item 1), stating its parent's
    condition in the same words the reviewer surface hints a closed cell

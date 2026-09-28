@@ -231,7 +231,9 @@ def constraint_summary_for_field(field: InstrumentResponseField) -> str:
     return ""
 
 
-def numeric_column_ch_width(field: InstrumentResponseField) -> int | None:
+def numeric_column_ch_width(
+    field: InstrumentResponseField, *, required: bool | None = None
+) -> int | None:
     """A ``ch``-unit width for a numeric response column.
 
     Keeps a small-range numeric input (e.g. a 1-5 Rating) from
@@ -261,7 +263,10 @@ def numeric_column_ch_width(field: InstrumentResponseField) -> int | None:
     # mark, and the sort button; the input must fit the widest
     # value. The constants pad for cell padding / the sort glyph
     # and want a visual tune.
-    header_ch = len(field.label) + (2 if field.required else 0) + 4
+    # ``required`` is the caller's "may be required" (19T Item 13: a field
+    # under a require-mode parent carries a "*" whatever its own flag).
+    marked = field.required if required is None else required
+    header_ch = len(field.label) + (2 if marked else 0) + 4
     input_ch = digit_span + 3
     return max(header_ch, input_ch)
 

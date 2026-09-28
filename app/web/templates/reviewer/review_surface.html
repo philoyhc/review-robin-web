@@ -368,11 +368,11 @@
                 {# Pin a numeric column on a fixed-layout group table
                    to a width keyed to its header + the field's digit span, so
                    a 1-5 Rating box doesn't sprawl. #}
-                {% set col_width = numeric_column_ch_width(cell.field) if group.is_group else none %}
+                {% set col_width = numeric_column_ch_width(cell.field, required=cell.may_be_required) if group.is_group else none %}
                 <th scope="col" class="{{ col_class }}"
                     {% if col_width %}style="width: {{ col_width }}ch"{% endif %}
                     data-sort-key="response:{{ cell.field.id }}"
-                    data-sort-type="{{ cell.field.data_type }}">{{ cell.field.label }}{% if cell.field.required %} *{% endif %}<button type="button" class="rrw-sort-btn"
+                    data-sort-type="{{ cell.field.data_type }}">{{ cell.field.label }}{% if cell.may_be_required %} *{% endif %}<button type="button" class="rrw-sort-btn"
                     aria-label="Sort by {{ cell.field.label }}"
                     onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge" aria-hidden="true">↕</span></button></th>
               {% endfor %}
@@ -436,8 +436,8 @@
                   {% if not cell.branch_open %}{% set cell_classes = cell_classes + ["rs-branch-closed"] %}{% endif %}
                   <td{% if cell_classes %} class="{{ cell_classes | join(' ') }}"{% endif %}
                       data-sort-value="{{ cell.value or '' }}"
-                      {% if cell.field.branch_op and row.accepting %}data-rs-branch-parent="{{ cell.field.field_key }}" data-rs-branch-op="{{ cell.field.branch_op }}" data-rs-branch-value="{{ cell.field.branch_value or '' }}"{% endif %}
-                      {% if cell.governed_by and row.accepting %}data-rs-governed-by="{{ cell.governed_by }}"{% if cell.field.required %} data-rs-required="true"{% endif %}{% endif %}
+                      {% if cell.field.branch_op and row.accepting %}data-rs-branch-parent="{{ cell.field.field_key }}" data-rs-branch-op="{{ cell.field.branch_op }}" data-rs-branch-value="{{ cell.field.branch_value or '' }}"{% if cell.field.branch_mode == "require" %} data-rs-branch-mode="require"{% endif %}{% endif %}
+                      {% if cell.governed_by and row.accepting %}data-rs-governed-by="{{ cell.governed_by }}"{% if cell.may_be_required %} data-rs-required="true"{% endif %}{% endif %}
                       {% if cell.branch_hint %}title="{{ cell.branch_hint }}"{% endif %}>
                     {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}
                     {% set disabled_attr = "" if row.accepting and cell.branch_open else "disabled" %}
@@ -660,7 +660,10 @@
        non-numeric answer closes a numeric branch; "is" matches any of
        the listed options and "is not" none of them; a range (19T Item
        12) opens within or outside "low to high". The server re-judges on Save and deletes a
-       closed branch's answer, so this only keeps the page honest. #}
+       closed branch's answer, so this only keeps the page honest. Under
+       a require-mode parent (19T Item 13) the governed cells stay
+       answerable and the condition decides only whether they are
+       required. #}
     <script>
       (function () {
         function isOpen(op, value, raw) {
@@ -713,15 +716,18 @@
           );
           var row = parentCell.closest("tr");
           if (!row) { return; }
+          var requireMode = parentCell.dataset.rsBranchMode === "require";
           row.querySelectorAll(
             '[data-rs-governed-by="' + parentCell.dataset.rsBranchParent + '"]'
           ).forEach(function (cell) {
-            cell.classList.toggle("rs-branch-closed", !open);
+            cell.classList.toggle("rs-branch-closed", !open && !requireMode);
             // 19T Item 11 — a required governed cell is required only
-            // while its branch is open, as ``required_field_ids`` judges.
+            // while its branch is open, as ``required_field_ids`` judges;
+            // under Require (19T Item 13) every governed cell is, and
+            // stays answerable either way.
             var requiredNow = open && cell.dataset.rsRequired === "true";
             cell.querySelectorAll("input, select, textarea").forEach(function (c) {
-              c.disabled = !open;
+              c.disabled = !open && !requireMode;
               var label = (c.getAttribute("aria-label") || "").replace(/ \(required\)$/, "");
               if (label) {
                 c.setAttribute("aria-label", requiredNow ? label + " (required)" : label);
