@@ -842,6 +842,11 @@ cannot see them:
   Instrument card's Band 2 preview is assembled in `rebuildPreview` and
   written into `[data-new-model-band2-preview]`; there is no
   server-rendered `<table>` to wrap, so the container carries the class.
+- **It can hold a non-table.** The Instrument card's Band 1 wraps its
+  rule columns (`.band1-grid`, a `76rem` floor) in one, the first form
+  layout rather than table to use it (19T Item 12A). **A locked region
+  goes inside the wrapper, never on it**: an inert `.table-scroll`
+  doesn't scroll.
 - **`.shaper-preview-table` goes without**, and is the one exception.
   It is flattened to `display: block; width: 100%` with its cells as
   wrapping flex children, and its own `.shaper-preview-scroll` sets

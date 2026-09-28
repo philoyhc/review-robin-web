@@ -1921,9 +1921,10 @@ Three things read wrong in the table:
   (#2668): the lock regions are Band 3's two tables, not the band, since
   an inert `.table-scroll` can't scroll. Band 2 follows (its intro card,
   visibility editor and preview), so its locked visibility table can
-  scroll, and **Band 1 scrolls too**, in a `.table-scroll` with a `76rem`
-  floor, where the middle column's "IS THE SAME AS" first fits (later
-  entries, same PR).
+  scroll (its preview, itself a scroller, still can't), and **Band 1
+  scrolls too**, in a `.table-scroll` with a `76rem` floor that keeps its
+  selects usable; a rule's tag select shrinks so "IS DIFFERENT FROM"
+  never spills (later entries, same PR).
 - **Tooltips give the full text** the name column cuts (a later entry):
   the operator's label, with its symbol for a single-value operator, and
   the field's name. Neither shows while its row is amber, so the row's
@@ -1985,8 +1986,11 @@ Later entries, measured by hand in Chromium:
   table scrolls it (200px and 83px), as on an unlocked card, and its
   inputs take no focus. Band 1 spilled from about 1210px of band (at a
   1100px window its button overran its divider by 18px; at 500px the page
-  overflowed by 144px). With the floor it scrolls from a 1300px window
-  down, locked or not, and the page no longer overflows at 500px. The
+  overflowed by 144px); "IS DIFFERENT FROM" needed 1386px, more than the
+  page's 1364px, so it spilled at every width. With the floor it scrolls
+  from about a 1330px window down, locked or not, the page no longer
+  overflows at 500px, and "IS DIFFERENT FROM" fits with its select at
+  105px (134px beside "IS THE SAME AS"). The
   visibility table wraps rather than overflowing down to 500px, so its
   scroller is there for a wider label.
 
@@ -2036,7 +2040,13 @@ was fixed in its PR.
   checklist row asks for a tab through a locked card. The read also
   found Band 2's locked-only Visibility table inside an inert region, so
   it couldn't scroll either; the author had it fixed in the same PR, and
-  Band 1 given a scroller. READ2_PENDING
+  Band 1 given a scroller. Its read found no high defect. Its two mediums
+  were fixed there: the spec claimed Band 2's preview scrolls when locked
+  (it still doesn't), and "IS DIFFERENT FROM" still spilled at the floor,
+  and at every width, so the select beside it now shrinks. The lows were
+  a window figure (1330px, not 1300), a comment split from its rule, a
+  stale comment on Band 2, the checklist's tab check, a weaker Band 2
+  test, and `spec/ui_elements.md` §10's non-table hosts.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 

@@ -497,10 +497,12 @@ this instrument. Three columns
 of equal width with a 1px vertical rule between them. Each column ("Link")
 is a self-contained sub-builder. The card title is bold (matching the
 other card names); the three Link labels below are unbold. The columns
-(`.band1-grid`) keep a `76rem` floor, where the middle column's "IS THE
-SAME AS" first fits, and scroll in a `.table-scroll` below it rather
-than spilling past their dividers, locked or not: the grid is the lock
-region, never its scroller (19T Item 12A).
+(`.band1-grid`) keep a `76rem` floor, which holds the rules' selects at
+a usable width, and scroll in a `.table-scroll` below it rather than
+spilling past their dividers, locked or not: the grid is the lock
+region, never its scroller. A rule's tag select shrinks from half its
+row to make room for a wider operator, so "IS DIFFERENT FROM" never
+spills either (19T Item 12A).
 
 | Column | Link (operator label) | Vocabulary |
 |---|---|---|
@@ -909,8 +911,10 @@ inside its `.table-scroll` on a narrow card rather than widening its
 column past its share; the response-field table keeps a `66rem` floor so
 its boxes stay usable while it scrolls (19T Item 12A). A locked card
 scrolls too: its lock regions are the two tables, not the band, since an
-inert `.table-scroll` couldn't scroll (a later 12A entry; Bands 1 and 2
-follow the same rule). The left column holds
+inert `.table-scroll` couldn't scroll (a later 12A entry). Band 1 and
+Band 2's visibility table follow the same rule; Band 2's preview, itself
+the `.table-scroll` its script fills, stays inert and unscrollable while
+locked. The left column holds
 the display-field table above; the right column, below, is the
 response-field table.
 

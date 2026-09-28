@@ -320,11 +320,16 @@ def test_a_locked_card_scrolls_band_2s_visibility_table(
             assert ('inert aria-hidden="true"' in tag) is locked, (marker, locked)
         table = _open_tag(band2, 'class="table-scroll" data-lock-only')
         assert "inert" not in table and "data-lock-region" not in table
-        # The visibility card holds no control outside its editor.
+        # Band 2 holds no control outside its three lock regions (the
+        # item's read). Each region is cut out up to the next sibling
+        # after it: the vp card's heading, then its editor's close.
+        outside = band2[: band2.index('<div class="card rs-instrument-card" data-intro-edit-block')]
         vp = band2[band2.index("data-new-model-band2-vp-preview-card") :]
-        vp = vp[: vp.index("data-new-model-vp-editor")]
-        assert re.search(r"<(input|button|select|textarea|a)\b", vp) is None
-        assert "role=\"button\"" not in vp and "tabindex" not in vp
+        outside += vp[: vp.index("data-new-model-vp-editor")]
+        after_editor = vp[vp.index("</table>", vp.index("data-new-model-vp-editor")) :]
+        outside += after_editor[: after_editor.index("data-new-model-band2-preview")]
+        for control in (r"<(input|button|select|textarea|a)\b", r'role="button"', r"tabindex"):
+            assert re.search(control, outside) is None, control
 
 
 def test_band_1_scrolls_rather_than_spilling(
@@ -349,3 +354,7 @@ def test_band_1_scrolls_rather_than_spilling(
         assert ('inert aria-hidden="true"' in tag) is locked
         before = card[: card.index('class="band1-grid"')]
         assert before.endswith('<div class="table-scroll"> <div data-lock-region ')
+        # A rule's tag select gives way to a wider operator ("IS DIFFERENT
+        # FROM" spilled at every width) rather than holding half its row.
+        selects = re.findall(r'<select style="([^"]*)" form="dfsave-\d+" name="link\d_field"', card)
+        assert selects and all(s.startswith("flex: 0 1 50%;") for s in selects)

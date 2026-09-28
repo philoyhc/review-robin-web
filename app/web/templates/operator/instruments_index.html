@@ -994,7 +994,10 @@
                     </div>
                   {% endif %}
                   <div style="display: flex; align-items: center; gap: 4px;">
-                    <select style="flex: 0 0 50%; min-width: 0; padding: 4px;"
+                    {# Shrinks (19T Item 12A) so a wider operator, "IS
+                       DIFFERENT FROM", takes room from it rather than
+                       spill past the column's divider. #}
+                    <select style="flex: 0 1 50%; min-width: 0; padding: 4px;"
                             form="dfsave-{{ instrument_id }}" name="{{ link_id }}_field">
                       {% for key, label in tag_options %}
                         <option value="{{ key }}" {% if key == _r.field %}selected{% endif %}>{{ label }}</option>
@@ -1763,14 +1766,15 @@
           {% endfor %}
         </div>
         {# Gate column drag-resize and the help boxes behind the
-           per-instrument Edit state — same pattern as Bands 1 + 3.
-           ``inert`` blocks every interaction below (clicks, focus,
-           native HTML5 drag); the opacity fade gives the visual
-           cue that the band is view-only until Edit is engaged. #}
-        {# 19T Item 12A — Band 2's lock regions are the intro card, the
-           visibility editor and the preview, not the band, so the locked
-           "Who can see what you wrote" table, which holds no control,
-           keeps a .table-scroll that scrolls (an inert one can't). #}
+           per-instrument Edit state. ``inert`` on each lock region blocks
+           every interaction inside it (clicks, focus, native HTML5 drag);
+           the opacity fade gives the visual cue that it is view-only
+           until Edit is engaged. 19T Item 12A — the lock regions are the
+           intro card, the visibility editor and the preview, not the
+           band, so the locked "Who can see what you wrote" table, which
+           holds no control, keeps a .table-scroll that scrolls (an inert
+           one can't). The preview is its own .table-scroll, so it stays
+           unscrollable while locked. #}
         <div data-new-model-band2-editable>
           {# Replicate the reviewer-surface per-instrument intro
              card — short_label / description + completion-progress
