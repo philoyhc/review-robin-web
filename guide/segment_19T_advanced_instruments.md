@@ -2034,6 +2034,9 @@ that is either closed (Show) or always optional (ungoverned).
 - **Changing the mode** joins the condition in the governed-answers lock
   in `_apply_branch_rules`, and is audited like it: Require → Show would
   strand answers on branches that are now closed.
+- **R under Require:** the governed rows' own `required` flag is kept
+  but ignored while the branch is Require, so switching back to Show
+  restores what each R said. The builder greys R on those rows.
 - **Authoring:** a require-mode branch counts as a required governed
   field for Item 11's rule (an active required ungoverned field must
   exist), since an unanswered parent leaves it optional.
@@ -2097,14 +2100,11 @@ Taken 2026-09-28 at `256d30aa`.
 
 ### Open questions
 
-1. **What does a governed row's R mean under Require?** Recommended: the
-   condition decides for every governed field; their R is fixed and
-   greyed, titled "Required while the condition holds". Alternative: R
-   picks which governed fields the condition makes required, the others
-   staying optional. The author decides.
-2. **Does the surface say why a field became required?** Recommended:
-   no, the required mark appearing is enough, as Item 11's closed
-   branches say nothing. The author decides.
+1. ~~A governed row's R under Require~~ — the condition decides for every
+   governed field; their R is greyed, titled "Required while the
+   condition holds" (the author, 2026-09-28, taking the recommendation).
+2. ~~Does the surface say why a field became required?~~ — no; the
+   required mark appearing is enough (the author, 2026-09-28).
 
 ### Out of scope
 
