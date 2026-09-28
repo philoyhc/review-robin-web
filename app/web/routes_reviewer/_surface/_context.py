@@ -316,6 +316,9 @@ def _surface_context(
         # template: a second kind of condition (Item 13) leaves a cell
         # enabled while it isn't required.
         required_now_ids = responses_service.required_field_ids(fields, values)
+        # 19T Item 13 — what a "*" marks: a field under a require-mode
+        # parent may be required whatever its own ``required``.
+        may_be_required_ids = responses_service.may_be_required_field_ids(fields)
         field_by_id = {f.id: f for f in fields}
         cells = []
         for field in fields:
@@ -332,9 +335,19 @@ def _surface_context(
                     "governed_by": parent.field_key if parent else "",
                     "branch_open": field.id in open_ids,
                     "required_now": field.id in required_now_ids,
+                    "may_be_required": field.id in may_be_required_ids,
+                    "require_mode": (
+                        parent is not None
+                        and responses_service.branch_mode(parent)
+                        == responses_service.BRANCH_MODE_REQUIRE
+                    ),
+                    # A require-mode cell never closes, and the page says
+                    # nothing of why it is required (the author, 2026-09-28).
                     "branch_hint": (
                         "Opens when " + views.branch_condition_label(parent)
                         if parent
+                        and responses_service.branch_mode(parent)
+                        != responses_service.BRANCH_MODE_REQUIRE
                         else ""
                     ),
                 }
@@ -651,7 +664,9 @@ def _surface_context(
         "errors": errors or [],
         "show_incomplete_marks": show_incomplete_marks,
         "any_required": any(
-            any(f.required for f in fields_by_instrument.get(a.instrument_id, []))
+            responses_service.may_be_required_field_ids(
+                fields_by_instrument.get(a.instrument_id, [])
+            )
             for a in assignments
         ),
         "any_accepting": any_accepting,

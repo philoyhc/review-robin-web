@@ -67,6 +67,14 @@ LIST_OP_CHOICES: tuple[tuple[str, str, str], ...] = tuple(
 
 BRANCH_OPS: frozenset[str] = frozenset({*NUMERIC_OPS, *LIST_OPS, *RANGE_OPS})
 
+# 19T Item 13 — what a parent's condition does to its governed fields:
+# ``show`` them (Item 10's kind: closed means unanswerable), or ``require``
+# them (always answerable; required exactly while the condition holds).
+# Stored on the parent as ``branch_mode``; null reads ``show``.
+BRANCH_MODE_SHOW = "show"
+BRANCH_MODE_REQUIRE = "require"
+BRANCH_MODES: frozenset[str] = frozenset({BRANCH_MODE_SHOW, BRANCH_MODE_REQUIRE})
+
 # 19T Item 11, the author's ruling on pre-positioning 4.
 REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE = (
     "A field inside a branch can be required only when the instrument has "
@@ -90,6 +98,16 @@ class BranchField(Protocol):
     branch_value: str | None
     _inline_data_type: str | None
     _inline_list_csv: str | None
+    # ``branch_mode`` (19T Item 13) is read through :func:`branch_mode`,
+    # which treats an object without it as Show.
+
+
+def branch_mode(parent: BranchField | None) -> str:
+    """A parent's mode, ``show`` or ``require`` (19T Item 13). Anything but
+    ``require`` reads Show, so a null column and an object without one
+    keep Item 10's meaning."""
+    mode = getattr(parent, "branch_mode", None)
+    return BRANCH_MODE_REQUIRE if mode == BRANCH_MODE_REQUIRE else BRANCH_MODE_SHOW
 
 
 def _list_items(text: str | None) -> list[str]:
@@ -275,7 +293,9 @@ def applicable_field_ids(
     """The ids of the fields an assignment can answer, given its answers.
 
     A field outside any branch always applies; a governed field applies
-    while its parent applies *and* the parent's branch is open. The walk
+    while its parent applies *and* the parent's branch is open. Under a
+    require-mode parent (19T Item 13) the condition decides only whether
+    the field is required, so the field applies whenever its parent does. The walk
     goes up the whole chain, so a field under a closed ancestor is closed
     even while a stale answer below it still meets its own condition.
     Branches are one level deep today (19T Item 14 lifts that), where
@@ -301,7 +321,10 @@ def applicable_field_ids(
                 parent is not None
                 and parent.id not in seen
                 and applies(parent, seen | {field.id})
-                and branch_is_open(parent, answer_by_field_id.get(parent_id))
+                and (
+                    branch_mode(parent) == BRANCH_MODE_REQUIRE
+                    or branch_is_open(parent, answer_by_field_id.get(parent_id))
+                )
             )
         memo[field.id] = result
         return result
@@ -320,10 +343,42 @@ def required_field_ids(
     (19T Item 11). Every required count goes through this one function
     rather than testing ``required`` and applicability itself, so a second
     kind of condition (Item 13), which makes a field required rather than
-    shown, changes only this (Item 11's pre-positioning 1)."""
+    shown, changes only this (Item 11's pre-positioning 1).
+
+    Under a require-mode parent (Item 13) a governed field's own
+    ``required`` is ignored: it is required exactly while it applies and
+    its parent's condition holds, an unanswered parent holding nothing."""
     field_list = list(fields)
+    by_id = {field.id: field for field in field_list}
     applicable = applicable_field_ids(field_list, answer_by_field_id)
-    return {f.id for f in field_list if f.required and f.id in applicable}
+    required: set[int] = set()
+    for field in field_list:
+        if field.id not in applicable:
+            continue
+        parent = by_id.get(field.branch_parent_id)
+        if parent is not None and branch_mode(parent) == BRANCH_MODE_REQUIRE:
+            if branch_is_open(parent, answer_by_field_id.get(parent.id)):
+                required.add(field.id)
+        elif field.required:
+            required.add(field.id)
+    return required
+
+
+def may_be_required_field_ids(fields: Iterable[BranchField]) -> set[int]:
+    """The ids of the fields some assignment could be required to answer:
+    what a "*" marks and what "has a required field" asks (19T Item 13).
+    A field under a require-mode parent may be, whatever its own
+    ``required`` says; any other field may be when it is ``required``."""
+    field_list = list(fields)
+    by_id = {field.id: field for field in field_list}
+    out: set[int] = set()
+    for field in field_list:
+        parent = by_id.get(field.branch_parent_id)
+        if parent is not None and branch_mode(parent) == BRANCH_MODE_REQUIRE:
+            out.add(field.id)
+        elif field.required:
+            out.add(field.id)
+    return out
 
 
 def branch_structure_errors(
@@ -347,7 +402,9 @@ def branch_structure_errors(
     ungoverned field is answered at every submit, so a submit always
     leaves a row. It holds at any depth and for any kind of condition,
     and only a visible governed field needs it, since a hidden one counts
-    nowhere on the reviewer side."""
+    nowhere on the reviewer side. A field under a require-mode parent (19T
+    Item 13) counts as a required governed field whatever its own
+    ``required``, since an unanswered parent leaves it optional."""
     field_list = list(fields)
     by_id = {field.id: field for field in field_list}
     governed_by_parent: dict[int, list[BranchField]] = {}
@@ -369,10 +426,13 @@ def branch_structure_errors(
         f.required and f.visible and f.branch_parent_id is None for f in field_list
     )
     if not has_anchor:
+        may_be_required = may_be_required_field_ids(field_list)
         errors.extend(
             (field.label, REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE)
             for field in field_list
-            if field.branch_parent_id is not None and field.required and field.visible
+            if field.branch_parent_id is not None
+            and field.id in may_be_required
+            and field.visible
         )
     for field in field_list:
         has_condition = bool(field.branch_op or field.branch_value)

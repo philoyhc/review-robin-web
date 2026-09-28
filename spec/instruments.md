@@ -1197,7 +1197,11 @@ field ends the branch, as X does.
   (`REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE`,
   `app/services/responses/_branching.py`) — an active required
   ungoverned field is answered at every submit, so a submit always
-  leaves a response row for the reviewer rollups to count. A hidden
+  leaves a response row for the reviewer rollups to count. Under a
+  require-mode parent (`branch_mode = require`, 19T Item 13) every
+  governed field counts as required governed for this rule, and each is
+  answerable whatever the parent's answer and required exactly while the
+  condition holds, its own R ignored (kept, so Show restores it). A hidden
   governed field needs no anchor, since a hidden field counts nowhere
   on the reviewer side.
 - **String is disabled** in a parent's type select. Other type changes

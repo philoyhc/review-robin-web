@@ -316,7 +316,8 @@ scroll, and cost a button label to do it.
 per-reviewee instruments** (19R Item 3), rather than by loading a
 reviewer's assignments and tallying them. A reviewer's work on
 **group-scoped instruments, and any instrument with a required governed
-field** (19T Item 11 — see "What these pages cost to render" below), is
+field or a require-mode branch** (19T Items 11 and 13 — see "What these
+pages cost to render" below), is
 still tallied in Python and added to that — both columns can be the sum
 of the two halves. Neither figure nor the pill state they carry changed
 with the group-scoped split: the rewrite moved where the arithmetic
@@ -627,8 +628,10 @@ these replaced issued few queries and built every `Assignment` and
 at a 1,000 × 1,000 roster (`guide/app_responsiveness.md`).
 
 `per_reviewer_progress` keeps one Python path, for **group-scoped
-instruments and any instrument with a required governed field**
-("route (a)", 19T Item 11): a group counts once per group, and the key
+instruments and any instrument with a required governed field or a
+require-mode branch** ("route (a)", 19T Items 11 and 13; a require-mode
+parent's governed fields are required while its condition holds,
+whatever their stored `required`): a group counts once per group, and the key
 is Python's `strip()` over reviewee tags or an active `Relationship`,
 which SQL's `TRIM` does not reproduce; an instrument with a required
 governed field is routed here because the condition it must be judged

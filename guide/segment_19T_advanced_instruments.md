@@ -2122,6 +2122,21 @@ Taken 2026-09-28 at `256d30aa`.
   unknown response-field attribute), so nothing stores `require` yet.
   Codex on #2672: two checklist rows still quoted "then show the below";
   fixed here. `spec/roundtrip_coverage.md` joins Doc impact.
+- **Rung 3 splits in two** (2026-09-28): 3a the rule, 3b the writes, the
+  plan's own order, so each is one review. **3a:** `applicable_field_ids`
+  and `required_field_ids` read the mode, and a new
+  `may_be_required_field_ids` answers "*" and "has a required field" (the
+  submit gate's shortcut, the surface's `any_required`, the summary and
+  results headers). The save rule, the import filter and the surface's
+  cells follow from applicability; the surface's script keeps a
+  require-mode cell enabled and toggles only "(required)", with no
+  title (the author's ruling). The rollups route a require-mode
+  instrument to Python; the authoring rule counts its governed fields;
+  the extract reads "Required when"; the entity stats count a
+  require-mode answer as required only where the condition held (scope
+  found at build). Chromium drove the script: Comments stays enabled and
+  gains and loses "(required)" as Rating crosses 4.
+  `spec/operations_pages.md` joins Doc impact.
 
 ### Open questions
 
@@ -2143,6 +2158,7 @@ Taken 2026-09-28 at `256d30aa`.
 - `spec/reviewer-surface.md` — a require-mode governed cell: always enabled, its required mark following the condition (Item 13).
 - `spec/csv_contracts.md` — the `branch_mode` column on the parent (Item 13).
 - `spec/extract_data.md` — "Required when" beside "Shown when" (Item 13).
+- `spec/operations_pages.md` — route (a) takes an instrument with a require-mode branch (Item 13).
 - `spec/settings_inventory.md` — `branch_mode` (Item 13).
 - `spec/roundtrip_coverage.md` — `branch_mode`: clone and Replicate carry it, and the Settings CSV once rung 3 lands (Item 13).
 - `docs/status.md` — row when the item closes (Item 13).

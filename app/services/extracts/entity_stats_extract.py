@@ -178,6 +178,44 @@ def build_entity_stats(
         .execution_options(yield_per=1000)
     )
 
+    # 19T Item 13 — a field under a require-mode parent is required where
+    # its parent's answer meets the condition, whatever its own
+    # ``required``: so its answer counts as a required one only there.
+    require_parents = {
+        f.id: f
+        for f in db.execute(
+            select(InstrumentResponseField)
+            .join(Instrument, InstrumentResponseField.instrument_id == Instrument.id)
+            .where(
+                Instrument.session_id == review_session.id,
+                InstrumentResponseField.branch_mode
+                == responses_service.BRANCH_MODE_REQUIRE,
+            )
+        ).scalars()
+    }
+    require_parent_by_field: dict[int, InstrumentResponseField] = {}
+    parent_answer: dict[tuple[int, int], str | None] = {}
+    if require_parents:
+        for governed_id, parent_id in db.execute(
+            select(
+                InstrumentResponseField.id, InstrumentResponseField.branch_parent_id
+            ).where(InstrumentResponseField.branch_parent_id.in_(require_parents))
+        ).all():
+            require_parent_by_field[governed_id] = require_parents[parent_id]
+        parent_answer = {
+            (assignment_id, field_id): value
+            for assignment_id, field_id, value in db.execute(
+                select(
+                    Response.assignment_id, Response.response_field_id, Response.value
+                )
+                .join(Assignment, Response.assignment_id == Assignment.id)
+                .where(
+                    Assignment.session_id == review_session.id,
+                    Response.response_field_id.in_(require_parents),
+                )
+            ).all()
+        }
+
     for (
         reviewer_id,
         reviewee_id,
@@ -189,6 +227,11 @@ def build_entity_stats(
         value,
         submitted_at,
     ) in db.execute(stmt):
+        parent = require_parent_by_field.get(field_id)
+        if parent is not None:
+            required = responses_service.branch_is_open(
+                parent, parent_answer.get((assignment_id, parent.id))
+            )
         if not value:
             # ``None`` (field cleared) or empty string — the reviewer
             # left no content, so it is not a "field with a response".

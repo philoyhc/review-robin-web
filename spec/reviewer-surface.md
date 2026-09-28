@@ -604,6 +604,18 @@ counts the ends as outside** — `out_inc` opens at the ends themselves,
 `out_exc` does not. It only keeps the page honest — the server
 re-judges on Save / Submit regardless.
 
+**Under a require-mode parent** (`branch_mode = require`, 19T Item 13)
+the governed cells never close: every one is answerable whatever the
+parent's answer, and is **required exactly while the condition holds**
+(`required_field_ids`), its own `required` ignored — an unanswered
+parent holds nothing. The parent cell carries
+`data-rs-branch-mode="require"`, and the script then toggles only the
+"(required)" in each governed control's label, never `disabled` or
+`td.rs-branch-closed`. The cell has **no title**: the page doesn't say
+why a field became required (the author, 2026-09-28). Its header takes
+the `*` whatever its own `required` (`may_be_required_field_ids`), and
+the save rule never removes its answer, since nothing there is closed.
+
 **The save rule**, "a closed branch holds no value"
 (`app/services/responses/_branch_rule.py`), runs after every write of
 `Response` rows — Save, Submit, the group fan-out, and the responses
