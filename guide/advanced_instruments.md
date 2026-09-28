@@ -711,6 +711,10 @@ save-rule and script cost, plus a condition editor that picks fields.
 
 ### Q3 — Ranges on a numeric condition
 
+*(Superseded 2026-09-28 by 19T Item 12's plan: four range operators,
+inclusive and exclusive, stored as `low to high`. The costing below
+stands.)*
+
 Two operators, both inclusive:
 - **`between`** — the "above this and below that" asked;
 - **`outside`** — its complement, which is what "high or low" means.
