@@ -13,16 +13,21 @@
        are always rendered; this layer swaps the Lock / Unlock /
        Save / Cancel cluster on the lock state and gives the
        editable regions a read-only look while locked. The `inert`
-       attribute on the band wrappers (Band 3's tables) is what
-       actually blocks interaction (set server-side from is_editing,
-       toggled by
-       newModelSetLock); the opacity here is only the visual cue.
+       attribute on the band wrappers (in Bands 2 and 3, the pieces
+       holding controls, so a table's scroller stays scrollable) is
+       what actually blocks interaction (set server-side from
+       is_editing, toggled by newModelSetLock); the opacity here is
+       only the visual cue.
        PR 1 is scaffold-only — persistence endpoints are untouched;
        the Lock / Unlock anchors keep their ?editing hrefs as the
        no-JS fallback. */
     [data-instrument-card][data-instrument-locked="true"] [data-unlock-only] { display: none !important; }
     [data-instrument-card][data-instrument-locked="false"] [data-lock-only] { display: none !important; }
     [data-instrument-card][data-instrument-locked="true"] [data-lock-region] { opacity: 0.75; }
+    /* The locked "Who can see what you wrote" card sits outside Band 2's
+       lock regions so its table can scroll; it fades with the intro card
+       beside it (19T Item 12A). */
+    [data-instrument-card][data-instrument-locked="true"] [data-new-model-band2-vp-preview-card] { opacity: 0.75; }
     /* The Band 2 preview help-card ✎/✓ edit affordances are built by
        JS (renderHelpCard, keyed by data-help-card-key) so they can't
        carry a Jinja data-unlock-only marker. `inert` on the lock
@@ -1082,8 +1087,12 @@
          below stay unbold, so the bold title vs unbold labels gives the
          visual hierarchy. #}
       <h3 style="margin: 0 0 12px 0;">Instrument assignment rule</h3>
-      <div data-lock-region
-           style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0;"
+      {# `.table-scroll` (base.html): Band 1's three columns keep a floor
+         (`.band1-grid`) and scroll here on a narrow card rather than
+         spilling past their dividers (19T Item 12A). The grid, not the
+         scroller, is the lock region, so a locked card scrolls too. #}
+      <div class="table-scroll">
+      <div data-lock-region class="band1-grid"
            {% if not is_editing %}inert aria-hidden="true"{% endif %}>
         <div style="padding: 0 16px 0 0; display: flex; flex-direction: column;">
           {{ new_model_rule_list("link1", instrument.id, _band1_state.link1,
@@ -1251,6 +1260,7 @@
             </div>
           </div>
         </div>
+      </div>
       </div>
       <script>
         {# Shared helpers for the rule-list cells. Defined on
@@ -1757,8 +1767,11 @@
            ``inert`` blocks every interaction below (clicks, focus,
            native HTML5 drag); the opacity fade gives the visual
            cue that the band is view-only until Edit is engaged. #}
-        <div data-new-model-band2-editable data-lock-region
-             {% if not is_editing %}inert aria-hidden="true"{% endif %}>
+        {# 19T Item 12A — Band 2's lock regions are the intro card, the
+           visibility editor and the preview, not the band, so the locked
+           "Who can see what you wrote" table, which holds no control,
+           keeps a .table-scroll that scrolls (an inert one can't). #}
+        <div data-new-model-band2-editable>
           {# Replicate the reviewer-surface per-instrument intro
              card — short_label / description + completion-progress
              pills — so the operator can preview the chrome the
@@ -1840,7 +1853,8 @@
                data-session-id="{{ session.id }}"
                style="margin-top: 16px;">
             <div class="card rs-instrument-card"
-                 data-intro-edit-block
+                 data-intro-edit-block data-lock-region
+                 {% if not is_editing %}inert aria-hidden="true"{% endif %}
                  style="position: relative;">
               {# Intro-card heading mirrors the reviewer-surface
                  ``views.instrument_heading`` contract:
@@ -1934,9 +1948,10 @@
                    here only, below a divider (``row-group-start``,
                    base.html). The cycle also repaints the locked table's
                    cell above, since Save doesn't reload. #}
-                <div class="table-scroll" data-unlock-only
+                <div class="table-scroll" data-unlock-only data-lock-region
                      data-new-model-vp-editor data-new-model-vp-form
-                     data-new-model-instrument-id="{{ instrument.id }}">
+                     data-new-model-instrument-id="{{ instrument.id }}"
+                     {% if not is_editing %}inert aria-hidden="true"{% endif %}>
                   {# Hidden inputs — the chip JS writes to these on every
                      cycle. They hitch a ride on the instrument card's
                      main Save form (``dfsave-<id>``) so the operator's
@@ -2038,7 +2053,8 @@
              with a ``table-layout: fixed`` table carrying operator-set
              column widths, so the wrapper goes on the container — there
              is no server-rendered <table> here to wrap. #}
-          <div data-new-model-band2-preview class="table-scroll"
+          <div data-new-model-band2-preview class="table-scroll" data-lock-region
+               {% if not is_editing %}inert aria-hidden="true"{% endif %}
                style="margin-top: 16px;">
             <div class="rs-progress-row">
               <p class="rs-instrument-progress"

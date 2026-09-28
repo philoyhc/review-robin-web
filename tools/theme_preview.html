@@ -2921,6 +2921,16 @@
          its .table-scroll rather than widening its column, locked or
          not: a locked card makes the tables inert, never their
          .table-scroll wrappers, which would then not scroll. */
+      /* Band 1: the rule's three columns, in a .table-scroll. Below the
+         76rem floor they would spill (the middle column's "IS THE SAME
+         AS" button first, which fits from about 1210px), so the band
+         scrolls instead, from about a 1350px window down (19T Item 12A). */
+      body.ui-v2 .band1-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 0;
+        min-width: 76rem;
+      }
       body.ui-v2 .band3-grid {
         display: grid;
         grid-template-columns: minmax(0, 3fr) minmax(0, 17fr);

@@ -496,7 +496,11 @@ Operations-row Assignments page; **Band 1** internally, and the `band1` /
 this instrument. Three columns
 of equal width with a 1px vertical rule between them. Each column ("Link")
 is a self-contained sub-builder. The card title is bold (matching the
-other card names); the three Link labels below are unbold.
+other card names); the three Link labels below are unbold. The columns
+(`.band1-grid`) keep a `76rem` floor, where the middle column's "IS THE
+SAME AS" first fits, and scroll in a `.table-scroll` below it rather
+than spilling past their dividers, locked or not: the grid is the lock
+region, never its scroller (19T Item 12A).
 
 | Column | Link (operator label) | Vocabulary |
 |---|---|---|
@@ -821,6 +825,11 @@ them. A cycle also repaints the locked table's matching pill
 (`data-new-model-vp-preview-cell`) — the live repaint 19T Item 3 entry 3
 added, kept because Save is a fetch and never reloads.
 
+Locked, the card is not inside a lock region: Band 2's are the intro
+card, this card's editor and the preview, so the locked table, which
+holds no control, keeps a `.table-scroll` that scrolls. The card fades
+with the intro card beside it (19T Item 12A).
+
 #### Display-field table
 
 Band 3's left column (`data-new-model-band3-left`) is a headerless,
@@ -900,7 +909,8 @@ inside its `.table-scroll` on a narrow card rather than widening its
 column past its share; the response-field table keeps a `66rem` floor so
 its boxes stay usable while it scrolls (19T Item 12A). A locked card
 scrolls too: its lock regions are the two tables, not the band, since an
-inert `.table-scroll` couldn't scroll (a later 12A entry). The left column holds
+inert `.table-scroll` couldn't scroll (a later 12A entry; Bands 1 and 2
+follow the same rule). The left column holds
 the display-field table above; the right column, below, is the
 response-field table.
 

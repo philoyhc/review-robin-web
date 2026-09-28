@@ -1919,7 +1919,11 @@ Three things read wrong in the table:
   shrink to nothing (later entries). It also stops the operator select collapsing, though its widest
   labels are still cut below about 1500px. A locked card scrolls too
   (#2668): the lock regions are Band 3's two tables, not the band, since
-  an inert `.table-scroll` can't scroll.
+  an inert `.table-scroll` can't scroll. Band 2 follows (its intro card,
+  visibility editor and preview), so its locked visibility table can
+  scroll, and **Band 1 scrolls too**, in a `.table-scroll` with a `76rem`
+  floor, where the middle column's "IS THE SAME AS" first fits (later
+  entries, same PR).
 - **Tooltips give the full text** the name column cuts (a later entry):
   the operator's label, with its symbol for a single-value operator, and
   the field's name. Neither shows while its row is amber, so the row's
@@ -1932,7 +1936,7 @@ Three things read wrong in the table:
 The suffix keeps this list out of Item 12's check; each line is honored
 in the same PR.
 
-- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column, the first value box at the type column's edge, the tooltips, the List condition's layout, Band 3's split and the scrolling table (Item 12A).
+- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column, the first value box at the type column's edge, the tooltips, the List condition's layout, Band 3's split, the scrolling tables and Band 1's scroller (Item 12A).
 - `spec/ui_elements.md` — `rf-table`: the glyphs, `td.rf-active-cell`, `td.rf-join-cell`, `td.rf-condition-lead` and `td.rf-condition-op` (Item 12A).
 - `docs/status.md` — row when the item closes (Item 12A).
 
@@ -1979,7 +1983,12 @@ Later entries, measured by hand in Chromium:
   this item.
 - **#2668, a locked card:** at an 800px window a shift-wheel over either
   table scrolls it (200px and 83px), as on an unlocked card, and its
-  inputs take no focus.
+  inputs take no focus. Band 1 spilled from about 1210px of band (at a
+  1100px window its button overran its divider by 18px; at 500px the page
+  overflowed by 144px). With the floor it scrolls from a 1300px window
+  down, locked or not, and the page no longer overflows at 500px. The
+  visibility table wraps rather than overflowing down to 500px, so its
+  scroller is there for a wider label.
 
 **Reads, one per change.** None found a high defect; every low finding
 was fixed in its PR.
@@ -2026,7 +2035,8 @@ was fixed in its PR.
   now pins that Band 3 holds no control outside its two tables, and the
   checklist row asks for a tab through a locked card. The read also
   found Band 2's locked-only Visibility table inside an inert region, so
-  it can't scroll either; outside this item.
+  it couldn't scroll either; the author had it fixed in the same PR, and
+  Band 1 given a scroller. READ2_PENDING
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 
