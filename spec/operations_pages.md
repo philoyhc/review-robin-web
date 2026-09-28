@@ -611,13 +611,14 @@ per reviewee (`monitoring.per_reviewee_coverage`) **and** calls
 `monitoring.summary_counts` for one number, `incomplete_count`, which
 runs the reviewer-side pass a second time.
 
-**For a per-reviewee instrument with no required governed field,
-neither rollup reads response rows at all** (19R Item 3) — both count
+**For a per-reviewee instrument with no required governed field or
+require-mode branch, neither rollup reads response rows at all** (19R Item 3) — both count
 in SQL and return one row per person, and `per_reviewee_coverage` is
 that and nothing else in that case. The paragraph after this one is the
 exception: `per_reviewer_progress` still reads the response rows of
 *group-scoped* assignments and any instrument with a **required
-governed field** (19T Item 11), and loads those assignments themselves;
+governed field or a require-mode branch** (19T Items 11 and 13), and
+loads those assignments themselves;
 `per_reviewee_coverage` gains the same second path for the latter
 (`_python_routed_coverage`). What the aggregate path may not do is
 materialize a row per assignment — its count is a `func.count`, not a

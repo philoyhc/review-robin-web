@@ -2136,7 +2136,10 @@ Taken 2026-09-28 at `256d30aa`.
   require-mode answer as required only where the condition held (scope
   found at build). Chromium drove the script: Comments stays enabled and
   gains and loses "(required)" as Rating crosses 4.
-  `spec/operations_pages.md` joins Doc impact.
+  `spec/operations_pages.md` joins Doc impact; the rung's `spec-writer`
+  pass found its other route (a) paragraph stale (fixed there) and
+  `spec/rrw_functional_spec.md` §5.7 describing Show alone, which joins
+  Doc impact for when the builder can author Require (rung 4).
 
 ### Open questions
 
@@ -2159,6 +2162,7 @@ Taken 2026-09-28 at `256d30aa`.
 - `spec/csv_contracts.md` — the `branch_mode` column on the parent (Item 13).
 - `spec/extract_data.md` — "Required when" beside "Shown when" (Item 13).
 - `spec/operations_pages.md` — route (a) takes an instrument with a require-mode branch (Item 13).
+- `spec/rrw_functional_spec.md` — §5.7's branch: the condition shows the governed fields, or makes them required (Item 13).
 - `spec/settings_inventory.md` — `branch_mode` (Item 13).
 - `spec/roundtrip_coverage.md` — `branch_mode`: clone and Replicate carry it, and the Settings CSV once rung 3 lands (Item 13).
 - `docs/status.md` — row when the item closes (Item 13).
