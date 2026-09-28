@@ -131,9 +131,11 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    so deleting an instrument's fields in any order passes a Postgres FK
    check — the service, not the database, refuses deleting a parent
    with a branch. `branch_op` is a `String(8)` token (`eq` / `ne` / `gt`
-   / `ge` / `lt` / `le` / `is` / `is_not`), not a symbol, since a
-   settings-CSV cell starting with `=` or `>` reads as a formula to
-   spreadsheet software. The rules themselves live in
+   / `ge` / `lt` / `le` / `is` / `is_not`, or — a range, 19T Item 12 —
+   `in_inc` / `in_exc` / `out_inc` / `out_exc`, with `branch_value` then
+   `"low to high"`), not a symbol, since a settings-CSV cell starting
+   with `=` or `>` reads as a formula to spreadsheet software. The
+   rules themselves live in
    `app/services/responses/_branching.py` and `_branch_rule.py`, not on
    the model.
 

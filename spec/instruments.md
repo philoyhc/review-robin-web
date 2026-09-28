@@ -1084,22 +1084,57 @@ from the name onward, parent and governed alike.
 the below". Its own "+" adds a governed field at the top of the branch;
 it has no X — the branch goes with its last governed field's X ("Delete
 this field and its branch"). The operators offered follow the parent's
-type:
+type. A List parent picks from `is` / `is_not` (shown "is" / "is not"),
+against one option or several comma-separated, read as *any of* / *none
+of*. An Integer or Decimal parent picks from ten, spelled out in the
+select in this order (19T Item 12):
 
-| Parent type | Operators (token → symbol) | Value |
+| Select label | Token | Symbol |
 |---|---|---|
-| Integer / Decimal | `eq`→`=`, `ne`→`≠`, `gt`→`>`, `ge`→`≥`, `lt`→`<`, `le`→`≤` | one number |
-| List | `is`, `is_not` (shown "is" / "is not") | one option, or several comma-separated, read as *any of* / *none of* |
+| is equal to | `eq` | `=` |
+| is not equal to | `ne` | `≠` |
+| is more than (inclusive) | `ge` | `≥` |
+| is more than (exclusive) | `gt` | `>` |
+| is less than (inclusive) | `le` | `≤` |
+| is less than (exclusive) | `lt` | `<` |
+| is within (inclusive) | `in_inc` | `≤` |
+| is within (exclusive) | `in_exc` | `<` |
+| is outside (inclusive) | `out_inc` | `≤` |
+| is outside (exclusive) | `out_exc` | `<` |
+
+The first six take **one box**, one number. The last four — a
+**range** — take **two boxes with "to" between them**: a low and a high
+number, low strictly below high. The second box shows only while the
+selected operator is one of the four; switching away from a range hides
+the box and clears it, keeping the low box's value
+(`newModelRfSyncConditionRange`). "Inclusive" on *is outside* counts the
+ends as outside: `out_inc` is the complement of `in_exc` and `out_exc` of
+`in_inc`.
 
 Operators are stored as tokens, not symbols — a settings-CSV cell
 starting with `=` or `>` reads as a formula to spreadsheet software; the
-builder shows the symbols. An unanswered parent, or an answer that
-doesn't parse against the parent's type, closes the branch.
+builder shows the symbols, joining a range's two boxes as `low to high`
+(`branch_value`; `RANGE_SEPARATOR`, `app/services/responses/_branching.py`).
+An unanswered parent, or an answer that doesn't parse against the
+parent's type, closes the branch.
 
 **A condition reaches the preview like a field row commits, without a
 ✓**: valid, it applies at once; invalid, the condition row carries the
 same amber left-edge marker a field row does (`data-row-pending`), the
-reason its tooltip, and Save refuses it, naming the field.
+reason its tooltip, and Save refuses it, naming the field. A range's own
+check (mirroring `range_error`) **names the end at fault** — "The
+range's low end needs a number.", "…high end needs a number.", or "The
+range's low end must be below its high end." — rather than a generic
+shape complaint.
+
+**Hints show symbols, not the select's spelled-out labels.** The
+preview's governed-column hint ("Opens when …", `newModelRfBranchHint`)
+reads as `condition_label` does, and each operator option carries its
+symbol (`data-symbol`). A single-value condition reads e.g. "Rating ≥ 4"; a range reads
+the field's name first, then both ends — "Rating ≥ 2 and ≤ 4", "Rating
+< 2 or > 4" — never "2 ≤ Rating ≤ 4", so a negative low end can never
+start a hint (or an extract cell, `spec/extract_data.md`) as a
+spreadsheet formula.
 
 **Join (↳) and detach (↰)** sit after ⑂, sharing its width (`.rf-glyph`).
 A plain row that isn't the first, has no saved responses and isn't
@@ -1146,8 +1181,9 @@ field ends the branch, as X does.
 **Storage:** `InstrumentResponseField.branch_parent_id` (a
 self-referencing FK, `ON DELETE SET NULL`) on a governed field;
 `branch_op` (`String(8)`, one of the tokens above) and `branch_value`
-(the number, or List options comma-separated) on the parent (Alembic
-`63b1bb107eb0`). The per-field routes (edit, delete, move, insert under
+(the number, List options comma-separated, or a range's `low to high`)
+on the parent (Alembic `63b1bb107eb0`; no migration for the four range
+tokens — they fit `String(8)`). The per-field routes (edit, delete, move, insert under
 `/fields/…`) refuse a branched instrument outright — each acts on one
 field and can't keep a branch's rules; its fields are edited on the
 instrument card only.

@@ -3404,10 +3404,10 @@ dep chains called out at the bottom of this file.
      governed field is required only while its branch is open, in an
      instrument with an active required field outside any branch; the
      rollups count it in Python (route (a)).
-   - **Item 12 — Augmented numerical conditions** (open, planned): ten
-     spelled-out numeric operators, within / outside a range in two
-     boxes. `guide/advanced_instruments.md` Item 6,
-     Q3.
+   - ~~**Item 12 — Augmented numerical conditions.**~~ **Closed
+     2026-09-28.** `guide/advanced_instruments.md` Item 6, Q3: ten
+     spelled-out numeric operators, within or outside a range (inclusive
+     or exclusive) in two boxes, stored as `low to high`.
    - **Item 13 — Conditional required** (open, stub): a second kind of
      condition making the governed fields required rather than shown, ⑂
      cycling between the two. `guide/advanced_instruments.md` Item 6, Q1.

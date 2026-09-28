@@ -19,8 +19,8 @@ built one item at a time:** Item 4 shipped first as 19T Item 7
 (2026-09-26), ahead of Item 3 because it doesn't touch the pills, and
 Item 5 as 19T Item 8 (2026-09-26), and Item 3 as 19T Item 9
 (2026-09-26). Item 1 shipped as 19T Item 10 (2026-09-27); Item 2 shipped
-as 19T Item 11 (2026-09-27), and Item 6's three extensions are
-logged as 19T Items 12–14. This file keeps the
+as 19T Item 11 (2026-09-27). Of Item 6's three extensions, Q3 shipped as
+19T Item 12 (2026-09-28) and the other two are logged as 19T Items 13–14. This file keeps the
 author's rulings and the measured cost, so the build can start from them.
 Every item is now built or logged as a 19T item, so no
 `guide/deferred_consolidated.md` entry points here any more (the last
@@ -711,9 +711,9 @@ save-rule and script cost, plus a condition editor that picks fields.
 
 ### Q3 — Ranges on a numeric condition
 
-*(Superseded 2026-09-28 by 19T Item 12's plan: four range operators,
-inclusive and exclusive, stored as `low to high`. The costing below
-stands.)*
+*(Superseded 2026-09-28 by 19T Item 12, which shipped the same day: four
+range operators, inclusive and exclusive, stored as `low to high`. The
+costing below is kept as it was.)*
 
 Two operators, both inclusive:
 - **`between`** — the "above this and below that" asked;
