@@ -1921,11 +1921,11 @@ Three things read wrong in the table:
   (#2668): the lock regions are Band 3's two tables, not the band, since
   an inert `.table-scroll` can't scroll. Band 2 follows (its intro card,
   visibility editor and preview), so its locked visibility table can
-  scroll, and #2669 wraps the preview in a plain `.table-scroll` so it
-  scrolls too, and **Band 1
-  scrolls too**, in a `.table-scroll` with a `76rem` floor that keeps its
-  selects usable; a rule's tag select shrinks so "IS DIFFERENT FROM"
-  never spills (later entries, same PR).
+  scroll. **Band 1 scrolls too**, in a `.table-scroll` with a `76rem`
+  floor that keeps its selects usable; a rule's tag select shrinks so "IS
+  DIFFERENT FROM" never spills (later entries, same PR). #2669 wraps
+  Band 2's preview in a plain `.table-scroll`, so it scrolls when locked
+  as well.
 - **Tooltips give the full text** the name column cuts (a later entry):
   the operator's label, with its symbol for a single-value operator, and
   the field's name. Neither shows while its row is amber, so the row's
@@ -2052,7 +2052,11 @@ was fixed in its PR.
   a window figure (1330px, not 1300), a comment split from its rule, a
   stale comment on Band 2, the checklist's tab check, a weaker Band 2
   test, and `spec/ui_elements.md` §10's non-table hosts.
-- **#2669:** READ3_PENDING
+- **#2669:** no high or medium finding. The lows were fixed there: the
+  spec's lead phrase for a script-built table, a unit test that would
+  have accepted an inert wrapper, this bullet's sentence, a loose
+  template comment, and a checklist row that didn't say a locked
+  preview's columns are dragged wider while unlocked.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 

@@ -219,9 +219,10 @@ def test_a_script_built_table_has_a_wrapped_host() -> None:
         classes = re.search(r'class="([^"]*)"', host.group(0))
         # The wrapper may sit directly around the host instead: a locked
         # Instruments card makes the host inert, and an inert scroller
-        # can't scroll (19T Item 12A).
+        # can't scroll (19T Item 12A). So the wrapper itself must never
+        # be a lock region.
         parent = re.search(
-            r'<div class="table-scroll"[^>]*>\s*$',
+            r'<div class="table-scroll"(?![^>]*\b(?:inert|data-lock-region)\b)[^>]*>\s*$',
             re.sub(r"\{#.*?#\}", "", text[: host.start()], flags=re.S),
         )
         assert (classes and "table-scroll" in classes.group(1).split()) or parent, (

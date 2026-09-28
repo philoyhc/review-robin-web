@@ -1773,7 +1773,9 @@
            intro card, the visibility editor and the preview, not the
            band, so the locked "Who can see what you wrote" table, which
            holds no control, keeps a .table-scroll that scrolls (an inert
-           one can't). The preview's .table-scroll wraps it the same way. #}
+           one can't). The preview's .table-scroll is likewise never inert:
+           it is a plain wrapper around the preview, which is the lock
+           region. #}
         <div data-new-model-band2-editable>
           {# Replicate the reviewer-surface per-instrument intro
              card — short_label / description + completion-progress
