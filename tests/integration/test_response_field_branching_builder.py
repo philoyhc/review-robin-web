@@ -86,7 +86,7 @@ def test_rows_align_from_the_name_onward(client: TestClient, db: Session) -> Non
     assert condition.count("<td") == 6 and 'colspan="7"' in condition
     assert "If the above" in condition.split("<td")[4]
     assert "data-new-model-rf-condition-op" in condition.split("<td")[5]
-    assert "then show the below" in condition.split("<td")[6]
+    assert "<span data-new-model-rf-condition-then>then<select data-new-model-rf-condition-mode" in condition.split("<td")[6]
 
 
 def test_fork_shows_its_three_states(client: TestClient, db: Session) -> None:
@@ -143,7 +143,9 @@ def test_branch_controls_are_wired(client: TestClient, db: Session) -> None:
     assert 'onclick="newModelRfConditionAdd(this)"' in condition
     assert 'onchange="newModelRfConditionChanged(this)"' in condition
     assert 'oninput="newModelRfConditionChanged(this)"' in condition
-    assert " disabled" not in condition
+    # No control is disabled; the mode's Require option is, until the rule
+    # lands (19T Item 13 rung 1).
+    assert " disabled" not in condition.replace('<option value="require" disabled>', "")
     governed = _row(table, "Comments")
     r = re.search(r"<button[^>]*data-new-model-rf-required[^>]*>", governed).group(0)
     assert " disabled" not in r and "can't be required" not in r
@@ -200,8 +202,10 @@ def test_governed_answers_lock_the_branch_on_the_page(
     group = table.split("<tbody data-new-model-rf-group")[1]
     assert group.startswith(' data-new-model-rf-branch data-new-model-rf-branch-locked="true">')
     condition = group.split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
-    # The operator, both boxes (19T Item 12) and the condition's "+".
-    assert condition.count(" disabled") == 4
+    # The operator, both boxes (19T Item 12), the condition's "+" and the
+    # mode select (19T Item 13), plus the mode's Require option, which the
+    # scaffold always disables.
+    assert condition.count(" disabled") == 6
 
 
 def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) -> None:

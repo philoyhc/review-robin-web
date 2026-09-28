@@ -175,7 +175,7 @@ def test_a_lists_condition_puts_its_box_beside_a_shrunk_operator(
 ) -> None:
     """The author's later 12A entry: a List condition's operator only needs
     room for "is not", so it shrinks, and its box (the List box's width)
-    and "then show the below" follow it in the operator's cell, which
+    and "then [mode]" (19T Item 13) follow it in the operator's cell, which
     takes the rest of the row; a number keeps the two-cell layout."""
     from .test_response_field_branching_save import _branched, _rfs, _save
 
@@ -198,7 +198,7 @@ def test_a_lists_condition_puts_its_box_beside_a_shrunk_operator(
     op = cells[4]
     assert op.startswith(' class="rf-condition-cell rf-condition-op" colspan="8">')
     assert op.index("<select") < op.index("data-new-model-rf-condition-value")
-    assert "<span data-new-model-rf-condition-then>then show the below</span>" in op
+    assert "<span data-new-model-rf-condition-then>then<select data-new-model-rf-condition-mode" in op
     assert cells[5].startswith(' colspan="7" class="rf-condition-cell" hidden>')
     # One value box, in the operator's cell, not a second in the hidden one.
     assert condition.count("data-new-model-rf-condition-value") == 1

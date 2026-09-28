@@ -1102,13 +1102,15 @@ from the name onward, parent and governed alike. The checkbox sits
 centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 12A).
 
-**The condition row** reads "If the above [operator] [value] then show
-the below". The operator sits in the name column at the name box's width,
+**The condition row** reads "If the above [operator] [value] then
+[mode]", the mode a select of **Show the below** and **Make the below
+required (else, optional)** (19T Item 13; until its rule lands, Show is
+the only choice and nothing saves the select). The operator sits in the name column at the name box's width,
 with "If the above" right-aligned in the join column before it
 (`td.rf-condition-lead`, `td.rf-condition-op`, 19T Item 12A); the first
 value box starts at the type column's edge. A List's operator shrinks to
-its label ("is not"), and its box, the List box's width, and "then show
-the below" follow it in the operator's cell, which spans the rest of the
+its label ("is not"), and its box, the List box's width, and "then
+[mode]" follow it in the operator's cell, which spans the rest of the
 row (`tr.rf-condition-list`; the last cell hides). The name column cuts long
 text, so the operator's tooltip gives its full label (with its symbol,
 for a single-value operator) and a name box's gives its full name;

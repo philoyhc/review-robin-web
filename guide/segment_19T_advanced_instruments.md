@@ -2108,6 +2108,15 @@ Taken 2026-09-28 at `256d30aa`.
 - `## Status` compacted to intended vs done; answered open questions collapsed
 - `docs/status.md` row added; plan moved to `guide/archive/` + index row
 
+### Status
+
+- **Rung 1 (scaffold), 2026-09-28:** the condition row reads "then" and
+  the mode select in both layouts, Show selected and Require's option
+  disabled; the row script disables the select with a locked condition,
+  and nothing else names it. Base SHA for the item's cumulative read:
+  `76d37d27`. Headless Chromium at 1500px: the select is 323px and
+  inside the table on a number and a List row, 4px after "then".
+
 ### Open questions
 
 1. ~~A governed row's R under Require~~ — the condition decides for every
