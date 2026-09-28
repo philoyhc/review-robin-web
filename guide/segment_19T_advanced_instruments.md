@@ -1726,15 +1726,144 @@ guards stay on until the rollups are taught**. The item's cumulative
 
 ## Item 12 — Augmented numerical conditions: inside a range, outside a range
 
-**Logged 2026-09-27 on the author's instruction; a stub, details to
-follow.** An Integer or Decimal parent's condition gains two operators:
-*inside a range* and *outside a range*, each taking a low and a high
-bound. The costing is `guide/advanced_instruments.md` Item 6, Q3: light,
-and no migration, since both tokens fit `branch_op` and the pair fits
-`branch_value`.
+**Logged 2026-09-27 on the author's instruction; planned 2026-09-28** on
+the author's rulings below. The costing is `guide/advanced_instruments.md`
+Item 6, Q3.
+
+### Opportunity
+
+An Integer or Decimal parent's condition compares against one number
+(`eq` … `le`, Item 10). "Open when the rating is 2 to 4", or "…high or
+low", can't be said on a wide scale, and not at all on a Decimal.
+
+### Decision
+
+The numeric operators become the author's ten, spelled out in the
+builder's select, in this order. The first six are today's tokens:
+
+| Select label | Token | Opens when (a low, b high) | Tooltip / extract |
+|---|---|---|---|
+| is equal to | `eq` | x = a | Rating = 4 |
+| is not equal to | `ne` | x ≠ a | Rating ≠ 4 |
+| is more than (inclusive) | `ge` | x ≥ a | Rating ≥ 4 |
+| is more than (exclusive) | `gt` | x > a | Rating > 4 |
+| is less than (inclusive) | `le` | x ≤ a | Rating ≤ 4 |
+| is less than (exclusive) | `lt` | x < a | Rating < 4 |
+| is within (inclusive) | `in_inc` | a ≤ x ≤ b | 2 ≤ Rating ≤ 4 |
+| is within (exclusive) | `in_exc` | a < x < b | 2 < Rating < 4 |
+| is outside (inclusive) | `out_inc` | x ≤ a or x ≥ b | Rating ≤ 2 or ≥ 4 |
+| is outside (exclusive) | `out_exc` | x < a or x > b | Rating < 2 or > 4 |
+
+The author's rulings, 2026-09-28:
+- **Two boxes, with "to" between them.** The second box shows only for
+  the last four. Each box holds one plain number and checks it against
+  `DECIMAL_PATTERN`, so errors name the box.
+- **"Inclusive" on outside means the ends count as outside.** So
+  outside-inclusive is the complement of within-exclusive, and the
+  reverse.
+- **The low end must be strictly below the high end.** An equal pair
+  only repeats = or ≠, or opens for nothing.
+- **Labels are spelled out** in the select: there is room. **Tooltips
+  and the extract keep symbols** (`condition_label`).
+
+**Rejected: one box taking a typed range.** Negative numbers make "a-b"
+ambiguous. It would need a syntax hint, and one parser kept identical in
+Python and both page scripts. Errors couldn't name the bad end either.
+
+### Semantics
+
+- **Storage: no migration.** The four tokens fit `branch_op`'s
+  `String(8)`. The value is stored as `low to high` (`2 to 4`, `-5 to
+  -1`, `1.5 to 3`) in the existing `branch_value`, joined by the page.
+  - **Not `2..4`**, as first suggested: a box holding "1." would join
+    to "1...3", which splits two ways.
+  - **Not `2,4`**: a comma-decimal spreadsheet reads that as 2.4.
+- **Validity** (`condition_error`):
+  - a range token needs exactly two parts, each a finite number, with
+    low < high;
+  - a single-value token refuses a range, and a range token refuses a
+    single value.
+- **The select lists by parent type**, as now: the ten above for
+  Integer / Decimal, `is` / `is_not` for List.
+- **Switching operators** keeps the first box's value. Moving to a
+  single-value operator hides the second box and drops its value.
+- **Locking, the save rule, Item 11's counts, the rollups:** unchanged.
+  Each reads `branch_is_open` (Item 11's pre-positioning 5).
+
+### Blast radius (measured)
+
+Taken 2026-09-28 at `3a13e884`:
+- **`app/services/responses/_branching.py`**: `NUMERIC_OPS`,
+  `condition_error`, `condition_label`, `branch_is_open`. Its callers need
+  no change: Save and the settings CSV go through `BRANCH_OPS` and
+  `condition_error`; the extract and the reviewer hint go through
+  `condition_label`.
+- **`app/web/views/_instruments.py`**: the two op lists handed to the
+  builder (lines 360 and 655), which today send symbols.
+- **Templates:** 2.
+  - `review_surface.html`'s `isOpen`.
+  - `instruments_index.html`'s condition row (one `<input>` today),
+    `newModelRfConditionError` (with the hardcoded
+    `['eq', 'ne', 'gt', 'ge', 'lt', 'le']` Item 11 noted), and the
+    stager's `branch_value`.
+- **Tests:** 10 files mention `branch_op` / `branch_value`
+  (`grep -rln "branch_op\|branch_value" tests/`).
+- **Specs:** 8 mention a condition. `spec/instruments.md`,
+  `spec/csv_contracts.md` and `spec/architecture.md` list the tokens.
+
+### PR ladder
+
+Enforcement lands before authoring, as in Item 10.
+1. **The plan** (this block, prose only).
+2. **The rules and the reviewer:**
+   - the four tokens in `_branching.py`, in their own `RANGE_OPS` that
+     the builder doesn't list yet;
+   - `condition_error`, `condition_label` and `branch_is_open`;
+   - `isOpen` in the reviewer script.
+
+   A settings CSV can carry a range from here, refused or opened
+   correctly. Tests include JavaScript/Python parity on every token.
+3. **The builder:**
+   - the spelled-out labels;
+   - the ten operators listed;
+   - the second box and "to", shown by operator;
+   - validation per box and low < high;
+   - the stager's join;
+   - the ops read from `data-new-model-rf-branch-ops`, not hardcoded.
+
+   Item cumulative read, from the rung-1 merge.
+4. **Close.**
+
+### Definition of done
+
+- `branch_is_open` and the reviewer's `isOpen` agree on every token at
+  and around both ends; pinned.
+- A settings CSV round-trips each range token, and refuses a bad range,
+  naming it.
+- The builder offers the ten spelled-out operators for a numeric parent
+  and shows two boxes only for a range. Save stores `low to high`.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.12` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+None open: the author ruled on all five (2026-09-28).
+
+### Out of scope
+
+- **Ranges on a List parent**, or several ranges at once.
+- **Item 13's second kind of condition**, which reuses these operators.
 
 ### Doc impact
 
+- `spec/instruments.md` — the operator table: ten spelled-out numeric operators, two boxes for a range (Item 12).
+- `spec/csv_contracts.md` — §3.3: the four range tokens and the `low to high` value (Item 12).
+- `spec/architecture.md` — the `branch_op` token list (Item 12).
+- `spec/reviewer-surface.md` — the closed cell's hint for a range (Item 12).
+- `spec/extract_data.md` — the "Shown when" row for a range (Item 12).
 - `docs/status.md` — row when the item closes (Item 12).
 
 ## Item 13 — Conditional required: a second kind of condition
