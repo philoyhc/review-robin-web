@@ -2899,6 +2899,12 @@
         padding-right: 0;
         text-align: center;
       }
+      /* Room after join / detach for one more button of the same width
+         and spacing (19T Item 12A, the author's ruling): the cell's own
+         padding, plus a button and the two paddings between cells. */
+      body.ui-v2 table.rf-table td.rf-join-cell {
+        padding-right: calc(2.25rem + 3 * var(--space-1));
+      }
       body.ui-v2 table.rf-table td.rf-name { width: 20%; }
       body.ui-v2 table.rf-table td.rf-type { width: 15%; }
       /* A branch in Band 3's response-field table (19T Item 10). The bar

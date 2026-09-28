@@ -1140,7 +1140,9 @@ the field's name first, then both ends — "Rating ≥ 2 and ≤ 4", "Rating
 start a hint (or an extract cell, `spec/extract_data.md`) as a
 spreadsheet formula.
 
-**Join (↰) and detach (↳)** sit after ⑂, sharing its width (`.rf-glyph`).
+**Join (↰) and detach (↳)** sit after ⑂, sharing its width (`.rf-glyph`),
+with room after them for one more button of that width
+(`td.rf-join-cell`, 19T Item 12A).
 A plain row that isn't the first, has no saved responses and isn't
 itself a parent can join the unit above: the end of an unlocked branch,
 or, on a plain Integer, Decimal or List field, a new branch with an

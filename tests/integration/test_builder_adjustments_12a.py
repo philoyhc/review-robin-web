@@ -79,3 +79,22 @@ def test_a_numbers_condition_boxes_follow_the_parents_min_box(
     assert "if (!row || !row.hasAttribute('data-new-model-rf-parent')) { return; }" in size
     recompute = _rf_fn(body, "newModelRfRecomputeCondition")
     assert "window.newModelRfSizeCondition(parent);" in recompute
+
+
+def test_join_and_detach_leave_room_for_one_more_button(
+    client: TestClient, db: Session
+) -> None:
+    """The author's later 12A entry: after ↰ / ↳, space for another button
+    of the same width, on the server's rows and the template's."""
+    _, _, card, flat = _page(client, db, "12a-join-room")
+    table = _rows_table(card)
+    for name in ("Rating", "Comments"):
+        assert '<td class="col-shrink rf-join-cell" data-new-model-rf-join-cell>' in _row(table, name)
+    template = flat.split("<template data-new-model-rf-row-template>")[1].split("</template>")[0]
+    assert '<td class="col-shrink rf-join-cell" data-new-model-rf-join-cell>' in template
+    # The cell's own padding, a 2.25rem button (``.rf-glyph``) and the two
+    # paddings between cells.
+    assert (
+        "body.ui-v2 table.rf-table td.rf-join-cell { "
+        "padding-right: calc(2.25rem + 3 * var(--space-1)); }"
+    ) in flat

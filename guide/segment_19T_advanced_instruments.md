@@ -1900,6 +1900,9 @@ Three things read wrong in the table:
   one box keeps 12em. **Rejected:** moving the boxes into the bounds
   column, which would break the condition's sentence.
 - **Every Active checkbox is centered in its cell** (`td.rf-active-cell`).
+- **Room for one more button after ↰ / ↳** (a later entry, same day): the
+  join cell's right padding (`td.rf-join-cell`), not an empty column, so
+  no column index or colspan moves.
 
 ### Doc impact — checked by hand
 
@@ -1922,6 +1925,10 @@ medium defects and four low ones, all fixed in the PR:
 - this Status now records the read;
 - Item 15's prose now gives the new glyph order;
 - the checklist no longer says a List's box is wider.
+
+The later entry, the room after ↰ / ↳, shipped in a second PR. Headless
+Chromium, run by hand, measured the name box two button pitches (88px) after
+the join button on both kinds of row.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 
