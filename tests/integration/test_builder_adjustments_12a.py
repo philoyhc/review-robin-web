@@ -75,5 +75,7 @@ def test_a_numbers_condition_boxes_follow_the_parents_min_box(
     # A hidden Min (a List parent) falls back to the stylesheet's width.
     assert "cond.style.removeProperty('--rf-condition-box');" in size
     assert "new ResizeObserver(apply)" in size
+    # A row that stops being a parent stops sizing (Codex on #2661).
+    assert "if (!row || !row.hasAttribute('data-new-model-rf-parent')) { return; }" in size
     recompute = _rf_fn(body, "newModelRfRecomputeCondition")
     assert "window.newModelRfSizeCondition(parent);" in recompute

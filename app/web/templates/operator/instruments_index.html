@@ -4976,6 +4976,11 @@
           var min = parent.querySelector('[data-new-model-rf-bound="min"]');
           if (!min) { return; }
           var apply = function () {
+            // Only while Min's own row is the parent: a former parent that
+            // joins another branch must not size that branch's condition
+            // (Codex on #2661).
+            var row = min.closest('[data-new-model-rf-row]');
+            if (!row || !row.hasAttribute('data-new-model-rf-parent')) { return; }
             var group = min.closest('[data-new-model-rf-group]');
             var cond = group && group.querySelector('[data-new-model-rf-condition]');
             if (!cond) { return; }
