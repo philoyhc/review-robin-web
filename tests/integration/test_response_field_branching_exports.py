@@ -81,3 +81,14 @@ def test_a_closed_branch_exports_blank(db: Session) -> None:
     header, first = data[0], data[1]
     assert first[header.index("Rating")] == "2"
     assert first[header.index("Comments")] == ""
+
+
+def test_a_range_condition_reads_after_the_fields_name(db: Session) -> None:
+    """19T Item 12: a range reads with symbols, after the field's name like
+    every other condition, so a negative low end never starts the cell."""
+    _, _, review_session, assignment = _seed(db)
+    fields = _branched(db, assignment.instrument_id)
+    fields["rating"].branch_op, fields["rating"].branch_value = "in_inc", "-5 to -1"
+    db.flush()
+    rows = _rows(db, review_session, assignment.instrument)
+    assert ["Shown when", "Rating ≥ -5 and ≤ -1"] in rows

@@ -94,8 +94,8 @@ def test_a_bad_range_or_answer_closes_the_branch() -> None:
 @pytest.mark.parametrize(
     ("op", "label"),
     [
-        ("in_inc", "2 ≤ Rating ≤ 4.50"),
-        ("in_exc", "2 < Rating < 4.50"),
+        ("in_inc", "Rating ≥ 2 and ≤ 4.50"),
+        ("in_exc", "Rating > 2 and < 4.50"),
         ("out_inc", "Rating ≤ 2 or ≥ 4.50"),
         ("out_exc", "Rating < 2 or > 4.50"),
     ],

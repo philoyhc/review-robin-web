@@ -4,10 +4,17 @@ and one otherwise, and the row script joins, checks and titles them."""
 
 from __future__ import annotations
 
+import html
+import json
 import re
+import shutil
+import subprocess
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+
+from app.services.responses import RANGE_OPS, condition_error
 
 from .test_instrument_builder_routes import _card_slice, _rf_fn
 from .test_response_field_branching_builder import _page, _rows_table
@@ -88,3 +95,50 @@ def test_the_row_script_joins_checks_and_titles_a_range(
     assert "window.newModelRfBranchOps().numeric" in error
     hint = _rf_fn(body, "newModelRfBranchHint")
     assert "option.getAttribute('data-symbol')" in hint
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_the_builders_check_agrees_with_save(client: TestClient, db: Session) -> None:
+    """``newModelRfConditionError`` run in node, over the page's own operators,
+    against ``condition_error`` on the value Save sees (stripped): every pair
+    of boxes is refused or accepted alike, with the same message (the item's
+    cumulative read)."""
+    review_session, instrument, _, _ = _page(client, db, "range-parity")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    ops = html.unescape(
+        re.search(r"data-new-model-rf-branch-ops='([^']*)'", body).group(1)
+    )
+    boxes = ["", " ", "2", " 2 ", "4", "-1", "1.", "x", "to", "2 to", "to 4",
+             "3 to 5", "inf", "1_000"]
+    cases = [
+        [op, low, high]
+        for op in sorted(RANGE_OPS) + ["ge", "eq"]
+        for low in boxes
+        for high in boxes
+    ]
+    script = (
+        "var window = {newModelRfBranchOps: function () { return "
+        + ops + "; }};\n"
+        + _rf_fn(body, "newModelRfIsRangeOp") + "\n        };\n"
+        + _rf_fn(body, "newModelRfConditionError") + "\n        };\n"
+        + "const cases = JSON.parse(process.argv[1]);\n"
+        + "console.log(JSON.stringify(cases.map(function (c) {\n"
+        + "  var value = window.newModelRfIsRangeOp(c[0])\n"
+        + "    ? c[1].trim() + ' to ' + c[2].trim() : c[1].trim();\n"
+        + "  return [value, window.newModelRfConditionError('integer', '', c[0], value)];\n"
+        + "})));\n"
+    )
+    out = subprocess.run(
+        ["node", "-e", script, json.dumps(cases)],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    results = json.loads(out)
+    mismatches = [
+        (op, value, js)
+        for (op, _, _), (value, js) in zip(cases, results)
+        if js != condition_error("Integer", None, op, value.strip())
+    ]
+    assert not mismatches, mismatches[:10]
+    assert any(js is None for _, js in results)

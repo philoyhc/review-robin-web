@@ -1748,3 +1748,17 @@ that they agree with each other.
 **Lift trigger:** an operator asking for keystroke-live filtering on a
 roster, or the next change that reworks a roster's pager.
 
+
+### The settings CSV has no formula guard (19T Item 12's cumulative read, 2026-09-28)
+
+A settings-CSV cell starting with `=`, `+`, `-` or `@` is read as a
+formula by spreadsheet software. Nothing in `app/services/session_config_io/`
+escapes one, so a label such as `- Overall`, or a range condition with a
+negative low end (`-5 to -1`), can come back from Excel as an error value.
+Re-importing that bundle is then refused, loudly, naming the field.
+Branch operators are stored as tokens for this reason (19T Item 10). The
+general fix, a guard on write that the importer strips, would change
+`spec/csv_contracts.md` for every cell.
+
+**Lift trigger:** an operator reporting a bundle that broke in a
+spreadsheet round trip.

@@ -127,6 +127,19 @@ def parse_range(text: str | None) -> tuple[float, float] | None:
     return low, high
 
 
+def canonical_condition_value(op: str | None, value: str | None) -> str | None:
+    """``value`` as the builder sends it back: stripped, and a range's ends
+    stripped around one ``RANGE_SEPARATOR``. The settings CSV stores this, so
+    a hand-spaced ``2 to  4`` doesn't later read as a changed condition to
+    the lock on an answered branch (19T Item 12's cumulative read)."""
+    if value is None:
+        return None
+    parts = value.split(RANGE_SEPARATOR)
+    if op in RANGE_OPS and len(parts) == 2:
+        return RANGE_SEPARATOR.join(part.strip() for part in parts)
+    return value.strip() or None
+
+
 def condition_error(
     data_type: str | None,
     list_csv: str | None,
@@ -192,11 +205,13 @@ def condition_label(parent: BranchField) -> str:
     closed cell and the by-instrument extract's metadata both use it."""
     op, value = parent.branch_op or "", (parent.branch_value or "").strip()
     if op in RANGE_OPS and parse_range(value) is not None:
-        # The ends as the operator typed them ("1.50" stays "1.50").
+        # The ends as the operator typed them ("1.50" stays "1.50"), after
+        # the field's name like every other condition, so a negative low end
+        # never starts an extract cell (a formula to spreadsheet software).
         low, high = (part.strip() for part in value.split(RANGE_SEPARATOR))
         return {
-            "in_inc": f"{low} ≤ {parent.label} ≤ {high}",
-            "in_exc": f"{low} < {parent.label} < {high}",
+            "in_inc": f"{parent.label} ≥ {low} and ≤ {high}",
+            "in_exc": f"{parent.label} > {low} and < {high}",
             "out_inc": f"{parent.label} ≤ {low} or ≥ {high}",
             "out_exc": f"{parent.label} < {low} or > {high}",
         }[op]

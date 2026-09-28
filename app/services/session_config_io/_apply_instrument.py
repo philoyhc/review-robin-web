@@ -26,7 +26,11 @@ from app.services.instruments._response_fields import (
     _validation_block_from_default_spec,
     validation_block_from_inline,
 )
-from app.services.responses import BRANCH_OPS, branch_structure_errors
+from app.services.responses import (
+    BRANCH_OPS,
+    branch_structure_errors,
+    canonical_condition_value,
+)
 
 from ._apply_shared import (
     _RX_INSTRUMENT,
@@ -443,7 +447,9 @@ def _apply_instruments(
                         help_text_visible=rf_spec.help_text_visible,
                         visible=rf_spec.visible,
                         branch_op=rf_spec.branch_op,
-                        branch_value=rf_spec.branch_value,
+                        branch_value=canonical_condition_value(
+                            rf_spec.branch_op, rf_spec.branch_value
+                        ),
                         **inline_kwargs,
                     ),
                 )

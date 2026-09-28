@@ -44,7 +44,7 @@ def test_a_range_condition_opens_and_titles_the_cell(
     client = make_client(reviewer_user)
     body = client.get(f"/me/sessions/{review_session.id}").text
     for td in _cells(body, "comments"):
-        assert 'title="Opens when 2 ≤ Rating ≤ 4"' in td
+        assert 'title="Opens when Rating ≥ 2 and ≤ 4"' in td
     for td in _cells(body, "rating"):
         assert 'data-rs-branch-op="in_inc"' in td
         assert 'data-rs-branch-value="2 to 4"' in td
@@ -112,6 +112,22 @@ def test_the_settings_csv_round_trips_a_range_and_refuses_a_bad_one(
             )
         ).scalar_one()
         assert (rating.branch_op, rating.branch_value) == (op, "2 to 4")
+
+    # A hand-spaced range is stored as the builder sends it back, so the
+    # lock on an answered branch doesn't read it as changed (the cumulative
+    # read).
+    spaced, _ = _session(db, "range-csv-spaced")
+    assert apply_session_config(
+        db, spaced, with_condition("in_inc", " 2  to  4 ")
+    ).errors == []
+    assert db.execute(
+        select(InstrumentResponseField.branch_value)
+        .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
+        .where(
+            Instrument.session_id == spaced.id,
+            InstrumentResponseField.field_key == "rating",
+        )
+    ).scalar_one() == "2 to 4"
 
     bad, _ = _session(db, "range-csv-bad")
     result = apply_session_config(db, bad, with_condition("in_inc", "4 to 2"))
