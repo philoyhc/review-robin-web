@@ -1900,6 +1900,13 @@ Three things read wrong in the table:
   one box keeps 12em. **Rejected:** moving the boxes into the bounds
   column, which would break the condition's sentence.
 - **Every Active checkbox is centered in its cell** (`td.rf-active-cell`).
+- **Room for one more button after ↰ / ↳** (a later entry, same day): the
+  join cell's right padding (`td.rf-join-cell`), not an empty column, so
+  no column index or colspan moves.
+- **The operator sits in the name column at the name box's width**, with
+  "If the above" right-aligned in the join column before it (a later
+  entry): the condition row splits into three cells, keeping twelve
+  columns.
 
 ### Doc impact — checked by hand
 
@@ -1907,21 +1914,47 @@ Three things read wrong in the table:
 The suffix keeps this list out of Item 12's check; each line is honored
 in the same PR.
 
-- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox (Item 12A).
-- `spec/ui_elements.md` — `rf-table`: the glyphs and `td.rf-active-cell` (Item 12A).
+- `spec/instruments.md` — the glyphs, the condition boxes' width, the centered checkbox, the room after join / detach, the operator in the name column (Item 12A).
+- `spec/ui_elements.md` — `rf-table`: the glyphs, `td.rf-active-cell`, `td.rf-join-cell`, `td.rf-condition-lead` and `td.rf-condition-op` (Item 12A).
 - `docs/status.md` — row when the item closes (Item 12A).
 
 ### Status
 
-**Closed 2026-09-28** in one PR (#2661). Headless Chromium, run by hand
+**Closed 2026-09-28** in two PRs, #2661 and #2662 (a later entry). For
+#2661, headless Chromium, run by hand
 and not repeatable by the suite, measured the condition boxes at the
 parent's Min width at 1500px and 1100px, with every checkbox centered.
-**Read:** one `diff-reviewer` read on the item's diff. It found no high or
-medium defects and four low ones, all fixed in the PR:
+**Reads:** one per PR. #2661's found no high or medium defects and four
+low ones, all fixed there:
 - a test now pins the glyphs the row script actually sets;
 - this Status now records the read;
 - Item 15's prose now gives the new glyph order;
 - the checklist no longer says a List's box is wider.
+
+#2662 carries two later entries, measured by hand in Chromium:
+- **the room after ↰ / ↳**: the name box sits two button pitches (88px)
+  after the join button on both kinds of row;
+- **the operator in the name column**: it has the name box's left edge
+  and width at 1500, 1100 and 900px.
+
+For the first entry, the table stayed inside its card down to a 900px
+window, with no page overflow; narrower windows are left to the browser
+check.
+
+**The read of the first entry** found four low ones, all fixed:
+- this PR count;
+- the Doc impact lines;
+- the read count;
+- the gap's width, now `--rf-glyph-width`, shared with the button.
+
+**The read of the second entry** found one medium issue and three low ones.
+- The low ones are fixed: `spec/ui_elements.md` and the Doc impact now
+  name the two classes, and this prose and the status row no longer
+  overclaim.
+- The medium one went to the author: at the name box's width, the closed
+  select cuts off the widest operator labels below a window of about
+  1500px. Chromium measured about 169px of text against 166, 137, 105
+  and 15px of room at 1500, 1300, 1100 and 900px.
 
 Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 

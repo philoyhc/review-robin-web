@@ -80,8 +80,13 @@ def test_rows_align_from_the_name_onward(client: TestClient, db: Session) -> Non
     assert "data-new-model-rf-name" in parent.split("<td")[5]
     assert "data-new-model-rf-fork" not in governed
     condition = table.split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
-    assert condition.count("<td") == 4 and 'colspan="9"' in condition
-    assert "If the above" in condition and "then show the below" in condition
+    # Bar, (Active), "+", then "If the above" in the join column, the
+    # operator in the name column and the rest across seven (19T Item 12A):
+    # twelve columns, like a field row.
+    assert condition.count("<td") == 6 and 'colspan="7"' in condition
+    assert "If the above" in condition.split("<td")[4]
+    assert "data-new-model-rf-condition-op" in condition.split("<td")[5]
+    assert "then show the below" in condition.split("<td")[6]
 
 
 def test_fork_shows_its_three_states(client: TestClient, db: Session) -> None:
@@ -277,7 +282,7 @@ def test_join_and_detach_show_their_states(client: TestClient, db: Session) -> N
         button = re.search(rf"<button[^>]*{marker}[^>]*>", _row(table, "Rating")).group(0)
         assert "rf-glyph" in button, marker
     assert (
-        "body.ui-v2 table.rf-table .btn.rf-glyph { width: 2.25rem; padding-left: 0; "
+        "body.ui-v2 table.rf-table .btn.rf-glyph { width: var(--rf-glyph-width); padding-left: 0; "
         "padding-right: 0; text-align: center; }"
     ) in flat
 

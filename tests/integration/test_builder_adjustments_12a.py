@@ -79,3 +79,43 @@ def test_a_numbers_condition_boxes_follow_the_parents_min_box(
     assert "if (!row || !row.hasAttribute('data-new-model-rf-parent')) { return; }" in size
     recompute = _rf_fn(body, "newModelRfRecomputeCondition")
     assert "window.newModelRfSizeCondition(parent);" in recompute
+
+
+def test_join_and_detach_leave_room_for_one_more_button(
+    client: TestClient, db: Session
+) -> None:
+    """The author's later 12A entry: after ↰ / ↳, space for another button
+    of the same width, on the server's rows and the template's."""
+    _, _, card, flat = _page(client, db, "12a-join-room")
+    table = _rows_table(card)
+    for name in ("Rating", "Comments"):
+        assert '<td class="col-shrink rf-join-cell" data-new-model-rf-join-cell>' in _row(table, name)
+    template = flat.split("<template data-new-model-rf-row-template>")[1].split("</template>")[0]
+    assert '<td class="col-shrink rf-join-cell" data-new-model-rf-join-cell>' in template
+    # The cell's own padding, a button (``.rf-glyph``'s width, one
+    # variable for both) and the two paddings between cells.
+    assert "body.ui-v2 table.rf-table { --rf-glyph-width: 2.25rem; }" in flat
+    assert "width: var(--rf-glyph-width);" in flat
+    assert (
+        "body.ui-v2 table.rf-table td.rf-join-cell { "
+        "padding-right: calc(var(--rf-glyph-width) + 3 * var(--space-1)); }"
+    ) in flat
+
+
+def test_the_operator_takes_the_name_column_and_the_lead_aligns_right(
+    client: TestClient, db: Session
+) -> None:
+    """The author's later 12A entry: the condition's operator sits in the
+    name column at the name box's width, with "If the above" right-aligned
+    before it."""
+    _, _, card, flat = _page(client, db, "12a-operator")
+    condition = _rows_table(card).split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
+    cells = condition.split("<td")[1:]
+    assert 'class="col-shrink rf-condition-cell rf-condition-lead">If the above</td>' in cells[3]
+    assert 'class="rf-condition-cell rf-condition-op">' in cells[4]
+    assert "<select data-new-model-rf-condition-op" in cells[4]
+    assert "body.ui-v2 table.rf-table td.rf-condition-lead { text-align: right; }" in flat
+    assert (
+        "body.ui-v2 table.rf-table td.rf-condition-op select { "
+        "width: 100%; margin: 0; box-sizing: border-box; }"
+    ) in flat

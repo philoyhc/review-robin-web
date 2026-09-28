@@ -2909,12 +2909,21 @@
       }
       body.ui-v2 table.rf-table .btn { padding: 4px 10px; }
       /* +, ⑂ and join / detach (↰ ↳) share one width, so the columns
-         line up whichever glyph a row shows (the author, 2026-09-27). */
+         line up whichever glyph a row shows (the author, 2026-09-27).
+         One variable, so the room after join / detach below stays one
+         button wide if the width changes (19T Item 12A). */
+      body.ui-v2 table.rf-table { --rf-glyph-width: 2.25rem; }
       body.ui-v2 table.rf-table .btn.rf-glyph {
-        width: 2.25rem;
+        width: var(--rf-glyph-width);
         padding-left: 0;
         padding-right: 0;
         text-align: center;
+      }
+      /* Room after join / detach for one more button of the same width
+         and spacing (19T Item 12A, the author's ruling): the cell's own
+         padding, plus a button and the two paddings between cells. */
+      body.ui-v2 table.rf-table td.rf-join-cell {
+        padding-right: calc(var(--rf-glyph-width) + 3 * var(--space-1));
       }
       body.ui-v2 table.rf-table td.rf-name { width: 20%; }
       body.ui-v2 table.rf-table td.rf-type { width: 15%; }
@@ -2964,6 +2973,15 @@
          muted, its control disabled until the parent's answer opens it.
          The cell's title names the condition. */
       body.ui-v2 td.rs-branch-closed { opacity: 0.5; }
+      /* The condition's operator sits in the name column at the name
+         box's width, "If the above" right-aligned before it in the join
+         column, any spare room to its left (19T Item 12A). */
+      body.ui-v2 table.rf-table td.rf-condition-lead { text-align: right; }
+      body.ui-v2 table.rf-table td.rf-condition-op select {
+        width: 100%;
+        margin: 0;
+        box-sizing: border-box;
+      }
       /* An empty name box shows the field's default label ("Field N")
          muted, as its placeholder: the name the field goes by until the
          operator types one (19T Item 9, on the author's ruling). */
