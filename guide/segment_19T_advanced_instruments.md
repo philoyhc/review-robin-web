@@ -2420,6 +2420,39 @@ Taken 2026-09-27 at `3cec7196`:
   routes and captures); `tests/integration/test_guide_screencaps.py`
   fails on a referenced-but-missing or committed-but-unreferenced file.
 
+### Status
+
+- **Rung 1 (prose), 2026-09-29.** Base SHA for the item's read:
+  `305f2463`. From the author's draft (`Guide_v4a`): the preview
+  paragraph points down to the fields tables, which get their own
+  paragraph (checkboxes, ▲ ▼, add / delete / edit); a paragraph on
+  branching (⑂, ↰, ↳, an example of a Show and a Require condition, a
+  branch one level down, the lock once answered); a sentence in "For
+  reviewers" on * and fields that open from an answer. Three wordings
+  from the review of the draft: "can only be answered if" (a closed branch's
+  fields still show, grayed), "↳ button detaches", and the two-level and
+  lock sentences. The example reads "For example" until rung 2 lands its
+  capture.
+- **Rung 2 (captures), 2026-09-29, in the same PR** (#2686, still open
+  when the author's `Guide_v4b` arrived with the dark shots). The
+  preview and fields pairs are replaced, and a new branching pair
+  (`instrument-card-branching`) follows the branching paragraph, which
+  now reads "In the example below". The fields pair keeps its file name
+  (`instrument-card-fields-and-visibility`, cited by Item 1's Doc impact)
+  though visibility now sits in the preview. **The pairs show different
+  states** (the dark preview one help-text card, the dark fields shot
+  unlocked, the dark branching shot two more rows), which
+  `spec/ui_elements.md` §10 counts a defect: a pair is one screen shot
+  twice. Retakes are the author's; until then each alt text names only
+  what both halves show. The item's read (over `305f2463..421d2f7d`)
+  found that, the lock sentence claiming the fields lock (their
+  membership and the condition do, up the chain), and "* are required"
+  (a * marks a field that may be required); fixed but for the retakes.
+  The author's `Guide_v4b1` and `Guide_v4b2` retook the three dark
+  halves, so every pair now shows one screen; the alt text names both
+  help-text cards, the locked card's Unlock, and ▲ ▼ only on the
+  movable display fields.
+
 ### PR ladder
 
 1. **Prose**: branching, the reviewer's view, the stale alt text rewritten
@@ -2443,8 +2476,10 @@ Taken 2026-09-27 at `3cec7196`:
 
 ### Open questions
 
-1. **Which captures the author retakes**, and whether a new one shows a
-   branch. Decides rung 2's scope. The author, once Items 11–14 land.
+1. ~~Which captures the author retakes~~ — the preview and the fields
+   (`instrument-card-preview`, `instrument-card-fields-and-visibility`),
+   plus a new branching capture; the collapsed card and the assignment
+   rule are still current (the author's `Guide_v4a`, 2026-09-29).
 2. ~~Whether this item waits for Item 11~~ — **it waits** (author,
    2026-09-27): the Guide describes required governed fields once, and
    this item's specifics are settled after Item 11 closes.
