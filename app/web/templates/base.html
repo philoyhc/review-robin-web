@@ -2977,6 +2977,16 @@
         opacity: 0.35;
       }
       body.ui-v2 table.rf-table td.rf-branch-bar-start::before { top: 70%; }
+      /* A branch inside a branch is ruled above its parent and below its
+         last field, from the parent's checkbox column rightward, clear of
+         the outer branch's bar; a top-level branch's <tbody> rule stays
+         full width (the author, 2026-09-29, 19T Item 14 rung 5). */
+      body.ui-v2 table.rf-table > tbody > tr.rf-inner-top > td:nth-child(n+2) {
+        border-top: 1px solid var(--border-default);
+      }
+      body.ui-v2 table.rf-table > tbody > tr.rf-inner-end > td:nth-child(n+2) {
+        border-bottom: 1px solid var(--border-default);
+      }
       body.ui-v2 table.rf-table td.rf-condition-cell {
         font-size: var(--fs-small);
         color: var(--text-subtle);

@@ -351,3 +351,30 @@ def test_hiding_a_level_one_parent_hides_its_branch_only(
         db.expire_all()
         visible = {f.label: f.visible for f in instrument.response_fields}
         assert visible == {"Familiarity": True, "Rating": False, "Comments": False}, code
+
+
+def test_save_accepts_a_level_one_field_joining_the_branch_above_it(
+    client: TestClient, db: Session
+) -> None:
+    """Rung 5's ↰: Other moves from Familiarity's branch into Rating's,
+    the branch that ends directly above it."""
+    review_session, instrument, fields = _chained(client, db, "two-level-nest-save")
+    payload = _stored(instrument)
+    payload.append({
+        "name": "Other", "data_type": "string", "min": "", "max": "", "step": "",
+        "list_options": "", "selected": True, "required": False,
+        "help_text_visible": False, "help_text": "", "row_key": "rf_other",
+        "branch_parent": f"rf_{fields['Familiarity'].id}",
+    })
+    assert _save(client, review_session, instrument, payload).status_code == 200
+    db.expire_all()
+    other = next(f for f in instrument.response_fields if f.label == "Other")
+    assert other.branch_parent_id == fields["Familiarity"].id
+    payload = _stored(instrument)
+    for rf in payload:
+        if rf["name"] == "Other":
+            rf["branch_parent"] = f"rf_{fields['Rating'].id}"
+    response = _save(client, review_session, instrument, payload)
+    assert response.status_code == 200, response.text
+    db.expire_all()
+    assert other.branch_parent_id == fields["Rating"].id

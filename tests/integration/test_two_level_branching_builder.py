@@ -73,13 +73,13 @@ def test_each_level_shifts_one_column_and_the_name_stays(
     assert "data-new-model-rf-active" in fam[0] and "rf-branch-bar-start" in fam[0]
     assert "data-new-model-rf-fork" in fam[2] and "data-new-model-rf-join" in fam[3]
     assert fam[4].startswith(' class="col-shrink rf-slot">') and fam[5].startswith(' class="col-shrink rf-slot">')
-    # Rating: bar, Active (its own bar starts here), +, ⑂, ↳, one slot.
+    # Rating: bar, Active (its own bar starts here), +, ⑂, ↰ (rung 5), ↳.
     rating = rows["Rating"]
     assert "rf-branch-bar" in rating[0]
     assert "data-new-model-rf-active" in rating[1] and "rf-branch-bar-start" in rating[1]
     assert "data-new-model-rf-add" in rating[2]
-    assert "data-new-model-rf-fork" in rating[3] and "data-new-model-rf-join" in rating[4]
-    assert rating[5].startswith(' class="col-shrink rf-slot">')
+    assert "data-new-model-rf-fork" in rating[3] and "data-new-model-rf-nest" in rating[4]
+    assert "data-new-model-rf-join" in rating[5] and ">↳</button>" in rating[5]
     # Comments: two bars, Active, +, ⑂'s slot left empty, ↳.
     comments = rows["Comments"]
     assert "rf-branch-bar" in comments[0] and "rf-branch-bar" in comments[1]
@@ -158,7 +158,8 @@ def test_the_row_script_works_on_a_rows_own_branch(client: TestClient, db: Sessi
     set_level = fn("newModelRfSetLevel")
     for line in (
         "if (forkCell) { forkCell.remove(); }",
-        "for (var i = 0; i < 2 - Math.min(level, 2); i++) {",
+        "for (var i = 0; i < (level === 0 ? 2 : 0); i++) {",
+        "joinCell.parentNode.insertBefore(nest, joinCell);",
         "for (var j = 0; j < level; j++) {",
     ):
         assert line in set_level, line
@@ -265,3 +266,108 @@ def test_detachs_title_counts_the_rows_own_branch(client: TestClient, db: Sessio
     comments = _row(_rows_table(card), "Comments")
     join = re.search(r"<button[^>]*data-new-model-rf-join[^>]*>", comments).group(0)
     assert 'title="Detach this field and end its branch"' in join
+
+
+# Rung 5 — a level-1 row's ↰ joins the branch inside its own branch that
+# ends directly above it (the author's screen cap, 2026-09-29).
+
+
+def _with_other(client: TestClient, db: Session, code: str, *, answered: str | None = None):
+    """The chain plus Other and Last, level-1 fields under Familiarity
+    after Rating's branch; ``answered`` names one to give a response."""
+    from .test_response_field_branching_save import _add_response
+
+    review_session, instrument, _, _, _ = _chain_page(client, db, code)
+    fields = {f.label: f for f in instrument.response_fields}
+    for offset, label in ((1, "Other"), (2, "Last")):
+        fields[label] = InstrumentResponseField(
+            instrument_id=instrument.id, field_key=label.lower(), label=label,
+            order=fields["Comments"].order + offset, _inline_data_type="String",
+            branch_parent_id=fields["Familiarity"].id,
+        )
+        db.add(fields[label])
+    db.commit()
+    if answered:
+        _add_response(db, review_session, instrument, fields[answered])
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    return _rows_table(_card_slice(" ".join(body.split()), instrument.id)), body
+
+
+def _nest(row: str) -> str:
+    return re.search(r"<button[^>]*data-new-model-rf-nest[^>]*>", row).group(0)
+
+
+def test_a_level_one_row_below_a_branch_can_join_it(client: TestClient, db: Session) -> None:
+    table, _ = _with_other(client, db, "two-level-nest")
+    other = _cells(_row(table, "Other"))
+    assert len(other) == 14
+    # bar, Active, +, ⑂, ↰, ↳: the ↰ fills the last slot, before ↳.
+    assert "data-new-model-rf-nest" in other[4]
+    assert "data-new-model-rf-join" in other[5] and ">↳</button>" in other[5]
+    nest = _nest(_row(table, "Other"))
+    assert " disabled" not in nest and 'title="Join the branch above"' in nest
+    # Rating has a branch of its own, so it can't join another.
+    rating = _nest(_row(table, "Rating"))
+    assert " disabled" in rating
+    assert 'title="A field with a branch can\'t join another"' in rating
+    # Other, above Last, has none.
+    last = _nest(_row(table, "Last"))
+    assert " disabled" in last
+    assert 'title="No branch inside this branch ends directly above"' in last
+
+
+def test_a_level_one_rows_join_is_off_in_an_answered_branch(
+    client: TestClient, db: Session
+) -> None:
+    """Last's answer locks Familiarity's branch, so Other can't leave it."""
+    table, _ = _with_other(client, db, "two-level-nest-locked", answered="Last")
+    for label in ("Other", "Last"):
+        nest = _nest(_row(table, label))
+        assert " disabled" in nest, label
+        assert 'title="Its branch has saved responses, so its fields can\'t change"' in nest, label
+
+
+def test_the_row_script_nests_a_level_one_row(client: TestClient, db: Session) -> None:
+    _, body = _with_other(client, db, "two-level-nest-js")
+
+    def fn(name: str) -> str:
+        return " ".join(_rf_fn(body, name).split())
+
+    sync = fn("newModelRfSyncNest")
+    for line in (
+        "var above = window.newModelRfBranchSibling(row, true);",
+        "} else if (!above || !above.hasAttribute('data-new-model-rf-parent')) {",
+        "} else if (window.newModelRfBranchLocked(window.newModelRfParentOf(row))) {",
+        "btn.setAttribute('title', off || 'Join the branch above');",
+    ):
+        assert line in sync, line
+    assert "window.newModelRfSetLevel(row, 2);" in fn("newModelRfNest")
+    recompute = fn("newModelRfRecomputeActionStates")
+    assert "window.newModelRfSyncNest(row);" in recompute
+    assert "window.newModelRfSyncInnerBorders(group);" in recompute
+
+
+def test_a_branch_inside_a_branch_is_ruled_above_and_below(
+    client: TestClient, db: Session
+) -> None:
+    """The author's second rung-5 entry: Rating's branch is ruled above
+    Rating and below Comments, its last field, from Rating's checkbox
+    column rightward, clear of Familiarity's bar."""
+    table, body = _with_other(client, db, "two-level-rules")
+    assert 'class="rf-inner-top"' in _row(table, "Rating")
+    assert 'class="rf-inner-end"' in _row(table, "Comments")
+    assert "rf-inner" not in _row(table, "Other") + _row(table, "Familiarity")
+    # A branch that ends the whole group still marks its last field.
+    _, _, card, _, _ = _chain_page(client, db, "two-level-rules-last")
+    assert 'class="rf-inner-end"' in _row(_rows_table(card), "Comments")
+    flat = " ".join(body.split())
+    for rule in (
+        "body.ui-v2 table.rf-table > tbody > tr.rf-inner-top > td:nth-child(n+2) { border-top: 1px solid var(--border-default); }",
+        "body.ui-v2 table.rf-table > tbody > tr.rf-inner-end > td:nth-child(n+2) { border-bottom: 1px solid var(--border-default); }",
+    ):
+        assert rule in flat, rule
+    sync = " ".join(_rf_fn(body, "newModelRfSyncInnerBorders").split())
+    assert "if (window.newModelRfRowLevel(row) !== 1) { return; }" in sync
+    assert "window.newModelRfUnitEnd(row).classList.add('rf-inner-end');" in sync

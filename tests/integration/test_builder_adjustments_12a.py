@@ -89,12 +89,12 @@ def test_join_and_detach_leave_room_for_two_more_buttons(
     buttons, ahead of a second level of branching (it was one), still
     of the same width, on the server's rows and the template's. 19T Item
     14 made the space two empty slot columns, which a branch's rows
-    shift into: two after a top-level row's join, one after a governed
-    row's."""
+    shift into: two after a top-level row's join, none after a level-1
+    row's, whose ↰ fills the last (rung 5)."""
     _, _, card, flat = _page(client, db, "12a-join-room")
     table = _rows_table(card)
     slot = '<td class="col-shrink rf-slot"></td>'
-    for name, slots in (("Rating", 2), ("Comments", 1)):
+    for name, slots in (("Rating", 2), ("Comments", 0)):
         row = _row(table, name)
         assert '<td class="col-shrink rf-join-cell" data-new-model-rf-join-cell>' in row
         after_join = row.split("data-new-model-rf-join-cell>")[1].split('<td class="rf-name">')[0]

@@ -1108,14 +1108,20 @@ Decimal or List field with none, selected (filled, like a pressed R) on
 a parent, and inactive on a String field ("A String field can't have a
 branch"). A governed row shifts one column right — the bar sits in the
 checkbox column, its checkbox in the **+** column, its **+** in the ⑂
-column, its ⑂ in the join column and its ↳ in the first of two empty
-slots after join (`td.rf-slot`) — so every row has six leading columns
-and aligns from the name onward, parent and governed alike. A level-1
+column, its ⑂ in the join column, and its ↰ and ↳ in the two empty
+slots after join (`td.rf-slot`, 19T Item 14 rung 5) — so every row has
+six leading columns and aligns from the name onward, parent and
+governed alike. A level-1
 row's ⑂ forks it one level down ("Add a branch inside this branch,
 below this field"): its condition row and fields shift one more column
 right, with their own bar. A level-2 row shifts two columns: two bars,
 its checkbox in the ⑂ column, its **+** in the join column, no ⑂ (the
-first slot stays empty) and its ↳ in the last slot. In an answered branch a level-1 row's ⑂ is off, like its "+".
+first slot stays empty) and its ↳ in the last slot, under a level-1
+row's. In an answered branch a level-1 row's ⑂ is off, like its "+".
+**A branch inside a branch is ruled** above its parent and below its
+last field, from the parent's checkbox column rightward, clear of the
+outer branch's bar (`tr.rf-inner-top` / `tr.rf-inner-end`, the
+author, 2026-09-29); a top-level group's rule stays full width.
 The checkbox sits
 centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 12A).
@@ -1196,12 +1202,18 @@ spreadsheet formula.
 
 **Join (↰) and detach (↳)** sit after ⑂, sharing its width (`.rf-glyph`).
 Two empty slots of that width follow a plain row's join (`td.rf-slot`);
-each level of branching shifts a row one column right into them.
+each level of branching shifts a row one column right into them. A
+level-1 row has both, ↰ before ↳.
 A plain row that isn't the first, has no saved responses and isn't
 itself a parent can join the unit above: the deepest unlocked branch
 that ends directly above it, at that branch's level, or, on a plain
 Integer, Decimal or List field, a new branch with an empty condition
-(a branch inside a branch is started with ⑂, not ↰). Joining keeps the
+(a branch inside a branch is started with ⑂, not ↰). **A level-1 row's
+↰** joins the branch of the field directly above it in its own branch,
+at level 2, when that field has one (19T Item 14 rung 5, the author's
+screen cap); otherwise it is off ("No branch inside this branch ends
+directly above"), and off, as ↳ is, on a parent or in a locked branch —
+which a row with saved responses always is, its answers locking it. Joining keeps the
 row's **R** (19T Item 11) — Save refuses the result if the row's R is
 now required with no anchor elsewhere in the instrument. A governed row
 in an unlocked branch can detach (↳) one level up, to directly below

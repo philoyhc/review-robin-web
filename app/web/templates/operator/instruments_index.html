@@ -4342,6 +4342,7 @@
                    {% if rf.is_parent %}data-new-model-rf-parent="true"{% endif %}
                    {% if rf.id %}data-rf-id="{{ rf.id }}"{% endif %}
                    data-new-model-rf-level="{{ _level }}"
+                   {% if rf.inner_top or rf.inner_end %}class="{{ 'rf-inner-top' if rf.inner_top else 'rf-inner-end' }}"{% endif %}
                    data-committed="true"
                    data-selected="{{ 'true' if rf.selected else 'false' }}"
                    data-label="{{ rf.name }}"
@@ -4356,8 +4357,9 @@
                    {% if rf.has_responses %}data-has-responses="true" data-new-model-rf-shape-locked="true"{% endif %}>
                 {# 19T Item 14 — six leading columns at every level: a bar per
                    branch the row is in, then Active, +, ⑂ (none at level
-                   2, the depth limit: its slot stays empty), join /
-                   detach, and empty slots to fill the six. #}
+                   2, the depth limit: its slot stays empty), a level-1
+                   row's ↰ (rung 5), join / detach, and empty slots to fill
+                   the six. #}
                 {% for _ in range(_level) %}<td class="col-shrink rf-branch-bar"></td>{% endfor %}
                 <td class="col-shrink rf-active-cell{% if rf.is_parent %} rf-branch-bar-start{% endif %}"><input type="checkbox" data-new-model-rf-active
                          {% if rf.selected %}checked{% endif %}
@@ -4381,17 +4383,28 @@
                 {% else %}
                 <td class="col-shrink rf-slot"></td>
                 {% endif %}
+                {# 19T Item 14 rung 5 — a level-1 row's ↰ joins the branch
+                   inside its own branch that ends directly above it, at
+                   level 2; it sits before its ↳. #}
+                {% if _level == 1 %}
+                <td class="col-shrink" data-new-model-rf-nest-cell>
+                <button type="button" class="btn secondary rf-glyph"
+                        data-new-model-rf-nest
+                        onclick="newModelRfNest(this)"
+                        {% if rf.is_parent or rf.branch_locked or not rf.nest_target %}disabled{% endif %}
+                        title="{% if rf.is_parent %}A field with a branch can't join another{% elif rf.branch_locked %}Its branch has saved responses, so its fields can't change{% elif not rf.nest_target %}No branch inside this branch ends directly above{% else %}Join the branch above{% endif %}">↰</button></td>
+                {% endif %}
                 {# 19T Item 10 rung 7b — join the unit above (↰), or, on a
                    governed row, detach from the branch (↳). The row script
-                   computes its state; a governed row's sits under ⑂'s
-                   neighbour, the one-column shift. #}
+                   computes its state; a governed row's ↳ sits in the last
+                   of the six leading columns (19T Item 14 rung 5). #}
                 <td class="col-shrink rf-join-cell" data-new-model-rf-join-cell>
                 <button type="button" class="btn secondary rf-glyph"
                         data-new-model-rf-join
                         onclick="newModelRfJoin(this)"
                         {% if _governed %}{% if rf.branch_locked or rf.is_parent %}disabled{% endif %}{% elif _outer.first or rf.is_parent or rf.has_responses %}disabled{% endif %}
                         title="{% if _governed %}{% if rf.is_parent %}A field with a branch can't leave its branch{% elif rf.branch_locked %}Its branch has saved responses, so its fields can't change{% elif rf.only_member %}Detach this field and end its branch{% else %}Move this field out of its branch{% endif %}{% else %}Join the field above{% endif %}">{% if _governed %}↳{% else %}↰{% endif %}</button></td>
-                {% for _ in range(2 - _level if _level < 2 else 0) %}<td class="col-shrink rf-slot"></td>{% endfor %}
+                {% for _ in range(2 if _level == 0 else 0) %}<td class="col-shrink rf-slot"></td>{% endfor %}
                 <td class="rf-name">
                 <input type="text"
                        data-new-model-rf-name
@@ -5025,8 +5038,9 @@
           return at >= 0 && sib ? sib : null;
         };
         // Set a row's level: a bar per branch it sits in, its ⑂ (none at
-        // level 2, the depth limit: an empty slot instead), and the slots
-        // after join that keep six leading columns (19T Item 14).
+        // level 2, the depth limit: an empty slot instead), a level-1 row's
+        // ↰ before its ↳ (rung 5), and the slots that keep six leading
+        // columns (19T Item 14).
         window.newModelRfSetLevel = window.newModelRfSetLevel || function (row, level) {
           row.setAttribute('data-new-model-rf-level', String(level));
           if (level > 0) {
@@ -5034,7 +5048,7 @@
           } else {
             row.removeAttribute('data-new-model-rf-governed');
           }
-          row.querySelectorAll('td.rf-branch-bar, td.rf-slot').forEach(function (td) { td.remove(); });
+          row.querySelectorAll('td.rf-branch-bar, td.rf-slot, [data-new-model-rf-nest-cell]').forEach(function (td) { td.remove(); });
           var joinCell = row.querySelector('[data-new-model-rf-join-cell]');
           var forkCell = row.querySelector('[data-new-model-rf-fork-cell]');
           function slot() {
@@ -5051,7 +5065,21 @@
             var fork = tpl && tpl.content.querySelector('[data-new-model-rf-fork-cell]');
             if (fork) { joinCell.parentNode.insertBefore(fork.cloneNode(true), joinCell); }
           }
-          for (var i = 0; i < 2 - Math.min(level, 2); i++) {
+          if (level === 1) {
+            // Its ↰ into a branch inside its own (rung 5), before its ↳.
+            var nest = document.createElement('td');
+            nest.className = 'col-shrink';
+            nest.setAttribute('data-new-model-rf-nest-cell', '');
+            var nestBtn = document.createElement('button');
+            nestBtn.type = 'button';
+            nestBtn.className = 'btn secondary rf-glyph';
+            nestBtn.setAttribute('data-new-model-rf-nest', '');
+            nestBtn.setAttribute('onclick', 'newModelRfNest(this)');
+            nestBtn.textContent = '↰';
+            nest.appendChild(nestBtn);
+            joinCell.parentNode.insertBefore(nest, joinCell);
+          }
+          for (var i = 0; i < (level === 0 ? 2 : 0); i++) {
             joinCell.insertAdjacentElement('afterend', slot());
           }
           for (var j = 0; j < level; j++) {
@@ -5558,6 +5586,60 @@
             active.setAttribute('title', 'Show this field in the preview and to reviewers');
           }
         };
+        // 19T Item 14 rung 5 — a level-1 row's ↰: live only when the field
+        // directly above it in its branch has a branch of its own, which
+        // it joins at level 2. It never starts one (⑂ does).
+        window.newModelRfSyncNest = window.newModelRfSyncNest || function (row) {
+          var btn = row && row.querySelector('[data-new-model-rf-nest]');
+          if (!btn) { return; }
+          var above = window.newModelRfBranchSibling(row, true);
+          var off = null;
+          if (row.hasAttribute('data-new-model-rf-parent')) {
+            off = "A field with a branch can't join another";
+          } else if (window.newModelRfBranchLocked(window.newModelRfParentOf(row))) {
+            // A row with saved responses of its own is here too: its
+            // answers lock its branch.
+            off = "Its branch has saved responses, so its fields can't change";
+          } else if (!window.newModelRfSaveName(row)) {
+            off = 'Enter a field name first.';
+          } else if (!above || !above.hasAttribute('data-new-model-rf-parent')) {
+            off = 'No branch inside this branch ends directly above';
+          }
+          btn.disabled = !!off;
+          btn.setAttribute('title', off || 'Join the branch above');
+        };
+        // A branch inside a branch is ruled above its parent and below its
+        // unit's last row (``rf-inner-top`` / ``rf-inner-end``, base.html),
+        // recomputed over the group whenever a row's states are.
+        window.newModelRfSyncInnerBorders = window.newModelRfSyncInnerBorders || function (group) {
+          if (!group) { return; }
+          group.querySelectorAll('.rf-inner-top, .rf-inner-end').forEach(function (el) {
+            el.classList.remove('rf-inner-top', 'rf-inner-end');
+          });
+          group.querySelectorAll('[data-new-model-rf-row][data-new-model-rf-parent]').forEach(function (row) {
+            if (window.newModelRfRowLevel(row) !== 1) { return; }
+            row.classList.add('rf-inner-top');
+            window.newModelRfUnitEnd(row).classList.add('rf-inner-end');
+          });
+        };
+        // The row already sits directly after that branch's last row, so
+        // moving it down a level makes it the branch's last field.
+        window.newModelRfNest = window.newModelRfNest || function (btn) {
+          var row = btn.closest('[data-new-model-rf-row]');
+          var rows = row && row.closest('[data-new-model-rf-rows]');
+          if (!row || !rows || btn.disabled) { return; }
+          window.newModelRfSetLevel(row, 2);
+          var parentRow = window.newModelRfParentOf(row);
+          if (parentRow && parentRow.getAttribute('data-selected') !== 'true') {
+            row.setAttribute('data-selected', 'false');
+          }
+          rows.querySelectorAll('[data-new-model-rf-row]').forEach(function (r) {
+            window.newModelRfRecomputeActionStates(r);
+          });
+          window.newModelRfBranchEdited(row);
+          var detach = row.querySelector('[data-new-model-rf-join]');
+          if (detach && !detach.disabled) { detach.focus(); }
+        };
         // ↰ / ↳: join the unit above, or detach from the branch.
         window.newModelRfJoin = window.newModelRfJoin || function (btn) {
           var row = btn.closest('[data-new-model-rf-row]');
@@ -5797,6 +5879,8 @@
           // Join / detach, here and on the row below, whose join depends
           // on this row's name and type.
           window.newModelRfSyncJoin(row);
+          window.newModelRfSyncNest(row);
+          window.newModelRfSyncInnerBorders(group);
           var nextGroup = group && !governed && window.newModelRfGroupSibling(group, false);
           if (nextGroup) {
             window.newModelRfSyncJoin(nextGroup.querySelector('[data-new-model-rf-row]'));
