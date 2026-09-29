@@ -119,12 +119,15 @@ class _PlannedField:
 def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
     """19T Item 10 — each instrument's parsed fields against the
     branching rules, before anything is applied: a ``branch_parent``
-    names a ``field_key`` of the same instrument, and the fields keep one
-    level, a non-String parent with a valid condition, a required governed
+    names a ``field_key`` of the same instrument, and the fields keep two
+    levels at most (19T Item 14), a non-String parent with a valid condition, a required governed
     field only beside an active required ungoverned one (19T Item 11), and
     a branch directly after its parent. A file that breaks one is refused
     with the rule named rather than applied with the branch dropped."""
-    from app.services.responses import branch_structure_errors
+    from app.services.responses import (
+        branch_structure_errors,
+        hide_below_hidden_parents,
+    )
 
     errors: list[ApplyError] = []
     for n, instrument in sorted(plan.instruments.items()):
@@ -178,12 +181,9 @@ def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
         # A hidden parent hides its branch when the file is applied
         # (``_apply_branches``), so the rules judge a governed field the
         # same way here: both phases give ``branch_structure_errors`` the
-        # same visibility (19T Item 11's cumulative read).
-        by_position = {p.id: p for p in planned}
-        for p in planned:
-            parent = by_position.get(p.branch_parent_id)
-            if parent is not None and not parent.visible:
-                p.visible = False
+        # same visibility (19T Item 11's cumulative read), at either level
+        # (19T Item 14).
+        hide_below_hidden_parents(planned)
         errors.extend(
             ApplyError(
                 row_number=0,

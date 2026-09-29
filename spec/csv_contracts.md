@@ -641,7 +641,9 @@ same rules the builder enforces — `spec/instruments.md` § "Branching
 between response fields"): an unknown `branch_parent`, a String parent,
 a branch that isn't one ruled group, or a condition that doesn't fit its
 parent's type is refused with a named error, and the whole apply fails —
-never applied with the branch silently dropped. **A required governed
+never applied with the branch silently dropped. A `branch_parent` may
+name a governed field, two levels deep at most; a third level is
+refused by name, and a hidden parent hides its whole branch on apply. **A required governed
 field needs an active required field outside any branch elsewhere in
 the instrument** (19T Item 11; a visible field under a `require`
 parent counts as required governed) — refused by name otherwise, the

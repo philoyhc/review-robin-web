@@ -31,6 +31,7 @@ from app.services.responses import (
     BRANCH_MODES,
     BRANCH_OPS,
     branch_structure_errors,
+    hide_below_hidden_parents,
     canonical_condition_value,
 )
 
@@ -266,11 +267,11 @@ def _apply_branches(
                 "a response field of this instrument"
             )
         field.branch_parent_id = parent.id
-        # A hidden parent hides its branch, as the card's Active cascade
-        # and its Save do (the item's cumulative read): a governed field
-        # left visible under a hidden parent could never be answered.
-        if not parent.visible:
-            field.visible = False
+    # A hidden parent hides its branch, as the card's Active cascade and
+    # its Save do (the item's cumulative read): a governed field left
+    # visible under a hidden parent could never be answered. At either
+    # level (19T Item 14).
+    hide_below_hidden_parents([field for _, field in created])
     errors = branch_structure_errors([field for _, field in created])
     if errors:
         raise _ParseError(
