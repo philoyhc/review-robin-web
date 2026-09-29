@@ -591,9 +591,9 @@ long `String` variant).
 `guide/advanced_instruments.md` Item 1 (design record, built as 19T
 Item 10); the builder side is `spec/instruments.md` § "Branching between
 response fields". Under **Show**, the default, a **governed** field's cell can be answered only
-while its **parent**'s branch is open and its parent itself applies —
-every branch above it is open, or Require (a governed field may itself
-be a parent, one level down) — judged, per row, on the values
+while its **parent**'s branch is open and its parent itself applies.
+A governed field may itself be a parent, one level down, so a field
+applies only while every branch above it is open or Require. It is judged, per row, on the values
 the page shows (`applicable_field_ids`,
 `app/services/responses/_branching.py`), so an already-answered but now
 out-of-scope value still renders. A **group row** (below) is judged on
@@ -627,12 +627,14 @@ holds** (`required_field_ids`), its own `required` ignored — an
 unanswered parent holds nothing. A Show branch above a Require branch
 still closes it: its cells are then muted and disabled, and not
 required. The parent cell carries
-`data-rs-branch-mode="require"`, and the script then toggles only the
-"(required)" in each governed control's label, never `disabled` or
-`td.rs-branch-closed`. The cell has **no title**: the page doesn't say
+`data-rs-branch-mode="require"`. On the parent's answer the script
+toggles only the "(required)" in each governed control's label, never
+`disabled` or `td.rs-branch-closed`; only a closed Show branch above
+closes the cell. The cell has **no title**: the page doesn't say
 why a field became required; the mark appearing is enough. Its header takes
 the `*` whatever its own `required` (`may_be_required_field_ids`), and
-the save rule never removes its answer, since nothing there is closed.
+the save rule never removes its answer on the parent's answer; a closed
+Show branch above drops it, as it would any closed field.
 A hidden governed field is never required under Require, and has no
 cell anyway.
 

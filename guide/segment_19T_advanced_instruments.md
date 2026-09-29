@@ -2267,7 +2267,9 @@ Taken 2026-09-29 at `85750b93`.
 
 **Closed 2026-09-29** (#2678 plan, #2679 evaluation, #2680 builder
 scaffold, #2681 server, #2682 builder wired, #2683 rung 5, and this
-close). Browser-checked by the author.
+close). Browser-tested by the author before the close, which asked for
+it; rung 5 came from that pass. The checklist row in
+`guide/post_azure_todo_checklist.md` item 6 stays for the dev slot.
 
 **What the ladder became.** Intended: plan, evaluation, scaffold,
 authoring with the builder, close. Rung 4 split in two, as Item 13's
@@ -2300,8 +2302,11 @@ since they live in the builder render.
 the group-wide lock, the preview's nested Require wording, a pre-JS ↳
 title and missing tests, all fixed in #2682), and rung 5's over
 `aac3050f..a81600fb` (no defect; wording, check order, an unreachable
-title and tests, fixed in #2683). Spec checks at rung 4b and at this
-close.
+title and tests, fixed in #2683). Codex on #2681: a branch's
+contiguity walk recursed and could overflow on a long chain, made
+iterative. `spec-writer` passes at rungs 3, 4a and 4b and at this close
+(its fix: a Require branch still closes under a closed Show branch
+above it).
 
 ### PR ladder
 

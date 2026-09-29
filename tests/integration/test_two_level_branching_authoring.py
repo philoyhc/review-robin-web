@@ -396,4 +396,4 @@ def test_clone_session_copies_a_chain(db: Session) -> None:
     assert fields["rating"].branch_parent_id == fields["familiarity"].id
     assert fields["why"].branch_parent_id == fields["rating"].id
     assert fields["rating"].branch_mode == "require"
-    assert fields["why"].id != _fields(db, source.id)["why"].id
+    assert fields["why"].branch_parent_id != _fields(db, source.id)["rating"].id
