@@ -2297,12 +2297,16 @@ since they live in the builder render.
 - "Opens when" names the field's own parent's condition only, under a
   Require branch inside a Show one too (the author's ruling).
 
-**Reads.** Two `diff-reviewer` reads: the cumulative one over
+**Reads.** Three `diff-reviewer` reads: the cumulative one over
 `6afbd412..71607916` at rung 4b (no high finding; the parent-move gap,
 the group-wide lock, the preview's nested Require wording, a pre-JS ↳
 title and missing tests, all fixed in #2682), and rung 5's over
 `aac3050f..a81600fb` (no defect; wording, check order, an unreachable
-title and tests, fixed in #2683). Codex on #2681: a branch's
+title and tests, fixed in #2683), and the close's over
+`251cc86d..2851feba`, which reopened `tests/` with a clone test (no high
+finding; a self-contradicting Require paragraph in
+`spec/reviewer-surface.md`, overclaimed wording, undercounted passes and
+a trivially true assertion, fixed in #2685). Codex on #2681: a branch's
 contiguity walk recursed and could overflow on a long chain, made
 iterative. `spec-writer` passes at rungs 3, 4a and 4b and at this close
 (its fix: a Require branch still closes under a closed Show branch
