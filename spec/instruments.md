@@ -937,15 +937,15 @@ Each row holds, left to right:
 | Control | Bound to | Notes |
 |---|---|---|
 | **Active** checkbox | `InstrumentResponseField.visible` | The field's selection — whether it renders on the reviewer surface, the reviewer summary and the reviewer-record CSV (see below). Unticking a field with saved responses asks to confirm first — "Hide … from the reviewer surface?", naming the response count and that the data is preserved for audit. An inactive row is not dimmed. |
-| **+** button | — | Inserts a new row (its own `<tbody>` group) directly after this one's, seeded with the next default label (see "A field's default label" below). |
+| **+** button | — | Inserts a new row (its own `<tbody>` group) directly after this one's, seeded with the next default label (see "A field's default label" below). On a governed row it adds a field to the same branch instead, directly after the row's unit — the row, its condition row and every deeper row (see ["Branching between response fields"](#branching-between-response-fields)). |
 | **⑂** / **↰** / **↳** | `branch_parent_id` / `branch_op` / `branch_value` / `branch_mode` | Fork, join and detach — see ["Branching between response fields"](#branching-between-response-fields) below. |
 | Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Empty until typed — see "A field's default label" below. |
 | Type (`<select>`) | `_inline_data_type` | `String / Integer / Decimal / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. Disabled when the row has saved responses; the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
 | Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_options` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
 | **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. Stages Band 2 state directly, so Save alone persists a toggle. Grayed out on a row a Require branch governs, where the condition decides (see ["Branching between response fields"](#branching-between-response-fields)). |
 | **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field above the reviewer-surface preview table. The help-text *text* is a plain `help_text` textarea on that card (shown when the instrument card is unlocked, `data-lock-only` read view when locked), bound to the `dfsave-{id}` form, so it commits with the bulk Save. Stages Band 2 state directly, like R. |
-| **▲ / ▼** | — | Full-size `btn secondary` buttons (not `btn-short` — that size is the display-field table's, see "Display-field table" above) that swap this row's `<tbody>` group with its neighbour. They move a **group**, not a row; a governed row moves within its branch instead — see ["Branching between response fields"](#branching-between-response-fields). |
-| **X** button (`.btn.destructive`) | — | Drops this row (its `<tbody>`), matching Band 1's rule/unit X. Disabled when the row has saved responses (title pins the reason), or when it is the only row left. |
+| **▲ / ▼** | — | Full-size `btn secondary` buttons (not `btn-short` — that size is the display-field table's, see "Display-field table" above) that swap this row's `<tbody>` group with its neighbor. They move a **group**, not a row; a governed row moves its unit (itself, its condition row and any branch inside it) past the neighboring unit within its branch instead — see ["Branching between response fields"](#branching-between-response-fields). |
+| **X** button (`.btn.destructive`) | — | Drops this row (its `<tbody>`), matching Band 1's rule/unit X. Disabled when the row has saved responses (title pins the reason), or when it is the only row left. In a branch, deletion runs bottom-up — see ["Branching between response fields"](#branching-between-response-fields). |
 
 **A row commits to the preview by itself** whenever its live name and
 shape are valid and differ from what it last committed — checked on
@@ -978,7 +978,9 @@ commits to the preview at once, but the card turns unsaved, and
 Cancel's discard reload drops it.
 
 **Order follows the rows.** ▲ ▼ swap a row's `<tbody>` group with its
-neighbour; "+" inserts a new group directly after the pressed row's;
+neighbor, or on a governed row its unit with the neighboring unit in
+its branch; "+" inserts a new group directly after the pressed row's,
+or on a governed row a new field in its branch directly after its unit;
 the bulk Save serializes rows in row order (a named, uncommitted row
 persists unselected, in place).
 
@@ -1108,8 +1110,9 @@ slots after join (`td.rf-slot`) — so every row has six leading columns
 and aligns from the name onward, parent and governed alike. A level-1
 row's ⑂ forks it one level down ("Add a branch inside this branch,
 below this field"): its condition row and fields shift one more column
-right, with their own bar. A level-2 row has no ⑂ (its slot stays
-empty). In an answered branch a level-1 row's ⑂ is off, like its "+".
+right, with their own bar. A level-2 row shifts two columns: two bars,
+its checkbox in the ⑂ column, its **+** in the join column, no ⑂ (the
+first slot stays empty) and its ↳ in the last slot. In an answered branch a level-1 row's ⑂ is off, like its "+".
 The checkbox sits
 centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 12A).

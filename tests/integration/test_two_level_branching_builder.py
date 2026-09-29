@@ -199,7 +199,6 @@ def test_answers_lock_every_branch_above_on_the_page(client: TestClient, db: Ses
         f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
     ).text
     table = _rows_table(_card_slice(" ".join(body.split()), instrument.id))
-    assert 'data-new-model-rf-branch-locked="true"' in table
     for cond in table.split("<tr data-new-model-rf-condition")[1:]:
         op = re.search(r"<select data-new-model-rf-condition-op[^>]*>", cond).group(0)
         assert " disabled" in op
@@ -234,3 +233,26 @@ def test_the_row_script_reads_a_rows_own_parent_and_condition(
     assert "var parent = window.newModelRfParentOf(row); var cond = window.newModelRfConditionOf(parent);" in hint
     sync = " ".join(_rf_fn(body, "newModelRfSyncConditionOps").split())
     assert "var parent = parentRow || group.querySelector('[data-new-model-rf-parent]');" in sync
+
+
+def test_the_row_script_locks_per_branch(client: TestClient, db: Session) -> None:
+    """As the server render and Save do: a branch is locked while a field
+    anywhere below its parent has responses, so an unanswered branch
+    inside an answered group stays open (the rung 4b spec check's D1)."""
+    _, _, _, _, body = _chain_page(client, db, "two-level-lock-js")
+    assert "data-new-model-rf-branch-locked" not in body
+
+    def fn(name: str) -> str:
+        return " ".join(_rf_fn(body, name).split())
+
+    helper = fn("newModelRfBranchLocked")
+    assert "return el !== parentRow && el.getAttribute('data-has-responses') === 'true';" in helper
+    assert "window.newModelRfUnit(parentRow).some(" in helper
+    assert "var locked = window.newModelRfBranchLocked(parent);" in fn("newModelRfRecomputeCondition")
+    assert (
+        "var locked = governed && window.newModelRfBranchLocked(window.newModelRfParentOf(row));"
+        in fn("newModelRfRecomputeActionStates")
+    )
+    join = fn("newModelRfSyncJoin")
+    assert "} else if (window.newModelRfBranchLocked(window.newModelRfParentOf(row))) {" in join
+    assert "window.newModelRfParentOf(aboveRows[aboveRows.length - 1]))) {" in join

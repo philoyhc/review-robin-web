@@ -2299,8 +2299,11 @@ Taken 2026-09-29 at `85750b93`.
   field ends that branch; Active cascades through the unit. The view
   locks every branch above an answer, as Save does. Chromium authored a
   chain from scratch and walked each of these. Judgment calls: ↰ never
-  starts a branch inside a branch (⑂ does), and the builder's lock stays
-  group-wide, stricter than Save's per-branch rule.
+  starts a branch inside a branch (⑂ does). The spec check found the
+  row script still locked group-wide, overriding the per-branch render
+  on its first pass; it now locks per branch (`newModelRfBranchLocked`,
+  answers anywhere below a parent), matching Save and the spec, and the
+  dead `data-new-model-rf-branch-locked` attribute is gone.
 
 ### PR ladder
 

@@ -200,7 +200,7 @@ def test_governed_answers_lock_the_branch_on_the_page(
     ).text
     table = _rows_table(_card_slice(" ".join(body.split()), instrument.id))
     group = table.split("<tbody data-new-model-rf-group")[1]
-    assert group.startswith(' data-new-model-rf-branch data-new-model-rf-branch-locked="true">')
+    assert group.startswith(" data-new-model-rf-branch>")
     condition = group.split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
     # The operator, both boxes (19T Item 12), the condition's "+" and the
     # mode select (19T Item 13).
