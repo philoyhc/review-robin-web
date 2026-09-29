@@ -2149,6 +2149,15 @@ reminder and header tests (added), and two plan overclaims (corrected).
 `spec-writer` ran at rungs 3a (a stale route (a) paragraph and §5.7,
 which joined Doc impact) and 4 (no divergence).
 
+**Spec sweep** (`spec-writer`, at this close): the Doc-impact specs,
+with no place where the code contradicts them. Five passages still read
+"required" as Show-only and gained Require: the Responses coverage's
+hidden-field asymmetry, the settings CSV's anchor rule, the surface's
+header "*" and branching intro, and the functional spec's surface
+paragraph. The authoring rule now says *visible* governed field, and
+the item tags came out of the new prose. The sweep landed in the
+records commit (`c7f95bb1`) rather than its own.
+
 **Browser check:** the author's run of `guide/post_azure_todo_checklist.md`
 item 6's "A Require branch" row passed so far (2026-09-29).
 
