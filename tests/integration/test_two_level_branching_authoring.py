@@ -378,3 +378,22 @@ def test_save_accepts_a_level_one_field_joining_the_branch_above_it(
     assert response.status_code == 200, response.text
     db.expire_all()
     assert other.branch_parent_id == fields["Rating"].id
+
+
+def test_clone_session_copies_a_chain(db: Session) -> None:
+    """The close's check of the definition of done: cloning re-points
+    each level at its own parent's clone."""
+    from app.services import session_clone
+
+    review_session, op = _session(db, "two-level-clone")
+    source = _chain_instrument(db, review_session)
+    clone = session_clone.clone_session(db, source=review_session, user=op, mode="all")
+    db.flush()
+    copied = db.execute(
+        select(Instrument).where(Instrument.session_id == clone.id)
+    ).scalar_one()
+    fields = _fields(db, copied.id)
+    assert fields["rating"].branch_parent_id == fields["familiarity"].id
+    assert fields["why"].branch_parent_id == fields["rating"].id
+    assert fields["rating"].branch_mode == "require"
+    assert fields["why"].id != _fields(db, source.id)["why"].id
