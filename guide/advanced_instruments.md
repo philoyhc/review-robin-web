@@ -20,7 +20,8 @@ built one item at a time:** Item 4 shipped first as 19T Item 7
 Item 5 as 19T Item 8 (2026-09-26), and Item 3 as 19T Item 9
 (2026-09-26). Item 1 shipped as 19T Item 10 (2026-09-27); Item 2 shipped
 as 19T Item 11 (2026-09-27). Of Item 6's three extensions, Q3 shipped as
-19T Item 12 (2026-09-28) and the other two are logged as 19T Items 13–14. This file keeps the
+19T Item 12 (2026-09-28), Q1 as 19T Item 13 (2026-09-29), and Q2 is
+logged as 19T Item 14. This file keeps the
 author's rulings and the measured cost, so the build can start from them.
 Every item is now built or logged as a 19T item, so no
 `guide/deferred_consolidated.md` entry points here any more (the last
@@ -647,6 +648,11 @@ required (Codex on #2651). It's a change to 19T Item 11's rung-4
 authoring rule, not new work.
 
 ### Q1 — A condition that makes a field required, not shown
+
+*(Shipped 2026-09-29 as 19T Item 13, as a "then [mode]" select on the
+condition row rather than ⑂ cycling between the two; a hidden governed
+field under Require is never required. The costing below is kept as it
+was.)*
 
 **Semantics:** a branch gets a mode.
 - **Show** is Item 1: closed means unanswerable.

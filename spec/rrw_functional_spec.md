@@ -1597,13 +1597,14 @@ photo / profile-link sources).
 
 **Branching** — a response field configured (Band 3) as **governed** by
 another renders muted and disabled until its parent's answer satisfies
-the parent's condition; it stays that way live as the reviewer edits
-the parent, and the server enforces the same rule on Save (deleting a
+the parent's condition (a **Require** branch never closes; see §5.7);
+it stays that way live as the reviewer edits the parent, and the server enforces the same rule on Save (deleting a
 governed answer whose branch is closed) regardless of what the page
 shows (`spec/reviewer-surface.md` § "Branching between response
 fields"). A governed field marked **required** is required, and blocks
 Submit when empty, only while its branch is open — closed, it demands
-nothing and carries no value.
+nothing and carries no value. Under Require, the fields are answerable
+throughout and required only while the condition holds.
 
 **Sortability** — every column header on the review surface is
 clickable to sort the rows by that column; Shift-click adds a

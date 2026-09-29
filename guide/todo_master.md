@@ -3412,9 +3412,10 @@ dep chains called out at the bottom of this file.
      **Closed 2026-09-28.** Join reads ↰ and detach ↳; a number's
      condition boxes match the parent's Min box; the Active checkbox is
      centered in its cell.
-   - **Item 13 — Conditional required** (open, stub): a second kind of
-     condition making the governed fields required rather than shown, ⑂
-     cycling between the two. `guide/advanced_instruments.md` Item 6, Q1.
+   - ~~**Item 13 — Conditional required.**~~ **Closed 2026-09-29.**
+     `guide/advanced_instruments.md` Item 6, Q1: the condition row's
+     "then [mode]" select shows the governed fields or requires them while
+     the condition holds, else optional.
    - **Item 14 — Two levels of branching** (open, stub).
      `guide/advanced_instruments.md` Item 6, Q2.
    - **Item 15 — The Guide catches up with 19T** (open, planned; Item 12
