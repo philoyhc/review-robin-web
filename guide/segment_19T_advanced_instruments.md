@@ -2313,10 +2313,11 @@ Taken 2026-09-29 at `85750b93`.
   pre-JS ↳ title counted the group, not the row's own branch
   (`only_member`); Band 3's control table missed the bars and slots;
   tests for a level-2 answer locking the top branch's membership and a
-  level-1 parent's hide cascade, with and without branch keys. Open for
-  the author: "Opens when" under a Require branch inside a Show branch
-  names the field's own parent's condition, as ruled, though the Show
-  branch above decides whether it opens.
+  level-1 parent's hide cascade, with and without branch keys. The
+  read asked whether "Opens when" under a Require branch inside a Show
+  branch should name the Show branch's condition, which decides whether
+  it opens: no, the field's own parent's condition only (the author's
+  ruling, 2026-09-29, confirming the plan's).
 
 ### PR ladder
 
