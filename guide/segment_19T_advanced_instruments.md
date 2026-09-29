@@ -2190,14 +2190,134 @@ item 6's "A Require branch" row passed so far (2026-09-29).
 
 ## Item 14 — Two levels of branching
 
-**Logged 2026-09-27 on the author's instruction; a stub, details to
-follow.** A governed field may itself be a parent, one level down. This
-lifts Item 10's one-level ruling. The costing is
-`guide/advanced_instruments.md` Item 6, Q2: the heaviest of the three,
-mostly in the builder.
+**Logged 2026-09-27; shaped 2026-09-29 on the author's instruction**,
+from their builder mockup and one of ours adding ⑂ to level-1 rows. The
+costing is `guide/advanced_instruments.md` Item 6, Q2. It lifts Item
+10's one-level ruling.
+
+### Opportunity
+
+Item 6's scenario asks "why so low?" only of a reviewer who knows the
+reviewee (Familiarity > 0) *and* rated them low: a condition on a field
+that is itself behind a condition. One level can't say it; a condition
+naming two fields was rejected in Q2 (same save-rule and script cost,
+plus a field picker).
+
+### Decision
+
+- **A governed field may be a parent, one level down; no deeper.**
+  Storage is unchanged: the self FK already allows a chain.
+- **The builder shifts each level one column right** and keeps the name
+  column fixed, in the room Item 12A left after ↰. A level-1 row carries
+  ⑂ after + (filled on a parent, off on a String); a level-2 row has
+  none, its ↳ one column further right. A condition row's + sits under
+  its parent's ⑂, and a level-2 branch has its own bar inside the
+  level-1 one.
+- **Rejected:** arbitrary depth (the row runs out of columns, and every
+  cascade becomes unbounded), and ⑂ cycling a level (the author placed
+  ⑂ on the row, like level 0's).
+
+### Semantics
+
+- **Applicability** walks the chain: a field applies only while every
+  ancestor's branch is open or Require. Item 11 already built this into
+  `applicable_field_ids`, so the save rule and the counts need nothing;
+  `required_field_ids` reads the immediate parent's mode.
+- **The save hold** (`_hold_answers_behind_refused_parents`) walks the
+  chain: a grandchild behind a refused grandparent is held too.
+- **The surface script cascades**: closing a parent closes its whole
+  subtree, whatever a middle parent's stale input holds.
+- **The lock**: answers on a governed field lock every condition on its
+  chain, and each branch's membership (the author, taking the
+  recommendation): changing either could strand them.
+- **Hiding** a parent hides its whole subtree; deletion stays
+  bottom-up at each level.
+- **Labels**: the extract's "Shown when" / "Required when", the
+  surface's title and the preview's hint name the field's own parent
+  condition only (the author, taking the recommendation).
+- **The preview** counts a row as an item only while every ancestor is
+  Require (the sample row fails every condition).
+- **The settings CSV** already names a parent by `field_key`, so a chain
+  needs no new column; a third level is refused by name.
+
+### Judgment calls — decided
+
+- ↰ joins the deepest branch that ends directly above (the author,
+  taking the recommendation); ↳ steps out one level.
+- A parent keeps its branch where it is: ↰ stays off on a parent and ↳
+  is off on a level-1 parent, so a level changes one row at a time;
+  ▲ ▼ move a subtree within its branch.
+
+### Blast radius (measured)
+
+Taken 2026-09-29 at `85750b93`.
+
+| What | Count | Command |
+|---|---|---|
+| `app/` files naming `branch_parent_id` | 17 | `grep -rln --include=*.py --include=*.html branch_parent_id app` |
+| test files naming a branch or governed field | 21 | `grep -rlE --include=*.py 'branch_parent\|branch_op\|governed' tests` |
+| builder lines / "governed" mentions | 6,783 / 80 | `wc -l` and `grep -c governed` on `instruments_index.html` |
+| tests pinning the one-level refusal | 6 | `grep -rn "inside a branch can't" tests` |
+| specs ruling nested branches out | 2 | `grep -lE "[Nn]ested branches" spec/*.md` |
+
+### PR ladder
+
+1. **The plan** (prose only).
+2. **Evaluation first.** The save hold and the surface script walk the
+   chain; the extract, rollups, preview counts and parity fixture are
+   tested on a chain seeded in the database. `branch_structure_errors`
+   still refuses a second level, so nothing outside a test stores one
+   (Item 12's order).
+3. **Builder scaffold.** A stored two-level branch renders as the
+   mockup: the shifted rows, the nested bar, the condition's + under
+   its parent's ⑂, and level-1 ⑂ inert.
+4. **Authoring, and the builder wired.** The structure rules accept two
+   levels and refuse three, with recursive contiguity; Save's hidden
+   cascade, the chain lock and bottom-up delete, and the importer, go
+   recursive. The builder wires level-1 ⑂, ↰ / ↳ by level, ▲ ▼ by
+   subtree, the Active cascade and R two deep, and the preview's counts.
+   May split server / builder at build. Last build rung: the item's
+   cumulative read.
+5. **Close.**
+
+### Definition of done
+
+- A two-level branch round-trips through Save, the settings CSV, clone
+  and `replicate_instrument`; a third level is refused by name.
+- On the surface, closing a level-0 parent closes and disables its
+  level-2 fields live, and Save drops their answers.
+- Answers on a level-2 field lock both conditions above it.
+- `spec/instruments.md` and `spec/rrw_functional_spec.md` drop "nested
+  branches" from out of scope and describe the levels.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.14` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. ~~What ↰ joins below a level-2 branch~~ — the deepest branch; ↳ steps
+   out one level (the author, 2026-09-29).
+2. ~~Which conditions a level-2 answer locks~~ — every condition on its
+   chain (the author, 2026-09-29).
+3. ~~What a level-2 field's condition label names~~ — its own parent's
+   condition only (the author, 2026-09-29).
+
+### Out of scope
+
+- A third level, and a condition naming two fields (Q2's rejected
+  alternative).
+- Moving a parent together with its branch into or out of another
+  branch.
 
 ### Doc impact
 
+- `spec/instruments.md` — two levels: the layout, level-1 ⑂, ↰ / ↳ by level, subtree moves, the chain lock and cascades; drop "nested branches" from out of scope (Item 14).
+- `spec/rrw_functional_spec.md` — §5.7 allows a branch inside a branch; drop "Nested branches" from its out-of-scope line (Item 14).
+- `spec/reviewer-surface.md` — a closed parent closes its whole subtree live (Item 14).
+- `spec/csv_contracts.md` — §3.3: a `branch_parent` may name a governed field, two levels deep (Item 14).
+- `spec/extract_data.md` — a level-2 field's condition row names its own parent's condition (Item 14).
 - `docs/status.md` — row when the item closes (Item 14).
 
 ## Item 15 — The Guide catches up with 19T
