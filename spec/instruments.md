@@ -954,8 +954,8 @@ field until the operator types into it — so there is always a "+" to
 press; deleting down to one row leaves that row rather than none.
 
 Each row holds, left to right (a governed row shifts these one column
-right per level, behind a bar per branch it sits in, and two slots
-after join, `td.rf-slot`, keep six leading columns on every row — see
+right per level, behind a bar per branch it sits in; two slots after
+join, `td.rf-slot`, keep six leading columns on every row — see
 ["Branching between response fields"](#branching-between-response-fields)):
 
 | Control | Bound to | Notes |
@@ -1130,20 +1130,18 @@ a parent, and inactive on a String field ("A String field can't have a
 branch"). A governed row shifts one column right — the bar sits in the
 checkbox column, its checkbox in the **+** column, its **+** in the ⑂
 column, its ⑂ in the join column, and its ↰ and ↳ in the two empty
-slots after join (`td.rf-slot`, 19T Item 14 rung 5) — so every row has
-six leading columns and aligns from the name onward, parent and
-governed alike. A level-1
+slots after join (`td.rf-slot`) — so every row has six leading columns
+and aligns from the name onward, parent and governed alike. A level-1
 row's ⑂ forks it one level down ("Add a branch inside this branch,
 below this field"): its condition row and fields shift one more column
 right, with their own bar. A level-2 row shifts two columns: two bars,
-its checkbox in the ⑂ column, its **+** in the join column, no ⑂ (the
-first slot stays empty) and its ↳ in the last slot, under a level-1
-row's. In an answered branch a level-1 row's ⑂ is off, like its "+".
+its checkbox in the ⑂ column, its **+** in the join column, no ⑂ or ↰
+(the first slot stays empty) and its ↳ in the last slot, under a
+level-1 row's. In an answered branch a level-1 row's ⑂ is off, like its "+".
 **A branch inside a branch is ruled** above its parent and below its
 last field, from the parent's checkbox column rightward, clear of the
-outer branch's bar (`tr.rf-inner-top` / `tr.rf-inner-end`, the
-author, 2026-09-29); a top-level group's rule stays full width.
-The checkbox sits
+outer branch's bar (`tr.rf-inner-top` / `tr.rf-inner-end`); a
+top-level group's rule stays full width. The checkbox sits
 centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 12A).
 
@@ -1151,8 +1149,9 @@ centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 [mode]", the mode a select of **Show the below** (the default) and
 **Require the below (else, optional)**, which Save sends as the
 parent's `branch_mode`. The operator sits in the name column at the name box's width,
-with "If the above" right-aligned before it, across the join column and
-both slots
+with "If the above" right-aligned before it, across the columns left of
+the name — the join column and both slots for a top-level condition,
+one fewer a level down
 (`td.rf-condition-lead`, `td.rf-condition-op`, 19T Item 12A); the first
 value box starts at the type column's edge. A List's operator shrinks to
 its label ("is not"), and its box, the List box's width, and "then
@@ -1231,8 +1230,7 @@ that ends directly above it, at that branch's level, or, on a plain
 Integer, Decimal or List field, a new branch with an empty condition
 (a branch inside a branch is started with ⑂, not ↰). **A level-1 row's
 ↰** joins the branch of the field directly above it in its own branch,
-at level 2, when that field has one (19T Item 14 rung 5, the author's
-screen cap); otherwise it is off ("No branch inside this branch ends
+at level 2, when that field has one; otherwise it is off ("No branch inside this branch ends
 directly above"), and off, as ↳ is, on a parent or in a locked branch —
 which a row with saved responses always is, its answers locking it. Joining keeps the
 row's **R** (19T Item 11) — Save refuses the result if the row's R is
@@ -1292,7 +1290,7 @@ it is: its ↳ is off ("A field with a branch can't leave its branch").
   with saved responses, and Save refuses the move, since the field's
   answers could then sit in a closed branch. Nor can a parent with
   answers anywhere below it ("Its branch has saved responses, so it
-  can't move into a branch.", 19T Item 14): it would carry them in.
+  can't move into a branch."): it would carry them in.
 
 **Storage:** `InstrumentResponseField.branch_parent_id` (a
 self-referencing FK, `ON DELETE SET NULL`) on a governed field;

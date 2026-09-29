@@ -1609,7 +1609,8 @@ shows (`spec/reviewer-surface.md` § "Branching between response
 fields"). A governed field marked **required** is required, and blocks
 Submit when empty, only while its branch is open — closed, it demands
 nothing and carries no value. Under Require, the fields are answerable
-throughout and required only while the condition holds.
+whatever the parent's answer (unless a Show branch above them is
+closed) and required only while the condition holds.
 
 **Sortability** — every column header on the review surface is
 clickable to sort the rows by that column; Shift-click adds a

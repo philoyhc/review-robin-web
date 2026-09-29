@@ -2265,76 +2265,52 @@ Taken 2026-09-29 at `85750b93`.
 
 ### Status
 
-- **Rung 2 (evaluation), 2026-09-29.** Base SHA for the item's
-  cumulative read: `6afbd412`. The save hold walks the chain and names
-  the nearest refused ancestor; the surface script passes a parent's
-  closed state down, so a stale middle answer can't open a closed
-  branch. The save rule, the counts and the extract needed nothing (Item
-  11's chain walk), and tests pin them on a seeded chain. Chromium drove
-  the script in both modes. **Moved to rung 3:** the preview's counts,
-  which live in the builder render; the builder page still renders a
-  seeded chain (as flat groups).
-- **Rung 3 (builder scaffold), 2026-09-29.** A stored chain renders as
-  the mockup: six leading columns on every row (the join cell's padding
-  became two `td.rf-slot` columns, so a level shifts one column and the
-  name stays put), a bar per level, each parent's condition row right
-  after it with its "+" under the parent's ⑂. Level-1 ⑂ shows, off. The
-  row script finds a row's own parent and condition (`rfRowParent`,
-  `rfRowCondition`), so the stager, the preview's hints and counts, R
-  under Require and condition sizing work at either level; a level-1
-  parent's ↳ is off. `spec/ui_elements.md` joins Doc impact (its
-  `rf-table` row named the retired padding).
-- **Rung 4 splits in two** (2026-09-29), as Item 13's rung 3 did: 4a
-  the server, 4b the builder and the item's read. **4a:** the structure
-  rules accept two levels and refuse a third by name
-  (`BRANCH_TOO_DEEP_MESSAGE`) or a loop (`BRANCH_LOOP_MESSAGE`), and a
-  branch's contiguity counts the branch inside it; Save's lock covers
-  every branch above an answer, and a hidden parent hides its whole
-  subtree on Save and in both settings-CSV phases
-  (`hide_below_hidden_parents`). Until 4b only the settings CSV can
-  author a chain, which rung 3's builder already renders; Save refuses
-  any shape the rules don't allow.
-- **Rung 4b (the builder wired), 2026-09-29.** A level-1 row's ⑂ is
-  live (off in an answered branch, like its "+"); ↰ joins the deepest
-  branch ending above, at its level; ↳ steps out one level, below its
-  branch, ending a branch it empties; ▲ ▼ move a unit (a row with its
-  condition and deeper rows) within its branch; X on a branch's last
-  field ends that branch; Active cascades through the unit. The view
-  locks every branch above an answer, as Save does. Chromium authored a
-  chain from scratch and walked each of these. Judgment calls: ↰ never
-  starts a branch inside a branch (⑂ does). The spec check found the
-  row script still locked group-wide, overriding the per-branch render
-  on its first pass; it now locks per branch (`newModelRfBranchLocked`,
-  answers anywhere below a parent), matching Save and the spec, and the
-  dead `data-new-model-rf-branch-locked` attribute is gone.
-- **Reads:** one cumulative `diff-reviewer` read over `6afbd412..71607916`
-  (plus a note on the lock fix). Acted on in #2682: Save refused an
-  answered field joining a branch but not a parent whose branch holds
-  answers (a hand-built POST only; now "Its branch has saved responses,
-  so it can't move into a branch."); the same group-wide lock the spec
-  check found; the preview spec named only one level of Require; the
-  pre-JS ↳ title counted the group, not the row's own branch
-  (`only_member`); Band 3's control table missed the bars and slots;
-  tests for a level-2 answer locking the top branch's membership and a
-  level-1 parent's hide cascade, with and without branch keys. The
-  read asked whether "Opens when" under a Require branch inside a Show
-  branch should name the Show branch's condition, which decides whether
-  it opens: no, the field's own parent's condition only (the author's
-  ruling, 2026-09-29, confirming the plan's).
-- **Rung 5, from the author's browser pass (2026-09-29).** A level-1
-  row directly below a branch inside its own branch had no way in: a
-  level-0 row's ↰ joins a level-1 branch, but a level-1 row had only ↳.
-  It gains a ↰ before its ↳ (the author's screen cap), filling the last
-  slot, so every governed row's ↳ shares one column. And a branch
-  inside a branch is ruled above its parent and below its last field,
-  from the parent's checkbox column rightward (the author's second
-  entry). Save needed nothing: it already takes the move. **Read:** one
-  `diff-reviewer` read over `aac3050f..a81600fb` found no defect; acted
-  on: a `spec/ui_elements.md` column slip, the name check's order
-  matched to level-0 ↰, an unreachable "saved responses" title dropped
-  (a row's own answers lock its branch first), and tests for the
-  no-branch-above and locked cases, a branch ending its group, and the
-  border sync's call.
+**Closed 2026-09-29** (#2678 plan, #2679 evaluation, #2680 builder
+scaffold, #2681 server, #2682 builder wired, #2683 rung 5, and this
+close). Browser-tested by the author before the close, which asked for
+it; rung 5 came from that pass. The checklist row in
+`guide/post_azure_todo_checklist.md` item 6 stays for the dev slot.
+
+**What the ladder became.** Intended: plan, evaluation, scaffold,
+authoring with the builder, close. Rung 4 split in two, as Item 13's
+did: 4a the server (structure rules, the chain lock, the hidden-subtree
+cascade, the settings CSV) and 4b the builder and the item's read. The
+author's browser pass added **rung 5**: a level-1 row's ↰, before its
+↳, joins the branch inside its own branch that ends directly above it,
+and a branch inside a branch is ruled above its parent and below its
+last field. Evaluation's preview counts moved from rung 2 to rung 3,
+since they live in the builder render.
+
+**Decisions confirmed at build.**
+- Six leading columns on every row: the join cell's padding became two
+  `td.rf-slot` columns, a level shifts one column, the name stays put;
+  a level-1 row fills both slots with ↰ and ↳, so every governed row's
+  ↳ shares a column.
+- ↰ never starts a branch inside a branch (⑂ does); a parent keeps its
+  branch where it is (↳ and ↰ off on it).
+- The lock is per branch, in the builder as in Save and the spec:
+  answers anywhere below a parent lock that branch
+  (`newModelRfBranchLocked`); the spec check caught the row script
+  still locking group-wide.
+- Save refuses a parent moving into a branch while answers sit below it
+  ("Its branch has saved responses, so it can't move into a branch.").
+- "Opens when" names the field's own parent's condition only, under a
+  Require branch inside a Show one too (the author's ruling).
+
+**Reads.** Three `diff-reviewer` reads: the cumulative one over
+`6afbd412..71607916` at rung 4b (no high finding; the parent-move gap,
+the group-wide lock, the preview's nested Require wording, a pre-JS ↳
+title and missing tests, all fixed in #2682), and rung 5's over
+`aac3050f..a81600fb` (no defect; wording, check order, an unreachable
+title and tests, fixed in #2683), and the close's over
+`251cc86d..2851feba`, which reopened `tests/` with a clone test (no high
+finding; a self-contradicting Require paragraph in
+`spec/reviewer-surface.md`, overclaimed wording, undercounted passes and
+a trivially true assertion, fixed in #2685). Codex on #2681: a branch's
+contiguity walk recursed and could overflow on a long chain, made
+iterative. `spec-writer` passes at rungs 3, 4a and 4b and at this close
+(its fix: a Require branch still closes under a closed Show branch
+above it).
 
 ### PR ladder
 
