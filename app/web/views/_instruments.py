@@ -337,6 +337,13 @@ def _response_field_groups(
     19T Item 13 — the condition's ``mode`` is ``show`` or ``require``,
     and a field a Require branch governs is ``require_governed``: always
     an item, required only while the condition holds.
+
+    19T Item 14 — a governed field may itself be a parent. A group is a
+    top-level field and every field below it; each entry gains ``level``
+    (0, 1 or 2, how many branches it sits in) and ``item_now`` (an item
+    on the unanswered sample row: every branch above it is Require), and
+    a parent carries its own ``condition``, rendered right after it at
+    the next level.
     """
     from app.services.responses import (
         BRANCH_MODE_REQUIRE,
@@ -363,23 +370,36 @@ def _response_field_groups(
         if rf.get("id") in parent_ids
         and rf.get("branch_mode") == BRANCH_MODE_REQUIRE
     }
+    by_id = {rf.get("id"): rf for rf in response_fields if rf.get("id") is not None}
+
+    def chain(rf: dict[str, Any]) -> list[dict[str, Any]]:
+        """The branches above ``rf``, nearest first; a cycle stops it."""
+        out: list[dict[str, Any]] = []
+        seen = {rf.get("id")}
+        parent = by_id.get(rf.get("branch_parent_id"))
+        while parent is not None and parent.get("id") not in seen:
+            out.append(parent)
+            seen.add(parent.get("id"))
+            parent = by_id.get(parent.get("branch_parent_id"))
+        return out
+
     groups: list[dict[str, Any]] = []
     for index, rf in enumerate(response_fields):
         rf["row_index"] = index
         rf["is_parent"] = rf.get("id") in parent_ids
         parent_id = rf.get("branch_parent_id")
+        ancestors = chain(rf)
+        rf["level"] = min(len(ancestors), 2)
         rf["require_governed"] = (
             parent_id is not None and parent_id in require_parent_ids
         )
+        rf["item_now"] = all(a.get("id") in require_parent_ids for a in ancestors)
         rf["branch_locked"] = (
             parent_id in locked_parent_ids
             if parent_id is not None
             else rf.get("id") in locked_parent_ids
         )
-        if parent_id is not None and groups and groups[-1]["parent_id"] == parent_id:
-            groups[-1]["rows"].append(rf)
-            continue
-        condition = None
+        rf["condition"] = None
         if rf["is_parent"]:
             ops = list(
                 LIST_OP_CHOICES if rf["data_type"] == "list" else NUMERIC_OP_CHOICES
@@ -390,18 +410,23 @@ def _response_field_groups(
                 value, high = (
                     part.strip() for part in value.split(RANGE_SEPARATOR, 1)
                 )
-            condition = {
+            rf["condition"] = {
                 "op": rf["branch_op"],
                 "value": value,
                 "high": high,
                 "is_range": is_range,
                 "is_list": rf["data_type"] == "list",
                 "ops": ops,
-                "locked": rf["branch_locked"],
+                "locked": rf.get("id") in locked_parent_ids,
                 "mode": rf.get("branch_mode") or BRANCH_MODE_SHOW,
+                "level": rf["level"] + 1,
             }
+        top_id = ancestors[-1].get("id") if ancestors else None
+        if top_id is not None and groups and groups[-1]["parent_id"] == top_id:
+            groups[-1]["rows"].append(rf)
+            continue
         groups.append(
-            {"parent_id": rf.get("id"), "rows": [rf], "condition": condition}
+            {"parent_id": rf.get("id"), "rows": [rf], "condition": rf["condition"]}
         )
     return groups
 

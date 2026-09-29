@@ -1095,10 +1095,13 @@ inside a branch can't itself be a parent) and **one branch per parent**.
 **⑂**, just after **+**, creates a branch: outline on an Integer,
 Decimal or List field with none, selected (filled, like a pressed R) on
 a parent, and inactive on a String field ("A String field can't have a
-branch"). A governed row shifts one column right before the name — the
-bar sits in the checkbox column, its checkbox in the **+** column, its
-**+** in the ⑂ column, and it has no ⑂ of its own — so every row aligns
-from the name onward, parent and governed alike. The checkbox sits
+branch"). A governed row shifts one column right — the bar sits in the
+checkbox column, its checkbox in the **+** column, its **+** in the ⑂
+column, its ⑂ in the join column and its ↳ in the first of two empty
+slots after join (`td.rf-slot`) — so every row has six leading columns
+and aligns from the name onward, parent and governed alike. A governed
+row's ⑂ is shown but off ("A branch inside a branch isn't available
+yet") until two levels can be authored (19T Item 14). The checkbox sits
 centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 12A).
 
@@ -1106,7 +1109,8 @@ centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 [mode]", the mode a select of **Show the below** (the default) and
 **Require the below (else, optional)**, which Save sends as the
 parent's `branch_mode`. The operator sits in the name column at the name box's width,
-with "If the above" right-aligned in the join column before it
+with "If the above" right-aligned before it, across the join column and
+both slots
 (`td.rf-condition-lead`, `td.rf-condition-op`, 19T Item 12A); the first
 value box starts at the type column's edge. A List's operator shrinks to
 its label ("is not"), and its box, the List box's width, and "then
@@ -1176,8 +1180,9 @@ start a hint (or an extract cell, `spec/extract_data.md`) as a
 spreadsheet formula.
 
 **Join (↰) and detach (↳)** sit after ⑂, sharing its width (`.rf-glyph`),
-with room after them for two more buttons of that width, ahead of a
-second level of branching (`td.rf-join-cell`, 19T Item 12A).
+with two empty slots of that width after them (`td.rf-slot`; 19T Item
+12A left the room, 19T Item 14 made it columns), into which a branch's
+rows shift.
 A plain row that isn't the first, has no saved responses and isn't
 itself a parent can join the unit above: the end of an unlocked branch,
 or, on a plain Integer, Decimal or List field, a new branch with an

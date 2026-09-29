@@ -152,7 +152,9 @@ def test_the_row_script_wires_the_mode(client: TestClient, db: Session) -> None:
     # A governed row is under Require while its condition row says so.
     at = body.index("function rfRowUnderRequire(row) {")
     under = " ".join(body[at : body.index("\n          }", at)].split())
-    assert f"var mode = group && group.querySelector('[{_MODE}]');" in under
+    # Its own parent's condition row, at either level (19T Item 14).
+    assert "var cond = rfRowCondition(rfRowParent(row));" in under
+    assert f"var mode = cond && cond.querySelector('[{_MODE}]');" in under
     assert "return !!(mode && mode.value === 'require');" in under
     # R greys out under Require, after the blank-row gate.
     recompute = " ".join(_rf_fn(body, "newModelRfRecomputeActionStates").split())
