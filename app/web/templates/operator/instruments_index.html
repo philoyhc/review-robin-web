@@ -100,25 +100,18 @@
     body.ui-v2 .sort-badge.sort-badge-empty {
       color: var(--text-subtle);
     }
-    /* Band 2 preview table — keep cell + input padding compact so
-       the operator-side preview row matches the reviewer surface's
-       visual density rather than inheriting the operator-table
-       defaults (var(--space-3) var(--space-4)) which bloat both
-       the header row and the data row. */
+    /* Band 2 preview table — the reviewer surface's cell padding
+       (``.rs-instrument-group``: half the row gap, the standard side
+       padding) and its inputs' own size, so the preview's columns
+       measure as the surface's (19T Item 16). */
     body.ui-v2 [data-new-model-band2-preview] th,
     body.ui-v2 [data-new-model-band2-preview] td {
-      padding: var(--space-2) var(--space-3);
+      padding: var(--space-2) var(--space-4);
       /* Top-align so multi-row textareas (long-text response
          fields) anchor at the top of the row rather than
          centering vertically inside it — matches the reviewer
          surface contract in base.html. */
       vertical-align: top;
-    }
-    body.ui-v2 [data-new-model-band2-preview] input,
-    body.ui-v2 [data-new-model-band2-preview] textarea,
-    body.ui-v2 [data-new-model-band2-preview] select {
-      padding: var(--space-1) var(--space-2);
-      font-size: var(--fs-small);
     }
     /* Band 3 Visibility — Reviewees + Observers audience chips
        in their unselected state are styled to match the
@@ -2058,8 +2051,8 @@
              DOMContentLoaded + on every R / chip / Band 3 row
              toggle, picking up the help cards + constraints. #}
           {# `.table-scroll`: the container is filled by ``rebuildPreview``
-             with a ``table-layout: fixed`` table carrying operator-set
-             column widths, so the wrapper goes directly around the
+             with a table laid out as the reviewer surface's is (fixed
+             once operator-set column widths exist), so the wrapper goes directly around the
              container — there is no server-rendered <table> here to wrap.
              The container, not the wrapper, is the lock region, so a
              locked card still scrolls a table wider than the card
@@ -2395,8 +2388,8 @@
           // Compose the inline ``width: Npx`` style for a <col>
           // element. Empty string when no width is set so the
           // browser falls back to the table's auto-distributed
-          // share. table-layout: fixed on the table makes these
-          // widths take hold deterministically.
+          // share. Under table-layout: fixed (once a width is set, as
+          // on the surface) these widths take hold deterministically.
           function colStyle(w) {
             return w && w > 0 ? 'width: ' + w + 'px;' : '';
           }
@@ -2543,9 +2536,9 @@
           // same <tbody class="rrw-rows">, same identity-cell
           // composition. Adds a <colgroup> with <col data-col-key>
           // entries so the operator's drag-resize widths take hold,
-          // and table-layout: fixed so column widths are honored
-          // deterministically (matching the operator's intent for
-          // the reviewer to see exactly this width).
+          // and the surface's layout rule: automatic until a width is
+          // set, then table-layout: fixed so the widths are honored
+          // exactly as the reviewer will see them (19T Item 16).
           function buildIndividualPreview(card, selected) {
             if (selected.length === 0) { return ''; }
             var name = selected.find(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'name'; });
@@ -2573,9 +2566,10 @@
             // keeps its fixed-layout start in ``data-start-style``, which
             // a drag applies as it switches the table to fixed, as a
             // saved width will switch the surface.
-            var sized = identityW > 0
-              || displays.some(function (o) { return o.width > 0; })
-              || responses.some(function (r) { return r.width > 0; });
+            // Any width counts, a hidden column's too, as the surface's
+            // ``has_custom_widths`` counts every saved key.
+            function hasWidth(row) { return (parseInt(row.getAttribute('data-width') || '', 10) || 0) > 0; }
+            var sized = identityW > 0 || dfRows(card).some(hasWidth) || rfRows(card).some(hasWidth);
             function colAttrs(style) {
               if (!style) { return ''; }
               return sized ? ' style="' + style + '"' : ' data-start-style="' + style + '"';
@@ -2823,6 +2817,9 @@
                 // the JSON ``response_fields[i].width_px`` slot retired.
                 saveBand2Widths(card);
               }
+              // Long-text boxes re-measure at their new width, as the
+              // surface's do once laid out.
+              adjustPreviewTextareaRows(table);
             }
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);

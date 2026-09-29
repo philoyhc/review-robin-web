@@ -887,8 +887,10 @@ persist as integer pixels per column key into
 
 **The preview lays its table out as the reviewer surface does**
 (`spec/reviewer-surface.md`), so its columns start at the surface's
-widths. A per-reviewee table is automatic until a column width is set,
-then `table-layout: fixed`; its headers and cells carry the surface's
+widths. A per-reviewee table is automatic until a column width is set
+(a hidden column's counting, as the surface's `has_custom_widths`
+does), then `table-layout: fixed`; its cells take the surface's padding
+and its inputs their own size; its headers and cells carry the surface's
 width classes (`rs-narrow` on a profile-link or number column,
 `rs-textlong` on a String over 100 characters, `th.rrw-sortable`) and,
 wherever the preview shows no sort control of its own, an inert copy

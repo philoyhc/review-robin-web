@@ -2514,8 +2514,11 @@ item of their own. It closes when the author says so.
    by running the JS in node against the Python. Then, on the author's
    ruling that the preview should match the surface, the per-reviewee
    preview takes the surface's layout rule (automatic until a width is
-   set), its width classes and an inert ↕ in each header; Chromium
-   measured the two within a few pixels, with and without a width.
+   set, any saved width counting), its width classes, its cell padding
+   and input size, and an inert ↕ in each header with no sort control
+   of its own; Chromium measured the two within a few pixels, with and
+   without a width. Its read: one false positive (textarea rows, which
+   the surface re-measures too), the rest acted on.
 
 ### Doc impact
 

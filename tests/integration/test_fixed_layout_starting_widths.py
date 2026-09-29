@@ -136,6 +136,11 @@ def test_the_preview_mirrors_it(client: TestClient, db: Session) -> None:
         "if (shape.dataType === 'integer' || shape.dataType === 'decimal') { return 'rs-narrow'; }",
         "return '<span class=\"rrw-sort-btn\" aria-hidden=\"true\"><span class=\"rrw-sort-badge\">↕</span></span>';",
         "+ (sortBadgeHtml(card, o.displayFieldId) || surfaceSortStub())",
+        # Any width counts, a hidden column's too, as has_custom_widths does.
+        "var sized = identityW > 0 || dfRows(card).some(hasWidth) || rfRows(card).some(hasWidth);",
+        # The surface's cell padding; the stub measures as a <button>.
+        "body.ui-v2 [data-new-model-band2-preview] td { padding: var(--space-2) var(--space-4);",
+        "box-sizing: border-box; /* a <button>'s default, so both measure alike */",
     ):
         assert line in flat, line
     # A drag starts from the header's width where a browser sizes no
