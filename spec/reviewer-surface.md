@@ -578,7 +578,9 @@ long `String` variant).
 `guide/advanced_instruments.md` Item 1 (design record, built as 19T
 Item 10); the builder side is `spec/instruments.md` § "Branching between
 response fields". Under **Show**, the default, a **governed** field's cell can be answered only
-while its **parent**'s branch is open — judged, per row, on the values
+while its **parent**'s branch is open and its parent itself applies —
+every branch above it is open, or Require (a branch inside a branch,
+19T Item 14) — judged, per row, on the values
 the page shows (`applicable_field_ids`,
 `app/services/responses/_branching.py`), so an already-answered but now
 out-of-scope value still renders. A **group row** (below) is judged on
@@ -586,8 +588,9 @@ its representative assignment's own answers, since the group shares one
 answer to the parent.
 
 A closed governed cell renders **muted** (`td.rs-branch-closed`) and its
-input **disabled**, titled with the condition that opens it —
-`views.branch_condition_label`: `"Opens when Rating ≥ 4"`, or, for a
+input **disabled**, titled with its own parent's condition (a cell
+closed by a branch further up still names its parent's, the author's
+ruling on 19T Item 14) — `views.branch_condition_label`: `"Opens when Rating ≥ 4"`, or, for a
 range (19T Item 12), `"Opens when Rating ≥ 2 and ≤ 4"` — the field's
 name first, then both ends, never `"2 ≤ Rating ≤ 4"`. A value the
 page closes over **stays visible, greyed, and isn't sent**, so if the

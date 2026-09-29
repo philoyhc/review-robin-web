@@ -343,10 +343,9 @@ def applicable_field_ids(
     require-mode parent (19T Item 13) the condition decides only whether
     the field is required, so the field applies whenever its parent does. The walk
     goes up the whole chain, so a field under a closed ancestor is closed
-    even while a stale answer below it still meets its own condition.
-    Branches are one level deep today (19T Item 14 lifts that), where
-    this is the same answer as checking the parent alone; walking the
-    chain here is 19T Item 11's pre-positioning 3. On a group-scoped
+    even while a stale answer below it still meets its own condition —
+    19T Item 11's pre-positioning 3, which 19T Item 14's two levels use.
+    On a group-scoped
     instrument the caller passes the group row's answers, since the
     parent's answer is shared across the row."""
     field_list = list(fields)

@@ -1092,7 +1092,8 @@ holds the parent's row, its condition row, and every field it governs,
 directly following the parent in field order. **Two levels at most**: a
 governed field may itself be a parent, and its branch sits inside its
 parent's, directly after it; a field two levels down can't be one ("A
-branch inside a branch can't have a branch of its own."), and a chain
+branch inside a branch can't have a branch of its own.", naming the
+field at the third level, on Save and in the settings CSV), and a chain
 that leads back to itself is refused ("Its branch leads back to
 itself."). **One branch per parent.** A field applies only while every
 branch above it is open or Require.
@@ -1229,8 +1230,8 @@ field ends the branch, as X does.
 - **The governed-answers lock.** Once any governed field has responses,
   the condition, its mode (Require → Show would strand answers on a
   now-closed branch) and the branch's membership lock, and so do those
-  of every branch above it, since changing either could close the
-  answered field's —
+  of every branch above it, since changing any of them could close the
+  answered field's branch —
   every governed row's X and ↳, the "+"s inside the branch, ↰ on the row
   below it, and the condition's controls. Save refuses a changed mode
   with the condition's message, and audits a mode change as
