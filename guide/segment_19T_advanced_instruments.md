@@ -2433,6 +2433,15 @@ Taken 2026-09-27 at `3cec7196`:
   fields still show, grayed), "↳ button detaches", and the two-level and
   lock sentences. The example reads "For example" until rung 2 lands its
   capture.
+- **Rung 2 (captures), 2026-09-29, in the same PR** (#2686, still open
+  when the author's `Guide_v4b` arrived with the dark shots). The
+  preview and fields pairs are replaced, and a new branching pair
+  (`instrument-card-branching`) follows the branching paragraph, which
+  now reads "In the example below". The fields pair keeps its file name
+  (`instrument-card-fields-and-visibility`, cited by Item 1's Doc impact)
+  though visibility now sits in the preview. The pairs show slightly
+  different states (the dark fields shot unlocked, the dark branching
+  shot with two more rows), so each alt text names only what both show.
 
 ### PR ladder
 
