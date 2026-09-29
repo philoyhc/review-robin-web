@@ -2405,11 +2405,25 @@
           function profileColumnCh(label) {
             return Math.max(String(label || '').length + 4, 'View'.length + 3);
           }
+          // Python's ``f"{v:g}"``: six significant digits, trailing zeros
+          // dropped, exponent form below 1e-4 or from 1e6 ("1e+06"). Only
+          // its length is read, so a tie rounding the other way is moot.
+          function pyG(n) {
+            if (n === 0) { return '0'; }
+            var parts = n.toExponential(5).split('e');
+            var exp = parseInt(parts[1], 10);
+            if (exp < -4 || exp >= 6) {
+              var mant = parts[0].indexOf('.') >= 0 ? parts[0].replace(/\.?0+$/, '') : parts[0];
+              var abs = Math.abs(exp);
+              return mant + 'e' + (exp < 0 ? '-' : '+') + (abs < 10 ? '0' : '') + abs;
+            }
+            var fixed = n.toFixed(Math.max(0, 5 - exp));
+            return fixed.indexOf('.') >= 0 ? fixed.replace(/\.?0+$/, '') : fixed;
+          }
           // views.numeric_column_ch_width: the wider of the header (the
           // label, " *" when it may be required, the sort button) and the
-          // committed min / max digit span (a Decimal's written as JS
-          // prints it, which matches %g but for exponents). Null for a
-          // column that isn't a number (19T Item 16).
+          // committed min / max digit span, a Decimal's written as %g is.
+          // Null for a column that isn't a number (19T Item 16).
           function numericColumnCh(label, required, shape) {
             if (!shape || (shape.dataType !== 'integer' && shape.dataType !== 'decimal')) {
               return null;
@@ -2418,7 +2432,7 @@
               if (v === '' || v === null || v === undefined) { return 0; }
               var n = Number(v);
               if (!isFinite(n)) { return 0; }
-              return (shape.dataType === 'integer' ? String(Math.trunc(n)) : String(n)).length;
+              return (shape.dataType === 'integer' ? String(Math.trunc(n)) : pyG(n)).length;
             }
             var span = Math.max(digits(shape.min), digits(shape.max), 1);
             return Math.max(String(label || '').length + (required ? 2 : 0) + 4, span + 3);

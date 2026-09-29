@@ -154,3 +154,63 @@ def test_the_observers_expander_script_is_among_them(
     assert any("observers-row-expander" in b for b in blocks), (
         "the expander builder is not in an inline script any more"
     )
+
+
+# 19T Item 16 — the one script here that is run, not just parsed: the
+# Band 2 preview's copy of ``views.numeric_column_ch_width``, which must
+# give the surface's width. It lives in this node-gated module so the
+# suite keeps a single tool-gated skip.
+
+_WIDTH_CASES = (
+    # (data_type, min, max, label, required)
+    ("Integer", 1, 5, "Rating", True),
+    ("Integer", -40, 120, "T", False),
+    ("Integer", None, None, "Score", False),
+    ("Decimal", 0, 2.5, "Hours", False),
+    ("Decimal", 0, 12.345678, "S", False),
+    ("Decimal", 0, 100000.5, "S", False),
+    ("Decimal", 0, 999999.9, "S", False),
+    ("Decimal", 0, 1234567, "S", False),
+    ("Decimal", 0.00001, 1, "S", False),
+    ("Decimal", -0.5, 99999.95, "S", False),
+    ("Decimal", 0.0001, 10, "S", False),
+)
+
+
+def test_the_previews_number_width_matches_the_surfaces() -> None:
+    import json
+    from types import SimpleNamespace
+
+    from app.web.views import numeric_column_ch_width
+
+    template = (
+        Path(__file__).resolve().parents[2]
+        / "app/web/templates/operator/instruments_index.html"
+    ).read_text()
+    start = template.index("          function pyG(n) {")
+    end = template.index("          // A response column's <col> style", start)
+    cases = [
+        {"label": label, "required": required,
+         "shape": {"dataType": kind.lower(),
+                   "min": "" if low is None else str(low),
+                   "max": "" if high is None else str(high)}}
+        for kind, low, high, label, required in _WIDTH_CASES
+    ]
+    script = (
+        template[start:end]
+        + "\nconsole.log(JSON.stringify(" + json.dumps(cases)
+        + ".map(function (c) { return numericColumnCh(c.label, c.required, c.shape); })));"
+    )
+    out = subprocess.run(
+        ["node", "-e", script], capture_output=True, text=True, check=True
+    ).stdout
+    expected = [
+        numeric_column_ch_width(
+            SimpleNamespace(
+                data_type=kind, label=label, required=required,
+                validation={"min": low, "max": high},
+            )
+        )
+        for kind, low, high, label, required in _WIDTH_CASES
+    ]
+    assert json.loads(out) == expected

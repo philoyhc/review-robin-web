@@ -2509,7 +2509,9 @@ item of their own. It closes when the author says so.
    summary and the results, acted on; the second, spec wording and a
    test scoped to the colgroup, acted on. On the author's follow-up the
    preview matches for number columns too (`numericColumnCh`, both
-   previews).
+   previews); its read found the JS copy printing a Decimal bound
+   unrounded where `%g` rounds to six digits, fixed (`pyG`) and pinned
+   by running the JS in node against the Python.
 
 ### Doc impact
 
