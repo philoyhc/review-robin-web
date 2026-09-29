@@ -3,7 +3,7 @@ author's mockup and ours laid it out: each level shifts one column right,
 into the two empty slots after join, so the name column never moves; a
 level-1 row carries ⑂ (inert until rung 4), a level-2 row none; a
 condition row's "+" sits under its parent's ⑂. The structure rules still
-refuse a second level, so each test seeds the chain in the database:
+refused a second level, so each test seeds the chain in the database:
 Familiarity > 0 governs Rating, and Rating ≥ 4 governs Comments."""
 
 from __future__ import annotations
@@ -107,32 +107,24 @@ def test_a_condition_rows_plus_sits_under_its_parents_fork(
     assert 'value="0"' in conditions[0] and 'value="4"' in conditions[1]
 
 
-def test_a_level_one_fork_shows_but_stays_off(client: TestClient, db: Session) -> None:
-    _, _, card, _, body = _chain_page(client, db, "two-level-fork")
+def test_a_level_one_parents_fork_is_pressed_and_its_detach_off(
+    client: TestClient, db: Session
+) -> None:
+    _, _, card, _, _ = _chain_page(client, db, "two-level-fork")
     table = _rows_table(card)
     fork = re.search(r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(table, "Rating")).group(0)
     assert " disabled" in fork and 'title="This field has a branch"' in fork
     join = re.search(r"<button[^>]*data-new-model-rf-join[^>]*>", _row(table, "Rating")).group(0)
     assert " disabled" in join and "A field with a branch can't leave its branch" in join
-    recompute = " ".join(_rf_fn(body, "newModelRfRecomputeActionStates").split())
-    assert (
-        "} else if (row.hasAttribute('data-new-model-rf-governed')) { "
-        "// 19T Item 14 rung 3 — shown on a level-1 row, not yet live. "
-        "forkBtn.disabled = true; "
-        "forkBtn.setAttribute('title', \"A branch inside a branch isn't available yet\");"
-    ) in recompute
 
 
-def test_a_plain_governed_rows_fork_is_off_with_the_reason(
-    client: TestClient, db: Session
-) -> None:
-    """One level, as today: Comments is a String, so its ⑂ says so; an
-    Integer governed row's ⑂ says a branch inside a branch isn't
-    available yet."""
-    review_session, instrument, card, _ = _page(client, db, "two-level-fork-plain")
+def test_a_governed_number_forks_one_level_down(client: TestClient, db: Session) -> None:
+    """Rung 4b: a level-1 Integer field's ⑂ is live; a String one's says
+    why not, and an answered branch's is off like its "+"s."""
+    review_session, instrument, card, _ = _page(client, db, "two-level-fork-live")
     comments = next(f for f in instrument.response_fields if f.label == "Comments")
     fork = re.search(r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(_rows_table(card), "Comments")).group(0)
-    assert " disabled" in fork
+    assert " disabled" in fork and "A String field can't have a branch" in fork
     comments._inline_data_type = "Integer"
     db.commit()
     body = client.get(
@@ -140,7 +132,76 @@ def test_a_plain_governed_rows_fork_is_off_with_the_reason(
     ).text
     card = _card_slice(" ".join(body.split()), instrument.id)
     fork = re.search(r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(_rows_table(card), "Comments")).group(0)
-    assert " disabled" in fork and "A branch inside a branch isn&#39;t available yet" in fork
+    assert " disabled" not in fork
+    assert 'title="Add a branch inside this branch, below this field"' in fork
+    recompute = " ".join(_rf_fn(body, "newModelRfRecomputeActionStates").split())
+    assert (
+        "} else if (governed && locked) { "
+        "// 19T Item 14 — a branch inside an answered branch would "
+        "// change it, so a locked branch's ⑂ is off like its \"+\"s. "
+        "forkBtn.disabled = true;"
+    ) in recompute
+    fork_fn = " ".join(_rf_fn(body, "newModelRfFork").split())
+    assert "|| window.newModelRfRowLevel(row) >= 2) { return; }" in fork_fn
+    assert (
+        "var cond = window.newModelRfNewConditionRow(band3, window.newModelRfRowLevel(row) + 1);"
+        in fork_fn
+    )
+
+
+def test_the_row_script_works_on_a_rows_own_branch(client: TestClient, db: Session) -> None:
+    """Rung 4b: every edit acts on the row's own branch and unit — the
+    row, its condition and every deeper row — at either level."""
+    _, _, _, _, body = _chain_page(client, db, "two-level-ops")
+    def fn(name: str) -> str:
+        return " ".join(_rf_fn(body, name).split())
+    set_level = fn("newModelRfSetLevel")
+    for line in (
+        "if (forkCell) { forkCell.remove(); }",
+        "for (var i = 0; i < 2 - Math.min(level, 2); i++) {",
+        "for (var j = 0; j < level; j++) {",
+    ):
+        assert line in set_level, line
+    new_row = fn("newModelRfNewGovernedRow")
+    assert "after = window.newModelRfUnitEnd(afterEl);" in new_row
+    assert "window.newModelRfSetLevel(clone, level);" in new_row
+    sibling = fn("newModelRfBranchSibling")
+    assert "var members = window.newModelRfBranchMembers(parent);" in sibling
+    join = fn("newModelRfJoin")
+    assert "window.newModelRfMakeUngoverned(row, level - 1);" in join
+    assert "joinLevel = Math.max(1, window.newModelRfRowLevel(lastRows[lastRows.length - 1]));" in join
+    end = fn("newModelRfEndBranch")
+    assert "if (window.newModelRfRowLevel(parentRow) === 0) {" in end
+    condition = fn("newModelRfNewConditionRow")
+    assert "if (lead) { lead.colSpan = 4 - level; }" in condition
+
+
+def test_answers_lock_every_branch_above_on_the_page(client: TestClient, db: Session) -> None:
+    """The view locks as Save does: an answer on Comments locks Rating's
+    branch and Familiarity's."""
+    from sqlalchemy import select
+
+    from app.db.models import Assignment, Response, Reviewee, Reviewer
+
+    review_session, instrument, _, _, _ = _chain_page(client, db, "two-level-lock-page")
+    comments = next(f for f in instrument.response_fields if f.label == "Comments")
+    assignment = Assignment(
+        session_id=review_session.id,
+        reviewer_id=db.execute(select(Reviewer.id).where(Reviewer.session_id == review_session.id)).scalars().first(),
+        reviewee_id=db.execute(select(Reviewee.id).where(Reviewee.session_id == review_session.id)).scalars().first(),
+        instrument_id=instrument.id,
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(Response(assignment_id=assignment.id, response_field_id=comments.id, value="x"))
+    db.commit()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+    ).text
+    table = _rows_table(_card_slice(" ".join(body.split()), instrument.id))
+    for cond in table.split("<tr data-new-model-rf-condition")[1:]:
+        op = re.search(r"<select data-new-model-rf-condition-op[^>]*>", cond).group(0)
+        assert " disabled" in op
 
 
 def test_the_preview_counts_an_item_only_if_every_branch_above_is_require(
@@ -172,3 +233,35 @@ def test_the_row_script_reads_a_rows_own_parent_and_condition(
     assert "var parent = window.newModelRfParentOf(row); var cond = window.newModelRfConditionOf(parent);" in hint
     sync = " ".join(_rf_fn(body, "newModelRfSyncConditionOps").split())
     assert "var parent = parentRow || group.querySelector('[data-new-model-rf-parent]');" in sync
+
+
+def test_the_row_script_locks_per_branch(client: TestClient, db: Session) -> None:
+    """As the server render and Save do: a branch is locked while a field
+    anywhere below its parent has responses, so an unanswered branch
+    inside an answered group stays open (the rung 4b spec check's D1)."""
+    _, _, _, _, body = _chain_page(client, db, "two-level-lock-js")
+    assert "data-new-model-rf-branch-locked" not in body
+
+    def fn(name: str) -> str:
+        return " ".join(_rf_fn(body, name).split())
+
+    helper = fn("newModelRfBranchLocked")
+    assert "return el !== parentRow && el.getAttribute('data-has-responses') === 'true';" in helper
+    assert "window.newModelRfUnit(parentRow).some(" in helper
+    assert "var locked = window.newModelRfBranchLocked(parent);" in fn("newModelRfRecomputeCondition")
+    assert (
+        "var locked = governed && window.newModelRfBranchLocked(window.newModelRfParentOf(row));"
+        in fn("newModelRfRecomputeActionStates")
+    )
+    join = fn("newModelRfSyncJoin")
+    assert "} else if (window.newModelRfBranchLocked(window.newModelRfParentOf(row))) {" in join
+    assert "window.newModelRfParentOf(aboveRows[aboveRows.length - 1]))) {" in join
+
+
+def test_detachs_title_counts_the_rows_own_branch(client: TestClient, db: Session) -> None:
+    """Comments is Rating's only field though the group holds three rows,
+    so its ↳ ends Rating's branch (the Item 14 cumulative read)."""
+    _, _, card, _, _ = _chain_page(client, db, "two-level-detach-title")
+    comments = _row(_rows_table(card), "Comments")
+    join = re.search(r"<button[^>]*data-new-model-rf-join[^>]*>", comments).group(0)
+    assert 'title="Detach this field and end its branch"' in join

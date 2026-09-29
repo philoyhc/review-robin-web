@@ -257,3 +257,97 @@ def test_replicate_instrument_copies_a_chain(db: Session) -> None:
     assert fields["rating"].branch_parent_id == fields["familiarity"].id
     assert fields["why"].branch_parent_id == fields["rating"].id
     assert fields["why"].branch_parent_id != _fields(db, source.id)["rating"].id
+
+
+# The Item 14 cumulative read's gaps: the lock and the move rule reach
+# through a level, and the hide cascade walks stored parents too.
+
+
+def _stored(instrument: Instrument) -> list[dict]:
+    """The card's payload as the builder sends it: every row keyed, each
+    naming its stored parent and condition."""
+    by_id = {f.id: f for f in instrument.response_fields}
+    out = []
+    for rf in _band2_rfs(instrument):
+        field = by_id[rf["id"]]
+        out.append({
+            **rf, "row_key": f"rf_{rf['id']}",
+            "branch_parent": f"rf_{field.branch_parent_id}" if field.branch_parent_id else None,
+            "branch_op": field.branch_op, "branch_value": field.branch_value,
+            "branch_mode": field.branch_mode,
+        })
+    return out
+
+
+def test_an_answer_two_levels_down_locks_the_top_branchs_membership(
+    client: TestClient, db: Session
+) -> None:
+    """Comments' answer sits in Rating's branch; Familiarity's branch
+    gains no direct field while it does."""
+    review_session, instrument, fields = _chained(client, db, "two-level-member")
+    _add_response(db, review_session, instrument, fields["Comments"])
+    payload = _stored(instrument)
+    payload.append({
+        "name": "Later", "data_type": "string", "min": "", "max": "", "step": "",
+        "list_options": "", "selected": True, "required": False,
+        "help_text_visible": False, "help_text": "", "row_key": "rf_later",
+        "branch_parent": f"rf_{fields['Familiarity'].id}",
+    })
+    response = _save(client, review_session, instrument, payload)
+    assert response.status_code == 422
+    assert response.json()["errors"] == [
+        "Later: Its branch has saved responses, so the branch's fields can't change."
+    ]
+
+
+def test_a_parent_with_answers_below_it_cant_move_into_a_branch(
+    client: TestClient, db: Session
+) -> None:
+    """Rating heads its own branch with Comments answered; putting it
+    under Familiarity would carry that answer into a closed branch."""
+    review_session, instrument = _new_model_with_tags(client, db, code="two-level-move")
+    response = _save(client, review_session, instrument, _chain_payload(
+        instrument,
+        Familiarity={"branch_op": None, "branch_value": None},
+        Rating={"branch_parent": None},
+    ))
+    assert response.status_code == 200, response.text
+    db.expire_all()
+    fields = {f.label: f for f in instrument.response_fields}
+    assert fields["Rating"].branch_parent_id is None
+    _add_response(db, review_session, instrument, fields["Comments"])
+    payload = _stored(instrument)
+    for rf in payload:
+        if rf["name"] == "Familiarity":
+            rf.update(branch_op="gt", branch_value="0")
+        if rf["name"] == "Rating":
+            rf["branch_parent"] = f"rf_{fields['Familiarity'].id}"
+    response = _save(client, review_session, instrument, payload)
+    assert response.status_code == 422
+    assert response.json()["errors"] == [
+        "Rating: Its branch has saved responses, so it can't move into a branch."
+    ]
+
+
+def test_hiding_a_level_one_parent_hides_its_branch_only(
+    client: TestClient, db: Session
+) -> None:
+    """With the branch keys sent and, as a caller ignorant of branching
+    sends it, without them (the stored parents are walked)."""
+    for code, payload_of in (
+        ("two-level-hide-mid", _stored),
+        ("two-level-hide-mid-bare", lambda i: [
+            {k: v for k, v in rf.items() if not k.startswith("branch_")}
+            for rf in _stored(i)
+        ]),
+    ):
+        review_session, instrument, _ = _chained(client, db, code)
+        payload = payload_of(instrument)
+        for rf in payload:
+            if rf["name"] == "Rating":
+                rf.update(selected=False, required=False)
+        response = _save(client, review_session, instrument, payload)
+        assert response.status_code == 200, (code, response.text)
+        db.expire_all()
+        visible = {f.label: f.visible for f in instrument.response_fields}
+        assert visible == {"Familiarity": True, "Rating": False, "Comments": False}, code

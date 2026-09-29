@@ -2291,6 +2291,33 @@ Taken 2026-09-29 at `85750b93`.
   (`hide_below_hidden_parents`). Until 4b only the settings CSV can
   author a chain, which rung 3's builder already renders; Save refuses
   any shape the rules don't allow.
+- **Rung 4b (the builder wired), 2026-09-29.** A level-1 row's ⑂ is
+  live (off in an answered branch, like its "+"); ↰ joins the deepest
+  branch ending above, at its level; ↳ steps out one level, below its
+  branch, ending a branch it empties; ▲ ▼ move a unit (a row with its
+  condition and deeper rows) within its branch; X on a branch's last
+  field ends that branch; Active cascades through the unit. The view
+  locks every branch above an answer, as Save does. Chromium authored a
+  chain from scratch and walked each of these. Judgment calls: ↰ never
+  starts a branch inside a branch (⑂ does). The spec check found the
+  row script still locked group-wide, overriding the per-branch render
+  on its first pass; it now locks per branch (`newModelRfBranchLocked`,
+  answers anywhere below a parent), matching Save and the spec, and the
+  dead `data-new-model-rf-branch-locked` attribute is gone.
+- **Reads:** one cumulative `diff-reviewer` read over `6afbd412..71607916`
+  (plus a note on the lock fix). Acted on in #2682: Save refused an
+  answered field joining a branch but not a parent whose branch holds
+  answers (a hand-built POST only; now "Its branch has saved responses,
+  so it can't move into a branch."); the same group-wide lock the spec
+  check found; the preview spec named only one level of Require; the
+  pre-JS ↳ title counted the group, not the row's own branch
+  (`only_member`); Band 3's control table missed the bars and slots;
+  tests for a level-2 answer locking the top branch's membership and a
+  level-1 parent's hide cascade, with and without branch keys. The
+  read asked whether "Opens when" under a Require branch inside a Show
+  branch should name the Show branch's condition, which decides whether
+  it opens: no, the field's own parent's condition only (the author's
+  ruling, 2026-09-29, confirming the plan's).
 
 ### PR ladder
 

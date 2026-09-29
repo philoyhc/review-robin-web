@@ -932,20 +932,23 @@ fields renders one blank, unlabelled placeholder row instead — not a
 field until the operator types into it — so there is always a "+" to
 press; deleting down to one row leaves that row rather than none.
 
-Each row holds, left to right:
+Each row holds, left to right (a governed row shifts these one column
+right per level, behind a bar per branch it sits in, and two slots
+after join, `td.rf-slot`, keep six leading columns on every row — see
+["Branching between response fields"](#branching-between-response-fields)):
 
 | Control | Bound to | Notes |
 |---|---|---|
 | **Active** checkbox | `InstrumentResponseField.visible` | The field's selection — whether it renders on the reviewer surface, the reviewer summary and the reviewer-record CSV (see below). Unticking a field with saved responses asks to confirm first — "Hide … from the reviewer surface?", naming the response count and that the data is preserved for audit. An inactive row is not dimmed. |
-| **+** button | — | Inserts a new row (its own `<tbody>` group) directly after this one's, seeded with the next default label (see "A field's default label" below). |
+| **+** button | — | Inserts a new row (its own `<tbody>` group) directly after this one's, seeded with the next default label (see "A field's default label" below). On a governed row it adds a field to the same branch instead, directly after the row's unit — the row, its condition row and every deeper row (see ["Branching between response fields"](#branching-between-response-fields)). |
 | **⑂** / **↰** / **↳** | `branch_parent_id` / `branch_op` / `branch_value` / `branch_mode` | Fork, join and detach — see ["Branching between response fields"](#branching-between-response-fields) below. |
 | Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Empty until typed — see "A field's default label" below. |
 | Type (`<select>`) | `_inline_data_type` | `String / Integer / Decimal / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. Disabled when the row has saved responses; the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
 | Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_options` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
 | **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. Stages Band 2 state directly, so Save alone persists a toggle. Grayed out on a row a Require branch governs, where the condition decides (see ["Branching between response fields"](#branching-between-response-fields)). |
 | **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field above the reviewer-surface preview table. The help-text *text* is a plain `help_text` textarea on that card (shown when the instrument card is unlocked, `data-lock-only` read view when locked), bound to the `dfsave-{id}` form, so it commits with the bulk Save. Stages Band 2 state directly, like R. |
-| **▲ / ▼** | — | Full-size `btn secondary` buttons (not `btn-short` — that size is the display-field table's, see "Display-field table" above) that swap this row's `<tbody>` group with its neighbour. They move a **group**, not a row; a governed row moves within its branch instead — see ["Branching between response fields"](#branching-between-response-fields). |
-| **X** button (`.btn.destructive`) | — | Drops this row (its `<tbody>`), matching Band 1's rule/unit X. Disabled when the row has saved responses (title pins the reason), or when it is the only row left. |
+| **▲ / ▼** | — | Full-size `btn secondary` buttons (not `btn-short` — that size is the display-field table's, see "Display-field table" above) that swap this row's `<tbody>` group with its neighbor. They move a **group**, not a row; a governed row moves its unit (itself, its condition row and any branch inside it) past the neighboring unit within its branch instead — see ["Branching between response fields"](#branching-between-response-fields). |
+| **X** button (`.btn.destructive`) | — | Drops this row (its `<tbody>`), matching Band 1's rule/unit X. Disabled when the row has saved responses (title pins the reason), or when it is the only row left. In a branch, deletion runs bottom-up — see ["Branching between response fields"](#branching-between-response-fields). |
 
 **A row commits to the preview by itself** whenever its live name and
 shape are valid and differ from what it last committed — checked on
@@ -978,7 +981,9 @@ commits to the preview at once, but the card turns unsaved, and
 Cancel's discard reload drops it.
 
 **Order follows the rows.** ▲ ▼ swap a row's `<tbody>` group with its
-neighbour; "+" inserts a new group directly after the pressed row's;
+neighbor, or on a governed row its unit with the neighboring unit in
+its branch; "+" inserts a new group directly after the pressed row's,
+or on a governed row a new field in its branch directly after its unit;
 the bulk Save serializes rows in row order (a named, uncommitted row
 persists unselected, in place).
 
@@ -1105,11 +1110,13 @@ branch"). A governed row shifts one column right — the bar sits in the
 checkbox column, its checkbox in the **+** column, its **+** in the ⑂
 column, its ⑂ in the join column and its ↳ in the first of two empty
 slots after join (`td.rf-slot`) — so every row has six leading columns
-and aligns from the name onward, parent and governed alike. A governed
-row's ⑂ is off until two levels can be authored (19T Item 14): titled
-"A branch inside a branch isn't available yet" on an Integer, Decimal
-or List field with no branch, and by the String and has-a-branch titles
-above otherwise. The checkbox sits
+and aligns from the name onward, parent and governed alike. A level-1
+row's ⑂ forks it one level down ("Add a branch inside this branch,
+below this field"): its condition row and fields shift one more column
+right, with their own bar. A level-2 row shifts two columns: two bars,
+its checkbox in the ⑂ column, its **+** in the join column, no ⑂ (the
+first slot stays empty) and its ↳ in the last slot. In an answered branch a level-1 row's ⑂ is off, like its "+".
+The checkbox sits
 centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 12A).
 
@@ -1191,13 +1198,16 @@ spreadsheet formula.
 Two empty slots of that width follow a plain row's join (`td.rf-slot`);
 each level of branching shifts a row one column right into them.
 A plain row that isn't the first, has no saved responses and isn't
-itself a parent can join the unit above: the end of an unlocked branch,
-or, on a plain Integer, Decimal or List field, a new branch with an
-empty condition. Joining keeps the row's **R** (19T Item 11) — Save
-refuses the result if the row's R is now required with no anchor
-elsewhere in the instrument. A governed row in an unlocked branch can
-detach (↳) to directly below the branch; detaching the only governed
-field ends the branch, as X does.
+itself a parent can join the unit above: the deepest unlocked branch
+that ends directly above it, at that branch's level, or, on a plain
+Integer, Decimal or List field, a new branch with an empty condition
+(a branch inside a branch is started with ⑂, not ↰). Joining keeps the
+row's **R** (19T Item 11) — Save refuses the result if the row's R is
+now required with no anchor elsewhere in the instrument. A governed row
+in an unlocked branch can detach (↳) one level up, to directly below
+its branch; detaching the only field of a branch ends that branch, as
+X does. A governed row that is itself a parent keeps its branch where
+it is: its ↳ is off ("A field with a branch can't leave its branch").
 
 **Inside a branch:**
 
@@ -1224,9 +1234,11 @@ field ends the branch, as X does.
 - **String is disabled** in a parent's type select. Other type changes
   keep the condition, which turns amber and is refused by Save if it no
   longer fits.
-- **Deletion runs bottom-up.** A parent's X is disabled while it has a
-  branch ("Delete its branch first"); the last governed row's X deletes
-  that row and the condition together.
+- **Deletion runs bottom-up**, at each level. A parent's X is disabled
+  while it has a branch ("Delete its branch first"); the last field of a
+  branch deletes that row and the branch's condition together.
+- **▲ ▼ move a unit within its branch**: a governed row swaps with its
+  neighbor in the same branch, carrying any branch of its own.
 - **The governed-answers lock.** Once any governed field has responses,
   the condition, its mode (Require → Show would strand answers on a
   now-closed branch) and the branch's membership lock, and so do those
@@ -1240,12 +1252,14 @@ field ends the branch, as X does.
   mode with its condition. Answers on
   the parent alone lock nothing about the branch; the parent's own type
   and bounds lock as they do today (`has_responses`).
-- **Active cascades both ways.** Unticking a parent's Active writes
-  `visible = False` onto every governed field; re-ticking it re-ticks
-  them all.
+- **Active cascades both ways**, through every level below. Unticking
+  a parent's Active writes `visible = False` onto every field below it,
+  a branch inside its branch included; re-ticking it re-ticks them all.
 - **An answered field can't move into a branch.** ↰ is off on a row
   with saved responses, and Save refuses the move, since the field's
-  answers could then sit in a closed branch.
+  answers could then sit in a closed branch. Nor can a parent with
+  answers anywhere below it ("Its branch has saved responses, so it
+  can't move into a branch.", 19T Item 14): it would carry them in.
 
 **Storage:** `InstrumentResponseField.branch_parent_id` (a
 self-referencing FK, `ON DELETE SET NULL`) on a governed field;
@@ -1282,7 +1296,11 @@ sample row closes every branch. A Require branch's fields
 follow the surface instead: their columns aren't muted, they count as
 items, and they are marked "*" as fields that may be required, but the
 required count leaves them out, since the unanswered sample row fails
-every condition.
+every condition. Inside a branch, that holds only while **every**
+branch above the field is Require (19T Item 14): a Require branch inside
+a Show branch is closed with it on the sample row, so its fields are
+muted and not counted (`item_now` in the view, `rfRowIsItemNow` in the
+row script).
 
 **Out of scope:** a third level of branching, more than one branch per
 parent, and a String parent.
