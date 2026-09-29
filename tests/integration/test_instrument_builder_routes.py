@@ -9083,8 +9083,11 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
         row = chunk.split("</tbody>")[0]
         positions = [row.index(marker) for marker in order]
         assert positions == sorted(positions)
-        # One cell per control, so every row lines up column by column.
-        assert row.count("<td") == len(order)
+        # One cell per control, plus the two empty slots after join that a
+        # branch's rows shift into (19T Item 14), so every row lines up
+        # column by column.
+        assert row.count('<td class="col-shrink rf-slot"></td>') == 2
+        assert row.count("<td") == len(order) + 2
         # 19T Item 10 — the ⑂ column holds its button.
         fork = re.search(
             r'<td class="col-shrink" data-new-model-rf-fork-cell>\s*<button[^>]*>', row

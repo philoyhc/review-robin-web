@@ -2903,11 +2903,11 @@
         text-align: center;
       }
       /* Room after join / detach for two more buttons of the same width
-         and spacing, ahead of a second level of branching (19T Item 12A,
-         the author's ruling): the cell's own padding, plus two buttons,
-         each with the two paddings between cells. */
-      body.ui-v2 table.rf-table td.rf-join-cell {
-        padding-right: calc(2 * var(--rf-glyph-width) + 5 * var(--space-1));
+         and spacing (19T Item 12A, the author's ruling), as two empty
+         slot columns: each level of branching shifts a row one column
+         right into them, so the name column never moves (19T Item 14). */
+      body.ui-v2 table.rf-table td.rf-slot {
+        width: var(--rf-glyph-width);
       }
       /* The table keeps a usable width on a narrow card and scrolls in
          its .table-scroll instead: its boxes are width 100% / min-width
@@ -2944,7 +2944,8 @@
          runs down the checkbox column from the parent's checkbox through
          its condition and governed rows, broad and pale (the author,
          2026-09-27); the condition row reads "If the above [operator]
-         [value] then [mode]" (19T Item 13). */
+         [value] then [mode]" (19T Item 13). A branch inside a branch
+         runs its own bar one column right (19T Item 14). */
       body.ui-v2 table.rf-table td.rf-branch-bar,
       body.ui-v2 table.rf-table td.rf-branch-bar-start { position: relative; }
       body.ui-v2 table.rf-table td.rf-branch-bar::before,
@@ -2979,17 +2980,17 @@
         width: var(--rf-condition-box, 12em);
         box-sizing: border-box;
       }
-      /* The Active checkbox sits centered in its cell, in the first
-         column on a plain row and the second on a governed one (19T
-         Item 12A). */
+      /* The Active checkbox sits centered in its cell, one column
+         further right per level of branching (19T Items 12A, 14). */
       body.ui-v2 table.rf-table td.rf-active-cell { text-align: center; }
       /* A governed response cell whose branch is closed (19T Item 10):
          muted, its control disabled until the parent's answer opens it.
          The cell's title names the condition. */
       body.ui-v2 td.rs-branch-closed { opacity: 0.5; }
       /* The condition's operator sits in the name column at the name
-         box's width, "If the above" right-aligned before it in the join
-         column, any spare room to its left (19T Item 12A). */
+         box's width, "If the above" right-aligned before it across the
+         columns left of the name, any spare room to its left (19T Items
+         12A, 14). */
       body.ui-v2 table.rf-table td.rf-condition-lead { text-align: right; }
       body.ui-v2 table.rf-table td.rf-condition-op select {
         width: 100%;

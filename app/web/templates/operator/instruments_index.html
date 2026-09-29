@@ -1848,9 +1848,9 @@
           {# 19T Item 10 — a governed field isn't an item while its branch is
              closed, as on the surface; the sample row is unanswered, so
              every branch is. A Require branch's fields always are (19T
-             Item 13). #}
-          {% set _all_count = (_rf_list | rejectattr('branch_parent_id') | list | length)
-                              + (_rf_list | selectattr('require_governed') | list | length) %}
+             Item 13), unless a branch above theirs is Show (19T Item 14:
+             ``item_now``). #}
+          {% set _all_count = (_rf_list | selectattr('item_now') | list | length) %}
           {# 19T Item 11 — nor is a required governed field required while
              its branch is closed, as ``rfRowRequiredNow`` counts it; nor a
              Require branch's field while its condition doesn't hold. #}
@@ -2273,22 +2273,53 @@
           function rfRowRequired(row) {
             return rfRowFlag(row, '[data-new-model-rf-required]', 'data-required');
           }
+          // 19T Item 14 — a row's level (how many branches it sits in),
+          // its own parent (the nearest row above it one level up), and a
+          // parent's own condition row (right after it). A group holds a
+          // top-level field and everything below it, so "the group's
+          // parent" is only the top one.
+          function rfRowLevel(row) {
+            return parseInt(row.getAttribute('data-new-model-rf-level') || '0', 10) || 0;
+          }
+          function rfRowParent(row) {
+            if (!row || !row.hasAttribute('data-new-model-rf-governed')) { return null; }
+            var level = rfRowLevel(row);
+            var prev = row.previousElementSibling;
+            while (prev) {
+              if (prev.hasAttribute('data-new-model-rf-row') && rfRowLevel(prev) < level) {
+                return prev;
+              }
+              prev = prev.previousElementSibling;
+            }
+            return null;
+          }
+          function rfRowCondition(parentRow) {
+            var next = parentRow && parentRow.nextElementSibling;
+            return next && next.hasAttribute('data-new-model-rf-condition') ? next : null;
+          }
+          window.newModelRfRowLevel = rfRowLevel;
+          window.newModelRfParentOf = rfRowParent;
+          window.newModelRfConditionOf = rfRowCondition;
           // 19T Item 13 — whether a governed row's branch requires it
           // (its condition row reads "Require the below"), rather than
           // shows it. Such a field is always an item, and the condition,
           // not its R, decides whether it is required.
           function rfRowUnderRequire(row) {
-            if (!row.hasAttribute('data-new-model-rf-governed')) { return false; }
-            var group = row.closest('[data-new-model-rf-group]');
-            var mode = group && group.querySelector('[data-new-model-rf-condition-mode]');
+            var cond = rfRowCondition(rfRowParent(row));
+            var mode = cond && cond.querySelector('[data-new-model-rf-condition-mode]');
             return !!(mode && mode.value === 'require');
           }
           window.newModelRfUnderRequire = rfRowUnderRequire;
           // Whether a field is an item on the sample row: not behind a
           // closed branch (19T Item 10), which every Show branch is, since
-          // the sample row is unanswered.
+          // the sample row is unanswered — at any level (19T Item 14).
           function rfRowIsItemNow(row) {
-            return !row.hasAttribute('data-new-model-rf-governed') || rfRowUnderRequire(row);
+            var r = row;
+            while (r && r.hasAttribute('data-new-model-rf-governed')) {
+              if (!rfRowUnderRequire(r)) { return false; }
+              r = rfRowParent(r);
+            }
+            return true;
           }
           window.newModelRfRowIsItemNow = rfRowIsItemNow;
           // 19T Item 11 — whether the preview's sample row must answer a
@@ -2791,13 +2822,13 @@
               rf.branch_op = null;
               rf.branch_value = null;
               rf.branch_mode = null;
-              var group = row.closest('[data-new-model-rf-group]');
-              if (group && row.hasAttribute('data-new-model-rf-governed')) {
-                var parentRow = group.querySelector('[data-new-model-rf-parent]');
+              // A row's own parent and its own condition (19T Item 14).
+              if (row.hasAttribute('data-new-model-rf-governed')) {
+                var parentRow = rfRowParent(row);
                 rf.branch_parent = parentRow ? parentRow.getAttribute('data-row-key') : null;
               }
-              var cond = group && row.hasAttribute('data-new-model-rf-parent')
-                ? group.querySelector('[data-new-model-rf-condition]') : null;
+              var cond = row.hasAttribute('data-new-model-rf-parent')
+                ? rfRowCondition(row) : null;
               if (cond) {
                 var opSel = cond.querySelector('[data-new-model-rf-condition-op]');
                 rf.branch_op = opSel && opSel.value ? opSel.value : null;
@@ -4215,8 +4246,13 @@
                       <option value="show"{% if condition.mode != 'require' %} selected{% endif %}>Show the below</option>
                       <option value="require"{% if condition.mode == 'require' %} selected{% endif %}>Require the below (else, optional)</option>
                     </select></span>{% endset %}
+                {# 19T Item 14 — a condition row sits at its fields' level:
+                   a bar per branch it is in, its "+" under its parent's ⑂,
+                   and "If the above" spanning the columns left before the
+                   name. #}
+                {% set _clevel = condition.level or 1 %}
                 <tr data-new-model-rf-condition{% if condition.is_list %} class="rf-condition-list"{% endif %}>
-                  <td class="col-shrink rf-branch-bar"></td>
+                  {% for _ in range(_clevel) %}<td class="col-shrink rf-branch-bar"></td>{% endfor %}
                   <td class="col-shrink"></td>
                   <td class="col-shrink"><button type="button" class="btn secondary rf-glyph"
                           data-new-model-rf-condition-add
@@ -4224,9 +4260,10 @@
                           onclick="newModelRfConditionAdd(this)"
                           title="Add a field at the top of the branch">+</button></td>
                   {# 19T Item 12A — the operator sits in the name column at the
-                     name box's width, with "If the above" right-aligned in the
-                     join column before it (the author's ruling). #}
-                  <td class="col-shrink rf-condition-cell rf-condition-lead">If the above</td>
+                     name box's width, with "If the above" right-aligned before
+                     it (the author's ruling), across the join column and
+                     slots left at this level (19T Item 14). #}
+                  <td class="col-shrink rf-condition-cell rf-condition-lead" colspan="{{ 4 - _clevel }}">If the above</td>
                   {# A List's operator shrinks to its label, and its box (the
                      List box's width) and "then [mode]" follow it
                      in the operator's cell, which takes the rest of the row;
@@ -4260,6 +4297,10 @@
                 </tr>
           {% endmacro %}
           {% set _rfs = _band2.response_fields %}
+          {# 19T Item 14 rung 3 — ⑂ shows on a level-1 row, inert until
+             rung 4 lets a governed field fork. The row script keeps the
+             same title. #}
+          {% set _nested_fork_title = "A branch inside a branch isn't available yet" %}
           {% set _next_idx = (_rfs | length) %}
           <div class="table-scroll">
           <table class="rf-table" data-new-model-rf-rows data-lock-region
@@ -4268,10 +4309,12 @@
                {% if not is_editing %}inert aria-hidden="true"{% endif %}>
             {# 19T Item 10 — one <tbody> per group: a field on its own, or
                a parent with its condition row and the fields it governs
-               (``views._response_field_groups``). A governed row shifts
-               one column right before the name: the bar in the checkbox
-               column, its checkbox in the + column, its + in the ⑂
-               column; from the name onward every row aligns. A branch
+               (``views._response_field_groups``), a field inside it
+               with its own branch too (19T Item 14). A governed row
+               shifts one column right per level, into the two slots after
+               join: the bar in the checkbox column, its checkbox in the +
+               column, its + in the ⑂ column; from the name onward every
+               row aligns. A branch
                whose governed fields have responses is locked
                (``data-new-model-rf-branch-locked``): its condition and
                membership can't change. The row script wires the rest. #}
@@ -4281,6 +4324,7 @@
             {% for rf in _group.rows %}
               {% set _rkey = 'rf_' ~ rf.row_index %}
               {% set _governed = rf.branch_parent_id is not none %}
+              {% set _level = rf.level or 0 %}
               {# Wave 3 PR ii — data_type select + bound inputs lock
                  when the row already has saved responses, so an
                  operator can't silently re-shape stored data
@@ -4299,6 +4343,7 @@
                    {% if _governed %}data-new-model-rf-governed="true"{% endif %}
                    {% if rf.is_parent %}data-new-model-rf-parent="true"{% endif %}
                    {% if rf.id %}data-rf-id="{{ rf.id }}"{% endif %}
+                   data-new-model-rf-level="{{ _level }}"
                    data-committed="true"
                    data-selected="{{ 'true' if rf.selected else 'false' }}"
                    data-label="{{ rf.name }}"
@@ -4311,7 +4356,11 @@
                    data-help-text="{{ rf.help_text or '' }}"
                    data-response-count="{{ rf.response_count or 0 }}"
                    {% if rf.has_responses %}data-has-responses="true" data-new-model-rf-shape-locked="true"{% endif %}>
-                {% if _governed %}<td class="col-shrink rf-branch-bar"></td>{% endif %}
+                {# 19T Item 14 — six leading columns at every level: a bar per
+                   branch the row is in, then Active, +, ⑂ (none at level
+                   2, the depth limit: its slot stays empty), join /
+                   detach, and empty slots to fill the six. #}
+                {% for _ in range(_level) %}<td class="col-shrink rf-branch-bar"></td>{% endfor %}
                 <td class="col-shrink rf-active-cell{% if rf.is_parent %} rf-branch-bar-start{% endif %}"><input type="checkbox" data-new-model-rf-active
                          {% if rf.selected %}checked{% endif %}
                          aria-label="Show {{ rf.name }}"
@@ -4322,15 +4371,17 @@
                         data-new-model-rf-add
                         onclick="newModelRfAddRow(this)"
                         title="{% if _governed %}Add a field to the branch below this one{% else %}Add a response field below this one{% endif %}">+</button></td>
-                {% if not _governed %}
+                {% if _level < 2 %}
                 <td class="col-shrink" data-new-model-rf-fork-cell>
                 <button type="button"
                         class="btn rf-glyph{% if not rf.is_parent %} secondary{% endif %}"
                         data-new-model-rf-fork
-                        {% if rf.is_parent or rf.data_type == 'string' %}disabled{% endif %}
+                        {% if rf.is_parent or rf.data_type == 'string' or _governed %}disabled{% endif %}
                         aria-pressed="{{ 'true' if rf.is_parent else 'false' }}"
                         onclick="newModelRfFork(this)"
-                        title="{% if rf.is_parent %}This field has a branch{% elif rf.data_type == 'string' %}A String field can't have a branch{% else %}Add a branch below this field{% endif %}">⑂</button></td>
+                        title="{% if rf.is_parent %}This field has a branch{% elif rf.data_type == 'string' %}A String field can't have a branch{% elif _governed %}{{ _nested_fork_title }}{% else %}Add a branch below this field{% endif %}">⑂</button></td>
+                {% else %}
+                <td class="col-shrink rf-slot"></td>
                 {% endif %}
                 {# 19T Item 10 rung 7b — join the unit above (↰), or, on a
                    governed row, detach from the branch (↳). The row script
@@ -4340,8 +4391,9 @@
                 <button type="button" class="btn secondary rf-glyph"
                         data-new-model-rf-join
                         onclick="newModelRfJoin(this)"
-                        {% if _governed %}{% if rf.branch_locked %}disabled{% endif %}{% elif _outer.first or rf.is_parent or rf.has_responses %}disabled{% endif %}
-                        title="{% if _governed %}{% if rf.branch_locked %}Its branch has saved responses, so its fields can't change{% elif _group.rows | length == 2 %}Detach this field and end its branch{% else %}Move this field out of its branch{% endif %}{% else %}Join the field above{% endif %}">{% if _governed %}↳{% else %}↰{% endif %}</button></td>
+                        {% if _governed %}{% if rf.branch_locked or rf.is_parent %}disabled{% endif %}{% elif _outer.first or rf.is_parent or rf.has_responses %}disabled{% endif %}
+                        title="{% if _governed %}{% if rf.is_parent %}A field with a branch can't leave its branch{% elif rf.branch_locked %}Its branch has saved responses, so its fields can't change{% elif _group.rows | length == 2 %}Detach this field and end its branch{% else %}Move this field out of its branch{% endif %}{% else %}Join the field above{% endif %}">{% if _governed %}↳{% else %}↰{% endif %}</button></td>
+                {% for _ in range(2 - _level if _level < 2 else 0) %}<td class="col-shrink rf-slot"></td>{% endfor %}
                 <td class="rf-name">
                 <input type="text"
                        data-new-model-rf-name
@@ -4436,12 +4488,13 @@
                         {% if not rf.has_responses %}onclick="newModelRfDeleteRow(this)"{% endif %}
                         title="{% if rf.has_responses %}Cannot delete — this field has saved responses{% elif rf.is_parent %}Delete its branch first{% elif rf.branch_locked %}Its branch has saved responses, so its fields can't change{% else %}Delete this row{% endif %}">X</button></td>
                 </tr>
-                {% if loop.first and _group.condition %}
-                {# The branch's condition row: after the bar, "If the
-                   above [operator] [value] then [mode]". Its "+"
-                   adds a field at the top of the branch; it has no X —
-                   the branch goes with its last governed field. #}
-                {{ rf_condition_row(_group.condition) }}
+                {% if rf.condition %}
+                {# A parent's condition row, right after it at the next
+                   level (19T Item 14): "If the above [operator] [value]
+                   then [mode]". Its "+" adds a field at the top of the
+                   branch; it has no X — the branch goes with its last
+                   governed field. #}
+                {{ rf_condition_row(rf.condition) }}
                 {% endif %}
             {% endfor %}
             </tbody>
@@ -4479,6 +4532,8 @@
                         disabled
                         onclick="newModelRfJoin(this)"
                         title="Join the field above">↰</button></td>
+                <td class="col-shrink rf-slot"></td>
+                <td class="col-shrink rf-slot"></td>
                 <td class="rf-name">
               <input type="text"
                      data-new-model-rf-name
@@ -4560,7 +4615,7 @@
           {# 19T Item 10 — ⑂ inserts this condition row below its field; the
              row script fills the operators the parent's type allows. #}
           <template data-new-model-rf-condition-template>
-            {{ rf_condition_row({"op": "", "value": "", "high": "", "is_range": false, "is_list": false, "ops": [], "locked": false, "mode": "show"}) }}
+            {{ rf_condition_row({"op": "", "value": "", "high": "", "is_range": false, "is_list": false, "ops": [], "locked": false, "mode": "show", "level": 1}) }}
           </template>
         </div>
       </div>
@@ -5050,9 +5105,11 @@
             rest.appendChild(then);
           }
         };
-        window.newModelRfSyncConditionOps = window.newModelRfSyncConditionOps || function (group) {
-          var cond = group.querySelector('[data-new-model-rf-condition]');
-          var parent = group.querySelector('[data-new-model-rf-parent]');
+        // ``parentRow`` names the branch when the group has two levels
+        // (19T Item 14); without it, the group's top branch.
+        window.newModelRfSyncConditionOps = window.newModelRfSyncConditionOps || function (group, parentRow) {
+          var parent = parentRow || group.querySelector('[data-new-model-rf-parent]');
+          var cond = window.newModelRfConditionOf(parent);
           var table = group.closest('[data-new-model-rf-rows]');
           if (!cond || !parent || !table) { return; }
           var sel = cond.querySelector('[data-new-model-rf-condition-op]');
@@ -5097,8 +5154,8 @@
             // (Codex on #2661).
             var row = min.closest('[data-new-model-rf-row]');
             if (!row || !row.hasAttribute('data-new-model-rf-parent')) { return; }
-            var group = min.closest('[data-new-model-rf-group]');
-            var cond = group && group.querySelector('[data-new-model-rf-condition]');
+            // Its own condition, at whichever level (19T Item 14).
+            var cond = window.newModelRfConditionOf(row);
             if (!cond) { return; }
             // A number's Min, or a List's options box (19T Item 12A):
             // whichever the parent's type shows.
@@ -5123,9 +5180,9 @@
         // The condition row's amber marker, as a field row's: the reason
         // is its tooltip, and Save refuses the branch until it is fixed.
         // A locked branch's condition can't change.
-        window.newModelRfRecomputeCondition = window.newModelRfRecomputeCondition || function (group) {
-          var cond = group.querySelector('[data-new-model-rf-condition]');
-          var parent = group.querySelector('[data-new-model-rf-parent]');
+        window.newModelRfRecomputeCondition = window.newModelRfRecomputeCondition || function (group, parentRow) {
+          var parent = parentRow || group.querySelector('[data-new-model-rf-parent]');
+          var cond = window.newModelRfConditionOf(parent);
           if (!cond || !parent) { return; }
           var locked = group.getAttribute('data-new-model-rf-branch-locked') === 'true';
           var sel = cond.querySelector('[data-new-model-rf-condition-op]');
@@ -5180,9 +5237,9 @@
         // preview, as the reviewer surface titles a closed cell
         // (``views.branch_condition_label``).
         window.newModelRfBranchHint = window.newModelRfBranchHint || function (row) {
-          var group = row.closest('[data-new-model-rf-group]');
-          var parent = group && group.querySelector('[data-new-model-rf-parent]');
-          var cond = group && group.querySelector('[data-new-model-rf-condition]');
+          // The row's own parent and condition (19T Item 14).
+          var parent = window.newModelRfParentOf(row);
+          var cond = window.newModelRfConditionOf(parent);
           if (!parent || !cond) { return ''; }
           var sel = cond.querySelector('[data-new-model-rf-condition-op]');
           var input = cond.querySelector('[data-new-model-rf-condition-value]');
@@ -5213,11 +5270,14 @@
           return 'Opens when ' + label + ' ' + symbol + ' ' + value;
         };
         // Make a template row a governed row: the bar in the checkbox
-        // column shifts it one column before the name, and it has no ⑂.
+        // column shifts it one column right, into one of the two empty
+        // slots after join, so the name column stays put. It keeps its ⑂,
+        // which stays off until a governed field can fork (19T Item 14).
         window.newModelRfMakeGoverned = window.newModelRfMakeGoverned || function (row) {
           row.setAttribute('data-new-model-rf-governed', 'true');
-          var forkCell = row.querySelector('[data-new-model-rf-fork-cell]');
-          if (forkCell) { forkCell.remove(); }
+          row.setAttribute('data-new-model-rf-level', '1');
+          var slots = row.querySelectorAll('td.rf-slot');
+          if (slots.length) { slots[slots.length - 1].remove(); }
           var bar = document.createElement('td');
           bar.className = 'col-shrink rf-branch-bar';
           row.insertBefore(bar, row.firstElementChild);
@@ -5303,7 +5363,8 @@
         window.newModelRfConditionChanged = window.newModelRfConditionChanged || function (el) {
           var group = el.closest('[data-new-model-rf-group]');
           if (!group) { return; }
-          window.newModelRfRecomputeCondition(group);
+          var condRow = el.closest('[data-new-model-rf-condition]');
+          window.newModelRfRecomputeCondition(group, condRow && condRow.previousElementSibling);
           group.querySelectorAll('[data-new-model-rf-governed]').forEach(function (r) {
             window.newModelRfRecomputeActionStates(r);
           });
@@ -5339,7 +5400,10 @@
             btn.disabled = !!off;
           }
           if (row.hasAttribute('data-new-model-rf-governed')) {
-            if (group.getAttribute('data-new-model-rf-branch-locked') === 'true') {
+            // A parent keeps its branch where it is (19T Item 14).
+            if (row.hasAttribute('data-new-model-rf-parent')) {
+              set('↳', "A field with a branch can't leave its branch", true);
+            } else if (group.getAttribute('data-new-model-rf-branch-locked') === 'true') {
               set('↳', "Its branch has saved responses, so its fields can't change", true);
             } else if (group.querySelectorAll('[data-new-model-rf-governed]').length === 1) {
               set('↳', 'Detach this field and end its branch', false);
@@ -5376,12 +5440,21 @@
             }
           }
         };
-        // Undo ``newModelRfMakeGoverned``: drop the bar, give the row its ⑂
-        // back (from the row template) before its join cell.
+        // Undo ``newModelRfMakeGoverned``: drop the bar and give the row its
+        // slot back after join (19T Item 14); a row without a ⑂ gets one
+        // from the row template, before its join cell.
         window.newModelRfMakeUngoverned = window.newModelRfMakeUngoverned || function (row) {
           row.removeAttribute('data-new-model-rf-governed');
+          row.setAttribute('data-new-model-rf-level', '0');
           var bar = row.querySelector('td.rf-branch-bar');
           if (bar) { bar.remove(); }
+          // Its slot back after join (19T Item 14).
+          var joinSlot = row.querySelector('[data-new-model-rf-join-cell]');
+          if (joinSlot && row.querySelectorAll('td.rf-slot').length < 2) {
+            var slot = document.createElement('td');
+            slot.className = 'col-shrink rf-slot';
+            joinSlot.insertAdjacentElement('afterend', slot);
+          }
           // Its Active box was off while its parent was hidden; as a field
           // of its own it can be shown again (Codex on #2646).
           var active = row.querySelector('[data-new-model-rf-active]');
@@ -5598,6 +5671,10 @@
             } else if (['integer', 'decimal', 'list'].indexOf(liveType) < 0) {
               forkBtn.disabled = true;
               forkBtn.setAttribute('title', "A String field can't have a branch");
+            } else if (row.hasAttribute('data-new-model-rf-governed')) {
+              // 19T Item 14 rung 3 — shown on a level-1 row, not yet live.
+              forkBtn.disabled = true;
+              forkBtn.setAttribute('title', "A branch inside a branch isn't available yet");
             } else if (!name) {
               forkBtn.disabled = true;
               forkBtn.setAttribute('title', 'Enter a field name first.');
@@ -5606,9 +5683,10 @@
               forkBtn.setAttribute('title', 'Add a branch below this field');
             }
           }
+          // The row's own condition, at whichever level (19T Item 14).
           if (isParent && group) {
-            window.newModelRfSyncConditionOps(group);
-            window.newModelRfRecomputeCondition(group);
+            window.newModelRfSyncConditionOps(group, row);
+            window.newModelRfRecomputeCondition(group, row);
           }
           // Join / detach, here and on the row below, whose join depends
           // on this row's name and type.

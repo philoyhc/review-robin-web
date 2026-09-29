@@ -2271,6 +2271,16 @@ Taken 2026-09-29 at `85750b93`.
   the script in both modes. **Moved to rung 3:** the preview's counts,
   which live in the builder render; the builder page still renders a
   seeded chain (as flat groups).
+- **Rung 3 (builder scaffold), 2026-09-29.** A stored chain renders as
+  the mockup: six leading columns on every row (the join cell's padding
+  became two `td.rf-slot` columns, so a level shifts one column and the
+  name stays put), a bar per level, each parent's condition row right
+  after it with its "+" under the parent's ⑂. Level-1 ⑂ shows, off. The
+  row script finds a row's own parent and condition (`rfRowParent`,
+  `rfRowCondition`), so the stager, the preview's hints and counts, R
+  under Require and condition sizing work at either level; a level-1
+  parent's ↳ is off. `spec/ui_elements.md` joins Doc impact (its
+  `rf-table` row named the retired padding).
 
 ### PR ladder
 
@@ -2326,6 +2336,7 @@ Taken 2026-09-29 at `85750b93`.
 ### Doc impact
 
 - `spec/instruments.md` — two levels: the layout, level-1 ⑂, ↰ / ↳ by level, subtree moves, the chain lock and cascades; drop "nested branches" from out of scope (Item 14).
+- `spec/ui_elements.md` — `rf-table`'s `td.rf-slot` columns replace the join cell's padding (Item 14).
 - `spec/rrw_functional_spec.md` — §5.7 allows a branch inside a branch; drop "Nested branches" from its out-of-scope line (Item 14).
 - `spec/reviewer-surface.md` — a closed parent closes its whole subtree live (Item 14).
 - `spec/csv_contracts.md` — §3.3: a `branch_parent` may name a governed field, two levels deep (Item 14).

@@ -62,29 +62,30 @@ def test_a_branch_is_one_ruled_group(client: TestClient, db: Session) -> None:
 
 
 def test_rows_align_from_the_name_onward(client: TestClient, db: Session) -> None:
-    """A governed row shifts one column before the name: the bar in the
-    checkbox column, its checkbox in +'s, its + in ⑂'s, and its detach
-    in the join column (rung 7b). Every row, the condition row included,
-    spans the table's twelve columns."""
+    """A governed row shifts one column right: the bar in the checkbox
+    column, its checkbox in +'s, its + in ⑂'s, its ⑂ in the join column
+    and its detach in the first slot (rung 7b; 19T Item 14 gave it ⑂).
+    Every row, the condition row included, spans the table's fourteen
+    columns, and the name column never moves."""
     _, _, card, _ = _page(client, db, "br-builder-align")
     table = _rows_table(card)
     parent, governed = _row(table, "Rating"), _row(table, "Comments")
-    assert parent.count("<td") == governed.count("<td") == 12
+    assert parent.count("<td") == governed.count("<td") == 14
     governed_cells = re.findall(r"<td[^>]*>", governed)
     assert 'class="col-shrink rf-branch-bar"' in governed_cells[0]
     assert "data-new-model-rf-active" in governed.split("<td")[2]
     assert "data-new-model-rf-add" in governed.split("<td")[3]
-    assert "data-new-model-rf-join" in governed.split("<td")[4]
+    assert "data-new-model-rf-fork" in governed.split("<td")[4]
+    assert "data-new-model-rf-join" in governed.split("<td")[5]
     assert "data-new-model-rf-join" in parent.split("<td")[4]
-    assert "data-new-model-rf-name" in governed.split("<td")[5]
-    assert "data-new-model-rf-name" in parent.split("<td")[5]
-    assert "data-new-model-rf-fork" not in governed
+    assert "data-new-model-rf-name" in governed.split("<td")[7]
+    assert "data-new-model-rf-name" in parent.split("<td")[7]
     condition = table.split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
-    # Bar, (Active), "+", then "If the above" in the join column, the
-    # operator in the name column and the rest across seven (19T Item 12A):
-    # twelve columns, like a field row.
+    # Bar, (Active), "+" under the parent's ⑂, then "If the above" across
+    # the join column and both slots, the operator in the name column and
+    # the rest across seven (19T Item 12A): fourteen columns.
     assert condition.count("<td") == 6 and 'colspan="7"' in condition
-    assert "If the above" in condition.split("<td")[4]
+    assert 'colspan="3">If the above' in condition.split("<td")[4]
     assert "data-new-model-rf-condition-op" in condition.split("<td")[5]
     assert "<span data-new-model-rf-condition-then>then<select data-new-model-rf-condition-mode" in condition.split("<td")[6]
 
@@ -222,7 +223,7 @@ def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) 
         "'Delete this field and its branch'",
         "if (stringOpt) { stringOpt.disabled = isParent; }",
         "activeBox.disabled = parentHidden;",
-        "window.newModelRfRecomputeCondition(group);",
+        "window.newModelRfRecomputeCondition(group, row);",
     ):
         assert rule in recompute, rule
     # 19T Item 11 — R is live inside a branch: nothing turns it off there,
@@ -336,12 +337,11 @@ def test_the_preview_counts_items_as_the_surface_does(
     ).text
     # One rule for both counts: a Show branch's fields aren't items, a
     # Require branch's are (19T Item 13).
+    # At any level, every branch above must be Require (19T Item 14).
     at = body.index("function rfRowIsItemNow(row) {")
-    item_now = body[at : body.index("\n          }", at)]
-    assert (
-        "return !row.hasAttribute('data-new-model-rf-governed') || rfRowUnderRequire(row);"
-        in item_now
-    )
+    item_now = " ".join(body[at : body.index("return true;", at)].split())
+    assert "if (!rfRowUnderRequire(r)) { return false; }" in item_now
+    assert "r = rfRowParent(r);" in item_now
     for start, rule in (
         ("window.newModelUpdateIntroProgress =", "window.newModelRfRowIsItemNow"),
         ("function buildProgressPills(card) {", "committedRows.filter(rfRowIsItemNow)"),

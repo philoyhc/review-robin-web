@@ -29,8 +29,9 @@ def test_join_reads_the_up_arrow_and_detach_the_down_arrow(
         (glyph, dq or sq)
         for glyph, dq, sq in re.findall(r"""set\('(.)', (?:"([^"]+)"|'([^']+)')""", sync)
     ]
-    assert len(calls) == 12, calls
+    assert len(calls) == 13, calls
     detach_titles = {
+        "A field with a branch can't leave its branch",
         "Its branch has saved responses, so its fields can't change",
         "Detach this field and end its branch",
         "Move this field out of its branch",
@@ -86,21 +87,26 @@ def test_join_and_detach_leave_room_for_two_more_buttons(
 ) -> None:
     """The author's later 12A entries: after ↰ / ↳, space for two more
     buttons, ahead of a second level of branching (it was one), still
-    of the same width, on the server's rows and the template's."""
+    of the same width, on the server's rows and the template's. 19T Item
+    14 made the space two empty slot columns, which a branch's rows
+    shift into: two after a top-level row's join, one after a governed
+    row's."""
     _, _, card, flat = _page(client, db, "12a-join-room")
     table = _rows_table(card)
-    for name in ("Rating", "Comments"):
-        assert '<td class="col-shrink rf-join-cell" data-new-model-rf-join-cell>' in _row(table, name)
+    slot = '<td class="col-shrink rf-slot"></td>'
+    for name, slots in (("Rating", 2), ("Comments", 1)):
+        row = _row(table, name)
+        assert '<td class="col-shrink rf-join-cell" data-new-model-rf-join-cell>' in row
+        after_join = row.split("data-new-model-rf-join-cell>")[1].split('<td class="rf-name">')[0]
+        assert after_join.count(slot) == slots, name
     template = flat.split("<template data-new-model-rf-row-template>")[1].split("</template>")[0]
     assert '<td class="col-shrink rf-join-cell" data-new-model-rf-join-cell>' in template
-    # The cell's own padding, then two buttons (``.rf-glyph``'s width, one
-    # variable for both), each with the two paddings between cells.
+    assert template.count(slot) == 2
+    # Each slot is a button wide (``.rf-glyph``'s width, one variable for
+    # both), with a cell's two paddings, as a button's cell has.
     assert "body.ui-v2 table.rf-table { --rf-glyph-width: 2.25rem; }" in flat
-    assert "width: var(--rf-glyph-width);" in flat
-    assert (
-        "body.ui-v2 table.rf-table td.rf-join-cell { "
-        "padding-right: calc(2 * var(--rf-glyph-width) + 5 * var(--space-1)); }"
-    ) in flat
+    assert "body.ui-v2 table.rf-table td.rf-slot { width: var(--rf-glyph-width); }" in flat
+    assert "padding-right: calc(2 * var(--rf-glyph-width)" not in flat
 
 
 def test_the_operator_takes_the_name_column_and_the_lead_aligns_right(
@@ -112,7 +118,8 @@ def test_the_operator_takes_the_name_column_and_the_lead_aligns_right(
     _, _, card, flat = _page(client, db, "12a-operator")
     condition = _rows_table(card).split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
     cells = condition.split("<td")[1:]
-    assert 'class="col-shrink rf-condition-cell rf-condition-lead">If the above</td>' in cells[3]
+    # A level-1 condition's lead spans the join column and both slots.
+    assert 'class="col-shrink rf-condition-cell rf-condition-lead" colspan="3">If the above</td>' in cells[3]
     assert 'class="rf-condition-cell rf-condition-op">' in cells[4]
     assert "<select data-new-model-rf-condition-op" in cells[4]
     assert "body.ui-v2 table.rf-table td.rf-condition-lead { text-align: right; }" in flat
