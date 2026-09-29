@@ -2452,6 +2452,11 @@ Taken 2026-09-27 at `3cec7196`:
   halves, so every pair now shows one screen; the alt text names both
   help-text cards, the locked card's Unlock, and ▲ ▼ only on the
   movable display fields.
+- **Follow-up, 2026-09-29** (author's edit after #2686): the branching
+  paragraph gets its own `h3`, "Advanced features: conditional
+  branching", and ends on the limits: two levels, and only numerical and
+  list fields can branch (Integer, Decimal, List per
+  `spec/instruments.md`).
 
 ### PR ladder
 
