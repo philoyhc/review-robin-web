@@ -53,6 +53,9 @@ _templates.env.globals["app_version"] = settings.app_version
 _templates.env.globals["numeric_column_ch_width"] = (
     views.numeric_column_ch_width
 )
+_templates.env.globals["profile_column_ch_width"] = (
+    views.profile_column_ch_width
+)
 # 2026-05-28 — derives the ``rows`` attribute for String
 # response-field textareas from ``max_chars`` + operator-set
 # column width so reviewers see a textarea sized for the typical

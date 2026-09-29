@@ -489,7 +489,12 @@ In rendered order:
    - `pair_context.{n}` and the rest → plain text.
    Header carries `class="rs-narrow"` for `profile_link` (URL
    columns are kept narrow); other display headers have no width
-   modifier.
+   modifier. When the table is `table-layout: fixed` (any column
+   width set), `rs-narrow`'s `width: 1%` would take 1% of the table,
+   so an unsized profile column's `<col>` starts at
+   `views.profile_column_ch_width(label)` ch instead — the label plus
+   room for the sort button, never narrower than "View" (the author,
+   2026-09-29).
 3. **Response fields** (in stored `InstrumentResponseField.order`):
    one column per response field. Header text is the field label;
    required fields — and a visible field a require-mode parent governs

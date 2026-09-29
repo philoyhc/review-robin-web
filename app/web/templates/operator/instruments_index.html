@@ -2400,6 +2400,11 @@
           function colStyle(w) {
             return w && w > 0 ? 'width: ' + w + 'px;' : '';
           }
+          // views.profile_column_ch_width: the label plus room for the
+          // sort button, never narrower than "View".
+          function profileColumnCh(label) {
+            return Math.max(String(label || '').length + 4, 'View'.length + 3);
+          }
           // Resize handle markup. Sits absolutely positioned on
           // the right edge of a <th>. mousedown wires a window-
           // level mousemove that updates the <col>'s width live;
@@ -2527,7 +2532,15 @@
               html += '<col data-col-key="identity" style="' + colStyle(identityW) + '">';
             }
             displays.forEach(function (o) {
-              html += '<col data-col-key="df_' + esc(o.displayFieldId) + '" style="' + colStyle(o.width) + '">';
+              var isProfile = o.sourceType === 'reviewee' && o.sourceField === 'profile_link';
+              // An unsized profile column starts wide enough for its
+              // header: under the fixed layout its rs-narrow 1% would
+              // squish it (the author, 2026-09-29). Mirrors the
+              // surface's views.profile_column_ch_width.
+              var style = (isProfile && !(o.width > 0))
+                ? 'width: ' + profileColumnCh(o.label) + 'ch;'
+                : colStyle(o.width);
+              html += '<col data-col-key="df_' + esc(o.displayFieldId) + '" style="' + style + '">';
             });
             responses.forEach(function (r) {
               html += '<col data-col-key="resp_' + esc(r.key) + '" style="' + colStyle(r.width) + '">';

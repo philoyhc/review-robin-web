@@ -123,6 +123,9 @@ _templates.env.globals["format_datetime_local"] = (
 _templates.env.globals["numeric_column_ch_width"] = (
     views.numeric_column_ch_width
 )
+_templates.env.globals["profile_column_ch_width"] = (
+    views.profile_column_ch_width
+)
 # Sized-textarea helper — same as on the reviewer ``_templates``.
 # The operator preview route (``_preview_surface.py``) renders
 # ``reviewer/review_surface.html`` through this operator instance,
