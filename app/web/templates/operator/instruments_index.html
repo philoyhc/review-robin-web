@@ -4391,8 +4391,8 @@
                 <button type="button" class="btn secondary rf-glyph"
                         data-new-model-rf-nest
                         onclick="newModelRfNest(this)"
-                        {% if rf.is_parent or rf.branch_locked or rf.has_responses or not rf.nest_target %}disabled{% endif %}
-                        title="{% if rf.is_parent %}A field with a branch can't join another{% elif rf.branch_locked %}Its branch has saved responses, so its fields can't change{% elif rf.has_responses %}It has saved responses, so it can't move into a branch{% elif not rf.nest_target %}No branch inside this branch ends directly above{% else %}Join the branch above{% endif %}">↰</button></td>
+                        {% if rf.is_parent or rf.branch_locked or not rf.nest_target %}disabled{% endif %}
+                        title="{% if rf.is_parent %}A field with a branch can't join another{% elif rf.branch_locked %}Its branch has saved responses, so its fields can't change{% elif not rf.nest_target %}No branch inside this branch ends directly above{% else %}Join the branch above{% endif %}">↰</button></td>
                 {% endif %}
                 {# 19T Item 10 rung 7b — join the unit above (↰), or, on a
                    governed row, detach from the branch (↳). The row script
@@ -5597,13 +5597,13 @@
           if (row.hasAttribute('data-new-model-rf-parent')) {
             off = "A field with a branch can't join another";
           } else if (window.newModelRfBranchLocked(window.newModelRfParentOf(row))) {
+            // A row with saved responses of its own is here too: its
+            // answers lock its branch.
             off = "Its branch has saved responses, so its fields can't change";
-          } else if (row.getAttribute('data-has-responses') === 'true') {
-            off = "It has saved responses, so it can't move into a branch";
-          } else if (!above || !above.hasAttribute('data-new-model-rf-parent')) {
-            off = 'No branch inside this branch ends directly above';
           } else if (!window.newModelRfSaveName(row)) {
             off = 'Enter a field name first.';
+          } else if (!above || !above.hasAttribute('data-new-model-rf-parent')) {
+            off = 'No branch inside this branch ends directly above';
           }
           btn.disabled = !!off;
           btn.setAttribute('title', off || 'Join the branch above');

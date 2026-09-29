@@ -1212,8 +1212,8 @@ Integer, Decimal or List field, a new branch with an empty condition
 ↰** joins the branch of the field directly above it in its own branch,
 at level 2, when that field has one (19T Item 14 rung 5, the author's
 screen cap); otherwise it is off ("No branch inside this branch ends
-directly above"), and off, as ↳ is, on a parent, in a locked branch or
-on a row with saved responses. Joining keeps the
+directly above"), and off, as ↳ is, on a parent or in a locked branch —
+which a row with saved responses always is, its answers locking it. Joining keeps the
 row's **R** (19T Item 11) — Save refuses the result if the row's R is
 now required with no anchor elsewhere in the instrument. A governed row
 in an unlocked branch can detach (↳) one level up, to directly below

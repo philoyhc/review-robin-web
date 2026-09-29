@@ -272,17 +272,23 @@ def test_detachs_title_counts_the_rows_own_branch(client: TestClient, db: Sessio
 # ends directly above it (the author's screen cap, 2026-09-29).
 
 
-def _with_other(client: TestClient, db: Session, code: str, **extra):
-    """The chain plus Other, a level-1 field under Familiarity directly
-    after Rating's branch."""
+def _with_other(client: TestClient, db: Session, code: str, *, answered: str | None = None):
+    """The chain plus Other and Last, level-1 fields under Familiarity
+    after Rating's branch; ``answered`` names one to give a response."""
+    from .test_response_field_branching_save import _add_response
+
     review_session, instrument, _, _, _ = _chain_page(client, db, code)
     fields = {f.label: f for f in instrument.response_fields}
-    db.add(InstrumentResponseField(
-        instrument_id=instrument.id, field_key="other", label="Other",
-        order=fields["Comments"].order + 1, _inline_data_type="String",
-        branch_parent_id=fields["Familiarity"].id, **extra,
-    ))
+    for offset, label in ((1, "Other"), (2, "Last")):
+        fields[label] = InstrumentResponseField(
+            instrument_id=instrument.id, field_key=label.lower(), label=label,
+            order=fields["Comments"].order + offset, _inline_data_type="String",
+            branch_parent_id=fields["Familiarity"].id,
+        )
+        db.add(fields[label])
     db.commit()
+    if answered:
+        _add_response(db, review_session, instrument, fields[answered])
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
     ).text
@@ -306,6 +312,21 @@ def test_a_level_one_row_below_a_branch_can_join_it(client: TestClient, db: Sess
     rating = _nest(_row(table, "Rating"))
     assert " disabled" in rating
     assert 'title="A field with a branch can\'t join another"' in rating
+    # Other, above Last, has none.
+    last = _nest(_row(table, "Last"))
+    assert " disabled" in last
+    assert 'title="No branch inside this branch ends directly above"' in last
+
+
+def test_a_level_one_rows_join_is_off_in_an_answered_branch(
+    client: TestClient, db: Session
+) -> None:
+    """Last's answer locks Familiarity's branch, so Other can't leave it."""
+    table, _ = _with_other(client, db, "two-level-nest-locked", answered="Last")
+    for label in ("Other", "Last"):
+        nest = _nest(_row(table, label))
+        assert " disabled" in nest, label
+        assert 'title="Its branch has saved responses, so its fields can\'t change"' in nest, label
 
 
 def test_the_row_script_nests_a_level_one_row(client: TestClient, db: Session) -> None:
@@ -323,7 +344,9 @@ def test_the_row_script_nests_a_level_one_row(client: TestClient, db: Session) -
     ):
         assert line in sync, line
     assert "window.newModelRfSetLevel(row, 2);" in fn("newModelRfNest")
-    assert "window.newModelRfSyncNest(row);" in fn("newModelRfRecomputeActionStates")
+    recompute = fn("newModelRfRecomputeActionStates")
+    assert "window.newModelRfSyncNest(row);" in recompute
+    assert "window.newModelRfSyncInnerBorders(group);" in recompute
 
 
 def test_a_branch_inside_a_branch_is_ruled_above_and_below(
@@ -336,6 +359,9 @@ def test_a_branch_inside_a_branch_is_ruled_above_and_below(
     assert 'class="rf-inner-top"' in _row(table, "Rating")
     assert 'class="rf-inner-end"' in _row(table, "Comments")
     assert "rf-inner" not in _row(table, "Other") + _row(table, "Familiarity")
+    # A branch that ends the whole group still marks its last field.
+    _, _, card, _, _ = _chain_page(client, db, "two-level-rules-last")
+    assert 'class="rf-inner-end"' in _row(_rows_table(card), "Comments")
     flat = " ".join(body.split())
     for rule in (
         "body.ui-v2 table.rf-table > tbody > tr.rf-inner-top > td:nth-child(n+2) { border-top: 1px solid var(--border-default); }",

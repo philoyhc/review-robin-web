@@ -2328,7 +2328,13 @@ Taken 2026-09-29 at `85750b93`.
   slot, so every governed row's ↳ shares one column. And a branch
   inside a branch is ruled above its parent and below its last field,
   from the parent's checkbox column rightward (the author's second
-  entry). Save needed nothing: it already takes the move.
+  entry). Save needed nothing: it already takes the move. **Read:** one
+  `diff-reviewer` read over `aac3050f..a81600fb` found no defect; acted
+  on: a `spec/ui_elements.md` column slip, the name check's order
+  matched to level-0 ↰, an unreachable "saved responses" title dropped
+  (a row's own answers lock its branch first), and tests for the
+  no-branch-above and locked cases, a branch ending its group, and the
+  border sync's call.
 
 ### PR ladder
 
