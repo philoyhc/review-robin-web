@@ -2115,58 +2115,42 @@ Taken 2026-09-28 at `256d30aa`.
 
 ### Status
 
-- **Rung 1 (scaffold), 2026-09-28:** the condition row reads "then" and
-  the mode select in both layouts, Show selected and Require's option
-  disabled; the row script disables the select with a locked condition,
-  and nothing else names it. Base SHA for the item's cumulative read:
-  `76d37d27`. Headless Chromium at 1500px: the select is 323px and
-  inside the table on a number and a List row, 4px after "then".
-- **Rung 2 (storage):** migration `c4e9a1d27b58` adds a nullable
-  `branch_mode` (`String(8)`); clone and `replicate_instrument` carry it.
-  The card's save ignores a mode and the settings CSV refuses one (an
-  unknown response-field attribute), so nothing stores `require` yet.
-  Codex on #2672: two checklist rows still quoted "then show the below";
-  fixed here. `spec/roundtrip_coverage.md` joins Doc impact.
-- **Rung 3 splits in two** (2026-09-28): 3a the rule, 3b the writes, the
-  plan's own order, so each is one review. **3a:** `applicable_field_ids`
-  and `required_field_ids` read the mode, and a new
-  `may_be_required_field_ids` answers "*" and "has a required field" (the
-  submit gate's shortcut, the surface's `any_required`, the summary and
-  results headers). The save rule, the import filter and the surface's
-  cells follow from applicability; the surface's script keeps a
-  require-mode cell enabled and toggles only "(required)", with no
-  title (the author's ruling). The rollups route a require-mode
-  instrument to Python; the authoring rule counts its governed fields;
-  the extract reads "Required when"; the entity stats count a
-  require-mode answer as required only where the condition held (scope
-  found at build). Chromium drove the script: Comments stays enabled and
-  gains and loses "(required)" as Rating crosses 4.
-  `spec/operations_pages.md` joins Doc impact; the rung's `spec-writer`
-  pass found its other route (a) paragraph stale (fixed there) and
-  `spec/rrw_functional_spec.md` §5.7 describing Show alone, which joins
-  Doc impact for when the builder can author Require (rung 4).
-- **Rung 3b (the writes):** the card's save takes `branch_mode` (Show
-  stored null), refuses an unknown one by name, locks it with the
-  condition on an answered branch, clears it when the branch ends, and
-  audits it in `instrument.field_updated`'s `changes`. The settings CSV
-  exports `require` or blank and imports `require` / `show` / blank,
-  refusing an unknown mode and an orphan one. The author renamed the
-  second option "Require the below (else, optional)" (2026-09-28).
-- **Rung 4 (the builder wired):** the select shows the saved mode and
-  Save sends it; a Require branch's rows gray out R ("Required while the
-  condition holds"), keeping its value. The preview follows the surface:
-  a Require branch's column isn't muted, is marked "*" and counts as an
-  item, but not as required on the unanswered sample row. Chromium drove
-  it: switching the mode back and forth restores each R, and detaching
-  the last field frees it.
-- **Reads:** one cumulative `diff-reviewer` read over `76d37d27..` (on
-  #2676) found no blocking defect. It found that a hidden governed field
-  under Require was owed with no escape, since its R is grayed; now it is
-  never required or marked "*". It also found stale spec prose (storage,
-  stager, the R row, `spec/architecture.md`, the entity stats' required
-  columns, which join Doc impact), missing reminder and header tests
-  (added), and two plan overclaims (corrected). The rung's `spec-writer`
-  pass found no divergence.
+**Closed 2026-09-29.** #2671 plan, #2672 scaffold, #2673 storage, #2674
+the rule, #2675 the writes, #2676 the builder and the read; this close.
+The ladder held, with rung 3 split into 3a (the rule) and 3b (the
+writes) so each was one review. Storage landed with no write path, so
+nothing could store `require` before the rule read it (Codex on #2671).
+Things that moved:
+- **`may_be_required_field_ids`** (rung 3a) answers "*" and "has a
+  required field": a Require branch's fields may be required whatever
+  their own R. The submit gate's shortcut, the surface's header, and the
+  summary and results headers read it.
+- **The entity stats** count a Require branch's answer as a required one
+  only where the parent's saved answer met the condition (scope found at
+  build; `spec/csv_contracts.md` §2.6).
+- **A hidden governed field under Require is never required** or marked
+  "*" (the cumulative read). Its R is grayed, so otherwise nothing could
+  stop the rollups owing a field no reviewer sees.
+- The second option reads "Require the below (else, optional)" (the
+  author, mid-3b; was "Make the below required …").
+
+**Decisions confirmed at build:** Show is stored null and `show` reads as
+blank anywhere in the settings CSV (Codex on #2675); an unknown mode is
+refused by name on Save and in the CSV. A mode goes with its branch, and
+joins the condition in the governed-answers lock. The builder preview
+follows the surface: a Require branch's column isn't muted, is marked
+"*" and counts as an item, but not as required on the unanswered sample
+row.
+
+**Reads:** one cumulative `diff-reviewer` read over `76d37d27..a0379f42`,
+with no blocking finding. It found the hidden-field gap (fixed), stale
+spec prose (`spec/architecture.md` and §2.6 joined Doc impact), missing
+reminder and header tests (added), and two plan overclaims (corrected).
+`spec-writer` ran at rungs 3a (a stale route (a) paragraph and §5.7,
+which joined Doc impact) and 4 (no divergence).
+
+**Browser check:** the author's run of `guide/post_azure_todo_checklist.md`
+item 6's "A Require branch" row passed so far (2026-09-29).
 
 ### Open questions
 

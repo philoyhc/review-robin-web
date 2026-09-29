@@ -1104,8 +1104,8 @@ centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 
 **The condition row** reads "If the above [operator] [value] then
 [mode]", the mode a select of **Show the below** (the default) and
-**Require the below (else, optional)** (19T Item 13), which Save sends
-as the parent's `branch_mode`. The operator sits in the name column at the name box's width,
+**Require the below (else, optional)**, which Save sends as the
+parent's `branch_mode`. The operator sits in the name column at the name box's width,
 with "If the above" right-aligned in the join column before it
 (`td.rf-condition-lead`, `td.rf-condition-op`, 19T Item 12A); the first
 value box starts at the type column's edge. A List's operator shrinks to
@@ -1198,14 +1198,15 @@ field ends the branch, as X does.
   `app/services/responses/_branching.py`) — an active required
   ungoverned field is answered at every submit, so a submit always
   leaves a response row for the reviewer rollups to count. Under a
-  require-mode parent (`branch_mode = require`, 19T Item 13) every
-  governed field counts as required governed for this rule, and each is
+  require-mode parent (`branch_mode = require`) every visible governed
+  field counts as required governed for this rule, and each is
   answerable whatever the parent's answer and required exactly while the
   condition holds, its own R ignored (kept, so Show restores it). The
   builder grays out those rows' R, titled "Required while the condition
   holds". A hidden governed field under Require is never required, nor
-  marked "*", anywhere — the reviewer and reviewee rollups included —
-  since its R can't be unticked to stop it being owed. A hidden
+  marked "*", anywhere — the reviewer surface, summary and results
+  headers, and both operator rollups (`spec/operations_pages.md`)
+  included — since its R can't be unticked to stop it being owed. A hidden
   governed field needs no anchor, since a hidden field counts nowhere
   on the reviewer side.
 - **String is disabled** in a parent's type select. Other type changes
@@ -1215,8 +1216,8 @@ field ends the branch, as X does.
   branch ("Delete its branch first"); the last governed row's X deletes
   that row and the condition together.
 - **The governed-answers lock.** Once any governed field has responses,
-  the condition, its mode (19T Item 13: Require → Show would strand
-  answers on a now-closed branch) and the branch's membership lock —
+  the condition, its mode (Require → Show would strand answers on a
+  now-closed branch) and the branch's membership lock —
   every governed row's X and ↳, the "+"s inside the branch, ↰ on the row
   below it, and the condition's controls. Save refuses a changed mode
   with the condition's message, and audits a mode change as
@@ -1238,8 +1239,7 @@ self-referencing FK, `ON DELETE SET NULL`) on a governed field;
 (the number, List options comma-separated, or a range's `low to high`)
 on the parent (Alembic `63b1bb107eb0`; no migration for the four range
 tokens — they fit `String(8)`), and `branch_mode` (`String(8)`,
-nullable: `require`, or null for Show; 19T Item 13, Alembic
-`c4e9a1d27b58`) on the parent. The per-field routes (edit, delete, move, insert under
+nullable: `require`, or null for Show; Alembic `c4e9a1d27b58`) on the parent. The per-field routes (edit, delete, move, insert under
 `/fields/…`) refuse a branched instrument outright — each acts on one
 field and can't keep a branch's rules; its fields are edited on the
 instrument card only.
@@ -1247,7 +1247,7 @@ instrument card only.
 **The stager** sends every row's `row_key`, so a branch can name a
 parent the same Save creates, plus `branch_parent` (a governed row's
 parent, by row key), `branch_op` and `branch_value` (a parent's
-condition) and `branch_mode` (what it does, 19T Item 13; `show` is
+condition) and `branch_mode` (what it does; `show` is
 stored null, and an unknown mode is refused by name). Each of the four
 is **independently present**, as the
 state's other top-level keys are: an entry that omits one keeps what's
@@ -1263,7 +1263,7 @@ reviewer surface's "*All items completed*" pill) excludes governed
 fields for the same reason, and so does the "*Required items
 completed*" count (`rfRowRequiredNow`, 19T Item 11): a required
 governed field isn't required while its branch is closed, and the
-sample row closes every branch. A Require branch's fields (19T Item 13)
+sample row closes every branch. A Require branch's fields
 follow the surface instead: their columns aren't muted, they count as
 items, and they are marked "*" as fields that may be required, but the
 required count leaves them out, since the unanswered sample row fails

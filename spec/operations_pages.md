@@ -316,7 +316,7 @@ scroll, and cost a button label to do it.
 per-reviewee instruments** (19R Item 3), rather than by loading a
 reviewer's assignments and tallying them. A reviewer's work on
 **group-scoped instruments, and any instrument with a required governed
-field or a require-mode branch** (19T Items 11 and 13 — see "What these
+field or a require-mode branch** (19T Item 11 — see "What these
 pages cost to render" below), is
 still tallied in Python and added to that — both columns can be the sum
 of the two halves. Neither figure nor the pill state they carry changed
@@ -541,8 +541,9 @@ an assignment complete only when it also carries a `submitted_at`, so a
 saved draft is progress to a reviewer and not yet coverage to a
 reviewee; and it counts every `required` field whether or not it is
 `visible`, so a field the operator has made inactive still weighs on
-coverage. A reviewer with `status` other than `active` is dropped from
-Invitations and still counted here.
+coverage — except a hidden field a require-mode branch governs, which
+`required_field_ids` never owes, so it weighs on neither page. A reviewer with `status` other than
+`active` is dropped from Invitations and still counted here.
 
 ### Per-row drill-in
 
@@ -617,7 +618,7 @@ in SQL and return one row per person, and `per_reviewee_coverage` is
 that and nothing else in that case. The paragraph after this one is the
 exception: `per_reviewer_progress` still reads the response rows of
 *group-scoped* assignments and any instrument with a **required
-governed field or a require-mode branch** (19T Items 11 and 13), and
+governed field or a require-mode branch** (19T Item 11), and
 loads those assignments themselves;
 `per_reviewee_coverage` gains the same second path for the latter
 (`_python_routed_coverage`). What the aggregate path may not do is
@@ -630,7 +631,7 @@ at a 1,000 × 1,000 roster (`guide/app_responsiveness.md`).
 
 `per_reviewer_progress` keeps one Python path, for **group-scoped
 instruments and any instrument with a required governed field or a
-require-mode branch** ("route (a)", 19T Items 11 and 13; a require-mode
+require-mode branch** ("route (a)", 19T Item 11; a require-mode
 parent's governed fields are required while its condition holds,
 whatever their stored `required`): a group counts once per group, and the key
 is Python's `strip()` over reviewee tags or an active `Relationship`,

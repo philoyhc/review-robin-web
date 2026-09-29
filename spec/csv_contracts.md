@@ -227,7 +227,7 @@ Reviewer stats extra columns: `RevieweesReviewedDraft/Submitted`
 (distinct reviewees with ≥1 non-empty response),
 `FieldsAnsweredDraft/Submitted`,
 `RequiredFieldsAnsweredDraft/Submitted` (answers to `required`
-fields; under a require-mode parent, 19T Item 13, a visible governed
+fields; under a require-mode parent a visible governed
 field's answer counts only where the parent's saved answer met the
 condition, whatever its own `required`, and a hidden one's never),
 `StringResponseCharsDraft/Submitted` (sum of `len(value)` over
@@ -608,8 +608,7 @@ boundary.
   the import tolerance is what keeps an older bundle importable.
 
 **Response-field branching** (`guide/advanced_instruments.md` Item 1;
-19T Item 10) adds three `instruments[n].response_fields[m]` attributes,
-and 19T Item 13 a fourth:
+19T Item 10) adds four `instruments[n].response_fields[m]` attributes:
 
 | Attribute | Carries | On |
 |---|---|---|
@@ -644,8 +643,9 @@ a branch that isn't one ruled group, or a condition that doesn't fit its
 parent's type is refused with a named error, and the whole apply fails —
 never applied with the branch silently dropped. **A required governed
 field needs an active required field outside any branch elsewhere in
-the instrument** (19T Item 11) — refused by name otherwise, the same
-rule `branch_structure_errors` applies to Save. A lone `branch_value`
+the instrument** (19T Item 11; a visible field under a `require`
+parent counts as required governed) — refused by name otherwise, the
+same rule `branch_structure_errors` applies to Save. A lone `branch_value`
 with no operator and no governed field is refused the same way, rather
 than stored as an orphaned condition. `branch_op` is also checked against the known tokens as it's
 read, before any row is created. **A hidden parent's branch is hidden on

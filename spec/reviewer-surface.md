@@ -492,7 +492,8 @@ In rendered order:
    modifier.
 3. **Response fields** (in stored `InstrumentResponseField.order`):
    one column per response field. Header text is the field label;
-   required fields get a trailing `*`. Header column-width hint is
+   required fields — and a visible field a require-mode parent governs
+   ("Branching between response fields" below) — get a trailing `*`. Header column-width hint is
    driven by the field's `data_type`:
    - `Integer` / `Decimal` → `class="rs-narrow"` (numbers are short).
    - `String` with `validation.max_length > 100` → `class="rs-textlong"`.
@@ -576,7 +577,7 @@ long `String` variant).
 
 `guide/advanced_instruments.md` Item 1 (design record, built as 19T
 Item 10); the builder side is `spec/instruments.md` § "Branching between
-response fields". A **governed** field's cell can be answered only
+response fields". Under **Show**, the default, a **governed** field's cell can be answered only
 while its **parent**'s branch is open — judged, per row, on the values
 the page shows (`applicable_field_ids`,
 `app/services/responses/_branching.py`), so an already-answered but now
@@ -604,7 +605,7 @@ counts the ends as outside** — `out_inc` opens at the ends themselves,
 `out_exc` does not. It only keeps the page honest — the server
 re-judges on Save / Submit regardless.
 
-**Under a require-mode parent** (`branch_mode = require`, 19T Item 13)
+**Under a require-mode parent** (`branch_mode = require`)
 the governed cells never close: every one is answerable whatever the
 parent's answer, and is **required exactly while the condition holds**
 (`required_field_ids`), its own `required` ignored — an unanswered
@@ -612,7 +613,7 @@ parent holds nothing. The parent cell carries
 `data-rs-branch-mode="require"`, and the script then toggles only the
 "(required)" in each governed control's label, never `disabled` or
 `td.rs-branch-closed`. The cell has **no title**: the page doesn't say
-why a field became required (the author, 2026-09-28). Its header takes
+why a field became required; the mark appearing is enough. Its header takes
 the `*` whatever its own `required` (`may_be_required_field_ids`), and
 the save rule never removes its answer, since nothing there is closed.
 A hidden governed field is never required under Require, and has no

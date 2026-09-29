@@ -135,7 +135,7 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    `in_inc` / `in_exc` / `out_inc` / `out_exc`, with `branch_value` then
    `"low to high"`), not a symbol, since a settings-CSV cell starting
    with `=` or `>` reads as a formula to spreadsheet software.
-   `branch_mode` (19T Item 13, Alembic `c4e9a1d27b58`) is `require` or
+   `branch_mode` (Alembic `c4e9a1d27b58`) is `require` or
    null, which reads Show. The
    rules themselves live in
    `app/services/responses/_branching.py` and `_branch_rule.py`, not on
