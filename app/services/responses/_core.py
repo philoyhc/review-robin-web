@@ -423,7 +423,10 @@ def _hold_answers_behind_refused_parents(
     writing it would let the save rule delete it at once, with the parent
     still unwritten: the reviewer's text would be lost silently (the item's
     cumulative read). Held, it comes back to the page as an error with the
-    typed value, like the parent's."""
+    typed value, like the parent's.
+
+    19T Item 14 — it walks the chain, so an answer two levels down is held
+    behind a refused grandparent too, naming the nearest refused ancestor."""
     refused = {(e.assignment_id, e.field_key) for e in errors}
     if not refused:
         return valid, []
@@ -437,13 +440,26 @@ def _hold_answers_behind_refused_parents(
             if assignment is not None
             else None
         )
-        parent = (
+        refused_ancestor = None
+        seen: set[int] = set()
+        ancestor = (
             field_by_id.get(field.branch_parent_id)
             if field is not None and field.branch_parent_id is not None
             else None
         )
-        if parent is not None and (u.assignment_id, parent.field_key) in refused:
-            held.append((u, assignment, field, parent))
+        # ``seen`` stops a cycle the structure rules refuse.
+        while ancestor is not None and ancestor.id not in seen:
+            if (u.assignment_id, ancestor.field_key) in refused:
+                refused_ancestor = ancestor
+                break
+            seen.add(ancestor.id)
+            ancestor = (
+                field_by_id.get(ancestor.branch_parent_id)
+                if ancestor.branch_parent_id is not None
+                else None
+            )
+        if refused_ancestor is not None:
+            held.append((u, assignment, field, refused_ancestor))
         else:
             kept.append(u)
     return kept, held

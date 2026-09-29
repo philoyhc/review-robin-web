@@ -147,8 +147,9 @@ def test_the_surface_script_mirrors_the_service_rule(
         assert f'if (op === "{op}") {{ return a {js} b; }}' in script
     # Only governed cells follow the parent, and only within its row; a
     # require-mode parent's never close (19T Item 13).
-    assert "cell.classList.toggle(\"rs-branch-closed\", !open && !requireMode);" in script
-    assert "c.disabled = !open && !requireMode;" in script
+    assert "var applies = parentApplies && (open || requireMode);" in script
+    assert "cell.classList.toggle(\"rs-branch-closed\", !applies);" in script
+    assert "c.disabled = !applies;" in script
     assert 'document.addEventListener("input", onEdit);' in script
     assert 'document.addEventListener("change", onEdit);' in script
 

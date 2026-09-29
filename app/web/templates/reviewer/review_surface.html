@@ -717,22 +717,29 @@
           var row = parentCell.closest("tr");
           if (!row) { return; }
           var requireMode = parentCell.dataset.rsBranchMode === "require";
+          // 19T Item 14 — a parent that is itself closed closes its whole
+          // branch, whatever its own (stale) answer holds, as
+          // ``applicable_field_ids`` walks the chain.
+          var parentApplies = !parentCell.classList.contains("rs-branch-closed");
           row.querySelectorAll(
             '[data-rs-governed-by="' + parentCell.dataset.rsBranchParent + '"]'
           ).forEach(function (cell) {
-            cell.classList.toggle("rs-branch-closed", !open && !requireMode);
+            var applies = parentApplies && (open || requireMode);
+            cell.classList.toggle("rs-branch-closed", !applies);
             // 19T Item 11 — a required governed cell is required only
             // while its branch is open, as ``required_field_ids`` judges;
             // under Require (19T Item 13) every governed cell is, and
             // stays answerable either way.
-            var requiredNow = open && cell.dataset.rsRequired === "true";
+            var requiredNow = parentApplies && open && cell.dataset.rsRequired === "true";
             cell.querySelectorAll("input, select, textarea").forEach(function (c) {
-              c.disabled = !open && !requireMode;
+              c.disabled = !applies;
               var label = (c.getAttribute("aria-label") || "").replace(/ \(required\)$/, "");
               if (label) {
                 c.setAttribute("aria-label", requiredNow ? label + " (required)" : label);
               }
             });
+            // A governed field that is itself a parent passes it down.
+            if (cell.dataset.rsBranchParent) { sync(cell); }
           });
         }
         function onEdit(event) {
