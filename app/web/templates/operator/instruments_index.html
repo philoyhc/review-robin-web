@@ -4260,8 +4260,9 @@
                           onclick="newModelRfConditionAdd(this)"
                           title="Add a field at the top of the branch">+</button></td>
                   {# 19T Item 12A — the operator sits in the name column at the
-                     name box's width, with "If the above" right-aligned in the
-                     join column before it (the author's ruling). #}
+                     name box's width, with "If the above" right-aligned before
+                     it (the author's ruling), across the join column and
+                     slots left at this level (19T Item 14). #}
                   <td class="col-shrink rf-condition-cell rf-condition-lead" colspan="{{ 4 - _clevel }}">If the above</td>
                   {# A List's operator shrinks to its label, and its box (the
                      List box's width) and "then [mode]" follow it
@@ -4308,10 +4309,12 @@
                {% if not is_editing %}inert aria-hidden="true"{% endif %}>
             {# 19T Item 10 — one <tbody> per group: a field on its own, or
                a parent with its condition row and the fields it governs
-               (``views._response_field_groups``). A governed row shifts
-               one column right before the name: the bar in the checkbox
-               column, its checkbox in the + column, its + in the ⑂
-               column; from the name onward every row aligns. A branch
+               (``views._response_field_groups``), a field inside it
+               with its own branch too (19T Item 14). A governed row
+               shifts one column right per level, into the two slots after
+               join: the bar in the checkbox column, its checkbox in the +
+               column, its + in the ⑂ column; from the name onward every
+               row aligns. A branch
                whose governed fields have responses is locked
                (``data-new-model-rf-branch-locked``): its condition and
                membership can't change. The row script wires the rest. #}
@@ -5437,8 +5440,9 @@
             }
           }
         };
-        // Undo ``newModelRfMakeGoverned``: drop the bar, give the row its ⑂
-        // back (from the row template) before its join cell.
+        // Undo ``newModelRfMakeGoverned``: drop the bar and give the row its
+        // slot back after join (19T Item 14); a row without a ⑂ gets one
+        // from the row template, before its join cell.
         window.newModelRfMakeUngoverned = window.newModelRfMakeUngoverned || function (row) {
           row.removeAttribute('data-new-model-rf-governed');
           row.setAttribute('data-new-model-rf-level', '0');

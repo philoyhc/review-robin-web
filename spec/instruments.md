@@ -1100,8 +1100,10 @@ checkbox column, its checkbox in the **+** column, its **+** in the ⑂
 column, its ⑂ in the join column and its ↳ in the first of two empty
 slots after join (`td.rf-slot`) — so every row has six leading columns
 and aligns from the name onward, parent and governed alike. A governed
-row's ⑂ is shown but off ("A branch inside a branch isn't available
-yet") until two levels can be authored (19T Item 14). The checkbox sits
+row's ⑂ is off until two levels can be authored (19T Item 14): titled
+"A branch inside a branch isn't available yet" on an Integer, Decimal
+or List field with no branch, and by the String and has-a-branch titles
+above otherwise. The checkbox sits
 centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 12A).
 
@@ -1179,10 +1181,9 @@ the field's name first, then both ends — "Rating ≥ 2 and ≤ 4", "Rating
 start a hint (or an extract cell, `spec/extract_data.md`) as a
 spreadsheet formula.
 
-**Join (↰) and detach (↳)** sit after ⑂, sharing its width (`.rf-glyph`),
-with two empty slots of that width after them (`td.rf-slot`; 19T Item
-12A left the room, 19T Item 14 made it columns), into which a branch's
-rows shift.
+**Join (↰) and detach (↳)** sit after ⑂, sharing its width (`.rf-glyph`).
+Two empty slots of that width follow a plain row's join (`td.rf-slot`);
+each level of branching shifts a row one column right into them.
 A plain row that isn't the first, has no saved responses and isn't
 itself a parent can join the unit above: the end of an unlocked branch,
 or, on a plain Integer, Decimal or List field, a new branch with an
