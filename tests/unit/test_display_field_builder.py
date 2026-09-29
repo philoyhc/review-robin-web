@@ -177,10 +177,12 @@ def test_update_display_field_records_only_changed_keys(db: Session) -> None:
     )
     assert changes2 == {}
 
+    # Ordered by id: Postgres returns unordered rows in any order, and
+    # events[1] must be the second write.
     events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.display_field_updated"
-        )
+        select(AuditEvent)
+        .where(AuditEvent.event_type == "instrument.display_field_updated")
+        .order_by(AuditEvent.id)
     ).scalars().all()
     assert len(events) == 2
     assert events[1].detail["changes"] == {}
