@@ -256,3 +256,12 @@ def test_the_row_script_locks_per_branch(client: TestClient, db: Session) -> Non
     join = fn("newModelRfSyncJoin")
     assert "} else if (window.newModelRfBranchLocked(window.newModelRfParentOf(row))) {" in join
     assert "window.newModelRfParentOf(aboveRows[aboveRows.length - 1]))) {" in join
+
+
+def test_detachs_title_counts_the_rows_own_branch(client: TestClient, db: Session) -> None:
+    """Comments is Rating's only field though the group holds three rows,
+    so its ↳ ends Rating's branch (the Item 14 cumulative read)."""
+    _, _, card, _, _ = _chain_page(client, db, "two-level-detach-title")
+    comments = _row(_rows_table(card), "Comments")
+    join = re.search(r"<button[^>]*data-new-model-rf-join[^>]*>", comments).group(0)
+    assert 'title="Detach this field and end its branch"' in join

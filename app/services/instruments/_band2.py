@@ -809,6 +809,11 @@ BRANCH_CONDITION_LOCKED_MESSAGE = (
 ANSWERED_FIELD_CANT_JOIN_MESSAGE = (
     "It has saved responses, so it can't move into a branch."
 )
+# 19T Item 14 — a parent carries its branch with it, so answers below it
+# hold it where it is too (the Item 14 cumulative read).
+ANSWERED_BRANCH_CANT_JOIN_MESSAGE = (
+    "Its branch has saved responses, so it can't move into a branch."
+)
 _BRANCH_ATTRS: tuple[str, ...] = (
     "branch_parent_id",
     "branch_op",
@@ -839,7 +844,8 @@ def _apply_branch_rules(
     every branch above it (19T Item 14) (the mode from 19T Item
     13: Require → Show would strand answers on a now-closed branch); a field with responses can't
     move into a branch either, since its answers could then sit in a
-    closed one. A parent whose last governed field goes loses its
+    closed one — nor can a parent with answers anywhere below it (19T
+    Item 14). A parent whose last governed field goes loses its
     condition, since a branch is its condition plus at least one field.
     Then the saved state is checked whole (``branch_structure_errors``):
     a required governed field with no active required field outside any
@@ -913,11 +919,14 @@ def _apply_branch_rules(
     for field in kept:
         old_parent = old_branch.get(field.id, (None, None, None, None))[0]
         if (
-            field.branch_parent_id is not None
-            and field.branch_parent_id != old_parent
-            and has_responses(field.id)
+            field.branch_parent_id is None
+            or field.branch_parent_id == old_parent
         ):
+            continue
+        if has_responses(field.id):
             errors.append((field.label, ANSWERED_FIELD_CANT_JOIN_MESSAGE))
+        elif any(has_responses(i) for i in old_below(field.id)):
+            errors.append((field.label, ANSWERED_BRANCH_CANT_JOIN_MESSAGE))
     if errors:
         raise InvalidResponseFieldShapeError(errors)
     for parent_id in old_governed:

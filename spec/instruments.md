@@ -932,7 +932,10 @@ fields renders one blank, unlabelled placeholder row instead — not a
 field until the operator types into it — so there is always a "+" to
 press; deleting down to one row leaves that row rather than none.
 
-Each row holds, left to right:
+Each row holds, left to right (a governed row shifts these one column
+right per level, behind a bar per branch it sits in, and two slots
+after join, `td.rf-slot`, keep six leading columns on every row — see
+["Branching between response fields"](#branching-between-response-fields)):
 
 | Control | Bound to | Notes |
 |---|---|---|
@@ -1254,7 +1257,9 @@ it is: its ↳ is off ("A field with a branch can't leave its branch").
   a branch inside its branch included; re-ticking it re-ticks them all.
 - **An answered field can't move into a branch.** ↰ is off on a row
   with saved responses, and Save refuses the move, since the field's
-  answers could then sit in a closed branch.
+  answers could then sit in a closed branch. Nor can a parent with
+  answers anywhere below it ("Its branch has saved responses, so it
+  can't move into a branch.", 19T Item 14): it would carry them in.
 
 **Storage:** `InstrumentResponseField.branch_parent_id` (a
 self-referencing FK, `ON DELETE SET NULL`) on a governed field;
@@ -1291,7 +1296,11 @@ sample row closes every branch. A Require branch's fields
 follow the surface instead: their columns aren't muted, they count as
 items, and they are marked "*" as fields that may be required, but the
 required count leaves them out, since the unanswered sample row fails
-every condition.
+every condition. Inside a branch, that holds only while **every**
+branch above the field is Require (19T Item 14): a Require branch inside
+a Show branch is closed with it on the sample row, so its fields are
+muted and not counted (`item_now` in the view, `rfRowIsItemNow` in the
+row script).
 
 **Out of scope:** a third level of branching, more than one branch per
 parent, and a String parent.

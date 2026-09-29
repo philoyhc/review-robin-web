@@ -4390,7 +4390,7 @@
                         data-new-model-rf-join
                         onclick="newModelRfJoin(this)"
                         {% if _governed %}{% if rf.branch_locked or rf.is_parent %}disabled{% endif %}{% elif _outer.first or rf.is_parent or rf.has_responses %}disabled{% endif %}
-                        title="{% if _governed %}{% if rf.is_parent %}A field with a branch can't leave its branch{% elif rf.branch_locked %}Its branch has saved responses, so its fields can't change{% elif _group.rows | length == 2 %}Detach this field and end its branch{% else %}Move this field out of its branch{% endif %}{% else %}Join the field above{% endif %}">{% if _governed %}↳{% else %}↰{% endif %}</button></td>
+                        title="{% if _governed %}{% if rf.is_parent %}A field with a branch can't leave its branch{% elif rf.branch_locked %}Its branch has saved responses, so its fields can't change{% elif rf.only_member %}Detach this field and end its branch{% else %}Move this field out of its branch{% endif %}{% else %}Join the field above{% endif %}">{% if _governed %}↳{% else %}↰{% endif %}</button></td>
                 {% for _ in range(2 - _level if _level < 2 else 0) %}<td class="col-shrink rf-slot"></td>{% endfor %}
                 <td class="rf-name">
                 <input type="text"

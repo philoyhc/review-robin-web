@@ -343,7 +343,8 @@ def _response_field_groups(
     (0, 1 or 2, how many branches it sits in) and ``item_now`` (an item
     on the unanswered sample row: every branch above it is Require), and
     a parent carries its own ``condition``, rendered right after it at
-    the next level.
+    the next level. ``only_member`` marks a governed field its parent
+    governs alone, whose ↳ ends that branch.
     """
     from app.services.responses import (
         BRANCH_MODE_REQUIRE,
@@ -381,6 +382,12 @@ def _response_field_groups(
         and rf.get("branch_mode") == BRANCH_MODE_REQUIRE
     }
     by_id = {rf.get("id"): rf for rf in response_fields if rf.get("id") is not None}
+    # How many fields each parent governs directly, for ↳'s title on its
+    # only one (19T Item 14: a row's own branch, not its group).
+    member_counts: dict[Any, int] = {}
+    for rf in response_fields:
+        if rf.get("branch_parent_id") is not None:
+            member_counts[rf["branch_parent_id"]] = member_counts.get(rf["branch_parent_id"], 0) + 1
 
     def chain(rf: dict[str, Any]) -> list[dict[str, Any]]:
         """The branches above ``rf``, nearest first; a cycle stops it."""
@@ -409,6 +416,7 @@ def _response_field_groups(
             if parent_id is not None
             else rf.get("id") in locked_parent_ids
         )
+        rf["only_member"] = parent_id is not None and member_counts.get(parent_id) == 1
         rf["condition"] = None
         if rf["is_parent"]:
             ops = list(

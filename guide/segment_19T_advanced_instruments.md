@@ -2304,6 +2304,19 @@ Taken 2026-09-29 at `85750b93`.
   on its first pass; it now locks per branch (`newModelRfBranchLocked`,
   answers anywhere below a parent), matching Save and the spec, and the
   dead `data-new-model-rf-branch-locked` attribute is gone.
+- **Reads:** one cumulative `diff-reviewer` read over `6afbd412..71607916`
+  (plus a note on the lock fix). Acted on in #2682: Save refused an
+  answered field joining a branch but not a parent whose branch holds
+  answers (a hand-built POST only; now "Its branch has saved responses,
+  so it can't move into a branch."); the same group-wide lock the spec
+  check found; the preview spec named only one level of Require; the
+  pre-JS ↳ title counted the group, not the row's own branch
+  (`only_member`); Band 3's control table missed the bars and slots;
+  tests for a level-2 answer locking the top branch's membership and a
+  level-1 parent's hide cascade, with and without branch keys. Open for
+  the author: "Opens when" under a Require branch inside a Show branch
+  names the field's own parent's condition, as ruled, though the Show
+  branch above decides whether it opens.
 
 ### PR ladder
 
