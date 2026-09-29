@@ -2695,7 +2695,12 @@
             if (!col) { return; }
             var card = table.closest('[data-new-model-band2]');
             var startX = event.clientX;
-            var startWidth = col.offsetWidth || parseInt(col.style.width, 10) || 100;
+            // A browser that sizes no <col> falls back to the header
+            // cell's width: a profile column's starting width is in ch,
+            // which parseInt would misread as px.
+            var headCell = handle.closest('th');
+            var startWidth = col.offsetWidth || (headCell && headCell.offsetWidth)
+              || parseInt(col.style.width, 10) || 100;
             var lastWidth = startWidth;
             document.body.style.cursor = 'col-resize';
             function onMove(ev) {

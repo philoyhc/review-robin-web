@@ -493,8 +493,8 @@ In rendered order:
    width set), `rs-narrow`'s `width: 1%` would take 1% of the table,
    so an unsized profile column's `<col>` starts at
    `views.profile_column_ch_width(label)` ch instead — the label plus
-   room for the sort button, never narrower than "View" (the author,
-   2026-09-29).
+   room for the sort button, never narrower than "View". The reviewer
+   summary and the reviewee results start theirs the same way.
 3. **Response fields** (in stored `InstrumentResponseField.order`):
    one column per response field. Header text is the field label;
    required fields — and a visible field a require-mode parent governs

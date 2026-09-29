@@ -887,9 +887,11 @@ persist as integer pixels per column key into
 
 The preview table is `table-layout: fixed`, so an unsized profile-link
 column, whose `rs-narrow` hint is `width: 1%`, would start as 1% of the
-table. It starts instead at `views.profile_column_ch_width` — its label
-plus room for the sort button, never narrower than "View" (the author,
-2026-09-29) — as the reviewer surface does; a dragged width wins.
+table. It starts instead at `views.profile_column_ch_width`'s width
+(mirrored in the preview script's `profileColumnCh`) — its label
+plus room for the sort button, never narrower than "View" — as the
+reviewer surface, the reviewer summary and the reviewee results do; a
+dragged width wins.
 
 Widths never POST on their own. A resize stages the live widths
 into a hidden `column_widths_snapshot` input (JSON); the bulk

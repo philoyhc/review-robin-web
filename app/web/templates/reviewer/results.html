@@ -105,7 +105,10 @@
               <colgroup>
                 <col{% if section.identity_width_px %} style="width: {{ section.identity_width_px }}px"{% endif %}>
                 {% for col in section.display_field_cols %}
-                  <col{% if col.width_px %} style="width: {{ col.width_px }}px"{% endif %}>
+                  {# An unsized profile column starts wide enough for its
+                     header: under the fixed layout its ``rs-narrow`` 1% would
+                     squish it (spec/reviewer-surface.md). #}
+                  <col{% if col.width_px %} style="width: {{ col.width_px }}px"{% elif col.is_profile_link %} style="width: {{ profile_column_ch_width(col.label) }}ch"{% endif %}>
                 {% endfor %}
                 {% for col in section.field_cols %}
                   <col{% if col.width_px %} style="width: {{ col.width_px }}px"{% endif %}>

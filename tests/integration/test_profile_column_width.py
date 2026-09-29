@@ -100,3 +100,60 @@ def test_the_preview_mirrors_it(client: TestClient, db: Session) -> None:
         in flat
     )
     assert "? 'width: ' + profileColumnCh(o.label) + 'ch;' : colStyle(o.width);" in flat
+    # A drag starts from the header's width where a browser sizes no
+    # <col>, never from the ch value read as px (the fix's read).
+    assert (
+        "var startWidth = col.offsetWidth || (headCell && headCell.offsetWidth) "
+        "|| parseInt(col.style.width, 10) || 100;"
+    ) in flat
+
+
+def test_the_summary_and_the_results_start_it_the_same_way(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Both share the surface's fixed layout once a width is set (the
+    rung's spec check)."""
+    from .test_reviewee_results_body import (
+        _enable_reviewee_after_release_raw,
+        _operator_user,
+        _seed_and_activate,
+        _seed_submitted_responses,
+    )
+
+    # The reviewer and reviewee ``_seed_and_activate`` rosters.
+    rae_user = AuthenticatedUser(
+        principal_id="rae-oid", email="rae@example.edu", name="Rae Reviewer", provider="aad"
+    )
+    carol = AuthenticatedUser(
+        principal_id="carol-oid", email="carol@example.edu", name="Carol Reviewee", provider="aad"
+    )
+    operator = make_client(alice)
+    review_session = _seed_and_activate(operator, db, code="prof-width-pages")
+    instrument = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .order_by(Instrument.order, Instrument.id)
+    ).scalars().first()
+    for reviewee in db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars():
+        reviewee.profile_link = "https://example.edu/p"
+    db.add(InstrumentDisplayField(
+        instrument_id=instrument.id, label="", source_type="reviewee",
+        source_field="profile_link", order=10, visible=True,
+    ))
+    instrument.column_widths = {"identity": 220}
+    db.commit()
+    _seed_submitted_responses(db, review_session, comments_value="Solid work.")
+    _enable_reviewee_after_release_raw(
+        db, review_session, operator=_operator_user(db), open_window=True
+    )
+    width = f'style="width: {profile_column_ch_width("Profile")}ch"'
+    summary = make_client(rae_user).get(f"/me/sessions/{review_session.id}/summary").text
+    results = make_client(carol).get(f"/me/sessions/{review_session.id}/results").text
+    for name, body in (("summary", summary), ("results", results)):
+        assert 'style="table-layout: fixed;"' in body, name
+        assert ">Profile</th>" in body, name
+        assert width in body, name
