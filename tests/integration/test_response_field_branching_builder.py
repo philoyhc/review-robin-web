@@ -63,8 +63,9 @@ def test_a_branch_is_one_ruled_group(client: TestClient, db: Session) -> None:
 
 def test_rows_align_from_the_name_onward(client: TestClient, db: Session) -> None:
     """A governed row shifts one column right: the bar in the checkbox
-    column, its checkbox in +'s, its + in ⑂'s, its ⑂ in the join column
-    and its detach in the first slot (rung 7b; 19T Item 14 gave it ⑂).
+    column, its checkbox in +'s, its + in ⑂'s, its ⑂ in the join column,
+    its ↰ in the first slot and its detach in the second (rung 7b; 19T
+    Item 14 gave it ⑂ and, at rung 5, ↰).
     Every row, the condition row included, spans the table's fourteen
     columns, and the name column never moves."""
     _, _, card, _ = _page(client, db, "br-builder-align")
@@ -76,7 +77,8 @@ def test_rows_align_from_the_name_onward(client: TestClient, db: Session) -> Non
     assert "data-new-model-rf-active" in governed.split("<td")[2]
     assert "data-new-model-rf-add" in governed.split("<td")[3]
     assert "data-new-model-rf-fork" in governed.split("<td")[4]
-    assert "data-new-model-rf-join" in governed.split("<td")[5]
+    assert "data-new-model-rf-nest" in governed.split("<td")[5]
+    assert "data-new-model-rf-join" in governed.split("<td")[6]
     assert "data-new-model-rf-join" in parent.split("<td")[4]
     assert "data-new-model-rf-name" in governed.split("<td")[7]
     assert "data-new-model-rf-name" in parent.split("<td")[7]

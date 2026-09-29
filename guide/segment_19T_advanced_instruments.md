@@ -2247,6 +2247,9 @@ plus a field picker).
 - A parent keeps its branch where it is: ↰ stays off on a parent and ↳
   is off on a level-1 parent, so a level changes one row at a time;
   ▲ ▼ move a subtree within its branch.
+- A level-1 row's ↰ (rung 5) only joins a branch the field above it
+  already has; it never starts one, as level-0 ↰ never starts a branch
+  inside a branch.
 
 ### Blast radius (measured)
 
@@ -2318,6 +2321,14 @@ Taken 2026-09-29 at `85750b93`.
   branch should name the Show branch's condition, which decides whether
   it opens: no, the field's own parent's condition only (the author's
   ruling, 2026-09-29, confirming the plan's).
+- **Rung 5, from the author's browser pass (2026-09-29).** A level-1
+  row directly below a branch inside its own branch had no way in: a
+  level-0 row's ↰ joins a level-1 branch, but a level-1 row had only ↳.
+  It gains a ↰ before its ↳ (the author's screen cap), filling the last
+  slot, so every governed row's ↳ shares one column. And a branch
+  inside a branch is ruled above its parent and below its last field,
+  from the parent's checkbox column rightward (the author's second
+  entry). Save needed nothing: it already takes the move.
 
 ### PR ladder
 
@@ -2337,7 +2348,10 @@ Taken 2026-09-29 at `85750b93`.
    subtree, the Active cascade and R two deep, and the preview's counts.
    May split server / builder at build. Last build rung: the item's
    cumulative read.
-5. **Close.**
+5. **The author's browser pass** (added 2026-09-29): a level-1 row's ↰
+   into the branch above it, and the rules around a branch inside a
+   branch. Reopens `app/`, so it takes its own read.
+6. **Close.**
 
 ### Definition of done
 
@@ -2373,7 +2387,7 @@ Taken 2026-09-29 at `85750b93`.
 ### Doc impact
 
 - `spec/instruments.md` — two levels: the layout, level-1 ⑂, ↰ / ↳ by level, subtree moves, the chain lock and cascades; drop "nested branches" from out of scope (Item 14).
-- `spec/ui_elements.md` — `rf-table`'s `td.rf-slot` columns replace the join cell's padding (Item 14).
+- `spec/ui_elements.md` — `rf-table`'s `td.rf-slot` columns replace the join cell's padding; `tr.rf-inner-top` / `tr.rf-inner-end` rule a branch inside a branch (Item 14).
 - `spec/rrw_functional_spec.md` — §5.7 allows a branch inside a branch; drop "Nested branches" from its out-of-scope line (Item 14).
 - `spec/reviewer-surface.md` — a closed parent closes its whole subtree live (Item 14).
 - `spec/csv_contracts.md` — §3.3: a `branch_parent` may name a governed field, two levels deep (Item 14).

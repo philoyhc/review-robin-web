@@ -344,7 +344,10 @@ def _response_field_groups(
     on the unanswered sample row: every branch above it is Require), and
     a parent carries its own ``condition``, rendered right after it at
     the next level. ``only_member`` marks a governed field its parent
-    governs alone, whose ↳ ends that branch.
+    governs alone, whose ↳ ends that branch, and ``nest_target`` one whose
+    previous field in its branch has a branch of its own, which its ↰
+    joins (rung 5). A level-1 parent is ``inner_top`` and its branch's
+    last field ``inner_end``: the rules around a branch inside a branch.
     """
     from app.services.responses import (
         BRANCH_MODE_REQUIRE,
@@ -401,6 +404,7 @@ def _response_field_groups(
         return out
 
     groups: list[dict[str, Any]] = []
+    last_member: dict[Any, dict[str, Any]] = {}
     for index, rf in enumerate(response_fields):
         rf["row_index"] = index
         rf["is_parent"] = rf.get("id") in parent_ids
@@ -417,6 +421,12 @@ def _response_field_groups(
             else rf.get("id") in locked_parent_ids
         )
         rf["only_member"] = parent_id is not None and member_counts.get(parent_id) == 1
+        # 19T Item 14 rung 5 — a level-1 field's ↰ joins the branch of the
+        # field directly above it in its own branch, if that has one.
+        previous = last_member.get(parent_id) if parent_id is not None else None
+        rf["nest_target"] = previous is not None and previous.get("id") in parent_ids
+        if parent_id is not None:
+            last_member[parent_id] = rf
         rf["condition"] = None
         if rf["is_parent"]:
             ops = list(
@@ -445,6 +455,13 @@ def _response_field_groups(
             continue
         groups.append(
             {"parent_id": rf.get("id"), "rows": [rf], "condition": rf["condition"]}
+        )
+    for index, rf in enumerate(response_fields):
+        following = response_fields[index + 1] if index + 1 < len(response_fields) else None
+        rf["inner_top"] = rf["level"] == 1 and rf["is_parent"]
+        rf["inner_end"] = rf["level"] == 2 and (
+            following is None
+            or following.get("branch_parent_id") != rf.get("branch_parent_id")
         )
     return groups
 
