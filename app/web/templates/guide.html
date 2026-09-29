@@ -371,10 +371,11 @@
       field and all three assignment links have been set — which is what the
       status bar's <strong>Instruments</strong> pill counts.
     </p>
+    <h3>Advanced features: conditional branching</h3>
     <p>
-      <strong>Advanced features:</strong> the <strong>⑂</strong> button adds
-      a conditional branch below a field, the <strong>↰</strong> button joins
-      the current row to a conditional branch above, and the
+      The <strong>⑂</strong> button adds a conditional branch below a field,
+      the <strong>↰</strong> button joins the current row to a conditional
+      branch above, and the
       <strong>↳</strong> button detaches the current row from its conditional
       branch. In the example below, Rating and Comments can only be answered
       if the reviewer gives more than 3 for Familiarity; and if Rating is less
@@ -382,7 +383,9 @@
       optional). A field inside a branch can have a branch of its own, one
       level down. Once reviewers have answered fields in a branch, its
       condition, and which fields belong to it, can no longer be changed; the
-      same holds for any branch above it.
+      same holds for any branch above it. Only 2 levels of branching are
+      allowed, and only numerical and list fields can support conditional
+      branching.
     </p>
     <figure class="guide-figure">
       <img src="/static/guide/instrument-card-branching.png"
