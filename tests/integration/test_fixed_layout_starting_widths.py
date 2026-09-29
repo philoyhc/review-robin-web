@@ -117,6 +117,15 @@ def test_the_preview_mirrors_it(client: TestClient, db: Session) -> None:
         in flat
     )
     assert "? 'width: ' + profileColumnCh(o.label) + 'ch;' : colStyle(o.width);" in flat
+    # An unsized number column starts at the surface's width, in both the
+    # per-reviewee and the group preview (19T Item 16).
+    assert (
+        "return Math.max(String(label || '').length + (required ? 2 : 0) + 4, span + 3);"
+        in flat
+    )
+    assert "return ch ? 'width: ' + ch + 'ch;' : colStyle(r.width);" in flat
+    assert "'\" style=\"' + responseColStyle(card, r) + '\">'" in flat
+    assert "'\" style=\"' + colStyle(r.width) + '\">'" not in flat
     # A drag starts from the header's width where a browser sizes no
     # <col>, never from the ch value read as px (the fix's read).
     assert (

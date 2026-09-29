@@ -2507,9 +2507,9 @@ item of their own. It closes when the author says so.
    two `diff-reviewer` reads and two `spec-writer` passes (the profile
    fix, then the numeric and status one). The first pair found the
    summary and the results, acted on; the second, spec wording and a
-   test scoped to the colgroup, acted on. Open for the author: the
-   preview's unsized numeric column still shares the spare width, where
-   the surface starts it at its digit span.
+   test scoped to the colgroup, acted on. On the author's follow-up the
+   preview matches for number columns too (`numericColumnCh`, both
+   previews).
 
 ### Doc impact
 

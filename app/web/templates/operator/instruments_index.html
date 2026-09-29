@@ -2405,6 +2405,34 @@
           function profileColumnCh(label) {
             return Math.max(String(label || '').length + 4, 'View'.length + 3);
           }
+          // views.numeric_column_ch_width: the wider of the header (the
+          // label, " *" when it may be required, the sort button) and the
+          // committed min / max digit span (a Decimal's written as JS
+          // prints it, which matches %g but for exponents). Null for a
+          // column that isn't a number (19T Item 16).
+          function numericColumnCh(label, required, shape) {
+            if (!shape || (shape.dataType !== 'integer' && shape.dataType !== 'decimal')) {
+              return null;
+            }
+            function digits(v) {
+              if (v === '' || v === null || v === undefined) { return 0; }
+              var n = Number(v);
+              if (!isFinite(n)) { return 0; }
+              return (shape.dataType === 'integer' ? String(Math.trunc(n)) : String(n)).length;
+            }
+            var span = Math.max(digits(shape.min), digits(shape.max), 1);
+            return Math.max(String(label || '').length + (required ? 2 : 0) + 4, span + 3);
+          }
+          // A response column's <col> style: its dragged width, or, for an
+          // unsized number column, its header / digit span, as the
+          // surface's is (19T Item 16).
+          function responseColStyle(card, r) {
+            var row = r.width > 0 ? null : rfRowByKey(card, r.key);
+            var ch = row && rfRowCommitted(row)
+              ? numericColumnCh(r.label, r.required, window.newModelRfCommittedShape(row))
+              : null;
+            return ch ? 'width: ' + ch + 'ch;' : colStyle(r.width);
+          }
           // Resize handle markup. Sits absolutely positioned on
           // the right edge of a <th>. mousedown wires a window-
           // level mousemove that updates the <col>'s width live;
@@ -2543,7 +2571,7 @@
               html += '<col data-col-key="df_' + esc(o.displayFieldId) + '" style="' + style + '">';
             });
             responses.forEach(function (r) {
-              html += '<col data-col-key="resp_' + esc(r.key) + '" style="' + colStyle(r.width) + '">';
+              html += '<col data-col-key="resp_' + esc(r.key) + '" style="' + responseColStyle(card, r) + '">';
             });
             html += '</colgroup><thead><tr>';
             var colIdx = 0;
@@ -2640,7 +2668,7 @@
             var html = '<table class="rs-group-table">';
             html += '<colgroup><col data-col-key="identity" style="' + colStyle(identityW) + '">';
             responses.forEach(function (r) {
-              html += '<col data-col-key="resp_' + esc(r.key) + '" style="' + colStyle(r.width) + '">';
+              html += '<col data-col-key="resp_' + esc(r.key) + '" style="' + responseColStyle(card, r) + '">';
             });
             html += '</colgroup><thead><tr>';
             var colIdx = 0;
