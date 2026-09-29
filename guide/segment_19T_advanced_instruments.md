@@ -2420,6 +2420,20 @@ Taken 2026-09-27 at `3cec7196`:
   routes and captures); `tests/integration/test_guide_screencaps.py`
   fails on a referenced-but-missing or committed-but-unreferenced file.
 
+### Status
+
+- **Rung 1 (prose), 2026-09-29.** Base SHA for the item's read:
+  `305f2463`. From the author's draft (`Guide_v4a`): the preview
+  paragraph points down to the fields tables, which get their own
+  paragraph (checkboxes, ▲ ▼, add / delete / edit); a paragraph on
+  branching (⑂, ↰, ↳, an example of a Show and a Require condition, a
+  branch one level down, the lock once answered); a sentence in "For
+  reviewers" on * and fields that open from an answer. Three wordings
+  from the review of the draft: "answerable only if" (a closed branch's
+  fields still show, grayed), "↳ button detaches", and the two-level and
+  lock sentences. The example reads "For example" until rung 2 lands its
+  capture.
+
 ### PR ladder
 
 1. **Prose**: branching, the reviewer's view, the stale alt text rewritten
@@ -2443,8 +2457,10 @@ Taken 2026-09-27 at `3cec7196`:
 
 ### Open questions
 
-1. **Which captures the author retakes**, and whether a new one shows a
-   branch. Decides rung 2's scope. The author, once Items 11–14 land.
+1. ~~Which captures the author retakes~~ — the preview and the fields
+   (`instrument-card-preview`, `instrument-card-fields-and-visibility`),
+   plus a new branching capture; the collapsed card and the assignment
+   rule are still current (the author's `Guide_v4a`, 2026-09-29).
 2. ~~Whether this item waits for Item 11~~ — **it waits** (author,
    2026-09-27): the Guide describes required governed fields once, and
    this item's specifics are settled after Item 11 closes.

@@ -295,9 +295,7 @@
       The second part is a <strong>preview of what the reviewer will see</strong>.
       Use the text boxes to fill in a description of the instrument and helping
       text for the response fields. The fields it shows are chosen further
-      down, in the <strong>Display fields</strong> and <strong>Response
-      fields</strong> tables, where a checkbox shows or hides each one and
-      ▲ ▼ reorder them. Name always shows, and so does Email, except on a
+      down (see below). Name always shows, and so does Email, except on a
       group-scoped instrument, whose group rows have no email. Column
       widths can be adjusted by dragging the edges. After changing the assignment rule,
       use <strong>Refresh sample</strong> to refresh the preview.
@@ -327,8 +325,13 @@
       only while the card is unlocked, since reviewers never see that row.
     </p>
     <p>
-      The last part lets you add, delete and edit <strong>response
-      fields</strong>. Use <strong>+</strong> to add a field below a row
+      The last part lets you adjust the <strong>Display fields</strong> and
+      <strong>Response fields</strong>. Use the checkboxes to show or hide
+      each field, ▲ ▼ to reorder them, and add, delete and edit response
+      fields.
+    </p>
+    <p>
+      Use <strong>+</strong> to add a field below a row
       (until you type a name, it goes by <em>Field 1</em>, <em>Field 2</em>
       and so on, shown grayed out, and a name you clear goes back to that
       label) and <strong>X</strong> to delete
@@ -365,6 +368,18 @@
       An instrument counts as set up once it has at least one visible response
       field and all three assignment links have been set — which is what the
       status bar's <strong>Instruments</strong> pill counts.
+    </p>
+    <p>
+      <strong>Advanced features:</strong> the <strong>⑂</strong> button adds
+      a conditional branch below a field, the <strong>↰</strong> button joins
+      the current row to a conditional branch above, and the
+      <strong>↳</strong> button detaches the current row from its conditional
+      branch. For example, Rating and Comments can be made answerable only if
+      the reviewer gives more than 3 for Familiarity; and if Rating is less
+      than 3 or more than 4, Comments becomes required (else it is shown but
+      optional). A field inside a branch can have a branch of its own, one
+      level down. Once reviewers have answered fields in a branch, its
+      condition and fields are locked.
     </p>
 
     <h3>Optional: relationships and observers</h3>
@@ -721,6 +736,11 @@
       the reviewees assigned to you and the questions to answer.
       <strong>Save</strong> as you go and <strong>Submit</strong> when finished.
       You can revisit until the session closes.
+    </p>
+    <p>
+      Fields marked * are required. Some fields open only once you answer
+      an earlier one; until then they're grayed out and can't be filled in,
+      and your answer can also make a field required.
     </p>
   </div>
   {% endif %}
