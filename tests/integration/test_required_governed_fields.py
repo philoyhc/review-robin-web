@@ -262,7 +262,10 @@ def test_the_surface_script_toggles_the_required_label(
     body = make_client(reviewer_user).get(f"/me/sessions/{review_session.id}").text
     start = body.index("function isOpen(op, value, raw)")
     script = body[start : body.index("})();", start)]
-    assert 'var requiredNow = open && cell.dataset.rsRequired === "true";' in script
+    assert (
+        'var requiredNow = parentApplies && open && cell.dataset.rsRequired === "true";'
+        in script
+    )
     assert 'requiredNow ? label + " (required)" : label' in script
 
 

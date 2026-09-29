@@ -316,9 +316,13 @@ def test_the_surface_script_keeps_a_require_mode_cell_enabled(
     start = body.index("function isOpen(op, value, raw)")
     script = body[start : body.index("})();", start)]
     assert 'var requireMode = parentCell.dataset.rsBranchMode === "require";' in script
-    assert 'cell.classList.toggle("rs-branch-closed", !open && !requireMode);' in script
-    assert "c.disabled = !open && !requireMode;" in script
-    assert 'var requiredNow = open && cell.dataset.rsRequired === "true";' in script
+    assert 'var applies = parentApplies && (open || requireMode);' in script
+    assert 'cell.classList.toggle("rs-branch-closed", !applies);' in script
+    assert "c.disabled = !applies;" in script
+    assert (
+        'var requiredNow = parentApplies && open && cell.dataset.rsRequired === "true";'
+        in script
+    )
 
 
 # The extracts.

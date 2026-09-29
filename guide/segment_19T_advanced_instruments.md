@@ -2260,6 +2260,18 @@ Taken 2026-09-29 at `85750b93`.
 | tests pinning the one-level refusal | 6 | `grep -rn "inside a branch can't" tests` |
 | specs ruling nested branches out | 2 | `grep -lE "[Nn]ested branches" spec/*.md` |
 
+### Status
+
+- **Rung 2 (evaluation), 2026-09-29.** Base SHA for the item's
+  cumulative read: `6afbd412`. The save hold walks the chain and names
+  the nearest refused ancestor; the surface script passes a parent's
+  closed state down, so a stale middle answer can't open a closed
+  branch. The save rule, the counts and the extract needed nothing (Item
+  11's chain walk), and tests pin them on a seeded chain. Chromium drove
+  the script in both modes. **Moved to rung 3:** the preview's counts,
+  which live in the builder render; the builder page still renders a
+  seeded chain (as flat groups).
+
 ### PR ladder
 
 1. **The plan** (prose only).
