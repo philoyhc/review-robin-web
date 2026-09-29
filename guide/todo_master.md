@@ -3416,9 +3416,10 @@ dep chains called out at the bottom of this file.
      `guide/advanced_instruments.md` Item 6, Q1: the condition row's
      "then [mode]" select shows the governed fields or requires them while
      the condition holds, else optional.
-   - **Item 14 — Two levels of branching** (open, planned): a governed
-     field may be a parent, one level down; each level shifts one column
-     right in the builder. `guide/advanced_instruments.md` Item 6, Q2.
+   - ~~**Item 14 — Two levels of branching.**~~ **Closed 2026-09-29.**
+     `guide/advanced_instruments.md` Item 6, Q2: a governed field may be
+     a parent, one level down; each level shifts one column right in the
+     builder, and answers anywhere below a parent lock its branch.
    - **Item 15 — The Guide catches up with 19T** (open, planned; Item 12
      until 2026-09-27): branching and the reviewer's view in the in-app
      Guide, after Items 11–14 land.
