@@ -254,6 +254,19 @@ def test_a_branch_inside_a_branch_must_directly_follow_too() -> None:
     ]
 
 
+def test_a_very_long_chain_is_refused_by_name_not_by_recursion() -> None:
+    """Codex on #2681: a settings CSV has no field cap, so a hand-made
+    chain thousands long must come back as named errors."""
+    fields = [Field(id=0, label="F0", order=0, required=True,
+                    _inline_data_type="Integer", branch_op="ge", branch_value="1")]
+    for n in range(1, 3000):
+        fields.append(Field(id=n, label=f"F{n}", order=n, branch_parent_id=n - 1,
+                            _inline_data_type="Integer", branch_op="ge", branch_value="1"))
+    errors = branch_structure_errors(fields)
+    assert ("F3", "A branch inside a branch can't have a branch of its own.") in errors
+    assert ("F1", "A branch inside a branch can't have a branch of its own.") not in errors
+
+
 def test_a_cycle_closes_rather_than_recursing() -> None:
     first = Field(id=1, label="A", order=0, branch_parent_id=2,
                   branch_op="ge", branch_value="1")

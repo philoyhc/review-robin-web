@@ -877,12 +877,16 @@ def _apply_branch_rules(
             )
         return answered[field_id]
 
-    def old_below(parent_id: int, seen: frozenset[int]) -> set[int]:
-        """Every field in the stored branch, a branch inside it included."""
+    def old_below(parent_id: int) -> set[int]:
+        """Every field in the stored branch, a branch inside it included
+        (iterative, as ``branch_structure_errors``' walk is)."""
         out: set[int] = set()
-        for child_id in old_governed.get(parent_id, set()):
-            if child_id not in seen:
-                out |= {child_id} | old_below(child_id, seen | {child_id})
+        stack = [parent_id]
+        while stack:
+            for child_id in old_governed.get(stack.pop(), set()):
+                if child_id != parent_id and child_id not in out:
+                    out.add(child_id)
+                    stack.append(child_id)
         return out
 
     errors: list[tuple[str, str]] = []
@@ -893,7 +897,7 @@ def _apply_branch_rules(
         # Answers anywhere below lock every branch above them (19T Item
         # 14, the author's ruling): a change here could close theirs.
         if not any(
-            has_responses(i) for i in old_below(parent_id, frozenset({parent_id}))
+            has_responses(i) for i in old_below(parent_id)
         ):
             continue
         changed = old_ids ^ new_governed.get(parent_id, set())

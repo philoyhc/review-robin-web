@@ -509,13 +509,17 @@ def branch_structure_errors(
             errors.append(
                 (field.label, "Its branch condition governs no field.")
             )
-    def descendants(parent_id: int, seen: frozenset[int]) -> set[int]:
+    def descendants(parent_id: int) -> set[int]:
+        # Iterative, so a hand-made chain of any length (a settings CSV
+        # has no field cap) is refused by name, not by RecursionError
+        # (Codex on #2681).
         out: set[int] = set()
-        for child in governed_by_parent.get(parent_id, []):
-            if child.id in seen:
-                continue
-            out.add(child.id)
-            out |= descendants(child.id, seen | {child.id})
+        stack = [parent_id]
+        while stack:
+            for child in governed_by_parent.get(stack.pop(), []):
+                if child.id != parent_id and child.id not in out:
+                    out.add(child.id)
+                    stack.append(child.id)
         return out
 
     ordered = sorted(field_list, key=lambda f: f.order)
@@ -523,7 +527,7 @@ def branch_structure_errors(
         if field.id not in governed_by_parent:
             continue
         # The branch's fields and any branch inside it (19T Item 14).
-        below = descendants(field.id, frozenset({field.id}))
+        below = descendants(field.id)
         following = ordered[index + 1 : index + 1 + len(below)]
         if {f.id for f in following} != below:
             errors.append(
