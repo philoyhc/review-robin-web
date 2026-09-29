@@ -2511,7 +2511,11 @@ item of their own. It closes when the author says so.
    preview matches for number columns too (`numericColumnCh`, both
    previews); its read found the JS copy printing a Decimal bound
    unrounded where `%g` rounds to six digits, fixed (`pyG`) and pinned
-   by running the JS in node against the Python.
+   by running the JS in node against the Python. Then, on the author's
+   ruling that the preview should match the surface, the per-reviewee
+   preview takes the surface's layout rule (automatic until a width is
+   set), its width classes and an inert ↕ in each header; Chromium
+   measured the two within a few pixels, with and without a width.
 
 ### Doc impact
 

@@ -885,15 +885,24 @@ persist as integer pixels per column key into
   save; carried on the row's `data-width` and folded in by
   `set_band2_state`).
 
-The preview table is `table-layout: fixed`, so an unsized profile-link
-column, whose `rs-narrow` hint is `width: 1%`, would start as 1% of the
-table. It starts instead at `views.profile_column_ch_width`'s width
-(mirrored in the preview script's `profileColumnCh`) — its label
-plus room for the sort button, never narrower than "View" — and an
-unsized number column at `views.numeric_column_ch_width`'s (mirrored
-in `numericColumnCh`: its header or its min / max digit span), in the
-group preview too, as the reviewer surface, the reviewer summary and
-the reviewee results do; a dragged width wins.
+**The preview lays its table out as the reviewer surface does**
+(`spec/reviewer-surface.md`), so its columns start at the surface's
+widths. A per-reviewee table is automatic until a column width is set,
+then `table-layout: fixed`; its headers and cells carry the surface's
+width classes (`rs-narrow` on a profile-link or number column,
+`rs-textlong` on a String over 100 characters, `th.rrw-sortable`) and,
+wherever the preview shows no sort control of its own, an inert copy
+of the surface's ↕ sort button, since a narrow column is as wide as its
+header. Under the fixed layout an unsized profile-link column starts
+at `views.profile_column_ch_width` (mirrored as `profileColumnCh`: its
+label plus room for the sort button, never narrower than "View") and a
+number column at `views.numeric_column_ch_width` (mirrored as
+`numericColumnCh`: its header or its min / max digit span), not
+`rs-narrow`'s 1% of the table. While automatic, each `<col>` keeps that
+start in `data-start-style`; a drag applies them as it turns the table
+fixed, as saving a width will turn the surface's. A group-flavor
+preview is always fixed, as the surface's group table is, its number
+columns starting the same way. A dragged width wins.
 
 Widths never POST on their own. A resize stages the live widths
 into a hidden `column_widths_snapshot` input (JSON); the bulk

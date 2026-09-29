@@ -126,6 +126,18 @@ def test_the_preview_mirrors_it(client: TestClient, db: Session) -> None:
     assert "return ch ? 'width: ' + ch + 'ch;' : colStyle(r.width);" in flat
     assert "'\" style=\"' + responseColStyle(card, r) + '\">'" in flat
     assert "'\" style=\"' + colStyle(r.width) + '\">'" not in flat
+    # The surface's layout rule: automatic until a width is set, the
+    # starts kept aside, applied as a drag turns the table fixed; the
+    # surface's width classes and an inert copy of its sort button.
+    for line in (
+        "var html = '<table style=\"table-layout: ' + (sized ? 'fixed' : 'auto') + ';\">';",
+        "return sized ? ' style=\"' + style + '\"' : ' data-start-style=\"' + style + '\"';",
+        "c.setAttribute('style', c.getAttribute('data-start-style'));",
+        "if (shape.dataType === 'integer' || shape.dataType === 'decimal') { return 'rs-narrow'; }",
+        "return '<span class=\"rrw-sort-btn\" aria-hidden=\"true\"><span class=\"rrw-sort-badge\">↕</span></span>';",
+        "+ (sortBadgeHtml(card, o.displayFieldId) || surfaceSortStub())",
+    ):
+        assert line in flat, line
     # A drag starts from the header's width where a browser sizes no
     # <col>, never from the ch value read as px (the fix's read).
     assert (

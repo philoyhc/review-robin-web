@@ -271,7 +271,7 @@ def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) 
     # The preview mutes a governed column, unless a Require branch governs
     # it (19T Item 13).
     assert "branchHint: rfRowIsItemNow(row)" in flat
-    assert "class=\"rs-branch-closed\"" in flat
+    assert "var cls = [hint, r.branchHint ? 'rs-branch-closed' : ''].filter(Boolean).join(' ');" in flat
 
 
 def test_join_and_detach_show_their_states(client: TestClient, db: Session) -> None:

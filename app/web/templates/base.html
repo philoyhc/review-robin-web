@@ -4435,6 +4435,15 @@
         border-color: var(--border-default);
         background: var(--surface-muted);
       }
+      /* The Band 2 preview's inert copy (a span, not a button): the
+         same box, so the header measures as the surface's, but no
+         control's look (19T Item 16). */
+      body.ui-v2 span.rrw-sort-btn,
+      body.ui-v2 span.rrw-sort-btn:hover {
+        cursor: default;
+        border-color: transparent;
+        background: transparent;
+      }
       body.ui-v2 .rrw-sort-btn:focus-visible {
         outline: 2px solid var(--focus-ring-strong);
         outline-offset: 1px;
