@@ -501,7 +501,8 @@ In rendered order:
    ("Branching between response fields" below) — get a trailing `*`. Header column-width hint is
    driven by the field's `data_type`:
    - `Integer` / `Decimal` → `class="rs-narrow"` (numbers are short).
-     Under a fixed layout an unsized numeric column's `<col>` starts
+     On a per-reviewee table with widths set (so `table-layout:
+     fixed`) an unsized numeric column's `<col>` starts
      at `views.numeric_column_ch_width` ch — its header or digit
      span, as a group table's numeric header does — rather than 1%
      of the table; the reviewer summary and the reviewee results do
@@ -726,7 +727,9 @@ reviewer-surface specifics:
   `ch`-width via `views.numeric_column_ch_width(field)` — the
   wider of the header label (plus the `required` mark + sort
   button) and the field's min/max digit span — so a small-range
-  input (e.g. a 1-5 Rating) does not sprawl. Their per-type
+  input (e.g. a 1-5 Rating) does not sprawl. The trailing status
+  column is `th.rs-status`, a fixed `4ch` (item 4 of the column
+  list). Their per-type
   `rs-narrow` / `rs-textlong` hints are dropped (under fixed
   layout `width: 1%` would collapse the column).
 - **One error / one missing entry per group.** Validation runs
@@ -1474,7 +1477,7 @@ compatible either way:
 
 - **Today.** Per-instrument rows render as a plain `<table>` inside
   `.table-scroll`, as does the visibility-policy card's table above
-  it. Column-width hint classes (`.rs-narrow` /
+  it. Column-width hint classes (`.rs-narrow` / `.rs-status` /
   `.rs-reviewee` / `.rs-textlong`) on `<th>` / `<td>` carry the
   responsive sizing. The data driving each row is built in
   `_surface_context` as a list of dicts with stable, serializable
