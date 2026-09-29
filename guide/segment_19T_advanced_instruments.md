@@ -2448,6 +2448,11 @@ Taken 2026-09-27 at `3cec7196`:
   found that, the lock sentence claiming the fields lock (their
   membership and the condition do, up the chain), and "* are required"
   (a * marks a field that may be required); fixed but for the retakes.
+  The author's `Guide_v4b1` retook the three dark halves: preview and
+  fields now match, and their alt text names both help-text cards and
+  the locked card's Unlock. The branching pair matches in every row but
+  the Display fields order (dark: Profile before Tutor), which its alt
+  text does not describe.
 
 ### PR ladder
 
