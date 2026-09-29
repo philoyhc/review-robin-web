@@ -1477,7 +1477,7 @@ compatible either way:
 
 - **Today.** Per-instrument rows render as a plain `<table>` inside
   `.table-scroll`, as does the visibility-policy card's table above
-  it. Column-width hint classes (`.rs-narrow` / `.rs-status` /
+  it. Column-width hint classes (`.rs-narrow` / `.rs-status` (header only) /
   `.rs-reviewee` / `.rs-textlong`) on `<th>` / `<td>` carry the
   responsive sizing. The data driving each row is built in
   `_surface_context` as a list of dicts with stable, serializable

@@ -2496,15 +2496,20 @@ item of their own. It closes when the author says so.
 1. **A narrow column squished under a fixed table layout** (#2684).
    `rs-narrow` is `width: 1%`: an auto layout shrinks the column to its
    content, a fixed one gives it 1% of the table. So the Band 2 preview's
-   profile column (always fixed) started as a sliver until dragged, and
-   on the reviewer surface, the summary and the results, once any width
-   is set, so did the profile, numeric and status columns. An unsized
+   profile column (always fixed) started as a sliver until dragged; so
+   did the profile and numeric columns on the reviewer surface, the
+   summary and the results once any width is set, and the surface's
+   status column then or on a group table (always fixed). An unsized
    `<col>` now starts at `views.profile_column_ch_width` (the label plus
    the sort button, never narrower than "View") or
    `numeric_column_ch_width` (header or digit span), and the status
-   column at `th.rs-status`'s `4ch`; a dragged width wins. One
-   `diff-reviewer` read and one `spec-writer` pass: both found the
-   summary and the results; acted on.
+   column at `th.rs-status`'s `4ch`; a dragged width wins. **Reads:**
+   two `diff-reviewer` reads and two `spec-writer` passes (the profile
+   fix, then the numeric and status one). The first pair found the
+   summary and the results, acted on; the second, spec wording and a
+   test scoped to the colgroup, acted on. Open for the author: the
+   preview's unsized numeric column still shares the spare width, where
+   the surface starts it at its digit span.
 
 ### Doc impact
 

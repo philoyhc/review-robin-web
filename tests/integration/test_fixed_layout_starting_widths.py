@@ -180,5 +180,6 @@ def test_the_summary_and_the_results_start_it_the_same_way(
     for name, body in (("summary", summary), ("results", results)):
         assert 'style="table-layout: fixed;"' in body, name
         assert ">Profile</th>" in body, name
-        assert width in body, name
-        assert numeric in body, name
+        colgroup = body.split("<colgroup>")[1].split("</colgroup>")[0]
+        assert width in colgroup, name
+        assert numeric in colgroup, name
