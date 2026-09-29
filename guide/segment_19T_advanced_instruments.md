@@ -2429,7 +2429,7 @@ Taken 2026-09-27 at `3cec7196`:
   branching (⑂, ↰, ↳, an example of a Show and a Require condition, a
   branch one level down, the lock once answered); a sentence in "For
   reviewers" on * and fields that open from an answer. Three wordings
-  from the review of the draft: "answerable only if" (a closed branch's
+  from the review of the draft: "can only be answered if" (a closed branch's
   fields still show, grayed), "↳ button detaches", and the two-level and
   lock sentences. The example reads "For example" until rung 2 lands its
   capture.
@@ -2439,9 +2439,15 @@ Taken 2026-09-27 at `3cec7196`:
   (`instrument-card-branching`) follows the branching paragraph, which
   now reads "In the example below". The fields pair keeps its file name
   (`instrument-card-fields-and-visibility`, cited by Item 1's Doc impact)
-  though visibility now sits in the preview. The pairs show slightly
-  different states (the dark fields shot unlocked, the dark branching
-  shot with two more rows), so each alt text names only what both show.
+  though visibility now sits in the preview. **The pairs show different
+  states** (the dark preview one help-text card, the dark fields shot
+  unlocked, the dark branching shot two more rows), which
+  `spec/ui_elements.md` §10 counts a defect: a pair is one screen shot
+  twice. Retakes are the author's; until then each alt text names only
+  what both halves show. The item's read (over `305f2463..421d2f7d`)
+  found that, the lock sentence claiming the fields lock (their
+  membership and the condition do, up the chain), and "* are required"
+  (a * marks a field that may be required); fixed but for the retakes.
 
 ### PR ladder
 

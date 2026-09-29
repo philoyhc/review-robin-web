@@ -304,15 +304,15 @@
       <img src="/static/guide/instrument-card-preview.png"
            data-theme-variant="light" loading="lazy"
            alt="The Preview review instrument part of the card: the description
-                box, the Who can see what you wrote table, the response fields'
-                help-text cards, the required and all-items counts, and a
+                box, the Who can see what you wrote table, the Rating help-text
+                card, the required and all-items counts, and a
                 sample reviewee row with Tutor, Group, Team and Profile columns
                 and the Rating and Comments inputs.">
       <img src="/static/guide/instrument-card-preview-dark.png"
            data-theme-variant="dark" loading="lazy"
            alt="The Preview review instrument part of the card: the description
-                box, the Who can see what you wrote table, the response fields'
-                help-text cards, the required and all-items counts, and a
+                box, the Who can see what you wrote table, the Rating help-text
+                card, the required and all-items counts, and a
                 sample reviewee row with Tutor, Group, Team and Profile columns
                 and the Rating and Comments inputs.">
     </figure>
@@ -379,7 +379,8 @@
       than 3 or more than 4, Comments becomes required (else it is shown but
       optional). A field inside a branch can have a branch of its own, one
       level down. Once reviewers have answered fields in a branch, its
-      condition and fields are locked.
+      condition and the fields it holds are locked, and so are those of any
+      branch above it.
     </p>
     <figure class="guide-figure">
       <img src="/static/guide/instrument-card-branching.png"
@@ -756,9 +757,10 @@
       You can revisit until the session closes.
     </p>
     <p>
-      Fields marked * are required. Some fields open only once you answer
-      an earlier one; until then they're grayed out and can't be filled in,
-      and your answer can also make a field required.
+      A * marks a field that is, or may become, required. Some fields open
+      only once your answer to an earlier one meets their condition; until
+      then they're grayed out and can't be filled in, and an earlier answer
+      can also decide whether a marked field is required.
     </p>
   </div>
   {% endif %}
