@@ -500,10 +500,11 @@ everywhere, so "you can click this" reads the same way on every control.
 > `white-space: nowrap`, for an action column that should hug the right
 > edge. Used on `sessions_list.html`'s Actions column.
 
-> **Reviewer-table column-width hints (`.rs-narrow`,
+> **Reviewer-table column-width hints (`.rs-narrow`, `.rs-status`,
 > `.rs-reviewee`, `.rs-textlong`)** — column-shape hints for the
 > response-input table on the reviewer surface, applied from each response
-> field's `data_type`. Reviewer-surface specific; they shape widths only and do
+> field's `data_type` (`.rs-narrow` also on a profile-link column,
+> `.rs-status` on the trailing status column). Reviewer-surface specific; they shape widths only and do
 > not conflict with the general table treatment.
 
 ### 8. Forms / inputs

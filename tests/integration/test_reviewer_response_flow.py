@@ -353,7 +353,7 @@ def test_surface_status_column_hidden_pre_submission(
 
     # The trailing status column has no marker text; the easiest pin is the
     # presence of its container styles. Pre-submission, neither the empty
-    # <th class="rs-narrow"> trailer nor the centered status <td> should
+    # <th class="rs-status"> trailer nor the centered status <td> should
     # appear.
     assert 'style="width: 1%; white-space: nowrap; text-align: center;"' not in body
 

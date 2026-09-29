@@ -32,7 +32,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services import instruments as instruments_service
-from app.web.views._instruments import instrument_heading
+from app.web.views._instruments import instrument_heading, numeric_column_ch_width
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 
@@ -70,6 +70,10 @@ class SummaryFieldCol:
     # widths). ``None``-typed fields default to neither.
     is_narrow: bool = False
     is_textlong: bool = False
+    # A narrow column's starting width in ``ch`` under the fixed layout
+    # an operator-set width brings (``numeric_column_ch_width``): there
+    # ``rs-narrow``'s 1% would squish it to 1% of the table.
+    narrow_ch: int | None = None
 
 
 @dataclass(frozen=True)
@@ -476,6 +480,10 @@ def build_reviewer_summary_context(
                 is_narrow=(
                     not is_group
                     and f.data_type in ("Integer", "Decimal")
+                ),
+                narrow_ch=(
+                    None if is_group
+                    else numeric_column_ch_width(f, required=f.id in may_be_required)
                 ),
                 is_textlong=(
                     not is_group

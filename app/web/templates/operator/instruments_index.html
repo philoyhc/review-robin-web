@@ -100,25 +100,18 @@
     body.ui-v2 .sort-badge.sort-badge-empty {
       color: var(--text-subtle);
     }
-    /* Band 2 preview table — keep cell + input padding compact so
-       the operator-side preview row matches the reviewer surface's
-       visual density rather than inheriting the operator-table
-       defaults (var(--space-3) var(--space-4)) which bloat both
-       the header row and the data row. */
+    /* Band 2 preview table — the reviewer surface's cell padding
+       (``.rs-instrument-group``: half the row gap, the standard side
+       padding) and its inputs' own size, so the preview's columns
+       measure as the surface's (19T Item 16). */
     body.ui-v2 [data-new-model-band2-preview] th,
     body.ui-v2 [data-new-model-band2-preview] td {
-      padding: var(--space-2) var(--space-3);
+      padding: var(--space-2) var(--space-4);
       /* Top-align so multi-row textareas (long-text response
          fields) anchor at the top of the row rather than
          centering vertically inside it — matches the reviewer
          surface contract in base.html. */
       vertical-align: top;
-    }
-    body.ui-v2 [data-new-model-band2-preview] input,
-    body.ui-v2 [data-new-model-band2-preview] textarea,
-    body.ui-v2 [data-new-model-band2-preview] select {
-      padding: var(--space-1) var(--space-2);
-      font-size: var(--fs-small);
     }
     /* Band 3 Visibility — Reviewees + Observers audience chips
        in their unselected state are styled to match the
@@ -2058,8 +2051,8 @@
              DOMContentLoaded + on every R / chip / Band 3 row
              toggle, picking up the help cards + constraints. #}
           {# `.table-scroll`: the container is filled by ``rebuildPreview``
-             with a ``table-layout: fixed`` table carrying operator-set
-             column widths, so the wrapper goes directly around the
+             with a table laid out as the reviewer surface's is (fixed
+             once operator-set column widths exist), so the wrapper goes directly around the
              container — there is no server-rendered <table> here to wrap.
              The container, not the wrapper, is the lock region, so a
              locked card still scrolls a table wider than the card
@@ -2395,10 +2388,57 @@
           // Compose the inline ``width: Npx`` style for a <col>
           // element. Empty string when no width is set so the
           // browser falls back to the table's auto-distributed
-          // share. table-layout: fixed on the table makes these
-          // widths take hold deterministically.
+          // share. Under table-layout: fixed (once a width is set, as
+          // on the surface) these widths take hold deterministically.
           function colStyle(w) {
             return w && w > 0 ? 'width: ' + w + 'px;' : '';
+          }
+          // views.profile_column_ch_width: the label plus room for the
+          // sort button, never narrower than "View".
+          function profileColumnCh(label) {
+            return Math.max(String(label || '').length + 4, 'View'.length + 3);
+          }
+          // Python's ``f"{v:g}"``: six significant digits, trailing zeros
+          // dropped, exponent form below 1e-4 or from 1e6 ("1e+06"). Only
+          // its length is read, so a tie rounding the other way is moot.
+          function pyG(n) {
+            if (n === 0) { return '0'; }
+            var parts = n.toExponential(5).split('e');
+            var exp = parseInt(parts[1], 10);
+            if (exp < -4 || exp >= 6) {
+              var mant = parts[0].indexOf('.') >= 0 ? parts[0].replace(/\.?0+$/, '') : parts[0];
+              var abs = Math.abs(exp);
+              return mant + 'e' + (exp < 0 ? '-' : '+') + (abs < 10 ? '0' : '') + abs;
+            }
+            var fixed = n.toFixed(Math.max(0, 5 - exp));
+            return fixed.indexOf('.') >= 0 ? fixed.replace(/\.?0+$/, '') : fixed;
+          }
+          // views.numeric_column_ch_width: the wider of the header (the
+          // label, " *" when it may be required, the sort button) and the
+          // committed min / max digit span, a Decimal's written as %g is.
+          // Null for a column that isn't a number (19T Item 16).
+          function numericColumnCh(label, required, shape) {
+            if (!shape || (shape.dataType !== 'integer' && shape.dataType !== 'decimal')) {
+              return null;
+            }
+            function digits(v) {
+              if (v === '' || v === null || v === undefined) { return 0; }
+              var n = Number(v);
+              if (!isFinite(n)) { return 0; }
+              return (shape.dataType === 'integer' ? String(Math.trunc(n)) : pyG(n)).length;
+            }
+            var span = Math.max(digits(shape.min), digits(shape.max), 1);
+            return Math.max(String(label || '').length + (required ? 2 : 0) + 4, span + 3);
+          }
+          // A response column's <col> style: its dragged width, or, for an
+          // unsized number column, its header / digit span, as the
+          // surface's is (19T Item 16).
+          function responseColStyle(card, r) {
+            var row = r.width > 0 ? null : rfRowByKey(card, r.key);
+            var ch = row && rfRowCommitted(row)
+              ? numericColumnCh(r.label, r.required, window.newModelRfCommittedShape(row))
+              : null;
+            return ch ? 'width: ' + ch + 'ch;' : colStyle(r.width);
           }
           // Resize handle markup. Sits absolutely positioned on
           // the right edge of a <th>. mousedown wires a window-
@@ -2496,9 +2536,9 @@
           // same <tbody class="rrw-rows">, same identity-cell
           // composition. Adds a <colgroup> with <col data-col-key>
           // entries so the operator's drag-resize widths take hold,
-          // and table-layout: fixed so column widths are honored
-          // deterministically (matching the operator's intent for
-          // the reviewer to see exactly this width).
+          // and the surface's layout rule: automatic until a width is
+          // set, then table-layout: fixed so the widths are honored
+          // exactly as the reviewer will see them (19T Item 16).
           function buildIndividualPreview(card, selected) {
             if (selected.length === 0) { return ''; }
             var name = selected.find(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'name'; });
@@ -2521,16 +2561,37 @@
             var hasIdentity = !!(name || email);
             var totalCols = (hasIdentity ? 1 : 0) + displays.length + responses.length;
             var lastIdx = totalCols - 1;
-            var html = '<table style="table-layout: fixed;">';
+            // 19T Item 16 — the surface's layout rule: automatic until
+            // some column width is set, then fixed. Automatic, a <col>
+            // keeps its fixed-layout start in ``data-start-style``, which
+            // a drag applies as it switches the table to fixed, as a
+            // saved width will switch the surface.
+            // Any width counts, a hidden column's too, as the surface's
+            // ``has_custom_widths`` counts every saved key.
+            function hasWidth(row) { return (parseInt(row.getAttribute('data-width') || '', 10) || 0) > 0; }
+            var sized = identityW > 0 || dfRows(card).some(hasWidth) || rfRows(card).some(hasWidth);
+            function colAttrs(style) {
+              if (!style) { return ''; }
+              return sized ? ' style="' + style + '"' : ' data-start-style="' + style + '"';
+            }
+            var html = '<table style="table-layout: ' + (sized ? 'fixed' : 'auto') + ';">';
             html += '<colgroup>';
             if (hasIdentity) {
-              html += '<col data-col-key="identity" style="' + colStyle(identityW) + '">';
+              html += '<col data-col-key="identity"' + colAttrs(colStyle(identityW)) + '>';
             }
             displays.forEach(function (o) {
-              html += '<col data-col-key="df_' + esc(o.displayFieldId) + '" style="' + colStyle(o.width) + '">';
+              var isProfile = o.sourceType === 'reviewee' && o.sourceField === 'profile_link';
+              // An unsized profile column starts wide enough for its
+              // header: under the fixed layout its rs-narrow 1% would
+              // squish it (the author, 2026-09-29). Mirrors the
+              // surface's views.profile_column_ch_width.
+              var style = (isProfile && !(o.width > 0))
+                ? 'width: ' + profileColumnCh(o.label) + 'ch;'
+                : colStyle(o.width);
+              html += '<col data-col-key="df_' + esc(o.displayFieldId) + '"' + colAttrs(style) + '>';
             });
             responses.forEach(function (r) {
-              html += '<col data-col-key="resp_' + esc(r.key) + '" style="' + colStyle(r.width) + '">';
+              html += '<col data-col-key="resp_' + esc(r.key) + '"' + colAttrs(responseColStyle(card, r)) + '>';
             });
             html += '</colgroup><thead><tr>';
             var colIdx = 0;
@@ -2544,26 +2605,28 @@
               var identitySortBadge = (name && name.displayFieldId)
                 ? sortBadgeHtml(card, name.displayFieldId)
                 : '';
-              html += '<th scope="col" class="rs-reviewee" style="position: relative;">Reviewee'
-                + identitySortBadge
+              html += '<th scope="col" class="rs-reviewee rrw-sortable" style="position: relative;">Reviewee'
+                + (identitySortBadge || surfaceSortStub())
                 + maybeResizeHandle('identity', colIdx === lastIdx)
                 + '</th>';
               colIdx += 1;
             }
             displays.forEach(function (o) {
               var isProfile = o.sourceType === 'reviewee' && o.sourceField === 'profile_link';
-              var cls = isProfile ? ' class="rs-narrow"' : '';
+              var cls = isProfile ? ' class="rs-narrow rrw-sortable"' : ' class="rrw-sortable"';
               html += '<th scope="col"' + cls + ' style="position: relative;">'
                 + esc(o.label)
-                + sortBadgeHtml(card, o.displayFieldId)
+                + (sortBadgeHtml(card, o.displayFieldId) || surfaceSortStub())
                 + maybeResizeHandle('df_' + o.displayFieldId, colIdx === lastIdx)
                 + '</th>';
               colIdx += 1;
             });
             responses.forEach(function (r) {
-              html += '<th scope="col" style="position: relative;">'
+              var hint = responseColClass(card, r);
+              html += '<th scope="col" class="' + (hint ? hint + ' ' : '') + 'rrw-sortable" style="position: relative;">'
                 + esc(r.label)
                 + (r.required ? ' <span class="rs-required" title="Required" aria-label="Required">*</span>' : '')
+                + surfaceSortStub()
                 + maybeResizeHandle('resp_' + r.key, colIdx === lastIdx)
                 + '</th>';
               colIdx += 1;
@@ -2592,20 +2655,43 @@
             // / number / list / text) for each response field, not
             // a bare ``—``.
             responses.forEach(function (r) {
-              html += responseCellOpen(r)
+              html += responseCellOpen(r, responseColClass(card, r))
                 + buildResponseFieldPreviewCell(card, r) + '</td>';
             });
             html += '</tr></tbody></table>';
             return html;
           }
-          // A response cell's opening tag: a governed field's is muted
-          // (``rs-branch-closed``) and titled with its condition.
-          function responseCellOpen(r) {
-            if (!r.branchHint) {
-              return '<td data-col-key="resp_' + esc(r.key) + '">';
+          // The surface's sort button, inert: every surface header carries
+          // one, and a narrow column is as wide as its header, so the
+          // preview carries it wherever it shows no sort control of its
+          // own (19T Item 16). ``th.rrw-sortable`` keeps the header on one
+          // line, as the surface's is; the table has no
+          // ``data-rrw-sortable``, so the sort script leaves it alone.
+          function surfaceSortStub() {
+            return '<span class="rrw-sort-btn" aria-hidden="true"><span class="rrw-sort-badge">↕</span></span>';
+          }
+          // A response column's width hint, as the surface gives it: a
+          // number is ``rs-narrow``, a String over 100 characters
+          // ``rs-textlong`` (19T Item 16). Not on a group table, whose
+          // surface skips them.
+          function responseColClass(card, r) {
+            var row = rfRowByKey(card, r.key);
+            if (!row || !rfRowCommitted(row)) { return ''; }
+            var shape = window.newModelRfCommittedShape(row);
+            if (shape.dataType === 'integer' || shape.dataType === 'decimal') { return 'rs-narrow'; }
+            if (shape.dataType === 'string' && (parseInt(shape.max || '0', 10) || 0) > 100) {
+              return 'rs-textlong';
             }
-            return '<td data-col-key="resp_' + esc(r.key) + '" class="rs-branch-closed"'
-              + ' title="' + esc(r.branchHint) + '">';
+            return '';
+          }
+          // A response cell's opening tag: a governed field's is muted
+          // (``rs-branch-closed``) and titled with its condition; ``hint``
+          // is its width class.
+          function responseCellOpen(r, hint) {
+            var cls = [hint, r.branchHint ? 'rs-branch-closed' : ''].filter(Boolean).join(' ');
+            return '<td data-col-key="resp_' + esc(r.key) + '"'
+              + (cls ? ' class="' + cls + '"' : '')
+              + (r.branchHint ? ' title="' + esc(r.branchHint) + '"' : '') + '>';
           }
           function buildGroupPreview(card, selected) {
             if (selected.length === 0) { return ''; }
@@ -2627,7 +2713,7 @@
             var html = '<table class="rs-group-table">';
             html += '<colgroup><col data-col-key="identity" style="' + colStyle(identityW) + '">';
             responses.forEach(function (r) {
-              html += '<col data-col-key="resp_' + esc(r.key) + '" style="' + colStyle(r.width) + '">';
+              html += '<col data-col-key="resp_' + esc(r.key) + '" style="' + responseColStyle(card, r) + '">';
             });
             html += '</colgroup><thead><tr>';
             var colIdx = 0;
@@ -2681,8 +2767,21 @@
             var col = table.querySelector('col[data-col-key="' + key + '"]');
             if (!col) { return; }
             var card = table.closest('[data-new-model-band2]');
+            // An automatic table turns fixed, with every column at its
+            // start, as the surface does once a width is saved.
+            if (table.style.tableLayout !== 'fixed') {
+              table.querySelectorAll('col[data-start-style]').forEach(function (c) {
+                c.setAttribute('style', c.getAttribute('data-start-style'));
+              });
+              table.style.tableLayout = 'fixed';
+            }
             var startX = event.clientX;
-            var startWidth = col.offsetWidth || parseInt(col.style.width, 10) || 100;
+            // A browser that sizes no <col> falls back to the header
+            // cell's width: a profile column's starting width is in ch,
+            // which parseInt would misread as px.
+            var headCell = handle.closest('th');
+            var startWidth = col.offsetWidth || (headCell && headCell.offsetWidth)
+              || parseInt(col.style.width, 10) || 100;
             var lastWidth = startWidth;
             document.body.style.cursor = 'col-resize';
             function onMove(ev) {
@@ -2718,6 +2817,9 @@
                 // the JSON ``response_fields[i].width_px`` slot retired.
                 saveBand2Widths(card);
               }
+              // Long-text boxes re-measure at their new width, as the
+              // surface's do once laid out.
+              adjustPreviewTextareaRows(table);
             }
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);

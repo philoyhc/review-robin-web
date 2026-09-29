@@ -124,6 +124,7 @@ from ._instruments import (
     instrument_heading,
     new_model_usable_tags,
     numeric_column_ch_width,
+    profile_column_ch_width,
     placeholder_for_field,
     textarea_rows_for,
 )
@@ -295,6 +296,7 @@ __all__ = [
     "constraint_summary_for_field",
     "new_model_usable_tags",
     "numeric_column_ch_width",
+    "profile_column_ch_width",
     "textarea_rows_for",
     "cohort_rule_signature",
     "cohort_rule_summary",

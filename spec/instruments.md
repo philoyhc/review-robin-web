@@ -885,6 +885,27 @@ persist as integer pixels per column key into
   save; carried on the row's `data-width` and folded in by
   `set_band2_state`).
 
+**The preview lays its table out as the reviewer surface does**
+(`spec/reviewer-surface.md`), so its columns start at the surface's
+widths. A per-reviewee table is automatic until a column width is set
+(a hidden column's counting, as the surface's `has_custom_widths`
+does), then `table-layout: fixed`; its cells take the surface's padding
+and its inputs their own size; its headers and cells carry the surface's
+width classes (`rs-narrow` on a profile-link or number column,
+`rs-textlong` on a String over 100 characters, `th.rrw-sortable`) and,
+wherever the preview shows no sort control of its own, an inert copy
+of the surface's ↕ sort button, since a narrow column is as wide as its
+header. Under the fixed layout an unsized profile-link column starts
+at `views.profile_column_ch_width` (mirrored as `profileColumnCh`: its
+label plus room for the sort button, never narrower than "View") and a
+number column at `views.numeric_column_ch_width` (mirrored as
+`numericColumnCh`: its header or its min / max digit span), not
+`rs-narrow`'s 1% of the table. While automatic, each `<col>` keeps that
+start in `data-start-style`; a drag applies them as it turns the table
+fixed, as saving a width will turn the surface's. A group-flavor
+preview is always fixed, as the surface's group table is, its number
+columns starting the same way. A dragged width wins.
+
 Widths never POST on their own. A resize stages the live widths
 into a hidden `column_widths_snapshot` input (JSON); the bulk
 Save reads that snapshot and commits it through the consolidated

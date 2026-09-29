@@ -2484,3 +2484,45 @@ Taken 2026-09-27 at `3cec7196`:
 ### Doc impact
 
 - `docs/status.md` — row when the item closes (Item 15).
+
+## Item 16 — Small fixes
+
+**Logged 2026-09-29 on the author's instruction:** a register of small
+fixes from the author's browser passes, one entry each, too small for an
+item of their own. It closes when the author says so.
+
+### Entries
+
+1. **A narrow column squished under a fixed table layout** (#2684).
+   `rs-narrow` is `width: 1%`: an auto layout shrinks the column to its
+   content, a fixed one gives it 1% of the table. So the Band 2 preview's
+   profile column (always fixed) started as a sliver until dragged; so
+   did the profile and numeric columns on the reviewer surface, the
+   summary and the results once any width is set, and the surface's
+   status column then or on a group table (always fixed). An unsized
+   `<col>` now starts at `views.profile_column_ch_width` (the label plus
+   the sort button, never narrower than "View") or
+   `numeric_column_ch_width` (header or digit span), and the status
+   column at `th.rs-status`'s `4ch`; a dragged width wins. **Reads:**
+   two `diff-reviewer` reads and two `spec-writer` passes (the profile
+   fix, then the numeric and status one). The first pair found the
+   summary and the results, acted on; the second, spec wording and a
+   test scoped to the colgroup, acted on. On the author's follow-up the
+   preview matches for number columns too (`numericColumnCh`, both
+   previews); its read found the JS copy printing a Decimal bound
+   unrounded where `%g` rounds to six digits, fixed (`pyG`) and pinned
+   by running the JS in node against the Python. Then, on the author's
+   ruling that the preview should match the surface, the per-reviewee
+   preview takes the surface's layout rule (automatic until a width is
+   set, any saved width counting), its width classes, its cell padding
+   and input size, and an inert ↕ in each header with no sort control
+   of its own; Chromium measured the two within a few pixels, with and
+   without a width. Its read: one false positive (textarea rows, which
+   the surface re-measures too), the rest acted on.
+
+### Doc impact
+
+- `spec/instruments.md` — the preview's unsized profile column (Item 16, entry 1).
+- `spec/reviewer-surface.md` — unsized profile and numeric columns and the status column under a fixed layout (Item 16, entry 1).
+- `spec/ui_elements.md` — `.rs-status` among the reviewer-table hints (Item 16, entry 1).
+- `docs/status.md` — row when the item closes (Item 16).

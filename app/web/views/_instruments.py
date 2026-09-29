@@ -271,6 +271,21 @@ def numeric_column_ch_width(
     return max(header_ch, input_ch)
 
 
+def profile_column_ch_width(label: str) -> int:
+    """A ``ch``-unit starting width for the profile-link column of a
+    fixed-layout table.
+
+    Under ``table-layout: fixed`` its ``rs-narrow`` hint (``width: 1%``)
+    is 1% of the table, not the content, so an unsized column started
+    squished to a sliver (the author, 2026-09-29). Sized as a numeric
+    column's header is (``numeric_column_ch_width``): the label plus room
+    for the sort button, and never narrower than its "View" link. The
+    Band 2 preview mirrors it (``profileColumnCh``). An operator-set
+    width wins.
+    """
+    return max(len(label) + 4, len("View") + 3)
+
+
 # Calibration constants for ``textarea_rows_for``. Tuned against
 # ``td.rs-textlong { min-width: 14em }`` in ``base.html`` and the
 # default proportional sans-serif body font stack. Revisit if the

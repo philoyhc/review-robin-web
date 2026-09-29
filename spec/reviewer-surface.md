@@ -489,16 +489,29 @@ In rendered order:
    - `pair_context.{n}` and the rest → plain text.
    Header carries `class="rs-narrow"` for `profile_link` (URL
    columns are kept narrow); other display headers have no width
-   modifier.
+   modifier. When the table is `table-layout: fixed` (any column
+   width set), `rs-narrow`'s `width: 1%` would take 1% of the table,
+   so an unsized profile column's `<col>` starts at
+   `views.profile_column_ch_width(label)` ch instead — the label plus
+   room for the sort button, never narrower than "View". The reviewer
+   summary and the reviewee results start theirs the same way.
 3. **Response fields** (in stored `InstrumentResponseField.order`):
    one column per response field. Header text is the field label;
    required fields — and a visible field a require-mode parent governs
    ("Branching between response fields" below) — get a trailing `*`. Header column-width hint is
    driven by the field's `data_type`:
    - `Integer` / `Decimal` → `class="rs-narrow"` (numbers are short).
+     On a per-reviewee table with widths set (so `table-layout:
+     fixed`) an unsized numeric column's `<col>` starts
+     at `views.numeric_column_ch_width` ch — its header or digit
+     span, as a group table's numeric header does — rather than 1%
+     of the table; the reviewer summary and the reviewee results do
+     the same (their `SummaryFieldCol.narrow_ch`).
    - `String` with `validation.max_length > 100` → `class="rs-textlong"`.
    - everything else → no width modifier.
-4. **Status indicator** (trailing, narrow): only renders when
+4. **Status indicator** (trailing, narrow — `th.rs-status`, a fixed
+   `4ch`, which a fixed layout can't squish as it would `rs-narrow`'s
+   1%): only renders when
    `group.show_status_col` is true (i.e. when at least one row has
    `submitted_at` set, or `show_incomplete_marks` is true after a
    missing-required Submit attempt). There is no `show_acknowledge`
@@ -714,7 +727,9 @@ reviewer-surface specifics:
   `ch`-width via `views.numeric_column_ch_width(field)` — the
   wider of the header label (plus the `required` mark + sort
   button) and the field's min/max digit span — so a small-range
-  input (e.g. a 1-5 Rating) does not sprawl. Their per-type
+  input (e.g. a 1-5 Rating) does not sprawl. The trailing status
+  column is `th.rs-status`, a fixed `4ch` (item 4 of the column
+  list). Their per-type
   `rs-narrow` / `rs-textlong` hints are dropped (under fixed
   layout `width: 1%` would collapse the column).
 - **One error / one missing entry per group.** Validation runs
@@ -1462,7 +1477,7 @@ compatible either way:
 
 - **Today.** Per-instrument rows render as a plain `<table>` inside
   `.table-scroll`, as does the visibility-policy card's table above
-  it. Column-width hint classes (`.rs-narrow` /
+  it. Column-width hint classes (`.rs-narrow` / `.rs-status` (header only) /
   `.rs-reviewee` / `.rs-textlong`) on `<th>` / `<td>` carry the
   responsive sizing. The data driving each row is built in
   `_surface_context` as a list of dicts with stable, serializable
