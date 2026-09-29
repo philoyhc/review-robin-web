@@ -563,6 +563,11 @@
        * screen.
        */
       th.rs-narrow, td.rs-narrow { width: 1%; white-space: nowrap; }
+      /* The surface's trailing status column (✓ / ⚠) takes a fixed
+         width rather than rs-narrow's 1%, which a table-layout: fixed
+         table (a group table, or any table once a width is set) reads
+         as 1% of the table (19T Item 16). */
+      th.rs-status { width: 4ch; }
       th.rs-reviewee, td.rs-reviewee {
         max-width: 20%;
         min-width: 8em;

@@ -334,7 +334,11 @@
                 {% set first_row_cg = group.rows[0] %}
                 {% for cell in first_row_cg.cells %}
                   {% set _rfw = group.response_field_width_by_id.get(cell.field.id) %}
-                  <col{% if _rfw %} style="width: {{ _rfw }}px"{% endif %}>
+                  {# An unsized numeric column starts at its header /
+                     digit span (as a group table's does), not
+                     rs-narrow's 1% of the fixed table. #}
+                  {% set _nch = numeric_column_ch_width(cell.field, required=cell.may_be_required) if not group.is_group else none %}
+                  <col{% if _rfw %} style="width: {{ _rfw }}px"{% elif _nch %} style="width: {{ _nch }}ch"{% endif %}>
                 {% endfor %}
                 {% if group.show_status_col %}<col>{% endif %}
               </colgroup>
@@ -379,7 +383,7 @@
                     aria-label="Sort by {{ cell.field.label }}"
                     onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge" aria-hidden="true">↕</span></button></th>
               {% endfor %}
-              {% if group.show_status_col %}<th scope="col" class="rs-narrow"><span class="visually-hidden">Status</span></th>{% endif %}
+              {% if group.show_status_col %}<th scope="col" class="rs-status"><span class="visually-hidden">Status</span></th>{% endif %}
             </tr>
             </thead>
             <tbody class="rrw-rows">

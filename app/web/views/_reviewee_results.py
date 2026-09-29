@@ -64,7 +64,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services import instruments as instruments_service
-from app.web.views._instruments import instrument_heading
+from app.web.views._instruments import instrument_heading, numeric_column_ch_width
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
@@ -640,6 +640,10 @@ def build_reviewee_results_context(
                 is_narrow=(
                     not is_group
                     and f.data_type in ("Integer", "Decimal")
+                ),
+                narrow_ch=(
+                    None if is_group
+                    else numeric_column_ch_width(f, required=f.id in may_be_required)
                 ),
                 is_textlong=(
                     not is_group

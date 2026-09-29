@@ -3422,6 +3422,9 @@ dep chains called out at the bottom of this file.
    - **Item 15 — The Guide catches up with 19T** (open, planned; Item 12
      until 2026-09-27): branching and the reviewer's view in the in-app
      Guide, after Items 11–14 land.
+   - **Item 16 — Small fixes** (open): a register of small fixes from the
+     author's browser passes; entry 1, a narrow column squished under a
+     fixed table layout.
 
 #### Stubs
 

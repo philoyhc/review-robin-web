@@ -2484,3 +2484,31 @@ Taken 2026-09-27 at `3cec7196`:
 ### Doc impact
 
 - `docs/status.md` — row when the item closes (Item 15).
+
+## Item 16 — Small fixes
+
+**Logged 2026-09-29 on the author's instruction:** a register of small
+fixes from the author's browser passes, one entry each, too small for an
+item of their own. It closes when the author says so.
+
+### Entries
+
+1. **A narrow column squished under a fixed table layout** (#2684).
+   `rs-narrow` is `width: 1%`: an auto layout shrinks the column to its
+   content, a fixed one gives it 1% of the table. So the Band 2 preview's
+   profile column (always fixed) started as a sliver until dragged, and
+   on the reviewer surface, the summary and the results, once any width
+   is set, so did the profile, numeric and status columns. An unsized
+   `<col>` now starts at `views.profile_column_ch_width` (the label plus
+   the sort button, never narrower than "View") or
+   `numeric_column_ch_width` (header or digit span), and the status
+   column at `th.rs-status`'s `4ch`; a dragged width wins. One
+   `diff-reviewer` read and one `spec-writer` pass: both found the
+   summary and the results; acted on.
+
+### Doc impact
+
+- `spec/instruments.md` — the preview's unsized profile column (Item 16, entry 1).
+- `spec/reviewer-surface.md` — unsized profile and numeric columns and the status column under a fixed layout (Item 16, entry 1).
+- `spec/ui_elements.md` — `.rs-status` among the reviewer-table hints (Item 16, entry 1).
+- `docs/status.md` — row when the item closes (Item 16).

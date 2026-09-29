@@ -501,9 +501,16 @@ In rendered order:
    ("Branching between response fields" below) — get a trailing `*`. Header column-width hint is
    driven by the field's `data_type`:
    - `Integer` / `Decimal` → `class="rs-narrow"` (numbers are short).
+     Under a fixed layout an unsized numeric column's `<col>` starts
+     at `views.numeric_column_ch_width` ch — its header or digit
+     span, as a group table's numeric header does — rather than 1%
+     of the table; the reviewer summary and the reviewee results do
+     the same (their `SummaryFieldCol.narrow_ch`).
    - `String` with `validation.max_length > 100` → `class="rs-textlong"`.
    - everything else → no width modifier.
-4. **Status indicator** (trailing, narrow): only renders when
+4. **Status indicator** (trailing, narrow — `th.rs-status`, a fixed
+   `4ch`, which a fixed layout can't squish as it would `rs-narrow`'s
+   1%): only renders when
    `group.show_status_col` is true (i.e. when at least one row has
    `submitted_at` set, or `show_incomplete_marks` is true after a
    missing-required Submit attempt). There is no `show_acknowledge`

@@ -72,7 +72,9 @@
                 <col{% if col.width_px %} style="width: {{ col.width_px }}px"{% elif col.is_profile_link %} style="width: {{ profile_column_ch_width(col.label) }}ch"{% endif %}>
               {% endfor %}
               {% for col in section.field_cols %}
-                <col{% if col.width_px %} style="width: {{ col.width_px }}px"{% endif %}>
+                {# An unsized numeric column starts at its header / digit
+                   span, not rs-narrow's 1% of a fixed table. #}
+                <col{% if col.width_px %} style="width: {{ col.width_px }}px"{% elif col.narrow_ch %} style="width: {{ col.narrow_ch }}ch"{% endif %}>
               {% endfor %}
             </colgroup>
           {% endif %}
