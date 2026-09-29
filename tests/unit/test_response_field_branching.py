@@ -113,15 +113,28 @@ def test_a_valid_branch_has_no_structure_errors() -> None:
 
 
 def test_structure_errors_name_each_broken_rule() -> None:
-    # One level: a governed field can't itself have a branch.
+    # Two levels at most (19T Item 14): a governed field may have a
+    # branch, but a field two levels down may not.
     nested = [
         _parent(),
         _governed(_inline_data_type="Integer", branch_op="eq", branch_value="1"),
-        _governed(id=3, label="Deep", order=2, branch_parent_id=2),
+        _governed(id=3, label="Deep", order=2, branch_parent_id=2,
+                  _inline_data_type="Integer", branch_op="eq", branch_value="1"),
+        _governed(id=4, label="Deeper", order=3, branch_parent_id=3),
     ]
-    assert ("Deep", "A field inside a branch can't have a branch.") in (
-        branch_structure_errors(nested)
-    )
+    two_levels = [*nested[:2], _governed(id=3, label="Deep", order=2, branch_parent_id=2)]
+    assert branch_structure_errors(two_levels) == []
+    assert branch_structure_errors(nested) == [
+        ("Deeper", "A branch inside a branch can't have a branch of its own.")
+    ]
+    # A loop is refused, not followed.
+    loop = [
+        Field(id=1, label="A", order=0, branch_parent_id=2, _inline_data_type="Integer",
+              branch_op="ge", branch_value="1"),
+        Field(id=2, label="B", order=1, branch_parent_id=1, _inline_data_type="Integer",
+              branch_op="ge", branch_value="1"),
+    ]
+    assert ("A", "Its branch leads back to itself.") in branch_structure_errors(loop)
     # A required governed field needs an active required field outside
     # any branch (19T Item 11).
     assert branch_structure_errors([_parent(), _governed(required=True)]) == [
@@ -206,8 +219,8 @@ def test_required_fields_are_the_required_ones_that_apply() -> None:
 
 def test_applicability_walks_the_whole_chain() -> None:
     """19T Item 11's pre-positioning 3: a field under a closed ancestor is
-    closed even while a stale answer below meets its own condition. The
-    structure rules still refuse a chain (Item 14 lifts that)."""
+    closed even while a stale answer below meets its own condition. Item
+    14 lets the structure rules accept the chain."""
     grandparent = _parent()
     parent = _governed(branch_op="ge", branch_value="4", _inline_data_type="Integer")
     child = Field(id=3, label="Why", order=2, branch_parent_id=2,
@@ -216,7 +229,42 @@ def test_applicability_walks_the_whole_chain() -> None:
     assert applicable_field_ids(fields, {1: "5", 2: "5"}) == {1, 2, 3}
     assert applicable_field_ids(fields, {1: "2", 2: "5"}) == {1}
     assert applicable_field_ids(fields, {1: "5", 2: "2"}) == {1, 2}
-    assert branch_structure_errors(fields)
+    assert branch_structure_errors(fields) == []
+
+
+def test_a_branch_inside_a_branch_must_directly_follow_too() -> None:
+    """The level-0 branch's fields include the branch inside it, so a
+    plain field wedged between Level1 and its own branch breaks both."""
+    def chain(*extra: Field) -> list[Field]:
+        return [
+            _parent(),
+            _governed(label="Level1", branch_op="ge", branch_value="4",
+                      _inline_data_type="Integer"),
+            *extra,
+        ]
+
+    level2 = Field(id=3, label="Level2", order=2, branch_parent_id=2)
+    sibling = Field(id=4, label="Sibling", order=3, branch_parent_id=1)
+    assert branch_structure_errors(chain(level2, sibling)) == []
+    wedged = Field(id=5, label="Notes", order=2)
+    level2.order, sibling.order = 3, 4
+    assert branch_structure_errors(chain(wedged, level2, sibling)) == [
+        ("Rating", "A branch's fields must directly follow their parent."),
+        ("Level1", "A branch's fields must directly follow their parent."),
+    ]
+
+
+def test_a_very_long_chain_is_refused_by_name_not_by_recursion() -> None:
+    """Codex on #2681: a settings CSV has no field cap, so a hand-made
+    chain thousands long must come back as named errors."""
+    fields = [Field(id=0, label="F0", order=0, required=True,
+                    _inline_data_type="Integer", branch_op="ge", branch_value="1")]
+    for n in range(1, 3000):
+        fields.append(Field(id=n, label=f"F{n}", order=n, branch_parent_id=n - 1,
+                            _inline_data_type="Integer", branch_op="ge", branch_value="1"))
+    errors = branch_structure_errors(fields)
+    assert ("F3", "A branch inside a branch can't have a branch of its own.") in errors
+    assert ("F1", "A branch inside a branch can't have a branch of its own.") not in errors
 
 
 def test_a_cycle_closes_rather_than_recursing() -> None:

@@ -1089,8 +1089,14 @@ while the condition holds for the assignment's answer to the parent
 (`app/services/responses/_branching.py`). A branch is one ruled group:
 the parent's `<tbody data-new-model-rf-group data-new-model-rf-branch>`
 holds the parent's row, its condition row, and every field it governs,
-directly following the parent in field order. **One level** (a field
-inside a branch can't itself be a parent) and **one branch per parent**.
+directly following the parent in field order. **Two levels at most**: a
+governed field may itself be a parent, and its branch sits inside its
+parent's, directly after it; a field two levels down can't be one ("A
+branch inside a branch can't have a branch of its own.", naming the
+field at the third level, on Save and in the settings CSV), and a chain
+that leads back to itself is refused ("Its branch leads back to
+itself."). **One branch per parent.** A field applies only while every
+branch above it is open or Require.
 
 **⑂**, just after **+**, creates a branch: outline on an Integer,
 Decimal or List field with none, selected (filled, like a pressed R) on
@@ -1223,7 +1229,9 @@ field ends the branch, as X does.
   that row and the condition together.
 - **The governed-answers lock.** Once any governed field has responses,
   the condition, its mode (Require → Show would strand answers on a
-  now-closed branch) and the branch's membership lock —
+  now-closed branch) and the branch's membership lock, and so do those
+  of every branch above it, since changing any of them could close the
+  answered field's branch —
   every governed row's X and ↳, the "+"s inside the branch, ↰ on the row
   below it, and the condition's controls. Save refuses a changed mode
   with the condition's message, and audits a mode change as
@@ -1258,7 +1266,8 @@ stored null, and an unknown mode is refused by name). Each of the four
 is **independently present**, as the
 state's other top-level keys are: an entry that omits one keeps what's
 stored, so a caller ignorant of branching can't clear it. A hidden
-parent (Active off) hides its branch server-side too, and every branch
+parent (Active off) hides its whole branch server-side too, a branch
+inside it included, and every branch
 change is audited as the field's `instrument.field_updated`.
 
 **The preview** mutes a governed column — the reviewer surface's
@@ -1275,8 +1284,8 @@ items, and they are marked "*" as fields that may be required, but the
 required count leaves them out, since the unanswered sample row fails
 every condition.
 
-**Out of scope:** nested branches, more than one branch per parent, and
-a String parent.
+**Out of scope:** a third level of branching, more than one branch per
+parent, and a String parent.
 
 ### Action row
 

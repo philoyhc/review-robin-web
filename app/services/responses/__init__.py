@@ -77,6 +77,11 @@ from ._branching import (
     condition_label,
     branch_structure_errors,
     condition_error,
+    BRANCH_LOOP_MESSAGE,
+    BRANCH_TOO_DEEP_MESSAGE,
+    MAX_BRANCH_DEPTH,
+    branch_depth,
+    hide_below_hidden_parents,
 )
 from ._group_reconciliation import (
     group_key_for_pair,
@@ -138,6 +143,11 @@ __all__ = [
     "may_be_required_field_ids",
     "canonical_condition_value",
     "condition_label",
+    "BRANCH_LOOP_MESSAGE",
+    "BRANCH_TOO_DEEP_MESSAGE",
+    "MAX_BRANCH_DEPTH",
+    "branch_depth",
+    "hide_below_hidden_parents",
     "branch_structure_errors",
     "condition_error",
     # _group_reconciliation

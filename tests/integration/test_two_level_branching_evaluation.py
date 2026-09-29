@@ -1,8 +1,8 @@
 """19T Item 14 rung 2 — two levels of branching, evaluated before they
 can be authored: a field applies only while every branch above it is open,
 the save hold and the surface script walk the chain, and the counts and
-the extract follow. The structure rules still refuse a second level, so
-each test seeds the chain in the database.
+the extract follow. Rung 2 still refused a second level, so each test
+seeds the chain in the database.
 
 The chain: Familiarity (Integer) governs Rating while Familiarity > 0, and
 Rating governs Comments while Rating ≥ 4."""
@@ -82,13 +82,11 @@ def test_required_follows_the_whole_chain() -> None:
     assert required(fields, {1: "0", 2: "5"}) == set()
 
 
-def test_the_structure_rules_still_refuse_a_second_level() -> None:
-    """Nothing outside a test can store a chain until the builder can
-    show one (the plan's rung 4)."""
-    errors = responses_service.branch_structure_errors(
-        [_f(0, required=True), *_chain()]
-    )
-    assert ("F3", "A field inside a branch can't have a branch.") in errors
+def test_the_structure_rules_accept_a_second_level() -> None:
+    """Rung 2 refused it until the builder could show a chain; rung 4
+    accepts it (a third level is refused in
+    ``test_two_level_branching_authoring.py``)."""
+    assert responses_service.branch_structure_errors([_f(0, required=True), *_chain()]) == []
 
 
 # The save path.

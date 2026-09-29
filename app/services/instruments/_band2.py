@@ -600,6 +600,18 @@ def _sync_response_fields_to_db(
     field_by_row_key: dict[str, InstrumentResponseField] = {}
     field_for_entry: list[InstrumentResponseField] = []
 
+    def _entry_parent(entry: dict[str, Any]) -> dict[str, Any] | None:
+        """The entry for ``entry``'s parent: named by row key when the
+        entry sends ``branch_parent``, else its stored parent's."""
+        if "branch_parent" in entry:
+            key = entry["branch_parent"]
+            return entry_by_row_key.get(key) if key else None
+        entry_id = _band2_rf_id(entry)
+        stored = existing_by_id.get(entry_id) if entry_id is not None else None
+        if stored is not None and stored.branch_parent_id is not None:
+            return entry_by_id.get(stored.branch_parent_id)
+        return None
+
     for order_idx, rf in enumerate(sanitised_rfs):
         rf_id = _band2_rf_id(rf)
 
@@ -642,19 +654,16 @@ def _sync_response_fields_to_db(
         prior_visible = bool(field.visible)
         incoming_visible = bool(rf.get("selected", True))
         # 19T Item 10 — a hidden parent hides its branch (the card's
-        # Active cascade, held here too).
-        if "branch_parent" in rf:
-            parent_entry = (
-                entry_by_row_key.get(rf["branch_parent"])
-                if rf["branch_parent"]
-                else None
-            )
-        elif field.branch_parent_id is not None:
-            parent_entry = entry_by_id.get(field.branch_parent_id)
-        else:
-            parent_entry = None
-        if parent_entry is not None and not parent_entry.get("selected"):
-            incoming_visible = False
+        # Active cascade, held here too), from any level above (19T Item
+        # 14).
+        seen_entries: set[int] = set()
+        ancestor = _entry_parent(rf)
+        while ancestor is not None and id(ancestor) not in seen_entries:
+            if not ancestor.get("selected"):
+                incoming_visible = False
+                break
+            seen_entries.add(id(ancestor))
+            ancestor = _entry_parent(ancestor)
         if (
             prior_visible
             and not incoming_visible
@@ -826,7 +835,8 @@ def _apply_branch_rules(
 
     Branches are deleted bottom-up: a parent can't go while it still
     governs a field. Once any field in a branch has responses, the
-    branch's membership, condition and mode lock (the mode from 19T Item
+    branch's membership, condition and mode lock, and so do those of
+    every branch above it (19T Item 14) (the mode from 19T Item
     13: Require → Show would strand answers on a now-closed branch); a field with responses can't
     move into a branch either, since its answers could then sit in a
     closed one. A parent whose last governed field goes loses its
@@ -867,12 +877,28 @@ def _apply_branch_rules(
             )
         return answered[field_id]
 
+    def old_below(parent_id: int) -> set[int]:
+        """Every field in the stored branch, a branch inside it included
+        (iterative, as ``branch_structure_errors``' walk is)."""
+        out: set[int] = set()
+        stack = [parent_id]
+        while stack:
+            for child_id in old_governed.get(stack.pop(), set()):
+                if child_id != parent_id and child_id not in out:
+                    out.add(child_id)
+                    stack.append(child_id)
+        return out
+
     errors: list[tuple[str, str]] = []
     for parent_id in new_governed:
         if parent_id in to_delete:
             errors.append((all_by_id[parent_id].label, "Delete its branch first."))
     for parent_id, old_ids in old_governed.items():
-        if not any(has_responses(i) for i in old_ids):
+        # Answers anywhere below lock every branch above them (19T Item
+        # 14, the author's ruling): a change here could close theirs.
+        if not any(
+            has_responses(i) for i in old_below(parent_id)
+        ):
             continue
         changed = old_ids ^ new_governed.get(parent_id, set())
         errors.extend(

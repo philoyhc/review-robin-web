@@ -148,9 +148,10 @@ The system does not:
   [§10.3](#103-review-surface)): a governed field's cell answers only
   while its parent's condition holds, within the same grid, and can be
   **required** — required, and missing when empty, only while its
-  branch is open. Nested branches, more than one branch per parent, and
-  a String parent remain out of scope (`guide/advanced_instruments.md`
-  Item 1).
+  branch is open. A governed field may itself be a parent, one level
+  down (§5.7); a third level, more than one branch per parent, and a
+  String parent remain out of scope (`guide/advanced_instruments.md`
+  Items 1 and 6).
 - **Run cross-session analytics.** The lobby lists sessions; it
   does not aggregate metrics across them.
 - **Manage participants as cross-session accounts.** Reviewers and
@@ -465,7 +466,10 @@ and what the condition does to the fields it governs. **Show** (the
 default): they show only while its answer meets it, and a required
 governed field is required, and missing when empty, only while its
 branch is open. **Require**: they always show, and are required exactly
-while its answer meets it, else optional (`spec/instruments.md` §
+while its answer meets it, else optional. A governed field may head a
+branch of its own, one level down and no further; a field shows only
+while every Show branch above it is open, and a Require branch above it
+never hides it (`spec/instruments.md` §
 *Branching between response fields*).
 
 **System-derived fields:** the field key (machine id, derived from
@@ -1597,7 +1601,8 @@ photo / profile-link sources).
 
 **Branching** — a response field configured (Band 3) as **governed** by
 another renders muted and disabled until its parent's answer satisfies
-the parent's condition (a **Require** branch never closes; see §5.7);
+the parent's condition and every branch above it is open (a **Require**
+branch never closes; see §5.7);
 it stays that way live as the reviewer edits the parent, and the server enforces the same rule on Save (deleting a
 governed answer whose branch is closed) regardless of what the page
 shows (`spec/reviewer-surface.md` § "Branching between response

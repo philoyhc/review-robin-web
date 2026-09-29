@@ -2281,6 +2281,16 @@ Taken 2026-09-29 at `85750b93`.
   under Require and condition sizing work at either level; a level-1
   parent's ↳ is off. `spec/ui_elements.md` joins Doc impact (its
   `rf-table` row named the retired padding).
+- **Rung 4 splits in two** (2026-09-29), as Item 13's rung 3 did: 4a
+  the server, 4b the builder and the item's read. **4a:** the structure
+  rules accept two levels and refuse a third by name
+  (`BRANCH_TOO_DEEP_MESSAGE`) or a loop (`BRANCH_LOOP_MESSAGE`), and a
+  branch's contiguity counts the branch inside it; Save's lock covers
+  every branch above an answer, and a hidden parent hides its whole
+  subtree on Save and in both settings-CSV phases
+  (`hide_below_hidden_parents`). Until 4b only the settings CSV can
+  author a chain, which rung 3's builder already renders; Save refuses
+  any shape the rules don't allow.
 
 ### PR ladder
 

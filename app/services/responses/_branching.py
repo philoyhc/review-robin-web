@@ -75,6 +75,52 @@ BRANCH_MODE_SHOW = "show"
 BRANCH_MODE_REQUIRE = "require"
 BRANCH_MODES: frozenset[str] = frozenset({BRANCH_MODE_SHOW, BRANCH_MODE_REQUIRE})
 
+# 19T Item 14 — how many branches a field may sit in, and the refusals
+# past it: a branch inside a branch can't have one of its own.
+MAX_BRANCH_DEPTH = 2
+BRANCH_TOO_DEEP_MESSAGE = (
+    "A branch inside a branch can't have a branch of its own."
+)
+BRANCH_LOOP_MESSAGE = "Its branch leads back to itself."
+
+
+def branch_depth(field: BranchField, by_id: Mapping[int, BranchField]) -> int | None:
+    """How many branches ``field`` sits in (0 outside any), or None when
+    its parents lead back to it (19T Item 14). A missing parent ends the
+    count there."""
+    depth = 0
+    seen = {field.id}
+    parent_id = field.branch_parent_id
+    while parent_id is not None:
+        if parent_id in seen:
+            return None
+        parent = by_id.get(parent_id)
+        depth += 1
+        if parent is None:
+            break
+        seen.add(parent_id)
+        parent_id = parent.branch_parent_id
+    return depth
+
+
+def hide_below_hidden_parents(fields: Iterable[BranchField]) -> None:
+    """A hidden parent hides its whole branch, a branch inside it
+    included (19T Item 14): set ``visible`` off on every field with a
+    hidden field above it. Settles in field order whatever the input
+    order, and a loop ends it."""
+    field_list = list(fields)
+    by_id = {field.id: field for field in field_list}
+    for field in field_list:
+        seen = {field.id}
+        parent = by_id.get(field.branch_parent_id)
+        while parent is not None and parent.id not in seen:
+            if not parent.visible:
+                field.visible = False
+                break
+            seen.add(parent.id)
+            parent = by_id.get(parent.branch_parent_id)
+
+
 # 19T Item 11, the author's ruling on pre-positioning 4.
 REQUIRED_GOVERNED_NEEDS_ANCHOR_MESSAGE = (
     "A field inside a branch can be required only when the instrument has "
@@ -297,10 +343,9 @@ def applicable_field_ids(
     require-mode parent (19T Item 13) the condition decides only whether
     the field is required, so the field applies whenever its parent does. The walk
     goes up the whole chain, so a field under a closed ancestor is closed
-    even while a stale answer below it still meets its own condition.
-    Branches are one level deep today (19T Item 14 lifts that), where
-    this is the same answer as checking the parent alone; walking the
-    chain here is 19T Item 11's pre-positioning 3. On a group-scoped
+    even while a stale answer below it still meets its own condition —
+    19T Item 11's pre-positioning 3, which 19T Item 14's two levels use.
+    On a group-scoped
     instrument the caller passes the group row's answers, since the
     parent's answer is shared across the row."""
     field_list = list(fields)
@@ -395,12 +440,14 @@ def branch_structure_errors(
     """Every way an instrument's fields break the branching rules, as
     ``(field label, reason)`` pairs, empty when they don't.
 
-    The rules (the design record's Rulings and 19T Item 10's answers): one
-    level, so a parent is never governed; a parent is an Integer, Decimal
-    or List field with a valid condition; a condition always governs at
-    least one field, since a branch is one unit; and a branch's fields
-    directly follow their parent in field order, so no field sits inside a
-    branch it isn't part of.
+    The rules (the design record's Rulings and 19T Item 10's answers): two
+    levels at most (19T Item 14 lifted one), so a governed field may be a
+    parent but a field inside a branch inside a branch may not; a parent
+    is an Integer, Decimal or List field with a valid condition; a
+    condition always governs at least one field, since a branch is one
+    unit; and a branch's fields, with any branch inside it, directly
+    follow their parent in field order, so no field sits inside a branch
+    it isn't part of.
 
     **A required governed field needs an active required field outside
     any branch** (19T Item 11, the author's ruling on its pre-positioning
@@ -425,10 +472,11 @@ def branch_structure_errors(
         if parent is None:
             errors.append((field.label, "Its branch's parent field is missing."))
             continue
-        if parent.branch_parent_id is not None:
-            errors.append(
-                (field.label, "A field inside a branch can't have a branch.")
-            )
+        depth = branch_depth(field, by_id)
+        if depth is None:
+            errors.append((field.label, BRANCH_LOOP_MESSAGE))
+        elif depth > MAX_BRANCH_DEPTH:
+            errors.append((field.label, BRANCH_TOO_DEEP_MESSAGE))
         governed_by_parent.setdefault(parent_id, []).append(field)
     has_anchor = any(
         f.required and f.visible and f.branch_parent_id is None for f in field_list
@@ -461,13 +509,27 @@ def branch_structure_errors(
             errors.append(
                 (field.label, "Its branch condition governs no field.")
             )
+    def descendants(parent_id: int) -> set[int]:
+        # Iterative, so a hand-made chain of any length (a settings CSV
+        # has no field cap) is refused by name, not by RecursionError
+        # (Codex on #2681).
+        out: set[int] = set()
+        stack = [parent_id]
+        while stack:
+            for child in governed_by_parent.get(stack.pop(), []):
+                if child.id != parent_id and child.id not in out:
+                    out.add(child.id)
+                    stack.append(child.id)
+        return out
+
     ordered = sorted(field_list, key=lambda f: f.order)
     for index, field in enumerate(ordered):
-        governed = governed_by_parent.get(field.id)
-        if not governed:
+        if field.id not in governed_by_parent:
             continue
-        following = ordered[index + 1 : index + 1 + len(governed)]
-        if {f.id for f in following} != {f.id for f in governed}:
+        # The branch's fields and any branch inside it (19T Item 14).
+        below = descendants(field.id)
+        following = ordered[index + 1 : index + 1 + len(below)]
+        if {f.id for f in following} != below:
             errors.append(
                 (field.label, "A branch's fields must directly follow their parent.")
             )
