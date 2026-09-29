@@ -9198,8 +9198,10 @@ def test_band3_response_rows_active_and_arrows_are_wired(
     assert "['string', 'integer', 'decimal', 'list'].indexOf(dataType) < 0" in validate
     move = _rf_fn(body, "newModelRfMove")
     # ▲ ▼ move the row's group (a governed row within its branch, 19T
-    # Item 10), and keep focus on a live arrow.
-    assert "other.parentNode.insertBefore(moving, up ? other : other.nextSibling);" in move
+    # Item 10, with any branch of its own, 19T Item 14), and keep focus
+    # on a live arrow.
+    assert "other.parentNode.insertBefore(group, up ? other : other.nextSibling);" in move
+    assert "unit.forEach(function (el) { sib.parentNode.insertBefore(el, anchor); });" in move
     assert "if (target && !target.disabled) { target.focus(); }" in move
     assert "window.newModelStageBand2State(band2);" in move
     assert "window.newModelRfRecomputeActionStates(r);" in move

@@ -230,7 +230,7 @@ def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) 
     # and the stager sends a governed row's R as it stands.
     assert "requiredBtn.setAttribute('data-required', 'false');" not in recompute
     stager = body[body.index("rf.row_key = row.getAttribute('data-row-key')"):]
-    stager = stager[: stager.index("var cond = group")]
+    stager = stager[: stager.index("var cond = row.hasAttribute(")]
     assert "rf.required = false" not in stager
     # The condition mirrors ``condition_error``'s messages.
     error = _fn(flat, "newModelRfConditionError")
@@ -246,15 +246,16 @@ def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) 
     fork = _fn(flat, "newModelRfFork")
     assert "row.setAttribute('data-new-model-rf-parent', 'true');" in fork
     assert "window.newModelRfNewGovernedRow(band3, cond)" in fork
-    # The last governed field's X takes the condition with it.
+    # The last field of its own branch takes the condition with it, at
+    # either level (19T Item 14).
     delete = _fn(flat, "newModelRfDeleteRow")
-    assert "if (last) { window.newModelRfEndBranch(group); }" in delete
+    assert "if (last) { window.newModelRfEndBranch(ownParent); }" in delete
     end = _fn(flat, "newModelRfEndBranch")
     assert "if (cond) { cond.remove(); }" in end
-    assert "parent.removeAttribute('data-new-model-rf-parent');" in end
-    # The Active cascade.
+    assert "parentRow.removeAttribute('data-new-model-rf-parent');" in end
+    # The Active cascade covers the row's whole unit (19T Item 14).
     active = _fn(flat, "newModelRfToggleActive")
-    assert "group.querySelectorAll('[data-new-model-rf-governed]')" in active
+    assert "var rows = window.newModelRfUnit(row).filter(" in active
     # The stager sends the row key, the parent by row key and the condition.
     start = flat.index("function saveBand2State(card, opts) {")
     stager = flat[start : flat.index("window.newModelStageBand2State = saveBand2State;")]
@@ -310,16 +311,19 @@ def test_the_row_script_joins_and_detaches(client: TestClient, db: Session) -> N
     ):
         assert title in sync, title
     join = _rf_fn(body, "newModelRfJoin")
-    # Detach lands the row directly below its branch; the last one ends it.
+    # Detach steps out one level, landing directly below its branch; the
+    # last one ends it (19T Item 14).
     assert "group.insertAdjacentElement('afterend', own);" in join
-    assert "window.newModelRfEndBranch(group);" in join
+    assert "window.newModelRfUnitEnd(ownParent).insertAdjacentElement('afterend', row);" in join
+    assert "window.newModelRfEndBranch(ownParent);" in join
     # A detached row's Active box comes back, though its hidden parent had
     # turned it off (Codex on #2646).
     ungoverned = _rf_fn(body, "newModelRfMakeUngoverned")
     assert "active.disabled = false;" in ungoverned
     # Joining a plain field starts a branch with an empty condition.
     assert "parent.setAttribute('data-new-model-rf-parent', 'true');" in join
-    assert "window.newModelRfMakeGoverned(row);" in join
+    # Joining lands at the deepest branch that ends directly above.
+    assert "window.newModelRfMakeGoverned(row, joinLevel);" in join
     recompute = _rf_fn(body, "newModelRfRecomputeActionStates")
     assert "window.newModelRfSyncJoin(row);" in recompute
 

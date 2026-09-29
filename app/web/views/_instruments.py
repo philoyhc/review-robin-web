@@ -359,11 +359,21 @@ def _response_field_groups(
         for rf in response_fields
         if rf.get("branch_parent_id") is not None
     }
-    locked_parent_ids = {
-        rf["branch_parent_id"]
+    # 19T Item 14 — answers lock every branch above them, as Save's lock
+    # does: the answered field's parent and each parent above that.
+    parent_of = {
+        rf.get("id"): rf.get("branch_parent_id")
         for rf in response_fields
-        if rf.get("branch_parent_id") is not None and rf.get("has_responses")
+        if rf.get("id") is not None
     }
+    locked_parent_ids: set[Any] = set()
+    for rf in response_fields:
+        if not rf.get("has_responses"):
+            continue
+        ancestor = rf.get("branch_parent_id")
+        while ancestor is not None and ancestor not in locked_parent_ids:
+            locked_parent_ids.add(ancestor)
+            ancestor = parent_of.get(ancestor)
     require_parent_ids = {
         rf.get("id")
         for rf in response_fields

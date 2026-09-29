@@ -2291,6 +2291,16 @@ Taken 2026-09-29 at `85750b93`.
   (`hide_below_hidden_parents`). Until 4b only the settings CSV can
   author a chain, which rung 3's builder already renders; Save refuses
   any shape the rules don't allow.
+- **Rung 4b (the builder wired), 2026-09-29.** A level-1 row's ⑂ is
+  live (off in an answered branch, like its "+"); ↰ joins the deepest
+  branch ending above, at its level; ↳ steps out one level, below its
+  branch, ending a branch it empties; ▲ ▼ move a unit (a row with its
+  condition and deeper rows) within its branch; X on a branch's last
+  field ends that branch; Active cascades through the unit. The view
+  locks every branch above an answer, as Save does. Chromium authored a
+  chain from scratch and walked each of these. Judgment calls: ↰ never
+  starts a branch inside a branch (⑂ does), and the builder's lock stays
+  group-wide, stricter than Save's per-branch rule.
 
 ### PR ladder
 

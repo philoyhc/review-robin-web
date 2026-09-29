@@ -1105,11 +1105,12 @@ branch"). A governed row shifts one column right — the bar sits in the
 checkbox column, its checkbox in the **+** column, its **+** in the ⑂
 column, its ⑂ in the join column and its ↳ in the first of two empty
 slots after join (`td.rf-slot`) — so every row has six leading columns
-and aligns from the name onward, parent and governed alike. A governed
-row's ⑂ is off until two levels can be authored (19T Item 14): titled
-"A branch inside a branch isn't available yet" on an Integer, Decimal
-or List field with no branch, and by the String and has-a-branch titles
-above otherwise. The checkbox sits
+and aligns from the name onward, parent and governed alike. A level-1
+row's ⑂ forks it one level down ("Add a branch inside this branch,
+below this field"): its condition row and fields shift one more column
+right, with their own bar. A level-2 row has no ⑂ (its slot stays
+empty). In an answered branch a level-1 row's ⑂ is off, like its "+".
+The checkbox sits
 centered in whichever column holds it (`td.rf-active-cell`, 19T Item
 12A).
 
@@ -1191,13 +1192,16 @@ spreadsheet formula.
 Two empty slots of that width follow a plain row's join (`td.rf-slot`);
 each level of branching shifts a row one column right into them.
 A plain row that isn't the first, has no saved responses and isn't
-itself a parent can join the unit above: the end of an unlocked branch,
-or, on a plain Integer, Decimal or List field, a new branch with an
-empty condition. Joining keeps the row's **R** (19T Item 11) — Save
-refuses the result if the row's R is now required with no anchor
-elsewhere in the instrument. A governed row in an unlocked branch can
-detach (↳) to directly below the branch; detaching the only governed
-field ends the branch, as X does.
+itself a parent can join the unit above: the deepest unlocked branch
+that ends directly above it, at that branch's level, or, on a plain
+Integer, Decimal or List field, a new branch with an empty condition
+(a branch inside a branch is started with ⑂, not ↰). Joining keeps the
+row's **R** (19T Item 11) — Save refuses the result if the row's R is
+now required with no anchor elsewhere in the instrument. A governed row
+in an unlocked branch can detach (↳) one level up, to directly below
+its branch; detaching the only field of a branch ends that branch, as
+X does. A governed row that is itself a parent keeps its branch where
+it is: its ↳ is off ("A field with a branch can't leave its branch").
 
 **Inside a branch:**
 
@@ -1224,9 +1228,11 @@ field ends the branch, as X does.
 - **String is disabled** in a parent's type select. Other type changes
   keep the condition, which turns amber and is refused by Save if it no
   longer fits.
-- **Deletion runs bottom-up.** A parent's X is disabled while it has a
-  branch ("Delete its branch first"); the last governed row's X deletes
-  that row and the condition together.
+- **Deletion runs bottom-up**, at each level. A parent's X is disabled
+  while it has a branch ("Delete its branch first"); the last field of a
+  branch deletes that row and the branch's condition together.
+- **▲ ▼ move a unit within its branch**: a governed row swaps with its
+  neighbor in the same branch, carrying any branch of its own.
 - **The governed-answers lock.** Once any governed field has responses,
   the condition, its mode (Require → Show would strand answers on a
   now-closed branch) and the branch's membership lock, and so do those
@@ -1240,9 +1246,9 @@ field ends the branch, as X does.
   mode with its condition. Answers on
   the parent alone lock nothing about the branch; the parent's own type
   and bounds lock as they do today (`has_responses`).
-- **Active cascades both ways.** Unticking a parent's Active writes
-  `visible = False` onto every governed field; re-ticking it re-ticks
-  them all.
+- **Active cascades both ways**, through every level below. Unticking
+  a parent's Active writes `visible = False` onto every field below it,
+  a branch inside its branch included; re-ticking it re-ticks them all.
 - **An answered field can't move into a branch.** ↰ is off on a row
   with saved responses, and Save refuses the move, since the field's
   answers could then sit in a closed branch.
