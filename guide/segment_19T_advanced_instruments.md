@@ -2568,7 +2568,8 @@ item of their own. It closes when the author says so.
    Headless Chromium in the sandbox: the password box now 297 × 36 with
    12px padding, as its neighbours. **Read:** one `diff-reviewer` read;
    it found §8's type list stale and no Doc impact bullet for it, both
-   acted on.
+   acted on; a `spec-writer` pass then took the history out of the new
+   §8 sentences.
 
 ### Doc impact
 
