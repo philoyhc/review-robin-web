@@ -28,6 +28,10 @@
        lock regions so its table can scroll; it fades with the intro card
        above it (19T Item 12A). */
     [data-instrument-card][data-instrument-locked="true"] [data-new-model-band2-vp-preview-card] { opacity: 0.75; }
+    /* 19T Item 16 entry 6 — locked, an intro card with neither a heading
+       nor a subtitle is not drawn, as the reviewer surface draws none;
+       unlocked it holds the description box. */
+    [data-instrument-card][data-instrument-locked="true"] .rs-intro-name[data-intro-empty] { display: none; }
     /* The Band 2 preview help-card ✎/✓ edit affordances are built by
        JS (renderHelpCard, keyed by data-help-card-key) so they can't
        carry a Jinja data-unlock-only marker. `inert` on the lock
@@ -1854,34 +1858,38 @@
                data-session-id="{{ session.id }}"
                style="margin-top: 16px;">
             <div class="rs-intro-col" data-rs-intro-col="left">
+            {% set _heading = band2_intro_heading_by_instrument[instrument.id] %}
             <div class="card rs-instrument-card rs-intro-name"
                  data-intro-edit-block data-lock-region
+                 data-intro-position="{{ loop.index }}"
+                 data-intro-total="{{ instruments | length }}"
+                 {% if not _heading.title and not _heading.subtitle %}data-intro-empty{% endif %}
                  {% if not is_editing %}inert aria-hidden="true"{% endif %}
                  style="position: relative;">
-              {# Intro-card heading mirrors the reviewer-surface
-                 ``views.instrument_heading`` contract:
-                 ``#{N}: {short_label}`` when set, just ``#{N}``
-                 otherwise. The short label itself is operator-
-                 editable from the card title in the ``<summary>``
-                 above — see the 2026-05-28 operator-identifier
-                 policy. #}
-              <h2 data-intro-short-label-block
-                  style="display: flex; align-items: baseline; gap: 8px;">
-                <span>#{{ loop.index }}{% if instrument.short_label %}: <span data-intro-short-label-view>{{ instrument.short_label }}</span>{% endif %}</span>
-              </h2>
+              {# Intro-card heading: the reviewer surface's own
+                 (``views.instrument_heading``, 19T Item 16 entry 6) —
+                 ``#{N}: {short_label}``, just ``#{N}``, or in a
+                 one-instrument session the short label alone (the
+                 description when there is none). The short label is
+                 edited from the card title in the ``<summary>`` above
+                 (the 2026-05-28 operator-identifier policy);
+                 ``newModelSyncTextViews`` recomposes the heading on
+                 Lock with ``newModelIntroHeading``. #}
+              <h2 data-intro-title-view{% if not _heading.title %} hidden{% endif %}>{{ _heading.title or '' }}</h2>
               {# Segment 18R Item 2 PR 4 — the inline ✎/✓ editor
                  retires. The description is a view/edit swap keyed on
                  the card lock state: the read-only paragraph shows
                  when locked (data-lock-only); the textarea shows when
                  unlocked (data-unlock-only) and rides the dfsave form
                  so it commits via the consolidated /save on Save (no
-                 more immediate /identity POST). newModelSetLock syncs
-                 the view paragraph from the textarea when the card
-                 locks. #}
+                 more immediate /identity POST). newModelSetLock
+                 recomposes the heading and the view paragraph when the
+                 card locks (19T Item 16 entry 6). #}
               <div data-intro-description-block>
+                {# The reviewer's subtitle, spaced as the surface's is;
+                   none, and no blank line, when the heading has none. #}
                 <p class="rs-instrument-subtitle muted"
-                   data-intro-description-view data-lock-only
-                   style="margin: 0; min-height: 1.4em;">{{ instrument.description or '' }}</p>
+                   data-intro-description-view data-lock-only{% if not _heading.subtitle %} hidden{% endif %}>{{ _heading.subtitle or '' }}</p>
                 <textarea data-intro-description-input data-unlock-only
                           form="dfsave-{{ instrument.id }}" name="description"
                           placeholder="(no description)"
@@ -3854,8 +3862,9 @@
           };
           // Segment 18R Item 2 PR 4 — copy the short-label + description
           // input values into their read-only view elements (shown when
-          // the card is locked). Handles the fallback heading nudge and
-          // the reviewer-preview ``#N: <label>`` separator.
+          // the card is locked): the card title with its fallback nudge,
+          // and the reviewer-preview heading and subtitle, recomposed by
+          // ``newModelIntroHeading``.
           window.newModelSyncTextViews = window.newModelSyncTextViews || function (card) {
             if (!card) { return; }
             var titleInput = card.querySelector('[data-card-title-input]');
@@ -3870,20 +3879,43 @@
                   + (card.getAttribute('data-instrument-card') || '');
                 titleView.classList.add('card-title-fallback');
               }
-              // The reviewer-preview heading span only exists when a
-              // short label was set at render time (``#N: <label>``);
-              // sync it when present. The blank → set case (a
-              // never-named instrument) stays ``#N`` until the next
-              // reload — the always-present card title already shows
-              // the new label.
-              var headView = card.querySelector('[data-intro-short-label-view]');
-              if (headView) { headView.textContent = label; }
             }
+            // 19T Item 16 entry 6 — the intro card's reviewer-preview
+            // heading and subtitle, recomposed from the saved label and
+            // description (a Save is a fetch, so the rendered ones can be
+            // stale by the time the card locks).
+            var intro = card.querySelector('[data-intro-edit-block]');
+            var headView = card.querySelector('[data-intro-title-view]');
             var descInput = card.querySelector('[data-intro-description-input]');
             var descView = card.querySelector('[data-intro-description-view]');
-            if (descInput && descView) {
-              descView.textContent = descInput.value || '';
+            if (intro && headView && descInput && descView) {
+              var heading = window.newModelIntroHeading(
+                titleInput ? titleInput.value : '', descInput.value,
+                parseInt(intro.getAttribute('data-intro-position'), 10),
+                parseInt(intro.getAttribute('data-intro-total'), 10));
+              headView.textContent = heading.title || '';
+              headView.hidden = !heading.title;
+              descView.textContent = heading.subtitle || '';
+              descView.hidden = !heading.subtitle;
+              intro.toggleAttribute('data-intro-empty', !heading.title && !heading.subtitle);
             }
+          };
+          // The reviewer surface's heading rule, ``views.instrument_heading``
+          // (kept identical; a node test in test_inline_scripts_parse.py
+          // holds the two to the same answers): in a one-instrument
+          // session the short label alone, or the description in its
+          // place; otherwise ``#N: label`` or ``#N``, the description
+          // beneath. ``null`` is no title / no subtitle.
+          window.newModelIntroHeading = function (label, description, position, total) {
+            var shortLabel = String(label || '').trim();
+            var desc = String(description || '').trim() || null;
+            if (total === 1) {
+              if (shortLabel) { return { title: shortLabel, subtitle: desc }; }
+              if (desc) { return { title: desc, subtitle: null }; }
+              return { title: null, subtitle: null };
+            }
+            if (shortLabel) { return { title: '#' + position + ': ' + shortLabel, subtitle: desc }; }
+            return { title: '#' + position, subtitle: desc };
           };
           // Lock click handler. If Save is active (something is
           // dirty), confirm before locking. On confirm (or when

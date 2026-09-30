@@ -4572,15 +4572,10 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     assert intro_idx != -1
     intro_block = flat[intro_idx : intro_idx + 4000]
     assert "#2:" in intro_block
-    # short_label renders inside the view span (alongside the
-    # # prefix); description renders inside the view paragraph.
-    # 2026-05-28 follow-on: the short_label editor moved to the
-    # card title in the ``<summary>``, so the intro card's span
-    # is now display-only and inherits h2 weight naturally —
-    # the prior explicit ``style="font-weight: inherit;"`` is
-    # gone.
-    assert "data-intro-short-label-view" in intro_block
-    assert ">Peer Review<" in intro_block
+    # 19T Item 16 entry 6 — the reviewer surface's own heading, whole,
+    # in the h2 (the short label is edited from the card title in the
+    # ``<summary>``); the description renders in the view paragraph.
+    assert "data-intro-title-view>#2: Peer Review</h2>" in intro_block
     assert "Quick sanity check after milestone 1." in intro_block
 
     # Counts reflect the full authored response-field set, not
@@ -4640,12 +4635,9 @@ def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
     # wrappers longer than the grid it replaced.
     intro_block = flat[intro_idx : intro_idx + 8000]
     # Heading still renders (#2: Reflection — source seed
-    # instrument is #1). 2026-05-28 follow-on dropped the
-    # explicit ``style="font-weight: inherit;"`` on the view
-    # span — see the sibling test's comment.
+    # instrument is #1), whole, as the reviewer surface composes it.
     assert "#2:" in intro_block
-    assert "data-intro-short-label-view" in intro_block
-    assert ">Reflection<" in intro_block
+    assert "data-intro-title-view>#2: Reflection</h2>" in intro_block
     # Progress row is rendered (always present so JS can update
     # counts live without a page reload) but ``hidden`` collapses
     # it when the instrument has zero response fields.
