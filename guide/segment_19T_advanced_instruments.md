@@ -2542,9 +2542,15 @@ item of their own. It closes when the author says so.
 3. **The Settings page in two columns** (author's ask, 2026-09-30). The
    "Bring your own SMTP" card folds into Email send (SMTP), below its
    header and above its fields, still only until a host is saved; that
-   card is the left column of a `.card-columns` pair, Date & time and
-   Clear all settings stacked in the right. Chromium at 1400 and 900px:
-   the columns split evenly, no horizontal scroll. Out of scope, noted:
+   card is the left column of a `.bottom-grid` pair of `.bottom-left`
+   stacks, Date & time and Clear all settings stacked in the right. The
+   read moved it off `.card-columns`, which never collapses: the pair
+   now drops to one column at 800px (`spec/visual_style_rrw.md`), which
+   also keeps Clear's 200px button inside its card on a phone. Stacked,
+   the two sides touched, since `.bottom-grid .card` zeroes the cards'
+   margins; the collapsed `.bottom-grid` now takes a 20px `row-gap`,
+   which Session Home and Create get too. Chromium at 1400, 900, 600
+   and 400px: two columns, then one with the gap, no horizontal scroll. Out of scope, noted:
    the App password box is unstyled, as on `main`, since `base.html`'s
    input rule lists no `type="password"`.
 
@@ -2554,4 +2560,5 @@ item of their own. It closes when the author says so.
 - `spec/reviewer-surface.md` — unsized profile and numeric columns and the status column under a fixed layout (Item 16, entry 1).
 - `spec/ui_elements.md` — `.rs-status` among the reviewer-table hints (Item 16, entry 1).
 - `spec/rrw_functional_spec.md` — §9.13 the Settings page's two columns (Item 16, entry 3).
+- `spec/ui_elements.md` — §10 `.bottom-grid`'s collapsed row gap (Item 16, entry 3).
 - `docs/status.md` — row when the item closes (Item 16).

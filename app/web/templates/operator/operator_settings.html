@@ -10,16 +10,16 @@
     <h1>Settings</h1>
   </div>
 
-
+  {# 19T Item 16 entry 3 — two columns: the SMTP card on the left (its
+     "Bring your own SMTP" intro folded in below the header), Date & time
+     and Clear all settings stacked on the right. `.bottom-grid` with a
+     `.bottom-left` stack per side (spec/ui_elements.md §10): each side
+     keeps its own height, and the pair collapses to one column at 800px. #}
+  <div class="bottom-grid">
+  <div class="bottom-left">
   {# Save button starts disabled and only enables once the operator
      has touched any input — the disabled→enabled→disabled cycle
      across the Save reload replaces a flash banner. #}
-  {# 19T Item 16 entry 3 — two columns: the SMTP card on the left (its
-     "Bring your own SMTP" intro folded in below the header), Date & time
-     and Clear all settings stacked on the right. `.card-columns` so the
-     sides keep their own heights. #}
-  <div class="card-columns">
-  <div>
   <div class="card">
     <h2>Email send (SMTP)</h2>
     {% if not user.smtp_host %}
@@ -95,7 +95,7 @@
   </div>
   </div>
 
-  <div>
+  <div class="bottom-left">
   {# Segment 18B PR 2 — per-operator default display timezone.
      Searchable <datalist> over every IANA zone name. The signed-in
      operator's surfaces render in this zone; new sessions inherit

@@ -71,14 +71,13 @@ def test_settings_display_mode_card_retired_toggle_in_chrome(
     client: TestClient, db: Session
 ) -> None:
     """Segment 19C Item 2 (W6) — the settings Display-mode card was retired in
-    favour of a chrome toggle; Date & time returns to a full-width card (no
-    ``.bottom-grid``). The light/dark pill lives in the chrome instead."""
+    favour of a chrome toggle; its ``.bottom-grid`` pairing with Date & time
+    went with it. The light/dark pill lives in the chrome instead."""
     body = client.get("/operator/settings").text
-    # Card gone, grid unwrapped, Date & time still present (in the right
-    # column since 19T Item 16 entry 3).
+    # Card gone; Date & time still present (in the right column since
+    # 19T Item 16 entry 3).
     assert 'id="display-mode-settings"' not in body
     assert "<h2>Display mode</h2>" not in body
-    assert 'class="bottom-grid"' not in body
     assert 'id="timezone-settings"' in body
     # The chrome toggle pill renders instead — two states, no System.
     assert 'class="theme-toggle"' in body
@@ -117,9 +116,9 @@ def test_settings_get_renders_populated_form_when_configured(
 def test_settings_two_columns_smtp_left_date_and_clear_right(
     client: TestClient, db: Session
 ) -> None:
-    """19T Item 16 entry 3 — one `.card-columns` pair: the SMTP card
-    alone in the left column; Date & time then Clear all settings in the
-    right."""
+    """19T Item 16 entry 3 — one `.bottom-grid` pair of `.bottom-left`
+    stacks: the SMTP card alone in the left; Date & time then Clear all
+    settings in the right."""
     from html.parser import HTMLParser
 
     class _Columns(HTMLParser):
@@ -135,7 +134,9 @@ def test_settings_two_columns_smtp_left_date_and_clear_right(
             if tag != "div":
                 return
             a = {k: v or "" for k, v in attrs}
-            if self.stack and self.stack[-1].get("class") == "card-columns":
+            if self.stack and "bottom-grid" in self.stack[-1].get(
+                "class", ""
+            ).split():
                 self.columns_seen += 1
                 a["_column"] = str(self.columns_seen)
             self.stack.append(a)

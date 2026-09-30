@@ -1813,7 +1813,10 @@
           grid-column: 1;
           grid-row: auto;
         }
-        .bottom-grid { grid-template-columns: 1fr; }
+        /* Stacked, the two sides need the gap the column-gap gave them
+           side by side: `.bottom-grid .card` zeroes the cards' margins
+           (19T Item 16 entry 3). */
+        .bottom-grid { grid-template-columns: 1fr; row-gap: 20px; }
         .card-half { max-width: 100%; }
       }
       /* ──────────────────────────────────────────────────────────
