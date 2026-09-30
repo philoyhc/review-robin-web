@@ -2607,6 +2607,15 @@ item of their own. It closes when the author says so.
    textarea" stale, stale comments in the template and tests, and
    `spec/reviewer-surface.md` counting "instruments the reviewer is
    assigned on" where both surfaces count the session's; all fixed.
+7. **The Guide's preview capture retaken** (author's `Guide_v4b3`,
+   2026-09-30). `instrument-card-preview` and its dark half showed Band
+   2 before Item 17 rung 4 and entry 6: "#1" over an empty name card, the
+   visibility card on the right, the help cards in a row beneath. The
+   pair now shows the name card ("Group Peer Review") over the
+   visibility card, the help cards on the right; both halves one screen
+   (`spec/ui_elements.md` §10). The alt text follows. The other captures
+   show no intro and nothing else from entries 3–6 (the Settings page,
+   the password box and a focused file input have no capture).
 
 ### Doc impact
 
