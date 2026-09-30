@@ -2422,41 +2422,35 @@ Taken 2026-09-27 at `3cec7196`:
 
 ### Status
 
-- **Rung 1 (prose), 2026-09-29.** Base SHA for the item's read:
-  `305f2463`. From the author's draft (`Guide_v4a`): the preview
-  paragraph points down to the fields tables, which get their own
-  paragraph (checkboxes, ▲ ▼, add / delete / edit); a paragraph on
-  branching (⑂, ↰, ↳, an example of a Show and a Require condition, a
-  branch one level down, the lock once answered); a sentence in "For
-  reviewers" on * and fields that open from an answer. Three wordings
-  from the review of the draft: "can only be answered if" (a closed branch's
-  fields still show, grayed), "↳ button detaches", and the two-level and
-  lock sentences. The example reads "For example" until rung 2 lands its
-  capture.
-- **Rung 2 (captures), 2026-09-29, in the same PR** (#2686, still open
-  when the author's `Guide_v4b` arrived with the dark shots). The
-  preview and fields pairs are replaced, and a new branching pair
-  (`instrument-card-branching`) follows the branching paragraph, which
-  now reads "In the example below". The fields pair keeps its file name
-  (`instrument-card-fields-and-visibility`, cited by Item 1's Doc impact)
-  though visibility now sits in the preview. **The pairs show different
-  states** (the dark preview one help-text card, the dark fields shot
-  unlocked, the dark branching shot two more rows), which
-  `spec/ui_elements.md` §10 counts a defect: a pair is one screen shot
-  twice. Retakes are the author's; until then each alt text names only
-  what both halves show. The item's read (over `305f2463..421d2f7d`)
-  found that, the lock sentence claiming the fields lock (their
-  membership and the condition do, up the chain), and "* are required"
-  (a * marks a field that may be required); fixed but for the retakes.
-  The author's `Guide_v4b1` and `Guide_v4b2` retook the three dark
-  halves, so every pair now shows one screen; the alt text names both
-  help-text cards, the locked card's Unlock, and ▲ ▼ only on the
-  movable display fields.
-- **Follow-up, 2026-09-29** (author's edit after #2686): the branching
-  paragraph gets its own `h3`, "Advanced features: conditional
-  branching", and ends on the limits: two levels, and only numerical and
-  list fields can branch (Integer, Decimal, List per
-  `spec/instruments.md`).
+**Closed 2026-09-30** (#2686, #2687, and this close). Base SHA for the
+item's read: `305f2463`.
+
+- **What shipped, against the ladder.** Rungs 1 and 2 landed together in
+  #2686 because the author's captures (`Guide_v4a`, `Guide_v4b`) arrived
+  while rung 1 was open. "Build the form" points the preview down to the
+  fields tables, which get their own paragraph and capture; branching
+  (⑂, ↰, ↳, a Show and a Require example, one level down, the lock) sits
+  under its own `h3`, "Advanced features: conditional branching" (#2687,
+  the author's edit), ending on the limits (two levels; only Integer,
+  Decimal and List fields can have a branch). "For reviewers" says a *
+  marks a field that is or may become required, and that some fields
+  open only from an earlier answer.
+- **Captures.** `instrument-card-preview` and
+  `instrument-card-fields-and-visibility` replaced (the second keeps its
+  name, which Item 1's Doc impact cites, though visibility now sits in
+  the preview); `instrument-card-branching` new. The first dark halves
+  showed different states from the light ones, a defect under
+  `spec/ui_elements.md` §10; the author retook them (`Guide_v4b1`,
+  `Guide_v4b2`) until each pair showed one screen.
+- **Decisions confirmed at build.** The lock is worded as a branch's
+  condition and membership, up the chain, not the fields themselves (the
+  read, then Codex); alt text names only what both halves show.
+- **Reads: three.** The cumulative read (`305f2463..421d2f7d`) found the
+  mismatched pairs, the lock and * wordings and a preview alt text; the
+  retake read found a Display fields order and ▲ ▼ claimed on every
+  display field; the heading's read confirmed the limits against
+  `_branching.py`. All acted on. No `spec/` path was in Doc impact, so
+  `spec-writer` had nothing to run against.
 
 ### PR ladder
 
