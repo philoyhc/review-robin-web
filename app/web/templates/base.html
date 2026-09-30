@@ -4658,17 +4658,25 @@
       // split never feeds back into itself. A change under 24px is
       // ignored too: a page scrollbar appearing or leaving (~15px) would
       // otherwise re-split, change the page's height, toggle the
-      // scrollbar back, and loop. From zero (a hidden intro shown) always
-      // counts.
+      // scrollbar back, and loop. From zero (a hidden intro shown) or to
+      // zero always counts, and so does crossing into or out of the
+      // one-column layout, however small the change that crossed it.
       function rrwIntroWatch(wrapper) {
         if (wrapper.__rrwIntroWatched) { return; }
         wrapper.__rrwIntroWatched = true;
+        var p = rrwIntroParts(wrapper);
+        if (!p) { return; }
         var lastWidth = wrapper.offsetWidth;
+        var lastCollapsed = rrwIntroCollapsed(p);
         var rerun = function () {
           var w = wrapper.offsetWidth;
-          if (lastWidth && w && Math.abs(w - lastWidth) < 24) { return; }
-          if (w === lastWidth) { return; }
+          var collapsed = rrwIntroCollapsed(p);
+          if (collapsed === lastCollapsed) {
+            if (w === lastWidth) { return; }
+            if (lastWidth && w && Math.abs(w - lastWidth) < 24) { return; }
+          }
           lastWidth = w;
+          lastCollapsed = collapsed;
           rrwIntroBalance(wrapper);
         };
         if (window.ResizeObserver) {

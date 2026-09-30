@@ -2719,7 +2719,11 @@ Taken 2026-09-30 at `be68a8ad`:
   drops a focused textarea (an unchanged placement now moves nothing);
   a possible scrollbar loop (width changes under 24px ignored); the
   estimate ignoring a long title; "0..k" for the first `k`; weak tests
-  and stale comments. All acted on.
+  and stale comments. All acted on. A second read, of those fixes, found
+  the 24px guard could swallow the resize that crossed 800px (crossing
+  into or out of one column now always re-runs), and two gap tests that
+  could not fail (replaced by cases a hard-coded or ignored gap answers
+  differently). Chromium: 815 → 795 → 810px reorders and re-splits.
 
 ### PR ladder
 

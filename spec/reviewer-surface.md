@@ -381,7 +381,7 @@ by how many instruments the reviewer is assigned on:
 | Multi-instrument, `short_label` set | `#{N}: {short_label}` | `description` if set, else nothing |
 | Multi-instrument, `short_label` empty | `#{N}` (bare) | `description` if set, else nothing |
 | Single-instrument, `short_label` set | `{short_label}` (no `#1:` prefix) | `description` if set, else nothing |
-| Single-instrument, both empty | none — no heading row renders | n/a |
+| Single-instrument, both empty | none — no heading card renders | n/a |
 | Single-instrument, only `description` set | `{description}` | none |
 
 The `#{N}` prefix is the safety-net default for multi-instrument

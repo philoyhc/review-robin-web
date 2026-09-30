@@ -232,10 +232,13 @@ _SPLIT_CASES = (
     (100, 100, [50, 50]),
     (60, 150, [200, 30, 30, 30]),
     (65.5, 154.25, [46.5, 70.25, 46.5, 118, 46.5]),
+    (None, None, [40, 10, 10, 10]),
+    (None, 20, [10, 10, 10]),
 )
-# The gap each case runs with: most at the surface's 12px, two at others,
-# so a copy that hard-coded one gap would disagree.
-_SPLIT_GAPS = (12, 12, 12, 12, 12, 12, 12, 12, 20, 0)
+# The gap each case runs with: most at the surface's 12px; the last two
+# at 20 and 0, where the answer differs from 12's (2 not 1, 3 not 2), so
+# a copy that hard-coded one gap would disagree.
+_SPLIT_GAPS = (12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 20, 0)
 
 
 def test_the_browsers_intro_split_matches_the_servers() -> None:

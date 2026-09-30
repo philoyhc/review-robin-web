@@ -43,11 +43,15 @@ def test_a_long_first_card_takes_the_left_alone() -> None:
     assert intro_split_index(60, 150, [200, 30, 30, 30], GAP) == 1
 
 
-def test_the_gap_counts_between_cards_only() -> None:
-    # Three cards of 10 either side of a 0 top: equal sums, so the gaps
-    # decide; with no top card a column of n cards carries n - 1 gaps.
-    assert intro_split_index(None, None, [10, 10, 10, 10], 20) == 2
-    assert intro_split_index(None, 25, [10, 10], 20) == 2
+def test_the_gap_decides_between_near_splits() -> None:
+    # A 40 then three 10s: with the gap between cards counted (20 here)
+    # the best split is 40 + 10 against 10 + 10; a copy that ignored the
+    # gap, or fixed it at 12, answers 1.
+    assert intro_split_index(None, None, [40, 10, 10, 10], 20) == 2
+    assert intro_split_index(None, None, [40, 10, 10, 10], 0) == 1
+    # With no gap three 10s balance a 20 top; at 12 the gaps tip it to 2.
+    assert intro_split_index(None, 20, [10, 10, 10], 0) == 3
+    assert intro_split_index(None, 20, [10, 10, 10], 12) == 2
 
 
 def test_the_estimate_counts_a_long_title() -> None:

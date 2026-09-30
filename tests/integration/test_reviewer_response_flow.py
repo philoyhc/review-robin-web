@@ -254,8 +254,8 @@ def test_surface_help_text_multi_items_render_in_grid(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Two+ help items render as half-width cards inside the per-
-    instrument intro grid; no solo-card branch."""
+    """Two+ help items render as half-width cards in the per-instrument
+    intro's columns; no solo-card branch."""
     from app.db.models import InstrumentResponseField
 
     operator = make_client(alice)
