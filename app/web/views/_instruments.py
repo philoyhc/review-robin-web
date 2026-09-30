@@ -62,8 +62,8 @@ class InstrumentHeading:
     """Title + optional subtitle for the per-instrument heading card.
 
     Title lands on the H2; subtitle on a `.muted` body-weight `<p>`
-    below it inside `.card.rs-instrument-card`, which sits in column 1
-    of the per-instrument intro grid (`.rs-intro-grid`). Either or
+    below it inside `.card.rs-instrument-card`, which heads the left
+    column of the per-instrument intro (`.rs-intro-columns`). Either or
     both can be ``None`` — the template only renders the heading card
     when ``title`` is truthy.
 
@@ -147,6 +147,81 @@ def instrument_heading(
     if short:
         return InstrumentHeading(title=f"#{position}: {short}", subtitle=desc)
     return InstrumentHeading(title=f"#{position}", subtitle=desc)
+
+
+
+def intro_split_index(
+    left_top: float | None,
+    right_top: float | None,
+    help_heights: list[float],
+    gap: float,
+) -> int:
+    """How many help cards go in the intro's left column (19T Item 17).
+
+    The intro is two column stacks: ``left_top`` (the heading card) over
+    the first ``k`` help cards, ``right_top`` (the visibility card) over
+    the rest, in field order. ``None`` is a column with no top card. Returns the
+    ``k`` whose columns end closest in height, ties to the larger ``k``
+    (the heavier left column). Kept identical to ``rrwIntroSplitIndex``
+    in ``base.html``, which splits on measured heights; a node test in
+    ``tests/integration/test_inline_scripts_parse.py`` holds the two to
+    the same answers.
+    """
+
+    def column(top: float | None, heights: list[float]) -> float:
+        parts = ([top] if top is not None else []) + list(heights)
+        return sum(parts) + gap * max(len(parts) - 1, 0)
+
+    best_k, best_diff = 0, None
+    for k in range(len(help_heights) + 1):
+        diff = abs(
+            column(left_top, help_heights[:k])
+            - column(right_top, help_heights[k:])
+        )
+        if best_diff is None or diff <= best_diff:
+            best_k, best_diff = k, diff
+    return best_k
+
+
+# Estimated card heights for the server's first split, in px at a
+# half-width column of the reviewer surface (about 80 characters a line).
+# Measured in Chromium at 1400px (19T Item 17): a one-line help card is
+# 46px, a heading with a one-line description 89px, the visibility card
+# 154px with two rows. The browser re-splits on measured heights; this
+# only has to be close enough that the page doesn't visibly jump.
+_INTRO_CHARS_PER_LINE = 80
+_INTRO_LINE_PX = 24
+_INTRO_GAP_PX = 12
+_INTRO_TITLE_CHARS_PER_LINE = 50
+_INTRO_TITLE_LINE_PX = 32
+
+
+def _intro_lines(text: str) -> int:
+    return max(1, math.ceil(len(text) / _INTRO_CHARS_PER_LINE))
+
+
+def estimated_intro_split(
+    heading: InstrumentHeading, visibility_rows: list[Any], help_items: list[Any]
+) -> int:
+    """The server's estimate of :func:`intro_split_index` from text
+    lengths, so the page renders close to balanced before (or without)
+    the browser's measured split."""
+    left_top = None
+    if heading.title:
+        # A one-line title; a longer one (a single instrument whose
+        # description is its title) adds H2 lines of about 50 characters.
+        left_top = 65.0 + _INTRO_TITLE_LINE_PX * (
+            max(1, math.ceil(len(heading.title) / _INTRO_TITLE_CHARS_PER_LINE)) - 1
+        )
+        if heading.subtitle:
+            left_top += _INTRO_LINE_PX * _intro_lines(heading.subtitle)
+    right_top = 76.0 + 39.0 * len(visibility_rows) if visibility_rows else None
+    heights = [
+        22.0
+        + _INTRO_LINE_PX * _intro_lines(f"{item.label} — {item.help_text or ''}")
+        for item in help_items
+    ]
+    return intro_split_index(left_top, right_top, heights, _INTRO_GAP_PX)
 
 
 def _format_band2_bound(value: float) -> str:

@@ -2660,6 +2660,8 @@ page's Band 2 preview) shows two grids:
 - The DOM order follows the columns (column-major), so a screen reader
   reads what the eye does down each column; keeping the DOM fixed and
   positioning visually would read the columns interleaved (2026-09-30).
+  Collapsed to one column the help cards all go right, so the DOM order
+  is the visual one there too (the item's read, 2026-09-30).
 
 ### Blast radius (measured)
 
@@ -2692,6 +2694,36 @@ Taken 2026-09-30 at `be68a8ad`:
   help cards under it, visibility right; at 700px one column, name,
   visibility, help. Band 2 locked: name card 82px, help cards inert and
   faded left; unlocked in-page, editable.
+- **Rung 2 (the split), 2026-09-30.** `views.intro_split_index` and
+  `rrwIntroSplitIndex` (`base.html` `<head>`, so either page can call
+  it) choose `k`; `views.estimated_intro_split` estimates it from text
+  for the server's render; `rrwIntroBalance` measures and places,
+  skipping an intro with no width or collapsed to one column, and
+  `rrwIntroWatch` re-takes it on a width change only (a height change is
+  the split's own effect). Band 2's intro carries `data-rs-intro-js` and
+  balances from `rebuildPreview`; unlocked it holds a taken split, and
+  `newModelSetLock` clears it so lock and unlock re-take it. Chromium,
+  the author's example: Familiarity and Rating left, Comments right
+  (columns 247 / 211px); two help cards, one each; at 700px one column;
+  Band 2 held its split through typing and re-took it on unlock. The
+  `<head>` script names the same hooks as the markup, so two tests now
+  search from the intro on.
+- **The item's reads, 2026-09-30.** One cumulative `diff-reviewer` read
+  (`be68a8ad..a0978ad8`) and one `spec-writer` pass. The spec pass found
+  older text the columns made false (`spec/reviewer-surface.md`'s
+  heading row, `spec/visibility_policy.md`'s "column 2"), fixed, and
+  `spec/visibility_policy.md` joined Doc impact. The read found: Lock
+  splitting on the pre-edit description (re-taken after the text
+  sync); the collapsed layout's DOM order not the visual one (all help
+  cards go right there); every placement re-appending every card, which
+  drops a focused textarea (an unchanged placement now moves nothing);
+  a possible scrollbar loop (width changes under 24px ignored); the
+  estimate ignoring a long title; "0..k" for the first `k`; weak tests
+  and stale comments. All acted on. A second read, of those fixes, found
+  the 24px guard could swallow the resize that crossed 800px (crossing
+  into or out of one column now always re-runs), and two gap tests that
+  could not fail (replaced by cases a hard-coded or ignored gap answers
+  differently). Chromium: 815 → 795 → 810px reorders and re-splits.
 
 ### PR ladder
 
@@ -2735,4 +2767,5 @@ Taken 2026-09-30 at `be68a8ad`:
 - `spec/reviewer-surface.md` — the help block and intro as two balanced column stacks, the split rule (Item 17).
 - `spec/ui_elements.md` — the `.rs-help-card` family's layout: column stacks, not a `.rs-help-grid` row (Item 17).
 - `spec/instruments.md` — Band 2's preview follows the same split (Item 17).
+- `spec/visibility_policy.md` — the transparency card heads the intro's right column, on both surfaces (Item 17).
 - `docs/status.md` — row when the item closes (Item 17).

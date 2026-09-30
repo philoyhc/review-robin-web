@@ -331,7 +331,7 @@ def test_a_locked_card_scrolls_band_2s_visibility_table(
         assert wrapper.endswith('<div class="table-scroll" style="margin-top: 16px;"> ')
         table = _open_tag(band2, 'class="table-scroll" data-lock-only')
         assert "inert" not in table and "data-lock-region" not in table
-        # Band 2 holds no control outside its three lock regions (the
+        # Band 2 holds no control outside its lock regions (the
         # item's read). Each region is cut out up to the next sibling
         # after it: the vp card's heading, then its editor's close.
         outside = band2[: band2.index('<div class="card rs-instrument-card rs-intro-name" data-intro-edit-block')]
@@ -386,3 +386,10 @@ def test_band_2s_intro_is_two_column_stacks(client: TestClient, db: Session) -> 
     # The help cards are placed in the stack, not the preview container.
     assert 'leftStack.innerHTML = buildResponseFieldHelpCards(card)' in card
     assert "container.innerHTML = buildResponseFieldHelpCards(card)" not in card
+    # Rung 2: Band 2 balances its own intro (the reviewer surface's load
+    # pass skips it), holding a taken split while unlocked, and lock /
+    # unlock clear the split so it is re-taken.
+    assert '<div class="rs-intro-columns" data-rs-intro-js' in card
+    assert "rrwIntroBalance(intro);" in card
+    assert "rrwIntroPlaceHelp(intro, parseInt(held, 10));" in card
+    assert "w.removeAttribute('data-rs-intro-split');" in card
