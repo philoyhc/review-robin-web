@@ -368,9 +368,10 @@ keep the standard spacing.
 
 ### Above the table — heading + help block
 
-The per-instrument heading is a `.rs-instrument-heading` flex row
-carrying a title (H2) and an optional subtitle on the same baseline,
-styled like the page header (H1 + deadline). Title and subtitle
+The per-instrument heading is a `.card.rs-instrument-card.rs-intro-name`
+card heading the intro's left column (see "Intro and help cards" below),
+carrying a title (H2) and an optional subtitle (`.muted`, body weight)
+below it. Title and subtitle
 content comes from `Instrument.short_label` and
 `Instrument.description` respectively, with composition rules driven
 by how many instruments the reviewer is assigned on:
@@ -406,7 +407,7 @@ class InstrumentHeading:
     subtitle: str | None   # rendered as a body-weight muted span; absent when None
 ```
 
-The template renders the H2 heading row only when `heading.title`
+The template renders the H2 heading card only when `heading.title`
 is truthy. The instrument card (`.rs-instrument-card`) hosts the
 heading + description **only**; the progress pills sit outside it, in
 the right-flushed row described next.

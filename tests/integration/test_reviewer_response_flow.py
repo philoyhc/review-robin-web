@@ -237,10 +237,10 @@ def test_surface_help_text_renders_as_inline_list(
     body = make_client(rae).get(f"/me/sessions/{review_session.id}").text
     del rae_client
 
-    # Single help item still renders as a half-width card inside the
-    # per-instrument intro grid (the lone-help case used to expand to
-    # full width via `rs-help-card-solo`; now it always stays half-
-    # width and lands in column 2 next to the heading card).
+    # Single help item still renders as a half-width card in the
+    # per-instrument intro's columns (the lone-help case used to expand
+    # to full width via `rs-help-card-solo`; it always stays half width,
+    # in whichever column the split gives it, 19T Item 17).
     assert 'class="card rs-help-card"' in body
     assert "rs-help-card-solo" not in body
     assert "<strong>Rating</strong> — 1 (poor) to 5 (excellent)." in body

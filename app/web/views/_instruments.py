@@ -62,8 +62,8 @@ class InstrumentHeading:
     """Title + optional subtitle for the per-instrument heading card.
 
     Title lands on the H2; subtitle on a `.muted` body-weight `<p>`
-    below it inside `.card.rs-instrument-card`, which sits in column 1
-    of the per-instrument intro grid (`.rs-intro-grid`). Either or
+    below it inside `.card.rs-instrument-card`, which heads the left
+    column of the per-instrument intro (`.rs-intro-columns`). Either or
     both can be ``None`` — the template only renders the heading card
     when ``title`` is truthy.
 

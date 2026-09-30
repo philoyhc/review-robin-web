@@ -2749,4 +2749,5 @@ Taken 2026-09-30 at `be68a8ad`:
 - `spec/reviewer-surface.md` — the help block and intro as two balanced column stacks, the split rule (Item 17).
 - `spec/ui_elements.md` — the `.rs-help-card` family's layout: column stacks, not a `.rs-help-grid` row (Item 17).
 - `spec/instruments.md` — Band 2's preview follows the same split (Item 17).
+- `spec/visibility_policy.md` — the transparency card heads the intro's right column, on both surfaces (Item 17).
 - `docs/status.md` — row when the item closes (Item 17).
