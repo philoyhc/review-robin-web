@@ -2646,7 +2646,8 @@ page's Band 2 preview) shows two grids:
 - **No visibility card** (no rows): the right column starts with help
   cards. **No heading**: the left column does.
 - **No help cards**: the two top cards only, each at its own height.
-- **One help card**: whichever side ends closer.
+- **One help card**: whichever side ends closer. (Rung 3: or left, on a
+  near tie between the two top cards.)
 - **A very long description**: every help card goes right (k = 0).
 - **Band 2 unlocked**: the help cards carry textareas that grow as the
   operator types, so the split holds until the card locks or unlocks.
@@ -2662,6 +2663,13 @@ page's Band 2 preview) shows two grids:
   positioning visually would read the columns interleaved (2026-09-30).
   Collapsed to one column the help cards all go right, so the DOM order
   is the visual one there too (the item's read, 2026-09-30).
+- A near tie leans left: when the columns without the first right-hand
+  help card end close by, that card goes left, under the card before it
+  (the author, from a Band 2 screenshot, 2026-09-30). Chosen at build,
+  pending the author's confirmation: "close by" is 24px, one line of
+  help text; and the lean moves the card at the split, the only reading
+  that keeps field order with more than one card on the right (the
+  author's "last card" is that card when one card is on the right).
 
 ### Blast radius (measured)
 
@@ -2724,6 +2732,22 @@ Taken 2026-09-30 at `be68a8ad`:
   into or out of one column now always re-runs), and two gap tests that
   could not fail (replaced by cases a hard-coded or ignored gap answers
   differently). Chromium: 815 → 795 → 810px reorders and re-splits.
+- **Rung 3 (the lean), 2026-09-30**, after #2693 merged: the author's
+  Band 2 screenshot had Rating alone under the visibility card, 4px
+  nearer balanced than below Familiarity, with the columns ending 2px
+  apart without it. Both copies take a `lean` (`views.INTRO_LEAN_PX`,
+  `RRW_INTRO_LEAN_PX`, 24; a test holds the two equal) and move the card
+  at the split left on a near tie. The gap tests run with no lean, so
+  the gap alone still decides them. Chromium, the screenshot's heights
+  (74 / 146 / 62 / 62px): without the lean the columns end at 513 /
+  585px, with it at 587 / 511px, Rating under Familiarity. A code slice
+  after the item's read, so it took its own (`688b2c81..df7b0e95`): no
+  code defect; the three-card test could not fail, nothing held the
+  24px edge inclusive or pinned which card moves, the one-card
+  Semantics line stated the old rule, the 24px and "card at the split"
+  were attributed to the author, and the constants' equality test
+  skipped without node. All fixed; mutants (`<`, the last card, one
+  card on the right only) now each fail a unit test.
 
 ### PR ladder
 
@@ -2736,6 +2760,8 @@ Taken 2026-09-30 at `be68a8ad`:
    tests of the function, Chromium check against the author's example;
    the specs. The item's last build rung: its cumulative read.
 3. **Close.**
+
+Added at build: **rung 3, the lean** (see Status), before the close.
 
 ### Definition of done
 

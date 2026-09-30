@@ -234,11 +234,21 @@ _SPLIT_CASES = (
     (65.5, 154.25, [46.5, 70.25, 46.5, 118, 46.5]),
     (None, None, [40, 10, 10, 10]),
     (None, 20, [10, 10, 10]),
+    (75, 146, [62, 62]),
+    (75, 146, [62, 62]),
+    (96, 146, [62, 62]),
+    (97, 146, [62, 62]),
+    (80, 96, [70, 40, 50]),
+    (80, 70, [46]),
 )
-# The gap each case runs with: most at the surface's 12px; the last two
-# at 20 and 0, where the answer differs from 12's (2 not 1, 3 not 2), so
-# a copy that hard-coded one gap would disagree.
-_SPLIT_GAPS = (12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 20, 0)
+# The gap each case runs with: most at the surface's 12px; two at 20 and
+# 0, where the answer differs from 12's (2 not 1, 3 not 2), so a copy that
+# hard-coded one gap would disagree.
+_SPLIT_GAPS = (12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 20, 0, 12, 12, 12, 12, 12, 12)
+# And the lean: the surface's 24px, except the gap cases (0, so only the
+# gap decides) and the author's example run once without it, where the
+# answer differs (1 not 2); 96 is the inclusive edge, exactly 24px.
+_SPLIT_LEANS = (24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 0, 0, 0, 24, 24, 24, 24, 24)
 
 
 def test_the_browsers_intro_split_matches_the_servers() -> None:
@@ -255,13 +265,16 @@ def test_the_browsers_intro_split_matches_the_servers() -> None:
         base[start:end]
         + "\nconsole.log(JSON.stringify(" + json.dumps(_SPLIT_CASES)
         + ".map(function (c, i) { return rrwIntroSplitIndex(c[0], c[1], c[2], "
-        + json.dumps(_SPLIT_GAPS) + "[i]); })));"
+        + json.dumps(_SPLIT_GAPS) + "[i], " + json.dumps(_SPLIT_LEANS) + "[i]); })));"
     )
     out = subprocess.run(
         ["node", "-e", script], capture_output=True, text=True, check=True
     ).stdout
     expected = [
-        intro_split_index(left, right, list(heights), gap)
-        for (left, right, heights), gap in zip(_SPLIT_CASES, _SPLIT_GAPS)
+        intro_split_index(left, right, list(heights), gap, lean)
+        for (left, right, heights), gap, lean in zip(
+            _SPLIT_CASES, _SPLIT_GAPS, _SPLIT_LEANS, strict=True
+        )
     ]
     assert json.loads(out) == expected
+

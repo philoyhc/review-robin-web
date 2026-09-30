@@ -155,6 +155,7 @@ def intro_split_index(
     right_top: float | None,
     help_heights: list[float],
     gap: float,
+    lean: float,
 ) -> int:
     """How many help cards go in the intro's left column (19T Item 17).
 
@@ -162,8 +163,12 @@ def intro_split_index(
     the first ``k`` help cards, ``right_top`` (the visibility card) over
     the rest, in field order. ``None`` is a column with no top card. Returns the
     ``k`` whose columns end closest in height, ties to the larger ``k``
-    (the heavier left column). Kept identical to ``rrwIntroSplitIndex``
-    in ``base.html``, which splits on measured heights; a node test in
+    (the heavier left column). Then a near tie leans left too: when the
+    two columns without the first right-hand help card end within
+    ``lean`` of each other, that card goes left, so it follows the card
+    above it rather than sitting alone under the visibility card.
+    Kept identical to ``rrwIntroSplitIndex`` in ``base.html``, which
+    splits on measured heights; a node test in
     ``tests/integration/test_inline_scripts_parse.py`` holds the two to
     the same answers.
     """
@@ -180,6 +185,13 @@ def intro_split_index(
         )
         if best_diff is None or diff <= best_diff:
             best_k, best_diff = k, diff
+    if best_k < len(help_heights):
+        without = abs(
+            column(left_top, help_heights[:best_k])
+            - column(right_top, help_heights[best_k + 1 :])
+        )
+        if without <= lean:
+            best_k += 1
     return best_k
 
 
@@ -194,6 +206,10 @@ _INTRO_LINE_PX = 24
 _INTRO_GAP_PX = 12
 _INTRO_TITLE_CHARS_PER_LINE = 50
 _INTRO_TITLE_LINE_PX = 32
+# How close the columns must end, without the card at the split, for that
+# card to go left. The author's ruling (2026-09-30) is "close by"; one
+# line of help text is the figure chosen at build.
+INTRO_LEAN_PX = 24
 
 
 def _intro_lines(text: str) -> int:
@@ -221,7 +237,7 @@ def estimated_intro_split(
         + _INTRO_LINE_PX * _intro_lines(f"{item.label} — {item.help_text or ''}")
         for item in help_items
     ]
-    return intro_split_index(left_top, right_top, heights, _INTRO_GAP_PX)
+    return intro_split_index(left_top, right_top, heights, _INTRO_GAP_PX, INTRO_LEAN_PX)
 
 
 def _format_band2_bound(value: float) -> str:
