@@ -457,9 +457,8 @@
       /*
        * Reviewer-surface help-text primitives — visual_style_general.md-aligned
        * tinted blocks for the per-instrument response-field help text.
-       * Always half-width inside the per-instrument intro grid
-       * (`.rs-intro-grid` below); the lone-help case lands in column 2
-       * (or column 1 if no heading) instead of expanding to full width.
+       * Always half-width, stacked in the per-instrument intro's two
+       * columns (`.rs-intro-columns` below), never full width.
        */
       /* Tinted slab inside the per-instrument intro grid, rather than
          a regular card with a contrasting border + interior.
@@ -4244,33 +4243,42 @@
         justify-content: flex-end;
         margin-top: var(--space-3);
       }
-      /* Per-instrument intro grid — half-width heading card (short
-         label + description) sitting alone in column 1; column 2 is
-         intentionally empty so the card keeps the same visual width
-         as the description card up top. Help text cards live in a
-         separate `.rs-help-grid` row below. Both grids stack on
-         narrow screens. */
-      body.ui-v2 .rs-intro-grid {
+      /* Per-instrument intro — two independent column stacks (19T
+         Item 17). The name / description card heads the left column and
+         the "Who can see what you wrote" card the right; the help cards
+         stack beneath them in `.rs-help-stack`s. `align-items: start`
+         and a flex stack per column let every card keep its own height:
+         the name card is as tall as its text, not as the visibility
+         table beside it. At 800px or narrower the columns and stacks
+         dissolve (`display: contents`) into one flex column ordered
+         name, visibility, then the help cards in field order. */
+      body.ui-v2 .rs-intro-columns {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: var(--space-3);
+        align-items: start;
         margin: var(--space-6) 0 var(--space-3) 0;
       }
-      body.ui-v2 .rs-help-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+      body.ui-v2 .rs-intro-col,
+      body.ui-v2 .rs-help-stack {
+        display: flex;
+        flex-direction: column;
         gap: var(--space-3);
-        margin: 0 0 var(--space-3) 0;
+        min-width: 0;
       }
+      body.ui-v2 .rs-help-stack:empty { display: none; }
+      body.ui-v2 .rs-intro-columns .card { margin: 0; }
       @media (max-width: 800px) {
-        body.ui-v2 .rs-intro-grid,
-        body.ui-v2 .rs-help-grid {
-          grid-template-columns: 1fr;
+        body.ui-v2 .rs-intro-columns {
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
         }
-      }
-      body.ui-v2 .rs-intro-grid .rs-instrument-card,
-      body.ui-v2 .rs-help-grid .rs-help-card {
-        margin: 0;
+        body.ui-v2 .rs-intro-col,
+        body.ui-v2 .rs-help-stack { display: contents; }
+        body.ui-v2 .rs-intro-name { order: 0; }
+        body.ui-v2 .rs-intro-visibility { order: 1; }
+        body.ui-v2 .rs-intro-columns .rs-help-card { order: 2; }
       }
       body.ui-v2 .rs-instrument-card h2 { margin: 0; }
       body.ui-v2 .rs-instrument-card .rs-instrument-subtitle {

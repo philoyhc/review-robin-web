@@ -334,7 +334,7 @@ def test_a_locked_card_scrolls_band_2s_visibility_table(
         # Band 2 holds no control outside its three lock regions (the
         # item's read). Each region is cut out up to the next sibling
         # after it: the vp card's heading, then its editor's close.
-        outside = band2[: band2.index('<div class="card rs-instrument-card" data-intro-edit-block')]
+        outside = band2[: band2.index('<div class="card rs-instrument-card rs-intro-name" data-intro-edit-block')]
         vp = band2[band2.index("data-new-model-band2-vp-preview-card") :]
         outside += vp[: vp.index("data-new-model-vp-editor")]
         after_editor = vp[vp.index("</table>", vp.index("data-new-model-vp-editor")) :]
@@ -369,3 +369,20 @@ def test_band_1_scrolls_rather_than_spilling(
         # FROM" spilled at every width) rather than holding half its row.
         selects = re.findall(r'<select style="([^"]*)" form="dfsave-\d+" name="link\d_field"', card)
         assert selects and all(s.startswith("flex: 0 1 50%;") for s in selects)
+
+
+def test_band_2s_intro_is_two_column_stacks(client: TestClient, db: Session) -> None:
+    """19T Item 17 rung 1: Band 2's intro mirrors the reviewer surface's
+    two column stacks — the name card heads the left, the visibility card
+    the right, and the JS-built help cards go to the left stack, out of the
+    preview."""
+    _, _, card, _ = _page(client, db, "17-intro-columns")
+    intro = card[card.index('<div class="rs-intro-columns"') :]
+    left = intro.index('data-rs-intro-col="left"')
+    right = intro.index('data-rs-intro-col="right"')
+    assert left < intro.index("rs-intro-name") < intro.index('data-rs-help-stack="left"') < right
+    assert right < intro.index("rs-intro-visibility") < intro.index('data-rs-help-stack="right"')
+    assert "rs-intro-grid" not in card and "rs-help-grid" not in card
+    # The help cards are placed in the stack, not the preview container.
+    assert 'leftStack.innerHTML = buildResponseFieldHelpCards(card)' in card
+    assert "container.innerHTML = buildResponseFieldHelpCards(card)" not in card

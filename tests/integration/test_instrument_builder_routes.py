@@ -4636,7 +4636,9 @@ def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
     flat = " ".join(body.split())
     intro_idx = flat.find(f'data-instrument-id="{new_model.id}"')
     assert intro_idx != -1
-    intro_block = flat[intro_idx : intro_idx + 6000]
+    # 8000: the intro is two column stacks since 19T Item 17, a few
+    # wrappers longer than the grid it replaced.
+    intro_block = flat[intro_idx : intro_idx + 8000]
     # Heading still renders (#2: Reflection — source seed
     # instrument is #1). 2026-05-28 follow-on dropped the
     # explicit ``style="font-weight: inherit;"`` on the view
@@ -5676,7 +5678,10 @@ def test_lock_scaffold_seeds_locked_state_and_lock_regions(
     # editor and preview; Band 3's two tables — the pieces, not the bands,
     # so their scrollers stay scrollable, 19T Item 12A), each carrying the
     # ``inert aria-hidden="true"`` attribute pair in the locked render.
-    assert view.count('inert aria-hidden="true"') == 6
+    # Markup only: the card's scripts may spell the pair too (19T Item 17's
+    # JS-built help cards carry it when locked).
+    view_markup = re.sub(r"<script>.*?</script>", "", view)
+    assert view_markup.count('inert aria-hidden="true"') == 6
 
     # Edit mode — unlocked. The regions drop inert (interactive).
     edit = _card_slice(
@@ -5690,7 +5695,7 @@ def test_lock_scaffold_seeds_locked_state_and_lock_regions(
     )
     assert 'data-instrument-locked="false"' in edit
     assert "data-lock-region" in edit
-    assert 'inert aria-hidden="true"' not in edit
+    assert 'inert aria-hidden="true"' not in re.sub(r"<script>.*?</script>", "", edit)
 
 
 def test_lock_scaffold_ships_state_machine_js(

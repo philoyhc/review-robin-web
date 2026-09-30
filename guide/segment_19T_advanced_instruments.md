@@ -2649,14 +2649,14 @@ page's Band 2 preview) shows two grids:
 - **One help card**: whichever side ends closer.
 - **A very long description**: every help card goes right (k = 0).
 - **Band 2 unlocked**: the help cards carry textareas that grow as the
-  operator types; see open question 1.
+  operator types, so the split holds until the card locks or unlocks.
 - **Reading order**: moving cards between columns makes the DOM order
   name, help 1..k, visibility, help k+1..n. See judgment calls.
 
 ### Judgment calls — decided
 
-- The split is recomputed on load, on resize and when Band 2 rebuilds its
-  help cards, never on scroll (2026-09-30).
+- The split is recomputed on load and on resize; in Band 2 also on lock
+  and unlock, not on every rebuild while editing (2026-09-30).
 - The DOM order follows the columns (column-major), so a screen reader
   reads what the eye does down each column; keeping the DOM fixed and
   positioning visually would read the columns interleaved (2026-09-30).
@@ -2674,6 +2674,24 @@ Taken 2026-09-30 at `be68a8ad`:
 - Specs: `spec/reviewer-surface.md` (the help-block bullet, ~line 452) and
   `spec/ui_elements.md` (the `.rs-help-card` family, ~line 289) both say
   "a `.rs-help-grid` row of half-width cards".
+
+### Status
+
+- **Rung 1 (scaffold), 2026-09-30**, with the plan in #2692 (still open
+  when the author said to start). Base SHA for the item's read:
+  `be68a8ad`. `.rs-intro-grid` and `.rs-help-grid` retire for
+  `.rs-intro-columns`: two `.rs-intro-col` stacks, each a top card and a
+  `.rs-help-stack`; every help card in the left stack. ≤800px the stacks
+  dissolve (`display: contents`) into one column ordered by `order`.
+  Found at build: the heading card now renders only with a title (it was
+  an empty placeholder holding column 1 for the visibility card), and
+  Band 2's JS-built help cards are each their own lock region, since
+  the stacks are layout only and have no box at 800px to fade. Two tests
+  counted `inert aria-hidden` across the card's scripts and now count
+  markup only. Chromium, reviewer surface at 1400px: name card 89px,
+  help cards under it, visibility right; at 700px one column, name,
+  visibility, help. Band 2 locked: name card 82px, help cards inert and
+  faded left; unlocked in-page, editable.
 
 ### PR ladder
 
@@ -2702,10 +2720,9 @@ Taken 2026-09-30 at `be68a8ad`:
 
 ### Open questions
 
-1. **Band 2 unlocked** — balance there too, re-splitting only on lock and
-   unlock so cards don't jump while the operator types, or keep the
-   current rows grid while editing? The author decides; the default in
-   rung 1 is the stacks in both states, re-split on lock / unlock only.
+1. ~~**Band 2 unlocked**~~ — the stacks in both states, re-split on lock
+   and unlock only, so cards don't jump while the operator types (author,
+   2026-09-30).
 
 ### Out of scope
 
