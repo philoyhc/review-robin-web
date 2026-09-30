@@ -2618,9 +2618,11 @@ item of their own. It closes when the author says so.
    show no intro and nothing else from entries 3–6 (the Settings page,
    the password box and a focused file input have no capture). **Read:**
    one `diff-reviewer` read; the pair is one screen and the alt text true
-   of both; it reworded the old capture's "#1", and noted, out of scope,
-   that `instrument-card-fields-and-visibility`'s delete line names
-   `Instrument_1` where the other captures name "Group Peer Review".
+   of both; it reworded the old capture's "#1", and noted that
+   `instrument-card-fields-and-visibility`'s delete line named
+   `Instrument_1` where the other captures name "Group Peer Review". The
+   author retook that pair too (`Guide_v4b4`): one screen, the delete line
+   now "Group Peer Review"; its alt text names no instrument and stands.
 
 ### Doc impact
 
