@@ -509,9 +509,11 @@ everywhere, so "you can click this" reads the same way on every control.
 
 ### 8. Forms / inputs
 
-> **Text inputs** — one rule covers `input[type="text"]`,
-> `datetime-local`, `number`, `email`, `file`, `textarea` **and**
-> `select`, so a form does not change shape by changing field type:
+> **Text inputs** — one rule covers `input[type="text"]`, `date`,
+> `datetime-local`, `number`, `email`, `password`, `file`, `textarea`
+> **and** `select`, so a form does not change shape by changing field type
+> (`tests/unit/test_input_type_styling.py` fails on a type a template
+> uses that the rule misses, 19T Item 16 entry 4):
 > `width: 100%`, `padding: var(--space-2) var(--space-3)` (8px / 12px),
 > `--fs-body`, `border: 1px solid var(--border-default)`,
 > `border-radius: var(--radius-button)`, filled `--surface-page` with
@@ -521,7 +523,9 @@ everywhere, so "you can click this" reads the same way on every control.
 > **Focus is two-layered.** `:focus` recolours the border to
 > `--focus-ring` and adds a 1px `--focus-ring-halo` shadow; `:focus-visible`
 > adds a 2px `--focus-ring` outline on top, so the strong ring is
-> keyboard-only and a mouse click does not draw it.
+> keyboard-only and a mouse click does not draw it. Both focus rules name
+> every type above **except `file`**, which has never been on them and so
+> takes the browser's own ring; recorded, not decided.
 > **`textarea` resizes vertically only** — a long entry grows downward; a
 > horizontal drag would pull it wider than its column and break the page
 > grid.

@@ -2,8 +2,8 @@
 
 `body.ui-v2`'s input rule, and its `:focus` and `:focus-visible`
 companions, name each input type they style. A type left off the list
-renders with the browser's default box — narrower, unpadded, unbordered
-— beside its styled neighbours, and nothing in the suite has a layout
+renders with the browser's default box — narrower, unpadded, with the
+browser's own border — beside its styled neighbours, and nothing in the suite has a layout
 engine to see it. The Settings page's App password box (19T Item 16
 entry 4) and the audit log's date filters were both left off.
 
