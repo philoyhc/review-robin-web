@@ -522,10 +522,11 @@ everywhere, so "you can click this" reads the same way on every control.
 > (`spec/color_tokens.md`).
 > **Focus is two-layered.** `:focus` recolours the border to
 > `--focus-ring` and adds a 1px `--focus-ring-halo` shadow; `:focus-visible`
-> adds a 2px `--focus-ring` outline on top, so the strong ring is
-> keyboard-only and a mouse click does not draw it. Both focus rules name
-> every type above **except `file`**, which takes the browser's own focus
-> ring.
+> adds a 2px `--focus-ring` outline on top. The browser decides when
+> `:focus-visible` matches: always on keyboard focus, and on a click into
+> a text-entry field or a `select` too, so a clicked file input is the
+> only one left with the halo alone. Both focus rules name every input
+> type the text-input rule does.
 > **`textarea` resizes vertically only** — a long entry grows downward; a
 > horizontal drag would pull it wider than its column and break the page
 > grid.

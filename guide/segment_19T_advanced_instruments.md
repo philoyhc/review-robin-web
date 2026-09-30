@@ -2570,6 +2570,20 @@ item of their own. It closes when the author says so.
    it found §8's type list stale and no Doc impact bullet for it, both
    acted on; a `spec-writer` pass then took the history out of the new
    §8 sentences.
+5. **File inputs take the app's focus ring** (author's ask, 2026-09-30,
+   after entry 4 recorded the gap). `input[type="file"]` joins the
+   `:focus` and `:focus-visible` rules, so the file inputs (the four
+   roster CSV imports, Quick Setup's slot inputs, Rehydrate; a Quick
+   Setup input is disabled only while its card is locked, or unwired in
+   the context-less build) show the same border, halo and keyboard
+   outline as every other box. A second test pins the two focus rules
+   to the box rule's type list, which the §8 sentence claims. The test drops its `file` exemption;
+   `spec/ui_elements.md` §8 says both focus rules name every type the
+   box rule does. Headless Chromium, Tab onto a file input: a 2px
+   `--focus-ring` outline over the same border and halo as a text box.
+   The spec pass doubted §8's "a mouse click does not draw" the outline;
+   Chromium draws it on a click into a text box or a select, not a file
+   input, so §8 and the `base.html` comment now say so.
 
 ### Doc impact
 
@@ -2578,5 +2592,5 @@ item of their own. It closes when the author says so.
 - `spec/ui_elements.md` — `.rs-status` among the reviewer-table hints (Item 16, entry 1).
 - `spec/rrw_functional_spec.md` — §9.13 the Settings page's two columns (Item 16, entry 3).
 - `spec/ui_elements.md` — §10 `.bottom-grid`'s collapsed row gap (Item 16, entry 3).
-- `spec/ui_elements.md` — §8 the text-input rule's types, `date` and `password` added, `file` off the focus rules (Item 16, entry 4).
+- `spec/ui_elements.md` — §8 the text-input rule's types, `date` and `password` added (Item 16, entry 4); `file` on the focus rules (entry 5).
 - `docs/status.md` — row when the item closes (Item 16).
