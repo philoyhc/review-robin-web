@@ -159,8 +159,8 @@ def intro_split_index(
     """How many help cards go in the intro's left column (19T Item 17).
 
     The intro is two column stacks: ``left_top`` (the heading card) over
-    help cards ``0..k``, ``right_top`` (the visibility card) over the rest,
-    in field order. ``None`` is a column with no top card. Returns the
+    the first ``k`` help cards, ``right_top`` (the visibility card) over
+    the rest, in field order. ``None`` is a column with no top card. Returns the
     ``k`` whose columns end closest in height, ties to the larger ``k``
     (the heavier left column). Kept identical to ``rrwIntroSplitIndex``
     in ``base.html``, which splits on measured heights; a node test in
@@ -192,6 +192,8 @@ def intro_split_index(
 _INTRO_CHARS_PER_LINE = 80
 _INTRO_LINE_PX = 24
 _INTRO_GAP_PX = 12
+_INTRO_TITLE_CHARS_PER_LINE = 50
+_INTRO_TITLE_LINE_PX = 32
 
 
 def _intro_lines(text: str) -> int:
@@ -206,7 +208,11 @@ def estimated_intro_split(
     the browser's measured split."""
     left_top = None
     if heading.title:
-        left_top = 65.0
+        # A one-line title; a longer one (a single instrument whose
+        # description is its title) adds H2 lines of about 50 characters.
+        left_top = 65.0 + _INTRO_TITLE_LINE_PX * (
+            max(1, math.ceil(len(heading.title) / _INTRO_TITLE_CHARS_PER_LINE)) - 1
+        )
         if heading.subtitle:
             left_top += _INTRO_LINE_PX * _intro_lines(heading.subtitle)
     right_top = 76.0 + 39.0 * len(visibility_rows) if visibility_rows else None
@@ -216,6 +222,7 @@ def estimated_intro_split(
         for item in help_items
     ]
     return intro_split_index(left_top, right_top, heights, _INTRO_GAP_PX)
+
 
 def _format_band2_bound(value: float) -> str:
     """Format a Wave-2 ``_inline_min`` / ``_inline_max`` / ``_inline_step``

@@ -619,8 +619,8 @@ def _surface_context(
     instrument_groups.sort(key=lambda g: g["position"])
 
     # "Who can see what you wrote" transparency table — one
-    # half-width card per instrument, sitting in the empty column
-    # 2 of the intro grid. Read-only mirror of the operator's Band
+    # half-width card per instrument, heading the right column of
+    # the intro (19T Item 17). Read-only mirror of the operator's Band
     # 3 policy in plain language so the reviewer knows what
     # downstream audiences (the reviewee, observers) will see and
     # in what form.

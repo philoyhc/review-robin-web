@@ -2051,14 +2051,15 @@
              operator views + edits each field there rather than
              in a separate card above the preview.
 
-             The preview div hosts JS-built help cards, a
+             The preview div hosts a
              flex-right row combining the progress pills with
              the per-field min/max/step reminders (mirrors the
              reviewer surface), and the preview table itself.
              The initial server render seeds the progress pills
              only — JS rebuildPreview replaces all of it on
              DOMContentLoaded + on every R / chip / Band 3 row
-             toggle, picking up the help cards + constraints. #}
+             toggle, picking up the constraints; the help cards it
+             builds go to the intro's stacks (19T Item 17). #}
           {# `.table-scroll`: the container is filled by ``rebuildPreview``
              with a table laid out as the reviewer surface's is (fixed
              once operator-set column widths exist), so the wrapper goes directly around the
@@ -3862,6 +3863,12 @@
             // consistent with how the other controls keep their edited
             // state while locked.
             if (locked) { window.newModelSyncTextViews(card); }
+            // 19T Item 17 — the refresh above split the intro before the
+            // sync showed the edited description; re-take it on the text
+            // the locked card now shows.
+            if (locked && window.rrwIntroBalance) {
+              card.querySelectorAll('[data-new-model-band2-intro-card]').forEach(rrwIntroBalance);
+            }
             // 19T Item 2 — an in-page Lock drops ``?editing=<this card>``
             // from the URL, so a reload lands locked rather than back in
             // the server's edit mode.

@@ -4573,7 +4573,8 @@
       // 19T Item 17 — the per-instrument intro's balanced columns, on the
       // reviewer surface and the Instruments page's Band 2 preview. The
       // intro (`.rs-intro-columns`) is two stacks: the heading card over
-      // help cards 0..k, the visibility card over the rest, in field order.
+      // the first k help cards, the visibility card over the rest, in
+      // field order.
       // In <head> so both pages can call it whenever their scripts run.
       //
       // rrwIntroSplitIndex is kept identical to the Python
@@ -4606,27 +4607,36 @@
           rightStack: right.querySelector('[data-rs-help-stack]'),
         };
       }
-      // Help cards 0..k to the left stack, the rest to the right, keeping
-      // field order (left stack's cards come first, then the right's).
+      // The first k help cards to the left stack, the rest to the right,
+      // keeping field order (left stack's cards come first, then the
+      // right's). Collapsed to one column (<=800px), all go right, so the
+      // DOM order — the reading and tab order — is the visual one: name,
+      // visibility, help cards. A placement that changes nothing moves
+      // nothing, so a focused textarea keeps its focus.
+      function rrwIntroCollapsed(p) {
+        return getComputedStyle(p.left).display === 'contents';
+      }
       function rrwIntroPlaceHelp(wrapper, k) {
         var p = rrwIntroParts(wrapper);
         if (!p || !p.leftStack || !p.rightStack) { return; }
         var cards = Array.prototype.slice.call(p.leftStack.children)
           .concat(Array.prototype.slice.call(p.rightStack.children));
-        k = Math.max(0, Math.min(k, cards.length));
+        k = rrwIntroCollapsed(p) ? 0 : Math.max(0, Math.min(k, cards.length));
+        if (p.leftStack.children.length === k) { return; }
         cards.forEach(function (card, i) {
           (i < k ? p.leftStack : p.rightStack).appendChild(card);
         });
       }
       // Measure and split. Skipped while the intro has no width (a closed
-      // <details>, a hidden page) or is collapsed to one column (<=800px,
-      // where the stacks are `display: contents` and placement is
-      // invisible); the ResizeObserver below re-runs it once it has room.
+      // <details>, a hidden page); collapsed to one column (<=800px,
+      // where the stacks are `display: contents`) the cards all go right
+      // and no split is taken. The ResizeObserver below re-runs it once
+      // the intro has two columns' room.
       function rrwIntroBalance(wrapper) {
         var p = rrwIntroParts(wrapper);
         if (!p || !p.leftStack || !p.rightStack) { return; }
         if (!wrapper.offsetWidth) { return; }
-        if (getComputedStyle(p.left).display === 'contents') { return; }
+        if (rrwIntroCollapsed(p)) { rrwIntroPlaceHelp(wrapper, 0); return; }
         function topOf(col, stack) {
           var first = col.firstElementChild;
           while (first && first !== stack && !first.classList.contains('card')) {
@@ -4645,13 +4655,18 @@
       // Re-split when the intro's width changes (a resize, a <details>
       // opening, the page leaving the one-column layout); a change of
       // height alone (a card moved, a textarea grown) is ignored, so a
-      // split never feeds back into itself.
+      // split never feeds back into itself. A change under 24px is
+      // ignored too: a page scrollbar appearing or leaving (~15px) would
+      // otherwise re-split, change the page's height, toggle the
+      // scrollbar back, and loop. From zero (a hidden intro shown) always
+      // counts.
       function rrwIntroWatch(wrapper) {
         if (wrapper.__rrwIntroWatched) { return; }
         wrapper.__rrwIntroWatched = true;
         var lastWidth = wrapper.offsetWidth;
         var rerun = function () {
           var w = wrapper.offsetWidth;
+          if (lastWidth && w && Math.abs(w - lastWidth) < 24) { return; }
           if (w === lastWidth) { return; }
           lastWidth = w;
           rrwIntroBalance(wrapper);

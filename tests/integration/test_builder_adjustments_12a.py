@@ -331,7 +331,7 @@ def test_a_locked_card_scrolls_band_2s_visibility_table(
         assert wrapper.endswith('<div class="table-scroll" style="margin-top: 16px;"> ')
         table = _open_tag(band2, 'class="table-scroll" data-lock-only')
         assert "inert" not in table and "data-lock-region" not in table
-        # Band 2 holds no control outside its three lock regions (the
+        # Band 2 holds no control outside its lock regions (the
         # item's read). Each region is cut out up to the next sibling
         # after it: the vp card's heading, then its editor's close.
         outside = band2[: band2.index('<div class="card rs-instrument-card rs-intro-name" data-intro-edit-block')]

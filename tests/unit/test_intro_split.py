@@ -1,7 +1,7 @@
 """19T Item 17 — the intro's help-card split (`views.intro_split_index`).
 
-The intro is two column stacks: the heading card over help cards 0..k,
-the visibility card over the rest, in field order. `k` is the split that
+The intro is two column stacks: the heading card over the first k help
+cards, the visibility card over the rest, in field order. `k` is the split that
 ends the two columns closest in height, ties to the heavier left column.
 The browser's copy, `rrwIntroSplitIndex` in `base.html`, is held to the
 same answers by `tests/integration/test_inline_scripts_parse.py`.
@@ -37,12 +37,26 @@ def test_the_split_balances_the_columns(left_top, right_top, heights, expected):
     assert intro_split_index(left_top, right_top, heights, GAP) == expected
 
 
-def test_order_is_kept_the_split_is_a_prefix() -> None:
-    # A long first card and short ones after: a shortest-column-first
-    # placement would send the short ones left; the split keeps field order.
-    k = intro_split_index(60, 150, [200, 30, 30, 30], GAP)
-    assert k in range(5)
-    assert k == 1
+def test_a_long_first_card_takes_the_left_alone() -> None:
+    # A shortest-column-first placement would send the short cards after
+    # it left too; the split keeps field order, so only the first goes.
+    assert intro_split_index(60, 150, [200, 30, 30, 30], GAP) == 1
+
+
+def test_the_gap_counts_between_cards_only() -> None:
+    # Three cards of 10 either side of a 0 top: equal sums, so the gaps
+    # decide; with no top card a column of n cards carries n - 1 gaps.
+    assert intro_split_index(None, None, [10, 10, 10, 10], 20) == 2
+    assert intro_split_index(None, 25, [10, 10], 20) == 2
+
+
+def test_the_estimate_counts_a_long_title() -> None:
+    # A lone instrument whose description is its title (no subtitle).
+    rows = [object(), object()]
+    short = [SimpleNamespace(label="A", help_text="a"), SimpleNamespace(label="B", help_text="b")]
+    assert estimated_intro_split(InstrumentHeading(title="Short", subtitle=None), rows, short) == 2
+    long_title = InstrumentHeading(title="t" * 400, subtitle=None)
+    assert estimated_intro_split(long_title, rows, short) == 0
 
 
 def test_the_estimate_follows_text_length() -> None:

@@ -2660,6 +2660,8 @@ page's Band 2 preview) shows two grids:
 - The DOM order follows the columns (column-major), so a screen reader
   reads what the eye does down each column; keeping the DOM fixed and
   positioning visually would read the columns interleaved (2026-09-30).
+  Collapsed to one column the help cards all go right, so the DOM order
+  is the visual one there too (the item's read, 2026-09-30).
 
 ### Blast radius (measured)
 
@@ -2706,6 +2708,18 @@ Taken 2026-09-30 at `be68a8ad`:
   Band 2 held its split through typing and re-took it on unlock. The
   `<head>` script names the same hooks as the markup, so two tests now
   search from the intro on.
+- **The item's reads, 2026-09-30.** One cumulative `diff-reviewer` read
+  (`be68a8ad..a0978ad8`) and one `spec-writer` pass. The spec pass found
+  older text the columns made false (`spec/reviewer-surface.md`'s
+  heading row, `spec/visibility_policy.md`'s "column 2"), fixed, and
+  `spec/visibility_policy.md` joined Doc impact. The read found: Lock
+  splitting on the pre-edit description (re-taken after the text
+  sync); the collapsed layout's DOM order not the visual one (all help
+  cards go right there); every placement re-appending every card, which
+  drops a focused textarea (an unchanged placement now moves nothing);
+  a possible scrollbar loop (width changes under 24px ignored); the
+  estimate ignoring a long title; "0..k" for the first `k`; weak tests
+  and stale comments. All acted on.
 
 ### PR ladder
 

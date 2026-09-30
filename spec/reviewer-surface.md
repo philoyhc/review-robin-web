@@ -457,8 +457,8 @@ together on every Band 3 / R toggle).
   tall as its own text. Below them, in each column's `.rs-help-stack`,
   a half-width `.rs-help-card` for each response field that has both
   `help_text` set and `help_text_visible=true`.
-  - **The split.** Help cards `0..k` go left and the rest right, in
-    field order, at the `k` whose columns end closest in height; a tie
+  - **The split.** The first `k` help cards go left and the rest right,
+    in field order, at the `k` whose columns end closest in height; a tie
     goes to the heavier left column. The server renders an estimate from
     text length (`views.estimated_intro_split`); the browser re-takes it
     on measured heights (`rrwIntroBalance`, `base.html`) on load and
@@ -467,7 +467,10 @@ together on every Band 3 / R toggle).
     same answers by a node test.
   - **At 800px or narrower** the stacks dissolve into one column: the
     heading card, the visibility card, then the help cards in field
-    order.
+    order. The help cards all move to the right stack there, so the
+    reading and tab order is the visual one; the split is re-taken when
+    the intro has two columns' room again. A width change under 24px
+    (a page scrollbar coming or going) does not re-split.
   - **No full-width solo variant.** A help card is always half width;
     `.rs-help-card-solo` is not part of the contract, and its absence is
     asserted by `tests/integration/test_reviewer_response_flow.py`.

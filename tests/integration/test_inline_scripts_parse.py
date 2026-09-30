@@ -233,6 +233,9 @@ _SPLIT_CASES = (
     (60, 150, [200, 30, 30, 30]),
     (65.5, 154.25, [46.5, 70.25, 46.5, 118, 46.5]),
 )
+# The gap each case runs with: most at the surface's 12px, two at others,
+# so a copy that hard-coded one gap would disagree.
+_SPLIT_GAPS = (12, 12, 12, 12, 12, 12, 12, 12, 20, 0)
 
 
 def test_the_browsers_intro_split_matches_the_servers() -> None:
@@ -248,13 +251,14 @@ def test_the_browsers_intro_split_matches_the_servers() -> None:
     script = (
         base[start:end]
         + "\nconsole.log(JSON.stringify(" + json.dumps(_SPLIT_CASES)
-        + ".map(function (c) { return rrwIntroSplitIndex(c[0], c[1], c[2], 12); })));"
+        + ".map(function (c, i) { return rrwIntroSplitIndex(c[0], c[1], c[2], "
+        + json.dumps(_SPLIT_GAPS) + "[i]); })));"
     )
     out = subprocess.run(
         ["node", "-e", script], capture_output=True, text=True, check=True
     ).stdout
     expected = [
-        intro_split_index(left, right, list(heights), 12)
-        for left, right, heights in _SPLIT_CASES
+        intro_split_index(left, right, list(heights), gap)
+        for (left, right, heights), gap in zip(_SPLIT_CASES, _SPLIT_GAPS)
     ]
     assert json.loads(out) == expected

@@ -289,7 +289,7 @@ def test_surface_help_text_multi_items_render_in_grid(
 
     # 19T Item 17 — the intro is two column stacks: the heading card
     # heads the left, the visibility card the right, and the help cards
-    # stack beneath (all in the left stack until the split, rung 2).
+    # stack beneath; here the server's estimated split puts both left.
     assert '<div class="rs-intro-columns">' in body
     # From the intro on: base.html's <head> script names the same hooks.
     body = body[body.index('<div class="rs-intro-columns">') :]
