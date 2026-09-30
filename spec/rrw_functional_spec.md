@@ -1493,6 +1493,11 @@ The operator's Settings page (`/operator/settings`) carries:
   typeahead with a worked-example live preview).
 - **Clear all settings** — wipes the SMTP fields on the account.
 
+The cards sit in two columns: Email send (SMTP) alone
+on the left, its "Bring your own SMTP" intro (shown only until an SMTP
+host is saved) below its header and above its fields; Date & time and
+Clear all settings stacked on the right.
+
 (There are no Library response-type or Library RuleSet cards on
 this page: both are per-session, authored on the instrument card.)
 

@@ -56,8 +56,13 @@ def test_settings_get_renders_empty_state_when_unconfigured(
     body = client.get("/operator/settings").text
     assert "<h1>Settings</h1>" in body
     assert "Email send (SMTP)" in body
-    # Empty-state intro card before the form:
+    # Empty-state intro, inside the SMTP card: below its header, before
+    # the form (19T Item 16 entry 3 folded the separate card in).
     assert "Bring your own SMTP" in body
+    header = body.index("<h2>Email send (SMTP)</h2>")
+    assert header < body.index("Bring your own SMTP") < body.index(
+        'id="operator-settings-form"'
+    )
     # Password indicator reads "not set" before any save.
     assert "not set" in body
 
@@ -66,13 +71,13 @@ def test_settings_display_mode_card_retired_toggle_in_chrome(
     client: TestClient, db: Session
 ) -> None:
     """Segment 19C Item 2 (W6) — the settings Display-mode card was retired in
-    favour of a chrome toggle; Date & time returns to a full-width card (no
-    ``.bottom-grid``). The light/dark pill lives in the chrome instead."""
+    favour of a chrome toggle; its ``.bottom-grid`` pairing with Date & time
+    went with it. The light/dark pill lives in the chrome instead."""
     body = client.get("/operator/settings").text
-    # Card gone, grid unwrapped, Date & time still present full-width.
+    # Card gone; Date & time still present (in the right column since
+    # 19T Item 16 entry 3).
     assert 'id="display-mode-settings"' not in body
     assert "<h2>Display mode</h2>" not in body
-    assert 'class="bottom-grid"' not in body
     assert 'id="timezone-settings"' in body
     # The chrome toggle pill renders instead — two states, no System.
     assert 'class="theme-toggle"' in body
@@ -104,8 +109,67 @@ def test_settings_get_renders_populated_form_when_configured(
     # Password reads "set" once persisted; plaintext never appears.
     assert "<span class=\"muted\">— set</span>" in body
     assert "app-pw-1234" not in body
-    # Empty-state intro card disappears once host is set.
+    # Empty-state intro disappears once host is set.
     assert "Bring your own SMTP" not in body
+
+
+def test_settings_two_columns_smtp_left_date_and_clear_right(
+    client: TestClient, db: Session
+) -> None:
+    """19T Item 16 entry 3 — one `.bottom-grid` pair of `.bottom-left`
+    stacks: the SMTP card alone in the left; Date & time then Clear all
+    settings in the right."""
+    from html.parser import HTMLParser
+
+    class _Columns(HTMLParser):
+        # Records, for each card of interest, the index of the
+        # `.bottom-grid` child it sits in, and each child's classes.
+        def __init__(self) -> None:
+            super().__init__()
+            self.stack: list[dict[str, str]] = []
+            self.column_of: dict[str, int] = {}
+            self.columns_seen = 0
+            self.column_classes: list[list[str]] = []
+
+        def handle_starttag(self, tag, attrs):
+            if tag != "div":
+                return
+            a = {k: v or "" for k, v in attrs}
+            if self.stack and "bottom-grid" in self.stack[-1].get(
+                "class", ""
+            ).split():
+                self.columns_seen += 1
+                a["_column"] = str(self.columns_seen)
+                self.column_classes.append(a.get("class", "").split())
+            self.stack.append(a)
+            if a.get("id") in ("timezone-settings", "danger-zone"):
+                self.column_of[a["id"]] = self._column()
+
+        def handle_endtag(self, tag):
+            if tag == "div" and self.stack:
+                self.stack.pop()
+
+        def handle_data(self, data):
+            if data.strip() == "Email send (SMTP)":
+                self.column_of["smtp"] = self._column()
+
+        def _column(self) -> int:
+            for a in reversed(self.stack):
+                if "_column" in a:
+                    return int(a["_column"])
+            return 0
+
+    body = client.get("/operator/settings").text
+    parser = _Columns()
+    parser.feed(body)
+    assert parser.columns_seen == 2
+    # Each side is a `.bottom-left` stack: a bare <div> would leave the
+    # two right-hand cards flush (`.bottom-grid .card` zeroes margins).
+    assert all("bottom-left" in c for c in parser.column_classes)
+    assert parser.column_of == {
+        "smtp": 1, "timezone-settings": 2, "danger-zone": 2,
+    }
+    assert body.index('id="timezone-settings"') < body.index('id="danger-zone"')
 
 
 # ── POST /settings ───────────────────────────────────────────────────────
