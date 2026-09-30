@@ -207,7 +207,8 @@ _INTRO_GAP_PX = 12
 _INTRO_TITLE_CHARS_PER_LINE = 50
 _INTRO_TITLE_LINE_PX = 32
 # How close the columns must end, without the card at the split, for that
-# card to go left: one line of help text (the author's ruling, 2026-09-30).
+# card to go left. The author's ruling (2026-09-30) is "close by"; one
+# line of help text is the figure chosen at build.
 INTRO_LEAN_PX = 24
 
 
