@@ -2600,7 +2600,13 @@ item of their own. It closes when the author says so.
    test, since a Save is a fetch and leaves the rendered heading stale.
    Chromium: locked 59px title-only and 89px with a description, as on
    the surface; Save-then-Lock recomposed; cleared, the locked card
-   hid. The lock fade (opacity 0.75) is Band 2's and stays.
+   hid. The lock fade (opacity 0.75) is Band 2's and stays. **Read:**
+   one `diff-reviewer` read; no code defect (position and total match the
+   surface's, every lock path recomposes, nothing overrides `hidden`); it
+   found `spec/instruments.md`'s `#{N}:` sentence and "syncs from the
+   textarea" stale, stale comments in the template and tests, and
+   `spec/reviewer-surface.md` counting "instruments the reviewer is
+   assigned on" where both surfaces count the session's; all fixed.
 
 ### Doc impact
 
@@ -2611,6 +2617,7 @@ item of their own. It closes when the author says so.
 - `spec/ui_elements.md` — §10 `.bottom-grid`'s collapsed row gap (Item 16, entry 3).
 - `spec/ui_elements.md` — §8 the text-input rule's types, `date` and `password` added (Item 16, entry 4); `file` on the focus rules (entry 5).
 - `spec/instruments.md` — Band 2's intro heading and subtitle composed as the reviewer surface's (Item 16, entry 6).
+- `spec/reviewer-surface.md` — the heading's composition counts the session's instruments (Item 16, entry 6).
 - `docs/status.md` — row when the item closes (Item 16).
 
 ## Item 17 — The instrument intro as two balanced columns

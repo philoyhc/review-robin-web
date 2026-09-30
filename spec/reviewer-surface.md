@@ -374,7 +374,8 @@ carrying a title (H2) and an optional subtitle (`.muted`, body weight)
 below it. Title and subtitle
 content comes from `Instrument.short_label` and
 `Instrument.description` respectively, with composition rules driven
-by how many instruments the reviewer is assigned on:
+by how many instruments the session has (every instrument, in
+`order, id`, as the Instruments page's Band 2 numbers them):
 
 | Case | Title (H2) | Subtitle (`.muted`, body-weight) |
 |---|---|---|

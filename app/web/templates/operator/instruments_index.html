@@ -1882,9 +1882,9 @@
                  when locked (data-lock-only); the textarea shows when
                  unlocked (data-unlock-only) and rides the dfsave form
                  so it commits via the consolidated /save on Save (no
-                 more immediate /identity POST). newModelSetLock syncs
-                 the view paragraph from the textarea when the card
-                 locks. #}
+                 more immediate /identity POST). newModelSetLock
+                 recomposes the heading and the view paragraph when the
+                 card locks (19T Item 16 entry 6). #}
               <div data-intro-description-block>
                 {# The reviewer's subtitle, spaced as the surface's is;
                    none, and no blank line, when the heading has none. #}
@@ -3862,8 +3862,9 @@
           };
           // Segment 18R Item 2 PR 4 — copy the short-label + description
           // input values into their read-only view elements (shown when
-          // the card is locked). Handles the fallback heading nudge and
-          // the reviewer-preview ``#N: <label>`` separator.
+          // the card is locked): the card title with its fallback nudge,
+          // and the reviewer-preview heading and subtitle, recomposed by
+          // ``newModelIntroHeading``.
           window.newModelSyncTextViews = window.newModelSyncTextViews || function (card) {
             if (!card) { return; }
             var titleInput = card.querySelector('[data-card-title-input]');

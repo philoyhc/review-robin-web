@@ -364,9 +364,9 @@ above) and `description` lives in Band 2's intro card as
 a lock-driven view/edit swap; both ride the `dfsave-{id}`
 bulk-Save form rather than a separate `/identity` POST, so
 the heading row stays compact. The intro card's
-title prefix reads `#{N}:` where N is the on-page
-position — the same prefix `views.instrument_heading`
-gives the reviewer, so the preview matches.
+heading is the one `views.instrument_heading` gives the
+reviewer — `#{N}:` with N the on-page position, and no
+prefix in a one-instrument session — so the preview matches.
 
 #### The per-session ordinal
 
@@ -792,12 +792,12 @@ Top-of-band intro card carrying:
   a `data-intro-description-input` textarea when unlocked. The
   textarea binds to the card's `dfsave-{id}` form
   (`name="description"`), so its value commits with the bulk Save
-  through the consolidated `/save` endpoint. `newModelSetLock`
-  syncs the read-only paragraph from the textarea when the card
-  locks (the same `newModelSyncTextViews` call the card title
-  uses — see that bullet above). A *dirty* card cannot reach that
-  path — it discards and reloads instead — so this sync, like the
-  title's, only ever copies persisted values.
+  through the consolidated `/save` endpoint. When the card locks,
+  `newModelSetLock` recomposes the heading and subtitle from the
+  label and textarea (the same `newModelSyncTextViews` call the card
+  title uses — see that bullet above). A *dirty* card cannot reach
+  that path — it discards and reloads instead — so this sync, like
+  the title's, only ever reads persisted values.
 
 Identity edits ride the bulk-save form: one Save commits identity
 together with Band 1 and Band 3, and the page issues no separate

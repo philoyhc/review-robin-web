@@ -156,7 +156,8 @@ def test_the_observers_expander_script_is_among_them(
     )
 
 
-# 19T Item 16 — the one script here that is run, not just parsed: the
+# 19T Item 16 — a script here that is run, not just parsed (as is the
+# intro heading's, below): the
 # Band 2 preview's copy of ``views.numeric_column_ch_width``, which must
 # give the surface's width. It lives in this node-gated module so the
 # suite keeps a single tool-gated skip.
