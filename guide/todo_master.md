@@ -3420,12 +3420,16 @@ dep chains called out at the bottom of this file.
      `guide/advanced_instruments.md` Item 6, Q2: a governed field may be
      a parent, one level down; each level shifts one column right in the
      builder, and answers anywhere below a parent lock its branch.
-   - **Item 15 — The Guide catches up with 19T** (open, planned; Item 12
-     until 2026-09-27): branching and the reviewer's view in the in-app
-     Guide, after Items 11–14 land.
+   - ~~**Item 15 — The Guide catches up with 19T.**~~ **Closed
+     2026-09-30.** Branching under its own heading in "Build the form",
+     the reviewer's view, and the instrument captures retaken in pairs.
    - **Item 16 — Small fixes** (open): a register of small fixes from the
-     author's browser passes; entry 1, a narrow column squished under a
-     fixed table layout.
+     author's browser passes (five entries so far); stays open for the
+     Guide's capture retakes.
+   - **Item 17 — The instrument intro as two balanced columns** (open,
+     planned): the name and visibility cards atop two column stacks, the
+     help cards split at one order-preserving point measured in the
+     browser, on the reviewer surface and Band 2.
 
 #### Stubs
 
