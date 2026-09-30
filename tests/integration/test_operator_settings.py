@@ -56,8 +56,13 @@ def test_settings_get_renders_empty_state_when_unconfigured(
     body = client.get("/operator/settings").text
     assert "<h1>Settings</h1>" in body
     assert "Email send (SMTP)" in body
-    # Empty-state intro card before the form:
+    # Empty-state intro, inside the SMTP card: below its header, before
+    # the form (19T Item 16 entry 3 folded the separate card in).
     assert "Bring your own SMTP" in body
+    header = body.index("<h2>Email send (SMTP)</h2>")
+    assert header < body.index("Bring your own SMTP") < body.index(
+        'id="operator-settings-form"'
+    )
     # Password indicator reads "not set" before any save.
     assert "not set" in body
 
@@ -69,7 +74,8 @@ def test_settings_display_mode_card_retired_toggle_in_chrome(
     favour of a chrome toggle; Date & time returns to a full-width card (no
     ``.bottom-grid``). The light/dark pill lives in the chrome instead."""
     body = client.get("/operator/settings").text
-    # Card gone, grid unwrapped, Date & time still present full-width.
+    # Card gone, grid unwrapped, Date & time still present (in the right
+    # column since 19T Item 16 entry 3).
     assert 'id="display-mode-settings"' not in body
     assert "<h2>Display mode</h2>" not in body
     assert 'class="bottom-grid"' not in body
@@ -104,8 +110,60 @@ def test_settings_get_renders_populated_form_when_configured(
     # Password reads "set" once persisted; plaintext never appears.
     assert "<span class=\"muted\">— set</span>" in body
     assert "app-pw-1234" not in body
-    # Empty-state intro card disappears once host is set.
+    # Empty-state intro disappears once host is set.
     assert "Bring your own SMTP" not in body
+
+
+def test_settings_two_columns_smtp_left_date_and_clear_right(
+    client: TestClient, db: Session
+) -> None:
+    """19T Item 16 entry 3 — one `.card-columns` pair: the SMTP card
+    alone in the left column; Date & time then Clear all settings in the
+    right."""
+    from html.parser import HTMLParser
+
+    class _Columns(HTMLParser):
+        # Records, for each card of interest, the index of the
+        # `.card-columns` child it sits in.
+        def __init__(self) -> None:
+            super().__init__()
+            self.stack: list[dict[str, str]] = []
+            self.column_of: dict[str, int] = {}
+            self.columns_seen = 0
+
+        def handle_starttag(self, tag, attrs):
+            if tag != "div":
+                return
+            a = {k: v or "" for k, v in attrs}
+            if self.stack and self.stack[-1].get("class") == "card-columns":
+                self.columns_seen += 1
+                a["_column"] = str(self.columns_seen)
+            self.stack.append(a)
+            if a.get("id") in ("timezone-settings", "danger-zone"):
+                self.column_of[a["id"]] = self._column()
+
+        def handle_endtag(self, tag):
+            if tag == "div" and self.stack:
+                self.stack.pop()
+
+        def handle_data(self, data):
+            if data.strip() == "Email send (SMTP)":
+                self.column_of["smtp"] = self._column()
+
+        def _column(self) -> int:
+            for a in reversed(self.stack):
+                if "_column" in a:
+                    return int(a["_column"])
+            return 0
+
+    body = client.get("/operator/settings").text
+    parser = _Columns()
+    parser.feed(body)
+    assert parser.columns_seen == 2
+    assert parser.column_of == {
+        "smtp": 1, "timezone-settings": 2, "danger-zone": 2,
+    }
+    assert body.index('id="timezone-settings"') < body.index('id="danger-zone"')
 
 
 # ── POST /settings ───────────────────────────────────────────────────────

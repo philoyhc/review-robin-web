@@ -2539,10 +2539,19 @@ item of their own. It closes when the author says so.
    "deadline" in the same sentence became **Start** / **End**, the
    form's labels. Each example checked against `parse_iso_duration`;
    one read, three wording findings, all acted on.
+3. **The Settings page in two columns** (author's ask, 2026-09-30). The
+   "Bring your own SMTP" card folds into Email send (SMTP), below its
+   header and above its fields, still only until a host is saved; that
+   card is the left column of a `.card-columns` pair, Date & time and
+   Clear all settings stacked in the right. Chromium at 1400 and 900px:
+   the columns split evenly, no horizontal scroll. Out of scope, noted:
+   the App password box is unstyled, as on `main`, since `base.html`'s
+   input rule lists no `type="password"`.
 
 ### Doc impact
 
 - `spec/instruments.md` — the preview's unsized profile column (Item 16, entry 1).
 - `spec/reviewer-surface.md` — unsized profile and numeric columns and the status column under a fixed layout (Item 16, entry 1).
 - `spec/ui_elements.md` — `.rs-status` among the reviewer-table hints (Item 16, entry 1).
+- `spec/rrw_functional_spec.md` — §9.13 the Settings page's two columns (Item 16, entry 3).
 - `docs/status.md` — row when the item closes (Item 16).

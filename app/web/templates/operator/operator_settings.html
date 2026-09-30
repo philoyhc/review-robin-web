@@ -10,8 +10,19 @@
     <h1>Settings</h1>
   </div>
 
-  {% if not user.smtp_host %}
-    <div class="card">
+
+  {# Save button starts disabled and only enables once the operator
+     has touched any input — the disabled→enabled→disabled cycle
+     across the Save reload replaces a flash banner. #}
+  {# 19T Item 16 entry 3 — two columns: the SMTP card on the left (its
+     "Bring your own SMTP" intro folded in below the header), Date & time
+     and Clear all settings stacked on the right. `.card-columns` so the
+     sides keep their own heights. #}
+  <div class="card-columns">
+  <div>
+  <div class="card">
+    <h2>Email send (SMTP)</h2>
+    {% if not user.smtp_host %}
       <p>
         <strong>Bring your own SMTP.</strong>
         Review Robin sends invitation and reminder emails through your
@@ -26,14 +37,7 @@
         rather than your sign-in password. Generate one once and paste
         it into the App password field.
       </p>
-    </div>
-  {% endif %}
-
-  {# Save button starts disabled and only enables once the operator
-     has touched any input — the disabled→enabled→disabled cycle
-     across the Save reload replaces a flash banner. #}
-  <div class="card">
-    <h2>Email send (SMTP)</h2>
+    {% endif %}
     <form method="post" action="/operator/settings" id="operator-settings-form">
       {% if return_to_raw %}
         <input type="hidden" name="return_to" value="{{ return_to_raw }}">
@@ -89,7 +93,9 @@
       </div>
     </form>
   </div>
+  </div>
 
+  <div>
   {# Segment 18B PR 2 — per-operator default display timezone.
      Searchable <datalist> over every IANA zone name. The signed-in
      operator's surfaces render in this zone; new sessions inherit
@@ -98,7 +104,8 @@
      the label is where the chosen zone is made explicit. #}
   {# Segment 19C Item 2 — the Display mode (light / dark) control moved to a
      chrome toggle (top-right, reaches participants too — see guide/ux_theme.md),
-     so the settings card was retired and Date & time returns to full width. #}
+     so the settings card was retired and Date & time returned to full width;
+     since 19T Item 16 entry 3 it heads the right column. #}
   <div class="card" id="timezone-settings">
     <h2>Date &amp; time</h2>
     <p class="muted">
@@ -206,6 +213,8 @@
         <button class="btn destructive" type="submit">Clear all settings</button>
       </div>
     </form>
+  </div>
+  </div>
   </div>
 
   {# Wave 5 PR 5.1 — the operator-library cards row retired
