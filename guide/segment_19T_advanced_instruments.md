@@ -2556,7 +2556,7 @@ item of their own. It closes when the author says so.
    stale `.bottom-grid` comment and an unpinned `.bottom-left`, acted
    on; the spec pass, a CSS class in the functional spec, dropped. Out
    of scope, noted: the App password box unstyled, as on `main` (entry 4).
-4. **The App password box styled like its neighbours** (author's ask,
+4. **The App password box styled like its neighbors** (author's ask,
    2026-09-30). `body.ui-v2`'s input rule and its `:focus` /
    `:focus-visible` companions named no `type="password"`, so the
    Settings page's one password box kept the browser's default. They
@@ -2566,7 +2566,7 @@ item of their own. It closes when the author says so.
    the templates use and fails on one the three rules miss; it records
    `file` as off both focus rules since they were written, undecided.
    Headless Chromium in the sandbox: the password box now 297 × 36 with
-   12px padding, as its neighbours. **Read:** one `diff-reviewer` read;
+   12px padding, as its neighbors. **Read:** one `diff-reviewer` read;
    it found §8's type list stale and no Doc impact bullet for it, both
    acted on; a `spec-writer` pass then took the history out of the new
    §8 sentences.
