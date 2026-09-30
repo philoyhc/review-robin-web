@@ -2554,9 +2554,22 @@ item of their own. It closes when the author says so.
    **Reads:** two `diff-reviewer` reads and one `spec-writer` pass. The
    first read found the non-collapsing grid, acted on; the second, a
    stale `.bottom-grid` comment and an unpinned `.bottom-left`, acted
-   on; the spec pass, a CSS class in the functional spec, dropped. Out of scope, noted:
-   the App password box is unstyled, as on `main`, since `base.html`'s
-   input rule lists no `type="password"`.
+   on; the spec pass, a CSS class in the functional spec, dropped. Out
+   of scope, noted: the App password box unstyled, as on `main` (entry 4).
+4. **The App password box styled like its neighbors** (author's ask,
+   2026-09-30). `body.ui-v2`'s input rule and its `:focus` /
+   `:focus-visible` companions named no `type="password"`, so the
+   Settings page's one password box kept the browser's default. They
+   now name it, and `type="date"`, which left the sys admin audit log's
+   two date filters bare the same way.
+   `tests/unit/test_input_type_styling.py` derives the text-like types
+   the templates use and fails on one the three rules miss; it records
+   `file` as off both focus rules since they were written, undecided.
+   Headless Chromium in the sandbox: the password box now 297 × 36 with
+   12px padding, as its neighbors. **Read:** one `diff-reviewer` read;
+   it found §8's type list stale and no Doc impact bullet for it, both
+   acted on; a `spec-writer` pass then took the history out of the new
+   §8 sentences.
 
 ### Doc impact
 
@@ -2565,4 +2578,5 @@ item of their own. It closes when the author says so.
 - `spec/ui_elements.md` — `.rs-status` among the reviewer-table hints (Item 16, entry 1).
 - `spec/rrw_functional_spec.md` — §9.13 the Settings page's two columns (Item 16, entry 3).
 - `spec/ui_elements.md` — §10 `.bottom-grid`'s collapsed row gap (Item 16, entry 3).
+- `spec/ui_elements.md` — §8 the text-input rule's types, `date` and `password` added, `file` off the focus rules (Item 16, entry 4).
 - `docs/status.md` — row when the item closes (Item 16).
