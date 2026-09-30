@@ -177,7 +177,7 @@ the joke it sounds like.
 ### 1.8 A new guard states the three things that make it evidence
 
 - **Written down at** `guide/archive/segment_19S_post_assessment.md` Item 1
-  entry **E6**, proposed by `guide/codex_assessment_21sep.md` §5; adopted
+  entry **E6**, proposed by `guide/archive/codex_assessment_21sep.md` §5; adopted
   per-item at 19S.2 rather than as a standing rule.
 - **The rule.** Before a guard is called complete: the fixture reaches
   the case, a mutation of the protected property fails, and the
@@ -209,7 +209,7 @@ the joke it sounds like.
 - **Written down at** `.claude/skills/segment-plan/SKILL.md` "Length"
   (~250 lines a segment, ~120 an item); raised as
   `guide/archive/segment_19S_post_assessment.md` Item 1 entry **E7**, from
-  `guide/codex_assessment_21sep.md` §7.
+  `guide/archive/codex_assessment_21sep.md` §7.
 - **The instance.** 19R's plan closed at **1,541 lines for eight items**.
   Its items each compacted at their own close and it still landed there.
   19S, written **after** the budget was raised as a finding, then
