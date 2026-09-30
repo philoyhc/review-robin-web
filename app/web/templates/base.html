@@ -457,8 +457,8 @@
       /*
        * Reviewer-surface help-text primitives — visual_style_general.md-aligned
        * tinted blocks for the per-instrument response-field help text.
-       * Always half-width, stacked in the per-instrument intro's two
-       * columns (`.rs-intro-columns` below), never full width.
+       * Stacked in the per-instrument intro's right column
+       * (`.rs-intro-columns` below), as wide as that column.
        */
       /* Tinted slab in the per-instrument intro's columns, rather than
          a regular card with a contrasting border + interior.
@@ -4243,15 +4243,13 @@
         justify-content: flex-end;
         margin-top: var(--space-3);
       }
-      /* Per-instrument intro — two independent column stacks (19T
-         Item 17). The name / description card heads the left column and
-         the "Who can see what you wrote" card the right; the help cards
-         stack beneath them in `.rs-help-stack`s. `align-items: start`
-         and a flex stack per column let every card keep its own height:
-         the name card is as tall as its text, not as the visibility
-         table beside it. At 800px or narrower the columns and stacks
-         dissolve (`display: contents`) into one flex column ordered
-         name, visibility, then the help cards in field order. */
+      /* Per-instrument intro — two independent columns (19T Item 17).
+         The left column stacks the name / description card over the
+         "Who can see what you wrote" card; the right stacks every help
+         card in field order. `align-items: start` and a flex stack per
+         column let every card keep its own height. At 800px or narrower
+         the two columns stack into one: name, visibility, then the help
+         cards. */
       body.ui-v2 .rs-intro-columns {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -4267,18 +4265,13 @@
         min-width: 0;
       }
       body.ui-v2 .rs-help-stack:empty { display: none; }
+      /* No help cards: the right column leaves the grid, so the one-column
+         layout below adds no gap under the visibility card; at two columns
+         the left keeps its half and the right half stays empty. */
+      body.ui-v2 .rs-intro-col[data-rs-intro-col="right"]:not(:has(.rs-help-card)) { display: none; }
       body.ui-v2 .rs-intro-columns .card { margin: 0; }
       @media (max-width: 800px) {
-        body.ui-v2 .rs-intro-columns {
-          display: flex;
-          flex-direction: column;
-          align-items: stretch;
-        }
-        body.ui-v2 .rs-intro-col,
-        body.ui-v2 .rs-help-stack { display: contents; }
-        body.ui-v2 .rs-intro-name { order: 0; }
-        body.ui-v2 .rs-intro-visibility { order: 1; }
-        body.ui-v2 .rs-intro-columns .rs-help-card { order: 2; }
+        body.ui-v2 .rs-intro-columns { grid-template-columns: 1fr; }
       }
       body.ui-v2 .rs-instrument-card h2 { margin: 0; }
       body.ui-v2 .rs-instrument-card .rs-instrument-subtitle {
@@ -4568,142 +4561,6 @@
           return String(tag).trim().toLowerCase() === needle;
         });
       }
-    </script>
-    <script>
-      // 19T Item 17 — the per-instrument intro's balanced columns, on the
-      // reviewer surface and the Instruments page's Band 2 preview. The
-      // intro (`.rs-intro-columns`) is two stacks: the heading card over
-      // the first k help cards, the visibility card over the rest, in
-      // field order.
-      // In <head> so both pages can call it whenever their scripts run.
-      //
-      // rrwIntroSplitIndex is kept identical to the Python
-      // ``views.intro_split_index`` (the server's estimate); a node test
-      // in tests/integration/test_inline_scripts_parse.py holds them to the
-      // same answers. `null` is a column with no top card; ties go to the
-      // larger k, the heavier left column, and so does a near tie: when
-      // the columns without the first right-hand help card end within
-      // `lean` of each other, that card goes left.
-      function rrwIntroSplitIndex(leftTop, rightTop, heights, gap, lean) {
-        function column(top, hs) {
-          var parts = (top === null ? [] : [top]).concat(hs);
-          var sum = 0;
-          for (var i = 0; i < parts.length; i++) { sum += parts[i]; }
-          return sum + gap * Math.max(parts.length - 1, 0);
-        }
-        var bestK = 0, bestDiff = null;
-        for (var k = 0; k <= heights.length; k++) {
-          var diff = Math.abs(column(leftTop, heights.slice(0, k))
-            - column(rightTop, heights.slice(k)));
-          if (bestDiff === null || diff <= bestDiff) { bestK = k; bestDiff = diff; }
-        }
-        if (bestK < heights.length) {
-          var without = Math.abs(column(leftTop, heights.slice(0, bestK))
-            - column(rightTop, heights.slice(bestK + 1)));
-          if (without <= lean) { bestK += 1; }
-        }
-        return bestK;
-      }
-      // The lean, one line of help text; views.INTRO_LEAN_PX is the same.
-      var RRW_INTRO_LEAN_PX = 24;
-      function rrwIntroParts(wrapper) {
-        var left = wrapper.querySelector('[data-rs-intro-col="left"]');
-        var right = wrapper.querySelector('[data-rs-intro-col="right"]');
-        if (!left || !right) { return null; }
-        return {
-          left: left, right: right,
-          leftStack: left.querySelector('[data-rs-help-stack]'),
-          rightStack: right.querySelector('[data-rs-help-stack]'),
-        };
-      }
-      // The first k help cards to the left stack, the rest to the right,
-      // keeping field order (left stack's cards come first, then the
-      // right's). Collapsed to one column (<=800px), all go right, so the
-      // DOM order — the reading and tab order — is the visual one: name,
-      // visibility, help cards. A placement that changes nothing moves
-      // nothing, so a focused textarea keeps its focus.
-      function rrwIntroCollapsed(p) {
-        return getComputedStyle(p.left).display === 'contents';
-      }
-      function rrwIntroPlaceHelp(wrapper, k) {
-        var p = rrwIntroParts(wrapper);
-        if (!p || !p.leftStack || !p.rightStack) { return; }
-        var cards = Array.prototype.slice.call(p.leftStack.children)
-          .concat(Array.prototype.slice.call(p.rightStack.children));
-        k = rrwIntroCollapsed(p) ? 0 : Math.max(0, Math.min(k, cards.length));
-        if (p.leftStack.children.length === k) { return; }
-        cards.forEach(function (card, i) {
-          (i < k ? p.leftStack : p.rightStack).appendChild(card);
-        });
-      }
-      // Measure and split. Skipped while the intro has no width (a closed
-      // <details>, a hidden page); collapsed to one column (<=800px,
-      // where the stacks are `display: contents`) the cards all go right
-      // and no split is taken. The ResizeObserver below re-runs it once
-      // the intro has two columns' room.
-      function rrwIntroBalance(wrapper) {
-        var p = rrwIntroParts(wrapper);
-        if (!p || !p.leftStack || !p.rightStack) { return; }
-        if (!wrapper.offsetWidth) { return; }
-        if (rrwIntroCollapsed(p)) { rrwIntroPlaceHelp(wrapper, 0); return; }
-        function topOf(col, stack) {
-          var first = col.firstElementChild;
-          while (first && first !== stack && !first.classList.contains('card')) {
-            first = first.nextElementSibling;
-          }
-          return (first && first !== stack) ? first.getBoundingClientRect().height : null;
-        }
-        var cards = Array.prototype.slice.call(p.leftStack.children)
-          .concat(Array.prototype.slice.call(p.rightStack.children));
-        var heights = cards.map(function (c) { return c.getBoundingClientRect().height; });
-        var gap = parseFloat(getComputedStyle(p.left).rowGap) || 0;
-        var k = rrwIntroSplitIndex(topOf(p.left, p.leftStack), topOf(p.right, p.rightStack), heights, gap, RRW_INTRO_LEAN_PX);
-        rrwIntroPlaceHelp(wrapper, k);
-        wrapper.setAttribute('data-rs-intro-split', String(k));
-      }
-      // Re-split when the intro's width changes (a resize, a <details>
-      // opening, the page leaving the one-column layout); a change of
-      // height alone (a card moved, a textarea grown) is ignored, so a
-      // split never feeds back into itself. A change under 24px is
-      // ignored too: a page scrollbar appearing or leaving (~15px) would
-      // otherwise re-split, change the page's height, toggle the
-      // scrollbar back, and loop. From zero (a hidden intro shown) or to
-      // zero always counts, and so does crossing into or out of the
-      // one-column layout, however small the change that crossed it.
-      function rrwIntroWatch(wrapper) {
-        if (wrapper.__rrwIntroWatched) { return; }
-        wrapper.__rrwIntroWatched = true;
-        var p = rrwIntroParts(wrapper);
-        if (!p) { return; }
-        var lastWidth = wrapper.offsetWidth;
-        var lastCollapsed = rrwIntroCollapsed(p);
-        var rerun = function () {
-          var w = wrapper.offsetWidth;
-          var collapsed = rrwIntroCollapsed(p);
-          if (collapsed === lastCollapsed) {
-            if (w === lastWidth) { return; }
-            if (lastWidth && w && Math.abs(w - lastWidth) < 24) { return; }
-          }
-          lastWidth = w;
-          lastCollapsed = collapsed;
-          rrwIntroBalance(wrapper);
-        };
-        if (window.ResizeObserver) {
-          new ResizeObserver(rerun).observe(wrapper);
-        } else {
-          window.addEventListener('resize', rerun);
-        }
-      }
-      // The reviewer surface's intros balance themselves on load. Band 2's
-      // (`data-rs-intro-js`) build their help cards in script and balance
-      // from ``rebuildPreview``, so a load-time pass here would run before
-      // their cards exist.
-      document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('.rs-intro-columns').forEach(function (w) {
-          if (!w.hasAttribute('data-rs-intro-js')) { rrwIntroBalance(w); }
-          rrwIntroWatch(w);
-        });
-      });
     </script>
     {% block extra_head %}{% endblock %}
   </head>

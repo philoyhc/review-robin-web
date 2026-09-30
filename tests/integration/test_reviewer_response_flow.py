@@ -248,6 +248,48 @@ def test_surface_help_text_renders_as_inline_list(
     assert '<ul class="help-block">' not in body
 
 
+def intro_columns(body: str) -> dict[str, str]:
+    """19T Item 17 — the inner HTML of the first intro's two columns,
+    keyed ``left`` / ``right`` by ``data-rs-intro-col``, so a test can
+    assert a card is *inside* a column rather than merely after it."""
+    from html.parser import HTMLParser
+
+    class _Cols(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__(convert_charrefs=False)
+            self.cols: dict[str, list[str]] = {}
+            self.current: str | None = None
+            self.depth = 0
+
+        def handle_starttag(self, tag, attrs) -> None:
+            if self.current is not None:
+                self.cols[self.current].append(self.get_starttag_text() or "")
+                if tag == "div":
+                    self.depth += 1
+            elif tag == "div" and dict(attrs).get("data-rs-intro-col") and len(self.cols) < 2:
+                self.current = dict(attrs)["data-rs-intro-col"]
+                self.cols[self.current] = []
+                self.depth = 0
+
+        def handle_endtag(self, tag) -> None:
+            if self.current is None:
+                return
+            if tag == "div" and self.depth == 0:
+                self.current = None
+                return
+            if tag == "div":
+                self.depth -= 1
+            self.cols[self.current].append(f"</{tag}>")
+
+        def handle_data(self, data) -> None:
+            if self.current is not None:
+                self.cols[self.current].append(data)
+
+    parser = _Cols()
+    parser.feed(body[body.index('<div class="rs-intro-columns"') :])
+    return {k: "".join(v) for k, v in parser.cols.items()}
+
+
 def test_surface_help_text_multi_items_render_in_grid(
     db: Session,
     alice: AuthenticatedUser,
@@ -287,37 +329,35 @@ def test_surface_help_text_multi_items_render_in_grid(
     rae_client = make_client(rae)
     body = rae_client.get(f"/me/sessions/{review_session.id}").text
 
-    # 19T Item 17 — the intro is two column stacks: the heading card
-    # heads the left, the visibility card the right, and the help cards
-    # stack beneath; here the server's estimated split puts both left.
+    # 19T Item 17 — the intro is two columns: the left stacks the
+    # heading card over the visibility card, the right every help card
+    # in field order.
     assert '<div class="rs-intro-columns">' in body
-    # From the intro on: base.html's <head> script names the same hooks.
+    cols = intro_columns(body)
     body = body[body.index('<div class="rs-intro-columns">') :]
-    left = body.index('data-rs-help-stack="left"')
-    right_col = body.index('data-rs-intro-col="right"')
-    # A lone untitled instrument renders no heading card: the columns
-    # place the visibility card, so an empty card no longer holds column 1.
+    # A lone untitled instrument renders no heading card.
     assert 'class="card rs-instrument-card rs-intro-name"' not in body
-    assert left < body.index("Rating help.") < body.index("Comments help.") < right_col
-    assert body.index("data-rs-visibility-policy-card") > right_col
+    assert "data-rs-visibility-policy-card" in cols["left"]
+    assert "rs-help-card" not in cols["left"]
+    assert "data-rs-help-stack" in cols["right"]
+    assert cols["right"].index("Rating help.") < cols["right"].index("Comments help.")
+    assert cols["right"].count('class="card rs-help-card"') == 2
     assert body.count('class="card rs-help-card"') == 2
+    assert body.count("data-rs-help-stack") == 1
     assert "rs-help-grid" not in body and "rs-intro-grid" not in body
-    assert "Rating help." in body
-    assert "Comments help." in body
     # The retired `rs-help-card-solo` modifier no longer renders.
     assert "rs-help-card-solo" not in body
 
 
-def test_surface_help_cards_split_between_the_columns(
+def test_surface_help_cards_all_go_right(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """19T Item 17 rung 2: the server renders its estimated split — a long
-    first help card fills the left column under the heading, so the second
-    heads the right column under the visibility card, field order kept.
-    The browser re-takes the split on measured heights."""
+    """19T Item 17 rung 4: the left column is the heading card over the
+    visibility card, the right every help card in field order, whatever
+    their length — nothing is measured or split."""
     from app.db.models import InstrumentResponseField
 
     operator = make_client(alice)
@@ -350,15 +390,15 @@ def test_surface_help_cards_split_between_the_columns(
 
     rae_client = make_client(rae)
     body = rae_client.get(f"/me/sessions/{review_session.id}").text
-    # From the intro on: base.html's <head> script names the same hooks.
-    body = body[body.index('<div class="rs-intro-columns">') :]
-    left_stack = body.index('data-rs-help-stack="left"')
-    right_col = body.index('data-rs-intro-col="right"')
-    right_stack = body.index('data-rs-help-stack="right"')
-    assert body.index('class="card rs-instrument-card rs-intro-name"') < left_stack
-    assert left_stack < body.index("Rating help.") < right_col
-    assert right_col < body.index("data-rs-visibility-policy-card") < right_stack
-    assert right_stack < body.index("Comments help.")
+    cols = intro_columns(body)
+    left = cols["left"]
+    assert left.index('class="card rs-instrument-card rs-intro-name"') < left.index(
+        "data-rs-visibility-policy-card"
+    )
+    assert "rs-help-card" not in left
+    assert cols["right"].index("Rating help.") < cols["right"].index("Comments help.")
+    assert "rs-intro-name" not in cols["right"]
+    assert "data-rs-visibility-policy-card" not in cols["right"]
 
 
 def test_surface_does_not_wrap_groups_in_outer_card(

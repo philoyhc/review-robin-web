@@ -440,8 +440,8 @@
       /*
        * Reviewer-surface help-text primitives — visual_style_general.md-aligned
        * tinted blocks for the per-instrument response-field help text.
-       * Always half-width, stacked in the per-instrument intro's two
-       * columns (`.rs-intro-columns` below), never full width.
+       * Stacked in the per-instrument intro's right column
+       * (`.rs-intro-columns` below), as wide as that column.
        */
       /* Tinted slab in the per-instrument intro's columns, rather than
          a regular card with a contrasting border + interior.
@@ -4226,15 +4226,13 @@
         justify-content: flex-end;
         margin-top: var(--space-3);
       }
-      /* Per-instrument intro — two independent column stacks (19T
-         Item 17). The name / description card heads the left column and
-         the "Who can see what you wrote" card the right; the help cards
-         stack beneath them in `.rs-help-stack`s. `align-items: start`
-         and a flex stack per column let every card keep its own height:
-         the name card is as tall as its text, not as the visibility
-         table beside it. At 800px or narrower the columns and stacks
-         dissolve (`display: contents`) into one flex column ordered
-         name, visibility, then the help cards in field order. */
+      /* Per-instrument intro — two independent columns (19T Item 17).
+         The left column stacks the name / description card over the
+         "Who can see what you wrote" card; the right stacks every help
+         card in field order. `align-items: start` and a flex stack per
+         column let every card keep its own height. At 800px or narrower
+         the two columns stack into one: name, visibility, then the help
+         cards. */
       body.ui-v2 .rs-intro-columns {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -4250,18 +4248,13 @@
         min-width: 0;
       }
       body.ui-v2 .rs-help-stack:empty { display: none; }
+      /* No help cards: the right column leaves the grid, so the one-column
+         layout below adds no gap under the visibility card; at two columns
+         the left keeps its half and the right half stays empty. */
+      body.ui-v2 .rs-intro-col[data-rs-intro-col="right"]:not(:has(.rs-help-card)) { display: none; }
       body.ui-v2 .rs-intro-columns .card { margin: 0; }
       @media (max-width: 800px) {
-        body.ui-v2 .rs-intro-columns {
-          display: flex;
-          flex-direction: column;
-          align-items: stretch;
-        }
-        body.ui-v2 .rs-intro-col,
-        body.ui-v2 .rs-help-stack { display: contents; }
-        body.ui-v2 .rs-intro-name { order: 0; }
-        body.ui-v2 .rs-intro-visibility { order: 1; }
-        body.ui-v2 .rs-intro-columns .rs-help-card { order: 2; }
+        body.ui-v2 .rs-intro-columns { grid-template-columns: 1fr; }
       }
       body.ui-v2 .rs-instrument-card h2 { margin: 0; }
       body.ui-v2 .rs-instrument-card .rs-instrument-subtitle {

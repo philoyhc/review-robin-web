@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from .test_instrument_builder_routes import _card_slice, _rf_fn
+from .test_reviewer_response_flow import intro_columns
 from .test_response_field_branching_builder import _page, _row, _rows_table
 
 
@@ -371,25 +372,20 @@ def test_band_1_scrolls_rather_than_spilling(
         assert selects and all(s.startswith("flex: 0 1 50%;") for s in selects)
 
 
-def test_band_2s_intro_is_two_column_stacks(client: TestClient, db: Session) -> None:
-    """19T Item 17 rung 1: Band 2's intro mirrors the reviewer surface's
-    two column stacks — the name card heads the left, the visibility card
-    the right, and the JS-built help cards go to the left stack, out of the
-    preview."""
+def test_band_2s_intro_is_two_columns(client: TestClient, db: Session) -> None:
+    """19T Item 17: Band 2's intro mirrors the reviewer surface's two
+    columns — the name card over the visibility card on the left, and
+    the JS-built help cards in the right column's one stack, out of the
+    preview. Rung 4 retired the measured split, so nothing re-places them."""
     _, _, card, _ = _page(client, db, "17-intro-columns")
-    intro = card[card.index('<div class="rs-intro-columns"') :]
-    left = intro.index('data-rs-intro-col="left"')
-    right = intro.index('data-rs-intro-col="right"')
-    assert left < intro.index("rs-intro-name") < intro.index('data-rs-help-stack="left"') < right
-    assert right < intro.index("rs-intro-visibility") < intro.index('data-rs-help-stack="right"')
+    cols = intro_columns(card)
+    assert cols["left"].index("rs-intro-name") < cols["left"].index("rs-intro-visibility")
+    assert "data-rs-help-stack" not in cols["left"]
+    assert '<div class="rs-help-stack" data-rs-help-stack>' in cols["right"]
+    assert "rs-intro-name" not in cols["right"] and "rs-intro-visibility" not in cols["right"]
     assert "rs-intro-grid" not in card and "rs-help-grid" not in card
     # The help cards are placed in the stack, not the preview container.
-    assert 'leftStack.innerHTML = buildResponseFieldHelpCards(card)' in card
+    assert "helpStack.innerHTML = buildResponseFieldHelpCards(card)" in card
     assert "container.innerHTML = buildResponseFieldHelpCards(card)" not in card
-    # Rung 2: Band 2 balances its own intro (the reviewer surface's load
-    # pass skips it), holding a taken split while unlocked, and lock /
-    # unlock clear the split so it is re-taken.
-    assert '<div class="rs-intro-columns" data-rs-intro-js' in card
-    assert "rrwIntroBalance(intro);" in card
-    assert "rrwIntroPlaceHelp(intro, parseInt(held, 10));" in card
-    assert "w.removeAttribute('data-rs-intro-split');" in card
+    for retired in ("data-rs-intro-js", "rrwIntro", "data-rs-intro-split"):
+        assert retired not in card

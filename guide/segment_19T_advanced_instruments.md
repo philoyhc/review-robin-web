@@ -2653,16 +2653,24 @@ page's Band 2 preview) shows two grids:
   operator types, so the split holds until the card locks or unlocks.
 - **Reading order**: moving cards between columns makes the DOM order
   name, help 1..k, visibility, help k+1..n. See judgment calls.
+- **Superseded by rung 4** (every bullet above that places help cards):
+  the left column is the name card (with a title) over the visibility
+  card, the right every help card in field order; with no help cards the
+  right column is hidden, the right half empty (author, 2026-09-30); DOM
+  order is name, visibility, help, and nothing is re-split in Band 2.
 
 ### Judgment calls — decided
 
 - The split is recomputed on load and on resize; in Band 2 also on lock
   and unlock, not on every rebuild while editing (2026-09-30).
+  Superseded by rung 4: there is no split.
 - The DOM order follows the columns (column-major), so a screen reader
   reads what the eye does down each column; keeping the DOM fixed and
   positioning visually would read the columns interleaved (2026-09-30).
   Collapsed to one column the help cards all go right, so the DOM order
-  is the visual one there too (the item's read, 2026-09-30).
+  is the visual one there too (the item's read, 2026-09-30). Rung 4:
+  with the help cards always right, the DOM order is the visual one at
+  every width.
 - A near tie leans left: when the columns without the first right-hand
   help card end close by, that card goes left, under the card before it
   (the author, from a Band 2 screenshot, 2026-09-30). Chosen at build,
@@ -2670,6 +2678,16 @@ page's Band 2 preview) shows two grids:
   help text; and the lean moves the card at the split, the only reading
   that keeps field order with more than one card on the right (the
   author's "last card" is that card when one card is on the right).
+  Superseded by rung 4.
+- **No split** (rung 4, the author, 2026-09-30, from a mockup of five
+  cases against the balanced split): name and visibility on the left,
+  every help card on the right, "more certainty about what goes where".
+  The cost, accepted: one help card leaves the right column short (251
+  against 67px in the mockup), many run it long (five: 90px taller).
+  Shown two readings of "help cards level with the visibility card"
+  (a half-width name card with the help cards starting beside the
+  visibility card, and a full-width name card), the author kept rung 4,
+  including an empty right half when there are no help cards.
 
 ### Blast radius (measured)
 
@@ -2748,6 +2766,28 @@ Taken 2026-09-30 at `be68a8ad`:
   were attributed to the author, and the constants' equality test
   skipped without node. All fixed; mutants (`<`, the last card, one
   card on the right only) now each fail a unit test.
+- **Rung 4 (no split), 2026-09-30.** The author, shown the lean still
+  moving cards by measurement, asked for certainty instead: the left
+  column is the name card over the visibility card, the right every
+  help card in field order, on both surfaces. Retired: the split
+  (`views.intro_split_index`, `rrwIntroSplitIndex` and the `<head>`
+  script with it: the lean, `rrwIntroBalance`, `rrwIntroWatch`),
+  `views.estimated_intro_split` and `group["help_split"]`, Band 2's
+  `data-rs-intro-js` and its lock / unlock re-splits, `.rs-help-stack`'s
+  left / right pair (one stack now), and the ≤800px `display: contents`
+  reordering (the grid goes to one column; DOM order is already the
+  visual one). `tests/unit/test_intro_split.py` and the node parity
+  test go with the code. Chromium: reviewer surface at 1400px, name /
+  visibility left, help right; at 700px one column in that order; Band
+  2 unlocked (help textareas) and locked with a long description, help
+  cards stay right. Its own reads (`b759c910..85ef4065`): `diff-reviewer`
+  found no code defect; it and `spec-writer` found the empty right column
+  with no help cards (kept, the author's ruling; the column is now
+  hidden so the one-column layout adds no gap under the visibility card),
+  Semantics and judgment calls unannotated, rung history and "always
+  half width" in the specs, a stale "left of the preview row" heading
+  and two stale comments, and tests that checked the help cards came
+  after the right column's opening rather than inside it. All fixed.
 
 ### PR ladder
 
@@ -2761,14 +2801,17 @@ Taken 2026-09-30 at `be68a8ad`:
    the specs. The item's last build rung: its cumulative read.
 3. **Close.**
 
-Added at build: **rung 3, the lean** (see Status), before the close.
+Added at build: **rung 3, the lean**, then **rung 4, no split**, which
+retires rungs 2 and 3's measured split (see Status), before the close.
 
 ### Definition of done
 
 - On the reviewer surface and the locked Band 2 preview, the name card is
-  as tall as its text, and the help cards split at the `k` that balances
-  the columns (the author's example: 2 left, 1 right).
-- The split function is tested in node over the edge cases in Semantics.
+  as tall as its text, and ~~the help cards split at the `k` that balances
+  the columns (the author's example: 2 left, 1 right)~~ the name and
+  visibility cards stack on the left, every help card on the right (rung 4).
+- ~~The split function is tested in node over the edge cases in Semantics.~~
+  Retired with the split (rung 4).
 - ≤800px: one column, name, visibility, help cards in field order.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19T.17` exits 0; any warning adjudicated
@@ -2780,7 +2823,7 @@ Added at build: **rung 3, the lean** (see Status), before the close.
 
 1. ~~**Band 2 unlocked**~~ — the stacks in both states, re-split on lock
    and unlock only, so cards don't jump while the operator types (author,
-   2026-09-30).
+   2026-09-30). Moot since rung 4: nothing is re-split.
 
 ### Out of scope
 
@@ -2790,8 +2833,8 @@ Added at build: **rung 3, the lean** (see Status), before the close.
 
 ### Doc impact
 
-- `spec/reviewer-surface.md` — the help block and intro as two balanced column stacks, the split rule (Item 17).
-- `spec/ui_elements.md` — the `.rs-help-card` family's layout: column stacks, not a `.rs-help-grid` row (Item 17).
-- `spec/instruments.md` — Band 2's preview follows the same split (Item 17).
-- `spec/visibility_policy.md` — the transparency card heads the intro's right column, on both surfaces (Item 17).
+- `spec/reviewer-surface.md` — the help block and intro as two columns: name over visibility on the left, every help card on the right (Item 17).
+- `spec/ui_elements.md` — the `.rs-help-card` family's layout: the intro's right column, not a `.rs-help-grid` row (Item 17).
+- `spec/instruments.md` — Band 2's preview follows the same layout (Item 17).
+- `spec/visibility_policy.md` — the transparency card sits under the heading card in the intro's left column, on both surfaces (Item 17).
 - `docs/status.md` — row when the item closes (Item 17).
