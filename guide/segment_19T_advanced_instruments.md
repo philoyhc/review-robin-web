@@ -2538,10 +2538,12 @@ item of their own. It closes when the author says so.
 2. **The Guide gives the offset syntax** (author's ask, 2026-09-30). The
    Create paragraph now says how to write **Send invites** and **Send
    reminders**: comma-separated negative ISO 8601 durations counted back
-   from Start or End (`spec/lifecycle.md` §8.2.4), between an hour and
-   10 days, at least an hour from now, no weeks or fractions, inert
-   without the anchor. Each example checked against
-   `parse_iso_duration`.
+   from Start or End (`spec/lifecycle.md` §8.2.4), no weeks, fractions
+   or more than 10 days, inert without the anchor and, once it is set,
+   at least an hour before it and an hour from now (checked only then).
+   "deadline" in the same sentence became **Start** / **End**, the
+   form's labels. Each example checked against `parse_iso_duration`;
+   one read, three wording findings, all acted on.
 
 ### Doc impact
 

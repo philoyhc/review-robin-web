@@ -70,18 +70,19 @@
     </figure>
     <p>
       Give the session a name and a short unique code, optionally set a
-      deadline and description. To send invites and reminders
-      automatically, list one or more offsets, separated by commas:
-      <strong>Send invites</strong> counts back from Start and
-      <strong>Send reminders</strong> from End. Write each as a minus sign,
-      <code>P</code>, then days (<code>D</code>), and after a
-      <code>T</code>, hours (<code>H</code>) or minutes (<code>M</code>):
+      <strong>Start</strong>, an <strong>End</strong> and a description. To
+      send invites and reminders automatically, list one or more offsets,
+      separated by commas: <strong>Send invites</strong> counts back from
+      Start and <strong>Send reminders</strong> from End. Write each as a
+      minus sign, <code>P</code>, then days (<code>D</code>), and after a
+      <code>T</code>, hours (<code>H</code>) and minutes (<code>M</code>):
       <code>-P1D</code> is a day before, <code>-PT2H</code> two hours
       before, <code>-P1DT12H</code> a day and a half before, and
-      <code>-P2D, -PT4H</code> sends twice. Each offset must be between an
-      hour and 10 days before, and at least an hour from now; weeks and
-      fractions (<code>-P1W</code>, <code>-P0.5D</code>) aren't accepted.
-      An offset does nothing until its Start or End is set.
+      <code>-P2D, -PT4H</code> sends twice. Weeks and fractions
+      (<code>-P1W</code>, <code>-P0.5D</code>) aren't accepted, nor is
+      anything over 10 days. An offset does nothing until its Start or End
+      is set; from then on it must be at least an hour before it, and at
+      least an hour from now.
     </p>
     <figure class="guide-figure">
       <img src="/static/guide/create-session-details.png"
