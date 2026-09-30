@@ -449,16 +449,27 @@ preview (`spec/instruments.md` § "Branching between response fields" —
 the JS-built `buildConstraints` block share the row and rebuild
 together on every Band 3 / R toggle).
 
-- **Help block** above the table (below the heading row), listing each
-  response field that has both `help_text` set and
-  `help_text_visible=true`. One shape, whatever the count: a
-  `.rs-help-grid` row of half-width `.rs-help-card` items. **The family
-  has no full-width solo variant, and must not grow one.** The
-  per-instrument intro is itself a half-width card grid, so a lone help
-  card belongs in column 2 beside the heading card; widening it to
-  full width breaks that pairing. `.rs-help-card-solo` is therefore not
-  part of the contract, and its absence is asserted by
-  `tests/integration/test_reviewer_response_flow.py`.
+- **Intro and help cards** above the table, as two column stacks
+  (`.rs-intro-columns`, two `.rs-intro-col`): the heading card (short
+  label and description, rendered only when there is a title) heads the
+  left column, "Who can see what you wrote" the right, and each is as
+  tall as its own text. Below them, in each column's `.rs-help-stack`,
+  a half-width `.rs-help-card` for each response field that has both
+  `help_text` set and `help_text_visible=true`.
+  - **The split.** Help cards `0..k` go left and the rest right, in
+    field order, at the `k` whose columns end closest in height; a tie
+    goes to the heavier left column. The server renders an estimate from
+    text length (`views.estimated_intro_split`); the browser re-takes it
+    on measured heights (`rrwIntroBalance`, `base.html`) on load and
+    whenever the intro's width changes. The two copies of the rule,
+    `views.intro_split_index` and `rrwIntroSplitIndex`, are held to the
+    same answers by a node test.
+  - **At 800px or narrower** the stacks dissolve into one column: the
+    heading card, the visibility card, then the help cards in field
+    order.
+  - **No full-width solo variant.** A help card is always half width;
+    `.rs-help-card-solo` is not part of the contract, and its absence is
+    asserted by `tests/integration/test_reviewer_response_flow.py`.
 
 Single-instrument sessions with both `short_label` and `description`
 empty render no H2 at all, pinned by

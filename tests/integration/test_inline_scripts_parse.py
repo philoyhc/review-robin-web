@@ -214,3 +214,47 @@ def test_the_previews_number_width_matches_the_surfaces() -> None:
         for kind, low, high, label, required in _WIDTH_CASES
     ]
     assert json.loads(out) == expected
+
+
+# 19T Item 17 — the intro's split runs twice: the server estimates it with
+# ``views.intro_split_index`` and the browser re-takes it on measured
+# heights with ``rrwIntroSplitIndex`` (base.html). Same inputs, same k.
+
+_SPLIT_CASES = (
+    # (left_top, right_top, heights)
+    (89, 154, [80, 60, 55]),
+    (89, 154, []),
+    (89, 154, [46]),
+    (500, 154, [46, 46]),
+    (None, 154, [46, 46]),
+    (89, None, [46, 46]),
+    (None, None, [46]),
+    (100, 100, [50, 50]),
+    (60, 150, [200, 30, 30, 30]),
+    (65.5, 154.25, [46.5, 70.25, 46.5, 118, 46.5]),
+)
+
+
+def test_the_browsers_intro_split_matches_the_servers() -> None:
+    import json
+
+    from app.web.views import intro_split_index
+
+    base = (
+        Path(__file__).resolve().parents[2] / "app/web/templates/base.html"
+    ).read_text()
+    start = base.index("      function rrwIntroSplitIndex(")
+    end = base.index("      function rrwIntroParts(", start)
+    script = (
+        base[start:end]
+        + "\nconsole.log(JSON.stringify(" + json.dumps(_SPLIT_CASES)
+        + ".map(function (c) { return rrwIntroSplitIndex(c[0], c[1], c[2], 12); })));"
+    )
+    out = subprocess.run(
+        ["node", "-e", script], capture_output=True, text=True, check=True
+    ).stdout
+    expected = [
+        intro_split_index(left, right, list(heights), 12)
+        for left, right, heights in _SPLIT_CASES
+    ]
+    assert json.loads(out) == expected

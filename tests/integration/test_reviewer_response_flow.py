@@ -291,6 +291,8 @@ def test_surface_help_text_multi_items_render_in_grid(
     # heads the left, the visibility card the right, and the help cards
     # stack beneath (all in the left stack until the split, rung 2).
     assert '<div class="rs-intro-columns">' in body
+    # From the intro on: base.html's <head> script names the same hooks.
+    body = body[body.index('<div class="rs-intro-columns">') :]
     left = body.index('data-rs-help-stack="left"')
     right_col = body.index('data-rs-intro-col="right"')
     # A lone untitled instrument renders no heading card: the columns
@@ -304,6 +306,59 @@ def test_surface_help_text_multi_items_render_in_grid(
     assert "Comments help." in body
     # The retired `rs-help-card-solo` modifier no longer renders.
     assert "rs-help-card-solo" not in body
+
+
+def test_surface_help_cards_split_between_the_columns(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """19T Item 17 rung 2: the server renders its estimated split — a long
+    first help card fills the left column under the heading, so the second
+    heads the right column under the visibility card, field order kept.
+    The browser re-takes the split on measured heights."""
+    from app.db.models import InstrumentResponseField
+
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-helpgrid",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        activate=False,
+    )
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    fields = list(
+        db.execute(
+            select(InstrumentResponseField)
+            .where(InstrumentResponseField.instrument_id == instrument.id)
+            .order_by(InstrumentResponseField.id)
+        ).scalars()
+    )
+    fields[0].help_text = "Rating help. " + "x" * 800
+    fields[0].help_text_visible = True
+    fields[1].help_text = "Comments help."
+    fields[1].help_text_visible = True
+    instrument.short_label = "Group Peer Review"
+    instrument.description = "Your impression of the candidate."
+    db.commit()
+    _activate(operator, db, review_session)
+
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/me/sessions/{review_session.id}").text
+    # From the intro on: base.html's <head> script names the same hooks.
+    body = body[body.index('<div class="rs-intro-columns">') :]
+    left_stack = body.index('data-rs-help-stack="left"')
+    right_col = body.index('data-rs-intro-col="right"')
+    right_stack = body.index('data-rs-help-stack="right"')
+    assert body.index('class="card rs-instrument-card rs-intro-name"') < left_stack
+    assert left_stack < body.index("Rating help.") < right_col
+    assert right_col < body.index("data-rs-visibility-policy-card") < right_stack
+    assert right_stack < body.index("Comments help.")
 
 
 def test_surface_does_not_wrap_groups_in_outer_card(

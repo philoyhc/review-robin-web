@@ -2692,6 +2692,20 @@ Taken 2026-09-30 at `be68a8ad`:
   help cards under it, visibility right; at 700px one column, name,
   visibility, help. Band 2 locked: name card 82px, help cards inert and
   faded left; unlocked in-page, editable.
+- **Rung 2 (the split), 2026-09-30.** `views.intro_split_index` and
+  `rrwIntroSplitIndex` (`base.html` `<head>`, so either page can call
+  it) choose `k`; `views.estimated_intro_split` estimates it from text
+  for the server's render; `rrwIntroBalance` measures and places,
+  skipping an intro with no width or collapsed to one column, and
+  `rrwIntroWatch` re-takes it on a width change only (a height change is
+  the split's own effect). Band 2's intro carries `data-rs-intro-js` and
+  balances from `rebuildPreview`; unlocked it holds a taken split, and
+  `newModelSetLock` clears it so lock and unlock re-take it. Chromium,
+  the author's example: Familiarity and Rating left, Comments right
+  (columns 247 / 211px); two help cards, one each; at 700px one column;
+  Band 2 held its split through typing and re-took it on unlock. The
+  `<head>` script names the same hooks as the markup, so two tests now
+  search from the intro on.
 
 ### PR ladder
 

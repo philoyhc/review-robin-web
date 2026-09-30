@@ -798,8 +798,10 @@ together with Band 1 and Band 3, and the page issues no separate
 
 #### Visibility card (right of the intro card)
 
-The "Who can see what you wrote (other than admin)" card sits beside the
-intro card in Band 2's grid, and is both the reviewer-surface preview and
+The "Who can see what you wrote (other than admin)" card heads the right
+column of Band 2's intro, the intro card the left, laid out as the
+reviewer surface's are (`spec/reviewer-surface.md`, "Intro and help
+cards"), and is both the reviewer-surface preview and
 the visibility editor — the same locked / unlocked swap as the
 description box beside it (19T Item 7). **Locked**, it renders the
 reviewer's own two-row table (`data-lock-only`), each mode as a
@@ -828,9 +830,15 @@ them. A cycle also repaints the locked table's matching pill
 added, kept because Save is a fetch and never reloads.
 
 Locked, the card is not inside a lock region: Band 2's are the intro
-card, this card's editor and the preview, so the locked table, which
-holds no control, keeps a `.table-scroll` that scrolls. The card fades
-with the intro card beside it (19T Item 12A).
+card, this card's editor, the preview and each help card, so the locked
+table, which holds no control, keeps a `.table-scroll` that scrolls. The
+card fades with the intro card beside it (19T Item 12A).
+
+The help cards, JS-built by `rebuildPreview`, split between the two
+columns by the reviewer surface's rule (`rrwIntroBalance`). While the
+card is unlocked a split already taken holds, so the cards don't move as
+the operator types into their textareas; it is re-taken on load, on
+Lock and Unlock, and when the intro's width changes (19T Item 17).
 
 #### Display-field table
 
@@ -967,7 +975,7 @@ join, `td.rf-slot`, keep six leading columns on every row — see
 | Type (`<select>`) | `_inline_data_type` | `String / Integer / Decimal / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. Disabled when the row has saved responses; the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
 | Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_options` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
 | **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. Stages Band 2 state directly, so Save alone persists a toggle. Grayed out on a row a Require branch governs, where the condition decides (see ["Branching between response fields"](#branching-between-response-fields)). |
-| **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field above the reviewer-surface preview table. The help-text *text* is a plain `help_text` textarea on that card (shown when the instrument card is unlocked, `data-lock-only` read view when locked), bound to the `dfsave-{id}` form, so it commits with the bulk Save. Stages Band 2 state directly, like R. |
+| **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field in Band 2's intro columns, above the reviewer-surface preview table. The help-text *text* is a plain `help_text` textarea on that card (shown when the instrument card is unlocked, `data-lock-only` read view when locked), bound to the `dfsave-{id}` form, so it commits with the bulk Save. Stages Band 2 state directly, like R. |
 | **▲ / ▼** | — | Full-size `btn secondary` buttons (not `btn-short` — that size is the display-field table's, see "Display-field table" above) that swap this row's `<tbody>` group with its neighbor. They move a **group**, not a row; a governed row moves its unit (itself, its condition row and any branch inside it) past the neighboring unit within its branch instead — see ["Branching between response fields"](#branching-between-response-fields). |
 | **X** button (`.btn.destructive`) | — | Drops this row (its `<tbody>`), matching Band 1's rule/unit X. Disabled when the row has saved responses (title pins the reason), or when it is the only row left. In a branch, deletion runs bottom-up — see ["Branching between response fields"](#branching-between-response-fields). |
 
