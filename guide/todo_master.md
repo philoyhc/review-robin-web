@@ -3300,6 +3300,31 @@ run. Items close independently, each with its own `Doc impact` /
 `guide/post_azure_todo_checklist.md` item 5 — the author cannot reach
 the dev slot yet.
 
+### Segment 19T — Advanced instruments — ✅ **closed + archived** (**seventeen items and 12A, all closed**; opened 2026-09-24, closed 2026-09-30; PRs #2597 → #2697; plan archived: `guide/archive/segment_19T_advanced_instruments.md`)
+
+Opened as "Odds and ends" for small operator-UI adjustments and renamed
+2026-09-27 once most of its items built `guide/advanced_instruments.md`.
+Items closed independently, each with its own `Doc impact` / `Status`.
+
+- **Items 1–6 — adjustments.** Band 3's response-field rows and an open
+  card no longer disabling the action row (1, 2); two small-fix
+  registers (3, 6); a full-size sample roster in the Guide (4);
+  `PhotoLink` renamed `ProfileLink` (5).
+- **Items 7–14 — the builder.** Visibility edited in Band 2's card (7);
+  display fields (8) and response fields (9) as Band 3 tables, retiring
+  the pills and ✓; branching between response fields (10), governed
+  fields that can be required (11), numeric range conditions (12), the
+  table's small adjustments (12A), a condition that requires rather
+  than shows (13), and a branch inside a branch (14).
+- **Items 15–17 — catching up.** The Guide covers all of it (15); a
+  register of seven small fixes, among them the Settings page in two
+  columns and Band 2's name card composed as the reviewer's (16); the
+  instrument intro as two columns, name over visibility left and every
+  help card right, after a measured split was built and retired (17).
+
+**Owed:** the browser checks are `guide/post_azure_todo_checklist.md`
+item 6 — the dev slot is enough.
+
 ---
 
 ## Upcoming
@@ -3356,80 +3381,6 @@ dep chains called out at the bottom of this file.
    covered by the operator's own broadcast email (participant model
    = roster + sign-in); the real gap is targeted reminders. Rationale
    in the plan's Status section.
-
-2. **19T — Advanced instruments (open segment; "Odds and ends" until
-   2026-09-27).** The Instruments page's builder and
-   `guide/advanced_instruments.md`, an item at a time, each closing on its
-   own; Items 1–6 were small operator-UI adjustments.
-   **Plan:** `guide/segment_19T_advanced_instruments.md`.
-   - ~~**Item 1 — Instruments:** response-field rows.~~ **Closed
-     2026-09-24.** ✓ only adds or updates a pill; "+" on each row; row
-     order through ✓, Save and drag; Band 3 split 2 : 3.
-   - ~~**Item 2 — Instruments:** an open card disabling the action row.~~
-     **Closed 2026-09-24.** `?editing` no longer disables it, and Lock
-     strips `?editing`.
-   - ~~**Item 3 — Small fixes register.**~~ **Closed 2026-09-25.** Three
-     entries: the Delete confirm checkbox no longer dirties the card; the
-     Name and Email pills are static labels; Band 2's visibility preview
-     repaints on a Band 3 Visibility edit.
-   - ~~**Item 4 — A full-size sample roster download.**~~ **Closed
-     2026-09-25.** 154 people in both rosters, Tutor / Group / Team tags,
-     linked from the Guide beside the demo session.
-   - ~~**Item 5 — `PhotoLink` becomes `ProfileLink`.**~~ **Closed
-     2026-09-25.** The roster CSV column's new name; the importer still
-     accepts the old one.
-   - ~~**Item 6 — Small fixes register, second batch.**~~ **Closed
-     2026-09-25.** The Required pill reads "*Required items completed"; an
-     Integer field refuses a fractional step, and no bound takes "nan" or
-     "inf".
-   - ~~**Item 7 — Visibility edited in Band 2's card.**~~ **Closed
-     2026-09-26.** `guide/advanced_instruments.md` Item 4: the "Who can see
-     what you wrote" card is the editor when unlocked; Band 3's table is
-     gone.
-   - ~~**Item 8 — Display fields as a Band 3 table.**~~ **Closed
-     2026-09-26.** `guide/advanced_instruments.md` Item 5: a compact
-     headerless table in Band 3's left third replaces Band 2's display
-     pills.
-   - ~~**Item 9 — Response fields as a Band 3 table.**~~ **Closed
-     2026-09-26.** `guide/advanced_instruments.md` Item 3: a table with an
-     Active checkbox and ▲ ▼ replaces the response pills and ✓; added
-     fields default to a muted "Field N"; Band 3 splits 1 : 4.
-   - ~~**Item 10 — Branching between response fields.**~~ **Closed
-     2026-09-27.** `guide/advanced_instruments.md` Item 1: ⑂ or ↳ opens a
-     branch of optional governed fields under an Integer, Decimal or List
-     field, shown only while the parent's answer meets its condition; a
-     closed branch holds no value.
-   - ~~**Item 11 — Governed fields can be set to required too.**~~
-     **Closed 2026-09-27.** `guide/advanced_instruments.md` Item 2: a
-     governed field is required only while its branch is open, in an
-     instrument with an active required field outside any branch; the
-     rollups count it in Python (route (a)).
-   - ~~**Item 12 — Augmented numerical conditions.**~~ **Closed
-     2026-09-28.** `guide/advanced_instruments.md` Item 6, Q3: ten
-     spelled-out numeric operators, within or outside a range (inclusive
-     or exclusive) in two boxes, stored as `low to high`.
-   - ~~**Item 12A — Small adjustments to the response-field table.**~~
-     **Closed 2026-09-28.** Join reads ↰ and detach ↳; a number's
-     condition boxes match the parent's Min box; the Active checkbox is
-     centered in its cell.
-   - ~~**Item 13 — Conditional required.**~~ **Closed 2026-09-29.**
-     `guide/advanced_instruments.md` Item 6, Q1: the condition row's
-     "then [mode]" select shows the governed fields or requires them while
-     the condition holds, else optional.
-   - ~~**Item 14 — Two levels of branching.**~~ **Closed 2026-09-29.**
-     `guide/advanced_instruments.md` Item 6, Q2: a governed field may be
-     a parent, one level down; each level shifts one column right in the
-     builder, and answers anywhere below a parent lock its branch.
-   - ~~**Item 15 — The Guide catches up with 19T.**~~ **Closed
-     2026-09-30.** Branching under its own heading in "Build the form",
-     the reviewer's view, and the instrument captures retaken in pairs.
-   - **Item 16 — Small fixes** (open): a register of small fixes from the
-     author's browser passes (five entries so far); stays open for the
-     Guide's capture retakes.
-   - **Item 17 — The instrument intro as two balanced columns** (open):
-     the name card over the visibility card on the left, every help card
-     on the right in field order, on the reviewer surface and Band 2 (the
-     measured split of rungs 2–3 retired at rung 4).
 
 #### Stubs
 

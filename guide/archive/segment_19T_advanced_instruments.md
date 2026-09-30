@@ -1,5 +1,16 @@
 # Segment 19T — Advanced instruments
 
+> **Closed and archived 2026-09-30.** Seventeen items and 12A, all
+> closed, PRs **#2597 → #2697**; `tools/close_check.py 19T` exits 0.
+> Items 1–6 were small operator-UI adjustments; Items 7–14 built
+> `guide/advanced_instruments.md` (visibility in Band 2's card, display
+> and response fields as Band 3 tables, branching two levels deep with
+> Show and Require conditions and numeric ranges); Item 15 caught the
+> Guide up; Item 16 was a register of seven small fixes; Item 17 laid
+> the instrument intro out as two columns, name over visibility left and
+> every help card right. The browser checks owed live in
+> `guide/post_azure_todo_checklist.md` item 6.
+
 **Opened:** 2026-09-24 · **Theme:** the Instruments page's builder and
 `guide/advanced_instruments.md`, built an item at a time; items close
 independently · **Related:** `spec/instruments.md`,
@@ -2624,6 +2635,25 @@ item of their own. It closes when the author says so.
    author retook that pair too (`Guide_v4b4`): one screen, the delete line
    now "Group Peer Review"; its alt text names no instrument and stands.
 
+### Status
+
+**Closed 2026-09-30** on the author's instruction, with seven entries
+(#2684, #2688, #2689, #2690, #2691, #2696, #2697 and this close).
+Entries 1, 3–6 fixed what the author's browser passes found: the
+preview's and the surface's unsized columns, the Settings page's two
+columns, the password and date boxes' styling, file inputs' focus ring,
+and Band 2's name card composed as the reviewer's; entries 2 and 7 are
+the Guide's (the offset syntax, and the captures retaken after Item 17).
+**Reads:** one `diff-reviewer` read per code entry, two for entry 1
+(profile, then numeric and status columns) plus its follow-ups' reads;
+`spec-writer` passes on entries 1 and 4 and at this close, which found
+the five specs current and took one provenance note out of
+`spec/ui_elements.md` §10. Each entry records what its read found; all
+acted on. **Scope that moved:** entry
+1 grew, on the author's rulings, from the profile column to the numeric
+and status columns and to the preview taking the surface's layout
+rule; entry 6 came out of Item 17.
+
 ### Doc impact
 
 - `spec/instruments.md` — the preview's unsized profile column (Item 16, entry 1).
@@ -2746,89 +2776,40 @@ Taken 2026-09-30 at `be68a8ad`:
 
 ### Status
 
-- **Rung 1 (scaffold), 2026-09-30**, with the plan in #2692 (still open
-  when the author said to start). Base SHA for the item's read:
-  `be68a8ad`. `.rs-intro-grid` and `.rs-help-grid` retire for
-  `.rs-intro-columns`: two `.rs-intro-col` stacks, each a top card and a
-  `.rs-help-stack`; every help card in the left stack. ≤800px the stacks
-  dissolve (`display: contents`) into one column ordered by `order`.
-  Found at build: the heading card now renders only with a title (it was
-  an empty placeholder holding column 1 for the visibility card), and
-  Band 2's JS-built help cards are each their own lock region, since
-  the stacks are layout only and have no box at 800px to fade. Two tests
-  counted `inert aria-hidden` across the card's scripts and now count
-  markup only. Chromium, reviewer surface at 1400px: name card 89px,
-  help cards under it, visibility right; at 700px one column, name,
-  visibility, help. Band 2 locked: name card 82px, help cards inert and
-  faded left; unlocked in-page, editable.
-- **Rung 2 (the split), 2026-09-30.** `views.intro_split_index` and
-  `rrwIntroSplitIndex` (`base.html` `<head>`, so either page can call
-  it) choose `k`; `views.estimated_intro_split` estimates it from text
-  for the server's render; `rrwIntroBalance` measures and places,
-  skipping an intro with no width or collapsed to one column, and
-  `rrwIntroWatch` re-takes it on a width change only (a height change is
-  the split's own effect). Band 2's intro carries `data-rs-intro-js` and
-  balances from `rebuildPreview`; unlocked it holds a taken split, and
-  `newModelSetLock` clears it so lock and unlock re-take it. Chromium,
-  the author's example: Familiarity and Rating left, Comments right
-  (columns 247 / 211px); two help cards, one each; at 700px one column;
-  Band 2 held its split through typing and re-took it on unlock. The
-  `<head>` script names the same hooks as the markup, so two tests now
-  search from the intro on.
-- **The item's reads, 2026-09-30.** One cumulative `diff-reviewer` read
-  (`be68a8ad..a0978ad8`) and one `spec-writer` pass. The spec pass found
-  older text the columns made false (`spec/reviewer-surface.md`'s
-  heading row, `spec/visibility_policy.md`'s "column 2"), fixed, and
-  `spec/visibility_policy.md` joined Doc impact. The read found: Lock
-  splitting on the pre-edit description (re-taken after the text
-  sync); the collapsed layout's DOM order not the visual one (all help
-  cards go right there); every placement re-appending every card, which
-  drops a focused textarea (an unchanged placement now moves nothing);
-  a possible scrollbar loop (width changes under 24px ignored); the
-  estimate ignoring a long title; "0..k" for the first `k`; weak tests
-  and stale comments. All acted on. A second read, of those fixes, found
-  the 24px guard could swallow the resize that crossed 800px (crossing
-  into or out of one column now always re-runs), and two gap tests that
-  could not fail (replaced by cases a hard-coded or ignored gap answers
-  differently). Chromium: 815 → 795 → 810px reorders and re-splits.
-- **Rung 3 (the lean), 2026-09-30**, after #2693 merged: the author's
-  Band 2 screenshot had Rating alone under the visibility card, 4px
-  nearer balanced than below Familiarity, with the columns ending 2px
-  apart without it. Both copies take a `lean` (`views.INTRO_LEAN_PX`,
-  `RRW_INTRO_LEAN_PX`, 24; a test holds the two equal) and move the card
-  at the split left on a near tie. The gap tests run with no lean, so
-  the gap alone still decides them. Chromium, the screenshot's heights
-  (74 / 146 / 62 / 62px): without the lean the columns end at 513 /
-  585px, with it at 587 / 511px, Rating under Familiarity. A code slice
-  after the item's read, so it took its own (`688b2c81..df7b0e95`): no
-  code defect; the three-card test could not fail, nothing held the
-  24px edge inclusive or pinned which card moves, the one-card
-  Semantics line stated the old rule, the 24px and "card at the split"
-  were attributed to the author, and the constants' equality test
-  skipped without node. All fixed; mutants (`<`, the last card, one
-  card on the right only) now each fail a unit test.
-- **Rung 4 (no split), 2026-09-30.** The author, shown the lean still
-  moving cards by measurement, asked for certainty instead: the left
+**Closed 2026-09-30** on the author's instruction (#2692 plan and
+scaffold, #2693 split, #2694 lean, #2695 no split, and this close).
+
+- **What shipped, against the Decision.** Not the balanced split. Rungs
+  1–2 built it as planned (two column stacks, `k` chosen to end the
+  columns closest, measured in the browser and estimated on the server,
+  Band 2 holding its split while unlocked), and rung 3 added a near-tie
+  lean on the author's screenshot. Shown the lean still moving cards by
+  measurement, the author asked for certainty (rung 4): **the left
   column is the name card over the visibility card, the right every
-  help card in field order, on both surfaces. Retired: the split
-  (`views.intro_split_index`, `rrwIntroSplitIndex` and the `<head>`
-  script with it: the lean, `rrwIntroBalance`, `rrwIntroWatch`),
-  `views.estimated_intro_split` and `group["help_split"]`, Band 2's
-  `data-rs-intro-js` and its lock / unlock re-splits, `.rs-help-stack`'s
-  left / right pair (one stack now), and the ≤800px `display: contents`
-  reordering (the grid goes to one column; DOM order is already the
-  visual one). `tests/unit/test_intro_split.py` and the node parity
-  test go with the code. Chromium: reviewer surface at 1400px, name /
-  visibility left, help right; at 700px one column in that order; Band
-  2 unlocked (help textareas) and locked with a long description, help
-  cards stay right. Its own reads (`b759c910..85ef4065`): `diff-reviewer`
-  found no code defect; it and `spec-writer` found the empty right column
-  with no help cards (kept, the author's ruling; the column is now
-  hidden so the one-column layout adds no gap under the visibility card),
-  Semantics and judgment calls unannotated, rung history and "always
-  half width" in the specs, a stale "left of the preview row" heading
-  and two stale comments, and tests that checked the help cards came
-  after the right column's opening rather than inside it. All fixed.
+  help card in field order**, on the reviewer surface and Band 2 alike,
+  with nothing measured. With no help cards the right column is hidden
+  and the right half stays empty (the author's ruling); at 800px or
+  narrower the grid is one column, name, visibility, help. The split,
+  its lean, the estimate and their tests retired in rung 4; the
+  column-major DOM order and the per-card lock regions stayed.
+- **Decisions confirmed at build.** The heading card renders only with a
+  title (it had been an empty placeholder holding column 1); Band 2's
+  help cards are each their own lock region, the stack being layout
+  only; the author kept rung 4 over two mockups that started the help
+  cards level with the visibility card, and kept the name card's border.
+- **Scope that moved.** `spec/visibility_policy.md` joined Doc impact
+  (the transparency card's column). Band 2's name card composing its
+  heading as the reviewer's went to Item 16 entry 6, the Guide's
+  preview capture to entry 7.
+- **Reads: four `diff-reviewer` reads** (rung 2's cumulative read and a
+  read of its fixes, rung 3's, rung 4's) and `spec-writer` at rung 2,
+  rung 4 and this close (no change at the close). They found
+  real defects in the split (Lock measuring pre-edit text, DOM order
+  off the visual order when collapsed, focus lost on every placement, a
+  scrollbar loop, a breakpoint swallowed by the loop guard), tests that
+  could not fail (two gap tests, the lean's three-card case), and, in
+  rung 4, the empty right column and prose the columns made stale. All
+  acted on; rung 4's retirement made the split's findings moot.
 
 ### PR ladder
 
