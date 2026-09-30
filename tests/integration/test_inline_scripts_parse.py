@@ -214,3 +214,51 @@ def test_the_previews_number_width_matches_the_surfaces() -> None:
         for kind, low, high, label, required in _WIDTH_CASES
     ]
     assert json.loads(out) == expected
+
+
+# 19T Item 16 entry 6 — Band 2's intro heading is composed twice: on the
+# server by ``views.instrument_heading`` (the reviewer surface's rule) and
+# on Lock by ``newModelIntroHeading``. (short_label, description,
+# position, total) — whitespace-only values count as unset.
+_HEADING_CASES = (
+    ("Group Peer Review", None, 1, 1),
+    ("Group Peer Review", "Rate each teammate.", 1, 1),
+    (None, "Rate each teammate.", 1, 1),
+    ("  ", "  ", 1, 1),
+    (None, None, 1, 1),
+    ("Peer Review", "Your impression.", 2, 3),
+    ("Peer Review", None, 2, 3),
+    (None, "Your impression.", 3, 3),
+    (None, None, 1, 2),
+)
+
+
+def test_band_2s_intro_heading_matches_the_surfaces() -> None:
+    import json
+    from types import SimpleNamespace
+
+    from app.web.views import instrument_heading
+
+    template = (
+        Path(__file__).resolve().parents[2]
+        / "app/web/templates/operator/instruments_index.html"
+    ).read_text()
+    start = template.index("          window.newModelIntroHeading = function (")
+    end = template.index("\n          };\n", start) + len("\n          };\n")
+    script = (
+        "var window = {};\n" + template[start:end]
+        + "\nconsole.log(JSON.stringify(" + json.dumps(_HEADING_CASES)
+        + ".map(function (c) { return window.newModelIntroHeading(c[0], c[1], c[2], c[3]); })));"
+    )
+    out = subprocess.run(
+        ["node", "-e", script], capture_output=True, text=True, check=True
+    ).stdout
+    expected = []
+    for label, description, position, total in _HEADING_CASES:
+        heading = instrument_heading(
+            instrument=SimpleNamespace(short_label=label, description=description),
+            position=position,
+            total_count=total,
+        )
+        expected.append({"title": heading.title, "subtitle": heading.subtitle})
+    assert json.loads(out) == expected

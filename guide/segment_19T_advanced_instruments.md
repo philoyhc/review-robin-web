@@ -2584,6 +2584,23 @@ item of their own. It closes when the author says so.
    The spec pass doubted §8's "a mouse click does not draw" the outline;
    Chromium draws it on a click into a text box or a select, not a file
    input, so §8 and the `base.html` comment now say so.
+6. **Band 2's name card as the reviewer's** (author's screenshots,
+   2026-09-30, after Item 17 rung 4). Band 2 titled every instrument
+   `#{{ loop.index }}` and rendered an empty description paragraph with
+   `min-height: 1.4em` and no top margin, so a one-instrument session
+   read "#1: Group Peer Review" over a blank line (card 82px) where the
+   reviewer sees "Group Peer Review" (59px). The route now serves
+   `views.instrument_heading` per instrument
+   (`band2_intro_heading_by_instrument`); the card renders its title and
+   subtitle, hides either when absent, spaces the subtitle as the
+   surface does, and, locked with neither, is not drawn
+   (`data-intro-empty`), as the reviewer draws no heading card.
+   `newModelSyncTextViews` recomposes the heading on Lock with
+   `newModelIntroHeading`, a JS copy of the rule held to it by a node
+   test, since a Save is a fetch and leaves the rendered heading stale.
+   Chromium: locked 59px title-only and 89px with a description, as on
+   the surface; Save-then-Lock recomposed; cleared, the locked card
+   hid. The lock fade (opacity 0.75) is Band 2's and stays.
 
 ### Doc impact
 
@@ -2593,6 +2610,7 @@ item of their own. It closes when the author says so.
 - `spec/rrw_functional_spec.md` — §9.13 the Settings page's two columns (Item 16, entry 3).
 - `spec/ui_elements.md` — §10 `.bottom-grid`'s collapsed row gap (Item 16, entry 3).
 - `spec/ui_elements.md` — §8 the text-input rule's types, `date` and `password` added (Item 16, entry 4); `file` on the focus rules (entry 5).
+- `spec/instruments.md` — Band 2's intro heading and subtitle composed as the reviewer surface's (Item 16, entry 6).
 - `docs/status.md` — row when the item closes (Item 16).
 
 ## Item 17 — The instrument intro as two balanced columns

@@ -4579,8 +4579,8 @@ def test_band2_intro_card_renders_short_label_description_and_progress(
     # is now display-only and inherits h2 weight naturally —
     # the prior explicit ``style="font-weight: inherit;"`` is
     # gone.
-    assert "data-intro-short-label-view" in intro_block
-    assert ">Peer Review<" in intro_block
+    # 19T Item 16 entry 6 — the reviewer surface's own heading, whole.
+    assert "data-intro-title-view>#2: Peer Review</h2>" in intro_block
     assert "Quick sanity check after milestone 1." in intro_block
 
     # Counts reflect the full authored response-field set, not
@@ -4644,8 +4644,7 @@ def test_band2_intro_card_omits_progress_when_no_selected_response_fields(
     # explicit ``style="font-weight: inherit;"`` on the view
     # span — see the sibling test's comment.
     assert "#2:" in intro_block
-    assert "data-intro-short-label-view" in intro_block
-    assert ">Reflection<" in intro_block
+    assert "data-intro-title-view>#2: Reflection</h2>" in intro_block
     # Progress row is rendered (always present so JS can update
     # counts live without a page reload) but ``hidden`` collapses
     # it when the instrument has zero response fields.

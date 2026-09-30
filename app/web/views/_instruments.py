@@ -1079,6 +1079,17 @@ def build_instruments_context(
         "band2_preview_visibility_rows_by_instrument": (
             build_reviewer_visibility_rows(db, instruments)
         ),
+        # 19T Item 16 entry 6 — the intro card's heading, composed as the
+        # reviewer surface composes it (no ``#N:`` in a one-instrument
+        # session; ``instruments`` is in the surface's ``order, id``).
+        "band2_intro_heading_by_instrument": {
+            instrument.id: instrument_heading(
+                instrument=instrument,
+                position=position,
+                total_count=len(instruments),
+            )
+            for position, instrument in enumerate(instruments, start=1)
+        },
     }
 
 

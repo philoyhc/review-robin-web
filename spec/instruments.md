@@ -772,16 +772,23 @@ live preview of one sample row inline.
 
 Top-of-band intro card carrying:
 
-- **Heading.** Read-only reviewer preview of the per-
-  instrument heading: `#{N}: {short_label}` when the
-  short label is set, just `#{N}` when not — matching the
-  `views.instrument_heading` contract the reviewer surface
-  consumes. Per the operator-identifier policy the short
-  label is **edited from the card title** in
-  the `<summary>` above (`Setup → Instruments` card), not
-  from this preview surface.
+- **Heading.** Read-only reviewer preview of the per-instrument
+  heading, composed by the reviewer surface's own rule
+  (`views.instrument_heading`, served as
+  `band2_intro_heading_by_instrument`): `#{N}: {short_label}`, or
+  `#{N}` with no short label; in a one-instrument session the short
+  label alone, or the description in its place, and no heading at all
+  when there is neither — locked, such a card (`data-intro-empty`) is
+  not drawn, as the reviewer surface draws none. On Lock,
+  `newModelIntroHeading` recomposes it from the saved values (a node
+  test holds it to the Python rule). Per the operator-identifier
+  policy the short label is **edited from the card title** in the
+  `<summary>` above (`Setup → Instruments` card), not from this
+  preview surface.
 - **Description** — a lock-driven view/edit swap: a read-only
   paragraph when the card is locked (`data-intro-description-view`),
+  the reviewer's subtitle spaced as the surface spaces it and hidden
+  when the heading has none, so no blank line;
   a `data-intro-description-input` textarea when unlocked. The
   textarea binds to the card's `dfsave-{id}` form
   (`name="description"`), so its value commits with the bulk Save
