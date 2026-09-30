@@ -81,7 +81,7 @@ on Postgres with no JS build step.
   card; display and response fields are Band 3 tables with an Active checkbox
   and ▲ ▼; the response pills and ✓ retired. Branching was then added to one row
   model rather than kept in step across pills, rows and a preview.
-- **Required fields counted per assignment** (19T Item 11, PRs #2653 → #2656).
+- **Required fields counted per assignment** (19T Item 11, PRs #2649 → #2656).
   A governed field is required only while its branch is open, so the static
   required count became per-assignment, and the rollups route a branching
   instrument to a Python path.
@@ -136,7 +136,7 @@ clean, `node` present so `tests/integration/test_inline_scripts_parse.py` ran. T
 16 skips are the same 16 as on 22 September — fifteen Wave 5 PR 5.3 scope
 retirements and the opt-in CSS parity dump. Both CI tracks, SQLite and
 `postgres:16` with the full `downgrade base + upgrade head` round-trip, were
-green on the 19T close.
+green on the 19T close (#2698's head, `c4475061`).
 
 **Endpoints and schema: 190 route declarations over 81 migrations** (was 188 /
 79). 187 are `@router.*` (121 POST, 64 GET, 1 PATCH, 1 DELETE) and 3 are
@@ -159,7 +159,7 @@ definitional split the prior snapshot recorded.
 **The Python plateau held; the template did not.** Thirteen production modules
 are at or above 1,000 LOC (twelve on 22 September — `app/services/instruments/_band2.py`
 crossed, at 1,013, +351). No module in the top ten moved more than 226, against
-four that moved over 200 last window. The window's size went elsewhere:
+five that moved over 200 last window. The window's size went elsewhere:
 **`app/web/templates/operator/instruments_index.html` grew 5,642 → 7,202 (+1,560)**
 and is now 31% larger than `base.html` (5,499, +179), and its integration test
 `tests/integration/test_instrument_builder_routes.py` grew +1,316 to 9,290. The
@@ -306,15 +306,17 @@ summary paragraph describes the tables below it.
 
 ## 6. Bugs and regressions
 
-**No known open bugs at `df4ecae3`.** What I checked: 0 open pull requests; 0
-xfails; the 16 skips read and confirmed as the same deliberate set as on
+**No known open bugs at `df4ecae3`.** What I checked: 0 open issues and 0 open
+pull requests on GitHub; 0 xfails; the 16 skips read and confirmed as the same deliberate set as on
 22 September; the 19T plan's item Status blocks, whose every read finding is
 recorded as fixed; and both cold reads of this window.
 
-Worth remembering, because each now has a guard:
+Worth remembering — the first three now have a guard, the fourth is a record:
 
 - **A lobby expander's Enter archived the session** (#2579). An implicit form
-  submit hit the archive button; a test now presses Enter in that field.
+  submit hit the archive button; `tests/integration/test_lobby_enter_does_not_submit.py`
+  pins the disabled first submit and the keydown guard (the key press itself
+  was checked by hand in Chromium).
 - **A rejected Relationships row consumed its pair** (19S Item 4, #2555): a
   later row for the same pair in the same file was then refused as a
   duplicate. Found by rewriting `spec/csv_contracts.md` §3.2 against the code.
@@ -325,8 +327,8 @@ Worth remembering, because each now has a guard:
   Item 17 reads, #2693): Lock measuring pre-edit text, DOM order off the visual
   order, focus lost on every placement, a scrollbar loop, a breakpoint swallowed
   by the loop guard. All were fixed, then the author replaced the split with a
-  fixed layout (#2695) — a record that a measured layout was harder to get right
-  than it looked.
+  fixed layout (#2695), which made them moot and retired their tests — a record
+  that a measured layout was harder to get right than it looked.
 
 ## 7. Estimated size upon completion
 
@@ -344,13 +346,14 @@ Worth remembering, because each now has a guard:
 Excludes anything past v1 and every entry in `guide/deferred_consolidated.md`
 Parts A and C.
 
-**Reconciliation — the floor was overtaken for a fourth consecutive window.**
-The 22 September snapshot projected **65,221–66,501** production and
-**29,831–30,561** templates. Production is **66,446**, inside the top of that
-range — but none of the named work started, so the range was reached by
-unnamed work, not delivered by the items. Templates are **31,561**, past the top
-by 1,000, almost all of it `instruments_index.html`. The named items carry
-forward unchanged because all five are still unstarted and four are blocked;
+**Reconciliation — templates overtook their floor for a fourth consecutive
+window; production reached the top of its range.** The 22 September snapshot
+projected **65,221–66,501** production and **29,831–30,561** templates.
+Production is **66,446**, inside the top of that range — but none of the named
+work started, so the range was reached by unnamed work, not delivered by the
+items. Templates are **31,561**, past the top by 1,000, almost all of it
+`instruments_index.html`. The named items carry forward unchanged because all
+five are still unstarted and three are blocked;
 the floor moves only by what this window added. As the last three snapshots
 said, it is a floor and not a forecast.
 

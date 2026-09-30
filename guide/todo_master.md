@@ -3273,7 +3273,7 @@ run, none by re-reading.
 ### Segment 19S — Post-assessment register — ✅ **closed + archived** (**ten items, all closed**; opened 2026-09-22, closed 2026-09-23; PRs #2544 → #2592; plan archived: `guide/archive/segment_19S_post_assessment.md`)
 
 Opened as **a register, not a queue**, for what the 22 September reads
-(`guide/archive/codebase_assessment_22sep.md`, `guide/codex_assessment_21sep.md`)
+(`guide/archive/codebase_assessment_22sep.md`, `guide/archive/codex_assessment_21sep.md`)
 surfaced with no home, then used by the author for a tags-and-owners
 run. Items close independently, each with its own `Doc impact` /
 `Status`.
