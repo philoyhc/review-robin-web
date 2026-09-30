@@ -2573,12 +2573,17 @@ item of their own. It closes when the author says so.
 5. **File inputs take the app's focus ring** (author's ask, 2026-09-30,
    after entry 4 recorded the gap). `input[type="file"]` joins the
    `:focus` and `:focus-visible` rules, so the file inputs (the four
-   roster CSV imports, Quick Setup's live slot, Rehydrate; Quick Setup's
-   second slot is disabled) show the same border, halo and keyboard
-   outline as every other box. The test drops its `file` exemption;
+   roster CSV imports, Quick Setup's slot inputs, Rehydrate; a Quick
+   Setup input is disabled only while its card is locked, or unwired in
+   the context-less build) show the same border, halo and keyboard
+   outline as every other box. A second test pins the two focus rules
+   to the box rule's type list, which the §8 sentence claims. The test drops its `file` exemption;
    `spec/ui_elements.md` §8 says both focus rules name every type the
    box rule does. Headless Chromium, Tab onto a file input: a 2px
    `--focus-ring` outline over the same border and halo as a text box.
+   The spec pass doubted §8's "a mouse click does not draw" the outline;
+   Chromium draws it on a click into a text box or a select, not a file
+   input, so §8 and the `base.html` comment now say so.
 
 ### Doc impact
 

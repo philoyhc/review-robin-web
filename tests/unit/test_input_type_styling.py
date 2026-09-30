@@ -65,3 +65,10 @@ def test_every_used_text_like_type_is_in_the_rule(pseudo: str) -> None:
         f"input types used in templates but missing from base.html's "
         f"`body.ui-v2 input[type=…]{pseudo}` rule: {sorted(missing)}"
     )
+
+
+@pytest.mark.parametrize("pseudo", [":focus", ":focus-visible"])
+def test_focus_rules_name_every_type_the_box_rule_does(pseudo: str) -> None:
+    """`spec/ui_elements.md` §8: both focus rules name every input type
+    the text-input rule does, used by a template today or not."""
+    assert _rule_types(pseudo) == _rule_types("")
