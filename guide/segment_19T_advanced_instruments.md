@@ -2550,7 +2550,11 @@ item of their own. It closes when the author says so.
    the two sides touched, since `.bottom-grid .card` zeroes the cards'
    margins; the collapsed `.bottom-grid` now takes a 20px `row-gap`,
    which Session Home and Create get too. Chromium at 1400, 900, 600
-   and 400px: two columns, then one with the gap, no horizontal scroll. Out of scope, noted:
+   and 400px: two columns, then one with the gap, no horizontal scroll.
+   **Reads:** two `diff-reviewer` reads and one `spec-writer` pass. The
+   first read found the non-collapsing grid, acted on; the second, a
+   stale `.bottom-grid` comment and an unpinned `.bottom-left`, acted
+   on; the spec pass, a CSS class in the functional spec, dropped. Out of scope, noted:
    the App password box is unstyled, as on `main`, since `base.html`'s
    input rule lists no `type="password"`.
 

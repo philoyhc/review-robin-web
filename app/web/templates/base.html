@@ -1241,14 +1241,14 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         /* Horizontal gap between side-by-side cards only.
-           ``row-gap`` defaults to 0 so when a ``.bottom-grid``
-           wraps to multiple rows (or a sibling .bottom-grid
-           sits below), the cards' own ``margin-bottom`` is
-           the sole source of vertical inter-card spacing
-           (same convention as ``.bottom-left``; see the note
-           there on cascade specificity). Longhand rather
-           than shorthand ``gap: 0 20px`` for the widest
-           legacy-browser parser tolerance. */
+           ``row-gap`` stays 0 here: every caller is one row of
+           two ``.bottom-left`` stacks, and ``.bottom-grid .card``
+           below zeroes the cards' margins, so the vertical gap
+           between stacked sides is the collapsed rule's
+           ``row-gap`` in the 800px media query (19T Item 16
+           entry 3). Longhand rather than shorthand
+           ``gap: 0 20px`` for the widest legacy-browser parser
+           tolerance. */
         column-gap: 20px;
         align-items: start;
         margin-bottom: 20px;

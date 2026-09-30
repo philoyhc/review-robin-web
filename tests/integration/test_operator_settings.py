@@ -123,12 +123,13 @@ def test_settings_two_columns_smtp_left_date_and_clear_right(
 
     class _Columns(HTMLParser):
         # Records, for each card of interest, the index of the
-        # `.card-columns` child it sits in.
+        # `.bottom-grid` child it sits in, and each child's classes.
         def __init__(self) -> None:
             super().__init__()
             self.stack: list[dict[str, str]] = []
             self.column_of: dict[str, int] = {}
             self.columns_seen = 0
+            self.column_classes: list[list[str]] = []
 
         def handle_starttag(self, tag, attrs):
             if tag != "div":
@@ -139,6 +140,7 @@ def test_settings_two_columns_smtp_left_date_and_clear_right(
             ).split():
                 self.columns_seen += 1
                 a["_column"] = str(self.columns_seen)
+                self.column_classes.append(a.get("class", "").split())
             self.stack.append(a)
             if a.get("id") in ("timezone-settings", "danger-zone"):
                 self.column_of[a["id"]] = self._column()
@@ -161,6 +163,9 @@ def test_settings_two_columns_smtp_left_date_and_clear_right(
     parser = _Columns()
     parser.feed(body)
     assert parser.columns_seen == 2
+    # Each side is a `.bottom-left` stack: a bare <div> would leave the
+    # two right-hand cards flush (`.bottom-grid .card` zeroes margins).
+    assert all("bottom-left" in c for c in parser.column_classes)
     assert parser.column_of == {
         "smtp": 1, "timezone-settings": 2, "danger-zone": 2,
     }
