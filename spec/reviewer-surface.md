@@ -455,17 +455,19 @@ together on every Band 3 / R toggle).
   so every card is as tall as its own text. **The left column** stacks
   the heading card (short label and description, rendered only when
   there is a title) over "Who can see what you wrote". **The right
-  column** holds one `.rs-help-stack`: a half-width `.rs-help-card` for
-  each response field that has both `help_text` set and
+  column** holds one `.rs-help-stack`: a `.rs-help-card` for each
+  response field that has both `help_text` set and
   `help_text_visible=true`, in field order. Which card goes where never
-  depends on text length or window width: nothing is measured or split
-  (19T Item 17 rung 4, replacing the balanced split of rungs 2 and 3).
+  depends on text length or window width: nothing is measured or split.
+  With no help cards the right column is hidden (`display: none`) and
+  the left keeps its half, the right half empty.
   - **At 800px or narrower** the two columns stack into one: the
     heading card, the visibility card, then the help cards in field
     order, which is also the DOM order.
-  - **No full-width solo variant.** A help card is always half width;
-    `.rs-help-card-solo` is not part of the contract, and its absence is
-    asserted by `tests/integration/test_reviewer_response_flow.py`.
+  - **No solo variant.** A help card takes its column's width, never a
+    wider one of its own; `.rs-help-card-solo` is not part of the
+    contract, and its absence is asserted by
+    `tests/integration/test_reviewer_response_flow.py`.
 
 Single-instrument sessions with both `short_label` and `description`
 empty render no H2 at all, pinned by

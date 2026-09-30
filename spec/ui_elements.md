@@ -288,8 +288,8 @@ classes.
 
 > **Reviewer help cards (`.rs-help-card` family)** — tinted slabs
 > listing per-instrument response-field help text, in `base.html`.
-> **Always half width, stacked in the per-instrument intro's right
-> column** (`.rs-intro-columns`: two `.rs-intro-col`, the heading card
+> **Always stacked in the per-instrument intro's right column, as wide
+> as it** (`.rs-intro-columns`: two `.rs-intro-col`, the heading card
 > over the visibility card on the left, one `.rs-help-stack` on the
 > right), whatever the count (`spec/reviewer-surface.md`, "Intro and
 > help cards"). There is no full-width variant:

@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from .test_instrument_builder_routes import _card_slice, _rf_fn
+from .test_reviewer_response_flow import intro_columns
 from .test_response_field_branching_builder import _page, _row, _rows_table
 
 
@@ -377,11 +378,11 @@ def test_band_2s_intro_is_two_columns(client: TestClient, db: Session) -> None:
     the JS-built help cards in the right column's one stack, out of the
     preview. Rung 4 retired the measured split, so nothing re-places them."""
     _, _, card, _ = _page(client, db, "17-intro-columns")
-    intro = card[card.index('<div class="rs-intro-columns"') :]
-    left = intro.index('data-rs-intro-col="left"')
-    right = intro.index('data-rs-intro-col="right"')
-    assert left < intro.index("rs-intro-name") < intro.index("rs-intro-visibility") < right
-    assert right < intro.index("<div class=\"rs-help-stack\" data-rs-help-stack></div>")
+    cols = intro_columns(card)
+    assert cols["left"].index("rs-intro-name") < cols["left"].index("rs-intro-visibility")
+    assert "data-rs-help-stack" not in cols["left"]
+    assert '<div class="rs-help-stack" data-rs-help-stack>' in cols["right"]
+    assert "rs-intro-name" not in cols["right"] and "rs-intro-visibility" not in cols["right"]
     assert "rs-intro-grid" not in card and "rs-help-grid" not in card
     # The help cards are placed in the stack, not the preview container.
     assert "helpStack.innerHTML = buildResponseFieldHelpCards(card)" in card

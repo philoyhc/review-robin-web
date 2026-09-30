@@ -3426,10 +3426,10 @@ dep chains called out at the bottom of this file.
    - **Item 16 — Small fixes** (open): a register of small fixes from the
      author's browser passes (five entries so far); stays open for the
      Guide's capture retakes.
-   - **Item 17 — The instrument intro as two balanced columns** (open,
-     planned): the name and visibility cards atop two column stacks, the
-     help cards split at one order-preserving point measured in the
-     browser, on the reviewer surface and Band 2.
+   - **Item 17 — The instrument intro as two balanced columns** (open):
+     the name card over the visibility card on the left, every help card
+     on the right in field order, on the reviewer surface and Band 2 (the
+     measured split of rungs 2–3 retired at rung 4).
 
 #### Stubs
 

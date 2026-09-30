@@ -2653,16 +2653,24 @@ page's Band 2 preview) shows two grids:
   operator types, so the split holds until the card locks or unlocks.
 - **Reading order**: moving cards between columns makes the DOM order
   name, help 1..k, visibility, help k+1..n. See judgment calls.
+- **Superseded by rung 4** (every bullet above that places help cards):
+  the left column is the name card (with a title) over the visibility
+  card, the right every help card in field order; with no help cards the
+  right column is hidden, the right half empty (author, 2026-09-30); DOM
+  order is name, visibility, help, and nothing is re-split in Band 2.
 
 ### Judgment calls — decided
 
 - The split is recomputed on load and on resize; in Band 2 also on lock
   and unlock, not on every rebuild while editing (2026-09-30).
+  Superseded by rung 4: there is no split.
 - The DOM order follows the columns (column-major), so a screen reader
   reads what the eye does down each column; keeping the DOM fixed and
   positioning visually would read the columns interleaved (2026-09-30).
   Collapsed to one column the help cards all go right, so the DOM order
-  is the visual one there too (the item's read, 2026-09-30).
+  is the visual one there too (the item's read, 2026-09-30). Rung 4:
+  with the help cards always right, the DOM order is the visual one at
+  every width.
 - A near tie leans left: when the columns without the first right-hand
   help card end close by, that card goes left, under the card before it
   (the author, from a Band 2 screenshot, 2026-09-30). Chosen at build,
@@ -2676,6 +2684,10 @@ page's Band 2 preview) shows two grids:
   every help card on the right, "more certainty about what goes where".
   The cost, accepted: one help card leaves the right column short (251
   against 67px in the mockup), many run it long (five: 90px taller).
+  Shown two readings of "help cards level with the visibility card"
+  (a half-width name card with the help cards starting beside the
+  visibility card, and a full-width name card), the author kept rung 4,
+  including an empty right half when there are no help cards.
 
 ### Blast radius (measured)
 
@@ -2768,7 +2780,14 @@ Taken 2026-09-30 at `be68a8ad`:
   test go with the code. Chromium: reviewer surface at 1400px, name /
   visibility left, help right; at 700px one column in that order; Band
   2 unlocked (help textareas) and locked with a long description, help
-  cards stay right.
+  cards stay right. Its own reads (`b759c910..85ef4065`): `diff-reviewer`
+  found no code defect; it and `spec-writer` found the empty right column
+  with no help cards (kept, the author's ruling; the column is now
+  hidden so the one-column layout adds no gap under the visibility card),
+  Semantics and judgment calls unannotated, rung history and "always
+  half width" in the specs, a stale "left of the preview row" heading
+  and two stale comments, and tests that checked the help cards came
+  after the right column's opening rather than inside it. All fixed.
 
 ### PR ladder
 

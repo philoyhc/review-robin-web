@@ -768,7 +768,7 @@ live preview of one sample row inline.
 > See `spec/assignments.md` § *Self-review policy* for the two
 > supported ways to suppress self-reviews.
 
-#### Intro card (left of the preview row)
+#### Intro card (top of the left column)
 
 Top-of-band intro card carrying:
 
@@ -837,7 +837,7 @@ card fades with the intro card above it (19T Item 12A).
 The help cards, JS-built by `rebuildPreview`, fill the right column in
 field order, as on the reviewer surface. Nothing is measured, so they
 stay put as the operator types into their textareas, locks or unlocks
-the card, or resizes the window (19T Item 17).
+the card, or resizes the window.
 
 #### Display-field table
 

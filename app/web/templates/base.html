@@ -457,8 +457,8 @@
       /*
        * Reviewer-surface help-text primitives — visual_style_general.md-aligned
        * tinted blocks for the per-instrument response-field help text.
-       * Always half-width, stacked in the per-instrument intro's two
-       * columns (`.rs-intro-columns` below), never full width.
+       * Stacked in the per-instrument intro's right column
+       * (`.rs-intro-columns` below), as wide as that column.
        */
       /* Tinted slab in the per-instrument intro's columns, rather than
          a regular card with a contrasting border + interior.
@@ -4265,6 +4265,10 @@
         min-width: 0;
       }
       body.ui-v2 .rs-help-stack:empty { display: none; }
+      /* No help cards: the right column leaves the grid, so the one-column
+         layout below adds no gap under the visibility card; at two columns
+         the left keeps its half and the right half stays empty. */
+      body.ui-v2 .rs-intro-col[data-rs-intro-col="right"]:not(:has(.rs-help-card)) { display: none; }
       body.ui-v2 .rs-intro-columns .card { margin: 0; }
       @media (max-width: 800px) {
         body.ui-v2 .rs-intro-columns { grid-template-columns: 1fr; }
