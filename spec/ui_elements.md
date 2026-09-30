@@ -288,13 +288,13 @@ classes.
 
 > **Reviewer help cards (`.rs-help-card` family)** — tinted slabs
 > listing per-instrument response-field help text, in `base.html`.
-> **Always half width, stacked in the per-instrument intro's two
-> columns** (`.rs-intro-columns`: a `.rs-intro-col` each, the heading
-> card atop the left and the visibility card atop the right, a
-> `.rs-help-stack` beneath each), whatever the count. Where the split
-> falls is `spec/reviewer-surface.md`'s ("Intro and help cards"). There
-> is no full-width variant: `test_reviewer_response_flow.py` asserts
-> that no `rs-help-card-solo` renders.
+> **Always half width, stacked in the per-instrument intro's right
+> column** (`.rs-intro-columns`: two `.rs-intro-col`, the heading card
+> over the visibility card on the left, one `.rs-help-stack` on the
+> right), whatever the count (`spec/reviewer-surface.md`, "Intro and
+> help cards"). There is no full-width variant:
+> `test_reviewer_response_flow.py` asserts that no `rs-help-card-solo`
+> renders.
 >
 > **Its own token family, not borrowed ones** — `--card-help-bg` /
 > `-border` / `-fg` (`#e5e7eb` / `#9ca3af` / `#111827` light,

@@ -4226,15 +4226,13 @@
         justify-content: flex-end;
         margin-top: var(--space-3);
       }
-      /* Per-instrument intro — two independent column stacks (19T
-         Item 17). The name / description card heads the left column and
-         the "Who can see what you wrote" card the right; the help cards
-         stack beneath them in `.rs-help-stack`s. `align-items: start`
-         and a flex stack per column let every card keep its own height:
-         the name card is as tall as its text, not as the visibility
-         table beside it. At 800px or narrower the columns and stacks
-         dissolve (`display: contents`) into one flex column ordered
-         name, visibility, then the help cards in field order. */
+      /* Per-instrument intro — two independent columns (19T Item 17).
+         The left column stacks the name / description card over the
+         "Who can see what you wrote" card; the right stacks every help
+         card in field order. `align-items: start` and a flex stack per
+         column let every card keep its own height. At 800px or narrower
+         the two columns stack into one: name, visibility, then the help
+         cards. */
       body.ui-v2 .rs-intro-columns {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -4252,16 +4250,7 @@
       body.ui-v2 .rs-help-stack:empty { display: none; }
       body.ui-v2 .rs-intro-columns .card { margin: 0; }
       @media (max-width: 800px) {
-        body.ui-v2 .rs-intro-columns {
-          display: flex;
-          flex-direction: column;
-          align-items: stretch;
-        }
-        body.ui-v2 .rs-intro-col,
-        body.ui-v2 .rs-help-stack { display: contents; }
-        body.ui-v2 .rs-intro-name { order: 0; }
-        body.ui-v2 .rs-intro-visibility { order: 1; }
-        body.ui-v2 .rs-intro-columns .rs-help-card { order: 2; }
+        body.ui-v2 .rs-intro-columns { grid-template-columns: 1fr; }
       }
       body.ui-v2 .rs-instrument-card h2 { margin: 0; }
       body.ui-v2 .rs-instrument-card .rs-instrument-subtitle {

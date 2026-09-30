@@ -1848,7 +1848,7 @@
              its branch is closed, as ``rfRowRequiredNow`` counts it; nor a
              Require branch's field while its condition doesn't hold. #}
           {% set _required_count = (_rf_list | selectattr('required') | rejectattr('branch_parent_id') | list | length) %}
-          <div class="rs-intro-columns" data-rs-intro-js
+          <div class="rs-intro-columns"
                data-new-model-band2-intro-card
                data-instrument-id="{{ instrument.id }}"
                data-session-id="{{ session.id }}"
@@ -1891,12 +1891,6 @@
                                  font: inherit; padding: 4px 6px;">{{ instrument.description or '' }}</textarea>
               </div>
             </div>
-            {# 19T Item 17 — the help cards, JS-built by ``rebuildPreview``,
-               split between this stack and the right column's by
-               ``rrwIntroBalance`` (base.html). #}
-            <div class="rs-help-stack" data-rs-help-stack="left"></div>
-            </div>
-            <div class="rs-intro-col" data-rs-intro-col="right">
             {# Reviewer-surface preview — "Who can see what you
                wrote (other than admin)". Mirrors the read-only
                transparency card the reviewer sees alongside their
@@ -2043,7 +2037,11 @@
                 </table>
                 </div>
               </div>
-              <div class="rs-help-stack" data-rs-help-stack="right"></div>
+            </div>
+            <div class="rs-intro-col" data-rs-intro-col="right">
+            {# 19T Item 17 — every help card, JS-built by ``rebuildPreview``
+               in field order, as on the reviewer surface. #}
+              <div class="rs-help-stack" data-rs-help-stack></div>
             </div>
           </div>
           {# Response field details now live as editable rows
@@ -2059,7 +2057,7 @@
              only — JS rebuildPreview replaces all of it on
              DOMContentLoaded + on every R / chip / Band 3 row
              toggle, picking up the constraints; the help cards it
-             builds go to the intro's stacks (19T Item 17). #}
+             builds go to the intro's right column (19T Item 17). #}
           {# `.table-scroll`: the container is filled by ``rebuildPreview``
              with a table laid out as the reviewer surface's is (fixed
              once operator-set column widths exist), so the wrapper goes directly around the
@@ -3008,9 +3006,8 @@
             if (pills.length === 0) { return ''; }
             var unlocked = card.getAttribute('data-new-model-band2-edit-mode') === '1';
             // 19T Item 17 — the cards alone, no grid wrapper: the caller
-            // places them in the intro's help stacks. Each card is its own
-            // lock region (the stacks are layout only, and dissolve at
-            // 800px, where a region with no box could not fade).
+            // places them in the intro's help stack. Each card is its own
+            // lock region (the stack is layout only).
             var html = '';
             var lockAttrs = unlocked ? '' : ' inert aria-hidden="true"';
             pills.forEach(function (p) {
@@ -3304,25 +3301,10 @@
             } else {
               tableHtml = buildIndividualPreview(card, selected);
             }
-            // 19T Item 17 — the help cards are rebuilt into the intro's left
-            // stack, then split between the two columns. Unlocked, a split
-            // already taken holds, so cards don't jump while the operator
-            // types (the author's ruling); it is re-taken on load, on lock
-            // and unlock (``newModelSetLock`` clears it first), and when the
-            // intro's width changes (``rrwIntroWatch``).
-            var intro = card.querySelector('[data-new-model-band2-intro-card]');
-            var leftStack = card.querySelector('[data-rs-help-stack="left"]');
-            var rightStack = card.querySelector('[data-rs-help-stack="right"]');
-            if (leftStack) { leftStack.innerHTML = buildResponseFieldHelpCards(card); }
-            if (rightStack) { rightStack.innerHTML = ''; }
-            if (intro && window.rrwIntroBalance) {
-              var held = intro.getAttribute('data-rs-intro-split');
-              if (held !== null && card.getAttribute('data-new-model-band2-edit-mode') === '1') {
-                rrwIntroPlaceHelp(intro, parseInt(held, 10));
-              } else {
-                rrwIntroBalance(intro);
-              }
-            }
+            // 19T Item 17 — the help cards are rebuilt into the intro's
+            // right column, in field order.
+            var helpStack = card.querySelector('[data-rs-help-stack]');
+            if (helpStack) { helpStack.innerHTML = buildResponseFieldHelpCards(card); }
             container.innerHTML = buildProgressAndConstraintsRow(card)
               + tableHtml;
             // Post-render adjustment: the initial ``rows`` baked into
@@ -3846,11 +3828,6 @@
             var b2 = card.querySelector('[data-new-model-band2]');
             if (b2) {
               b2.setAttribute('data-new-model-band2-edit-mode', locked ? '0' : '1');
-              // 19T Item 17 — lock and unlock re-take the intro's split (the
-              // unlocked help cards are textareas, taller than the text).
-              b2.querySelectorAll('[data-rs-intro-split]').forEach(function (w) {
-                w.removeAttribute('data-rs-intro-split');
-              });
               // Segment 18R Item 2 PR 4 — re-render the Band 2 preview
               // so the per-field help boxes swap between an editable
               // textarea (unlocked) and read-only text (locked).
@@ -3863,12 +3840,6 @@
             // consistent with how the other controls keep their edited
             // state while locked.
             if (locked) { window.newModelSyncTextViews(card); }
-            // 19T Item 17 — the refresh above split the intro before the
-            // sync showed the edited description; re-take it on the text
-            // the locked card now shows.
-            if (locked && window.rrwIntroBalance) {
-              card.querySelectorAll('[data-new-model-band2-intro-card]').forEach(rrwIntroBalance);
-            }
             // 19T Item 2 — an in-page Lock drops ``?editing=<this card>``
             // from the URL, so a reload lands locked rather than back in
             // the server's edit mode.

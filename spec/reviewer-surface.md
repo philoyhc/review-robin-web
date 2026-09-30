@@ -450,31 +450,19 @@ preview (`spec/instruments.md` § "Branching between response fields" —
 the JS-built `buildConstraints` block share the row and rebuild
 together on every Band 3 / R toggle).
 
-- **Intro and help cards** above the table, as two column stacks
-  (`.rs-intro-columns`, two `.rs-intro-col`): the heading card (short
-  label and description, rendered only when there is a title) heads the
-  left column, "Who can see what you wrote" the right, and each is as
-  tall as its own text. Below them, in each column's `.rs-help-stack`,
-  a half-width `.rs-help-card` for each response field that has both
-  `help_text` set and `help_text_visible=true`.
-  - **The split.** The first `k` help cards go left and the rest right,
-    in field order, at the `k` whose columns end closest in height; a tie
-    goes to the heavier left column. So does a near tie: when the two
-    columns without the first right-hand help card end within one line
-    of help text (24px) of each other, that card goes left, under the
-    card before it, rather than under the visibility card (19T Item 17
-    rung 3). The server renders an estimate from text length
-    (`views.estimated_intro_split`); the browser re-takes it on measured
-    heights (`rrwIntroBalance`, `base.html`) on load and whenever the
-    intro's width changes. The two copies of the rule,
-    `views.intro_split_index` and `rrwIntroSplitIndex`, are held to the
-    same answers by a node test.
-  - **At 800px or narrower** the stacks dissolve into one column: the
+- **Intro and help cards** above the table, as two columns
+  (`.rs-intro-columns`, two `.rs-intro-col`), each a start-aligned stack
+  so every card is as tall as its own text. **The left column** stacks
+  the heading card (short label and description, rendered only when
+  there is a title) over "Who can see what you wrote". **The right
+  column** holds one `.rs-help-stack`: a half-width `.rs-help-card` for
+  each response field that has both `help_text` set and
+  `help_text_visible=true`, in field order. Which card goes where never
+  depends on text length or window width: nothing is measured or split
+  (19T Item 17 rung 4, replacing the balanced split of rungs 2 and 3).
+  - **At 800px or narrower** the two columns stack into one: the
     heading card, the visibility card, then the help cards in field
-    order. The help cards all move to the right stack there, so the
-    reading and tab order is the visual one; the split is re-taken when
-    the intro has two columns' room again. A width change under 24px
-    (a page scrollbar coming or going) does not re-split.
+    order, which is also the DOM order.
   - **No full-width solo variant.** A help card is always half width;
     `.rs-help-card-solo` is not part of the contract, and its absence is
     asserted by `tests/integration/test_reviewer_response_flow.py`.

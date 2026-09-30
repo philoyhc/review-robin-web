@@ -223,19 +223,14 @@
       {% for group in instrument_groups %}
         <section class="rs-instrument-group"
                  data-rs-position="{{ group.position }}">
-        {# Per-instrument intro (19T Item 17): two independent column
-           stacks. The heading card (short label + description) heads the
-           left column and the "Who can see what you wrote" transparency
-           card the right; the help cards stack beneath them, each card at
-           its own height. The help cards split at the one point, in field
-           order, that ends the two columns closest in height, leaning
-           left on a near tie. #}
+        {# Per-instrument intro (19T Item 17): two independent columns.
+           The left stacks the heading card (short label + description)
+           over the "Who can see what you wrote" transparency card; the
+           right stacks every help card in field order. Each card is its
+           own height. #}
         {% if group.heading.title or group.visibility_rows or group.help_block_items %}
           <div class="rs-intro-columns">
             <div class="rs-intro-col" data-rs-intro-col="left">
-              {# Only with a title: the columns place the visibility card
-                 on their own, so an empty heading card no longer holds
-                 column 1 for it. #}
               {% if group.heading.title %}
                 <div class="card rs-instrument-card rs-intro-name">
                   <h2>{{ group.heading.title }}</h2>
@@ -244,13 +239,6 @@
                   {% endif %}
                 </div>
               {% endif %}
-              {# The first ``help_split`` help cards, estimated from text
-                 (``views.estimated_intro_split``); the rest head the right
-                 stack. ``rrwIntroBalance`` (base.html) re-splits on the
-                 measured heights once the page lays out. #}
-              <div class="rs-help-stack" data-rs-help-stack="left">{% for field in group.help_block_items[:group.help_split] %}<div class="card rs-help-card"><strong>{{ field.label }}</strong> — {{ field.help_text }}</div>{% endfor %}</div>
-            </div>
-            <div class="rs-intro-col" data-rs-intro-col="right">
               {# Visibility-policy transparency card. Read-only mirror
                  of the operator's Band 3 policy for this instrument —
                  one row per non-admin audience (You / Reviewees) ×
@@ -287,7 +275,9 @@
                   </div>
                 </div>
               {% endif %}
-              <div class="rs-help-stack" data-rs-help-stack="right">{% for field in group.help_block_items[group.help_split:] %}<div class="card rs-help-card"><strong>{{ field.label }}</strong> — {{ field.help_text }}</div>{% endfor %}</div>
+            </div>
+            <div class="rs-intro-col" data-rs-intro-col="right">
+              <div class="rs-help-stack" data-rs-help-stack>{% for field in group.help_block_items %}<div class="card rs-help-card"><strong>{{ field.label }}</strong> — {{ field.help_text }}</div>{% endfor %}</div>
             </div>
           </div>
         {% endif %}

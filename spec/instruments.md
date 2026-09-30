@@ -796,14 +796,14 @@ Identity edits ride the bulk-save form: one Save commits identity
 together with Band 1 and Band 3, and the page issues no separate
 `/identity` POST.
 
-#### Visibility card (right of the intro card)
+#### Visibility card (under the intro card)
 
-The "Who can see what you wrote (other than admin)" card heads the right
-column of Band 2's intro, the intro card the left, laid out as the
+The "Who can see what you wrote (other than admin)" card sits under the
+intro card in the left column of Band 2's intro, laid out as the
 reviewer surface's are (`spec/reviewer-surface.md`, "Intro and help
 cards"), and is both the reviewer-surface preview and
 the visibility editor — the same locked / unlocked swap as the
-description box beside it (19T Item 7). **Locked**, it renders the
+description box above it (19T Item 7). **Locked**, it renders the
 reviewer's own two-row table (`data-lock-only`), each mode as a
 display-only pill (`pill pill-count`, carrying
 `data-new-model-vp-preview-cell`) rather than plain text — see
@@ -832,13 +832,12 @@ added, kept because Save is a fetch and never reloads.
 Locked, the card is not inside a lock region: Band 2's are the intro
 card, this card's editor, the preview and each help card, so the locked
 table, which holds no control, keeps a `.table-scroll` that scrolls. The
-card fades with the intro card beside it (19T Item 12A).
+card fades with the intro card above it (19T Item 12A).
 
-The help cards, JS-built by `rebuildPreview`, split between the two
-columns by the reviewer surface's rule (`rrwIntroBalance`). While the
-card is unlocked a split already taken holds, so the cards don't move as
-the operator types into their textareas; it is re-taken on load, on
-Lock and Unlock, and when the intro's width changes (19T Item 17).
+The help cards, JS-built by `rebuildPreview`, fill the right column in
+field order, as on the reviewer surface. Nothing is measured, so they
+stay put as the operator types into their textareas, locks or unlocks
+the card, or resizes the window (19T Item 17).
 
 #### Display-field table
 

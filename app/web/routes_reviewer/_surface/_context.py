@@ -619,8 +619,8 @@ def _surface_context(
     instrument_groups.sort(key=lambda g: g["position"])
 
     # "Who can see what you wrote" transparency table — one
-    # half-width card per instrument, heading the right column of
-    # the intro (19T Item 17). Read-only mirror of the operator's Band
+    # half-width card per instrument, under the heading card in the
+    # intro's left column (19T Item 17). Read-only mirror of the operator's Band
     # 3 policy in plain language so the reviewer knows what
     # downstream audiences (the reviewee, observers) will see and
     # in what form.
@@ -630,11 +630,6 @@ def _surface_context(
     for group in instrument_groups:
         group["visibility_rows"] = visibility_rows_by_instrument.get(
             group["instrument"].id, []
-        )
-        # 19T Item 17 — how many help cards the intro's left column takes,
-        # estimated from text; the browser re-splits on measured heights.
-        group["help_split"] = views.estimated_intro_split(
-            group["heading"], group["visibility_rows"], group["help_block_items"]
         )
 
     if preview_mode and page_url_builder is not None:
