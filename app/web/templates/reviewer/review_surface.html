@@ -223,64 +223,67 @@
       {% for group in instrument_groups %}
         <section class="rs-instrument-group"
                  data-rs-position="{{ group.position }}">
-        {# Per-instrument intro: heading card (short label + description)
-           in column 1; "Who can see what you wrote" transparency
-           table in column 2. Help text cards start in their own
-           2-col grid below — they don't share a row with the
-           heading. #}
-        {% if group.heading.title or group.visibility_rows %}
-          <div class="rs-intro-grid">
-            <div class="card rs-instrument-card">
+        {# Per-instrument intro (19T Item 17): two independent column
+           stacks. The heading card (short label + description) heads the
+           left column and the "Who can see what you wrote" transparency
+           card the right; the help cards stack beneath them, each card at
+           its own height. Every help card sits in the left stack until
+           the split (rung 2) balances the two columns. #}
+        {% if group.heading.title or group.visibility_rows or group.help_block_items %}
+          <div class="rs-intro-columns">
+            <div class="rs-intro-col" data-rs-intro-col="left">
+              {# Only with a title: the columns place the visibility card
+                 on their own, so an empty heading card no longer holds
+                 column 1 for it. #}
               {% if group.heading.title %}
-                <h2>{{ group.heading.title }}</h2>
-                {% if group.heading.subtitle %}
-                  <p class="rs-instrument-subtitle muted">{{ group.heading.subtitle }}</p>
-                {% endif %}
-              {% endif %}
-            </div>
-            {# Visibility-policy transparency card. Read-only mirror
-               of the operator's Band 3 policy for this instrument —
-               one row per non-admin audience (You / Reviewees) ×
-               two windows (Session ongoing / Responses released).
-               ``—`` means "this audience can't view your responses
-               in that window". Observers are intentionally
-               omitted — they're admin-side viewers; the heading
-               suffix "(other than admin)" makes that explicit. #}
-            {% if group.visibility_rows %}
-              <div class="card rs-instrument-card"
-                   data-rs-visibility-policy-card>
-                <h3 style="margin: 0 0 8px 0;">Who can see what you wrote (other than admin)</h3>
-                {# `.table-scroll` (base.html): a table wider than its card
-                   scrolls inside the card rather than pushing the page sideways. #}
-                <div class="table-scroll">
-                <table style="width: 100%; border-collapse: collapse;">
-                  <thead>
-                    <tr style="text-align: left;">
-                      <th style="padding: 4px 8px; width: 28%;" class="muted">Audience</th>
-                      <th style="padding: 4px 8px; width: 36%;" class="muted">Session ongoing</th>
-                      <th style="padding: 4px 8px; width: 36%;" class="muted">Responses released</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for vp in group.visibility_rows %}
-                      <tr>
-                        <td style="padding: 4px 8px;">{{ vp.audience_label }}</td>
-                        <td style="padding: 4px 8px;">{{ vp.while_ongoing_label }}</td>
-                        <td style="padding: 4px 8px;">{{ vp.after_release_label }}</td>
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
+                <div class="card rs-instrument-card rs-intro-name">
+                  <h2>{{ group.heading.title }}</h2>
+                  {% if group.heading.subtitle %}
+                    <p class="rs-instrument-subtitle muted">{{ group.heading.subtitle }}</p>
+                  {% endif %}
                 </div>
-              </div>
-            {% endif %}
-          </div>
-        {% endif %}
-        {% if group.help_block_items %}
-          <div class="rs-help-grid">
-            {% for field in group.help_block_items %}
-              <div class="card rs-help-card"><strong>{{ field.label }}</strong> — {{ field.help_text }}</div>
-            {% endfor %}
+              {% endif %}
+              <div class="rs-help-stack" data-rs-help-stack="left">{% for field in group.help_block_items %}<div class="card rs-help-card"><strong>{{ field.label }}</strong> — {{ field.help_text }}</div>{% endfor %}</div>
+            </div>
+            <div class="rs-intro-col" data-rs-intro-col="right">
+              {# Visibility-policy transparency card. Read-only mirror
+                 of the operator's Band 3 policy for this instrument —
+                 one row per non-admin audience (You / Reviewees) ×
+                 two windows (Session ongoing / Responses released).
+                 ``—`` means "this audience can't view your responses
+                 in that window". Observers are intentionally
+                 omitted — they're admin-side viewers; the heading
+                 suffix "(other than admin)" makes that explicit. #}
+              {% if group.visibility_rows %}
+                <div class="card rs-instrument-card rs-intro-visibility"
+                     data-rs-visibility-policy-card>
+                  <h3 style="margin: 0 0 8px 0;">Who can see what you wrote (other than admin)</h3>
+                  {# `.table-scroll` (base.html): a table wider than its card
+                     scrolls inside the card rather than pushing the page sideways. #}
+                  <div class="table-scroll">
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                      <tr style="text-align: left;">
+                        <th style="padding: 4px 8px; width: 28%;" class="muted">Audience</th>
+                        <th style="padding: 4px 8px; width: 36%;" class="muted">Session ongoing</th>
+                        <th style="padding: 4px 8px; width: 36%;" class="muted">Responses released</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for vp in group.visibility_rows %}
+                        <tr>
+                          <td style="padding: 4px 8px;">{{ vp.audience_label }}</td>
+                          <td style="padding: 4px 8px;">{{ vp.while_ongoing_label }}</td>
+                          <td style="padding: 4px 8px;">{{ vp.after_release_label }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                  </div>
+                </div>
+              {% endif %}
+              <div class="rs-help-stack" data-rs-help-stack="right"></div>
+            </div>
           </div>
         {% endif %}
         {# Progress pills + per-field min/max/step reminders share

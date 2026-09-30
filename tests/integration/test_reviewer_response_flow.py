@@ -287,11 +287,19 @@ def test_surface_help_text_multi_items_render_in_grid(
     rae_client = make_client(rae)
     body = rae_client.get(f"/me/sessions/{review_session.id}").text
 
-    # Help cards live in their own `.rs-help-grid` row below the
-    # heading card's `.rs-intro-grid`; they no longer share a row
-    # with the heading.
-    assert '<div class="rs-help-grid">' in body
+    # 19T Item 17 — the intro is two column stacks: the heading card
+    # heads the left, the visibility card the right, and the help cards
+    # stack beneath (all in the left stack until the split, rung 2).
+    assert '<div class="rs-intro-columns">' in body
+    left = body.index('data-rs-help-stack="left"')
+    right_col = body.index('data-rs-intro-col="right"')
+    # A lone untitled instrument renders no heading card: the columns
+    # place the visibility card, so an empty card no longer holds column 1.
+    assert 'class="card rs-instrument-card rs-intro-name"' not in body
+    assert left < body.index("Rating help.") < body.index("Comments help.") < right_col
+    assert body.index("data-rs-visibility-policy-card") > right_col
     assert body.count('class="card rs-help-card"') == 2
+    assert "rs-help-grid" not in body and "rs-intro-grid" not in body
     assert "Rating help." in body
     assert "Comments help." in body
     # The retired `rs-help-card-solo` modifier no longer renders.

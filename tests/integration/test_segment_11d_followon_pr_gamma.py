@@ -229,9 +229,9 @@ def test_instrument_heading_multi_with_short_label_and_description(
     ).text
     # PR γ wrapped the heading in a flex `.rs-instrument-heading` row
     # of bare text; the per-instrument intro grid follow-up moved it
-    # into a half-width `.card.rs-instrument-card` so the heading +
-    # first help text card sit side-by-side.
-    assert 'class="card rs-instrument-card"' in body
+    # into a half-width `.card.rs-instrument-card`, heading the left
+    # column stack since 19T Item 17.
+    assert 'class="card rs-instrument-card rs-intro-name"' in body
     assert "<h2>#1: Self-eval</h2>" in body
     assert "Reflect on your own progress." in body
     assert 'class="rs-instrument-subtitle muted"' in body

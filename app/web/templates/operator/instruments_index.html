@@ -1848,12 +1848,13 @@
              its branch is closed, as ``rfRowRequiredNow`` counts it; nor a
              Require branch's field while its condition doesn't hold. #}
           {% set _required_count = (_rf_list | selectattr('required') | rejectattr('branch_parent_id') | list | length) %}
-          <div class="rs-intro-grid"
+          <div class="rs-intro-columns"
                data-new-model-band2-intro-card
                data-instrument-id="{{ instrument.id }}"
                data-session-id="{{ session.id }}"
                style="margin-top: 16px;">
-            <div class="card rs-instrument-card"
+            <div class="rs-intro-col" data-rs-intro-col="left">
+            <div class="card rs-instrument-card rs-intro-name"
                  data-intro-edit-block data-lock-region
                  {% if not is_editing %}inert aria-hidden="true"{% endif %}
                  style="position: relative;">
@@ -1890,6 +1891,11 @@
                                  font: inherit; padding: 4px 6px;">{{ instrument.description or '' }}</textarea>
               </div>
             </div>
+            {# 19T Item 17 — the help cards, JS-built by ``rebuildPreview``,
+               stack under the name card (all of them until rung 2's split). #}
+            <div class="rs-help-stack" data-rs-help-stack="left"></div>
+            </div>
+            <div class="rs-intro-col" data-rs-intro-col="right">
             {# Reviewer-surface preview — "Who can see what you
                wrote (other than admin)". Mirrors the read-only
                transparency card the reviewer sees alongside their
@@ -1904,7 +1910,7 @@
             {# Rendered unconditionally: the card holds the editor's hidden
                inputs, which Save must always send (19T Item 7). Only the
                locked table depends on the reviewer's rows. #}
-              <div class="card rs-instrument-card"
+              <div class="card rs-instrument-card rs-intro-visibility"
                    data-new-model-band2-vp-preview-card>
                 <h3 style="margin: 0 0 8px 0;">Who can see what you wrote (other than admin)</h3>
                 {% if _vp_preview_rows %}
@@ -2036,6 +2042,8 @@
                 </table>
                 </div>
               </div>
+              <div class="rs-help-stack" data-rs-help-stack="right"></div>
+            </div>
           </div>
           {# Response field details now live as editable rows
              inside Band 3's "Response fields" section — the
@@ -2997,12 +3005,18 @@
             var pills = helpVisibleResponsePills(card);
             if (pills.length === 0) { return ''; }
             var unlocked = card.getAttribute('data-new-model-band2-edit-mode') === '1';
-            var html = '<div class="rs-help-grid" data-new-model-band2-help-cards>';
+            // 19T Item 17 — the cards alone, no grid wrapper: the caller
+            // places them in the intro's help stacks. Each card is its own
+            // lock region (the stacks are layout only, and dissolve at
+            // 800px, where a region with no box could not fade).
+            var html = '';
+            var lockAttrs = unlocked ? '' : ' inert aria-hidden="true"';
             pills.forEach(function (p) {
               var keyAttr = esc(p.key || '');
               var helpText = p.helpText || '';
               html += '<div class="card rs-help-card" '
                 + 'data-help-card-key="' + keyAttr + '" '
+                + 'data-lock-region' + lockAttrs + ' '
                 + 'style="position: relative;">';
               html += '<strong>' + esc(p.label || '') + '</strong>';
               if (unlocked) {
@@ -3019,7 +3033,6 @@
               }
               html += '</div>';
             });
-            html += '</div>';
             return html;
           }
           // Refresh the intro card's "Required items completed"
@@ -3289,8 +3302,13 @@
             } else {
               tableHtml = buildIndividualPreview(card, selected);
             }
-            container.innerHTML = buildResponseFieldHelpCards(card)
-              + buildProgressAndConstraintsRow(card)
+            // 19T Item 17 — the help cards go to the intro's left stack
+            // (all of them until rung 2's split); the right stack empties.
+            var leftStack = card.querySelector('[data-rs-help-stack="left"]');
+            var rightStack = card.querySelector('[data-rs-help-stack="right"]');
+            if (leftStack) { leftStack.innerHTML = buildResponseFieldHelpCards(card); }
+            if (rightStack) { rightStack.innerHTML = ''; }
+            container.innerHTML = buildProgressAndConstraintsRow(card)
               + tableHtml;
             // Post-render adjustment: the initial ``rows`` baked into
             // each textarea by ``buildResponseFieldPreviewCell`` used

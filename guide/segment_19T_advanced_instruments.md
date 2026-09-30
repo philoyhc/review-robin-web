@@ -2594,3 +2594,145 @@ item of their own. It closes when the author says so.
 - `spec/ui_elements.md` — §10 `.bottom-grid`'s collapsed row gap (Item 16, entry 3).
 - `spec/ui_elements.md` — §8 the text-input rule's types, `date` and `password` added (Item 16, entry 4); `file` on the focus rules (entry 5).
 - `docs/status.md` — row when the item closes (Item 16).
+
+## Item 17 — The instrument intro as two balanced columns
+
+**Logged 2026-09-30 on the author's instruction**, from a screenshot of
+the reviewer surface; the recommendation below was the author's pick.
+
+### Opportunity
+
+Above each instrument's table the reviewer surface (and the Instruments
+page's Band 2 preview) shows two grids:
+- **`.rs-intro-grid`**: the name / description card and the "Who can see
+  what you wrote" card share one grid row, so the name card stretches to
+  the visibility table's height even for a one-line description.
+- **`.rs-help-grid`**: the help cards fill row by row, each row as tall
+  as its taller card. Three cards leave the third alone on the left with
+  a gap beside it (the author's example: Familiarity, Rating, Comments).
+
+### Decision
+
+**Two independent column stacks, split at one order-preserving point.**
+- The left column starts with the name card and the right with the
+  visibility card; each column is a start-aligned stack, so each card is
+  as tall as its own text.
+- Help cards 1..k go under the name card and k+1..n under the visibility
+  card, in field order. `k` is chosen from the n+1 splits to make the two
+  columns end closest in height; a tie goes to the heavier left column.
+  In the author's example that is k = 2 (Familiarity and Rating left,
+  Comments right).
+- **Heights are measured in the browser**, since they depend on the
+  column width and the text wrapping. The server renders an estimated
+  split (text length) so a page without script, or before it runs, is
+  close; a small script measures, re-splits if needed, and re-runs on
+  resize. At 800px or narrower one column: name, visibility, then the
+  help cards in field order.
+- **One split function** serves the reviewer surface and Band 2's JS-built
+  help cards, so the preview matches the surface (Item 16 entry 1's rule).
+  It takes the heights and returns `k`, pure, and is tested in node the
+  way `pyG` is.
+
+**Rejected:**
+- **CSS columns** (`column-count: 2`) balance on their own but cannot pin
+  the visibility card to the top of the right column.
+- **CSS masonry**, not reliably available across browsers.
+- **Shortest-column-first placement** balances slightly better but zigzags
+  the help cards out of field order, which matters once one card refers
+  to another's answer ("Rating and Comments will be available only if…").
+
+### Semantics
+
+- **No visibility card** (no rows): the right column starts with help
+  cards. **No heading**: the left column does.
+- **No help cards**: the two top cards only, each at its own height.
+- **One help card**: whichever side ends closer.
+- **A very long description**: every help card goes right (k = 0).
+- **Band 2 unlocked**: the help cards carry textareas that grow as the
+  operator types, so the split holds until the card locks or unlocks.
+- **Reading order**: moving cards between columns makes the DOM order
+  name, help 1..k, visibility, help k+1..n. See judgment calls.
+
+### Judgment calls — decided
+
+- The split is recomputed on load and on resize; in Band 2 also on lock
+  and unlock, not on every rebuild while editing (2026-09-30).
+- The DOM order follows the columns (column-major), so a screen reader
+  reads what the eye does down each column; keeping the DOM fixed and
+  positioning visually would read the columns interleaved (2026-09-30).
+
+### Blast radius (measured)
+
+Taken 2026-09-30 at `be68a8ad`:
+- Templates: 3 (`grep -rln "rs-intro-grid\|rs-help-grid" app/web/templates`):
+  `reviewer/review_surface.html`, `operator/instruments_index.html`
+  (the intro at line 1851, `buildResponseFieldHelpCards` at 2996),
+  `base.html` (the two grid rules, ~4253–4273).
+- Tests naming the classes or hooks: 4 files, 9 hits
+  (`test_reviewer_response_flow.py` 4, `test_segment_11d_followon_pr_gamma.py` 2,
+  `test_instrument_builder_routes.py` 2, `test_builder_adjustments_12a.py` 1).
+- Specs: `spec/reviewer-surface.md` (the help-block bullet, ~line 452) and
+  `spec/ui_elements.md` (the `.rs-help-card` family, ~line 289) both say
+  "a `.rs-help-grid` row of half-width cards".
+
+### Status
+
+- **Rung 1 (scaffold), 2026-09-30**, with the plan in #2692 (still open
+  when the author said to start). Base SHA for the item's read:
+  `be68a8ad`. `.rs-intro-grid` and `.rs-help-grid` retire for
+  `.rs-intro-columns`: two `.rs-intro-col` stacks, each a top card and a
+  `.rs-help-stack`; every help card in the left stack. ≤800px the stacks
+  dissolve (`display: contents`) into one column ordered by `order`.
+  Found at build: the heading card now renders only with a title (it was
+  an empty placeholder holding column 1 for the visibility card), and
+  Band 2's JS-built help cards are each their own lock region, since
+  the stacks are layout only and have no box at 800px to fade. Two tests
+  counted `inert aria-hidden` across the card's scripts and now count
+  markup only. Chromium, reviewer surface at 1400px: name card 89px,
+  help cards under it, visibility right; at 700px one column, name,
+  visibility, help. Band 2 locked: name card 82px, help cards inert and
+  faded left; unlocked in-page, editable.
+
+### PR ladder
+
+1. **Scaffold: the column stacks.** Both surfaces render two start-aligned
+   stacks, the name card atop the left and the visibility card atop the
+   right, every help card still in the left stack. The name card shrinks
+   to its text. No script. Must not touch the split.
+2. **The split.** The pure split function, the server's estimated `k`, the
+   measuring script on both surfaces (resize, Band 2 rebuilds), node
+   tests of the function, Chromium check against the author's example;
+   the specs. The item's last build rung: its cumulative read.
+3. **Close.**
+
+### Definition of done
+
+- On the reviewer surface and the locked Band 2 preview, the name card is
+  as tall as its text, and the help cards split at the `k` that balances
+  the columns (the author's example: 2 left, 1 right).
+- The split function is tested in node over the edge cases in Semantics.
+- ≤800px: one column, name, visibility, help cards in field order.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19T.17` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. ~~**Band 2 unlocked**~~ — the stacks in both states, re-split on lock
+   and unlock only, so cards don't jump while the operator types (author,
+   2026-09-30).
+
+### Out of scope
+
+- The progress-and-constraints row and the table below: unchanged.
+- The Guide's captures of the reviewer surface: Item 16 carries any
+  retake, once this lands.
+
+### Doc impact
+
+- `spec/reviewer-surface.md` — the help block and intro as two balanced column stacks, the split rule (Item 17).
+- `spec/ui_elements.md` — the `.rs-help-card` family's layout: column stacks, not a `.rs-help-grid` row (Item 17).
+- `spec/instruments.md` — Band 2's preview follows the same split (Item 17).
+- `docs/status.md` — row when the item closes (Item 17).
