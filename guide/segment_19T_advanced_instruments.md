@@ -2535,6 +2535,13 @@ item of their own. It closes when the author says so.
    of its own; Chromium measured the two within a few pixels, with and
    without a width. Its read: one false positive (textarea rows, which
    the surface re-measures too), the rest acted on.
+2. **The Guide gives the offset syntax** (author's ask, 2026-09-30). The
+   Create paragraph now says how to write **Send invites** and **Send
+   reminders**: comma-separated negative ISO 8601 durations counted back
+   from Start or End (`spec/lifecycle.md` §8.2.4), between an hour and
+   10 days, at least an hour from now, no weeks or fractions, inert
+   without the anchor. Each example checked against
+   `parse_iso_duration`.
 
 ### Doc impact
 
