@@ -4581,8 +4581,10 @@
       // ``views.intro_split_index`` (the server's estimate); a node test
       // in tests/integration/test_inline_scripts_parse.py holds them to the
       // same answers. `null` is a column with no top card; ties go to the
-      // larger k, the heavier left column.
-      function rrwIntroSplitIndex(leftTop, rightTop, heights, gap) {
+      // larger k, the heavier left column, and so does a near tie: when
+      // the columns without the first right-hand help card end within
+      // `lean` of each other, that card goes left.
+      function rrwIntroSplitIndex(leftTop, rightTop, heights, gap, lean) {
         function column(top, hs) {
           var parts = (top === null ? [] : [top]).concat(hs);
           var sum = 0;
@@ -4595,8 +4597,15 @@
             - column(rightTop, heights.slice(k)));
           if (bestDiff === null || diff <= bestDiff) { bestK = k; bestDiff = diff; }
         }
+        if (bestK < heights.length) {
+          var without = Math.abs(column(leftTop, heights.slice(0, bestK))
+            - column(rightTop, heights.slice(bestK + 1)));
+          if (without <= lean) { bestK += 1; }
+        }
         return bestK;
       }
+      // The lean, one line of help text; views.INTRO_LEAN_PX is the same.
+      var RRW_INTRO_LEAN_PX = 24;
       function rrwIntroParts(wrapper) {
         var left = wrapper.querySelector('[data-rs-intro-col="left"]');
         var right = wrapper.querySelector('[data-rs-intro-col="right"]');
@@ -4648,7 +4657,7 @@
           .concat(Array.prototype.slice.call(p.rightStack.children));
         var heights = cards.map(function (c) { return c.getBoundingClientRect().height; });
         var gap = parseFloat(getComputedStyle(p.left).rowGap) || 0;
-        var k = rrwIntroSplitIndex(topOf(p.left, p.leftStack), topOf(p.right, p.rightStack), heights, gap);
+        var k = rrwIntroSplitIndex(topOf(p.left, p.leftStack), topOf(p.right, p.rightStack), heights, gap, RRW_INTRO_LEAN_PX);
         rrwIntroPlaceHelp(wrapper, k);
         wrapper.setAttribute('data-rs-intro-split', String(k));
       }

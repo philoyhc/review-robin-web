@@ -459,10 +459,14 @@ together on every Band 3 / R toggle).
   `help_text` set and `help_text_visible=true`.
   - **The split.** The first `k` help cards go left and the rest right,
     in field order, at the `k` whose columns end closest in height; a tie
-    goes to the heavier left column. The server renders an estimate from
-    text length (`views.estimated_intro_split`); the browser re-takes it
-    on measured heights (`rrwIntroBalance`, `base.html`) on load and
-    whenever the intro's width changes. The two copies of the rule,
+    goes to the heavier left column. So does a near tie: when the two
+    columns without the first right-hand help card end within one line
+    of help text (24px) of each other, that card goes left, under the
+    card before it, rather than under the visibility card (19T Item 17
+    rung 3). The server renders an estimate from text length
+    (`views.estimated_intro_split`); the browser re-takes it on measured
+    heights (`rrwIntroBalance`, `base.html`) on load and whenever the
+    intro's width changes. The two copies of the rule,
     `views.intro_split_index` and `rrwIntroSplitIndex`, are held to the
     same answers by a node test.
   - **At 800px or narrower** the stacks dissolve into one column: the

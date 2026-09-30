@@ -2662,6 +2662,11 @@ page's Band 2 preview) shows two grids:
   positioning visually would read the columns interleaved (2026-09-30).
   Collapsed to one column the help cards all go right, so the DOM order
   is the visual one there too (the item's read, 2026-09-30).
+- A near tie leans left: when the columns without the first right-hand
+  help card end within 24px (one line of help text) of each other, that
+  card goes left, under the card before it (the author, from a Band 2
+  screenshot, 2026-09-30). The lean moves the card at the split, which
+  is the last card only when one card is on the right.
 
 ### Blast radius (measured)
 
@@ -2724,6 +2729,16 @@ Taken 2026-09-30 at `be68a8ad`:
   into or out of one column now always re-runs), and two gap tests that
   could not fail (replaced by cases a hard-coded or ignored gap answers
   differently). Chromium: 815 → 795 → 810px reorders and re-splits.
+- **Rung 3 (the lean), 2026-09-30**, after #2693 merged: the author's
+  Band 2 screenshot had Rating alone under the visibility card, 4px
+  nearer balanced than below Familiarity, with the columns ending 2px
+  apart without it. Both copies take a `lean` (`views.INTRO_LEAN_PX`,
+  `RRW_INTRO_LEAN_PX`, 24; a test holds the two equal) and move the card
+  at the split left on a near tie. The gap tests run with no lean, so
+  the gap alone still decides them. Chromium, the screenshot's heights
+  (74 / 146 / 62 / 62px): without the lean the columns end at 513 /
+  585px, with it at 587 / 511px, Rating under Familiarity. A code slice
+  after the item's read, so it takes its own.
 
 ### PR ladder
 
@@ -2736,6 +2751,8 @@ Taken 2026-09-30 at `be68a8ad`:
    tests of the function, Chromium check against the author's example;
    the specs. The item's last build rung: its cumulative read.
 3. **Close.**
+
+Added at build: **rung 3, the lean** (see Status), before the close.
 
 ### Definition of done
 
