@@ -22,11 +22,11 @@ the table means adding a documented shape to the index also teaches this
 test about it, and a shape nobody documented covers nothing. The
 constitution's "constant-derived gates only" rule, applied to a document.
 
-Scope is ``*.md``. JSON sidecars (``codebase_assessment_11sep.json``,
-``assessment.json``) are excluded: the archive index names them inline on
-their document's row (``codebase_assessment_17aug.md`` (+ ``.json``))
-rather than giving them one, so requiring a row of their own would fail on
-the convention the index actually uses.
+Scope is ``*.md``. JSON files (the latest ``codebase_assessment_<date>.json``
+sidecar, ``assessment.json``) are excluded: they travel with the document
+they serve rather than taking a row of their own, and older sidecars are
+deleted rather than archived (``guide/README.md``), so requiring a row
+would fail on the convention the index actually uses.
 """
 
 from __future__ import annotations
