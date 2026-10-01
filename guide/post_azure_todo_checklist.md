@@ -30,9 +30,12 @@ one — a UI behaviour no test can reach, waiting on the dev slot.
 Recorded rather than quietly filed, because the rule above says
 "blocked on the deployment itself" and this is blocked on something
 cheaper. The justification is the same one that makes the rule work:
-this author runs nothing locally (`CLAUDE.md` → Where work runs), so a
-check that needs a browser needs a deploy, and a check that needs a
-deploy needs a file like this one or it is forgotten. Items of this
+a check that needs a deploy needs a file like this one or it is
+forgotten. *Corrected 2026-10-01:* this paragraph first said the author
+runs nothing locally, so any browser check needed a deploy. The author
+has in fact run the app locally with fake auth from early on (`CLAUDE.md`
+→ Where work runs), so a check a local browser can settle belongs here
+only if it needs what a deployment adds. Items of this
 kind leave as soon as they are settled and do not wait for the
 cutover.
 
@@ -345,17 +348,17 @@ it.)
 
 ## 5. Verify Session Home's Owners card and the tag typeahead in a browser
 
-**Status:** open. Blocked on a deploy — the **dev slot is enough**, and
-the author cannot reach it yet (2026-09-23). A browser against
-`localhost` settles every row too; they are here because a browser
-settles them and headless Chromium did not.
+**Status:** **checked locally by the author, 2026-10-01**, in a browser
+against the app on `localhost` with fake auth. The two rows that name
+more than that, the keyboard pick in **Safari** and **a screen reader**,
+need no deployment either, so they moved to
+`guide/deferred_consolidated.md` Part C rather than waiting here.
 
 **What.** Segment 19S Item 10 gave Session Home's Owners card a card
 of its own, where each Add owner and Remove saves at once behind a
 Lock / Unlock like Quick Setup's (`spec/session_owners.md`), and Item 7 put a typeahead on
 the four tag boxes. The suite pins their markup; headless Chromium
-drove the scripts, but draws no datalist popup and was never a person
-at a keyboard.
+drove the scripts, but draws no datalist popup.
 
 **Done when** each has been seen, in a real browser:
 
@@ -381,8 +384,9 @@ here. Settling a row is a dated line there, not a reopening.
 
 ## 6. Verify the Instruments response-field rows, action row and small fixes in a browser
 
-**Status:** open. Blocked on a deploy; the **dev slot is enough**
-(2026-09-24).
+**Status:** **checked locally by the author, 2026-10-01**, in a browser
+against the app on `localhost` with fake auth. Nothing in the table
+needs a deployment.
 
 **What.** Segment 19T Items 1 and 2 reworked Band 3's response-field rows:
 - a "+" on each row;
@@ -409,9 +413,9 @@ the reviewer surface only while the parent's answer meets a condition. Item 12
 added ranges to a number's condition: within or outside two ends,
 inclusive or exclusive.
 The suite pins the markup, and headless Chromium drove the rows on a
-rendered page. Neither was a person on the live app.
+rendered page; the author checked them in a browser.
 
-**Done when** each has been seen on the dev slot, card unlocked:
+**Done when** each has been seen in a browser, card unlocked:
 
 | Check | How | Passes when |
 |---|---|---|

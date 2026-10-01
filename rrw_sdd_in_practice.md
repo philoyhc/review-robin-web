@@ -217,7 +217,7 @@ The snapshots have paid. One fixed two real logic bugs with regression tests. Th
 
 ### 6.6 The human is the verifier of last resort — and there is no autonomous loop
 
-**Decision.** End-to-end verification of anything the test suite cannot exercise is done by the author looking at it. That covers templates, redirects, layout, in-browser JS and real auth. It happens on the Azure dev slot after deploy. When the author cannot reach the dev slot, each check still owed is carried in `guide/post_azure_todo_checklist.md` until it can be made. A PR description must say what was not verified rather than claim that it was.
+**Decision.** End-to-end verification of anything the test suite cannot exercise is done by the author looking at it. That covers templates, redirects, layout, in-browser JS and real auth. The author runs the app locally with fake auth and looks at each change in a browser; what only a deployment shows, real auth and the network, waits for one and is carried in `guide/post_azure_todo_checklist.md` until it can be made. A PR description must say what was not verified rather than claim that it was.
 
 No agent runs unattended. An agent follows a pull request it opened through CI and review, under the instruction that opened it. It does not start new work on its own, and it does not merge; the author merges.
 
@@ -225,7 +225,7 @@ No agent runs unattended. An agent follows a pull request it opened through CI a
 
 The practice has two partial answers. Scaffold-first (Section 5) puts a new surface in front of a person before it is wired. The agent can also drive a headless browser to measure a layout or take a screenshot and attach the measurement to the PR. Neither is a person looking. Scaffold-first applies only to new surfaces, and a measured layout is only as good as the question asked of it. So the gap is not "nothing looks at layout" but "nothing looks at layout *twice*".
 
-The loop-engineering threshold for running autonomously is a machine-checkable definition of done, and work long enough for autonomy to matter. A solo project whose slices are sized to be reviewed in one sitting does not meet it, and the audit says so in as many words. The `diff-reviewer` says the same about itself: "You will not catch rendering, layout, or in-browser JS behaviour. Those need the Azure dev slot, not a reader."
+The loop-engineering threshold for running autonomously is a machine-checkable definition of done, and work long enough for autonomy to matter. A solo project whose slices are sized to be reviewed in one sitting does not meet it, and the audit says so in as many words. The `diff-reviewer` says the same about itself: "You will not catch rendering, layout, or in-browser JS behaviour. Those need a browser, not a reader."
 
 **Trade-off.** The verifier is a person, and the practice's throughput is bounded by that person's attention. That is accepted deliberately as the right shape for the project's scale, not as an immature version of an autonomous one. It is also where the practice's answer is most partial: the browser-only class is "both the largest measured category of real defects here and the one no layer of the current practice catches".
 

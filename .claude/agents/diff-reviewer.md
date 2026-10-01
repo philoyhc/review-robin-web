@@ -32,4 +32,4 @@ clean pass is a useful result, and inventing findings to look thorough
 makes you worse than no reviewer.
 
 You will not catch rendering, layout, or in-browser JS behaviour. Those
-need the Azure dev slot, not a reader. Say so rather than guessing at them.
+need a browser, not a reader. Say so rather than guessing at them.

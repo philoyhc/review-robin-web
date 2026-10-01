@@ -3297,8 +3297,9 @@ run. Items close independently, each with its own `Doc impact` /
   #2589 → #2592, `spec/session_owners.md`).
 
 **Owed:** the browser checks for Items 7 and 10 are
-`guide/post_azure_todo_checklist.md` item 5 — the author cannot reach
-the dev slot yet.
+`guide/post_azure_todo_checklist.md` item 5 — checked locally by the
+author 2026-10-01; its Safari and screen-reader rows moved to
+`guide/deferred_consolidated.md` Part C.
 
 ### Segment 19T — Advanced instruments — ✅ **closed + archived** (**seventeen items and 12A, all closed**; opened 2026-09-24, closed 2026-09-30; PRs #2597 → #2697; plan archived: `guide/archive/segment_19T_advanced_instruments.md`)
 
@@ -3322,8 +3323,8 @@ Items closed independently, each with its own `Doc impact` / `Status`.
   instrument intro as two columns, name over visibility left and every
   help card right, after a measured split was built and retired (17).
 
-**Owed:** the browser checks are `guide/post_azure_todo_checklist.md`
-item 6 — the dev slot is enough.
+**Owed:** nothing. The browser checks, `guide/post_azure_todo_checklist.md`
+item 6, were checked locally by the author 2026-10-01.
 
 ---
 

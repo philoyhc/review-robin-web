@@ -49,7 +49,8 @@ the maker, not a checker. Its size figures reproduce exactly at the same tree;
 two of its figures differ from mine by definition, and one it could not take I
 could — all three are in §2.
 
-**Development context:** single author, AI agents building, no laptop dev loop,
+**Development context:** single author, AI agents building, the author checking
+each change in a browser against a local run with fake auth,
 pre-deployment with an institutional pilot pending. 161 merges in ten days is
 not a team velocity figure. **Most of this window was built while waiting on
 NUS IT**: the deployment that would put the work in front of users is not the
@@ -301,22 +302,24 @@ summary paragraph describes the tables below it.
   one complete interaction with its view contract and tests, rather than
   splitting markup, script and tests separately — is right. No plan; there is
   no builder change queued.
-- **Nothing built this window has been used by a person in a real browser.** The
+- **The builder's browser behavior is checked by hand, and only by hand.** The
   builder is client-side staging before one save; tests prove the posted payload
   and the parsed script, not that keyboard and pointer sequences produce them.
-  **Headless Chromium in the sandbox closed part of that gap.** It drove the
-  builder's rows, the "+" / X / ✓ sequence and the tag and owner scripts on a
-  rendered page under fake auth. It found three defects on main, fixed in 19T
-  Item 1, and it measured the band layouts at several widths (the 19T record,
-  `guide/archive/segment_19T_advanced_instruments.md`). Those checks were run by
-  hand, so the suite cannot repeat them. What headless Chromium cannot settle
-  is what the checklist is for: a datalist popup, a scrollbar drag, Safari, a
-  person's reading of the page, and real Easy Auth, Postgres and the gateway.
-  `guide/post_azure_todo_checklist.md` item 6 now carries the whole 19T surface,
-  and item 5 the tags and owners work. Both can run on the personal dev slot,
-  which the author recorded on 2026-09-23 as unreachable, or on the NUS
-  deployment, whose remaining path `docs/nus_azure_status_v7.md` holds on two
-  external decisions: a runner VM SKU that Southeast Asia can actually allocate
+  The author checks each change in a browser against a local run, and headless
+  Chromium in the sandbox drove the rows, the "+" / X / ✓ sequence and the tag
+  and owner scripts too, finding three defects on main (19T Item 1,
+  `guide/archive/segment_19T_advanced_instruments.md`).
+  `guide/post_azure_todo_checklist.md` items 5 and 6, the tags, owners and 19T
+  surface, were checked locally by the author on 2026-10-01, bar item 5's
+  Safari and screen-reader rows. *Corrected 2026-10-01:* this bullet first
+  said no person had used the window in a real browser, on a record that said
+  the author runs nothing locally; the author always has. **What is
+  unverified is narrower:** nothing repeats those checks, so an edit to the
+  builder's script can break a sequence that only the next hand check would
+  catch, and what only a deployment shows (real Easy Auth, the live app on
+  Postgres, the gateway, the deployed configuration) has not been seen. That
+  waits on the NUS deployment, whose remaining path
+  `docs/nus_azure_status_v7.md` holds on two external decisions: a runner VM SKU that Southeast Asia can actually allocate
   (repeated `SkuNotAvailable`, awaiting Microsoft Support) and the production
   hostname, which NUS is deciding for a family of applications. The private Web
   App, PostgreSQL, Key Vault, Application Insights, Easy Auth v2 and the
@@ -396,8 +399,8 @@ Review Robin Web is feature-complete for a pilot, and this window made its
 instrument model substantially more expressive — branching with two modes,
 ranges and two levels, carried to every surface — without a new seam in the
 Python and with 5,109 tests green. It also made the builder's one template the
-largest UI unit in the product and left the window's interaction unseen by a
-person in a real browser; headless Chromium drove its scripts, by hand. The one
+largest UI unit in the product, its interaction checked by hand in a browser
+and repeated by nothing. The one
 live thread is unchanged — **nothing sends email, and nothing has been
 deployed** — but on 2026-10-01 it is better
 described: most of the NUS foundation is provisioned, and what blocks the rest
@@ -406,27 +409,24 @@ project's to make.
 
 **Recommended next moves, at most three:**
 
-1. **While the wait lasts, build what shrinks the unverified surface rather
-   than widens it.** The wait is NUS IT's, and nothing here shortens it. What
-   the project controls is how much untested interaction is queued when it
-   ends. So, in order:
-   - **The first browser.** If the personal dev slot becomes reachable, run
-     checklist items 5 and 6 there at once.
+1. **While the wait lasts, make what has been checked stay checked, and keep
+   the NUS path ready.** The wait is NUS IT's, and nothing here shortens it.
    - **The NUS path.** Keep the project-side runner, gateway, secrets and
      migration work in `docs/nus_azure_status_v7.md` ready for the day its two
      blockers clear, without guessing the hostname or retrying the VM.
-   - **Meanwhile, prefer work that adds no new interaction.** Prepare's 13 s
-     (§5) is one. Turning the hand-run Chromium checks above into something
-     repeatable is another. The builder-script extraction is not, despite the
-     idle time: it rewrites the very script no person has used, so it waits for
-     its trigger (move 3).
-   - **Feature work that adds interaction lengthens checklist items 5 and 6.**
-     Take it on with that cost named.
+   - **Repeatable browser checks for the builder.** The author's local checks
+     settle a change once; nothing re-runs them when a later edit touches the
+     same script. Turning the checklist rows a headless browser can settle
+     into committed tests protects what has been checked, and adds no
+     interaction. Prepare's 13 s (§5) is the other candidate of that kind.
+   - **The builder-script extraction still waits** for its trigger (move 3),
+     and goes better once those tests exist: a refactor of an untested script
+     is checked only by hand.
 
-   First because the window's value is untested where it lives, client-side
-   staging, and every other candidate is a refinement whose worth is a guess
-   until someone uses the builder. The updated Codex read reaches the same
-   order.
+   First because the window's value lives in client-side staging that only a
+   hand check covers, and because the deployment is the one part of the
+   product nobody has seen working. The updated Codex read reaches the same
+   order on the deployment.
 2. **Freeze instrument scope until a real instrument needs more.** Two levels,
    two modes and ranges already multiply across authoring, entry, completeness,
    summaries, results, clone and round-trip. The next rules-language feature
