@@ -145,6 +145,17 @@ through the server's database, as `tests/integration/_full_matrix.py` does.
 reviewer's number input carries `max`, so Chromium's own validation stops
 the Save before the server can refuse it; raised with the author.
 
+**Reads:** one cumulative `diff-reviewer` read, `df7a5942..b8f35a33`. No
+defect in the harness or CI; seven findings, all acted on in rung 4:
+two tests claimed more than they checked (the closed-answer delete never
+had an answer to delete; the under-condition Submit asserted only an
+absence), so they now save while open before closing, and wait for the
+summary page and check the live "(required)" label and the count. The
+server now inherits a pre-bound socket (no port race under xdist), is
+killed if it won't stop, and a failed migration shows its stderr; the
+fake-auth keys are pinned against a developer's `.env`; one redundant
+click removed; the import-error divergence recorded above.
+
 ## PR ladder
 
 1. **This plan.** Prose only.
