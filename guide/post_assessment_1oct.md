@@ -89,7 +89,9 @@ so in the PR.
 and `guide/archive/browser_test.md`'s "not automated" list is overtaken by
 this entry. One code PR.
 
-## E3 — A comprehensive code-vs-spec sweep
+## ~~E3 — A comprehensive code-vs-spec sweep~~
+
+**Done in #2718.** All 68 files were read against the code in nine verify-mode reads, and no spec was edited. The record is `guide/sweep_2026-10-01_corpus.md`, and `--stale` now reads "not due". The 242 findings are in `guide/findings_2026-10-01_corpus.md`, with who decides each: the rulings needed first, then the code defects, then one line per file.
 
 **Why now.** The corpus sweep is due by merges:
 `python3 tools/close_check.py --stale` reports 615 merges since the last
