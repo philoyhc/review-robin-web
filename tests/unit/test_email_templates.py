@@ -20,14 +20,22 @@ def _session(
     deadline: datetime | None = None,
     help_contact: str | None = None,
     overrides: dict | None = None,
+    display_timezone: str | None = None,
+    creator_timezone: str | None = None,
 ) -> SimpleNamespace:
     """A duck-typed stand-in for ``ReviewSession`` carrying only the
-    attributes the renderer reads."""
+    attributes the renderer reads — including the two the session-zone
+    resolver reads: the session's own zone and its creator's default."""
+    creator_preferences = (
+        {"display_timezone": creator_timezone} if creator_timezone else None
+    )
     return SimpleNamespace(
         name=name,
         deadline=deadline,
         help_contact=help_contact,
         email_template_overrides=overrides,
+        display_timezone=display_timezone,
+        created_by_user=SimpleNamespace(preferences=creator_preferences),
     )
 
 
@@ -116,6 +124,57 @@ def test_all_five_merge_fields_substitute() -> None:
         "Please review for Spring 2026 (deadline 2026-06-30 17:00).\n"
         "Questions? Contact Prof X <x@example.edu>.\n"
         "Link: https://app/i/abc\n"
+    )
+
+
+# ── Dates follow the session zone (spec/timezone_display.md) ─────────────
+# They rendered in UTC until 2026-10-01, so a 17:00 Singapore deadline
+# was mailed as 09:00 (guide/findings_2026-10-01_corpus.md C18 = D25).
+
+_NINE_UTC = datetime(2026, 6, 30, 9, 0, tzinfo=timezone.utc)
+
+
+def test_deadline_renders_in_the_sessions_own_zone() -> None:
+    session = _session(
+        deadline=_NINE_UTC,
+        display_timezone="Asia/Singapore",
+        overrides={"invitation_body": "Due $deadline"},
+    )
+    _, body = email_templates.render_invitation(
+        session, _reviewer(), invite_url="https://app/x"
+    )
+    assert body == "Due 2026-06-30 17:00"
+
+
+def test_deadline_falls_back_to_the_creators_zone() -> None:
+    """No session override: the creating operator's default zone, the
+    same resolution order every session page uses."""
+    session = _session(
+        deadline=_NINE_UTC,
+        creator_timezone="America/New_York",
+        overrides={"reminder_body": "Due $deadline"},
+    )
+    _, body = email_templates.render_reminder(
+        session, _reviewer(), invite_url="https://app/x"
+    )
+    assert body == "Due 2026-06-30 05:00"
+
+
+def test_deadline_with_no_zone_anywhere_stays_utc() -> None:
+    session = _session(
+        deadline=_NINE_UTC, overrides={"invitation_body": "Due $deadline"}
+    )
+    _, body = email_templates.render_invitation(
+        session, _reviewer(), invite_url="https://app/x"
+    )
+    assert body == "Due 2026-06-30 09:00"
+
+
+def test_submitted_at_renders_in_the_sessions_zone() -> None:
+    session = _session(display_timezone="Asia/Singapore")
+    assert (
+        email_templates._format_submitted_at(session, _NINE_UTC)
+        == "2026-06-30 17:00"
     )
 
 

@@ -6,8 +6,8 @@ renders consistently.
 
 Segment 18B PR 2: the helpers grow timezone awareness. A stored
 UTC timestamp is converted into a resolved display zone before
-formatting. ``tz_name`` defaults to ``UTC`` — callers that pass
-nothing (e.g. the email merge fields) keep rendering in UTC.
+formatting. ``tz_name`` defaults to ``UTC`` for a caller that passes
+nothing; the email merge fields pass the session's zone.
 
 Segment 18B follow-up: the date-time render dropped its zone token
 by default — IANA reports a numeric offset (``+08``) for many zones

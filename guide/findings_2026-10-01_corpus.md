@@ -1,7 +1,7 @@
 # Findings — corpus sweep (2026-10-01)
 
 **Found by:** `guide/sweep_2026-10-01_corpus.md` (`guide/post_assessment_1oct.md`
-E3) · **Read at:** `68f28224` · **Open:** every row below.
+E3) · **Read at:** `68f28224` · **Open:** every row below that is not struck.
 
 Every spec, `docs/` file and root document was read against the code it
 describes, in nine verify-mode reads split by area. **Nothing in `spec/`
@@ -28,11 +28,11 @@ is left stricter until ruled on. Grouped by what the ruling is about.
 
 **The code may be wrong, and the effect reaches people.**
 
-- **C18 = D25** — Email `$deadline` and `$submitted_at` render in UTC
-  (`format_datetime` with no zone, `app/services/email_templates.py`).
-  `spec/timezone_display.md` says the session's zone, while
-  `spec/email_template_editor.md` describes the bare call. A Singapore
-  session's 17:00 deadline would be sent as 09:00.
+- ~~**C18 = D25**~~ — **Ruled 2026-10-01: follow the session zone. Done
+  in #2720.** Email `$deadline` and `$submitted_at` rendered in UTC
+  (`format_datetime` with no zone), so a Singapore session's 17:00
+  deadline was sent as 09:00. They now resolve the session's zone, and
+  `spec/email_template_editor.md` says so.
 - **B19** — Scheduled activation, invites and reminders fire only when
   someone opens Session Home. `observe_scheduled_events` has one caller.
   `spec/lifecycle.md` §8.3 says Session Home, the Operations pages and the
@@ -296,7 +296,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - C10 low · write/deepen · `:241-247` · the expander's Name/Code/Deadline are draft-only.
 - `session_owners.md` — current.
 - `timezone_display.md`
-  - C18 med · `:65-66` · email zone · author (= D25).
+  - ~~C18 med · `:65-66` · email zone · author (= D25).~~ Ruled session zone; done in #2720.
   - C19 low · `:67-70` · carve out the UTC audit extract.
   - C20 low · `:56,94-98` · the dashboard uses the compact offset; `/edit` is only a redirect.
 - `preview_hub.md`
@@ -370,7 +370,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - D23 low · `:111` · `archive_offset` has no editor.
   - D24 low · §8 · five env vars missing (= H12).
 - `email_template_editor.md`
-  - D25 high · `:195,198` · email zone · author (= C18).
+  - ~~D25 high · `:195,198` · email zone · author (= C18).~~ Done in #2720.
   - D26 med · `:87-89` · fields are empty with a placeholder (contradicts `:57`).
   - D27 low · `:289-299` · test counts; label punctuation.
 - `architecture.md`

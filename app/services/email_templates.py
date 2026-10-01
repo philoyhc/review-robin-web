@@ -41,6 +41,7 @@ from sqlalchemy.orm.exc import UnmappedInstanceError
 from app.db.models import Assignment, Response, Reviewer, ReviewSession, User
 from app.services import audit as audit_service
 from app.services.date_formatting import format_datetime
+from app.services.sessions import resolve_session_timezone
 
 # Default templates — verbatim parameterisations of the strings the
 # original ``invitations._email_body`` / ``_reminder_body`` helpers
@@ -132,10 +133,14 @@ def _substitute(template_str: str, **merge: Any) -> str:
 
 
 def _format_deadline(review_session: ReviewSession) -> str:
-    # Canonical date-time render (Segment 18B PR 1): the deadline
-    # is operator-entered with a time component, so the time is
-    # shown and an explicit zone token carried.
-    return format_datetime(review_session.deadline)
+    # Rendered in the session's resolved zone, like every other
+    # session-scoped surface (spec/timezone_display.md). It used to
+    # render in UTC, so a 17:00 Singapore deadline was mailed as 09:00.
+    if review_session.deadline is None:
+        return ""
+    return format_datetime(
+        review_session.deadline, resolve_session_timezone(review_session)
+    )
 
 
 def _merge_context(
@@ -218,15 +223,18 @@ def _latest_submitted_at(
     ).scalar()
 
 
-def _format_submitted_at(submitted_at: datetime | None) -> str:
-    """Format ``$submitted_at`` for the responses-received body.
+def _format_submitted_at(
+    review_session: ReviewSession, submitted_at: datetime | None
+) -> str:
+    """Format ``$submitted_at`` for the responses-received body, in the
+    session's resolved zone.
 
     Returns ``"(not yet submitted)"`` when no submission exists yet —
     only the editor preview path hits this branch in practice; the
     live send path always has a stamped ``submitted_at``."""
     if submitted_at is None:
         return "(not yet submitted)"
-    return format_datetime(submitted_at)
+    return format_datetime(submitted_at, resolve_session_timezone(review_session))
 
 
 def render_responses_received(
@@ -236,7 +244,7 @@ def render_responses_received(
     confirmation sent when a reviewer submits their review.
 
     Drops ``$invite_url`` (moot post-submit); adds ``$submitted_at``,
-    formatted ``YYYY-MM-DD HH:MM TZ``. When the operator hasn't
+    formatted ``YYYY-MM-DD HH:MM`` in the session's zone. When the operator hasn't
     overridden the body and ``session.help_contact`` is unset, the
     "Questions? Contact …" line is dropped from the default body
     rather than rendering a hollow ``Contact .`` — operator-supplied
@@ -248,7 +256,7 @@ def render_responses_received(
         "session_name": review_session.name,
         "deadline": _format_deadline(review_session),
         "help_contact": review_session.help_contact or "",
-        "submitted_at": _format_submitted_at(submitted_at),
+        "submitted_at": _format_submitted_at(review_session, submitted_at),
     }
     subject = _substitute(
         _resolve(
