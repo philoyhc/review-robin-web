@@ -1,0 +1,510 @@
+# Findings — corpus sweep (2026-10-01)
+
+**Found by:** `guide/sweep_2026-10-01_corpus.md` (`guide/post_assessment_1oct.md`
+E3) · **Read at:** `68f28224` · **Open:** every row below.
+
+Every spec, `docs/` file and root document was read against the code it
+describes, in nine verify-mode reads split by area. **Nothing in `spec/`
+was edited.** A sweeper may not re-align a spec to the code
+(`rrw_sdd_in_practice.md` §4), so each divergence is listed here and the
+fixes ship afterwards as ordinary PRs. A row is struck when it is done,
+with the PR that did it, or marked declined with the reason.
+
+**Ids** carry the area of the read that found them: **A** instruments and
+the reviewer surface · **B** assignments, workflow, lifecycle, Validate ·
+**C** Setup, Session Home and the lobby · **D** data in and out · **E** UI
+and visual style · **F** architecture, roles and operations · **G** the
+functional spec · **H** deployment and operations docs · **I** root and
+process documents. **Severity** is the reader's, re-checked here for the
+code defects. **Decides:** *spec* means the spec is wrong and an
+update-in-place fixes it; *code* means the code is wrong against a spec
+that is right; *author* means it is a choice between fixing the code and
+changing the contract deliberately.
+
+## 1. Rulings needed
+
+These are the author's calls. Where the spec is stricter than the code it
+is left stricter until ruled on. Grouped by what the ruling is about.
+
+**The code may be wrong, and the effect reaches people.**
+
+- **C18 = D25** — Email `$deadline` and `$submitted_at` render in UTC
+  (`format_datetime` with no zone, `app/services/email_templates.py`).
+  `spec/timezone_display.md` says the session's zone, while
+  `spec/email_template_editor.md` describes the bare call. A Singapore
+  session's 17:00 deadline would be sent as 09:00.
+- **B19** — Scheduled activation, invites and reminders fire only when
+  someone opens Session Home. `observe_scheduled_events` has one caller.
+  `spec/lifecycle.md` §8.3 says Session Home, the Operations pages and the
+  lobby, and the function's own docstring repeats that.
+- **A6** — The reviewer write gate is session-wide. Closing one instrument
+  403s Save, Submit and Clear on the instruments still open
+  (`_require_session_accepting`), but the spec gates per instrument. No
+  test covers the mixed case.
+- **A5** — When no instrument accepts, Prev and Next disappear with the
+  action row, so a reviewer can't page through a closed multi-page
+  surface. The spec keeps them.
+- **G10** — `responses_visible_when_closed` has no operator control and
+  defaults to False, so after close a reviewer cannot see their own saved
+  answers. The specs say a visibility policy governs it, and nothing
+  reads one there.
+- **C7 = G7** — On Session Home, Delete data and Delete session render as
+  live in `expired` and `archived`, but the route answers 409.
+  `spec/setup_pages.md` names exactly this predicate error.
+- **D14** — `clone_session` copies `Reviewee.results_acknowledged_at`
+  into the new draft session (it copies every column but id and stamps).
+  `spec/roundtrip_coverage.md` and `spec/rehydrate.md` say it is not
+  cloned.
+- **C3** — A Quick Setup settings replace deletes instruments, assignments
+  and responses. Only the UI checkbox guards it, with no server-side
+  confirm or response-loss check. The spec says it has no cascade.
+- **B16** — `POST /delete-data` takes `confirm` only, not the response-loss
+  acknowledgement that `spec/lifecycle.md` lists for it.
+
+**A contract the code never built.** Is it deferred or dropped? Either way
+the spec should say so.
+
+- **A18 = G11** — The peer-reviewer `after_release` grant is authored,
+  shown to reviewers on the transparency card, and read by nothing.
+- **A19** — `observer_tag` is never enforced. Worse, an editor save writes
+  it back as NULL, wiping an imported tag (`routes_operator/_instruments.py`
+  builds `vp_rows` without it). The wipe is a defect whatever the ruling.
+- **F11** — The configurable welcome message, institution name and magic
+  links (`spec/audience_and_identity_model.md`).
+- **F15** — The Draft/Receiving/Closed instrument statuses and the
+  reviewer notification on edit (`spec/domain_assumptions.md`).
+- **G4** — The Responses-received switch has no consumer at submit time.
+- **G13** — Export validation at row-write time
+  (`spec/rrw_functional_spec.md` §13.4).
+- **D16, D18** — The Rehydrate analyzer checks, and a streaming, bounded
+  responses parser. Rehydrate is off by default.
+- **C2** — Quick Setup's count indicators, success messages and per-row
+  errors were removed deliberately in `40bc2549`. Confirm the removal
+  stands.
+- **B20** — Retry and `failed_persistent` exist for scheduled activation
+  only. Should invites and reminders get them too?
+- **B18** — `spec/lifecycle.md` §8.2.2 names one call site, `resolve_offset`,
+  which has no callers. Should the code be consolidated onto it, or the
+  contract restated?
+
+**Shipped behavior differs from the spec. Which is the contract?**
+
+- **A1** — Replicate does not share `rule_set_id` and does not copy the
+  labels or Band 1 state. A replica starts closed and "Not set up". Tests
+  pin the code.
+- **A22, A23** — Sorting. The spec has a Sort column on the display-field
+  table, a per-column click cycle and a Reset link. What ships is header
+  badges, a replace-cascade on click, and no Reset.
+- **A24** — A stale sort id is not compacted on save. It fails the save
+  with `cross_instrument` until a sort click rebuilds the inputs.
+- **A7** — A blocked Submit re-renders page 1, not the originating page.
+- **B2** — Inactive reviewers and reviewees are generated into
+  assignments. The code and its tests treat this as intended, and the spec
+  says active only.
+- **B4** — `reviewer_missing` tests whether a row exists, not `include`,
+  so a reviewer whose rows are all excluded is not flagged.
+- **B7** — Group self-review: `include` follows the roster, while the
+  `is_self_review` column follows the materialised rows.
+- **B17 = F3, with F17** — Reminders and per-row invitation actions:
+  routes accept `validated`, and the Invitations template allows them only
+  in `ready`. The two halves of `spec/operations_pages.md` disagree.
+- **B21** — `close_instrument` and the visibility-when-closed route have
+  no lifecycle gate.
+- **B15, B27** — `GET /assignments?validated=1` and the Validate page's
+  `verdict_*` / `lifecycle_copy` fields are reachable from no template.
+  Retire them, or wire them?
+- **A13** — `build_reviewee_results_context` still carries pre-release
+  scaffolding that the route-level gate makes unreachable.
+- **D7, D13** — The responses bundle does not carry the by-instrument and
+  metadata files the spec promises. The `Instrument_{N}` CSV fallback uses
+  position, and the screen uses `session_seq`.
+- **G16 = E22** — Session codes are unique across the workspace. The spec says
+  per operator.
+- **G21** — The raw invitation token is stored in the outbox body and
+  reusable until the next send. The spec says it is never stored and is
+  one-shot. This is a security-posture statement; check
+  `docs/security_posture.md` too.
+- **F23** — The Graph stub docstring says delegated `/me/sendMail`, and
+  `spec/email_infra_options.md` says Option B is an app permission.
+- **C1** — Quick Setup's Lock/Unlock prose says the toggle renders in
+  `validated` and `ready`. The spec's own state table, the code and the
+  tests say draft only. The prose is probably the stale half.
+
+**Visual treatment: the specs disagree with each other or with `base.html`.**
+
+- **E5** — The Setup row's active underline is `--marker-neutral` (grey),
+  not `--nav-marker-setup` as three specs say. Is the token stale, or is
+  the CSS a bug against the blue Setup identity?
+- **E4, E13** — The tab hover foreground is `--text-body`, not
+  `--nav-tab-active-fg`, which no page shows. The status strip's surface
+  is `--surface-page`, not `--surface-card`.
+- **E7, E8** — The Workflow card body has a 7.5em minimum (in
+  `workflow_card.md`), and `ui_elements.md` and `session_home.md` say
+  there is none. The grid gap is 16px, against a 20px stack; measure that
+  in a browser.
+- **E14** — Session Home has no H1, and `visual_style_rrw.md` says the
+  session name is its H1. Add one, or drop the clause?
+- **E25–E29** — Where `visual_style_general.md` (said to win on
+  treatment) contradicts what ships: the 2px focus ring, link underlines,
+  row borders and heading gap, example hexes below the AA floor,
+  confirmations, loading indicators, font and line-height. The likely
+  ruling is app-override notes in `visual_style_rrw.md`, as the status
+  strip already has.
+- **E2** — Four §10 primitives have CSS and no markup. Retire the
+  entries, the CSS, and the `.btn-row` test references?
+
+## 2. Code defects
+
+The spec is right and the code is wrong; each ships as its own code PR.
+All of these were confirmed by reading the code at `68f28224`.
+
+- **D17** — `app/services/session_rehydrate.py` joins `apply_result.errors`,
+  which are `ApplyError` dataclasses, with `"; ".join`. The `TypeError`
+  replaces the operator's message, though the rollback still happens. It
+  is untested, and Rehydrate is off by default.
+- **B29** — `assignments.reviewer_missing` sets
+  `fix_anchor="#reviewer-row-{id}"`, but its `fix_url` is `/assignments`.
+  The anchor exists only on the Reviewers page, so the deep link is dead.
+- **A19** — An editor save wipes `observer_tag` (see §1).
+- **E32** — The Extract data page's **Purge and archive** is `btn alert`
+  (the lock-card role), while the lobby uses `danger-solid` for the same
+  action. Three buttons there carry inline `style="display: none;"`
+  (`spec/ui_elements.md` §6 calls an inline style a defect).
+- **E6** — `body.ui-v2 a.btn[aria-disabled="true"]` sets opacity 0.55,
+  which beats the single 0.5 rule `ui_elements.md` specifies.
+- **C4** — The `needs_confirm` banner says the checkbox is "at the top of
+  Quick Setup", but it sits below the grid.
+- **Stale code comments.** Fix these with the next edit to each file:
+  - `instrument_field.py:70-74` says "one level"; branching has two.
+  - The `scheduled_events/__init__.py` docstring names three trigger pages.
+  - `session_lifecycle.py:692` says "pre-filters to `draft`".
+  - The `responses/_core.py:826` docstring says "any status".
+  - The `_reviewee_results.py` docstring (see A13).
+  - The `test_assignments_status_filter.py:142` docstring names
+    `col_data_sample`.
+  - `.env.example` cites `guide/segment_05A.md`, which is now under <!-- path-ref-ok -->
+    `guide/archive/`.
+
+## 3. Findings by file
+
+One line each: id · severity · where · finding · decides. A line with no
+`Decides` field means *spec*.
+
+### `spec/`
+
+- `instruments.md`
+  - A1 med · `:1500-1519` · Replicate contract (§1) · author.
+  - A2 med · `:1417,1476` · "+Instrument is empty": it seeds Rating, Comments and the locked Name/Email rows.
+  - A3 med · `:722` · "sole surface" for self-review contradicts `:571-577` (the Link 3 checkbox owns the rule).
+  - A4 low · `:662` · `_new_model_usable_tags` → `new_model_usable_tags` (also B5, C17).
+  - Also G10 `:144-149,345-360`.
+- `reviewer-surface.md`
+  - A5 high · `:831` · Prev/Next hidden when closed · author.
+  - A6 high · `:799-810` · write gate session-wide · author.
+  - A7 med · `:780-793` · blocked Submit → page 1 · author.
+  - A8 med · `:62,1557` · the dashboard links `/summary` once submitted, built in `_dashboard.py`.
+  - A9 low · `:230` · Submit redirects to the bare URL; only the current page posts.
+  - A10 low · `:119` · pill reads `{label}: {state}`.
+  - A11 low · `:281,566,1339` · no acknowledge path; fraction 0.5, not 75%; invite lands on the bare URL.
+  - A12 med · `:874,1334` · identity is `normalize_email` (strip + lower), not casefold.
+- `participant_model.md`
+  - A13 med · `:84` vs `:97` · scaffolding contradiction · author (builder code).
+  - A14 med · `:25-29` · casefold → `normalize_email`.
+  - A15 low · `:41-44,150` · the "Session Edit Details" page is retired (also `visibility_policy.md:94,149`).
+  - A16 low · `:157` · Stop-release exists.
+  - A17 low · `:59` · the observer events omit `cohort_rule_assigned` and `bulk_deleted`.
+- `visibility_policy.md`
+  - A18 high · `:73-78,116` · peer grant has no reader · author.
+  - A19 high · `:35,180-190` · `observer_tag` is unenforced and wiped · author + code.
+  - A20 med · `:117` · the reviewee cell "Default `after_release`" contradicts §4.1. Read `test_doc_conventions.py` before editing the tokens.
+  - A21 low · `:217` · `resolve_mode` applies no scope; the views do.
+- `sort_by_reviewee.md`
+  - A22 high · `:39-90` · operator sort UI · author (also `operator_ui_concept.md:94`).
+  - A23 med-high · `:94-100` · click semantics and Reset · author.
+  - A24 med · `:162-169` · no auto-compact · author.
+  - A25 med · write/deepen · the group `-1` key and group-surface sorting are unspecced.
+  - A26 low · `:268-274` · the lobby and Archived pages adopt it too, with other cookie names.
+  - A27 low-med · `:104-116` · the server drops `response:N` keys, so a response-only cookie flickers.
+- `assignments.md`
+  - B1 high · `:87-90,500-511,682` · there is no `Assignment.group_key` column; it is derived by `responses.group_keys`.
+  - B2 high · `:68-70,566` · inactive rows are generated · author.
+  - B3 med · `:891-894` · `col_data_sample` is gone.
+  - B4 med · `:1151-1167` · Validation-surfaces rules: scope, never-generated and links are *spec*; `include` is *author*.
+  - B5 low · `:159` · helper name.
+  - B6 low · `:1019,1084` · no UI posts to `/assignments/generate`.
+  - B7 low · `:426-461` · group self-review · author.
+- `reconciling_regeneration.md` — current.
+- `workflow_card.md`
+  - B8 high · `:500-525` · the banner posts to `/activate`, not `/workflow/activate` (contradicts its own `:925`).
+  - B9 med · `:107,754` · the checklist renders in every draft state.
+  - B10 med · `:132-139,890-903` · `manual_activate_cancellation` shape, condition and copy.
+  - B11 med · `:74-82` · `is_configured` has one rule, not a legacy split.
+  - B12 med · `:830-888` · skip-notice and auto-send copy.
+  - B13 low · `:44,597,681` · Close in States 7–9; State 1 renders no Prepare; slug list.
+  - B14 low · `:918,923` · generate invalidates `validated`; the remind gate is B17.
+- `lifecycle.md`
+  - B15 med · `:76-78` · `mark_validated` callers; `?validated=1` · spec + author.
+  - B16 med · `:260-269` · response-loss ack callers · author.
+  - B17 med · `:271-291` · `_require_validated_or_ready` lives in `_operations.py` and refuses every non-validated/ready state; reminders gate · author.
+  - B18 med · `:663-668` · `resolve_offset` has no callers · author.
+  - B19 med · `:759-770` · sweep trigger · author.
+  - B20 low · `:786-799` · retry is activation-only · author.
+  - B21 med · `:306-313,552` · close reason is `manual`, not `operator` (spec); the ungated routes are *author*.
+  - B22 low · `:165,542` · `session.activated` context adds `trigger`, and activation clears `scheduled_activate_at`.
+  - B23 low · `:111-133` · state the `invalidate_if_validated` rule, not a partial call-site list.
+  - B24 low · `:51` · `lifecycle_display_label`; `lifecycle_label` is the filter.
+  - B25 low · `:237` · Quick Setup and settings import test `is_editable` inline.
+  - B26 low · `:318-324` · `observe_deadline` callers.
+  - Also G6 `:47` "pre-filters to `draft`".
+- `validate_page.md`
+  - B27 med · `:137-141` · dead verdict and lifecycle fields; the copy branches on `closed` · spec + author.
+  - B28 low · `:390` · grouped by `(gate, source)`.
+  - B29 med · `:270-273,425-430` · dead deep link · code (§2); `reviewer_missing` scope.
+  - B30 med · `:409` · the §5.3 table: Prepare is the live gate (= B15).
+- `setup_pages.md`
+  - C11 med · `:243-245` · the Reviewees label editor is one row of three tag cells.
+  - C12 low · `:58-62,93` · all four roster guidance cards are full width.
+  - C13 low · `:599` · empty tag columns don't render (contradicts `:606`).
+  - C14 low · `:1347,1354,696` · "Photo" → "Profile".
+  - C15 low · `:1521` · Observers preview is Name then Email.
+  - C16 low · `:1413` · the relationships extract has six columns.
+  - C17 low · `:28,182` · Edit page retired; helper name.
+- `quick_setup_card_spec.md`
+  - C1 high · `:23-25` · lock-toggle prose · author (likely spec).
+  - C2 med · `:34-49,87-91` · counts and messages removed · author.
+  - C3 med · `:77` · settings replace cascades · author.
+  - C4 low · `:67,79,131` · checkbox below the grid; copy (+ code banner, §2).
+  - C5 low · `:25,121` · `closed` → `expired`.
+  - C6 low · `:83` · the settings per-slot route isn't allowlisted (no UI calls it).
+- `session_home.md`
+  - C1 also `:460-481,506-512`.
+  - C7 med · `:275-322,518-524` · Danger Zone in `expired`/`archived` · author.
+  - C8 low · `:155,306` · Activated "inline section"; copy reads "Revert to draft first".
+- `sessions_overview.md`
+  - C9 low · `:217` · Tags is not sortable.
+  - C10 low · write/deepen · `:241-247` · the expander's Name/Code/Deadline are draft-only.
+- `session_owners.md` — current.
+- `timezone_display.md`
+  - C18 med · `:65-66` · email zone · author (= D25).
+  - C19 low · `:67-70` · carve out the UTC audit extract.
+  - C20 low · `:56,94-98` · the dashboard uses the compact offset; `/edit` is only a redirect.
+- `preview_hub.md`
+  - C21 low · `:15-18` · the `GET …/preview` 308 is unlisted.
+- `ui_elements.md`
+  - E1 med · retire · `:439` · `.btn-cta` has no rule (also `operator_button_audit.md:47`; drop it from `test_cascade_ties.py` CANONICAL); `.btn.danger` row.
+  - E2 low-med · `:690` · dead §10 primitives · author.
+  - E3 med · `:140` · status-strip slots: no Assignments pill; point at `visual_style_rrw.md`.
+  - E4 med · `:125` · hover foreground · author.
+  - E5 med · `:111` · Setup underline token · author.
+  - E6 low · `:457` · anchor opacity 0.55 · code (§2).
+  - E7 low-med · `:275` · Workflow body min-height · author.
+  - E8 low-med · §4 · grid gap 16px · author (measure first).
+  - E9 low · tallies and provenance; keep the 6px rail and the specificity tuples, which tests read.
+- `color_tokens.md`
+  - E10 low · `:308` · 4.14 / 3.55, not 3.96 / 3.41 (also in `status_history.md`, which is dated).
+  - E11 low · `:182` · `--slate-deep` is shared with the dark help-card border.
+- `visual_style_rrw.md`
+  - E12 med · `:44` · five live states.
+  - E13 low-med · `:56` · status-strip surface · author.
+  - E14 med · `:161-233` · Edit Session is retired (spec); Home H1 · author (also `operator_ui_concept.md:195`).
+  - E15 med · `:339` · lobby columns; point at `sessions_overview.md` (also `operator_ui_concept.md:230`).
+  - E16 low-med · `:466` · there is no thank-you page.
+  - E17 med · `:686` · the description renders below the H2.
+  - E18 low · `:155,174,296,332` · label weight, the Email pill copy, lobby lifecycle pills, breadcrumbs.
+  - E19 low · retire · `:794-838` · the "Doc impact" section is plan residue.
+- `visual_style_general.md`
+  - E25–E29 med · treatments contradicted by the app · author.
+  - E28 also write/deepen: a contrast-floor paragraph.
+- `operator_ui_concept.md`
+  - E20 low-med · `:208` · the app identity is a `<span>` (contradicts `:399`).
+  - E21 med · `:71,82,175` · Relationships is feature-gated too.
+  - E22 med-low · `:240` · code uniqueness (= G16).
+  - E23 med · consolidate · `:352` · reduce the Validate page description to a pointer at `validate_page.md`.
+  - E24 low · `:459` · nine operator Guide sections.
+  - Also A22 `:94`.
+- `operator_button_audit.md`
+  - E30 med-low · rows #11–13 and #123–125 each appear twice; give the later rows the next free ids.
+  - E31 med · write/deepen · unaudited: the lobby expander, Extract data, Rehydrate, the Instruments toggles, the chrome Guide/Admin links · the R/≡ toggle role is *author*.
+  - E32 med · code (§2).
+  - E33 low-med · `:808` · `.tab-strip-page` uses tokens, not those literals.
+  - E34 low · rows 119, 121.
+  - E35 low · provenance in cells; the repeated Inactivate note.
+- `csv_contracts.md`
+  - D1 med · `:451,470,686` · `session_rule_sets` keys are ordinal only, every row is emitted, and types are lowercase.
+  - D2 low · `:184` · responses are ordered by email.
+  - D3 med · `:218` · stats files are not the roster shape.
+  - D4 med · `:900` · bundle members: `observers.csv`, data shapes, `participant_tokens.csv`.
+  - D5 med · write/deepen · `:44-50,744` · the 1 MiB / 5,000-row caps; the `_read_dict_rows` shape.
+  - D6 low · bundled: 14 extract modules, "Pair context N", compact `DetailJson`, keyword-only signatures, the `visible=False` drop.
+- `extract_data.md`
+  - D7 high · `:202-207` · bundle contents · author.
+  - D8 med · write/deepen · `:21-27,987` · the Archive session (purge) card and the Extract Setup card are unspecced.
+  - D9 med · `:151-166` · the self-review chip copy and its own storage key.
+  - D10 med · `:868` · the `_self`/`_noself`/`_both` suffix.
+  - D11 med · `:978` · clone does copy DataShapes.
+  - D12 low · bundled labels, helper name, slug, identity rows.
+  - D13 low · `:129` · `Instrument_{N}` fallback · author.
+- `roundtrip_coverage.md`
+  - D14 med · `:127` · `results_acknowledged_at` is cloned · author (likely code).
+  - D15 low · `session_seq` is absent from the matrix.
+- `rehydrate.md`
+  - D16 med · analyzer · author.
+  - D17 med · code (§2).
+  - D18 med · parser · author.
+  - D19 low · `:377` · closed-branch drops.
+  - D20 low · `:7` · four routes 404, not three.
+- `settings_inventory.md`
+  - D21 med · §7 · missing browser keys and cookies (`rrw-extract-data-chips-*`, `rrw-self-review-handling-*`, both tag filters, `rrw_instruments_pending_open`, both sort cookies); "Photo".
+  - D22 med · §4/§5 · missing columns: five instrument ones, `profile_link`, `cohort_rule`, the observer unique constraint.
+  - D23 low · `:111` · `archive_offset` has no editor.
+  - D24 low · §8 · five env vars missing (= H12).
+- `email_template_editor.md`
+  - D25 high · `:195,198` · email zone · author (= C18).
+  - D26 med · `:87-89` · fields are empty with a placeholder (contradicts `:57`).
+  - D27 low · `:289-299` · test counts; label punctuation.
+- `architecture.md`
+  - F1 high · `:528,542,352` · locked Name/Email rows *are* seeded (conflicts with `instruments.md:875`).
+  - F2 med · `:320,361` · headings use `short_label`.
+  - F3 med · `:435` · invitations: validated or ready.
+  - F4 med · `:477` · the `reminders.sent` envelope.
+  - F5 med · `:724,755` · the canonical audit examples.
+  - F6 low · `:623` · `reviewer.bulk_deleted`.
+  - F7 low · `:281` · `rules/preview.py` is gone.
+  - F8 low · `:236` · drop line numbers.
+- `permissions.md`
+  - F9 med · `:119` · `/about` creates a user row; §3 omits `/guide`, `/templates/*.zip` and the `/me/sessions/{id}` 303.
+  - F10 low · `:276` · test counts.
+- `audience_and_identity_model.md`
+  - F11 med · unbuilt contract · author.
+- `role_landing_and_visibility.md`
+  - F12 low · `:112` · a reviewer's `ready` can still be closed.
+- `role_navigator.md`
+  - F13 high · `:86-88` · casefold → `.lower()` (= A12, A14).
+  - F14 low · `:64` · pre-open renders 200.
+- `domain_assumptions.md`
+  - F15 med · statuses · author.
+  - F16 low · `:29` · purge-and-archive can delete.
+- `operations_pages.md`
+  - F17 high · `:359` vs `:144` · per-row invitation buttons in `validated` · author.
+  - F18 med · `:526` · at-risk is coverage only.
+  - F19 low · the classifier lives in `services/monitoring.py`.
+  - F20 low · move the measurement figures (see the sweep record, §5).
+- `email_infra_options.md`
+  - F21 low · the audit scaffolding has landed.
+  - F22 low · Reply-To is not built.
+  - F23 low · Graph docstring · author.
+  - F24 low · `sent_at`; retire the stale "Doc impact" section.
+- `blob_storage.md`
+  - F25 low · `:33` misquote; `:171` time-bound claim.
+- `spec/README.md`
+  - F26 low · the `domain_assumptions` row sits in the Visual/UI table.
+  - Also: the Peer reviewer audience is described as "own + peers" (`:25`), which conflicts with `visibility_policy.md` §1.1.
+- `rrw_functional_spec.md`
+  - G1 low · `:1770` · invitation status `pending`.
+  - G2 med · `:2187-2204` · names audit events that don't exist.
+  - G3 low · `:914` · the reminder carries `$invite_url` (contradicts `:1788`).
+  - G4 low-med · `:921` · Responses-received switch · author.
+  - G5 med · `:686,2149,106` · the Activate super-button survives; activation is from `validated` only.
+  - G6 med · `:676,704-712,2231` · Archive and Release are `expired`-only on the card; lobby purge-and-archive; the Extract Archive card.
+  - G7 med · `:1075,2244` · Delete Data is draft/validated only (= C7).
+  - G8 med-high · `:1586-1670` · pages, dirty state and Save; `reviewer-surface.md` wins.
+  - G9 low-med · `:714,1565` · non-open states render pre-open.
+  - G10 med-high · `:418,1210,1568` · visibility-when-closed · author.
+  - G11 low-med · peer grant (= A18).
+  - G12 med · `:2088-2102` · readiness checklist overstated; consolidate with `validate_page.md`.
+  - G13 low-med · `:2123` · export validation · author.
+  - G14 low-med · `:1835-1851` · invites fire from `validated`; the captions are on the Workflow card.
+  - G15 med · `:1012` · clone never copies responses or assignments.
+  - G16 low-med · `:349,853` · code uniqueness · author (also `operator_ui_concept.md:240`).
+  - G17 low-med · `:774,813` · non-allowlisted users get a 303 to `/me`.
+  - G18 low-med · `:829,1516` · there is no sys-admin owner management.
+  - G19 low · `:1479` · Rehydrate is gated off.
+  - G20 low · `:1490` · SMTP modes are `starttls`/`ssl`.
+  - G21 med-low · `:592,796,1767` · token storage and reuse · author.
+  - G22 low · write/deepen · branching: ranges, any/none, the anchor rule, hidden parents.
+  - G23 low · `:721` · Observers lock only when `archived` (contradicts §9.5).
+  - G24 low · provenance and segment history in the spec, at about ten sites.
+  - G25 low · write/deepen · tags, owners, the who-can-see card, `/guide` and `/about`, theme.
+
+### `docs/`
+
+- `architecture.md`
+  - H1 med · `:17-44,96` · topology lacks the gateway, VNet, private endpoints and runner.
+  - H2 med · `:100` · not every state change is a form POST; scheduled events fire on GETs (also `security_posture.md`, `azure_provision.md`).
+  - H3 low · correlation ids are in audit only.
+  - H4 low · prebuilt `antenv`, not Oryx.
+  - H5 med · `:81` · Key Vault + managed identity stated as fact (contradicts `security_posture.md`).
+- `database.md`
+  - H6 low · `:5,11` · "this segment".
+- `local_setup.md`
+  - H7 med · `:210,299` · `/` 302-redirects; it doesn't return 200 JSON (also `deployment_dev.md:211`).
+- `security_posture.md`
+  - H8 low · `:195` · retired `/operator/settings/library/*`.
+  - H9 low · `:224` · table split; `_require_editable` location.
+  - H10 low · `:400` · fake auth reads no headers.
+  - Also G21.
+- `deployment_dev.md`
+  - H11 **high** · `:314-318,379` · "`DELETE FROM users` cascades" is false; the FK has no `ON DELETE`, so raw SQL fails.
+  - H12 med · the env table is missing three vars.
+  - H13 med · `:117` · SMTP is live, so `SMTP_ENCRYPTION_KEY` is needed now.
+  - H14 low · `:50` · the artefact includes `antenv/`.
+  - H15 low · `:322` · that audit is shipped.
+- `deployment_nus.md`
+  - H11 `:337`.
+  - H16 med · statuses settled by v7; consolidate.
+  - H17 med · database `rrw` vs v7's `reviewrobin`.
+  - H18 **high** · `:372` · Rehydrate as the data-carry path is off by default.
+  - H19 low · `:386` · §6.3 → §6.4.
+- `azure_provision.md`
+  - H20 med · email is wired.
+  - H21 med · overtaken; retire.
+  - H22 low · SMTP credentials are per user, encrypted in the DB.
+- `azure_github_setup.md`
+  - H23 med · `:64-73` · a DML-only role can't run migrations.
+  - H24 med · retire or consolidate into `deployment_nus.md`.
+  - H25, H26, H27 low · a duplicate pointer; `deploy_nus.yml`/`NUS_*`; local Docker Postgres is deferred.
+- `cli_setup.md`
+  - H28 med · `:229,240` · Python ≥3.12.
+  - H29 low · node is needed.
+  - H30 low · section name.
+  - Also H27.
+- `backup_restore.md`
+  - H31 low · rehydrate stashes uploads.
+  - H32 low · the storage deferred row.
+- `operations_runbook.md` — H13 `:69-71`.
+- `troubleshooting.md` — current.
+- `README.md` (docs)
+  - I11 med · no row for `unenforced_conventions.md`.
+- `known_limitations.md`
+  - I3 med · `:10-23` · infra posture is silent on the provisioned NUS environment (at cutover).
+  - I10 low · no `beforeunload` guard; no autosave.
+- `unenforced_conventions.md`
+  - I20 med · `:403-407` · "no browser in CI" is false; leans on the dev slot.
+- `status.md`
+  - I1 **high** · `:910,1063,1082,1084` · autosave claimed as shipped.
+  - I2 med · `:897` · one page per instrument.
+  - I7 med · route table `:681-843`.
+  - I8 med · audit table `:1005-1050`.
+  - I9 med · `:541,547,588` · infra bullets.
+  - Also README `:941,964` Band 3 → Band 2.
+- `nus_azure_status_v7.md`, `practice-audit-2026-09-04.md`, `status_history.md` — current or dated.
+
+### Root
+
+- `README.md`
+  - I1 · I2 `:93` · I5 low `:42,81` · I6 low `:65,94` (`setup-invite`; Band 2; the node skip).
+- `rrw_design_rationale.md`
+  - I1 high `:133,219` · I2 `:133` · I3 `:171,195` · I5 `:177`.
+- `azure_ask.md`
+  - I12 med · answered differently; retire or annotate.
+  - I13 low · `:38,182`.
+- `rrw_sdd_in_practice.md`
+  - I14 med · `:5` · "no local dev loop" (contradicts `:220`).
+- `CLAUDE.md` / `AGENTS.md`
+  - I15 med · `/results` gates on `require_reviewee_with_current_grant`.
+  - I16 low · six Setup pages.
+  - I17 low · ~35 s (134 s measured); `ci-postgres` ignores `tests/browser/`.
+  - I18 low · name `docs/unenforced_conventions.md`.
+- `new_project_practices_setup.md`
+  - I19 low · `:139` · the dev-slot mention, via `tools/practice_kit.py`.
+- `CONTRIBUTING.md`, `constitution.md` — current.
