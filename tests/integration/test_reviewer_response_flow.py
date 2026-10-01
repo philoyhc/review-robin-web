@@ -866,6 +866,13 @@ def test_an_integer_field_with_a_blank_step_steps_by_one(
     assert 'data-rs-step="1"' in body
     assert 'data-rs-step-anchor="1"' in body
 
+    # Steps count from Min, so a non-whole Min gets no fallback step: at
+    # Min 0.5 a step of 1 would admit 1.5 and refuse every whole answer.
+    rating.validation = {"min": 0.5, "max": 5}
+    db.commit()
+    body = make_client(rae).get(f"/me/sessions/{review_session.id}/1").text
+    assert "data-rs-step=" not in body.split('name="response[')[1].split(">")[0]
+
 
 def test_save_rejects_out_of_range_integer_and_keeps_typed_value(
     db: Session,

@@ -509,8 +509,10 @@
                          the same browser popup chrome as a range
                          violation, just with our custom message and
                          our float-tolerant comparison. An Integer field
-                         with a blank Step steps by 1, so a decimal meets
-                         the same check rather than reaching the server.
+                         with a blank Step steps by 1 (unless its Min is not
+                         whole, since steps count from Min), so a decimal
+                         meets the same check rather than reaching the
+                         server.
                          Spinners are hidden via base.html CSS. #}
                       <input type="number"
                              inputmode="{{ 'numeric' if data_type == 'Integer' else 'decimal' }}"
@@ -521,7 +523,7 @@
                              {% if validation.min is defined %}min="{{ validation.min }}"{% endif %}
                              {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}
                              step="any"
-                             {% if validation.step is defined %}data-rs-step="{{ validation.step }}"{% elif data_type == "Integer" %}data-rs-step="1"{% endif %}
+                             {% if validation.step is defined %}data-rs-step="{{ validation.step }}"{% elif data_type == "Integer" and (validation.min is not defined or validation.min == validation.min|int) %}data-rs-step="1"{% endif %}
                              {% if validation.min is defined %}data-rs-step-anchor="{{ validation.min }}"{% endif %}
                              {% if cell.placeholder %}title="{{ cell.placeholder }}"{% endif %}
                              {{ disabled_attr }}>
