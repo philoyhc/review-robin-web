@@ -284,8 +284,8 @@ def test_set_sort_accepts_group_identity_sentinel(
 ) -> None:
     """The ``GROUP_IDENTITY_SORT_KEY`` (-1) sentinel for the
     composed Group cell sort on a new-model group-scoped
-    instrument's preview is exempt from the cross-instrument
-    check — it isn't a real InstrumentDisplayField row."""
+    instrument's preview is kept, not dropped as a stale id — it
+    isn't a real InstrumentDisplayField row."""
     review_session = _make_session(client, db, code="ssdf-group-sentinel")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session.id)

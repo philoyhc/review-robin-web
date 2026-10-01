@@ -26,7 +26,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import Instrument, ReviewSession
+from app.db.models import Assignment, Instrument, ReviewSession
 
 from ._full_matrix import (
     generate_via_page_button,
@@ -463,6 +463,29 @@ def test_a_blocked_submit_reopens_the_page_it_came_from(
     ) in body
     for query in ("", "?page=x", "?page=9"):
         assert "Page 1 of 2" in blocked(query)
+
+    # An invalid value typed on page 2 comes back on page 2, in its
+    # input, beside the errors card; on page 1 its input isn't rendered.
+    second = max(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars(),
+        key=lambda i: (i.order, i.id),
+    )
+    assignment = db.execute(
+        select(Assignment).where(Assignment.instrument_id == second.id)
+    ).scalar_one()
+    response = rae_client.post(
+        f"/me/sessions/{review_session.id}/submit?page=2",
+        data={f"response[{assignment.id}][rating]": "9"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert "data-rs-errors-card" in response.text
+    assert "Page 2 of 2" in response.text
+    assert 'value="9"' in response.text
 
 
 def test_single_page_session_omits_page_nav(

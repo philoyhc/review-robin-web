@@ -9,8 +9,9 @@ Pins:
   ``sort_display_field_id`` + ``sort_dir`` arrays and persists
   via ``instruments.set_sort_display_fields``.
 - Validator rejections (over-cap / unknown direction /
-  duplicates / cross-instrument id) surface as a per-instrument
-  banner via the redirect.
+  duplicates) surface as a per-instrument banner via the
+  redirect. An id that is not this instrument's is dropped, not
+  rejected (findings A24).
 - Empty arrays clear the spec back to the unsorted default.
 
 The PR 1 tests already cover the service-layer behaviour
@@ -438,6 +439,37 @@ def test_consolidated_save_returns_ok_json_and_persists(
     db.refresh(instrument)
     assert instrument.sort_display_fields == [
         {"display_field_id": f1.id, "dir": "asc"}
+    ]
+
+
+def test_consolidated_save_drops_a_sort_key_whose_field_was_deleted(
+    db: Session, client: TestClient
+) -> None:
+    """The card posts the stored sort spec back. Once a display field
+    it names is deleted, the save drops that key and succeeds, where it
+    used to answer 422 until a sort click rebuilt the inputs
+    (``spec/sort_by_reviewee.md`` "Cascade behaviour"; findings A24)."""
+    review_session = _make_session(client, db, code="save-json-stale")
+    _populate_rosters(client, review_session.id)
+    instrument = _instrument(db, review_session)
+    f1, f2 = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    stale_id = f1.id
+    db.delete(f1)
+    db.commit()
+    form = _bulk_save_form(instrument)
+    form["sort_display_field_id"] = [str(stale_id), str(f2.id)]
+    form["sort_dir"] = ["asc", "desc"]
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments"
+        f"/{instrument.id}/save",
+        data=form,
+        follow_redirects=False,
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["ok"] is True
+    db.refresh(instrument)
+    assert instrument.sort_display_fields == [
+        {"display_field_id": f2.id, "dir": "desc"}
     ]
 
 

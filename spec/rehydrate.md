@@ -5,9 +5,12 @@
 > pre-flight analyzer, the operator-scoped stash, the responses importer,
 > and the `session_rehydrate.rehydrate_session` orchestrator — but
 > `rehydrate_enabled` ships **false**, the three routes 404, and the
-> lobby button does not render. Unproblematic restores work; what is
-> unsettled is not a known defect but the absence of a real run: the
-> pipeline has never been exercised on live data. A response the
+> lobby button does not render. **The author ruled it incomplete on
+> 2026-10-01**: the pipeline has never been exercised on live data, and
+> a failure other than `RehydrateError` still answers 500 where
+> [§7](#7-atomicity-and-audit) says the failing step is reported.
+> What is open before it is exposed is in
+> `guide/deferred_consolidated.md`. A response the
 > regenerated rules cannot place is dropped, reported and downloadable
 > ([§6.6](#66-report-what-could-not-be-placed)). This spec describes the
 > contract the feature meets, not a surface an operator can use today.
