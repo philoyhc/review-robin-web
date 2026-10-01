@@ -489,10 +489,14 @@ held it rather than ship a half-step.
 
 **Do, after the cutover.** Choose the trigger the deployment supports
 and run `observe_scheduled_events` from it for every session with a
-pending anchor. Keep the page-view sweep as a backstop.
-`spec/lifecycle.md` §8.3, the minimum-lead-time rule beside it, and the
-docstring then say what ships.
+pending anchor. **Pass `build_invite_url`**, built from the deployment's
+base URL: without it the invite and reminder triggers return early
+(`_invites.py`, `_reminders.py`) and only activation runs. A page view
+gets that URL from its request; a clock does not. Keep the page-view
+sweep as a backstop. `spec/lifecycle.md` §8.3, the minimum-lead-time
+rule beside it, and the docstring then say what ships.
 
-**Done when** a reminder scheduled for a fixed time goes out at that time
-on the deployed app with no operator page open. Both the audit event's
-time and the outbox row's time show it.
+**Done when** a scheduled invitation and a scheduled reminder each go
+out at their set time on the deployed app with no operator page open.
+Both the audit events' times and the outbox rows' times show it, and the
+links in the outbox rows open on the deployed host.
