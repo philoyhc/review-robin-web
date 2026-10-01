@@ -149,7 +149,9 @@ Top-to-bottom, the page renders:
      the review-level controls (Save / Cancel / Submit) from the
      per-page navigation cluster. 1px wide, full button-height,
      `border-default` colored, with horizontal margin. Rendered only
-     on multi-page sessions (`page_count > 1`); in operator-preview
+     on multi-page sessions (`page_count > 1`) that still show the
+     write controls; on a closed surface those and the divider drop
+     and the page nav stays (§"Lifecycle gating"). In operator-preview
      mode Save / Cancel / Submit render as inert disabled buttons
      and Prev / Next stay functional.
    - **Prev / Page N of M / Next** — the page-navigation cluster,
@@ -822,7 +824,7 @@ GET requests behave differently depending on which gate fails:
   "opens later" suffix, an info banner explaining the review
   hasn't opened yet, the deadline + zone if one is set, and a
   link back to the reviewer dashboard. No response form is
-  rendered. Applies for `draft` and `validated` lifecycle states
+  rendered. Applies for `draft`, `validated` and `archived`
   alike.
 
 - **Session `ready`, response window closed**
@@ -1147,8 +1149,12 @@ dashboard's Session column once Reviewer Status is
 - **Caption** — "Submitted on {YYYY-MM-DD HH:MM} ({zone})"
   built from `MAX(response.submitted_at)` across the
   reviewer's rows.
+- **Hidden-responses banner** — when the visibility policy hides
+  any answered instrument (§"Lifecycle gating"), a warning says some
+  or all of the reviewer's responses are not shown.
 - **Action row** — primary "Download my responses (CSV)"
-  button linking to `/me/sessions/{id}/summary.csv`, a
+  button linking to `/me/sessions/{id}/summary.csv` (dropped when no
+  section is shown), a
   "Recall my submission" control (`POST /me/sessions/{id}/recall`),
   and a secondary "Your reviewer dashboard" link. Recall renders
   only while the session is still `ready` (`can_recall =
@@ -1157,7 +1163,8 @@ dashboard's Session column once Reviewer Status is
   keep editing. Handled by `reviewer_recall` in
   `routes_reviewer/_surface/_routes.py`.
 - **Sections** — one `.card` per instrument the reviewer
-  responded on, in `(Instrument.order, Instrument.id)` order.
+  responded on and may read now (§"Lifecycle gating"), in
+  `(Instrument.order, Instrument.id)` order.
   Each section's `<h2>` shows the instrument's short label +
   full name (when both are set); the body is a `<table>` whose
   header is `Reviewee` + one column per response field
@@ -1173,7 +1180,8 @@ dashboard's Session column once Reviewer Status is
   the unified Responses CSV (see `spec/csv_contracts.md`
   §2.4), scoped to one reviewer; a per-instrument preamble +
   field dictionary appears for every instrument the reviewer
-  responded on. Builds via
+  responded on and may read now; rows of the others are left out.
+  Builds via
   `app.services.extracts.responses_extract.serialize_reviewer_session_summary`,
   which reuses 18H Part 2's `_response_row_tuple` so a
   per-cell rename here flows through to every related file.

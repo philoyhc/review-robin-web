@@ -1701,10 +1701,12 @@ reviewer. Confirmation checkbox required. Audit-logged as
 Once the session has fully submitted (every required cell
 populated and stamped), the reviewer sees a read-only
 **summary page** (`/me/sessions/{id}/summary`) — one section per
-instrument they responded on, a submitted-on timestamp, a
+instrument they responded on and may read now (each instrument's
+visibility policy decides; nothing once archived), a submitted-on
+timestamp, a
 **Recall my submission** control (rolls the submission back to
 draft while the session is still `ready`), and a **Download my
-responses (CSV)** button emitting `{code}_my_responses.csv` (same
+responses (CSV)** button (when any section shows) emitting `{code}_my_responses.csv` (same
 21-column shape as the operator Responses extract, narrowed to
 this reviewer's rows).
 

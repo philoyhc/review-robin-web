@@ -138,9 +138,9 @@ it.
 
 **Visibility-when-closed exemption.** The
 `set_responses_visible_when_closed` service deliberately does
-**not** invalidate. The `responses_visible_when_closed` flag is a
-display setting that doesn't affect the validation snapshot (an
-operator can flip it without re-running validation).
+**not** invalidate. The `responses_visible_when_closed` flag decides
+nothing (it round-trips for config only) and doesn't affect the
+validation snapshot.
 
 ### 2.4 `validated → ready` — `activate_session(...)`
 
@@ -297,7 +297,7 @@ open or every instrument is closed.
 | Column | Type | Meaning |
 |---|---|---|
 | `accepting_responses` | `Boolean` | Reviewers can save / submit. **Session-wide in practice:** set on every instrument by activate, cleared on every instrument by revert, Close session and deadline-close. No operator control sets it per instrument. |
-| `responses_visible_when_closed` | `Boolean` | **Decides nothing.** Kept for config round-trip only; what a reviewer reads back after close is the visibility policy's call (`spec/reviewer-surface.md` "Lifecycle gating"). doesn't affect the validation snapshot. |
+| `responses_visible_when_closed` | `Boolean` | **Decides nothing.** Kept for config round-trip only; what a reviewer reads back after close is the visibility policy's call (`spec/reviewer-surface.md` "Lifecycle gating"). |
 | `deadline_closed_at` | `DateTime \| None` | Timestamp the deadline-close fired. Used to render the "auto-closed at X" pill. |
 
 **Services:**
@@ -320,8 +320,8 @@ open or every instrument is closed.
   session is `ready` and before its deadline, emitting
   `instrument.opened reason="session_wide"`. Past the deadline it
   closes instead, as before.
-- `set_responses_visible_when_closed(...)` — operator flips the
-  display flag. No lifecycle gating beyond `_require_editable` /
+- `set_responses_visible_when_closed(...)` — writes the flag, which
+  decides nothing now (§4 field table); its route has no UI. No lifecycle gating beyond `_require_editable` /
   `_require_status_ready` on its route; **does not invalidate**
   per §2.3.
 - `observe_deadline(...)` — lazy deadline-close. Idempotent. Called

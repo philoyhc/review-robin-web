@@ -265,7 +265,9 @@ Session column once Reviewer Status is `submitted`).
 
 Same 21-column long-format header as §2.4. The file leads with
 a per-instrument preamble + field dictionary for every
-instrument the reviewer responded on — instruments they
+instrument the reviewer responded on and may read now (the visibility
+rule in `spec/reviewer-surface.md` "Lifecycle gating"; rows of a
+hidden instrument are left out too) — instruments they
 weren't assigned to (or that they have no `Response` rows on)
 are omitted, so the file is narrower than the unified
 Responses CSV. Group-scoped instruments collapse the same way
