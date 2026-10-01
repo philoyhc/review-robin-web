@@ -46,7 +46,9 @@ def test_prepare_says_so_and_takes_one_click(
     )
 
     button.click()
-    expect(button).to_have_text("Preparing…")
+    # Two lines, like the idle label, so the button keeps its height.
+    expect(button).to_have_text("Preparing session…", use_inner_text=True)
+    assert button.evaluate("b => b.querySelectorAll('br').length") == 1
     expect(button).to_have_attribute("aria-busy", "true")
     # Busy is aria-busy, never disabled (base.html's busy indicator, rule 2).
     expect(button).to_be_enabled()

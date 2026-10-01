@@ -411,7 +411,7 @@ which runs three steps in sequence. The run takes seconds on a large
 roster (about 14 s at a 200 × 200 full matrix,
 `guide/app_responsiveness.md`), so on submit the clicked button (this
 one, or the confirmation's **Regenerate &amp; prepare**, which renders
-with it in normal use) reads "Preparing…" with `aria-busy="true"`, and a
+with it in normal use) reads "Preparing / session…", keeping the two-line label's height ("Preparing…" on the one-line Regenerate &amp; prepare), with `aria-busy="true"`, and a
 second submit from either is refused until the page changes or a
 back-forward cache return. No timeout lifts the refusal, since a
 Prepare at scale can outlast any (74.8 s measured once), and a second
