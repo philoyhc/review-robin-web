@@ -385,8 +385,8 @@ set is enforced at the application layer (the `SessionStatus` enum in
 machine — the transitions (`mark_validated`, `activate_session`,
 `invalidate_session` / `invalidate_if_validated`,
 `revert_session_to_draft`, `expire_session`, `archive_session` /
-`unarchive_session`), the route-layer gates, the per-instrument
-open/close model, and the UI lock-card pattern. The paragraphs below
+`unarchive_session`), the route-layer gates, session-wide accepting (no per-instrument
+open/close), and the UI lock-card pattern. The paragraphs below
 carry the write-path narrative at architectural altitude; where they
 and `spec/lifecycle.md` diverge, the lifecycle spec wins.
 
@@ -696,7 +696,7 @@ top-level `changes` envelope; one level of nesting only).
 For events triggered by a known cause: invalidation
 (`reason: "setup_mutation"`), revert
 (`reason: "operator_revert"`), cascade close
-(`reason: "deadline"` / `"manual"`). Free-form `str`; emitters
+(`reason: "deadline"`; past rows may carry `"manual"`). Free-form `str`; emitters
 pick from a small documented set per event family rather than
 typing freely.
 
