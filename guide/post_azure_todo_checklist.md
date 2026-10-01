@@ -465,3 +465,38 @@ rendered page; the author checked them in a browser.
 **Where this came from.** `guide/archive/segment_19T_advanced_instruments.md` Items 1–4, 6–14, 12A, 16 and 17,
 each closed with this check owed. Settling a row is a dated line
 there, not a reopening.
+
+## 7. Give scheduled sends a trigger that does not wait for a page view
+
+**Status:** open, **incomplete work awaiting Azure** (author's ruling,
+2026-10-01, on `guide/findings_2026-10-01_corpus.md` B19).
+
+**What is wrong.** Scheduled activation, invitations and reminders fire
+only when someone opens a session's Session Home:
+`scheduled_events.observe_scheduled_events` has one caller,
+`app/web/routes_operator/_session_home.py`. `spec/lifecycle.md` §8.3
+says the Operations pages and the Sessions lobby run the sweep too, and
+the function's own docstring repeats that. Either way, nothing fires
+while nobody has the app open, so a reminder scheduled for 09:00 goes
+out whenever an operator next looks.
+
+**Why it waits here.** The real fix is a trigger that runs on a clock,
+such as a scheduled job, a timer, or an always-on worker. Which one
+depends on what the NUS App Service plan and network allow
+(`docs/nus_azure_status_v7.md`). Widening the page-view trigger to the
+Operations pages and the lobby would still leave the gap, so the author
+held it rather than ship a half-step.
+
+**Do, after the cutover.** Choose the trigger the deployment supports
+and run `observe_scheduled_events` from it for every session with a
+pending anchor. **Pass `build_invite_url`**, built from the deployment's
+base URL: without it the invite and reminder triggers return early
+(`_invites.py`, `_reminders.py`) and only activation runs. A page view
+gets that URL from its request; a clock does not. Keep the page-view
+sweep as a backstop. `spec/lifecycle.md` §8.3, the minimum-lead-time
+rule beside it, and the docstring then say what ships.
+
+**Done when** a scheduled invitation and a scheduled reminder each go
+out at their set time on the deployed app with no operator page open.
+Both the audit events' times and the outbox rows' times show it, and the
+links in the outbox rows open on the deployed host.
