@@ -82,7 +82,7 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 # tests/browser/ skips without a Chromium build Playwright can find
-# (guide/browser_test.md). The web image preinstalls one under
+# (guide/archive/browser_test.md). The web image preinstalls one under
 # PLAYWRIGHT_BROWSERS_PATH; warn if that ever stops being true.
 if ! ls -d "${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"/chromium_headless_shell-* >/dev/null 2>&1; then
   echo "session-start: WARNING: no Chromium for Playwright — tests/browser/ will skip"

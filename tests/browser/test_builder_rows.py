@@ -1,7 +1,7 @@
 """Band 3's response-field rows, driven as an operator drives them.
 
 Each test names the row of ``guide/post_azure_todo_checklist.md`` item 6
-it repeats (``guide/browser_test.md`` rung 3). A new session's instrument
+it repeats (``guide/archive/browser_test.md`` rung 3). A new session's instrument
 starts with two response fields, "Rating" (Integer 1-5, required) and
 "Comments".
 """

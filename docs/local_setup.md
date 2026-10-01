@@ -187,7 +187,7 @@ ruff check .                                   # lint
 
 **Browser tests.** `tests/browser/` starts the app on a free port against
 its own SQLite file, with fake auth, and drives it with Chromium through
-Playwright (`guide/browser_test.md`). Playwright comes with
+Playwright (`guide/archive/browser_test.md`). Playwright comes with
 `pip install -e .[dev]`; the browser is a separate, one-time download:
 
 ```bash

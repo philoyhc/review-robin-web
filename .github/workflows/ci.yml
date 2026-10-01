@@ -32,7 +32,7 @@ jobs:
 
       - name: Run tests
         # tests/browser/ fails rather than skips without a browser here
-        # (guide/browser_test.md).
+        # (guide/archive/browser_test.md).
         env:
           RRW_REQUIRE_BROWSER: "1"
         run: pytest -n auto

@@ -105,88 +105,66 @@ up with no change there.
 
 ## Status
 
-Rung 2 (2026-10-01), against the plan:
-- **A card opens collapsed.** Each instrument card is a closed
-  `<details>` in a fresh browser, so a test clicks its summary first, as
-  a person does. Every builder test will.
-- **`ci-postgres.yml` passes `--ignore=tests/browser`** rather than letting
-  the tests skip there for want of a browser: an exclusion said out loud,
-  not a skip.
-- **`.claude/hooks/session-start.sh` changed after all**, against Blast
-  radius: it now warns when no Chromium is found, as it already did for
-  `node`.
-- **CI cost, measured on #2707:** the Chromium install step takes 21 s
-  (04:21:58 → 04:22:19); the `test` job ran 2 min 29 s against #2704's
-  2 min 19 s, with 5,110 passed under `RRW_REQUIRE_BROWSER=1`, so the
-  browser test ran rather than skipped.
-- **A missing `playwright` is an import error, not a skip**, against
-  Decision: it is a dev dependency like `pytest`, so only a missing
-  Chromium skips (and fails under `RRW_REQUIRE_BROWSER=1`).
-- Base SHA for the cumulative read at rung 4: `df7a5942`.
+Closed 2026-10-01, PRs #2706 → #2710 and this close. **34 tests** in
+`tests/browser/`, run by `pytest -n auto` in the sandbox and required in
+CI's `test` job; about 25 s of browser time per run.
 
-Rung 3 (2026-10-01): 14 tests in `test_builder_rows.py` and
-`test_builder_card.py` repeat item 6's rows for "+", default names, the
-preview following a row, ▲ and Active, R and ≡ alone, a new field saved
-twice and its order, the last row, Cancel, an open card under Lock,
-Delete's checkbox, Name and Email fixed, and visibility in the card. Two
-deliberate template breakages (▲ and the visibility chip made inert) each
-failed their test. Left to the hand check: the hide-confirm on a field
-with saved responses (an activated session's card won't unlock, so it
-stays a hand check).
+**What the ladder became.** Rungs 1–5 landed as planned, one PR each: the
+harness and one Save-and-reload test (2); 14 builder-row tests (3); 6
+builder branching and 2 reviewer branch-row tests (4); 11 Owners-card,
+typeahead and Create tests (5). Every test from rung 3 on names its
+checklist row in its docstring; rung 2's Save round trip is the harness's
+smoke test and repeats no single row. The tag file is `test_tags_and_create.py`, not
+`test_tag_typeahead.py`, because Create's Owners card shares its setup.
 
-Rung 4 (2026-10-01): 6 builder tests in `test_builder_branching.py` (⑂,
-join and detach, List conditions, the Active cascade, ranges, two levels
-saved and no third offered) and 2 reviewer tests in
-`test_reviewer_branching.py` (a branch opening and closing with the answer,
-a closed answer dropped on Save; required only while open). The reviewer
-signs in through the Easy Auth headers (`page_as`); a full matrix is pinned
-through the server's database, as `tests/integration/_full_matrix.py` does.
-**Not automatable as written:** 'A refused parent keeps the text' — the
-reviewer's number input carries `max`, so Chromium's own validation stops
-the Save before the server can refuse it; raised with the author.
+**Divergences from the plan:**
+- **A missing `playwright` is an import error, not a skip**: it is a dev
+  dependency like `pytest`, so only a missing Chromium skips, and fails
+  under `RRW_REQUIRE_BROWSER=1` (checked with `PLAYWRIGHT_BROWSERS_PATH`
+  pointed at nothing: 34 skipped, or 34 errors with the variable set).
+- **`ci-postgres.yml` passes `--ignore=tests/browser`**, an exclusion said
+  out loud rather than a skip.
+- **`.claude/hooks/session-start.sh` changed**, against Blast radius: it
+  warns when no Chromium is found, as it does for `node`.
+- **People other than the fake operator** sign in through the Easy Auth
+  headers, which `app/auth/identity.py` reads first; colleagues come from
+  `OPERATOR_EMAILS`. A full matrix is pinned through the server's database,
+  as `tests/integration/_full_matrix.py` does.
+- **The browser is module-scoped**, with a session-scoped launch check
+  owning skip-or-fail. Session-scoped, it kept sync Playwright's event loop
+  running in each xdist worker, and a later `asyncio.run()` on that worker
+  failed (`test_session_new_tags_card.py`, found by CI on #2710).
 
-**Reads:** one cumulative `diff-reviewer` read, `df7a5942..b8f35a33`. No
-defect in the harness or CI; seven findings, all acted on in rung 4:
-two tests claimed more than they checked (the closed-answer delete never
-had an answer to delete; the under-condition Submit asserted only an
-absence), so they now save while open before closing, and wait for the
-summary page and check the live "(required)" label and the count. The
-server now inherits a pre-bound socket (no port race under xdist), is
-killed if it won't stop, and a failed migration shows its stderr; the
-fake-auth keys are pinned against a developer's `.env`; one redundant
-click removed; the import-error divergence recorded above.
+**CI cost:** the Chromium install step takes 21 s; the `test` job went from
+2 min 19 s (#2704) to 2 min 29 s at rung 2 (#2707) and 2 min 42 s with all
+34 tests (#2710's head, `9a2a5d12`).
 
-Rung 5 (2026-10-01): 11 tests for item 5. `test_owners_card.py`: the
-card starts locked; Add owner and Remove save at once; the last owner
-can't go; removing yourself asks, Cancel posts nothing, confirming lands
-on the lobby; owners change in an activated session; the card relocks
-after leaving Home; without JavaScript both forms still work.
-`test_tags_and_create.py`: suggestions complete only the last tag (Create
-and Session Home), Enter in a lobby tag box posts nothing, and Create
-stages owners and saves what remains. A second operator comes from
-`OPERATOR_EMAILS` on first sign-in. Four template breakages each failed
-their test. **Found:** with JavaScript off, Create can't submit at all —
-its button renders `disabled` and only script enables it (since
-`9cfb70e1`, 2026-05-22) — so item 5's 'Create is unchanged … Off' row
-can't pass as written; raised with the author, no test, and
-`spec/session_owners.md` and a `session_new.html` comment still describe
-that path. Left to the hand check: the datalist popup; Owners above the
-Danger Zone (layout); and the parts of rows tested only in part — relocking
-via another session's Home, Quick Setup's lock unaffected, the details
-card staying locked on an Activated session, and the lobby's two
-typeahead boxes (Create's and Session Home's are tested). Rung 5's own
-`diff-reviewer` read: seven findings, all acted on — the fake operator's
-email pinned against a `.env`, the lobby Enter test now waits a second for
-a POST and checks the session survives, `activate()` asserts the success
-redirect, the no-JS test removes another owner too, Create stages two and
-keeps one, shared steps moved to `_builder.py` / `conftest.py`.
-**A harness defect CI found on #2710:** the session-scoped browser kept
-sync Playwright's event loop running in each worker's thread, so a later
-test on that worker calling `asyncio.run()`
-(`test_session_new_tags_card.py`) failed, depending on xdist's split. The
-browser is now module-scoped, with a session-scoped launch check owning
-skip-or-fail; reproduced serially before the fix, passing after. Browser
-runs take about 25 s, from 21 s.
+**Rows not automated, with the reason:**
+- *The hide-confirm on a field with saved responses* — an activated
+  session's card won't unlock.
+- *A refused parent keeps the text* — the number input carries `max`, so
+  Chromium's own validation stops the Save before the server can refuse it.
+- *Create is unchanged, JavaScript off* — Create can't submit at all
+  without script: its button renders `disabled` (since `9cfb70e1`,
+  2026-05-22), while `spec/session_owners.md` and a `session_new.html`
+  comment still describe that path. A defect, not a test gap.
+- *The datalist popup* (headless draws none), *Owners above the Danger
+  Zone* (layout), and the parts of rows tested only in part: relocking via
+  another session's Home, Quick Setup's lock unaffected, the details card
+  staying locked when Activated, and the lobby's two typeahead boxes.
+
+The refused parent and the no-JS Create were raised with the author and
+were unanswered at the close.
+
+**Reads:** two `diff-reviewer` reads. The cumulative read at rung 4
+(`df7a5942..b8f35a33`) found seven issues, all fixed: two tests claimed more
+than they checked, a port race under xdist, a server that might not stop, a
+silent migration failure, fake-auth keys a developer's `.env` could
+override, and a redundant click. Rung 5's own read found seven, all fixed,
+mostly tests asserting less than their row. Template breakages were used
+to check that tests fail: two at rung 3, four at rung 5. Codex found one
+more at rung 5: the lock test had checked a Remove button that was already
+disabled for another reason.
 
 ## PR ladder
 
@@ -234,11 +212,10 @@ runs take about 25 s, from 21 s.
 
 ## Open questions
 
-- **Does a layout measurement ever become a test?** Proposed no: widths
-  were measured by hand against the author's judgment, and a pixel assertion
-  breaks on every legitimate change. The author decides.
-- **Run them on the `postgres:16` job too?** Proposed no for now (Semantics).
-  The author decides.
+- **Does a layout measurement ever become a test?** Not ruled; shipped as
+  proposed: none does.
+- **Run them on the `postgres:16` job too?** Not ruled; shipped as
+  proposed: excluded, by `--ignore` (Status).
 
 ## Out of scope
 
@@ -257,3 +234,4 @@ runs take about 25 s, from 21 s.
 - `CLAUDE.md` — "Where work runs": the tool-gated skip sentence names the browser tests and `RRW_REQUIRE_BROWSER` (rung 2); `AGENTS.md` copied.
 - `docs/local_setup.md` — running the browser tests locally, including `playwright install chromium` (rung 2).
 - `docs/status.md` — a row at the close.
+- `.claude/hooks/session-start.sh` — warn when no Chromium is found (rung 2).

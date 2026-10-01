@@ -1,7 +1,7 @@
 """Session Home's Owners card, driven as an operator drives it.
 
 Each test names the row of ``guide/post_azure_todo_checklist.md`` item 5
-it repeats (``guide/browser_test.md`` rung 5). The fake operator creates
+it repeats (``guide/archive/browser_test.md`` rung 5). The fake operator creates
 each session and so is its first owner; ``COLLEAGUE_EMAIL`` is a second
 workspace operator, admitted through ``OPERATOR_EMAILS`` on first sign-in.
 """

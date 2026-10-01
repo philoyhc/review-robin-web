@@ -1,7 +1,7 @@
 """The tag typeahead and the Create page's Owners card.
 
 Each test names the row of ``guide/post_azure_todo_checklist.md`` item 5
-it repeats (``guide/browser_test.md`` rung 5). Headless Chromium draws no
+it repeats (``guide/archive/browser_test.md`` rung 5). Headless Chromium draws no
 datalist popup, so the typeahead tests read the suggestions the script
 writes into ``#tag-vocabulary`` instead; the popup itself stays a hand
 check.

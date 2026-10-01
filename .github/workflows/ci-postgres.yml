@@ -52,5 +52,5 @@ jobs:
 
       - name: Run pytest against Postgres
         # The browser tests serve the app from their own SQLite file, so they
-        # add nothing here; they run in ci.yml (guide/browser_test.md).
+        # add nothing here; they run in ci.yml (guide/archive/browser_test.md).
         run: pytest -q --ignore=tests/browser

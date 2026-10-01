@@ -154,7 +154,7 @@ migration chain — faster, and the chain is still exercised on
 every PR by the `ci-postgres` job. Data-only migrations are
 replayed in `tests/_sqlite_schema.py`.
 
-**Browser tests** (`tests/browser/`, plan `guide/browser_test.md`)
+**Browser tests** (`tests/browser/`, plan `guide/archive/browser_test.md`)
 serve the app live with fake auth and drive it with Chromium through
 Python Playwright, a dev dependency pinned to the minor whose
 Chromium build the web sandbox ships. They skip, saying why, when no

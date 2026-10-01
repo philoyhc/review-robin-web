@@ -1,7 +1,7 @@
 """A branch as the reviewer meets it.
 
 Each test names the row of ``guide/post_azure_todo_checklist.md`` item 6
-it repeats (``guide/browser_test.md`` rung 4). Every test builds a session
+it repeats (``guide/archive/browser_test.md`` rung 4). Every test builds a session
 whose "Rating" (Integer 1-5) governs a String field "Why" under
 "Rating ≥ 4", activates it, and signs in as the roster's one reviewer.
 """
