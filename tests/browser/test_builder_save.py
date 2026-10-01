@@ -1,5 +1,5 @@
 """The builder's Save, end to end: the round trip every later browser test
-builds on (``guide/browser_test.md`` rung 2)."""
+builds on (``guide/archive/browser_test.md`` rung 2)."""
 
 from __future__ import annotations
 

@@ -2,7 +2,7 @@
 fields and visibility, driven as an operator drives them.
 
 Each test names the row of ``guide/post_azure_todo_checklist.md`` item 6
-it repeats (``guide/browser_test.md`` rung 3).
+it repeats (``guide/archive/browser_test.md`` rung 3).
 """
 
 from __future__ import annotations

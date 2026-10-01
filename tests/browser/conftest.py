@@ -1,6 +1,6 @@
 """Browser tests: the app served live, driven by a real Chromium.
 
-Plan: ``guide/browser_test.md``. A session-scoped server runs
+Plan: ``guide/archive/browser_test.md``. A session-scoped server runs
 ``uvicorn app.main:app`` against a freshly migrated SQLite file with fake
 auth, so a Save reaches the server and a reload proves it persisted. Tests
 seed through the app's own routes over HTTP and make their own session, so
