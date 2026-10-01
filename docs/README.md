@@ -18,6 +18,7 @@ timeline lives in `status_history.md`.
 | `local_setup.md` | Developer how-to for running tests, migrations, and the dev server locally — including a **Running in a GitHub Codespace** section (absorbed from the retired `codespace_setup.md`: SQLite + fake auth, port forwarding, optional Postgres parity + devcontainer). |
 | `deployment_dev.md` | Dev Azure App Service deployment notes (resource names, env vars, GRANT bootstrap, planned production flow). |
 | `deployment_nus.md` | **Migration runbook** — moving the deploy target from personal Azure to the institutional (NUS) host while keeping localhost + CI unchanged, then retiring personal Azure. Comprehensive GitHub-side (OIDC federated identity, secrets, workflow target) + Azure-side (provisioning, NUS Entra Easy Auth, DB bootstrap, the migrate-job network gotcha) checklists, cutover order, and verification. |
+| `nus_azure_status_v7.md` | **Current NUS production Azure handoff/status** (2026-10-01) — verified network/App Service/Postgres/Key Vault/App Gateway/runner state, plus the two active external blockers: Southeast Asia runner VM capacity awaiting Microsoft Support, and the production domain/hostname decision being rationalized across analogous citizen-developed applications. |
 | `operations_runbook.md` | Day-to-day procedures for operating the deployed service (deploy, restart, logs, secrets). |
 | `troubleshooting.md` | Symptom-driven diagnosis for the deployed dev slot. |
 | `backup_restore.md` | Database backup / restore mechanism and data-retention notes. |
