@@ -326,8 +326,8 @@ class EventSchema:
     ``allows`` is the set of top-level keys that may appear in
     ``detail`` for this event type. Present keys must be a subset
     of ``allows``; not all allowed keys need to appear (e.g.
-    ``instrument.closed`` allows ``context`` for the deadline path
-    but the manual path doesn't carry it).
+    ``instrument.closed`` allows ``context``, which the deadline path
+    carries and the retired manual path never did).
     """
 
     allows: frozenset[str]
@@ -433,7 +433,11 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # (``context.error_message``); see ``_workflow.py``.
     "session.workflow_run_started": EventSchema(_IDENTITY | {"context"}),
     "session.workflow_run_failed": EventSchema(_IDENTITY | {"context"}),
-    "instrument.opened": EventSchema(_IDENTITY | {"refs"}),
+    # Per-instrument Open was removed (2026-10-01; accepting is
+    # session-wide). Now emitted only by the deadline observer's heal,
+    # ``reason="session_wide"``, when a live session still carries an
+    # instrument the retired Close left shut.
+    "instrument.opened": EventSchema(_IDENTITY | {"refs", "reason"}),
     "instrument.closed": EventSchema(_IDENTITY | {"refs", "reason", "context"}),
     # PR 2 — instruments
     "response_type.added": EventSchema(_IDENTITY | {"snapshot"}),

@@ -753,81 +753,10 @@ def unarchive_session(
 # --------------------------------------------------------------------------- #
 # Per-instrument controls
 # --------------------------------------------------------------------------- #
-
-
-def open_instrument(
-    db: Session,
-    *,
-    instrument: Instrument,
-    review_session: ReviewSession,
-    user: User,
-    correlation_id: str | None = None,
-    now: datetime | None = None,
-) -> Instrument:
-    """Set ``accepting_responses=true``. Requires session ready and pre-deadline."""
-    if not is_ready(review_session):
-        raise LifecycleError(
-            "Cannot open an instrument while session is not ready",
-            code="session_not_ready",
-        )
-    current = now or datetime.now(timezone.utc)
-    if review_session.deadline is not None and current >= _aware(
-        review_session.deadline
-    ):
-        raise LifecycleError(
-            "Cannot open an instrument past the session deadline",
-            code="deadline_passed",
-        )
-
-    # Wave 5 PR 5.3 — the legacy group-scoped "no rule pinned"
-    # gate retired. Group-scoped instruments default to Full
-    # Matrix on untouched Band 1 (Wave 4 PR 1) just like
-    # individual ones.
-
-    if not instrument.accepting_responses:
-        instrument.accepting_responses = True
-        instrument.deadline_closed_at = None
-        db.flush()
-        audit.write_event(
-            db,
-            event_type="instrument.opened",
-            summary=f"Instrument {instrument.name} opened",
-            actor_user_id=user.id,
-            session=review_session,
-            refs={"instrument_id": instrument.id},
-            correlation_id=correlation_id,
-        )
-    db.commit()
-    db.refresh(instrument)
-    return instrument
-
-
-def close_instrument(
-    db: Session,
-    *,
-    instrument: Instrument,
-    review_session: ReviewSession,
-    user: User,
-    reason: str = "manual",
-    correlation_id: str | None = None,
-) -> Instrument:
-    """Set ``accepting_responses=false``. Idempotent if already closed."""
-    if instrument.accepting_responses:
-        instrument.accepting_responses = False
-        db.flush()
-        audit.write_event(
-            db,
-            event_type="instrument.closed",
-            summary=f"Instrument {instrument.name} closed ({reason})",
-            actor_user_id=user.id,
-            session=review_session,
-            refs={"instrument_id": instrument.id},
-            reason=reason,
-            correlation_id=correlation_id,
-        )
-    db.commit()
-    db.refresh(instrument)
-    return instrument
+# Accepting is session-wide, so there is no per-instrument open or close:
+# ``activate_session`` opens every instrument, and ``observe_deadline``,
+# Close session (``expire_session``) and Revert close them all. ``open_instrument`` / ``close_instrument``
+# were removed with their routes on 2026-10-01.
 
 
 def set_responses_visible_when_closed(
@@ -945,6 +874,52 @@ def session_status_for_reviewer(
     return "closed"
 
 
+def _reopen_while_live(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    correlation_id: str | None,
+) -> None:
+    """Reopen any instrument a live session left closed.
+
+    Only for a ``ready`` session before its deadline (the caller checks
+    the deadline): every other state either has no accepting at all or
+    closes it session-wide. Emits ``instrument.opened`` with
+    ``reason="session_wide"`` per instrument reopened, so the heal is on
+    the audit log. A no-op once no session carries a split.
+    """
+    if not is_ready(review_session):
+        return
+    closed = list(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id,
+                Instrument.accepting_responses.is_(False),
+            )
+        ).scalars()
+    )
+    if not closed:
+        return
+    for instrument in closed:
+        instrument.accepting_responses = True
+        instrument.deadline_closed_at = None
+        audit.write_event(
+            db,
+            event_type="instrument.opened",
+            summary=(
+                f"Instrument {instrument.name} reopened (accepting is "
+                "session-wide)"
+            ),
+            actor_user_id=None,
+            session=review_session,
+            refs={"instrument_id": instrument.id},
+            reason="session_wide",
+            correlation_id=correlation_id,
+        )
+    db.flush()
+    db.commit()
+
+
 def observe_deadline(
     db: Session,
     review_session: ReviewSession,
@@ -964,11 +939,19 @@ def observe_deadline(
     the only way to trace which reviewer's GET (or operator's GET)
     tripped the close, since the close itself runs anonymously
     (``actor_user_id=None``).
+
+    **Before the deadline it heals the other way.** Accepting is
+    session-wide, so a ``ready`` session before its deadline has every
+    instrument open. One left closed by the retired per-instrument Close
+    would otherwise block every reviewer write with no control to reopen
+    it, so it is reopened here, on the same requests that would have hit
+    the gate (see :func:`_reopen_while_live`).
     """
-    if review_session.deadline is None:
-        return 0
     current = now or datetime.now(timezone.utc)
-    if current < _aware(review_session.deadline):
+    if review_session.deadline is None or current < _aware(
+        review_session.deadline
+    ):
+        _reopen_while_live(db, review_session, correlation_id=correlation_id)
         return 0
 
     instruments = list(
@@ -1096,8 +1079,6 @@ __all__ = [
     "release_responses_now",
     "stop_responses_release",
     "unarchive_session",
-    "open_instrument",
-    "close_instrument",
     "set_responses_visible_when_closed",
     "session_accepts_responses",
     "observe_deadline",

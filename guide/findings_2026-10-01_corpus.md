@@ -38,14 +38,15 @@ is left stricter until ruled on. Grouped by what the ruling is about.
   someone opens Session Home. `observe_scheduled_events` has one caller.
   `spec/lifecycle.md` §8.3 says Session Home, the Operations pages and the
   lobby, and the function's own docstring repeats that.
-- **A6** — The reviewer write gate is session-wide. Closing one instrument
-  403s Save, Submit and Clear on the instruments still open
-  (`_require_session_accepting`), but the spec gates per instrument. No
-  test covers the mixed case.
-- **A5** — When no instrument accepts, Prev and Next disappear with the
+- ~~**A6**~~ — **Ruled 2026-10-01: remove per-instrument Open / Close.
+  Done in #2722.** Accepting is session-wide, so the session-wide write
+  gate is right and the spec now says so. It was: closing one instrument
+  403'd Save, Submit and Clear on the instruments still open.
+- **A5** — **Ruled 2026-10-01: fix the code.** When no instrument accepts, Prev and Next disappear with the
   action row, so a reviewer can't page through a closed multi-page
   surface. The spec keeps them.
-- **G10** — `responses_visible_when_closed` has no operator control and
+- **G10** — **Ruled 2026-10-01: the visibility policy decides, and nothing
+  is visible once the session is archived.** `responses_visible_when_closed` has no operator control and
   defaults to False, so after close a reviewer cannot see their own saved
   answers. The specs say a visibility policy governs it, and nothing
   reads one there.
@@ -73,7 +74,10 @@ the spec should say so.
 - **F11** — The configurable welcome message, institution name and magic
   links (`spec/audience_and_identity_model.md`).
 - **F15** — The Draft/Receiving/Closed instrument statuses and the
-  reviewer notification on edit (`spec/domain_assumptions.md`).
+  reviewer notification on edit (`spec/domain_assumptions.md`). The A6
+  ruling (#2722, accepting is session-wide) rules out a per-instrument
+  Closed/Paused state, so this now reads as "won't do" unless the author
+  says otherwise.
 - **G4** — The Responses-received switch has no consumer at submit time.
 - **G13** — Export validation at row-write time
   (`spec/rrw_functional_spec.md` §13.4).
@@ -109,8 +113,8 @@ the spec should say so.
 - **B17 = F3, with F17** — Reminders and per-row invitation actions:
   routes accept `validated`, and the Invitations template allows them only
   in `ready`. The two halves of `spec/operations_pages.md` disagree.
-- **B21** — `close_instrument` and the visibility-when-closed route have
-  no lifecycle gate.
+- **B21** — ~~`close_instrument`~~ (removed in #2722, with A6) and the
+  visibility-when-closed route have no lifecycle gate.
 - **B15, B27** — `GET /assignments?validated=1` and the Validate page's
   `verdict_*` / `lifecycle_copy` fields are reachable from no template.
   Retire them, or wire them?
@@ -212,7 +216,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - Also G10 `:144-149,345-360`.
 - `reviewer-surface.md`
   - A5 high · `:831` · Prev/Next hidden when closed · author.
-  - A6 high · `:799-810` · write gate session-wide · author.
+  - ~~A6 high · `:799-810` · write gate session-wide · author.~~ Ruled: per-instrument Open / Close removed; done in #2722.
   - A7 med · `:780-793` · blocked Submit → page 1 · author.
   - A8 med · `:62,1557` · the dashboard links `/summary` once submitted, built in `_dashboard.py`.
   - A9 low · `:230` · Submit redirects to the bare URL; only the current page posts.

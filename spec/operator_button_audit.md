@@ -409,7 +409,7 @@ per instrument card.
 
 | # | Card / sub-section | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 50 | Section A right card | Open this Instrument / Close this instrument | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle on `accepting_responses` (post-activation only) |
+| 50 | Section A right card | Open this Instrument / Close this instrument | — | — | **Retired** | Removed 2026-10-01: accepting is session-wide, so there is no per-instrument toggle (`spec/lifecycle.md`); number retained because audit identifiers are stable |
 | 52 | Bottom action row (unlocked) | Save | `<button type="submit" form="dfsave-{iid}">` | `btn secondary` | Secondary | Bulk-save covers Band 1 form fields + Band 3 row state. Starts `disabled`; activates on first dirty event. Preserves `?editing=<id>` on redirect. |
 | 53 | Bottom action row (unlocked) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Confirms then reloads to discard unsaved client-side state. Mirrors Save's dirty-aware enabled state. |
 | 54 | Bottom action row | Replicate | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/{iid}/replicate` — clones the card immediately after it; disabled only when the session is not editable |

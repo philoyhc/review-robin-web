@@ -417,11 +417,11 @@ def reviewer_recall(
 
     Gated on session status ``ready`` only — a session that's
     been closed (``expired``) or archived has no live form to
-    return to, so recall is meaningless. Per-instrument
-    ``accepting_responses`` flips by the operator don't block
-    recall; the reviewer is putting their values back into the
-    draft pool to keep editing them on whichever instruments
-    are still open.
+    return to, so recall is meaningless. ``accepting_responses``
+    is not consulted: it is session-wide, so a ready session past
+    its deadline is the only closed-but-ready case, and recall
+    there just returns the values to drafts the surface shows
+    read-only.
     """
     reviewer, review_session = reviewer_session
     lifecycle.observe_deadline(

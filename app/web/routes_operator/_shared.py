@@ -779,8 +779,8 @@ def _instruments_redirect(
     """Redirect to the Instruments index, optionally landing on an
     in-page anchor.
 
-    Per-instrument actions (open / close / visibility / save / page
-    break) should pass ``fragment="instrument-{id}"`` so the
+    Per-instrument actions (visibility / save / page break) should
+    pass ``fragment="instrument-{id}"`` so the
     operator lands on the instrument they were just acting on
     instead of being yanked to the top of the page. Bulk actions
     (accepting / visibility all-on/off) pass no fragment — they
