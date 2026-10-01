@@ -106,7 +106,11 @@
       {% if rows and not any_accepting %}
         <div class="banner banner-warning">
           This session is no longer accepting responses.
-          {% if any_closed_with_hidden_values %}
+          {% if any_closed_with_hidden_values and any_closed_with_shown_values %}
+            Some of your previously saved values are hidden by the
+            operator's visibility setting; the rest remain visible in
+            read-only form.
+          {% elif any_closed_with_hidden_values %}
             Your previously saved values are hidden by the operator's
             visibility setting.
           {% else %}

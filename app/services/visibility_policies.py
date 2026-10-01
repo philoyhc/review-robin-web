@@ -602,11 +602,11 @@ __all__ = [
     "decode_pair_to_mode",
     "encode_mode",
     "list_for_instrument",
+    "peer_reviewer_policies",
     "resolve_mode",
     "reviewee_has_current_grant",
-    "upsert_many",
-    "peer_reviewer_policies",
     "reviewer_sees_own_responses",
+    "upsert_many",
     "upsert_policy",
     "valid_modes_for_cell",
 ]

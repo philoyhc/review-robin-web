@@ -67,6 +67,7 @@ def _seed_session_with_rae_and_one_reviewee(
     *,
     code: str,
     reviewer_email: str,
+    extra_instruments: int = 0,
 ) -> ReviewSession:
     operator_client.post(
         "/operator/sessions",
@@ -98,6 +99,10 @@ def _seed_session_with_rae_and_one_reviewee(
         },
         follow_redirects=False,
     )
+    for _ in range(extra_instruments):
+        operator_client.post(
+            f"/operator/sessions/{review_session.id}/instruments/add-new-model"
+        )
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator_client, review_session.id)
     return review_session
@@ -159,13 +164,17 @@ def _close_after_rae_submits(
     code: str,
     released_mode: str | None,
     open_release: bool,
+    retired_flag: bool = True,
+    second_instrument_mode: str | None = "unused",
 ) -> tuple[ReviewSession, TestClient]:
     """Rae submits 5 / "great review"; the operator authors the
     peer_reviewer "Responses released" cell, closes the session, and
     optionally opens the release window. Returns Rae's client, with her
     identity installed."""
+    two = second_instrument_mode != "unused"
     review_session = _seed_session_with_rae_and_one_reviewee(
-        client, db, code=code, reviewer_email=rae.email
+        client, db, code=code, reviewer_email=rae.email,
+        extra_instruments=1 if two else 0,
     )
     _activate(client, review_session)
     rae_client = make_client(rae)
@@ -174,23 +183,28 @@ def _close_after_rae_submits(
         comments_value="great review", db=db,
     )
     _restore_operator_identity(alice)
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalar_one()
+    instruments = sorted(
+        db.execute(
+            select(Instrument).where(Instrument.session_id == review_session.id)
+        ).scalars(),
+        key=lambda i: (i.order, i.id),
+    )
     operator = db.execute(
         select(User).where(User.email == alice.email)
     ).scalar_one()
-    visibility_policies.upsert_policy(
-        db,
-        review_session=review_session,
-        instrument=instrument,
-        audience="peer_reviewer",
-        while_ongoing_mode="raw",
-        after_release_mode=released_mode,
-        user=operator,
-    )
-    # The retired toggle, set on: it must no longer decide anything.
-    instrument.responses_visible_when_closed = True
+    modes = [released_mode] + ([second_instrument_mode] if two else [])
+    for instrument, mode in zip(instruments, modes):
+        visibility_policies.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            audience="peer_reviewer",
+            while_ongoing_mode="raw",
+            after_release_mode=mode,
+            user=operator,
+        )
+        # The retired toggle: it must no longer decide anything.
+        instrument.responses_visible_when_closed = retired_flag
     db.commit()
     close_resp = client.post(
         f"/operator/sessions/{review_session.id}/workflow/close",
@@ -211,9 +225,11 @@ def _close_after_rae_submits(
 def test_released_raw_shows_the_reviewers_own_values(
     client: TestClient, db: Session, alice, rae, make_client
 ) -> None:
+    """The policy alone shows them: the retired toggle is off here."""
     review_session, rae_client = _close_after_rae_submits(
         client, db, alice, rae, make_client,
         code="vis-raw", released_mode="raw", open_release=True,
+        retired_flag=False,
     )
     body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert 'value="5"' in body
@@ -266,6 +282,31 @@ def test_otherwise_a_closed_session_hides_them(
         f"/me/sessions/{review_session.id}/summary.csv"
     ).text
     assert "great review" not in csv_body
+
+
+def test_visibility_is_decided_per_instrument(
+    client: TestClient, db: Session, alice, rae, make_client
+) -> None:
+    """Instrument 1 released Raw, instrument 2 off: the surface says some
+    values are hidden, the summary shows one section and says so, and the
+    CSV carries instrument 1 only."""
+    review_session, rae_client = _close_after_rae_submits(
+        client, db, alice, rae, make_client,
+        code="vis-mixed", released_mode="raw", open_release=True,
+        second_instrument_mode=None,
+    )
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
+    assert "Some of your previously saved values are hidden" in body
+    assert "great review" in body
+    summary = rae_client.get(f"/me/sessions/{review_session.id}/summary").text
+    assert "Some of your responses are not shown" in summary
+    assert summary.count('<section class="card"') == 1
+    assert "summary.csv" in summary
+    csv_body = rae_client.get(
+        f"/me/sessions/{review_session.id}/summary.csv"
+    ).text
+    assert "instrument_1" in csv_body
+    assert "instrument_2" not in csv_body
 
 
 def test_archiving_ends_all_visibility(

@@ -840,12 +840,18 @@ GET requests behave differently depending on which gate fails:
   - The Danger Zone card hides (no Clear all).
   - A `.banner.banner-warning` lands inline in the overview card
     explaining the state, e.g. "This session is no longer
-    accepting responses." Two variants, depending on whether the
-    reviewer may read their own values back:
+    accepting responses." Three variants, depending on whether the
+    reviewer may read their own values back, across the session's
+    instruments:
     - "Your previously saved values remain visible below in
-      read-only form."
+      read-only form." (all shown)
     - "Your previously saved values are hidden by the operator's
-      visibility setting."
+      visibility setting." (all hidden)
+    - "Some of your previously saved values are hidden by the
+      operator's visibility setting; the rest remain visible in
+      read-only form." (mixed)
+    On a hidden row, branches are judged as if unanswered, so a governed
+    cell's muting does not reveal a hidden parent answer.
 
 - **What a reviewer reads back once responses close.** The
   instrument's `peer_reviewer` visibility policy decides
@@ -858,6 +864,10 @@ GET requests behave differently depending on which gate fails:
   | `expired`, release window open | Shown when the "Responses released" cell is Raw. Hidden when it is Summarized (the surface has no summary view) or off. |
   | `expired`, release window not open | Hidden. |
   | `archived` | Hidden. Archiving ends all visibility. |
+  | `draft` / `validated` (after Revert) | Hidden. The surface shows the pre-open page; the summary and its CSV show nothing. |
+
+  "Own saved values" means the reviewer's stored answers, submitted or
+  still drafts, the same rows the surface always rendered.
 
   The same rule decides the summary page and its CSV, per
   instrument: a hidden instrument is left out, and a banner says some

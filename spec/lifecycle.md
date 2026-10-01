@@ -290,7 +290,7 @@ read-only banners but the source of truth is the route gate.
 ## 4. Per-instrument lifecycle
 
 Each instrument carries an `accepting_responses` flag and a
-visibility-when-closed display flag. Accepting is set and cleared
+`responses_visible_when_closed` flag, which decides nothing (below). Accepting is set and cleared
 session-wide, below, so within a `ready` session every instrument is
 open or every instrument is closed.
 
@@ -321,9 +321,8 @@ open or every instrument is closed.
   `instrument.opened reason="session_wide"`. Past the deadline it
   closes instead, as before.
 - `set_responses_visible_when_closed(...)` — writes the flag, which
-  decides nothing now (§4 field table); its route has no UI. No lifecycle gating beyond `_require_editable` /
-  `_require_status_ready` on its route; **does not invalidate**
-  per §2.3.
+  decides nothing now (§4 field table); its route has no UI and no
+  lifecycle gate; **does not invalidate** per §2.3.
 - `observe_deadline(...)` — lazy deadline-close. Idempotent. Called
   by the reviewer write-path predicate
   `session_accepts_responses` and by operator GETs that render
