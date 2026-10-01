@@ -430,11 +430,16 @@ def test_reviewer_save_403_when_deadline_passed(
     assert response.status_code == 403
 
 
-def test_reviewer_surface_hides_values_when_closed_and_invisible(
+def test_past_the_deadline_a_ready_session_still_shows_the_reviewer_their_values(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
+    """While the session is ``ready`` the reviewer is inside the
+    ``while_ongoing`` window, whose ``peer_reviewer`` cell is Raw by
+    rule, so once the deadline closes the instruments their own saved
+    values stay readable (read-only). The visibility policy decides,
+    not ``responses_visible_when_closed`` (G10, 2026-10-01)."""
     operator = make_client(alice)
     session = _build_ready_session(operator, db, code="visibility")
     assignment = db.execute(
@@ -443,8 +448,8 @@ def test_reviewer_surface_hides_values_when_closed_and_invisible(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalar_one()
+    assert instrument.responses_visible_when_closed is False
 
-    # Reviewer saves a draft while still accepting.
     rae = AuthenticatedUser(
         principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
     )
@@ -459,26 +464,15 @@ def test_reviewer_surface_hides_values_when_closed_and_invisible(
     )
 
     # Pass the deadline: the reviewer's next GET runs the deadline
-    # observer, which closes every instrument (there is no per-instrument
-    # close any more).
-    user = db.execute(select(__import__("app.db.models", fromlist=["User"]).User)).scalars().first()
+    # observer, which closes every instrument.
     session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
     db.commit()
 
     page = rae_client.get(f"/me/sessions/{session.id}")
     assert page.status_code == 200
-    assert "secret-comment" not in page.text
     assert "no longer accepting responses" in page.text.lower()
-
-    lifecycle.set_responses_visible_when_closed(
-        db,
-        instrument=instrument,
-        review_session=session,
-        user=user,
-        visible=True,
-    )
-    page = rae_client.get(f"/me/sessions/{session.id}")
     assert "secret-comment" in page.text
+    assert "remain visible below" in page.text
 
 
 def test_lazy_deadline_close_fires_once(

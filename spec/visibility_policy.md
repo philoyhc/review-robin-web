@@ -77,6 +77,16 @@ The peer-reviewer audience is constrained per window:
 
 `Anonymized` (row + deidentified) is **not** offered for peer reviewers — anonymising one's own work against oneself is incoherent. `Summarized` (aggregated + deidentified) is meaningful because a reviewer who reviewed multiple reviewees has a multi-row fan-out of their own responses, which the summary aggregates. The scope rule (§1.1) still holds: the reviewer's grant covers only responses they themselves keyed in.
 
+**Where the reviewer cells are read.** Once an instrument stops
+accepting, the review surface, the summary page and its CSV show the
+reviewer's own saved values only as this policy allows
+(`visibility_policies.reviewer_sees_own_responses`): always while the
+session is `ready`, inside the release window only for a Raw "Responses
+released" cell, and never once the session is archived. A Summarized
+grant has no reviewer-facing summary view yet, so it hides the values
+like an off cell does. `spec/reviewer-surface.md` "Lifecycle gating"
+carries the table.
+
 ---
 
 ## 3. Window axis (when they see)

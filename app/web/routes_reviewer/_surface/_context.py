@@ -30,6 +30,7 @@ from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
+from app.services import visibility_policies
 from app.web import views
 from app.web.deps import request_correlation_id
 from app.web.routes_reviewer._shared import (
@@ -271,6 +272,14 @@ def _surface_context(
         db, review_session.id
     )
 
+    # G10 (author's ruling, 2026-10-01): once an instrument no longer
+    # accepts, the reviewer's own saved values show only as the
+    # instrument's peer_reviewer visibility policy allows, and never once
+    # the session is archived (``visibility_policies
+    # .reviewer_sees_own_responses``).
+    peer_policies = visibility_policies.peer_reviewer_policies(
+        db, instrument_ids
+    )
     rows_by_instrument: dict[int, list[dict]] = {}
     any_accepting = False
     any_closed_with_hidden_values = False
@@ -289,7 +298,10 @@ def _surface_context(
         if accepting:
             any_accepting = True
         show_values = accepting or (
-            instrument is not None and instrument.responses_visible_when_closed
+            instrument is not None
+            and visibility_policies.reviewer_sees_own_responses(
+                review_session, peer_policies.get(instrument.id)
+            )
         )
         if not show_values:
             any_closed_with_hidden_values = True

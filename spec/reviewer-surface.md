@@ -838,20 +838,30 @@ GET requests behave differently depending on which gate fails:
   - The Danger Zone card hides (no Clear all).
   - A `.banner.banner-warning` lands inline in the overview card
     explaining the state, e.g. "This session is no longer
-    accepting responses." Two variants depending on the
-    operator's per-instrument visibility flag:
+    accepting responses." Two variants, depending on whether the
+    reviewer may read their own values back:
     - "Your previously saved values remain visible below in
-      read-only form." (operator left
-      `responses_visible_when_closed=true`).
+      read-only form."
     - "Your previously saved values are hidden by the operator's
-      visibility setting." (operator set
-      `responses_visible_when_closed=false`).
+      visibility setting."
 
-  This closed-state machinery deliberately stays on the surface
-  template (rather than redirecting to a separate "closed" page)
-  so the `responses_visible_when_closed` toggle keeps working —
-  a separate template would have to re-render the response data
-  to honour the toggle.
+- **What a reviewer reads back once responses close.** The
+  instrument's `peer_reviewer` visibility policy decides
+  (`spec/visibility_policy.md` §2.2), through
+  `visibility_policies.reviewer_sees_own_responses`:
+
+  | Session | Own saved values |
+  |---|---|
+  | `ready` (incl. past the deadline) | Shown. That is the `while_ongoing` window, whose reviewer cell is Raw by rule. |
+  | `expired`, release window open | Shown when the "Responses released" cell is Raw. Hidden when it is Summarized (the surface has no summary view) or off. |
+  | `expired`, release window not open | Hidden. |
+  | `archived` | Hidden. Archiving ends all visibility. |
+
+  The same rule decides the summary page and its CSV, per
+  instrument: a hidden instrument is left out, and a banner says some
+  or all responses are not shown; with none shown, the CSV link goes.
+  `responses_visible_when_closed` no longer decides anything; it
+  round-trips for config only.
 
 ### Lazy deadline-close
 

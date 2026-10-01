@@ -35,6 +35,7 @@ from app.services import instruments as instruments_service
 from app.web.views._instruments import instrument_heading, numeric_column_ch_width
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
+from app.services import visibility_policies
 
 
 # Cap on the member-name list rendered in a group-scoped row's
@@ -177,6 +178,9 @@ class ReviewerSummaryContext:
     session: ReviewSession
     sections: list[SummarySection]
     last_submitted_at: datetime | None
+    # How many answered instruments the visibility policy hides right
+    # now (G10). The page says so rather than silently showing less.
+    hidden_count: int = 0
 
 
 def build_reviewer_summary_context(
@@ -405,10 +409,22 @@ def build_reviewer_summary_context(
         if last_submitted_at is None or response.submitted_at > last_submitted_at:
             last_submitted_at = response.submitted_at
 
+    # G10: only the instruments the reviewer's peer_reviewer policy lets
+    # them read now, and none once the session is archived — the same
+    # rule as the review surface and the summary CSV.
+    peer_policies = visibility_policies.peer_reviewer_policies(
+        db, row_order.keys()
+    )
     sections: list[SummarySection] = []
+    hidden_count = 0
     total_instrument_count = len(instruments)
     for position, instrument in enumerate(instruments, start=1):
         if instrument.id not in row_order:
+            continue
+        if not visibility_policies.reviewer_sees_own_responses(
+            review_session, peer_policies.get(instrument.id)
+        ):
+            hidden_count += 1
             continue
         is_group = instrument.group_kind is not None
         # Canonical heading title (audit V1): call the same
@@ -577,6 +593,7 @@ def build_reviewer_summary_context(
         session=review_session,
         sections=sections,
         last_submitted_at=last_submitted_at,
+        hidden_count=hidden_count,
     )
 
 

@@ -204,9 +204,9 @@ The "Close session" path. Called by `POST
 session** button on the Workflow card. Flips `ready → expired`
 and sets `accepting_responses=false` on every instrument in the
 same transaction. **Existing `Response` rows are preserved
-untouched** (drafts + submitted), so reviewers with
-`responses_visible_when_closed=True` instruments can still read
-what they submitted after the close.
+untouched** (drafts + submitted); whether a reviewer can still read
+theirs after the close is the visibility policy's call
+(`spec/reviewer-surface.md` "Lifecycle gating").
 
 Pre-conditions:
 
@@ -297,7 +297,7 @@ open or every instrument is closed.
 | Column | Type | Meaning |
 |---|---|---|
 | `accepting_responses` | `Boolean` | Reviewers can save / submit. **Session-wide in practice:** set on every instrument by activate, cleared on every instrument by revert, Close session and deadline-close. No operator control sets it per instrument. |
-| `responses_visible_when_closed` | `Boolean` | Whether reviewers can still see their own past responses after `accepting_responses=False`. Operator default; doesn't affect the validation snapshot. |
+| `responses_visible_when_closed` | `Boolean` | **Decides nothing.** Kept for config round-trip only; what a reviewer reads back after close is the visibility policy's call (`spec/reviewer-surface.md` "Lifecycle gating"). doesn't affect the validation snapshot. |
 | `deadline_closed_at` | `DateTime \| None` | Timestamp the deadline-close fired. Used to render the "auto-closed at X" pill. |
 
 **Services:**
@@ -353,9 +353,9 @@ upstream of this check:
 - If the session is `ready` but the predicate returns `False`
   (the deadline passed),
   the existing surface template renders read-only with the "no
-  longer accepting responses" banner; the
-  `responses_visible_when_closed` toggle decides whether the
-  saved values render below.
+  longer accepting responses" banner; the saved values render below,
+  since a `ready` session is in the reviewer's `while_ongoing` window
+  (`spec/reviewer-surface.md` "Lifecycle gating").
 
 See `spec/reviewer-surface.md` §"Lifecycle gating" for the full
 GET-side rendering rules.

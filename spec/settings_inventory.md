@@ -255,7 +255,7 @@ a per-instrument Danger sub-card.
 | `description` | `String(2000)` | Operator-visible explanation. |
 | `order` | `Integer` | Position within the session. |
 | `accepting_responses` | `Boolean` | Whether reviewers can write. Set on every instrument by Activate and cleared on every instrument by the deadline, Close session or Revert; no per-instrument control. |
-| `responses_visible_when_closed` | `Boolean` | Whether reviewers can see their own past responses after the instrument closes. |
+| `responses_visible_when_closed` | `Boolean` | Decides nothing; kept for config round-trip. The visibility policy decides what a reviewer reads back after close (`spec/reviewer-surface.md`). |
 | `deadline_closed_at` | `DateTime` | Auto-closed timestamp; populated when the deadline passes. |
 | `sort_display_fields` | `JSON` | Operator-defined default sort spec for this instrument's reviewer-surface table. Canonical shape: `[{"display_field_id": int, "dir": "asc|desc"}, ...]`, max 3 entries. NULL or `[]` = "no operator default" (insertion order). Edited via the Sort column on the per-instrument Display Fields card; reviewer-side override + cookie persistence on top, see `spec/sort_by_reviewee.md`. |
 | `group_kind` | `String(32)` | Group-scoping flavour — one shared answer covers a whole group of reviewees instead of per-reviewee. NULL = "regular per-reviewee instrument". |

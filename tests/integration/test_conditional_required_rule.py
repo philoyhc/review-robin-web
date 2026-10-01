@@ -372,6 +372,7 @@ def test_the_summary_and_results_headers_mark_a_require_mode_field(
 
     from .test_reviewee_results_body import (
         _enable_reviewee_after_release_raw,
+        _enable_reviewer_after_release_raw,
         _operator_user,
         _seed_and_activate,
         _seed_submitted_responses,
@@ -382,6 +383,8 @@ def test_the_summary_and_results_headers_mark_a_require_mode_field(
     _enable_reviewee_after_release_raw(
         db, review_session, operator=_operator_user(db), open_window=True
     )
+    # The reviewer's own summary needs its own release grant (G10).
+    _enable_reviewer_after_release_raw(db, review_session, operator=_operator_user(db))
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()

@@ -1,18 +1,22 @@
-"""Reviewer surface visibility when the session is closed via the
-Workflow card's Close session button.
+"""What a reviewer can read back once their session closes.
 
-The per-instrument ``responses_visible_when_closed`` toggle is
-supposed to keep the reviewer's saved values visible on the
-surface after the instrument closes. PR #1480 wired Close
-session (``ready → expired``) and relaxed the surface's master
-gate to render in ``expired`` too. This file pins the end-to-end
-visibility contract: a reviewer who submits responses, then has
-the session closed under them, should still read their own
-submissions on the surface — but only on instruments whose
-``responses_visible_when_closed`` flag is True.
+The instrument's ``peer_reviewer`` visibility policy decides (author's
+ruling, 2026-10-01, on ``guide/findings_2026-10-01_corpus.md`` G10;
+``visibility_policies.reviewer_sees_own_responses``):
+
+- ``expired`` and the release window open: the reviewer's own values
+  show when the policy's "Responses released" cell is Raw, and not when
+  it is Summarized or off;
+- ``expired`` outside the window: nothing;
+- archived: nothing, on the summary page or its CSV either.
+
+``responses_visible_when_closed`` no longer decides anything; it
+round-trips for config only, and setting it changes nothing here.
 """
 
 from __future__ import annotations
+
+import datetime as dt
 
 import pytest
 from fastapi.testclient import TestClient
@@ -24,9 +28,11 @@ from app.db.models import (
     Assignment,
     Instrument,
     ReviewSession,
+    User,
 )
 from app.main import app
 from app.services import session_lifecycle as lifecycle
+from app.services import visibility_policies
 from app.web.deps import get_current_user
 
 from ._full_matrix import (
@@ -143,57 +149,49 @@ def _submit_rating(
     assert submit_resp.status_code == 303, submit_resp.text[:500]
 
 
-def test_close_session_with_show_when_closed_preserves_reviewer_visibility(
+def _close_after_rae_submits(
     client: TestClient,
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client,
-) -> None:
-    """With ``responses_visible_when_closed=True`` set BEFORE the
-    operator clicks Close session, the reviewer's submitted values
-    must still be visible on the surface after the session goes
-    ``expired``.
-
-    This is the user-reported regression scenario: 'Show when
-    closed' on the Instruments page wasn't keeping responses
-    visible to the reviewer after a closed session.
-    """
+    *,
+    code: str,
+    released_mode: str | None,
+    open_release: bool,
+) -> tuple[ReviewSession, TestClient]:
+    """Rae submits 5 / "great review"; the operator authors the
+    peer_reviewer "Responses released" cell, closes the session, and
+    optionally opens the release window. Returns Rae's client, with her
+    identity installed."""
     review_session = _seed_session_with_rae_and_one_reviewee(
-        client, db, code="vis-closed", reviewer_email=rae.email
+        client, db, code=code, reviewer_email=rae.email
     )
     _activate(client, review_session)
-    db.refresh(review_session)
-    assert lifecycle.is_ready(review_session)
-
-    # Flip Show-when-closed ON for the (single) instrument before
-    # the reviewer submits — mirrors the operator's pre-close
-    # workflow.
-    instrument = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == review_session.id
-        )
-    ).scalar_one()
-    flip_resp = client.post(
-        f"/operator/sessions/{review_session.id}"
-        f"/instruments/{instrument.id}/visibility",
-        data={"visible_when_closed": "true"},
-        follow_redirects=False,
-    )
-    assert flip_resp.status_code == 303
-    db.refresh(instrument)
-    assert instrument.responses_visible_when_closed is True
-
-    # Reviewer types + submits.
     rae_client = make_client(rae)
     _submit_rating(
         rae_client, review_session, rating_value="5",
         comments_value="great review", db=db,
     )
-
-    # Operator closes the session. Re-install Alice's override
-    # so the workflow route resolves to the operator, not Rae.
     _restore_operator_identity(alice)
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    operator = db.execute(
+        select(User).where(User.email == alice.email)
+    ).scalar_one()
+    visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        audience="peer_reviewer",
+        while_ongoing_mode="raw",
+        after_release_mode=released_mode,
+        user=operator,
+    )
+    # The retired toggle, set on: it must no longer decide anything.
+    instrument.responses_visible_when_closed = True
+    db.commit()
     close_resp = client.post(
         f"/operator/sessions/{review_session.id}/workflow/close",
         follow_redirects=False,
@@ -201,111 +199,92 @@ def test_close_session_with_show_when_closed_preserves_reviewer_visibility(
     assert close_resp.status_code == 303
     db.refresh(review_session)
     assert lifecycle.is_expired(review_session)
-    db.refresh(instrument)
-    assert instrument.accepting_responses is False
-    # ``responses_visible_when_closed`` survives the close flip.
-    assert instrument.responses_visible_when_closed is True
-
-    # Reviewer reloads the surface. The values must appear in the
-    # disabled inputs — this is the user-facing contract that the
-    # bug report says is broken. Reinstall Rae's override first
-    # since the workflow_close just swapped back to Alice.
+    if open_release:
+        review_session.responses_release_at = dt.datetime.now(
+            dt.timezone.utc
+        ) - dt.timedelta(hours=1)
+        db.commit()
     app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
-    ).text
-    # The numeric input renders ``value="5"`` and the comments
-    # textarea inlines the text as its text content.
-    assert 'value="5"' in body, (
-        "rating value missing — responses_visible_when_closed=True "
-        "should have preserved it on the closed-session surface"
+    return review_session, rae_client
+
+
+def test_released_raw_shows_the_reviewers_own_values(
+    client: TestClient, db: Session, alice, rae, make_client
+) -> None:
+    review_session, rae_client = _close_after_rae_submits(
+        client, db, alice, rae, make_client,
+        code="vis-raw", released_mode="raw", open_release=True,
     )
-    assert "great review" in body, (
-        "comments value missing — responses_visible_when_closed=True "
-        "should have preserved it on the closed-session surface"
-    )
-    # Sanity: the surface IS rendering the closed form (disabled
-    # inputs), not redirecting / showing pre_open.html.
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
+    assert 'value="5"' in body
+    assert "great review" in body
+    assert "remain visible below" in body
+    # Still the closed, read-only form, not pre_open.html.
     assert "Review opens later" not in body
     assert "disabled" in body
+    summary = rae_client.get(f"/me/sessions/{review_session.id}/summary")
+    assert "great review" in summary.text
+    csv_body = rae_client.get(
+        f"/me/sessions/{review_session.id}/summary.csv"
+    ).text
+    assert "great review" in csv_body
 
 
-def test_show_when_closed_flipped_after_close_takes_effect(
+@pytest.mark.parametrize(
+    ("released_mode", "open_release"),
+    [("raw", False), ("summarized", True), (None, True)],
+    ids=["window-not-open", "released-summarized", "released-off"],
+)
+def test_otherwise_a_closed_session_hides_them(
     client: TestClient,
     db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
+    alice,
+    rae,
     make_client,
+    released_mode: str | None,
+    open_release: bool,
 ) -> None:
-    """The operator's likely real-world flow: forgot to set Show-
-    when-closed before closing, flips it on after. The toggle
-    must still take effect — the visibility route is
-    deliberately not gated by ``_require_instrument_editable``,
-    so it accepts the flip on an ``expired`` session.
-
-    This test pins that contract end-to-end: post-close toggle
-    flips, reviewer reloads the surface, sees their values.
-    """
-    review_session = _seed_session_with_rae_and_one_reviewee(
-        client, db, code="vis-after", reviewer_email=rae.email
+    """Outside the release window, or with Summarized (the surface has
+    no summary view) or off, the reviewer's values are hidden — even
+    with the retired toggle set."""
+    review_session, rae_client = _close_after_rae_submits(
+        client, db, alice, rae, make_client,
+        code=f"vis-hide-{released_mode}-{open_release}",
+        released_mode=released_mode,
+        open_release=open_release,
     )
-    _activate(client, review_session)
-    instrument = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == review_session.id
-        )
-    ).scalar_one()
-
-    # Reviewer types + submits while the session is open.
-    rae_client = make_client(rae)
-    _submit_rating(
-        rae_client, review_session, rating_value="5",
-        comments_value="great review", db=db,
-    )
-
-    # Operator closes the session without flipping Show-when-closed.
-    _restore_operator_identity(alice)
-    client.post(
-        f"/operator/sessions/{review_session.id}/workflow/close",
-        follow_redirects=False,
-    )
-    db.refresh(review_session)
-    assert lifecycle.is_expired(review_session)
-    db.refresh(instrument)
-    assert instrument.responses_visible_when_closed is False
-
-    # Reviewer reloads — values should NOT appear yet.
-    app.dependency_overrides[get_current_user] = lambda: rae
-    body_before = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
+    assert 'value="5"' not in body
+    assert "great review" not in body
+    assert "hidden by the operator" in body
+    assert "disabled" in body
+    summary = rae_client.get(f"/me/sessions/{review_session.id}/summary").text
+    assert "great review" not in summary
+    assert "Your responses are not shown" in summary
+    assert "summary.csv" not in summary
+    csv_body = rae_client.get(
+        f"/me/sessions/{review_session.id}/summary.csv"
     ).text
-    assert 'value="5"' not in body_before
+    assert "great review" not in csv_body
 
-    # Operator flips Show-when-closed AFTER the session is
-    # already ``expired``. The route deliberately has no
-    # ``_require_instrument_editable`` gate.
-    _restore_operator_identity(alice)
-    flip_resp = client.post(
-        f"/operator/sessions/{review_session.id}"
-        f"/instruments/{instrument.id}/visibility",
-        data={"visible_when_closed": "true"},
-        follow_redirects=False,
+
+def test_archiving_ends_all_visibility(
+    client: TestClient, db: Session, alice, rae, make_client
+) -> None:
+    """Archived: nothing, whatever the policy says — not on the summary,
+    not in its CSV (the surface already shows the not-open page)."""
+    review_session, rae_client = _close_after_rae_submits(
+        client, db, alice, rae, make_client,
+        code="vis-archived", released_mode="raw", open_release=True,
     )
-    assert flip_resp.status_code == 303
-    db.refresh(instrument)
-    assert instrument.responses_visible_when_closed is True
-
-    # Reviewer reloads again — values must NOW appear.
-    app.dependency_overrides[get_current_user] = lambda: rae
-    body_after = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+    review_session.status = "archived"
+    db.commit()
+    summary = rae_client.get(f"/me/sessions/{review_session.id}/summary").text
+    assert "great review" not in summary
+    csv_body = rae_client.get(
+        f"/me/sessions/{review_session.id}/summary.csv"
     ).text
-    assert 'value="5"' in body_after, (
-        "post-close flip of responses_visible_when_closed should "
-        "make the reviewer's saved values visible on the next "
-        "surface fetch"
-    )
-    assert "great review" in body_after
+    assert "great review" not in csv_body
 
 
 def test_dashboard_shows_closed_status_and_keeps_link_after_close(
@@ -318,26 +297,13 @@ def test_dashboard_shows_closed_status_and_keeps_link_after_close(
     """After the operator closes a session, the reviewer dashboard
     must report it as ``closed`` (not ``not opened``) and keep
     the session-name link enabled — otherwise the reviewer
-    can't reach their own submissions even when
-    ``responses_visible_when_closed=True``. This was the user-
-    visible symptom of the original bug report: the toggle was
-    fine, but the dashboard hid the route in.
+    can't reach their own submissions even where the visibility
+    policy shows them.
     """
     review_session = _seed_session_with_rae_and_one_reviewee(
         client, db, code="dash-closed", reviewer_email=rae.email
     )
     _activate(client, review_session)
-    instrument = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == review_session.id
-        )
-    ).scalar_one()
-    client.post(
-        f"/operator/sessions/{review_session.id}"
-        f"/instruments/{instrument.id}/visibility",
-        data={"visible_when_closed": "true"},
-        follow_redirects=False,
-    )
     rae_client = make_client(rae)
     _submit_rating(
         rae_client, review_session, rating_value="5",
@@ -385,50 +351,3 @@ def test_dashboard_shows_closed_status_and_keeps_link_after_close(
         f'href="/me/sessions/{review_session.id}/summary"' in body
         or f'href="/me/sessions/{review_session.id}/1"' in body
     ), "dashboard must keep an active link into the closed session"
-
-
-def test_close_session_without_show_when_closed_hides_reviewer_values(
-    client: TestClient,
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client,
-) -> None:
-    """The flag-False default is the opposite contract: reviewer
-    sees disabled inputs with **blank** values on the closed-
-    session surface."""
-    review_session = _seed_session_with_rae_and_one_reviewee(
-        client, db, code="vis-closed-off", reviewer_email=rae.email
-    )
-    _activate(client, review_session)
-    instrument = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == review_session.id
-        )
-    ).scalar_one()
-    # responses_visible_when_closed defaults to False — don't flip it.
-    assert instrument.responses_visible_when_closed is False
-
-    rae_client = make_client(rae)
-    _submit_rating(
-        rae_client, review_session, rating_value="5",
-        comments_value="great review", db=db,
-    )
-
-    _restore_operator_identity(alice)
-    client.post(
-        f"/operator/sessions/{review_session.id}/workflow/close",
-        follow_redirects=False,
-    )
-
-    app.dependency_overrides[get_current_user] = lambda: rae
-    body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
-    ).text
-    # Values must NOT appear — show_values=False on the cell builds
-    # ``value=""`` and the comments textarea body is empty.
-    assert 'value="5"' not in body
-    assert "great review" not in body
-    # Still the closed-form variant, not pre_open.html.
-    assert "Review opens later" not in body
-    assert "disabled" in body

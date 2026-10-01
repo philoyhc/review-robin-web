@@ -21,11 +21,28 @@
     </p>
   {% endif %}
 
+  {% if summary.hidden_count %}
+    {# G10: the instrument's visibility policy decides what a reviewer
+       may read back once responses close, and nothing is readable once
+       the session is archived. #}
+    <div class="banner banner-warning">
+      {% if summary.sections %}
+        Some of your responses are not shown: the operator's visibility
+        setting doesn't allow you to see them at this point.
+      {% else %}
+        Your responses are not shown: the operator's visibility setting
+        doesn't allow you to see them at this point.
+      {% endif %}
+    </div>
+  {% endif %}
+
   <div class="btn-pair" style="margin: var(--space-3) 0;">
+    {% if summary.sections %}
     <a class="btn"
        href="/me/sessions/{{ session.id }}/summary.csv">
       Download my responses (CSV)
     </a>
+    {% endif %}
     {# "Recall my submission" — only while the session is still
        ``ready``. Posts to /recall, which nulls submitted_at on
        every Response row for this reviewer and 303s to /1 so
