@@ -33,7 +33,10 @@ Without JavaScript row says the same for Create. A comment in
 **Do.** Render the button enabled and let the script disable it, so the
 page degrades rather than locks. The server already refuses a missing Name
 or Code. Add a no-JS Create test to `tests/browser/test_tags_and_create.py`
-that stages nothing, submits, and lands on Session Home.
+that types one workspace operator's address into the owner picker without
+adding it, submits, and checks both that it lands on Session Home and that
+the Owners card lists that address beside the creator, as item 5's Off row
+requires.
 
 **Done when.** The no-JS test passes. Item 5's Off row is checked by that
 test. `spec/session_owners.md` and the template comment describe what ships.
@@ -66,8 +69,11 @@ reaches it only past those checks:
 **Do.**
 1. Confirm in the builder that an Integer field's Step can be left blank.
 2. Add a reviewer test to `tests/browser/test_reviewer_branching.py`: an
-   Integer parent with no Step, 2.5 in the parent and text in its governed
-   field, Save. Both come back with their text, and the governed one reads
+   Integer parent with no Step, and a branch whose condition 2.5 meets, so
+   the governed input stays enabled and posts. The shared
+   `_builder.branch_rating` opens at ≥ 4, which 2.5 would close, so pass
+   `value="2"`. Type 2.5 in the parent and text in its governed field, then
+   Save. Both come back with their text, and the governed one reads
    "Kept until … is fixed.".
 3. Reword the checklist row to that sequence, on the reviewer surface
    rather than the preview.
