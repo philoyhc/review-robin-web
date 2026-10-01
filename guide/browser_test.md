@@ -180,6 +180,13 @@ email pinned against a `.env`, the lobby Enter test now waits a second for
 a POST and checks the session survives, `activate()` asserts the success
 redirect, the no-JS test removes another owner too, Create stages two and
 keeps one, shared steps moved to `_builder.py` / `conftest.py`.
+**A harness defect CI found on #2710:** the session-scoped browser kept
+sync Playwright's event loop running in each worker's thread, so a later
+test on that worker calling `asyncio.run()`
+(`test_session_new_tags_card.py`) failed, depending on xdist's split. The
+browser is now module-scoped, with a session-scoped launch check owning
+skip-or-fail; reproduced serially before the fix, passing after. Browser
+runs take about 25 s, from 21 s.
 
 ## PR ladder
 
