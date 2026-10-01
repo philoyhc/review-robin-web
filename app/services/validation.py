@@ -614,7 +614,9 @@ def _check_assignments_reviewer_missing(
                 f"Reviewer {reviewer.name!r} ({reviewer.email}) is "
                 "missing assignments"
             ),
-            fix_anchor=f"#reviewer-row-{reviewer.id}",
+            # No anchor: the fix is Generate on the Assignments page,
+            # which has no per-reviewer row to land on. The
+            # ``reviewer-row-`` ids live on the Reviewers page only.
         )
 
 

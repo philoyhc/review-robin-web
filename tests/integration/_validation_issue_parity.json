@@ -228,7 +228,7 @@
   "single_instrument_generated": [
     {
       "field": "reviewer_id:2",
-      "fix_anchor": "#reviewer-row-2",
+      "fix_anchor": null,
       "message": "Reviewer 'Cal' (cal@example.edu) is missing assignments",
       "rule_key": "assignments.reviewer_missing",
       "severity": "warning",

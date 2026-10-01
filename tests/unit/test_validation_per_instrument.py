@@ -181,7 +181,11 @@ def test_single_instrument_flags_reviewer_with_no_assignments(
     assert len(single) == 1
     assert single[0].severity is Severity.warning
     assert "Bob" in single[0].message
-    assert single[0].fix_anchor == f"#reviewer-row-{reviewers[1].id}"
+    # The Fix link lands on Assignments, where Generate is. It used to
+    # carry ``#reviewer-row-{id}``, an anchor only the Reviewers page
+    # renders, so the deep link went nowhere (post_assessment_1oct E6).
+    assert single[0].fix_anchor is None
+    assert single[0].fix_url == f"/operator/sessions/{review_session.id}/assignments"
     # Per-instrument sibling stays quiet on N==1 sessions.
     assert (
         _issues_with_key(
