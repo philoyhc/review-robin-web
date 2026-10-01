@@ -433,9 +433,11 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # (``context.error_message``); see ``_workflow.py``.
     "session.workflow_run_started": EventSchema(_IDENTITY | {"context"}),
     "session.workflow_run_failed": EventSchema(_IDENTITY | {"context"}),
-    # Emitterless — per-instrument Open / Close was removed (2026-10-01;
-    # accepting is session-wide). Kept so past rows stay addressable.
-    "instrument.opened": EventSchema(_IDENTITY | {"refs"}),
+    # Per-instrument Open was removed (2026-10-01; accepting is
+    # session-wide). Now emitted only by the deadline observer's heal,
+    # ``reason="session_wide"``, when a live session still carries an
+    # instrument the retired Close left shut.
+    "instrument.opened": EventSchema(_IDENTITY | {"refs", "reason"}),
     "instrument.closed": EventSchema(_IDENTITY | {"refs", "reason", "context"}),
     # PR 2 — instruments
     "response_type.added": EventSchema(_IDENTITY | {"snapshot"}),

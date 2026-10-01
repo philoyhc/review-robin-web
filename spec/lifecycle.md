@@ -309,8 +309,17 @@ open or every instrument is closed.
   `expire_session` and `observe_deadline` close them all. So once
   a session is activated, an instrument is never closed while another
   in it accepts (a settings import can set the flag per instrument,
-  but only on an editable session, and activation then opens all), and the reviewer write gate (`spec/reviewer-surface.md`
+  but only on an editable session, and activation then opens all),
+  and the reviewer write gate (`spec/reviewer-surface.md`
   "Lifecycle gating") is session-wide with it.
+- **The heal.** A session that was already `ready` when the
+  per-instrument Close was retired may still carry an instrument it
+  closed, which nothing in the UI can reopen and which would make the
+  gate refuse every write. `observe_deadline`, which runs on every
+  reviewer request and on the Instruments page, reopens it while the
+  session is `ready` and before its deadline, emitting
+  `instrument.opened reason="session_wide"`. Past the deadline it
+  closes instead, as before.
 - `set_responses_visible_when_closed(...)` — operator flips the
   display flag. No lifecycle gating beyond `_require_editable` /
   `_require_status_ready` on its route; **does not invalidate**
@@ -547,7 +556,7 @@ are read-mostly so they work in any state.
 | `session.responses_release_stopped` | `stop_responses_release` (Workflow-card **Stop releasing**) | `snapshot={"responses_release_until": …}` |
 | `session.workflow_run_started` | `POST /workflow/prepare` and `POST /workflow/activate` — bracket the run, once per click | `context={"button": "prepare_session" \| "activate_session"}` |
 | `session.workflow_run_failed` | same two routes when the chain raises | `context={"button": …, "step": "generate" \| "validate" \| "invite" \| "activate", "error_message": …}`. **Not `precondition`** — every precondition return in `_workflow.py` happens *before* the `workflow_run_started` write and redirects with `super_step="precondition"` instead, so no audit row ever carries it. `precondition` is a `super_step` value (the redirect query param the card reads), not a `context.step` one. |
-| `instrument.opened` | *(none — no per-instrument open; registered so past rows stay readable)* | `refs={"instrument_id": id}` |
+| `instrument.opened` | `observe_deadline`'s heal (§4) | `refs={"instrument_id": id}` + `reason="session_wide"`. Older rows, from the retired per-instrument Open, carry no reason. |
 | `instrument.closed` | `observe_deadline` | `refs={"instrument_id": id}` + `reason="deadline"` + `context={"deadline": "..."}`. Past rows may carry `reason="manual"` from the retired per-instrument close. |
 
 See `spec/architecture.md` "Audit-event detail schema" for the

@@ -350,6 +350,64 @@ def test_no_per_instrument_open_or_close(
     assert instrument.accepting_responses is True
 
 
+def test_a_live_session_left_split_by_the_retired_close_heals(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The upgrade state: an Activated session, before its deadline, whose
+    operator closed one instrument with the retired per-instrument Close.
+    Nothing can reopen it from the UI now, and the session-wide gate
+    would refuse every reviewer write, so the deadline observer reopens
+    it on the reviewer's next request and records why."""
+    operator = make_client(alice)
+    session = _build_ready_session(operator, db, code="split-heal")
+    session.deadline = datetime.now(timezone.utc) + timedelta(days=1)
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalar_one()
+    instrument.accepting_responses = False  # what the retired Close left
+    db.commit()
+
+    rae = AuthenticatedUser(
+        principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
+    )
+    response = make_client(rae).post(
+        f"/me/sessions/{session.id}/1/save",
+        data={},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    db.refresh(instrument)
+    assert instrument.accepting_responses is True
+    healed = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "instrument.opened",
+            AuditEvent.session_id == session.id,
+        )
+    ).scalars().all()
+    assert len(healed) == 1
+    assert healed[0].detail["reason"] == "session_wide"
+
+
+def test_the_heal_leaves_a_session_past_its_deadline_closed(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    operator = make_client(alice)
+    session = _build_ready_session(operator, db, code="split-past")
+    session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db.commit()
+    lifecycle.observe_deadline(db, session)
+    lifecycle.observe_deadline(db, session)  # a second pass reopens nothing
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalar_one()
+    assert instrument.accepting_responses is False
+
+
 def test_reviewer_save_403_when_deadline_passed(
     db: Session,
     alice: AuthenticatedUser,
