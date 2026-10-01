@@ -3,7 +3,13 @@
 **As of** the close of Segment 19T, advanced instruments: seventeen items and
 12A, closed and archived 2026-09-30. No segment plan is open in `guide/`; the
 two queued segments, 14B and 20, both wait on the institutional Azure
-deployment.
+deployment, which `docs/nus_azure_status_v7.md` (2026-10-01) shows mostly
+provisioned and held on two external decisions.
+
+**Updated 2026-10-01** to reflect the NUS Azure status v7, the Codex read's
+update for it, and the fix of the two doc drifts §3 found — tables, window and
+SHA re-taken together at `c0bf5bf5`. Only `docs` moved; every code area is
+identical to the first writing at `df4ecae3`.
 
 **Since the prior snapshot** (`guide/archive/codebase_assessment_22sep.md`,
 `ed8a69e7`), four arcs shipped:
@@ -22,10 +28,12 @@ deployment.
   a register of seven small fixes, and the instrument intro laid out as two
   columns.
 
-**Numbers taken at `df4ecae3` on `main`, 2026-09-30.** Window
-`ed8a69e7..df4ecae3`: **158 merge commits, 397 non-merge commits, PRs
-#2542–#2699** (157 numbered) across 2026-09-22 → 2026-09-30, nine calendar
-days. `df4ecae3` is `17675383` — the 19T close — plus one Codex document.
+**Numbers taken at `c0bf5bf5`, 2026-10-01** — `main` at `0b970eeb` plus this
+amendment's drift-fix commit. Window `ed8a69e7..c0bf5bf5`: **161 merge commits,
+403 non-merge commits, PRs #2542–#2702** (160 numbered) across 2026-09-22 →
+2026-10-01, ten calendar days. Everything after `17675383`, the 19T close, is
+documentation: the Codex read and its update, the Azure status, this snapshot,
+and the drift fixes.
 
 **This document stands alone** and archives
 `guide/archive/codebase_assessment_22sep.md` alongside it. Authority lives
@@ -36,13 +44,13 @@ here.
 
 **An independent cold read exists and should be read first:**
 `guide/codex_assessment_30sep.md`, taken at `17675383` against its own 21
-September predecessor. I built this window, so under `constitution.md` III I am
+September predecessor and updated 2026-10-01 for the Azure status. I built this window, so under `constitution.md` III I am
 the maker, not a checker. Its size figures reproduce exactly at the same tree;
 two of its figures differ from mine by definition, and one it could not take I
 could — all three are in §2.
 
 **Development context:** single author, AI agents building, no laptop dev loop,
-pre-deployment with an institutional pilot pending. 158 merges in nine days is
+pre-deployment with an institutional pilot pending. 161 merges in ten days is
 not a team velocity figure.
 
 ## 1. What's in the box
@@ -107,7 +115,7 @@ Physical lines, git-tracked files only, classified by `guide/assessment.json`.
 
 | Area | Files | LOC | Δ LOC from prior |
 | --- | --- | --- | --- |
-| `docs` | 269 (262 prior) | **155,475** | +9,563 (+6.6%) † |
+| `docs` | 271 (262 prior) | **156,069** | +10,157 (+7.0%) † |
 | `tests` | 402 (363 prior) | **141,957** | +12,226 (+9.4%) |
 | `production` | 207 (205 prior) | **66,446** | +2,905 (+4.6%) |
 | `templates` | 62 (60 prior) | **31,561** | +2,400 (+8.2%) |
@@ -120,9 +128,10 @@ the assessments' own `codebase_assessment_*.json` sidecars — measurement outpu
 not documentation — as **28,816 lines, 16% of the area**. The area now excludes
 them. The 22 September baseline is rebased from its own per-file map (262 files,
 145,912 LOC rather than 269 / 170,435), so the delta above compares like with
-like. On the old counter `docs` reads 184,291, which is the figure the Codex read
-quotes (183,995 at `17675383`, before its own document); its "2.77× production"
-ratio is **2.34×** without the sidecars.
+like. At `df4ecae3` the old counter read 184,291 against the new one's 155,475 —
+the Codex read's 183,995 at `17675383` is the old counter before its own
+document — and its "2.77× production" ratio is **2.34×** without the sidecars
+(2.35× at `c0bf5bf5`).
 
 **Test-to-production is 2.14**, from 2.04. Tests grew 9.4% against production's
 4.6%. My read: branching explains most of it — one feature crossing persistence,
@@ -131,7 +140,7 @@ CSV, each pinned separately — and the Codex read's caution is right that the
 next tests should be justified by the failure they detect, not the states the
 builder can reach.
 
-**Tests: 5,109 passed, 16 skipped, 0 xfails** (was 4,636 / 16 / 0), `ruff check .`
+**Tests: 5,109 passed, 16 skipped, 0 xfails** (was 4,636 / 16 / 0; re-run at `c0bf5bf5`), `ruff check .`
 clean, `node` present so `tests/integration/test_inline_scripts_parse.py` ran. The
 16 skips are the same 16 as on 22 September — fifteen Wave 5 PR 5.3 scope
 retirements and the opt-in CSS parity dump. Both CI tracks, SQLite and
@@ -175,7 +184,8 @@ layer took branching's rules; the template took its authoring.
 **Package shape:** `app/services` 98 modules (was 96), `app/web` 69 (of which
 `app/web/views` 23 and `app/web/routes_operator` 22), `app/db/models` 21.
 
-**Duplication and churn** (`python3 tools/code_metrics.py`, the standing items
+**Duplication and churn** (`python3 tools/code_metrics.py` at `df4ecae3` — the code, and so both
+figures, unchanged at `c0bf5bf5` — the standing items
 `guide/README.md` requires):
 
 | | ≥10-line blocks | prior |
@@ -201,15 +211,15 @@ The duplication that exists is where it was: the roster route modules at **47% /
 ## 3. Functional-spec compliance
 
 Every row checked against code — a route registered, a service function
-present and called, a test covering it — at `df4ecae3`, not against the spec's
-description of itself. **Bold rows changed this window.**
+present and called, a test covering it — at `df4ecae3` (the code is unchanged at
+`c0bf5bf5`), not against the spec's description of itself. **Bold rows changed this window.**
 
 | Area | Spec | Status |
 | --- | --- | --- |
 | Lifecycle (five states) | `spec/lifecycle.md` | ✓ shipped — `activate_session`, `revert_session_to_draft`, `expire_session` in `session_lifecycle.py`; unchanged |
 | **Assignments engine** | `spec/assignments.md` | ✓ shipped — `replace_assignments` inserts in bulk since 19S.3 (`db.execute(insert(Assignment), …)`, 2026-09-22) |
 | Validate page | `spec/validate_page.md` | ✓ shipped — 22 rules in `REGISTERED_RULES` (22 on 22 September); unchanged |
-| **Instruments** | `spec/instruments.md` | ✓ shipped — Band 3 display- and response-field tables, visibility edited in Band 2 (19T.7–9, 2026-09-26); **⚠ drift in the overview**, below |
+| **Instruments** | `spec/instruments.md` | ✓ shipped — Band 3 display- and response-field tables, visibility edited in Band 2 (19T.7–9, 2026-09-26); the overview's drift fixed 2026-10-01, below |
 | **Response-field branching** | `spec/instruments.md`, `spec/reviewer-surface.md`, `spec/csv_contracts.md` §3.3 | ✓ shipped 2026-09-27 → 2026-09-29 — `MAX_BRANCH_DEPTH = 2` in `_branching.py`, enforced on Save and in both settings-CSV phases; a third level refused in `test_two_level_branching_authoring.py` |
 | Setup pages | `spec/setup_pages.md` | ✓ shipped — routes unchanged; the roster CSV column `PhotoLink` renamed `ProfileLink` (19T.5) |
 | **Operations pages** | `spec/operations_pages.md` | ✓ shipped — SQL rollups in `monitoring.py`, now counting a required governed field per assignment (19T.11) |
@@ -230,18 +240,19 @@ description of itself. **Bold rows changed this window.**
 | Blob storage | `spec/blob_storage.md` | ⏸ stub, not built — no storage client in `app/`; plan at `guide/segment_18Q_blob.md` |
 | Operator theming | `spec/visual_style_rrw.md` | ⏸ planned — `guide/deferred_consolidated.md` Part A |
 
-**One `⚠ drift`, small and one-sided: the spec is behind.** `spec/instruments.md`'s
-overview — the Band 3 bullet, the band shorthand table and the layout diagram —
-still describes Band 3 as the response-field table alone, while the code has had
-a display-field table in its left column since 19T Item 8 (2026-09-26). The
-detailed "Display-field table" section further down is correct; the summary
-above it was not swept when the table landed.
+**No `⚠ drift` at `c0bf5bf5`; there was one at `df4ecae3`, and it is fixed.**
+`spec/instruments.md`'s overview — the Band 3 bullet, the band shorthand table and
+the layout diagram — described Band 3 as the response-field table alone, while
+the code has had a display-field table in its left column since 19T Item 8
+(2026-09-26). The detailed "Display-field table" section further down was
+correct; the summary above it was not swept when the table landed. All three
+now name both tables (`c0bf5bf5`).
 
-**One design record behind its result.** `guide/advanced_instruments.md` still
-says Item 6's second level is "logged as 19T Item 14", and `guide/README.md`'s
-row for it says "the first five are built"; 19T Item 14 closed 2026-09-29. The
-Codex read found it; the audit confirms it. It misdescribes no behavior, only
-the record's own state.
+**One design record was behind its result, and is fixed.**
+`guide/advanced_instruments.md` called Item 6's second level "logged as 19T Item
+14", and `guide/README.md`'s row for it said "the first five are built", though
+19T Item 14 closed 2026-09-29. The Codex read found it and the audit confirmed
+it; both now say every item shipped (`c0bf5bf5`).
 
 The gates still cover the mechanical half — every anchored backticked path,
 every `§N` pointer, every cited pytest node — and still cannot tell whether a
@@ -287,8 +298,15 @@ summary paragraph describes the tables below it.
   client-side staging before one save; tests prove the posted payload and the
   parsed script, not that keyboard and pointer sequences produce them.
   `guide/post_azure_todo_checklist.md` item 6 now carries the whole 19T surface,
-  and item 5 the tags and owners work, and neither can run until the author can
-  reach the dev slot.
+  and item 5 the tags and owners work. Both can run on the personal dev slot,
+  which the author recorded on 2026-09-23 as unreachable, or on the NUS
+  deployment, whose remaining path `docs/nus_azure_status_v7.md` holds on two
+  external decisions: a runner VM SKU that Southeast Asia can actually allocate
+  (repeated `SkuNotAvailable`, awaiting Microsoft Support) and the production
+  hostname, which NUS is deciding for a family of applications. The private Web
+  App, PostgreSQL, Key Vault, Application Insights, Easy Auth v2 and the
+  gateway's reachability to the private endpoint are in place; none of that is
+  application evidence yet.
 - **Prepare is still 13 seconds with no feedback.** Halved, not solved; the
   third materialization is still in it, and whether 13 s wants another pass or a
   progress indicator is recorded as unsettled in `guide/app_responsiveness.md`.
@@ -296,17 +314,17 @@ summary paragraph describes the tables below it.
   Require, numeric and list operators, saved responses, two levels, three
   audiences. The two-level limit is the useful product boundary; nothing but
   judgment keeps the next request from moving it.
-- **The completed design record lags its own result.**
-  `guide/advanced_instruments.md` opens by saying Item 6's second level is
-  "logged as 19T Item 14" although 19T closed with it shipped — the Codex read's
-  finding, and a small instance of the pattern the prior snapshot named: the
-  records of the work go stale faster than the work.
+- **The records went stale faster than the work, again.** Both drifts §3
+  found — a spec overview and a design record, each a state behind — survived
+  item closes that ran their own checks, and both were found by a cold read
+  rather than a gate. They are fixed; the pattern the prior snapshot named is
+  not.
 - **Nothing sends email.** Unchanged, and still the gap between ready and
   shippable; Segment 14B waits on institutional Azure.
 
 ## 6. Bugs and regressions
 
-**No known open bugs at `df4ecae3`.** What I checked: 0 open issues and 0 open
+**No known open bugs at `c0bf5bf5`.** What I checked, again on 2026-10-01: 0 open issues and 0 open
 pull requests on GitHub; 0 xfails; the 16 skips read and confirmed as the same deliberate set as on
 22 September; the 19T plan's item Status blocks, whose every read finding is
 recorded as fixed; and both cold reads of this window.
@@ -332,7 +350,7 @@ Worth remembering — the first three now have a guard, the fourth is a record:
 
 ## 7. Estimated size upon completion
 
-**Current: production 66,446, templates 31,561** at `df4ecae3`.
+**Current: production 66,446, templates 31,561** at `c0bf5bf5` (unchanged since `df4ecae3`).
 
 | Remaining work | Production LOC | Templates | Depends on |
 | --- | --- | --- | --- |
@@ -364,16 +382,23 @@ instrument model substantially more expressive — branching with two modes,
 ranges and two levels, carried to every surface — without a new seam in the
 Python and with 5,109 tests green. It also made the builder's one template the
 largest UI unit in the product and left all of the window's interaction
-unverified in a browser. The one live thread is unchanged: **nothing sends
-email, and nothing has been deployed.**
+unverified in a browser. The one live thread is unchanged — **nothing sends
+email, and nothing has been deployed** — but on 2026-10-01 it is better
+described: most of the NUS foundation is provisioned, and what blocks the rest
+is a regional capacity problem and a naming decision, neither of them the
+project's to make.
 
 **Recommended next moves, at most three:**
 
-1. **Deploy to the dev slot and run checklist items 5 and 6.** First because the
-   window's value is untested where it lives — client-side staging — and
-   because every other candidate is a refinement whose worth is a guess until
-   someone uses the builder in a browser. The Codex read reaches the same
-   conclusion from a different direction.
+1. **Get the window into a browser by whichever route opens first, and hold
+   feature work until then.** If the personal dev slot is reachable, run
+   checklist items 5 and 6 there now; otherwise they wait for the NUS path,
+   and the project-side runner, gateway, secrets and migration work in
+   `docs/nus_azure_status_v7.md` is what to have ready for the day the two
+   blockers clear — without guessing the hostname or retrying the VM. First
+   because the window's value is untested where it lives, client-side staging,
+   and every other candidate is a refinement whose worth is a guess until
+   someone uses the builder. The updated Codex read reaches the same order.
 2. **Freeze instrument scope until a real instrument needs more.** Two levels,
    two modes and ranges already multiply across authoring, entry, completeness,
    summaries, results, clone and round-trip. The next rules-language feature

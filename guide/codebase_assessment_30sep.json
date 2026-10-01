@@ -3,10 +3,10 @@
   "config": "file",
   "loc_convention": "physical lines, git-tracked files only",
   "git": {
-    "head": "df4ecae3",
+    "head": "c0bf5bf5",
     "since": "ed8a69e7",
-    "merge_commits": 158,
-    "non_merge_commits": 397,
+    "merge_commits": 161,
+    "non_merge_commits": 403,
     "pr_numbers": [
       2542,
       2543,
@@ -164,16 +164,19 @@
       2696,
       2697,
       2698,
-      2699
+      2699,
+      2700,
+      2701,
+      2702
     ],
-    "pr_range": "#2542\u2013#2699",
+    "pr_range": "#2542\u2013#2702",
     "first_date": "2026-09-22",
-    "last_date": "2026-09-30"
+    "last_date": "2026-10-01"
   },
   "areas": {
     "docs": {
-      "files": 269,
-      "loc": 155475
+      "files": 271,
+      "loc": 156069
     },
     "production": {
       "files": 207,
@@ -1694,7 +1697,7 @@
       "docs"
     ],
     "docs/README.md": [
-      36,
+      37,
       "docs"
     ],
     "docs/architecture.md": [
@@ -1739,6 +1742,10 @@
     ],
     "docs/local_setup.md": [
       517,
+      "docs"
+    ],
+    "docs/nus_azure_status_v7.md": [
+      125,
       "docs"
     ],
     "docs/operations_runbook.md": [
@@ -1786,7 +1793,7 @@
       "docs"
     ],
     "guide/archive/README.md": [
-      217,
+      218,
       "docs"
     ],
     "guide/archive/assumptions_ui_legacy.md": [
@@ -1855,6 +1862,10 @@
     ],
     "guide/archive/codebase_assessment_19may.md": [
       269,
+      "docs"
+    ],
+    "guide/archive/codebase_assessment_22sep.md": [
+      447,
       "docs"
     ],
     "guide/archive/codebase_assessment_28may.md": [
@@ -2486,15 +2497,15 @@
       "docs"
     ],
     "guide/assessment.json": [
-      47,
+      51,
       "docs"
     ],
-    "guide/codebase_assessment_22sep.md": [
-      447,
+    "guide/codebase_assessment_30sep.md": [
+      421,
       "docs"
     ],
     "guide/codex_assessment_30sep.md": [
-      295,
+      334,
       "docs"
     ],
     "guide/deferred_consolidated.md": [
@@ -2610,7 +2621,7 @@
       "docs"
     ],
     "spec/instruments.md": [
-      1598,
+      1601,
       "docs"
     ],
     "spec/lifecycle.md": [
