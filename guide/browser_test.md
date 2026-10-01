@@ -156,6 +156,21 @@ killed if it won't stop, and a failed migration shows its stderr; the
 fake-auth keys are pinned against a developer's `.env`; one redundant
 click removed; the import-error divergence recorded above.
 
+Rung 5 (2026-10-01): 11 tests for item 5. `test_owners_card.py`: the
+card starts locked; Add owner and Remove save at once; the last owner
+can't go; removing yourself asks, Cancel posts nothing, confirming lands
+on the lobby; owners change in an activated session; the card relocks
+after leaving Home; without JavaScript both forms still work.
+`test_tags_and_create.py`: suggestions complete only the last tag (Create
+and Session Home), Enter in a lobby tag box posts nothing, and Create
+stages owners and saves what remains. A second operator comes from
+`OPERATOR_EMAILS` on first sign-in. Four template breakages each failed
+their test. **Found:** with JavaScript off, Create can't submit at all —
+its button renders `disabled` and only script enables it (since
+`9cfb70e1`, 2026-05-22) — so item 5's 'Create is unchanged … Off' row
+can't pass as written; raised with the author, no test. Left to the hand
+check: the datalist popup, Owners above the Danger Zone (layout).
+
 ## PR ladder
 
 1. **This plan.** Prose only.
