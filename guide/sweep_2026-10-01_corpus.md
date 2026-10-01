@@ -154,7 +154,7 @@ None. The parts read but **not verified** were:
 | In scope | 68 (40 `spec/`, 19 `docs/`, 9 root) |
 | Read | 68 |
 | Findings | 242: write 9 / update ~215 / consolidate 3 / retire 6 / move 1. Rows overlap where one finding names two specs. |
-| Code defects | 5, plus 8 stale code comments (register §2) |
+| Code defects | 6, plus 7 stale code comments (register §2) |
 | Rulings needed | about 50, in about 35 groups (register §1) |
 | Carried in / closed / still open | 3 / 0 / 3 (all declined) |
 | Untouched since the previous sweep | 12 of 68; stalest 86 d |
