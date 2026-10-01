@@ -158,6 +158,11 @@ the spec should say so.
 The spec is right and the code is wrong; each ships as its own code PR.
 All of these were confirmed by reading the code at `68f28224`.
 
+**The six defects are done in #2719** (`guide/post_assessment_1oct.md`
+E6), one commit and test each. The stale comments below stay open: each
+is fixed with the next edit to its file. The spec halves of C4 and E32
+stay in §3.
+
 - **D17** — `app/services/session_rehydrate.py` joins `apply_result.errors`,
   which are `ApplyError` dataclasses, with `"; ".join`. The `TypeError`
   replaces the operator's message, though the rollback still happens. It
