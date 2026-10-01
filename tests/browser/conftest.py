@@ -33,6 +33,7 @@ from playwright.sync_api import Browser, Error, Page, sync_playwright
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REQUIRE_BROWSER = os.environ.get("RRW_REQUIRE_BROWSER") == "1"
 SERVER_START_TIMEOUT_S = 30.0
+COLLEAGUE_EMAIL = "colleague@example.edu"
 
 
 def _unavailable(reason: str) -> None:
@@ -97,6 +98,9 @@ def live_server(
         "DATABASE_URL": database_url,
         "ALLOW_FAKE_AUTH": "true",
         "FAKE_AUTH_OPERATOR": "true",
+        # A second workspace operator, made on first sign-in through the
+        # Easy Auth headers (page_as), so owner tests have someone to add.
+        "OPERATOR_EMAILS": COLLEAGUE_EMAIL,
     }
     migrated = subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
