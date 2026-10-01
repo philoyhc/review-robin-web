@@ -3255,7 +3255,7 @@ segment-level manifest.
 **Closed on its intake channel, not on the theme running out.** The plan
 was written to admit further items as measurement turned them up, and
 both end-of-window reads asked it to stop being that —
-`guide/codebase_assessment_22sep.md` §8 ranks the close **first of
+`guide/archive/codebase_assessment_22sep.md` §8 ranks the close **first of
 three moves**. The measured-but-unscheduled candidates stay in
 `guide/app_responsiveness.md`; what the reads surfaced with no home is
 logged in `guide/archive/segment_19S_post_assessment.md` as a register.
@@ -3273,7 +3273,7 @@ run, none by re-reading.
 ### Segment 19S — Post-assessment register — ✅ **closed + archived** (**ten items, all closed**; opened 2026-09-22, closed 2026-09-23; PRs #2544 → #2592; plan archived: `guide/archive/segment_19S_post_assessment.md`)
 
 Opened as **a register, not a queue**, for what the 22 September reads
-(`guide/codebase_assessment_22sep.md`, `guide/codex_assessment_21sep.md`)
+(`guide/archive/codebase_assessment_22sep.md`, `guide/archive/codex_assessment_21sep.md`)
 surfaced with no home, then used by the author for a tags-and-owners
 run. Items close independently, each with its own `Doc impact` /
 `Status`.

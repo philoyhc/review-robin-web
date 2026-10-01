@@ -1,5 +1,5 @@
 {
-  "_comment": "Area classification for codebase_assessment_*.md (skill: codebase-assessment). First match wins, so narrow areas go first. Written 2026-09-04 because auto-detection put tools/*.html into `templates` (they are generated dev-tooling gallery pages, not app templates \u2014 an 8,310-line phantom +38%) and tools/*.py into `production` (tools/README.md: scripts that operate ON the repo but are not part of the app or its test suite).",
+  "_comment": "Area classification for codebase_assessment_*.md (skill: codebase-assessment). First match wins, so narrow areas go first. Written 2026-09-04 because auto-detection put tools/*.html into `templates` (they are generated dev-tooling gallery pages, not app templates \u2014 an 8,310-line phantom +38%) and tools/*.py into `production` (tools/README.md: scripts that operate ON the repo but are not part of the app or its test suite). Amended 2026-09-30: the docs area excludes codebase_assessment_*.json sidecars, which are measurement output rather than documentation and had grown to 28,816 lines (16% of docs); the 22sep baseline was rebased the same way for that snapshot's deltas.",
   "areas": [
     {
       "name": "tests",
@@ -41,6 +41,10 @@
         "spec/**",
         "guide/**",
         ".claude/**"
+      ],
+      "exclude": [
+        "guide/codebase_assessment_*.json",
+        "guide/archive/codebase_assessment_*.json"
       ]
     }
   ]

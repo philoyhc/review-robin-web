@@ -20,7 +20,7 @@ Invitations** and 83% of Responses. It is kept as written because the
 investigation it heads was measured then, and because nothing regressed;
 what changed is which half of the page time is which. The next page-time
 question at this scale is a **query** question, and
-`guide/codebase_assessment_22sep.md` §8 move 3 asks for it to be put to
+`guide/archive/codebase_assessment_22sep.md` §8 move 3 asks for it to be put to
 **real** data rather than to more code — a re-take this synthetic bench
 cannot stand in for.
 
