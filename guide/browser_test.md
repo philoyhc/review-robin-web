@@ -119,6 +119,9 @@ Rung 2 (2026-10-01), against the plan:
   (04:21:58 → 04:22:19); the `test` job ran 2 min 29 s against #2704's
   2 min 19 s, with 5,110 passed under `RRW_REQUIRE_BROWSER=1`, so the
   browser test ran rather than skipped.
+- **A missing `playwright` is an import error, not a skip**, against
+  Decision: it is a dev dependency like `pytest`, so only a missing
+  Chromium skips (and fails under `RRW_REQUIRE_BROWSER=1`).
 - Base SHA for the cumulative read at rung 4: `df7a5942`.
 
 Rung 3 (2026-10-01): 14 tests in `test_builder_rows.py` and
@@ -128,7 +131,30 @@ twice and its order, the last row, Cancel, an open card under Lock,
 Delete's checkbox, Name and Email fixed, and visibility in the card. Two
 deliberate template breakages (▲ and the visibility chip made inert) each
 failed their test. Left to the hand check: the hide-confirm on a field
-with saved responses (needs an activated session; rung 4 seeds one).
+with saved responses (an activated session's card won't unlock, so it
+stays a hand check).
+
+Rung 4 (2026-10-01): 6 builder tests in `test_builder_branching.py` (⑂,
+join and detach, List conditions, the Active cascade, ranges, two levels
+saved and no third offered) and 2 reviewer tests in
+`test_reviewer_branching.py` (a branch opening and closing with the answer,
+a closed answer dropped on Save; required only while open). The reviewer
+signs in through the Easy Auth headers (`page_as`); a full matrix is pinned
+through the server's database, as `tests/integration/_full_matrix.py` does.
+**Not automatable as written:** 'A refused parent keeps the text' — the
+reviewer's number input carries `max`, so Chromium's own validation stops
+the Save before the server can refuse it; raised with the author.
+
+**Reads:** one cumulative `diff-reviewer` read, `df7a5942..b8f35a33`. No
+defect in the harness or CI; seven findings, all acted on in rung 4:
+two tests claimed more than they checked (the closed-answer delete never
+had an answer to delete; the under-condition Submit asserted only an
+absence), so they now save while open before closing, and wait for the
+summary page and check the live "(required)" label and the count. The
+server now inherits a pre-bound socket (no port race under xdist), is
+killed if it won't stop, and a failed migration shows its stderr; the
+fake-auth keys are pinned against a developer's `.env`; one redundant
+click removed; the import-error divergence recorded above.
 
 ## PR ladder
 

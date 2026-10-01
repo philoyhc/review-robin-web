@@ -19,7 +19,6 @@ import socket
 import subprocess
 import sys
 import time
-import urllib.error
 import urllib.request
 import uuid
 from collections.abc import Callable, Iterator
@@ -56,12 +55,29 @@ def browser() -> Iterator[Browser]:
 @dataclass(frozen=True)
 class LiveServer:
     base_url: str
+    # The server's own SQLite file, for fixture-time setup the UI has no
+    # short route to (pinning a rule set, as tests/integration does).
+    database_url: str
 
 
-def _free_port() -> int:
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        return sock.getsockname()[1]
+def _server_command(sock: socket.socket) -> tuple[list[str], dict[str, object]]:
+    """How to start uvicorn on ``sock``'s port, and the Popen extras it needs.
+
+    On POSIX the server inherits the listening socket itself (``--fd``), so
+    no other xdist worker's server can take the port between choosing it and
+    binding it. Windows can't pass a file descriptor to a child, so there the
+    socket only chooses the port and is closed before uvicorn binds it: the
+    race comes back, rarely, and ``_wait_for_health`` re-checks that our own
+    server is still the one running.
+    """
+    base = [sys.executable, "-m", "uvicorn", "app.main:app"]
+    if os.name == "posix":
+        sock.listen()
+        sock.set_inheritable(True)
+        return base + ["--fd", str(sock.fileno())], {"pass_fds": (sock.fileno(),)}
+    port = sock.getsockname()[1]
+    sock.close()
+    return base + ["--port", str(port)], {}
 
 
 @pytest.fixture(scope="session")
@@ -70,35 +86,51 @@ def live_server(
 ) -> Iterator[LiveServer]:
     # Depends on ``browser`` so a missing browser skips before a server starts.
     workdir = tmp_path_factory.mktemp("live_server")
+    database_url = f"sqlite:///{workdir / 'browser.db'}"
+    # The server inherits the test environment on purpose: the root
+    # conftest's AUDIT_STRICT_MODE (and REHYDRATE_ENABLED) reach it, as they
+    # reach the in-process suite. The fake-auth keys are pinned here because
+    # app settings also read a developer's .env, which must not decide who
+    # the tests sign in as.
     env = {
         **os.environ,
-        "DATABASE_URL": f"sqlite:///{workdir / 'browser.db'}",
+        "DATABASE_URL": database_url,
         "ALLOW_FAKE_AUTH": "true",
+        "FAKE_AUTH_OPERATOR": "true",
     }
-    subprocess.run(
+    migrated = subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
         cwd=REPO_ROOT,
         env=env,
-        check=True,
         capture_output=True,
+        text=True,
     )
-    port = _free_port()
-    base_url = f"http://127.0.0.1:{port}"
+    if migrated.returncode != 0:
+        raise RuntimeError(f"alembic upgrade head failed:\n{migrated.stderr}")
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    base_url = f"http://127.0.0.1:{sock.getsockname()[1]}"
+    command, extras = _server_command(sock)
     log_path = workdir / "server.log"
-    with log_path.open("wb") as log:
+    with sock, log_path.open("wb") as log:
         server = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "app.main:app", "--port", str(port)],
+            command,
             cwd=REPO_ROOT,
             env=env,
             stdout=log,
             stderr=subprocess.STDOUT,
+            **extras,
         )
         try:
             _wait_for_health(base_url, server, log_path)
-            yield LiveServer(base_url=base_url)
+            yield LiveServer(base_url=base_url, database_url=database_url)
         finally:
             server.terminate()
-            server.wait(timeout=10)
+            try:
+                server.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait()
 
 
 def _wait_for_health(base_url: str, server: subprocess.Popen, log_path: Path) -> None:
@@ -108,8 +140,14 @@ def _wait_for_health(base_url: str, server: subprocess.Popen, log_path: Path) ->
             break
         try:
             with urllib.request.urlopen(f"{base_url}/health", timeout=1):
-                return
-        except (urllib.error.URLError, ConnectionError):
+                # Something answers; make sure it is this server, which logs
+                # this once bound (and exits instead if the port was taken).
+                if b"Application startup complete" in log_path.read_bytes():
+                    return
+                time.sleep(0.1)
+        except OSError:
+            # Refused, reset, or (the socket listens before uvicorn starts
+            # accepting) a read that timed out in the queue: try again.
             time.sleep(0.1)
     raise RuntimeError(
         f"live server did not answer /health; its log:\n{log_path.read_text()}"
@@ -142,14 +180,41 @@ def new_session(api: httpx.Client) -> Callable[[], int]:
 
 
 @pytest.fixture
-def page(browser: Browser, live_server: LiveServer) -> Iterator[Page]:
-    """A fresh page per test. An uncaught page error fails the test."""
-    context = browser.new_context(
-        base_url=live_server.base_url, viewport={"width": 1500, "height": 1000}
-    )
-    opened = context.new_page()
+def page_as(browser: Browser, live_server: LiveServer) -> Iterator[Callable[..., Page]]:
+    """Open fresh pages, as the fake operator or as a named person.
+
+    A person signs in through the Easy Auth headers, which
+    ``app/auth/identity.py`` reads before falling back to fake auth. An
+    uncaught page error on any page fails the test.
+    """
+    contexts = []
     errors: list[str] = []
-    opened.on("pageerror", lambda exc: errors.append(str(exc)))
-    yield opened
-    context.close()
+
+    def open_page(email: str | None = None) -> Page:
+        headers = {}
+        if email is not None:
+            headers = {
+                "X-MS-CLIENT-PRINCIPAL-NAME": email,
+                "X-MS-CLIENT-PRINCIPAL-ID": f"browser-{email}",
+                "X-MS-CLIENT-PRINCIPAL-IDP": "aad",
+            }
+        context = browser.new_context(
+            base_url=live_server.base_url,
+            viewport={"width": 1500, "height": 1000},
+            extra_http_headers=headers,
+        )
+        contexts.append(context)
+        opened = context.new_page()
+        opened.on("pageerror", lambda exc: errors.append(str(exc)))
+        return opened
+
+    yield open_page
+    for context in contexts:
+        context.close()
     assert not errors, f"uncaught page errors: {errors}"
+
+
+@pytest.fixture
+def page(page_as: Callable[..., Page]) -> Page:
+    """A fresh page signed in as the fake operator."""
+    return page_as()
