@@ -66,9 +66,9 @@ the spec should say so.
 
 - **A18 = G11** — The peer-reviewer `after_release` grant is authored,
   shown to reviewers on the transparency card, and read by nothing.
-- **A19** — `observer_tag` is never enforced. Worse, an editor save writes
-  it back as NULL, wiping an imported tag (`routes_operator/_instruments.py`
-  builds `vp_rows` without it). The wipe is a defect whatever the ruling.
+- **A19** — `observer_tag` is never enforced. An editor save used to
+  wipe an imported tag as well; that half is fixed in #2719 (§2), and the
+  ruling on enforcing the tag stays open.
 - **F11** — The configurable welcome message, institution name and magic
   links (`spec/audience_and_identity_model.md`).
 - **F15** — The Draft/Receiving/Closed instrument statuses and the
@@ -179,6 +179,12 @@ stay in §3.
   which beats the single 0.5 rule `ui_elements.md` specifies.
 - **C4** — The `needs_confirm` banner says the checkbox is "at the top of
   Quick Setup", but it sits below the grid.
+- **D17, the rest (open).** #2719 catches `RehydrateError`, so a settings
+  failure reaches the operator. Any other failure inside
+  `rehydrate_session` (an `IntegrityError` from a roster save, a
+  `ResponsesFormatError`) still answers 500 after the rollback, and
+  `spec/rehydrate.md` §7 says every failing step is reported. Rehydrate
+  is off by default.
 - **Stale code comments.** Fix these with the next edit to each file:
   - `instrument_field.py:70-74` says "one level"; branching has two.
   - The `scheduled_events/__init__.py` docstring names three trigger pages.

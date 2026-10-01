@@ -502,6 +502,12 @@ def upsert_many(
         if "observer_tag" in row:
             value = row["observer_tag"]
             return str(value) if value is not None else None
+        # Only the observer audience keeps a tag (§4: the service holds
+        # every other row to NULL). A settings import can still store
+        # one on another audience; carrying it here would refuse the
+        # card's save with ``observer_tag_misuse``, so it is cleared.
+        if str(row["audience"]) != "observer":
+            return None
         existing = db.execute(
             select(InstrumentViewPolicy.observer_tag).where(
                 InstrumentViewPolicy.instrument_id == instrument.id,
