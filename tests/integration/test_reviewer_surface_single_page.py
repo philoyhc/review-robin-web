@@ -359,6 +359,53 @@ def test_multi_page_renders_prev_next_nav(
     )
 
 
+def test_a_closed_multi_page_surface_keeps_prev_and_next(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Once nothing accepts, Save / Cancel / Submit and the divider go,
+    but Prev / Page N of M / Next stay, so the reviewer can still page
+    through what they wrote (spec/reviewer-surface.md "Lifecycle
+    gating"; post_assessment findings A5). The row used to vanish
+    whole."""
+    import datetime as dt
+
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="mp-closed",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        extra_instruments=1,
+    )
+    first = min(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars(),
+        key=lambda i: (i.order, i.id),
+    )
+    from app.services import instruments as instruments_service
+
+    instruments_service.create_page_break_after(db, instrument=first)
+    review_session.deadline = dt.datetime.now(dt.timezone.utc) - dt.timedelta(
+        minutes=1
+    )
+    db.commit()
+
+    body = make_client(rae).get(f"/me/sessions/{review_session.id}/1").text
+    assert "no longer accepting responses" in body.lower()
+    assert "Page 1 of 2" in body
+    assert f'href="/me/sessions/{review_session.id}/2"' in body
+    assert "data-rs-save>Save</button>" not in body
+    assert f'formaction="/me/sessions/{review_session.id}/submit"' not in body
+    assert "<span class=\"rs-action-divider\"" not in body
+
+
 def test_single_page_session_omits_page_nav(
     db: Session,
     alice: AuthenticatedUser,

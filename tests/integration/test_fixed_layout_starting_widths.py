@@ -160,6 +160,7 @@ def test_the_summary_and_the_results_start_it_the_same_way(
     rung's spec check)."""
     from .test_reviewee_results_body import (
         _enable_reviewee_after_release_raw,
+        _enable_reviewer_after_release_raw,
         _operator_user,
         _seed_and_activate,
         _seed_submitted_responses,
@@ -193,6 +194,8 @@ def test_the_summary_and_the_results_start_it_the_same_way(
     _enable_reviewee_after_release_raw(
         db, review_session, operator=_operator_user(db), open_window=True
     )
+    # The reviewer's own summary needs its own release grant (G10).
+    _enable_reviewer_after_release_raw(db, review_session, operator=_operator_user(db))
     width = f'style="width: {profile_column_ch_width("Profile")}ch"'
     rating = db.execute(
         select(InstrumentResponseField).where(

@@ -21,6 +21,7 @@ envelope. No-op writes (no change) emit nothing.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Iterable
 
 from sqlalchemy import select
@@ -309,6 +310,65 @@ def reviewee_has_current_grant(
     )
 
 
+def peer_reviewer_policies(
+    db: Session, instrument_ids: Iterable[int]
+) -> dict[int, InstrumentViewPolicy]:
+    """The ``peer_reviewer`` policy row per instrument, keyed by
+    instrument id. An instrument with no row is absent from the dict."""
+    ids = set(instrument_ids)
+    if not ids:
+        return {}
+    rows = db.execute(
+        select(InstrumentViewPolicy).where(
+            InstrumentViewPolicy.instrument_id.in_(ids),
+            InstrumentViewPolicy.audience == "peer_reviewer",
+        )
+    ).scalars()
+    return {row.instrument_id: row for row in rows}
+
+
+def reviewer_sees_own_responses(
+    review_session: ReviewSession,
+    policy: InstrumentViewPolicy | None,
+    *,
+    now: datetime | None = None,
+) -> bool:
+    """Whether a reviewer may read back their **own** saved answers on
+    one instrument once it no longer accepts responses (author's ruling,
+    2026-10-01, on ``guide/findings_2026-10-01_corpus.md`` G10).
+
+    The instrument's ``peer_reviewer`` policy decides
+    (``spec/visibility_policy.md`` §2.2):
+
+    - **Archived** — never; archiving ends all visibility.
+    - **``ready``** (the ``while_ongoing`` window, deadline or not) —
+      always. That cell is ``raw`` by rule, the baseline self-view, so
+      a missing row reads the same.
+    - **``expired`` inside the release window** — when the
+      ``after_release`` mode is ``raw``. ``summarized`` is a summary,
+      not the reviewer's own rows, and the reviewer surface has no
+      summary view, so it hides them like ``None`` does.
+    - **Anything else** (``expired`` outside the window, ``draft``,
+      ``validated``) — never.
+
+    ``responses_visible_when_closed`` is not read: it round-trips for
+    config only.
+    """
+    if lifecycle.is_archived(review_session):
+        return False
+    if lifecycle.is_ready(review_session):
+        return True
+    if not (
+        lifecycle.is_expired(review_session)
+        and lifecycle.is_response_release_window_open(review_session, now=now)
+    ):
+        return False
+    return (
+        resolve_mode(policy, while_ongoing_open=False, after_release_open=True)
+        == "raw"
+    )
+
+
 def _validate_per_window(
     *,
     audience: str,
@@ -542,8 +602,10 @@ __all__ = [
     "decode_pair_to_mode",
     "encode_mode",
     "list_for_instrument",
+    "peer_reviewer_policies",
     "resolve_mode",
     "reviewee_has_current_grant",
+    "reviewer_sees_own_responses",
     "upsert_many",
     "upsert_policy",
     "valid_modes_for_cell",

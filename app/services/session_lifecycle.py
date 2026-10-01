@@ -467,9 +467,9 @@ def expire_session(
     """Flip ``ready → expired`` and close every instrument.
 
     The operator's "Close session" button on the Workflow card.
-    Responses are preserved (drafts + submitted) so reviewers
-    with ``responses_visible_when_closed=True`` instruments can
-    still read what they submitted. From ``expired`` the
+    Responses are preserved (drafts + submitted); whether reviewers
+    can still read them is the visibility policy's call
+    (``visibility_policies.reviewer_sees_own_responses``). From ``expired`` the
     operator can Revert to draft (see :func:`revert_session_to_draft`)
     to reopen the session for editing.
     """
@@ -827,9 +827,8 @@ def session_status_for_reviewer(
     The post-Close-session ``expired`` state reports as
     ``"closed"`` (not ``"not opened"``) so the reviewer
     dashboard keeps the link to the session live — without that,
-    reviewers couldn't reach ``/summary`` (or the per-instrument
-    surface with ``responses_visible_when_closed=True``) after
-    the operator closed the session.
+    reviewers couldn't reach ``/summary`` or the read-only surface
+    after the operator closed the session.
 
     State → return value mapping:
 

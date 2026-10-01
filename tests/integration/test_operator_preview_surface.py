@@ -368,10 +368,11 @@ def test_preview_surface_renders_the_reviewer_s_saved_responses(
     checked that a saved value comes back — so the behaviour 19P.6 links
     the Invitations drill-in to was resting on nothing.
 
-    It also pins the `responses_visible_when_closed` bypass: `show_values`
-    is `accepting or responses_visible_when_closed`, and the preconditions
-    below assert this instrument sets neither — so only the `preview_mode`
-    override can put the value on the page. Without them the causal claim
+    It also pins the read-back bypass: `show_values` is `accepting or
+    reviewer_sees_own_responses(...)`, and the preconditions below assert
+    the session is not accepting and not `ready` (where the rule would
+    show the value anyway) — so only the `preview_mode` override can put
+    the value on the page. Without them the causal claim
     rests on a shared helper this test does not own, and would go quietly
     false the day that helper starts activating its session.
     """
@@ -384,9 +385,10 @@ def test_preview_surface_renders_the_reviewer_s_saved_responses(
         "premise: the session is not accepting, so `accepting` is false "
         "without the preview_mode override"
     )
-    assert instrument.responses_visible_when_closed is False, (
-        "premise: the instrument hides values when closed, so that is not "
-        "what puts the saved value on the page"
+    assert session.status not in ("ready", "expired"), (
+        "premise: the reviewer read-back rule shows nothing outside ready "
+        "and a released expiry, so it is not what puts the saved value on "
+        "the page"
     )
     assignment = db.execute(
         select(Assignment).where(Assignment.session_id == session.id)

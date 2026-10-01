@@ -157,9 +157,8 @@
       {% endif %}
     {% elif is_expired %}
       {# State 10 — session was closed via the Close session button.
-         Responses are preserved; reviewers with
-         ``responses_visible_when_closed=True`` instruments can still
-         read their submissions. Revert to draft reopens the session
+         Responses are preserved; what reviewers can still read is
+         each instrument's visibility policy's call. Revert to draft reopens the session
          for editing. #}
       <p>Session is closed. No further responses are being accepted.
         Revert to draft to reopen for editing — responses are

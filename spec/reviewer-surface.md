@@ -149,7 +149,9 @@ Top-to-bottom, the page renders:
      the review-level controls (Save / Cancel / Submit) from the
      per-page navigation cluster. 1px wide, full button-height,
      `border-default` colored, with horizontal margin. Rendered only
-     on multi-page sessions (`page_count > 1`); in operator-preview
+     on multi-page sessions (`page_count > 1`) that still show the
+     write controls; on a closed surface those and the divider drop
+     and the page nav stays (§"Lifecycle gating"). In operator-preview
      mode Save / Cancel / Submit render as inert disabled buttons
      and Prev / Next stay functional.
    - **Prev / Page N of M / Next** — the page-navigation cluster,
@@ -822,7 +824,7 @@ GET requests behave differently depending on which gate fails:
   "opens later" suffix, an info banner explaining the review
   hasn't opened yet, the deadline + zone if one is set, and a
   link back to the reviewer dashboard. No response form is
-  rendered. Applies for `draft` and `validated` lifecycle states
+  rendered. Applies for `draft`, `validated` and `archived`
   alike.
 
 - **Session `ready`, response window closed**
@@ -838,20 +840,40 @@ GET requests behave differently depending on which gate fails:
   - The Danger Zone card hides (no Clear all).
   - A `.banner.banner-warning` lands inline in the overview card
     explaining the state, e.g. "This session is no longer
-    accepting responses." Two variants depending on the
-    operator's per-instrument visibility flag:
+    accepting responses." Three variants, depending on whether the
+    reviewer may read their own values back, across the session's
+    instruments:
     - "Your previously saved values remain visible below in
-      read-only form." (operator left
-      `responses_visible_when_closed=true`).
+      read-only form." (all shown)
     - "Your previously saved values are hidden by the operator's
-      visibility setting." (operator set
-      `responses_visible_when_closed=false`).
+      visibility setting." (all hidden)
+    - "Some of your previously saved values are hidden by the
+      operator's visibility setting; the rest remain visible in
+      read-only form." (mixed)
+    On a hidden row, branches are judged as if unanswered, so a governed
+    cell's muting does not reveal a hidden parent answer.
 
-  This closed-state machinery deliberately stays on the surface
-  template (rather than redirecting to a separate "closed" page)
-  so the `responses_visible_when_closed` toggle keeps working —
-  a separate template would have to re-render the response data
-  to honour the toggle.
+- **What a reviewer reads back once responses close.** The
+  instrument's `peer_reviewer` visibility policy decides
+  (`spec/visibility_policy.md` §2.2), through
+  `visibility_policies.reviewer_sees_own_responses`:
+
+  | Session | Own saved values |
+  |---|---|
+  | `ready` (incl. past the deadline) | Shown. That is the `while_ongoing` window, whose reviewer cell is Raw by rule. |
+  | `expired`, release window open | Shown when the "Responses released" cell is Raw. Hidden when it is Summarized (the surface has no summary view) or off. |
+  | `expired`, release window not open | Hidden. |
+  | `archived` | Hidden. Archiving ends all visibility. |
+  | `draft` / `validated` (after Revert) | Hidden. The surface shows the pre-open page; the summary and its CSV show nothing. |
+
+  "Own saved values" means the reviewer's stored answers, submitted or
+  still drafts, the same rows the surface always rendered.
+
+  The same rule decides the summary page and its CSV, per
+  instrument: a hidden instrument is left out, and a banner says some
+  or all responses are not shown; with none shown, the CSV link goes.
+  `responses_visible_when_closed` no longer decides anything; it
+  round-trips for config only.
 
 ### Lazy deadline-close
 
@@ -1137,8 +1159,12 @@ dashboard's Session column once Reviewer Status is
 - **Caption** — "Submitted on {YYYY-MM-DD HH:MM} ({zone})"
   built from `MAX(response.submitted_at)` across the
   reviewer's rows.
+- **Hidden-responses banner** — when the visibility policy hides
+  any answered instrument (§"Lifecycle gating"), a warning says some
+  or all of the reviewer's responses are not shown.
 - **Action row** — primary "Download my responses (CSV)"
-  button linking to `/me/sessions/{id}/summary.csv`, a
+  button linking to `/me/sessions/{id}/summary.csv` (dropped when no
+  section is shown), a
   "Recall my submission" control (`POST /me/sessions/{id}/recall`),
   and a secondary "Your reviewer dashboard" link. Recall renders
   only while the session is still `ready` (`can_recall =
@@ -1147,7 +1173,8 @@ dashboard's Session column once Reviewer Status is
   keep editing. Handled by `reviewer_recall` in
   `routes_reviewer/_surface/_routes.py`.
 - **Sections** — one `.card` per instrument the reviewer
-  responded on, in `(Instrument.order, Instrument.id)` order.
+  responded on and may read now (§"Lifecycle gating"), in
+  `(Instrument.order, Instrument.id)` order.
   Each section's `<h2>` shows the instrument's short label +
   full name (when both are set); the body is a `<table>` whose
   header is `Reviewee` + one column per response field
@@ -1163,7 +1190,8 @@ dashboard's Session column once Reviewer Status is
   the unified Responses CSV (see `spec/csv_contracts.md`
   §2.4), scoped to one reviewer; a per-instrument preamble +
   field dictionary appears for every instrument the reviewer
-  responded on. Builds via
+  responded on and may read now; rows of the others are left out.
+  Builds via
   `app.services.extracts.responses_extract.serialize_reviewer_session_summary`,
   which reuses 18H Part 2's `_response_row_tuple` so a
   per-cell rename here flows through to every related file.

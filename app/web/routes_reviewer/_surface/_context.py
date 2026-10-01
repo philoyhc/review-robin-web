@@ -30,6 +30,7 @@ from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
+from app.services import visibility_policies
 from app.web import views
 from app.web.deps import request_correlation_id
 from app.web.routes_reviewer._shared import (
@@ -271,9 +272,18 @@ def _surface_context(
         db, review_session.id
     )
 
+    # G10 (author's ruling, 2026-10-01): once an instrument no longer
+    # accepts, the reviewer's own saved values show only as the
+    # instrument's peer_reviewer visibility policy allows, and never once
+    # the session is archived (``visibility_policies
+    # .reviewer_sees_own_responses``).
+    peer_policies = visibility_policies.peer_reviewer_policies(
+        db, instrument_ids
+    )
     rows_by_instrument: dict[int, list[dict]] = {}
     any_accepting = False
     any_closed_with_hidden_values = False
+    any_closed_with_shown_values = False
     for assignment in assignments:
         fields = fields_by_instrument.get(assignment.instrument_id, [])
         instrument = instruments.get(assignment.instrument_id)
@@ -289,10 +299,15 @@ def _surface_context(
         if accepting:
             any_accepting = True
         show_values = accepting or (
-            instrument is not None and instrument.responses_visible_when_closed
+            instrument is not None
+            and visibility_policies.reviewer_sees_own_responses(
+                review_session, peer_policies.get(instrument.id)
+            )
         )
         if not show_values:
             any_closed_with_hidden_values = True
+        elif not accepting:
+            any_closed_with_shown_values = True
         values: dict[int, str] = {}
         for field in fields:
             existing = response_rows.get((assignment.id, field.id))
@@ -310,12 +325,16 @@ def _surface_context(
         # (the page's script re-judges as the parent changes). A closed
         # governed cell renders muted and disabled, with the condition
         # that opens it as its hint.
-        open_ids = responses_service.applicable_field_ids(fields, values)
+        # Judged on what the reviewer may see: on a hidden row the
+        # branches read as if unanswered, so a governed cell's muting
+        # cannot reveal whether a hidden parent answer met its condition.
+        judged = values if show_values else {fid: "" for fid in values}
+        open_ids = responses_service.applicable_field_ids(fields, judged)
         # 19T Item 11 — whether a cell is required now is its own fact,
         # from its own helper, never derived from ``branch_open`` in the
         # template: a second kind of condition (Item 13) leaves a cell
         # enabled while it isn't required.
-        required_now_ids = responses_service.required_field_ids(fields, values)
+        required_now_ids = responses_service.required_field_ids(fields, judged)
         # 19T Item 13 — what a "*" marks: a field under a require-mode
         # parent may be required whatever its own ``required``.
         may_be_required_ids = responses_service.may_be_required_field_ids(fields)
@@ -668,6 +687,7 @@ def _surface_context(
         ),
         "any_accepting": any_accepting,
         "any_closed_with_hidden_values": any_closed_with_hidden_values,
+        "any_closed_with_shown_values": any_closed_with_shown_values,
         "dropped_fields": dropped_fields,
         "page_statuses": page_statuses,
         "session_status": _session_status(page_statuses),

@@ -46,6 +46,7 @@ from app.db.models import (
 from app.services import responses as responses_service
 from app.services.date_formatting import iso_in_zone
 from app.services.sessions import resolve_session_timezone
+from app.services import visibility_policies
 
 __all__ = [
     "HEADER",
@@ -556,12 +557,25 @@ def serialize_reviewer_session_summary(
             .distinct()
         ).scalars()
     )
+    # G10: the reviewer's own record carries only the instruments their
+    # peer_reviewer visibility policy lets them read now, and none once
+    # the session is archived — the same rule as the review surface.
+    peer_policies = visibility_policies.peer_reviewer_policies(
+        db, answered_instrument_ids
+    )
+    readable_instrument_ids = {
+        instrument_id
+        for instrument_id in answered_instrument_ids
+        if visibility_policies.reviewer_sees_own_responses(
+            review_session, peer_policies.get(instrument_id)
+        )
+    }
     instrument_label: dict[int, str] = {}
     emitted_preamble = False
     for n, instrument in enumerate(instruments, start=1):
         label = f"instrument_{n}"
         instrument_label[instrument.id] = label
-        if instrument.id not in answered_instrument_ids:
+        if instrument.id not in readable_instrument_ids:
             continue
         emitted_preamble = True
         yield (label,)
@@ -627,6 +641,8 @@ def serialize_reviewer_session_summary(
         field,
         is_self_review_value,
     ) in db.execute(stmt):
+        if instrument.id not in readable_instrument_ids:
+            continue
         group_key = group_key_by_assignment.get(response.assignment_id)
         if group_key is not None:
             cell = (the_reviewer.id, instrument.id, group_key, field.id)

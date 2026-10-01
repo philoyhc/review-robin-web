@@ -432,9 +432,8 @@ def workflow_close(
 
     Flips ``ready → expired`` and closes every instrument
     (``accepting_responses=False``). Responses (drafts +
-    submitted) are preserved; reviewers with
-    ``responses_visible_when_closed=True`` instruments can still
-    read what they submitted post-close. The session can be
+    submitted) are preserved; what reviewers can still read is the
+    visibility policy's call. The session can be
     reopened by clicking Revert to draft, which goes through the
     shared ``/sessions/{id}/revert`` route — that path accepts
     ``expired`` as a valid starting state alongside ``ready``.

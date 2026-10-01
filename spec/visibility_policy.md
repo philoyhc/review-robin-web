@@ -77,6 +77,16 @@ The peer-reviewer audience is constrained per window:
 
 `Anonymized` (row + deidentified) is **not** offered for peer reviewers — anonymising one's own work against oneself is incoherent. `Summarized` (aggregated + deidentified) is meaningful because a reviewer who reviewed multiple reviewees has a multi-row fan-out of their own responses, which the summary aggregates. The scope rule (§1.1) still holds: the reviewer's grant covers only responses they themselves keyed in.
 
+**Where the reviewer cells are read.** Once an instrument stops
+accepting, the review surface, the summary page and its CSV show the
+reviewer's own saved values only as this policy allows
+(`visibility_policies.reviewer_sees_own_responses`): always while the
+session is `ready`, inside the release window only for a Raw "Responses
+released" cell, and never once the session is archived. A Summarized
+grant has no reviewer-facing summary view yet, so it hides the values
+like an off cell does. `spec/reviewer-surface.md` "Lifecycle gating"
+carries the table.
+
 ---
 
 ## 3. Window axis (when they see)
@@ -157,7 +167,7 @@ The anchor is deliberately **left in place** across a revert rather than cleared
 
 When `sessions.status = "archived"`, the resolver treats every per-window pair as `(NULL, NULL)` ≡ off for every non-operator audience regardless of window state. No schema change — pure view-time gate. Mirrors how archive retires a session out of reviewer reach today.
 
-**Enforced in two places, deliberately.** The rule already holds *arithmetically*: `while_ongoing` requires `ready` and `after_release` requires `expired`, and an archived session is neither, so no grant resolves for any audience without anything checking `is_archived` at all. Both `_reviewee_results.py` and `_observer_collation.py` nonetheless short-circuit on `is_archived` before touching the policy table. The redundancy is the point — otherwise this section describes an *emergent* property of two lifecycle predicates rather than a rule the views enforce, and relaxing either predicate would silently reopen archived sessions to non-operators. `tests/unit/test_observer_archive_short_circuit.py` pins that by simulating exactly such a relaxation.
+**Enforced at each reader, deliberately.** The rule already holds *arithmetically*: `while_ongoing` requires `ready` and `after_release` requires `expired`, and an archived session is neither, so no grant resolves for any audience without anything checking `is_archived` at all. Every reader nonetheless short-circuits on `is_archived` before touching the policy: `_reviewee_results.py`, `_observer_collation.py`, `visibility_policies.reviewee_has_current_grant` (the `/results` gate) and `visibility_policies.reviewer_sees_own_responses` (the reviewer's own read-back, pinned by `tests/unit/test_reviewer_sees_own_responses.py`). The redundancy is the point — otherwise this section describes an *emergent* property of two lifecycle predicates rather than a rule the views enforce, and relaxing either predicate would silently reopen archived sessions to non-operators. `tests/unit/test_observer_archive_short_circuit.py` pins that by simulating exactly such a relaxation.
 
 ---
 
@@ -215,6 +225,7 @@ A no-op save (operator clicked Save with no changes) emits nothing.
 | Band 2's "Who can see what you wrote" card | One card, under the intro card in the left column of Band 2's intro, is both the preview and the editor (19T Item 7; `spec/instruments.md` § *Visibility card*). Locked, it renders `band2_preview_visibility_rows_by_instrument` (`build_reviewer_visibility_rows`, same rows as the reviewer surface's `visibility_rows`) — two rows, Observers omitted, each mode a display-only `pill pill-count` (19T Item 8) rather than the reviewer surface's plain text; whether the reviewer surface should follow is undecided. Unlocked, the chip table renders hidden inputs that hitch on the card's main Save form (`form="dfsave-<id>"`), from `band3_visibility_by_instrument`; both the consolidated `POST /operator/sessions/{id}/instruments/{instrument_id}/save` and its no-JS `/fields/save` fallback read them and call `upsert_many`, so there is no standalone visibility submit to keep in step. A cycle chip (`newModelCycleVisibilityCell`) repaints the locked table's matching cell live on click, so an unsaved edit shows there before Save; Cancel's discard reload restores the saved state. |
 | Reviewer-surface transparency card | `views.build_reviewer_visibility_rows` (in `app/web/views/_instruments.py`) + a read-only "Who can see what you wrote" card under the heading card in the left column of each per-instrument intro (`.rs-intro-columns`; `spec/reviewer-surface.md`, "Intro and help cards") on `review_surface.html`. Two rows (You / Reviewees; Observers omitted) × two windows, with the persisted mode labels (Raw responses / Anonymized responses / Anonymized summaries / —). |
 | Resolver | `app/services/visibility_policies.py::resolve_mode` reads policies and applies the scope rules. |
+| Reviewer's own read-back | `visibility_policies.reviewer_sees_own_responses` over `peer_reviewer_policies`, applied per instrument by the review surface (`routes_reviewer/_surface/_context.py`), the summary page (`views/_reviewer_summary.py`) and the summary CSV (`extracts/responses_extract.py`). Raw shows, Summarized and off hide, nothing once archived (§2.2). |
 | Reviewee `/results` body | `build_reviewee_results_context` renders the raw / anonymized / summarized modes, plus the Acknowledge card at the foot of the page. |
 | Observer `/collation` body | The per-instrument 3-row table (Row 1 distinct-reviewer headcount + shared aggregate over the in-cohort assignment pool / Row 2 distinct-reviewee headcount + same aggregate / Row 3 conditional CSV download), scoped to the observer's cohort. Identification mode follows Band 3 (`raw` / `anonymized`); `summarized` returns no per-row download. |
 

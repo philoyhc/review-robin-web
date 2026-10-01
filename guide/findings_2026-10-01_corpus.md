@@ -42,11 +42,12 @@ is left stricter until ruled on. Grouped by what the ruling is about.
   Done in #2722.** Accepting is session-wide, so the session-wide write
   gate is right and the spec now says so. It was: closing one instrument
   403'd Save, Submit and Clear on the instruments still open.
-- **A5** — **Ruled 2026-10-01: fix the code.** When no instrument accepts, Prev and Next disappear with the
+- ~~**A5**~~ — **Ruled 2026-10-01: fix the code. Done in #2723.** When no instrument accepts, Prev and Next disappear with the
   action row, so a reviewer can't page through a closed multi-page
   surface. The spec keeps them.
-- **G10** — **Ruled 2026-10-01: the visibility policy decides, and nothing
-  is visible once the session is archived.** `responses_visible_when_closed` has no operator control and
+- ~~**G10**~~ — **Ruled 2026-10-01: the visibility policy decides, and nothing
+  is visible once the session is archived. Done in #2723**, on the surface, the
+  summary and its CSV. `responses_visible_when_closed` has no operator control and
   defaults to False, so after close a reviewer cannot see their own saved
   answers. The specs say a visibility policy governs it, and nothing
   reads one there.
@@ -215,7 +216,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - A4 low · `:662` · `_new_model_usable_tags` → `new_model_usable_tags` (also B5, C17).
   - Also G10 `:144-149,345-360`.
 - `reviewer-surface.md`
-  - A5 high · `:831` · Prev/Next hidden when closed · author.
+  - ~~A5 high · `:831` · Prev/Next hidden when closed · author.~~ Done in #2723.
   - ~~A6 high · `:799-810` · write gate session-wide · author.~~ Ruled: per-instrument Open / Close removed; done in #2722.
   - A7 med · `:780-793` · blocked Submit → page 1 · author.
   - A8 med · `:62,1557` · the dashboard links `/summary` once submitted, built in `_dashboard.py`.
@@ -425,7 +426,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - G7 med · `:1075,2244` · Delete Data is draft/validated only (= C7).
   - G8 med-high · `:1586-1670` · pages, dirty state and Save; `reviewer-surface.md` wins.
   - G9 low-med · `:714,1565` · non-open states render pre-open.
-  - G10 med-high · `:418,1210,1568` · visibility-when-closed · author.
+  - ~~G10 med-high · `:418,1210,1568` · visibility-when-closed · author.~~ Ruled: policy decides; done in #2723.
   - G11 low-med · peer grant (= A18).
   - G12 med · `:2088-2102` · readiness checklist overstated; consolidate with `validate_page.md`.
   - G13 low-med · `:2123` · export validation · author.

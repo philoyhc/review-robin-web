@@ -1567,9 +1567,10 @@ link to the dashboard. No review form renders.
 If the session is past deadline or paused, the reviewer's
 **review surface still loads** but renders read-only: inputs
 disabled, Save / Submit / Clear hidden, previously-saved
-responses still visible. Per-instrument visibility-when-closed
-controls whether each instrument's responses remain readable
-or are hidden after close.
+responses visible as each instrument's visibility policy allows:
+always while the session is ready, after close only through a Raw
+"Responses released" grant inside the release window, and never once
+archived (`spec/reviewer-surface.md` "Lifecycle gating").
 
 If the signed-in identity does not match any reviewer row on
 the session, a direct link answers a **bare 404** — the
@@ -1700,10 +1701,12 @@ reviewer. Confirmation checkbox required. Audit-logged as
 Once the session has fully submitted (every required cell
 populated and stamped), the reviewer sees a read-only
 **summary page** (`/me/sessions/{id}/summary`) — one section per
-instrument they responded on, a submitted-on timestamp, a
+instrument they responded on and may read now (each instrument's
+visibility policy decides; nothing once archived), a submitted-on
+timestamp, a
 **Recall my submission** control (rolls the submission back to
 draft while the session is still `ready`), and a **Download my
-responses (CSV)** button emitting `{code}_my_responses.csv` (same
+responses (CSV)** button (when any section shows) emitting `{code}_my_responses.csv` (same
 21-column shape as the operator Responses extract, narrowed to
 this reviewer's rows).
 

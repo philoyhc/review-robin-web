@@ -682,9 +682,9 @@ sub-module (`app/web/routes_operator/_workflow.py`):
   (`close_visible = is_ready`). Calls `lifecycle.expire_session`
   — the service keeps the enum's name, the button keeps the
   operator's — for `ready → expired` + closes every instrument
-  (`accepting_responses = False`); the per-instrument
-  `responses_visible_when_closed` toggle then governs whether
-  reviewers can still see what they submitted post-close. Emits
+  (`accepting_responses = False`); each instrument's visibility
+  policy then governs whether reviewers can still see what they
+  submitted (`spec/reviewer-surface.md` "Lifecycle gating"). Emits
   `session.expired`.
 - **Release responses** posts to
   `/operator/sessions/{id}/workflow/release-responses` via

@@ -138,9 +138,9 @@ it.
 
 **Visibility-when-closed exemption.** The
 `set_responses_visible_when_closed` service deliberately does
-**not** invalidate. The `responses_visible_when_closed` flag is a
-display setting that doesn't affect the validation snapshot (an
-operator can flip it without re-running validation).
+**not** invalidate. The `responses_visible_when_closed` flag decides
+nothing (it round-trips for config only) and doesn't affect the
+validation snapshot.
 
 ### 2.4 `validated → ready` — `activate_session(...)`
 
@@ -204,9 +204,9 @@ The "Close session" path. Called by `POST
 session** button on the Workflow card. Flips `ready → expired`
 and sets `accepting_responses=false` on every instrument in the
 same transaction. **Existing `Response` rows are preserved
-untouched** (drafts + submitted), so reviewers with
-`responses_visible_when_closed=True` instruments can still read
-what they submitted after the close.
+untouched** (drafts + submitted); whether a reviewer can still read
+theirs after the close is the visibility policy's call
+(`spec/reviewer-surface.md` "Lifecycle gating").
 
 Pre-conditions:
 
@@ -290,14 +290,14 @@ read-only banners but the source of truth is the route gate.
 ## 4. Per-instrument lifecycle
 
 Each instrument carries an `accepting_responses` flag and a
-visibility-when-closed display flag. Accepting is set and cleared
+`responses_visible_when_closed` flag, which decides nothing (below). Accepting is set and cleared
 session-wide, below, so within a `ready` session every instrument is
 open or every instrument is closed.
 
 | Column | Type | Meaning |
 |---|---|---|
 | `accepting_responses` | `Boolean` | Reviewers can save / submit. **Session-wide in practice:** set on every instrument by activate, cleared on every instrument by revert, Close session and deadline-close. No operator control sets it per instrument. |
-| `responses_visible_when_closed` | `Boolean` | Whether reviewers can still see their own past responses after `accepting_responses=False`. Operator default; doesn't affect the validation snapshot. |
+| `responses_visible_when_closed` | `Boolean` | **Decides nothing.** Kept for config round-trip only; what a reviewer reads back after close is the visibility policy's call (`spec/reviewer-surface.md` "Lifecycle gating"). |
 | `deadline_closed_at` | `DateTime \| None` | Timestamp the deadline-close fired. Used to render the "auto-closed at X" pill. |
 
 **Services:**
@@ -320,10 +320,9 @@ open or every instrument is closed.
   session is `ready` and before its deadline, emitting
   `instrument.opened reason="session_wide"`. Past the deadline it
   closes instead, as before.
-- `set_responses_visible_when_closed(...)` — operator flips the
-  display flag. No lifecycle gating beyond `_require_editable` /
-  `_require_status_ready` on its route; **does not invalidate**
-  per §2.3.
+- `set_responses_visible_when_closed(...)` — writes the flag, which
+  decides nothing now (§4 field table); its route has no UI and no
+  lifecycle gate; **does not invalidate** per §2.3.
 - `observe_deadline(...)` — lazy deadline-close. Idempotent. Called
   by the reviewer write-path predicate
   `session_accepts_responses` and by operator GETs that render
@@ -353,9 +352,9 @@ upstream of this check:
 - If the session is `ready` but the predicate returns `False`
   (the deadline passed),
   the existing surface template renders read-only with the "no
-  longer accepting responses" banner; the
-  `responses_visible_when_closed` toggle decides whether the
-  saved values render below.
+  longer accepting responses" banner; the saved values render below,
+  since a `ready` session is in the reviewer's `while_ongoing` window
+  (`spec/reviewer-surface.md` "Lifecycle gating").
 
 See `spec/reviewer-surface.md` §"Lifecycle gating" for the full
 GET-side rendering rules.

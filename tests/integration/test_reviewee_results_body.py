@@ -210,6 +210,27 @@ def _enable_reviewee_after_release_raw(
     db.commit()
 
 
+def _enable_reviewer_after_release_raw(
+    db: Session, review_session: ReviewSession, *, operator: User
+) -> None:
+    """Author the ``peer_reviewer`` policy as Raw on the after_release
+    cell, so a reviewer can still read their own answers on the summary
+    once the session is expired and released (G10)."""
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        audience="peer_reviewer",
+        while_ongoing_mode="raw",
+        after_release_mode="raw",
+        user=operator,
+    )
+    db.commit()
+
+
 # ── Body coverage ─────────────────────────────────────────────────────
 
 

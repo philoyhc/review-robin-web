@@ -19,14 +19,23 @@
    and point at the operator-side preview URLs that the surface
    context resolved via its ``page_url_builder``.
 
+   On a closed surface (``any_accepting`` false, not a preview) the
+   write controls and the divider drop and the Prev / counter / Next
+   cluster stays, so the reviewer can still page through what they
+   wrote (spec/reviewer-surface.md "Lifecycle gating"). The caller
+   renders the row only when it has something to show.
+
    Required context:
      - session: ReviewSession
+     - any_accepting: bool
      - current_page_n / page_count / prev_page_url / next_page_url
      - preview_mode: bool
      - action_row_position: "top" or "bottom" (default treated as
        "bottom"). Top is flush left; bottom is flush right.
 #}
+{% set rs_writable = any_accepting or preview_mode %}
 <div class="rs-action-row{% if action_row_position == 'top' %} rs-action-row-top{% endif %}">
+  {% if rs_writable %}
   <div class="rs-action-row-controls">
     {% if preview_mode %}
       <button class="btn secondary" type="button" disabled aria-disabled="true">Save</button>
@@ -44,8 +53,11 @@
       </button>
     {% endif %}
   </div>
+  {% endif %}
   {% if page_count > 1 %}
+    {% if rs_writable %}
     <span class="rs-action-divider" aria-hidden="true"></span>
+    {% endif %}
     <div class="rs-page-nav-cluster">
       {% if prev_page_url %}
         <a class="btn secondary" href="{{ prev_page_url }}">&lt; Previous page</a>
