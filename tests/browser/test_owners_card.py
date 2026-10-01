@@ -14,7 +14,12 @@ import httpx
 from playwright.sync_api import Browser, Dialog, Locator, Page, expect
 
 from ._builder import activate, seed_rosters, sign_in
-from .conftest import COLLEAGUE_EMAIL, FAKE_OPERATOR_EMAIL, LiveServer
+from .conftest import (
+    COLLEAGUE_EMAIL,
+    FAKE_OPERATOR_EMAIL,
+    SECOND_COLLEAGUE_EMAIL,
+    LiveServer,
+)
 
 
 def _sign_in_colleague(api: httpx.Client) -> None:
@@ -61,13 +66,20 @@ def test_the_card_starts_locked(
     page: Page, api: httpx.Client, new_session: Callable[[], int]
 ) -> None:
     """Item 5, 'The card starts locked'."""
-    _sign_in_colleague(api)
-    _open_home(page, new_session())
+    # Two owners, so a Remove that only the lock disables is on the card,
+    # and a second colleague, so the picker still has someone to offer.
+    session_id = _two_owner_session(page, api, new_session)
+    sign_in(api, SECOND_COLLEAGUE_EMAIL)
+    page.goto("/operator/sessions")
+    _open_home(page, session_id)
 
     expect(page.locator("#owners-card-body")).to_have_class("lockable-body locked")
     expect(page.locator("#owners-add-email")).to_be_disabled()
     expect(page.locator("#owners-add-submit")).to_be_disabled()
     expect(page.locator("#owners-lock-toggle")).to_have_text("Unlock")
+    remove = _owner_row(page, COLLEAGUE_EMAIL).get_by_role("button", name="Remove")
+    expect(remove).to_be_disabled()
+    expect(remove).to_have_attribute("title", "Unlock the card to change owners.")
 
 
 def test_add_and_remove_each_save_at_once(
