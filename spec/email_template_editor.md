@@ -192,10 +192,10 @@ never an error — so a typo in an override cannot fail a send.
 |---|---|---|---|---|
 | `$reviewer_name` | ✓ | ✓ | ✓ | roster name; `""` in previews with no reviewer |
 | `$session_name` | ✓ | ✓ | ✓ | `session.name` |
-| `$deadline` | ✓ | ✓ | ✓ | `format_datetime(session.deadline)` — `YYYY-MM-DD HH:MM` plus the zone token when shown; `""` when unset |
+| `$deadline` | ✓ | ✓ | ✓ | `session.deadline` in the session's resolved zone (`sessions.resolve_session_timezone`, as `spec/timezone_display.md` requires): `YYYY-MM-DD HH:MM`, plus the zone token when `SHOW_ZONE_TOKEN` is on; `""` when unset |
 | `$help_contact` | ✓ | ✓ | ✓ | `session.help_contact` or `""` |
 | `$invite_url` | ✓ | ✓ | — | the reviewer's `/me/invite/{token}` URL; a fixed placeholder in previews |
-| `$submitted_at` | — | — | ✓ | latest `Response.submitted_at` for the reviewer in this session, `YYYY-MM-DD HH:MM TZ`; `"(not yet submitted)"` when none (previews only, in practice) |
+| `$submitted_at` | — | — | ✓ | latest `Response.submitted_at` for the reviewer in this session, `YYYY-MM-DD HH:MM` in the session's resolved zone; `"(not yet submitted)"` when none (previews only, in practice) |
 
 **Defaults** (verbatim parameterisations of the pre-11E hard-coded
 strings, so a `NULL` column renders byte-identically to the old
