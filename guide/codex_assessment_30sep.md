@@ -8,6 +8,11 @@ roadmap, deferred ledger, operational documents, and the history available in
 this checkout. Quantitative results use git-tracked files and the classification
 in `guide/assessment.json`.
 
+**Operational update, 1 October 2026:** `docs/nus_azure_status_v7.md` supplies
+newer deployment evidence than the 30 September snapshot. The assessment below
+has been updated where that evidence changes its operational conclusions; its
+code and quantitative baseline remains pinned to `17675383`.
+
 ## Executive assessment
 
 Review Robin Web remains **technically ready for an institutional pilot, while
@@ -28,11 +33,17 @@ post-Azure evidence item remains open. The available shallow history starts on
 18,522 lines and deleting 2,344**. That is enough to establish the pace without
 pretending it covers the full interval.
 
-The next move should be operational, not another feature segment. Deploy the
-closed 19T surface, run the six post-Azure checklist items, and let real browser,
-identity, latency, delivery, and restore evidence select the next code change.
-Do not reopen the builder merely because its new abstractions make further
-instrument features possible.
+The next move should still be operational, not another feature segment, but
+deployment cannot yet be treated as a project-controlled next action. The NUS
+landing zone now has the private Web App, PostgreSQL, Key Vault, telemetry,
+Easy Auth, OIDC deployment identity, public IP, DNAT, and Application Gateway
+plumbing provisioned. Two external decisions block the remaining path: Microsoft
+Support must identify runner VM capacity in Southeast Asia, and NUS must settle
+the production hostname. Once those clear, finish the runner, gateway, secrets,
+migrations, and deployment; then run the six post-Azure checklist items and let
+real browser, identity, latency, delivery, and restore evidence select the next
+code change. Do not reopen the builder merely because its new abstractions make
+further instrument features possible.
 
 ## 1. Repository shape and capability
 
@@ -206,16 +217,29 @@ audit events. Branching does not create a new authorization seam or accept
 executable conditions—the operator chooses from bounded tokens interpreted by
 services.
 
-Operational uncertainty remains the dominant risk:
+Operational uncertainty remains the dominant risk, but the infrastructure state
+is materially stronger than the 30 September read established. The Web App,
+PostgreSQL Flexible Server, and Key Vault are private; App Service Route All is
+enabled; Log Analytics and Application Insights are provisioned; Easy Auth v2
+is enabled with tenant consent; the GitHub OIDC identity exists; and the
+Application Gateway can reach the App Service private endpoint. A default-probe
+HTTP 404 demonstrates network reachability, not application health.
 
-- real Easy Auth claims and role landing are unverified;
-- external email delivery is deliberately inactive;
-- backup and restore have not been rehearsed;
-- Application Insights is absent;
-- Postgres networking and secrets retain pilot-grade compromises;
-- transfer compression and real page latency are unmeasured;
-- keyboard, screen-reader, responsive, and progressive-enhancement behavior
-  remain untested in a deployed browser.
+The remaining uncertainty is now more precisely divided:
+
+- **Two external blockers:** repeated `SkuNotAvailable` failures prevent the
+  private self-hosted runner VM, pending Microsoft Support advice; and NUS has
+  not yet decided the production domain/hostname needed for DNS, TLS, gateway
+  routing, and the final Easy Auth redirect URI.
+- **Project work after those blockers clear:** register and verify the private
+  runner, validate its firewall path and private Key Vault access, create the
+  least-privilege database role, store production secrets, switch the NUS
+  deployment workflow to the runner, run migrations, and complete HTTPS gateway
+  routing with App Service host-header handling and an application health probe.
+- **Evidence still owed after deployment:** real Easy Auth claims and role
+  landing, external email delivery, backup and restore rehearsal, useful
+  telemetry, transfer compression and page latency, and keyboard, screen-reader,
+  responsive, and progressive-enhancement behavior in a deployed browser.
 
 The post-Azure checklist now has six open items, including browser verification
 for the Owners/typeahead work and the whole 19T instrument surface. This is a
@@ -245,7 +269,19 @@ observation as scheduled work.
 
 ## 8. Recommended next moves
 
-### 1. Deploy the closed 19T surface and run checklist item 6
+### 1. Hold feature work while the two deployment blockers clear
+
+Do not substitute local product work for progress that currently depends on
+Microsoft Support and the NUS hostname decision. Keep the deployable artifact
+ready and avoid hard-coding a guessed public hostname or making further runner
+VM attempts until NUS receives an approved/capacity-backed SKU path.
+
+### 2. Complete the private deployment path, then test 19T
+
+When the blockers clear, create and register the private runner, verify its
+forced outbound and private-service access, establish the least-privilege
+database identity and secrets, switch the deployment workflow, run migrations,
+and complete the Application Gateway HTTPS route and health probe.
 
 Exercise the instrument builder and reviewer surface in the dev slot: row
 movement, lock state, branching modes, nested branches, range boundaries,
@@ -253,14 +289,14 @@ conditional required behavior, saved-response locks, narrow layout, and focus
 flow. Record failures against the checklist instead of reopening the archived
 segment.
 
-### 2. Execute the remaining institutional evidence checklist
+### 3. Execute the remaining institutional evidence checklist
 
 Verify real identity and visibility, navigation behavior, stylesheet transfer
 cost, Owners and tag typeahead, restore, logging, and the participant journey.
 These observations now have higher expected value than another locally inferred
 feature or abstraction.
 
-### 3. Freeze advanced-instrument scope until use supplies a case
+### 4. Freeze advanced-instrument scope until use supplies a case
 
 Two-level branching is already a considerable rules language. Do not add deeper
 nesting, compound predicates, or another field mode without a real instrument
@@ -268,7 +304,7 @@ that cannot be represented and a clear migration/export contract. Complexity
 here multiplies across authoring, entry, completeness, summaries, results,
 clone, and configuration round-trip.
 
-### 4. Make the next builder change pay for one vertical extraction
+### 5. Make the next builder change pay for one vertical extraction
 
 If pilot evidence requires another instrument change, extract the complete
 interaction it touches from `instruments_index.html`, with its view contract and
@@ -276,7 +312,7 @@ tests. Candidate seams are branch-row authoring or preview reconstruction. Do
 not schedule a size-only rewrite, and do not split markup, script, and tests
 independently.
 
-### 5. Compact the completed design record and stale roadmap stubs
+### 6. Compact the completed design record and stale roadmap stubs
 
 Correct the Item 14 status in the advanced-instruments record and Guide index,
 then let the next corpus sweep dispose of destinations that name already-closed
@@ -289,7 +325,10 @@ Review Robin Web is a capable, well-tested pilot application. Segment 19T added
 a coherent advanced instrument model and carried it across every relevant
 surface without breaking the repository's architectural seams. It also expanded
 the largest UI file, the tests, and the documentation substantially while the
-same institutional unknowns remained untouched. The application does not need
-another locally imagined capability to become ready. It needs deployment,
-observed use, browser evidence, and an operational rehearsal. Let those results
-decide what changes next.
+same institutional unknowns remained untouched. The 1 October handoff now shows
+that most of the private Azure foundation exists; what remains is a specific
+external capacity problem, a specific institutional naming decision, the
+project-side work they unblock, and then operational proof. The application does
+not need another locally imagined capability to become ready. It needs those
+blockers cleared, deployment completed, observed use, browser evidence, and an
+operational rehearsal. Let those results decide what changes next.
