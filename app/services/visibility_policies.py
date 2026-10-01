@@ -476,6 +476,13 @@ def upsert_many(
     ("off in this window") or one of the operator-facing labels
     ``"raw"`` / ``"anonymized"`` / ``"summarized"``.
 
+    **A row without an ``observer_tag`` key keeps the stored tag**;
+    an explicit ``None`` clears it. The instrument card's editor has no
+    tag control, so its rows carry no key, and before this a save wrote
+    every observer row back with ``observer_tag=None``, wiping a tag a
+    settings import had set (``spec/visibility_policy.md`` §4:
+    *"observer_tag choice survives"*; post_assessment_1oct E6).
+
     Validation is per-row — the first violation raises; rows
     already applied stay flushed because the route layer wraps
     the whole save in a transaction. Returns the list of
@@ -491,6 +498,18 @@ def upsert_many(
         text = str(value).strip()
         return text or None
 
+    def _observer_tag_for(row: dict[str, object]) -> str | None:
+        if "observer_tag" in row:
+            value = row["observer_tag"]
+            return str(value) if value is not None else None
+        existing = db.execute(
+            select(InstrumentViewPolicy.observer_tag).where(
+                InstrumentViewPolicy.instrument_id == instrument.id,
+                InstrumentViewPolicy.audience == str(row["audience"]),
+            )
+        ).scalar_one_or_none()
+        return existing
+
     result: list[tuple[str, dict[str, list[object]]]] = []
     for row in rows:
         _, changes = upsert_policy(
@@ -500,11 +519,7 @@ def upsert_many(
             audience=str(row["audience"]),
             while_ongoing_mode=_mode_or_none(row.get("while_ongoing_mode")),
             after_release_mode=_mode_or_none(row.get("after_release_mode")),
-            observer_tag=(
-                str(row["observer_tag"])
-                if row.get("observer_tag") is not None
-                else None
-            ),
+            observer_tag=_observer_tag_for(row),
             user=user,
             correlation_id=correlation_id,
         )
