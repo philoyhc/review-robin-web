@@ -554,7 +554,7 @@ Response field input markup is driven by the field's `data_type`:
 |---|---|
 | `String` with `validation.max_length > 100` | `<textarea rows="N">` where `N` is derived from `max_length` and the operator-set column width via `views.textarea_rows_for` (see below); `min-height: 44px` floor; `resize: vertical` so the corner-drag doesn't push the column out of its operator-defined width; preserves stored value. |
 | `String` with `validation.max_length ≤ 100` | `<input type="text">`; the `maxlength` attribute reflects `validation.max_length`. |
-| `Integer`, `Decimal` | `<input type="number">`; `min` / `max` / `step` reflect `validation`. |
+| `Integer`, `Decimal` | `<input type="number">`; `min` / `max` / `step` reflect `validation`. An `Integer` with no `validation.step` still carries `data-rs-step="1"`, so a decimal meets the inline step check. |
 | `List` | `<select>` over `validation.choices`, with an empty leading option (`value=""`) representing "no answer". |
 | anything else | `<input type="text">` (defensive fallback). |
 
@@ -655,7 +655,10 @@ import — so a governed answer never outlives its branch closing. A
 governed value typed in the same request as a parent value Save
 refuses is **held back as an error**, not written and then deleted: the
 reviewer sees `"Kept until {parent label} is fixed."` beside the
-parent's own error, and both come back with their typed text.
+parent's own error, and both come back with their typed text. With
+script on, the browser's own range and step checks stop such a Save
+before it posts, so the held answer is reached without JavaScript (or
+by a direct POST).
 
 **A governed field can be required too.** It is required, and counts
 missing, only while its branch is open for that row

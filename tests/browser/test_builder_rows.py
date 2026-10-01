@@ -166,3 +166,25 @@ def test_the_last_row_cannot_be_deleted(
 
     expect(rows(card)).to_have_count(1)
     expect(rows(card).first.locator("[data-new-model-rf-delete]")).to_be_disabled()
+
+
+def test_an_integer_rows_blank_step_saves_as_one(
+    page: Page, new_session: Callable[[], int]
+) -> None:
+    """Item 6, 'Integer Step defaults to 1'."""
+    session_id = new_session()
+    card = open_unlocked(page, session_id)
+    rows(card).first.locator("[data-new-model-rf-add]").click()
+    row = rows(card).nth(1)
+    row.locator("[data-new-model-rf-name]").fill("Count")
+    row.locator("[data-new-model-rf-data-type]").select_option("integer")
+    step = row.locator("[data-new-model-rf-bound=step]")
+    expect(step).to_be_visible()
+    expect(step).to_have_value("")
+    expect(step).to_have_attribute("placeholder", "Step")
+
+    save(page, card)
+    expect(step).to_have_value("1")
+
+    card = open_unlocked(page, session_id)
+    expect(rows(card).nth(1).locator("[data-new-model-rf-bound=step]")).to_have_value("1")

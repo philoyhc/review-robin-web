@@ -834,6 +834,39 @@ def test_numeric_input_carries_step_data_attrs_for_js_validity(
     assert "setCustomValidity" in body
 
 
+def test_an_integer_field_with_a_blank_step_steps_by_one(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """An Integer field saved with Step left blank still carries
+    ``data-rs-step="1"``, so a decimal meets the inline step check
+    instead of reaching the server as "Must be a whole number."."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-blank-step",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        activate=False,
+    )
+    rating = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.field_key == "rating"
+        )
+    ).scalar_one()
+    rating._inline_step = None
+    rating.validation = {"min": 1, "max": 5}
+    db.commit()
+    _activate(operator, db, review_session)
+
+    body = make_client(rae).get(f"/me/sessions/{review_session.id}/1").text
+    assert 'data-rs-step="1"' in body
+    assert 'data-rs-step-anchor="1"' in body
+
+
 def test_save_rejects_out_of_range_integer_and_keeps_typed_value(
     db: Session,
     alice: AuthenticatedUser,

@@ -4061,6 +4061,12 @@
                   row.setAttribute('data-selected', 'false');
                   if (window.newModelRfValidateShape(row)) { return; }
                 }
+                // An Integer row's blank Step saved as 1; show it.
+                var step = row.querySelector('[data-new-model-rf-bound="step"]');
+                if (step && !step.value.trim()
+                    && window.newModelRfRowShape(row).dataType === 'integer') {
+                  step.value = '1';
+                }
                 window.newModelRfCommitRow(row);
               });
               if (window.newModelRefreshBand2) { window.newModelRefreshBand2(b2); }

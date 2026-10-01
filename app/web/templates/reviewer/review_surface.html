@@ -508,8 +508,10 @@
                          ``setCustomValidity`` so off-grid values get
                          the same browser popup chrome as a range
                          violation, just with our custom message and
-                         our float-tolerant comparison. Spinners are
-                         hidden via base.html CSS. #}
+                         our float-tolerant comparison. An Integer field
+                         with a blank Step steps by 1, so a decimal meets
+                         the same check rather than reaching the server.
+                         Spinners are hidden via base.html CSS. #}
                       <input type="number"
                              inputmode="{{ 'numeric' if data_type == 'Integer' else 'decimal' }}"
                              name="{{ field_name }}"
@@ -519,7 +521,7 @@
                              {% if validation.min is defined %}min="{{ validation.min }}"{% endif %}
                              {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}
                              step="any"
-                             {% if validation.step is defined %}data-rs-step="{{ validation.step }}"{% endif %}
+                             {% if validation.step is defined %}data-rs-step="{{ validation.step }}"{% elif data_type == "Integer" %}data-rs-step="1"{% endif %}
                              {% if validation.min is defined %}data-rs-step-anchor="{{ validation.min }}"{% endif %}
                              {% if cell.placeholder %}title="{{ cell.placeholder }}"{% endif %}
                              {{ disabled_attr }}>

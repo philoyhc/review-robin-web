@@ -5089,6 +5089,104 @@ def test_integer_whole_bounds_rule_is_mirrored_client_side(
     assert "row.getAttribute('data-has-responses') !== 'true'" in body
 
 
+def _post_rating(
+    client: TestClient, review_session, new_model, rating_id: int, step: str
+):
+    return client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "id": rating_id,
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "1",
+                    "max": "5",
+                    "step": step,
+                    "selected": True,
+                }
+            ]
+        },
+    )
+
+
+def test_an_integer_fields_blank_step_saves_as_one(
+    client: TestClient, db: Session
+) -> None:
+    """An Integer field saved with Step left blank stores Step 1, and its
+    reviewer-facing ``validation`` carries it; a Decimal's blank Step
+    stays blank."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="int-blank-step"
+    )
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
+    response = _post_rating(client, review_session, new_model, rating.id, "")
+    assert response.status_code == 200, response.text
+    db.refresh(rating)
+    assert rating._inline_step == 1.0
+    assert rating.validation["step"] == 1
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "id": rating.id,
+                    "name": "Rating",
+                    "data_type": "decimal",
+                    "min": "1",
+                    "max": "5",
+                    "step": "",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    assert response.status_code == 200, response.text
+    db.refresh(rating)
+    assert rating._inline_step is None
+
+
+def test_a_stored_blank_integer_step_fills_in_despite_responses(
+    client: TestClient, db: Session
+) -> None:
+    """A blank Step stored before the default existed already meant 1, so
+    the next Save fills it in even though the field has responses, rather
+    than refusing the card as a shape change."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="int-blank-step-responses"
+    )
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
+    _post_rating(client, review_session, new_model, rating.id, "1")
+    rating._inline_step = None
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalars().first()
+    reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars().first()
+    assignment = Assignment(
+        session_id=review_session.id,
+        instrument_id=new_model.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(Response(assignment_id=assignment.id, response_field_id=rating.id, value="4"))
+    db.commit()
+
+    response = _post_rating(client, review_session, new_model, rating.id, "")
+    assert response.status_code == 200, response.text
+    db.refresh(rating)
+    assert rating._inline_step == 1.0
+    # A real Step change on that field is still refused.
+    response = _post_rating(client, review_session, new_model, rating.id, "2")
+    assert response.status_code == 409
+
+
 def test_wave3_prii_shape_change_blocked_when_responses_exist(
     client: TestClient, db: Session
 ) -> None:

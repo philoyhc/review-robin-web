@@ -43,10 +43,11 @@ def _branched_session(
     new_session: Callable[[], int],
     *,
     required: bool = False,
+    opens_at: str = "4",
 ) -> int:
     session_id = new_session()
     seed_rosters(api, session_id)
-    card = branch_rating(page, session_id)
+    card = branch_rating(page, session_id, value=opens_at)
     if required:
         card.locator("[data-new-model-rf-governed] [data-new-model-rf-required]").click()
         save(page, card)
@@ -123,3 +124,41 @@ def test_a_required_governed_field_is_required_only_while_open(
     )
     reviewer.get_by_role("button", name="Submit").first.click()
     reviewer.wait_for_url(f"**/me/sessions/{session_id}/summary")
+
+
+def test_a_refused_parent_keeps_the_text_without_javascript(
+    page: Page,
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], int],
+) -> None:
+    """Item 6, 'A refused parent keeps the text'.
+
+    With JavaScript on, the inline step check stops 2.5 in an Integer
+    field before Save posts, so only a script-less page reaches the
+    server's refusal. Without script the branch opens on the stored
+    answer, so the parent is saved once first."""
+    session_id = _branched_session(page, api, live_server, new_session, opens_at="2")
+    reviewer = page_as(REVIEWER_EMAIL, javascript=False)
+    url = f"/me/sessions/{session_id}/1"
+    reviewer.goto(url)
+    _answer(reviewer, "rating").fill("3")
+    _save_answers(reviewer)
+    reviewer.goto(url)
+    expect(_answer(reviewer, "why")).to_be_enabled()
+
+    _answer(reviewer, "rating").fill("2.5")
+    _answer(reviewer, "why").fill("Clear and specific")
+    _save_answers(reviewer)
+
+    errors = reviewer.locator("[data-rs-errors-card]")
+    expect(errors).to_contain_text("Must be a whole number.")
+    expect(errors).to_contain_text("Kept until Rating is fixed.")
+    expect(_answer(reviewer, "rating")).to_have_value("2.5")
+    expect(_answer(reviewer, "why")).to_have_value("Clear and specific")
+
+    # Neither was written: the stored answers are what they were.
+    reviewer.goto(url)
+    expect(_answer(reviewer, "rating")).to_have_value("3")
+    expect(_answer(reviewer, "why")).to_have_value("")

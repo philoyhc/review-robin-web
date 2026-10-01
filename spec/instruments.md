@@ -1075,6 +1075,12 @@ response-type display names — and enforces:
   from what's stored, since those bounds are locked and refusing them
   would block every Save of the card; a stored field without
   responses meets the rule on its next Save.
+- `Integer` only: a blank Step **saves as 1**, the step an Integer
+  takes anyway, and Save writes the 1 into the row's Step box; until
+  then the box shows its muted "Step" placeholder. A blank Step stored
+  before this default fills in on the card's next Save even when the
+  field has responses, since it already meant 1 (no shape change).
+  A `Decimal`'s blank Step stays blank.
 - `String`: the `max` slot is read as `max_length` and must be `> 0`
   when set.
 - `List`: at least one option once blanks are trimmed.
