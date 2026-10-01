@@ -75,12 +75,16 @@ The on-page model maps onto these:
   vs Group). Together these define **the assignment rule** for
   this instrument (`SessionRuleSet` row materialised lazily on
   first non-empty filter).
-- **Band 2.** A preview row of what the reviewer sees alongside
-  each row: the display fields (Name + Email always, plus the
-  reviewee / pair-context tag fields the operator picks in Band 3's
-  display-field table) and the response fields.
-- **Band 3.** Response fields — typed input controls the
-  reviewer fills in. Each row carries its own inline
+- **Band 2.** What the reviewer sees: an intro (the name card over
+  the visibility card on the left, the help cards on the right) above
+  a preview row of the display fields (Name and Email on an Individual
+  instrument, plus the reviewee / pair-context tag fields the operator
+  picks in Band 3's display-field table) and the response fields.
+- **Band 3.** Two tables side by side. On the left, **display
+  fields** — which roster and pair-context fields the reviewer sees
+  (Name and Email fixed on an Individual instrument), in order (see
+  "Display-field table"). On the right, **response fields** — typed
+  input controls the reviewer fills in. Each response-field row carries its own inline
   `data_type` + `min` / `max` / `step` / `list_options`; there is
   no per-session response-type catalogue to point at.
 
@@ -203,7 +207,7 @@ band numbers survive in prose and in identifiers (`band2_state`,
 |---|---|
 | Band 1 | Instrument assignment rule (+ Unit of review) |
 | Band 2 | Preview review instrument |
-| Band 3 | Response fields |
+| Band 3 | Display fields · Response fields |
 
 Order of stripes (each separated by a horizontal rule):
 
@@ -216,9 +220,9 @@ Order of stripes (each separated by a horizontal rule):
 │ Who does the review │ Who is being reviewed │ Unit of review   │
 │  (three columns, vertical rules between)                       │
 ├────────────────────────────────────────────────────────────────┤
-│ Band 2 — preview row                                           │
+│ Band 2 — intro (name, visibility │ help cards), preview row    │
 ├────────────────────────────────────────────────────────────────┤
-│ Band 3 — response-field table                                  │
+│ Band 3 — display-field table │ response-field table            │
 ├────────────────────────────────────────────────────────────────┤
 │ Action row (Save / Cancel / Replicate / Delete / +Instrument / │
 │             +Page break / Lock-Unlock) + delete-confirm cbox   │

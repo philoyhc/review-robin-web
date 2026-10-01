@@ -11,19 +11,19 @@ Six items that rework the Instruments page's builder:
   are never required;
 - **Item 2**: required governed fields;
 - **Item 6**: required-when conditions, a second level and numeric
-  ranges, explored against one scenario (2026-09-27), and logged as 19T
-  Items 12–14 the same day.
+  ranges, explored against one scenario (2026-09-27), and built as 19T
+  Items 12–14.
 
-**Logged 2026-09-24 and 2026-09-25 on the author's instruction. Being
-built one item at a time:** Item 4 shipped first as 19T Item 7
+**Logged 2026-09-24 and 2026-09-25 on the author's instruction, and
+built one item at a time; every item has shipped:** Item 4 shipped first as 19T Item 7
 (2026-09-26), ahead of Item 3 because it doesn't touch the pills, and
 Item 5 as 19T Item 8 (2026-09-26), and Item 3 as 19T Item 9
 (2026-09-26). Item 1 shipped as 19T Item 10 (2026-09-27); Item 2 shipped
 as 19T Item 11 (2026-09-27). Of Item 6's three extensions, Q3 shipped as
-19T Item 12 (2026-09-28), Q1 as 19T Item 13 (2026-09-29), and Q2 is
-logged as 19T Item 14. This file keeps the
-author's rulings and the measured cost, so the build can start from them.
-Every item is now built or logged as a 19T item, so no
+19T Item 12 (2026-09-28), Q1 as 19T Item 13 (2026-09-29), and Q2 as
+19T Item 14 (2026-09-29). Segment 19T closed 2026-09-30. This file keeps
+the author's rulings and the measured cost, as the design record behind
+what shipped. Every item is built as a 19T item, so no
 `guide/deferred_consolidated.md` entry points here any more (the last
 left at 19T Item 11's close). It was logged as
 response_field_branching.md and renamed once Item 3 widened it.
