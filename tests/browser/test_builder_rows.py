@@ -17,6 +17,7 @@ from ._builder import (
     names,
     open_unlocked,
     preview_headers,
+    preview_input,
     rows,
     save,
     save_button,
@@ -70,11 +71,14 @@ def test_the_preview_follows_a_row_and_keeps_its_last_valid_shape(
 
     first.locator("[data-new-model-rf-name]").fill("Score")
     assert preview_headers(card) == ["Score", "Comments"]
+    first.locator("[data-new-model-rf-bound=max]").fill("3")
+    expect(preview_input(card, 0)).to_have_attribute("max", "3")
 
     first.locator("[data-new-model-rf-bound=max]").fill("0")
     expect(first).to_have_attribute(
         "title", "Max must be at least Min. The preview keeps the last valid shape."
     )
+    expect(preview_input(card, 0)).to_have_attribute("max", "3")
     assert preview_headers(card) == ["Score", "Comments"]
 
 

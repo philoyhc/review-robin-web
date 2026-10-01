@@ -120,13 +120,13 @@ def test_visibility_is_edited_in_the_card_and_survives_lock_and_reload(
     card.locator("[data-instrument-lock-toggle]:visible").first.click()
     locked_cell = card.locator("[data-new-model-vp-preview-cell=reviewee-after_release]")
     expect(locked_cell).to_be_visible()
-    expect(locked_cell).not_to_have_text("—")
-    shown = (locked_cell.text_content() or "").strip()
+    expect(locked_cell).to_have_text("Raw responses")
+    expect(card.locator("[data-new-model-vp-observers-row]")).to_be_hidden()
 
     card = open_card(page, session_id)
     expect(
         card.locator("[data-new-model-vp-preview-cell=reviewee-after_release]")
-    ).to_have_text(shown)
+    ).to_have_text("Raw responses")
     card.locator("[data-instrument-unlock-toggle]:visible").first.click()
     expect(_chip(card, "reviewee", "after_release")).to_have_attribute(
         "data-new-model-vp-current-slug", "raw"

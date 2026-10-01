@@ -67,6 +67,13 @@ def preview_headers(card: Locator) -> list[str]:
     )
 
 
+def preview_input(card: Locator, column: int) -> Locator:
+    """The sample row's control under a response-field column."""
+    return card.locator("th[scope=col]:not(.rs-reviewee)").nth(column).locator(
+        "xpath=ancestor::table[1]"
+    ).locator("tbody td :is(input, select, textarea)").nth(column)
+
+
 def save_button(card: Locator) -> Locator:
     return card.locator("[data-new-model-save]:visible").first
 
@@ -79,3 +86,6 @@ def save(page: Page, card: Locator) -> None:
     ) as saved:
         button.click()
     assert saved.value.ok, saved.value.text()
+    # The response arrives before the page's own handler has assigned ids
+    # to new rows and cleared the dirty state; Save disabling is that end.
+    expect(button).to_be_disabled()
