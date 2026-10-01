@@ -62,6 +62,7 @@ from ._generate import (
     generate_full_matrix,
     reconcile_impact,
     InstrumentReconcileState,
+    persist_reconcile_warm,
     staleness_by_instrument,
     replace_assignments,
 )
@@ -107,6 +108,7 @@ __all__ = [
     "list_reviewers",
     "reconcile_impact",
     "InstrumentReconcileState",
+    "persist_reconcile_warm",
     "staleness_by_instrument",
     "recompute_self_review_classification",
     "replace_assignments",
