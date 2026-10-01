@@ -112,8 +112,9 @@ CI's `test` job; about 25 s of browser time per run.
 **What the ladder became.** Rungs 1–5 landed as planned, one PR each: the
 harness and one Save-and-reload test (2); 14 builder-row tests (3); 6
 builder branching and 2 reviewer branch-row tests (4); 11 Owners-card,
-typeahead and Create tests (5). Every test names its checklist row in
-its docstring. The tag file is `test_tags_and_create.py`, not
+typeahead and Create tests (5). Every test from rung 3 on names its
+checklist row in its docstring; rung 2's Save round trip is the harness's
+smoke test and repeats no single row. The tag file is `test_tags_and_create.py`, not
 `test_tag_typeahead.py`, because Create's Owners card shares its setup.
 
 **Divergences from the plan:**
