@@ -51,4 +51,6 @@ jobs:
           alembic upgrade head
 
       - name: Run pytest against Postgres
-        run: pytest -q
+        # The browser tests serve the app from their own SQLite file, so they
+        # add nothing here; they run in ci.yml (guide/browser_test.md).
+        run: pytest -q --ignore=tests/browser

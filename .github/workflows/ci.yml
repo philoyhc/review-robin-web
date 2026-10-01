@@ -24,8 +24,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[dev]
 
+      - name: Install Chromium for the browser tests
+        run: python -m playwright install --with-deps chromium
+
       - name: Lint
         run: ruff check .
 
       - name: Run tests
+        # tests/browser/ fails rather than skips without a browser here
+        # (guide/browser_test.md).
+        env:
+          RRW_REQUIRE_BROWSER: "1"
         run: pytest -n auto

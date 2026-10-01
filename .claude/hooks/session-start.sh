@@ -74,11 +74,18 @@ fi
 "$VENV/bin/python" -m pip install --quiet --upgrade pip
 "$VENV/bin/python" -m pip install --quiet -e ".[dev]"
 
-# tests/integration/test_inline_scripts_parse.py skips silently without node —
-# the suite's only tool-gated skip, so say it out loud rather than pass by not
-# running. On stdout, because that is what reaches the session; stderr may not.
+# tests/integration/test_inline_scripts_parse.py skips silently without node,
+# so say it out loud rather than pass by not running. On stdout, because that
+# is what reaches the session; stderr may not.
 if ! command -v node >/dev/null 2>&1; then
   echo "session-start: WARNING: node not found — test_inline_scripts_parse.py will skip"
+fi
+
+# tests/browser/ skips without a Chromium build Playwright can find
+# (guide/browser_test.md). The web image preinstalls one under
+# PLAYWRIGHT_BROWSERS_PATH; warn if that ever stops being true.
+if ! ls -d "${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"/chromium_headless_shell-* >/dev/null 2>&1; then
+  echo "session-start: WARNING: no Chromium for Playwright — tests/browser/ will skip"
 fi
 
 echo "session-start: $("$VENV/bin/python" --version), $("$VENV/bin/python" -m pytest --version 2>&1 | head -1) ready in .venv"
