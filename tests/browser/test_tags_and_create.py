@@ -11,19 +11,15 @@ from __future__ import annotations
 
 import re
 import uuid
+from collections.abc import Callable
 
 import httpx
 import pytest
-from playwright.sync_api import Browser, Page, expect
+from playwright.sync_api import Page, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from ._builder import sign_in
-from .conftest import (
-    COLLEAGUE_EMAIL,
-    FAKE_OPERATOR_EMAIL,
-    SECOND_COLLEAGUE_EMAIL,
-    LiveServer,
-)
+from .conftest import COLLEAGUE_EMAIL, FAKE_OPERATOR_EMAIL, SECOND_COLLEAGUE_EMAIL
 
 
 def _tagged_session(api: httpx.Client, tags: str) -> int:
@@ -125,30 +121,30 @@ def test_create_stages_owners_and_saves_what_remains(
 
 
 def test_create_without_javascript_saves_the_typed_owner(
-    browser: Browser, live_server: LiveServer, api: httpx.Client
+    page_as: Callable[..., Page], api: httpx.Client
 ) -> None:
     """Item 5, 'Create is unchanged' (JavaScript off)."""
     sign_in(api, COLLEAGUE_EMAIL)
-    context = browser.new_context(base_url=live_server.base_url, java_script_enabled=False)
-    try:
-        page = context.new_page()
-        page.goto("/operator/sessions/new")
-        # With no script the staging buttons stay hidden and the typed
-        # address submits with the form, never added.
-        expect(page.locator("#session-owners-add")).to_be_hidden()
-        page.locator("#session-owners-email").fill(COLLEAGUE_EMAIL)
-        code = f"n{uuid.uuid4().hex[:8]}"
-        page.locator("input[name=name]").fill(f"No script {code}")
-        page.locator("input[name=code]").fill(code)
-        submit = page.get_by_role("button", name="Create session")
-        expect(submit).to_be_enabled()
-        with page.expect_navigation():
-            submit.click()
+    page = page_as(javascript=False)
+    page.goto("/operator/sessions/new")
+    # With no script the staging buttons stay hidden and the typed
+    # address submits with the form, never added.
+    expect(page.locator("#session-owners-add")).to_be_hidden()
+    page.locator("#session-owners-email").fill(COLLEAGUE_EMAIL)
+    name = page.locator("input[name=name]")
+    # Without the script's trim, the field's own pattern refuses spaces.
+    name.fill("   ")
+    assert name.evaluate("el => el.validity.patternMismatch")
+    code = f"n{uuid.uuid4().hex[:8]}"
+    name.fill(f"No script {code}")
+    page.locator("input[name=code]").fill(code)
+    submit = page.get_by_role("button", name="Create session")
+    expect(submit).to_be_enabled()
+    with page.expect_navigation():
+        submit.click()
 
-        expect(page).to_have_url(re.compile(r"/operator/sessions/\d+"))
-        owners = page.locator("#owners-card code")
-        expect(owners).to_have_text(
-            [FAKE_OPERATOR_EMAIL, COLLEAGUE_EMAIL], use_inner_text=True
-        )
-    finally:
-        context.close()
+    expect(page).to_have_url(re.compile(r"/operator/sessions/\d+"))
+    owners = page.locator("#owners-card code")
+    expect(owners).to_have_text(
+        [FAKE_OPERATOR_EMAIL, COLLEAGUE_EMAIL], use_inner_text=True
+    )
