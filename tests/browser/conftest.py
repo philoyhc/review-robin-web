@@ -60,14 +60,24 @@ class LiveServer:
     database_url: str
 
 
-def _bound_socket() -> socket.socket:
-    """A listening socket the server inherits, so no other xdist worker's
-    server can take the port between choosing it and binding it."""
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(("127.0.0.1", 0))
-    sock.listen()
-    sock.set_inheritable(True)
-    return sock
+def _server_command(sock: socket.socket) -> tuple[list[str], dict[str, object]]:
+    """How to start uvicorn on ``sock``'s port, and the Popen extras it needs.
+
+    On POSIX the server inherits the listening socket itself (``--fd``), so
+    no other xdist worker's server can take the port between choosing it and
+    binding it. Windows can't pass a file descriptor to a child, so there the
+    socket only chooses the port and is closed before uvicorn binds it: the
+    race comes back, rarely, and ``_wait_for_health`` re-checks that our own
+    server is still the one running.
+    """
+    base = [sys.executable, "-m", "uvicorn", "app.main:app"]
+    if os.name == "posix":
+        sock.listen()
+        sock.set_inheritable(True)
+        return base + ["--fd", str(sock.fileno())], {"pass_fds": (sock.fileno(),)}
+    port = sock.getsockname()[1]
+    sock.close()
+    return base + ["--port", str(port)], {}
 
 
 @pytest.fixture(scope="session")
@@ -97,17 +107,19 @@ def live_server(
     )
     if migrated.returncode != 0:
         raise RuntimeError(f"alembic upgrade head failed:\n{migrated.stderr}")
-    sock = _bound_socket()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
     base_url = f"http://127.0.0.1:{sock.getsockname()[1]}"
+    command, extras = _server_command(sock)
     log_path = workdir / "server.log"
     with sock, log_path.open("wb") as log:
         server = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "app.main:app", "--fd", str(sock.fileno())],
+            command,
             cwd=REPO_ROOT,
             env=env,
             stdout=log,
             stderr=subprocess.STDOUT,
-            pass_fds=(sock.fileno(),),
+            **extras,
         )
         try:
             _wait_for_health(base_url, server, log_path)
@@ -128,7 +140,11 @@ def _wait_for_health(base_url: str, server: subprocess.Popen, log_path: Path) ->
             break
         try:
             with urllib.request.urlopen(f"{base_url}/health", timeout=1):
-                return
+                # Something answers; make sure it is this server, which logs
+                # this once bound (and exits instead if the port was taken).
+                if b"Application startup complete" in log_path.read_bytes():
+                    return
+                time.sleep(0.1)
         except OSError:
             # Refused, reset, or (the socket listens before uvicorn starts
             # accepting) a read that timed out in the queue: try again.
