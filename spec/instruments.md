@@ -1080,7 +1080,9 @@ response-type display names — and enforces:
   then the box shows its muted "Step" placeholder. A blank Step stored
   before this default fills in on the card's next Save even when the
   field has responses, since it already meant 1 (no shape change).
-  A `Decimal`'s blank Step stays blank.
+  A `Decimal`'s blank Step stays blank. The default is applied by the
+  card's Save only: a Settings CSV import stores a blank Step as
+  blank, and the reviewer surface still steps such an Integer by 1.
 - `String`: the `max` slot is read as `max_length` and must be `> 0`
   when set.
 - `List`: at least one option once blanks are trimmed.
