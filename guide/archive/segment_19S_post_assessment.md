@@ -10,7 +10,8 @@
 > retired after Item 10 closed (Item 10's second Decision amendment;
 > `spec/session_owners.md`).
 > The browser checks Items 7 and 10 owe live in
-> `guide/post_azure_todo_checklist.md` item 5.
+> `guide/post_azure_todo_checklist.md` item 5, checked locally by the
+> author 2026-10-01 bar its Safari and screen-reader rows.
 
 **Opened:** 2026-09-22 · **Theme:** one home for what the end-of-window
 reads surfaced and nothing else owns · **Related:**

@@ -188,9 +188,10 @@ reject it.
 
 ## Where work runs
 
-- The human author does not run Python, alembic, or a database
-  locally. There is no laptop dev loop. `docs/local_setup.md` and
-  `ALLOW_FAKE_AUTH=true` exist for the agent's sandbox.
+- The author runs the app locally (`uvicorn` with fake auth, per
+  `docs/local_setup.md`) and checks every change in a browser at
+  `http://127.0.0.1:8000/`. The agent's sandbox remains the pre-PR
+  gate for `pytest` and `ruff`.
 - The agent's session container is the pre-PR gate: `pytest -n auto`
   and `ruff check .` must both pass there before pushing, with `node`
   present so `tests/integration/test_inline_scripts_parse.py` runs
@@ -289,9 +290,10 @@ reject it.
   Outside a close `spec-writer` may not re-align a spec to the code, so
   a deferred slice loses a report, not an alignment — and a later slice
   can falsify what an earlier pass verified.
-- End-to-end verification happens on the Azure dev slot after deploy,
-  not in the agent's sandbox. When a change touches UI or anything
-  the test suite can't exercise (templates, redirects, real auth),
-  say so explicitly in the PR description rather than claiming it was
-  verified.
+- End-to-end verification is the author's, in a browser, not the
+  agent's sandbox: layout, in-browser behavior and redirects on a local
+  run; real Easy Auth, the deployed configuration and the network only
+  on an Azure deployment. When a change touches UI or anything the test
+  suite can't exercise, say so explicitly in the PR description rather
+  than claiming it was verified.
 - If dependencies or tooling change, update `README.md`.

@@ -84,8 +84,10 @@ reproduces both.*)
 ## IV. The human is the verifier of last resort, and nothing runs unattended
 
 Anything the suite and the reader cannot see — layout, rendering,
-in-browser behaviour, real authentication — is verified by a person on
-the deployed dev slot, and a change that touches such things says so in
+in-browser behaviour, real authentication — is verified by a person in
+a browser: the author on a local run, and on a deployment for what only
+a deployment shows, such as real authentication. A change that touches
+such things says so in
 its description rather than claiming verification. No autonomous loop,
 no scheduled agent, no agent that merges: the definition of done is not
 machine-checkable for the defects that actually occur here, and a loop

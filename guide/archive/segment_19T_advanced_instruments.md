@@ -9,7 +9,8 @@
 > Guide up; Item 16 was a register of seven small fixes; Item 17 laid
 > the instrument intro out as two columns, name over visibility left and
 > every help card right. The browser checks owed live in
-> `guide/post_azure_todo_checklist.md` item 6.
+> `guide/post_azure_todo_checklist.md` item 6, checked locally by the
+> author 2026-10-01.
 
 **Opened:** 2026-09-24 · **Theme:** the Instruments page's builder and
 `guide/advanced_instruments.md`, built an item at a time; items close
