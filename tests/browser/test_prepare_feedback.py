@@ -1,7 +1,8 @@
 """Prepare's button while the request runs (post_assessment_1oct E4).
 
 Prepare takes about 14 s at a 200 x 200 full matrix, so the clicked
-button says "Preparing…" and a second click is refused until the page
+button says "Preparing session…", in two lines like its idle label, and
+a second click is refused until the page
 changes. A submit listener the test adds after the card's own stops the
 form leaving the page, so the button can be read mid-"request"; it
 records whether the card's listener, which runs first, had already
@@ -45,8 +46,12 @@ def test_prepare_says_so_and_takes_one_click(
         }"""
     )
 
+    idle_height = button.bounding_box()["height"]
     button.click()
-    expect(button).to_have_text("Preparing…")
+    # Two lines, like the idle label, so the button keeps its height.
+    expect(button).to_have_text("Preparing session…", use_inner_text=True)
+    assert button.evaluate("b => b.querySelectorAll('br').length") == 1
+    assert button.bounding_box()["height"] == idle_height
     expect(button).to_have_attribute("aria-busy", "true")
     # Busy is aria-busy, never disabled (base.html's busy indicator, rule 2).
     expect(button).to_be_enabled()

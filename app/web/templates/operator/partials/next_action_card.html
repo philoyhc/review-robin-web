@@ -498,8 +498,9 @@
 
 {# Prepare runs Generate + Validate + Invite in one POST, about 14 s at
    a 200 × 200 full matrix (`guide/app_responsiveness.md`, re-measured
-   2026-10-01). On submit, the clicked Prepare button reads "Preparing…"
-   and a second submit from either Prepare form (Prepare session, or
+   2026-10-01). On submit, the clicked Prepare button reads "Preparing
+   session…" in two lines like its idle label ("Preparing…" on the
+   one-line Regenerate & prepare), and a second submit from either Prepare form (Prepare session, or
    the confirmation's Regenerate & prepare, which render together) is
    refused: it would only queue a second Prepare behind the first. The
    buttons stay enabled — busy is `aria-busy`, never `disabled` (rule 2
@@ -536,7 +537,11 @@
         || document.querySelector('button[form="' + form.id + '"]');
       if (button) {
         busy.push({ button: button, label: button.innerHTML });
-        button.textContent = 'Preparing\u2026';
+        // Keep the idle label's line count, so the button keeps its
+        // height: "Prepare / session" becomes "Preparing / session…".
+        button.innerHTML = /<br/i.test(button.innerHTML)
+          ? 'Preparing<br>session\u2026'
+          : 'Preparing\u2026';
         button.setAttribute('aria-busy', 'true');
       }
     });
