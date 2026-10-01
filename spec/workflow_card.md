@@ -407,7 +407,13 @@ Generate + Validate + Invite in sequence (see below).
 
 The Prepare session button POSTs to
 `/operator/sessions/{id}/workflow/prepare` in `_workflow.py`,
-which runs three steps in sequence:
+which runs three steps in sequence. The run takes seconds on a large
+roster (about 14 s at a 200 × 200 full matrix,
+`guide/app_responsiveness.md`), so on submit the button, and the
+confirmation's **Regenerate &amp; prepare**, reads "Preparing…",
+disables itself with `aria-busy="true"`, and refuses a second submit
+until the page changes; a back-forward cache return restores it. The
+steps:
 
 1. **Generate.** `assignments.replace_assignments(...)` —
    materialises one `Assignment` row per `(reviewer, reviewee,

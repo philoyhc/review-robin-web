@@ -503,6 +503,46 @@
    auto-sends will be cancelled. Native confirm is the smallest UX
    surface here — no new modal CSS, screen-reader-friendly out of
    the box. #}
+{# Prepare runs Generate + Validate + Invite in one POST, about 14 s at
+   a 200 × 200 full matrix (`guide/app_responsiveness.md`, re-measured
+   2026-10-01). Its button says so while it runs and refuses a second
+   click, which would only queue a second Prepare behind the first.
+   Restored on a back-forward cache return, which shows the page as it
+   was left. Rendered only where a Prepare form is. #}
+{% if prepare_visible or prepare_confirm %}
+<script>
+(function () {
+  ['next-action-prepare-form', 'next-action-prepare-regenerate-form'].forEach(function (id) {
+    var form = document.getElementById(id);
+    if (!form) return;
+    var buttons = document.querySelectorAll('button[form="' + id + '"]');
+    form.addEventListener('submit', function (event) {
+      if (form.dataset.preparing === 'true') {
+        event.preventDefault();
+        return;
+      }
+      form.dataset.preparing = 'true';
+      buttons.forEach(function (button) {
+        button.dataset.idleLabel = button.innerHTML;
+        button.textContent = 'Preparing\u2026';
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+      });
+    });
+    window.addEventListener('pageshow', function (event) {
+      if (!event.persisted) return;
+      delete form.dataset.preparing;
+      buttons.forEach(function (button) {
+        if (button.dataset.idleLabel === undefined) return;
+        button.innerHTML = button.dataset.idleLabel;
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+      });
+    });
+  });
+})();
+</script>
+{% endif %}
 <script>
 (function () {
   var form = document.getElementById('next-action-activate-session-form');
