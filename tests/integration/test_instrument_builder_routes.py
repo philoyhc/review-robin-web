@@ -5187,6 +5187,58 @@ def test_a_stored_blank_integer_step_fills_in_despite_responses(
     assert response.status_code == 409
 
 
+def test_a_stored_non_whole_integer_min_keeps_its_blank_step(
+    client: TestClient, db: Session
+) -> None:
+    """Steps count from Min, so a stored Integer with a non-whole Min (kept
+    by the whole-bounds exemption because it has responses) keeps its blank
+    Step: filled with 1, every whole-number answer would turn invalid."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="int-non-whole-min"
+    )
+    rating = next(rf for rf in new_model.response_fields if rf.label == "Rating")
+    _post_rating(client, review_session, new_model, rating.id, "1")
+    rating._inline_min = 0.5
+    rating._inline_step = None
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalars().first()
+    reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars().first()
+    assignment = Assignment(
+        session_id=review_session.id,
+        instrument_id=new_model.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(Response(assignment_id=assignment.id, response_field_id=rating.id, value="3"))
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state",
+        json={
+            "response_fields": [
+                {
+                    "id": rating.id,
+                    "name": "Rating",
+                    "data_type": "integer",
+                    "min": "0.5",
+                    "max": "5",
+                    "step": "",
+                    "selected": True,
+                }
+            ]
+        },
+    )
+    assert response.status_code == 200, response.text
+    db.refresh(rating)
+    assert rating._inline_step is None
+
+
 def test_wave3_prii_shape_change_blocked_when_responses_exist(
     client: TestClient, db: Session
 ) -> None:

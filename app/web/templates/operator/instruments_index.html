@@ -4061,10 +4061,12 @@
                   row.setAttribute('data-selected', 'false');
                   if (window.newModelRfValidateShape(row)) { return; }
                 }
-                // An Integer row's blank Step saved as 1; show it.
+                // An Integer row's blank Step saved as 1 (unless a stored
+                // non-whole Min kept it blank); show it.
                 var step = row.querySelector('[data-new-model-rf-bound="step"]');
-                if (step && !step.value.trim()
-                    && window.newModelRfRowShape(row).dataType === 'integer') {
+                var shape = window.newModelRfRowShape(row);
+                if (step && !step.value.trim() && shape.dataType === 'integer'
+                    && (shape.min === '' || Number.isInteger(Number(shape.min)))) {
                   step.value = '1';
                 }
                 window.newModelRfCommitRow(row);

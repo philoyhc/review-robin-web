@@ -657,8 +657,9 @@ refuses is **held back as an error**, not written and then deleted: the
 reviewer sees `"Kept until {parent label} is fixed."` beside the
 parent's own error, and both come back with their typed text. With
 script on, the browser's range check and the page's inline step check
-stop such a Save before it posts, so the held answer is reached without JavaScript (or
-by a direct POST).
+stop such a Save before it posts whenever the page's bounds match the
+stored ones, so in practice the held answer is reached without
+JavaScript or by a direct POST.
 
 **A governed field can be required too.** It is required, and counts
 missing, only while its branch is open for that row

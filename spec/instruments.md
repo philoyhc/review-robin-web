@@ -1075,14 +1075,6 @@ response-type display names — and enforces:
   from what's stored, since those bounds are locked and refusing them
   would block every Save of the card; a stored field without
   responses meets the rule on its next Save.
-- `Integer` only: a blank Step **saves as 1**, the step an Integer
-  takes anyway, and Save writes the 1 into the row's Step box; until
-  then the box shows its muted "Step" placeholder. A blank Step stored
-  before this default fills in on the card's next Save even when the
-  field has responses, since it already meant 1 (no shape change).
-  A `Decimal`'s blank Step stays blank. The default is applied by the
-  card's Save only: a Settings CSV import stores a blank Step as
-  blank, and the reviewer surface still steps such an Integer by 1.
 - `String`: the `max` slot is read as `max_length` and must be `> 0`
   when set.
 - `List`: at least one option once blanks are trimmed.
@@ -1090,6 +1082,20 @@ response-type display names — and enforces:
 Nothing else is enforced here: there is **no** minimum-step rule tied to
 the type's precision, and **no** duplicate-option check. Both were
 specified once and never built, so do not read them as shipped.
+
+**A blank Integer Step saves as 1.** After the rules above pass, the
+card's Save (`_sync_response_fields_to_db`) stores an `Integer` field's
+blank Step as 1, the step an Integer takes anyway, and the builder writes
+the 1 into the row's Step box; until then the box shows its muted "Step"
+placeholder. A blank Step stored earlier fills in on the next Save even
+when the field has responses, since it already meant 1, so the shape
+guard does not count it as a change. Two exceptions keep a Step blank: a
+`Decimal`, and an `Integer` whose stored Min is not whole (kept by the
+exemption above), since steps count from Min and 1 would make its whole
+answers invalid. The default is the card Save's only: a Settings CSV
+import stores a blank Step as blank, and the reviewer surface still
+steps such an Integer by 1. Once stored, the Step shows in the reviewer's
+constraint line ("1-5, steps of 1").
 
 A row that doesn't satisfy its type's contract fails the bulk
 save with a 422 and an inline banner pinning the per-row error.
