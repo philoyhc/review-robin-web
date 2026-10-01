@@ -154,11 +154,19 @@ migration chain — faster, and the chain is still exercised on
 every PR by the `ci-postgres` job. Data-only migrations are
 replayed in `tests/_sqlite_schema.py`.
 
+**Browser tests** (`tests/browser/`, plan `guide/browser_test.md`)
+serve the app live with fake auth and drive it with Chromium through
+Python Playwright, a dev dependency pinned to the minor whose
+Chromium build the web sandbox ships. They skip, saying why, when no
+Chromium is installed; run `python -m playwright install chromium`
+once to enable them locally. The SQLite CI job installs Chromium and
+sets `RRW_REQUIRE_BROWSER=1`, which turns that skip into a failure.
+
 CI runs the same `pytest` against a `postgres:16` service
 container too (`ci-postgres` job) — the suite covers both
 dialects on every PR. That job stays single-process: its
 workers would otherwise share one Postgres database. It applies
-the full Alembic migration chain.
+the full Alembic migration chain, and leaves out `tests/browser/`.
 
 ## Project documents
 

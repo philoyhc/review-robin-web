@@ -195,8 +195,11 @@ reject it.
 - The agent's session container is the pre-PR gate: `pytest -n auto`
   and `ruff check .` must both pass there before pushing, with `node`
   present so `tests/integration/test_inline_scripts_parse.py` runs
-  rather than skips — the suite's only tool-gated skip, and a silent
-  one, so read the skip list, not just the exit code. Both also run in
+  rather than skips — a silent tool-gated skip, so read the skip list,
+  not just the exit code. The other tool-gated tests are
+  `tests/browser/`, which need a Chromium build (preinstalled in the web
+  sandbox) and skip with a reason without one; CI sets
+  `RRW_REQUIRE_BROWSER=1` so a missing browser fails there. Both also run in
   CI (`ci.yml`) on every PR, alongside `ci-postgres.yml`.
 - **The install belongs in whatever step has network**: `pip install
   -e .[dev]` before the agent phase. `requirements.txt` is the Azure

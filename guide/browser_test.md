@@ -29,7 +29,7 @@ container.
 
 ## Decision
 
-Python Playwright tests under `tests/browser/`, run by `pytest` like the <!-- path-ref-ok -->
+Python Playwright tests under `tests/browser/`, run by `pytest` like the
 rest of the suite, **required in CI** on every PR (author, 2026-10-01).
 
 - **A live server, not a rendered snapshot.** A session-scoped fixture
@@ -97,16 +97,34 @@ Taken 2026-10-01 at `85f8f92d`.
 
 Files the build touches: `pyproject.toml` (dev dependency),
 `.github/workflows/ci.yml` (browser install, `RRW_REQUIRE_BROWSER=1`),
-`tests/browser/` (new), `README.md` (tooling changed), `CLAUDE.md` / <!-- path-ref-ok -->
+`tests/browser/` (new), `README.md` (tooling changed), `CLAUDE.md` /
 `AGENTS.md` (the tool-gated-skip sentence), `docs/local_setup.md` (running
 them locally). `.claude/hooks/session-start.sh` already runs
 `pip install -e ".[dev]"` every session, so the sandbox picks the dependency
 up with no change there.
 
+## Status
+
+Rung 2 (2026-10-01), against the plan:
+- **A card opens collapsed.** Each instrument card is a closed
+  `<details>` in a fresh browser, so a test clicks its summary first, as
+  a person does. Every builder test will.
+- **`ci-postgres.yml` passes `--ignore=tests/browser`** rather than letting
+  the tests skip there for want of a browser: an exclusion said out loud,
+  not a skip.
+- **`.claude/hooks/session-start.sh` changed after all**, against Blast
+  radius: it now warns when no Chromium is found, as it already did for
+  `node`.
+- **CI cost, measured on #2707:** the Chromium install step takes 21 s
+  (04:21:58 → 04:22:19); the `test` job ran 2 min 29 s against #2704's
+  2 min 19 s, with 5,110 passed under `RRW_REQUIRE_BROWSER=1`, so the
+  browser test ran rather than skipped.
+- Base SHA for the cumulative read at rung 4: `df7a5942`.
+
 ## PR ladder
 
 1. **This plan.** Prose only.
-2. **The harness and one test.** `tests/browser/conftest.py` (server, <!-- path-ref-ok -->
+2. **The harness and one test.** `tests/browser/conftest.py` (server,
    browser, seeding helpers, the skip-or-fail rule), one test (unlock an
    instrument, rename a field, Save, reload, the name persisted), the
    dependency, the CI step, and the README, `CLAUDE.md` and
@@ -130,7 +148,7 @@ up with no change there.
 
 ## Definition of done
 
-- `tests/browser/` exists and `pytest -n auto` runs it in the sandbox with <!-- path-ref-ok -->
+- `tests/browser/` exists and `pytest -n auto` runs it in the sandbox with
   no skip.
 - `ci.yml` installs Chromium and sets `RRW_REQUIRE_BROWSER=1`; a PR run
   shows the browser tests passing, and removing the browser makes the job
