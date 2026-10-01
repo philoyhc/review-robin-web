@@ -633,7 +633,6 @@ a relationship, change the rule, re-pin the instrument, flip self-reviews
 — and asserts the verdict changes. That test is the deliverable as much
 as the cache is.
 
-
 **Actioned further 2026-10-01** (`guide/post_assessment_1oct.md` E5).
 The 19R cache only became durable through Generate, so a session not
 yet prepared recomputed on every page load: at 1,000 × 1,000 with one
@@ -643,8 +642,9 @@ walk itself is the cost. Two changes: the Assignments and Validate GETs
 commit the warm, and a never-generated Full Matrix instrument is
 counted instead of walked. Taken 2026-10-01 at `27ae7afe` plus the
 change, same cluster method as above, cold cache: Assignments
-**289 ms**, Validate **215 ms**. With a rule pinned the first GET still
-walks, then serves from the committed cache.
+**289 ms**, Validate **215 ms**. With a rule pinned the first
+Assignments or Validate GET still walks, then later loads serve from
+the committed cache.
 
 ### R2 — roll progress up in SQL instead of over every ORM row
 

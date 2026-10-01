@@ -1006,12 +1006,14 @@ def staleness_by_instrument(
         #
         # So the warm rides the caller's transaction: it persists if
         # something downstream commits, and costs one recompute if not.
-        # **On a plain GET nothing does** — ``get_db`` only closes, and
-        # the two commits in ``app/web/deps.py`` run in the dependency,
-        # before the view. So this half of the cache warms within a
-        # request; what makes it durable is the write-through in
-        # :func:`replace_assignments`, which commits because writing
-        # the rows is its whole job.
+        # ``get_db`` only closes, and the two commits in
+        # ``app/web/deps.py`` run in the dependency, before the view, so
+        # a GET commits nothing unless it asks: the Assignments and
+        # Validate GETs do, through :func:`persist_reconcile_warm` and
+        # the marker set below (post_assessment_1oct E5). Elsewhere what
+        # makes the warm durable is the write-through in
+        # :func:`replace_assignments`, which commits because writing the
+        # rows is its whole job, or any later commit in the request.
         #
         # (An earlier version gave the reason as "the workflow card
         # promotes ``draft → validated`` in the same request, so a
@@ -1032,10 +1034,12 @@ def persist_reconcile_warm(db: Session) -> None:
 
     The warm is flushed, never committed, because a POST may have audit
     work pending that a commit would carry (see the comment at that
-    flush). A page GET writes nothing of its own, so it can commit the
-    warm; without this, before the first Prepare nothing ever commits
-    it and every load of Assignments or Validate recomputed the verdict
-    from scratch. A no-op when nothing was warmed.
+    flush). By the time these GETs call this, nothing they wrote is left
+    uncommitted (the ``?validated=1`` promotion commits itself), so they
+    can commit the warm; without this, before the first Prepare nothing
+    ever committed it and every load of Assignments or Validate
+    recomputed the verdict from scratch. A no-op when nothing was
+    warmed.
     """
     if db.info.pop(_RECONCILE_WARM_PENDING, False):
         db.commit()

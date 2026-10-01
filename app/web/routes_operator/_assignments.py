@@ -104,9 +104,10 @@ def assignments_hub(
         filter_status=filter_status,
         offset=offset,
     )
-    # A GET writes nothing of its own, so the reconcile verdict the page
-    # warmed is committed rather than recomputed on every load
-    # (post_assessment_1oct E5).
+    # Nothing this GET wrote is left uncommitted by now (the
+    # ``?validated=1`` promotion commits itself), so the reconcile
+    # verdict the page warmed is committed rather than recomputed on
+    # every load (post_assessment_1oct E5).
     assignments.persist_reconcile_warm(db)
     return response
 

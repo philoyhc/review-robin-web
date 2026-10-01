@@ -1105,9 +1105,13 @@ diff — without that, a cached `stale` would outlive the regeneration
 that cleared it. A render that recomputes writes its result into the
 caller's transaction without committing; the **Assignments and
 Validate page GETs** then commit it (`assignments.persist_reconcile_warm`),
-since a page GET writes nothing of its own. Other callers, POST paths
-among them, leave it to Generate, because a commit there could carry
-audit work they have pending.
+since by then nothing else they wrote is left uncommitted. Other
+callers, POST paths among them, do not commit it themselves, because a
+commit there could carry audit work they have pending; their warm
+lasts if a later commit in the request carries it (the `validated`
+promotion does) or Generate writes it through. The other pages that
+run the Workflow card's readiness report still warm without
+committing.
 
 **A never-generated instrument on the Full Matrix default is counted,
 not walked.** With no rule and no `Assignment` rows the verdict is

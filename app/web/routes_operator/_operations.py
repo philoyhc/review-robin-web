@@ -187,7 +187,8 @@ def validate_session(
     issues = validation.validate_session_setup(db, review_session)
     # A GET writes nothing of its own, so the reconcile verdict the
     # readiness run warmed is committed rather than recomputed on every
-    # load (post_assessment_1oct E5).
+    # load (post_assessment_1oct E5). Before the ``?activate=1``
+    # redirects, so those keep their warm too.
     assignments.persist_reconcile_warm(db)
     report = lifecycle.build_readiness_report(issues)
     # Activate-warns detour: ?activate=1 requests the inline
