@@ -14,9 +14,10 @@ import uuid
 import httpx
 import pytest
 from playwright.sync_api import Page, expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
-from .conftest import COLLEAGUE_EMAIL
-from .test_owners_card import FAKE_OPERATOR_EMAIL, _sign_in_colleague
+from ._builder import sign_in
+from .conftest import COLLEAGUE_EMAIL, FAKE_OPERATOR_EMAIL, SECOND_COLLEAGUE_EMAIL
 
 
 def _tagged_session(api: httpx.Client, tags: str) -> int:
@@ -76,30 +77,35 @@ def test_enter_in_a_lobby_tag_box_never_submits(
     tags.fill("pilot, e")
     tags.press("Enter")
 
-    expect(page).to_have_url("/operator/sessions")
+    # A submission would POST; give it a second to start before saying none did.
+    with pytest.raises(PlaywrightTimeoutError):
+        page.wait_for_event("request", lambda r: r.method == "POST", timeout=1000)
     assert posted == []
+    page.reload()
+    expect(page.locator(f"input.sessions-list-select-row[value='{session_id}']")).to_have_count(1)
 
 
 def test_create_stages_owners_and_saves_what_remains(
     page: Page, api: httpx.Client
 ) -> None:
     """Item 5, 'Create is unchanged' (JavaScript on)."""
-    _sign_in_colleague(api)
+    sign_in(api, COLLEAGUE_EMAIL)
+    sign_in(api, SECOND_COLLEAGUE_EMAIL)
     page.goto("/operator/sessions/new")
     table = page.locator("#session-owners-table")
     add = page.locator("#session-owners-add")
     expect(add).to_be_visible()
 
-    page.locator("#session-owners-email").fill(COLLEAGUE_EMAIL)
-    add.click()
-    staged = table.locator("tr").filter(has_text=COLLEAGUE_EMAIL)
-    expect(staged).to_have_count(1)
-    staged.get_by_role("button", name="Remove").click()  # no confirm
-    expect(staged).to_have_count(0)
+    for email in (COLLEAGUE_EMAIL, SECOND_COLLEAGUE_EMAIL):
+        page.locator("#session-owners-email").fill(email)
+        add.click()
+        expect(table.locator("tr").filter(has_text=email)).to_have_count(1)
+    # A staged row's Remove takes it out with no confirm (no dialog
+    # listener here, so one would be dismissed and fail the count).
+    second = table.locator("tr").filter(has_text=SECOND_COLLEAGUE_EMAIL)
+    second.get_by_role("button", name="Remove").click()
+    expect(second).to_have_count(0)
 
-    page.locator("#session-owners-email").fill(COLLEAGUE_EMAIL)
-    add.click()
-    expect(staged).to_have_count(1)
     code = f"c{uuid.uuid4().hex[:8]}"
     page.locator("input[name=name]").fill(f"Created {code}")
     page.locator("input[name=code]").fill(code)

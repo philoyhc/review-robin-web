@@ -168,8 +168,18 @@ stages owners and saves what remains. A second operator comes from
 their test. **Found:** with JavaScript off, Create can't submit at all —
 its button renders `disabled` and only script enables it (since
 `9cfb70e1`, 2026-05-22) — so item 5's 'Create is unchanged … Off' row
-can't pass as written; raised with the author, no test. Left to the hand
-check: the datalist popup, Owners above the Danger Zone (layout).
+can't pass as written; raised with the author, no test, and
+`spec/session_owners.md` and a `session_new.html` comment still describe
+that path. Left to the hand check: the datalist popup; Owners above the
+Danger Zone (layout); and the parts of rows tested only in part — relocking
+via another session's Home, Quick Setup's lock unaffected, the details
+card staying locked on an Activated session, and the lobby's two
+typeahead boxes (Create's and Session Home's are tested). Rung 5's own
+`diff-reviewer` read: seven findings, all acted on — the fake operator's
+email pinned against a `.env`, the lobby Enter test now waits a second for
+a POST and checks the session survives, `activate()` asserts the success
+redirect, the no-JS test removes another owner too, Create stages two and
+keeps one, shared steps moved to `_builder.py` / `conftest.py`.
 
 ## PR ladder
 

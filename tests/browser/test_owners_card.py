@@ -13,22 +13,12 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Browser, Dialog, Locator, Page, expect
 
-from ._builder import activate, seed_rosters
-from .conftest import COLLEAGUE_EMAIL, LiveServer
-
-FAKE_OPERATOR_EMAIL = "operator@example.edu"
+from ._builder import activate, seed_rosters, sign_in
+from .conftest import COLLEAGUE_EMAIL, FAKE_OPERATOR_EMAIL, LiveServer
 
 
 def _sign_in_colleague(api: httpx.Client) -> None:
-    """First sign-in makes the colleague's users row, as an operator."""
-    response = api.get(
-        "/operator/sessions",
-        headers={
-            "X-MS-CLIENT-PRINCIPAL-NAME": COLLEAGUE_EMAIL,
-            "X-MS-CLIENT-PRINCIPAL-ID": f"browser-{COLLEAGUE_EMAIL}",
-        },
-    )
-    assert response.status_code == 200, response.text
+    sign_in(api, COLLEAGUE_EMAIL)
 
 
 def _card(page: Page) -> Locator:
@@ -170,16 +160,20 @@ def test_add_and_self_remove_work_without_javascript(
     context = browser.new_context(base_url=live_server.base_url, java_script_enabled=False)
     try:
         page = context.new_page()
-        asked: list[Dialog] = []
-        page.on("dialog", lambda dialog: (asked.append(dialog), dialog.accept()))
         _open_home(page, session_id)
         _unlock(page)
         _add(page, COLLEAGUE_EMAIL)
         expect(_owner_row(page, COLLEAGUE_EMAIL)).to_have_count(1)
 
         with page.expect_navigation():
+            _owner_row(page, COLLEAGUE_EMAIL).get_by_role("button", name="Remove").click()
+        expect(_owner_row(page, COLLEAGUE_EMAIL)).to_have_count(0)
+        _add(page, COLLEAGUE_EMAIL)
+
+        # Your own Remove posts straight through: with no script there is
+        # no confirm to ask, and landing on the lobby shows it removed you.
+        with page.expect_navigation():
             _owner_row(page, FAKE_OPERATOR_EMAIL).get_by_role("button", name="Remove").click()
         expect(page).to_have_url("/operator/sessions")
-        assert asked == []
     finally:
         context.close()

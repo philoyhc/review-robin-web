@@ -33,7 +33,13 @@ from playwright.sync_api import Browser, Error, Page, sync_playwright
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REQUIRE_BROWSER = os.environ.get("RRW_REQUIRE_BROWSER") == "1"
 SERVER_START_TIMEOUT_S = 30.0
+# Pinned in the server's environment below, so a developer's .env (which
+# CLAUDE.md tells them to give a FAKE_AUTH_EMAIL) cannot rename the operator.
+FAKE_OPERATOR_EMAIL = "operator@example.edu"
+# Workspace operators other than the fake one, admitted through
+# OPERATOR_EMAILS on first sign-in (``_builder.sign_in``).
 COLLEAGUE_EMAIL = "colleague@example.edu"
+SECOND_COLLEAGUE_EMAIL = "second@example.edu"
 
 
 def _unavailable(reason: str) -> None:
@@ -98,9 +104,9 @@ def live_server(
         "DATABASE_URL": database_url,
         "ALLOW_FAKE_AUTH": "true",
         "FAKE_AUTH_OPERATOR": "true",
-        # A second workspace operator, made on first sign-in through the
-        # Easy Auth headers (page_as), so owner tests have someone to add.
-        "OPERATOR_EMAILS": COLLEAGUE_EMAIL,
+        "FAKE_AUTH_EMAIL": FAKE_OPERATOR_EMAIL,
+        "FAKE_AUTH_NAME": "Browser Operator",
+        "OPERATOR_EMAILS": f"{COLLEAGUE_EMAIL},{SECOND_COLLEAGUE_EMAIL}",
     }
     migrated = subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
