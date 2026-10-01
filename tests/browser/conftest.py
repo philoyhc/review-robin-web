@@ -56,6 +56,9 @@ def browser() -> Iterator[Browser]:
 @dataclass(frozen=True)
 class LiveServer:
     base_url: str
+    # The server's own SQLite file, for fixture-time setup the UI has no
+    # short route to (pinning a rule set, as tests/integration does).
+    database_url: str
 
 
 def _free_port() -> int:
@@ -70,9 +73,10 @@ def live_server(
 ) -> Iterator[LiveServer]:
     # Depends on ``browser`` so a missing browser skips before a server starts.
     workdir = tmp_path_factory.mktemp("live_server")
+    database_url = f"sqlite:///{workdir / 'browser.db'}"
     env = {
         **os.environ,
-        "DATABASE_URL": f"sqlite:///{workdir / 'browser.db'}",
+        "DATABASE_URL": database_url,
         "ALLOW_FAKE_AUTH": "true",
     }
     subprocess.run(
@@ -95,7 +99,7 @@ def live_server(
         )
         try:
             _wait_for_health(base_url, server, log_path)
-            yield LiveServer(base_url=base_url)
+            yield LiveServer(base_url=base_url, database_url=database_url)
         finally:
             server.terminate()
             server.wait(timeout=10)
@@ -142,14 +146,41 @@ def new_session(api: httpx.Client) -> Callable[[], int]:
 
 
 @pytest.fixture
-def page(browser: Browser, live_server: LiveServer) -> Iterator[Page]:
-    """A fresh page per test. An uncaught page error fails the test."""
-    context = browser.new_context(
-        base_url=live_server.base_url, viewport={"width": 1500, "height": 1000}
-    )
-    opened = context.new_page()
+def page_as(browser: Browser, live_server: LiveServer) -> Iterator[Callable[..., Page]]:
+    """Open fresh pages, as the fake operator or as a named person.
+
+    A person signs in through the Easy Auth headers, which
+    ``app/auth/identity.py`` reads before falling back to fake auth. An
+    uncaught page error on any page fails the test.
+    """
+    contexts = []
     errors: list[str] = []
-    opened.on("pageerror", lambda exc: errors.append(str(exc)))
-    yield opened
-    context.close()
+
+    def open_page(email: str | None = None) -> Page:
+        headers = {}
+        if email is not None:
+            headers = {
+                "X-MS-CLIENT-PRINCIPAL-NAME": email,
+                "X-MS-CLIENT-PRINCIPAL-ID": f"browser-{email}",
+                "X-MS-CLIENT-PRINCIPAL-IDP": "aad",
+            }
+        context = browser.new_context(
+            base_url=live_server.base_url,
+            viewport={"width": 1500, "height": 1000},
+            extra_http_headers=headers,
+        )
+        contexts.append(context)
+        opened = context.new_page()
+        opened.on("pageerror", lambda exc: errors.append(str(exc)))
+        return opened
+
+    yield open_page
+    for context in contexts:
+        context.close()
     assert not errors, f"uncaught page errors: {errors}"
+
+
+@pytest.fixture
+def page(page_as: Callable[..., Page]) -> Page:
+    """A fresh page signed in as the fake operator."""
+    return page_as()

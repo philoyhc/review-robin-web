@@ -128,7 +128,19 @@ twice and its order, the last row, Cancel, an open card under Lock,
 Delete's checkbox, Name and Email fixed, and visibility in the card. Two
 deliberate template breakages (▲ and the visibility chip made inert) each
 failed their test. Left to the hand check: the hide-confirm on a field
-with saved responses (needs an activated session; rung 4 seeds one).
+with saved responses (an activated session's card won't unlock, so it
+stays a hand check).
+
+Rung 4 (2026-10-01): 6 builder tests in `test_builder_branching.py` (⑂,
+join and detach, List conditions, the Active cascade, ranges, two levels
+saved and no third offered) and 2 reviewer tests in
+`test_reviewer_branching.py` (a branch opening and closing with the answer,
+a closed answer dropped on Save; required only while open). The reviewer
+signs in through the Easy Auth headers (`page_as`); a full matrix is pinned
+through the server's database, as `tests/integration/_full_matrix.py` does.
+**Not automatable as written:** 'A refused parent keeps the text' — the
+reviewer's number input carries `max`, so Chromium's own validation stops
+the Save before the server can refuse it; raised with the author.
 
 ## PR ladder
 

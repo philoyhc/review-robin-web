@@ -89,3 +89,43 @@ def save(page: Page, card: Locator) -> None:
     # The response arrives before the page's own handler has assigned ids
     # to new rows and cleared the dirty state; Save disabling is that end.
     expect(button).to_be_disabled()
+
+
+REVIEWER_EMAIL = "rana@example.edu"
+
+
+def activate(api: httpx.Client, database_url: str, session_id: int) -> None:
+    """Pin a full matrix, generate, validate and activate, so the roster's
+    reviewer has an assignment. The pin writes the database directly, as
+    ``tests/integration/_full_matrix.py`` does; the rest is the app's routes.
+    """
+    from integration._full_matrix import pin_full_matrix_on_all_instruments
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    engine = create_engine(database_url)
+    try:
+        with Session(engine) as db:
+            pin_full_matrix_on_all_instruments(db, session_id)
+    finally:
+        engine.dispose()
+    base = f"/operator/sessions/{session_id}"
+    generated = api.post(f"{base}/assignments/generate", follow_redirects=False)
+    assert generated.status_code == 303, generated.text
+    api.get(f"{base}/assignments?validated=1")
+    activated = api.post(
+        f"{base}/activate", data={"acknowledge_warnings": "true"}, follow_redirects=False
+    )
+    assert activated.status_code == 303, activated.text
+
+
+def branch_rating(page: Page, session_id: int, *, op: str = "ge", value: str = "4") -> Locator:
+    """Give "Rating" a Show branch holding one String field, "Why"; save."""
+    card = open_unlocked(page, session_id)
+    rows(card).first.locator("[data-new-model-rf-fork]").click()
+    condition = card.locator("[data-new-model-rf-condition]").first
+    condition.locator("[data-new-model-rf-condition-op]").select_option(op)
+    condition.locator("[data-new-model-rf-condition-value]").fill(value)
+    card.locator("[data-new-model-rf-governed] [data-new-model-rf-name]").fill("Why")
+    save(page, card)
+    return card
