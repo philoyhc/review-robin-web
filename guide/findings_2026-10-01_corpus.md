@@ -28,11 +28,11 @@ is left stricter until ruled on. Grouped by what the ruling is about.
 
 **The code may be wrong, and the effect reaches people.**
 
-- **C18 = D25** — Email `$deadline` and `$submitted_at` render in UTC
-  (`format_datetime` with no zone, `app/services/email_templates.py`).
-  `spec/timezone_display.md` says the session's zone, while
-  `spec/email_template_editor.md` describes the bare call. A Singapore
-  session's 17:00 deadline would be sent as 09:00.
+- ~~**C18 = D25**~~ — **Ruled 2026-10-01: follow the session zone. Done
+  in #2720.** Email `$deadline` and `$submitted_at` rendered in UTC
+  (`format_datetime` with no zone), so a Singapore session's 17:00
+  deadline was sent as 09:00. They now resolve the session's zone, and
+  `spec/email_template_editor.md` says so.
 - **B19** — Scheduled activation, invites and reminders fire only when
   someone opens Session Home. `observe_scheduled_events` has one caller.
   `spec/lifecycle.md` §8.3 says Session Home, the Operations pages and the
