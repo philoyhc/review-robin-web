@@ -379,8 +379,8 @@ entities straight after the recompute wrote them. With verify stubbed
 out (an experiment, not shipped) Prepare ran 9.7 and 8.5 s.
 
 **The author ruled for feedback only** (2026-10-01): Prepare's button
-says "Preparing…" and takes one click (`spec/workflow_card.md`,
-"Prepare session"). The verify pass stays as it is. If Prepare needs
+says it is preparing and takes one click (`spec/workflow_card.md`,
+"Prepare session", has the label). The verify pass stays as it is. If Prepare needs
 to be faster later, a column-projection verify is the measured first
 step, about 5 s; the recompute (2.5 s, with `normalize_email` called
 884,400 times) is the next.
