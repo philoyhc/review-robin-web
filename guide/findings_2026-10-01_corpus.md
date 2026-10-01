@@ -82,8 +82,10 @@ the spec should say so.
 - **G4** — The Responses-received switch has no consumer at submit time.
 - **G13** — Export validation at row-write time
   (`spec/rrw_functional_spec.md` §13.4).
-- **D16, D18** — The Rehydrate analyzer checks, and a streaming, bounded
-  responses parser. Rehydrate is off by default.
+- **D16, D18** — **Ruled 2026-10-01: Rehydrate is incomplete and not
+  exposed to operators** (`rehydrate_enabled` ships false), carried in
+  `guide/deferred_consolidated.md` with D17's rest. The Rehydrate analyzer
+  checks, and a streaming, bounded responses parser.
 - **C2** — Quick Setup's count indicators, success messages and per-row
   errors were removed deliberately in `40bc2549`. Confirm the removal
   stands.
@@ -101,9 +103,11 @@ the spec should say so.
 - **A22, A23** — Sorting. The spec has a Sort column on the display-field
   table, a per-column click cycle and a Reset link. What ships is header
   badges, a replace-cascade on click, and no Reset.
-- **A24** — A stale sort id is not compacted on save. It fails the save
-  with `cross_instrument` until a sort click rebuilds the inputs.
-- **A7** — A blocked Submit re-renders page 1, not the originating page.
+- ~~**A24**~~ — **Ruled 2026-10-01: follow the spec.** A stale sort id is
+  not compacted on save. It fails the save with `cross_instrument` until
+  a sort click rebuilds the inputs.
+- ~~**A7**~~ — **Ruled 2026-10-01: reopen the page submitted from.** A
+  blocked Submit re-renders page 1, not the originating page.
 - **B2** — Inactive reviewers and reviewees are generated into
   assignments. The code and its tests treat this as intended, and the spec
   says active only.
@@ -185,7 +189,7 @@ stay in §3.
   which beats the single 0.5 rule `ui_elements.md` specifies.
 - **C4** — The `needs_confirm` banner says the checkbox is "at the top of
   Quick Setup", but it sits below the grid.
-- **D17, the rest (open).** #2719 catches `RehydrateError`, so a settings
+- **D17, the rest (deferred with Rehydrate, §1 D16).** #2719 catches `RehydrateError`, so a settings
   failure reaches the operator. Any other failure inside
   `rehydrate_session` (an `IntegrityError` from a roster save, a
   `ResponsesFormatError`) still answers 500 after the rollback, and

@@ -371,7 +371,7 @@ def test_review_surface_action_rows_render_above_and_below_tables(
     # Submit lives at both rows too — formaction routes the click to
     # /submit instead of the form's default /save action.
     assert (
-        body.count(f'formaction="/me/sessions/{review_session.id}/submit"')
+        body.count(f'formaction="/me/sessions/{review_session.id}/submit?page=1"')
         >= 2
     )
 

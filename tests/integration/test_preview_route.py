@@ -209,7 +209,7 @@ def test_reviewer_side_surface_still_renders_write_path(
     assert "Operator view" not in body
     assert ">Save</button>" in body
     assert (
-        f'formaction="/me/sessions/{review_session.id}/submit"' in body
+        f'formaction="/me/sessions/{review_session.id}/submit?page=1"' in body
     )
     assert ">Cancel</a>" in body
     assert (

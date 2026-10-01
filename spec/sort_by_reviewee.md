@@ -236,8 +236,9 @@ Key landmarks in the codebase:
 - **Schema:** `Instrument.sort_display_fields` JSON column.
 - **Service:** `app/services/instruments/_display_fields.py
   ::set_sort_display_fields` with `SortSpecError` (codes
-  `too_many` / `unknown_dir` / `duplicate_id` /
-  `cross_instrument` / `bad_id`).
+  `too_many` / `unknown_dir` / `duplicate_id` / `bad_id`; an id
+  that is not this instrument's display field is dropped, per
+  "Cascade behaviour").
 - **Audit event:** `instrument.sort_fields_updated` registered
   in `app/services/audit.py::EVENT_SCHEMAS`.
 - **Read path:** `app/web/views/_sort.py

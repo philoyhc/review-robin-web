@@ -61,6 +61,20 @@ def submit_redirect_url(
     return f"/me/sessions/{review_session.id}"
 
 
+def _submitted_from_page(request: Request) -> int:
+    """The page a blocked Submit re-renders (findings A7).
+
+    The Submit button posts to ``/submit?page=N`` with the page it sat
+    on, so the gaps card opens over that page rather than page 1. A
+    missing or malformed value falls back to 1; ``_surface_context``
+    clamps an out-of-range one the same way.
+    """
+    try:
+        return int(request.query_params.get("page", "1"))
+    except ValueError:
+        return 1
+
+
 @router.get("/sessions/{session_id}", response_class=HTMLResponse, response_model=None)
 def review_surface_default_position(session_id: int) -> RedirectResponse:
     """Bare-URL fallback. 303s to ``/{id}/1`` (page 1) per the
@@ -362,6 +376,7 @@ async def reviewer_submit(
             user=user,
             reviewer=reviewer,
             review_session=review_session,
+            page_n=_submitted_from_page(request),
             missing=result.missing,
             errors=result.errors,
             bad_values=bad_values,

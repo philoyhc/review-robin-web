@@ -402,8 +402,67 @@ def test_a_closed_multi_page_surface_keeps_prev_and_next(
     assert "Page 1 of 2" in body
     assert f'href="/me/sessions/{review_session.id}/2"' in body
     assert "data-rs-save>Save</button>" not in body
-    assert f'formaction="/me/sessions/{review_session.id}/submit"' not in body
+    assert f'formaction="/me/sessions/{review_session.id}/submit' not in body
     assert "<span class=\"rs-action-divider\"" not in body
+
+
+def test_a_blocked_submit_reopens_the_page_it_came_from(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A Submit blocked by a missing required field re-renders the page
+    the reviewer pressed it on, not page 1 (findings A7). The button
+    posts ``/submit?page=N``; no or a malformed ``page`` falls back to 1,
+    and an out-of-range one is clamped to 1 rather than 404ing."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="mp-blocked",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        extra_instruments=1,
+    )
+    first = min(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars(),
+        key=lambda i: (i.order, i.id),
+    )
+    from app.services import instruments as instruments_service
+
+    instruments_service.create_page_break_after(db, instrument=first)
+    db.commit()
+
+    rae_client = make_client(rae)
+    page_two = rae_client.get(f"/me/sessions/{review_session.id}/2").text
+    assert (
+        f'formaction="/me/sessions/{review_session.id}/submit?page=2"'
+        in page_two
+    )
+
+    def blocked(query: str) -> str:
+        response = rae_client.post(
+            f"/me/sessions/{review_session.id}/submit{query}",
+            data={},
+            follow_redirects=False,
+        )
+        assert response.status_code == 400
+        assert "Required fields missing" in response.text
+        return response.text
+
+    body = blocked("?page=2")
+    assert "Page 2 of 2" in body
+    assert (
+        f'data-rs-missing-dismiss\n           href="/me/sessions/'
+        f'{review_session.id}/2"'
+    ) in body
+    for query in ("", "?page=x", "?page=9"):
+        assert "Page 1 of 2" in blocked(query)
 
 
 def test_single_page_session_omits_page_nav(

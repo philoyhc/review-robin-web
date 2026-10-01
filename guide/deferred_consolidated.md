@@ -819,6 +819,18 @@ database).
 
 ---
 
+#### Rehydrate is incomplete and not exposed (findings D16–D18)
+
+> Ruled by the author, 2026-10-01, on `guide/findings_2026-10-01_corpus.md`.
+
+`rehydrate_enabled` ships false, so the lobby button does not render and
+the three routes 404 (`spec/rehydrate.md`, header). Open before it can be
+exposed: the analyzer checks (D16); a failure other than `RehydrateError`
+inside `rehydrate_session` still answers 500 after the rollback, where
+`spec/rehydrate.md` §7 says every failing step is reported (D17's rest);
+and a streaming, bounded responses parser (D18). **Lift trigger:** an
+operator needs to restore a session from its extract.
+
 #### Rehydrate does not run the cross-roster identity check (19Q Item 7)
 
 > Found by the cold read at 19Q Item 7 rung 2, 2026-09-19.

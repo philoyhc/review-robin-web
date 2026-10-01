@@ -805,8 +805,13 @@ def set_sort_display_fields(
     - ``bad_id``: ``display_field_id`` is not an integer.
     - ``unknown_dir``: ``dir`` not in ``{"asc", "desc"}``.
     - ``duplicate_id``: same ``display_field_id`` appears twice.
-    - ``cross_instrument``: ``display_field_id`` is not one of
-      this instrument's display fields.
+
+    An entry whose ``display_field_id`` is not one of this
+    instrument's display fields — one deleted since the card rendered,
+    or never this instrument's — is dropped rather than refused, so the
+    save compacts the spec (``spec/sort_by_reviewee.md`` "Cascade
+    behaviour"; findings A24). The remaining entries keep their order,
+    which is their priority, so the numbering stays contiguous.
 
     Lifecycle-invalidates if the session was previously validated
     (sort spec is a setup-shape change, not a runtime knob).
@@ -825,6 +830,7 @@ def set_sort_display_fields(
         ).scalars()
     )
     seen: set[int] = set()
+    kept: list[dict[str, Any]] = []
     for entry in normalised:
         if entry["display_field_id"] in seen:
             raise SortSpecError(
@@ -834,22 +840,19 @@ def set_sort_display_fields(
                     "more than once in the sort spec."
                 ),
             )
+        seen.add(entry["display_field_id"])
         # ``display_field_id == GROUP_IDENTITY_SORT_KEY`` (-1) is a
         # sentinel for the composed Group cell on a group-scoped
         # new-model instrument's preview. It isn't a real
-        # InstrumentDisplayField row; skip the cross-instrument
-        # check and let the reviewer-surface render path interpret
-        # it (see ``app/web/routes_reviewer/_surface.py``).
-        if entry["display_field_id"] != GROUP_IDENTITY_SORT_KEY:
-            if entry["display_field_id"] not in valid_ids:
-                raise SortSpecError(
-                    code="cross_instrument",
-                    message=(
-                        f"Display field {entry['display_field_id']} is not "
-                        f"on instrument {_instrument_label(instrument)}."
-                    ),
-                )
-        seen.add(entry["display_field_id"])
+        # InstrumentDisplayField row; keep it and let the
+        # reviewer-surface render path interpret it (see
+        # ``app/web/routes_reviewer/_surface/``).
+        if (
+            entry["display_field_id"] == GROUP_IDENTITY_SORT_KEY
+            or entry["display_field_id"] in valid_ids
+        ):
+            kept.append(entry)
+    normalised = kept
 
     old_value = instrument.sort_display_fields
     if old_value == normalised:
