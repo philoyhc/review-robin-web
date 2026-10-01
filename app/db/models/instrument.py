@@ -134,7 +134,8 @@ class Instrument(Base, TimestampMixin):
     render falls back to its current sort policy of instrument
     order then insertion order). Maximum 3 entries; service-layer
     ``instruments.set_sort_display_fields`` enforces length /
-    duplicate / cross-instrument-id / direction validators.
+    duplicate / direction validators and drops an id that is not
+    this instrument's display field.
 
     Column shipped inert in Segment 13D PR 5 (#701, 2026-05-09);
     13B PR 1 (#TBD) lit up the reviewer-surface render-path

@@ -152,7 +152,7 @@ Shape:
 
 - Up to 3 entries; service-enforced (DB doesn't enforce a length cap).
 - `dir ∈ {"asc", "desc"}` — service validates.
-- `display_field_id` references `instrument_display_fields(id)` — service validates the id belongs to this instrument.
+- `display_field_id` references `instrument_display_fields(id)` — service drops an id that is not this instrument's (see "Cascade behaviour").
 - Empty list `[]` or NULL → fall back to **implicit insertion order** (today's behaviour, zero change for existing sessions).
 
 JSON over three explicit FK columns: simpler schema, easier to extend to 4+ slots later if it ever matters, and the FK-orphan risk is small (handled by render-time defense + auto-compact on next save). See "Cascade behaviour" below.

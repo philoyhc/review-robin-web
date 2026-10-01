@@ -103,10 +103,11 @@ the spec should say so.
 - **A22, A23** — Sorting. The spec has a Sort column on the display-field
   table, a per-column click cycle and a Reset link. What ships is header
   badges, a replace-cascade on click, and no Reset.
-- ~~**A24**~~ — **Ruled 2026-10-01: follow the spec.** A stale sort id is
+- ~~**A24**~~ — **Ruled 2026-10-01: follow the spec. Done in #2724.** A stale sort id is
   not compacted on save. It fails the save with `cross_instrument` until
   a sort click rebuilds the inputs.
-- ~~**A7**~~ — **Ruled 2026-10-01: reopen the page submitted from.** A
+- ~~**A7**~~ — **Ruled 2026-10-01: reopen the page submitted from. Done in
+  #2724.** A
   blocked Submit re-renders page 1, not the originating page.
 - **B2** — Inactive reviewers and reviewees are generated into
   assignments. The code and its tests treat this as intended, and the spec

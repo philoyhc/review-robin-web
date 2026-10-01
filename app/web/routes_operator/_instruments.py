@@ -578,8 +578,8 @@ async def instrument_bulk_save_fields(
     # ``sort_dir`` parallel arrays the legacy editor table
     # uses. Reuse the same service-layer call + error path as
     # the standard branch below; any rejection (length / dup /
-    # cross-instrument / dir) redirects back to the index with
-    # an inline banner.
+    # dir) redirects back to the index with an inline banner. An
+    # id that is not this instrument's is dropped, not rejected.
     sort_ids_raw = [str(v) for v in form.getlist("sort_display_field_id")]
     sort_dirs_raw = [str(v) for v in form.getlist("sort_dir")]
     if len(sort_ids_raw) != len(sort_dirs_raw):

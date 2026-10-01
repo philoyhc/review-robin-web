@@ -791,8 +791,7 @@ field before the submit lands.
    no `acknowledged_missing` audit detail. The flag that turns the
    status column on after a failed Submit is `show_incomplete_marks`.
 
-The card carries a Cancel link back to the originating instrument
-page so the reviewer can also dismiss the warning without scrolling
+The card carries a Cancel link back to the originating page so the reviewer can also dismiss the warning without scrolling
 through the form (URL bar leaves the POST-only `/submit` endpoint
 behind).
 
@@ -1149,7 +1148,7 @@ submitted every assigned row on a session.
 returns this URL when `fully_submitted` — every assigned row now has
 `submitted_at` — and the bare session URL otherwise, which 303s on to
 `/1`. It takes no page position: since 18L the URL slot is the
-operator-defined page number, so submit does not try to return the
+operator-defined page number, so a successful submit does not try to return the
 reviewer to the page they were on. The page also stays reachable later from the
 dashboard's Session column once Reviewer Status is
 `submitted`.
