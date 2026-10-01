@@ -62,3 +62,46 @@ def test_without_one_the_creators_zone_applies(db: Session) -> None:
         review_session, reviewer, invite_url="https://app/x"
     )
     assert body == "Due 2026-06-30 05:00"
+
+
+def test_submitted_at_reads_a_real_submission_in_the_session_zone(
+    db: Session,
+) -> None:
+    """``$submitted_at`` is the reviewer's latest ``Response.submitted_at``,
+    looked up through the mapped rows, then rendered in the session zone."""
+    from app.db.models import Assignment, Response, Reviewee
+    from app.services.instruments import ensure_default_instrument
+
+    review_session = _session(db, code="mail-sub", own_zone="Asia/Singapore")
+    review_session.email_template_overrides = {
+        "responses_received_body": "Sent $submitted_at"
+    }
+    reviewer = Reviewer(session_id=review_session.id, name="R", email="r@e.edu")
+    reviewee = Reviewee(
+        session_id=review_session.id, name="E", email_or_identifier="e@e.edu"
+    )
+    db.add_all([reviewer, reviewee])
+    db.flush()
+    instrument = ensure_default_instrument(db, review_session)
+    assignment = Assignment(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+        instrument_id=instrument.id,
+        include=True,
+    )
+    db.add(assignment)
+    db.flush()
+    field = instrument.response_fields[0]
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=field.id,
+            value="4",
+            submitted_at=_NINE_UTC,
+        )
+    )
+    db.flush()
+
+    _, body = email_templates.render_responses_received(review_session, reviewer)
+    assert body == "Sent 2026-06-30 17:00"
