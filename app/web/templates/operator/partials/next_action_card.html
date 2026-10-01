@@ -504,22 +504,20 @@
    refused: it would only queue a second Prepare behind the first. The
    buttons stay enabled — busy is `aria-busy`, never `disabled` (rule 2
    of the navigation busy indicator in `base.html`). Reset on a
-   back-forward cache return, and after 60 s (the same give-up as the
-   busy indicator's `GIVE_UP_MS`), so a stopped load cannot leave
-   Prepare refusing clicks.
+   back-forward cache return only: Prepare has run past 60 s at scale
+   (74.8 s on the 2026-09-21 bench), so no timeout may lift the guard
+   while the POST may still be running. A load stopped by hand leaves
+   Prepare refusing clicks until the page is reloaded.
    Rendered only where a Prepare form is. #}
 {% if prepare_visible or prepare_confirm %}
 <script>
 (function () {
-  var GIVE_UP_MS = 60000;
   var forms = ['next-action-prepare-form', 'next-action-prepare-regenerate-form']
     .map(function (id) { return document.getElementById(id); })
     .filter(Boolean);
   var preparing = false;
   var busy = [];
-  var giveUp = null;
   function reset() {
-    if (giveUp) { window.clearTimeout(giveUp); giveUp = null; }
     preparing = false;
     busy.forEach(function (entry) {
       entry.button.innerHTML = entry.label;
@@ -541,7 +539,6 @@
         button.textContent = 'Preparing\u2026';
         button.setAttribute('aria-busy', 'true');
       }
-      giveUp = window.setTimeout(reset, GIVE_UP_MS);
     });
   });
   window.addEventListener('pageshow', function (event) {

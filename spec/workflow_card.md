@@ -412,9 +412,11 @@ roster (about 14 s at a 200 × 200 full matrix,
 `guide/app_responsiveness.md`), so on submit the clicked button (this
 one, or the confirmation's **Regenerate &amp; prepare**, which renders
 with it in normal use) reads "Preparing…" with `aria-busy="true"`, and a
-second submit from either is refused until the page changes, a
-back-forward cache return, or 60 s pass (the busy indicator's own
-give-up time). The buttons stay enabled: busy is `aria-busy`, never
+second submit from either is refused until the page changes or a
+back-forward cache return. No timeout lifts the refusal, since a
+Prepare at scale can outlast any (74.8 s measured once), and a second
+one would run concurrently; a load stopped by hand is recovered by
+reloading. The buttons stay enabled: busy is `aria-busy`, never
 `disabled` (`spec/ui_elements.md` §1, "Navigation busy indicator").
 The steps:
 
