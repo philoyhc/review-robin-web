@@ -3298,7 +3298,8 @@ run. Items close independently, each with its own `Doc impact` /
 
 **Owed:** the browser checks for Items 7 and 10 are
 `guide/post_azure_todo_checklist.md` item 5 — checked locally by the
-author 2026-10-01, bar its Safari and screen-reader rows.
+author 2026-10-01; its Safari and screen-reader rows moved to
+`guide/deferred_consolidated.md` Part C.
 
 ### Segment 19T — Advanced instruments — ✅ **closed + archived** (**seventeen items and 12A, all closed**; opened 2026-09-24, closed 2026-09-30; PRs #2597 → #2697; plan archived: `guide/archive/segment_19T_advanced_instruments.md`)
 

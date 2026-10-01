@@ -349,9 +349,10 @@ it.)
 ## 5. Verify Session Home's Owners card and the tag typeahead in a browser
 
 **Status:** **checked locally by the author, 2026-10-01**, in a browser
-against the app on `localhost` with fake auth. Two rows name more than
-that: the keyboard pick in **Safari**, and **a screen reader**. They
-stay open, needing no deploy, only that browser or reader.
+against the app on `localhost` with fake auth. The two rows that name
+more than that, the keyboard pick in **Safari** and **a screen reader**,
+need no deployment either, so they moved to
+`guide/deferred_consolidated.md` Part C rather than waiting here.
 
 **What.** Segment 19S Item 10 gave Session Home's Owners card a card
 of its own, where each Add owner and Remove saves at once behind a
