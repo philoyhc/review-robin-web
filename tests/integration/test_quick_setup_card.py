@@ -265,9 +265,16 @@ def test_reviewers_replace_without_confirm_redirects_with_error(
 
     body = client.get(location).text
     assert (
-        "Tick the replacement-confirmation box at the top of "
-        "Quick Setup before submitting."
+        "Tick the replacement-confirmation box just above "
+        "Submit, then submit again."
     ) in body
+    # Where the banner says it is: after the slot grid, before Submit.
+    # It once said "at the top of Quick Setup", which it has not been
+    # since the checkbox moved to the footer (post_assessment_1oct E6).
+    grid = body.index('class="quick-setup-top-grid"')
+    toggle = body.index('id="quick-setup-confirm-replace-toggle"')
+    submit = body.index('id="quick-setup-submit-all"')
+    assert grid < toggle < submit
     # Cancel button on the error banner points at clean URL with the
     # slot fragment.
     assert (

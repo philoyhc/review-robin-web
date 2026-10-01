@@ -352,8 +352,8 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
         )
     if reason == "needs_confirm":
         return (
-            "Tick the replacement-confirmation box at the top of "
-            "Quick Setup before submitting."
+            "Tick the replacement-confirmation box just above "
+            "Submit, then submit again."
         )
     # Default / parse-error path. Keep the message short — the
     # per-entity Setup page is the authoritative error surface.

@@ -371,3 +371,52 @@ def test_another_operator_cannot_fetch_a_dropped_csv(
     )
     assert response.status_code == 404
 
+
+
+# --------------------------------------------------------------------------- #
+# post_assessment_1oct E6 — a settings.csv that fails to apply
+# --------------------------------------------------------------------------- #
+
+
+def test_a_settings_apply_failure_reaches_the_operator(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    """``spec/rehydrate.md`` §6.2: a settings failure rolls the whole
+    rehydrate back "and the operator gets the message". The message used
+    to be built by joining ``ApplyError`` dataclasses as strings, a
+    ``TypeError``, and the route caught nothing, so the operator got a
+    500. Validate cannot reach an apply failure, so apply is stubbed."""
+    from app.services import session_config_io
+    from app.services.session_config_io import ApplyError, ApplyResult
+
+    rs = _seed(db)
+    token = _validate_for_token(client, _file_set(db, rs))
+
+    def _refuse(*args, **kwargs) -> ApplyResult:
+        return ApplyResult(
+            counts={},
+            errors=[
+                ApplyError(row_number=7, field="session.name", message="too long"),
+                ApplyError(row_number=0, field="rule_set_name", message="unresolved"),
+            ],
+        )
+
+    monkeypatch.setattr(session_config_io, "apply_session_config", _refuse)
+    response = client.post(
+        "/operator/sessions/rehydrate/commit",
+        data={"token": token},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    assert (
+        "settings.csv failed to apply: row 7, session.name: too long; "
+        "rule_set_name: unresolved"
+    ) in response.text
+    # All or nothing: the partial session is gone.
+    assert (
+        db.execute(
+            select(ReviewSession).where(ReviewSession.name.like("%_REHYD%"))
+        ).scalars().all()
+        == []
+    )

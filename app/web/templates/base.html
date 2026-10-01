@@ -2540,14 +2540,6 @@
         margin: 0;
         font-weight: 600;
       }
-      /* Anchors styled as buttons but rendered with aria-disabled
-         (no native ``disabled`` on <a>) get the same not-allowed
-         affordance + reduced opacity as a real disabled button. */
-      body.ui-v2 a.btn[aria-disabled="true"] {
-        opacity: 0.55;
-        cursor: not-allowed;
-        pointer-events: none;
-      }
       /* Buttons — Primary / Secondary / Destructive vocabulary
          per spec/visual_style_general.md. Same shape, role expressed by
          tonal variation only. Primary is solid ``--btn-primary-bg`` and is

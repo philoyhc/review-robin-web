@@ -40,6 +40,7 @@ from app.services import rehydrate_stash
 from app.services.extracts import stream_csv
 from app.services.extracts.responses_import import serialize_dropped_responses
 from app.services.session_rehydrate import (
+    RehydrateError,
     RehydrateReport,
     analyze_rehydrate_set,
     pack_file_set,
@@ -215,12 +216,19 @@ def rehydrate_commit(
     if not report.ok:
         return _render(request, user, report=report, token=token)
 
-    result = rehydrate_session(
-        db,
-        files=files,
-        user=user,
-        correlation_id=request_correlation_id(),
-    )
+    try:
+        result = rehydrate_session(
+            db,
+            files=files,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except RehydrateError as exc:
+        # The service has already rolled back and removed the partial
+        # session (spec/rehydrate.md §7); the operator gets its message
+        # (§6.2), not a 500. No token: the same set would fail the same
+        # way, so the next step is a corrected upload.
+        return _render(request, user, report=RehydrateReport(errors=[str(exc)]))
     rehydrate_stash.delete(db, token=token)
 
     if not result.dropped:

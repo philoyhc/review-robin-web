@@ -533,6 +533,93 @@ def test_route_save_skips_audiences_with_missing_slots(
     assert {r.audience for r in rows} == {"reviewee"}
 
 
+@pytest.mark.parametrize("path", ["fields/save", "save"])
+def test_an_editor_save_keeps_an_imported_observer_tag(
+    client: TestClient, db: Session, path: str
+) -> None:
+    """``spec/visibility_policy.md`` §4: the operator's ``observer_tag``
+    choice survives. The card's editor has no tag control, and its save
+    used to write every row back with ``observer_tag=None``, wiping a tag
+    a settings import set (post_assessment_1oct E6). Both routes that
+    carry the editor's rows are covered."""
+    review_session = _alice_session(client, db, code=f"vp-tag-{path[0]}")
+    instrument = _instrument_for(db, review_session)
+    user = db.execute(select(User)).scalars().first()
+    visibility_policies.upsert_policy(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        audience="observer",
+        while_ongoing_mode="summarized",
+        after_release_mode=None,
+        observer_tag="committee",
+        user=user,
+    )
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/{path}",
+        data={
+            "observer_while_ongoing_mode": "",
+            "observer_after_release_mode": "anonymized",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code in (200, 303), response.text
+
+    db.expire_all()
+    row = db.execute(
+        select(InstrumentViewPolicy).where(
+            InstrumentViewPolicy.instrument_id == instrument.id,
+            InstrumentViewPolicy.audience == "observer",
+        )
+    ).scalar_one()
+    assert row.after_release_granularity == "row"  # the save landed
+    assert row.observer_tag == "committee"
+
+
+def test_an_editor_save_clears_a_stray_tag_on_another_audience(
+    client: TestClient, db: Session
+) -> None:
+    """A settings import can store ``observer_tag`` on a non-observer
+    row, which the service otherwise refuses (§4). Keeping the observer's
+    tag must not carry that one into the save: it is cleared, as before,
+    and the save goes through rather than failing ``observer_tag_misuse``
+    on a tag the card has no control for."""
+    review_session = _alice_session(client, db, code="vp-tag-stray")
+    instrument = _instrument_for(db, review_session)
+    db.add(
+        InstrumentViewPolicy(
+            instrument_id=instrument.id,
+            audience="reviewee",
+            after_release_granularity="row",
+            after_release_identification="deidentified",
+            observer_tag="committee",
+        )
+    )
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        data={
+            "reviewee_while_ongoing_mode": "",
+            "reviewee_after_release_mode": "summarized",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+
+    db.expire_all()
+    row = db.execute(
+        select(InstrumentViewPolicy).where(
+            InstrumentViewPolicy.instrument_id == instrument.id,
+            InstrumentViewPolicy.audience == "reviewee",
+        )
+    ).scalar_one()
+    assert row.after_release_granularity == "aggregated"
+    assert row.observer_tag is None
+
+
 # ── Template render: form + chip state on GET ────────────────────────
 
 

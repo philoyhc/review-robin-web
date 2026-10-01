@@ -600,8 +600,7 @@
           <button type="button" class="btn secondary"
                   data-shape-save title="Save shape">Save</button>
           <button type="button" class="btn secondary"
-                  data-shape-edit title="Edit shape"
-                  style="display: none;">Edit</button>
+                  data-shape-edit title="Edit shape" hidden>Edit</button>
           <button type="button" class="btn secondary"
                   data-shape-cancel
                   title="Abandon unsaved edits and unselect">Cancel</button>
@@ -686,8 +685,7 @@
             <span class="data-shape-name-display"
                   data-shape-name-display>{{ saved.name }}</span>
             <button type="button" class="btn secondary"
-                    data-shape-save title="Save shape"
-                    style="display: none;">Save</button>
+                    data-shape-save title="Save shape" hidden>Save</button>
             <button type="button" class="btn secondary"
                     data-shape-edit title="Edit shape">Edit</button>
             <button type="button" class="btn secondary"
@@ -755,8 +753,7 @@
           <button type="button" class="btn secondary"
                   data-shape-save title="Save shape">Save</button>
           <button type="button" class="btn secondary"
-                  data-shape-edit title="Edit shape"
-                  style="display: none;">Edit</button>
+                  data-shape-edit title="Edit shape" hidden>Edit</button>
           <button type="button" class="btn secondary"
                   data-shape-cancel
                   title="Abandon unsaved edits and unselect">Cancel</button>
@@ -830,7 +827,7 @@
             </p>
           {% endif %}
           <div class="extract-data-card-actions">
-            <button class="btn alert" type="submit"
+            <button class="btn danger-solid" type="submit"
                     {% if not archivable %}disabled aria-disabled="true"{% endif %}>
               {% if is_archived %}Already archived{% else %}Purge and archive{% endif %}
             </button>
@@ -1431,8 +1428,8 @@
             oNameDisplay.style.display = "";
           }
           if (oNameInput) oNameInput.style.display = "none";
-          if (oSaveBtn) oSaveBtn.style.display = "none";
-          if (oEditBtn) oEditBtn.style.display = "";
+          if (oSaveBtn) oSaveBtn.hidden = true;
+          if (oEditBtn) oEditBtn.hidden = false;
           // Restore the persisted preview row so transient
           // edits drop. ``renderSavedPreviewRow`` reads the
           // ``data-shape-column-slots`` attribute server-
@@ -2476,8 +2473,8 @@
           shape.setAttribute("data-shape-mode", "edit");
           nameInput.style.display = "";
           nameDisplay.style.display = "none";
-          editBtn.style.display = "none";
-          saveBtn.style.display = "";
+          editBtn.hidden = true;
+          saveBtn.hidden = false;
           cancelBtn.style.display = "";
           // Mark this card as the active target BEFORE
           // restoring chip state so the chip toggles that
@@ -2502,8 +2499,8 @@
             nameDisplay.textContent || "(unsaved shape)";
           nameInput.style.display = "none";
           nameDisplay.style.display = "";
-          saveBtn.style.display = "none";
-          editBtn.style.display = "";
+          saveBtn.hidden = true;
+          editBtn.hidden = false;
           cancelBtn.style.display = "";
           if (activeShape === shape) setActiveShape(null);
           renderSavedPreviewRow(shape);

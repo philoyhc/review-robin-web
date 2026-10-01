@@ -12,6 +12,7 @@ to avoid a wider sweep.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 from fastapi.testclient import TestClient
@@ -495,3 +496,32 @@ def test_extract_data_wrapup_layout_without_token_keys(
     setup_pos = body.find('id="extract-data"', body.find("Data shaper"))
     assert -1 not in (setup_pos, archive_pos)
     assert archive_pos < setup_pos
+
+
+def test_no_button_on_the_page_carries_an_inline_style(
+    client: TestClient, db: Session
+) -> None:
+    """``spec/ui_elements.md`` §6: an inline ``style`` on a button is a
+    defect. Three of the data shaper's buttons were hidden with
+    ``style="display: none;"``; they use ``hidden`` now
+    (post_assessment_1oct E6). A saved shape renders the third."""
+    review_session = _make_session(client, db, code="ed-no-inline")
+    created = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json={
+            "name": "Saved",
+            "axis": "reviewer",
+            "instrument_id": None,
+            "response_field_id": None,
+            "column_chip_slots": ["reviewer:name", "reviewer:email"],
+        },
+    )
+    assert created.status_code == 201, created.text
+    page = client.get(f"/operator/sessions/{review_session.id}/extract-data").text
+
+    buttons = re.findall(r"<button\b[^>]*>", page)
+    assert buttons
+    assert [b for b in buttons if "style=" in b] == []
+    # The purge button is the lobby's role, not the lock card's.
+    card = _archive_card(page)
+    assert 'class="btn danger-solid" type="submit"' in card
