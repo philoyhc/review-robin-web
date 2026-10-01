@@ -141,9 +141,6 @@ it.
 **not** invalidate. The `responses_visible_when_closed` flag is a
 display setting that doesn't affect the validation snapshot (an
 operator can flip it without re-running validation).
-*(Per-instrument open/close on a `ready` session likewise never
-invalidates, since the session isn't in `validated` to begin
-with.)*
 
 ### 2.4 `validated → ready` — `activate_session(...)`
 
@@ -297,20 +294,20 @@ open/close state plus a visibility-when-closed display flag.
 
 | Column | Type | Meaning |
 |---|---|---|
-| `accepting_responses` | `Boolean` | Reviewers can save / submit. Auto-set on activate, auto-cleared on revert and on deadline-close. |
+| `accepting_responses` | `Boolean` | Reviewers can save / submit. **Session-wide in practice:** set on every instrument by activate, cleared on every instrument by revert, Close session and deadline-close. No operator control sets it per instrument. |
 | `responses_visible_when_closed` | `Boolean` | Whether reviewers can still see their own past responses after `accepting_responses=False`. Operator default; doesn't affect the validation snapshot. |
 | `deadline_closed_at` | `DateTime \| None` | Timestamp the deadline-close fired. Used to render the "auto-closed at X" pill. |
 
 **Services:**
 
-- `open_instrument(...)` / `close_instrument(...)` — operator
-  flips on the Instruments page. Requires session `ready` and
-  pre-deadline. A group-scoped instrument is not special here: it
-  defaults to the synthetic Full Matrix on an untouched Band 1 just
-  like an individual one, so `activate_session`'s bulk open opens
-  every instrument and nothing refuses a group instrument for
-  want of a rule. Emit `instrument.opened` /
-  `instrument.closed reason=operator` audit events.
+- **No per-instrument open or close.** Accepting is session-wide:
+  `activate_session` opens every instrument (a group-scoped one
+  included, since it defaults to the synthetic Full Matrix on an
+  untouched Band 1), and `revert_session_to_draft`,
+  `expire_session` and `observe_deadline` close them all. So an
+  instrument is never closed while another in the same session
+  accepts, and the reviewer write gate (`spec/reviewer-surface.md`
+  "Lifecycle gating") is session-wide with it.
 - `set_responses_visible_when_closed(...)` — operator flips the
   display flag. No lifecycle gating beyond `_require_editable` /
   `_require_status_ready` on its route; **does not invalidate**
@@ -548,8 +545,8 @@ are read-mostly so they work in any state.
 | `session.responses_release_stopped` | `stop_responses_release` (Workflow-card **Stop releasing**) | `snapshot={"responses_release_until": …}` |
 | `session.workflow_run_started` | `POST /workflow/prepare` and `POST /workflow/activate` — bracket the run, once per click | `context={"button": "prepare_session" \| "activate_session"}` |
 | `session.workflow_run_failed` | same two routes when the chain raises | `context={"button": …, "step": "generate" \| "validate" \| "invite" \| "activate", "error_message": …}`. **Not `precondition`** — every precondition return in `_workflow.py` happens *before* the `workflow_run_started` write and redirects with `super_step="precondition"` instead, so no audit row ever carries it. `precondition` is a `super_step` value (the redirect query param the card reads), not a `context.step` one. |
-| `instrument.opened` | `open_instrument` | `refs={"instrument_id": id}` |
-| `instrument.closed` | `close_instrument` or `observe_deadline` | `refs={"instrument_id": id}` + `reason=<"operator" \| "deadline">` (+ `context={"deadline": "..."} ` on the deadline path) |
+| `instrument.opened` | *(none — no per-instrument open; registered so past rows stay readable)* | `refs={"instrument_id": id}` |
+| `instrument.closed` | `observe_deadline` | `refs={"instrument_id": id}` + `reason="deadline"` + `context={"deadline": "..."}`. Past rows may carry `reason="manual"` from the retired per-instrument close. |
 
 See `spec/architecture.md` "Audit-event detail schema" for the
 canonical envelope contract these events follow.

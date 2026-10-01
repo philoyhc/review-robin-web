@@ -801,8 +801,11 @@ three** of the following hold:
 
 1. `ReviewSession.status == "ready"` (operator has activated the
    session).
-2. The assignment's `Instrument.accepting_responses == true` (the
-   per-instrument acceptance switch hasn't been turned off).
+2. `Instrument.accepting_responses == true` on the instruments the
+   reviewer writes to. Accepting is session-wide (`spec/lifecycle.md`):
+   Activate sets it on every instrument and the deadline, Close session
+   or Revert clears it on every instrument, so the gate is effectively
+   one switch per session.
 3. `now() < ReviewSession.deadline` (deadline hasn't passed; null
    deadline counts as open).
 
@@ -822,16 +825,16 @@ GET requests behave differently depending on which gate fails:
   rendered. Applies for `draft` and `validated` lifecycle states
   alike.
 
-- **Session `ready`, response window closed** (per-instrument
-  `accepting_responses=false`, typically because the deadline
-  passed). The page still renders so the reviewer can read prior
+- **Session `ready`, response window closed**
+  (`accepting_responses=false` on every instrument, because the
+  deadline passed). The page still renders so the reviewer can read prior
   state. The editing surface degrades to read-only:
 
   - Every input renders `disabled`.
   - In both action rows: Save / Cancel / Submit hide, plus the
     vertical divider that separated them. The Prev / Next page-nav
     links stay so the reviewer can walk through their other
-    instruments (which may or may not also be closed).
+    pages.
   - The Danger Zone card hides (no Clear all).
   - A `.banner.banner-warning` lands inline in the overview card
     explaining the state, e.g. "This session is no longer

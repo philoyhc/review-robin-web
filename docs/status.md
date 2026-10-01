@@ -1013,8 +1013,8 @@ list lives in `EVENT_SCHEMAS`.
 | `session.reverted_to_draft` | operator flips session ready→draft (`detail.closed_instrument_ids`, `response_count_at_revert`) |
 | `session.invalidated` | operator flips session validated→draft (`detail.reason ∈ {"operator_revert", …}`); also auto-emitted by setup-mutating service code when the session was previously `validated` |
 | `session.validated` | session marked validated on `?validated=1` when no blocking errors |
-| `instrument.opened` | operator manually re-opens a closed instrument |
-| `instrument.closed` | manual or lazy-deadline close (`detail.reason ∈ {manual, deadline}`) |
+| `instrument.opened` | no emitter since per-instrument Open / Close was removed (2026-10-01); kept registered so past rows stay readable |
+| `instrument.closed` | lazy-deadline close (`detail.reason = deadline`); older rows may carry `manual` |
 | `instrument.described` | operator edits the friendly description (`detail.description: [old, new]`) |
 | `instrument.field_added` | operator adds a response field (`detail.field_key`, `label`, `response_type`, `required`, `validation`, `help_text`, `help_text_visible`) |
 | `instrument.field_updated` | operator edits a response field (`detail.changes: {key: [old, new]}` for each changed key only) |

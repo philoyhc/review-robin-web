@@ -38,7 +38,6 @@ from app.web.deps import (
 )
 from app.web.routes_operator._shared import (
     _instruments_redirect,
-    _lifecycle_error_response,
     _require_instrument_editable,
     _require_instrument_in_session,
     _templates,
@@ -1136,55 +1135,10 @@ def instruments_delete(
     )
 
 
-# Bulk accepting toggle (``/instruments/accepting/all-{on,off}``) and
-# bulk visibility-when-closed toggle (``/instruments/visibility/all-
-# {on,off}``) retired in 18R Item 3. The "Open / close all" bulk
-# control was never wired into the UI and dropped from the spec;
-# per-instrument Open/Close (below) remains the accepting control, and
-# visibility when closed is now governed by the per-instrument
-# visibility policy.
-
-
-@router.post("/sessions/{session_id}/instruments/{instrument_id}/open")
-def instrument_open(
-    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    instrument, review_session = bundle
-    try:
-        lifecycle.open_instrument(
-            db,
-            instrument=instrument,
-            review_session=review_session,
-            user=user,
-            correlation_id=request_correlation_id(),
-        )
-    except lifecycle.LifecycleError as exc:
-        raise _lifecycle_error_response(exc) from exc
-    return _instruments_redirect(
-        review_session.id, fragment=f"instrument-{instrument.id}"
-    )
-
-
-@router.post("/sessions/{session_id}/instruments/{instrument_id}/close")
-def instrument_close(
-    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    instrument, review_session = bundle
-    lifecycle.close_instrument(
-        db,
-        instrument=instrument,
-        review_session=review_session,
-        user=user,
-        reason="manual",
-        correlation_id=request_correlation_id(),
-    )
-    return _instruments_redirect(
-        review_session.id, fragment=f"instrument-{instrument.id}"
-    )
+# Accepting is session-wide: Activate opens every instrument, and the
+# deadline or Close session closes them all. The bulk toggles retired in
+# 18R Item 3, and per-instrument Open / Close on 2026-10-01 (author's
+# ruling on guide/findings_2026-10-01_corpus.md A6).
 
 
 @router.post(

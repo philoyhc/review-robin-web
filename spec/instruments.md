@@ -141,10 +141,11 @@ Below it, left-aligned under the pill row:
   fresh all-collapsed default on each page load.
 
 **No session-level bulk flip of `accepting_responses` or
-`responses_visible_when_closed`.** Per-instrument Open / Close
-(in the Identity row of each card) is the only accepting
-control, and visibility-when-closed has no operator control at
-all — it is governed by the per-instrument **visibility policy**
+`responses_visible_when_closed`, and none per instrument
+either.** Accepting is session-wide: Activate opens every
+instrument, and the deadline, Close session or Revert closes them
+all (`spec/lifecycle.md`). Visibility-when-closed has no operator
+control at all — it is governed by the per-instrument **visibility policy**
 (`spec/visibility_policy.md`), with the
 `responses_visible_when_closed` column persisting for config
 round-trip only. The one-line status row therefore reports an
@@ -213,8 +214,8 @@ Order of stripes (each separated by a horizontal rule):
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│ Identity (heading + pills + per-instrument open/close /        │
-│           visibility forms)                                     │
+│ Identity (heading + pills)                                     │
+│                                                                 │
 ├────────────────────────────────────────────────────────────────┤
 │ Instrument assignment rule                                     │
 │ Who does the review │ Who is being reviewed │ Unit of review   │
@@ -348,11 +349,8 @@ operator control to mirror at all (below).
 Beneath the `<summary>` (only visible when the card is
 expanded):
 
-- **Per-instrument flip forms** (only render in lifecycle
-  states where they're meaningful — `is_ready` for the
-  open/close form):
-  - **Open this Instrument** / **Close this instrument**
-    (`POST /sessions/{sid}/instruments/{iid}/open|close`).
+- **No per-instrument open / close.** Accepting is session-wide,
+  so the card carries no flip form in any state.
 
 **Visibility when closed has no operator control** — neither
 per-card nor session-wide. It is governed by the per-instrument

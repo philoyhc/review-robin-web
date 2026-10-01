@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -321,31 +320,34 @@ def test_reviewer_save_403_when_session_draft(
     assert response.status_code == 403
 
 
-def test_reviewer_save_403_when_instrument_closed_manually(
+def test_no_per_instrument_open_or_close(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
+    """Accepting is session-wide (author's ruling, 2026-10-01): Activate
+    opens every instrument and the deadline or Close session closes them
+    all. The per-instrument Open / Close buttons and their routes are
+    gone, so an operator cannot leave one instrument closed while
+    another accepts."""
     operator = make_client(alice)
-    session = _build_ready_session(operator, db, code="manual-close")
+    session = _build_ready_session(operator, db, code="no-per-instr")
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/close",
-        follow_redirects=False,
-    )
 
-    rae = AuthenticatedUser(
-        principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
-    )
-    rae_client = make_client(rae)
-    response = rae_client.post(
-        f"/me/sessions/{session.id}/1/save",
-        data={},
-        follow_redirects=False,
-    )
-    assert response.status_code == 403
+    page = operator.get(f"/operator/sessions/{session.id}/instruments")
+    assert page.status_code == 200
+    assert "Close this instrument" not in page.text
+    assert "Open this Instrument" not in page.text
+    for action in ("open", "close"):
+        response = operator.post(
+            f"/operator/sessions/{session.id}/instruments/{instrument.id}/{action}",
+            follow_redirects=False,
+        )
+        assert response.status_code in (404, 405), action
+    db.refresh(instrument)
+    assert instrument.accepting_responses is True
 
 
 def test_reviewer_save_403_when_deadline_passed(
@@ -398,16 +400,11 @@ def test_reviewer_surface_hides_values_when_closed_and_invisible(
         follow_redirects=False,
     )
 
-    # Close the instrument directly via the service so we don't have to
-    # juggle TestClient identity overrides mid-test.
+    # Close the instrument as the deadline observer does (there is no
+    # per-instrument close any more).
     user = db.execute(select(__import__("app.db.models", fromlist=["User"]).User)).scalars().first()
-    lifecycle.close_instrument(
-        db,
-        instrument=instrument,
-        review_session=session,
-        user=user,
-        reason="manual",
-    )
+    instrument.accepting_responses = False
+    db.commit()
 
     page = rae_client.get(f"/me/sessions/{session.id}")
     assert page.status_code == 200
@@ -497,40 +494,6 @@ def test_lazy_deadline_close_audit_carries_correlation_id(
     assert deadline_only[0].correlation_id != ""
 
 
-def test_instrument_close_open_visibility_audits(
-    client: TestClient, db: Session
-) -> None:
-    session = _build_ready_session(client, db, code="instr-audit")
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalar_one()
-
-    client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/close",
-        follow_redirects=False,
-    )
-    client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/open",
-        follow_redirects=False,
-    )
-
-    closed = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.closed",
-            AuditEvent.session_id == session.id,
-        )
-    ).scalars().all()
-    opened = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "instrument.opened",
-            AuditEvent.session_id == session.id,
-        )
-    ).scalars().all()
-    manual_close = [e for e in closed if (e.detail or {}).get("reason") == "manual"]
-    assert len(manual_close) == 1
-    assert len(opened) == 1
-
-
 # --------------------------------------------------------------------------- #
 # Segment 13C — group-scoped instrument rule-required gate
 # --------------------------------------------------------------------------- #
@@ -551,53 +514,10 @@ def _add_group_instrument(
     ).scalar_one()
 
 
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — every instrument now defaults to Full Matrix "
-    "on untouched Band 1 (no longer blocked when rule_set_id IS NULL). "
-    "The legacy 'group instrument needs a rule' gate retired with the "
-    "is_new_model split."
-)
-def test_group_instrument_open_blocked_without_rule(
+def test_activation_opens_a_group_instrument(
     client: TestClient, db: Session
 ) -> None:
-    """A group-scoped instrument cannot be opened until a rule is
-    pinned (Segment 13C rule-required gate)."""
-    session = _create_session(client, db, code="grp-norule")
-    group = _add_group_instrument(client, db, session.id)
-    _populate_rosters(client, session.id)
-    _generate_full_matrix(client, db, session.id)
-
-    # Unpin the group instrument's rule before activation.
-    db.refresh(group)
-    group.rule_set_id = None
-    db.commit()
-
-    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
-    activate = client.post(
-        f"/operator/sessions/{session.id}/activate",
-        data={"acknowledge_warnings": "true"},
-        follow_redirects=False,
-    )
-    assert activate.status_code == 303, activate.text
-
-    # Activation skips the rule-less group instrument.
-    db.refresh(group)
-    assert group.accepting_responses is False
-
-    # An explicit open is rejected too.
-    response = client.post(
-        f"/operator/sessions/{session.id}/instruments/{group.id}/open",
-        follow_redirects=False,
-    )
-    assert response.status_code == 409
-    db.refresh(group)
-    assert group.accepting_responses is False
-
-
-def test_group_instrument_open_allowed_with_rule(
-    client: TestClient, db: Session
-) -> None:
-    """With a rule pinned, the group-scoped instrument opens."""
+    """Activation opens a group-scoped instrument like any other."""
     session = _create_session(client, db, code="grp-rule")
     group = _add_group_instrument(client, db, session.id)
     _populate_rosters(client, session.id)
@@ -611,11 +531,6 @@ def test_group_instrument_open_allowed_with_rule(
     assert activate.status_code == 303, activate.text
     db.refresh(group)
     assert group.rule_set_id is not None  # Full Matrix pinned by the helper
-
-    response = client.post(
-        f"/operator/sessions/{session.id}/instruments/{group.id}/open",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303, response.text
-    db.refresh(group)
+    # Activation opens it with every other instrument; there is no
+    # per-instrument open.
     assert group.accepting_responses is True

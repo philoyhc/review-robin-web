@@ -966,9 +966,9 @@ def build_instruments_context(
     # ``expired`` and ``archived``, where the routes then permitted
     # the delete. Both halves now read ``is_editable`` so page and
     # route agree by construction rather than by two lists kept in
-    # step. ``is_ready`` stays for the things it actually guards —
-    # the lock card and the per-instrument Open / Close controls,
-    # which are collection-phase actions, not setup mutations.
+    # step. ``is_ready`` stays for the thing it actually guards —
+    # the lock card's copy, a collection-phase state rather than a
+    # setup mutation.
     can_edit = lifecycle.is_editable(review_session)
     # The recovery path out of each locked state, for the disabled
     # controls' titles. ``revert_session_to_draft`` accepts ``ready``

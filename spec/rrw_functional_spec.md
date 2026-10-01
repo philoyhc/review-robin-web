@@ -1212,9 +1212,10 @@ affordances this section used to name went separately at 18R Item
 3: `POST .../instruments/accepting/all-{on,off}` existed with no
 UI driving it, while the **Show all when closed / Don't show any
 when closed** toggle *was* on the page and was removed with it
-(`docs/status.md`, the two struck route rows). Per-instrument
-Open / Close in each card's Identity row is the only accepting
-control; visibility-when-closed has no operator control at all and
+(`docs/status.md`, the two struck route rows). There is no
+per-instrument accepting control either: Activate opens every
+instrument and the deadline, Close session or Revert closes them
+all. Visibility-when-closed has no operator control at all and
 follows the per-instrument visibility policy, so the status row
 reports an accepting count and no showing-when-closed count.
 `spec/instruments.md` owns that contract and states it in full.
@@ -1225,8 +1226,7 @@ most one instrument unlocked at a time). Its stripes:
 
 - **Identity** (in the card `<summary>`) — the reviewer-facing
   short label (editable inline when unlocked), Set-up / Not-set-up
-  and Locked / Unlocked pills, drag handle for reorder, and (when
-  expanded, in `ready`) the per-instrument open/close form.
+  and Locked / Unlocked pills, and drag handle for reorder.
 - **Instrument assignment rule** (Band 1) — three "Links" of equal
   width: Link 1 *Who does the review*, Link 2 *Who is being
   reviewed*, Link 3 *Unit of review* (Individual vs Group). Each
