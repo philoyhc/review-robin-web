@@ -12,7 +12,7 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Dialog, Page, expect
 
-from tests.browser._builder import (
+from ._builder import (
     add_instrument,
     open_card,
     open_unlocked,

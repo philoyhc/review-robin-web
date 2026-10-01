@@ -13,7 +13,7 @@ from collections.abc import Callable
 import pytest
 from playwright.sync_api import Page, expect
 
-from tests.browser._builder import (
+from ._builder import (
     names,
     open_unlocked,
     preview_headers,
