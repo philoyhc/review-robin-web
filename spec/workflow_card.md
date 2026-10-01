@@ -409,11 +409,14 @@ The Prepare session button POSTs to
 `/operator/sessions/{id}/workflow/prepare` in `_workflow.py`,
 which runs three steps in sequence. The run takes seconds on a large
 roster (about 14 s at a 200 × 200 full matrix,
-`guide/app_responsiveness.md`), so on submit the button, and the
-confirmation's **Regenerate &amp; prepare**, reads "Preparing…",
-disables itself with `aria-busy="true"`, and refuses a second submit
-until the page changes; a back-forward cache return restores it. The
-steps:
+`guide/app_responsiveness.md`), so on submit the clicked button (this
+one, or the confirmation's **Regenerate &amp; prepare**, which renders
+with it) reads "Preparing…" with `aria-busy="true"`, and a second
+submit from either is refused until the page changes. The buttons stay
+enabled: busy is `aria-busy`, never `disabled`
+(`spec/ui_elements.md` §1, "Navigation busy indicator"). A
+back-forward cache return, or the busy indicator's 60 s give-up,
+restores them. The steps:
 
 1. **Generate.** `assignments.replace_assignments(...)` —
    materialises one `Assignment` row per `(reviewer, reviewee,

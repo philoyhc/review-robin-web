@@ -496,6 +496,58 @@
   </div>
 </div>
 
+{# Prepare runs Generate + Validate + Invite in one POST, about 14 s at
+   a 200 × 200 full matrix (`guide/app_responsiveness.md`, re-measured
+   2026-10-01). On submit, the clicked Prepare button reads "Preparing…"
+   and a second submit from either Prepare form (Prepare session, or
+   the confirmation's Regenerate & prepare, which render together) is
+   refused: it would only queue a second Prepare behind the first. The
+   buttons stay enabled — busy is `aria-busy`, never `disabled` (rule 2
+   of the navigation busy indicator in `base.html`). Reset on a
+   back-forward cache return, and after the indicator's own 60 s
+   give-up, so a stopped load cannot leave Prepare unclickable.
+   Rendered only where a Prepare form is. #}
+{% if prepare_visible or prepare_confirm %}
+<script>
+(function () {
+  var GIVE_UP_MS = 60000;
+  var forms = ['next-action-prepare-form', 'next-action-prepare-regenerate-form']
+    .map(function (id) { return document.getElementById(id); })
+    .filter(Boolean);
+  var preparing = false;
+  var busy = [];
+  function reset() {
+    preparing = false;
+    busy.forEach(function (entry) {
+      entry.button.innerHTML = entry.label;
+      entry.button.removeAttribute('aria-busy');
+    });
+    busy = [];
+  }
+  forms.forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (preparing) {
+        event.preventDefault();
+        return;
+      }
+      preparing = true;
+      var button = event.submitter
+        || document.querySelector('button[form="' + form.id + '"]');
+      if (button) {
+        busy.push({ button: button, label: button.innerHTML });
+        button.textContent = 'Preparing\u2026';
+        button.setAttribute('aria-busy', 'true');
+      }
+      window.setTimeout(reset, GIVE_UP_MS);
+    });
+  });
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) reset();
+  });
+})();
+</script>
+{% endif %}
+
 {# 18G PR 2C — manual-activate cancellation modal. When the Activate
    form carries the data-manual-activate-confirm attribute (i.e.
    invite_offsets is non-empty and Start is scheduled), a browser
@@ -503,46 +555,6 @@
    auto-sends will be cancelled. Native confirm is the smallest UX
    surface here — no new modal CSS, screen-reader-friendly out of
    the box. #}
-{# Prepare runs Generate + Validate + Invite in one POST, about 14 s at
-   a 200 × 200 full matrix (`guide/app_responsiveness.md`, re-measured
-   2026-10-01). Its button says so while it runs and refuses a second
-   click, which would only queue a second Prepare behind the first.
-   Restored on a back-forward cache return, which shows the page as it
-   was left. Rendered only where a Prepare form is. #}
-{% if prepare_visible or prepare_confirm %}
-<script>
-(function () {
-  ['next-action-prepare-form', 'next-action-prepare-regenerate-form'].forEach(function (id) {
-    var form = document.getElementById(id);
-    if (!form) return;
-    var buttons = document.querySelectorAll('button[form="' + id + '"]');
-    form.addEventListener('submit', function (event) {
-      if (form.dataset.preparing === 'true') {
-        event.preventDefault();
-        return;
-      }
-      form.dataset.preparing = 'true';
-      buttons.forEach(function (button) {
-        button.dataset.idleLabel = button.innerHTML;
-        button.textContent = 'Preparing\u2026';
-        button.disabled = true;
-        button.setAttribute('aria-busy', 'true');
-      });
-    });
-    window.addEventListener('pageshow', function (event) {
-      if (!event.persisted) return;
-      delete form.dataset.preparing;
-      buttons.forEach(function (button) {
-        if (button.dataset.idleLabel === undefined) return;
-        button.innerHTML = button.dataset.idleLabel;
-        button.disabled = false;
-        button.removeAttribute('aria-busy');
-      });
-    });
-  });
-})();
-</script>
-{% endif %}
 <script>
 (function () {
   var form = document.getElementById('next-action-activate-session-form');
