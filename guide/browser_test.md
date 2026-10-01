@@ -115,6 +115,10 @@ Rung 2 (2026-10-01), against the plan:
 - **`.claude/hooks/session-start.sh` changed after all**, against Blast
   radius: it now warns when no Chromium is found, as it already did for
   `node`.
+- **CI cost, measured on #2707:** the Chromium install step takes 21 s
+  (04:21:58 → 04:22:19); the `test` job ran 2 min 29 s against #2704's
+  2 min 19 s, with 5,110 passed under `RRW_REQUIRE_BROWSER=1`, so the
+  browser test ran rather than skipped.
 - Base SHA for the cumulative read at rung 4: `df7a5942`.
 
 ## PR ladder
