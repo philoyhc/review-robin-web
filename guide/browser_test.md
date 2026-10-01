@@ -121,6 +121,15 @@ Rung 2 (2026-10-01), against the plan:
   browser test ran rather than skipped.
 - Base SHA for the cumulative read at rung 4: `df7a5942`.
 
+Rung 3 (2026-10-01): 14 tests in `test_builder_rows.py` and
+`test_builder_card.py` repeat item 6's rows for "+", default names, the
+preview following a row, ▲ and Active, R and ≡ alone, a new field saved
+twice and its order, the last row, Cancel, an open card under Lock,
+Delete's checkbox, Name and Email fixed, and visibility in the card. Two
+deliberate template breakages (▲ and the visibility chip made inert) each
+failed their test. Left to the hand check: the hide-confirm on a field
+with saved responses (needs an activated session; rung 4 seeds one).
+
 ## PR ladder
 
 1. **This plan.** Prose only.
