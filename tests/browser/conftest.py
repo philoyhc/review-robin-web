@@ -217,7 +217,7 @@ def page_as(browser: Browser, live_server: LiveServer) -> Iterator[Callable[...,
     contexts = []
     errors: list[str] = []
 
-    def open_page(email: str | None = None) -> Page:
+    def open_page(email: str | None = None, *, javascript: bool = True) -> Page:
         headers = {}
         if email is not None:
             headers = {
@@ -229,6 +229,7 @@ def page_as(browser: Browser, live_server: LiveServer) -> Iterator[Callable[...,
             base_url=live_server.base_url,
             viewport={"width": 1500, "height": 1000},
             extra_http_headers=headers,
+            java_script_enabled=javascript,
         )
         contexts.append(context)
         opened = context.new_page()

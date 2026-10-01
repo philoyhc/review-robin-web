@@ -377,6 +377,13 @@ INTEGER_WHOLE_BOUNDS_MESSAGE = (
     "Choose Decimal for steps like 0.5."
 )
 
+#: What an Integer field's blank Step saves as.
+INTEGER_DEFAULT_STEP = 1.0
+
+
+def _is_whole_or_blank(value: float | None) -> bool:
+    return value is None or value == int(value)
+
 
 def _band2_rf_id(rf: dict[str, Any]) -> int | None:
     """The stored row id a band2_state entry names, or None for a new
@@ -699,6 +706,16 @@ def _sync_response_fields_to_db(
         new_min = _band2_parse_float(rf.get("min"))
         new_max = _band2_parse_float(rf.get("max"))
         new_step = _band2_parse_float(rf.get("step"))
+        # An Integer field's blank Step saves as 1, the step an Integer
+        # takes anyway; the builder writes the 1 into the box on Save.
+        # Steps count from Min, so a stored non-whole Min (kept by the
+        # whole-bounds exemption) keeps its blank Step.
+        if (
+            new_data_type == "Integer"
+            and new_step is None
+            and _is_whole_or_blank(new_min)
+        ):
+            new_step = INTEGER_DEFAULT_STEP
         new_list_csv_raw = rf.get("list_options") or ""
         new_list_csv = new_list_csv_raw if new_list_csv_raw else None
 
@@ -722,7 +739,16 @@ def _sync_response_fields_to_db(
             shape_changed.append("min")
         if field._inline_max != new_max:
             shape_changed.append("max")
-        if field._inline_step != new_step:
+        stored_step = field._inline_step
+        if (
+            stored_step is None
+            and field._inline_data_type == new_data_type == "Integer"
+            and _is_whole_or_blank(field._inline_min)
+        ):
+            # A blank Step stored before the default existed already
+            # meant 1, so filling it in changes no response's validity.
+            stored_step = INTEGER_DEFAULT_STEP
+        if stored_step != new_step:
             shape_changed.append("step")
         if field._inline_list_csv != new_list_csv:
             shape_changed.append("list_options")

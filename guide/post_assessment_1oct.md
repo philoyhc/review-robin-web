@@ -42,7 +42,9 @@ requires.
 test. `spec/session_owners.md` and the template comment describe what ships.
 One code PR.
 
-## E2 — "A refused parent keeps the text": test it, reword the row
+## ~~E2 — "A refused parent keeps the text": test it, reword the row~~
+
+**Done in #2713**, with the author's ruling that a blank Integer Step saves as 1. The browser now refuses 2.5 too, so the test drives the held answer with JavaScript off.
 
 **What is wrong.** `guide/post_azure_todo_checklist.md` item 6's row says to
 type an out-of-range parent value "in that preview" and Save. Neither half
