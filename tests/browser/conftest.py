@@ -33,6 +33,13 @@ from playwright.sync_api import Browser, Error, Page, sync_playwright
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REQUIRE_BROWSER = os.environ.get("RRW_REQUIRE_BROWSER") == "1"
 SERVER_START_TIMEOUT_S = 30.0
+# Pinned in the server's environment below, so a developer's .env (which
+# CLAUDE.md tells them to give a FAKE_AUTH_EMAIL) cannot rename the operator.
+FAKE_OPERATOR_EMAIL = "operator@example.edu"
+# Workspace operators other than the fake one, admitted through
+# OPERATOR_EMAILS on first sign-in (``_builder.sign_in``).
+COLLEAGUE_EMAIL = "colleague@example.edu"
+SECOND_COLLEAGUE_EMAIL = "second@example.edu"
 
 
 def _unavailable(reason: str) -> None:
@@ -42,12 +49,28 @@ def _unavailable(reason: str) -> None:
 
 
 @pytest.fixture(scope="session")
-def browser() -> Iterator[Browser]:
+def chromium_available() -> None:
+    """Launch Chromium once to learn whether it can run, then shut it down.
+
+    Skip-or-fail is decided here, once per worker, without holding the
+    browser open: sync Playwright runs an event loop in the calling thread
+    for as long as ``sync_playwright()`` is entered, and any other test on
+    the worker that calls ``asyncio.run()`` meanwhile fails with "cannot be
+    called from a running event loop".
+    """
     with sync_playwright() as playwright:
         try:
-            launched = playwright.chromium.launch()
+            playwright.chromium.launch().close()
         except Error as exc:
             _unavailable(f"Chromium could not launch: {exc.message.splitlines()[0]}")
+
+
+@pytest.fixture(scope="module")
+def browser(chromium_available: None) -> Iterator[Browser]:
+    """One Chromium per browser-test module, so Playwright's event loop is
+    gone before pytest moves on to a test from any other module."""
+    with sync_playwright() as playwright:
+        launched = playwright.chromium.launch()
         yield launched
         launched.close()
 
@@ -82,9 +105,10 @@ def _server_command(sock: socket.socket) -> tuple[list[str], dict[str, object]]:
 
 @pytest.fixture(scope="session")
 def live_server(
-    browser: Browser, tmp_path_factory: pytest.TempPathFactory
+    chromium_available: None, tmp_path_factory: pytest.TempPathFactory
 ) -> Iterator[LiveServer]:
-    # Depends on ``browser`` so a missing browser skips before a server starts.
+    # Depends on the Chromium check so a missing browser skips before a
+    # server starts.
     workdir = tmp_path_factory.mktemp("live_server")
     database_url = f"sqlite:///{workdir / 'browser.db'}"
     # The server inherits the test environment on purpose: the root
@@ -97,6 +121,9 @@ def live_server(
         "DATABASE_URL": database_url,
         "ALLOW_FAKE_AUTH": "true",
         "FAKE_AUTH_OPERATOR": "true",
+        "FAKE_AUTH_EMAIL": FAKE_OPERATOR_EMAIL,
+        "FAKE_AUTH_NAME": "Browser Operator",
+        "OPERATOR_EMAILS": f"{COLLEAGUE_EMAIL},{SECOND_COLLEAGUE_EMAIL}",
     }
     migrated = subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],

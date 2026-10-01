@@ -94,6 +94,19 @@ def save(page: Page, card: Locator) -> None:
 REVIEWER_EMAIL = "rana@example.edu"
 
 
+def sign_in(api: httpx.Client, email: str) -> None:
+    """One request through the Easy Auth headers, which makes the person's
+    users row (an operator, for an address in OPERATOR_EMAILS)."""
+    response = api.get(
+        "/operator/sessions",
+        headers={
+            "X-MS-CLIENT-PRINCIPAL-NAME": email,
+            "X-MS-CLIENT-PRINCIPAL-ID": f"browser-{email}",
+        },
+    )
+    assert response.status_code == 200, response.text
+
+
 def activate(api: httpx.Client, database_url: str, session_id: int) -> None:
     """Pin a full matrix, generate, validate and activate, so the roster's
     reviewer has an assignment. The pin writes the database directly, as
@@ -116,7 +129,10 @@ def activate(api: httpx.Client, database_url: str, session_id: int) -> None:
     activated = api.post(
         f"{base}/activate", data={"acknowledge_warnings": "true"}, follow_redirects=False
     )
+    # A refused activation redirects too, with super_status=failed in the
+    # query string; success lands on bare Session Home.
     assert activated.status_code == 303, activated.text
+    assert activated.headers["location"] == base, activated.headers["location"]
 
 
 def branch_rating(page: Page, session_id: int, *, op: str = "ge", value: str = "4") -> Locator:

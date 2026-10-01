@@ -156,6 +156,38 @@ killed if it won't stop, and a failed migration shows its stderr; the
 fake-auth keys are pinned against a developer's `.env`; one redundant
 click removed; the import-error divergence recorded above.
 
+Rung 5 (2026-10-01): 11 tests for item 5. `test_owners_card.py`: the
+card starts locked; Add owner and Remove save at once; the last owner
+can't go; removing yourself asks, Cancel posts nothing, confirming lands
+on the lobby; owners change in an activated session; the card relocks
+after leaving Home; without JavaScript both forms still work.
+`test_tags_and_create.py`: suggestions complete only the last tag (Create
+and Session Home), Enter in a lobby tag box posts nothing, and Create
+stages owners and saves what remains. A second operator comes from
+`OPERATOR_EMAILS` on first sign-in. Four template breakages each failed
+their test. **Found:** with JavaScript off, Create can't submit at all —
+its button renders `disabled` and only script enables it (since
+`9cfb70e1`, 2026-05-22) — so item 5's 'Create is unchanged … Off' row
+can't pass as written; raised with the author, no test, and
+`spec/session_owners.md` and a `session_new.html` comment still describe
+that path. Left to the hand check: the datalist popup; Owners above the
+Danger Zone (layout); and the parts of rows tested only in part — relocking
+via another session's Home, Quick Setup's lock unaffected, the details
+card staying locked on an Activated session, and the lobby's two
+typeahead boxes (Create's and Session Home's are tested). Rung 5's own
+`diff-reviewer` read: seven findings, all acted on — the fake operator's
+email pinned against a `.env`, the lobby Enter test now waits a second for
+a POST and checks the session survives, `activate()` asserts the success
+redirect, the no-JS test removes another owner too, Create stages two and
+keeps one, shared steps moved to `_builder.py` / `conftest.py`.
+**A harness defect CI found on #2710:** the session-scoped browser kept
+sync Playwright's event loop running in each worker's thread, so a later
+test on that worker calling `asyncio.run()`
+(`test_session_new_tags_card.py`) failed, depending on xdist's split. The
+browser is now module-scoped, with a session-scoped launch check owning
+skip-or-fail; reproduced serially before the fix, passing after. Browser
+runs take about 25 s, from 21 s.
+
 ## PR ladder
 
 1. **This plan.** Prose only.
