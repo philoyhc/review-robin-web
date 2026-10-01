@@ -754,8 +754,8 @@ def unarchive_session(
 # Per-instrument controls
 # --------------------------------------------------------------------------- #
 # Accepting is session-wide, so there is no per-instrument open or close:
-# ``activate_session`` opens every instrument, and ``observe_deadline`` and
-# Close session close them all. ``open_instrument`` / ``close_instrument``
+# ``activate_session`` opens every instrument, and ``observe_deadline``,
+# Close session (``expire_session``) and Revert close them all. ``open_instrument`` / ``close_instrument``
 # were removed with their routes on 2026-10-01.
 
 

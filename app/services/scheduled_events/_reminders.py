@@ -137,11 +137,9 @@ def _observe_scheduled_reminders(
 
     Accepting-responses window is the **relaxed** definition
     (``status == "ready" ∧ now < deadline``); the per-instrument
-    ``accepting_responses`` flag is intentionally not consulted —
-    if every instrument has been temporarily closed while the
-    session is still ``ready``, sending a reminder is harmless
-    (reviewer lands on "responses not currently accepted") and the
-    operator can clear ``reminder_offsets`` to suppress.
+    ``accepting_responses`` flag is intentionally not consulted: it
+    is session-wide, and the only thing that clears it on a ``ready``
+    session is the deadline, which this window already excludes.
 
     Concurrency is the same SELECT … FOR UPDATE pattern as Parts
     1/2: the session row is locked once before iterating; each

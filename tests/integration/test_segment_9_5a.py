@@ -322,7 +322,7 @@ def test_delete_data_does_not_invalidate(
     assert session.status == "validated"
 
 
-def test_instrument_open_close_do_not_invalidate(
+def test_validating_leaves_instruments_closed_without_invalidating(
     client: TestClient, db: Session
 ) -> None:
     session = _validated_session(client, db, code="noinv-instr")
@@ -330,9 +330,9 @@ def test_instrument_open_close_do_not_invalidate(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalar_one()
 
-    # Instrument open/close routes require ready, so directly toggling via
-    # the lifecycle service from validated state would 409 — instead, verify
-    # that no invalidate event has fired during validation.
+    # Instruments open only on Activate (accepting is session-wide), so a
+    # validated session's instrument is still closed, and validating it
+    # fired no invalidate event.
     invalidated = db.execute(
         select(AuditEvent).where(
             AuditEvent.event_type == "session.invalidated",

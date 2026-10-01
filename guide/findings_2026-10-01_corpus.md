@@ -74,7 +74,10 @@ the spec should say so.
 - **F11** — The configurable welcome message, institution name and magic
   links (`spec/audience_and_identity_model.md`).
 - **F15** — The Draft/Receiving/Closed instrument statuses and the
-  reviewer notification on edit (`spec/domain_assumptions.md`).
+  reviewer notification on edit (`spec/domain_assumptions.md`). The A6
+  ruling (#2722, accepting is session-wide) rules out a per-instrument
+  Closed/Paused state, so this now reads as "won't do" unless the author
+  says otherwise.
 - **G4** — The Responses-received switch has no consumer at submit time.
 - **G13** — Export validation at row-write time
   (`spec/rrw_functional_spec.md` §13.4).

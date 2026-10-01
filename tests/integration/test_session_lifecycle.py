@@ -326,7 +326,7 @@ def test_no_per_instrument_open_or_close(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """Accepting is session-wide (author's ruling, 2026-10-01): Activate
-    opens every instrument and the deadline or Close session closes them
+    opens every instrument and the deadline, Close session or Revert closes them
     all. The per-instrument Open / Close buttons and their routes are
     gone, so an operator cannot leave one instrument closed while
     another accepts."""
@@ -400,10 +400,11 @@ def test_reviewer_surface_hides_values_when_closed_and_invisible(
         follow_redirects=False,
     )
 
-    # Close the instrument as the deadline observer does (there is no
-    # per-instrument close any more).
+    # Pass the deadline: the reviewer's next GET runs the deadline
+    # observer, which closes every instrument (there is no per-instrument
+    # close any more).
     user = db.execute(select(__import__("app.db.models", fromlist=["User"]).User)).scalars().first()
-    instrument.accepting_responses = False
+    session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
     db.commit()
 
     page = rae_client.get(f"/me/sessions/{session.id}")

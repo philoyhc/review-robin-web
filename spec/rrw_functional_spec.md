@@ -419,15 +419,17 @@ nav button and the H2 title), friendly description (≤2000
 characters, reviewer-facing — appears as subtitle below the H2),
 unit of review (per-reviewee vs group-scoped), the instrument's
 **assignment rule** (Band 1 — which reviewer × reviewee pairs are
-eligible), accepting-responses flag, visibility-when-closed flag,
-page-break flag (`starts_new_page` — where the reviewer surface
+eligible), visibility-when-closed flag, page-break flag (`starts_new_page` — where the reviewer surface
 breaks to a new page), ordered list of response fields, ordered
 list of display fields, and per-audience **visibility policies**
 (see [§5.16](#516-visibility-policy)).
 
 **System-derived fields:** the materialised assignment rows the
 rule produces, the cached eligible-pair count, the per-instrument
-fan-out copies for group-scoped instruments.
+fan-out copies for group-scoped instruments, and the
+accepting-responses flag, which the session's lifecycle sets on
+every instrument at once (Activate opens; the deadline, Close session
+or Revert closes).
 
 A session may have any number of instruments (no cap). Each
 instrument defines its own response fields, display fields, rule,

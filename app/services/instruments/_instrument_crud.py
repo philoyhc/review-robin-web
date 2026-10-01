@@ -288,8 +288,8 @@ def replicate_instrument(
     ``group_kind``, and ``sort_display_fields``. The copy's name
     is the source name +
     " (copy)"; it starts ``accepting_responses=False`` and carries
-    **no** pinned rule (``rule_set_id``) — the operator pins one
-    before opening it.
+    **no** pinned rule (``rule_set_id``). Activation opens it with
+    every other instrument.
 
     **No ``Assignment`` rows are created**, here or in
     :func:`create_instrument`. Both cloned them until Segment 19N.1, so
@@ -946,8 +946,8 @@ def set_column_widths(
 
 # ``bulk_set_accepting`` and ``bulk_set_visibility`` retired in 18R
 # Item 3. The bulk accepting ("Open / close all") control was never
-# wired into the UI and dropped from the spec; per-instrument
-# open/close remains the accepting control. The bulk visibility-when-
+# wired into the UI and dropped from the spec, and per-instrument
+# open/close went too (2026-10-01): accepting is session-wide. The bulk visibility-when-
 # closed toggle was removed from the Instruments page — visibility
 # when closed is now governed by the per-instrument visibility policy.
 # The per-instrument ``set_responses_visible_when_closed`` service

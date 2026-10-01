@@ -1,8 +1,8 @@
 """Instruments slice — instrument CRUD (page, add, delete, edit
 description, bulk save fields), per-instrument response/display
-field CRUD (add / edit / delete / move + bulk save), lifecycle
-(open / close / visibility), and the session-level bulk
-visibility / accepting toggles.
+field CRUD (add / edit / delete / move + bulk save), and the
+visibility-when-closed flag. There is no per-instrument or bulk
+accepting control: accepting is session-wide.
 
 Slice 10 of the major refactor. Response Type Definition CRUD
 was carved into the sibling ``_response_types.py`` slice in
@@ -1136,7 +1136,7 @@ def instruments_delete(
 
 
 # Accepting is session-wide: Activate opens every instrument, and the
-# deadline or Close session closes them all. The bulk toggles retired in
+# deadline, Close session or Revert closes them all. The bulk toggles retired in
 # 18R Item 3, and per-instrument Open / Close on 2026-10-01 (author's
 # ruling on guide/findings_2026-10-01_corpus.md A6).
 
