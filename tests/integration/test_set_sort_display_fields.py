@@ -198,15 +198,16 @@ def test_set_sort_rejects_duplicate_id(
     assert excinfo.value.code == "duplicate_id"
 
 
-def test_set_sort_rejects_cross_instrument_id(
+def test_set_sort_drops_a_foreign_id(
     db: Session, client: TestClient
 ) -> None:
-    """A display_field_id that belongs to a different
-    instrument's display field set fails."""
+    """A display_field_id that belongs to a different instrument is
+    dropped, not refused (findings A24): the spec keeps only this
+    instrument's keys."""
     review_session = _make_session(client, db, code="ssdf-cross")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session.id)
-    _seed_two_display_fields(db, instrument)
+    f1, _ = _seed_two_display_fields(db, instrument)
 
     # Seed a second instrument with its own display field.
     other = Instrument(
@@ -225,14 +226,57 @@ def test_set_sort_rejects_cross_instrument_id(
     db.add(foreign)
     db.flush()
 
-    with pytest.raises(instruments.SortSpecError) as excinfo:
-        instruments.set_sort_display_fields(
-            db,
-            instrument=instrument,
-            fields=[(foreign.id, "asc")],
-            actor=_actor(db),
+    new_value, _ = instruments.set_sort_display_fields(
+        db,
+        instrument=instrument,
+        fields=[(foreign.id, "asc"), (f1.id, "desc")],
+        actor=_actor(db),
+    )
+    assert new_value == [{"display_field_id": f1.id, "dir": "desc"}]
+
+
+def test_a_save_compacts_a_sort_key_whose_field_was_deleted(
+    db: Session, client: TestClient
+) -> None:
+    """The card posts back the stored spec; once a display field it
+    names is deleted, the next save drops that key and closes the gap
+    rather than failing the save (``spec/sort_by_reviewee.md``
+    "Cascade behaviour"; findings A24). The audit diff records the
+    cleanup."""
+    review_session = _make_session(client, db, code="ssdf-stale")
+    _populate_rosters(client, review_session.id)
+    instrument = _instrument(db, review_session.id)
+    f1, f2 = _seed_two_display_fields(db, instrument)
+    instruments.set_sort_display_fields(
+        db,
+        instrument=instrument,
+        fields=[(f1.id, "asc"), (f2.id, "desc")],
+        actor=_actor(db),
+    )
+    stale_id = f1.id
+    db.delete(f1)
+    db.flush()
+
+    new_value, old_value = instruments.set_sort_display_fields(
+        db,
+        instrument=instrument,
+        fields=[(stale_id, "asc"), (f2.id, "desc")],
+        actor=_actor(db),
+    )
+    assert new_value == [{"display_field_id": f2.id, "dir": "desc"}]
+    assert old_value == [
+        {"display_field_id": stale_id, "dir": "asc"},
+        {"display_field_id": f2.id, "dir": "desc"},
+    ]
+    db.refresh(instrument)
+    assert instrument.sort_display_fields == new_value
+    events = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "instrument.sort_fields_updated",
+            AuditEvent.session_id == review_session.id,
         )
-    assert excinfo.value.code == "cross_instrument"
+    ).scalars().all()
+    assert len(events) == 2
 
 
 def test_set_sort_accepts_group_identity_sentinel(
@@ -240,8 +284,8 @@ def test_set_sort_accepts_group_identity_sentinel(
 ) -> None:
     """The ``GROUP_IDENTITY_SORT_KEY`` (-1) sentinel for the
     composed Group cell sort on a new-model group-scoped
-    instrument's preview is exempt from the cross-instrument
-    check — it isn't a real InstrumentDisplayField row."""
+    instrument's preview is kept, not dropped as a stale id — it
+    isn't a real InstrumentDisplayField row."""
     review_session = _make_session(client, db, code="ssdf-group-sentinel")
     _populate_rosters(client, review_session.id)
     instrument = _instrument(db, review_session.id)

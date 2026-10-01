@@ -48,7 +48,7 @@
          data-rs-discard>Cancel</a>
       <button class="btn"
               type="submit"
-              formaction="/me/sessions/{{ session.id }}/submit">
+              formaction="/me/sessions/{{ session.id }}/submit?page={{ current_page_n }}">
         Submit
       </button>
     {% endif %}

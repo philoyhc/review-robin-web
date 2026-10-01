@@ -433,7 +433,7 @@ def test_no_write_form_in_preview(
     assert f'action="/me/sessions/{session.id}/1/save"' not in body
     # No session-wide submit formaction either.
     assert (
-        f'formaction="/me/sessions/{session.id}/submit"' not in body
+        f'formaction="/me/sessions/{session.id}/submit' not in body
     )
 
 

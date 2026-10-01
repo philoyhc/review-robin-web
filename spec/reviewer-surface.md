@@ -77,7 +77,9 @@ safe default landing.
 - The Submit POST is **session-wide** — no `{page_n}` segment; submits
   the whole review. On success, 303s to `/me/sessions/{id}`
   (which 303s on to `/1`) or to the summary page when the submit closed
-  out the whole session.
+  out the whole session. The button posts `/submit?page={page_n}`, so a
+  blocked Submit re-renders the page it was pressed on; a missing,
+  malformed or out-of-range `page` falls back to page 1.
 - The Clear POST is **session-wide** — no `{page_n}` segment; wipes
   everything and 303s to the bare session URL.
 
@@ -229,7 +231,7 @@ intentional-nav escape prompts on the app's own controls.
 | **Save** | Page | POST `…/{page_n}/save` | Submit the page `<form>` to persist the **current page's** inputs to the database. Always enabled (no dirty-tracking gate). On success: 303 → `…/{page_n}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
 | **Cancel** | Page | GET `…/{page_n}` | An `<a href>` back to the current page URL — a plain server reload. Unsaved typing lives only in the current page's DOM, so the reload re-renders from the last-saved server values, dropping the edits. No JS, no separate write, no audit. Other pages' saved state is untouched. |
 | **Prev / Next** | Page | GET `…/{N}` | `<a href>` links to the adjacent page — plain HTTP navigation. Server-side render returns that page's instruments. At a page boundary the link renders as a disabled `<button>`. There is no per-instrument page button and no client-side swap. Unsaved typing on the current page is lost on navigation (no `beforeunload` guard). |
-| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the dirty inputs across **every** page (an implicit save of the whole review), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the surface with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → `…/{page_n}` (no flash; the per-page pill flips to `submitted` and the status column shows the complete icon on every row whose required fields are filled). |
+| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the current page's inputs (the form posts only this page; other pages contribute what their own Save stored), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the page Submit was pressed on (`?page={page_n}`) with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → the bare session URL (which 303s on to `/1`), or to the summary page once every assignment is submitted (no flash; the per-page pill flips to `submitted` and the status column shows the complete icon on every row whose required fields are filled). |
 | **Clear all** | Review-session | POST `/me/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
 
 ### Why Submit is session-wide
@@ -789,8 +791,7 @@ field before the submit lands.
    no `acknowledged_missing` audit detail. The flag that turns the
    status column on after a failed Submit is `show_incomplete_marks`.
 
-The card carries a Cancel link back to the originating instrument
-page so the reviewer can also dismiss the warning without scrolling
+The card carries a Cancel link back to the originating page so the reviewer can also dismiss the warning without scrolling
 through the form (URL bar leaves the POST-only `/submit` endpoint
 behind).
 
@@ -1147,7 +1148,7 @@ submitted every assigned row on a session.
 returns this URL when `fully_submitted` — every assigned row now has
 `submitted_at` — and the bare session URL otherwise, which 303s on to
 `/1`. It takes no page position: since 18L the URL slot is the
-operator-defined page number, so submit does not try to return the
+operator-defined page number, so a successful submit does not try to return the
 reviewer to the page they were on. The page also stays reachable later from the
 dashboard's Session column once Reviewer Status is
 `submitted`.
