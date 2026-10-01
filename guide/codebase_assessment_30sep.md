@@ -51,7 +51,11 @@ could — all three are in §2.
 
 **Development context:** single author, AI agents building, no laptop dev loop,
 pre-deployment with an institutional pilot pending. 161 merges in ten days is
-not a team velocity figure.
+not a team velocity figure. **Most of this window was built while waiting on
+NUS IT**: the deployment that would put the work in front of users is not the
+project's to hurry, and the builder work filled the wait. Read §5 and §8 in that
+light. The question is not whether to have built it, but what to build while the
+wait lasts.
 
 ## 1. What's in the box
 
@@ -297,9 +301,17 @@ summary paragraph describes the tables below it.
   one complete interaction with its view contract and tests, rather than
   splitting markup, script and tests separately — is right. No plan; there is
   no builder change queued.
-- **Everything built this window is unverified in a browser.** The builder is
-  client-side staging before one save; tests prove the posted payload and the
-  parsed script, not that keyboard and pointer sequences produce them.
+- **Nothing built this window has been used by a person in a real browser.** The
+  builder is client-side staging before one save; tests prove the posted payload
+  and the parsed script, not that keyboard and pointer sequences produce them.
+  **Headless Chromium in the sandbox closed part of that gap.** It drove the
+  builder's rows, the "+" / X / ✓ sequence and the tag and owner scripts on a
+  rendered page under fake auth. It found three defects on main, fixed in 19T
+  Item 1, and it measured the band layouts at several widths (the 19T record,
+  `guide/archive/segment_19T_advanced_instruments.md`). Those checks were run by
+  hand, so the suite cannot repeat them. What headless Chromium cannot settle
+  is what the checklist is for: a datalist popup, a scrollbar drag, Safari, a
+  person's reading of the page, and real Easy Auth, Postgres and the gateway.
   `guide/post_azure_todo_checklist.md` item 6 now carries the whole 19T surface,
   and item 5 the tags and owners work. Both can run on the personal dev slot,
   which the author recorded on 2026-09-23 as unreachable, or on the NUS
@@ -384,24 +396,37 @@ Review Robin Web is feature-complete for a pilot, and this window made its
 instrument model substantially more expressive — branching with two modes,
 ranges and two levels, carried to every surface — without a new seam in the
 Python and with 5,109 tests green. It also made the builder's one template the
-largest UI unit in the product and left all of the window's interaction
-unverified in a browser. The one live thread is unchanged — **nothing sends
-email, and nothing has been deployed** — but on 2026-10-01 it is better
+largest UI unit in the product and left the window's interaction unseen by a
+person in a real browser; headless Chromium drove its scripts, by hand. The one
+live thread is unchanged — **nothing sends email, and nothing has been
+deployed** — but on 2026-10-01 it is better
 described: most of the NUS foundation is provisioned, and what blocks the rest
 is a regional capacity problem and a naming decision, neither of them the
 project's to make.
 
 **Recommended next moves, at most three:**
 
-1. **Get the window into a browser by whichever route opens first, and hold
-   feature work until then.** If the personal dev slot is reachable, run
-   checklist items 5 and 6 there now; otherwise they wait for the NUS path,
-   and the project-side runner, gateway, secrets and migration work in
-   `docs/nus_azure_status_v7.md` is what to have ready for the day the two
-   blockers clear — without guessing the hostname or retrying the VM. First
-   because the window's value is untested where it lives, client-side staging,
-   and every other candidate is a refinement whose worth is a guess until
-   someone uses the builder. The updated Codex read reaches the same order.
+1. **While the wait lasts, build what shrinks the unverified surface rather
+   than widens it.** The wait is NUS IT's, and nothing here shortens it. What
+   the project controls is how much untested interaction is queued when it
+   ends. So, in order:
+   - **The first browser.** If the personal dev slot becomes reachable, run
+     checklist items 5 and 6 there at once.
+   - **The NUS path.** Keep the project-side runner, gateway, secrets and
+     migration work in `docs/nus_azure_status_v7.md` ready for the day its two
+     blockers clear, without guessing the hostname or retrying the VM.
+   - **Meanwhile, prefer work that adds no new interaction.** Prepare's 13 s
+     (§5) is one. Turning the hand-run Chromium checks above into something
+     repeatable is another. The builder-script extraction is not, despite the
+     idle time: it rewrites the very script no person has used, so it waits for
+     its trigger (move 3).
+   - **Feature work that adds interaction lengthens checklist items 5 and 6.**
+     Take it on with that cost named.
+
+   First because the window's value is untested where it lives, client-side
+   staging, and every other candidate is a refinement whose worth is a guess
+   until someone uses the builder. The updated Codex read reaches the same
+   order.
 2. **Freeze instrument scope until a real instrument needs more.** Two levels,
    two modes and ranges already multiply across authoring, entry, completeness,
    summaries, results, clone and round-trip. The next rules-language feature
