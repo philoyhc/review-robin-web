@@ -3,10 +3,10 @@
   "config": "file",
   "loc_convention": "physical lines, git-tracked files only",
   "git": {
-    "head": "c0bf5bf5",
+    "head": "36e4e6a8",
     "since": "ed8a69e7",
     "merge_commits": 161,
-    "non_merge_commits": 403,
+    "non_merge_commits": 405,
     "pr_numbers": [
       2542,
       2543,
@@ -176,7 +176,7 @@
   "areas": {
     "docs": {
       "files": 271,
-      "loc": 156069
+      "loc": 156095
     },
     "production": {
       "files": 207,
@@ -2501,7 +2501,7 @@
       "docs"
     ],
     "guide/codebase_assessment_30sep.md": [
-      421,
+      446,
       "docs"
     ],
     "guide/codex_assessment_30sep.md": [
@@ -2621,7 +2621,7 @@
       "docs"
     ],
     "spec/instruments.md": [
-      1601,
+      1602,
       "docs"
     ],
     "spec/lifecycle.md": [

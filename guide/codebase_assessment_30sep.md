@@ -8,7 +8,7 @@ provisioned and held on two external decisions.
 
 **Updated 2026-10-01** to reflect the NUS Azure status v7, the Codex read's
 update for it, and the fix of the two doc drifts §3 found — tables, window and
-SHA re-taken together at `c0bf5bf5`. Only `docs` moved; every code area is
+SHA re-taken together at `36e4e6a8`. Only `docs` moved; every code area is
 identical to the first writing at `df4ecae3`.
 
 **Since the prior snapshot** (`guide/archive/codebase_assessment_22sep.md`,
@@ -28,9 +28,9 @@ identical to the first writing at `df4ecae3`.
   a register of seven small fixes, and the instrument intro laid out as two
   columns.
 
-**Numbers taken at `c0bf5bf5`, 2026-10-01** — `main` at `0b970eeb` plus this
-amendment's drift-fix commit. Window `ed8a69e7..c0bf5bf5`: **161 merge commits,
-403 non-merge commits, PRs #2542–#2702** (160 numbered) across 2026-09-22 →
+**Numbers taken at `36e4e6a8`, 2026-10-01** — `main` at `0b970eeb` plus this
+amendment's drift-fix commits. Window `ed8a69e7..36e4e6a8`: **161 merge commits,
+405 non-merge commits, PRs #2542–#2702** (160 numbered) across 2026-09-22 →
 2026-10-01, ten calendar days. Everything after `17675383`, the 19T close, is
 documentation: the Codex read and its update, the Azure status, this snapshot,
 and the drift fixes.
@@ -115,7 +115,7 @@ Physical lines, git-tracked files only, classified by `guide/assessment.json`.
 
 | Area | Files | LOC | Δ LOC from prior |
 | --- | --- | --- | --- |
-| `docs` | 271 (262 prior) | **156,069** | +10,157 (+7.0%) † |
+| `docs` | 271 (262 prior) | **156,095** | +10,183 (+7.0%) † |
 | `tests` | 402 (363 prior) | **141,957** | +12,226 (+9.4%) |
 | `production` | 207 (205 prior) | **66,446** | +2,905 (+4.6%) |
 | `templates` | 62 (60 prior) | **31,561** | +2,400 (+8.2%) |
@@ -131,7 +131,7 @@ them. The 22 September baseline is rebased from its own per-file map (262 files,
 like. At `df4ecae3` the old counter read 184,291 against the new one's 155,475 —
 the Codex read's 183,995 at `17675383` is the old counter before its own
 document — and its "2.77× production" ratio is **2.34×** without the sidecars
-(2.35× at `c0bf5bf5`).
+(2.35× at `36e4e6a8`).
 
 **Test-to-production is 2.14**, from 2.04. Tests grew 9.4% against production's
 4.6%. My read: branching explains most of it — one feature crossing persistence,
@@ -140,7 +140,7 @@ CSV, each pinned separately — and the Codex read's caution is right that the
 next tests should be justified by the failure they detect, not the states the
 builder can reach.
 
-**Tests: 5,109 passed, 16 skipped, 0 xfails** (was 4,636 / 16 / 0; re-run at `c0bf5bf5`), `ruff check .`
+**Tests: 5,109 passed, 16 skipped, 0 xfails** (was 4,636 / 16 / 0; re-run at `c0bf5bf5`; `36e4e6a8` changed spec prose only), `ruff check .`
 clean, `node` present so `tests/integration/test_inline_scripts_parse.py` ran. The
 16 skips are the same 16 as on 22 September — fifteen Wave 5 PR 5.3 scope
 retirements and the opt-in CSS parity dump. Both CI tracks, SQLite and
@@ -185,7 +185,7 @@ layer took branching's rules; the template took its authoring.
 `app/web/views` 23 and `app/web/routes_operator` 22), `app/db/models` 21.
 
 **Duplication and churn** (`python3 tools/code_metrics.py` at `df4ecae3` — the code, and so both
-figures, unchanged at `c0bf5bf5` — the standing items
+figures, unchanged at `36e4e6a8` — the standing items
 `guide/README.md` requires):
 
 | | ≥10-line blocks | prior |
@@ -212,7 +212,7 @@ The duplication that exists is where it was: the roster route modules at **47% /
 
 Every row checked against code — a route registered, a service function
 present and called, a test covering it — at `df4ecae3` (the code is unchanged at
-`c0bf5bf5`), not against the spec's description of itself. **Bold rows changed this window.**
+`36e4e6a8`), not against the spec's description of itself. **Bold rows changed this window.**
 
 | Area | Spec | Status |
 | --- | --- | --- |
@@ -240,13 +240,16 @@ present and called, a test covering it — at `df4ecae3` (the code is unchanged 
 | Blob storage | `spec/blob_storage.md` | ⏸ stub, not built — no storage client in `app/`; plan at `guide/segment_18Q_blob.md` |
 | Operator theming | `spec/visual_style_rrw.md` | ⏸ planned — `guide/deferred_consolidated.md` Part A |
 
-**No `⚠ drift` at `c0bf5bf5`; there was one at `df4ecae3`, and it is fixed.**
+**No `⚠ drift` at `36e4e6a8`; there was one at `df4ecae3`, and it is fixed.**
 `spec/instruments.md`'s overview — the Band 3 bullet, the band shorthand table and
 the layout diagram — described Band 3 as the response-field table alone, while
 the code has had a display-field table in its left column since 19T Item 8
 (2026-09-26). The detailed "Display-field table" section further down was
 correct; the summary above it was not swept when the table landed. All three
-now name both tables (`c0bf5bf5`).
+now name both tables (`c0bf5bf5`). A spec-writer check of that fix found the
+Band 2 bullet and diagram line stale the same way — a preview row alone, where
+19T Item 17 put the intro columns above it, and "Name and Email always" where a
+group row shows Name only — fixed in `36e4e6a8`.
 
 **One design record was behind its result, and is fixed.**
 `guide/advanced_instruments.md` called Item 6's second level "logged as 19T Item
@@ -324,7 +327,7 @@ summary paragraph describes the tables below it.
 
 ## 6. Bugs and regressions
 
-**No known open bugs at `c0bf5bf5`.** What I checked, again on 2026-10-01: 0 open issues and 0 open
+**No known open bugs at `36e4e6a8`.** What I checked, again on 2026-10-01: 0 open issues and 0 open
 pull requests on GitHub; 0 xfails; the 16 skips read and confirmed as the same deliberate set as on
 22 September; the 19T plan's item Status blocks, whose every read finding is
 recorded as fixed; and both cold reads of this window.
@@ -350,7 +353,7 @@ Worth remembering — the first three now have a guard, the fourth is a record:
 
 ## 7. Estimated size upon completion
 
-**Current: production 66,446, templates 31,561** at `c0bf5bf5` (unchanged since `df4ecae3`).
+**Current: production 66,446, templates 31,561** at `36e4e6a8` (unchanged since `df4ecae3`).
 
 | Remaining work | Production LOC | Templates | Depends on |
 | --- | --- | --- | --- |
