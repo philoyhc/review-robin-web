@@ -151,6 +151,36 @@ GETs commit the warmed cache, and a never-generated Full Matrix
 instrument is counted rather than walked. Now 289 ms and 215 ms;
 `guide/app_responsiveness.md` R1 has the measurement.
 
+## E6 — The sweep's six code defects
+
+**What is wrong.** The E3 sweep confirmed six places where the spec is
+right and the code is wrong, by reading the code at `68f28224`. They are
+listed in `guide/findings_2026-10-01_corpus.md` §2:
+
+- **D17.** A Rehydrate whose `settings.csv` fails to apply builds its
+  message by joining `ApplyError` dataclasses as strings, which raises a
+  `TypeError`. The commit route catches nothing, so the operator gets a
+  500 instead of the message `spec/rehydrate.md` §6.2 promises.
+- **B29.** The Validate page's `assignments.reviewer_missing` link points
+  at `#reviewer-row-{id}` on the Assignments page, but that anchor exists
+  only on the Reviewers page.
+- **A19.** Saving an instrument card writes every visibility row back
+  with `observer_tag` set to NULL, wiping a tag a settings import set.
+- **E32.** The Extract data page's **Purge and archive** uses the
+  lock-card role (`btn alert`), not the lobby's `danger-solid`, and three
+  of its buttons are hidden with inline styles.
+- **E6.** A disabled anchor button renders at opacity 0.55, against the
+  single 0.5 rule in `spec/ui_elements.md` §6.
+- **C4.** Quick Setup's replace banner says the confirmation checkbox is
+  "at the top"; it sits below the slot grid.
+
+**Do.** Fix each one with a test that fails on the old code, one commit
+per defect, in one PR. The sweep's stale code comments are not here: they
+ride the next edit to each file.
+
+**Done when.** Each defect has its fix and test, and §2 of the findings
+register marks the six as done with this PR.
+
 ## Not here
 
 - **The NUS deployment and email.** These are external and blocked

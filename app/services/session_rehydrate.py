@@ -19,7 +19,7 @@ import io
 import re
 import zipfile
 from dataclasses import dataclass, field as _dc_field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -31,6 +31,9 @@ from app.services.extracts.responses_import import (
     ResponsesFormatError,
     parse_responses_csv,
 )
+
+if TYPE_CHECKING:
+    from app.services.session_config_io import ApplyError
 
 _NAME_MAX = 255
 _CODE_MAX = 64
@@ -375,6 +378,13 @@ def unpack_file_set(blob: bytes) -> dict[str, bytes]:
 # --------------------------------------------------------------------------- #
 
 
+def _describe_apply_error(error: ApplyError) -> str:
+    """One ``ApplyError`` as the operator reads it: the CSV row (when the
+    error has one), the field, and the reason."""
+    where = f"row {error.row_number}, " if error.row_number else ""
+    return f"{where}{error.field}: {error.message}"
+
+
 class RehydrateError(Exception):
     """A step of the reconstruction pipeline failed. The orchestrator
     hard-deletes the partially-built session before re-raising, so no
@@ -539,7 +549,7 @@ def rehydrate_session(
         if not apply_result.ok:
             raise RehydrateError(
                 "settings.csv failed to apply: "
-                + "; ".join(apply_result.errors)
+                + "; ".join(_describe_apply_error(e) for e in apply_result.errors)
             )
 
         # 2. Rosters.
