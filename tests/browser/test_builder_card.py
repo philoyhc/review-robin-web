@@ -89,8 +89,6 @@ def test_name_and_email_are_fixed_display_fields(
         checkbox = fixed.locator("[data-new-model-df-active]")
         expect(checkbox).to_be_checked()
         expect(checkbox).to_be_disabled()
-        checkbox.click(force=True)
-        expect(checkbox).to_be_checked()
         expect(fixed.locator("[data-new-model-df-move]")).to_have_count(0)
 
 

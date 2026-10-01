@@ -8,6 +8,7 @@ whose "Rating" (Integer 1-5) governs a String field "Why" under
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 import httpx
@@ -79,10 +80,18 @@ def test_a_branch_opens_as_the_answer_meets_its_condition(
     expect(why).to_be_disabled()
     expect(why).to_have_value("Clear and specific")  # greyed, not cleared
 
+    # Saved while open, the answer persists ...
+    rating.fill("5")
+    _save_answers(reviewer)
+    reviewer.goto(f"/me/sessions/{session_id}/1")
+    expect(_answer(reviewer, "why")).to_have_value("Clear and specific")
+
+    # ... and a Save with the branch closed deletes it on the server.
+    _answer(reviewer, "rating").fill("3")
     _save_answers(reviewer)
     reviewer.goto(f"/me/sessions/{session_id}/1")
     expect(_answer(reviewer, "rating")).to_have_value("3")
-    expect(_answer(reviewer, "why")).to_have_value("")  # Save drops a closed answer
+    expect(_answer(reviewer, "why")).to_have_value("")
 
 
 def test_a_required_governed_field_is_required_only_while_open(
@@ -96,15 +105,21 @@ def test_a_required_governed_field_is_required_only_while_open(
     session_id = _branched_session(page, api, live_server, new_session, required=True)
     reviewer = page_as(REVIEWER_EMAIL)
     reviewer.goto(f"/me/sessions/{session_id}/1")
-    submit = reviewer.get_by_role("button", name="Submit").first
+    why = _answer(reviewer, "why")
+    required_pill = reviewer.get_by_text(re.compile(r"Required items completed: \d+/\d+"))
 
     _answer(reviewer, "rating").fill("5")
-    with reviewer.expect_navigation():
-        submit.click()
-    expect(reviewer.get_by_text("Required fields missing.")).to_be_visible()
-    expect(reviewer.get_by_text("Page 1: Carol — Why")).to_be_visible()
-
-    _answer(reviewer, "rating").fill("2")
+    expect(why).to_have_attribute("aria-label", re.compile(r"\(required\)$"))
     with reviewer.expect_navigation():
         reviewer.get_by_role("button", name="Submit").first.click()
-    expect(reviewer.get_by_text("Required fields missing.")).to_have_count(0)
+    expect(reviewer.get_by_text("Required fields missing.")).to_be_visible()
+    expect(reviewer.get_by_text("Page 1: Carol — Why")).to_be_visible()
+    # The server-rendered count includes the open governed field: Rating and Why.
+    expect(required_pill).to_have_text(re.compile(r"/2\s*$"))
+
+    _answer(reviewer, "rating").fill("2")
+    expect(_answer(reviewer, "why")).not_to_have_attribute(
+        "aria-label", re.compile(r"\(required\)$")
+    )
+    reviewer.get_by_role("button", name="Submit").first.click()
+    reviewer.wait_for_url(f"**/me/sessions/{session_id}/summary")

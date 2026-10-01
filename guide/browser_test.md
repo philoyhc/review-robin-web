@@ -119,6 +119,9 @@ Rung 2 (2026-10-01), against the plan:
   (04:21:58 → 04:22:19); the `test` job ran 2 min 29 s against #2704's
   2 min 19 s, with 5,110 passed under `RRW_REQUIRE_BROWSER=1`, so the
   browser test ran rather than skipped.
+- **A missing `playwright` is an import error, not a skip**, against
+  Decision: it is a dev dependency like `pytest`, so only a missing
+  Chromium skips (and fails under `RRW_REQUIRE_BROWSER=1`).
 - Base SHA for the cumulative read at rung 4: `df7a5942`.
 
 Rung 3 (2026-10-01): 14 tests in `test_builder_rows.py` and

@@ -19,7 +19,6 @@ import socket
 import subprocess
 import sys
 import time
-import urllib.error
 import urllib.request
 import uuid
 from collections.abc import Callable, Iterator
@@ -61,10 +60,14 @@ class LiveServer:
     database_url: str
 
 
-def _free_port() -> int:
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        return sock.getsockname()[1]
+def _bound_socket() -> socket.socket:
+    """A listening socket the server inherits, so no other xdist worker's
+    server can take the port between choosing it and binding it."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    sock.listen()
+    sock.set_inheritable(True)
+    return sock
 
 
 @pytest.fixture(scope="session")
@@ -74,35 +77,48 @@ def live_server(
     # Depends on ``browser`` so a missing browser skips before a server starts.
     workdir = tmp_path_factory.mktemp("live_server")
     database_url = f"sqlite:///{workdir / 'browser.db'}"
+    # The server inherits the test environment on purpose: the root
+    # conftest's AUDIT_STRICT_MODE (and REHYDRATE_ENABLED) reach it, as they
+    # reach the in-process suite. The fake-auth keys are pinned here because
+    # app settings also read a developer's .env, which must not decide who
+    # the tests sign in as.
     env = {
         **os.environ,
         "DATABASE_URL": database_url,
         "ALLOW_FAKE_AUTH": "true",
+        "FAKE_AUTH_OPERATOR": "true",
     }
-    subprocess.run(
+    migrated = subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
         cwd=REPO_ROOT,
         env=env,
-        check=True,
         capture_output=True,
+        text=True,
     )
-    port = _free_port()
-    base_url = f"http://127.0.0.1:{port}"
+    if migrated.returncode != 0:
+        raise RuntimeError(f"alembic upgrade head failed:\n{migrated.stderr}")
+    sock = _bound_socket()
+    base_url = f"http://127.0.0.1:{sock.getsockname()[1]}"
     log_path = workdir / "server.log"
-    with log_path.open("wb") as log:
+    with sock, log_path.open("wb") as log:
         server = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "app.main:app", "--port", str(port)],
+            [sys.executable, "-m", "uvicorn", "app.main:app", "--fd", str(sock.fileno())],
             cwd=REPO_ROOT,
             env=env,
             stdout=log,
             stderr=subprocess.STDOUT,
+            pass_fds=(sock.fileno(),),
         )
         try:
             _wait_for_health(base_url, server, log_path)
             yield LiveServer(base_url=base_url, database_url=database_url)
         finally:
             server.terminate()
-            server.wait(timeout=10)
+            try:
+                server.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait()
 
 
 def _wait_for_health(base_url: str, server: subprocess.Popen, log_path: Path) -> None:
@@ -113,7 +129,9 @@ def _wait_for_health(base_url: str, server: subprocess.Popen, log_path: Path) ->
         try:
             with urllib.request.urlopen(f"{base_url}/health", timeout=1):
                 return
-        except (urllib.error.URLError, ConnectionError):
+        except OSError:
+            # Refused, reset, or (the socket listens before uvicorn starts
+            # accepting) a read that timed out in the queue: try again.
             time.sleep(0.1)
     raise RuntimeError(
         f"live server did not answer /health; its log:\n{log_path.read_text()}"
