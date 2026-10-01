@@ -411,12 +411,12 @@ which runs three steps in sequence. The run takes seconds on a large
 roster (about 14 s at a 200 × 200 full matrix,
 `guide/app_responsiveness.md`), so on submit the clicked button (this
 one, or the confirmation's **Regenerate &amp; prepare**, which renders
-with it) reads "Preparing…" with `aria-busy="true"`, and a second
-submit from either is refused until the page changes. The buttons stay
-enabled: busy is `aria-busy`, never `disabled`
-(`spec/ui_elements.md` §1, "Navigation busy indicator"). A
-back-forward cache return, or the busy indicator's 60 s give-up,
-restores them. The steps:
+with it in normal use) reads "Preparing…" with `aria-busy="true"`, and a
+second submit from either is refused until the page changes, a
+back-forward cache return, or 60 s pass (the busy indicator's own
+give-up time). The buttons stay enabled: busy is `aria-busy`, never
+`disabled` (`spec/ui_elements.md` §1, "Navigation busy indicator").
+The steps:
 
 1. **Generate.** `assignments.replace_assignments(...)` —
    materialises one `Assignment` row per `(reviewer, reviewee,

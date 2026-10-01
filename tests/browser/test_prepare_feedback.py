@@ -32,6 +32,8 @@ def test_prepare_says_so_and_takes_one_click(
     page.goto(f"/operator/sessions/{session_id}")
     button = page.locator("button[form='next-action-prepare-form']")
     expect(button).to_have_text("Prepare session", use_inner_text=True)
+    # A draft session's Prepare is the primary button; validated, secondary.
+    expect(button).not_to_have_class(re.compile(r"\bsecondary\b"))
     page.evaluate(
         """() => {
             window.refusedByCard = [];

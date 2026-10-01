@@ -5349,6 +5349,8 @@
            real load short — it only stops a missed signal from
            leaving the bar running forever. */
         var GIVE_UP_MS = 60000;
+        /* operator/partials/next_action_card.html's Prepare guard gives
+           up after the same 60 s; change both together. */
         var bar = document.querySelector("[data-rrw-busy-bar]");
         var statusRegion = document.querySelector("[data-rrw-busy-status]");
         if (!bar) return;
