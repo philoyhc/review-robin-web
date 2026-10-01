@@ -496,6 +496,58 @@
   </div>
 </div>
 
+{# Prepare runs Generate + Validate + Invite in one POST, about 14 s at
+   a 200 × 200 full matrix (`guide/app_responsiveness.md`, re-measured
+   2026-10-01). On submit, the clicked Prepare button reads "Preparing…"
+   and a second submit from either Prepare form (Prepare session, or
+   the confirmation's Regenerate & prepare, which render together) is
+   refused: it would only queue a second Prepare behind the first. The
+   buttons stay enabled — busy is `aria-busy`, never `disabled` (rule 2
+   of the navigation busy indicator in `base.html`). Reset on a
+   back-forward cache return only: Prepare has run past 60 s at scale
+   (74.8 s on the 2026-09-21 bench), so no timeout may lift the guard
+   while the POST may still be running. A load stopped by hand leaves
+   Prepare refusing clicks until the page is reloaded.
+   Rendered only where a Prepare form is. #}
+{% if prepare_visible or prepare_confirm %}
+<script>
+(function () {
+  var forms = ['next-action-prepare-form', 'next-action-prepare-regenerate-form']
+    .map(function (id) { return document.getElementById(id); })
+    .filter(Boolean);
+  var preparing = false;
+  var busy = [];
+  function reset() {
+    preparing = false;
+    busy.forEach(function (entry) {
+      entry.button.innerHTML = entry.label;
+      entry.button.removeAttribute('aria-busy');
+    });
+    busy = [];
+  }
+  forms.forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (preparing) {
+        event.preventDefault();
+        return;
+      }
+      preparing = true;
+      var button = event.submitter
+        || document.querySelector('button[form="' + form.id + '"]');
+      if (button) {
+        busy.push({ button: button, label: button.innerHTML });
+        button.textContent = 'Preparing\u2026';
+        button.setAttribute('aria-busy', 'true');
+      }
+    });
+  });
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) reset();
+  });
+})();
+</script>
+{% endif %}
+
 {# 18G PR 2C — manual-activate cancellation modal. When the Activate
    form carries the data-manual-activate-confirm attribute (i.e.
    invite_offsets is non-empty and Start is scheduled), a browser

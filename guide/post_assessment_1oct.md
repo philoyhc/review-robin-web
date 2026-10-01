@@ -119,7 +119,9 @@ report rather than re-align. The fixes ship afterwards, as ordinary PRs.
 `--stale` reads "not due", and every finding is either fixed or carried in
 the register with who decides it.
 
-## E4 — Prepare's 13 seconds, without feedback
+## ~~E4 — Prepare's 13 seconds, without feedback~~
+
+**Done in #2715.** Re-measured, still about 14 s; the author ruled for feedback only, so the button reads "Preparing…" and takes one click. The measurement and the next step if speed is ever wanted are in `guide/app_responsiveness.md`.
 
 **What is wrong.** Prepare takes about 13 s at 200 × 200 with nothing on
 screen while it runs (`guide/codebase_assessment_30sep.md` §5; measured in

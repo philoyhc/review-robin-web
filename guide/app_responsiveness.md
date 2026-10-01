@@ -366,6 +366,25 @@ Three things this measurement says that the plan for it did not:
   or whether 13 s now wants progress feedback instead, is not settled
   here.
 
+### Re-measured 2026-10-01 — feedback, not another pass
+
+Taken 2026-10-01 at `c0861809` on a throwaway loopback `postgres:16`
+cluster in the agent container, the same method as the table above
+(`guide/post_assessment_1oct.md` E4): **13.7 / 13.9 / 15.2 s**, SQL
+4.6–5.5 s, 58 queries — unchanged since 19S Item 3. Timed per phase
+without a profiler, the insert is about 4.5 s, the recompute 2.5 s,
+the diff 0.8 s, and **`verify_self_review_classification` about 5 s**:
+it re-reads all 80,000 rows as `Assignment`, `Reviewer` and `Reviewee`
+entities straight after the recompute wrote them. With verify stubbed
+out (an experiment, not shipped) Prepare ran 9.7 and 8.5 s.
+
+**The author ruled for feedback only** (2026-10-01): Prepare's button
+says "Preparing…" and takes one click (`spec/workflow_card.md`,
+"Prepare session"). The verify pass stays as it is. If Prepare needs
+to be faster later, a column-projection verify is the measured first
+step, about 5 s; the recompute (2.5 s, with `normalize_email` called
+884,400 times) is the next.
+
 ## Finding 5 — nothing is compressed
 
 `app/main.py` installs no compression middleware, so every response goes

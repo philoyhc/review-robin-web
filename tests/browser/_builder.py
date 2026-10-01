@@ -107,11 +107,10 @@ def sign_in(api: httpx.Client, email: str) -> None:
     assert response.status_code == 200, response.text
 
 
-def activate(api: httpx.Client, database_url: str, session_id: int) -> None:
-    """Pin a full matrix, generate, validate and activate, so the roster's
-    reviewer has an assignment. The pin writes the database directly, as
-    ``tests/integration/_full_matrix.py`` does; the rest is the app's routes.
-    """
+def pin_full_matrix(database_url: str, session_id: int) -> None:
+    """Pin a full matrix on every instrument, writing the database directly
+    as ``tests/integration/_full_matrix.py`` does: the UI has no short
+    route to it, and an unpinned instrument hides Prepare."""
     from integration._full_matrix import pin_full_matrix_on_all_instruments
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
@@ -122,6 +121,13 @@ def activate(api: httpx.Client, database_url: str, session_id: int) -> None:
             pin_full_matrix_on_all_instruments(db, session_id)
     finally:
         engine.dispose()
+
+
+def activate(api: httpx.Client, database_url: str, session_id: int) -> None:
+    """Pin a full matrix, generate, validate and activate, so the roster's
+    reviewer has an assignment. The rest after the pin is the app's routes.
+    """
+    pin_full_matrix(database_url, session_id)
     base = f"/operator/sessions/{session_id}"
     generated = api.post(f"{base}/assignments/generate", follow_redirects=False)
     assert generated.status_code == 303, generated.text
