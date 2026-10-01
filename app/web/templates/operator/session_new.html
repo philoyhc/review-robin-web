@@ -23,11 +23,13 @@
           <div class="page-grid" style="margin: 0 0 var(--space-3) 0;">
             <div>
               <label for="name">Name</label>
-              <input type="text" id="name" name="name" required maxlength="255">
+              <input type="text" id="name" name="name" required maxlength="255"
+                     pattern=".*\S.*" title="Enter more than spaces.">
             </div>
             <div>
               <label for="code">Code</label>
-              <input type="text" id="code" name="code" required maxlength="64">
+              <input type="text" id="code" name="code" required maxlength="64"
+                     pattern=".*\S.*" title="Enter more than spaces.">
             </div>
           </div>
 
@@ -121,9 +123,7 @@
       <div class="btn-pair" style="margin-top: 20px;">
         <button class="btn"
                 type="submit"
-                id="create-session-submit"
-                disabled
-                aria-disabled="true">Create session</button>
+                id="create-session-submit">Create session</button>
         <a class="btn secondary" href="/operator/sessions">Cancel</a>
       </div>
     </form>
@@ -132,7 +132,13 @@
   {# Disable the Create session button until both Name and Code
      have non-empty trimmed values. The browser's own
      ``required`` attribute on those inputs catches empty submits
-     too, but disabling the button is the clearer affordance. #}
+     too, and their ``pattern`` refuses one of only spaces (the
+     trim below, kept when script is off), but disabling the button
+     is the clearer affordance. The button renders enabled and this
+     script disables it on load, so without JavaScript the page still
+     submits (it rendered
+     ``disabled`` from 2026-05-22 to 2026-10-01, which left a
+     script-less Create unable to submit at all). #}
   <script>
     (function () {
       var nameInput = document.getElementById("name");

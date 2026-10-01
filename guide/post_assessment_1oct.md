@@ -14,7 +14,9 @@ did it.
 
 Counts taken 2026-10-01 at `c4b084c0`.
 
-## E1 — Create can't submit without JavaScript
+## ~~E1 — Create can't submit without JavaScript~~
+
+**Done in #2714.** Create session renders enabled and its script disables it on load. A no-JS browser test types a co-owner without adding them, creates the session, and finds them listed.
 
 **What is wrong.** `app/web/templates/operator/session_new.html` renders
 Create session with `disabled` and `aria-disabled="true"`, and only its

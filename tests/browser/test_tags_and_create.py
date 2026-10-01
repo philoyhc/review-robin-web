@@ -9,7 +9,9 @@ check.
 
 from __future__ import annotations
 
+import re
 import uuid
+from collections.abc import Callable
 
 import httpx
 import pytest
@@ -92,6 +94,8 @@ def test_create_stages_owners_and_saves_what_remains(
     sign_in(api, COLLEAGUE_EMAIL)
     sign_in(api, SECOND_COLLEAGUE_EMAIL)
     page.goto("/operator/sessions/new")
+    # With script on, Create waits for Name and Code.
+    expect(page.get_by_role("button", name="Create session")).to_be_disabled()
     table = page.locator("#session-owners-table")
     add = page.locator("#session-owners-add")
     expect(add).to_be_visible()
@@ -114,3 +118,33 @@ def test_create_stages_owners_and_saves_what_remains(
 
     owners = page.locator("#owners-card code")
     expect(owners).to_have_text([FAKE_OPERATOR_EMAIL, COLLEAGUE_EMAIL], use_inner_text=True)
+
+
+def test_create_without_javascript_saves_the_typed_owner(
+    page_as: Callable[..., Page], api: httpx.Client
+) -> None:
+    """Item 5, 'Create is unchanged' (JavaScript off)."""
+    sign_in(api, COLLEAGUE_EMAIL)
+    page = page_as(javascript=False)
+    page.goto("/operator/sessions/new")
+    # With no script the staging buttons stay hidden and the typed
+    # address submits with the form, never added.
+    expect(page.locator("#session-owners-add")).to_be_hidden()
+    page.locator("#session-owners-email").fill(COLLEAGUE_EMAIL)
+    name = page.locator("input[name=name]")
+    # Without the script's trim, the field's own pattern refuses spaces.
+    name.fill("   ")
+    assert name.evaluate("el => el.validity.patternMismatch")
+    code = f"n{uuid.uuid4().hex[:8]}"
+    name.fill(f"No script {code}")
+    page.locator("input[name=code]").fill(code)
+    submit = page.get_by_role("button", name="Create session")
+    expect(submit).to_be_enabled()
+    with page.expect_navigation():
+        submit.click()
+
+    expect(page).to_have_url(re.compile(r"/operator/sessions/\d+"))
+    owners = page.locator("#owners-card code")
+    expect(owners).to_have_text(
+        [FAKE_OPERATOR_EMAIL, COLLEAGUE_EMAIL], use_inner_text=True
+    )
