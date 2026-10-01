@@ -215,7 +215,7 @@
          The action row carries Save / Cancel / Submit | divider |
          Prev / Page N of M / Next. Within a page, instruments
          stack vertically without an inter-instrument separator. #}
-      {% if any_accepting or preview_mode %}
+      {% if any_accepting or preview_mode or page_count > 1 %}
         {% with action_row_position="top" %}
           {% include "reviewer/_action_row.html" %}
         {% endwith %}
@@ -580,7 +580,7 @@
           </section>{# /.rs-instrument-group #}
       {% endfor %}
 
-      {% if any_accepting or preview_mode %}
+      {% if any_accepting or preview_mode or page_count > 1 %}
         {% include "reviewer/_action_row.html" %}
       {% endif %}
     {% if preview_mode %}</div>{% else %}</form>{% endif %}
