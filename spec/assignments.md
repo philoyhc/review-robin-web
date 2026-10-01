@@ -1103,8 +1103,22 @@ on any of them recomputes.
 **Generate writes the fresh verdict through**, having just computed the
 diff — without that, a cached `stale` would outlive the regeneration
 that cleared it. A render that recomputes writes its result into the
-caller's transaction without committing, so the durable warming is
-Generate's.
+caller's transaction without committing; the **Assignments and
+Validate page GETs** then commit it (`assignments.persist_reconcile_warm`),
+since by then nothing else they wrote is left uncommitted. Other
+callers, POST paths among them, do not commit it themselves, because a
+commit there could carry audit work they have pending; their warm
+lasts if a later commit in the request carries it (the `validated`
+promotion does) or Generate writes it through. The other pages that
+run the Workflow card's readiness report still warm without
+committing.
+
+**A never-generated instrument on the Full Matrix default is counted,
+not walked.** With no rule and no `Assignment` rows the verdict is
+not stale by definition, and the fan-out is every reviewer × reviewee
+pair, less the self-review pairs only when a self-review override
+excludes them, so `eligible` and `self_reviews_excluded` are
+arithmetic over the rosters rather than a walk of R × E pairs.
 
 **A miss is invisible.** Nothing on any surface distinguishes a served
 verdict from a recomputed one; the operator sees the same answer either

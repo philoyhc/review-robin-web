@@ -824,6 +824,55 @@ def _stamp_for(
     )
 
 
+#: ``Session.info`` key set when :func:`staleness_by_instrument` flushed a
+#: cache warm that nothing has committed yet.
+_RECONCILE_WARM_PENDING = "rrw_reconcile_warm_pending"
+
+
+def _full_matrix_never_generated_state(
+    reviewers: list[Reviewer],
+    reviewees: list[Reviewee],
+    *,
+    override_exclude_self_reviews: bool | None,
+) -> InstrumentReconcileState:
+    """What :func:`_diff_one_instrument` reports for an instrument on the
+    Full Matrix default with no rows, counted instead of walked.
+
+    The default's schema has no rules and ``excludeSelfReviews=False``,
+    so the engine's fan-out is every ``(reviewer, reviewee)`` pair, less
+    the self-review pairs only when ``override_exclude_self_reviews`` is
+    true; and the per-instrument exclusion needs a pinned rule set, so it
+    never applies here. A self-review pair is the engine's own test,
+    ``rules.engine._is_self_review``: both normalized addresses non-empty
+    and equal. No rows means not stale. ``tests/integration/
+    test_assignments_staleness_fast_path.py`` holds this to the walk.
+    """
+    from collections import Counter
+
+    from app.services.email_identity import normalize_email
+
+    total = len(reviewers) * len(reviewees)
+    excluded = 0
+    if override_exclude_self_reviews:
+        identifiers = Counter(
+            key
+            for key in (
+                normalize_email(r.email_or_identifier) for r in reviewees
+            )
+            if key
+        )
+        excluded = sum(
+            identifiers[key]
+            for key in (normalize_email(r.email) for r in reviewers)
+            if key
+        )
+    return InstrumentReconcileState(
+        stale=False,
+        eligible=total - excluded,
+        self_reviews_excluded=excluded,
+    )
+
+
 def staleness_by_instrument(
     db: Session,
     review_session: ReviewSession,
@@ -888,11 +937,32 @@ def staleness_by_instrument(
         if cached is not None:
             state[instrument.id] = cached
             continue
+        session_rule_set = inputs.rule_set_for(instrument)
+        if (
+            session_rule_set is None
+            and not _reconcile_cache.rows_for(
+                rows_by_instrument, instrument.id
+            ).count
+        ):
+            # Never generated, on the Full Matrix default: the verdict
+            # is not stale by the rule below, and the fan-out is every
+            # pair, so it is counted rather than walked — the walk is
+            # R x E pairs, 6.5 s at 1,000 x 1,000 on every page load
+            # before the first Prepare (post_assessment_1oct E5).
+            computed = _full_matrix_never_generated_state(
+                inputs.reviewers,
+                inputs.reviewees,
+                override_exclude_self_reviews=override_exclude_self_reviews,
+            )
+            state[instrument.id] = computed
+            _store_state(instrument, stamp, computed)
+            warmed = True
+            continue
         diff = _diff_one_instrument(
             db,
             review_session=review_session,
             instrument=instrument,
-            session_rule_set=inputs.rule_set_for(instrument),
+            session_rule_set=session_rule_set,
             reviewers=inputs.reviewers,
             reviewees=inputs.reviewees,
             pair_context_lookup=inputs.pair_context_lookup,
@@ -936,12 +1006,14 @@ def staleness_by_instrument(
         #
         # So the warm rides the caller's transaction: it persists if
         # something downstream commits, and costs one recompute if not.
-        # **On a plain GET nothing does** — ``get_db`` only closes, and
-        # the two commits in ``app/web/deps.py`` run in the dependency,
-        # before the view. So this half of the cache warms within a
-        # request; what makes it durable is the write-through in
-        # :func:`replace_assignments`, which commits because writing
-        # the rows is its whole job.
+        # ``get_db`` only closes, and the two commits in
+        # ``app/web/deps.py`` run in the dependency, before the view, so
+        # a GET commits nothing unless it asks: the Assignments and
+        # Validate GETs do, through :func:`persist_reconcile_warm` and
+        # the marker set below (post_assessment_1oct E5). Elsewhere what
+        # makes the warm durable is the write-through in
+        # :func:`replace_assignments`, which commits because writing the
+        # rows is its whole job, or any later commit in the request.
         #
         # (An earlier version gave the reason as "the workflow card
         # promotes ``draft → validated`` in the same request, so a
@@ -952,7 +1024,25 @@ def staleness_by_instrument(
         # conservative choice stands on the audit-flush reason above,
         # not on that one. 19R Item 2 rung 3 cold read.)
         db.flush()
+        db.info[_RECONCILE_WARM_PENDING] = True
     return state
+
+
+def persist_reconcile_warm(db: Session) -> None:
+    """Commit a verdict :func:`staleness_by_instrument` warmed in this
+    request, for **GET routes only** (post_assessment_1oct E5).
+
+    The warm is flushed, never committed, because a POST may have audit
+    work pending that a commit would carry (see the comment at that
+    flush). By the time these GETs call this, nothing they wrote is left
+    uncommitted (the ``?validated=1`` promotion commits itself), so they
+    can commit the warm; without this, before the first Prepare nothing
+    ever committed it and every load of Assignments or Validate
+    recomputed the verdict from scratch. A no-op when nothing was
+    warmed.
+    """
+    if db.info.pop(_RECONCILE_WARM_PENDING, False):
+        db.commit()
 
 
 def reconcile_impact(

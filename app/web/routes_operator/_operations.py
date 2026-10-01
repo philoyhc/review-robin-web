@@ -23,7 +23,7 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
-from app.services import invitations, monitoring, validation
+from app.services import assignments, invitations, monitoring, validation
 from app.services.email_identity import normalize_email
 from app.services._queries import tag_slot_presence
 from app.services import session_lifecycle as lifecycle
@@ -185,6 +185,11 @@ def validate_session(
     db: Session = Depends(get_db),
 ) -> Response:
     issues = validation.validate_session_setup(db, review_session)
+    # A GET writes nothing of its own, so the reconcile verdict the
+    # readiness run warmed is committed rather than recomputed on every
+    # load (post_assessment_1oct E5). Before the ``?activate=1``
+    # redirects, so those keep their warm too.
+    assignments.persist_reconcile_warm(db)
     report = lifecycle.build_readiness_report(issues)
     # Activate-warns detour: ?activate=1 requests the inline
     # confirmation banner (Segment 11G PR D). It only renders on

@@ -136,6 +136,19 @@ measured with `tools/bench_roster_scale.py`.
 **Done when.** That decision is recorded in `guide/app_responsiveness.md`,
 and whichever was chosen has shipped or been scheduled.
 
+## ~~E5 — Assignments and Validate are slow before the first Prepare~~
+
+**Done in #2717.** Logged 2026-10-01 from the author's local session,
+1,000 reviewers × 1,000 reviewees with instruments not yet set up,
+where both pages took several seconds. Reproduced on the bench at
+6.5 s and 7.3 s, almost all Python: each load walked the Full Matrix
+default's 1,000,000 pairs to answer the staleness verdict, and the
+verdict's cache was never committed on a GET, so nothing was kept
+before the first Prepare. The author chose both fixes: the two page
+GETs commit the warmed cache, and a never-generated Full Matrix
+instrument is counted rather than walked. Now 289 ms and 215 ms;
+`guide/app_responsiveness.md` R1 has the measurement.
+
 ## Not here
 
 - **The NUS deployment and email.** These are external and blocked

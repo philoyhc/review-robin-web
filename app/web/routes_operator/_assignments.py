@@ -88,7 +88,7 @@ def assignments_hub(
     # promotes ``draft → validated`` inline when the report is
     # clean; the resulting validation_summary + per-issue list
     # flows through to the partial via the same builder.
-    return _render_assignments_hub(
+    response = _render_assignments_hub(
         request,
         db,
         review_session,
@@ -104,6 +104,12 @@ def assignments_hub(
         filter_status=filter_status,
         offset=offset,
     )
+    # Nothing this GET wrote is left uncommitted by now (the
+    # ``?validated=1`` promotion commits itself), so the reconcile
+    # verdict the page warmed is committed rather than recomputed on
+    # every load (post_assessment_1oct E5).
+    assignments.persist_reconcile_warm(db)
+    return response
 
 
 _ASSIGNMENT_SORT_KEYS = {
