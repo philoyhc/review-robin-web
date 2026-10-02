@@ -414,12 +414,12 @@ distinct review surfaces (e.g., "Skills assessment" and
 "Behavioural notes") in the same session.
 
 **User-supplied fields:** name (operator-internal handle), short
-label (≤32 characters, reviewer-facing — appears on the per-page
-nav button and the H2 title), friendly description (≤2000
+label (≤32 characters, reviewer-facing — appears in the instrument's
+status pill and the H2 title), friendly description (≤2000
 characters, reviewer-facing — appears as subtitle below the H2),
 unit of review (per-reviewee vs group-scoped), the instrument's
 **assignment rule** (Band 1 — which reviewer × reviewee pairs are
-eligible), visibility-when-closed flag, page-break flag (`starts_new_page` — where the reviewer surface
+eligible), page-break flag (`starts_new_page` — where the reviewer surface
 breaks to a new page), ordered list of response fields, ordered
 list of display fields, and per-audience **visibility policies**
 (see [§5.16](#516-visibility-policy)).
