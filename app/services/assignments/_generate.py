@@ -65,7 +65,14 @@ def bulk_set_assignment_include(
     Returns the count actually flipped (rows whose previous
     ``include`` differed from ``include``). Audit event
     ``assignments.bulk_include_set`` carries ``counts.flipped`` +
-    ``context.include``."""
+    ``counts.skipped_inactive`` + ``context.include``.
+
+    **Activate never includes a pair with an inactive side** (findings
+    B2; Codex on #2727): Prepare writes such a pair ``include=False``,
+    and Activate is allowed in ``validated`` without invalidating it, so
+    a manual include would otherwise put an inactive person back into a
+    live review. Those rows are skipped and counted. Inactivate is not
+    restricted."""
     if not assignment_ids:
         return 0
     rows = list(
@@ -77,7 +84,14 @@ def bulk_set_assignment_include(
         ).scalars()
     )
     flipped = 0
+    skipped_inactive = 0
     for assignment in rows:
+        if include and not (
+            _is_active(assignment.reviewer) and _is_active(assignment.reviewee)
+        ):
+            if not assignment.include:
+                skipped_inactive += 1
+            continue
         if assignment.include != include:
             assignment.include = include
             flipped += 1
@@ -91,7 +105,7 @@ def bulk_set_assignment_include(
         ),
         actor_user_id=user.id,
         session=review_session,
-        payload=audit.counts(flipped=flipped),
+        payload=audit.counts(flipped=flipped, skipped_inactive=skipped_inactive),
         context={"include": include},
         correlation_id=correlation_id,
     )

@@ -212,3 +212,34 @@ def test_nothing_included_is_reported_once_not_per_reviewer(
     ]
     assert "assignments.no_included_pairs" in keys
     assert "assignments.reviewer_missing" not in keys
+
+
+def test_bulk_activate_does_not_include_a_pair_with_an_inactive_side(
+    db: Session,
+) -> None:
+    """Codex on #2727: Activate on the Assignments page is allowed in
+    ``validated`` and does not invalidate it, so including a pair with
+    an inactive side would put that person back into a live review. It
+    is skipped; a pair between two active people still flips."""
+    user, review_session = _seed(db)
+    _set_status(db, Reviewee, "Dan", "inactive")
+    _prepare(db, user, review_session)
+    rows = _rows(db, review_session.id)
+    for row in rows.values():
+        row.include = False
+    db.commit()
+
+    flipped = assignments.bulk_set_assignment_include(
+        db,
+        review_session=review_session,
+        assignment_ids=[r.id for r in rows.values()],
+        include=True,
+        user=user,
+        correlation_id="c",
+    )
+    assert flipped == 2
+    rows = _rows(db, review_session.id)
+    assert {k for k, r in rows.items() if r.include} == {
+        ("Ana", "Carol"),
+        ("Bo", "Carol"),
+    }

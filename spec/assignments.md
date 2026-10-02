@@ -612,7 +612,10 @@ Steps:
      Prepare. The
      Self review column and its toggle count and flip only rows with
      both sides active: an inactive side's row stays excluded by
-     status, not by the toggle.
+     status, not by the toggle. Likewise the Assignments page's
+     **Activate** skips a row with an inactive side (counted in the
+     audit event's `skipped_inactive`), so no manual include puts an
+     inactive person into a live review; Inactivate is unrestricted.
 
 The engine is pure (no DB writes); the materialise step is the
 caller's responsibility. `app/services/assignments/` is the
