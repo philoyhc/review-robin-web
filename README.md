@@ -100,7 +100,7 @@ Every mutating service writes an `audit_events` row with a typed `event_type` + 
 
 ### Email send
 
-Email send is **queued, not sent**. Outbox rows stamp `status="queued"`; the audit-log columns the dispatch helper will write to (`error_message`, `from_address`, `backend`, `backend_message_id`, `delivered_at`, `payload_hash`, `correlation_id`) sit inert on the row. The transport interface (`EmailTransport` Protocol + `SmtpEmailTransport` + typed-stub `GraphEmailTransport`) is shipped but not yet wired up to the dispatch helper.
+Email is **recorded, not sent**. The send path writes each outbox row `queued` and flips it to `sent` with no transport call; stamping `queued` until a transport really sends is work awaiting Azure (`guide/post_azure_todo_checklist.md` item 8). Six of the audit-log columns the dispatch helper will write to (`error_message`, `from_address`, `backend`, `backend_message_id`, `delivered_at`, `payload_hash`) sit inert on the row; `correlation_id` is already stamped and read back by scheduled reminders. The transport interface (`EmailTransport` Protocol + `SmtpEmailTransport` + typed-stub `GraphEmailTransport`) is shipped but not yet wired up to the dispatch helper.
 
 For the latest snapshot of what's shipped vs. pending, see [`docs/status.md`](docs/status.md).
 
