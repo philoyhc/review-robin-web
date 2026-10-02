@@ -182,9 +182,9 @@ the spec should say so.
 
 **Visual treatment: the specs disagree with each other or with `base.html`.**
 
-- **E5** — The Setup row's active underline is `--marker-neutral` (grey),
-  not `--nav-marker-setup` as three specs say. Is the token stale, or is
-  the CSS a bug against the blue Setup identity?
+- ~~**E5**~~ — **Ruled 2026-10-02: follow the spec. Done in #2762.** The
+  Setup row's active underline was `--marker-neutral` (grey); it is now
+  `--nav-marker-setup`, the blue Setup identity three specs name.
 - **E4, E13** — The tab hover foreground is `--text-body`, not
   `--nav-tab-active-fg`, which no page shows. The status strip's surface
   is `--surface-page`, not `--surface-card`.
@@ -397,7 +397,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - E2 low-med · `:690` · dead §10 primitives · author.
   - ~~E3 med · `:140` · status-strip slots: no Assignments pill; point at `visual_style_rrw.md`.~~ Done in #2737.
   - E4 med · `:125` · hover foreground · author.
-  - E5 med · `:111` · Setup underline token · author.
+  - ~~E5 med · `:111` · Setup underline token · author.~~ Done in #2762.
   - E6 low · `:457` · anchor opacity 0.55 · code (§2).
   - E7 low-med · `:275` · Workflow body min-height · author.
   - E8 low-med · §4 · grid gap 16px · author (measure first).
