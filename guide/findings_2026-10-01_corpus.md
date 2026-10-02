@@ -77,11 +77,9 @@ the spec should say so.
   inside the cohort rule is deferred (`guide/deferred_consolidated.md`).
 - **F11** — The configurable welcome message, institution name and magic
   links (`spec/audience_and_identity_model.md`).
-- **F15** — The Draft/Receiving/Closed instrument statuses and the
-  reviewer notification on edit (`spec/domain_assumptions.md`). The A6
-  ruling (#2722, accepting is session-wide) rules out a per-instrument
-  Closed/Paused state, so this now reads as "won't do" unless the author
-  says otherwise.
+- ~~**F15**~~ — **Ruled 2026-10-02: strike. Done in #2755.** The
+  Draft/Receiving/Closed instrument statuses and the reviewer
+  notification on edit are gone from `spec/domain_assumptions.md`.
 - ~~**G4**~~ — **Ruled 2026-10-02: queue it on submit, work in progress
   awaiting Azure. Done in #2753.** The Responses-received switch had no
   consumer at submit time; a successful submit now queues the
@@ -95,8 +93,10 @@ the spec should say so.
 - **C2** — Quick Setup's count indicators, success messages and per-row
   errors were removed deliberately in `40bc2549`. Confirm the removal
   stands.
-- **B20** — Retry and `failed_persistent` exist for scheduled activation
-  only. Should invites and reminders get them too?
+- ~~**B20**~~ — **Ruled 2026-10-02: work in progress awaiting Azure.
+  Recorded in #2755** as part of `guide/post_azure_todo_checklist.md`
+  item 7. Retry and `failed_persistent` exist for scheduled activation
+  only.
 - **B18** — `spec/lifecycle.md` §8.2.2 names one call site, `resolve_offset`,
   which has no callers. Should the code be consolidated onto it, or the
   contract restated?
@@ -315,7 +315,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~B17 med · `:271-291` · `_require_validated_or_ready` lives in `_operations.py`; reminders gate.~~ Done in #2745.
   - B18 med · `:663-668` · `resolve_offset` has no callers · author.
   - B19 med · `:759-770` · sweep trigger · ruled: awaits Azure (`post_azure_todo_checklist.md` item 7).
-  - B20 low · `:786-799` · retry is activation-only · author.
+  - ~~B20 low · `:786-799` · retry is activation-only.~~ Recorded in #2755.
   - B21 med · `:306-313,552` · ~~close reason is `manual`, not `operator` (spec)~~ already right after #2722; the ungated routes are *author*.
   - ~~B22 low · `:165,542` · `session.activated` context adds `trigger`, and activation clears `scheduled_activate_at`.~~ Done in #2733.
   - ~~B23 low · `:111-133` · state the `invalidate_if_validated` rule, not a partial call-site list.~~ Done in #2733.
@@ -450,7 +450,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~F13 high · `:86-88` · casefold → `.lower()` (= A12, A14).~~ Done in #2732.
   - ~~F14 low · `:64` · pre-open renders 200.~~ Done in #2732.
 - `domain_assumptions.md`
-  - F15 med · statuses · author.
+  - ~~F15 med · statuses.~~ Done in #2755.
   - ~~F16 low · `:29` · purge-and-archive can delete.~~ Done in #2734.
 - `operations_pages.md`
   - ~~F17 high · `:359` vs `:144` · per-row invitation buttons in `validated`.~~ Done in #2745.

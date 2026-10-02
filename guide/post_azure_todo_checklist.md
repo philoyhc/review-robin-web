@@ -505,6 +505,13 @@ with `not_prepared`. `build_auto_send_invites_caption` in
 `validated` or `ready`; `spec/workflow_card.md` "Auto-send invites
 signal" records it as a known defect until then.
 
+**Give invites and reminders a retry with it** (author's ruling,
+2026-10-02, on `guide/findings_2026-10-01_corpus.md` B20). Scheduled
+activation retries and marks `failed_persistent` when it keeps failing;
+scheduled invites and reminders have no retry. Until a transport
+exists nothing can fail, so the retry waits for it: give the clock
+trigger the same retry and terminal state for both.
+
 **Done when** a scheduled invitation and a scheduled reminder each go
 out at their set time on the deployed app with no operator page open.
 Both the audit events' times and the outbox rows' times show it, and the
