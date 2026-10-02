@@ -93,6 +93,7 @@ def _parse_rows(rows: list[Row]) -> tuple[_ParsedConfig, list[ApplyError]]:
     # Cross-row validations. These run after row parsing so the
     # error list orders parse errors first.
     errors.extend(_cross_row_errors(plan))
+    _drop_retired_view_policy_modes(plan)
     errors.extend(_view_policy_cell_errors(plan))
     errors.extend(_branch_errors(plan))
     return plan, errors
@@ -195,6 +196,30 @@ def _branch_errors(plan: _ParsedConfig) -> list[ApplyError]:
     return errors
 
 _VP_WINDOWS: tuple[str, ...] = ("while_ongoing", "after_release")
+
+
+def _drop_retired_view_policy_modes(plan: _ParsedConfig) -> None:
+    """Read a retired mode in an older bundle as off, before the cell
+    check refuses it.
+
+    The reviewer's "Responses released" cell lost ``summarized``
+    (``aggregated`` + ``deidentified``) on 2026-10-02 (findings A18): no
+    reviewer summary view was ever built, so since #2723 such a grant
+    hid the reviewer's answers like an off cell. A bundle exported
+    before then imports that cell as off rather than refusing the whole
+    apply. Only that exact pair is rewritten; a half-set or incoherent
+    pair is left for :func:`_view_policy_cell_errors` to refuse.
+    """
+    for instrument in plan.instruments.values():
+        vp = instrument.view_policies.get("peer_reviewer")
+        if vp is None:
+            continue
+        if (
+            vp.after_release_granularity == "aggregated"
+            and vp.after_release_identification == "deidentified"
+        ):
+            vp.after_release_granularity = None
+            vp.after_release_identification = None
 
 
 def _view_policy_cell_errors(plan: _ParsedConfig) -> list[ApplyError]:

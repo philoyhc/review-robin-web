@@ -324,7 +324,7 @@ without keeps it; view policies fall back to defaults.
 the instrument card's visibility editor uses (`spec/visibility_policy.md` §3.1) and returns an
 `ApplyError` naming the field. Rehydrate treats that like any other
 settings failure — `RehydrateError("settings.csv failed to apply: …")`,
-the whole rehydrate rolls back, and the operator gets the message. An
+the whole rehydrate rolls back, and the operator gets the message. (An older extract's retired reviewer `summarized` released cell is read as off rather than failing, `spec/visibility_policy.md` §3.1.) An
 extract taken from a session the editor authored cannot trip this: the
 forbidden cells serialize as empty and parse back to "off".
 

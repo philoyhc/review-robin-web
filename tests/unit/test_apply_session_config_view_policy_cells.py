@@ -218,6 +218,27 @@ def test_peer_reviewer_while_ongoing_summarized_is_rejected(
     assert any("peer_reviewer" in e.message for e in result.errors)
 
 
+def test_an_old_bundles_reviewer_released_summary_imports_as_off(
+    db: Session,
+) -> None:
+    """The reviewer's Responses-released cell lost ``summarized`` on
+    2026-10-02 (findings A18). A bundle exported before then carries it;
+    the import reads it as off, which is what it showed, rather than
+    refusing the whole apply."""
+    review_session = _session(db, code="vp-pr-rel")
+    result = apply_session_config(
+        db,
+        review_session,
+        _cell_rows("peer_reviewer", "after_release", "summarized")
+        + _cell_rows("peer_reviewer", "while_ongoing", "raw")[1:],
+    )
+    assert result.errors == []
+    (policy,) = _policies(db, review_session)
+    assert policy.audience == "peer_reviewer"
+    assert policy.after_release_granularity is None
+    assert policy.after_release_identification is None
+
+
 # ── Pairs that are not modes at all ──────────────────────────────────
 
 

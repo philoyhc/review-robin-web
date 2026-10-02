@@ -248,8 +248,8 @@ def test_released_raw_shows_the_reviewers_own_values(
 
 @pytest.mark.parametrize(
     ("released_mode", "open_release"),
-    [("raw", False), ("summarized", True), (None, True)],
-    ids=["window-not-open", "released-summarized", "released-off"],
+    [("raw", False), (None, True)],
+    ids=["window-not-open", "released-off"],
 )
 def test_otherwise_a_closed_session_hides_them(
     client: TestClient,
@@ -260,9 +260,8 @@ def test_otherwise_a_closed_session_hides_them(
     released_mode: str | None,
     open_release: bool,
 ) -> None:
-    """Outside the release window, or with Summarized (the surface has
-    no summary view) or off, the reviewer's values are hidden — even
-    with the retired toggle set."""
+    """Outside the release window, or with the released cell off, the
+    reviewer's values are hidden — even with the retired toggle set."""
     review_session, rae_client = _close_after_rae_submits(
         client, db, alice, rae, make_client,
         code=f"vis-hide-{released_mode}-{open_release}",

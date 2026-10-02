@@ -89,3 +89,13 @@ E1, E2 and E4 were checked by the author when they merged.
 - [ ] **Observers still see their cohort.** On the observer collation
   page, an observer with a cohort rule sees their counts; one with no
   rule sees the "no rule" message.
+
+## Reviewer visibility is Raw or off (A18)
+
+- [ ] **Migrate first.** Run `alembic upgrade head`.
+- [ ] **The You cell cycles two ways.** On an instrument card, unlock
+  "Who can see what you wrote" and click You → Responses released. It
+  cycles — / Raw responses only; Anonymized summaries no longer appears.
+- [ ] **A stored summary reads as off.** An instrument whose You cell
+  was Anonymized summaries before migrating now shows —, and the
+  reviewer's own card shows — in that cell too.

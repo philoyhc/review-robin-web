@@ -862,7 +862,7 @@ GET requests behave differently depending on which gate fails:
   | Session | Own saved values |
   |---|---|
   | `ready` (incl. past the deadline) | Shown. That is the `while_ongoing` window, whose reviewer cell is Raw by rule. |
-  | `expired`, release window open | Shown when the "Responses released" cell is Raw. Hidden when it is Summarized (the surface has no summary view) or off. |
+  | `expired`, release window open | Shown when the "Responses released" cell is Raw. Hidden when it is off. |
   | `expired`, release window not open | Hidden. |
   | `archived` | Hidden. Archiving ends all visibility. |
   | `draft` / `validated` (after Revert) | Hidden. The surface shows the pre-open page; the summary and its CSV show nothing. |

@@ -80,14 +80,14 @@ def test_valid_modes_for_cell_locks_per_audience() -> None:
         )
         == frozenset({"raw"})
     )
-    # peer_reviewer after_release: off / Raw / Anonymized
-    # summaries. ``anonymized`` is intentionally excluded —
-    # anonymising one's own work against oneself is incoherent.
+    # peer_reviewer after_release: off / Raw. ``anonymized`` is
+    # incoherent for one's own work; ``summarized`` was retired
+    # (findings A18) — no reviewer summary view was ever built.
     assert (
         visibility_policies.valid_modes_for_cell(
             "peer_reviewer", "after_release"
         )
-        == frozenset({None, "raw", "summarized"})
+        == frozenset({None, "raw"})
     )
     assert (
         visibility_policies.valid_modes_for_cell(
@@ -112,27 +112,26 @@ def test_valid_modes_for_cell_locks_per_audience() -> None:
     )
 
 
-def test_upsert_policy_accepts_peer_reviewer_summarized_after_release(
+def test_upsert_policy_refuses_peer_reviewer_summarized_after_release(
     db: Session,
 ) -> None:
-    """Reviewer Responses-released accepts ``summarized`` — the
-    'Anonymized summaries' mode that aggregates across the
-    reviewees the reviewer reviewed on this instrument."""
+    """The reviewer's Responses-released cell is Raw or off: the
+    'Anonymized summaries' option was retired because no reviewer
+    summary view was ever built (findings A18)."""
     review_session, instrument, user = _setup(db)
-    row, _ = visibility_policies.upsert_policy(
-        db,
-        review_session=review_session,
-        instrument=instrument,
-        audience="peer_reviewer",
-        while_ongoing_mode="raw",
-        after_release_mode="summarized",
-        user=user,
-    )
-    db.commit()
-    assert row.while_ongoing_granularity == "row"
-    assert row.while_ongoing_identification == "identified"
-    assert row.after_release_granularity == "aggregated"
-    assert row.after_release_identification == "deidentified"
+    with pytest.raises(
+        visibility_policies.VisibilityPolicyError
+    ) as excinfo:
+        visibility_policies.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            audience="peer_reviewer",
+            while_ongoing_mode="raw",
+            after_release_mode="summarized",
+            user=user,
+        )
+    assert excinfo.value.code == "invalid_mode"
 
 
 def _setup(db: Session) -> tuple[ReviewSession, Instrument, User]:
