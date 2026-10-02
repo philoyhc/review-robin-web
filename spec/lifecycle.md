@@ -215,7 +215,8 @@ Audit event: `session.expired` with
 
 Route helpers enforce the state machine at the request boundary:
 `_require_editable` and `_require_response_loss_ack` in
-`app/web/routes_operator/_shared.py`, and the two invitation gates
+`app/web/routes_operator/_shared.py` (with `_require_not_ready`, the
+Danger Zone's gate, described under §3.1), and the two invitation gates
 in `app/web/routes_operator/_operations.py`.
 
 ### 3.1 `_require_editable(session)`
@@ -225,7 +226,7 @@ Raises **HTTP 409 Conflict** when the session is not `draft` or
 roster import, roster delete-all, relationships CRUD, assignment
 generate, assignment delete-all, etc.) call this **first**.
 
-Four exceptions to that list, all easy to mis-read:
+Five exceptions to that list, all easy to mis-read:
 
 - **Quick Setup and the settings import do not call this helper.**
   Their handlers in `app/web/routes_operator/_quick_setup.py` test
@@ -252,6 +253,12 @@ Four exceptions to that list, all easy to mis-read:
   read this gate, which is why the helper's own docstring still
   describes itself in that narrower case. §5 carries the reason, and
   the rule that governs a second such exception.
+- **Session Home's Delete Data and Delete session call
+  `_require_not_ready` instead** (`_shared.py`), which 409s only in
+  `ready`, so both work on a `draft`, `validated`, `expired` or
+  `archived` session (author's ruling, 2026-10-02,
+  `guide/findings_2026-10-01_corpus.md` C7). The lobby's bulk Delete
+  still filters on `is_editable`.
 
 Detail message: `"Session is <status>; revert to draft to edit"`.
 
@@ -420,7 +427,8 @@ live roster beneath it.
 *narrower* than the lifecycle's, and nothing may use a **wider** one
 either without saying why in this section. Observers is the only entry;
 a second page claiming the exception without a reason stated here is a
-defect, not a precedent.
+defect, not a precedent. (Session Home's Danger Zone is not a Setup page
+and carries its own wider gate, with its reason, in §3.1.)
 
 All four render one partial,
 `operator/partials/_roster_lock_card.html`, parameterized on the

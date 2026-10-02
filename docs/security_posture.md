@@ -217,8 +217,8 @@ service writes an `audit_events` row).
 
 | Action | Confirm | Permission | Audit |
 |---|---|---|---|
-| Delete response data (`/delete-data`) | `confirm=true`, **plus `_require_editable`** | `require_session_operator` | ✓ |
-| Delete session (`/delete`, `/bulk-delete`, `/bulk-delete-archived`) | `confirm=true`, **plus `_require_editable`** on `/delete`; `/bulk-delete` skips sessions that are not editable, and `/bulk-delete-archived` deletes only archived ones | `require_session_operator` / per-id check | ✓ |
+| Delete response data (`/delete-data`) | `confirm=true`, **plus `_require_not_ready`** (any state but `ready`) | `require_session_operator` | ✓ |
+| Delete session (`/delete`, `/bulk-delete`, `/bulk-delete-archived`) | `confirm=true`, **plus `_require_not_ready`** on `/delete` (any state but `ready`); `/bulk-delete` skips sessions that are not editable, and `/bulk-delete-archived` deletes only archived ones | `require_session_operator` / per-id check | ✓ |
 | Close / reopen session (`/activate`, `/revert`, `/workflow/activate`) | `activate_confirm` banner | `require_session_operator` | ✓ |
 | Replace reviewers / reviewees roster | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
 | Replace assignments (import / generate / `delete-all`) | `confirm`/`confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
@@ -228,7 +228,7 @@ service writes an `audit_events` row).
 | Reviewer clear (`/clear`) | `confirm=true` | `require_reviewer_in_session` | ✓ |
 | Revoke / regenerate invitation links | operator UI action | `require_session_operator` | ✓ |
 
-**`_require_editable` is a third gate, not a restatement of the other two** (19C Item 3; defined in `app/web/routes_operator/_shared.py`, called by the two routes in `_session_home.py`). Permission says *who*, the confirm token says *they meant it*, and this says *the session is in a state where destroying data is coherent*: both routes refuse while the session is `ready`, so an operator has to pause it first. A live review is the one moment when deleting its responses is most likely to be a mistake and least likely to be recoverable. See `spec/session_home.md` §3.
+**The lifecycle gate is a third gate, not a restatement of the other two** (19C Item 3; now `_require_not_ready`, defined in `app/web/routes_operator/_shared.py` and called by the two routes in `_session_home.py`, which widened it from `_require_editable` on 2026-10-02 so a finished or archived session can be deleted). Permission says *who*, the confirm token says *they meant it*, and this says *the session is in a state where destroying data is coherent*: both routes refuse while the session is `ready`, so an operator has to pause it first. A live review is the one moment when deleting its responses is most likely to be a mistake and least likely to be recoverable. See `spec/session_home.md` §3.
 
 User-facing warnings are rendered by the operator templates that
 own each confirm checkbox; they are not exercised by the test

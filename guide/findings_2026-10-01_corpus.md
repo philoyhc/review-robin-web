@@ -51,9 +51,10 @@ is left stricter until ruled on. Grouped by what the ruling is about.
   defaults to False, so after close a reviewer cannot see their own saved
   answers. The specs say a visibility policy governs it, and nothing
   reads one there.
-- **C7 = G7** — On Session Home, Delete data and Delete session render as
-  live in `expired` and `archived`, but the route answers 409.
-  `spec/setup_pages.md` names exactly this predicate error.
+- ~~**C7 = G7**~~ — **Ruled 2026-10-02: allow them. Done in #2747.** On
+  Session Home, Delete data and Delete session rendered live in
+  `expired` and `archived`, but the route answered 409. Both routes now
+  refuse only in `ready`.
 - ~~**D14**~~ — **Ruled 2026-10-02: follow the spec. Done in #2744.**
   `clone_session` (the lobby's Duplicate) copied
   `Reviewee.results_acknowledged_at` into the new draft session; the
@@ -340,7 +341,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~C6 low · `:83` · the settings per-slot route isn't allowlisted (no UI calls it).~~ Done in #2731.
 - `session_home.md`
   - ~~C1 also `:460-481,506-512`.~~ Done in #2739.
-  - C7 med · `:275-322,518-524` · Danger Zone in `expired`/`archived` · author.
+  - ~~C7 med · `:275-322,518-524` · Danger Zone in `expired`/`archived`.~~ Done in #2747.
   - ~~C8 low · `:155,306` · Activated "inline section"; copy reads "Revert to draft first".~~ Done in #2731.
 - `sessions_overview.md`
   - ~~C9 low · `:217` · Tags is not sortable.~~ Done in #2731.
@@ -469,7 +470,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - G4 low-med · `:921` · Responses-received switch · author.
   - ~~G5 med · `:686,2149,106` · the Activate super-button survives; activation is from `validated` only.~~ Done in #2736.
   - ~~G6 med · `:676,704-712,2231` · Archive and Release are `expired`-only on the card; lobby purge-and-archive; the Extract Archive card.~~ Done in #2736.
-  - G7 med · `:1075,2244` · Delete Data is draft/validated only (= C7).
+  - ~~G7 med · `:1075,2244` · Delete Data is draft/validated only (= C7).~~ Done in #2747.
   - ~~G8 med-high · `:1586-1670` · pages, dirty state and Save; `reviewer-surface.md` wins.~~ Done in #2736.
   - ~~G9 low-med · `:714,1565` · non-open states render pre-open.~~ Done in #2736.
   - ~~G10 med-high · `:418,1210,1568` · visibility-when-closed · author.~~ Ruled: policy decides; done in #2723.

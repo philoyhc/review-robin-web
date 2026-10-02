@@ -56,6 +56,7 @@ from app.web.routes_operator._shared import (
     _quick_setup_unlocked,
     _redirect_url,
     _require_editable,
+    _require_not_ready,
     _templates,
     parse_session_deadline,
 )
@@ -506,7 +507,7 @@ def session_delete_data(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_editable(review_session)
+    _require_not_ready(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -531,7 +532,7 @@ def session_delete(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    _require_editable(review_session)
+    _require_not_ready(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -288,9 +288,10 @@ Its contents:
   POSTs to `/operator/sessions/{id}/delete-data`. **Locked while
   Activated** on the same terms as Delete Session (below): confirm
   checkbox `disabled`, a "Data deletion is locked while status is
-  Activated" note, and the `_require_editable` gate on
-  `/delete-data`. Reviewer responses only exist once the session is
-  Activated, so deleting them is a revert-first workflow — Revert to
+  Activated" note, and the `_require_not_ready` gate on
+  `/delete-data`. Once the session has ended (`expired`) or been
+  `archived`, both deletes are live (author's ruling, 2026-10-02).
+  During the response window it is a revert-first workflow — Revert to
   draft via the Workflow card, delete the data (the revert preserves the
   `Response` rows), then re-activate.
 - **Delete Session** — removes the session entirely. Confirmation
@@ -298,8 +299,8 @@ Its contents:
   while Activated**: the button and confirm checkbox carry the
   `disabled` attribute, with an explanatory note ("Revert the
   session to draft first to enable deletion."). The server-side lifecycle
-  gate (`_require_editable`) in `/delete` is the source of truth —
-  a direct POST while Activated still 4xxs. Visible greyed-out so
+  gate (`_require_not_ready`) in `/delete` is the source of truth —
+  a direct POST while Activated still answers 409. Visible greyed-out so
   the operator always sees the affordance and the path forward
   (Revert to draft via the Workflow card first, then delete).
 
@@ -519,8 +520,8 @@ as it renders on the **Extract data** Operations tab, not on Home
 The **Danger Zone** card (Delete Data + Delete Session) sits in
 Home's bottom-right (see §3). Its per-state
 availability: both Delete Data and Delete Session are active in
-`draft` / `validated` and visible-but-disabled in `ready`
-(Activated) — pause first to enable either. The **Owners** card
+`draft` / `validated` / `expired` / `archived` and visible-but-disabled
+in `ready` (Activated) — **Revert to draft** first to enable either. The **Owners** card
 (§3a) stacked above it carries no such gate — it is active in every
 lifecycle state.
 
