@@ -192,7 +192,6 @@ the dependencies above; no route trusts a client-supplied actor id.
 | `/operator/*` (all) | `require_operator` | Router-level dependency — no operator route can skip it. |
 | Operator session-scoped routes | `require_session_operator` | Direct or via `_require_*_in_session` helpers. |
 | `/operator/sessions` bulk routes (tags / archive / bulk-delete) | `require_operator` + per-id check | Each client-supplied `session_id` is re-resolved with `sessions.get_for_user`; non-owned ids are skipped. |
-| `/operator/settings/library/*` deletes | `require_operator` + owner check | Query filters `owner_user_id == user.id`; cross-operator id 404s. |
 | `/operator/sys-admin/*` | `require_sys_admin` | Includes user admit/revoke/promote/demote/remove. Segment 18S adds a service-layer actor-super guard on promote/demote (`requires_super_admin`) and a target-super protection on demote/revoke/remove/remove-from-sessions (`protected_super_admin`). |
 | Export routes (`/export/*.csv`, `bundle.zip`) | `require_session_operator` | |
 | `/export/audit_log.csv` | `require_sys_admin` | Tightened in Segment 16C PR 1. |
@@ -219,7 +218,7 @@ service writes an `audit_events` row).
 | Action | Confirm | Permission | Audit |
 |---|---|---|---|
 | Delete response data (`/delete-data`) | `confirm=true`, **plus `_require_editable`** | `require_session_operator` | ✓ |
-| Delete session (`/delete`, `/bulk-delete`, `/bulk-delete-archived`) | `confirm=true`, **plus `_require_editable`** | `require_session_operator` / per-id check | ✓ |
+| Delete session (`/delete`, `/bulk-delete`, `/bulk-delete-archived`) | `confirm=true`, **plus `_require_editable`** on `/delete`; `/bulk-delete` skips sessions that are not editable, and `/bulk-delete-archived` deletes only archived ones | `require_session_operator` / per-id check | ✓ |
 | Close / reopen session (`/activate`, `/revert`, `/workflow/activate`) | `activate_confirm` banner | `require_session_operator` | ✓ |
 | Replace reviewers / reviewees roster | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
 | Replace assignments (import / generate / `delete-all`) | `confirm`/`confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
@@ -229,7 +228,7 @@ service writes an `audit_events` row).
 | Reviewer clear (`/clear`) | `confirm=true` | `require_reviewer_in_session` | ✓ |
 | Revoke / regenerate invitation links | operator UI action | `require_session_operator` | ✓ |
 
-**`_require_editable` is a third gate, not a restatement of the other two** (19C Item 3, `app/web/routes_operator/_session_home.py`). Permission says *who*, the confirm token says *they meant it*, and this says *the session is in a state where destroying data is coherent*: both routes refuse while the session is `ready`, so an operator has to pause it first. A live review is the one moment when deleting its responses is most likely to be a mistake and least likely to be recoverable. See `spec/session_home.md` §3.
+**`_require_editable` is a third gate, not a restatement of the other two** (19C Item 3; defined in `app/web/routes_operator/_shared.py`, called by the two routes in `_session_home.py`). Permission says *who*, the confirm token says *they meant it*, and this says *the session is in a state where destroying data is coherent*: both routes refuse while the session is `ready`, so an operator has to pause it first. A live review is the one moment when deleting its responses is most likely to be a mistake and least likely to be recoverable. See `spec/session_home.md` §3.
 
 User-facing warnings are rendered by the operator templates that
 own each confirm checkbox; they are not exercised by the test
@@ -376,8 +375,12 @@ cross-origin POST / PUT / DELETE / PATCH — so a forged form submit from
 another origin reaches the app with no auth cookie, fails Easy Auth's
 gate, and never hits a route handler. Top-level cross-origin GET
 navigation still sends the cookie (the `Lax` exception), but every
-state-changing route is a POST, never a GET, so the GET exception isn't
-exploitable.
+route that changes state on the caller's say-so is a POST, so the GET
+exception isn't exploitable. The one GET that writes is Session Home:
+it runs `observe_scheduled_events` first, which fires the session's
+past-due scheduled activation, invites and reminders. It takes no input
+and does only what the session's own schedule already called for, so a
+forged navigation gains nothing.
 
 **Verification.** The `SameSite=Lax` default has been App Service's
 behaviour since 2020 (Chrome 80). Confirm on the dev slot when
@@ -398,8 +401,9 @@ default, this section is the canonical place to revisit the decision.
 If the deployment model ever shifts (multi-tenant, embedded iframe from
 a foreign origin), revisit this and likely add CSRF tokens.
 
-**Local dev / `ALLOW_FAKE_AUTH=true`.** The fake-auth path uses request
-headers, not cookies, so SameSite-on-the-cookie doesn't apply; local
+**Local dev / `ALLOW_FAKE_AUTH=true`.** The fake-auth path reads no
+headers and no cookies — it injects an identity from settings when no
+Easy Auth header is present — so SameSite-on-the-cookie doesn't apply; local
 dev is single-origin (`127.0.0.1:8000`), so cross-origin CSRF isn't a
 realistic threat anyway.
 

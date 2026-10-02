@@ -403,12 +403,15 @@ the joke it sounds like.
   which rule wins on an element is decided by the browser. A class check
   guards one known mechanism, not the rule: the next page could space
   its cards another way, or break them another way.
-  A browser in CI would enforce the rule itself, and is a new dependency
-  and a new failure mode for one rule.
+  CI does now run a browser: `tests/browser/` drives Chromium under
+  Playwright, required in `ci.yml` since 2026-10-01. None of those
+  tests measures the gap between cards, so the rule is still
+  unenforced; a test that did would be the way to enforce it.
 - **What covers it instead.** Measuring the gap when a card is added:
   dump the rendered page from the test client and read
   `getBoundingClientRect()` in Chromium, as `tools/css_parity_check.py`
-  does, at 1280 and 700px. Then the dev slot. 19S Item 9's definition of
+  does, at 1280 and 700px. Then the author's browser check on a local
+  run. 19S Item 9's definition of
   done requires it for its own cards; nothing requires it anywhere else.
 
 ## 2. Enforceable but not enforced — the revisit queue

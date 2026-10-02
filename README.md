@@ -39,7 +39,7 @@ timezone), not in the per-session chrome.
 | URL | Surface |
 |---|---|
 | `/operator/sessions` | Sessions lobby — selection-aware inline row-expander with per-row rename, free-form tagging (click-to-filter tag strip), one-click clone (full-setup or config-shell), client-side search, sortable columns, and **Purge and archive** (selective hard-delete of responses / rosters / audit log via `session_purge`, then archive). |
-| `/operator/sessions/archived` | Archived sessions — the live off-ramp for the `draft ⇄ archived` cycle. |
+| `/operator/sessions/archived` | Archived sessions — the live off-ramp: any non-archived session can be archived, and unarchiving restores it to `draft`. |
 | `/operator/sessions/new` | Create a new session. |
 | `/operator/settings` | **Operator Settings** — per-operator SMTP credentials (encrypted at rest) + display timezone. Honours `?return_to=<path>` so the user-menu link returns to the calling page. |
 | `/operator/sys-admin` | Sys Admin chrome root (sys-admin-gated). |
@@ -62,7 +62,7 @@ session and pulling data out.
 | `relationships` | Setup | **Relationships** — pair-context tags driving rule-engine cross-pair predicates. Tab gated by `relationships_enabled`. |
 | `observers` | Setup | **Observers** — opt-in fourth roster, gated by `observers_enabled`. Each Observer carries a **Cohort match rule** (multi-predicate, AND/OR; e.g. `reviewer.tag1 IS THE SAME AS observer.tag1`) authored on this page. |
 | `instruments` | Setup | **Instruments** — per-instrument card with Bands 1+2+3. Band 1 authors the assignment rule; Band 2 is the operator-side reviewer-surface preview; Band 3 hosts the Response Fields table with inline `data_type` + bounds. Group-scoped instruments (one reviewer answer per group of reviewees) are configured **on the card** — a group boundary + unit-of-review in Band 1; a group instrument requires a pinned rule before it can open. New instruments are added via **+Instrument** (the legacy `Add instrument` / `Add group instrument` buttons retired); **+Page break** inserts a reviewer-surface page break, and **Replicate** clones a card's content into a new instrument after the source. |
-| `setupinvite` | Setup | **Email Template** — per-template (Invitation / Reminder / Responses-received) override of subject + body + CC + BCC, with the canonical merge tags (`$reviewer_name`, `$session_name`, `$deadline`, `$help_contact`, plus `$invite_url` on Invitation / Reminder and `$submitted_at` on Responses-received). |
+| `setup-invite` | Setup | **Email Template** — per-template (Invitation / Reminder / Responses-received) override of subject + body + CC + BCC, with the canonical merge tags (`$reviewer_name`, `$session_name`, `$deadline`, `$help_contact`, plus `$invite_url` on Invitation / Reminder and `$submitted_at` on Responses-received). |
 | `assignments` | Operations | **Assignments** — per-instrument status table (rule selection + self-review inclusion per instrument) + Assignments preview table (12-column shape: Reviewer · R Tag1..3 · Reviewee · E Tag1..3 · Pair1..3 · Include). "Search by" dropdown, row-select checkboxes, bulk include / exclude buttons. |
 | `validate` | Operations | **Validate** — find-and-fix surface with severity filter chip strip + per-issue Fix-on-Setup deep links. |
 | `previews` | — | Retired Previews hub (19Q Item 1); no row, because it is no longer a tab — a permanent redirect to Invitations. |
@@ -78,7 +78,7 @@ The **Extract Setup card** (five-or-six live CSV downloads — per-entity roster
 
 #### Session lifecycle
 
-`draft → validated → ready` (Activated) with edit-locks, deadline tracking, response-window gates, and audit events on every state transition. `archived` is a live off-ramp (`draft ⇄ archived`, written by `archive_session` / `unarchive_session`). Setup mutations invalidate `validated → draft` automatically via `lifecycle.invalidate_if_validated`.
+`draft → validated → ready` (Activated) `→ expired` (Closed) with edit-locks, deadline tracking, response-window gates, and audit events on every state transition. `archived` is a live off-ramp: `archive_session` accepts any non-archived state and `unarchive_session` restores `archived → draft`. Setup mutations invalidate `validated → draft` automatically via `lifecycle.invalidate_if_validated`.
 
 #### Assignment model
 
@@ -90,9 +90,9 @@ Three audiences share the `/me/` chrome and a role-navigator chip strip that let
 
 | URL | Surface |
 |---|---|
-| `/me/sessions/{id}/{page}` | **Reviewer.** Multi-instrument session as paginated pages within one form; each page is one instrument's table of (reviewee × response field) cells. A group-scoped instrument renders one row per boundary-defined group — a single reviewer answer covers the whole group, counted once across reviewer state, monitoring, and the response extract. Per-page status pills (`not_started` / `in_progress` / `complete` / `submitted`); Save persists the current page's dirty inputs, Submit commits the whole review session-wide. Numeric inputs validate range natively and step-grid via JS `setCustomValidity`; server-side `validate_value` is the authoritative backstop. Missing-required and invalid-value warnings render as their own full-width cards below the bottom-grid; Submit is a hard gate on missing required. |
-| `/me/sessions/{id}/results` | **Reviewee.** The reviewee's view of responses received about them, per the per-instrument Band 3 visibility policy (Raw / Anonymized / Summarized mode picked by the operator per instrument × per audience). An Acknowledge card at the foot stamps `reviewees.results_acknowledged_at` (idempotent). |
-| `/me/sessions/{id}/collation` | **Observer.** Per-instrument 3-row tables — Row 1 distinct-reviewer headcount + shared aggregate over the observer's in-cohort assignment pool, Row 2 distinct-reviewee headcount + same aggregate, Row 3 conditional `Download CSV` button. Identification mode follows Band 3 (Raw / Anonymized rows / Anonymized summaries). Anonymized downloads swap reviewer / reviewee names for per-session opaque tokens (`R-a3f8b2c1` / `E-9d4e7f10` via `app/services/participant_tokens.py`); the operator-side deanonymization key ships as `participant_tokens.csv` from the Extract data tab's Token keys card. |
+| `/me/sessions/{id}/{page}` | **Reviewer.** Multi-instrument session as paginated pages within one form; each page holds one or more instruments, split where the operator places a page break, and each instrument renders as a table of (reviewee × response field) cells. A group-scoped instrument renders one row per boundary-defined group — a single reviewer answer covers the whole group, counted once across reviewer state, monitoring, and the response extract. Per-page status pills (`not_started` / `in_progress` / `complete` / `submitted`); Save persists the current page's dirty inputs, Submit commits the whole review session-wide. Numeric inputs validate range natively and step-grid via JS `setCustomValidity`; server-side `validate_value` is the authoritative backstop. Missing-required and invalid-value warnings render as their own full-width cards below the bottom-grid; Submit is a hard gate on missing required. |
+| `/me/sessions/{id}/results` | **Reviewee.** The reviewee's view of responses received about them, per the per-instrument Band 2 visibility policy (Raw / Anonymized / Summarized mode picked by the operator per instrument × per audience). An Acknowledge card at the foot stamps `reviewees.results_acknowledged_at` (idempotent). |
+| `/me/sessions/{id}/collation` | **Observer.** Per-instrument 3-row tables — Row 1 distinct-reviewer headcount + shared aggregate over the observer's in-cohort assignment pool, Row 2 distinct-reviewee headcount + same aggregate, Row 3 conditional `Download CSV` button. Identification mode follows Band 2 (Raw / Anonymized rows / Anonymized summaries). Anonymized downloads swap reviewer / reviewee names for per-session opaque tokens (`R-a3f8b2c1` / `E-9d4e7f10` via `app/services/participant_tokens.py`); the operator-side deanonymization key ships as `participant_tokens.csv` from the Extract data tab's Token keys card. |
 
 ### Lifecycle + audit
 
@@ -161,6 +161,10 @@ Chromium build the web sandbox ships. They skip, saying why, when no
 Chromium is installed; run `python -m playwright install chromium`
 once to enable them locally. The SQLite CI job installs Chromium and
 sets `RRW_REQUIRE_BROWSER=1`, which turns that skip into a failure.
+`tests/integration/test_inline_scripts_parse.py` needs `node` on PATH
+and skips without it. CI's `ubuntu-latest` runners have `node`, but no
+switch turns that skip into a failure, so read the skip list rather than
+just the exit code.
 
 CI runs the same `pytest` against a `postgres:16` service
 container too (`ci-postgres` job) — the suite covers both

@@ -172,6 +172,37 @@ the spec should say so.
 - **E2** — Four §10 primitives have CSS and no markup. Retire the
   entries, the CSS, and the `.btn-row` test references?
 
+**New from the fix batches (2026-10-02).** Each was found while
+fixing a no-ruling row (#2731–#2738); each is a choice between code and
+contract.
+
+- **E36** — the Data shaper's Delete has no confirm step (§3,
+  `operator_button_audit.md`).
+- **C1** — confirmed: `quick_setup_card_spec.md:25` says the Lock /
+  Unlock toggle shows in every state, but `show_lock_toggle =
+  is_available` (draft with no responses), so `ready` and `expired`
+  have no toggle. Spec or code?
+- **A27** — see §3: a response-only sort cookie leaves the rows in
+  insertion order under a sort badge.
+- **Invite landing ignores `Reviewer.status`.** `lookup_invitation_by_token`
+  applies no active filter, so an inactive reviewer passes the invite
+  email check and then hits the surface's 404 (`spec/reviewer-surface.md`
+  "Identity matching" records it as a known gap).
+- **Observer per-instrument CSV has no archive guard.**
+  `observer_collation_instrument_csv` relies on both window predicates
+  reading false once archived, unlike every other `resolve_mode` caller
+  (`spec/visibility_policy.md` §6).
+- **The auto-send invites caption treats `expired` and `archived` as
+  prepared**, so it can promise "System will dispatch automatically"
+  where the trigger skips with `not_prepared` (`spec/workflow_card.md`
+  records it as a known defect).
+- **Outbox status wording.** `README.md` and `docs/status.md` say outbox
+  rows are stamped `queued`; the code stamps `sent` without sending
+  (H20). Fix the docs to `sent`, or have the code stamp `queued` until
+  Segment 14B sends?
+- **R / ≡ toggle role** — E31's open half: audit rows 223–224 read
+  "TBD (author)".
+
 ## 2. Code defects
 
 The spec is right and the code is wrong; each ships as its own code PR.
@@ -460,82 +491,82 @@ One line each: id · severity · where · finding · decides. A line with no
 ### `docs/`
 
 - `architecture.md`
-  - H1 med · `:17-44,96` · topology lacks the gateway, VNet, private endpoints and runner.
-  - H2 med · `:100` · not every state change is a form POST; scheduled events fire on GETs (also `security_posture.md`, `azure_provision.md`).
-  - H3 low · correlation ids are in audit only.
-  - H4 low · prebuilt `antenv`, not Oryx.
-  - H5 med · `:81` · Key Vault + managed identity stated as fact (contradicts `security_posture.md`).
+  - ~~H1 med · `:17-44,96` · topology lacks the gateway, VNet, private endpoints and runner.~~ Done in #2738.
+  - ~~H2 med · `:100` · not every state change is a form POST; scheduled events fire on GETs (also `security_posture.md`, `azure_provision.md`).~~ Done in #2738.
+  - ~~H3 low · correlation ids are in audit only.~~ Done in #2738.
+  - ~~H4 low · prebuilt `antenv`, not Oryx.~~ Done in #2738.
+  - ~~H5 med · `:81` · Key Vault + managed identity stated as fact (contradicts `security_posture.md`).~~ Done in #2738.
 - `database.md`
-  - H6 low · `:5,11` · "this segment".
+  - ~~H6 low · `:5,11` · "this segment".~~ Done in #2738.
 - `local_setup.md`
-  - H7 med · `:210,299` · `/` 302-redirects; it doesn't return 200 JSON (also `deployment_dev.md:211`).
+  - ~~H7 med · `:210,299` · `/` 302-redirects; it doesn't return 200 JSON (also `deployment_dev.md:211`).~~ Done in #2738.
 - `security_posture.md`
-  - H8 low · `:195` · retired `/operator/settings/library/*`.
-  - H9 low · `:224` · table split; `_require_editable` location.
-  - H10 low · `:400` · fake auth reads no headers.
+  - ~~H8 low · `:195` · retired `/operator/settings/library/*`.~~ Done in #2738.
+  - ~~H9 low · `:224` · table split; `_require_editable` location.~~ Done in #2738.
+  - ~~H10 low · `:400` · fake auth reads no headers.~~ Done in #2738.
   - ~~Also G21.~~ It makes no token-storage claim; nothing to correct.
 - `deployment_dev.md`
-  - H11 **high** · `:314-318,379` · "`DELETE FROM users` cascades" is false; the FK has no `ON DELETE`, so raw SQL fails.
-  - H12 med · the env table is missing three vars.
-  - H13 med · `:117` · SMTP is live, so `SMTP_ENCRYPTION_KEY` is needed now.
-  - H14 low · `:50` · the artefact includes `antenv/`.
-  - H15 low · `:322` · that audit is shipped.
+  - ~~H11 **high** · `:314-318,379` · "`DELETE FROM users` cascades" is false; the FK has no `ON DELETE`, so raw SQL fails.~~ Done in #2738.
+  - ~~H12 med · the env table is missing three vars.~~ Done in #2738.
+  - ~~H13 med · `:117` · SMTP is live, so `SMTP_ENCRYPTION_KEY` is needed now.~~ Done in #2738, on a corrected premise: SMTP does not send, but the Settings page encrypts operator SMTP passwords, so the key is needed now.
+  - ~~H14 low · `:50` · the artefact includes `antenv/`.~~ Done in #2738.
+  - ~~H15 low · `:322` · that audit is shipped.~~ Done in #2738.
 - `deployment_nus.md`
-  - H11 `:337`.
-  - H16 med · statuses settled by v7; consolidate.
-  - H17 med · database `rrw` vs v7's `reviewrobin`.
-  - H18 **high** · `:372` · Rehydrate as the data-carry path is off by default.
-  - H19 low · `:386` · §6.3 → §6.4.
+  - ~~H11 `:337`.~~ Done in #2738.
+  - ~~H16 med · statuses settled by v7; consolidate.~~ Done in #2738.
+  - ~~H17 med · database `rrw` vs v7's `reviewrobin`.~~ Done in #2738.
+  - ~~H18 **high** · `:372` · Rehydrate as the data-carry path is off by default.~~ Done in #2738.
+  - ~~H19 low · `:386` · §6.3 → §6.4.~~ Done in #2738.
 - `azure_provision.md`
-  - H20 med · email is wired.
-  - H21 med · overtaken; retire.
-  - H22 low · SMTP credentials are per user, encrypted in the DB.
+  - H20 med · email is wired · **premise wrong:** nothing calls the SMTP transport. `app/services/invitations.py` stamps outbox rows `sent` without sending, and real sending is Segment 14B. Item 8 stays "not yet wired"; nothing to fix.
+  - ~~H21 med · overtaken; retire.~~ Done in #2738.
+  - ~~H22 low · SMTP credentials are per user, encrypted in the DB.~~ Done in #2738.
 - `azure_github_setup.md`
-  - H23 med · `:64-73` · a DML-only role can't run migrations.
-  - H24 med · retire or consolidate into `deployment_nus.md`.
-  - H25, H26, H27 low · a duplicate pointer; `deploy_nus.yml`/`NUS_*`; local Docker Postgres is deferred.
+  - ~~H23 med · `:64-73` · a DML-only role can't run migrations.~~ Done in #2738.
+  - ~~H24 med · retire or consolidate into `deployment_nus.md`.~~ Done in #2738.
+  - ~~H25, H26, H27 low · a duplicate pointer; `deploy_nus.yml`/`NUS_*`; local Docker Postgres is deferred.~~ Done in #2738.
 - `cli_setup.md`
-  - H28 med · `:229,240` · Python ≥3.12.
-  - H29 low · node is needed.
-  - H30 low · section name.
-  - Also H27.
+  - ~~H28 med · `:229,240` · Python ≥3.12.~~ Done in #2738.
+  - ~~H29 low · node is needed.~~ Done in #2738.
+  - ~~H30 low · section name.~~ Done in #2738.
+  - ~~Also H27.~~ Done in #2738.
 - `backup_restore.md`
-  - H31 low · rehydrate stashes uploads.
-  - H32 low · the storage deferred row.
-- `operations_runbook.md` — H13 `:69-71`.
+  - ~~H31 low · rehydrate stashes uploads.~~ Done in #2738.
+  - ~~H32 low · the storage deferred row.~~ Done in #2738.
+- ~~`operations_runbook.md` — H13 `:69-71`.~~ Done in #2738.
 - `troubleshooting.md` — current.
 - `README.md` (docs)
-  - I11 med · no row for `unenforced_conventions.md`.
+  - ~~I11 med · no row for `unenforced_conventions.md`.~~ Done in #2738.
 - `known_limitations.md`
-  - I3 med · `:10-23` · infra posture is silent on the provisioned NUS environment (at cutover).
-  - I10 low · no `beforeunload` guard; no autosave.
+  - ~~I3 med · `:10-23` · infra posture is silent on the provisioned NUS environment (at cutover).~~ Done in #2738.
+  - ~~I10 low · no `beforeunload` guard; no autosave.~~ Done in #2738.
 - `unenforced_conventions.md`
-  - I20 med · `:403-407` · "no browser in CI" is false; leans on the dev slot.
+  - ~~I20 med · `:403-407` · "no browser in CI" is false; leans on the dev slot.~~ Done in #2738.
 - `status.md`
-  - I1 **high** · `:910,1063,1082,1084` · autosave claimed as shipped.
-  - I2 med · `:897` · one page per instrument.
-  - I7 med · route table `:681-843`.
-  - I8 med · audit table `:1005-1050`.
-  - I9 med · `:541,547,588` · infra bullets.
-  - Also README `:941,964` Band 3 → Band 2.
+  - ~~I1 **high** · `:910,1063,1082,1084` · autosave claimed as shipped.~~ Done in #2738.
+  - ~~I2 med · `:897` · one page per instrument.~~ Done in #2738.
+  - ~~I7 med · route table `:681-843`.~~ Done in #2738.
+  - ~~I8 med · audit table `:1005-1050`.~~ Done in #2738.
+  - ~~I9 med · `:541,547,588` · infra bullets.~~ Done in #2738.
+  - ~~Also README `:941,964` Band 3 → Band 2.~~ Done in #2738.
 - `nus_azure_status_v7.md`, `practice-audit-2026-09-04.md`, `status_history.md` — current or dated.
 
 ### Root
 
 - `README.md`
-  - I1 · I2 `:93` · I5 low `:42,81` · I6 low `:65,94` (`setup-invite`; Band 2; the node skip).
+  - ~~I1 · I2 `:93` · I5 low `:42,81` · I6 low `:65,94` (`setup-invite`; Band 2; the node skip).~~ Done in #2738.
 - `rrw_design_rationale.md`
-  - I1 high `:133,219` · I2 `:133` · I3 `:171,195` · I5 `:177`.
+  - ~~I1 high `:133,219` · I2 `:133` · I3 `:171,195` · I5 `:177`.~~ Done in #2738.
 - `azure_ask.md`
-  - I12 med · answered differently; retire or annotate.
-  - I13 low · `:38,182`.
+  - ~~I12 med · answered differently; retire or annotate.~~ Done in #2738.
+  - ~~I13 low · `:38,182`.~~ Done in #2738.
 - `rrw_sdd_in_practice.md`
-  - I14 med · `:5` · "no local dev loop" (contradicts `:220`).
+  - ~~I14 med · `:5` · "no local dev loop" (contradicts `:220`).~~ Done in #2738.
 - `CLAUDE.md` / `AGENTS.md`
-  - I15 med · `/results` gates on `require_reviewee_with_current_grant`.
-  - I16 low · six Setup pages.
-  - I17 low · ~35 s (134 s measured); `ci-postgres` ignores `tests/browser/`.
-  - I18 low · name `docs/unenforced_conventions.md`.
+  - ~~I15 med · `/results` gates on `require_reviewee_with_current_grant`.~~ Done in #2738.
+  - ~~I16 low · six Setup pages.~~ Done in #2738.
+  - ~~I17 low · ~35 s (134 s measured); `ci-postgres` ignores `tests/browser/`.~~ Done in #2738.
+  - ~~I18 low · name `docs/unenforced_conventions.md`.~~ Done in #2738.
 - `new_project_practices_setup.md`
-  - I19 low · `:139` · the dev-slot mention, via `tools/practice_kit.py`.
+  - ~~I19 low · `:139` · the dev-slot mention, via `tools/practice_kit.py`.~~ Done in #2738.
 - `CONTRIBUTING.md`, `constitution.md` — current.

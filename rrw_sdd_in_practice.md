@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-Review Robin Web (RRW) is a web application for running structured institutional review cycles. `rrw_design_rationale.md` explains what it *is* and why it looks the way it does. This document is its companion on a different axis. It explains how RRW is *worked on*: the practice by which a single author, working through AI coding agents with no local dev loop, has landed some two thousand six hundred pull requests without the codebase taking the shape that AI-authored codebases are reported to take.
+Review Robin Web (RRW) is a web application for running structured institutional review cycles. `rrw_design_rationale.md` explains what it *is* and why it looks the way it does. This document is its companion on a different axis. It explains how RRW is *worked on*: the practice by which a single author, working through AI coding agents and checking each change in a browser on a local run, has landed some two thousand six hundred pull requests without the codebase taking the shape that AI-authored codebases are reported to take.
 
 The practice has a name now. Through 2026 the term **spec-driven development** (SDD) went mainstream for the family of methods in which specifications are the durable source of truth and code is kept in agreement with them. RRW was doing a form of this before the term went mainstream. More usefully for a reader, it is doing a *particular* form of it, with rules about which direction authority runs and when, which the general term does not fix. This document states that form and records why each of its parts is the way it is. It also says plainly where the practice departs from what SDD prescribes and where it falls short of it.
 

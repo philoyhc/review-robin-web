@@ -37,7 +37,7 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
     ("constitution.md", "adapt", "", "keep the six articles; drop the dated annotations; re-point 'derived from'"),
     ("CONTRIBUTING.md", "adapt", "", "fill the merge-policy paragraph's <slow job> and <paths> for the new CI"),
     (".gitignore", "skeleton", "", "the harness lines only — .claude/* negations plus the hook's build products; appended if absent"),
-    (".claude/agents/diff-reviewer.md", "adapt", "", "project name in line 1, check 4's seams (routes_operator/_shared.py, base.html), the Azure dev slot in the last paragraph"),
+    (".claude/agents/diff-reviewer.md", "adapt", "", "project name in line 1, check 4's seams (routes_operator/_shared.py, base.html)"),
     (".claude/agents/spec-writer.md", "adapt", "", "cites this project's specs and close procedure; re-point once your spec/ has a second file"),
     (".claude/skills/segment-plan/SKILL.md", "verbatim", "", "the plan / item / close procedure"),
     (".claude/hooks/session-start.sh", "adapt", "", "builds the 3.12 venv the pre-PR gate needs; retarget the node-warning comment at your own JS-parsing test"),

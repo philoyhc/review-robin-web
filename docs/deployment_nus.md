@@ -17,6 +17,12 @@ test on localhost exactly as today**. After NUS is verified and serving,
 > `docs/azure_provision.md` (SKU/pricing shopping list),
 > `docs/cli_setup.md` (workstation CLIs), `guide/deferred_consolidated.md`
 > (hardening deferred until a real deployment forces it).
+>
+> **The verified NUS state is in `docs/nus_azure_status_v7.md`** (2026-10-01):
+> what is provisioned, the network design (private Web App, Postgres and Key
+> Vault behind an Application Gateway) and the two external blockers. Where
+> this runbook and v7 disagree, v7 is current; the §1 checklist and §13 below
+> mark what v7 has settled.
 
 ---
 
@@ -68,16 +74,23 @@ Still to confirm / decide before the first deploy:
   `app-nrrw-prd-reviewrobinweb-01` / `psql-nrrw-prd-reviewrobinweb-01`;
   **confirm the real provisioned names** before filling `NUS_WEBAPP_NAME`
   and `NUS_DATABASE_URL` (§6.2).
-- [ ] **DB name + app user** — create `rrw` + `rrw_app` on the B2S server.
+- [x] **DB name** — the application database is **`reviewrobin`**
+  (provisioned, per v7).
+- [ ] **App user** — the least-privilege PostgreSQL application role is still
+  to be created (v7, "Remaining project-side work" step 5). This runbook calls
+  it `rrw_app`.
 - [ ] **Ownership** — do you have Contributor on `rg-nrrw-prd-compute-01`, or
   does NUS IT run the portal steps? (The `admazclhc` admin account suggests
   IT-managed; confirm what you can do yourself.)
-- [ ] **Entra tenant** — the NUS tenant; confirm you (or an NUS admin) can
-  **create app registrations** and grant **admin consent**.
-- [ ] **Networking** — public-access-with-firewall vs **private
-  endpoint / VNet**? Drives the migrate-job reachability decision (§5).
-- [ ] **Custom domain** under `nus.edu.sg`, or the default
-  `*.azurewebsites.net` hostname?
+- [x] **Entra tenant** — Easy Auth v2 is enabled and NUS tenant admin consent
+  for `openid`, `profile` and `email` is complete (v7).
+- [x] **Networking** — **private endpoint / VNet.** The Web App, Postgres and
+  Key Vault are private; public ingress is through an Application Gateway.
+  So the `migrate` job needs the self-hosted runner (§5 option 1), whose VM
+  is blocked on regional capacity (v7, "External blocker 1").
+- [ ] **Custom domain** — a production hostname is required (the default
+  `*.azurewebsites.net` name is a backend identity only) and awaits the NUS
+  naming decision (v7, "External blocker 2").
 - [ ] **Whitelist** — `SYS_ADMIN_EMAILS` / `OPERATOR_EMAILS` = NUS emails.
 - [ ] **Data carry-over** — clean start on NUS, or migrate from personal
   Postgres (§8)?
@@ -110,7 +123,7 @@ NUS subscription. Can run in parallel while personal Azure keeps serving.
   (Filesystem)** so Log stream is populated.
 - [ ] **Azure Database for PostgreSQL — Flexible Server** — Postgres **16**,
   region, SKU (**B1ms+**), storage, backup retention. Then create:
-  - application database **`rrw`**
+  - application database **`reviewrobin`** (already exists on NUS)
   - application user **`rrw_app`** (record its password for `DATABASE_URL`).
 - [ ] **DB networking** — per the §1 policy decision:
   - *Public + firewall* (simplest, matches dev): enable "Allow Azure
@@ -130,8 +143,10 @@ NUS subscription. Can run in parallel while personal Azure keeps serving.
     (`guide/segment_18Q_blob.md`). Not needed for the app to run.
   - **Azure Monitor** (Log Analytics + Application Insights) — point App
     Service diagnostics + application logging here.
-- [ ] **(Optional, if NUS policy)** App Gateway + WAF, private endpoints —
-  see `guide/deferred_consolidated.md` §1. Add when NUS policy requires.
+- [x] **App Gateway, private endpoints** — NUS policy required them and NUS
+  IT has provisioned them; the gateway's production listener, TLS and health
+  probe are project work still to do (v7, "Application Gateway work
+  remaining").
 
 ---
 
@@ -220,7 +235,7 @@ these repository **secrets**:
 | `NUS_AZURE_CLIENT_ID` | NUS deploy app-reg **client id** (§6.1) |
 | `NUS_AZURE_TENANT_ID` | **NUS tenant id** |
 | `NUS_AZURE_SUBSCRIPTION_ID` | **NUS subscription id** (for `sub-nrrw-prd-reviewrobinweb`) |
-| `NUS_DATABASE_URL` | `postgresql+psycopg://rrw_app:<pw>@<nus-server>.postgres.database.azure.com:5432/rrw?sslmode=require` |
+| `NUS_DATABASE_URL` | `postgresql+psycopg://rrw_app:<pw>@<nus-server>.postgres.database.azure.com:5432/reviewrobin?sslmode=require` |
 
 …and one repository **variable** (not sensitive — it's just a name):
 
@@ -298,7 +313,7 @@ start — restart after changes.
 | `OPERATOR_CONTACT_EMAIL` | contact shown on `/about`'s access card (optional) |
 | `ALLOW_FAKE_AUTH` | **`false`** (must never be true in a deployed env) |
 | `LOG_LEVEL` | `INFO` |
-| `SMTP_ENCRYPTION_KEY` | Fernet key (only once email infra is in use) |
+| `SMTP_ENCRYPTION_KEY` | Fernet key — needed, since the operator Settings page stores SMTP credentials encrypted with it |
 | `AUDIT_STRICT_MODE` | `false` |
 
 > In a non-`local` `APP_ENV`, the app **refuses to boot** unless at least one
@@ -333,8 +348,9 @@ operator**, so **one setting seeds a full-rights admin** — no DB surgery:
 > **Order matters — set it *before* their first sign-in.** The bootstrap
 > fires **only** on first sign-in; once a `users` row exists the env var is
 > **inert** (adding/removing an email never changes an existing row). If they
-> already signed in first, fix it from Azure Cloud Shell — prefer `UPDATE`
-> over `DELETE` (a delete cascades their `session_operators`):
+> already signed in first, fix it with an `UPDATE`, not a `DELETE` (the
+> foreign keys that reference `users.id` have no `ON DELETE`, so a delete
+> fails for anyone who owns or created a session or has an audit row):
 >
 > ```sql
 > UPDATE users SET is_operator = true, is_sys_admin = true
@@ -352,13 +368,13 @@ sys-admin allowlist bootstrap."
 
 Postgres 15+ denies non-owners `CREATE` on `public`, so `rrw_app` can't
 create `alembic_version` until granted. Run **once**, as the **Flexible
-Server admin login** (not `rrw_app`), against the `rrw` DB (from Azure Cloud
-Shell) — identical to `docs/deployment_dev.md` → "First-time database
+Server admin login** (not `rrw_app`), against the `reviewrobin` DB (from
+inside the VNet, e.g. the self-hosted runner) — the same as `docs/deployment_dev.md` → "First-time database
 bootstrap":
 
 ```sql
 GRANT ALL ON SCHEMA public TO rrw_app;
-GRANT ALL PRIVILEGES ON DATABASE rrw TO rrw_app;
+GRANT ALL PRIVILEGES ON DATABASE reviewrobin TO rrw_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO rrw_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO rrw_app;
 ```
@@ -366,11 +382,13 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO rrw_app;
 **Optional — carry data across.** If you must preserve existing data rather
 than start clean:
 
-- `pg_dump` the personal `rrw` DB → `pg_restore` into the NUS `rrw` DB (run
+- `pg_dump` the personal `rrw` DB → `pg_restore` into the NUS `reviewrobin` DB (run
   the GRANT above first; restore as a role with rights). Match Postgres 16 on
   both ends.
-- Or, for session-level data only, use the app's own **Extract** (download
-  CSVs on personal) → **Rehydrate** (rebuild on NUS) per session.
+- **Not Rehydrate.** The app's **Extract** → **Rehydrate** round trip is not
+  a carry path today: Rehydrate is off by default (`REHYDRATE_ENABLED=false`
+  in `app/config.py`), its routes 404 in a deployed environment, and it is
+  deferred (`spec/rehydrate.md`).
 - Then run `alembic upgrade head` (or let the pipeline's migrate step) so the
   schema is current.
 
@@ -384,7 +402,7 @@ than start clean:
 4. **DB GRANT bootstrap** (§8); optional data carry-over.
 5. **NUS OIDC identity** + RG role + federated credential (§6.1).
 6. **Deploy to NUS out-of-band first** — the parallel `deploy_nus.yml` via
-   `workflow_dispatch` (§6.3), so nothing on personal is disturbed.
+   `workflow_dispatch` (§6.4), so nothing on personal is disturbed.
 7. **Verify NUS** (§10) end-to-end, including a real smoke-test session.
 8. **Custom domain / DNS** if used (§1).
 9. **Flip the trigger:** make the NUS workflow the `on: push` deploy; disable
@@ -444,9 +462,12 @@ subscription with Contributor:
 
 ## 13. Open questions to resolve with NUS
 
-- Do we get a subscription (self-serve) or ticket-based provisioning?
-- Networking posture — public+firewall vs private endpoint/VNet? (Drives §5.)
-- Who can create + admin-consent app registrations in the NUS tenant?
-- Custom domain under `nus.edu.sg`, or default hostname?
-- Any mandated WAF / App Gateway / logging/monitoring standards?
+Settled by v7: the networking posture (private endpoints and VNet, with an
+Application Gateway in front), admin consent in the NUS tenant, and the
+provisioned database. Still open:
+
+- Production hostname under `nus.edu.sg` — awaiting the NUS naming decision
+  (v7, "External blocker 2").
+- A deployable runner VM SKU — awaiting Microsoft Support (v7, "External
+  blocker 1").
 - Data carry-over required, or clean start on NUS?

@@ -2,13 +2,13 @@
 
 Review Robin Web uses **SQLAlchemy 2.x** with **Alembic** for migrations.
 
-The implementation contract for this segment lives in
+The original implementation contract is Segment 4A's plan,
 `guide/archive/segment_04A.md`. This document is the operator-facing how-to.
 
 ## Local development
 
 The default `database_url` is `sqlite:///./review_robin_web.db`. SQLite is
-sufficient for unit tests and most local development through Segment 5.
+sufficient for unit tests and local development.
 
 **Local Postgres is intentionally deferred** (see `guide/archive/segment_05A.md`
 §3.5). The repo no longer ships a `docker-compose.yml` for Postgres, and

@@ -42,8 +42,8 @@ CSV exports (`/operator/sessions/{id}/export/*.csv`,
 `bundle.zip`) and the audit-log CSV are **generated on demand and
 streamed** to the operator's browser. The app does not write them
 to server-side storage and does not retain them — there is no
-blob storage configured (storage is a deferred item, see
-`docs/security_posture.md`). The only copy of an export is the
+blob storage configured (application blob storage is deferred, see
+`spec/blob_storage.md` and `guide/segment_18Q_blob.md`). The only copy of an export is the
 file the operator downloaded.
 
 ## Import files
@@ -52,6 +52,14 @@ Uploaded roster / assignment / config CSVs are **parsed in
 memory and discarded** once the import completes. The app does
 not keep the uploaded file; only the resulting rows
 (reviewers / reviewees / assignments / …) are persisted.
+
+The one exception is **Rehydrate** (off by default,
+`REHYDRATE_ENABLED`): it stashes the uploaded file set in the
+`rehydrate_stashes` table between its Validate and Rehydrate
+requests. A stash expires after an hour and is deleted after a
+successful rehydrate, when an expired token is next read, or with
+its operator's `users` row; nothing sweeps abandoned stashes on a
+schedule.
 
 ## Data retention
 
