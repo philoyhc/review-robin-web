@@ -480,7 +480,9 @@ number (`=`, `≠`, `≥`, `>`, `≤`, `<`) or with a **range**: *within* or
 strictly below the high one; an inclusive *outside* counts the ends as
 outside. A List parent's condition is `is` or `is not` against one
 option or several, read as *any of* / *none of*. An unanswered parent,
-or an answer that does not parse against its type, closes the branch.
+or an answer that does not parse against its type, fails the
+condition: a Show branch closes, and a Require branch's fields stay
+answerable but optional.
 A visible governed field can be required only when the instrument also
 has an active required field outside any branch — the **anchor**, which
 every submit answers — and Save and the settings CSV refuse it
@@ -683,9 +685,10 @@ per session. They are set on Create, on the Session details card's
 **Tags** sub-card ([§9.4](#94-session-details-config-card)), and from
 the lobby's row and bulk expanders, whose typeahead offers the tags
 already on the operator's sessions; the lobby's tag-filter strip
-filters on them ([§9.1](#91-lobby-management)). Each change is audited
-as `session.tag_added` or `session.tag_removed`, and the tags
-round-trip through Settings.csv. `spec/sessions_overview.md` owns the
+filters on them ([§9.1](#91-lobby-management)). Each change made in a
+tag editor is audited as `session.tag_added` or `session.tag_removed`.
+The tags also round-trip through Settings.csv and are copied by a
+clone; neither of those paths writes a tag event. `spec/sessions_overview.md` owns the
 lobby's filter.
 
 ---
@@ -730,7 +733,7 @@ treats the session in lobby and extract surfaces.
   closed and all responses are preserved. From `expired` the
   operator can **Revert to draft** to reopen the session for
   editing (the revert path accepts both `ready` and `expired`).
-- **`* → archived`**: The Workflow card offers **Archive** only in
+- **`* → archived`**: The Workflow card offers **Archive session** only in
   `expired`. The lobby's **Purge and archive** (row or bulk
   expander) and the Extract data page's **Archive session** card
   archive from `draft`, `validated` or `expired` — never `ready`,
@@ -741,7 +744,7 @@ treats the session in lobby and extract surfaces.
   `expired`, from `responses_release_at` until
   `responses_release_until` ([§8.3](#83-schedule-fields)). In
   `expired` the Workflow card offers **Release responses** to open
-  it now and **Stop releasing** to end it.
+  it now and **Stop releasing responses** to end it.
 
 The reviewer surface is open for writes **only in `ready`**, before
 the deadline. Past the deadline, and in `expired`, it still loads
@@ -829,10 +832,11 @@ Two entry paths exist:
 
 - **Unique invitation link** (`/me/invite/{token}`). The
   token is per-reviewer, per-session, redeemed to a durable session
-  URL. The invitation row stores only its hash. A send mints a fresh
-  token and puts it in the email body, which the `email_outbox` row
-  keeps, so a sys admin can re-read the link that was sent. The link
-  stays usable until the next send or a Regenerate rotates the token;
+  URL. The invitation row stores only its hash. An invitation send
+  mints a fresh token and puts it in the email body, which the
+  `email_outbox` row keeps, so a sys admin can re-read the link that
+  was sent; a reminder reuses that link. The link stays usable until
+  the next invitation send or a Regenerate rotates the token;
   a token minted at create time or by Regenerate is never written
   anywhere in the clear. It is a pointer, not a credential:
   redemption requires sign-in and a matching email (§11.1).
@@ -877,11 +881,14 @@ remove a co-owner, themselves included; the last owner cannot be
 removed. Each add or remove saves at once and is audited as
 `session.owner_added` / `session.owner_removed`. The card renders
 locked, and **Unlock** enables its controls — a guard against
-accidental edits, not a permission. There is no owner management on
-the sys-admin surface: a non-owner admin can only **self-add** (the
-adopt bootstrap from Sessions Diagnostics) or clone; removing owners
-and editing config require real ownership. `spec/session_owners.md`
-owns the contract.
+accidental edits, not a permission. Per-session add and remove are
+for owners only: a non-owner admin can only **self-add** (the adopt
+bootstrap from Sessions Diagnostics) or clone. The one exception is
+Accounts Management's **remove from all sessions**, which takes a
+user off every session's owners at once, refused where they are the
+sole owner, without the admin owning those sessions
+([§4.1](#41-system-administrator-three-tier-model)).
+`spec/session_owners.md` owns the contract.
 
 ---
 
@@ -1536,8 +1543,9 @@ The operator's Settings page (`/operator/settings`) carries:
 
 - **Email send (SMTP)** — host, port, from-email / username,
   password (encrypted at rest), display name, encryption mode
-  (`starttls` or `ssl`, the latter implicit TLS; left unset it
-  resolves to `starttls`).
+  (`starttls` or `ssl`, the latter implicit TLS). Every field but
+  display name is required: until all are set, email reads as not
+  configured.
 - **Date & time** — the operator's default display timezone (IANA
   typeahead with a worked-example live preview).
 - **Clear all settings** — wipes the SMTP fields on the account.
@@ -1569,22 +1577,26 @@ the chrome's user menu. It carries:
   history.
 - **Audit-events CSV download** per session.
 
-There is no owner management here. Owners are managed on Session
-Home's Owners card by the session's own owners
-([§7.4](#74-session-ownership)); a non-owner sys-admin's only door is
-the self-add.
+There is no per-session owner management here: owners are added and
+removed on Session Home's Owners card by the session's own owners
+([§7.4](#74-session-ownership)), and a non-owner sys-admin's only
+per-session door is the self-add. Accounts Management's **remove
+from all sessions** is the one bulk exception.
 
 ### 9.15 Guide, About and theme
 
-The chrome of every page, operator and participant alike, carries
-**Guide** and **About** links, each passing `?return_to=` so the page
-can link back to where the viewer came from, and a **Light / Dark**
-theme toggle.
+The operator chrome and the participant top bar carry **Guide** and
+**About** links, each passing `?return_to=` so the page can link back
+to where the viewer came from, and a **Light / Dark** theme toggle.
+The standalone error page has no chrome. Neither link renders on its
+own page or on `/auth/me/debug`, and the Guide link is also omitted
+for a viewer the Guide has nothing for.
 
 - **`/guide`** is the in-app documentation: one page of sections
   addressed to operators, reviewers, observers and reviewees. A viewer
   sees only the sections for the roles they hold — operator from the
-  workspace allowlist, the participant roles from their roster rows
+  workspace allowlist (sys-admins included), the participant roles
+  from their roster rows
   (a reviewee only while a visibility grant resolves). It grants
   nothing and holds nothing privileged. A viewer who holds no role is
   redirected (303) to `/about`, and the chrome omits their Guide link.
@@ -1743,8 +1755,10 @@ not once per member.
 The reviewer surface uses an **explicit Save** model. **Save** is
 always enabled — there is no dirty tracking — and persists the
 current page's inputs, then reloads that page; saving with no edits
-is a harmless no-op. **Cancel** reloads the page from its last-saved
-values, dropping unsaved typing. There is no unsaved-changes warning
+is a harmless no-op. If a value is invalid, Save answers 400 and
+re-renders the page in place with a warning card and the typed value
+kept; the valid values still save. **Cancel** reloads the page from
+its last-saved values, dropping unsaved typing. There is no unsaved-changes warning
 on leaving a page.
 
 Clearing a cell to empty deletes that response row. There is
@@ -1762,7 +1776,7 @@ every page. On click:
    every assigned row.
 3. If any required cell is empty, the submit is blocked and the
    page Submit was pressed on re-renders with a full-width
-   "Missing required" card enumerating the gaps row-by-row
+   "Required fields missing." card enumerating the gaps row-by-row
    (`Page N: Reviewee X — field Y`). No partial submit happens.
 4. If validation passes, every populated cell receives a
    `submitted_at` timestamp in one atomic transaction; per-
@@ -1859,9 +1873,12 @@ creates one **invitation** row carrying:
 - The reviewer's email.
 - A unique **token** — generated at create time, embedded in the
   email body as a sign-in URL, and stored on the invitation row only
-  as a SHA-256 **hash**. Each send mints a fresh token; that email
-  body, raw token included, is kept on its `email_outbox` row (visible
-  to sys admins). The link is reusable until the next send or a
+  as a SHA-256 **hash**. Each invitation send mints a fresh token;
+  that email body, raw token included, is kept on its `email_outbox`
+  row (visible to sys admins). A reminder reuses the most recent
+  invitation link, minting a token only when there is none to reuse
+  and it falls back to an invitation send. The link is reusable until
+  the next invitation send or a
   Regenerate (per invitation or bulk) rotates the token, after which
   the outbox copy is stale. A token minted at create time or by
   Regenerate is never stored in the clear. **It is not a
@@ -2186,8 +2203,8 @@ report at the top.
 The Validate page (`/operator/sessions/{id}/validate`) reports
 the session's readiness findings, each an **error**, **warning** or
 **info**. Errors block `draft → validated` and activation; warnings
-and info do not block but must be acknowledged at activation, on
-`/validate?activate=1`. Every issue carries a "Fix on {page} ↗"
+do not block but must be acknowledged at activation, on
+`/validate?activate=1`; info is advisory only. Every issue carries a "Fix on {page} ↗"
 deep-link to the page that fixes it. The checks themselves, with
 their severities, are `spec/validate_page.md` §3.2's to list.
 
@@ -2201,7 +2218,7 @@ partial.
 On Submit, required-field validation runs across every
 instrument's every assigned row. Missing required fields
 block the submit and are enumerated row by row in the
-"Missing required" card. Invalid numeric values block the
+"Required fields missing." card. Invalid numeric values block the
 submit with a per-cell error and preserve the user's typed
 value.
 
@@ -2264,7 +2281,8 @@ Coverage:
 - **Setup mutations** — `reviewers.imported`,
   `instrument.field_added`, `relationships.deleted_all`, etc.
 - **Assignment regeneration** — `assignments.generated`,
-  with per-reason exclusion counts in its `context`.
+  with per-reason exclusion counts as `excluded_<reason>` keys in
+  its `counts` payload.
 - **Response mutations** — `responses.saved`,
   `responses.submitted`, `responses.cleared`,
   `responses.deleted_all`.
@@ -2315,8 +2333,8 @@ the end-of-cycle transition; Revert is a mid-cycle setup edit.
 
 ### 16.2 Archive
 
-Operator-driven, reversible. The Workflow card offers **Archive**
-once the session is `expired`; the Sessions lobby's **Purge and
+Operator-driven, reversible. The Workflow card offers **Archive
+session** once the session is `expired`; the Sessions lobby's **Purge and
 archive** and the Extract data page's **Archive session** card
 archive a `draft`, `validated` or `expired` session, never a `ready`
 one ([§6.1](#61-transitions)). Archived sessions:
