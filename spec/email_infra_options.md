@@ -179,7 +179,7 @@ Today's `email_outbox` table is the audit log. Its shape:
 | `cc_emails` / `bcc_emails` | text, comma-separated | Populated from the editor's CC / BCC overrides at queue time. |
 | `subject` | text | The merged subject. |
 | `body` | text | The merged body. |
-| `status` | enum | Canonical set `EMAIL_OUTBOX_STATUSES` — `{queued, sending, sent, failed}`. Only `queued` and `sent` are ever persisted: the enqueue path writes `queued` and flips it to `sent` in the same transaction, with no transport call. `sending` and `failed` exist for a dispatcher that does not yet run. |
+| `status` | enum | Canonical set `EMAIL_OUTBOX_STATUSES` — `{queued, sending, sent, failed}`. Only `queued` and `sent` are ever persisted: the invitation and reminder paths write `queued` and flip it to `sent` in the same transaction, with no transport call, while a `responses_received` row stays `queued`. `sending` and `failed` exist for a dispatcher that does not yet run. |
 | `created_at` | timestamp | When the row was written. |
 | `sent_at` | timestamp | When the row flipped to `sent`; null while `queued`. |
 
@@ -650,8 +650,8 @@ A reasonable sequence:
    14B Part A. First call site for the existing
    `transport_for` factory; first writer of Step 3's columns.
    Per-row Send + bulk Send + Send-test-to-me + dispatch helper
-   + chrome pill + audit events + responses-received submit-
-   time enqueue.
+   + chrome pill + audit events, and sending the responses-received
+   rows a submit already queues.
 5. ◻ **`correlation_id` strategy + idempotent retry** — Segment
    14B Part B.
 6. ◻ **Bulk-send queue + background worker** — Segment 14B

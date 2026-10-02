@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import date_formatting
+from app.services import invitations as invitations_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
@@ -399,6 +400,13 @@ async def reviewer_submit(
             context,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
+    invitations_service.queue_responses_received(
+        db,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=user,
+        correlation_id=request_correlation_id(),
+    )
     state = responses_service.reviewer_session_state(
         db, reviewer=reviewer, session_id=review_session.id
     )

@@ -10,9 +10,11 @@
   <h2 style="margin-top: 0;">Outbox — {{ outbox_session.name }}</h2>
   <p class="muted">
     Dev-mode email outbox. No real SMTP backend is wired up;
-    rows are flipped <code>queued → sent</code> synchronously when
-    an operator clicks <em>Send</em>. The rendered body includes
-    the raw invitation URL so you can copy it into a real client.
+    invitation and reminder rows are flipped <code>queued → sent</code>
+    synchronously when an operator clicks <em>Send</em>, and a
+    responses-received row stays <code>queued</code>. An invitation's
+    rendered body includes the raw invitation URL so you can copy it
+    into a real client.
   </p>
 
   {% if outbox_rows %}

@@ -17,8 +17,9 @@ if TYPE_CHECKING:
 # Canonical value sets for the ``status`` and ``kind`` string columns.
 # Documented here so any future widening is a deliberate edit. Until
 # Segment 14B Part A wires the dispatch helper, the enqueue paths only
-# ever write ``"queued"`` (status) and ``"invitation"`` / ``"reminder"``
-# (kind); the wider sets below are scaffolding for that work.
+# ever write ``"queued"`` (later flipped to ``"sent"`` for invitations and
+# reminders) and the three kinds below; ``sending`` and ``failed`` are
+# scaffolding for that work.
 EMAIL_OUTBOX_STATUSES: tuple[str, ...] = ("queued", "sending", "sent", "failed")
 EMAIL_OUTBOX_KINDS: tuple[str, ...] = ("invitation", "reminder", "responses_received")
 
@@ -28,9 +29,10 @@ class EmailOutbox(Base):
     responses-received notification).
 
     Pre-Segment-14B the row is a dev-mode preview surface: there is no
-    real transport, so ``status`` flips ``queued → sent`` synchronously
-    when the row is written and the operator views the rendered body
-    here. Segment 14B Part A lights up the actual send paths against
+    real transport, so an invitation or reminder row's ``status`` flips
+    ``queued → sent`` synchronously when it is written, a
+    responses-received row stays ``queued``, and the operator views the
+    rendered body here. Segment 14B Part A lights up the actual send paths against
     the audit-log columns added by Segment 11C PR F (``error_message``,
     ``from_address``, ``backend``, ``backend_message_id``,
     ``delivered_at``, ``payload_hash``, ``correlation_id``); the value

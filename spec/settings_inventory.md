@@ -231,7 +231,7 @@ meaning "use the default"):
 
 | Key | Default | Notes |
 |---|---|---|
-| `responses_received_enabled` | `True` (when absent) | Gates the post-submit confirmation auto-send. Stored, round-tripped and previewed; **no submit-time consumer reads it yet** (`spec/email_template_editor.md` §7). |
+| `responses_received_enabled` | `True` (when absent) | Gates the post-submit confirmation. A successful submit with it on queues one `responses_received` outbox row, which stays `queued` until a transport exists (`spec/email_template_editor.md` §7). |
 
 **Canonical spec:** `spec/operator_ui_concept.md` "Email Template"
 section; `app/services/email_templates.py` for the resolver

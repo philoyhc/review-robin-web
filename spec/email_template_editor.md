@@ -229,7 +229,7 @@ outbox row's `cc_emails` / `bcc_emails` unparsed.
 |---|---|---|
 | `invitations.send_invitation` / `send_reminder` | `render_invitation` / `render_reminder` + `cc_bcc_for` → an `EmailOutbox` row (`kind`, to / cc / bcc, merged `subject` + `body`) | **Wired, but nothing is transmitted.** The row is written `queued` and flipped to `sent` in the same transaction with no transport call — the dev-mode preview state described in `spec/rrw_functional_spec.md` §11.6. Lighting the `EmailTransport` is Segment 14B. |
 | Invitations per-reviewer drill-in (`app/web/views/_previews.py`) | all three renderers, with a placeholder invite URL and the named reviewer | Wired. |
-| Reviewer submit (the responses-received confirmation) | `responses_received_enabled` + `render_responses_received` | **No consumer exists.** The toggle is stored, round-tripped, audited and previewed, but no submit-time code path reads it; until Segment 14B wires the send, the checkbox is inert. |
+| Reviewer submit (the responses-received confirmation) | `responses_received_enabled` + `render_responses_received` + `cc_bcc_for` → `invitations.queue_responses_received` | **Queued, and work in progress awaiting Azure.** A successful submit (`/me/sessions/{id}/submit`) writes one `responses_received` `EmailOutbox` row when the toggle is on, and nothing when it is off, the submit is blocked or it recorded no response (author's ruling, 2026-10-02). A reviewer has one queued confirmation: a second submit refreshes it (a read then a write, not a constraint). Queueing runs after the submit commits and never fails it. A recall, a reviewer's clear-all or an operator's Delete Data leaves a queued confirmation in place. The row stays `queued` — unlike invitations and reminders it is not flipped to `sent` — until a transport exists; what to send of it then is decided with the transport (`guide/post_azure_todo_checklist.md` item 9). |
 | Settings CSV export / import, clone | the JSON wholesale (§8) | Wired. |
 
 ---
@@ -279,9 +279,10 @@ overrides)".
 |---|---|---|
 | `email_template.updated` | a Save that changed at least one key (including the toggle) | `changes` = `{key: [old, new]}`, `context.template` = kind |
 | `email_template.reset` | a Reset that removed an override | `changes`, `context.template`, `context.field` |
+| `responses_received.queued` | a successful submit queued, or refreshed, the confirmation (§7) | `refs` = `reviewer_id`, `outbox_id`; `context.refreshed`; actor = the reviewer |
 
-A Save or Reset that changes nothing writes **no** event. Both types
-are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
+A Save or Reset that changes nothing writes **no** event. All three
+types are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
 
 ---
 
@@ -299,6 +300,11 @@ are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
   dates in the session's zone (own zone, creator fallback, UTC), the
   responses-received default variants and `$invite_url` drop, and
   every branch of the `enabled` getter / setter.
+- `tests/integration/test_responses_received_queued.py` — the
+  submit-time queue (§7): queued on submit, nothing when the toggle is
+  off or the submit is blocked, one row refreshed on a second submit,
+  the subject kept within its column, and a queue failure that does
+  not fail the submit.
 - `tests/integration/test_email_dates_session_zone.py` — the same
   zone rule on mapped rows, through the session's creator.
 

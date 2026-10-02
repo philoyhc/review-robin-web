@@ -175,3 +175,16 @@ E1, E2 and E4 were checked by the author when they merged.
 - [ ] **Replicate keeps its suffix.** Rename an instrument to about 250
   characters, then Replicate it. The copy's name still ends " (copy)",
   with the source name trimmed to fit.
+
+## A submit queues the confirmation email (G4)
+
+- [ ] **On by default.** As a reviewer, submit on an Activated session.
+  In Admin → Sessions, open that session's outbox: one
+  responses-received row for that reviewer, status `queued`, its body
+  naming the submit time.
+- [ ] **A second submit refreshes it.** Recall and resubmit: still one
+  queued row for that reviewer, not two.
+- [ ] **Off sends nothing.** On the session's Email Template page,
+  choose Responses received, untick "Send this confirmation when a reviewer submits" and save.
+  Another reviewer's submit adds no row, and the submit itself still
+  succeeds.
