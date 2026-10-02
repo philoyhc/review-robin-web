@@ -198,3 +198,10 @@ E1, E2 and E4 were checked by the author when they merged.
 - [ ] **Values after release.** Close the session and let the release
   window open: the results page lists every reviewer with an included
   assignment, with submitted values filled and the rest empty.
+
+## Long session names still send (email subjects)
+
+- [ ] **Invite and remind on a long name.** Rename an Activated session
+  to about 250 characters, then send one invitation and one reminder
+  from Operations. Both succeed, and each outbox row's subject is cut
+  short rather than erroring.
