@@ -56,6 +56,7 @@ def test_import_config_success_redirects_with_flash(
     )
     response = client.post(
         f"/operator/sessions/{review_session.id}/import-config",
+        data={"confirm_replace": "true"},
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )
@@ -72,6 +73,7 @@ def test_import_config_lifecycle_gate_rejects_ready(
     payload = _build_csv([("instruments[1].name", "X", "string")])
     response = client.post(
         f"/operator/sessions/{review_session.id}/import-config",
+        data={"confirm_replace": "true"},
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )
@@ -93,6 +95,7 @@ def test_import_config_parse_error_redirects_with_parse_reason(
     )
     response = client.post(
         f"/operator/sessions/{review_session.id}/import-config",
+        data={"confirm_replace": "true"},
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )
@@ -108,6 +111,7 @@ def test_import_config_bad_header_rejected(
     review_session = _make_session(client, db, code="ic-hdr")
     response = client.post(
         f"/operator/sessions/{review_session.id}/import-config",
+        data={"confirm_replace": "true"},
         files={
             "file": (
                 "bad.csv",
@@ -132,6 +136,7 @@ def test_import_config_emits_audit_event(
     )
     response = client.post(
         f"/operator/sessions/{review_session.id}/import-config",
+        data={"confirm_replace": "true"},
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )
@@ -159,7 +164,94 @@ def test_import_config_route_rejects_non_operator(
     bob_client = make_client(bob)  # type: ignore[operator]
     response = bob_client.post(
         f"/operator/sessions/{review_session.id}/import-config",
+        data={"confirm_replace": "true"},
         files={"file": ("c.csv", b"field,value,data_type\n", "text/csv")},
         follow_redirects=False,
     )
     assert response.status_code in (403, 404)
+
+
+def _session_with_a_response(client: TestClient, db: Session, code: str):
+    from app.db.models import (
+        Assignment,
+        Instrument,
+        InstrumentResponseField,
+        Response,
+        Reviewee,
+        Reviewer,
+    )
+
+    review_session = _make_session(client, db, code=code)
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalars().first()
+    field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id
+        )
+    ).scalars().first()
+    reviewer = Reviewer(
+        session_id=review_session.id, name="Ana", email="ana@example.edu"
+    )
+    reviewee = Reviewee(
+        session_id=review_session.id,
+        name="Ben",
+        email_or_identifier="ben@example.edu",
+    )
+    db.add_all([reviewer, reviewee])
+    db.flush()
+    assignment = Assignment(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+        instrument_id=instrument.id,
+        include=True,
+        created_by_mode="rule_based",
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=field.id,
+            value="5",
+        )
+    )
+    db.commit()
+    return review_session
+
+
+def test_a_settings_replace_needs_the_tick_and_the_response_loss_ack(
+    client: TestClient, db: Session
+) -> None:
+    """A settings CSV rebuilds every instrument, deleting assignments and
+    responses. The server refuses it without the replacement tick, and,
+    where responses exist, without the response-loss acknowledgement;
+    nothing is deleted on a refusal (findings C3)."""
+    from app.db.models import Response
+
+    review_session = _session_with_a_response(client, db, "ic-c3")
+    payload = _build_csv([("instruments[1].name", "Eval", "string")])
+    url = f"/operator/sessions/{review_session.id}/import-config"
+
+    for data in ({}, {"confirm_replace": "true"}):
+        response = client.post(
+            url,
+            data=data,
+            files={"file": ("config.csv", payload, "text/csv")},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+        assert "quick_setup_reason=needs_confirm" in response.headers["location"]
+        db.expire_all()
+        assert db.execute(select(Response)).scalars().all() != []
+
+    response = client.post(
+        url,
+        data={"confirm_replace": "true", "acknowledge_response_loss": "true"},
+        files={"file": ("config.csv", payload, "text/csv")},
+        follow_redirects=False,
+    )
+    assert "config_imported=ok" in response.headers["location"]
+    db.expire_all()
+    assert db.execute(select(Response)).scalars().all() == []

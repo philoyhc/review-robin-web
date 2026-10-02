@@ -220,15 +220,16 @@ service writes an `audit_events` row).
 |---|---|---|---|
 | Delete response data (`/delete-data`) | `confirm=true`, **plus `_require_editable`** | `require_session_operator` | ✓ |
 | Delete session (`/delete`, `/bulk-delete`, `/bulk-delete-archived`) | `confirm=true`, **plus `_require_editable`** | `require_session_operator` / per-id check | ✓ |
-
-**`_require_editable` is a third gate, not a restatement of the other two** (19C Item 3, `app/web/routes_operator/_session_home.py`). Permission says *who*, the confirm token says *they meant it*, and this says *the session is in a state where destroying data is coherent*: both routes refuse while the session is `ready`, so an operator has to pause it first. A live review is the one moment when deleting its responses is most likely to be a mistake and least likely to be recoverable. See `spec/session_home.md` §3.
 | Close / reopen session (`/activate`, `/revert`, `/workflow/activate`) | `activate_confirm` banner | `require_session_operator` | ✓ |
 | Replace reviewers / reviewees roster | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
 | Replace assignments (import / generate / `delete-all`) | `confirm`/`confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
 | Replace relationships (`delete-all`) | `confirm=true` | `require_session_operator` | ✓ |
+| Replace settings (`/import-config`, Quick Setup Settings) — rebuilds every instrument, deleting assignments and responses | `confirm_replace` + response-loss ack (findings C3) | `require_session_operator` | ✓ |
 | Delete instrument / field | `confirm=true` | `require_session_operator` (via helper) | ✓ |
 | Reviewer clear (`/clear`) | `confirm=true` | `require_reviewer_in_session` | ✓ |
 | Revoke / regenerate invitation links | operator UI action | `require_session_operator` | ✓ |
+
+**`_require_editable` is a third gate, not a restatement of the other two** (19C Item 3, `app/web/routes_operator/_session_home.py`). Permission says *who*, the confirm token says *they meant it*, and this says *the session is in a state where destroying data is coherent*: both routes refuse while the session is `ready`, so an operator has to pause it first. A live review is the one moment when deleting its responses is most likely to be a mistake and least likely to be recoverable. See `spec/session_home.md` §3.
 
 User-facing warnings are rendered by the operator templates that
 own each confirm checkbox; they are not exercised by the test

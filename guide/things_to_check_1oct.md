@@ -117,3 +117,12 @@ E1, E2 and E4 were checked by the author when they merged.
   group-scoped instrument, answer a group, deactivate one member and
   Prepare, change the group's answer, then reactivate the member and
   Prepare. The reviewer sees the changed answer, not the old one.
+
+## Settings replace names its loss (C3)
+
+- [ ] **The tick says what a settings file does.** On Session Home's
+  Quick Setup card, the replacement tick ends "A settings file rebuilds
+  every instrument and deletes its assignments."
+- [ ] **A settings upload still needs the tick.** Unlock the card,
+  choose a settings CSV and leave the tick off: Submit stays disabled.
+  Tick it and submit: the settings apply.

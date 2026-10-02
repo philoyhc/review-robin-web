@@ -432,6 +432,8 @@ def test_the_settings_slot_commits_its_own_work(
             review_session=review_session,
             user=db.get(User, review_session.created_by_user_id),
             db=db,
+            replacing=True,
+            confirm_replace="true",
         )
     )
 
