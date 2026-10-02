@@ -126,27 +126,22 @@ stepper already makes lifecycle state explicit, and a second
 lifecycle explanation on the same page is redundant (see
 `spec/operator_ui_concept.md` P4).
 
-**The invitation gate is `validated` or `ready` at the route layer, and
-`ready` at most of the buttons.** All six invitation routes —
-`send-all`, `regenerate-all`, `{iid}/send`, `{iid}/regenerate`,
-`{iid}/remind`, `remind-incomplete` — call
-`_require_validated_or_ready` (`app/web/routes_operator/_operations.py`),
-so none of them is `ready`-only, reminders included.
+**The invitation gate: bulk send from `validated`, everything else
+`ready`.** Route and button agree (author's ruling, 2026-10-02, B17 /
+F17), in `app/web/routes_operator/_operations.py`:
 
-The stricter rule is a **UI** convention, and that is where the
-difference between the actions lives:
-
-- The Workflow card's **Send invites** is live from `validated` onward
-  (`send_invites_visible`, `app/web/views/_workflow_card.py`).
-- Its **Send reminders** renders only when `is_ready` — reminders fire
-  after the response window opens, by button gate rather than by route
-  gate.
-- Every **per-row** button on this page — Send, Regenerate, Send
-  reminder — carries `{% if not is_ready %}disabled{% endif %}`, so all
-  three are `ready`-only in practice however permissive their routes
-  are.
-- `regenerate-all` has no UI caller at all; it is reachable only by
-  POSTing the route.
+- `send-all` and `regenerate-all` call `_require_validated_or_ready`.
+  The Workflow card's **Send invites** is live from `validated` onward
+  (`send_invites_visible`, `app/web/views/_workflow_card.py`), so
+  reviewers can be notified before activation. `regenerate-all` has no
+  UI caller at all; it is reachable only by POSTing the route.
+- `{iid}/send`, `{iid}/regenerate`, `{iid}/remind` and
+  `remind-incomplete` call `_require_ready` and answer **409**
+  elsewhere. The Workflow card's **Send reminders** renders only when
+  `is_ready`, and every **per-row** button on this page — Send,
+  Regenerate, Send reminder — carries
+  `{% if not is_ready %}disabled{% endif %}`. Reminders fire after the
+  response window opens.
 
 ---
 
@@ -356,10 +351,9 @@ row exists:
 - **Regenerate** — always visible when an invitation row exists.
   POSTs to `/operator/sessions/{session_id}/invitations/{id}/regenerate`.
 
-**Send** and **Regenerate** are live from `validated` onward.
-**Send reminder** stays `ready`-only — reminders fire after the
-response window opens, not before. All three render `disabled`
-outside their allowed state.
+All three are `ready`-only, at the button and at the route
+(`_require_ready`, 409). Bulk **Send invites** on the Workflow card is
+the one way to send before activation.
 
 **Send also has a server-side eligibility gate**, which the button's
 visibility rule does not express. Since 19Q Item 2 rung 1 the route

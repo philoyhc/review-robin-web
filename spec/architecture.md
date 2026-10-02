@@ -439,10 +439,11 @@ an invitation always rotates the token, so a previously delivered URL
 becomes stale.
 
 State machine: `pending` → `sent` → `opened`. Generate is idempotent
-(operator-paced, no auto-trigger on activation). All invitation
-actions require the session to be `validated` or `ready`
+(operator-paced, no auto-trigger on activation). Bulk Send all and
+Regenerate all require the session to be `validated` or `ready`
 (`_require_validated_or_ready`, 409 otherwise) so the emailed link
-never points at a draft session.
+never points at a draft session; per-row Send / Regenerate and every
+reminder require `ready` (`_require_ready`).
 
 `/me/invite/{token}` requires Easy Auth sign-in (no magic-link
 anonymous access — that's deferred to Segment 16A). The route looks up

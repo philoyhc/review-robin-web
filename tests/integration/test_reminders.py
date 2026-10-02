@@ -468,3 +468,43 @@ def test_remind_incomplete_writes_no_audit_when_zero_targets(
     ).scalars().all()
     assert events == []
     assert reminders == []
+
+
+def test_per_row_actions_and_reminders_409_while_session_validated(
+    client: TestClient, db: Session
+) -> None:
+    """Per-row Send, Regenerate and Send reminder, and the bulk reminder,
+    are `ready`-only at the route as their buttons always were (B17 /
+    F17, author's ruling 2026-10-02). Bulk Send all keeps 18F's
+    "validated or ready" gate so the Workflow card can invite before
+    activation."""
+    session = _create_session(client, db, "validated-rem")
+    _populate(client, db, session.id, reviewers=["rae@example.edu"])
+    response = client.post(
+        f"/operator/sessions/{session.id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(session)
+    assert session.status == "validated"
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+
+    base = f"/operator/sessions/{session.id}/invitations"
+    for path in (
+        f"{base}/{invitation.id}/send",
+        f"{base}/{invitation.id}/regenerate",
+        f"{base}/{invitation.id}/remind",
+        f"{base}/remind-incomplete",
+    ):
+        response = client.post(path, follow_redirects=False)
+        assert response.status_code == 409, (path, response.text)
+
+    db.refresh(invitation)
+    assert invitation.sent_at is None
+
+    response = client.post(f"{base}/send-all", follow_redirects=False)
+    assert response.status_code == 303, response.text
+    db.refresh(invitation)
+    assert invitation.sent_at is not None

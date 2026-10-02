@@ -1250,13 +1250,22 @@ def test_detail_page_url_region_distinguishes_its_states(
     assert "No invitation URL has been issued yet." in card
     assert "creates one invitation per eligible reviewer" not in card
 
-    # Sent: the URL itself, and neither fallback.
+    # Sent: the URL itself, and neither fallback. Per-row Send is
+    # `ready`-only (B17, 2026-10-02), so activate first.
+    response = client.post(
+        f"/operator/sessions/{session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
     invitation = db.execute(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
-    client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send",
+        follow_redirects=False,
     )
+    assert response.status_code == 303, response.text
     card = _invitation_card(client.get(url).text)
     assert "/me/invite/" in card
     assert "No invitation URL has been issued yet." not in card
