@@ -269,6 +269,18 @@ def _view_policy_cell_errors(plan: _ParsedConfig) -> list[ApplyError]:
                             )
                         )
                         continue
+                if (
+                    audience == "peer_reviewer"
+                    and window == "after_release"
+                    and mode == "summarized"
+                ):
+                    # Retired 2026-10-02 (findings A18): the reviewer's
+                    # "Responses released" cell is Raw or off. A bundle
+                    # exported before then reads as off rather than
+                    # refusing the whole apply; off is what it showed.
+                    setattr(vp, f"{window}_granularity", None)
+                    setattr(vp, f"{window}_identification", None)
+                    continue
                 allowed = valid_modes_for_cell(audience, window)
                 if mode not in allowed:
                     errors.append(

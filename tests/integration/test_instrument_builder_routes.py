@@ -8965,7 +8965,7 @@ def test_band2_visibility_card_is_the_editor(
         editor,
     )
     assert chips == [
-        ("peer_reviewer", "after_release", "|raw|summarized", "raw"),
+        ("peer_reviewer", "after_release", "|raw", "raw"),
         ("reviewee", "after_release", "|raw|anonymized|summarized", "anonymized"),
         ("observer", "while_ongoing", "|summarized", "summarized"),
         ("observer", "after_release", "|raw|anonymized|summarized", "raw"),

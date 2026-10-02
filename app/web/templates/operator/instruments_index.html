@@ -1985,13 +1985,14 @@
                   <tbody>
                     {# You (reviewer) — their own submitted responses. Raw
                        while the session runs (the baseline self-view);
-                       after release —, Raw or Anonymized summaries. #}
+                       after release — or Raw (Anonymized summaries
+                       retired 2026-10-02, findings A18). #}
                     <tr>
                       <td style="padding: 4px 8px;">You (reviewer)</td>
                       <td style="padding: 4px 8px;">{{ b3_static_pill("Raw responses") }}</td>
                       <td style="padding: 4px 8px;">
                         {{ b3_mode_cycle("peer_reviewer", "after_release",
-                                          ["", "raw", "summarized"], _pr.after_release_mode) }}
+                                          ["", "raw"], _pr.after_release_mode) }}
                       </td>
                     </tr>
                     {# Reviewees — responses about them. — while the

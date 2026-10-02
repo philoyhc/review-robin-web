@@ -67,8 +67,8 @@ is left stricter until ruled on. Grouped by what the ruling is about.
 **A contract the code never built.** Is it deferred or dropped? Either way
 the spec should say so.
 
-- **A18 = G11** — The peer-reviewer `after_release` grant is authored,
-  shown to reviewers on the transparency card, and read by nothing.
+- ~~**A18 = G11**~~ — **Ruled 2026-10-02: the reviewer's cells are Raw or
+  off.** `summarized` retired; #2723 made Raw read and off hide.
 - ~~**A19**~~ — **Ruled 2026-10-02: retire `observer_tag`.** Nothing read
   it; an observer's cohort rule decides who they see. Instrument scoping
   inside the cohort rule is deferred (`guide/deferred_consolidated.md`).
@@ -238,7 +238,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - A16 low · `:157` · Stop-release exists.
   - A17 low · `:59` · the observer events omit `cohort_rule_assigned` and `bulk_deleted`.
 - `visibility_policy.md`
-  - A18 high · `:73-78,116` · peer grant has no reader · author.
+  - ~~A18 high · `:73-78,116` · peer grant has no reader · author.~~ Ruled: Raw or off.
   - ~~A19 high · `:35,180-190` · `observer_tag` is unenforced and wiped · author + code.~~ Ruled: retired.
   - A20 med · `:117` · the reviewee cell "Default `after_release`" contradicts §4.1. Read `test_doc_conventions.py` before editing the tokens.
   - A21 low · `:217` · `resolve_mode` applies no scope; the views do.
@@ -434,7 +434,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - G8 med-high · `:1586-1670` · pages, dirty state and Save; `reviewer-surface.md` wins.
   - G9 low-med · `:714,1565` · non-open states render pre-open.
   - ~~G10 med-high · `:418,1210,1568` · visibility-when-closed · author.~~ Ruled: policy decides; done in #2723.
-  - G11 low-med · peer grant (= A18).
+  - ~~G11 low-med · peer grant (= A18).~~
   - G12 med · `:2088-2102` · readiness checklist overstated; consolidate with `validate_page.md`.
   - G13 low-med · `:2123` · export validation · author.
   - G14 low-med · `:1835-1851` · invites fire from `validated`; the captions are on the Workflow card.
