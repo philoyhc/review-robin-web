@@ -586,8 +586,14 @@ Steps:
      `session.self_reviews_active` for self pairs; and `False`
      whenever the reviewer or the reviewee is inactive. A status
      change reaches the row at the next Prepare, which recomputes
-     `include` on every kept row; until then invitations, the
-     reviewer's surface and Validate read `status` directly.
+     `include` on every kept row. Until then Validate reads `status`
+     directly, so it already reports what that Prepare will leave;
+     invitations and the reviewer's surface read `include` (and the
+     reviewer's own status). A roster status change returns the
+     session to draft, so Prepare runs again before it is live. The
+     Self review column and its toggle count and flip only rows with
+     both sides active: an inactive side's row stays excluded by
+     status, not by the toggle.
 
 The engine is pure (no DB writes); the materialise step is the
 caller's responsibility. `app/services/assignments/` is the
@@ -1039,12 +1045,13 @@ Prepare step — then for each instrument:
      responses survive untouched, but their
      `Assignment.include` is **recomputed, not preserved**.
      `_diff_one_instrument` sets the expected value to
-     `self_reviews_active` for a self-review pair and `True`
-     for every other pair, and `_materialise_one_instrument`'s
+     `self_reviews_active` for a self-review pair, `True`
+     for every other pair, and `False` whenever either side is
+     inactive (findings B2), and `_materialise_one_instrument`'s
      to-keep loop writes it back
      whenever it differs from the stored one — so an
-     operator's manual Inactivate on a non-self pair is reset
-     to `True` on the next Generate. That reset is the
+     operator's manual Inactivate on a non-self pair between two
+     active people is reset to `True` on the next Generate. That reset is the
      deliberate state of the round trip today, not an
      oversight: assignment-row status carries through no
      export and no clone, and restoring it is future work

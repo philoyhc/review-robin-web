@@ -571,7 +571,8 @@ def _materialise_one_instrument(
     # recomputed, not preserved: the expected value is
     # ``self_reviews_active`` for a self-review pair and ``True`` for
     # every other, and ``False`` whenever either side is inactive, so
-    # this also resets a row an operator inactivated by hand. Deliberate for now — assignment-row status round-trips
+    # this also resets a row an operator inactivated by hand.
+    # Deliberate for now — assignment-row status round-trips
     # through nothing, and restoring it is future work (19N Item 1,
     # Semantics 6 / ``spec/roundtrip_coverage.md``).
     for key in diff.to_keep:

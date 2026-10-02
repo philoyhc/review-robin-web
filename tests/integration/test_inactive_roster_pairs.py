@@ -153,3 +153,62 @@ def test_validate_warns_an_active_reviewer_left_with_no_active_work(
     assert messages == [
         "Reviewer 'Bo' (bo@example.edu) has no active assignments"
     ]
+
+
+def test_the_self_review_column_ignores_a_row_excluded_by_status(
+    db: Session,
+) -> None:
+    """An inactive person's self-review row is excluded by roster
+    status, not by the Self review toggle: the column does not read it
+    as mixed, and ticking the toggle leaves it excluded."""
+    user, review_session = _seed(db)
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Ana as reviewee",
+            email_or_identifier="ana@example.edu",
+        )
+    )
+    db.commit()
+    review_session.self_reviews_active = True
+    db.commit()
+    _prepare(db, user, review_session)
+    instrument_id = db.execute(select(Assignment.instrument_id)).scalars().first()
+    assert assignments.self_review_breakdown_per_instrument(
+        db, review_session.id
+    ) == {instrument_id: (1, 0)}
+
+    _set_status(db, Reviewer, "Ana", "inactive")
+    _prepare(db, user, review_session)
+    assert assignments.self_review_breakdown_per_instrument(
+        db, review_session.id
+    ) == {}
+    assignments.set_instrument_self_reviews_active(
+        db,
+        review_session=review_session,
+        instrument_id=instrument_id,
+        user=user,
+        active=True,
+        correlation_id="c",
+    )
+    self_row = db.execute(
+        select(Assignment).where(Assignment.is_self_review.is_(True))
+    ).scalar_one()
+    assert self_row.include is False
+
+
+def test_nothing_included_is_reported_once_not_per_reviewer(
+    db: Session,
+) -> None:
+    """With every row excluded, ``assignments.no_included_pairs`` says
+    so once; ``reviewer_missing`` does not repeat it per reviewer."""
+    user, review_session = _seed(db)
+    _prepare(db, user, review_session)
+    for row in db.execute(select(Assignment)).scalars():
+        row.include = False
+    db.commit()
+    keys = [
+        i.rule_key for i in validation.validate_session_setup(db, review_session)
+    ]
+    assert "assignments.no_included_pairs" in keys
+    assert "assignments.reviewer_missing" not in keys
