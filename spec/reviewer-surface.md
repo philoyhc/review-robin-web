@@ -919,12 +919,15 @@ differently:
   also `status == "active"` only. SQLite's `lower()` is ASCII-only
   while Postgres's is Unicode-aware, so the two sides agree on ASCII
   addresses only.
-- **Invitation landing** — folds both sides through `normalize_email`,
-  but `invitations.lookup_invitation_by_token` applies no status
-  filter. Today an inactive reviewer therefore passes the invite
-  check, and the redirect then lands on the surface's 404. This is a
-  known gap (`guide/findings_2026-10-01_corpus.md`), not the
-  contract.
+- **Invitation landing** (`/me/invite/{token}`,
+  `app/web/routes_reviewer/_invite.py`) — `invitations.invitation_admits`
+  folds both sides through `normalize_email` and admits only an
+  `active` reviewer. An inactive reviewer is treated as if not a
+  reviewer at all: the same 403 mismatch page any other signed-in
+  user gets, and the visit records no open (no `opened_at`, no
+  `invitation.opened` event). The token lookup itself stays
+  status-blind, so the link answers as a mismatch rather than as an
+  unknown token's 404 (author's ruling, 2026-10-02).
 
 A user can have at most one active `Reviewer` row per session. A
 session can have multiple reviewers, each tied to a distinct user.

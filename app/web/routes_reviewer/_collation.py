@@ -110,6 +110,15 @@ def observer_collation_instrument_csv(
     identification mode the operator set on Band 3."""
     observer, review_session = observer_session
 
+    # Archive forces every non-operator audience off
+    # (``spec/visibility_policy.md`` §3.3), stated here as the other
+    # ``resolve_mode`` readers state it rather than left to both window
+    # predicates reading False once archived. 404, the answer this
+    # route already gives an instrument the observer cannot see — and
+    # the page offers no download link once archived.
+    if lifecycle.is_archived(review_session):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
     instrument = db.execute(
         select(Instrument).where(
             Instrument.id == instrument_id,

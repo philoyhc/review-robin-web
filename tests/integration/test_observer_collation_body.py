@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -26,6 +27,7 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+from app.web.routes_reviewer import _collation
 
 
 def _make_session(
@@ -950,3 +952,61 @@ def test_collation_csv_404_when_user_is_not_an_observer(
         f"{seeded['instrument'].id}.csv"
     )
     assert response.status_code == 404
+
+
+# ── Archive guard on the CSV (spec/visibility_policy.md §3.3) ─────────
+
+_ARCHIVE_COHORT_RULE = {
+    "combinator": "AND",
+    "rules": [
+        {
+            "field": "reviewer.tag1",
+            "op": "IS",
+            "operand_tag": "",
+            "operand_value": "mathcohort",
+        }
+    ],
+}
+
+
+def _archived_csv_url(client: TestClient, db: Session, *, code: str) -> str:
+    """A session whose observer CSV serves Raw rows while ``ready`` —
+    asserted here, so the 404s below cannot pass vacuously — and is then
+    archived."""
+    review_session = _make_session(client, db, code=code)
+    seeded = _seed_one_instrument(db, review_session)
+    _add_observer(
+        db,
+        review_session,
+        email="alice@example.edu",
+        cohort_rule=_ARCHIVE_COHORT_RULE,
+    )
+    url = (
+        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"{seeded['instrument'].id}.csv"
+    )
+    assert client.get(url).status_code == 200
+    review_session.status = "archived"
+    db.commit()
+    return url
+
+
+def test_collation_csv_404_once_the_session_is_archived(
+    client: TestClient, db: Session
+) -> None:
+    """The contract, whichever mechanism enforces it: the same 404 the
+    route gives an instrument the observer cannot see."""
+    url = _archived_csv_url(client, db, code="col-csv-archived")
+    assert client.get(url).status_code == 404
+
+
+def test_collation_csv_archive_guard_holds_if_a_window_predicate_relaxes(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The guard's own job, and the only way to see it fail: simulate a
+    window predicate relaxed to admit an archived session. Without the
+    route's ``is_archived`` short-circuit the while-ongoing Raw grant
+    resolves again and the CSV streams."""
+    url = _archived_csv_url(client, db, code="col-csv-archived-relaxed")
+    monkeypatch.setattr(_collation.lifecycle, "is_ready", lambda s: True)
+    assert client.get(url).status_code == 404

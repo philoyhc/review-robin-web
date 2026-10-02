@@ -399,6 +399,61 @@ def test_token_url_with_mismatched_email_returns_403(
     assert invitation.opened_at is None  # mismatch did not stamp
 
 
+def test_token_url_treats_an_inactive_reviewer_as_not_a_reviewer(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Author's ruling, 2026-10-02: an inactive reviewer at the invite
+    landing gets exactly what a signed-in non-reviewer gets — the 403
+    mismatch page — not the redirect into the surface's 404. Nor does
+    the visit count as an open: no ``opened_at`` stamp and no
+    ``invitation.opened`` audit event."""
+    operator = make_client(alice)
+    session = _ready_session(operator, db, code="inactive-open")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    outbox = db.execute(
+        select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
+    ).scalar_one()
+    raw_token = _extract_invite_token(outbox.body)
+    reviewer = db.get(Reviewer, invitation.reviewer_id)
+    assert reviewer is not None and reviewer.email == "rae@example.edu"
+    reviewer.status = "inactive"
+    db.commit()
+
+    rae = AuthenticatedUser(
+        principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
+    )
+    response = make_client(rae).get(
+        f"/me/invite/{raw_token}", follow_redirects=False
+    )
+    eve = AuthenticatedUser(
+        principal_id="eve-oid", email="eve@example.edu", name="Eve", provider="aad"
+    )
+    stranger = make_client(eve).get(
+        f"/me/invite/{raw_token}", follow_redirects=False
+    )
+    assert response.status_code == stranger.status_code == 403
+    assert "belongs to someone else" in response.text
+
+    db.refresh(invitation)
+    assert invitation.opened_at is None
+    assert invitation.status == "sent"
+    assert (
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "invitation.opened"
+            )
+        ).first()
+        is None
+    )
+
+
 def test_token_url_with_unknown_token_returns_404(client: TestClient) -> None:
     response = client.get("/me/invite/not-a-real-token", follow_redirects=False)
     assert response.status_code == 404
