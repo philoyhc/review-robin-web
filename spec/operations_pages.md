@@ -519,17 +519,20 @@ terms as the Invitations progress columns above.
 
 ### Coverage state definitions
 
-Operator-meaningful summaries computed by `_classify_coverage` in
-`app/services/monitoring.py`, from the fraction of assigned reviewers
-who have responded:
+Operator-meaningful summaries computed in `app/services/monitoring.py`
+(`per_reviewee_coverage`, classified by `_classify_coverage`). The unit
+is the reviewee's **included assignments**, one per reviewer ×
+instrument, not distinct reviewers. An assignment is complete when it
+has a response row and every required field on its instrument carries a
+non-empty, submitted answer (an instrument with no required field counts
+any row). Coverage is the fraction of assignments complete:
 
-- **complete** — all assigned reviewers have responded.
+- **complete** — every included assignment is complete.
 - **adequate** — partial coverage at or above
   `AT_RISK_THRESHOLDS["adequate_fraction"]` (0.5).
 - **at risk** — partial coverage below that threshold. Coverage is the
   only input; the deadline plays no part.
-- **no responses** — zero reviewers have responded for this
-  reviewee, or none is assigned.
+- **no responses** — no included assignment is complete yet.
 
 These are guidance, not enforcement. The operator decides what to
 do; the coverage state helps them prioritize.
@@ -654,7 +657,9 @@ stays in reserve.
 
 The Assignments, Invitations and Responses pages are **flat in the
 roster**: the query count does not move with the roster size. The
-per-size figures are in `guide/app_responsiveness.md` (Finding 2).
+per-size query counts (25 × 25 to 200 × 200) are in
+`guide/app_responsiveness.md`, Finding 2, "Re-taken 2026-09-21 — flat
+in the roster".
 
 **Flat is the contract; the figures are the reading.** A legitimately
 added query moves a number without breaking anything, so the guards in

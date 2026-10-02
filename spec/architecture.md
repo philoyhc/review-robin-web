@@ -319,10 +319,12 @@ instrument the reviewer is assigned on. Within a single instrument:
   `InstrumentResponseField.help_text_visible`.
 - **Section heading** is composed from the instrument's
   `short_label` (prefixed `#{N}: ` when the session has more than one
-  instrument), with its `description` as the subtitle
-  (`instrument_heading` in `app/web/views/_instruments.py`; the
-  composition table is `spec/reviewer-surface.md` "Above the table —
-  heading + help block"). The system handle (`name`; `Default` on the
+  instrument), with its `description` as the subtitle. Without a
+  `short_label`, a single instrument's heading is its `description`
+  with no subtitle, and one of several is a bare `#{N}`
+  (`instrument_heading` in `app/web/views/_instruments.py`; the full
+  table is `spec/reviewer-surface.md` "Above the table — heading +
+  help block"). The system handle (`name`; `Default` on the
   auto-created instrument) is internal-only and never reviewer-visible.
 
 Across instruments — a reviewer assigned on multiple instruments for
@@ -364,8 +366,8 @@ authoritative "what works today" list, read **`docs/status.md`**
   per-section contract.
 - The reviewer surface renders one tabular artifact per instrument
   in DOM order, with section heading from `Instrument.short_label`
-  (subtitle `Instrument.description`) and a per-field help block above
-  each table.
+  (subtitle `Instrument.description`; the no-label cases are above)
+  and a per-field help block above each table.
 - Schema + services + operator UI are multi-instrument-aware
   (`create_instrument`, `delete_instrument`, FK cascades; the
   `Add an instrument` and `Delete this instrument` buttons).

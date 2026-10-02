@@ -202,9 +202,14 @@ columns already say.
 
 **Segment 11C Part 2 (truncated)** landed the audit-log columns
 the production send path will write at send time, as inert
-schema scaffolding — no wiring, no service-layer reads. They are
-on `email_outbox` today and nothing writes them; they are populated
-by **Segment 14B Part A** when the dispatch helper goes live:
+schema scaffolding. They are on `email_outbox` today. Six of them —
+`error_message`, `from_address`, `backend`, `backend_message_id`,
+`delivered_at`, `payload_hash` — are written by nothing yet and are
+populated by **Segment 14B Part A** when the dispatch helper goes live.
+`correlation_id` is already in use: scheduled reminders stamp it
+(`reminder:{session_id}:{reviewer_id}:{offset_index}`) and read it back
+to skip a reviewer already reminded at that offset
+(`app/services/scheduled_events/_reminders.py`):
 
 - `error_message` (Text, nullable) — captured on failure so the
   Outbox / Invitations diagnostic surfaces can render the
@@ -589,9 +594,10 @@ to all. ✅ = shipped, ◻ = pending.
    `cc_emails` / `bcc_emails`, `error_message` + the future-target
    columns (`from_address` / `backend` / `backend_message_id` /
    `delivered_at` / `payload_hash` / `correlation_id`) and the
-   widened status / kind value-sets are in place as inert schema
-   scaffolding (**Segment 11C Part 2**). **Segment 14B Part A** is
-   the first call site that writes to them.
+   widened status / kind value-sets are in place as schema
+   scaffolding (**Segment 11C Part 2**). Only `correlation_id` is
+   written today, by scheduled reminders; **Segment 14B Part A** is
+   the first call site that writes the rest.
 4. ◻ **A `correlation_id` strategy** for idempotent sends
    across invitation, reminder, and other kinds — Segment 14B
    Part B.
@@ -634,7 +640,8 @@ A reasonable sequence:
 2. ✅ **Operator credential storage** — per-operator SMTP
    credentials on `users`, encrypted at rest.
 3. ✅ **Outbox audit-log column scaffolding** — Segment 11C
-   Part 2. Inert; populated at send time by Step 4. Landed the
+   Part 2. Inert apart from `correlation_id` (scheduled reminders);
+   populated at send time by Step 4. Landed the
    columns (`error_message` + future-target additions) and the
    widened status / kind value-sets so the wiring in Step 4
    doesn't have to ship Alembic churn alongside its logic
