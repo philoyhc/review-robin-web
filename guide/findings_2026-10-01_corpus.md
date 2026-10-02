@@ -183,10 +183,12 @@ fixing a no-ruling row (#2731–#2738). **All eight ruled 2026-10-02.**
   say so.
 - **A27** — **Ruled: fix; the rows should sort.** The server orders
   `response:N` keys. Code PR to follow.
-- **Invite landing ignores `Reviewer.status`** — **Ruled: an inactive
-  reviewer is treated as not a reviewer at all.** Code PR to follow.
-- **Observer per-instrument CSV** — **Ruled: add the archive guard.**
-  Code PR to follow.
+- ~~**Invite landing ignores `Reviewer.status`**~~ — **Ruled: an inactive
+  reviewer is treated as not a reviewer at all. Done in #2740**: their
+  token resolves as not found (404), and per-row Remind refuses them
+  with Send's 409.
+- ~~**Observer per-instrument CSV**~~ — **Ruled: add the archive guard.
+  Done in #2740.**
 - ~~**Auto-send caption treats `expired` / `archived` as prepared**~~ —
   **Ruled: scheduled send is work in progress awaiting Azure. Recorded
   in #2739** as `guide/post_azure_todo_checklist.md` item 7.
