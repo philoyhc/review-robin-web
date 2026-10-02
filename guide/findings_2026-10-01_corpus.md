@@ -58,11 +58,13 @@ is left stricter until ruled on. Grouped by what the ruling is about.
   into the new draft session (it copies every column but id and stamps).
   `spec/roundtrip_coverage.md` and `spec/rehydrate.md` say it is not
   cloned.
-- **C3** — A Quick Setup settings replace deletes instruments, assignments
-  and responses. Only the UI checkbox guards it, with no server-side
-  confirm or response-loss check. The spec says it has no cascade.
-- **B16** — `POST /delete-data` takes `confirm` only, not the response-loss
-  acknowledgement that `spec/lifecycle.md` lists for it.
+- ~~**C3**~~ — **Ruled 2026-10-02: gate it on the server and name the
+  loss.** A Quick Setup settings replace deleted instruments, assignments
+  and responses behind a UI-only checkbox, and the spec said it had no
+  cascade.
+- ~~**B16**~~ — **Ruled 2026-10-02: the Delete Data tick is the
+  acknowledgement.** `POST /delete-data` took `confirm` only, not the
+  response-loss acknowledgement `spec/lifecycle.md` listed for it.
 
 **A contract the code never built.** Is it deferred or dropped? Either way
 the spec should say so.
@@ -270,7 +272,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - B14 low · `:918,923` · generate invalidates `validated`; the remind gate is B17.
 - `lifecycle.md`
   - B15 med · `:76-78` · `mark_validated` callers; `?validated=1` · spec + author.
-  - B16 med · `:260-269` · response-loss ack callers · author.
+  - ~~B16 med · `:260-269` · response-loss ack callers · author.~~ Ruled: the tick is the ack.
   - B17 med · `:271-291` · `_require_validated_or_ready` lives in `_operations.py` and refuses every non-validated/ready state; reminders gate · author.
   - B18 med · `:663-668` · `resolve_offset` has no callers · author.
   - B19 med · `:759-770` · sweep trigger · ruled: awaits Azure (`post_azure_todo_checklist.md` item 7).
@@ -298,7 +300,7 @@ One line each: id · severity · where · finding · decides. A line with no
 - `quick_setup_card_spec.md`
   - C1 high · `:23-25` · lock-toggle prose · author (likely spec).
   - C2 med · `:34-49,87-91` · counts and messages removed · author.
-  - C3 med · `:77` · settings replace cascades · author.
+  - ~~C3 med · `:77` · settings replace cascades · author.~~ Ruled: gated on the server; the spec names the cascade.
   - C4 low · `:67,79,131` · checkbox below the grid; copy (+ code banner, §2).
   - C5 low · `:25,121` · `closed` → `expired`.
   - C6 low · `:83` · the settings per-slot route isn't allowlisted (no UI calls it).

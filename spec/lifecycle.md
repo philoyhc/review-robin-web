@@ -259,8 +259,13 @@ Detail message: `"Session is <status>; revert to draft to edit"`.
 Raises **HTTP 400 Bad Request** when responses already exist and
 the request didn't carry `acknowledge_response_loss=true`. Called
 from routes whose mutations would invalidate stored reviewer
-responses (roster delete-all, assignment delete-all, full
-session delete).
+responses: reviewer and reviewee delete-all, assignment Generate and
+delete-all, and Quick Setup's roster and settings replaces (which
+answer `needs_confirm` rather than 400). **Delete Data and Delete
+session do not call it**: each carries its own confirm tick that
+names the loss ("Yes, delete every reviewer response on …"), and that
+tick is the acknowledgement (author's ruling 2026-10-02,
+`guide/findings_2026-10-01_corpus.md` B16).
 
 Detail message: `"Existing reviewer responses will be discarded;
 tick 'acknowledge response loss' to proceed"`.

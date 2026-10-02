@@ -118,6 +118,7 @@ def test_import_config_route_via_quick_setup_slot(
     )
     response = client.post(
         f"/operator/sessions/{review_session.id}/import-config",
+        data={"confirm_replace": "true"},
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )
@@ -156,6 +157,7 @@ def test_submit_all_runs_settings_after_rosters_and_relationships(
 
     response = client.post(
         f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        data={"confirm_replace": "true"},
         files={
             "reviewers_file": ("r.csv", REVIEWER_CSV, "text/csv"),
             "reviewees_file": ("e.csv", REVIEWEE_CSV, "text/csv"),
@@ -198,6 +200,7 @@ def test_submit_all_settings_parse_error_surfaces_in_settings_slot(
     )
     response = client.post(
         f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        data={"confirm_replace": "true"},
         files={"settings_file": ("c.csv", bad_payload, "text/csv")},
         follow_redirects=False,
     )

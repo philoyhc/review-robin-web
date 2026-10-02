@@ -377,6 +377,7 @@ async def create_session(
             review_session=review_session,
             user=user,
             db=db,
+            replacing=False,
             correlation_id=correlation_id,
         )
         if reason is not None:
@@ -952,6 +953,9 @@ async def quick_setup_submit_all(
             review_session=review_session,
             user=user,
             db=db,
+            replacing=True,
+            confirm_replace=confirm_replace,
+            acknowledge_response_loss=acknowledge_response_loss,
         )
         if reason is not None:
             return error_redirect("settings", reason)
@@ -975,6 +979,8 @@ async def quick_setup_submit_all(
 )
 async def import_session_config(
     file: UploadFile = File(...),
+    confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -986,7 +992,9 @@ async def import_session_config(
     submitted reviewer responses the session carried over from a
     prior activation cycle — ``apply_session_config`` clears them
     explicitly so the rebuild does not trip the ``responses`` foreign
-    key.
+    key. It therefore needs ``confirm_replace=true``, and
+    ``acknowledge_response_loss=true`` when responses exist (findings
+    C3).
 
     Reachable from Quick Setup slot 4 (PR 4) and as a direct
     POST endpoint — same success / error redirect shape the
@@ -1002,6 +1010,9 @@ async def import_session_config(
         review_session=review_session,
         user=user,
         db=db,
+        replacing=True,
+        confirm_replace=confirm_replace,
+        acknowledge_response_loss=acknowledge_response_loss,
     )
     if reason is not None:
         return RedirectResponse(
@@ -1024,15 +1035,35 @@ async def _run_quick_setup_settings(
     review_session: ReviewSession,
     user: User,
     db: Session,
+    replacing: bool,
+    confirm_replace: str | None = None,
+    acknowledge_response_loss: str | None = None,
     correlation_id: str | None = None,
 ) -> str | None:
     """Reusable Settings-slot pipeline shared by the per-slot
     route, the submit-all handler, and the create-session
     handler. Returns the ``quick_setup_reason`` token on
-    failure, ``None`` on success."""
+    failure, ``None`` on success.
+
+    A settings CSV rebuilds every instrument, which deletes the
+    session's assignments and any responses with them. On an existing
+    session (``replacing``) the server therefore refuses it unless the
+    replacement tick was sent, and, when responses exist, unless the
+    response-loss acknowledgement was too — the same two gates the
+    roster slots apply (findings C3). Create-session passes
+    ``replacing=False``: there is nothing to replace."""
 
     if not lifecycle.is_editable(review_session):
         return "lifecycle"
+    if replacing:
+        if confirm_replace != "true":
+            return "needs_confirm"
+        try:
+            _require_response_loss_ack(
+                db, review_session, acknowledge_response_loss
+            )
+        except HTTPException:
+            return "needs_confirm"
 
     content = await file.read()
     if not content:
