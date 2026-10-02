@@ -161,6 +161,91 @@ def _reviewer_assignments(
     return list(db.execute(stmt).scalars())
 
 
+def _excluded_group_members(
+    db: Session,
+    reviewer: Reviewer,
+    session_id: int,
+    *,
+    assignments: list[Assignment],
+    group_instrument_ids: set[int],
+    group_key_by_assignment: dict[int, tuple[str, ...]],
+) -> tuple[list[Assignment], dict[int, tuple[str, ...]]]:
+    """This reviewer's excluded rows that belong to a group they still
+    review, with those rows' group keys.
+
+    A group's answers are kept on every member's row, and the form reads
+    one included member's copy. A member excluded because they went
+    inactive (findings B2), or by hand, is out of what the reviewer sees,
+    but their row is still the group's: saves, submits, recalls and
+    clears reach it too (author's ruling 2026-10-02), so reactivating
+    the member brings back the group's current answers.
+
+    Only members of a group with at least one **included** member
+    qualify. A group excluded whole — by the self-review toggle, or
+    because every member is inactive — is not the reviewer's to answer,
+    and nothing here reaches it.
+    """
+    if not group_instrument_ids:
+        return [], {}
+    candidates = list(
+        db.execute(
+            select(Assignment)
+            .where(
+                Assignment.session_id == session_id,
+                Assignment.reviewer_id == reviewer.id,
+                Assignment.include.is_(False),
+                Assignment.instrument_id.in_(group_instrument_ids),
+            )
+            .order_by(Assignment.id)
+        ).scalars()
+    )
+    if not candidates:
+        return [], {}
+    included_groups = {
+        (a.instrument_id, group_key_by_assignment.get(a.id, ()))
+        for a in assignments
+        if a.instrument_id in group_instrument_ids
+    }
+    keys = _group_key_by_assignment(
+        db,
+        assignments=candidates,
+        group_instrument_ids=group_instrument_ids,
+        session_id=session_id,
+    )
+    members = [
+        a
+        for a in candidates
+        if (a.instrument_id, keys.get(a.id, ())) in included_groups
+    ]
+    return members, {a.id: keys.get(a.id, ()) for a in members}
+
+
+def _with_excluded_group_members(
+    db: Session, reviewer: Reviewer, session_id: int
+) -> list[Assignment]:
+    """The reviewer's included rows plus :func:`_excluded_group_members`
+    — the rows a recall or clear acts on."""
+    assignments = _reviewer_assignments(db, reviewer, session_id)
+    group_instrument_ids = _group_instrument_ids(
+        db, {a.instrument_id for a in assignments}
+    )
+    group_key_by_assignment = _group_key_by_assignment(
+        db,
+        assignments=assignments,
+        group_instrument_ids=group_instrument_ids,
+        session_id=session_id,
+    )
+    excluded, _ = _excluded_group_members(
+        db,
+        reviewer,
+        session_id,
+        assignments=assignments,
+        group_instrument_ids=group_instrument_ids,
+        group_key_by_assignment=group_key_by_assignment,
+    )
+    return assignments + excluded
+
+
 def _instrument_fields_by_id(
     db: Session, instrument_ids: set[int]
 ) -> dict[int, list[InstrumentResponseField]]:
@@ -360,8 +445,9 @@ def _split_validated(
     position_by_instrument_id: dict[int, int],
 ) -> tuple[list[ResponseUpsert], list[ValidationError]]:
     """Partition upserts into (valid, errors) by running ``validate_value``
-    against each. Upserts that target an unknown assignment / field key are
-    treated as valid here — ``_apply_upserts`` already silently drops them."""
+    against each. Both callers drop upserts on any row but the reviewer's
+    included ones first; one on an unknown field key is treated as valid
+    here, and ``_apply_upserts`` silently drops it."""
     valid: list[ResponseUpsert] = []
     errors: list[ValidationError] = []
     for u in upserts:
@@ -502,6 +588,11 @@ def save_draft(
     # Validate the raw upserts first — a group-scoped instrument's
     # surface posts one upsert per group (keyed to a representative
     # member), so a bad value yields one error, not one per member.
+    # Only the reviewer's included rows take a posted value. Any other
+    # id is dropped here, before validation and the group fan-out, so
+    # an excluded row's id can never carry an unchecked value into a
+    # group (it used to be dropped later, at the write).
+    upserts = [u for u in upserts if u.assignment_id in assignment_index]
     valid_upserts, errors = _split_validated(
         upserts=upserts,
         assignment_index=assignment_index,
@@ -509,9 +600,20 @@ def save_draft(
         position_by_instrument_id=_session_position_map(db, review_session.id),
     )
     # Then fan the valid upserts out to every member of their group.
+    # An excluded member of a group the reviewer still reviews gets the
+    # group's answer too (``_excluded_group_members``).
+    excluded, excluded_keys = _excluded_group_members(
+        db,
+        reviewer,
+        review_session.id,
+        assignments=assignments,
+        group_instrument_ids=group_instrument_ids,
+        group_key_by_assignment=group_key_by_assignment,
+    )
+    group_key_by_assignment = {**group_key_by_assignment, **excluded_keys}
     valid_upserts = _expand_group_upserts(
         valid_upserts,
-        assignments=assignments,
+        assignments=assignments + excluded,
         group_instrument_ids=group_instrument_ids,
         group_key_by_assignment=group_key_by_assignment,
     )
@@ -519,7 +621,10 @@ def save_draft(
     written = _apply_upserts(
         db,
         upserts=valid_upserts,
-        assignment_index=assignment_index,
+        assignment_index={
+            **assignment_index,
+            **{a.id: a for a in excluded},
+        },
         field_index=field_index,
     )
     # 19T Item 10 — a closed branch holds no value, judged on the answers
@@ -603,15 +708,31 @@ def submit(
     # Validate the raw upserts before fanning group answers out, so a
     # bad value on a group-scoped instrument yields one error rather
     # than one per member.
+    # Only the reviewer's included rows take a posted value. Any other
+    # id is dropped here, before validation and the group fan-out, so
+    # an excluded row's id can never carry an unchecked value into a
+    # group (it used to be dropped later, at the write).
+    upserts = [u for u in upserts if u.assignment_id in assignment_index]
     valid_upserts, errors = _split_validated(
         upserts=upserts,
         assignment_index=assignment_index,
         field_index=field_index,
         position_by_instrument_id=position_by_instrument_id,
     )
+    # An excluded member of a group the reviewer still reviews gets the
+    # group's answer too (``_excluded_group_members``).
+    excluded, excluded_keys = _excluded_group_members(
+        db,
+        reviewer,
+        review_session.id,
+        assignments=assignments,
+        group_instrument_ids=group_instrument_ids,
+        group_key_by_assignment=group_key_by_assignment,
+    )
+    group_key_by_assignment = {**group_key_by_assignment, **excluded_keys}
     valid_upserts = _expand_group_upserts(
         valid_upserts,
-        assignments=assignments,
+        assignments=assignments + excluded,
         group_instrument_ids=group_instrument_ids,
         group_key_by_assignment=group_key_by_assignment,
     )
@@ -619,7 +740,10 @@ def submit(
     written = _apply_upserts(
         db,
         upserts=valid_upserts,
-        assignment_index=assignment_index,
+        assignment_index={
+            **assignment_index,
+            **{a.id: a for a in excluded},
+        },
         field_index=field_index,
     )
     # 19T Item 10 — a closed branch holds no value, judged on the answers
@@ -680,7 +804,7 @@ def submit(
 
     now = datetime.now(timezone.utc)
     submitted_count = 0
-    for assignment in assignments:
+    for assignment in assignments + excluded:
         rows = list(
             db.execute(
                 select(Response).where(Response.assignment_id == assignment.id)
@@ -740,7 +864,7 @@ def recall(
     intent in the log. Driver of the reviewer summary page's
     "Recall my submission" button.
     """
-    assignments = _reviewer_assignments(db, reviewer, review_session.id)
+    assignments = _with_excluded_group_members(db, reviewer, review_session.id)
     recalled_count = 0
     for assignment in assignments:
         rows = list(
@@ -780,8 +904,10 @@ def clear_all(
     user: User,
     correlation_id: str,
 ) -> ClearResult:
-    """Delete every Response row for this reviewer's assignments in the session."""
-    assignments = _reviewer_assignments(db, reviewer, review_session.id)
+    """Delete every Response row for this reviewer's assignments in the
+    session, including an excluded group member's copy of the group's
+    answers (``_excluded_group_members``)."""
+    assignments = _with_excluded_group_members(db, reviewer, review_session.id)
     deleted = 0
     for assignment in assignments:
         rows = list(

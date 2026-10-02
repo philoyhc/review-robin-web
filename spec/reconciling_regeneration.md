@@ -54,7 +54,9 @@ A pair's identity is `(reviewer_id, reviewee_id)` within the
 
 `_materialise_one_instrument` sets `include` per pair: self-review
 pairs take `review_session.self_reviews_active`; all other pairs are
-`True`.
+`True`; and any pair whose reviewer or reviewee is inactive is `False`
+(findings B2). An inactive side's pairs are kept, not dropped, so a
+deactivate → Prepare → reactivate round trip keeps their responses.
 
 **What counts as a self-review is not a pair-level test.** On a
 group-scoped instrument the engine applies the **whole-group** rule —
@@ -70,8 +72,8 @@ On reconcile:
   from the stored value (operator toggled `self_reviews_active`
   during the pause), `UPDATE` the single column in place. This is
   metadata-only and never touches responses. The expected value is
-  `True` for every non-self-review pair, so a row an operator
-  inactivated by hand is reset to `True` here too — the
+  `True` for every non-self-review pair between two active people, so
+  a row an operator inactivated by hand is reset to `True` here too — the
   round-trip gap `spec/roundtrip_coverage.md` records, not a
   self-review-only path.
 

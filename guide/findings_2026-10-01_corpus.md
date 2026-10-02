@@ -111,11 +111,13 @@ the spec should say so.
   #2724.** A
   blocked Submit re-rendered page 1. It now re-renders the page Submit
   was pressed on.
-- **B2** — Inactive reviewers and reviewees are generated into
-  assignments. The code and its tests treat this as intended, and the spec
-  says active only.
-- **B4** — `reviewer_missing` tests whether a row exists, not `include`,
-  so a reviewer whose rows are all excluded is not flagged.
+- ~~**B2**~~ — **Ruled 2026-10-02: an inactive side keeps its pairs,
+  `include=False`.** Prepare wrote them `include=True`; the spec said
+  active only. Keeping the rows keeps their responses through a
+  deactivate → reactivate round trip.
+- ~~**B4**~~ — **Ruled 2026-10-02: warn an active reviewer with no active
+  assignments.** `reviewer_missing` tested whether a row existed, so a
+  reviewer whose rows were all excluded was not flagged.
 - **B7** — Group self-review: `include` follows the roster, while the
   `is_self_review` column follows the materialised rows.
 - **B17 = F3, with F17** — Reminders and per-row invitation actions:
@@ -251,9 +253,9 @@ One line each: id · severity · where · finding · decides. A line with no
   - A27 low-med · `:104-116` · the server drops `response:N` keys, so a response-only cookie flickers.
 - `assignments.md`
   - B1 high · `:87-90,500-511,682` · there is no `Assignment.group_key` column; it is derived by `responses.group_keys`.
-  - B2 high · `:68-70,566` · inactive rows are generated · author.
+  - ~~B2 high · `:68-70,566` · inactive rows are generated · author.~~ Ruled: kept, excluded.
   - B3 med · `:891-894` · `col_data_sample` is gone.
-  - B4 med · `:1151-1167` · Validation-surfaces rules: scope, never-generated and links are *spec*; `include` is *author*.
+  - ~~B4 med · `:1151-1167` · Validation-surfaces rules: scope, never-generated and links are *spec*; `include` is *author*.~~ Ruled: active work only.
   - B5 low · `:159` · helper name.
   - B6 low · `:1019,1084` · no UI posts to `/assignments/generate`.
   - B7 low · `:426-461` · group self-review · author.

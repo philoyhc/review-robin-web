@@ -386,6 +386,21 @@ def verify_self_review_classification(
     ]
 
 
+def _active_self_review_rows():
+    """Self-review ``Assignment`` rows whose reviewer and reviewee are
+    both active."""
+    return (
+        select(Assignment)
+        .join(Reviewer, Reviewer.id == Assignment.reviewer_id)
+        .join(Reviewee, Reviewee.id == Assignment.reviewee_id)
+        .where(
+            Assignment.is_self_review.is_(True),
+            Reviewer.status == "active",
+            Reviewee.status == "active",
+        )
+    )
+
+
 def self_review_breakdown_per_instrument(
     db: Session, session_id: int
 ) -> dict[int, tuple[int, int]]:
@@ -403,11 +418,15 @@ def self_review_breakdown_per_instrument(
     policy*). Reads the canonical ``Assignment.is_self_review``
     column directly. Instruments with none are absent from the
     dict.
+
+    Only rows whose reviewer and reviewee are both active count: an
+    inactive side's rows are excluded by roster status, not by this
+    toggle (findings B2), and counting them would show the column
+    mixed when no one touched it.
     """
     rows = db.execute(
-        select(Assignment).where(
+        _active_self_review_rows().where(
             Assignment.session_id == session_id,
-            Assignment.is_self_review.is_(True),
         )
     ).scalars().all()
     out: dict[int, tuple[int, int]] = {}
@@ -449,11 +468,12 @@ def set_instrument_self_reviews_active(
     # Read the canonical column to pick self-review rows on this
     # instrument. The column is the source of truth post-
     # consolidation (PR 1/2 of ``guide/self_review_consolidate.md``).
+    # Rows with an inactive side stay excluded: the toggle is about
+    # self-review, not roster status (findings B2).
     rows = db.execute(
-        select(Assignment).where(
+        _active_self_review_rows().where(
             Assignment.session_id == review_session.id,
             Assignment.instrument_id == instrument_id,
-            Assignment.is_self_review.is_(True),
         )
     ).scalars().all()
     flipped = 0

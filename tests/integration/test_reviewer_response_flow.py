@@ -2494,3 +2494,159 @@ def test_surface_visibility_policy_card_reflects_persisted_policy(
     # summaries" (operators see "summarized" as the encoded mode;
     # the reviewer-surface wording is gentler).
     assert "Anonymized summaries" in body
+
+
+def test_an_excluded_group_member_keeps_the_groups_answers(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A group member excluded from the review (inactive, findings B2,
+    or by hand) still receives the group's answers, and a clear removes
+    them, so reactivating the member brings back the group's current
+    answers rather than stale ones (author's ruling 2026-10-02). The
+    member stays excluded throughout."""
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Grp Excluded", "code": "grp-excl"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "grp-excl")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Team A\n"
+                b"Eve,eve@example.edu,Team A\n"
+                b"Dan,dan@example.edu,Team B\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    # Set the group boundary directly: group by RevieweeTag1, so
+    # Team A (Carol, Eve) and Team B (Dan) are two distinct groups.
+    group = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+    group.group_kind = "r1"
+    db.commit()
+
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    _activate(operator, db, review_session)
+
+    by_reviewee = {
+        a.reviewee.name: a
+        for a in db.execute(
+            select(Assignment)
+            .where(Assignment.session_id == review_session.id)
+            .where(Assignment.instrument_id == group.id)
+            .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        ).scalars()
+    }
+    assert set(by_reviewee) == {"Carol", "Eve", "Dan"}
+
+    eve = by_reviewee["Eve"]
+    eve.include = False
+    db.commit()
+
+    def _rating(assignment: Assignment) -> str | None:
+        rows = db.execute(
+            select(Response).where(Response.assignment_id == assignment.id)
+        ).scalars().all()
+        return {r.response_field.field_key: r.value for r in rows}.get("rating")
+
+    rae_client = make_client(rae)
+    for value in ("4", "2"):
+        response = rae_client.post(
+            f"/me/sessions/{review_session.id}/1/save",
+            data={f"response[{by_reviewee['Carol'].id}][rating]": value},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303, response.text
+        db.expire_all()
+        assert _rating(by_reviewee["Carol"]) == value
+        assert _rating(eve) == value
+        assert _rating(by_reviewee["Dan"]) is None
+    assert db.get(Assignment, eve.id).include is False
+
+    # Posting the excluded row's id directly writes nothing: it is not
+    # the reviewer's to answer, and an out-of-range value must not ride
+    # the group fan-out past validation.
+    for url in ("save", "submit"):
+        rae_client.post(
+            f"/me/sessions/{review_session.id}/{url}",
+            data={f"response[{eve.id}][rating]": "99"},
+            follow_redirects=False,
+        )
+        db.expire_all()
+        assert _rating(by_reviewee["Carol"]) == "2"
+        assert _rating(eve) == "2"
+
+    # Team B, excluded whole (Dan is its only member), is not the
+    # reviewer's group: a clear leaves its old answer alone.
+    dan = by_reviewee["Dan"]
+    field_id = db.execute(
+        select(Response.response_field_id).where(
+            Response.assignment_id == by_reviewee["Carol"].id
+        )
+    ).scalar_one()
+    dan.include = False
+    db.add(Response(assignment_id=dan.id, response_field_id=field_id, value="3"))
+    db.commit()
+
+    response = rae_client.post(
+        f"/me/sessions/{review_session.id}/clear",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.expire_all()
+    assert _rating(eve) is None
+    assert _rating(by_reviewee["Carol"]) is None
+    assert _rating(dan) == "3"
+
+    # Submit and recall leave the whole excluded group alone too: its
+    # old answer is never stamped submitted on the reviewer's behalf.
+    def _dan_submitted() -> bool:
+        db.expire_all()
+        row = db.execute(
+            select(Response).where(Response.assignment_id == dan.id)
+        ).scalar_one()
+        return row.submitted_at is not None
+
+    rae_client.post(
+        f"/me/sessions/{review_session.id}/submit",
+        data={f"response[{by_reviewee['Carol'].id}][rating]": "1"},
+        follow_redirects=False,
+    )
+    assert not _dan_submitted()
+    rae_client.post(
+        f"/me/sessions/{review_session.id}/recall", follow_redirects=False
+    )
+    assert not _dan_submitted()
+    assert _rating(dan) == "3"
