@@ -453,8 +453,8 @@ are two-state toggles, and no §6 role covers a toggle: each renders
 
 | # | Card / sub-section | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 223 | Response-field row | R | `<button type="button">` | `btn` (on) / `btn secondary` (off) | **TBD (author)** | Toggles the field's `required`; disabled while a Require branch governs the field |
-| 224 | Response-field row | ≡ | `<button type="button">` | `btn` (on) / `btn secondary` (off) | **TBD (author)** | Toggles the field's help-text card on the reviewer surface (`help_text_visible`) |
+| 223 | Response-field row | R | `<button type="button">` | `btn` (on) / `btn secondary` (off) | **TBD (author)** | Toggles the field's `required`; disabled ("Enter a field name first.") while the row has no field name, and while a Require branch governs the field |
+| 224 | Response-field row | ≡ | `<button type="button">` | `btn` (on) / `btn secondary` (off) | **TBD (author)** | Toggles the field's help-text card on the reviewer surface (`help_text_visible`); disabled ("Enter a field name first.") while the row has no field name |
 
 ---
 

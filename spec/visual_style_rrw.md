@@ -463,7 +463,7 @@ There is no separate thank-you page. A submit that closes out every assignment i
 
 - H1 "Your responses — [session name]", with a muted "Submitted on [date]" line under it.
 - The reviewer's submitted responses, one section per instrument, as far as the visibility policy allows.
-- A short action row: download the responses as CSV, recall the submission while the session is still Activated, and a link back to the reviewer dashboard.
+- A short action row: download the responses as CSV (only when at least one section is visible), recall the submission while the session is still Activated, and a link back to the reviewer dashboard.
 
 Tone: calm and brief. The reviewer is finished; the page should confirm what was received and let them go.
 
