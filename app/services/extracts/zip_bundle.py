@@ -232,7 +232,7 @@ def build_by_instrument_bundle(
 
     One CSV per included instrument, named
     ``{code}_by_instrument_{slug}.csv`` where ``{slug}`` is the
-    instrument's short label (or the ``Instrument_{N}`` fallback)
+    instrument's short label (or the ``Instrument_{session_seq}`` fallback)
     sanitised for filesystem safety. Each CSV carries a meta
     header + the wide-format data table — see
     ``by_instrument_extract.py``.
@@ -241,10 +241,9 @@ def build_by_instrument_bundle(
 
     * ``instrument_ids`` — when provided, only these instruments
       ship. ``None`` (default) = every instrument on the session.
-      Position numbering follows the session-order sequence
-      regardless of which subset is selected, so the
-      ``Instrument_{N}`` fallback stays stable as the operator
-      toggles chips on / off.
+      The ``Instrument_{session_seq}`` fallback is fixed per
+      instrument, so it stays stable as the operator toggles chips
+      on / off.
     * ``include_metadata`` — when False, each CSV skips the meta
       header block (and the blank separator row) and starts
       directly with the data-table header.

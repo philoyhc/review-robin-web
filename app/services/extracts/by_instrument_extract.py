@@ -47,6 +47,7 @@ from app.services import responses as responses_service
 from app.services.date_formatting import iso_in_zone
 from app.services.instruments import decode_band1_state, decode_group_kind
 from app.services.instruments._instrument_crud import GROUP_KIND_SENTINEL
+from app.services.instruments import _instrument_label
 from app.services.participant_tokens import ParticipantTokenizer
 from app.services.sessions import resolve_session_timezone
 
@@ -63,14 +64,12 @@ __all__ = [
 
 
 def fallback_instrument_label(instrument: Instrument, position: int) -> str:
-    """The human-facing instrument label for the meta header.
-
-    Uses ``Instrument.short_label`` when set; falls back to the
-    ugly positional ``Instrument_{N}`` so the meta row is never
-    blank."""
-    if instrument.short_label and instrument.short_label.strip():
-        return instrument.short_label.strip()
-    return f"Instrument_{position}"
+    """The human-facing instrument label for the meta header: the
+    operator pages' own label (``_instrument_label``) — ``short_label``
+    when set, else ``Instrument_{session_seq}``, which a reorder does
+    not change. ``position`` is unused, kept for the callers'
+    signature."""
+    return _instrument_label(instrument)
 
 
 def by_instrument_filename_slug(
@@ -78,17 +77,17 @@ def by_instrument_filename_slug(
 ) -> str:
     """A filesystem-safe slug for the per-instrument CSV name.
 
-    Built from the short label (or the ``Instrument_{N}``
+    Built from the short label (or the ``Instrument_{session_seq}``
     fallback) — keeps alphanumerics + ``-`` + ``_``, collapses
     runs of other characters into a single ``_``. Empty slug
-    after sanitisation falls through to ``Instrument_{N}``.
+    after sanitisation falls through to ``Instrument_{session_seq}``.
     Collisions resolve by appending ``_{position}`` and mutating
     ``used`` in place so the caller's loop stays one-pass.
     """
     base = fallback_instrument_label(instrument, position)
     slug = re.sub(r"[^A-Za-z0-9_-]+", "_", base).strip("_")
     if not slug:
-        slug = f"Instrument_{position}"
+        slug = f"Instrument_{instrument.session_seq}"
     candidate = slug
     if candidate in used:
         candidate = f"{slug}_{position}"

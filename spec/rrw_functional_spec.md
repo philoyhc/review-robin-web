@@ -1510,7 +1510,8 @@ offline analysis. It is deliberately not an in-app analysis tool
 dimension the operator asks for. Cards:
 
 - **Extract all data** — a top-level `Zip all` of the response
-  files (`{code}_responses.zip`), scoped by chip.
+  files (`{code}_responses.zip`); its Data shaper and Token keys
+  chips scope it.
 - **By instrument** — one wide CSV per instrument (rows =
   reviewer × reviewee pairs, columns = response fields
   side-by-side) for cross-reviewer comparison.

@@ -274,9 +274,11 @@ def test_selected_string_field_ships_length(db: Session) -> None:
     )
 
 
-def test_blank_short_label_falls_back_to_positional(db: Session) -> None:
+def test_blank_short_label_falls_back_to_the_session_seq(db: Session) -> None:
     review_session = _session(db, code="fb")
     instrument = _instrument(db, review_session, short_label=None, order=0)
+    instrument.session_seq = 5
+    db.flush()
     _field(db, instrument, _NUMERIC, field_key="score", label="Score")
 
     rows = build_reviewer_metadata(
@@ -285,7 +287,7 @@ def test_blank_short_label_falls_back_to_positional(db: Session) -> None:
         instrument_ids={instrument.id},
         all_reviewers=True,
     )
-    assert rows[0][4].startswith("#1: Instrument_1.Score")
+    assert rows[0][4].startswith("#1: Instrument_5.Score")
 
 
 def test_instrument_positions_follow_session_order_not_selection(

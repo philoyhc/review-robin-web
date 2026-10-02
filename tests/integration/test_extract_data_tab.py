@@ -556,7 +556,7 @@ def test_reviewer_metadata_card_renders_selectable_chips(
     client: TestClient, db: Session
 ) -> None:
     """The Reviewer response metadata card carries one chip per
-    instrument (by short label or ``Instrument_{n}`` fallback)
+    instrument (``#{n}``, with the short label when set)
     inline before the ``All reviewers`` toggle. All chips
     default to selected; the per-statistic chips moved into the
     extract column shape (numeric fields ship
@@ -670,7 +670,7 @@ def test_by_instrument_card_renders_selectable_chips(
     client: TestClient, db: Session
 ) -> None:
     """The By instrument card carries one chip per instrument
-    (by short label or ``Instrument_{n}`` fallback) plus the two
+    (``#{n}``, with the short label when set) plus the two
     cross-cutting toggles. All default to selected
     (``is-selected`` + ``aria-pressed="true"``)."""
     review_session = _make_session(client, db, code="ed-chips")
