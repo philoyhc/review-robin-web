@@ -1154,7 +1154,8 @@ of these points**, flagged inline; `spec/setup_pages.md`
   Activate, Delete), the selected count (`N of M selected`,
   where M is the rendered window) and the delete confirmation.
   In Edit / Add mode the row's cells become inputs and a Save +
-  Cancel pair renders in an expander bar beneath it. The
+  Cancel pair renders in an expander bar beneath it, and the
+  toolbar strip locks with `Add new` and `Search` disabled. The
   preview-count line sits in the toolbar's left pane and is
   shared by all seven preview pages.
 - **Upload card** and **Danger Zone card** — CSV file input +

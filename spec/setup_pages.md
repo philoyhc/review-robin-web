@@ -758,8 +758,8 @@ and its search reaches both sides of the pair without being told which,
 so there is no "Search by" side-picker.
 
 The strip greys out (`.is-locked`) and stops accepting clicks while a
-row is being edited or added, and `Add new` renders disabled in that
-state — the same lock the retired card's strip took.
+row is being edited or added, and `Add new` and `Search` render
+disabled in that state — the same lock the retired card's strip took.
 
 `Add` is labeled **`Add new`** on all four pages. The one-row
 constraint that shortened it went with `Delete`, which is in the
@@ -1186,7 +1186,8 @@ row's cells render as `<input>` / `<select>`; Add prepends a
 blank row at the top of the table. The Save / Cancel pair renders in
 an expander bar beneath the edited row, and the toolbar takes the lock
 the retired card's strip took: the filter form greys out and stops
-accepting clicks (`.is-locked`), and `Add new` renders disabled.
+accepting clicks (`.is-locked`), and `Add new` and `Search` render
+disabled.
 Editing a row's **status** to `inactive` /
 `active` is the inactivate / reactivate path — there is no
 separate per-row toggle. **Inactivate** / **Activate** flip the

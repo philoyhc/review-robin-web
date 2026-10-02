@@ -462,7 +462,11 @@ everywhere, so "you can click this" reads the same way on every control.
 > `pointer-events: none`. Markup carries the class **and**
 > `aria-disabled="true"` (an anchor cannot take the `disabled` attribute),
 > and never an inline `style` override: a role's disabled look has to move
-> in one place.
+> in one place. **One exception:** inside a container that already fades
+> as a whole — the roster toolbar's locked filter strip,
+> `.operator-actions-filter.is-locked` — a `.btn` takes `opacity: 1`, so
+> the 0.5 comes from the strip once rather than compounding to 0.25 and
+> leaving a disabled button fainter than the inputs beside it.
 
 > **No inline-styled buttons.** Every button takes a role from the table
 > above; an inline `style` on a button is a defect, because a role that

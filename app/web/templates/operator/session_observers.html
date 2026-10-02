@@ -647,7 +647,7 @@
                       NAVIGATION, not at the POST. #}
                    href="{{ observers_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}#{{ row_editor_anchor }}">Add new</a>
               {% endif %}
-              <button class="btn secondary" type="submit">Search</button>
+              <button class="btn secondary" type="submit"{% if edit_mode %} disabled{% endif %}>Search</button>
             </div>
           </form>
         </div>

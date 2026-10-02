@@ -186,7 +186,7 @@ def test_the_filter_strip_renders_in_the_toolbars_right_pane(
     right = _pane(html, "right")
     assert 'name="q"' in right, "the search box did not move"
     assert 'class="filter-status"' in right, "the status select did not move"
-    assert ">Search</button>" in right
+    assert 'type="submit">Search</button>' in right, "Search disabled outside edit"
     assert ">Add new</a>" in right, "Add did not move, or kept its old label"
 
 
@@ -351,7 +351,9 @@ def test_a_locked_session_offers_no_add_new_at_all(
         assert "?add=1" not in right, (status, page)
         # Reading a locked roster is legitimate, so the filter stays.
         assert 'name="q"' in right, (status, page)
-        assert ">Search</button>" in right, (status, page)
+        # Disabled only while a row is being edited, never by the lock:
+        # the bare `>Search</button>` also matched the disabled button.
+        assert 'type="submit">Search</button>' in right, (status, page)
 
 
 @pytest.mark.parametrize("page,noun", PAGES)
@@ -388,6 +390,15 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(
     right = _pane(_markup(html), "right")
     assert '<a class="btn secondary disabled" aria-disabled="true">Add new</a>' in right
     assert "?add=1" not in right, "a live Add new while a row is being edited"
+    # Search is disabled too, and neither button fades a second time
+    # inside the already-faded strip, so the two read alike (author's
+    # browser check, 2026-10-02: Add new looked fainter than Search).
+    assert 'type="submit" disabled>Search</button>' in right
+    assert re.search(
+        r"body\.ui-v2 \.toolbar-right \.operator-actions-filter\.is-locked \.btn \{"
+        r"\s*opacity: 1;",
+        html,
+    ), "a disabled button in the locked strip fades twice"
 
 
 # ── What the moved controls must keep ─────────────────────────────────
