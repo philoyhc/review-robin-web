@@ -27,7 +27,7 @@ notional one at the base:
    the workspace default (UTC).
 3. **Session** — each session's `display_timezone`
    (`sessions.display_timezone`), a field of the Create Session
-   and Edit Session Details forms. Captured at create time as a
+   form and Session Home's **Session details** card. Captured at create time as a
    **snapshot** of the creating operator's then-current default;
    may be deliberately overridden afterward. A snapshot, not a
    live link — changing the operator default later does not move
@@ -41,7 +41,7 @@ effective display zone:
     session.display_timezone  →  creating operator's default  →  UTC
 
 **The middle step exists for rows whose `display_timezone` is
-NULL.** The Create and Edit forms both write a concrete zone, so a
+NULL.** Create Session and the Session details card both write a concrete zone, so a
 new session resolves at the first step; dropping the fallback would
 render those rows in UTC rather than in their operator's zone. The
 operator default resolves the same way:
