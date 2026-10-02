@@ -486,10 +486,10 @@ def _response_field_rows(instrument: Instrument, n: int) -> list[Row]:
 def _view_policy_rows(instrument: Instrument, n: int) -> list[Row]:
     """Segment 18P PR A2 — the Band 3 visibility grid.
 
-    Emits one five-row block per ``InstrumentViewPolicy`` (per
+    Emits one four-row block per ``InstrumentViewPolicy`` (per
     audience), sorted by audience for byte-stable re-export. Each
     cell is a nullable string (the ``(granularity, identification)``
-    pair members + ``observer_tag``); an empty cell round-trips to
+    pair members); an empty cell round-trips to
     ``NULL``.
     """
     rows: list[Row] = []
@@ -521,13 +521,6 @@ def _view_policy_rows(instrument: Instrument, n: int) -> list[Row]:
             Row(
                 f"{prefix}.after_release_identification",
                 _str(policy.after_release_identification),
-                "string",
-            )
-        )
-        rows.append(
-            Row(
-                f"{prefix}.observer_tag",
-                _str(policy.observer_tag),
                 "string",
             )
         )

@@ -23,7 +23,6 @@ def _policy(
     while_ongoing_identification: str | None = None,
     after_release_granularity: str | None = None,
     after_release_identification: str | None = None,
-    observer_tag: str | None = None,
 ) -> InstrumentViewPolicy:
     """Build a detached policy row in memory — the resolver only
     reads attributes, no Session attachment required."""
@@ -34,7 +33,6 @@ def _policy(
         while_ongoing_identification=while_ongoing_identification,
         after_release_granularity=after_release_granularity,
         after_release_identification=after_release_identification,
-        observer_tag=observer_tag,
     )
 
 

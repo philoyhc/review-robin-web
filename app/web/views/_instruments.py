@@ -1109,17 +1109,14 @@ _BAND3_VISIBILITY_DEFAULTS: dict[str, dict[str, object]] = {
     "peer_reviewer": {
         "while_ongoing_mode": "raw",
         "after_release_mode": None,
-        "observer_tag": None,
     },
     "reviewee": {
         "while_ongoing_mode": None,
         "after_release_mode": None,
-        "observer_tag": None,
     },
     "observer": {
         "while_ongoing_mode": None,
         "after_release_mode": None,
-        "observer_tag": None,
     },
 }
 
@@ -1137,7 +1134,7 @@ def _band3_visibility_states_for(
     """Build the Band 3 visibility editor state for every instrument
     on the page. Returns ``{instrument_id: {audience: state}}``
     where ``state`` is a dict carrying ``while_ongoing_mode`` /
-    ``after_release_mode`` / ``observer_tag``. Each mode is one
+    ``after_release_mode``. Each mode is one
     of ``None`` / ``"raw"`` / ``"anonymized"`` / ``"summarized"``.
     Audiences with no persisted row fall back to
     :data:`_BAND3_VISIBILITY_DEFAULTS`."""
@@ -1162,7 +1159,6 @@ def _band3_visibility_states_for(
                     row.after_release_granularity,
                     row.after_release_identification,
                 ),
-                "observer_tag": row.observer_tag,
             }
         result[instrument.id] = per_audience
     return result

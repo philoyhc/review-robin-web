@@ -21,11 +21,9 @@ class InstrumentViewPolicy(Base, TimestampMixin):
     time (no materialization onto ``assignments``) to decide which
     audiences see this instrument's responses and in what form.
 
-    ``observer_tag`` is meaningful only when ``audience ==
-    'observer'``; the service layer enforces this convention (no
-    DB CHECK constraint). NULL means "all observers on the
-    session"; a tag value restricts the grant to observers
-    carrying that tag.
+    An ``observer_tag`` column, meant to restrict the observer grant
+    to observers carrying a tag, was dropped unread on 2026-10-02
+    (findings A19): an observer's cohort rule decides who they see.
 
     Lands inert per ``guide/archive/participant_model_upgrade.md`` Phase 1;
     the Band 3 editor lights the table up in Phase 3. See
@@ -56,6 +54,5 @@ class InstrumentViewPolicy(Base, TimestampMixin):
     while_ongoing_identification: Mapped[str | None] = mapped_column(String(16))
     after_release_granularity: Mapped[str | None] = mapped_column(String(16))
     after_release_identification: Mapped[str | None] = mapped_column(String(16))
-    observer_tag: Mapped[str | None] = mapped_column(String(255))
 
     instrument: Mapped[Instrument] = relationship(back_populates="view_policies")

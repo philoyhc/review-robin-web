@@ -61,7 +61,6 @@ def test_policy_persists_and_refetches(db: Session) -> None:
     assert refetched.while_ongoing_identification is None
     assert refetched.after_release_granularity == "row"
     assert refetched.after_release_identification == "deidentified"
-    assert refetched.observer_tag is None
 
 
 def test_policy_per_window_columns_default_to_null(db: Session) -> None:
