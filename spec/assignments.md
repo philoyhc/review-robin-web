@@ -642,8 +642,8 @@ The Operations-row page at
 
 1. **Per-instrument status table** — one row per instrument
    summarising the current materialisation.
-2. **Validation results banner** (when `?validated=1` or a
-   validation pass surfaces issues).
+2. **Validation results banner** — the template includes it, but
+   the route never passes it any issues, so it never renders.
 3. **Assignments preview card** — the row-level table of
    materialised pairs, with a per-row Include checkbox. It carries
    **no `<h2>`** — a preview-table card does not take one, and this

@@ -33,6 +33,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._validated import validate_session
 
 # Emails are deliberately in the **reverse** of name order.
 #
@@ -111,7 +112,8 @@ def _seed(client: TestClient, db: Session, code: str) -> ReviewSession:
 
     pin_full_matrix_on_all_instruments(db, s.id)
     generate_via_page_button(client, s.id)
-    client.get(f"/operator/sessions/{s.id}/assignments?validated=1")
+    validate_session(s)
+    client.get(f"/operator/sessions/{s.id}/assignments")
     resp = client.post(
         f"/operator/sessions/{s.id}/activate",
         data={"acknowledge_warnings": "true"},

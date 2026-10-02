@@ -133,11 +133,9 @@ with a composite *"Session metadata (name / code / description
 / deadline / help contact)"* where the code emits **Session
 name** and **Session code** as separate rows and nothing for
 description or deadline; and it ended with **Relationships**
-and an **Activation readiness** row carrying `_verdict(...)`.
-`_verdict` is computed and reaches
-`ValidateContext.verdict_line` / `.verdict_class`, but no
-template reads either — the verdict the operator sees is the
-lifecycle copy above the grid. Enumerated against the code at
+and an **Activation readiness** row. There is no verdict line:
+the error / warning / info counts are the severity chip strip.
+Enumerated against the code at
 19Q Item 7's close, after a first pass retired two of the
 three and left the composite standing, which then duplicated
 help contact.
@@ -407,7 +405,7 @@ two lifecycle gates that consume its output are:
 
 | Gate | Service | Behaviour |
 |---|---|---|
-| `?validated=1` on Session Home GET | `mark_validated(...)` (per `spec/lifecycle.md` §2.1) | Flips `draft → validated` iff `len(errors) == 0`. Warnings + info are advisory at this step. |
+| `POST /workflow/prepare` | `mark_validated(...)` (per `spec/lifecycle.md` §2.1) | Flips `draft → validated` iff `len(errors) == 0`. Warnings + info are advisory at this step. |
 | `POST /activate` | `activate_session(...)` (per `spec/lifecycle.md` §2.4) | Flips `validated → ready` iff `len(errors) == 0` and (no warnings OR `acknowledge_warnings=true`). |
 
 The activate-warns detour banner (§2.1) is the only operator

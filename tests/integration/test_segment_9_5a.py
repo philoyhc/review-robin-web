@@ -10,6 +10,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._validated import validate_session
 
 
 def _create_session(
@@ -53,9 +54,8 @@ def _populate(client: TestClient, db: Session, session_id: int) -> None:
     generate_via_page_button(client, session_id)
 
 
-def _validate(client: TestClient, session_id: int) -> None:
-    response = client.get(f"/operator/sessions/{session_id}/assignments?validated=1")
-    assert response.status_code == 200
+def _validate(db: Session, session_id: int) -> None:
+    validate_session(db, session_id)
 
 
 def _validated_session(
@@ -63,7 +63,7 @@ def _validated_session(
 ) -> ReviewSession:
     session = _create_session(client, db, code=code)
     _populate(client, db, session.id)
-    _validate(client, session.id)
+    _validate(db, session.id)
     db.refresh(session)
     assert session.status == "validated"
     return session
@@ -74,47 +74,19 @@ def _validated_session(
 # --------------------------------------------------------------------------- #
 
 
-def test_validated_query_flips_draft_to_validated_when_no_errors(
+def test_the_assignments_page_never_promotes_a_draft(
     client: TestClient, db: Session
 ) -> None:
+    """The retired ``?validated=1`` entry path (findings B15) used to
+    flip a clean draft to ``validated`` on this GET; nothing does now."""
     session = _create_session(client, db, code="t1-ok")
     _populate(client, db, session.id)
 
-    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
+    response = client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
 
-    db.refresh(session)
-    assert session.status == "validated"
-
-
-def test_validated_query_does_not_flip_when_errors_exist(
-    client: TestClient, db: Session
-) -> None:
-    session = _create_session(client, db, code="t1-err")
-    # No setup → validation has errors
-
-    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
-
+    assert response.status_code == 200
     db.refresh(session)
     assert session.status == "draft"
-
-
-def test_validated_query_idempotent_when_already_validated(
-    client: TestClient, db: Session
-) -> None:
-    session = _validated_session(client, db, code="t1-idem")
-
-    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
-
-    db.refresh(session)
-    assert session.status == "validated"
-    # Only one session.validated audit event
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.event_type == "session.validated",
-            AuditEvent.session_id == session.id,
-        )
-    ).scalars().all()
-    assert len(events) == 1
 
 
 def test_validate_deep_dive_does_not_flip_status(
@@ -383,7 +355,8 @@ def test_session_validated_audit_event(
     session = _create_session(client, db, code="audit-v")
     _populate(client, db, session.id)
 
-    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
+    validate_session(session)
+    client.get(f"/operator/sessions/{session.id}/assignments")
 
     event = db.execute(
         select(AuditEvent).where(

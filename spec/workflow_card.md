@@ -59,9 +59,7 @@ the Activate warnings-detour URL carries through to Validate, so
 
 Every page route builds the card's context with one call to
 `views.build_workflow_card_context(db, review_session, *,
-return_to, validated_just_ran=False, issues=None,
-super_failure=None, prepare_confirm=None, user=None,
-correlation_id=None)` and merges the returned dict into its template
+return_to, issues=None, super_failure=None, prepare_confirm=None)` and merges the returned dict into its template
 context via `**workflow_ctx`.
 
 `issues` is a readiness issue list the caller already built **in this
@@ -102,9 +100,8 @@ returns:
   visible buttons. See "Workflow stepper — single-row button
   layout" below for the per-slot formula + the contract that
   every state caps at ≤ 4 visible.
-- `validation_summary` — `dict | None`. Populated when
-  `validated_just_ran=True` OR the session is already
-  `validated`. Keys: `error_count` / `warning_count` /
+- `validation_summary` — `dict | None`. Populated when the
+  session is `validated`. Keys: `error_count` / `warning_count` /
   `info_count` (from the readiness report); `can_activate`
   (`report.can_activate AND is_validated(session)`);
   `needs_acknowledge` (`report.has_non_blocking_findings`).
@@ -148,12 +145,8 @@ returns:
 - `next_action_return_to` — the `return_to` slug, passed
   through.
 
-When `validated_just_ran=True` (the page was reached with
-`?validated=1`) AND the readiness report is clean AND the session
-is still in draft, the builder also calls
-`lifecycle.mark_validated` to flip `draft → validated` before
-populating the rest of the context. `user` and `correlation_id`
-must be passed in for that path to fire.
+The builder is read-only; the Workflow card's Prepare is how a
+session is validated.
 
 A companion helper `views.parse_super_failure(super_status,
 super_step, super_error, super_button)` decodes the workflow
@@ -173,11 +166,14 @@ rather than replacing them. Prose elsewhere calls this the *ten-state
 cascade*, counting the numbers; the table below counts the rows. Both are
 right, and the difference is worth knowing before reconciling one against the
 other. The body and right column are chosen by this cascade in
-`next_action_card.html`:
+`next_action_card.html`. **State 3 is unreachable:** the builder computes
+`validation_summary` only for a `validated` session, so no draft carries
+one; its rows below describe the template branch, not a state an operator
+sees.
 
 ```
 if is_setup_empty:                              → State 1
-elif is_draft and validation_summary:           → State 3
+elif is_draft and validation_summary:           → State 3 (unreachable)
 elif is_draft:                                  → State 2
 elif is_validated:
     if not validation_summary.can_activate:     → State 4Err
@@ -444,9 +440,9 @@ The steps:
    clean and the session is still `draft`,
    `lifecycle.mark_validated(...)` flips `draft → validated`.
    When the report has errors, the chain stops here — assignment
-   pairs survive, the session stays in `draft`, and the right
-   column reports the counts and links to Validate for the
-   diagnostic.
+   pairs survive, the session stays in `draft`, and the card shows
+   State 2 with the failure signal line ("Validation reported N
+   errors."); the Validate page carries the diagnostic.
 3. **Invite.** `invitations.generate_invitations(...)` —
    idempotently creates one `Invitation` row per eligible
    reviewer (assigned, with at least one `include=True`
@@ -554,8 +550,8 @@ so the workflow-failure signal line adapts.
   `super_button=prepare&super_step=generate&super_error=<msg>`.
   Card lands in State 2 (draft, no summary) on next render.
 - **Validate finds errors.** No rollback. The fresh assignments
-  stay; the next render computes `validation_summary` with
-  errors populated and the card lands in State 3. Redirect
+  stay. The summary is computed only for a `validated` session, so
+  the card shows State 2 with the failure signal line. Redirect
   carries `super_button=prepare&super_step=validate`. The audit
   event records the failure for observability.
 - **Invite raises.** No rollback: the fresh assignments and the

@@ -30,6 +30,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._validated import validate_session
 
 
 def _make_session(
@@ -94,7 +95,8 @@ def _generate_full_matrix(
 
 
 def _activate(client: TestClient, db: Session, session_id: int) -> None:
-    client.get(f"/operator/sessions/{session_id}/assignments?validated=1")
+    validate_session(db, session_id)
+    client.get(f"/operator/sessions/{session_id}/assignments")
     client.post(
         f"/operator/sessions/{session_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -103,7 +105,8 @@ def _activate(client: TestClient, db: Session, session_id: int) -> None:
 
 
 def _validate(client: TestClient, db: Session, session_id: int) -> None:
-    client.get(f"/operator/sessions/{session_id}/assignments?validated=1")
+    validate_session(db, session_id)
+    client.get(f"/operator/sessions/{session_id}/assignments")
 
 
 def _instrument(db: Session, session_id: int) -> Instrument:

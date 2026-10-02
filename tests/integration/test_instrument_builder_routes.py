@@ -30,6 +30,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._validated import validate_session
 
 
 def _band2_rfs(instrument: Instrument) -> list[dict]:
@@ -131,7 +132,8 @@ def _generate_full_matrix(client: TestClient, db: Session, session_id: int) -> N
 
 
 def _activate(client: TestClient, db: Session, session_id: int) -> None:
-    client.get(f"/operator/sessions/{session_id}/assignments?validated=1")
+    validate_session(db, session_id)
+    client.get(f"/operator/sessions/{session_id}/assignments")
     client.post(
         f"/operator/sessions/{session_id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -213,7 +215,8 @@ def test_edit_description_redirects_and_invalidates(
     review_session = _make_session(client, db, code="desc-1")
     _populate_rosters(client, review_session.id)
     _generate_full_matrix(client, db, review_session.id)
-    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
+    validate_session(review_session)
+    client.get(f"/operator/sessions/{review_session.id}/assignments")
     db.refresh(review_session)
     assert review_session.status == "validated"
 
@@ -517,7 +520,8 @@ def test_activation_blocked_when_instrument_has_no_response_fields(
             follow_redirects=False,
         )
 
-    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
+    validate_session(review_session)
+    client.get(f"/operator/sessions/{review_session.id}/assignments")
     db.refresh(review_session)
     assert review_session.status != "validated"
 

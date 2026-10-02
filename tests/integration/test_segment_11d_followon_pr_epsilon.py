@@ -32,6 +32,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 from app.services import instruments as instruments_service
+from ._validated import validate_session
 
 
 
@@ -105,7 +106,8 @@ def _setup_two_instrument_session(
     instruments_service.update_short_label(
         db, instrument=second, short_label="Peer review", actor=None
     )
-    operator_client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
+    validate_session(review_session)
+    operator_client.get(f"/operator/sessions/{review_session.id}/assignments")
     operator_client.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},

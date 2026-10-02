@@ -145,7 +145,6 @@ from ._validate import (
     SeverityChip,
     ValidateContext,
     build_validate_context,
-    validate_lifecycle_copy,
 )
 
 # Workflow card context builder (per spec/workflow_card.md
@@ -338,5 +337,4 @@ __all__ = [
     "reviewers_search_options",
     "sessions_filter_options",
     "session_status_pills",
-    "validate_lifecycle_copy",
 ]

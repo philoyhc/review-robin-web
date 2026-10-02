@@ -428,9 +428,6 @@ def test_a_read_never_commits(
 ) -> None:
     """The read path warms the cache but must not commit.
 
-    Not because of the promotion the workflow card does on the
-    ``?validated=1`` entry — that runs *after* validation and commits
-    itself, so it would carry the warm rather than be endangered by it.
     The reason is that a guard making a commit here safe cannot be
     written: ``audit.write_event`` ends in ``db.flush()``, so a handler
     that has already emitted an event has uncommitted work that

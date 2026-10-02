@@ -3,7 +3,7 @@
 Covers:
 - Setup-row view helper output.
 - Four-card layout on ``GET /operator/sessions/{id}``.
-- Inline validate-summary card via ``?validated=1``.
+- Inline validate-summary card once validated.
 - ``/validate`` page activate-form removed.
 - ``POST /delete-data`` wipes responses, preserves setup, audits, and is
   allowed in ``ready``.
@@ -33,6 +33,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 from app.web import views
+from ._validated import validate_session
 
 
 def _make_session(
@@ -81,7 +82,8 @@ def _seed_pair(
 
 
 def _activate(client: TestClient, db: Session, review_session: ReviewSession) -> None:
-    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
+    validate_session(review_session)
+    client.get(f"/operator/sessions/{review_session.id}/assignments")
     response = client.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -360,7 +362,7 @@ def test_setup_table_renders_manage_links(
 
 
 # ---------------------------------------------------------------------------
-# Slice 2 — inline validate-summary via ?validated=1
+# Slice 2 — inline validate-summary
 # ---------------------------------------------------------------------------
 
 
@@ -978,8 +980,9 @@ def test_revert_route_handles_validated_to_draft(
     review_session = _seed_pair(
         client, db, code="validated-revert", reviewer_email="r@example.edu"
     )
-    # Mark validated via the ?validated=1 entry path.
-    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
+    # Mark validated.
+    validate_session(review_session)
+    client.get(f"/operator/sessions/{review_session.id}/assignments")
     db.refresh(review_session)
     assert review_session.status == "validated"
 

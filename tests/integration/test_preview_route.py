@@ -31,6 +31,7 @@ from ._full_matrix import (
 )
 
 from ._full_preview import get_full_preview_html
+from ._validated import validate_session
 
 
 @pytest.fixture
@@ -88,7 +89,8 @@ def _generate_full_matrix(client: TestClient, db: Session, session_id: int) -> N
 
 
 def _activate(client: TestClient, db: Session, session_id: int) -> None:
-    client.get(f"/operator/sessions/{session_id}/assignments?validated=1")
+    validate_session(db, session_id)
+    client.get(f"/operator/sessions/{session_id}/assignments")
     client.post(
         f"/operator/sessions/{session_id}/activate",
         data={"acknowledge_warnings": "true"},

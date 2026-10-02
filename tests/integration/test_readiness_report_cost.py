@@ -43,6 +43,7 @@ from app.services import validation
 from app.web import views
 from ._full_matrix import pin_full_matrix_on_all_instruments
 from ._validation_scenarios import SCENARIOS
+from ._validated import validate_session
 
 
 # Every page that renders `operator/partials/next_action_card.html`,
@@ -59,8 +60,8 @@ def _seed_validated(
 ) -> ReviewSession:
     """A `validated` session with both rosters imported and every
     instrument pinned to Full Matrix. No assignments generated, so the
-    report carries a warning and no errors — enough for `?validated=1`
-    to flip the lifecycle."""
+    report carries a warning and no errors — enough to mark it
+    validated."""
     response = client.post(
         "/operator/sessions",
         data={"name": code.title(), "code": code, "description": "d"},
@@ -93,8 +94,9 @@ def _seed_validated(
         follow_redirects=False,
     )
     pin_full_matrix_on_all_instruments(db, review_session.id)
+    validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1"
+        f"/operator/sessions/{review_session.id}/assignments"
     )
     db.refresh(review_session)
     assert review_session.status == "validated"

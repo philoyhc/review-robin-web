@@ -1037,14 +1037,6 @@ def staleness_by_instrument(
         # :func:`replace_assignments`, which commits because writing the
         # rows is its whole job, or any later commit in the request.
         #
-        # (An earlier version gave the reason as "the workflow card
-        # promotes ``draft → validated`` in the same request, so a
-        # commit here would commit a half-finished promotion". That
-        # reading was backwards: ``_workflow_card.py`` validates
-        # *before* it promotes, and ``lifecycle.mark_validated`` ends
-        # in its own commit — which in fact carries this warm. The
-        # conservative choice stands on the audit-flush reason above,
-        # not on that one. 19R Item 2 rung 3 cold read.)
         db.flush()
         db.info[_RECONCILE_WARM_PENDING] = True
     return state
@@ -1057,10 +1049,9 @@ def persist_reconcile_warm(db: Session) -> None:
     The warm is flushed, never committed, because a POST may have audit
     work pending that a commit would carry (see the comment at that
     flush). By the time these GETs call this, nothing they wrote is left
-    uncommitted (the ``?validated=1`` promotion commits itself), so they
-    can commit the warm; without this, before the first Prepare nothing
-    ever committed it and every load of Assignments or Validate
-    recomputed the verdict from scratch. A no-op when nothing was
+    uncommitted, so they can commit the warm; without this, before the
+    first Prepare nothing ever committed it and every load of
+    Assignments or Validate recomputed the verdict from scratch. A no-op when nothing was
     warmed.
     """
     if db.info.pop(_RECONCILE_WARM_PENDING, False):

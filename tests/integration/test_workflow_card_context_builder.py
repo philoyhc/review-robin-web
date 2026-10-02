@@ -153,19 +153,17 @@ def test_builder_state_1a_flips_when_rosters_and_rule_pinned(
     }
 
 
-def test_builder_validated_just_ran_promotes_draft_to_validated(
+def test_builder_never_promotes_a_draft(
     client: TestClient, db: Session
 ) -> None:
-    """When ``validated_just_ran=True`` and the readiness report is
-    clean, the builder calls ``lifecycle.mark_validated`` inline —
-    same behaviour the old ``?validated=1`` handler had."""
+    """The builder is read-only. It once flipped a clean draft to
+    ``validated`` for the retired ``?validated=1`` entry path (findings
+    B15); a clean draft now stays a draft, with no validation summary."""
     from app.services import session_lifecycle as lifecycle
-    from app.db.models import User
 
     review_session = _seed_pair_plus_pinned(
         client, db, code="builder-promote"
     )
-    # Generate so validation reports zero errors.
     client.post(
         f"/operator/sessions/{review_session.id}/assignments/generate",
         follow_redirects=False,
@@ -173,19 +171,13 @@ def test_builder_validated_just_ran_promotes_draft_to_validated(
     db.refresh(review_session)
     assert lifecycle.is_draft(review_session)
 
-    operator = db.execute(select(User).limit(1)).scalar_one()
     ctx = views.build_workflow_card_context(
-        db,
-        review_session,
-        return_to="assignments",
-        validated_just_ran=True,
-        user=operator,
+        db, review_session, return_to="assignments"
     )
+
     db.refresh(review_session)
-    assert lifecycle.is_validated(review_session)
-    assert ctx["is_validated"] is True
-    assert ctx["validation_summary"] is not None
-    assert ctx["validation_summary"]["can_activate"] is True
+    assert lifecycle.is_draft(review_session)
+    assert ctx["validation_summary"] is None
 
 
 def test_parse_super_failure_decodes_query_params() -> None:

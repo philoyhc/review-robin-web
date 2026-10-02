@@ -23,6 +23,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._validated import validate_session
 
 
 REVIEWER_CSV = b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
@@ -71,7 +72,8 @@ def _activate(
 ) -> None:
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
-    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
+    validate_session(review_session)
+    client.get(f"/operator/sessions/{review_session.id}/assignments")
     client.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},

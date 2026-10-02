@@ -138,9 +138,20 @@ the spec should say so.
   keeps `validated`.
 - **B21** — ~~`close_instrument`~~ (removed in #2722, with A6) and the
   visibility-when-closed route have no lifecycle gate.
-- **B15, B27** — `GET /assignments?validated=1` and the Validate page's
-  `verdict_*` / `lifecycle_copy` fields are reachable from no template.
-  Retire them, or wire them?
+- ~~**B15, B27**~~ — **Ruled 2026-10-02: retire them. Done in #2760.**
+  `GET /assignments?validated=1` (and the Workflow card builder's
+  promotion behind it) is gone, as are the Validate page's unread
+  `verdict_*`, `lifecycle_copy` and `last_validated_text` fields. Tests
+  that used the GET to validate a session call the service through
+  `tests/integration/_validated.py`.
+- **B32** — The Workflow card's State 3 (a draft with a validation
+  summary: error counts and a Validate link) was reachable only through
+  the retired `?validated=1` path. `spec/workflow_card.md` says a Prepare
+  whose Validate step fails lands there; it lands in State 2 with the
+  failure signal line instead. Likewise the Assignments page includes
+  `validation_results.html` but never passes it issues, so that banner
+  never renders. Wire a failed Prepare to show the counts, or retire
+  State 3 and the include? Found in #2760.
 - ~~**A13**~~ — **Ruled 2026-10-02: delete it. Done in #2754.**
   `build_reviewee_results_context` carried pre-release scaffolding that
   the route-level gate made unreachable.
@@ -327,7 +338,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~B13 low · `:44,597,681` · Close in States 7–9; State 1 renders no Prepare; slug list.~~ Done in #2733.
   - ~~B14 low · `:918,923` · generate invalidates `validated`; the remind gate is B17.~~ Done in #2733.
 - `lifecycle.md`
-  - B15 med · `:76-78` · `mark_validated` callers; `?validated=1` · spec + author.
+  - ~~B15 med · `:76-78` · `mark_validated` callers; `?validated=1` · spec + author.~~ Done in #2760.
   - ~~B16 med · `:260-269` · response-loss ack callers · author.~~ Ruled: the tick is the ack.
   - ~~B17 med · `:271-291` · `_require_validated_or_ready` lives in `_operations.py`; reminders gate.~~ Done in #2745.
   - B18 med · `:663-668` · `resolve_offset` has no callers · author.
@@ -341,10 +352,10 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~B26 low · `:318-324` · `observe_deadline` callers.~~ Done in #2733.
   - ~~Also G6 `:47` "pre-filters to `draft`".~~ Done in #2733.
 - `validate_page.md`
-  - B27 med · `:137-141` · dead verdict and lifecycle fields; the copy branches on `closed` · spec + author.
+  - ~~B27 med · `:137-141` · dead verdict and lifecycle fields; the copy branches on `closed` · spec + author.~~ Done in #2760.
   - ~~B28 low · `:390` · grouped by `(gate, source)`.~~ Done in #2733.
   - ~~B29 med · `:270-273,425-430` · dead deep link · code (§2); `reviewer_missing` scope.~~ Done in #2733.
-  - B30 med · `:409` · the §5.3 table: Prepare is the live gate (= B15).
+  - ~~B30 med · `:409` · the §5.3 table: Prepare is the live gate (= B15).~~ Done in #2760.
 - `setup_pages.md`
   - ~~C11 med · `:243-245` · the Reviewees label editor is one row of three tag cells.~~ Done in #2731.
   - ~~C12 low · `:58-62,93` · all four roster guidance cards are full width.~~ Done in #2731.
