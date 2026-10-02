@@ -874,13 +874,18 @@ gate the trigger:
 | empty / null | (any) | (any) | (any) | (none) |
 | set | unset | (any) | (any) | ⓘ "Auto-send invites are configured (N entries) but currently inactive — no Start to anchor against. They reactivate when Start is re-set." |
 | set | set | no (draft) | (any) | ⚠ "Auto-send scheduled at «X» — currently inactive: Prepare session before then or these will skip." |
-| set | set | yes (any non-draft state but `ready`: `validated`, `expired`, `archived`) | no | ⚠ "Auto-send scheduled at «X» — currently inactive: there are no invitations to send. Prepare creates one per eligible reviewer — run Prepare session before then, or these will skip." |
+| set | set | yes (`validated`) | no | ⚠ "Auto-send scheduled at «X» — currently inactive: there are no invitations to send. Prepare creates one per eligible reviewer — run Prepare session before then, or these will skip." |
 | set | set | yes (`ready`) | no | ⚠ "Auto-send scheduled at «X» — currently inactive: there are no invitations to send. Creating them needs Prepare, which an open session cannot run — revert to draft (this stops responses), fix the roster, then Prepare and activate again before then, or these will skip." |
 | set | set | yes | yes | ✓ "Auto-send scheduled at «X». System will dispatch automatically; you can also Send all now." |
 
-In this table **Prepared? means not `draft`**: the caption builder tests
-`is_draft` and then `is_ready`, so `expired` and `archived` take the
-"yes" rows too.
+In this table **Prepared?** follows the trigger: `validated` or `ready`.
+**Known defect:** the caption builder tests `is_draft` and then
+`is_ready`, so it treats `expired` and `archived` as prepared. It can
+show those states the ✓ "System will dispatch automatically" row,
+though the trigger skips them with `not_prepared` (`is_prepared` in
+`app/services/scheduled_events/_invites.py`). The fix belongs in
+`build_auto_send_invites_caption`. Until then, the caption in those two
+states is wrong, not the contract.
 
 #### Auto-send reminders signal
 
