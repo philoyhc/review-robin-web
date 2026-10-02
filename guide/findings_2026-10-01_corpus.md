@@ -200,8 +200,10 @@ the spec should say so.
   confirmations, loading indicators, font and line-height. The likely
   ruling is app-override notes in `visual_style_rrw.md`, as the status
   strip already has.
-- **E2** — Four §10 primitives have CSS and no markup. Retire the
-  entries, the CSS, and the `.btn-row` test references?
+- ~~**E2**~~ — **Ruled 2026-10-02: retire them. Done in #2763.**
+  `.btn-row`, `.setup-grid`, `.card-half` and `.session-status-row` had
+  CSS and no markup; their rules, their `spec/ui_elements.md` §10 rows
+  and the `.btn-row` test references are gone.
 
 **New from the fix batches (2026-10-02).** Each was found while
 fixing a no-ruling row (#2731–#2738). **All eight ruled 2026-10-02.**
@@ -394,7 +396,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~C21 low · `:15-18` · the `GET …/preview` 308 is unlisted.~~ Done in #2731.
 - `ui_elements.md`
   - ~~E1 med · retire · `:439` · `.btn-cta` has no rule (also `operator_button_audit.md:47`; drop it from `test_cascade_ties.py` CANONICAL); `.btn.danger` row.~~ Done in #2737.
-  - E2 low-med · `:690` · dead §10 primitives · author.
+  - ~~E2 low-med · `:690` · dead §10 primitives · author.~~ Done in #2763.
   - ~~E3 med · `:140` · status-strip slots: no Assignments pill; point at `visual_style_rrw.md`.~~ Done in #2737.
   - E4 med · `:125` · hover foreground · author.
   - ~~E5 med · `:111` · Setup underline token · author.~~ Done in #2762.

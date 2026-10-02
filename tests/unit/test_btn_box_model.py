@@ -37,7 +37,7 @@ from ._base_css import css, rules
 
 # A selector whose subject — the rightmost compound — is a ``.btn``.
 # Anchored on the end so ``.next-action-buttons-row > .btn`` counts and
-# ``.btn-row > *`` does not: the latter's subject is ``*``, and its
+# a ``.some-row > *`` would not: the latter's subject is ``*``, and its
 # items are sized by ``flex``, which respects the box model either way.
 _BTN_SUBJECT = re.compile(r"(?:^|[\s>+~])(?:[a-z]+)?\.btn(?:[.:][A-Za-z0-9_-]+)*$")
 

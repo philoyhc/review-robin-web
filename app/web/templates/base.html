@@ -739,19 +739,9 @@
          blue admin/info pill so the protected top tier stands out. */
       .pill-super { background: var(--status-super-bg); color: var(--status-super-fg); }
       /* .session-meta-row / .session-detail-code retired with the old
-         read-only Session Details card (18R Item 4 Slice 5b). */
-      .session-status-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin: 6px 0 0 0;
-      }
-      .btn-row {
-        display: flex;
-        gap: 16px;
-        margin: 0;
-      }
-      .btn-row > * { flex: 1; }
+         read-only Session Details card (18R Item 4 Slice 5b);
+         .session-status-row, .btn-row, .setup-grid and .card-half had
+         no markup left and went 2026-10-02 (findings E2). */
       .btn-icon {
         background: none;
         border: none;
@@ -1020,14 +1010,6 @@
       .field-builder.locked details summary span[title="Edit"],
       .field-builder.locked a[title="Delete row"],
       .field-builder.locked a[title="Add row after"] { display: none; }
-      .setup-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        column-gap: 16px;
-        row-gap: 10px;
-        align-items: center;
-      }
-      .setup-grid > .setup-content { grid-column: 2 / -1; }
       .page-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -1295,10 +1277,9 @@
         flex-wrap: wrap;
       }
       .btn-pair > form { margin: 0; }
-      .card-half { max-width: calc(50% - 10px); box-sizing: border-box; }
       /* Filter strip (Manage Invitations + Responses, Segment 11C
          Part 1 follow-up). It was a `.filter-card` inside a
-         `.card-half`, with a two-up `.filter-row` for the status
+         half-width card, with a two-up `.filter-row` for the status
          dropdown + search input and a right-aligned `.filter-actions`
          row at the bottom for **Apply** (with optional Clear).
 
@@ -1840,7 +1821,6 @@
            side by side: `.bottom-grid .card` zeroes the cards' margins
            (19T Item 16 entry 3). */
         .bottom-grid { grid-template-columns: 1fr; row-gap: 20px; }
-        .card-half { max-width: 100%; }
       }
       /* ──────────────────────────────────────────────────────────
          v2 — pilot of spec/ui_elements.md canonical primitives.
