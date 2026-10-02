@@ -137,8 +137,9 @@ the spec should say so.
 - **D7, D13** — The responses bundle does not carry the by-instrument and
   metadata files the spec promises. The `Instrument_{N}` CSV fallback uses
   position, and the screen uses `session_seq`.
-- **G16 = E22** — Session codes are unique across the workspace. The spec says
-  per operator.
+- ~~**G16 = E22**~~ — **Ruled 2026-10-02: keep workspace-wide, correct
+  the spec. Done in #2746.** Session codes are unique across the
+  workspace; the specs said per operator.
 - ~~**G21**~~ — **Ruled 2026-10-02: keep the behavior, correct the
   spec.** The raw invitation token was stored in the outbox body and
   reusable until the next send, while the spec said it was never stored
@@ -379,7 +380,7 @@ One line each: id · severity · where · finding · decides. A line with no
 - `operator_ui_concept.md`
   - ~~E20 low-med · `:208` · the app identity is a `<span>` (contradicts `:399`).~~ Done in #2737.
   - ~~E21 med · `:71,82,175` · Relationships is feature-gated too.~~ Done in #2737.
-  - E22 med-low · `:240` · code uniqueness (= G16).
+  - ~~E22 med-low · `:240` · code uniqueness (= G16).~~ Done in #2746.
   - ~~E23 med · consolidate · `:352` · reduce the Validate page description to a pointer at `validate_page.md`.~~ Done in #2737.
   - ~~E24 low · `:459` · nine operator Guide sections.~~ Done in #2737.
   - Also A22 `:94`.
@@ -477,7 +478,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - G13 low-med · `:2123` · export validation · author.
   - ~~G14 low-med · `:1835-1851` · invites fire from `validated`; the captions are on the Workflow card.~~ Done in #2736.
   - ~~G15 med · `:1012` · clone never copies responses or assignments.~~ Done in #2736.
-  - G16 low-med · `:349,853` · code uniqueness · author (also `operator_ui_concept.md:240`).
+  - ~~G16 low-med · `:349,853` · code uniqueness (also `operator_ui_concept.md:240`).~~ Done in #2746.
   - ~~G17 low-med · `:774,813` · non-allowlisted users get a 303 to `/me`.~~ Done in #2736.
   - ~~G18 low-med · `:829,1516` · there is no sys-admin owner management.~~ Done in #2736.
   - ~~G19 low · `:1479` · Rehydrate is gated off.~~ Done in #2736.

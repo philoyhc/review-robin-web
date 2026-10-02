@@ -707,7 +707,7 @@ large to keep accurate by hand, so the code is the source of truth:
 
 ### Sessions
 
-- Create with name, code (unique per operator), description, deadline.
+- Create with name, code (unique across the workspace), description, deadline.
 - Session creation **also synchronously creates the Default
   Instrument** with two seed response fields (`rating` integer 1–5
   required; `comments` long text optional) and three seed display

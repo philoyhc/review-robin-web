@@ -346,7 +346,7 @@ The top-level unit. A session represents one review cycle and
 carries every other entity inside it.
 
 **User-supplied fields:** name, code (stable short identifier
-unique per operator), description, deadline, display timezone,
+unique across the workspace), description, deadline, display timezone,
 help contact, scheduled activation timestamp (optional), invite
 offsets and reminder offsets (optional), archive offset (optional),
 retention overrides (optional).
@@ -904,7 +904,8 @@ settings.
 ### 8.1 Identity fields
 
 - **Name** — free-form display label.
-- **Code** — short stable identifier, unique per operator. Used as
+- **Code** — short stable identifier, unique across the workspace
+  (a database constraint on `sessions.code`), not per operator. Used as
   the filename prefix for every CSV extract (`{code}_kind.csv`)
   and as the operator's primary short-form reference.
 - **Description** — optional long-form description; appears in
