@@ -292,34 +292,34 @@ One line each: id · severity · where · finding · decides. A line with no
   - B29 med · `:270-273,425-430` · dead deep link · code (§2); `reviewer_missing` scope.
   - B30 med · `:409` · the §5.3 table: Prepare is the live gate (= B15).
 - `setup_pages.md`
-  - C11 med · `:243-245` · the Reviewees label editor is one row of three tag cells.
-  - C12 low · `:58-62,93` · all four roster guidance cards are full width.
-  - C13 low · `:599` · empty tag columns don't render (contradicts `:606`).
-  - C14 low · `:1347,1354,696` · "Photo" → "Profile".
-  - C15 low · `:1521` · Observers preview is Name then Email.
-  - C16 low · `:1413` · the relationships extract has six columns.
-  - C17 low · `:28,182` · Edit page retired; helper name.
+  - ~~C11 med · `:243-245` · the Reviewees label editor is one row of three tag cells.~~ Done in #2731.
+  - ~~C12 low · `:58-62,93` · all four roster guidance cards are full width.~~ Done in #2731.
+  - ~~C13 low · `:599` · empty tag columns don't render (contradicts `:606`).~~ Done in #2731.
+  - ~~C14 low · `:1347,1354,696` · "Photo" → "Profile".~~ Done in #2731.
+  - ~~C15 low · `:1521` · Observers preview is Name then Email.~~ Done in #2731.
+  - ~~C16 low · `:1413` · the relationships extract has six columns.~~ Done in #2731.
+  - ~~C17 low · `:28,182` · Edit page retired; helper name.~~ Done in #2731.
 - `quick_setup_card_spec.md`
   - C1 high · `:23-25` · lock-toggle prose · author (likely spec).
   - C2 med · `:34-49,87-91` · counts and messages removed · author.
   - ~~C3 med · `:77` · settings replace cascades · author.~~ Ruled: gated on the server; the spec names the cascade.
-  - C4 low · `:67,79,131` · checkbox below the grid; copy (+ code banner, §2).
-  - C5 low · `:25,121` · `closed` → `expired`.
-  - C6 low · `:83` · the settings per-slot route isn't allowlisted (no UI calls it).
+  - ~~C4 low · `:67,79,131` · checkbox below the grid; copy (+ code banner, §2).~~ Done in #2731.
+  - ~~C5 low · `:25,121` · `closed` → `expired`.~~ Done in #2731.
+  - ~~C6 low · `:83` · the settings per-slot route isn't allowlisted (no UI calls it).~~ Done in #2731.
 - `session_home.md`
   - C1 also `:460-481,506-512`.
   - C7 med · `:275-322,518-524` · Danger Zone in `expired`/`archived` · author.
-  - C8 low · `:155,306` · Activated "inline section"; copy reads "Revert to draft first".
+  - ~~C8 low · `:155,306` · Activated "inline section"; copy reads "Revert to draft first".~~ Done in #2731.
 - `sessions_overview.md`
-  - C9 low · `:217` · Tags is not sortable.
-  - C10 low · write/deepen · `:241-247` · the expander's Name/Code/Deadline are draft-only.
+  - ~~C9 low · `:217` · Tags is not sortable.~~ Done in #2731.
+  - ~~C10 low · write/deepen · `:241-247` · the expander's Name/Code/Deadline are draft-only.~~ Done in #2731.
 - `session_owners.md` — current.
 - `timezone_display.md`
   - ~~C18 med · `:65-66` · email zone · author (= D25).~~ Ruled session zone; done in #2720.
-  - C19 low · `:67-70` · carve out the UTC audit extract.
-  - C20 low · `:56,94-98` · the dashboard uses the compact offset; `/edit` is only a redirect.
+  - ~~C19 low · `:67-70` · carve out the UTC audit extract.~~ Done in #2731.
+  - ~~C20 low · `:56,94-98` · the dashboard uses the compact offset; `/edit` is only a redirect.~~ Done in #2731.
 - `preview_hub.md`
-  - C21 low · `:15-18` · the `GET …/preview` 308 is unlisted.
+  - ~~C21 low · `:15-18` · the `GET …/preview` 308 is unlisted.~~ Done in #2731.
 - `ui_elements.md`
   - E1 med · retire · `:439` · `.btn-cta` has no rule (also `operator_button_audit.md:47`; drop it from `test_cascade_ties.py` CANONICAL); `.btn.danger` row.
   - E2 low-med · `:690` · dead §10 primitives · author.

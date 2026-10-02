@@ -151,9 +151,11 @@ background, default border). Inline middle-dot links are not used
 here. POST forms (Activate, and the two draft-returning transitions
 `next-action-revert-form` / `next-action-pause-form`) declare a
 hidden form id in the body and the submit button declares
-`form="next-action-{name}-form"` so the form definition stays
-near its checkbox while the button lives in the row (or, in the
-Activated state, in the inline section).
+`form="next-action-{name}-form"` so the form definitions stay
+together in the body while the buttons live in the single button
+row. The one exception is Prepare's regenerate confirmation: while it
+is open, `Regenerate & prepare` and `Cancel` render inside the banner
+above the row.
 
 **Contents by lifecycle state:** see **`spec/workflow_card.md`**.
 That spec is the canonical source for the ten-state cascade
@@ -304,7 +306,7 @@ Its contents:
 Description copy on the card: "Delete Data wipes every reviewer
 response while leaving session setup intact. Delete session
 removes the entire session. Both are locked while the session is
-Activated — pause it first."
+Activated — Revert to draft first."
 
 Both confirm checkboxes are `required`, so the destructive submit
 is blocked without JavaScript unless the operator ticks the box.

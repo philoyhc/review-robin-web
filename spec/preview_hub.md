@@ -13,7 +13,9 @@ jobs now live on the Invitations per-reviewer drill-in:
   placement and `spec/email_template_editor.md` owns their template source.
 
 `GET /operator/sessions/{id}/previews` is retained only as a permanent 308
-redirect to `/operator/sessions/{id}/invitations`. The picker, its Random
+redirect to `/operator/sessions/{id}/invitations`. The older standalone
+`GET /operator/sessions/{id}/preview` is likewise a permanent 308 redirect,
+to `/operator/sessions/{id}/preview-surface/1`. The picker, its Random
 action, `session_previews.html`, and `_preview_picker.html` have no successor.
 `POST /operator/sessions/{id}/previews/random` is not a bookmark and is gone.
 

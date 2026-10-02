@@ -27,13 +27,11 @@ E1, E2 and E4 were checked by the author when they merged.
   **Save** shows and **Edit** hides. Click **Cancel**: they swap back.
 - [x] **A new shape's buttons still work.** Click **+Shape**. The new
   card shows **Save**, not **Edit**. Name it, pick columns, and Save it.
-- [ ] **Disabled link buttons match.** On the Reviewers page, switch
+- [x] **Disabled link buttons match.** On the Reviewers page, switch
   the table into edit mode. The toolbar's **Add new**, a link, should be
   exactly as faint as any other disabled button (0.5, not 0.55).
-  *Checked 2026-10-02: Add new looked fainter than Search. Fixed in
-  #2730 (Search disabled too; no second fade inside the locked strip).
-  Recheck: Add new and Search read alike, as faint as the inputs, on
-  Reviewers, Reviewees, Relationships and Observers.*
+  *Checked 2026-10-02: Add new looked fainter than Search; fixed in
+  #2730 and rechecked the same day.*
 - [x] **The Quick Setup banner points the right way.** Upload a second
   reviewers CSV in Quick Setup without ticking the replace box. The
   banner should say the box is "just above Submit", and it is.
