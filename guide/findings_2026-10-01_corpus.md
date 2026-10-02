@@ -434,7 +434,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - G8 med-high · `:1586-1670` · pages, dirty state and Save; `reviewer-surface.md` wins.
   - G9 low-med · `:714,1565` · non-open states render pre-open.
   - ~~G10 med-high · `:418,1210,1568` · visibility-when-closed · author.~~ Ruled: policy decides; done in #2723.
-  - ~~G11 low-med · peer grant (= A18).~~
+  - ~~G11 low-med · peer grant (= A18).~~ Ruled: Raw or off (A18).
   - G12 med · `:2088-2102` · readiness checklist overstated; consolidate with `validate_page.md`.
   - G13 low-med · `:2123` · export validation · author.
   - G14 low-med · `:1835-1851` · invites fire from `validated`; the captions are on the Workflow card.

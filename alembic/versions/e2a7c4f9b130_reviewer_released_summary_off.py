@@ -6,8 +6,11 @@ was ever built: since #2723 such a grant hides the reviewer's answers like
 an off cell does. The author retired the option on 2026-10-02
 (`guide/findings_2026-10-01_corpus.md` A18), so the cell is Raw or off.
 
-This sets every stored peer-reviewer ``after_release`` summary to off,
-which is what it already showed. The downgrade is a no-op: the cleared
+This sets every stored peer-reviewer ``after_release`` pair whose
+granularity is ``aggregated`` to off: the retired summary, and the
+reserved-incoherent ``aggregated`` + ``identified`` pair, which already
+read as off. Since #2723 that is what the reviewer's read-back showed,
+though the transparency card and the editor still labelled it. The downgrade is a no-op: the cleared
 values are not recoverable, and off is a valid state before and after.
 
 Revision ID: e2a7c4f9b130

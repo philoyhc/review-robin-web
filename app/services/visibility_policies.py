@@ -420,9 +420,12 @@ def upsert_policy(
     no field changed). Only emits ``instrument.view_policy_set``
     when ``changes`` is non-empty.
 
-    Validates per-(audience, window) — Reviewer Session-ongoing
-    must be ``"raw"`` (baseline self-view always on); Reviewee
-    Session-ongoing must be ``None``; the others accept the
+    Validates per-(audience, window) against
+    ``_PER_CELL_VALID_MODES``: Reviewer Session-ongoing must be
+    ``"raw"`` (baseline self-view always on), Reviewer
+    Responses-released ``"raw"`` or ``None``, Reviewee
+    Session-ongoing ``None``, Observer Session-ongoing
+    ``"summarized"`` or ``None``; the other two cells accept the
     three coherent modes plus ``None``.
     """
     _validate_per_window(

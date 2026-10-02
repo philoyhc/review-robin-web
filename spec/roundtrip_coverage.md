@@ -85,7 +85,7 @@ responses. See `spec/rehydrate.md`.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `audience`, `while_ongoing_granularity/_identification`, `after_release_granularity/_identification` (a retired `observer_tag` row in an older bundle is accepted and dropped) | ✅ | ❌ | Settings-CSV carries the visibility grid (`instruments[n].view_policies[<audience>].*`, recreated in the instrument rebuild). Clone does **not** copy it — a clone reverts to default visibility. **The import validates each `(audience, window)` cell** against the same table the editor uses and rejects the whole apply on an illegal one (`spec/visibility_policy.md` §3.1). A round-trip of an editor-authored session is unaffected: the serializer emits all four cells for every audience, so a forbidden cell exports as two empty strings and parses back to `None`, which is that cell's legal mode |
+| `audience`, `while_ongoing_granularity/_identification`, `after_release_granularity/_identification` (a retired `observer_tag` row in an older bundle is accepted and dropped, and a retired reviewer `summarized` released cell is read as off) | ✅ | ❌ | Settings-CSV carries the visibility grid (`instruments[n].view_policies[<audience>].*`, recreated in the instrument rebuild). Clone does **not** copy it — a clone reverts to default visibility. **The import validates each `(audience, window)` cell** against the same table the editor uses and rejects the whole apply on an illegal one (`spec/visibility_policy.md` §3.1). A round-trip of an editor-authored session is unaffected: the serializer emits all four cells for every audience, so a forbidden cell exports as two empty strings and parses back to `None`, which is that cell's legal mode |
 
 ### Rule sets (`session_rule_sets`)
 

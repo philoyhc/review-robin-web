@@ -75,7 +75,7 @@ The peer-reviewer audience is constrained per window:
 | Session ongoing (`while_ongoing`) | **Raw only** — the baseline self-view-during-session guarantee. The editor renders this cell as a static "Raw responses" pill; the operator cannot turn it off. |
 | Responses released (`after_release`) | `None` (off) / **Raw**. The reviewer either sees nothing or their own raw submissions, read-only (no recall / resubmit). |
 
-`Anonymized` (row + deidentified) is **not** offered for peer reviewers — anonymising one's own work against oneself is incoherent. `Summarized` (aggregated + deidentified) was offered until 2026-10-02 and retired (`guide/findings_2026-10-01_corpus.md` A18): no reviewer-facing summary view was ever built, so the cell promised what nothing delivered. Migration `e2a7c4f9b130` set every stored reviewer summary to off, which is what it already showed, and a settings CSV from before then imports it as off. The scope rule (§1.1) still holds: the reviewer's grant covers only responses they themselves keyed in.
+`Anonymized` (row + deidentified) is **not** offered for peer reviewers — anonymising one's own work against oneself is incoherent. `Summarized` (aggregated + deidentified) was offered until 2026-10-02 and retired (`guide/findings_2026-10-01_corpus.md` A18): no reviewer-facing summary view was ever built, so the cell promised what nothing delivered. Migration `e2a7c4f9b130` set every stored reviewer `aggregated` pair to off; since #2723 that is what the reviewer's read-back already showed, though the transparency card and the editor still labelled it Anonymized summaries. A settings CSV from before then imports the cell as off. The scope rule (§1.1) still holds: the reviewer's grant covers only responses they themselves keyed in.
 
 **Where the reviewer cells are read.** Once an instrument stops
 accepting, the review surface, the summary page and its CSV show the
@@ -129,7 +129,10 @@ cells' backticked mode names intact when rewording.
 editor refuses an illegal cell in `upsert_policy` → `_validate_per_window`; the
 **Settings-CSV import** refuses it in the parse phase
 (`session_config_io/_apply_parse._view_policy_cell_errors`), naming the
-field and the legal modes, before any row is written. Checking the
+field and the legal modes, before any row is written. One exception
+runs first: a bundle exported before 2026-10-02 may carry the
+reviewer's retired `summarized` "Responses released" cell, and the
+import reads it as off (`_drop_retired_view_policy_modes`, §2.2). Checking the
 vocabulary is not enough on the import path: a value can be one of `row`
 / `aggregated` / `identified` / `deidentified` and still be illegal in
 the cell it lands in, so a hand-edited or hand-built bundle would
