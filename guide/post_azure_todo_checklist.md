@@ -509,13 +509,16 @@ signal" records it as a known defect until then.
 2026-10-02, on `guide/findings_2026-10-01_corpus.md` B20). Scheduled
 activation retries and marks `failed_persistent` when it keeps failing;
 scheduled invites and reminders have no retry. They can already fail
-before any transport exists: a render or an outbox or audit write that
-raises is not caught, so it propagates out of
-`observe_scheduled_events` and the page that ran it (Session Home, on
-every load) answers 500 until the cause is fixed, with no terminal
-audit event. The ruling defers the retry to the clock trigger all the
-same: give it the same retry and terminal state for both, covering
-those queue-stage failures as well as transport ones.
+before any transport exists, at a render or an outbox or audit write.
+Since 2026-10-02 (B20, author's second ruling) `observe_scheduled_events`
+catches that: it rolls back, logs, writes `session.scheduled_event_failed`
+and lets the page render, retrying on the next visit with no cap and no
+terminal state. One known gap under that catch: when one reviewer's
+scheduled reminder fails, the rollback also drops the dedupe stamp on
+the reminders already queued in that pass, so the next visit queues
+them again (`guide/findings_2026-10-01_corpus.md` B31). Give the clock trigger the same retry and terminal state
+as activation for both, covering those queue-stage failures as well as
+transport ones.
 
 **Done when** a scheduled invitation and a scheduled reminder each go
 out at their set time on the deployed app with no operator page open.

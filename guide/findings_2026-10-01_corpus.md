@@ -37,7 +37,7 @@ is left stricter until ruled on. Grouped by what the ruling is about.
   as `guide/post_azure_todo_checklist.md` item 7. Scheduled activation, invites and reminders fire only when
   someone opens Session Home. `observe_scheduled_events` has one caller.
   `spec/lifecycle.md` §8.3 says Session Home, the Operations pages and the
-  lobby, and the function's own docstring repeats that.
+  lobby; the function's own docstring repeated that until #2757.
 - ~~**A6**~~ — **Ruled 2026-10-01: remove per-instrument Open / Close.
   Done in #2722.** Accepting is session-wide, so the session-wide write
   gate is right and the spec now says so. It was: closing one instrument
@@ -96,7 +96,9 @@ the spec should say so.
 - ~~**B20**~~ — **Ruled 2026-10-02: work in progress awaiting Azure.
   Recorded in #2755** as part of `guide/post_azure_todo_checklist.md`
   item 7. Retry and `failed_persistent` exist for scheduled activation
-  only.
+  only. **Ruled again 2026-10-02: catch the failure now. Done in #2757:**
+  a trigger that raises is logged and recorded as
+  `session.scheduled_event_failed`, and the page still loads.
 - **B18** — `spec/lifecycle.md` §8.2.2 names one call site, `resolve_offset`,
   which has no callers. Should the code be consolidated onto it, or the
   contract restated?
@@ -235,6 +237,13 @@ stay in §3.
   which beats the single 0.5 rule `ui_elements.md` specifies.
 - **C4** — The `needs_confirm` banner says the checkbox is "at the top of
   Quick Setup", but it sits below the grid.
+- **B31** — A scheduled reminder pass that fails partway re-queues the
+  reminders it already queued. `send_reminder` commits each outbox row
+  with no `correlation_id`; `_dispatch_scheduled_reminders` only flushes
+  the dedupe stamp, so the rollback after a later reviewer's failure
+  drops it and the next visit queues those reminders again. Found in
+  #2757's read; it predates that PR, which made the page load instead of
+  failing.
 - **D17, the rest (deferred with Rehydrate, §1 D16).** #2719 catches `RehydrateError`, so a settings
   failure reaches the operator. Any other failure inside
   `rehydrate_session` (an `IntegrityError` from a roster save, a
@@ -243,7 +252,7 @@ stay in §3.
   is off by default.
 - **Stale code comments.** Fix these with the next edit to each file:
   - `instrument_field.py:70-74` says "one level"; branching has two.
-  - The `scheduled_events/__init__.py` docstring names three trigger pages.
+  - ~~The `scheduled_events/__init__.py` docstring names three trigger pages.~~ Fixed in #2757.
   - `session_lifecycle.py:692` says "pre-filters to `draft`".
   - The `responses/_core.py:826` docstring says "any status".
   - ~~The `_reviewee_results.py` docstring (see A13).~~ Done in #2754.
@@ -315,7 +324,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~B17 med · `:271-291` · `_require_validated_or_ready` lives in `_operations.py`; reminders gate.~~ Done in #2745.
   - B18 med · `:663-668` · `resolve_offset` has no callers · author.
   - B19 med · `:759-770` · sweep trigger · ruled: awaits Azure (`post_azure_todo_checklist.md` item 7).
-  - ~~B20 low · `:786-799` · retry is activation-only.~~ Recorded in #2755.
+  - ~~B20 low · `:786-799` · retry is activation-only.~~ Recorded in #2755; errors caught in #2757.
   - B21 med · `:306-313,552` · ~~close reason is `manual`, not `operator` (spec)~~ already right after #2722; the ungated routes are *author*.
   - ~~B22 low · `:165,542` · `session.activated` context adds `trigger`, and activation clears `scheduled_activate_at`.~~ Done in #2733.
   - ~~B23 low · `:111-133` · state the `invalidate_if_validated` rule, not a partial call-site list.~~ Done in #2733.

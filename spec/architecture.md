@@ -782,6 +782,7 @@ canonical "no payload" marker.
 | `session.scheduled_invites_skipped` | `reason` + `context` | `{"session_id": 17, ..., "reason": "not_prepared" \| "invitations_not_created", "context": {"anchor_at": "...", "offset_index": 0, "offset": "-P1D", "scheduled_at": "..."}}` |
 | `session.scheduled_reminders_fired` | `counts` + `context` | Same shape as `scheduled_invites_fired`, anchored on `deadline`. |
 | `session.scheduled_reminders_skipped` | `reason` + `context` | `reason ∈ {"not_ready", "no_invitations", "outside_response_window"}`; same context keys. |
+| `session.scheduled_event_failed` | `reason` + `context` | `{"session_id": 17, ..., "reason": "<repr(exc), first 200 characters>", "context": {"trigger": "invites" \| "activation" \| "reminders"}}`. Written by `observe_scheduled_events` when a trigger raises; not repeated while that trigger's latest one records the same reason. |
 
 **Observer roster events** (registered in `EVENT_SCHEMAS`):
 

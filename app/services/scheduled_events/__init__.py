@@ -1,7 +1,7 @@
 """Lazy observer for scheduled session-lifecycle events (Segment 18G).
 
 Per ``spec/lifecycle.md`` §8.2 + §8.3: scheduled events fire on
-operator GETs to session-related pages. Each trigger checks its
+the operator's GET of Session Home (the observer's only caller). Each trigger checks its
 precondition (§8.2.3), uses ``SELECT … FOR UPDATE`` on the
 session row, and is idempotent via the column clear at the end
 of a successful fire.
@@ -35,13 +35,16 @@ avoids a circular import.
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 
 from typing import Callable
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession
+from app.db.models import AuditEvent, ReviewSession
+from app.services import audit
 from app.services import session_lifecycle as lifecycle  # noqa: F401 — re-export for legacy ``monkeypatch.setattr("app.services.scheduled_events.lifecycle.activate_session", …)`` paths
 
 # Private names (single underscore) are part of the byte-stable
@@ -105,6 +108,11 @@ __all__ = [
 ]
 
 
+log = logging.getLogger(__name__)
+
+SCHEDULED_EVENT_FAILED = "session.scheduled_event_failed"
+
+
 def observe_scheduled_events(
     db: Session,
     session: ReviewSession,
@@ -113,8 +121,8 @@ def observe_scheduled_events(
     correlation_id: str | None = None,
     build_invite_url: Callable[[str], str] | None = None,
 ) -> None:
-    """Lazy observer entry point — called from session-related GETs
-    (Session Home, Operations pages, the Sessions lobby).
+    """Lazy observer entry point — called from Session Home's GET, its
+    only caller.
 
     Fires any scheduled-event triggers whose fire-time has passed
     and whose preconditions are met. Idempotent and concurrency-safe
@@ -142,20 +150,133 @@ def observe_scheduled_events(
     pass) is the natural order below.
     """
     current = now or datetime.now(timezone.utc)
-    _observe_scheduled_invites(
+    _run_guarded(
         db,
         session,
-        now=current,
+        trigger="invites",
         correlation_id=correlation_id,
-        build_invite_url=build_invite_url,
+        fire=lambda: _observe_scheduled_invites(
+            db,
+            session,
+            now=current,
+            correlation_id=correlation_id,
+            build_invite_url=build_invite_url,
+        ),
     )
-    _observe_scheduled_activation(
-        db, session, now=current, correlation_id=correlation_id
-    )
-    _observe_scheduled_reminders(
+    _run_guarded(
         db,
         session,
-        now=current,
+        trigger="activation",
         correlation_id=correlation_id,
-        build_invite_url=build_invite_url,
+        fire=lambda: _observe_scheduled_activation(
+            db, session, now=current, correlation_id=correlation_id
+        ),
     )
+    _run_guarded(
+        db,
+        session,
+        trigger="reminders",
+        correlation_id=correlation_id,
+        fire=lambda: _observe_scheduled_reminders(
+            db,
+            session,
+            now=current,
+            correlation_id=correlation_id,
+            build_invite_url=build_invite_url,
+        ),
+    )
+
+
+def _run_guarded(
+    db: Session,
+    session: ReviewSession,
+    *,
+    trigger: str,
+    correlation_id: str | None,
+    fire: Callable[[], None],
+) -> None:
+    """Run one trigger so that its failure never fails the page.
+
+    Activation has its own retry and ``failed_persistent`` terminal
+    state; invites and reminders do not yet (work in progress awaiting
+    Azure, ``guide/post_azure_todo_checklist.md`` item 7). Until then an
+    uncaught render, outbox or audit error would propagate out of this
+    observer and fail the GET that ran it — Session Home, on every load.
+    Here it is rolled back, logged and recorded as
+    ``session.scheduled_event_failed``; the next visit tries again.
+
+    An audit-schema error is re-raised: it only ever raises in strict
+    mode, where it is the test suite's gate on event drift.
+    """
+    session_id = session.id
+    try:
+        fire()
+    except audit.AuditDetailValidationError:
+        raise
+    except Exception as exc:  # noqa: BLE001 — observer must keep page rendering
+        db.rollback()
+        log.exception(
+            "Scheduled %s trigger failed for session %s", trigger, session_id
+        )
+        _record_failure(
+            db,
+            session_id=session_id,
+            trigger=trigger,
+            error_text=repr(exc)[:200],
+            correlation_id=correlation_id,
+        )
+
+
+def _record_failure(
+    db: Session,
+    *,
+    session_id: int,
+    trigger: str,
+    error_text: str,
+    correlation_id: str | None,
+) -> None:
+    """Write ``session.scheduled_event_failed`` unless this trigger's
+    latest one for the session already records the same error, so a
+    failure repeated on every page load leaves one row per trigger
+    rather than one per visit. A failure to write it is logged and
+    rolled back; an audit-schema error is re-raised (see
+    :func:`_run_guarded`)."""
+    try:
+        rows = db.execute(
+            select(AuditEvent)
+            .where(
+                AuditEvent.session_id == session_id,
+                AuditEvent.event_type == SCHEDULED_EVENT_FAILED,
+            )
+            .order_by(AuditEvent.id.desc())
+        ).scalars()
+        for row in rows:
+            detail = row.detail if isinstance(row.detail, dict) else {}
+            context = detail.get("context") or {}
+            if isinstance(context, dict) and context.get("trigger") == trigger:
+                if detail.get("reason") == error_text:
+                    return
+                break
+        review_session = db.get(ReviewSession, session_id)
+        if review_session is None:
+            return
+        audit.write_event(
+            db,
+            event_type=SCHEDULED_EVENT_FAILED,
+            summary=f"Scheduled {trigger} failed for {review_session.code}",
+            actor_user_id=None,
+            session=review_session,
+            reason=error_text,
+            context={"trigger": trigger},
+            correlation_id=correlation_id,
+        )
+        db.commit()
+    except audit.AuditDetailValidationError:
+        raise
+    except Exception:  # noqa: BLE001 — recording the failure must not fail the page
+        db.rollback()
+        log.exception(
+            "Could not record the scheduled %s failure for session %s",
+            trigger,
+            session_id,
+        )
