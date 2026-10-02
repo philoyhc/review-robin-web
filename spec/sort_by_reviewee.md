@@ -280,7 +280,7 @@ Key landmarks in the codebase:
   **operator tables** — Reviewers / Reviewees / Relationships
   (Setup), Assignments / Invitations / Responses (Operations), and
   the Sessions lobby and Archived sessions page
-  (`app/web/routes_operator/_lobby.py`), eight in all: each annotated with
+  (`app/web/routes_operator/_lobby.py`): each annotated with
   `<table data-rrw-sortable="...">`, `th.rrw-sortable`,
   `data-sort-key`, `data-sort-value` cells, and
   `<tbody class="rrw-rows">`.

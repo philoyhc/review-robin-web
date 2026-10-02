@@ -905,17 +905,26 @@ The lazy-close is idempotent — subsequent observers see
 ## Identity matching
 
 A signed-in user is matched to `Reviewer` rows by **case-insensitive
-email equality**: both sides pass through `normalize_email` in
-`app/services/email_identity.py`, which strips whitespace and applies
-`str.lower` (deliberately not `casefold()`, which would merge distinct
-mailboxes such as `ß` and `ss`). Only `Reviewer` rows with
-`status == "active"` grant access; inactive / removed reviewers are
-invisible.
+email equality**, folded by `normalize_email` in
+`app/services/email_identity.py`: strip whitespace, then `str.lower`
+(deliberately not `casefold()`, which would merge distinct mailboxes
+such as `ß` and `ss`). Three callers apply it, each slightly
+differently:
 
-Both rules live in `require_reviewer_in_session` in `app/web/deps.py`,
-the per-session lookup that drives the surface route. The reviewer
-dashboard, the session surface, and the invitation-landing
-email-match check all use the same rule.
+- **Session surface** — `require_reviewer_in_session` in
+  `app/web/deps.py` folds both sides in Python and admits only
+  `status == "active"` rows; inactive / removed reviewers get a 404.
+- **Dashboard** (`/me`, `app/web/routes_reviewer/_dashboard.py`) —
+  matches in SQL, `func.lower(Reviewer.email) == normalize_email(user.email)`,
+  also `status == "active"` only. SQLite's `lower()` is ASCII-only
+  while Postgres's is Unicode-aware, so the two sides agree on ASCII
+  addresses only.
+- **Invitation landing** — folds both sides through `normalize_email`,
+  but `invitations.lookup_invitation_by_token` applies no status
+  filter. Today an inactive reviewer therefore passes the invite
+  check, and the redirect then lands on the surface's 404. This is a
+  known gap (`guide/findings_2026-10-01_corpus.md`), not the
+  contract.
 
 A user can have at most one active `Reviewer` row per session. A
 session can have multiple reviewers, each tied to a distinct user.
