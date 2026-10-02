@@ -53,7 +53,8 @@ operator default resolves the same way:
 Every surface that belongs to a single session — and so has one
 unambiguous zone — localises to it:
 
-- **Operator session pages** — Session Home / Detail, Edit, the
+- **Operator session pages** — Session Home / Detail (the old
+  `/edit` URL is only a redirect to its details card), the
   Setup pages (Reviewers / Reviewees / Relationships /
   Instruments), Operations pages. The session dependency
   (`require_session_operator` / `require_reviewer_in_session`)
@@ -64,10 +65,13 @@ unambiguous zone — localises to it:
   rows of the reviewer dashboard.
 - **Reviewer emails** — the `$deadline` / `$submitted_at` merge
   fields.
-- **CSV extracts** — every per-session extract. Timestamps are
-  ISO 8601 carrying the session zone's UTC offset (e.g.
-  `2026-06-02T08:00:00+08:00`) — a precise, round-trip-safe
-  machine format whose offset reflects the session zone.
+- **CSV extracts** — every per-session extract but the audit log.
+  Timestamps are ISO 8601 carrying the session zone's UTC offset
+  (e.g. `2026-06-02T08:00:00+08:00`) — a precise, round-trip-safe
+  machine format whose offset reflects the session zone. The
+  audit-events extract (`app/services/extracts/audit_events_extract.py`)
+  is the exception: its `CreatedAt` is ISO 8601 in UTC, matching the
+  UTC audit-log viewer below.
 
 **The sessions lobby** (`/operator/sessions`) and the
 **archived-sessions page** (`/operator/sessions/archived`) each
@@ -77,8 +81,9 @@ for their timestamp columns. The per-row timestamp columns
 dedicated **Timezone** column names each row's own session zone
 (see Rendering format below for its compact form).
 
-**The Sys Admin audit-log viewer is the one deliberate
-exception — UTC end-to-end.** A forensic surface correlating
+**The Sys Admin audit-log viewer is the deliberate
+exception — UTC end-to-end**, and the audit-events extract
+follows it. A forensic surface correlating
 events across sessions and operators reads most clearly in one
 fixed zone; its "When" column header and its From / To date
 filter are labelled `(UTC)`.
@@ -93,14 +98,13 @@ filter are labelled `(UTC)`.
   (`spec/settings_inventory.md` §8.5).
 - Where a **zone identity** is shown to a person — the Settings
   and Session forms' live previews, the Session Details card's
-  Timezone item, the reviewer dashboard / review-surface deadline
-  labels — it renders as the **compact GMT-offset followed by the
+  Timezone item, the review-surface deadline labels — it renders as the **compact GMT-offset followed by the
   raw IANA id**, e.g. `GMT+8 Asia/Singapore`, via
   `date_formatting.gmt_offset_zone_label`. The offset gives
   at-a-glance orientation; the IANA id is the unambiguous
   identifier. A bare `UTC` is shown once, not doubled.
-- The **sessions-lobby and archived-page Timezone columns** are
-  tighter still: the cell shows just the compact GMT-offset
+- The **sessions-lobby, archived-page and reviewer-dashboard
+  Timezone columns** are tighter still: the cell shows just the compact GMT-offset
   (`gmt_offset_label`, e.g. `GMT+8`), with the full
   `GMT+8 Asia/Singapore` in the cell's hover tooltip.
 - **No surface shows the CLDR long display name** (e.g.

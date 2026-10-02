@@ -22,7 +22,7 @@ Position in the Home body, top to bottom:
 
 The card is always rendered on Home for `draft` and `validated` sessions. Visibility does not depend on whether setup data exists — the card is a stable, learnable location for bulk setup regardless of session population.
 
-For `ready` and `closed` sessions, the card renders the same body-greying as the default `is_locked=True` treatment in `draft` / `validated` — the body wrapper carries `.quick-setup-body.locked`, and the Lock / Unlock toggle stays visible in every editable-conceivable state. Per `spec/session_home.md` ("Disabled treatment on Home is plain greying-out, not yellow lock cards"), Home does not stack a yellow lock card on top of the body greying. On `ready`, unlocking the card is purely visual — the importer rejects mutating submits at the service layer (`_require_editable`) and the rejection surfaces inline as a scoped `banner-error` carrying "Revert the session to draft before applying setup changes" copy. Current-state indicators (counts, rule label) render in every state.
+For `ready` and `expired` sessions, the card renders the same body-greying as the default `is_locked=True` treatment in `draft` / `validated` — the body wrapper carries `.quick-setup-body.locked`, and the Lock / Unlock toggle stays visible in every editable-conceivable state. Per `spec/session_home.md` ("Disabled treatment on Home is plain greying-out, not yellow lock cards"), Home does not stack a yellow lock card on top of the body greying. On `ready`, unlocking the card is purely visual — the importer rejects mutating submits at the service layer (`_require_editable`) and the rejection surfaces inline as a scoped `banner-error` carrying "Revert the session to draft before applying setup changes" copy. Current-state indicators (counts, rule label) render in every state.
 
 ### Slots
 
@@ -64,7 +64,7 @@ Each CSV's expected schema (column names, required vs. optional fields, encoding
 
 **Replace semantics.** Each slot replaces the entire corresponding dataset for the session; what a replacement takes with it is `spec/setup_pages.md` § *What a delete takes with it*, which governs every reviewer-delete surface alike. Merge semantics are not supported; per-record edits remain on the per-entity Setup pages. Replacing reviewers or reviewees automatically clears existing assignments and relationships (cascade inside the replacement transaction).
 
-**Replacement confirmation.** A single card-level checkbox sits above the slot grid, inside the `.quick-setup-body` wrapper:
+**Replacement confirmation.** A single card-level checkbox sits below the slot grid, inside the `.quick-setup-body` wrapper and just above the footer's Submit:
 
 > ☐ Yes, replace existing reviewers, reviewees or settings, according to what is uploaded. A settings file rebuilds every instrument and deletes its assignments.
 
@@ -80,7 +80,7 @@ The single card-level checkbox covers the cascade: its copy (quoted under **Repl
 
 **Locked state.** The card-level checkbox sits inside `.quick-setup-body`, so it greys along with the H2 title and slot controls when the card is locked. Greying is not the only signal: when the card is locked, the slot file inputs **and** the replacement-confirmation checkbox also carry the HTML `disabled` attribute, so a locked card cannot have a file staged or the box ticked — not merely a greyed-but-live surface.
 
-**Lock state on navigation.** Unlocking the card sets a per-session cookie (`qsu_{session_id}=1`, path `/`) that survives form submissions on Session Home itself — the operator can unlock once, upload through several slots, and stay unlocked. Navigating to **any other page** (per-entity Setup pages, Operations tabs, the sessions lobby, another session's Home, any other operator route) expires the cookie via a Starlette HTTP middleware. Returning to Session Home then renders the card locked again. The Quick Setup endpoints themselves (`/quick-setup/lock`, `/quick-setup/submit-all`, and the per-slot endpoints) are allowlisted so the card's own form submissions don't trigger the relock, as are Session Home's Owners card endpoints (`/owners/...`), whose own `oou_` unlock cookie shares the middleware (`spec/session_owners.md` §2).
+**Lock state on navigation.** Unlocking the card sets a per-session cookie (`qsu_{session_id}=1`, path `/`) that survives form submissions on Session Home itself — the operator can unlock once, upload through several slots, and stay unlocked. Navigating to **any other page** (per-entity Setup pages, Operations tabs, the sessions lobby, another session's Home, any other operator route) expires the cookie via a Starlette HTTP middleware. Returning to Session Home then renders the card locked again. The Quick Setup endpoints themselves (`/quick-setup/lock`, `/quick-setup/submit-all`, and the per-slot `/quick-setup/{kind}` endpoints) are allowlisted so the card's own form submissions don't trigger the relock, as are Session Home's Owners card endpoints (`/owners/...`), whose own `oou_` unlock cookie shares the middleware (`spec/session_owners.md` §2). The Settings slot's per-slot route, `POST …/import-config`, sits outside the `quick-setup` prefix and is not allowlisted, so a direct POST to it relocks the card; no UI calls it.
 
 ### Result reporting
 
@@ -118,7 +118,7 @@ The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Relat
 | `draft` | Any | **Unavailable.** Body greyed via `.quick-setup-body.locked`; Lock / Unlock toggle hidden entirely. Operator routes to per-entity Setup pages (which have the response-loss-acknowledgment flow) for any further changes. |
 | `validated` | (any) | **Unavailable.** Same body-greying + no-toggle treatment as `draft`-with-responses. The validated state is meant to be a final-check state; bulk re-uploads route through per-entity Setup pages instead. |
 | `ready` | (any) | **Unavailable.** Same treatment. Counts / rule still display in the greyed body for context. |
-| `closed` | (any) | Same as `ready`. |
+| `expired` | (any) | Same as `ready`. |
 
 The description copy explains the rule from the operator's vantage point. It has two variants: the default ("Available only when session is in draft mode and does not have any responses.") and a responses-specific one shown when the session holds responses — typically a session activated then reverted to draft, which keeps its responses and so lands `draft`-but-locked. The responses variant names the reason ("Quick Setup is locked because this session already holds reviewer responses from a prior activation.") and points the operator at the per-entity Setup pages. Both gates otherwise show up as the same visual signal (greyed body with disabled controls, no toggle). Defense-in-depth route gates (`_require_editable` + `_require_response_loss_ack`) stay in place but never fire from this surface because the submit forms aren't reachable when the body's locked.
 

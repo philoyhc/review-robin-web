@@ -214,8 +214,9 @@ ordered by `created_at DESC` (most recent first).
 
 ### Columns
 
-All non-checkbox columns are sortable (`rrw-sortable` header with
-a `rrw-sort-btn`); see "Sort / filter / search" below.
+Every column but **Tags** and the checkbox column is sortable
+(`rrw-sortable` header with a `rrw-sort-btn`); see "Sort / filter /
+search" below.
 
 | # | Column | Source | Display |
 |---|---|---|---|
@@ -240,7 +241,7 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   operator on Session Home.
 - **Row expander.** Ticking a single row's checkbox opens an
   inline expander row beneath it (the `single-session-expander`
-  `<template>`) carrying editable Name / Code / Deadline / Tags
+  `<template>`) carrying Name / Code / Deadline / Tags
   fields plus action buttons: Save (POSTs `{id}/lobby-edit`),
   Cancel, Duplicate / Duplicate settings only (POST `{id}/clone`),
   Purge and archive (POST `bulk-archive`), and a Delete button
@@ -248,6 +249,16 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   Ticking two or more rows opens the `bulk-expander` instead — bulk
   tag add/remove (`bulk-tags`), bulk purge-and-archive, and a
   gated bulk Delete.
+- **Name / Code / Deadline edit in `draft` only; Tags in any state.**
+  On any other lifecycle state the expander seeds those three boxes
+  with the row's values and renders them `disabled`, leaving Tags
+  live. The gate is enforced on the server too: `{id}/lobby-edit`
+  always applies the tags through `session_tags.set_tags`, but calls
+  `sessions.update_session` for name, code and deadline only when
+  `lifecycle.is_draft` holds, and otherwise ignores those fields
+  rather than refusing the post, so a stale form cannot slip past the
+  gate. This is narrower than Session Home's details card, whose
+  `/config` accepts `draft` and `validated`.
 - **Tags have four write surfaces, two of them off this page.** The
   lobby's two — the row expander's `{id}/lobby-edit` and the toolbar's
   `bulk-tags` — were the only ones until 19S Item 6 put a **Tags box on

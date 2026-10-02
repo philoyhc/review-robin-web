@@ -25,7 +25,8 @@ canonical description, alongside the per-page idiosyncrasies.
 (`app/web/routes_operator/_setup_observers.py`) are gated by
 `require_observers_enabled_session` — the page returns 404 until
 the operator enables observers via the **User interface settings**
-card on the Create Session form or Edit Session Details page. When
+card on the Create Session form or Session Home's **Session details**
+card. When
 `session.observers_enabled` is `True` the page offers the same CRUD
 operations as Reviewees — per-row edit, add, bulk status flips,
 delete, CSV import. (Its **layout** matched Reviewers' too until
@@ -56,8 +57,8 @@ below describe what that panel holds and what it replaced.
 
 0. **Page guidance** (`partials/_page_guidance.html`).
    A `<details class="card page-guidance">` — a **half-width
-   card**, not an inline band, on five of the six pages. **Reviewers
-   renders it full width** at the top of the page since 19P.1
+   card**, not an inline band, on Instruments and Email Template. **The
+   four roster pages render it full width** at the top of the page
    (`.page-guidance-wide`), where one measure would otherwise run to
    ~150 characters, so its open body sets two columns. **Closed by default**, showing one
    line: the summary `What this page is for`, set in **card-header
@@ -91,8 +92,8 @@ below describe what that panel holds and what it replaced.
    stretching grid cannot inflate it to a neighbour's height.
 
    **Every half-width card above the preview table shares one
-   `.card-columns`, not a row grid — and not two of them** (Reviewers
-   excepted since 19P.1; see the table below and the Reviewers section). Two
+   `.card-columns`, not a row grid — and not two of them** (the four
+   roster pages excepted; see the table below). Two
    containers look identical while everything is closed and still lose
    the point: growth in the upper one pushes both columns of the lower
    one down. A full-width card (the Activated lock card) therefore
@@ -179,7 +180,7 @@ below describe what that panel holds and what it replaced.
    |---|---|
    | Reviewers | The email is mandatory and should be the institutional MS365 account they sign in with, not contact detail; upload **replaces** the roster and clears assignments; `inactive` is the non-destructive alternative to delete; and an empty roster blocks `draft → validated` (`reviewers.empty`, error severity); and an upload or a delete also destroys **every relationship involving the rows it removes** (19O.5) |
    | Reviewees | An email is **optional** when you are only collecting data about someone — and **required, tied to their institutional MS365 account**, the moment they must see responses or summaries, since that is what a sign-in is matched against (the gap surfaces only as `reviewees.unreachable_for_results` on Validate); an empty roster blocks `draft → validated` (`reviewees.empty`, error severity); and an upload or a delete also destroys **every relationship involving the rows it removes** (19O.5) |
-   | Relationships | The page is **optional** — a session works without any — and earns its keep only for context *not already derivable from reviewer and reviewee tags*; its three tags are a real assignment-rule namespace (`pair_context.tagN` → `Relationship.tag_N`, `spec/assignments.md` "Predicate vocabulary"), so they can affect who reviews, or does not review, whom — **but only once populated**, since `views._instruments._new_model_usable_tags` offers a namespace + slot in the Band 1 dropdowns only when some row fills it; and **this roster depends on the other two** — every row names one reviewer and one reviewee, so replacing or emptying either of those rosters deletes the rows that referenced them, irreversibly, which is why it is set last and re-set after any change to them (19O.5) |
+   | Relationships | The page is **optional** — a session works without any — and earns its keep only for context *not already derivable from reviewer and reviewee tags*; its three tags are a real assignment-rule namespace (`pair_context.tagN` → `Relationship.tag_N`, `spec/assignments.md` "Predicate vocabulary"), so they can affect who reviews, or does not review, whom — **but only once populated**, since `views._instruments.new_model_usable_tags` offers a namespace + slot in the Band 1 dropdowns only when some row fills it; and **this roster depends on the other two** — every row names one reviewer and one reviewee, so replacing or emptying either of those rosters deletes the rows that referenced them, irreversibly, which is why it is set last and re-set after any change to them (19O.5) |
    | Observers | The page is **optional** — a session works without any; the cohort rule grants sight rather than narrowing it, so an observer with no rule sees **nothing** (see "Cohort match rule editor" below); and what they see of each response is a **per-instrument** Band 3 policy, not a setting on this page |
    | Instruments | The instrument carries the assignment rule, and pairs materialise at Prepare rather than as the rule is edited; a session **must keep at least one** (`routes_operator/_instruments.py` refuses the last delete) |
    | Email Template | Sending is not switched on (Segment 14B), and no part of reviewer access depends on it |
@@ -240,9 +241,9 @@ below describe what that panel holds and what it replaced.
    the Workflow card's stepper already states the lifecycle, per
    `spec/operator_ui_concept.md` P4.
 4. **Friendly-label editor.** The inline editor card via
-   `operator/partials/_field_labels_editor.html`. Reviewers +
-   Relationships render a 3-cell row; Reviewees a 2-row stacked grid
-   (identity + tags, 6 cells). Save + Cancel pair in Secondary style,
+   `operator/partials/_field_labels_editor.html`. Reviewers,
+   Reviewees and Relationships each render one row of three tag
+   cells. Save + Cancel pair in Secondary style,
    both starting `disabled` until the form is dirty (inline JS toggles
    via an initial-value snapshot). POST handlers in the per-entity
    setup modules (`app/web/routes_operator/_setup_reviewers.py` /
@@ -596,8 +597,9 @@ The pattern:
   Sessions-lobby tag-filter chip styling (`.pill` + `.tag-chip` +
   `.is-selected`); the inline JS binds both `click` and
   `keydown` (Enter / Space).
-- Optional tag / context columns always render in the DOM (so
-  empty columns can be revealed). Clicking a chip toggles
+- A populated optional tag / context column renders in the DOM
+  whether or not it is shown, so a hidden one can be revealed (an
+  empty one does not render; see the next bullet). Clicking a chip toggles
   per-column visibility via a CSS class on the table (e.g.
   `col-hidden-tag-1` → `display: none` for cells with class
   `tag-col-1`). The chip flips between filled (`is-selected`,
@@ -622,7 +624,7 @@ The pattern:
   **`edit_mode` overrides the gate** on the three roster pages: an
   operator adding or editing a row sees every tag column and can type
   into an empty one, which is the only way a tag ever stops being
-  empty. The Photo column has always worked this way.
+  empty. The Profile column has always worked this way.
 - The Reviewees row also carries a chip for the **profile-link
   column** (`data-col-toggle="profile"`, cells `class="profile-col"`).
   Chip and column are gated on the same `col_data["profile"]`, so
@@ -693,7 +695,7 @@ Sortable columns per table:
 - **Reviewers:** `name`, `email`, `tag_1` / `tag_2` / `tag_3`,
   `status`, `updated_at`.
 - **Reviewees:** `name`, `email_or_identifier`, `tag_1` /
-  `tag_2` / `tag_3`, `status`, `updated_at`. (The Photo column
+  `tag_2` / `tag_3`, `status`, `updated_at`. (The Profile column
   stays non-sortable — it renders a link, not a comparable
   value.)
 - **Relationships:** `reviewer` / `reviewee` (both sort on the
@@ -1301,7 +1303,7 @@ CSV header copy lists `ReviewerName`, `ReviewerEmail` required;
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the **row expander** below |
 | 1 | Name | — | `reviewer.name` |
 | 2 | Email | — | `<code>{{ reviewer.email }}</code>` |
-| 3 | Profile | — | Conditional: rendered only when at least one reviewer has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` when populated; input in edit mode. `class="profile-col"`. Uses the operator-renamable `("reviewer", "profile_link")` label (default "Profile"). **Not toggleable** — unlike the Reviewees Photo column, this one has no chip and no `col-hidden-profile` rule; its visibility is decided server-side only. The asymmetry with Reviewees is deliberate. |
+| 3 | Profile | — | Conditional: rendered only when at least one reviewer has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` when populated; input in edit mode. `class="profile-col"`. Uses the operator-renamable `("reviewer", "profile_link")` label (default "Profile"). **Not toggleable** — unlike the Reviewees Profile column, this one has no chip and no `col-hidden-profile` rule; its visibility is decided server-side only. The asymmetry with Reviewees is deliberate. |
 | 4 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
 | 5 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 6 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
@@ -1345,17 +1347,17 @@ is only a bug when it points at a different shape.*
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the **row expander** below |
 | 1 | Name | — | `reviewee.name` |
 | 2 | Email / Identifier | — | `<code>{{ reviewee.email_or_identifier }}</code>` |
-| 3 | Photo | ✓ | Conditional: rendered only when at least one reviewee has `profile_link`. Cell renders `<a href="…" target="_blank">link</a>`. `data-col-toggle="profile"` / `class="profile-col"` |
+| 3 | Profile | ✓ | Conditional: rendered only when at least one reviewee has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>`. `data-col-toggle="profile"` / `class="profile-col"`. Uses the operator-renamable `("reviewee", "profile_link")` label (default "Profile"). |
 | 4 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
 | 5 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 6 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
 | 7 | Status | — | `reviewee.status` |
 | 8 | Updated | — | `reviewee.updated_at` (`%Y-%m-%d %H:%M`) |
 
-Whether the Photo column renders at all is governed by whether any
-reviewee has a populated `profile_link` in the current preview
-rows; when it renders, its `Show columns:` chip can hide / show it
-like the tag columns. Position 3 sits between the identity columns
+Outside `edit_mode`, whether the Profile column renders at all is
+governed by whether any reviewee in the session's roster has a
+populated `profile_link`; when it renders, its `Show columns:` chip
+can hide / show it like the tag columns. Position 3 sits between the identity columns
 and the toggleable tag columns so the canonical column order is
 consistent across reviewers / reviewees.
 
@@ -1411,9 +1413,9 @@ distinct without needing an explicit hide affordance.
 ### Round-trip with the Relationships extract
 
 The CSV column shape here is the inverse of
-`app/services/extracts/relationships_extract.py` (8-column wide
+`app/services/extracts/relationships_extract.py` (6-column wide
 CSV: `ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`,
-`Status` — same six columns the importer accepts). Round-trip is
+`Status` — the same six columns the importer accepts). Round-trip is
 byte-stable on the export's own output. The Extract Setup card on the
 **Extract data** Operations tab carries the corresponding Download
 button (`spec/session_home.md` §2).
@@ -1519,8 +1521,8 @@ silent failure the relaxation exists to remove.
 | # | Column | Toggle? | Notes |
 |---|---|---|---|
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the **row expander** below |
-| 1 | Email | — | `observer.email` in `<code>` |
-| 2 | Name | — | `observer.display_name`; `—` when null |
+| 1 | Name | — | `observer.display_name`; `—` when null |
+| 2 | Email | — | `observer.email` in `<code>` |
 | 3 | Tag | — | `observer.tag_1`; `—` when null |
 | 4 | Status | — | `observer.status` |
 | 5 | Cohort | — | Friendly summary of `observer.cohort_rule` (e.g. `Reviewer: Mentor IS THE SAME AS Observer: Email + 1 more`); `—` when no rule saved |
