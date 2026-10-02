@@ -828,7 +828,23 @@ and direct POSTs bypass the picker entirely).
   scheduled-fire moment from the audit log; **after 3 failed
   retries** it emits `session.scheduled_X_failed_persistent`,
   clears the schedule, and stops. Retries are paced by operator
-  visits — no time-based throttle for MVP.
+  visits — no time-based throttle for MVP. **Only activation
+  implements this.** For invites and reminders the retry and
+  terminal state are work in progress awaiting Azure
+  (`guide/post_azure_todo_checklist.md` item 7). Until then
+  `observe_scheduled_events` runs each trigger guarded: one that
+  raises has its uncommitted work rolled back (anything it already
+  committed, such as sent invitations, stays) and is logged,
+  `session.scheduled_event_failed` records it (`context.trigger`,
+  `reason`; not repeated while that trigger's latest one says the
+  same), the page still renders, and the next visit tries again with
+  no attempt cap. The guard also covers activation: if writing its own
+  retry or skip row fails, that attempt is rolled back uncounted, so
+  the three-retry cap above holds only while those writes succeed. An
+  audit-schema error is re-raised — it only raises in strict mode,
+  where it is the test suite's gate — except inside activation's own
+  transition handler, which records one raised by `activate_session`
+  as a retry like any other error.
 - **Operator notification on skip / failure.** MVP: audit
   events only, plus a **Session Home banner** on the next
   operator visit ("Scheduled activation skipped at «X» —

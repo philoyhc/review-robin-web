@@ -205,3 +205,12 @@ E1, E2 and E4 were checked by the author when they merged.
   to about 250 characters, then send one invitation and one reminder
   from Operations. Both succeed, and each outbox row's subject is cut
   short rather than erroring.
+
+## A failing scheduled send no longer breaks Session Home (B20)
+
+- [ ] **Session Home loads.** Nothing in the UI can force a send to
+  fail, so this is a smoke check: open Session Home for a session with
+  scheduled invites or reminders set and past due. It loads, and Admin →
+  Sessions shows the audit log with either the fired events or, if
+  something failed, one `session.scheduled_event_failed` row per
+  failing trigger, however many times the page is reloaded.

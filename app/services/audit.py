@@ -404,6 +404,13 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.scheduled_reminders_fired": EventSchema(
         _IDENTITY | {"counts", "context"}
     ),
+    # B20 (2026-10-02): a trigger that raised inside
+    # ``observe_scheduled_events`` — rolled back and logged so the page
+    # still renders. ``context.trigger`` names it (``invites`` /
+    # ``activation`` / ``reminders``); ``reason`` carries the error.
+    "session.scheduled_event_failed": EventSchema(
+        _IDENTITY | {"reason", "context"}
+    ),
     # Segment 18A Part 3 — session archiving (draft ⇄ archived).
     "session.archived": EventSchema(_IDENTITY | {"changes"}),
     "session.unarchived": EventSchema(_IDENTITY | {"changes"}),
