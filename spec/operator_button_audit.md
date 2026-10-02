@@ -87,10 +87,10 @@ Source: `app/web/templates/operator/sessions_list.html`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 193 | Search | Add new session | `<a>` | `btn` | Primary | The lobby's **only** create affordance, in every state — the first-run card names this button instead of carrying a second one (`spec/sessions_overview.md` "Empty state") |
+| 193 | Filter | Add new session | `<a>` | `btn` | Primary | The lobby's **only** create affordance, in every state — the first-run card names this button instead of carrying a second one (`spec/sessions_overview.md` "Empty state") |
 | 194 | Filter | Rehydrate / Go to Archive | `<a>` | `btn secondary` | Secondary | Always rendered; `Go to Archive` is active in every state, `Rehydrate` in every state **in which it renders at all** — it is gated behind `rehydrate_enabled`, which ships false, so by default it is absent rather than inactive (`spec/rehydrate.md`) |
 | 194a | Filter | Clear | `<button type="button">` | `btn secondary` | Secondary | Empties the filter box. `Clear`, not `Cancel`: the control is a filter, and a live filter has nothing in flight to cancel. Only when live sessions exist; inert as a `<span class="btn secondary disabled">`, not a disabled `<a>`, because `a.btn.disabled` still navigates. **Note the adjacency**: the `Sessions` card's tag strip carries its own `Clear` chip, which clears the selected tags rather than the box |
-| 195 | Row expander (single / bulk) | Delete | `<button type="submit">` | `btn destructive` | Destructive | Lives in the row expander, not a standalone Danger Zone card; gated behind a "Yes, delete" checkbox — see `spec/sessions_overview.md` |
+| 195 | Row expander (single / bulk) | Delete / Delete all | `<button type="submit">` | `btn destructive` | Destructive | Lives in the row expander, not a standalone Danger Zone card; gated behind a "Yes, delete" checkbox — see `spec/sessions_overview.md` |
 | 199 | Row expander (single) | Save | `<button type="button">` | `btn secondary` | Secondary | Posts the row's Name / Code / Deadline / Tags to `{id}/lobby-edit`. Name, Code and Deadline are editable in `draft` only; Tags in any state |
 | 200 | Row expander (single) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Unticks the row, which closes the expander; writes nothing |
 | 201 | Row expander (single) | Duplicate | `<button type="button">` | `btn secondary` | Secondary | Posts `{id}/clone` with `mode=all` |
@@ -607,7 +607,8 @@ reached from the chrome — `spec/operations_pages.md`.
 
 Source: `app/web/templates/operator/session_extract_data.html`. The
 Data shaper's action row repeats on every shape sub-card and is listed
-once.
+once, as are the Extract Setup card's per-entity rows
+(`operator/partials/_extract_data_card.html`, included by the page).
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
@@ -624,6 +625,9 @@ once.
 | 220 | Data shaper | Zip all | `<a>` | `btn secondary` | Secondary (Disabled) | `href="#"` and `aria-disabled="true"` unconditionally — a placeholder |
 | 221 | Archive session | Purge and archive / Already archived | `<button type="submit">` | `btn danger-solid` | Alert | Posts `/operator/sessions/bulk-archive` with the ticked purge options and `return_to=archived` — the lobby's #203 route. Disabled when the session is Activated or already archived |
 | 222 | Token keys | Download token keys | `<a>` | `btn secondary` | Secondary | `GET …/export/participant_tokens.csv`. The card renders only when `observers_enabled` |
+| 227 | Extract Setup, per-entity row (Reviewers / Reviewees / Relationships / Observers) | Download | `<a download>` | `btn secondary` | Secondary (Disabled when the roster is empty) | `GET …/export/{key}.csv`. With no rows it renders `aria-disabled="true"` with no `href`, titled "No {noun}s to download yet". The Observers row renders only when `observers_enabled` |
+| 228 | Extract Setup | Download (Session settings) | `<a download>` | `btn secondary` | Secondary | `GET …/export/settings.csv`; always live |
+| 229 | Extract Setup | Download (Zip all) | `<a download>` | `btn secondary` | Secondary | `GET …/export/bundle.zip` — the setup CSVs only |
 
 ---
 

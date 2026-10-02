@@ -166,7 +166,7 @@ Specifics:
 
 ### Status strip
 
-The status strip sits below the chrome and above the page body on all session-scoped pages. Composition, left to right:
+The status strip sits inside the session nav card, below the two tab rows, on all session-scoped pages. Composition, left to right:
 
 ```
 Session: [LIFECYCLE_BADGE]  ·  Reviewers: [count]  ·  Reviewees: [count]  ·  Relationships: [count]  ·  Observers: [count]  ·  Instruments: [configured / total]  ·  Email Template: [Set up / Not set up]  ·  Invitations: [state]  ·  Responses: [state]
@@ -326,7 +326,7 @@ Non-session operator pages share a simple structure:
    - **H1 page title.**
    - Page content.
 
-The breadcrumb is at most two deep: `Sessions` on the lobby (and on Settings), `Sessions` → `New session` / `Archived` on the lobby's two children; About, the Guide and the Sys Admin pages render none. The H1 and the user menu together orient the operator.
+The breadcrumb is at most two deep: `Sessions` on the lobby (and on Settings), `Sessions` → `New session` / `Archived` on the lobby's children (and `Sessions` → `Rehydrate session` on the rehydrate page, which is gated off by default); About, the Guide and the Sys Admin pages render none. The H1 and the user menu together orient the operator.
 
 #### Operator's Overview (Sessions list)
 

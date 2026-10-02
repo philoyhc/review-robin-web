@@ -119,9 +119,9 @@ def test_sessions_list_empty_state_has_one_create_affordance(
     assert 'class="btn" href="/operator/sessions/new">Add new session</a>' in body
     assert body.count('href="/operator/sessions/new"') == 1
     # The first-run card carries no button of its own — it names the one
-    # that exists. (`btn-cta` still appears in the page: base.html inlines
-    # the whole stylesheet, so the rule survives its last user. The
-    # assertion is on the markup.)
+    # that exists. (`btn-cta` has no rule in base.html any longer; the
+    # assertion is on the markup, so it guards against the class
+    # returning to a template.)
     assert 'class="btn-cta"' not in body
     assert ">Create new session<" not in body
     # Named once, in the `Set up a session` tile, where it belongs to the
