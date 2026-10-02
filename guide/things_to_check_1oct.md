@@ -226,3 +226,9 @@ E1, E2 and E4 were checked by the author when they merged.
 - [ ] **No new page break, visibility starts off.** Replicate an
   instrument that starts a new page: the copy sits on the same reviewer
   page as its source. The copy's Visibility settings are all off.
+
+## Setup tabs underline in blue (findings register E5)
+
+- [ ] **Light and dark.** On any Setup page (Reviewers, say), the active
+  Setup tab's underline is blue rather than grey, in both themes. The
+  Operations row's green underline is unchanged.

@@ -976,14 +976,14 @@
         background: var(--tab-marker-color);
         border-radius: 2px;
       }
-      /* Per-row active-tab marker — match the row's tint family.
-         Setup row sits on grey, so its marker is grey;
-         Operations row sits on light green, so its marker is a
-         less-saturated green. Specificity 0,3,1 wins over the
+      /* Per-row active-tab marker. The Setup row's is the blue
+         Setup identity (--nav-marker-setup, author's ruling
+         2026-10-02, findings E5); the Operations row sits on
+         light green, so its marker is a less-saturated green. Specificity 0,3,1 wins over the
          global .nav-tab.active::after (0,2,1). Applies on both v1
          and v2 pages — the :root tokens are globally available. */
       .tab-strip-setup .nav-tab.active::after {
-        background: var(--marker-neutral);
+        background: var(--nav-marker-setup);
       }
       .tab-strip-ops .nav-tab.active::after {
         background: var(--nav-marker-ops);
@@ -3985,14 +3985,14 @@
         background: var(--nav-tab-active-bg);
       }
       body.ui-v2 .nav-tab.active { color: var(--text-body); }
-      /* Active-tab underline — match the row's tint family. Setup
-         row tints grey, so its marker is grey (--neutral-marker);
-         Operations row tints green, so its marker is the
-         less-saturated --accent-green-marker. Same logic as v1's
-         per-row markers above — these v2-scoped rules just keep
-         the cascade tidy if v2-only tokens diverge later. */
+      /* Active-tab underline — the Setup row's is the blue Setup
+         identity (--nav-marker-setup, findings E5); the Operations
+         row tints green, so its marker is the less-saturated
+         --nav-marker-ops. Same as v1's per-row markers above — these
+         v2-scoped rules just keep the cascade tidy if v2-only tokens
+         diverge later. */
       body.ui-v2 .tab-strip-setup .nav-tab.active::after {
-        background: var(--marker-neutral);
+        background: var(--nav-marker-setup);
       }
       body.ui-v2 .tab-strip-ops .nav-tab.active::after {
         background: var(--nav-marker-ops);
