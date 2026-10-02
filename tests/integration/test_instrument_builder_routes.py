@@ -536,9 +536,9 @@ def test_replicate_instrument_clones_content(
     client: TestClient, db: Session
 ) -> None:
     """Replicate clones an instrument's description, response /
-    display fields and group_kind into a new card slotted immediately
-    after the source — without the source's pinned rule (13C PR 3) and,
-    since Segment 19N, **without its assignment rows**.
+    display fields, group_kind and a clone of its pinned rule (A1,
+    2026-10-02) into a new card slotted immediately after the source — since
+    Segment 19N **without its assignment rows**.
 
     The duplicate starts empty and gets its pairs from the next
     Generate, like any other instrument: rows are only ever written by
@@ -589,7 +589,9 @@ def test_replicate_instrument_clones_content(
     assert copy.description == "Peer review round 1"
     assert copy.group_kind == "r1"
     assert copy.accepting_responses is False
-    assert copy.rule_set_id is None
+    source_rule_set = db.get(Instrument, source_id).rule_set_id
+    assert copy.rule_set_id is not None
+    assert copy.rule_set_id != source_rule_set
     assert copy.order == db.get(Instrument, source_id).order + 1
     assert _count(InstrumentResponseField, copy.id) == src_fields
     assert _count(InstrumentDisplayField, copy.id) == src_displays

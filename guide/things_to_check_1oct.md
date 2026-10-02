@@ -214,3 +214,15 @@ E1, E2 and E4 were checked by the author when they merged.
   Sessions shows the audit log with either the fired events or, if
   something failed, one `session.scheduled_event_failed` row per
   failing trigger, however many times the page is reloaded.
+
+## Replicate copies the set-up (A1)
+
+- [ ] **The copy is set up.** On a draft session, set an instrument's
+  Band 1 links and a filter rule, a short label, a column width and a
+  default sort, then Replicate it. The copy shows the same Band 1 pills
+  and rule (not "Not set up"), the same label, widths and sort.
+- [ ] **Edits stay separate.** Change the copy's Band 1 rule and save:
+  the source's rule is unchanged.
+- [ ] **No new page break, visibility starts off.** Replicate an
+  instrument that starts a new page: the copy sits on the same reviewer
+  page as its source. The copy's Visibility settings are all off.

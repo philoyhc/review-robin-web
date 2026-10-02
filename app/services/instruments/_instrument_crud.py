@@ -24,6 +24,10 @@ Saves emit ``instrument.created`` / ``.deleted`` /
 
 from __future__ import annotations
 
+import copy as _copy
+import re
+from typing import Any
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -32,10 +36,12 @@ from app.db.models import (
     InstrumentDisplayField,
     InstrumentResponseField,
     ReviewSession,
+    SessionRuleSet,
     User,
 )
 from app.services import session_lifecycle as lifecycle
 from app.services import audit
+from app.services.instruments._band1 import _band1_rule_set_name
 from app.services.instruments._response_fields import DEFAULT_RESPONSE_FIELDS
 from app.services.instruments._state import _instrument_label
 
@@ -284,18 +290,26 @@ def replicate_instrument(
     source: Instrument,
     actor: User,
 ) -> Instrument:
-    """Clone an instrument's content into a new instrument slotted
-    immediately after the source (Segment 13C PR 3).
+    """Clone an instrument into a new instrument slotted immediately
+    after the source (Segment 13C PR 3; ``spec/instruments.md``
+    "Replicate semantics").
 
-    Copies the description, the response fields (incl. each
-    field's help text and per-field ``visible`` flag), the display
-    fields (incl. each row's ``visible`` Include flag),
-    ``group_kind``, and ``sort_display_fields``. The copy's name
-    is the source name +
-    " (copy)", the source name trimmed so the whole fits the 255-char
-    column; it starts ``accepting_responses=False`` and carries
-    **no** pinned rule (``rule_set_id``). Activation opens it with
-    every other instrument.
+    Copies every column but the key, ``order``, ``session_seq``,
+    ``starts_new_page``, the caches and ``deadline_closed_at``: description, ``short_label``,
+    the response fields (incl. help text, ``visible`` and branches),
+    the display fields (incl. each row's ``visible``), ``group_kind``,
+    ``band1_touched_links``, ``band2_state`` and the two acceptance
+    flags as-is. ``starts_new_page`` is not copied: it marks a break
+    before the instrument, a fact about position, and the copy
+    continues the source's page like any new instrument. The source's Band 1 rule set is
+    **cloned** into a row of the copy's own (author's ruling,
+    2026-10-02, A1: the copy starts with the source's Band 1 rule and
+    set-up state). Not shared: three Band 1 writers update the pinned
+    row in place, so a shared row would carry an edit to either
+    instrument into the other. ``sort_display_fields`` and
+    ``column_widths`` name fields by id, so they are re-pointed at the
+    copy's fields. The name is the source name + " (copy)", the source
+    name trimmed so the whole fits the 255-char column.
 
     **No ``Assignment`` rows are created**, here or in
     :func:`create_instrument`. Both cloned them until Segment 19N.1, so
@@ -325,17 +339,16 @@ def replicate_instrument(
         name=source.name[: _NAME_MAX - len(_COPY_SUFFIX)] + _COPY_SUFFIX,
         description=source.description,
         order=new_order,
-        accepting_responses=False,
-        responses_visible_when_closed=False,
+        short_label=source.short_label,
+        accepting_responses=source.accepting_responses,
+        responses_visible_when_closed=source.responses_visible_when_closed,
         group_kind=source.group_kind,
-        sort_display_fields=(
-            [dict(entry) for entry in source.sort_display_fields]
-            if source.sort_display_fields
-            else source.sort_display_fields
-        ),
+        band1_touched_links=_copy.deepcopy(source.band1_touched_links),
+        band2_state=_copy.deepcopy(source.band2_state),
     )
     db.add(instrument)
     db.flush()
+    instrument.rule_set_id = _clone_rule_set(db, source, instrument, actor)
 
     source_fields = db.execute(
         select(InstrumentResponseField).where(
@@ -385,17 +398,27 @@ def replicate_instrument(
             InstrumentDisplayField.instrument_id == source.id
         )
     ).scalars()
+    display_copy_of: dict[int, InstrumentDisplayField] = {}
     for display in source_displays:
-        db.add(
-            InstrumentDisplayField(
-                instrument_id=instrument.id,
-                label=display.label,
-                source_type=display.source_type,
-                source_field=display.source_field,
-                order=display.order,
-                visible=display.visible,
-            )
+        display_copy = InstrumentDisplayField(
+            instrument_id=instrument.id,
+            label=display.label,
+            source_type=display.source_type,
+            source_field=display.source_field,
+            order=display.order,
+            visible=display.visible,
         )
+        db.add(display_copy)
+        display_copy_of[display.id] = display_copy
+    db.flush()
+    display_ids = {old: new.id for old, new in display_copy_of.items()}
+    field_ids = {old: new.id for old, new in copy_of.items()}
+    instrument.sort_display_fields = _repoint_sort(
+        source.sort_display_fields, display_ids
+    )
+    instrument.column_widths = _repoint_widths(
+        source.column_widths, display_ids=display_ids, field_ids=field_ids
+    )
     db.flush()
 
     # A duplicated instrument gets **no assignment rows** either
@@ -423,6 +446,101 @@ def replicate_instrument(
     )
     db.commit()
     return instrument
+
+
+def _clone_rule_set(
+    db: Session, source: Instrument, replica: Instrument, actor: User
+) -> int | None:
+    """A copy of the source's pinned rule set, owned by the replica,
+    with its ``session_rule_set.created`` event. ``None`` when the
+    source has none."""
+    if source.rule_set_id is None:
+        return None
+    original = db.get(SessionRuleSet, source.rule_set_id)
+    if original is None:
+        return None
+    clone = SessionRuleSet(
+        session_id=replica.session_id,
+        name=_band1_rule_set_name(db, replica),
+        description=(
+            f"Auto-managed by Band 1 of new-model instrument "
+            f"#{replica.id}."
+        ),
+        combinator=original.combinator,
+        exclude_self_reviews=original.exclude_self_reviews,
+        seed=original.seed,
+        rules_json=_copy.deepcopy(original.rules_json),
+    )
+    db.add(clone)
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="session_rule_set.created",
+        summary=(
+            f"Copied Band 1 RuleSet for replicated instrument "
+            f"{_instrument_label(replica)}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session=replica.session,
+        payload=audit.snapshot(
+            {
+                "id": clone.id,
+                "name": clone.name,
+                "combinator": clone.combinator,
+                "rule_count": len(clone.rules_json or []),
+            }
+        ),
+        refs={
+            "session_rule_set_id": clone.id,
+            "instrument_id": replica.id,
+        },
+    )
+    return clone.id
+
+
+_WIDTH_KEY = re.compile(r"^(df|rf)_(\d+)$")
+
+
+def _repoint_sort(
+    entries: list[dict[str, Any]] | None, display_ids: dict[int, int]
+) -> list[dict[str, Any]] | None:
+    """A replica's sort entries, re-pointed at its own display fields.
+    An entry naming no source display field is dropped."""
+    if not isinstance(entries, list) or not entries:
+        return entries if isinstance(entries, list) else None
+    out = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        old_id = entry.get("display_field_id")
+        new_id = display_ids.get(old_id) if isinstance(old_id, int) else None
+        if new_id is not None:
+            out.append({**entry, "display_field_id": new_id})
+    return out
+
+
+def _repoint_widths(
+    widths: dict[str, Any] | None,
+    *,
+    display_ids: dict[int, int],
+    field_ids: dict[int, int],
+) -> dict[str, Any] | None:
+    """A replica's column widths, ``df_<id>`` / ``rf_<id>`` keys re-pointed
+    at its own fields. Other keys (``identity``) are kept; a key naming
+    no source field is dropped."""
+    if not isinstance(widths, dict) or not widths:
+        return widths if isinstance(widths, dict) else None
+    out: dict[str, Any] = {}
+    for key, value in widths.items():
+        match = _WIDTH_KEY.match(key) if isinstance(key, str) else None
+        if match is None:
+            out[key] = value
+            continue
+        ids = display_ids if match.group(1) == "df" else field_ids
+        new_id = ids.get(int(match.group(2)))
+        if new_id is not None:
+            out[f"{match.group(1)}_{new_id}"] = value
+    return out
 
 
 class LastInstrumentError(Exception):
