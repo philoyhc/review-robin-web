@@ -453,8 +453,9 @@ are two-state toggles, and no §6 role covers a toggle: each renders
 
 | # | Card / sub-section | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 223 | Response-field row | R | `<button type="button">` | `btn` (on) / `btn secondary` (off) | **TBD (author)** | Toggles the field's `required`; disabled ("Enter a field name first.") while the row has no field name, and while a Require branch governs the field |
-| 224 | Response-field row | ≡ | `<button type="button">` | `btn` (on) / `btn secondary` (off) | **TBD (author)** | Toggles the field's help-text card on the reviewer surface (`help_text_visible`); disabled ("Enter a field name first.") while the row has no field name |
+| 223 | Response-field row | R | `<button type="button">` | `btn` (on) / `btn secondary` (off) | **Toggle** | Toggles the field's `required`; disabled ("Enter a field name first.") while the row has no field name, and while a Require branch governs the field |
+| 224 | Response-field row | ≡ | `<button type="button">` | `btn` (on) / `btn secondary` (off) | **Toggle** | Toggles the field's help-text card on the reviewer surface (`help_text_visible`); disabled ("Enter a field name first.") while the row has no field name |
+| 230 | Response-field row | ⑂ | `<button type="button">` | `btn rf-glyph` (on) / `btn secondary rf-glyph` (off) | **Toggle** | Adds a branch below the field. On (`aria-pressed="true"`) once the field has a branch, and disabled then; also disabled for a String field, and inside a branch whose responses lock it (`branch_locked`) |
 
 ---
 

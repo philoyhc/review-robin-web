@@ -496,7 +496,43 @@ gets that URL from its request; a clock does not. Keep the page-view
 sweep as a backstop. `spec/lifecycle.md` §8.3, the minimum-lead-time
 rule beside it, and the docstring then say what ships.
 
+**Fix the auto-send caption with it** (author's ruling, 2026-10-02:
+scheduled send is work in progress awaiting Azure). The Workflow
+card's caption treats `expired` and `archived` as prepared and can
+promise "System will dispatch automatically" where the trigger skips
+with `not_prepared`. `build_auto_send_invites_caption` in
+`app/web/views/_workflow_card.py` should use the trigger's own test,
+`validated` or `ready`; `spec/workflow_card.md` "Auto-send invites
+signal" records it as a known defect until then.
+
 **Done when** a scheduled invitation and a scheduled reminder each go
 out at their set time on the deployed app with no operator page open.
 Both the audit events' times and the outbox rows' times show it, and the
 links in the outbox rows open on the deployed host.
+
+## 8. Stamp outbox rows `queued` until a transport has sent them
+
+**Status:** open, **incomplete work awaiting Azure** (author's ruling,
+2026-10-02, on `guide/findings_2026-10-01_corpus.md` H20).
+
+**What is wrong.** Nothing sends email yet: no caller reaches the
+transport in `app/services/email_send.py`. The send path still writes
+each outbox row `queued` and flips it to `sent` in the same call
+(`app/services/invitations.py`), so `sent` claims a delivery that never
+happened. Invitation status follows it.
+
+**Why it waits here.** The honest status needs the transport that
+makes it true. Segment 14B Part A wires the dispatch helper, and which
+backend it uses depends on what the NUS tenant allows
+(`spec/email_infra_options.md`).
+
+**Do, with the transport.** Leave the row `queued` until the transport
+reports success, then stamp `sent` (or `failed`, with
+`error_message`). Re-check every reader of `sent` — the invitation
+pills, the Workflow card captions, the Responses page — against the
+new timing. `README.md` and `docs/status.md` describe today's
+behavior until then.
+
+**Done when** a row reads `queued` until its message leaves, `sent`
+only after the transport confirms, and `failed` when it does not.
+

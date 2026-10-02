@@ -879,7 +879,7 @@ gate the trigger:
 | set | set | yes | yes | ✓ "Auto-send scheduled at «X». System will dispatch automatically; you can also Send all now." |
 
 In this table **Prepared?** follows the trigger: `validated` or `ready`.
-**Known defect:** the caption builder tests `is_draft` and then
+**Known defect, awaiting Azure** (`guide/post_azure_todo_checklist.md` item 7): the caption builder tests `is_draft` and then
 `is_ready`, so it treats `expired` and `archived` as prepared. It can
 show those states the ✓ "System will dispatch automatically" row,
 though the trigger skips them with `not_prepared` (`is_prepared` in

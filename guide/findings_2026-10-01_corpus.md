@@ -145,9 +145,9 @@ the spec should say so.
   made no such claim.
 - **F23** — The Graph stub docstring says delegated `/me/sendMail`, and
   `spec/email_infra_options.md` says Option B is an app permission.
-- **C1** — Quick Setup's Lock/Unlock prose says the toggle renders in
-  `validated` and `ready`. The spec's own state table, the code and the
-  tests say draft only. The prose is probably the stale half.
+- ~~**C1**~~ — **Ruled 2026-10-02: follow the code. Done in #2739.**
+  Quick Setup's Lock/Unlock prose said the toggle renders in
+  `validated` and `ready`; the code and tests say draft only.
 
 **Visual treatment: the specs disagree with each other or with `base.html`.**
 
@@ -173,35 +173,30 @@ the spec should say so.
   entries, the CSS, and the `.btn-row` test references?
 
 **New from the fix batches (2026-10-02).** Each was found while
-fixing a no-ruling row (#2731–#2738); each is a choice between code and
-contract.
+fixing a no-ruling row (#2731–#2738). **All eight ruled 2026-10-02.**
 
-- **E36** — the Data shaper's Delete has no confirm step (§3,
-  `operator_button_audit.md`).
-- **C1** — confirmed: `quick_setup_card_spec.md:25` says the Lock /
-  Unlock toggle shows in every state, but `show_lock_toggle =
-  is_available` (draft with no responses), so `ready` and `expired`
-  have no toggle. Spec or code?
-- **A27** — see §3: a response-only sort cookie leaves the rows in
-  insertion order under a sort badge.
-- **Invite landing ignores `Reviewer.status`.** `lookup_invitation_by_token`
-  applies no active filter, so an inactive reviewer passes the invite
-  email check and then hits the surface's 404 (`spec/reviewer-surface.md`
-  "Identity matching" records it as a known gap).
-- **Observer per-instrument CSV has no archive guard.**
-  `observer_collation_instrument_csv` relies on both window predicates
-  reading false once archived, unlike every other `resolve_mode` caller
-  (`spec/visibility_policy.md` §6).
-- **The auto-send invites caption treats `expired` and `archived` as
-  prepared**, so it can promise "System will dispatch automatically"
-  where the trigger skips with `not_prepared` (`spec/workflow_card.md`
-  records it as a known defect).
-- **Outbox status wording.** `README.md` and `docs/status.md` say outbox
-  rows are stamped `queued`; the code stamps `sent` without sending
-  (H20). Fix the docs to `sent`, or have the code stamp `queued` until
-  Segment 14B sends?
-- **R / ≡ toggle role** — E31's open half: audit rows 223–224 read
-  "TBD (author)".
+- **E36** — **Ruled: a delete-confirmation checkbox and warning below
+  the Data shaper's button row, flush right.** Code PR to follow.
+- ~~**C1**~~ — **Ruled: follow the code. Done in #2739.** The Lock /
+  Unlock toggle renders only while the card is available (`draft`,
+  no responses); `quick_setup_card_spec.md` and `session_home.md` now
+  say so.
+- **A27** — **Ruled: fix; the rows should sort.** The server orders
+  `response:N` keys. Code PR to follow.
+- **Invite landing ignores `Reviewer.status`** — **Ruled: an inactive
+  reviewer is treated as not a reviewer at all.** Code PR to follow.
+- **Observer per-instrument CSV** — **Ruled: add the archive guard.**
+  Code PR to follow.
+- ~~**Auto-send caption treats `expired` / `archived` as prepared**~~ —
+  **Ruled: scheduled send is work in progress awaiting Azure. Recorded
+  in #2739** as `guide/post_azure_todo_checklist.md` item 7.
+- ~~**Outbox status wording**~~ — **Ruled: the code should say `queued`
+  until a message is actually sent, awaiting Azure. Recorded in #2739**
+  as `guide/post_azure_todo_checklist.md` item 8; `README.md` and
+  `docs/status.md` describe today's `queued` → `sent` flip.
+- ~~**R / ≡ toggle role**~~ — **Ruled: add a Toggle role. Done in
+  #2739**: `spec/ui_elements.md` §6 gains **Toggle**, and it covers R,
+  ≡ and ⑂ (audit rows 223, 224 and 230).
 
 ## 2. Code defects
 
@@ -331,14 +326,14 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~C16 low · `:1413` · the relationships extract has six columns.~~ Done in #2731.
   - ~~C17 low · `:28,182` · Edit page retired; helper name.~~ Done in #2731.
 - `quick_setup_card_spec.md`
-  - C1 high · `:23-25` · lock-toggle prose · author (likely spec).
+  - ~~C1 high · `:23-25` · lock-toggle prose · author (likely spec).~~ Ruled: follow the code. Done in #2739.
   - C2 med · `:34-49,87-91` · counts and messages removed · author.
   - ~~C3 med · `:77` · settings replace cascades · author.~~ Ruled: gated on the server; the spec names the cascade.
   - ~~C4 low · `:67,79,131` · checkbox below the grid; copy (+ code banner, §2).~~ Done in #2731.
   - ~~C5 low · `:25,121` · `closed` → `expired`.~~ Done in #2731.
   - ~~C6 low · `:83` · the settings per-slot route isn't allowlisted (no UI calls it).~~ Done in #2731.
 - `session_home.md`
-  - C1 also `:460-481,506-512`.
+  - ~~C1 also `:460-481,506-512`.~~ Done in #2739.
   - C7 med · `:275-322,518-524` · Danger Zone in `expired`/`archived` · author.
   - ~~C8 low · `:155,306` · Activated "inline section"; copy reads "Revert to draft first".~~ Done in #2731.
 - `sessions_overview.md`
@@ -385,7 +380,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - Also A22 `:94`.
 - `operator_button_audit.md`
   - ~~E30 med-low · rows #11–13 and #123–125 each appear twice; give the later rows the next free ids.~~ Done in #2737.
-  - E31 med · write/deepen · ~~unaudited: the lobby expander, Extract data, the Instruments toggles, the chrome Guide/Admin links~~ done in #2737 (Rehydrate stays unaudited while it is gated off) · the R/≡ toggle role is *author* (audit rows 223–224 read "TBD (author)").
+  - E31 med · write/deepen · ~~unaudited: the lobby expander, Extract data, the Instruments toggles, the chrome Guide/Admin links~~ done in #2737 (Rehydrate stays unaudited while it is gated off) · ~~the R/≡ toggle role is *author*~~ ruled Toggle, done in #2739.
   - E36 med · new · the Data shaper's Delete (audit row 217) is `btn destructive` with no confirm step, against the audit's cross-page convention 6 · author.
   - E32 med · code (§2).
   - ~~E33 low-med · `:808` · `.tab-strip-page` uses tokens, not those literals.~~ Done in #2737.
