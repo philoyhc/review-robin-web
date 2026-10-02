@@ -1055,6 +1055,18 @@ async def _run_quick_setup_settings(
 
     if not lifecycle.is_editable(review_session):
         return "lifecycle"
+
+    content = await file.read()
+    if not content:
+        return "parse"
+
+    rows, parse_error = _read_settings_csv(content)
+    if parse_error is not None:
+        return "parse"
+
+    # Lifecycle, then parse, then the replacement gates: the order the
+    # roster slots use, so a malformed file reports ``parse`` whether or
+    # not the tick was sent.
     if replacing:
         if confirm_replace != "true":
             return "needs_confirm"
@@ -1064,14 +1076,6 @@ async def _run_quick_setup_settings(
             )
         except HTTPException:
             return "needs_confirm"
-
-    content = await file.read()
-    if not content:
-        return "parse"
-
-    rows, parse_error = _read_settings_csv(content)
-    if parse_error is not None:
-        return "parse"
 
     result = session_config_io.apply_session_config(
         db,

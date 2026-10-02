@@ -226,6 +226,7 @@ service writes an `audit_events` row).
 | Replace reviewers / reviewees roster | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
 | Replace assignments (import / generate / `delete-all`) | `confirm`/`confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
 | Replace relationships (`delete-all`) | `confirm=true` | `require_session_operator` | ✓ |
+| Replace settings (`/import-config`, Quick Setup Settings) — rebuilds every instrument, deleting assignments and responses | `confirm_replace` + response-loss ack, **plus `is_editable`** (findings C3) | `require_session_operator` | ✓ |
 | Delete instrument / field | `confirm=true` | `require_session_operator` (via helper) | ✓ |
 | Reviewer clear (`/clear`) | `confirm=true` | `require_reviewer_in_session` | ✓ |
 | Revoke / regenerate invitation links | operator UI action | `require_session_operator` | ✓ |

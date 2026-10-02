@@ -290,3 +290,42 @@ def test_quick_setup_card_renders_settings_slot_live(
     assert "Session settings" in body
     # File-upload control under the live name.
     assert 'name="settings_file"' in body
+
+
+def test_submit_all_settings_without_the_tick_is_refused(
+    client: TestClient, db: Session
+) -> None:
+    """A settings file rebuilds every instrument, so submit-all refuses
+    it on an existing session without the replacement tick, and leaves
+    the instruments alone (findings C3). A file that is not a settings
+    CSV at all still reports ``parse`` without the tick: its shape is
+    checked first, as the roster slots do. (A well-formed file whose
+    content the apply refuses is found only after the tick.)"""
+    review_session = _make_session(client, db, code="qsc-tick")
+    before = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalars().all()
+    good = _settings_csv([("instruments[1].name", "Renamed", "string")])
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        files={"settings_file": ("c.csv", good, "text/csv")},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    location = response.headers["location"]
+    assert "quick_setup_error=settings" in location
+    assert "quick_setup_reason=needs_confirm" in location
+    db.expire_all()
+    after = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalars().all()
+    assert [i.id for i in after] == [i.id for i in before]
+    assert all(i.name != "Renamed" for i in after)
+
+    bad = b"not,a,settings,header\n1,2,3,4\n"
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        files={"settings_file": ("c.csv", bad, "text/csv")},
+        follow_redirects=False,
+    )
+    assert "quick_setup_reason=parse" in response.headers["location"]
