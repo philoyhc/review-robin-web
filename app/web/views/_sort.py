@@ -173,11 +173,13 @@ def decode_cookie_sort_spec_for_reviewer_surface(
     ``sort_display_fields``-shaped spec the
     ``order_rows_by_sort_spec`` helper understands.
 
-    Returns ``None`` when no cookie exists (caller falls back to
-    the operator-default ``instrument.sort_display_fields``). An
-    empty list means "operator default is overridden but the
-    reviewer cleared the sort" — distinct from ``None`` so the
-    caller can honour the override.
+    Returns ``None`` — the caller falls back to the operator-default
+    ``instrument.sort_display_fields`` — when the cookie is missing,
+    is not valid JSON, is not a list, or holds any ``response:N``
+    key (below). Otherwise returns the decoded display-key spec,
+    which *replaces* the operator default: an empty list means "the
+    reviewer cleared the sort" and renders insertion order, distinct
+    from ``None`` so the caller can honour the override.
 
     Opaque keys decoded:
 
@@ -186,12 +188,20 @@ def decode_cookie_sort_spec_for_reviewer_surface(
     - ``reviewee.email_or_identifier`` → locked Email display
       field's ``display_field_id``.
     - ``display:N`` → ``int(N)``.
-    - ``response:N`` → dropped (server doesn't sort by response
-      values; the JS re-sorts client-side if any).
+    - ``response:N`` → the server doesn't sort by response values;
+      the page's on-load script re-sorts by the whole spec instead
+      (ruling A27). A cookie holding any response key therefore
+      returns ``None``: the server renders the operator default,
+      which is the order the script's tie-break
+      (``rrwOriginalIndex``) then reads — the same order a click on
+      a page with no stored sort stamps. Applying the cookie's display keys here
+      would leave rows tied on every key in a different order after
+      a reload than after a click.
 
-    Malformed JSON / missing keys / unknown ``dir`` values are
-    silently filtered. Per ``spec/sort_by_reviewee.md`` and the
-    primitive's hard cap, at most 3 entries.
+    Entries that are not objects, lack a string ``key`` or carry an
+    unknown ``dir`` are dropped first; then at most 3 are kept, per
+    ``spec/sort_by_reviewee.md`` and the primitive's hard cap. Keys
+    naming no display field are skipped after the cap.
     """
     import json
     from urllib.parse import unquote
@@ -214,28 +224,35 @@ def decode_cookie_sort_spec_for_reviewer_surface(
         if df.source_type == "reviewee"
     }
     display_ids = {df.id for df in display_fields}
+    # Drop malformed entries, then cap — the order ``_rrwReadCookie``
+    # uses, so the server and the browser keep the same entries.
+    entries = [
+        entry
+        for entry in decoded
+        if isinstance(entry, dict)
+        and isinstance(entry.get("key"), str)
+        and entry.get("dir") in ("asc", "desc")
+    ][:3]
     out: list[dict[str, object]] = []
-    for entry in decoded[:3]:
-        if not isinstance(entry, dict):
-            continue
-        key = entry.get("key")
-        direction = entry.get("dir")
-        if direction not in ("asc", "desc"):
-            continue
+    for entry in entries:
+        key = entry["key"]
+        direction = entry["dir"]
+        if key.startswith("response:"):
+            # The on-load script owns this spec; see the docstring.
+            return None
         df_id: int | None = None
         if key == "reviewee.name":
             df_id = name_id_by_source.get("name")
         elif key == "reviewee.email_or_identifier":
             df_id = name_id_by_source.get("email_or_identifier")
-        elif isinstance(key, str) and key.startswith("display:"):
+        elif key.startswith("display:"):
             try:
                 candidate = int(key.split(":", 1)[1])
             except ValueError:
                 continue
             if candidate in display_ids:
                 df_id = candidate
-        # ``response:N`` and any other opaque keys → skip (server
-        # can't sort by response values).
+        # Any other opaque key → skip.
         if df_id is None:
             continue
         out.append({"display_field_id": df_id, "dir": direction})

@@ -4810,11 +4810,14 @@
       // page load, before the user clicks anything. The cookie
       // persists across reloads on the same browser; the SSR
       // path also reads the cookie so the initial HTML already
-      // sits in the persisted order. Without this DOMContentLoaded
+      // sits in the persisted order for display keys (response keys
+      // re-sort below). Without this DOMContentLoaded
       // pass the badges wouldn't reflect the cookie.
       // Called at load, and **callable again**: a re-rendered table
       // arrives with no sort badges, because they are painted from
-      // cookies rather than carried in the markup. `spec/ui_elements.md`
+      // cookies rather than carried in the markup — and, when the
+      // stored spec holds a `response:N` key, in server order rather
+      // than the sorted one, so this re-sorts it too. `spec/ui_elements.md`
       // §10 names this and `_rrwHydrateColToggles` as the two hooks a
       // re-render owes the table (19K.2). This block binds nothing —
       // its headers call `rrwSortHeaderClick` through an inline
@@ -4830,8 +4833,25 @@
           if (state.length === 0) continue;
           _rrwSortState[tableId] = state;
           _rrwRefreshSortBadges(table, state);
-          // No need to re-apply DOM order — SSR already did.
+          // The server orders display keys, so a display-only spec
+          // needs no re-sort. It cannot order `response:N` keys
+          // (ruling A27), so a spec holding one re-sorts here, through
+          // the click path's own routine, or the badges would claim a
+          // sort the rows don't follow. For such a spec the server
+          // renders the operator default, so ties break as a click's
+          // do on a page with no stored sort. Group tables take this path too: the server ignores
+          // their cookie altogether.
+          if (_rrwSpecHasResponseKey(state)) {
+            _rrwApplySort(table, state);
+          }
         }
+      }
+
+      function _rrwSpecHasResponseKey(state) {
+        for (var i = 0; i < state.length; i++) {
+          if (state[i].key.indexOf('response:') === 0) return true;
+        }
+        return false;
       }
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', _rrwHydrateFromCookies);

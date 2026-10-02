@@ -280,36 +280,96 @@ def test_malformed_cookie_falls_back_to_operator_default(
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
 
 
-def test_cookie_response_key_dropped_server_side(
+def _render_with_cookie(
+    client: TestClient,
+    db: Session,
+    rae: AuthenticatedUser,
+    make_client,
+    *,
+    code: str,
+    cookie: list[dict[str, str]],
+) -> str:
+    """Render the surface with ``cookie`` (percent-encoded, as the
+    browser writes it) over an operator default of name descending."""
+    review_session = _setup_session_with_three_reviewees(
+        client, db, code=code, reviewer_email=rae.email
+    )
+    instrument = _instrument(db, review_session)
+    name_field = db.execute(
+        select(InstrumentDisplayField)
+        .where(InstrumentDisplayField.instrument_id == instrument.id)
+        .where(InstrumentDisplayField.source_field == "name")
+    ).scalar_one()
+    instrument.sort_display_fields = [
+        {"display_field_id": name_field.id, "dir": "desc"}
+    ]
+    db.commit()
+    _activate(client, db, review_session)
+    rae_client = make_client(rae)
+    rae_client.cookies.set(
+        f"rrw-sort-rs-{review_session.id}-{instrument.id}",
+        quote(json.dumps(cookie)),
+        path=f"/me/sessions/{review_session.id}",
+    )
+    return rae_client.get(f"/me/sessions/{review_session.id}").text
+
+
+def test_response_only_cookie_renders_operator_default(
     db: Session,
     client: TestClient,
     rae: AuthenticatedUser,
     make_client,
 ) -> None:
-    """``response:N`` keys are JS-only — the server can't sort by
-    response values. The decoder drops them; the rest of the
-    spec still applies."""
-    review_session = _setup_session_with_three_reviewees(
-        client, db, code="ck-rkey", reviewer_email=rae.email
+    """Ruling A27: the server can't sort by response values; the
+    on-load script re-sorts by them. The server renders the operator
+    default, not insertion order, because that is the order the
+    script's tie-break reads and the order a click on a page with no
+    stored sort stamps, so rows tied on the response (unanswered ones included)
+    land the same after a reload as after a click."""
+    body = _render_with_cookie(
+        client, db, rae, make_client,
+        code="ck-rkey-only",
+        cookie=[{"key": "response:99", "dir": "asc"}],
     )
-    instrument = _instrument(db, review_session)
-    _activate(client, db, review_session)
+    # Operator default (name desc).
+    assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
 
-    rae_client = make_client(rae)
-    cookie_name = f"rrw-sort-rs-{review_session.id}-{instrument.id}"
-    # response:99 should drop; reviewee.name asc should apply.
-    rae_client.cookies.set(
-        cookie_name,
-        json.dumps([
+
+def test_mixed_cookie_with_response_key_renders_operator_default(
+    db: Session,
+    client: TestClient,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """A response key next to a display key hands the whole spec to
+    the on-load script, which applies the display key too. The server
+    renders the operator default so the script's tie-break matches a
+    click's."""
+    body = _render_with_cookie(
+        client, db, rae, make_client,
+        code="ck-rkey-mixed",
+        cookie=[
             {"key": "response:99", "dir": "asc"},
             {"key": "reviewee.name", "dir": "asc"},
-        ]),
-        path=f"/me/sessions/{review_session.id}",
+        ],
     )
-    response = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+    assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
+
+
+def test_display_only_cookie_still_applies_server_side(
+    db: Session,
+    client: TestClient,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """With no response key the server applies the cookie in place of
+    the operator default, as before, and the on-load script does not
+    re-sort."""
+    body = _render_with_cookie(
+        client, db, rae, make_client,
+        code="ck-dkey-only",
+        cookie=[{"key": "reviewee.name", "dir": "asc"}],
     )
-    body = response.text
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
 
 
