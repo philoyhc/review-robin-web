@@ -137,10 +137,12 @@ the spec should say so.
   position, and the screen uses `session_seq`.
 - **G16 = E22** — Session codes are unique across the workspace. The spec says
   per operator.
-- **G21** — The raw invitation token is stored in the outbox body and
-  reusable until the next send. The spec says it is never stored and is
-  one-shot. This is a security-posture statement; check
-  `docs/security_posture.md` too.
+- ~~**G21**~~ — **Ruled 2026-10-02: keep the behavior, correct the
+  spec.** The raw invitation token was stored in the outbox body and
+  reusable until the next send, while the spec said it was never stored
+  and one-shot. The link is not a credential (sign-in plus a matching
+  email), so the spec now says what is true. `docs/security_posture.md`
+  made no such claim.
 - **F23** — The Graph stub docstring says delegated `/me/sendMail`, and
   `spec/email_infra_options.md` says Option B is an app permission.
 - **C1** — Quick Setup's Lock/Unlock prose says the toggle renders in
@@ -448,7 +450,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - G18 low-med · `:829,1516` · there is no sys-admin owner management.
   - G19 low · `:1479` · Rehydrate is gated off.
   - G20 low · `:1490` · SMTP modes are `starttls`/`ssl`.
-  - G21 med-low · `:592,796,1767` · token storage and reuse · author.
+  - ~~G21 med-low · `:592,796,1767` · token storage and reuse · author.~~ Ruled: the spec is corrected.
   - G22 low · write/deepen · branching: ranges, any/none, the anchor rule, hidden parents.
   - G23 low · `:721` · Observers lock only when `archived` (contradicts §9.5).
   - G24 low · provenance and segment history in the spec, at about ten sites.
@@ -470,7 +472,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - H8 low · `:195` · retired `/operator/settings/library/*`.
   - H9 low · `:224` · table split; `_require_editable` location.
   - H10 low · `:400` · fake auth reads no headers.
-  - Also G21.
+  - ~~Also G21.~~ It makes no token-storage claim; nothing to correct.
 - `deployment_dev.md`
   - H11 **high** · `:314-318,379` · "`DELETE FROM users` cascades" is false; the FK has no `ON DELETE`, so raw SQL fails.
   - H12 med · the env table is missing three vars.
