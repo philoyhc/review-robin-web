@@ -126,10 +126,10 @@ is silently ignored on apply rather than failing the import.
 | Reviewee `name`, `email_or_identifier`, `profile_link`, `tag_1..3` | ✅ | ✅ | |
 | Reviewer / Reviewee **`status`** (active vs inactive) | ✅ | ✅ | The roster CSVs carry a `Status` column (blank/absent → active); clone preserves status |
 | Reviewee `results_acknowledged_at` | ❌ | ❌ | Participant-set; carried by no CSV and not cloned |
-| Observer `email`, `display_name`, `tag_1` | ✅ | ❌ | **Clone copies no observers at all** |
-| Observer **`status`** | ✅ | ❌ | `parse_observer_csv` reads back the `Status` the extract emits. Clone copies no observers |
-| Observer **`cohort_rule`** (JSON) | ✅ | ❌ | Round-trips via the observers CSV's `CohortRule` column, re-validated through `CohortRuleSet` on import. Clone copies no observers |
-| Relationship refs, `tag_1..3`, `status` | ✅ | ✅ | `status` round-trips by both paths, as it does for reviewers and reviewees above — observers are the exception, and only because clone copies no observers at all |
+| Observer `email`, `display_name`, `tag_1` | ✅ | ✅ | Clone copies observers in `"all"` mode (Duplicate) |
+| Observer **`status`** | ✅ | ✅ | `parse_observer_csv` reads back the `Status` the extract emits; clone copies it |
+| Observer **`cohort_rule`** (JSON) | ✅ | ✅ | Round-trips via the observers CSV's `CohortRule` column, re-validated through `CohortRuleSet` on import. Clone copies the JSON as is — a rule holds no roster ids, only tag fields and observer attributes |
+| Relationship refs, `tag_1..3`, `status` | ✅ | ✅ | `status` round-trips by both paths, as it does for reviewers, reviewees and observers above |
 
 ### Assignments (`assignments`) — derived
 
@@ -152,10 +152,7 @@ The settings an operator can set that survive **no** export/import path
 1. **Instrument visibility policies under clone** (`instrument_view_policies`)
    — the Settings CSV carries them; `session_clone` does not, so a clone
    reverts to default visibility. Affects `/results` + `/collation`.
-2. **Observers under clone** — `session_clone` copies **no observer rows at
-   all**, so `email` / `display_name` / `tag_1` / `status` / `cohort_rule`
-   are all lost on that path. The observers CSV carries every one of them.
-3. **Assignment row status does not round-trip** (`Assignment.include`,
+2. **Assignment row status does not round-trip** (`Assignment.include`,
    the Assignments page's bulk Activate / Inactivate) — no export, no
    clone, and regenerating resets it to `True`. **This is the one place
    the author's contract is knowingly unmet**: *"individual rows can be
@@ -164,16 +161,16 @@ The settings an operator can set that survive **no** export/import path
    and it is the part that does not survive a round trip.
    **Carrying it is future work** — deferred 2026-09-13, recorded here
    rather than left to be rediscovered as a bug.
-4. **Session-operator role grants** — co-operators aren't carried by any
+3. **Session-operator role grants** — co-operators aren't carried by any
    config path; only the acting operator's own owner row is created.
 
 Covered by **one** path but lost by another (footguns when you pick the
 wrong tool):
 
-5. **Scheduling anchors** stay clone-reset **by design** — a clone is a
+4. **Scheduling anchors** stay clone-reset **by design** — a clone is a
    fresh cycle the operator re-schedules. The Settings CSV round-trips
    them, so use it, not clone, for backup / restore.
-6. **`assignment_mode`** travels by neither mechanism. The Settings CSV
+5. **`assignment_mode`** travels by neither mechanism. The Settings CSV
    drops it as machine-derived, and a clone starts NULL rather than
    copying it: a clone carries no `Assignment` rows, and NULL is how
    this codebase says *never Generated* — the state the delete-all path
@@ -207,10 +204,10 @@ Places where a value *looks* carried but isn't faithfully restored:
 
 Ordered by user-visible impact:
 
-1. **Clone's observer and visibility-policy gaps** (gaps 1–2) — the CSV
-   paths carry both, so a clone is the wrong tool for a session whose
-   observers or Band 3 grid matter until clone copies them.
-2. **Manual assignment overrides** (gap 3) — only worth an importer if
+1. **Clone's visibility-policy gap** (gap 1) — the CSV path carries it,
+   so a clone is the wrong tool for a session whose Band 3 grid matters
+   until clone copies it.
+2. **Manual assignment overrides** (gap 2) — only worth an importer if
    field use shows operators rely on hand-toggling pairs; otherwise
    document that assignments always regenerate from rules.
 
