@@ -18,8 +18,8 @@ a column on either side is a deliberate spec edit.
 
 Cross-references:
 
-- **`app/services/extracts/`** — thirteen modules (the extracts,
-  `zip_bundle.py` and `responses_import.py`) + the shared
+- **`app/services/extracts/`** — one module per extract, plus
+  `zip_bundle.py` and `responses_import.py`, and the shared
   `__init__.py` (`stream_csv`, `filename`).
 - **`app/services/csv_imports.py`** — two roster importers
   (Reviewers, Reviewees) + the shared parsing primitives.
