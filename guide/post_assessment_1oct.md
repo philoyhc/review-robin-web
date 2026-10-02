@@ -153,7 +153,7 @@ instrument is counted rather than walked. Now 289 ms and 215 ms;
 
 ## ~~E6 — The sweep's six code defects~~
 
-**Done in #2719**, with one commit per defect and a test that fails on the old code. Rehydrate's settings failure now reaches the operator. `reviewer_missing` links to Assignments with no anchor. An instrument card save keeps an imported observer tag. Purge and archive on the Extract page is `danger-solid`, and the shaper's hidden buttons use `hidden`. One disabled opacity covers every button. The Quick Setup banner says "just above Submit".
+**Done in #2719**, with one commit per defect and a test that fails on the old code. Rehydrate's settings failure now reaches the operator. `reviewer_missing` links to Assignments with no anchor. An instrument card save keeps an imported observer tag (superseded: the tag was retired outright in #2725, A19). Purge and archive on the Extract page is `danger-solid`, and the shaper's hidden buttons use `hidden`. One disabled opacity covers every button. The Quick Setup banner says "just above Submit".
 
 **What is wrong.** The E3 sweep confirmed six places where the spec is
 right and the code is wrong, by reading the code at `68f28224`. They are

@@ -1,6 +1,7 @@
 # Things to check in a browser — 1 October
 
-Browser checks owed on `guide/post_assessment_1oct.md` work that the test
+Browser checks owed on `guide/post_assessment_1oct.md` work, and on the
+`guide/findings_2026-10-01_corpus.md` fixes that followed it, that the test
 suite cannot settle. Run them locally (`uvicorn`, fake auth). Tick a row
 when it is checked, and retire the file once every row is ticked.
 

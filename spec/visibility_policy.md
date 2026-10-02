@@ -32,7 +32,7 @@ The audience name implies a **scope rule** the resolver applies in addition to t
 |---|---|
 | Peer reviewer | The reviewer's **own** submitted responses on this instrument — **never** responses keyed in by another reviewer. The stored name `peer_reviewer` is wider than the grant it names: the policy governs a reviewer viewing **their own** work post-submit / across pages of the review, never a peer's. |
 | Reviewee | Responses **about this reviewee** — or about a group this reviewee is a member of, for group-scoped instruments. Never about another reviewee or another group. |
-| Observer | Responses on instruments granted to observers, within the observer's own **cohort rule** (`app/services/observer_cohort.py`): an observer with no rule sees no one. The grant is per instrument and applies to every observer; which observer sees which instruments is not configurable (instrument scoping inside the cohort rule is deferred, `guide/deferred_consolidated.md`). Observers are the only audience whose grant is cross-cohort. |
+| Observer | Responses on instruments granted to observers, within the observer's own **cohort rule** (`app/services/observer_cohort.py`): an observer with no rule sees no one. The grant is per instrument and applies to every observer; which observer sees which instruments is not configurable (instrument scoping inside the cohort rule is deferred, `guide/deferred_consolidated.md`). Observers are the only audience whose grant spans reviewer–reviewee pairs they are not part of. |
 
 ---
 
