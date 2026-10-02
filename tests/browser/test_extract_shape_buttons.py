@@ -9,7 +9,8 @@ script in a browser, since the template test cannot run it.
 
 E36 added a confirm tick that gates each card's Delete; the second test
 drives that gate and the page's clearing of it on Cancel or a change of
-shape.
+shape, and the third checks that deleting the only card, while it is
+being edited, selects the fresh blank card it is replaced with.
 """
 
 from __future__ import annotations

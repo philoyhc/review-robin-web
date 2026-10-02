@@ -11,9 +11,11 @@ Three properties, each load-bearing for a different reason:
 1. **Delegated**, so a pair injected after load works with no
    registration. 19P.1 rung 2b builds a confirm and a Delete inside the
    row expander in JS; a listener bound at load could never reach them.
-2. **Capture-bound**, because four roster pages re-run the gate by hand
-   with `dispatchEvent(new Event("change"))` and `new Event` does not
-   bubble. A bubble-phase delegated listener misses those entirely: the
+2. **Capture-bound**, because a page that re-runs the gate by hand
+   with `dispatchEvent(new Event("change"))` sends an event that does
+   not bubble. The four roster pages did until 19P.3; the Data shaper
+   (E36) does today, with `{ bubbles: true }`. A bubble-phase delegated
+   listener misses a non-bubbling dispatch entirely: the
    tick clears while `Delete` stays enabled — a destructive control
    whose disabled state lies. Reproduced in Chromium before the fix.
 3. **The load-time pass**, because it sets each button's starting

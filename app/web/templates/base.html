@@ -5266,10 +5266,10 @@
            all three cases — non-bubbling dispatch, bubbling dispatch,
            real user tick.
 
-           Fixing the primitive rather than the four callers is
-           deliberate: the two lobby dispatches already pass
-           `{ bubbles: true }`, so both idioms are in the tree and a
-           listener handling only one is a trap for the fifth caller. */
+           Fixing the primitive rather than each caller is
+           deliberate: dispatches with and without `{ bubbles: true }`
+           have both existed in the tree, and a listener handling only
+           one is a trap for the next caller. */
         document.addEventListener("change", function (event) {
           var cb = event.target;
           if (!cb || !cb.getAttribute) return;
