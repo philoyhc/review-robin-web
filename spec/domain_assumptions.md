@@ -36,8 +36,11 @@ responses, rosters and audit log the operator ticks, and unarchiving
 does not bring them back.
 
 Session setup can be edited only in `draft` or `validated`; an
-Activated or Closed session is reverted to draft first. Reviewers are not
-notified of edits (author's ruling, 2026-10-02, F15).
+Activated or Closed session is reverted to draft first. The exceptions
+are in `spec/lifecycle.md` §3.1: the Observers roster accepts edits
+until the session is archived, and the email-template editor is not
+gated at all. Reviewers are not notified of edits (author's ruling,
+2026-10-02, F15).
 
 Note: While Session is the top level structure, there should be a
 way to put arbitrarily assign them to Groups. Sessions can be
