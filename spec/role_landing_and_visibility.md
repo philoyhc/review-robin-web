@@ -113,7 +113,7 @@ Recorded per state with an active roster row in each.
 |---|---|---|---|
 | `draft` | listed, "not opened" | no | — |
 | `validated` | listed, "not opened" | no | — |
-| `ready` | listed, "open" | **yes** | opens |
+| `ready` | listed, "open" — or "closed" when the deadline has passed, no instrument the reviewer is assigned on is accepting responses, or they have no included assignment (`session_status_for_reviewer`) | **yes** | opens |
 | `expired` | listed, "closed" | **yes** | **opens** |
 | `archived` | listed, "not opened" **+ an `archived` companion pill** | no | — |
 

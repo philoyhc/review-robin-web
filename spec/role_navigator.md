@@ -61,7 +61,7 @@ When the user has no roles on the session (an empty list returned), the template
 
 | Role | Target | Reachable when |
 |---|---|---|
-| reviewer | `/me/sessions/{id}/summary` if `pill.state == "submitted"`, else `/me/sessions/{id}/1` | `session_status_for_reviewer(reviewer, session) != "not opened"`. Closes when the session is `draft` / `validated` (the reviewer surface itself would 403 / redirect). |
+| reviewer | `/me/sessions/{id}/summary` if `pill.state == "submitted"`, else `/me/sessions/{id}/1` | `session_status_for_reviewer(reviewer, session) != "not opened"`. Closes when the session is `draft` / `validated` / `archived`, where the reviewer surface itself answers 200 with the not-open page (`reviewer/pre_open.html`). |
 | reviewee | `/me/sessions/{id}/results` | Only while `visibility_policies.reviewee_has_current_grant` resolves. Without one the chip is **omitted**, not greyed — see below. |
 | observer | `/me/sessions/{id}/collation` | Any active observer, **except on an archived session** (`lifecycle.is_archived`), where the chip greys. Per-instrument render gated on Band 3 + the active session window inside `build_observer_collation_context`; an archived session renders no sections at all. |
 
@@ -83,7 +83,7 @@ questions are re-asked here on every surface that includes the strip.
 
 ### Identity match
 
-The same case-insensitive email match drives roster membership detection. `build_role_chips` folds **both sides in Python** through `email_identity.normalize_email` (`.strip().casefold()`) and compares the results — not a SQL-side `lower()`. `casefold` is the Unicode-correct fold and is not equivalent to `lower()` on every input, so the folding function is part of the contract, not an implementation detail:
+The same case-insensitive email match drives roster membership detection. `build_role_chips` folds **both sides in Python** through `email_identity.normalize_email` (`.strip().lower()`) and compares the results — not a SQL-side `lower()`, whose behavior differs between SQLite (ASCII-only) and Postgres. The fold is deliberately `str.lower` and not `casefold`, which folds `ß` to `ss` and would merge two distinct mailboxes, so the folding function is part of the contract, not an implementation detail:
 
 - Reviewer: `Reviewer.status == "active"` and `normalize_email(Reviewer.email) == normalize_email(user.email)`.
 - Reviewee: `Reviewee.status == "active"`, `participants.is_email_identified(reviewee)`, and the same fold over `email_or_identifier`. Confidential / non-email reviewees are filtered out.
