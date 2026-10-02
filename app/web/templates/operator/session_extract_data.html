@@ -571,8 +571,9 @@
            the name input. ``Save`` / ``Edit`` are mode-toggle
            siblings (only one is visible at a time); ``Cancel``
            abandons unsaved edits and unselects the sub-card;
-           ``Delete`` removes the sub-card (disabled when it's
-           the only one in the stack); ``+Shape`` spawns a
+           ``Delete`` removes the sub-card (or resets the only
+           one to blank) and is enabled only while the confirm
+           tick beneath the row is on; ``+Shape`` spawns a
            fresh blank sub-card after this one and makes it
            the new selected target; ``Download`` is the
            placeholder per-shape extract button (``aria-
@@ -591,8 +592,8 @@
            and ``data-shape-add`` are always-on except where
            the validity check excludes them (e.g. ``Cancel``
            disabled in saved mode — there's nothing to abandon
-           — and ``Delete`` disabled when this is the only
-           sub-card). #}
+           — and ``Delete``, which the confirm tick gates
+           rather than this helper). #}
         <div class="data-shape-actions">
           <input type="text" class="data-shape-name-input"
                  data-shape-name placeholder="Name this shape">
@@ -605,7 +606,9 @@
                   data-shape-cancel
                   title="Abandon unsaved edits and unselect">Cancel</button>
           <button type="button" class="btn destructive"
-                  data-shape-delete title="Delete shape">Delete</button>
+                  data-shape-delete data-delete-btn="shape-new"
+                  disabled aria-disabled="true"
+                  title="Delete shape">Delete</button>
           <button type="button" class="btn secondary"
                   data-shape-add title="Spawn a new blank shape">+Shape</button>
           <a class="btn secondary"
@@ -613,6 +616,20 @@
              href="#"
              download
              aria-disabled="true">Download</a>
+        </div>
+        {# E36 — Delete is gated by the app-wide confirm-checkbox
+           pairing (`spec/operator_button_audit.md` convention 6):
+           the tick and its sentence sit on their own line beneath
+           the action row, flushed right. The pairing resolves its
+           button with ``querySelector``, so the key must be unique
+           page-wide: a saved card keys on its shape id, the initial
+           blank card on ``shape-new-0``, and ``spawnShapeCard``
+           re-keys this template's placeholder on every clone. #}
+        <div class="data-shape-delete-confirm">
+          <label class="confirm-label">
+            <input type="checkbox" data-delete-confirm="shape-new">
+            <span>Yes, delete this shape. There is no undo.</span>
+          </label>
         </div>
       </div>
     </template>
@@ -692,7 +709,9 @@
                     data-shape-cancel
                     title="Abandon unsaved edits and unselect">Cancel</button>
             <button type="button" class="btn destructive"
-                    data-shape-delete title="Delete shape">Delete</button>
+                    data-shape-delete data-delete-btn="shape-{{ saved.id }}"
+                    disabled aria-disabled="true"
+                    title="Delete shape">Delete</button>
             <button type="button" class="btn secondary"
                     data-shape-add title="Spawn a new blank shape">+Shape</button>
             <a class="btn secondary"
@@ -700,6 +719,13 @@
                href="#"
                download
                aria-disabled="true">Download</a>
+          </div>
+          {# E36 — Delete's confirm tick; keys as the template's note says. #}
+          <div class="data-shape-delete-confirm">
+            <label class="confirm-label">
+              <input type="checkbox" data-delete-confirm="shape-{{ saved.id }}">
+              <span>Yes, delete this shape. There is no undo.</span>
+            </label>
           </div>
         </div>
       {% endfor %}
@@ -724,8 +750,9 @@
            the name input. ``Save`` / ``Edit`` are mode-toggle
            siblings (only one is visible at a time); ``Cancel``
            abandons unsaved edits and unselects the sub-card;
-           ``Delete`` removes the sub-card (disabled when it's
-           the only one in the stack); ``+Shape`` spawns a
+           ``Delete`` removes the sub-card (or resets the only
+           one to blank) and is enabled only while the confirm
+           tick beneath the row is on; ``+Shape`` spawns a
            fresh blank sub-card after this one and makes it
            the new selected target; ``Download`` is the
            placeholder per-shape extract button (``aria-
@@ -744,8 +771,8 @@
            and ``data-shape-add`` are always-on except where
            the validity check excludes them (e.g. ``Cancel``
            disabled in saved mode — there's nothing to abandon
-           — and ``Delete`` disabled when this is the only
-           sub-card). #}
+           — and ``Delete``, which the confirm tick gates
+           rather than this helper). #}
         <div class="data-shape-actions">
           <input type="text" class="data-shape-name-input"
                  data-shape-name placeholder="Name this shape">
@@ -758,7 +785,9 @@
                   data-shape-cancel
                   title="Abandon unsaved edits and unselect">Cancel</button>
           <button type="button" class="btn destructive"
-                  data-shape-delete title="Delete shape">Delete</button>
+                  data-shape-delete data-delete-btn="shape-new-0"
+                  disabled aria-disabled="true"
+                  title="Delete shape">Delete</button>
           <button type="button" class="btn secondary"
                   data-shape-add title="Spawn a new blank shape">+Shape</button>
           <a class="btn secondary"
@@ -766,6 +795,13 @@
              href="#"
              download
              aria-disabled="true">Download</a>
+        </div>
+        {# E36 — Delete's confirm tick; keys as the template's note says. #}
+        <div class="data-shape-delete-confirm">
+          <label class="confirm-label">
+            <input type="checkbox" data-delete-confirm="shape-new-0">
+            <span>Yes, delete this shape. There is no undo.</span>
+          </label>
         </div>
       </div>
       {% endif %}
@@ -1287,7 +1323,47 @@
         '[data-shape][data-shape-mode="edit"]'
       );
 
+      // E36 — clear every Delete confirm tick in the stack. Called
+      // whenever the active shape changes and on Cancel, so a tick
+      // never outlives the selection it was given under. The
+      // dispatch is what re-closes the paired Delete: the app-wide
+      // pairing in ``base.html`` owns the enable / disable, and it
+      // hears a programmatic ``change`` (capture-bound, and this one
+      // bubbles anyway), so this page carries no gate logic of its
+      // own.
+      function clearDeleteConfirms() {
+        stack.querySelectorAll("[data-delete-confirm]").forEach(
+          function (deleteConfirm) {
+            if (!deleteConfirm.checked) return;
+            deleteConfirm.checked = false;
+            deleteConfirm.dispatchEvent(
+              new Event("change", { bubbles: true })
+            );
+          }
+        );
+      }
+
+      // Spawned cards key their confirm pair ``shape-new-1``,
+      // ``shape-new-2``, …; the server-rendered blank card is
+      // ``shape-new-0`` and saved cards key on their shape id, so no
+      // two pairs on the page share a key.
+      var spawnedShapeCount = 0;
+      function spawnShapeCard() {
+        var fragment = shapeTemplate.content.cloneNode(true);
+        var shape = fragment.querySelector("[data-shape]");
+        var key = "shape-new-" + (++spawnedShapeCount);
+        shape.querySelector("[data-delete-confirm]")
+          .setAttribute("data-delete-confirm", key);
+        shape.querySelector("[data-delete-btn]")
+          .setAttribute("data-delete-btn", key);
+        return shape;
+      }
+
       function setActiveShape(shape) {
+        // Switching shape clears the Delete ticks (E36). Clicks inside
+        // the active card re-assert the same shape, which must leave
+        // its own tick alone — so only a change of shape clears.
+        if (shape !== activeShape) clearDeleteConfirms();
         activeShape = shape;
         // Visual cue: only the active sub-card carries
         // ``data-shape-selected="true"``; everything else
@@ -2004,7 +2080,6 @@
         var isEdit = mode === "edit";
         var saveBtn = shape.querySelector("[data-shape-save]");
         var cancelBtn = shape.querySelector("[data-shape-cancel]");
-        var deleteBtn = shape.querySelector("[data-shape-delete]");
         var addBtn = shape.querySelector("[data-shape-add]");
         var downloadBtn = shape.querySelector("[data-shape-download]");
         // Save: enabled only when the shape is valid AND the
@@ -2017,11 +2092,11 @@
           );
         }
         if (cancelBtn) cancelBtn.disabled = !isEdit;
-        // Delete is always available — clicking it on the only
-        // sub-card clears it (deleteBtn handler swaps in a fresh
-        // blank from the template), matching the "reset to
-        // empty card" affordance an operator expects.
-        if (deleteBtn) deleteBtn.disabled = false;
+        // Delete is not set here: its confirm tick gates it through
+        // the app-wide pairing (E36), and forcing it on would open
+        // the gate on every chip click. Clicking it on the only
+        // sub-card still resets that card to blank (see the
+        // ``deleteBtn`` handler).
         if (addBtn) addBtn.disabled = false;
         if (downloadBtn) {
           // ``Download`` enables once the sub-card has a
@@ -2503,6 +2578,7 @@
           editBtn.hidden = false;
           cancelBtn.style.display = "";
           if (activeShape === shape) setActiveShape(null);
+          clearDeleteConfirms();
           renderSavedPreviewRow(shape);
           updateAllButtonStates();
         });
@@ -2524,8 +2600,7 @@
             // a new shape against. Matches the always-present-
             // empty-card pattern the page renders on first
             // load when no shapes exist server-side.
-            var fragment = shapeTemplate.content.cloneNode(true);
-            var freshShape = fragment.querySelector("[data-shape]");
+            var freshShape = spawnShapeCard();
             shape.parentNode.replaceChild(freshShape, shape);
             bindShapeCard(freshShape);
             clearAllSelectionChips();
@@ -2559,8 +2634,7 @@
           // previously-active card.
           closeOtherEditingShapes(null);
           clearAllSelectionChips();
-          var fragment = shapeTemplate.content.cloneNode(true);
-          var newShape = fragment.querySelector("[data-shape]");
+          var newShape = spawnShapeCard();
           shape.parentNode.insertBefore(newShape, shape.nextSibling);
           bindShapeCard(newShape);
           setActiveShape(newShape);

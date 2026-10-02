@@ -27,6 +27,7 @@ E1, E2 and E4 were checked by the author when they merged.
   **Save** shows and **Edit** hides. Click **Cancel**: they swap back.
 - [x] **A new shape's buttons still work.** Click **+Shape**. The new
   card shows **Save**, not **Edit**. Name it, pick columns, and Save it.
+
 - [x] **Disabled link buttons match.** On the Reviewers page, switch
   the table into edit mode. The toolbar's **Add new**, a link, should be
   exactly as faint as any other disabled button (0.5, not 0.55).
@@ -128,3 +129,14 @@ E1, E2 and E4 were checked by the author when they merged.
 - [ ] **A settings upload still needs the tick.** Unlock the card,
   choose a settings CSV and leave the tick off: Submit stays disabled.
   Tick it and submit: the settings apply.
+
+## Data shaper Delete needs a tick (E36)
+
+- [ ] **Delete waits for the tick.** On Extract data, every shape card
+  has a "Yes, delete this shape" tick on its own line beneath the
+  buttons, flushed right. **Delete** stays disabled until that card's
+  tick is on, and ticking one card opens no other card's **Delete**.
+- [ ] **The tick resets.** Tick a card, then click **Cancel**, **Edit**
+  on another shape, or **+Shape**: the tick clears and **Delete** is
+  disabled again. Ticked, **Delete** removes the shape, and it stays
+  gone after a reload.

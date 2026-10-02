@@ -2,7 +2,7 @@
 carrying its load-time pass.
 
 `data-delete-confirm="{key}"` enables its paired `data-delete-btn="{key}"`
-only while ticked. Nine templates use it.
+only while ticked. Ten templates use it.
 
 Three properties, each load-bearing for a different reason:
 
@@ -138,12 +138,21 @@ def test_every_programmatic_dispatch_is_reachable(pairing: str) -> None:
     # the real claim rather than lower it to zero, which would be the
     # vacuity it was guarding — "found nothing" and "there is nothing to
     # find" are the same result under a `>= 0`. So the claim is stated
-    # directly: the set is empty, and if a template ever dispatches
-    # again, `unreachable` below is what has to hold.
-    assert dispatches == [], (
-        "a template dispatches `change` at a confirm checkbox again. That "
-        "is allowed, but it has to bubble or be capture-bound — see the "
-        "assertion below, which is the rule this file exists for."
+    # directly: the set is enumerated, and for every member `unreachable`
+    # below is what has to hold.
+    #
+    # **E36 brought one back.** The Data shaper's sub-cards persist
+    # across a change of shape rather than being rebuilt, so a tick left
+    # on would outlive the selection it was given under; the page clears
+    # it and dispatches so the pairing re-closes `Delete`. It bubbles,
+    # and the pairing is capture-bound besides.
+    assert dispatches == [
+        ("session_extract_data.html", "deleteConfirm", True),
+    ], (
+        "the set of templates dispatching `change` at a confirm checkbox "
+        f"changed: {dispatches}. That is allowed, but each has to bubble "
+        "or be capture-bound — see the assertion below, which is the rule "
+        "this file exists for — and this list is updated to name it."
     )
     unreachable = [d for d in dispatches if not d[2] and not capture_bound]
     assert not unreachable, (
