@@ -155,9 +155,16 @@ the spec should say so.
 - ~~**A13**~~ — **Ruled 2026-10-02: delete it. Done in #2754.**
   `build_reviewee_results_context` carried pre-release scaffolding that
   the route-level gate made unreachable.
-- **D7, D13** — The responses bundle does not carry the by-instrument and
-  metadata files the spec promises. The `Instrument_{N}` CSV fallback uses
-  position, and the screen uses `session_seq`.
+- ~~**D7, D13**~~ — **Ruled 2026-10-02: restate the spec, fix the
+  naming. Done in #2761.** `spec/extract_data.md` now lists what the
+  responses bundle carries and says its By-instrument and metadata chips
+  change nothing. The extracts' `Instrument_{N}` fallback is the
+  instrument's `session_seq`, as on screen, not its position — the
+  operator CSVs and the observer collation CSV alike.
+- **D28** — The Extract data page's intro card says Zip all downloads
+  the response files "as configured using the other cards". None of the
+  other cards' settings reach the bundle. Reword the copy, or make the
+  bundle honour them? Found in #2761.
 - ~~**G16 = E22**~~ — **Ruled 2026-10-02: keep workspace-wide, correct
   the spec. Done in #2746.** Session codes are unique across the
   workspace; the specs said per operator.
@@ -433,13 +440,14 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~D5 med · write/deepen · `:44-50,744` · the 1 MiB / 5,000-row caps; the `_read_dict_rows` shape.~~ Done in #2735.
   - ~~D6 low · bundled: 14 extract modules, "Pair context N", compact `DetailJson`, keyword-only signatures, the `visible=False` drop.~~ Done in #2735.
 - `extract_data.md`
-  - D7 high · `:202-207` · bundle contents · author.
+  - ~~D7 high · `:202-207` · bundle contents · author.~~ Done in #2761.
   - ~~D8 med · write/deepen · `:21-27,987` · the Archive session (purge) card and the Extract Setup card are unspecced.~~ Done in #2735.
   - ~~D9 med · `:151-166` · the self-review chip copy and its own storage key.~~ Done in #2735.
   - ~~D10 med · `:868` · the `_self`/`_noself`/`_both` suffix.~~ Done in #2735.
   - ~~D11 med · `:978` · clone does copy DataShapes.~~ Done in #2735.
   - ~~D12 low · bundled labels, helper name, slug, identity rows.~~ Done in #2735.
-  - D13 low · `:129` · `Instrument_{N}` fallback · author.
+  - ~~D13 low · `:129` · `Instrument_{N}` fallback · author.~~ Done in #2761.
+  - D28 low · `:203` · Zip all's body copy overstates what it scopes · author.
 - `roundtrip_coverage.md`
   - ~~D14 med · `:127` · `results_acknowledged_at` is cloned.~~ Done in #2744.
   - ~~D15 low · `session_seq` is absent from the matrix.~~ Done in #2735.

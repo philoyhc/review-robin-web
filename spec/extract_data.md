@@ -132,14 +132,15 @@ selectable-chip primitive (`spec/ui_elements.md` §10), with
 `is-selected` + `aria-pressed` driving the visual state.
 Three families of chip live on the page:
 
-- **Family / scope toggles** (intro card) — pick which
-  lenses participate in the top-level `Zip all`.
+- **Family / scope toggles** (intro card) — two of them
+  (`data-shaper`, `token-keys`) scope the top-level `Zip all`;
+  the other three change nothing (see the Extract all data card).
 - **Instrument chips** (by-instrument + the two metadata
   cards) — one per session instrument, labelled
   `#{N}: {short_label}` where `{N}` is the instrument's
-  1-based session position (stable as chips toggle) and
-  `{short_label}` falls back to `Instrument_{N}` when the
-  operator left it blank. `#{N}` is always carried — even
+  1-based session position (stable as chips toggle); the chip
+  reads `#{N}` alone when the operator left the short label
+  blank. `#{N}` is always carried — even
   on single-instrument sessions — so the positional ordering
   reads consistently across cards.
 - **Cross-cutting toggles** (by-instrument card +
@@ -208,18 +209,26 @@ configurable surfaces below.
 
 | Chip slot | Label | Role |
 |---|---|---|
-| `by-instruments` | `By instrument` | Scope: include the by-instrument CSVs |
-| `reviewer-metadata` | `Reviewer response metadata` | Scope: include the reviewer metadata CSV |
-| `reviewee-metadata` | `Reviewee response metadata` | Scope: include the reviewee metadata CSV |
+| `by-instruments` | `By instrument` | Toggles and persists, but changes nothing: the bundle carries no By-instrument CSVs. |
+| `reviewer-metadata` | `Reviewer response metadata` | Toggles and persists, but changes nothing: the bundle carries no reviewer metadata CSV. |
+| `reviewee-metadata` | `Reviewee response metadata` | Toggles and persists, but changes nothing: the bundle carries no reviewee metadata CSV. |
 | `data-shaper` | `Data shaper` | Scope: include the Data shaper outputs — drives `?data_shapes=0` on the bundle URL when off. |
 | `token-keys` | `Token keys` | Scope: include `participant_tokens.csv` in the bundle — drives `?tokens=0` when off. **Conditional**: chip + the matching Token keys card below only render when `session.observers_enabled` is on, since the tokens have no consumer without observers today. |
 
-The chip set is the scope-filter for the top-level
-`Zip all` zip. `data-shaper` + `token-keys` are wired
+Only `data-shaper` + `token-keys` scope the top-level
+`Zip all` zip; they are wired
 (drive `?data_shapes=0` / `?tokens=0` on the bundle URL);
 `by-instruments` / `reviewer-metadata` / `reviewee-metadata`
-remain placeholder for the eventual scope split — today the
-bundle always carries those three regardless of chip state.
+change nothing, because the bundle carries none of those files.
+What it carries (`build_responses_bundle`, each member named
+`{code}_…`): `responses.csv`, `reviewer_stats.csv`,
+`reviewee_stats.csv`, one `instrument_{n}.csv` per instrument (`n`
+its display position), the Data shaper outputs and, when observers
+are on, `participant_tokens.csv`. The By-instrument CSVs and the two
+metadata CSVs come from their own cards' downloads, and none of the
+other cards' settings reach the bundle — so the card's body copy,
+"as configured using the other cards", overstates it (findings
+D28).
 The chips persist via the shared `localStorage` plumbing so
 the operator's intent survives reload.
 
@@ -404,8 +413,10 @@ order.
 selected instrument, for every response field on that
 instrument). Column prefix:
 `#{N}: {short_label}.{field_label}` (mirroring the
-by-instrument card's chip label convention, with the same
-`Instrument_{N}` fallback). Footprint depends on the field's
+by-instrument card's chip label convention, `{N}` the position),
+with `Instrument_{session_seq}` standing in for a blank short
+label — the handle the operator pages show, which a reorder does
+not change. Footprint depends on the field's
 data type:
 
 | Field data type | Block columns |

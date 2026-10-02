@@ -18,10 +18,11 @@ selection on the card:
   ``.Max``. String fields add ``.Length`` (the sum of characters
   across non-empty responses).
 
-The per-block column prefix mirrors the By-instrument card's chip
-label exactly: ``#{N}: {short_label}.{field}`` where ``{N}`` is
+The per-block column prefix follows the By-instrument card's chip
+label: ``#{N}: {short_label}.{field}`` where ``{N}`` is
 the instrument's 1-based session position (stable as chips
-toggle) and ``{short_label}`` falls back to ``Instrument_{N}``
+toggle) and ``{short_label}`` falls back to
+``Instrument_{session_seq}`` — the handle the operator pages show —
 when the operator left it blank.
 
 The ``all_*`` toggle gates which roster entries get a row:
@@ -65,6 +66,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services import responses as responses_service
+from app.services.instruments import _instrument_label
 
 __all__ = [
     "build_reviewer_metadata",
@@ -196,8 +198,7 @@ class _FieldSpec:
 def _instrument_short_or_fallback(
     instrument: Instrument, position: int
 ) -> str:
-    short = (instrument.short_label or "").strip()
-    return short or f"Instrument_{position}"
+    return _instrument_label(instrument)
 
 
 def _resolve_scope(

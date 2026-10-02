@@ -80,12 +80,16 @@ def test_members_named_by_instrument_short_label(
     assert names == ["bi-slug_by_instrument_Peer_Review.csv"]
 
 
-def test_members_fall_back_to_positional_label_when_short_label_blank(
+def test_members_fall_back_to_the_session_seq_when_short_label_blank(
     client: TestClient, db: Session
 ) -> None:
+    """The fallback is ``Instrument_{session_seq}``, as on the operator
+    pages, not the position — set apart here so the two can't agree
+    by accident (findings D13)."""
     review_session = _make_session(client, db, code="bi-fb")
     instrument = _default_instrument(db, review_session.id)
     instrument.short_label = None
+    instrument.session_seq = 7
     db.commit()
 
     response = client.get(
@@ -94,7 +98,7 @@ def test_members_fall_back_to_positional_label_when_short_label_blank(
     )
     archive = zipfile.ZipFile(io.BytesIO(response.content))
     assert archive.namelist() == [
-        "bi-fb_by_instrument_Instrument_1.csv",
+        "bi-fb_by_instrument_Instrument_7.csv",
     ]
 
 
