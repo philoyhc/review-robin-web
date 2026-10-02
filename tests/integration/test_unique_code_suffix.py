@@ -23,7 +23,12 @@ LONG_NAME = "n" * 255
 @pytest.fixture(autouse=True)
 def _fail_instead_of_hang() -> Iterator[None]:
     """The old bug was an endless loop, so a regression would stall the
-    run rather than fail it: time each test out after 10 seconds."""
+    run rather than fail it: time each test out after 10 seconds.
+    ``SIGALRM`` is POSIX only; on Windows (``docs/local_setup.md`` §10)
+    the tests run without the guard."""
+    if not hasattr(signal, "SIGALRM"):
+        yield
+        return
 
     def _timeout(signum: int, frame: object) -> None:
         raise TimeoutError("candidate search did not terminate")
