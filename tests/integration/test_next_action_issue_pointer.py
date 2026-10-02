@@ -10,7 +10,8 @@ a session with several assignment warnings repeated "Assignments" down
 the column.
 
 **Coverage, stated rather than implied.** The partial is included at
-three sites — State 3, State 4Err, and the ``W`` overlay — with
+three sites — State 3 (unreachable since the ``?validated=1`` path was
+retired; findings B32), State 4Err, and the ``W`` overlay — with
 identical content, so the behaviour is pinned once at the site that has
 a deterministic fixture (``W``), and
 ``test_the_card_includes_the_partial_at_exactly_three_sites`` keeps that
@@ -111,8 +112,8 @@ def _render_partial(**context: object) -> str:
 
     Through a page it cannot be reached with an empty issue set: the
     two unconditional include sites (States 3 and 4Err) both require a
-    ``validation_summary``, and a draft that validates clean flips to
-    ``validated`` rather than rendering State 3 with nothing in it. So
+    ``validation_summary``, which only a validated session carries, and
+    a validated session with nothing to report renders neither. So
     a page-level "clean session" test exercises the *absence of the
     include*, not the guard inside it — which is how the first draft of
     this file passed while a mutant deleted the guard outright.

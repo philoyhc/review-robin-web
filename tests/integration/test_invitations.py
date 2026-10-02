@@ -26,6 +26,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 from ._invitation_states import _create_session, _populate
+from ._validated import validate_session
 
 
 # --------------------------------------------------------------------------- #
@@ -34,8 +35,7 @@ from ._invitation_states import _create_session, _populate
 
 
 def _activate(client: TestClient, session_id: int) -> None:
-    # Prepare, not the `?validated=1` promotion: since 19Q.2 rung 2
-    # Prepare is what creates the invitations, and every test below
+    # Prepare: since 19Q.2 rung 2 it is what creates the invitations, and every test below
     # that used to call `POST /invitations/generate` now relies on it.
     response = client.post(
         f"/operator/sessions/{session_id}/workflow/prepare",
@@ -129,13 +129,14 @@ def _ready_session_without_invitations(
 
     Since 19Q.2 rung 2, Prepare creates one invitation per eligible
     reviewer, so `_ready_session` — which goes through Prepare — can no
-    longer produce this state. It is still reachable, by the
-    `?validated=1` promotion that `build_workflow_card_context`
-    performs inline: that path runs validation and flips
-    `draft -> validated` without running Prepare, so nothing creates
-    invitations. The author's ruling (2026-09-18) was to keep that
-    backend rather than migrate ~200 tests off it, so the state this
-    fixture builds is one an operator can still reach.
+    longer produce this state. The `?validated=1` promotion could —
+    it flipped `draft -> validated` without running Prepare — and the
+    author's ruling of 2026-09-18 kept it for that reason; the ruling of
+    2026-10-02 (findings B15) retired it, since no page linked there.
+    No operator path reaches this state now. The fixture builds it
+    through the service (`validate_session`), so the page's handling of
+    a reviewer with no invitation row stays guarded for data that
+    predates Prepare.
 
     The tests below are the ones that guard what the page does when a
     listed reviewer has no invitation row. Pointing them at
@@ -145,7 +146,8 @@ def _ready_session_without_invitations(
     """
     session = _create_session(client, db, code)
     _populate(client, db, session.id, reviewer_email=reviewer_email)
-    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
+    validate_session(session)
+    client.get(f"/operator/sessions/{session.id}/assignments")
     response = client.post(
         f"/operator/sessions/{session.id}/activate",
         data={"acknowledge_warnings": "true"},

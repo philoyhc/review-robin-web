@@ -396,7 +396,6 @@ the pattern itself is specified in `spec/setup_pages.md`.
 | Param | Surface | Purpose |
 |---|---|---|
 | `?return_to=<path>` | Chrome-detour pages (Operator Settings, About) | Round-trip target for the `← Back to {{ return_to_label }}` back-link. |
-| `?validated=1` | Session Home | Triggers a fresh validation run on this render. |
 | `?activate=1` | Validate detail page | Surfaces the activate-warns acknowledgment banner. |
 | `?quick_setup_error=…&quick_setup_reason=…` | Session Home | Slot-scoped error feedback after a failed Quick Setup submit. |
 | `?rule_based_error=…` | Assignments page | Slot-scoped error feedback after a failed rule-based generate. |

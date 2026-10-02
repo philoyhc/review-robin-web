@@ -708,8 +708,8 @@ treats the session in lobby and extract surfaces.
 
 ### 6.1 Transitions
 
-- **`draft → validated`**: Operator runs Validate Setup; the
-  validation engine passes with no blocking errors.
+- **`draft → validated`**: Operator runs Prepare session; its
+  validation step passes with no blocking errors.
 - **`validated → draft`** (auto-invalidate): Any setup mutation
   (roster import, instrument edit, rule change, assignment
   regenerate) automatically flips the session back to `draft`.

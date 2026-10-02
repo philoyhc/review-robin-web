@@ -21,11 +21,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
-from app.web import views
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._validated import validate_session
 
 
 # --------------------------------------------------------------------------- #
@@ -85,46 +85,14 @@ def _seed_pair(
 def _activate(
     client: TestClient, db: Session, review_session: ReviewSession
 ) -> None:
-    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
+    validate_session(review_session)
+    client.get(f"/operator/sessions/{review_session.id}/assignments")
     client.post(
         f"/operator/sessions/{review_session.id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
     db.refresh(review_session)
-
-
-# --------------------------------------------------------------------------- #
-# Lifecycle copy lookup — pure function
-# --------------------------------------------------------------------------- #
-
-
-def test_validate_lifecycle_copy_draft_clean() -> None:
-    assert (
-        views.validate_lifecycle_copy("draft", has_errors=False, has_warnings=False)
-        == "Activate from the Next Action card on Session Home."
-    )
-
-
-def test_validate_lifecycle_copy_draft_with_errors() -> None:
-    assert (
-        views.validate_lifecycle_copy("draft", has_errors=True, has_warnings=False)
-        == "Resolve the errors below before activating."
-    )
-
-
-def test_validate_lifecycle_copy_validated() -> None:
-    assert (
-        views.validate_lifecycle_copy("validated", has_errors=False, has_warnings=True)
-        == "Setup is validated. Activate from Session Home."
-    )
-
-
-def test_validate_lifecycle_copy_ready() -> None:
-    assert (
-        "live" in views.validate_lifecycle_copy("ready", False, False)
-        and "Setup is locked" in views.validate_lifecycle_copy("ready", False, False)
-    )
 
 
 # --------------------------------------------------------------------------- #
@@ -376,9 +344,9 @@ def _seed_validated_with_warnings(
     # Wave 5 PR 5.2 — lazily materialise the Full Matrix
     # ``session_rule_sets`` row (auto-seed retired).
     pin_full_matrix_on_all_instruments(db, review_session.id)
-    # ?validated=1 marks the session validated when can_activate
-    # (no errors). Warnings don't block.
-    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
+    # Validated when can_activate (no errors). Warnings don't block.
+    validate_session(review_session)
+    client.get(f"/operator/sessions/{review_session.id}/assignments")
     db.refresh(review_session)
     assert review_session.status == "validated"
     return review_session
@@ -430,7 +398,7 @@ def test_validate_activate_param_on_draft_redirects_to_clean_url(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="draft-redir")
-    # Session stays draft (no ?validated=1).
+    # Session stays draft.
     response = client.get(
         f"/operator/sessions/{review_session.id}/validate?activate=1",
         follow_redirects=False,
@@ -447,7 +415,8 @@ def test_validate_activate_param_no_warnings_redirects(
     """Validated session with no warnings: ?activate=1 has nothing
     to acknowledge → 303 to clean /validate URL."""
     review_session = _seed_pair(client, db, code="no-warn-redir")
-    client.get(f"/operator/sessions/{review_session.id}/assignments?validated=1")
+    validate_session(review_session)
+    client.get(f"/operator/sessions/{review_session.id}/assignments")
     db.refresh(review_session)
 
     response = client.get(

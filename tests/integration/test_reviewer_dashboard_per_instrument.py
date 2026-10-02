@@ -23,6 +23,7 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+from ._validated import validate_session
 
 
 @pytest.fixture
@@ -104,8 +105,9 @@ def _add_assignment_for_reviewer(
 def _activate(operator_client: TestClient, review_session: ReviewSession) -> None:
     """Force-set assignment_mode + transition session through
     validate → active so the reviewer dashboard treats it as live."""
+    validate_session(review_session)
     operator_client.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1"
+        f"/operator/sessions/{review_session.id}/assignments"
     )
     operator_client.post(
         f"/operator/sessions/{review_session.id}/activate",

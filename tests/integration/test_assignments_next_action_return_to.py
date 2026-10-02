@@ -4,9 +4,7 @@ redirecting back to Assignments rather than Session Home.
 The duplicated Next Action card uses the ``_REVERT_RETURN_TO``
 allowlist on the ``/revert`` route (existing) and a matching
 ``return_to`` form field on the ``/activate`` route (added with
-this slice). The Validate Setup link points at
-``/assignments?validated=1`` rather than the Session Home URL; the
-Activate-with-warnings detour carries ``?return_to=assignments``
+this slice). The Activate-with-warnings detour carries ``?return_to=assignments``
 through to the Validate-page banner.
 """
 from __future__ import annotations
@@ -18,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession
 from app.services import session_lifecycle as lifecycle
 from ._full_matrix import pin_full_matrix_on_all_instruments
+from ._validated import validate_session
 
 
 def _make_session(
@@ -68,7 +67,7 @@ def _seed_pair_plus_pinned(
 
 
 # --------------------------------------------------------------------------- #
-# Validate Setup link points at /assignments?validated=1
+# Workflow card right column
 # --------------------------------------------------------------------------- #
 
 
@@ -92,23 +91,22 @@ def test_workflow_card_right_column_renders_setup_checklist_in_state_1(
     assert f'href="/operator/sessions/{review_session.id}/instruments"' in body
 
 
-def test_workflow_card_right_column_lists_validation_issues_in_state_3(
+def test_workflow_card_right_column_renders_once_validated(
     client: TestClient, db: Session
 ) -> None:
-    """State 3 (validation just failed) → the right column carries
-    the pill row + the per-issue list. The left-column body keeps
-    only the prose intro + wrap-up; the pill row is no longer
-    rendered there."""
+    """A validated session → the right-column aside renders, and the
+    left-column body does not carry the generate form or a second pill
+    row. (State 3, a draft with validation issues, is unreachable —
+    findings B32.)"""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-state3")
-    # Generate, then re-validate after wiping the reviewer roster
-    # so validation surfaces errors.
     client.post(
         f"/operator/sessions/{review_session.id}/assignments/generate",
         follow_redirects=False,
     )
-    # Hit the ?validated=1 entry path to populate validation_summary.
+    # Validate, to populate validation_summary.
+    validate_session(review_session)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1"
+        f"/operator/sessions/{review_session.id}/assignments"
     ).text
     # The right-column aside is present.
     assert 'id="next-action-status"' in body
@@ -178,30 +176,6 @@ def test_prepare_session_form_targets_workflow_route(
     assert 'id="next-action-generate-form"' not in body
 
 
-def test_validated_query_param_promotes_draft_to_validated_on_assignments(
-    client: TestClient, db: Session
-) -> None:
-    """``?validated=1`` on the Assignments URL runs validation,
-    flips ``draft → validated`` when clean, and renders the Next
-    Action card with the inline readiness summary."""
-    review_session = _seed_pair_plus_pinned(
-        client, db, code="rt-validate-flip"
-    )
-    # Generate first so there's at least one assignment row.
-    client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
-        follow_redirects=False,
-    )
-    db.refresh(review_session)
-    assert review_session.status == "draft"
-    response = client.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1"
-    )
-    assert response.status_code == 200
-    db.refresh(review_session)
-    assert lifecycle.is_validated(review_session)
-
-
 # --------------------------------------------------------------------------- #
 # Activate form carries return_to hidden field
 # --------------------------------------------------------------------------- #
@@ -219,8 +193,9 @@ def test_activate_form_includes_return_to_assignments(
         f"/operator/sessions/{review_session.id}/assignments/generate",
         follow_redirects=False,
     )
+    validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -258,8 +233,9 @@ def test_activate_post_with_return_to_redirects_to_assignments(
         f"/operator/sessions/{review_session.id}/assignments/generate",
         follow_redirects=False,
     )
+    validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments",
         follow_redirects=False,
     )
     response = client.post(
@@ -285,8 +261,9 @@ def test_activate_post_without_return_to_redirects_to_session_home(
         f"/operator/sessions/{review_session.id}/assignments/generate",
         follow_redirects=False,
     )
+    validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments",
         follow_redirects=False,
     )
     response = client.post(
@@ -314,8 +291,9 @@ def test_revert_form_on_assignments_carries_return_to(
         f"/operator/sessions/{review_session.id}/assignments/generate",
         follow_redirects=False,
     )
+    validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -344,8 +322,9 @@ def test_pause_form_on_assignments_carries_return_to(
         f"/operator/sessions/{review_session.id}/assignments/generate",
         follow_redirects=False,
     )
+    validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments",
         follow_redirects=False,
     )
     client.post(
@@ -390,8 +369,9 @@ def test_activate_warnings_detour_link_carries_return_to(
         f"/operator/sessions/{review_session.id}/assignments/generate",
         follow_redirects=False,
     )
+    validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -430,8 +410,9 @@ def test_validate_warnings_banner_acknowledge_form_carries_return_to(
         f"/operator/sessions/{review_session.id}/assignments/generate",
         follow_redirects=False,
     )
+    validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1",
+        f"/operator/sessions/{review_session.id}/assignments",
         follow_redirects=False,
     )
     from app.db.models import Assignment

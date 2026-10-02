@@ -65,7 +65,6 @@ router = APIRouter()
 def assignments_hub(
     request: Request,
     needs_confirm: int | None = Query(default=None),
-    validated: bool = Query(default=False),
     super_status: str | None = Query(default=None),
     super_button: str | None = Query(default=None),
     super_step: str | None = Query(default=None),
@@ -83,18 +82,12 @@ def assignments_hub(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    # ``?validated=1`` is the workflow-card Validate Setup entry path.
-    # ``build_workflow_card_context`` runs validation live and
-    # promotes ``draft → validated`` inline when the report is
-    # clean; the resulting validation_summary + per-issue list
-    # flows through to the partial via the same builder.
     response = _render_assignments_hub(
         request,
         db,
         review_session,
         user,
         missing_confirm=needs_confirm == 1,
-        validated_just_ran=validated,
         super_failure=views.parse_super_failure(
             super_status, super_step, super_error, super_button
         ),
@@ -104,8 +97,7 @@ def assignments_hub(
         filter_status=filter_status,
         offset=offset,
     )
-    # Nothing this GET wrote is left uncommitted by now (the
-    # ``?validated=1`` promotion commits itself), so the reconcile
+    # Nothing this GET wrote is left uncommitted by now, so the reconcile
     # verdict the page warmed is committed rather than recomputed on
     # every load (post_assessment_1oct E5).
     assignments.persist_reconcile_warm(db)
@@ -167,7 +159,6 @@ def _render_assignments_hub(
     issues: list | None = None,
     missing_confirm: bool = False,
     is_blocked: bool = False,
-    validated_just_ran: bool = False,
     super_failure: dict[str, str] | None = None,
     prepare_confirm: str | None = None,
     search: str = "",
@@ -269,11 +260,8 @@ def _render_assignments_hub(
         db,
         review_session,
         return_to="assignments",
-        validated_just_ran=validated_just_ran,
         super_failure=super_failure,
         prepare_confirm=prepare_confirm,
-        user=user,
-        correlation_id=request_correlation_id(),
     )
 
     return _templates.TemplateResponse(

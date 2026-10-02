@@ -25,13 +25,10 @@ The builder owns:
   the workflow card's POSTs back on itself
   (``next_action_return_to``).
 
-The builder is read-only with one exception: when
-``validated_just_ran`` is True (the page's ``?validated=1`` entry
-path) AND the readiness report is clean AND the session is still
-in draft, it calls ``lifecycle.mark_validated`` to flip
-``draft → validated`` before computing the rest of the context.
-This matches the historical behaviour of the inline computation in
-``_assignments.py``.
+The builder is read-only. It once flipped ``draft → validated`` on
+the Assignments page's ``?validated=1`` entry path; no page linked
+there, and the path was retired (2026-10-02, findings B15) — the
+Workflow card's Prepare is how a session is validated.
 """
 
 from __future__ import annotations
@@ -42,7 +39,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, ReviewSession, User
+from app.db.models import AuditEvent, ReviewSession
 from app.services import (
     assignments,
     csv_imports,
@@ -61,12 +58,9 @@ def build_workflow_card_context(
     review_session: ReviewSession,
     *,
     return_to: str,
-    validated_just_ran: bool = False,
     issues: list[validation.ValidationIssue] | None = None,
     super_failure: dict[str, str] | None = None,
     prepare_confirm: str | None = None,
-    user: User | None = None,
-    correlation_id: str | None = None,
 ) -> dict[str, Any]:
     """Build the dict of context keys consumed by the Workflow card.
 
@@ -76,13 +70,6 @@ def build_workflow_card_context(
     as ``next_action_return_to`` and drives the hidden ``return_to``
     field on every workflow-card form so the post-action redirect
     lands back on the same page.
-
-    ``validated_just_ran`` (the page's ``?validated=1`` entry path)
-    triggers an inline ``validate_session_setup`` run; when the
-    report is clean and the session is still draft, the helper
-    flips it to ``validated`` via ``lifecycle.mark_validated``
-    before populating the rest of the context. ``user`` and
-    ``correlation_id`` are required when this path fires.
 
     ``issues`` is a readiness issue list the caller has already
     built **in this same request**, passed in so the builder does not
@@ -129,29 +116,13 @@ def build_workflow_card_context(
         "warnings": [],
         "info": [],
     }
-    if validated_just_ran or is_validated:
+    if is_validated:
         run_issues = (
             validation.validate_session_setup(db, review_session)
             if issues is None
             else issues
         )
         report = lifecycle.build_readiness_report(run_issues)
-        if (
-            validated_just_ran
-            and report.can_activate
-            and is_draft
-            and user is not None
-        ):
-            lifecycle.mark_validated(
-                db,
-                review_session=review_session,
-                user=user,
-                report=report,
-                correlation_id=correlation_id,
-            )
-            # Refresh the lifecycle booleans after the flip.
-            is_draft = lifecycle.is_draft(review_session)
-            is_validated = lifecycle.is_validated(review_session)
         validation_summary = {
             "error_count": len(report.errors),
             "warning_count": len(report.warnings),

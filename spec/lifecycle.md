@@ -28,7 +28,7 @@ Cross-references:
 ## 1. State machine
 
 ```
-        Validate Setup            Activate Session         Close session
+        Prepare session           Activate Session         Close session
    ┌─────────────────────→  ┌───────────────────────→  ┌──────────────→
 draft                    validated                    ready           expired
    ←─────────────────────┘  ←───────────────────────┐  ←──────────────┘
@@ -74,10 +74,8 @@ single audit event and commit atomically.
 
 ### 2.1 `draft → validated` — `mark_validated(...)`
 
-Called by `GET /operator/sessions/{id}/validate?activate=*`, the
-validate-now path on Session Home, and
-`POST /operator/sessions/{id}/workflow/prepare` — the Workflow
-card's Prepare button runs Generate + Validate + Invite and flips
+Called only by `POST /operator/sessions/{id}/workflow/prepare` — the
+Workflow card's Prepare button runs Generate + Validate + Invite and flips
 `draft → validated` on a clean report. Idempotent (no-op when
 already `validated`). Raises `LifecycleError(code="has_errors")`
 when the readiness report carries blocking errors.

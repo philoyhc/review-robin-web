@@ -6,8 +6,7 @@ Slice 8 of the §12.B ladder (``guide/archive/major_refactor.md``).
 
 Owns the ``SetupCoverageRow`` / ``SeverityChip`` /
 ``IssueSourceGroup`` / ``ValidateContext`` dataclasses, the
-lifecycle-aware secondary-line copy (``validate_lifecycle_copy``),
-the verdict / severity-tally / per-source-count helpers, and the
+severity-tally / per-source-count helpers, and the
 context builder ``build_validate_context`` that wires
 ``validation.validate_session_setup`` output into the page shape.
 
@@ -149,22 +148,9 @@ class IssueSourceGroup:
 
 @dataclass(frozen=True)
 class ValidateContext:
-    verdict_line: str
-    """Page's at-a-glance verdict ("Ready to activate.", "Has 3
-    errors.", "Ready to activate with 2 warnings.")"""
-    verdict_class: str
-    """``"verdict-clean"`` / ``"verdict-error"`` / ``"verdict-warn"``
-    — drives the colour-coded accent on the readiness summary card."""
     error_count: int
     warning_count: int
     info_count: int
-    last_validated_text: str
-    """Today validation runs live on every GET. Renders as
-    "Validated just now" — sets expectations that re-running is free
-    and refresh-driven."""
-    lifecycle_copy: str
-    """Lifecycle-aware secondary line ("Activate from the Next Action
-    card on Session Home.", etc.)"""
     setup_coverage: list[SetupCoverageRow]
     severity_filter: str
     """``"all"`` (no filter) / ``"error"`` / ``"warning"`` / ``"info"``"""
@@ -176,43 +162,6 @@ class ValidateContext:
     filtered_issue_count: int
     """Total issues *after* the filter is applied. Drives the
     issue-list empty state when the filter narrows to zero rows."""
-
-
-def validate_lifecycle_copy(
-    session_status: str, has_errors: bool, has_warnings: bool
-) -> str:
-    """Pure function — easy to unit-test the per-state secondary line.
-
-    The plan covers ``draft``, ``validated``, ``ready``, plus a future
-    ``closed`` state that's not yet part of the lifecycle enum. Falls
-    through to a generic line for any unexpected status."""
-    if session_status == "draft":
-        if has_errors:
-            return "Resolve the errors below before activating."
-        return "Activate from the Next Action card on Session Home."
-    if session_status == "validated":
-        return "Setup is validated. Activate from Session Home."
-    if session_status == "ready":
-        return (
-            "This session is live. Setup is locked. Revert to draft on "
-            "Session Home to make changes."
-        )
-    if session_status == "closed":
-        return "Session closed. This is a snapshot of the final setup state."
-    return ""
-
-
-def _verdict(error_count: int, warning_count: int) -> tuple[str, str]:
-    if error_count > 0:
-        plural = "" if error_count == 1 else "s"
-        return f"Has {error_count} error{plural}.", "verdict-error"
-    if warning_count > 0:
-        plural = "" if warning_count == 1 else "s"
-        return (
-            f"Ready to activate with {warning_count} warning{plural}.",
-            "verdict-warn",
-        )
-    return "Ready to activate.", "verdict-clean"
 
 
 def _setup_coverage_rows(
@@ -397,14 +346,8 @@ def build_validate_context(
         elif issue.severity.value == "warning":
             issue_counts_by_source[issue.source] = (e, w + 1)
 
-    verdict_line, verdict_class = _verdict(error_count, warning_count)
     setup_coverage = _setup_coverage_rows(
         db, review_session, issue_counts_by_source
-    )
-    lifecycle_copy = validate_lifecycle_copy(
-        review_session.status,
-        has_errors=error_count > 0,
-        has_warnings=warning_count > 0,
     )
 
     severity_chips = [
@@ -465,13 +408,9 @@ def build_validate_context(
     ]
 
     return ValidateContext(
-        verdict_line=verdict_line,
-        verdict_class=verdict_class,
         error_count=error_count,
         warning_count=warning_count,
         info_count=info_count,
-        last_validated_text="Validated just now",
-        lifecycle_copy=lifecycle_copy,
         setup_coverage=setup_coverage,
         severity_filter=severity_filter,
         severity_chips=severity_chips,

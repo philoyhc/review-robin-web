@@ -44,6 +44,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._validated import validate_session
 
 
 @pytest.fixture
@@ -106,8 +107,9 @@ def _seed_and_activate(
     )
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator_client, review_session.id)
+    validate_session(review_session)
     operator_client.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1"
+        f"/operator/sessions/{review_session.id}/assignments"
     )
     response = operator_client.post(
         f"/operator/sessions/{review_session.id}/activate",
@@ -513,8 +515,9 @@ def test_results_body_omits_instrument_with_policy_off(
     db.commit()
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
+    validate_session(review_session)
     operator.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1"
+        f"/operator/sessions/{review_session.id}/assignments"
     )
     response = operator.post(
         f"/operator/sessions/{review_session.id}/activate",
@@ -1168,8 +1171,9 @@ def test_results_body_group_scoped_drops_display_field_columns(
     db.commit()
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
+    validate_session(review_session)
     operator.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1"
+        f"/operator/sessions/{review_session.id}/assignments"
     )
     activate_response = operator.post(
         f"/operator/sessions/{review_session.id}/activate",
@@ -1279,8 +1283,9 @@ def test_results_body_excludes_responses_about_other_reviewees(
     )
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
+    validate_session(review_session)
     operator.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1"
+        f"/operator/sessions/{review_session.id}/assignments"
     )
     operator.post(
         f"/operator/sessions/{review_session.id}/activate",
@@ -1434,8 +1439,9 @@ def test_results_body_excludes_responses_about_other_groups(
     ).scalar_one()
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
+    validate_session(review_session)
     operator.get(
-        f"/operator/sessions/{review_session.id}/assignments?validated=1"
+        f"/operator/sessions/{review_session.id}/assignments"
     )
     operator.post(
         f"/operator/sessions/{review_session.id}/activate",

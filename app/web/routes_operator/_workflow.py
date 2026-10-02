@@ -160,9 +160,9 @@ def workflow_prepare(
         report = lifecycle.build_readiness_report(issues)
         if not report.can_activate:
             # Validation errors — session stays in ``draft``; the
-            # per-issue right column surfaces the diagnostic on next
-            # render. The audit event records the failure for
-            # observability.
+            # card's failure signal line names the step and the
+            # Validate page carries the diagnostic. The audit event
+            # records the failure for observability.
             audit.write_event(
                 db,
                 event_type="session.workflow_run_failed",

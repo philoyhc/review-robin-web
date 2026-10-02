@@ -123,15 +123,32 @@ def pin_full_matrix(database_url: str, session_id: int) -> None:
         engine.dispose()
 
 
+def mark_validated(database_url: str, session_id: int) -> None:
+    """Promote the session ``draft → validated`` through the service, as
+    ``tests/integration/_validated.py`` does; the ``?validated=1`` GET
+    that used to do it is retired."""
+    from integration._validated import validate_session
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    engine = create_engine(database_url)
+    try:
+        with Session(engine) as db:
+            validate_session(db, session_id)
+    finally:
+        engine.dispose()
+
+
 def activate(api: httpx.Client, database_url: str, session_id: int) -> None:
     """Pin a full matrix, generate, validate and activate, so the roster's
-    reviewer has an assignment. The rest after the pin is the app's routes.
+    reviewer has an assignment. The pin and the validate step write the
+    database directly; generate and activate are the app's routes.
     """
     pin_full_matrix(database_url, session_id)
     base = f"/operator/sessions/{session_id}"
     generated = api.post(f"{base}/assignments/generate", follow_redirects=False)
     assert generated.status_code == 303, generated.text
-    api.get(f"{base}/assignments?validated=1")
+    mark_validated(database_url, session_id)
     activated = api.post(
         f"{base}/activate", data={"acknowledge_warnings": "true"}, follow_redirects=False
     )

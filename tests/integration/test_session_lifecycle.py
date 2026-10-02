@@ -20,6 +20,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 from app.services import session_lifecycle as lifecycle
+from ._validated import validate_session
 
 
 # --------------------------------------------------------------------------- #
@@ -76,7 +77,8 @@ def _build_ready_session(
     session = _create_session(client, db, code=code)
     _populate_rosters(client, session.id)
     _generate_full_matrix(client, db, session.id)
-    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
+    validate_session(session)
+    client.get(f"/operator/sessions/{session.id}/assignments")
     response = client.post(
         f"/operator/sessions/{session.id}/activate",
         data={"acknowledge_warnings": "true"},
@@ -123,7 +125,8 @@ def test_activate_requires_acknowledge_when_warnings_present(
     session = _create_session(client, db, code="warn-1")
     _populate_rosters(client, session.id)
     # Skip _generate_full_matrix so the assignment_mode-is-None warning fires.
-    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
+    validate_session(session)
+    client.get(f"/operator/sessions/{session.id}/assignments")
     db.refresh(session)
     assert session.status == "validated"
 
@@ -575,7 +578,8 @@ def test_activation_opens_a_group_instrument(
     group = _add_group_instrument(client, db, session.id)
     _populate_rosters(client, session.id)
     _generate_full_matrix(client, db, session.id)
-    client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
+    validate_session(session)
+    client.get(f"/operator/sessions/{session.id}/assignments")
     activate = client.post(
         f"/operator/sessions/{session.id}/activate",
         data={"acknowledge_warnings": "true"},

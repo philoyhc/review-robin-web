@@ -29,6 +29,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._validated import validate_session
 
 
 def _create_session(
@@ -331,7 +332,8 @@ def _build_active_session_with_reviewer(
     )
     pin_full_matrix_on_all_instruments(db, session.id)
     generate_via_page_button(operator, session.id)
-    operator.get(f"/operator/sessions/{session.id}/assignments?validated=1")
+    validate_session(session)
+    operator.get(f"/operator/sessions/{session.id}/assignments")
     operator.post(
         f"/operator/sessions/{session.id}/activate",
         data={"acknowledge_warnings": "true"},
