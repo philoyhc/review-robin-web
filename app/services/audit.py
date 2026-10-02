@@ -522,6 +522,10 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "invitation.regenerated": EventSchema(_IDENTITY | {"refs"}),
     "invitations.regenerated": EventSchema(_IDENTITY | {"set_changes"}),
     "invitation.sent": EventSchema(_IDENTITY | {"refs", "context"}),
+    # G4 (2026-10-02) — the responses-received confirmation queued on a
+    # reviewer's successful submit; stays ``queued`` until a transport
+    # exists (work in progress awaiting Azure).
+    "responses_received.queued": EventSchema(_IDENTITY | {"refs", "context"}),
     "invitation.opened": EventSchema(_IDENTITY | {"refs"}),
     "reminders.sent": EventSchema(_IDENTITY | {"set_changes", "context"}),
     # PR 4 — responses

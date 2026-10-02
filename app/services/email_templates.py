@@ -283,10 +283,10 @@ def responses_received_enabled(review_session: ReviewSession) -> bool:
 
     Default ``True`` when the override key is missing or stored as a
     non-bool (the editor's checkbox starts checked). Honours an
-    explicit ``True`` and an explicit ``False``. Intended consumer: the
-    reviewer-submit enqueue (Segment 14B). Nothing reads this at submit
-    time yet — the editor stores, round-trips and previews it, but the
-    send is not wired (spec/email_template_editor.md §7)."""
+    explicit ``True`` and an explicit ``False``. Read at submit time by
+    ``invitations.queue_responses_received``, which queues the
+    confirmation in the outbox; nothing transmits it until a transport
+    exists (spec/email_template_editor.md §7)."""
     overrides = review_session.email_template_overrides or {}
     value = overrides.get(RESPONSES_RECEIVED_ENABLED_KEY)
     if isinstance(value, bool):

@@ -73,7 +73,8 @@
         {% if active_template == "responses_received" %}
           {# Send-on-submit toggle. Default-on; uncheck to suppress
              the confirmation entirely for this session. The submit-
-             time enqueue (Segment 11C Part 2 PR H) reads this flag.
+             time enqueue (``invitations.queue_responses_received``)
+             reads this flag.
              "Reset to default" for the toggle is just re-checking
              the box — no separate reset link. #}
           <div class="form-row">

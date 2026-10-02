@@ -16,17 +16,22 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from sqlalchemy import select, update
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
     EmailOutbox,
     Invitation,
+    Response,
     ReviewSession,
     Reviewer,
     User,
 )
+from app.logging_config import get_logger
 from app.services import audit, email_templates
+
+log = get_logger(__name__)
 
 
 INVITATION_KIND = "invitation"
@@ -599,6 +604,7 @@ def has_sent_invitations(db: Session, session_id: int) -> bool:
 
 
 REMINDER_KIND = "reminder"
+RESPONSES_RECEIVED_KIND = "responses_received"
 
 _INVITE_URL_PATTERN = re.compile(r"https?://\S+/me/invite/[A-Za-z0-9_\-]+")
 
@@ -807,9 +813,118 @@ def send_reminders_to_incomplete(
     )
 
 
+# ``email_outbox.subject`` is ``String(255)``; Postgres refuses a longer
+# value, and a long session name can push a rendered subject past it.
+_SUBJECT_MAX = 255
+
+
+def queue_responses_received(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    reviewer: Reviewer,
+    user: User,
+    correlation_id: str | None = None,
+) -> int | None:
+    """Queue the responses-received confirmation for a reviewer who has
+    just submitted, when the session's toggle is on (author's ruling,
+    2026-10-02, G4). Returns the outbox row id, or ``None`` when nothing
+    is queued.
+
+    **Work in progress awaiting Azure** (``guide/post_azure_todo_checklist.md``
+    item 9): the row is written ``queued`` and stays ``queued`` — there
+    is no transport yet, so nothing is sent and, unlike the invitation
+    and reminder paths, it is not flipped to ``sent``.
+
+    - **One pending confirmation per reviewer.** A queued row for this
+      reviewer is refreshed rather than joined by another, so a
+      double-clicked Submit or a recall and resubmit leaves one row
+      carrying the latest ``$submitted_at``. This is a read then a
+      write, not a database constraint: two submits racing on separate
+      workers could still each insert one.
+    - **Nothing to confirm, nothing queued.** A submit that stamped no
+      response (nothing answered on optional-only instruments) queues
+      nothing, rather than an email saying "(not yet submitted)".
+    - **Never fails the submit.** It runs after the submit has
+      committed; a database error here is logged and rolled back, so
+      the reviewer is not shown an error for a submission that landed.
+    """
+    if not email_templates.responses_received_enabled(review_session):
+        return None
+    # Read before anything can fail: after a rollback these attributes
+    # would reload from the database, which may be what failed.
+    session_id, reviewer_id = review_session.id, reviewer.id
+    try:
+        submitted = db.execute(
+            select(Response.id)
+            .join(Assignment, Response.assignment_id == Assignment.id)
+            .where(
+                Assignment.session_id == session_id,
+                Assignment.reviewer_id == reviewer_id,
+                Response.submitted_at.is_not(None),
+            )
+            .limit(1)
+        ).first()
+        if submitted is None:
+            return None
+        subject, body = email_templates.render_responses_received(
+            review_session, reviewer
+        )
+        cc_emails, bcc_emails = email_templates.cc_bcc_for(
+            review_session, RESPONSES_RECEIVED_KIND
+        )
+        outbox = db.execute(
+            select(EmailOutbox).where(
+                EmailOutbox.session_id == review_session.id,
+                EmailOutbox.reviewer_id == reviewer.id,
+                EmailOutbox.kind == RESPONSES_RECEIVED_KIND,
+                EmailOutbox.status == "queued",
+            )
+        ).scalars().first()
+        refreshed = outbox is not None
+        if outbox is None:
+            outbox = EmailOutbox(
+                session_id=review_session.id,
+                reviewer_id=reviewer.id,
+                invitation_id=None,
+                kind=RESPONSES_RECEIVED_KIND,
+                status="queued",
+            )
+            db.add(outbox)
+        outbox.to_email = reviewer.email
+        outbox.cc_emails = cc_emails
+        outbox.bcc_emails = bcc_emails
+        outbox.subject = subject[:_SUBJECT_MAX]
+        outbox.body = body
+        db.flush()
+        audit.write_event(
+            db,
+            event_type="responses_received.queued",
+            summary=(
+                f"{'Refreshed' if refreshed else 'Queued'} the "
+                f"responses-received email to {reviewer.email}"
+            ),
+            actor_user_id=user.id,
+            session=review_session,
+            refs={"reviewer_id": reviewer.id, "outbox_id": outbox.id},
+            context={"refreshed": refreshed},
+            correlation_id=correlation_id,
+        )
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        log.exception(
+            "queueing the responses-received email failed",
+            extra={"session_id": session_id, "reviewer_id": reviewer_id},
+        )
+        return None
+    return outbox.id
+
+
 __all__ = [
     "INVITATION_KIND",
     "REMINDER_KIND",
+    "RESPONSES_RECEIVED_KIND",
     "GenerateResult",
     "RegenerateResult",
     "RegenerateAllResult",
@@ -831,4 +946,5 @@ __all__ = [
     "list_sendable_invitations",
     "list_outbox_for_session",
     "reviewers_eligible_for_invitation",
+    "queue_responses_received",
 ]

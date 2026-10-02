@@ -82,7 +82,10 @@ the spec should say so.
   ruling (#2722, accepting is session-wide) rules out a per-instrument
   Closed/Paused state, so this now reads as "won't do" unless the author
   says otherwise.
-- **G4** — The Responses-received switch has no consumer at submit time.
+- ~~**G4**~~ — **Ruled 2026-10-02: queue it on submit, work in progress
+  awaiting Azure. Done in #2753.** The Responses-received switch had no
+  consumer at submit time; a successful submit now queues the
+  confirmation (`guide/post_azure_todo_checklist.md` item 9).
 - **G13** — Export validation at row-write time
   (`spec/rrw_functional_spec.md` §13.4).
 - **D16, D18** — **Ruled 2026-10-01: Rehydrate is incomplete and not
@@ -467,7 +470,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~G1 low · `:1770` · invitation status `pending`.~~ Done in #2736.
   - ~~G2 med · `:2187-2204` · names audit events that don't exist.~~ Done in #2736.
   - ~~G3 low · `:914` · the reminder carries `$invite_url` (contradicts `:1788`).~~ Done in #2736.
-  - G4 low-med · `:921` · Responses-received switch · author.
+  - ~~G4 low-med · `:921` · Responses-received switch.~~ Done in #2753.
   - ~~G5 med · `:686,2149,106` · the Activate super-button survives; activation is from `validated` only.~~ Done in #2736.
   - ~~G6 med · `:676,704-712,2231` · Archive and Release are `expired`-only on the card; lobby purge-and-archive; the Extract Archive card.~~ Done in #2736.
   - ~~G7 med · `:1075,2244` · Delete Data is draft/validated only (= C7).~~ Done in #2747.

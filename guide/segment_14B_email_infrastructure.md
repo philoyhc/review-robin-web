@@ -107,8 +107,8 @@ covered without the app sending anything.
 the incomplete: a nudge to *exactly* those reviewers who have not yet
 submitted, on a schedule, with their own link. Today the operator
 reads the Responses page's coverage view and chases by hand. Two
-smaller gaps sit behind it: the responses-received confirmation (its
-editor toggle is stored and previewed but has no consumer —
+smaller gaps sit behind it: the responses-received confirmation (a
+submit now queues it, but nothing sends it —
 `spec/email_template_editor.md` §7), and the 18G scheduled auto-send
 offsets, which today fire into the dev outbox only.
 
@@ -181,15 +181,12 @@ that 14B enqueues actually go out via the operator's configured
 - **Two new audit events:** `email.sent` (with the outbox row
   id, recipient, transport response truncation) and
   `email.send_failed` (with the outbox row id, error message).
-- **Reviewer-submit responses-received enqueue.** When the
-  reviewer-submit handler stamps `submitted_at`, it reads
-  `email_templates.responses_received_enabled(session)` (Segment
-  11E PR 6's helper); when `True` (the default), enqueues a
-  single `email_outbox` row with `kind="responses_received"`,
-  populated by `render_responses_received` (also 11E PR 6).
-  Per-reviewer-per-session, not per-assignment. Emits
-  `responses_received_email.queued` audit event with
-  `{"reviewer_id": <int>, "assignment_count": <int>}`.
+- ~~**Reviewer-submit responses-received enqueue.**~~ Landed ahead of
+  this segment (author's ruling 2026-10-02, G4) as
+  `invitations.queue_responses_received`: one queued row per reviewer,
+  refreshed on resubmit, and a `responses_received.queued` audit event
+  (`refs` = `reviewer_id`, `outbox_id`; `context.refreshed`). Part A
+  sends the queued rows.
 
 **Sketched PRs:**
 
@@ -202,8 +199,11 @@ that 14B enqueues actually go out via the operator's configured
   selected queued rows. The latency caveat for 200-reviewer
   sessions is acknowledged here (Part C is the async escape
   hatch).
-- **PR A3 — Responses-received submit-time enqueue.** The
-  `responses_received_email.queued` audit event lands here.
+- ~~**PR A3 — Responses-received submit-time enqueue.**~~ Landed
+  ahead of this segment (author's ruling 2026-10-02, G4) as
+  `invitations.queue_responses_received`, with the audit event named
+  `responses_received.queued`; what remains is sending the queued rows
+  (`guide/post_azure_todo_checklist.md` item 9).
 
 PR A1 + A2 can fold if the bulk handler stays small;
 keeping them split protects rollback if bulk semantics need

@@ -2051,7 +2051,9 @@ transport. When the operator (or an auto-send offset) issues an
 invitation or reminder, the system renders the message, writes the
 outbox row, and flips its status straight to `sent` as a
 **dev-mode preview** — no message is actually handed to a mail
-server. The `SmtpEmailTransport` exists and is unit-tested but has
+server. A reviewer's submit queues the responses-received
+confirmation the same way but leaves it `queued`. The
+`SmtpEmailTransport` exists and is unit-tested but has
 no caller on the live send path. The functional contract (templates,
 tokens, outbox, scheduling, transport class) is complete; only the
 last mile (invoking the transport from the send path) is pending.
@@ -2294,9 +2296,10 @@ Coverage:
   `responses.deleted_all`.
 - **Invitation lifecycle** — `invitations.generated`,
   `invitation.sent`, `reminders.sent`, `invitation.opened`,
-  `invitation.regenerated` / `invitations.regenerated`. There is
-  no per-attempt email event: the outbox row is the record of
-  each send ([§11.3](#113-the-outbox)).
+  `invitation.regenerated` / `invitations.regenerated`, and
+  `responses_received.queued` when a submit queues the
+  confirmation. There is no per-attempt email event: the outbox
+  row is the record of each send ([§11.3](#113-the-outbox)).
 - **Workspace admin** — operator admit / revoke, `is_sys_admin`
   promote / demote, user delete, `session.owner_added` /
   `session.owner_removed`.

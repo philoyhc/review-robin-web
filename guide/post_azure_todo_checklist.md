@@ -536,3 +536,26 @@ behavior until then.
 **Done when** a row reads `queued` until its message leaves, `sent`
 only after the transport confirms, and `failed` when it does not.
 
+## 9. Send the responses-received confirmation
+
+**Status:** open, **incomplete work awaiting Azure** (author's ruling,
+2026-10-02, on `guide/findings_2026-10-01_corpus.md` G4).
+
+**What is there.** A reviewer's successful submit queues one
+`responses_received` outbox row when the session's "Send this
+confirmation when a reviewer submits" box is ticked
+(`invitations.queue_responses_received`). A reviewer has at most one
+queued row (a second submit refreshes it). The row stays `queued`;
+nothing transmits it.
+
+**Do, with the transport.** Decide first what happens to the rows
+queued before the transport existed — send them, drop them, or cut off
+by date — since some confirm submissions made long before. A recall,
+a clear-all or Delete Data leaves its queued row in place too, so
+decide whether those are dropped or re-checked before sending. The
+dispatcher should claim a row (flip it to `sending`) before sending,
+since a resubmit rewrites a row that is still `queued`. Then send queued `responses_received` rows like any other,
+and stamp them per item 8.
+
+**Done when** a reviewer who submits on a session with the box ticked
+receives the confirmation, and one with it unticked receives nothing.
