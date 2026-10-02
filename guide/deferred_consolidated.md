@@ -1782,3 +1782,17 @@ a deployment, so they don't belong in that checklist.
 
 **Lift trigger:** a pilot operator on Safari or using a screen reader, or
 an accessibility review before the pilot opens.
+
+### Welcome message, institution name, contact line and magic links (findings F11, author's ruling 2026-10-02)
+
+`spec/audience_and_identity_model.md` lists three things an operator can
+configure for reviewers — a welcome message above the form on first
+visit, an institution name beside the session name, and a contact line
+for questions — and names magic links as the sign-in fallback for
+reviewers without institutional SSO. None is built: no column, setting
+or route carries any of them, and reviewers sign in through Easy Auth
+only. The spec now marks each as deferred and points here.
+
+**Lift trigger:** a pilot session with external reviewers who have no
+institutional account (magic links), or an operator asking to brief
+reviewers on the form itself (the three content settings).

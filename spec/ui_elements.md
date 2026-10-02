@@ -122,8 +122,11 @@ classes.
 
 > **Hover = selected.** Hovering any session-nav target — a Setup or
 > Operations tab, or the Home anchor — paints it in that target's own
-> **selected** colours: `--nav-tab-active-bg` / `--nav-tab-active-fg` for
-> a tab, and the anchor's selected background for Home.
+> **selected** colors: `--nav-tab-active-bg` as the background and
+> `--text-body` as the foreground for a tab — the selected tab's
+> foreground is `--text-body` too, and `--nav-tab-active-fg` paints
+> neither — and the anchor's selected background for Home (author's
+> ruling, 2026-10-02, findings E4).
 > **A hover value must be a token, never a literal.** A literal
 > near-white (the shape this replaced) cannot follow the theme: it reads
 > as a tint over the light strips and a pale block over the dark ones.
@@ -180,6 +183,11 @@ classes.
 > visible card borders never touch.** The mechanism differs by context —
 > the wrapper's `gap` inside `.page-grid` / `.bottom-grid`, the card's
 > own `margin-bottom` outside one — and the value is 20px in both.
+> **The step below a `.page-grid` / `.bottom-grid` wrapper is the one
+> exception**: under `body.ui-v2` (every page) the wrapper's own
+> `margin-bottom` is `--space-4` (16px), so whatever follows a grid sits
+> 16px below it, not 20px. Borders still never touch (author's ruling,
+> 2026-10-02, findings E8).
 > **Two cards stacked in one cell of a `.bottom-grid` need
 > `.bottom-left`** (§10), the flex column whose `gap` spaces them. In a
 > plain `<div>` cell the zeroed margin leaves them flush, which is how
@@ -276,8 +284,11 @@ classes.
 > `.card`'s shape with a `--card-active-border` border and
 > `display: flex; flex-direction: column`. The border signals this is the
 > page's single most important card and ties it to the Primary button it
-> carries. **No fixed `min-height`** — the card grows to fit its content,
-> so a short early state is not padded out to match a tall one.
+> carries. **The card has no `min-height` of its own, but
+> `.next-action-body` carries `min-height: 7.5em`**, so the button row
+> lands at the same height in every state and content past that grows the
+> card (`spec/workflow_card.md` "Stable card height"; author's ruling,
+> 2026-10-02, findings E7).
 > **The H2 is the constant string "Workflow"**; the per-state action verb
 > belongs in the primary button's label, never in the heading.
 > The card's parts are `.next-action-body` (flex-grows),
@@ -1004,7 +1015,7 @@ that owns them. Each is stated in full above; none is decided here.
 - **Cards never touch** (`visual_style_general.md` P8). Cards on a page,
   and the cards a card divides its content into (Session Home's details
   card), are 20px apart — set by a wrapper's `gap` or a bare card's
-  `margin-bottom`; two cards stacked in one grid cell go in a
+  `margin-bottom` (the step below a grid wrapper is 16px); two cards stacked in one grid cell go in a
   `.bottom-left`. Tile rows inside a card (`.subcard-row`, 12px) stay
   tighter, deliberately. Stated in full in §4.
 - **`.bottom-grid` for natural-height pairs.** When two cards in a

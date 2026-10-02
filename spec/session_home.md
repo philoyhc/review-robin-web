@@ -119,11 +119,11 @@ context that helps the operator decide whether to take it.
   button inside the card. The blue framing signals this is the
   page's single most important card and ties visually to the
   primary action it carries.
-- Card height grows to fit content. There's no fixed `min-height` —
-  early states (empty draft) read short; states carrying several
-  explanation paragraphs and a full button row read taller. Each
-  state's vertical extent matches its content rather than padding to
-  a uniform frame.
+- Card height grows to fit content. The card has no `min-height` of
+  its own, but `.next-action-body` carries `min-height: 7.5em` so the
+  button row lands at the same height in every state; states with
+  several explanation paragraphs grow past it (`spec/workflow_card.md`
+  "Stable card height"; author's ruling, 2026-10-02, findings E7).
 
 **Body layout.** Two vertically-stacked blocks inside the card, the
 same in **every** state — there is no Activated-state exception:

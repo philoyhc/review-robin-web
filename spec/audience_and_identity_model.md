@@ -39,9 +39,9 @@ invitation, completes one or more instruments for one or more
 assigned reviewees, submits responses.
 
 - **Auth.** Institutional credentials (MS365 SSO) by default.
-  Magic links available as enhancement / fallback for cases where
-  SSO is unavailable (external evaluators, cross-institution
-  panels). Reviews are intended to be secure and authenticated;
+  Magic links, an enhancement / fallback for cases where SSO is
+  unavailable (external evaluators, cross-institution panels), are
+  deferred and not built (findings F11). Reviews are intended to be secure and authenticated;
   unauthenticated review is not a supported posture.
 - **Account model.** Reviewers have lightweight accounts in Review
   Robin — they sign in and have a session-spanning identity, but
@@ -279,6 +279,10 @@ sees:
 - Optional contact information for questions (operator email or
   similar).
 
+The last three are **not built** and are deferred (author's ruling,
+2026-10-02, findings F11; `guide/deferred_consolidated.md`, "Welcome
+message, institution name, contact line and magic links").
+
 What operators **cannot** configure:
 
 - Visual style — colors, typography, layout, spacing. App-level.
@@ -327,7 +331,10 @@ supported for either:
   reviewer to SSO; after authenticating, they are deep-linked to
   the relevant response surface.
 
-Magic links exist as an explicit fallback, not the primary mode.
+Magic links are **not built** and are deferred with the content
+settings above (findings F11): today a reviewer signs in through
+institutional SSO only. When built, they are an explicit fallback,
+not the primary mode.
 The "tokenized link replaces auth" pattern is **not** the model;
 that pattern works against the secure-review ambition. Magic links
 in Review Robin authenticate the reviewer (proving possession of
