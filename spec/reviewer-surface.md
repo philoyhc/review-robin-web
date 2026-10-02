@@ -1032,8 +1032,8 @@ descending.
 **The `reviewee` role additionally requires a currently-resolving
 visibility grant.** An active, email-identified
 roster row is necessary but not sufficient: at least one instrument in
-the session must grant the reviewee a mode under the windows open right
-now (`visibility_policies.reviewee_has_current_grant`). Without one the
+the session must grant the reviewee a mode inside the open
+response-release window (`visibility_policies.reviewee_has_current_grant`). Without one the
 `reviewee` entry never enters `roles`, so the session contributes no row
 at all unless the user holds another role on it — the role is gated, not
 the row. Reviewers and observers are not grant-gated. Full contract in
@@ -1249,7 +1249,8 @@ for the gate semantics.
    the user's, case-insensitively; confidential reviewees (non-email
    identifiers) never pass; **and**
 2. `visibility_policies.reviewee_has_current_grant` — at least one
-   instrument granting them a mode under the windows open right now.
+   instrument granting them a mode inside the open response-release
+   window.
 
 **On any failure: a bare HTTP 404**, byte-identical to an unknown
 session id. Unknown session, not a reviewee here, an inactive row, a
@@ -1271,7 +1272,7 @@ see belongs on an operator surface.
 filtered through the per-instrument `reviewee` visibility policy.
 Three rendering modes:
 
-- **raw** — one row per reviewer, identified (name + email in the identity column).
+- **raw** — one row per reviewer with an included assignment to this reviewee, identified (name + email in the identity column); one who has not submitted shows empty value cells.
 - **anonymized** — same per-row table, every identification cell (Reviewer + display fields) replaced with a muted em-dash.
 - **summarized** — one aggregate row; identity column header "Summary" carrying two counts; per-field cells per data type (Integer/Decimal: Average / Median / Min / Max / N; List: per-choice frequency; String: total + average length). Em-dash placeholders at zero responses.
 

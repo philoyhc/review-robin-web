@@ -34,6 +34,7 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
+    InstrumentViewPolicy,
     Response,
     ReviewSession,
     User,
@@ -272,6 +273,46 @@ def test_results_body_renders_raw_responses_for_reviewee(
     assert "rae@example.edu" in body
     # The submitted values surface.
     assert "Solid work." in body
+
+
+def test_a_legacy_while_ongoing_reviewee_row_grants_nothing_before_release(
+    db: Session,
+    alice: AuthenticatedUser,
+    carol: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A13 (2026-10-02). A reviewee's grant is after-release only, but a
+    row written before the per-cell validation can still carry a
+    while-ongoing mode. On an Activated session it used to open the
+    route's gate and show its submitted values. The gate and the builder
+    both pass the while-ongoing window as closed now, so the page is a
+    bare 404 — no values, no names, and no sign the reviewee is being
+    reviewed."""
+    operator = make_client(alice)
+    review_session = _seed_and_activate(operator, db, code="vp-legacy")
+    _seed_submitted_responses(db, review_session)
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+    granularity, identification = visibility_policies.encode_mode("raw")
+    db.add(
+        InstrumentViewPolicy(
+            instrument_id=instrument.id,
+            audience="reviewee",
+            while_ongoing_granularity=granularity,
+            while_ongoing_identification=identification,
+        )
+    )
+    db.commit()
+    assert review_session.status == "ready"
+
+    response = make_client(carol).get(
+        f"/me/sessions/{review_session.id}/results"
+    )
+
+    assert response.status_code == 404
+    assert "Solid work." not in response.text
+    assert "rae@example.edu" not in response.text
 
 
 def test_results_404_when_no_visibility_policy(
@@ -811,8 +852,8 @@ def test_results_body_summarized_zero_responses_shows_label_scaffolding(
     scaffolding so the reviewee can see what each cell will
     eventually show. Numerical cells render "Average: —",
     "Median: —", etc. with the count line below; String cells
-    render the length labels likewise. Mirrors the Raw mode's
-    "scaffolding without values" preview behavior."""
+    render the length labels likewise, as a Raw section shows an
+    unsubmitted reviewer's row with empty cells."""
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code="vp-sum-empty")
     # No _seed_submitted_responses() — no Response rows exist.

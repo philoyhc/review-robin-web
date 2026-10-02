@@ -136,8 +136,9 @@ the spec should say so.
 - **B15, B27** — `GET /assignments?validated=1` and the Validate page's
   `verdict_*` / `lifecycle_copy` fields are reachable from no template.
   Retire them, or wire them?
-- **A13** — `build_reviewee_results_context` still carries pre-release
-  scaffolding that the route-level gate makes unreachable.
+- ~~**A13**~~ — **Ruled 2026-10-02: delete it. Done in #2754.**
+  `build_reviewee_results_context` carried pre-release scaffolding that
+  the route-level gate made unreachable.
 - **D7, D13** — The responses bundle does not carry the by-instrument and
   metadata files the spec promises. The `Instrument_{N}` CSV fallback uses
   position, and the screen uses `session_seq`.
@@ -245,7 +246,7 @@ stay in §3.
   - The `scheduled_events/__init__.py` docstring names three trigger pages.
   - `session_lifecycle.py:692` says "pre-filters to `draft`".
   - The `responses/_core.py:826` docstring says "any status".
-  - The `_reviewee_results.py` docstring (see A13).
+  - ~~The `_reviewee_results.py` docstring (see A13).~~ Done in #2754.
   - The `test_assignments_status_filter.py:142` docstring names
     `col_data_sample`.
   - `.env.example` cites `guide/segment_05A.md`, which is now under <!-- path-ref-ok -->
@@ -274,7 +275,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~A11 low · `:281,566,1339` · no acknowledge path; fraction 0.5, not 75%; invite lands on the bare URL.~~ Done in #2732.
   - ~~A12 med · `:874,1334` · identity is `normalize_email` (strip + lower), not casefold.~~ Done in #2732.
 - `participant_model.md`
-  - A13 med · `:84` vs `:97` · scaffolding contradiction · author (builder code).
+  - ~~A13 med · `:84` vs `:97` · scaffolding contradiction.~~ Done in #2754.
   - ~~A14 med · `:25-29` · casefold → `normalize_email`.~~ Done in #2732.
   - ~~A15 low · `:41-44,150` · the "Session Edit Details" page is retired (also `visibility_policy.md:94,149`).~~ Done in #2732.
   - ~~A16 low · `:157` · Stop-release exists.~~ Done in #2732.

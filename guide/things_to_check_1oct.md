@@ -188,3 +188,13 @@ E1, E2 and E4 were checked by the author when they merged.
   choose Responses received, untick "Send this confirmation when a reviewer submits" and save.
   Another reviewer's submit adds no row, and the submit itself still
   succeeds.
+
+## Reviewee results only after release (A13)
+
+- [ ] **Nothing before release.** On an Activated session with a
+  reviewee policy set on After release, sign in as that reviewee:
+  `/me` shows no reviewee row, and `/me/sessions/{id}/results` is a
+  404.
+- [ ] **Values after release.** Close the session and let the release
+  window open: the results page lists every reviewer with an included
+  assignment, with submitted values filled and the rest empty.
