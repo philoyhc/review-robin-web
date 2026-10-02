@@ -537,6 +537,16 @@ carrying the same answer. Reads collapse the rows back into one
 group — extraction and aggregation respect this contract (see
 `spec/csv_contracts.md`).
 
+**An excluded member still receives the group's answers.** A member
+whose row is `include=False` (inactive, findings B2, or excluded by
+hand) is out of everything a reviewer, an invitation or a count sees,
+but their row is still the group's: saves and submits write its copy,
+and recall and Clear all reach it (author's ruling 2026-10-02). The
+form reads the lowest-id member's copy, so without this, reactivating
+an excluded member could show the reviewer stale or blank answers and a
+save would copy them back to the whole group. A group the self-review
+toggle excludes is excluded whole, so no answer reaches it.
+
 ### Self-review interaction
 
 On a group-scoped instrument, a "self review group" is **any

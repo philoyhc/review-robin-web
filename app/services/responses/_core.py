@@ -161,6 +161,51 @@ def _reviewer_assignments(
     return list(db.execute(stmt).scalars())
 
 
+def _excluded_group_members(
+    db: Session,
+    reviewer: Reviewer,
+    session_id: int,
+    group_instrument_ids: set[int],
+) -> list[Assignment]:
+    """This reviewer's **excluded** rows on group-scoped instruments.
+
+    A group's answers are kept on every member's row, and the form reads
+    one representative's copy. A member excluded because they went
+    inactive (findings B2), or by hand, is out of everything a reviewer
+    sees, but their row still belongs to the group. Saves, submits,
+    recalls and clears reach it too (author's ruling 2026-10-02), so
+    reactivating the member brings back the group's current answers
+    rather than the ones from before they left.
+    """
+    if not group_instrument_ids:
+        return []
+    stmt = (
+        select(Assignment)
+        .where(
+            Assignment.session_id == session_id,
+            Assignment.reviewer_id == reviewer.id,
+            Assignment.include.is_(False),
+            Assignment.instrument_id.in_(group_instrument_ids),
+        )
+        .order_by(Assignment.id)
+    )
+    return list(db.execute(stmt).scalars())
+
+
+def _with_excluded_group_members(
+    db: Session, reviewer: Reviewer, session_id: int
+) -> list[Assignment]:
+    """The reviewer's included rows plus :func:`_excluded_group_members`
+    — the rows a submit, recall or clear acts on."""
+    assignments = _reviewer_assignments(db, reviewer, session_id)
+    group_instrument_ids = _group_instrument_ids(
+        db, {a.instrument_id for a in assignments}
+    )
+    return assignments + _excluded_group_members(
+        db, reviewer, session_id, group_instrument_ids
+    )
+
+
 def _instrument_fields_by_id(
     db: Session, instrument_ids: set[int]
 ) -> dict[int, list[InstrumentResponseField]]:
@@ -509,9 +554,23 @@ def save_draft(
         position_by_instrument_id=_session_position_map(db, review_session.id),
     )
     # Then fan the valid upserts out to every member of their group.
+    # An excluded member of a group still gets the group's answer
+    # (``_excluded_group_members``).
+    excluded = _excluded_group_members(
+        db, reviewer, review_session.id, group_instrument_ids
+    )
+    group_key_by_assignment = {
+        **group_key_by_assignment,
+        **_group_key_by_assignment(
+            db,
+            assignments=excluded,
+            group_instrument_ids=group_instrument_ids,
+            session_id=review_session.id,
+        ),
+    }
     valid_upserts = _expand_group_upserts(
         valid_upserts,
-        assignments=assignments,
+        assignments=assignments + excluded,
         group_instrument_ids=group_instrument_ids,
         group_key_by_assignment=group_key_by_assignment,
     )
@@ -519,7 +578,10 @@ def save_draft(
     written = _apply_upserts(
         db,
         upserts=valid_upserts,
-        assignment_index=assignment_index,
+        assignment_index={
+            **assignment_index,
+            **{a.id: a for a in excluded},
+        },
         field_index=field_index,
     )
     # 19T Item 10 — a closed branch holds no value, judged on the answers
@@ -609,9 +671,23 @@ def submit(
         field_index=field_index,
         position_by_instrument_id=position_by_instrument_id,
     )
+    # An excluded member of a group still gets the group's answer
+    # (``_excluded_group_members``).
+    excluded = _excluded_group_members(
+        db, reviewer, review_session.id, group_instrument_ids
+    )
+    group_key_by_assignment = {
+        **group_key_by_assignment,
+        **_group_key_by_assignment(
+            db,
+            assignments=excluded,
+            group_instrument_ids=group_instrument_ids,
+            session_id=review_session.id,
+        ),
+    }
     valid_upserts = _expand_group_upserts(
         valid_upserts,
-        assignments=assignments,
+        assignments=assignments + excluded,
         group_instrument_ids=group_instrument_ids,
         group_key_by_assignment=group_key_by_assignment,
     )
@@ -619,7 +695,10 @@ def submit(
     written = _apply_upserts(
         db,
         upserts=valid_upserts,
-        assignment_index=assignment_index,
+        assignment_index={
+            **assignment_index,
+            **{a.id: a for a in excluded},
+        },
         field_index=field_index,
     )
     # 19T Item 10 — a closed branch holds no value, judged on the answers
@@ -680,7 +759,7 @@ def submit(
 
     now = datetime.now(timezone.utc)
     submitted_count = 0
-    for assignment in assignments:
+    for assignment in assignments + excluded:
         rows = list(
             db.execute(
                 select(Response).where(Response.assignment_id == assignment.id)
@@ -688,7 +767,10 @@ def submit(
         )
         for row in rows:
             row.submitted_at = now
-            submitted_count += 1
+            # An excluded member's copy is stamped too, so it reads
+            # submitted if they come back, but not counted.
+            if assignment.include:
+                submitted_count += 1
     db.flush()
 
     audit.write_event(
@@ -740,7 +822,7 @@ def recall(
     intent in the log. Driver of the reviewer summary page's
     "Recall my submission" button.
     """
-    assignments = _reviewer_assignments(db, reviewer, review_session.id)
+    assignments = _with_excluded_group_members(db, reviewer, review_session.id)
     recalled_count = 0
     for assignment in assignments:
         rows = list(
@@ -780,8 +862,10 @@ def clear_all(
     user: User,
     correlation_id: str,
 ) -> ClearResult:
-    """Delete every Response row for this reviewer's assignments in the session."""
-    assignments = _reviewer_assignments(db, reviewer, review_session.id)
+    """Delete every Response row for this reviewer's assignments in the
+    session, including an excluded group member's copy of the group's
+    answers (``_excluded_group_members``)."""
+    assignments = _with_excluded_group_members(db, reviewer, review_session.id)
     deleted = 0
     for assignment in assignments:
         rows = list(

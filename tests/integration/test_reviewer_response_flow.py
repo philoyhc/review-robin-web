@@ -2494,3 +2494,111 @@ def test_surface_visibility_policy_card_reflects_persisted_policy(
     # summaries" (operators see "summarized" as the encoded mode;
     # the reviewer-surface wording is gentler).
     assert "Anonymized summaries" in body
+
+
+def test_an_excluded_group_member_keeps_the_groups_answers(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A group member excluded from the review (inactive, findings B2,
+    or by hand) still receives the group's answers, and a clear removes
+    them, so reactivating the member brings back the group's current
+    answers rather than stale ones (author's ruling 2026-10-02). The
+    member stays excluded throughout."""
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Grp Excluded", "code": "grp-excl"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "grp-excl")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Team A\n"
+                b"Eve,eve@example.edu,Team A\n"
+                b"Dan,dan@example.edu,Team B\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    # Set the group boundary directly: group by RevieweeTag1, so
+    # Team A (Carol, Eve) and Team B (Dan) are two distinct groups.
+    group = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+    group.group_kind = "r1"
+    db.commit()
+
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    _activate(operator, db, review_session)
+
+    by_reviewee = {
+        a.reviewee.name: a
+        for a in db.execute(
+            select(Assignment)
+            .where(Assignment.session_id == review_session.id)
+            .where(Assignment.instrument_id == group.id)
+            .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        ).scalars()
+    }
+    assert set(by_reviewee) == {"Carol", "Eve", "Dan"}
+
+    eve = by_reviewee["Eve"]
+    eve.include = False
+    db.commit()
+
+    def _rating(assignment: Assignment) -> str | None:
+        rows = db.execute(
+            select(Response).where(Response.assignment_id == assignment.id)
+        ).scalars().all()
+        return {r.response_field.field_key: r.value for r in rows}.get("rating")
+
+    rae_client = make_client(rae)
+    for value in ("4", "2"):
+        response = rae_client.post(
+            f"/me/sessions/{review_session.id}/1/save",
+            data={f"response[{by_reviewee['Carol'].id}][rating]": value},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303, response.text
+        db.expire_all()
+        assert _rating(by_reviewee["Carol"]) == value
+        assert _rating(eve) == value
+        assert _rating(by_reviewee["Dan"]) is None
+    assert db.get(Assignment, eve.id).include is False
+
+    response = rae_client.post(
+        f"/me/sessions/{review_session.id}/clear",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.expire_all()
+    assert _rating(eve) is None

@@ -113,3 +113,7 @@ E1, E2 and E4 were checked by the author when they merged.
   reviewee of one active reviewer inactive. Validate warns that the
   reviewer "has no active assignments"; an inactive reviewer is never
   named.
+- [ ] **A group member who comes back sees current answers.** On a
+  group-scoped instrument, answer a group, deactivate one member and
+  Prepare, change the group's answer, then reactivate the member and
+  Prepare. The reviewer sees the changed answer, not the old one.
