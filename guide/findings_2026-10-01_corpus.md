@@ -393,17 +393,17 @@ One line each: id · severity · where · finding · decides. A line with no
   - D26 med · `:87-89` · fields are empty with a placeholder (contradicts `:57`).
   - D27 low · `:289-299` · test counts; label punctuation.
 - `architecture.md`
-  - F1 high · `:528,542,352` · locked Name/Email rows *are* seeded (conflicts with `instruments.md:875`).
-  - F2 med · `:320,361` · headings use `short_label`.
-  - F3 med · `:435` · invitations: validated or ready.
-  - F4 med · `:477` · the `reminders.sent` envelope.
-  - F5 med · `:724,755` · the canonical audit examples.
-  - F6 low · `:623` · `reviewer.bulk_deleted`.
-  - F7 low · `:281` · `rules/preview.py` is gone.
-  - F8 low · `:236` · drop line numbers.
+  - ~~F1 high · `:528,542,352` · locked Name/Email rows *are* seeded (conflicts with `instruments.md:875`).~~ Done in #2734.
+  - ~~F2 med · `:320,361` · headings use `short_label`.~~ Done in #2734.
+  - ~~F3 med · `:435` · invitations: validated or ready.~~ Done in #2734.
+  - ~~F4 med · `:477` · the `reminders.sent` envelope.~~ Done in #2734.
+  - ~~F5 med · `:724,755` · the canonical audit examples.~~ Done in #2734.
+  - ~~F6 low · `:623` · `reviewer.bulk_deleted`.~~ Done in #2734.
+  - ~~F7 low · `:281` · `rules/preview.py` is gone.~~ Done in #2734.
+  - ~~F8 low · `:236` · drop line numbers.~~ Done in #2734.
 - `permissions.md`
-  - F9 med · `:119` · `/about` creates a user row; §3 omits `/guide`, `/templates/*.zip` and the `/me/sessions/{id}` 303.
-  - F10 low · `:276` · test counts.
+  - ~~F9 med · `:119` · `/about` creates a user row; §3 omits `/guide`, `/templates/*.zip` and the `/me/sessions/{id}` 303.~~ Done in #2734.
+  - ~~F10 low · `:276` · test counts.~~ Done in #2734.
 - `audience_and_identity_model.md`
   - F11 med · unbuilt contract · author.
 - `role_landing_and_visibility.md`
@@ -413,22 +413,22 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~F14 low · `:64` · pre-open renders 200.~~ Done in #2732.
 - `domain_assumptions.md`
   - F15 med · statuses · author.
-  - F16 low · `:29` · purge-and-archive can delete.
+  - ~~F16 low · `:29` · purge-and-archive can delete.~~ Done in #2734.
 - `operations_pages.md`
   - F17 high · `:359` vs `:144` · per-row invitation buttons in `validated` · author.
-  - F18 med · `:526` · at-risk is coverage only.
-  - F19 low · the classifier lives in `services/monitoring.py`.
-  - F20 low · move the measurement figures (see the sweep record, §5).
+  - ~~F18 med · `:526` · at-risk is coverage only.~~ Done in #2734.
+  - ~~F19 low · the classifier lives in `services/monitoring.py`.~~ Done in #2734.
+  - ~~F20 low · move the measurement figures (see the sweep record, §5).~~ Done in #2734.
 - `email_infra_options.md`
-  - F21 low · the audit scaffolding has landed.
-  - F22 low · Reply-To is not built.
+  - ~~F21 low · the audit scaffolding has landed.~~ Done in #2734.
+  - ~~F22 low · Reply-To is not built.~~ Done in #2734.
   - F23 low · Graph docstring · author.
-  - F24 low · `sent_at`; retire the stale "Doc impact" section.
+  - ~~F24 low · `sent_at`; retire the stale "Doc impact" section.~~ Done in #2734.
 - `blob_storage.md`
-  - F25 low · `:33` misquote; `:171` time-bound claim.
+  - ~~F25 low · `:33` misquote; `:171` time-bound claim.~~ Done in #2734.
 - `spec/README.md`
-  - F26 low · the `domain_assumptions` row sits in the Visual/UI table.
-  - Also: the Peer reviewer audience is described as "own + peers" (`:25`), which conflicts with `visibility_policy.md` §1.1.
+  - ~~F26 low · the `domain_assumptions` row sits in the Visual/UI table.~~ Done in #2734.
+  - ~~Also: the Peer reviewer audience is described as "own + peers" (`:25`), which conflicts with `visibility_policy.md` §1.1.~~ Done in #2734.
 - `rrw_functional_spec.md`
   - G1 low · `:1770` · invitation status `pending`.
   - G2 med · `:2187-2204` · names audit events that don't exist.
