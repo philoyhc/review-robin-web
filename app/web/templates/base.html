@@ -1427,6 +1427,13 @@
         opacity: 0.5;
         pointer-events: none;
       }
+      /* The locked strip already fades as a whole, so a disabled
+         button inside it (Add new, and Search while a row is open)
+         takes no second fade: without this it drew at 0.25 beside
+         inputs at 0.5, and Add new looked fainter than Search. */
+      body.ui-v2 .toolbar-right .operator-actions-filter.is-locked .btn {
+        opacity: 1;
+      }
       /* The "Showing N of M" hint at the top-left of a preview-table
          card (Segment 19I Item 4). Moved here from the
          operator-actions strip so it sits with the rows it counts. */

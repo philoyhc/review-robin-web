@@ -635,7 +635,7 @@
                  it accept until `archived`, and the whole card is
                  absent there. #}
               {% if edit_mode %}
-                <a class="btn secondary disabled" aria-disabled="true">Add new</a>
+                <a class="btn secondary disabled" aria-disabled="true" tabindex="-1">Add new</a>
               {% elif not is_archived %}
                 <a class="btn secondary"
                    {# Carries the active filter into add mode (19P.2
@@ -647,7 +647,7 @@
                       NAVIGATION, not at the POST. #}
                    href="{{ observers_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}#{{ row_editor_anchor }}">Add new</a>
               {% endif %}
-              <button class="btn secondary" type="submit">Search</button>
+              <button class="btn secondary" type="submit"{% if edit_mode %} disabled{% endif %}>Search</button>
             </div>
           </form>
         </div>

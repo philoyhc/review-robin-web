@@ -386,8 +386,15 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(
     # click from a half-typed row loses it. Nothing pinned this: a
     # mutation making the disabled branch live passed the whole suite.
     right = _pane(_markup(html), "right")
-    assert '<a class="btn secondary disabled" aria-disabled="true">Add new</a>' in right
+    assert '<a class="btn secondary disabled" aria-disabled="true" tabindex="-1">Add new</a>' in right
     assert "?add=1" not in right, "a live Add new while a row is being edited"
+    # Search is disabled too, and neither button fades a second time
+    # inside the already-faded strip, so the two read alike (author's
+    # browser check, 2026-10-02: Add new looked fainter than Search).
+    assert 'type="submit" disabled>Search</button>' in right
+    assert re.search(
+        r"\.operator-actions-filter\.is-locked \.btn \{\s*opacity: 1;", html
+    ), "a disabled button in the locked strip fades twice"
 
 
 # ── What the moved controls must keep ─────────────────────────────────
