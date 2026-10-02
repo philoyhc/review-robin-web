@@ -11,6 +11,9 @@ Two modes:
 
 Never copied either way: responses, assignments, invitations, audit
 history, email-outbox rows — a clone always starts as a clean draft.
+Nor is a reviewee's ``results_acknowledged_at``: the acknowledgement
+is the participant's, of the source session's results, so a cloned
+reviewee starts unacknowledged (``spec/roundtrip_coverage.md``).
 """
 from __future__ import annotations
 
@@ -41,6 +44,9 @@ CLONE_MODES: tuple[str, ...] = ("all", "config")
 # ``id`` plus the ``TimestampMixin`` columns are never carried over —
 # a cloned row is new, so it gets a fresh PK and fresh timestamps.
 _SKIP_BASE: frozenset[str] = frozenset({"id", "created_at", "updated_at"})
+
+# Participant-set reviewee state, never carried into a clone.
+_SKIP_REVIEWEE: frozenset[str] = frozenset({"results_acknowledged_at"})
 
 _CODE_MAX_LENGTH = 64
 
@@ -289,7 +295,8 @@ def clone_session(
             new_reviewee = Reviewee(
                 session_id=clone.id,
                 **_column_values(
-                    reviewee, skip=set(_SKIP_BASE) | {"session_id"}
+                    reviewee,
+                    skip=set(_SKIP_BASE) | _SKIP_REVIEWEE | {"session_id"},
                 ),
             )
             db.add(new_reviewee)
