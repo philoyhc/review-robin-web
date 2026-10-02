@@ -168,3 +168,22 @@ def test_replicate_tolerates_malformed_imported_sort_and_widths(
 
     assert replica.sort_display_fields == []
     assert replica.column_widths is None
+
+
+def test_replicate_keeps_the_group_identity_sort(db: Session) -> None:
+    """A group instrument's sort by its composed Group column is the
+    ``GROUP_IDENTITY_SORT_KEY`` sentinel, not a field id; it carries
+    over unchanged."""
+    review_session, source, op = _setup(db)
+    source.sort_display_fields = [
+        {"display_field_id": instruments.GROUP_IDENTITY_SORT_KEY, "dir": "asc"}
+    ]
+    db.commit()
+
+    replica = instruments.replicate_instrument(
+        db, review_session=review_session, source=source, actor=op
+    )
+
+    assert replica.sort_display_fields == [
+        {"display_field_id": instruments.GROUP_IDENTITY_SORT_KEY, "dir": "asc"}
+    ]

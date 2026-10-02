@@ -42,6 +42,7 @@ from app.db.models import (
 from app.services import session_lifecycle as lifecycle
 from app.services import audit
 from app.services.instruments._band1 import _band1_rule_set_name
+from app.services.instruments._display_fields import GROUP_IDENTITY_SORT_KEY
 from app.services.instruments._response_fields import DEFAULT_RESPONSE_FIELDS
 from app.services.instruments._state import _instrument_label
 
@@ -505,7 +506,9 @@ def _repoint_sort(
     entries: list[dict[str, Any]] | None, display_ids: dict[int, int]
 ) -> list[dict[str, Any]] | None:
     """A replica's sort entries, re-pointed at its own display fields.
-    An entry naming no source display field is dropped."""
+    The group-identity sentinel (``GROUP_IDENTITY_SORT_KEY``, a group
+    instrument's composed Group column) names no field and is kept as
+    it is; an entry naming no source display field is dropped."""
     if not isinstance(entries, list) or not entries:
         return entries if isinstance(entries, list) else None
     out = []
@@ -513,6 +516,9 @@ def _repoint_sort(
         if not isinstance(entry, dict):
             continue
         old_id = entry.get("display_field_id")
+        if old_id == GROUP_IDENTITY_SORT_KEY:
+            out.append(dict(entry))
+            continue
         new_id = display_ids.get(old_id) if isinstance(old_id, int) else None
         if new_id is not None:
             out.append({**entry, "display_field_id": new_id})
