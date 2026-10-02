@@ -205,6 +205,21 @@ def _require_not_archived(review_session: ReviewSession) -> None:
         )
 
 
+def _require_not_ready(review_session: ReviewSession) -> None:
+    """Reject Session Home's Delete Data and Delete session while ``ready``.
+
+    The author's ruling of 2026-10-02 (C7 = G7): both are allowed in
+    ``draft``, ``validated``, ``expired`` and ``archived`` — a finished
+    session is the natural time to clean up — and refused only while
+    the session is Activated, where Session Home also greys them out.
+    """
+    if lifecycle.is_ready(review_session):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Session is ready; revert to draft first to delete.",
+        )
+
+
 def require_relationships_enabled_session(
     review_session: ReviewSession = Depends(require_session_operator),
 ) -> ReviewSession:

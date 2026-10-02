@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -616,7 +617,7 @@ def test_delete_data_rejected_when_ready(
     """Delete Data is gated like Delete session — locked while the session is
     Activated. Session Home renders the confirm checkbox disabled with a lock
     note, and a direct POST (bypassing the disabled attribute) is rejected by
-    the route's ``_require_editable`` gate; the responses are left intact.
+    the route's ``_require_not_ready`` gate; the responses are left intact.
     Revert the session to draft first to delete data."""
     operator = make_client(alice)
     review_session, count_before = _seed_responses(operator, db)
@@ -832,7 +833,7 @@ def test_delete_session_post_still_rejected_when_ready(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """The visible-but-disabled UI change is cosmetic. Server-side,
-    the lifecycle gate (_require_editable in the /delete route)
+    the lifecycle gate (_require_not_ready in the /delete route)
     still rejects the POST — bypassing the disabled attribute via a
     direct POST should still 4xx."""
 
@@ -848,6 +849,58 @@ def test_delete_session_post_still_rejected_when_ready(
         follow_redirects=False,
     )
     assert response.status_code in (400, 403, 409)
+
+
+@pytest.mark.parametrize("state", ["expired", "archived"])
+def test_delete_data_and_session_allowed_after_the_end(
+    state: str,
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """C7 = G7, author's ruling 2026-10-02: Delete Data and Delete
+    session work on a finished session. Only ``ready`` refuses them
+    (``_require_not_ready``), so the controls Session Home renders live
+    in ``expired`` and ``archived`` are no longer a 409."""
+    operator = make_client(alice)
+    review_session, count_before = _seed_responses(operator, db)
+    assert count_before > 0
+    review_session.status = state
+    db.commit()
+    session_id = review_session.id
+
+    operator = make_client(alice)
+    page = operator.get(f"/operator/sessions/{session_id}")
+    assert page.status_code == 200
+    body = page.text
+    assert 'id="danger-zone"' in body
+    for key in ("delete-data", "delete-session"):
+        tag = body.split(f'data-delete-confirm="{key}"', 1)[1].split(">", 1)[0]
+        assert "disabled" not in tag, key
+    assert "Data deletion is locked while status is Activated" not in body
+    assert "Session deletion is locked while status is Activated" not in body
+
+    response = operator.post(
+        f"/operator/sessions/{session_id}/delete-data",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    remaining = db.execute(
+        select(Response)
+        .join(Assignment, Response.assignment_id == Assignment.id)
+        .where(Assignment.session_id == session_id)
+    ).all()
+    assert remaining == []
+
+    response = operator.post(
+        f"/operator/sessions/{session_id}/delete",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.expire_all()
+    assert db.get(ReviewSession, session_id) is None
 
 
 # ---------------------------------------------------------------------------

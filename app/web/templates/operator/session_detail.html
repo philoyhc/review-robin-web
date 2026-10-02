@@ -399,7 +399,7 @@
        from the retired Edit page). Delete Data wipes reviewer responses;
        Delete session removes the whole session. Both are locked while
        Activated (confirm checkbox disabled + each route's
-       ``_require_editable`` gate) — Revert to draft first. Each confirm
+       ``_require_not_ready`` gate) — Revert to draft first. Each confirm
        checkbox is ``required`` so the destructive submit is blocked without
        JavaScript unless the operator ticks it. #}
     <div class="bottom-left">

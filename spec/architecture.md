@@ -420,10 +420,12 @@ stamps `Instrument.deadline_closed_at`, and emits a single
 Setup is open only while the session is **editable** — `draft` OR
 `validated` (`is_editable`). Once the session leaves that band
 (`ready` / `expired` / `archived`), every operator setup-mutation
-endpoint (session edit/delete, roster import + delete-all, instrument
+endpoint (session edit, roster import + delete-all, instrument
 CRUD, assignment generate + delete-all) returns **HTTP 409** via the
 `_require_editable` route gate in
-`app/web/routes_operator/_shared.py`. The corresponding GET pages
+`app/web/routes_operator/_shared.py`. Session Home's Delete Data and
+Delete session are an exception: `_require_not_ready` refuses them
+only in `ready` (`spec/lifecycle.md` §3.1). The corresponding GET pages
 render read-only banners. Operators must revert to draft to make
 further setup changes; if any `Response` rows already exist,
 response-loss acknowledgment (`acknowledge_response_loss=true`) is

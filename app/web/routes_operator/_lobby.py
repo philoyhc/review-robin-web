@@ -419,12 +419,12 @@ def sessions_delete_selected(
     """Bulk-delete the sessions ticked on the operator sessions list.
 
     Filters server-side to caller-owned + editable (draft / validated)
-    sessions; non-editable rows are silently skipped per the existing
-    ``_require_editable`` posture. The Danger Zone card on the list
-    page surfaces a confirm checkbox and an explicit destructive
-    button — without ``confirm=true`` the request is rejected with
-    ``400`` (matches the single-session ``/sessions/{id}/delete``
-    handler). Each deletion goes through ``sessions.delete_session``
+    sessions; non-editable rows are silently skipped. This is narrower
+    than Session Home's single-session ``/sessions/{id}/delete``, which
+    since 2026-10-02 refuses only ``ready`` (``_require_not_ready``).
+    The lobby's row expander surfaces a "Yes, delete" checkbox and the
+    Delete button — without ``confirm=true`` the request is rejected
+    with ``400``, as the single-session route does. Each deletion goes through ``sessions.delete_session``
     which already cascades reviewers / reviewees / instruments /
     assignments / invitations / email_outbox rows + writes the
     ``session.deleted`` audit row."""

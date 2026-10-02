@@ -1134,10 +1134,10 @@ page, and `/edit` 308-redirects to
   "Submit all" action that chains the imports in dependency order.
   Defaults to locked (Lock/Unlock toggle).
 - **Danger Zone card** (bottom-right of the `.bottom-grid`) —
-  **Delete Data** (wipes every reviewer response, preserves setup;
-  confirm-gated; any state) and **Delete Session** (removes the
-  session entirely; confirm-gated; visible-but-disabled in `ready`,
-  route-enforced server-side).
+  **Delete Data** (wipes every reviewer response, preserves setup)
+  and **Delete Session** (removes the session entirely). Both are
+  confirm-gated, live in every state but `ready`, and
+  visible-but-disabled in `ready`, route-enforced server-side.
 - **Owners card**, stacked above Danger Zone — the session's own
   owner set, editable in every session state, guarded by its own
   Lock / Unlock against accidental edits. `spec/session_owners.md` carries the full contract.
@@ -2343,7 +2343,8 @@ one ([§6.1](#61-transitions)). Archived sessions:
 - Disappear from the main Sessions lobby.
 - Are visible on the archived-sessions child page.
 - Have all data preserved on disk, unless purged on the way in
-  (§16.5).
+  (§16.5) or deleted afterwards from Session Home's Danger Zone
+  (§16.3, §16.4).
 - Can be unarchived back to `draft` at any time.
 
 ### 16.3 Delete data
@@ -2351,7 +2352,9 @@ one ([§6.1](#61-transitions)). Archived sessions:
 A per-session operator action on the Session Home Danger Zone.
 Wipes every reviewer response in the session while preserving the
 rosters, instruments, assignments, and configuration. Available in
-any state. Audit-logged as `responses.deleted_all`. Useful for
+every state but `ready` (`draft`, `validated`, `expired`,
+`archived`); an Activated session takes **Revert to draft** first.
+Audit-logged as `responses.deleted_all`. Useful for
 clearing a session between two pilot runs without rebuilding the
 configuration.
 
@@ -2360,8 +2363,9 @@ configuration.
 A per-session operator action on the Session Home Danger Zone.
 Removes the session entirely and cascades to every dependent row
 (rosters, assignments, responses, audit events for the session).
-Visible-but-disabled while the session is `ready`; the operator
-must pause first.
+Available in every state but `ready`, so a finished (`expired`) or
+`archived` session can be deleted from its Home; visible-but-disabled
+while the session is `ready`, which takes **Revert to draft** first.
 
 ### 16.5 Operator-triggered purge and archive
 
