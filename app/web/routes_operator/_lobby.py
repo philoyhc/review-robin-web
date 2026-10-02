@@ -431,13 +431,14 @@ def sessions_delete_selected(
 ) -> RedirectResponse:
     """Bulk-delete the sessions ticked on the operator sessions list.
 
-    Filters server-side to caller-owned + editable (draft / validated)
-    sessions; non-editable rows are silently skipped. This is narrower
-    than Session Home's single-session ``/sessions/{id}/delete``, which
-    since 2026-10-02 refuses only ``ready`` (``_require_not_ready``).
-    The lobby's row expander surfaces a "Yes, delete" checkbox and the
-    Delete button — without ``confirm=true`` the request is rejected
-    with ``400``, as the single-session route does. Each deletion goes through ``sessions.delete_session``
+    Filters server-side to sessions the caller operates, in ``draft``,
+    ``validated`` or ``expired`` (author's ruling, 2026-10-02: a
+    finished session is deletable from the lobby as from its Home);
+    ``ready`` (Activated) rows are silently skipped, and ``archived``
+    ones are deleted from the archived page's own route. The lobby's
+    row expander surfaces a "Yes, delete" checkbox and the Delete
+    button — without ``confirm=true`` the request is rejected with
+    ``400``, as the single-session route does. Each deletion goes through ``sessions.delete_session``
     which already cascades reviewers / reviewees / instruments /
     assignments / invitations / email_outbox rows + writes the
     ``session.deleted`` audit row."""
@@ -452,7 +453,10 @@ def sessions_delete_selected(
         review_session = sessions.get_for_user(db, user, session_id)
         if review_session is None:
             continue
-        if not lifecycle.is_editable(review_session):
+        if not (
+            lifecycle.is_editable(review_session)
+            or lifecycle.is_expired(review_session)
+        ):
             continue
         sessions.delete_session(
             db,

@@ -789,6 +789,41 @@ def test_delete_selected_removes_ticked_drafts(
     ).scalar_one_or_none() is not None
 
 
+def test_delete_selected_accepts_expired_and_skips_ready(
+    client: TestClient, db: Session
+) -> None:
+    """Author's ruling 2026-10-02: the lobby's Delete accepts an
+    ``expired`` session, as Session Home's Delete session does; an
+    Activated (``ready``) one is still skipped silently."""
+    for name, code in (("Done", "done-1"), ("Live", "live-1")):
+        client.post(
+            "/operator/sessions",
+            data={"name": name, "code": code},
+            follow_redirects=False,
+        )
+    done = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "done-1")
+    ).scalar_one()
+    live = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "live-1")
+    ).scalar_one()
+    done.status = "expired"
+    live.status = "ready"
+    db.commit()
+    done_id, live_id = done.id, live.id
+
+    response = client.post(
+        "/operator/sessions/bulk-delete",
+        data={"session_ids": [done_id, live_id], "confirm": "true"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    db.expire_all()
+    assert db.get(ReviewSession, done_id) is None
+    assert db.get(ReviewSession, live_id) is not None
+
+
 def test_delete_selected_without_confirm_returns_400(
     client: TestClient, db: Session
 ) -> None:

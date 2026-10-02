@@ -68,8 +68,9 @@ What the application database holds and how it is removed:
 - **Sessions, rosters, instruments, assignments, responses** —
   persist until an operator deletes them. "Delete Data" clears a
   session's responses; "Delete Session" removes the session and
-  its dependent rows; the lobby bulk actions delete selected
-  (archived) sessions. All are confirm-gated and audited.
+  its dependent rows; the lobby's Delete removes selected `draft`,
+  `validated` or `expired` sessions, and the archived page's Delete
+  selected archived ones. All are confirm-gated and audited.
 - **`audit_events`** — append-only in normal operation. Rows are
   removed only by the selective purge (which can target the
   audit log) or by a whole-session delete.
