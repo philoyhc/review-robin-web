@@ -54,10 +54,10 @@ is left stricter until ruled on. Grouped by what the ruling is about.
 - **C7 = G7** — On Session Home, Delete data and Delete session render as
   live in `expired` and `archived`, but the route answers 409.
   `spec/setup_pages.md` names exactly this predicate error.
-- **D14** — `clone_session` copies `Reviewee.results_acknowledged_at`
-  into the new draft session (it copies every column but id and stamps).
-  `spec/roundtrip_coverage.md` and `spec/rehydrate.md` say it is not
-  cloned.
+- ~~**D14**~~ — **Ruled 2026-10-02: follow the spec. Done in #2744.**
+  `clone_session` (the lobby's Duplicate) copied
+  `Reviewee.results_acknowledged_at` into the new draft session; the
+  specs say it is not cloned, and now it is not.
 - ~~**C3**~~ — **Ruled 2026-10-02: gate it on the server and name the
   loss.** A Quick Setup settings replace deleted instruments, assignments
   and responses behind a UI-only checkbox, and the spec said it had no
@@ -405,7 +405,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~D12 low · bundled labels, helper name, slug, identity rows.~~ Done in #2735.
   - D13 low · `:129` · `Instrument_{N}` fallback · author.
 - `roundtrip_coverage.md`
-  - D14 med · `:127` · `results_acknowledged_at` is cloned · author (likely code).
+  - ~~D14 med · `:127` · `results_acknowledged_at` is cloned.~~ Done in #2744.
   - ~~D15 low · `session_seq` is absent from the matrix.~~ Done in #2735.
 - `rehydrate.md`
   - D16 med · analyzer · author.

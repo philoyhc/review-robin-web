@@ -165,6 +165,33 @@ def test_clone_copies_data_shapes_retention_and_toggles(db: Session) -> None:
     assert shape.instrument_id != src_inst.id
 
 
+def test_clone_all_does_not_copy_results_acknowledgement(
+    db: Session,
+) -> None:
+    """A reviewee's acknowledgement is of the source session's results,
+    so the cloned reviewee starts unacknowledged (D14)."""
+    source, op = _source_session(db, "clone-ack")
+    source_reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == source.id)
+    ).scalar_one()
+    source_reviewee.results_acknowledged_at = dt.datetime(
+        2026, 9, 1, 9, 0, tzinfo=dt.timezone.utc
+    )
+    db.commit()
+
+    clone = session_clone.clone_session(
+        db, source=source, user=op, mode="all"
+    )
+
+    clone_reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == clone.id)
+    ).scalar_one()
+    assert clone_reviewee.email_or_identifier == "e1@example.edu"
+    assert clone_reviewee.results_acknowledged_at is None
+    db.refresh(source_reviewee)
+    assert source_reviewee.results_acknowledged_at is not None
+
+
 def test_clone_config_skips_roster(db: Session) -> None:
     source, op = _source_session(db, "clone-config")
 
