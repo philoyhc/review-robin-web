@@ -41,9 +41,9 @@ flowchart LR
     App -->|"app data + audit log"| PG
     App -->|logs| MON
     App -->|"diagnostics / artifacts"| ST
-    GH -->|"deploy · OIDC"| App
-    GH -->|"migrate first (Alembic)"| PG
-    GH -.->|"jobs (planned)"| RUN
+    GH -.->|"jobs · OIDC (planned)"| RUN
+    RUN -.->|"deploy"| App
+    RUN -.->|"migrate first (Alembic)"| PG
 
     classDef heart fill:#e6f0fb,stroke:#1668c1,stroke-width:2px,color:#12395f;
     class App heart;

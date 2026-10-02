@@ -541,8 +541,10 @@ suite against a `postgres:16` service container).
   the same suite covers both dialects without duplication.
 - **Test infrastructure**: in-memory SQLite engine whose schema is
   built from the ORM metadata (`Base.metadata.create_all`) once per
-  session — Alembic migrations run only when the suite points at
-  Postgres, as `ci-postgres` does; per-test savepoint-based
+  session (the shared `engine` fixture). Alembic still runs on SQLite
+  where a test asks for it — the migration tests under `tests/db/` and
+  the browser tests' `tests/browser/conftest.py` — and `ci-postgres`
+  round-trips the whole chain on Postgres; per-test savepoint-based
   isolation so service-layer commits don't leak across tests;
   `make_client` factory for multi-user integration tests.
 - **Browser tests** (`tests/browser/`): Python Playwright against a
