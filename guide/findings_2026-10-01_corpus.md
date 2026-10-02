@@ -430,31 +430,31 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~F26 low · the `domain_assumptions` row sits in the Visual/UI table.~~ Done in #2734.
   - ~~Also: the Peer reviewer audience is described as "own + peers" (`:25`), which conflicts with `visibility_policy.md` §1.1.~~ Done in #2734.
 - `rrw_functional_spec.md`
-  - G1 low · `:1770` · invitation status `pending`.
-  - G2 med · `:2187-2204` · names audit events that don't exist.
-  - G3 low · `:914` · the reminder carries `$invite_url` (contradicts `:1788`).
+  - ~~G1 low · `:1770` · invitation status `pending`.~~ Done in #2736.
+  - ~~G2 med · `:2187-2204` · names audit events that don't exist.~~ Done in #2736.
+  - ~~G3 low · `:914` · the reminder carries `$invite_url` (contradicts `:1788`).~~ Done in #2736.
   - G4 low-med · `:921` · Responses-received switch · author.
-  - G5 med · `:686,2149,106` · the Activate super-button survives; activation is from `validated` only.
-  - G6 med · `:676,704-712,2231` · Archive and Release are `expired`-only on the card; lobby purge-and-archive; the Extract Archive card.
+  - ~~G5 med · `:686,2149,106` · the Activate super-button survives; activation is from `validated` only.~~ Done in #2736.
+  - ~~G6 med · `:676,704-712,2231` · Archive and Release are `expired`-only on the card; lobby purge-and-archive; the Extract Archive card.~~ Done in #2736.
   - G7 med · `:1075,2244` · Delete Data is draft/validated only (= C7).
-  - G8 med-high · `:1586-1670` · pages, dirty state and Save; `reviewer-surface.md` wins.
-  - G9 low-med · `:714,1565` · non-open states render pre-open.
+  - ~~G8 med-high · `:1586-1670` · pages, dirty state and Save; `reviewer-surface.md` wins.~~ Done in #2736.
+  - ~~G9 low-med · `:714,1565` · non-open states render pre-open.~~ Done in #2736.
   - ~~G10 med-high · `:418,1210,1568` · visibility-when-closed · author.~~ Ruled: policy decides; done in #2723.
   - ~~G11 low-med · peer grant (= A18).~~ Ruled: Raw or off (A18).
-  - G12 med · `:2088-2102` · readiness checklist overstated; consolidate with `validate_page.md`.
+  - ~~G12 med · `:2088-2102` · readiness checklist overstated; consolidate with `validate_page.md`.~~ Done in #2736.
   - G13 low-med · `:2123` · export validation · author.
-  - G14 low-med · `:1835-1851` · invites fire from `validated`; the captions are on the Workflow card.
-  - G15 med · `:1012` · clone never copies responses or assignments.
+  - ~~G14 low-med · `:1835-1851` · invites fire from `validated`; the captions are on the Workflow card.~~ Done in #2736.
+  - ~~G15 med · `:1012` · clone never copies responses or assignments.~~ Done in #2736.
   - G16 low-med · `:349,853` · code uniqueness · author (also `operator_ui_concept.md:240`).
-  - G17 low-med · `:774,813` · non-allowlisted users get a 303 to `/me`.
-  - G18 low-med · `:829,1516` · there is no sys-admin owner management.
-  - G19 low · `:1479` · Rehydrate is gated off.
-  - G20 low · `:1490` · SMTP modes are `starttls`/`ssl`.
+  - ~~G17 low-med · `:774,813` · non-allowlisted users get a 303 to `/me`.~~ Done in #2736.
+  - ~~G18 low-med · `:829,1516` · there is no sys-admin owner management.~~ Done in #2736.
+  - ~~G19 low · `:1479` · Rehydrate is gated off.~~ Done in #2736.
+  - ~~G20 low · `:1490` · SMTP modes are `starttls`/`ssl`.~~ Done in #2736.
   - ~~G21 med-low · `:592,796,1767` · token storage and reuse · author.~~ Ruled: the spec is corrected.
-  - G22 low · write/deepen · branching: ranges, any/none, the anchor rule, hidden parents.
-  - G23 low · `:721` · Observers lock only when `archived` (contradicts §9.5).
-  - G24 low · provenance and segment history in the spec, at about ten sites.
-  - G25 low · write/deepen · tags, owners, the who-can-see card, `/guide` and `/about`, theme.
+  - ~~G22 low · write/deepen · branching: ranges, any/none, the anchor rule, hidden parents.~~ Done in #2736.
+  - ~~G23 low · `:721` · Observers lock only when `archived` (contradicts §9.5).~~ Done in #2736.
+  - ~~G24 low · provenance and segment history in the spec, at about ten sites.~~ Done in #2736.
+  - ~~G25 low · write/deepen · tags, owners, the who-can-see card, `/guide` and `/about`, theme.~~ Done in #2736.
 
 ### `docs/`
 
