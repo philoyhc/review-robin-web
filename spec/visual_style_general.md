@@ -130,7 +130,7 @@ All buttons share: 8px vertical padding, 16px horizontal padding, 6px corner rad
 - **Secondary.** White background, `border-default` border, `text-primary` text. The default button. Used for everything that isn't the single primary action: "Cancel," "Edit," "View detail," routine submits.
 - **Destructive.** White background, `accent-red` border, `accent-red` text. For the *confirmation step* of destructive actions, not for the trigger. The trigger is a normal secondary button; clicking it surfaces a confirmation where the destructive button appears.
 - **Outline-amber (recovery action inside a colored card).** White background, `accent-amber-dark` border, `accent-amber-dark` text. Per **P7**, recovery actions inside a lock card or other warning-framed card adopt the card's color family. Used e.g. for "Revert to draft" inside a lock card.
-- **Disabled.** Same shape as the role variant; reduced opacity (0.5), `cursor: not-allowed`, `pointer-events: none`. One rule covers `<button disabled>`, `<a class="btn disabled" aria-disabled="true">`, and any role variant.
+- **Disabled.** Same shape as the role variant; reduced opacity (0.5), `cursor: not-allowed`, `pointer-events: none`. One rule covers `<button disabled>`, `<a class="btn disabled" aria-disabled="true">`, and any role variant. Inside a container that already fades as a whole (the roster toolbar's locked strip) the button takes no second fade (`spec/ui_elements.md` §6).
 
 **Hover** (per **P6**):
 - *Filled buttons* (Primary, any future filled role): lighten — bg/border move one shade lighter (e.g. `accent-blue` → `accent-blue-light`).

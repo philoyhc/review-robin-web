@@ -30,8 +30,8 @@ E1, E2 and E4 were checked by the author when they merged.
 - [ ] **Disabled link buttons match.** On the Reviewers page, switch
   the table into edit mode. The toolbar's **Add new**, a link, should be
   exactly as faint as any other disabled button (0.5, not 0.55).
-  *Checked 2026-10-02: Add new looked fainter than Search. Fixed in the
-  next PR (Search disabled too; no second fade inside the locked strip).
+  *Checked 2026-10-02: Add new looked fainter than Search. Fixed in
+  #2730 (Search disabled too; no second fade inside the locked strip).
   Recheck: Add new and Search read alike, as faint as the inputs, on
   Reviewers, Reviewees, Relationships and Observers.*
 - [x] **The Quick Setup banner points the right way.** Upload a second

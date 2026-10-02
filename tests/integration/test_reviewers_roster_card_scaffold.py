@@ -2131,7 +2131,7 @@ def test_add_new_is_disabled_while_a_row_is_being_edited(client, db):
     right = html[html.index('<div class="toolbar-pane toolbar-right">') :]
     right = right[: right.index("</form>")]
     assert (
-        '<a class="btn secondary disabled" aria-disabled="true" tabindex="-1">Add new</a>'
+        '<a class="btn secondary disabled" aria-disabled="true">Add new</a>'
         in right
     ), right[-500:]
     assert "?add=1" not in right, "a live Add new while a row is being edited"

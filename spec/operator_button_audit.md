@@ -50,7 +50,7 @@ shorthand:
 | **Return-to (`.back-link`)** | Top-of-body inline link to "wherever you came from" (`return_to_url` round-trip). Required on chrome-detour pages (Operator Settings, About) and on the Sys Admin child pages. (See `spec/ui_elements.md` §6.) |
 | **Chrome utility link** | Top-right chrome anchors — Sign-out (`signout`), Settings / About (`chrome-link`). Defined in `spec/visual_style_rrw.md`, not in `.btn` family. |
 | **Chrome nav** | The two-row session top-nav tabs (`.nav-tab`). Lives in `spec/visual_style_rrw.md` "Operator session chrome", not in the `.btn` family. |
-| **Disabled** | Visual variant of any role — opacity 0.5, `cursor: not-allowed`, `aria-disabled="true"`. |
+| **Disabled** | Visual variant of any role — opacity 0.5, `cursor: not-allowed`, `aria-disabled="true"`; applied once, not again inside an already-faded locked strip. |
 | **Inline link** | `<a>` rendered without a `.btn` class; reads as a hyperlink, not a button. |
 
 Format note: counts for "per row" / "per instrument" buttons are
