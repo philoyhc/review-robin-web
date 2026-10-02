@@ -302,6 +302,19 @@ def _apply_session_config_form(
     # scalar ``sessions`` columns.
     _require_editable(review_session)
 
+    # A code another session holds is refused before anything is
+    # written (the timezone write below commits), rather than reaching
+    # the unique constraint as a 500.
+    try:
+        sessions.ensure_code_available(
+            db, code, exclude_session_id=review_session.id
+        )
+    except sessions.SessionCodeTakenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     # 18B PR 5: the display timezone is a field of this form. Blank ⇒
     # leave the session's current zone unchanged. The deadline picker is
     # wall-clock in this zone.

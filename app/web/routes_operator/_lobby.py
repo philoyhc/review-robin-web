@@ -297,6 +297,19 @@ def lobby_edit_submit(
     """
     correlation_id = request_correlation_id()
 
+    # Checked before the tag write, so a taken code refuses the whole
+    # save rather than reaching the unique constraint as a 500.
+    if lifecycle.is_draft(review_session):
+        try:
+            sessions.ensure_code_available(
+                db, code, exclude_session_id=review_session.id
+            )
+        except sessions.SessionCodeTakenError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
+
     session_tags.set_tags(
         db,
         review_session=review_session,

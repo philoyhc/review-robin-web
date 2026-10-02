@@ -905,7 +905,12 @@ settings.
 
 - **Name** — free-form display label.
 - **Code** — short stable identifier, unique across the workspace
-  (a database constraint on `sessions.code`), not per operator. Used as
+  (a database constraint on `sessions.code`), not per operator. Create,
+  Session Home's Save and, on a `draft` session, the lobby's
+  row-expander Save refuse a code another session holds with a 422
+  before writing anything (`sessions.ensure_code_available`, a
+  pre-check: two simultaneous saves of one code can still meet at the
+  constraint). Used as
   the filename prefix for every CSV extract (`{code}_kind.csv`)
   and as the operator's primary short-form reference.
 - **Description** — optional long-form description; appears in

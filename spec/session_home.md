@@ -439,7 +439,9 @@ left this card for one of its own, above the Danger Zone — see §3a /
   tag write runs **after** the config apply, so a save the card
   rejects writes no tags either, and every audit event one save
   produces shares one correlation id (the `audit_events`
-  `correlation_id` column, one value per request).
+  `correlation_id` column, one value per request). A code another
+  session holds answers **422** before anything is written, the
+  timezone included (`sessions.ensure_code_available`).
 - `GET /operator/sessions/{id}/edit` exists only as a **308
   permanent redirect** to `…?editing=1#session-config` for stale
   bookmarks. It keeps the `require_session_operator` gate, so a

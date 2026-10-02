@@ -23,6 +23,32 @@ from app.services.instruments import ensure_default_instrument
 log = get_logger(__name__)
 
 
+class SessionCodeTakenError(ValueError):
+    """A session code another session already holds.
+
+    ``sessions.code`` is unique across the workspace (a database
+    constraint), so a taken code is refused before the write rather than
+    surfacing as an ``IntegrityError`` — which answered 500.
+    """
+
+
+def ensure_code_available(
+    db: Session, code: str, *, exclude_session_id: int | None = None
+) -> None:
+    """Raise ``SessionCodeTakenError`` when another session holds ``code``.
+
+    ``exclude_session_id`` is the session being edited, so saving a
+    session under its own unchanged code passes.
+    """
+    query = select(ReviewSession.id).where(ReviewSession.code == code)
+    if exclude_session_id is not None:
+        query = query.where(ReviewSession.id != exclude_session_id)
+    if db.execute(query.limit(1)).first() is not None:
+        raise SessionCodeTakenError(
+            f"Session code {code!r} is already used by another session."
+        )
+
+
 def create_session(
     db: Session,
     *,
