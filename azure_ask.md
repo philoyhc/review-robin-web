@@ -1,5 +1,14 @@
 # Azure ask — Review Robin Web
 
+> **Answered differently (note added 2026-10-02).** The answer was not
+> the dev-slot shape asked for below. RRW was provisioned into the NUS
+> Azure landing zone as a private-networked environment behind an
+> Application Gateway, with private endpoints, Key Vault and Application
+> Insights; `docs/nus_azure_status_v7.md` records that state and what
+> still blocks cutover. This document is kept as the record of the ask,
+> not as current requirements. Its fate is queued in
+> `guide/post_azure_todo_checklist.md`.
+
 Institutional-Azure wish list for hosting **Review Robin Web (RRW)**
 as a sanctioned pilot, and (separately) what would additionally be
 needed if adoption takes off.
@@ -35,8 +44,9 @@ same shape under institutional ownership.
   "confidential" — but the classification decision is IT's, not
   the developer's.
 - **A written data policy** covering retention, deletion on
-  request, and export. RRW writes a session `session.purged` /
-  `session.archived` event on every purge or archive, and every
+  request, and export. RRW writes a `session.responses_purged` /
+  `session.rosters_purged` / `session.audit_log_purged` event on every
+  purge and a `session.archived` event on every archive, and every
   mutating action lands an audit row — so retention rules can be
   operationalised, but IT needs to name them.
 - **A cost cap.** The dev slot runs a Free-tier App Service Plan
@@ -179,9 +189,11 @@ approval path if RRW graduates beyond pilot.
 ### 2.6 Delegated admin
 
 - **A workspace admin group** distinct from the individual
-  operator. Today RRW has one workspace sys-admin (the developer);
-  adoption introduces multiple sanctioned operators from
-  different administrative units.
+  operator. RRW already ships a three-tier workspace role model
+  (operator ⊂ admin ⊂ super-admin, managed at
+  `/operator/sys-admin/users`); what adoption needs is an
+  institutional group to hold the admin tiers, since it introduces
+  multiple sanctioned operators from different administrative units.
 - **A named security contact** and a **named cost owner**
   separate from the developer, so incident routing and billing
   escalation don't route through a single person.

@@ -130,7 +130,7 @@ Symmetric peer review is not excluded by this — it is the *special case* where
 
 ### 6.2 A tabular review surface built for scale
 
-**Decision.** Give reviewers a paginated, tabular response surface — one page per instrument, each a grid of (reviewee × response field) cells — with typed fields, bounds, native and server-side validation, drafts, and autosave.
+**Decision.** Give reviewers a paginated, tabular response surface — pages of one or more instruments, each instrument a grid of (reviewee × response field) cells — with typed fields, bounds, native and server-side validation, and drafts saved page by page. Cell-level autosave is deferred (`guide/deferred_consolidated.md`).
 
 **Why.** The reviewer task is intrinsically tabular and can be long. A dense grid that a reviewer can move through quickly is a better fit than a sequence of single-record forms, and it is the affordance that spreadsheets got right. Typed fields with validation shift data-quality enforcement to *authoring time* rather than leaving it to post-hoc cleanup.
 
@@ -168,13 +168,13 @@ The surface has to hold two quite different load shapes, and a dense grid serves
 
 **Why.** For institutional review, staying in-tenant is the difference between a tool that can be sanctioned and one that cannot. It aligns with the second wall coming down (Section 4): in-principle approval to host sandboxed citizen projects on institutional Azure under a workable data policy. Reusing institutional identity also means no separate credentials to manage and a permission story the institution already understands.
 
-One honesty caveat belongs here. At the pilot stage, the safety of "inside the institution" rests on the **platform sandbox and the institutional data policy**, not yet on the application's own hardening: database access is currently guarded by a firewall allow-list rather than private networking, secrets are held as plain application settings, and there is no monitoring layer. Private networking, managed secret storage, and telemetry are on the roadmap. The in-tenant posture is what makes the tool *sanctionable now*; the deeper hardening follows. Saying so is part of the same honesty the design otherwise insists on.
+One honesty caveat belongs here. At the pilot stage, the safety of "inside the institution" rests on the **platform sandbox and the institutional data policy**, not yet on the application's own hardening: on the developer-owned dev slot that serves today, database access is guarded by a firewall allow-list rather than private networking, secrets are held as plain application settings, and there is no monitoring layer. The NUS environment that replaces it is provisioned with private networking, Key Vault and Application Insights, and awaits cutover (`docs/nus_azure_status_v7.md`). The in-tenant posture is what makes the tool *sanctionable now*; the deeper hardening follows. Saying so is part of the same honesty the design otherwise insists on.
 
 **Trade-off.** RRW is bound to Easy Auth and has no standalone login fallback; it must run behind the platform's identity layer. That coupling is accepted deliberately — it is a feature, not a limitation, for the intended setting.
 
 ### 6.7 Accountability by construction
 
-**Decision.** Make the cycle defensible by construction: every mutating operation writes a typed, schema-validated audit event; the session moves through an explicit lifecycle (draft → validated → ready/"Activated", with an archived off-ramp) with edit-locks once live; permissions scope operators to sessions they own; and regenerating assignments **reconciles** rather than wipes — inserting newly eligible pairs, dropping orphaned ones, and leaving matched pairs and their saved responses untouched.
+**Decision.** Make the cycle defensible by construction: every mutating operation writes a typed, schema-validated audit event; the session moves through an explicit lifecycle (draft → validated → ready/"Activated" → expired/"Closed", with an archived off-ramp) with edit-locks once live; permissions scope operators to sessions they own; and regenerating assignments **reconciles** rather than wipes — inserting newly eligible pairs, dropping orphaned ones, and leaving matched pairs and their saved responses untouched.
 
 **Why.** Defensibility was named as a core requirement of the problem, not a nice-to-have. An append-only audit log answers "what happened and who did it," lifecycle locks stop live cycles from being edited out from under their data, scoped permissions keep operators in their lane, and reconciling regeneration removes a whole class of accidental data-loss. Together they let the institution stand behind decisions like hiring and admissions.
 
@@ -192,7 +192,7 @@ One honesty caveat belongs here. At the pilot stage, the safety of "inside the i
 
 ## 7. What RRW deliberately is not
 
-Scope discipline is a design feature, so it is worth stating the exclusions directly. RRW does not analyse or present data (Section 6.5). It is not a case-management or HR platform, and does not replace substantive human judgment or the operator's oversight. It does not guarantee fairness or good decision-making; it makes the *collection* of judgment reliable and defensible. And, as a pilot-stage build, several things remain deliberately unfinished — live email sending is queued but not yet wired, there is a single environment rather than separate staging and production, retention is operator-driven, app-level security hardening (private networking, managed secret storage, monitoring) is still on the roadmap, and accessibility has had a basic pass rather than a full audit. These are honest boundaries, most of them chosen rather than missed.
+Scope discipline is a design feature, so it is worth stating the exclusions directly. RRW does not analyse or present data (Section 6.5). It is not a case-management or HR platform, and does not replace substantive human judgment or the operator's oversight. It does not guarantee fairness or good decision-making; it makes the *collection* of judgment reliable and defensible. And, as a pilot-stage build, several things remain deliberately unfinished — live email sending is queued but not yet wired, the developer-owned dev slot is the only live environment until the provisioned NUS environment is cut over, retention is operator-driven, app-level security hardening (private networking, managed secret storage, monitoring) arrives with that cutover, and accessibility has had a basic pass rather than a full audit. These are honest boundaries, most of them chosen rather than missed.
 
 ---
 
@@ -216,7 +216,7 @@ RRW exists to solve one structurally hard, widely recurring problem — **routin
 |---|---|
 | Arbitrary, many-to-many reviewer→reviewee mapping (asymmetric *or* symmetric) | Independent reviewer/reviewee pools; rule-based assignment engine — symmetric peer review as the shared-pool special case |
 | Large symmetric course peer review (the TEAMMATES use case) | Shared pool with self-review excluded; small groups via group-scoped rules; CSV roster import instead of block paste |
-| Reviewer work is tabular and long | Paginated tabular response surface with typed fields, drafts, autosave — serving both many-reviewers-few-rows and few-reviewers-many-rows load shapes |
+| Reviewer work is tabular and long | Paginated tabular response surface with typed fields and page-by-page drafts — serving both many-reviewers-few-rows and few-reviewers-many-rows load shapes |
 | Returns must be collatable and analysable | Typed fields + validation at authoring time; structured CSV/zip export |
 | Different audiences may see different views | Per-instrument, per-audience, per-window visibility policy (raw/anonymised/summarised) with tokenised downloads |
 | Cycles are discrete, not tied to a standing roster | Session as the unit of organisation; duplicate-and-tag to reuse a population |

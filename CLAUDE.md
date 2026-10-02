@@ -80,7 +80,7 @@ section rather than reproducing it.
 Run all of these from the repository root with the project virtualenv activated (`pip install -e .[dev]` once).
 
 ```bash
-pytest                                   # full suite (SQLite, ~35s with -n auto)
+pytest                                   # full suite (SQLite; 172 s with -n auto on 4 cores, 2026-10-02)
 pytest tests/integration/test_X.py       # one file
 pytest tests/integration/test_X.py::test_name   # one test
 pytest -k "expression"                   # match by name
@@ -147,7 +147,7 @@ reject it.
 - `app/auth/identity.py` parses Azure Easy Auth headers (`X-MS-CLIENT-PRINCIPAL` and friends) into an `AuthenticatedUser`. When `ALLOW_FAKE_AUTH=true`, a fake user is injected.
 - `app/web/deps.py` exposes `get_current_user` and `get_or_create_user` (the latter ensures the auth principal has a row in `users`). Routes depend on these, not on the headers directly.
 - **Operator authorization** goes through `require_session_operator` (in `deps.py`), which combines `get_or_create_user` with a per-session permission check from `app/services/permissions.py`.
-- **Participant authorization** goes through `require_reviewee_in_session` (W2) or `require_observer_in_session` (W3) for the reviewee `/me/sessions/{id}/results` and observer `/me/sessions/{id}/collation` surfaces. Both match the signed-in user's email (case-insensitive) against the session's roster + gate on `Reviewee.status` / `Observer.status` being `"active"`. Reviewees with non-email identifiers (anonymous IDs for analysis-only sessions) fail the reachability check — flagged on the Validate page by the `reviewees.unreachable_for_results` soft warning (W8).
+- **Participant authorization** goes through `require_reviewee_with_current_grant` (19F) or `require_observer_in_session` (W3) for the reviewee `/me/sessions/{id}/results` and observer `/me/sessions/{id}/collation` surfaces. Both match the signed-in user's email (case-insensitive) against the session's roster + gate on `Reviewee.status` / `Observer.status` being `"active"`; the reviewee gate does that through `require_reviewee_in_session` (W2), then 404s unless a visibility grant currently resolves (`visibility_policies.reviewee_has_current_grant`). Reviewees with non-email identifiers (anonymous IDs for analysis-only sessions) fail the reachability check — flagged on the Validate page by the `reviewees.unreachable_for_results` soft warning (W8).
 
 ### Templating conventions
 
@@ -159,7 +159,7 @@ reject it.
 ### Database
 
 - One `database_url` in `app/config.py` (Pydantic settings). Production reads Azure Postgres via `psycopg[binary]`; local dev uses SQLite. The same `alembic env.py` works for both.
-- CI runs migrations *and* the full pytest suite against a real `postgres:16` service container (`ci-postgres` job in `.github/workflows/ci-postgres.yml`) on every PR, so dialect-only failures show up in CI alongside the SQLite pytest job.
+- CI runs migrations *and* the pytest suite, less `tests/browser/`, against a real `postgres:16` service container (`ci-postgres` job in `.github/workflows/ci-postgres.yml`) on every PR, so dialect-only failures show up in CI alongside the SQLite pytest job.
 
 ## Where to look
 
@@ -169,7 +169,7 @@ reject it.
 - **`spec/operator_ui_concept.md`** — operator chrome, setup nav, cross-page conventions.
 - **`spec/ui_elements.md`** — the canonical `.btn` roles (§6) and layout primitives (§10).
 - **`spec/session_home.md`** / **`spec/sessions_overview.md`** — Session Home and the lobby.
-- **`spec/setup_pages.md`** — the five Setup pages: shared body shape, column orders.
+- **`spec/setup_pages.md`** — the six Setup pages: shared body shape, column orders.
 - **`spec/assignments.md`** — assignment engine + the Assignments page.
 - **`spec/instruments.md`** — Instrument entity + the per-session Instruments page.
 - **`spec/settings_inventory.md`** — every persisted setting, plus browser-local UI state.
@@ -182,6 +182,7 @@ reject it.
 - **`guide/codebase_assessment_*.md`** — latest code-vs-spec snapshot.
 - **`guide/deferred_consolidated.md`** — everything scoped but not scheduled.
 - **`docs/practice-audit-2026-09-04.md`** — what gates a merge here, and which conventions are enforced by a check rather than by noticing.
+- **`docs/unenforced_conventions.md`** — the conventions deliberately left as guidance rather than a check, each with its reason, plus the queue of ones that could be derived now.
 - **`constitution.md`** — the six rules every change is held to (plan in / spec out; gates derived only from what the repository states; maker ≠ checker; human verifier, no autonomous loop; reasoning travels with the change; retire rather than mechanise badly). Derived from `rrw_sdd_in_practice.md` §6.
 - **`docs/security_posture.md`** / **`docs/database.md`** — deeper dives on those subsystems.
 - **`docs/local_setup.md`** / **`docs/deployment_dev.md`** — developer setup and dev-deploy notes.
