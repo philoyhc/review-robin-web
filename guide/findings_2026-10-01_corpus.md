@@ -122,9 +122,11 @@ the spec should say so.
   reviewer whose rows were all excluded was not flagged.
 - **B7** — Group self-review: `include` follows the roster, while the
   `is_self_review` column follows the materialised rows.
-- **B17 = F3, with F17** — Reminders and per-row invitation actions:
-  routes accept `validated`, and the Invitations template allows them only
-  in `ready`. The two halves of `spec/operations_pages.md` disagree.
+- ~~**B17 = F3, with F17**~~ — **Ruled 2026-10-02: `ready` only. Done in
+  #2745.** Reminders and per-row invitation actions: routes accepted
+  `validated`, and the Invitations template allowed them only in
+  `ready`. The routes now refuse outside `ready`; bulk Send invites
+  keeps `validated`.
 - **B21** — ~~`close_instrument`~~ (removed in #2722, with A6) and the
   visibility-when-closed route have no lifecycle gate.
 - **B15, B27** — `GET /assignments?validated=1` and the Validate page's
@@ -304,7 +306,7 @@ One line each: id · severity · where · finding · decides. A line with no
 - `lifecycle.md`
   - B15 med · `:76-78` · `mark_validated` callers; `?validated=1` · spec + author.
   - ~~B16 med · `:260-269` · response-loss ack callers · author.~~ Ruled: the tick is the ack.
-  - B17 med · `:271-291` · `_require_validated_or_ready` lives in `_operations.py` and refuses every non-validated/ready state; reminders gate · author.
+  - ~~B17 med · `:271-291` · `_require_validated_or_ready` lives in `_operations.py`; reminders gate.~~ Done in #2745.
   - B18 med · `:663-668` · `resolve_offset` has no callers · author.
   - B19 med · `:759-770` · sweep trigger · ruled: awaits Azure (`post_azure_todo_checklist.md` item 7).
   - B20 low · `:786-799` · retry is activation-only · author.
@@ -445,7 +447,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - F15 med · statuses · author.
   - ~~F16 low · `:29` · purge-and-archive can delete.~~ Done in #2734.
 - `operations_pages.md`
-  - F17 high · `:359` vs `:144` · per-row invitation buttons in `validated` · author.
+  - ~~F17 high · `:359` vs `:144` · per-row invitation buttons in `validated`.~~ Done in #2745.
   - ~~F18 med · `:526` · at-risk is coverage only.~~ Done in #2734.
   - ~~F19 low · the classifier lives in `services/monitoring.py`.~~ Done in #2734.
   - ~~F20 low · move the measurement figures (see the sweep record, §5).~~ Done in #2734.

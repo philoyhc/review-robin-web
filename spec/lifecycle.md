@@ -213,8 +213,10 @@ Audit event: `session.expired` with
 
 ## 3. Route-layer gates
 
-Two helpers in `app/web/routes_operator/_shared.py` enforce the
-state machine at the request boundary:
+Route helpers enforce the state machine at the request boundary:
+`_require_editable` and `_require_response_loss_ack` in
+`app/web/routes_operator/_shared.py`, and the two invitation gates
+in `app/web/routes_operator/_operations.py`.
 
 ### 3.1 `_require_editable(session)`
 
@@ -276,21 +278,30 @@ tick 'acknowledge response loss' to proceed"`.
 
 Raises **HTTP 409 Conflict** when the session is `draft`
 (invitation actions need at least the assignment pairs to be
-settled). Every invitation route in
-`app/web/routes_operator/_operations.py` calls it — `send-all`,
-`regenerate-all`, per-row `regenerate` / `send` / `remind`, and the
-bulk `remind-incomplete`. (`POST /invitations/generate` was in this
+settled). The two **bulk** invitation routes in
+`app/web/routes_operator/_operations.py` call it — `send-all` and
+`regenerate-all`. (`POST /invitations/generate` was in this
 list until 19Q Item 2 rung 3 retired it; Prepare creates the
 invitations now, gated by its own `is_editable` precondition rather
 than this one.) It is deliberately looser than "ready
 only" so an operator can notify reviewers **before** activation
-(the Prepared / pre-open scenario); **Send reminders** and the
-reviewer write-path gates stay `ready`-only.
+(the Prepared / pre-open scenario).
 
 Detail message: `"Invitations can only be issued once the
 session has been prepared (validated or ready)."`
 
-These three gates are the only thing that stops a direct POST
+### 3.4 `_require_ready(session)`
+
+The stricter invitation gate, in the same module: per-row `send` /
+`regenerate` / `remind` and the bulk `remind-incomplete` answer
+**409** outside `ready` (author's ruling, 2026-10-02,
+`guide/findings_2026-10-01_corpus.md` B17), as their buttons always
+rendered.
+
+Detail message: `"This action is available only once the session is
+Activated."`
+
+These gates are the only thing that stops a direct POST
 from bypassing the lifecycle. The corresponding GET pages render
 read-only banners but the source of truth is the route gate.
 

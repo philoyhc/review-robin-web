@@ -664,9 +664,9 @@ Each form carries a hidden `return_to=<slug>` field; the route's
 the special `"home"` slug to resolve the 303 target. Direct form
 posts elsewhere (e.g. tests hitting the route without the form's
 hidden field) fall back to `/operator/sessions/{id}/invitations`.
-The underlying routes accept POSTs from `validated` / `ready`
-regardless of the form's visibility — deep-link / curl callers
-still work as defense-in-depth.
+The underlying routes gate on their own: `send-all` accepts POSTs
+from `validated` or `ready` whatever the form's visibility, and
+`remind-incomplete` accepts `ready` only (`_require_ready`, 409).
 
 - **Revert to draft** posts to `/operator/sessions/{id}/revert`:
   - States 4 / 4Err / 5 / 6 (`is_validated`): via

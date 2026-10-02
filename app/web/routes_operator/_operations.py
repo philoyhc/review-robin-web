@@ -290,14 +290,16 @@ def session_preview(
 
 
 def _require_validated_or_ready(review_session: ReviewSession) -> None:
-    """Reject invitation actions while the session is still in draft.
+    """Reject bulk invitation actions while the session is still in draft.
 
     Segment 18F Part 2 relaxes the gate from "ready only" to
     "validated or ready" — operators can create and send invites
     from the Prepared (`validated`) state so reviewers receive a
     notification *before* the session is activated. Invitations
     still can't fire from `draft` (the assignment pairs aren't
-    settled yet) or any post-`ready` state.
+    settled yet) or any post-`ready` state. Only ``send-all`` and
+    ``regenerate-all`` use it; the per-row actions and reminders use
+    ``_require_ready``.
     """
     if not (
         lifecycle.is_validated(review_session)
@@ -312,9 +314,23 @@ def _require_validated_or_ready(review_session: ReviewSession) -> None:
         )
 
 
-# Back-compat alias — kept so any direct caller from outside this module
-# (test fixtures, future routes) keeps working through the rename.
+def _require_ready(review_session: ReviewSession) -> None:
+    """Reject per-row invitation actions and reminders outside ``ready``.
 
+    The author's ruling of 2026-10-02 (B17 / F17): per-row Send,
+    Regenerate and Send reminder, and the bulk reminder, are
+    ``ready``-only, as their buttons always were. Only the bulk
+    ``send-all`` and ``regenerate-all`` keep 18F's "validated or ready"
+    gate, so the Workflow card can invite before activation.
+    """
+    if not lifecycle.is_ready(review_session):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "This action is available only once the session is "
+                "Activated."
+            ),
+        )
 
 
 def _require_invitation_in_session(
@@ -757,7 +773,7 @@ def invitations_regenerate(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     invitation, review_session = bundle
-    _require_validated_or_ready(review_session)
+    _require_ready(review_session)
     invitations.regenerate_token(
         db,
         invitation=invitation,
@@ -780,7 +796,7 @@ def invitations_send_one(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     invitation, review_session = bundle
-    _require_validated_or_ready(review_session)
+    _require_ready(review_session)
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
     ).scalar_one()
@@ -1056,7 +1072,7 @@ def invitations_remind_one(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     invitation, review_session = bundle
-    _require_validated_or_ready(review_session)
+    _require_ready(review_session)
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
     ).scalar_one()
@@ -1108,7 +1124,7 @@ def invitations_remind_incomplete(
     ``invitations.send_reminders_to_incomplete`` helper the (still-
     existing) Monitoring page uses; PR 3 retires the Monitoring
     counterpart endpoint."""
-    _require_validated_or_ready(review_session)
+    _require_ready(review_session)
     invitations.send_reminders_to_incomplete(
         db,
         review_session=review_session,

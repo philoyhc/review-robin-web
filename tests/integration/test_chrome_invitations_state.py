@@ -161,6 +161,13 @@ def test_invitations_pill_partially_sent_when_some_reviewers_sent(
     session = _create_session(client, db, "chrome-inv-partial")
     _seed_two_reviewers(client, db, session.id)
     _validated(client, db, session.id)
+    # Per-row Send is `ready`-only (B17, 2026-10-02), so activate first.
+    response = client.post(
+        f"/operator/sessions/{session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
 
     # Send invitation for Rae only — Ren stays pending.
     rae = db.execute(
