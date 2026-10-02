@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.db.models import User
 from app.db.session import get_db
 from app.services import invitations as invitations_service
+from app.services.email_identity import normalize_email
 from app.web import breadcrumbs
 from app.web.deps import get_or_create_user, request_correlation_id
 from app.web.routes_reviewer._shared import (
@@ -32,12 +33,12 @@ def reviewer_invite(
 ):
     """Token landing page (Easy Auth required).
 
-    Looks up the invitation by sha256(token); 404 if unknown. If the
-    invitation admits the signed-in user (``invitations.invitation_admits``:
-    an active reviewer whose email matches, case-insensitive), stamps
-    ``opened_at`` on first hit and 303s to the reviewer surface for that
-    session. Anyone else, including the invited reviewer once inactive,
-    gets 403 with the mismatch page and no ``opened_at`` stamp.
+    Looks up the invitation by sha256(token); 404 if unknown or if its
+    reviewer is inactive (``lookup_invitation_by_token``). If the
+    signed-in user's email matches the invitation's reviewer email
+    (case-insensitive), stamps ``opened_at`` on first hit and 303s to
+    the reviewer surface for that session. Mismatched email returns 403
+    with a dedicated page.
     """
     found = invitations_service.lookup_invitation_by_token(db, token)
     if found is None:
@@ -46,7 +47,7 @@ def reviewer_invite(
             detail="This invitation link is invalid or has expired.",
         )
     invitation, review_session, reviewer = found
-    if not invitations_service.invitation_admits(reviewer, user):
+    if normalize_email(user.email) != normalize_email(reviewer.email):
         return _templates.TemplateResponse(
             request,
             "reviewer/invite_mismatch.html",

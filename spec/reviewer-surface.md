@@ -920,14 +920,15 @@ differently:
   while Postgres's is Unicode-aware, so the two sides agree on ASCII
   addresses only.
 - **Invitation landing** (`/me/invite/{token}`,
-  `app/web/routes_reviewer/_invite.py`) — `invitations.invitation_admits`
-  folds both sides through `normalize_email` and admits only an
-  `active` reviewer. An inactive reviewer is treated as if not a
-  reviewer at all: the same 403 mismatch page any other signed-in
-  user gets, and the visit records no open (no `opened_at`, no
-  `invitation.opened` event). The token lookup itself stays
-  status-blind, so the link answers as a mismatch rather than as an
-  unknown token's 404 (author's ruling, 2026-10-02).
+  `app/web/routes_reviewer/_invite.py`) — folds both sides through
+  `normalize_email`, after `invitations.lookup_invitation_by_token`
+  has resolved only an `active` reviewer's invitation. An inactive
+  reviewer is treated as if not a reviewer at all (author's ruling,
+  2026-10-02): their token answers 404 as an unknown one does — the
+  answer the surface gives a signed-in non-reviewer — for whoever
+  follows it, and the visit records no open (no `opened_at`, no
+  `invitation.opened` event). An active reviewer's token followed by
+  someone else gets the 403 mismatch page.
 
 A user can have at most one active `Reviewer` row per session. A
 session can have multiple reviewers, each tied to a distinct user.
@@ -1384,7 +1385,9 @@ Behaviour:
 
 1. Easy Auth must be signed in (otherwise the platform redirects to
    sign-in and back).
-2. Look up the invitation by `sha256(token)`. Not found → **404**.
+2. Look up the invitation by `sha256(token)`. Not found → **404**,
+   and an inactive reviewer's invitation is not found ("Identity
+   matching" above), whoever follows it.
 3. **Email match check** — case-insensitive comparison of the
    signed-in email against the invited reviewer's `Reviewer.email`,
    both sides through `normalize_email` (strip + `str.lower`).

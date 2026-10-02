@@ -373,6 +373,12 @@ rows it lists and it lists only eligible reviewers. It checks
 eligibility **and not** `pending`: a direct POST re-sending an
 already-sent invitation still rotates its token, as it always has.
 
+**Send reminder carries the same gate** (2026-10-02): a reminder
+carries the invite link, and an inactive reviewer must not be sent it,
+so `/remind` also answers **409** for a reviewer who is not
+`is_reviewer_eligible_for_invitation`. The bulk and scheduled reminder
+paths already exclude them, through `monitoring.per_reviewer_progress`.
+
 ### Per-row drill-in
 
 The reviewer name is a link to a per-**reviewer** detail page,

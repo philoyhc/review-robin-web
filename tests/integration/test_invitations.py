@@ -405,9 +405,11 @@ def test_token_url_treats_an_inactive_reviewer_as_not_a_reviewer(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """Author's ruling, 2026-10-02: an inactive reviewer at the invite
-    landing gets exactly what a signed-in non-reviewer gets — the 403
-    mismatch page — not the redirect into the surface's 404. Nor does
-    the visit count as an open: no ``opened_at`` stamp and no
+    landing is treated as if not a reviewer at all — the 404 an unknown
+    token gets, not the redirect into the surface's 404 and not the
+    mismatch page (which would tell them the invitation was issued to
+    their own address). A stranger holding the token gets the same 404.
+    Nor does the visit count as an open: no ``opened_at`` stamp and no
     ``invitation.opened`` audit event."""
     operator = make_client(alice)
     session = _ready_session(operator, db, code="inactive-open")
@@ -432,14 +434,16 @@ def test_token_url_treats_an_inactive_reviewer_as_not_a_reviewer(
     response = make_client(rae).get(
         f"/me/invite/{raw_token}", follow_redirects=False
     )
+    assert response.status_code == 404
+    assert "belongs to someone else" not in response.text
+
     eve = AuthenticatedUser(
         principal_id="eve-oid", email="eve@example.edu", name="Eve", provider="aad"
     )
     stranger = make_client(eve).get(
         f"/me/invite/{raw_token}", follow_redirects=False
     )
-    assert response.status_code == stranger.status_code == 403
-    assert "belongs to someone else" in response.text
+    assert stranger.status_code == 404
 
     db.refresh(invitation)
     assert invitation.opened_at is None
@@ -452,6 +456,14 @@ def test_token_url_treats_an_inactive_reviewer_as_not_a_reviewer(
         ).first()
         is None
     )
+
+    # Reactivating restores the link — the row was hidden, not broken.
+    reviewer.status = "active"
+    db.commit()
+    reopened = make_client(rae).get(
+        f"/me/invite/{raw_token}", follow_redirects=False
+    )
+    assert reopened.status_code == 303
 
 
 def test_token_url_with_unknown_token_returns_404(client: TestClient) -> None:
@@ -1538,6 +1550,42 @@ def test_per_row_remind_redirects_to_invitations_page(
     assert response.headers["location"].endswith(
         f"/operator/sessions/{session.id}/invitations"
     )
+
+
+def test_per_row_remind_refuses_an_inactive_reviewer(
+    client: TestClient, db: Session
+) -> None:
+    """Per-row Remind carries per-row Send's eligibility gate: a reminder
+    carries the invite link, and an inactive reviewer must not be sent
+    it (author's ruling, 2026-10-02). The button is off the table for
+    them, so this is the direct-POST / stale-tab path. The positive
+    control is ``test_per_row_remind_redirects_to_invitations_page``."""
+    session = _ready_session(client, db, code="remind-inactive")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    reviewer = db.get(Reviewer, invitation.reviewer_id)
+    assert reviewer is not None
+    reviewer.status = "inactive"
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        follow_redirects=False,
+    )
+    assert response.status_code == 409, response.text
+
+    assert db.execute(
+        select(EmailOutbox).where(
+            EmailOutbox.invitation_id == invitation.id,
+            EmailOutbox.kind == inv_service.REMINDER_KIND,
+        )
+    ).first() is None
+    db.refresh(invitation)
+    assert invitation.last_reminder_at is None
 
 
 def test_invitations_remind_incomplete_bulk_endpoint(

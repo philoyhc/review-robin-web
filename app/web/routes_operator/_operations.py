@@ -1060,6 +1060,22 @@ def invitations_remind_one(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
     ).scalar_one()
+    # Same server-side eligibility gate as per-row Send above, and for
+    # the same reason: the table never renders the button for an
+    # ineligible reviewer, but a direct POST or a stale tab could, and a
+    # reminder carries the invite link. An inactive reviewer must not be
+    # sent it (author's ruling, 2026-10-02) — the bulk and scheduled
+    # reminder paths already exclude them via `per_reviewer_progress`.
+    if not invitations.is_reviewer_eligible_for_invitation(
+        db, session_id=review_session.id, reviewer_id=reviewer.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Reviewer is not eligible for a reminder; they must be "
+                "active with at least one included assignment."
+            ),
+        )
     invitations.send_reminder(
         db,
         invitation=invitation,

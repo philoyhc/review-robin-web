@@ -27,7 +27,6 @@ from app.db.models import (
     User,
 )
 from app.services import audit, email_templates
-from app.services.email_identity import normalize_email
 
 
 INVITATION_KIND = "invitation"
@@ -404,36 +403,28 @@ def send_invitation(
 def lookup_invitation_by_token(
     db: Session, raw_token: str
 ) -> tuple[Invitation, ReviewSession, Reviewer] | None:
+    """The invitation a raw token names, or None.
+
+    Only an **active** reviewer's invitation resolves. An inactive
+    reviewer is treated as if they were not a reviewer at all (author's
+    ruling, 2026-10-02), so their token answers as an unknown one —
+    the landing's 404, the same answer ``require_reviewer_in_session``
+    gives a signed-in non-reviewer — for whoever follows it, and the
+    landing never reaches ``record_open``.
+    """
     token_hash = hash_token(raw_token)
     row = db.execute(
         select(Invitation, ReviewSession, Reviewer)
         .join(ReviewSession, ReviewSession.id == Invitation.session_id)
         .join(Reviewer, Reviewer.id == Invitation.reviewer_id)
-        .where(Invitation.token_hash == token_hash)
+        .where(
+            Invitation.token_hash == token_hash,
+            Reviewer.status == "active",
+        )
     ).first()
     if row is None:
         return None
     return row[0], row[1], row[2]
-
-
-def invitation_admits(reviewer: Reviewer, user: User) -> bool:
-    """Whether the signed-in ``user`` may follow ``reviewer``'s invitation.
-
-    Two conditions, both required: the reviewer row is ``active``, and
-    the user's email matches it case-insensitively through
-    ``normalize_email``. An inactive reviewer is treated as if they
-    were not a reviewer at all (author's ruling, 2026-10-02), so the
-    landing answers them exactly as it answers anyone else the
-    invitation does not name — and does not record the open.
-
-    The status test lives here rather than in
-    ``lookup_invitation_by_token``: filtering the lookup would turn an
-    inactive reviewer's token into an unknown one (404), which is not
-    how the landing answers a signed-in non-reviewer.
-    """
-    return reviewer.status == "active" and normalize_email(
-        user.email
-    ) == normalize_email(reviewer.email)
 
 
 def record_open(
@@ -834,7 +825,6 @@ __all__ = [
     "regenerate_all_tokens",
     "send_invitation",
     "lookup_invitation_by_token",
-    "invitation_admits",
     "record_open",
     "list_invitations_for_session",
     "is_reviewer_eligible_for_invitation",
