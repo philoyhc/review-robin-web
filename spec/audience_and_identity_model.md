@@ -279,9 +279,13 @@ sees:
 - Optional contact information for questions (operator email or
   similar).
 
-The last three are **not built** and are deferred (author's ruling,
-2026-10-02, findings F11; `guide/deferred_consolidated.md`, "Welcome
-message, institution name, contact line and magic links").
+Two of these are built under other names. The welcome message is the
+session's `description`, shown at the top of the reviewer surface on
+every visit (plain text, not only the first visit). The contact line is
+`help_contact`, shown as "Questions? Contact …" on the reviewer surface
+and in the emails. The institution name is **not built** and is
+deferred (author's ruling, 2026-10-02, findings F11;
+`guide/deferred_consolidated.md`, "Institution name and magic links").
 
 What operators **cannot** configure:
 
@@ -331,8 +335,8 @@ supported for either:
   reviewer to SSO; after authenticating, they are deep-linked to
   the relevant response surface.
 
-Magic links are **not built** and are deferred with the content
-settings above (findings F11): today a reviewer signs in through
+Magic links are **not built** and are deferred with the institution
+name above (findings F11): today a reviewer signs in through
 institutional SSO only. When built, they are an explicit fallback,
 not the primary mode.
 The "tokenized link replaces auth" pattern is **not** the model;

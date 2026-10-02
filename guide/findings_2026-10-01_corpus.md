@@ -75,11 +75,12 @@ the spec should say so.
 - ~~**A19**~~ — **Ruled 2026-10-02: retire `observer_tag`.** Nothing read
   it; an observer's cohort rule decides who they see. Instrument scoping
   inside the cohort rule is deferred (`guide/deferred_consolidated.md`).
-- ~~**F11**~~ — **Ruled 2026-10-02: defer them. Done in #2764.** The
-  configurable welcome message, institution name and magic links
-  (`spec/audience_and_identity_model.md`), and the contact line beside
-  them, are marked deferred there and carried in
-  `guide/deferred_consolidated.md`.
+- ~~**F11**~~ — **Ruled 2026-10-02: defer them. Done in #2764.** Of the
+  configurable reviewer content in `spec/audience_and_identity_model.md`,
+  the institution name and magic links are unbuilt; they are marked
+  deferred there and carried in `guide/deferred_consolidated.md`. The
+  welcome message and contact line are built, as the session's
+  `description` and `help_contact`, and the spec now says so.
 - ~~**F15**~~ — **Ruled 2026-10-02: strike. Done in #2755.** The
   Draft/Receiving/Closed instrument statuses and the reviewer
   notification on edit are gone from `spec/domain_assumptions.md`.
