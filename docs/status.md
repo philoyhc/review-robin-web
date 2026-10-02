@@ -539,15 +539,23 @@ suite against a `postgres:16` service container).
   against a `postgres:16` service container. The `engine` fixture in
   `tests/conftest.py` honours `TEST_DATABASE_URL` / `DATABASE_URL` so
   the same suite covers both dialects without duplication.
-- **Test infrastructure**: in-memory SQLite engine running real
-  Alembic migrations once per session; per-test savepoint-based
+- **Test infrastructure**: in-memory SQLite engine whose schema is
+  built from the ORM metadata (`Base.metadata.create_all`) once per
+  session — Alembic migrations run only when the suite points at
+  Postgres, as `ci-postgres` does; per-test savepoint-based
   isolation so service-layer commits don't leak across tests;
   `make_client` factory for multi-user integration tests.
 - **Browser tests** (`tests/browser/`): Python Playwright against a
   live `uvicorn`, required in CI's `test` job (`RRW_REQUIRE_BROWSER=1`).
-- **Documentation**: `docs/{authentication,database,imports}.md`,
-  `docs/deployment_dev.md` (incl. one-time Postgres GRANT bootstrap),
-  segment plans in `guide/`.
+- **Documentation**: the `docs/` set indexed in `docs/README.md`
+  (identity now lives in `docs/security_posture.md`; `database.md`,
+  `deployment_dev.md` with its one-time Postgres GRANT bootstrap, and
+  the NUS runbook and status among them), segment plans in `guide/`.
+- **NUS environment**: provisioned but not yet serving — private App
+  Service, Postgres and Key Vault behind an Application Gateway, waiting
+  on a runner VM and a production hostname
+  (`docs/nus_azure_status_v7.md`). The App Service, Postgres and deploy
+  bullets above describe the personal dev slot that still serves.
 
 ### Authentication & permissions
 
@@ -586,8 +594,9 @@ suite against a `postgres:16` service container).
 - Inline-SVG favicon (bird emoji 🐦) defined in
   `app/web/templates/base.html`. Edit the emoji or the SVG markup
   in the `<link rel="icon">` data URI to change it; for a real
-  graphic asset, mount `StaticFiles` and point `href` at
-  `/static/favicon.png`.
+  graphic asset, add the file under `app/web/static/` — the
+  `StaticFiles` mount at `/static` in `app/main.py` already serves
+  it — and point `href` at its `/static/...` URL.
 - **Manage-page reshape (Segment 9.4C)**: the reviewers, reviewees,
   and assignments Manage pages now render an always-present
   `<section id="upload-csv">` card with the existing import form;
@@ -672,96 +681,27 @@ suite against a `postgres:16` service container).
   responses, log messages, audit-event detail, and CSS class names
   continue to use enum values.
 
-### Operator-facing app
+### Routes
 
-| URL | What it does |
-|---|---|
-| `GET /` | service metadata |
-| `GET /health` | unauthenticated `{"status": "ok"}` |
-| `GET /about` | unauthenticated stub page; chrome's app-identity link target |
-| `GET /me`, `/me/debug` | identity introspection |
-| `GET /operator/sessions` | list of sessions where user is operator |
-| `GET /operator/sessions/new` | create form |
-| `POST /operator/sessions` | create + insert `SessionOperator` + audit + 303 |
-| `GET /operator/sessions/{id}` | Session Home — **Next Action card** on top (constant H2, blue border, state-conditional Primary + Secondary buttons at the bottom; surfaces Validate Setup / Activate Session / Pause Session per lifecycle state), then a two-column bottom grid. Left column: Session Details (with Edit link). Right column: **Quick Setup** (4-slot two-column fully-wired card post-12A-3: Reviewers + Reviewees on the left, Relationships + Session settings on the right; submit-all chain is reviewers → reviewees → relationships → settings), then **Extract Data** (5 live CSV downloads in a 2-column layout post-12A-3: Reviewers · Settings · Reviewees · Responses · Relationships, with Zip-all row inert; per-entity Download buttons grey out when their count is 0). The Danger Zone card (Delete Data + Delete Session) moved to Edit Session Details on 2026-05-22 (commit b490825). `?validated=1` re-runs setup validation and (when no blocking errors) marks the session `validated`; the Next Action card switches its primary button to **Activate Session**. When warnings exist, that button 303s to `/validate?activate=1` for a confirmation banner with the warnings inline (Segment 11G PR D); when warnings don't exist, the button POSTs directly. Spec at `spec/session_home.md`. |
-| `GET /operator/sessions/{id}/edit` | **Retired (18R Item 4).** The standalone Edit Session Details page was retired: session config now displays + edits inline on Session Home via `?editing=1#session-config` (the same display↔edit swap the instruments card uses), and the Danger Zone lives on Home. `GET .../edit` is a thin **301-redirect stub** to `?editing=1#session-config`. |
-| `POST /operator/sessions/{id}/config` | Apply session-config changes + audit (replaced the retired `POST .../edit` in 18R Item 4). |
-| `POST /operator/sessions/{id}/delete` | delete session and all dependents (confirm; locked while `ready`) |
-| `POST /operator/sessions/{id}/delete-data` | wipe every reviewer Response for the session; preserves setup; allowed in any status; emits `responses.deleted_all` audit event |
-| `GET /operator/sessions/{id}/validate` | read-only setup validation deep-dive (Activate moved to the inline summary card on session detail) |
-| `GET /operator/sessions/{id}/reviewers` | roster Manage view with anchored `#upload-csv` import card and disabled Edit Reviewers button |
-| `POST /operator/sessions/{id}/reviewers/import` | parse + replace + audit; on validation errors re-renders the Manage page |
-| `POST /operator/sessions/{id}/reviewers/delete-all` | delete every reviewer + cascade |
-| `GET /operator/sessions/{id}/reviewees` | roster Manage view, on the shared roster shape since 19P.3: full-width guidance, roster card with the **Unlock panel** holding the tag-label editor, the `Danger Zone` and the anchored `#upload-csv` import card, then the preview-table card with its two-pane toolbar and **row expander**. Nothing below the table. |
-| `POST /operator/sessions/{id}/reviewees/import` | parse + replace + audit; on validation errors re-renders the Manage page |
-| `POST /operator/sessions/{id}/reviewees/delete-all` | delete every reviewee + cascade |
-| `GET /operator/sessions/{id}/relationships` | Relationships Setup page (Segment 15D PR 2; rebuilt to the shared roster shape at 19P.3). Full-width guidance, then a roster card whose **Unlock panel** holds the tag-label editor over the `Danger Zone` on the left and `Upload Relationships` on the right; preview-table card below it, its two-pane toolbar carrying the `Show columns:` chips and pager left and the filter strip right, and a **row expander** for the selection actions. Nothing below the table. Trailing `status` cell renders as a `pill-info` (active) / `pill-empty` (inactive) span. The stats info card (`Fields with data:` pills) retired in Segment 19I Item 12; the roster index in the card above replaced it at 19P.3. |
-| `POST /operator/sessions/{id}/relationships/import` | parse + replace + audit; on validation errors re-renders the Setup page; emits `relationships.imported` |
-| `POST /operator/sessions/{id}/relationships/delete-all` | delete every relationships row + cascade; emits `relationships.deleted_all` |
-| `GET /operator/sessions/{id}/assignments` | **Operations** Assignments page (chrome row label moved from Setup to Operations in 15D PR 6a). Per-instrument status table, then the **Assignments preview** card, which since 19P.5 carries the filter strip in its **two-pane toolbar** and the bulk `Inactivate` / `Activate` in an injected **row expander** — the roster idiom, taken by the one Operations page with selection. The half-width operator-actions card that held both, its `.bottom-grid` and the `.grid-right` rule are gone. Rule authoring lives on the Instruments page's Band 1, not here |
-| `POST /operator/sessions/{id}/assignments/rule-based/generate` | generate assignments from a Personal or seeded RuleSet via `app/services/rules/engine.py`. Reads pair-context tags from the `relationships` table via `pair_context_lookup`. Inactive reviewers / reviewees / relationships rows excluded; audit `excluded_counts` records reasons. Emits `assignments.generated` |
-| `POST /operator/sessions/{id}/assignments/self-reviews/active` | flip `sessions.self_reviews_active` Boolean — bulk-activates / deactivates self-review pairs the engine produced; per-row `Assignment.include` overrides individually post-flip. Emits `assignments.self_reviews_active_changed` |
-| `POST /operator/sessions/{id}/assignments/manual/import` | dev-only manual-CSV pipeline; the operator-facing card retired in 15D PR 6a. Route still exists for test fixtures |
-| `POST /operator/sessions/{id}/assignments/delete-all` | delete every assignment, clear mode |
-| `POST /operator/sessions/{id}/activate` | flip session draft→ready (warn-and-acknowledge for non-blocking findings) |
-| `POST /operator/sessions/{id}/revert` | dispatched by current status (Segment 11B): `ready → draft` calls `lifecycle.revert_session_to_draft` (confirm checkbox required; closes all instruments); `validated → draft` calls `lifecycle.invalidate_session(reason="operator_revert")` (no confirm checkbox). Wired to the Pause Session and Revert to draft buttons in the Next Action card on Session Home. |
-| `GET /operator/sessions/{id}/instruments` | consolidated instruments page (post-10D shape) — setup nav header, yellow lock card when ready, **session status card** (half-width in a `.card-columns` pair beside the guidance card: deadline + accepting-count pills and the Expand/Collapse buttons — **no** bulk accepting or visibility control, the accepting one never wired and the visibility one removed, both at 18R Item 3; corrected 19O Item 6, and `spec/instruments.md` owns the contract), then one pastel-tinted card per instrument with a top `.bottom-grid` (description + per-instrument status), a `.field-builder` `.bottom-grid` of Display + Response Fields half-cards (both fully wired post-10D — add / edit / delete / reorder rows + per-source picker for Display Fields), a live client-rendered Preview Instrument #N table, and a Back / Save / Edit / Add an instrument / Delete button row. Multi-instrument schema + services + UI shipped (Add + Delete with mutual-exclusion / `is_ready` / single-instrument gates and a native `confirm()` on Delete). See `spec/setup_pages.md` for the per-section contract. |
-| `GET /operator/sessions/{id}/setup-invite` | operator-editable email template editor (Segment 11E). Two-card `.bottom-grid`: composer left, merge tags + Save / Cancel right. `?template=invitation|reminder` selects the active template; per-field "Reset to default" forms remove individual override keys. POSTs to `POST .../setup-invite` (save) and `.../setup-invite/reset` (per-field reset). |
-| `GET /operator/settings` | per-operator Settings page (Segment 11E). SMTP credentials (host / port / username / app-password / display name / encryption mode) stored on `users.smtp_*`; password encrypted at rest via `cryptography.fernet` keyed off the `SMTP_ENCRYPTION_KEY` env var. Honours `?return_to=<path>` per `app.web.return_to`. Reachable via the chrome user-menu Settings link. POSTs to `POST /operator/settings` (save) and `.../settings/clear` (wipe). |
-| `GET /operator/sessions/{id}/instruments/{instrument_id}` | legacy redirect — 303 to `/instruments` (back-compat for bookmarks; 10A) |
-| `POST /operator/sessions/{id}/instruments/{instrument_id}/edit` | edit friendly description (`Instrument.description`); audit `instrument.described`; invalidates `validated → draft` |
-| `POST /operator/sessions/{id}/instruments/{instrument_id}/fields` | add a response field; auto-derives `field_key` from label when blank; audit `instrument.field_added` |
-| `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/{field_id}/edit` | edit a response field (label / required / validation / help text + visibility); audit `instrument.field_updated`; banner-warns when optional → required leaves existing reviewer rows incomplete |
-| `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/{field_id}/delete` | delete a response field; cascade-confirm flow when responses exist; audit `instrument.field_deleted` |
-| `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/{field_id}/move` | up / down reorder; repacks `0..N-1`; audit `instrument.fields_reordered` |
-| `POST /operator/sessions/{id}/instruments/{instrument_id}/display-fields` | add a display field (one of the seven D6 sources, posted as `source_pair=reviewee:tag_1`); audit `instrument.display_field_added`; invalidates `validated → draft`; `DisplaySourceError` (unknown source / duplicate) redirects with `?display_source_error=<pair>` |
-| `POST /operator/sessions/{id}/instruments/{instrument_id}/display-fields/{df_id}/edit` | edit label override + visibility; `(source_type, source_field)` are immutable; audit `instrument.display_field_updated` (diff-shaped) |
-| `POST /operator/sessions/{id}/instruments/{instrument_id}/display-fields/{df_id}/delete` | delete a display field; no cascade-confirm; audit `instrument.display_field_deleted` (with snapshot) |
-| `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/save` | shared bulk form covering display + response fields — repacks `order` to `0..N-1` per table independently; persists display rows' `visible` + `label`; audit `instrument.fields_reordered` (when response order changes) and / or `instrument.display_fields_saved` (D11 diff shape) |
-| `GET /operator/sessions/{id}/preview` | the standalone reviewer-surface preview, **retired in Segment 11F PR C**; permanent (308) redirect to `/sessions/{id}/preview-surface/1`, kept for stale bookmarks. (The attribution was dropped when the row was rewritten at 19Q Item 1 and restored at 19O Item 6 — this table is the one document whose job is history.) |
-| `GET /operator/sessions/{id}/previews` | retired hub; permanent (308) redirect to `/sessions/{id}/invitations` |
-| `POST /operator/sessions/{id}/previews/random` | retired with the hub; returns 404 |
-| ~~`.../instruments/accepting/all-{on,off}`~~ | **Retired 18R Item 3.** The bulk "Open / close all" control was never wired into the UI and was dropped from the spec, along with `bulk_set_accepting` + the `instruments.bulk_accepting_responses` audit event. Per-instrument open/close (below) was retired too, on 2026-10-01. |
-| ~~`.../instruments/visibility/all-{on,off}`~~ | **Retired 18R Item 3.** The session-level bulk visibility-when-closed toggle was removed from the Instruments page, along with `bulk_set_visibility` + the `instruments.bulk_visibility_when_closed` audit event. Visibility when closed is now governed by the per-instrument visibility policy; `responses_visible_when_closed` persists for config round-trip. |
-| `POST /operator/sessions/{id}/instruments/add` | create a new instrument under the session (optional `after={instrument_id}` for placement); audit `instrument.created`; invalidates `validated → draft`. UI button currently disabled — multi-instrument operator UI is intentionally deferred |
-| `POST /operator/sessions/{id}/instruments/{instrument_id}/delete` | delete an instrument and its dependents (cascades response fields, display fields, and assignments via FK delete-orphan); audit `instrument.deleted`; invalidates `validated → draft`. UI button only renders when more than one instrument exists; 400 when deleting the last instrument |
-| ~~`POST /operator/sessions/{id}/instruments/{instrument_id}/open`~~ | **Retired 2026-10-01 (#2722).** Accepting is session-wide: Activate opens every instrument; the deadline, Close session and Revert close them all. |
-| ~~`POST /operator/sessions/{id}/instruments/{instrument_id}/close`~~ | **Retired 2026-10-01 (#2722)**, with `/open` above. |
-| `POST /operator/sessions/{id}/instruments/{instrument_id}/visibility` | toggle `responses_visible_when_closed` |
-| `POST /operator/sessions/{id}/instruments/{instrument_id}/fields/add-row` | append a new response field with a default key/label/type after `after={field_id}` (or at the end when omitted); audit `instrument.field_added`; invalidates `validated → draft`. Powers the Response Fields ➕ button on the per-instrument card |
-| `GET /operator/sessions/{id}/invitations` | consolidated reviewer-centric Manage Invitations page (Segment 11C Part 1). Pill-styled table — Reviewer / three chip-toggled tag columns / Email Status / Sent / Progress / Required Fields / Reminder / Actions, ten with every tag slot populated — absorbs the retired Monitoring page's per-reviewer progress + reminder affordances. (It shipped seven-column in 11C; the three tag columns arrived at 19I Item 11 and this row had not caught up.) Full-width info card since 19P.5, and the filter strip sits in the table card's **two-pane toolbar** with its submit relabeled `Apply` → `Search`; no selection and no expander — the rows stay links |
-| `GET /operator/sessions/{id}/invitations/reviewers/{rid}` | reviewer drill-in from a Manage Invitations row. **Keyed on the reviewer since 19P.6**, so the row's link renders whether or not an invitation exists. Invitation card reports three facts — created / email sent (with delivery state) / last reminder — plus a four-state URL region; Review Progress card carries **Open reviewer surface** to `/preview-surface/1` in a new tab |
-| `GET /operator/sessions/{id}/invitations/{iid}/detail` | the pre-19P.6 invitation-keyed drill-in (Segment 11C Part 1). **308** to the reviewer URL above, kept for bookmarks |
-| ~~`POST /operator/sessions/{id}/invitations/generate`~~ | **Retired 19Q Item 2 rung 3** — returns 404. Prepare creates one invitation per eligible reviewer inside `POST /workflow/prepare`, so the step has no route of its own. |
-| `POST /operator/sessions/{id}/invitations/send-all` | write outbox row per **sendable** invitation — `pending` and the reviewer still assigned-and-active (`invitations.list_sendable_invitations`, 19Q.2 rung 1); route gates on `validated` or `ready`, button on `validated` onward |
-| `POST /operator/sessions/{id}/invitations/{iid}/send` | send a single invitation (rotates token; route gates on `validated` or `ready`, per-row button `ready`-only) |
-| `POST /operator/sessions/{id}/invitations/{iid}/regenerate` | rotate token + reset to pending (route gates on `validated` or `ready`, per-row button `ready`-only) |
-| `POST /operator/sessions/{id}/invitations/{iid}/remind` | send a single reminder reusing the prior invitation URL (route gates on `validated` or `ready`, per-row button `ready`-only) |
-| `POST /operator/sessions/{id}/invitations/remind-incomplete` | bulk reminders to every incomplete reviewer (route gates on `validated` or `ready`; the Workflow card's Send reminders button is `ready`-only). Single-source endpoint for both Manage Invitations and Responses bulk-remind buttons (Segment 11C Part 1) |
-| `GET /operator/sessions/{id}/responses` | reviewee-centric coverage view (Segment 11C Part 1). Each row classifies a reviewee per `monitoring.AT_RISK_THRESHOLDS` (Complete / Adequate / At risk / No responses). Same 19P.5 move as Invitations: full-width info card, filter strip in the table card's **two-pane toolbar**, `Search` for `Apply` |
-| `GET /operator/sessions/{id}/responses/{reviewee_id}/detail` | reviewee drill-in scaffold from the Responses table (Segment 11C Part 1) |
-| `GET /operator/sessions/{id}/export/settings.csv` | Settings extract (Segment 12A-1 PR 1) — 3-column CSV `key,value,...`; emits `session.settings_extracted` |
-| `GET /operator/sessions/{id}/export/reviewers.csv` | Reviewers extract (12A-1 PR 2) — column shape matches `parse_reviewer_csv` so files round-trip; emits `session.reviewers_extracted` |
-| `GET /operator/sessions/{id}/export/reviewees.csv` | Reviewees extract (12A-1 PR 2) — column shape matches `parse_reviewee_csv` (incl. `ProfileLink`, which import also accepts as the legacy `PhotoLink`); emits `session.reviewees_extracted` |
-| `GET /operator/sessions/{id}/export/relationships.csv` | Relationships extract (12A-3 PR 1) — 6-column CSV (`ReviewerEmail` / `RevieweeEmail` / `PairContextTag1..3` / `Status`) matching `parse_relationship_csv`; round-trips with the importer shipped by 15D PR 1; emits `session.relationships_extracted` |
-| `GET /operator/sessions/{id}/export/responses.csv` | Responses extract (12A-1 PR 4 + 4a) — 20-column wide CSV streamed via `yield_per(1000)`; lifecycle (saved / submitted / version) + uppercase `TRUE` / `FALSE` `SelfReview` flag; emits `session.responses_extracted` |
-| `GET /operator/sessions/{id}/export/audit_log.csv` | Audit-events extract (12B PR 1) — 8-column wide CSV (`EventType` / `Severity` / `Summary` / `ActorEmail` / `CorrelationId` / `CreatedAt` / `DetailJson`) with the canonical Segment 11K detail envelope JSON-encoded in the trailing column; LEFT JOIN against `users` for ActorEmail; streamed via `yield_per(1000)`; emits `session.audit_log_extracted`. **No operator-facing UI surface today** — the Extract Data tile retired in 12B PR 2 (#789); the route relocates to the Sys Admin page when Segment 16A ships |
-| `POST /operator/sessions/{id}/import-config` | Settings importer (12A-3 PR 3) — multipart `file` upload of a 3-column Settings CSV; `apply_session_config()` parses + applies as wipe-and-replace inside one transaction; lifecycle gate `status in {"draft", "validated"}` invalidates `validated → draft`; emits `session.settings_imported`; reachable via Quick Setup slot 4 (12A-3 PR 4) |
-| `GET /operator/sessions/{id}/outbox` | dev-mode email outbox view for the session. **Not a chrome tab** — reachable via the "View outbox" button on Manage Invitations |
-| `GET /operator/sessions/{id}/monitoring` | 303-redirects to `/invitations`. The Monitoring page itself was retired in Segment 11C Part 1; the redirect preserves old bookmarks |
+**This section used to carry a route-by-route table; it was replaced by
+this pointer on 2026-10-02** (findings `I7`,
+`guide/findings_2026-10-01_corpus.md`). The table listed about 80 rows
+against 188 route decorators in the code, and many rows had drifted —
+`GET /` still read "service metadata" when it 302-redirects by role. Too
+large to keep accurate by hand, so the code is the source of truth:
 
-### Reviewer-facing app
-
-| URL | What it does |
-|---|---|
-| `GET /me` | dashboard: sessions where user has an active `Reviewer` row; per-session pill (`not started` / `in progress` / `submitted`) |
-| `GET /me/invite/{token}` | invitation token landing — Easy Auth required, email-match check, stamps `opened_at`, 303 to surface |
-| `GET /me/sessions/{id}` | review surface: editable table of assigned reviewees and Default Instrument fields; ?saved=ok / ?submitted=ok flash banners |
-| `POST /me/sessions/{id}/save` | upsert response cells (empty value deletes the row); 303 → surface with `?saved=ok` |
-| `POST /me/sessions/{id}/submit` | persist + validate required; 400 + warn-and-override on missing without acknowledge; else stamps `submitted_at` and 303 → surface with `?submitted=ok` |
-| `POST /me/sessions/{id}/clear` | delete every response for this reviewer in this session (confirm checkbox required); 303 → surface |
-
-The Cancel link on the surface is just `<a>` back to `GET /me/sessions/{id}` — no server-side state change.
+- **The routes** are the routing modules: `app/web/routes_*.py` (about,
+  auth, guide, health, templates), the operator package
+  `app/web/routes_operator/` split by feature area, the participant
+  package `app/web/routes_reviewer/`, and the few app-level routes in
+  `app/main.py` (`/`, `/operator`, the `/static` mount).
+  `spec/architecture.md` "Three-layer split" maps the packages, and
+  `spec/permissions.md` §3 gives the gate on every route family.
+- **To list them**, run from the repository root
+  `grep -rnE -A1 '@(router|app)\.(get|post|put|delete|patch)\(' app/web app/main.py`
+  (`-A1` because a long path wraps onto the decorator's next line).
+- **Retired routes** — the history this table also kept — are in this
+  file's git history.
 
 ### Sessions
 
@@ -894,8 +834,9 @@ flags this on Setup).
   `reviewee` chip drops out. An archived session's observer row renders
   **unlinked**, beside the reviewer's "not opened".
 - **Surface** is a multi-page form — instruments grouped into pages
-  per `Instrument.page_number` + `Instrument.starts_new_page`
-  (Segments 18L + 18M). Each page renders one instrument's table of
+  in `Instrument.order`, a new page starting at each instrument whose
+  `Instrument.starts_new_page` is set (Segments 18L + 18M). A page can
+  hold several instruments; each renders its own table of
   (reviewee × response field) cells. A **group-scoped instrument**
   (Segment 13C) renders one row per boundary-defined group; one
   reviewer answer covers the whole group, counted once across
@@ -907,8 +848,10 @@ flags this on Setup).
 - **Per-page status pills**: `not_started` / `in_progress` /
   `complete` / `submitted` (Segment 11D follow-on).
 - **Save draft**: filtered to the current page's dirty inputs;
-  upserts `Response` rows. Empty value deletes the row. Cell-level
-  autosave landed in Segment 17B.
+  upserts `Response` rows. Empty value deletes the row. There is no
+  autosave and no leave-page guard: cell-level autosave was deferred
+  from Segment 17B (`guide/deferred_consolidated.md`, "17B — Cell-level
+  autosave").
 - **Submit**: page-aware on Submit; missing-required-on-current-page
   is a hard gate (the acknowledge-and-submit-anyway escape retired
   in Segment 11D follow-on); the missing-required card is its own
@@ -939,7 +882,8 @@ flags this on Setup).
   refusal is a **404**, so "no grant" and "not a reviewee here" are one
   outcome rather than two a caller could tell apart.
 - **Body**: per-instrument sections, each rendered in one of three
-  modes per the operator's per-instrument Band 3 visibility policy
+  modes per the operator's per-instrument visibility policy, edited in
+  Band 2's "Who can see what you wrote" card since 19T Item 7
   (`raw` / `anonymized` / `summarized`).
 - **Summarized mode aggregates** per data type:
   Integer / Decimal → Average / Median / Min / Max;
@@ -962,7 +906,7 @@ flags this on Setup).
   assignment pool (partitioned by the observer's
   `cohort_rule`); Row 2 is distinct-reviewee headcount + same
   aggregate; Row 3 is a conditional `Download CSV` button.
-- **Identification mode** follows Band 3: Raw rows, Anonymized
+- **Identification mode** follows the Band 2 visibility policy: Raw rows, Anonymized
   rows, or Anonymized summaries. Anonymized downloads swap
   reviewer / reviewee names for per-session opaque tokens
   (`R-a3f8b2c1` / `E-9d4e7f10` via
@@ -991,69 +935,15 @@ window closed 2026-05-30; all rows written after that date
 follow the canonical envelopes. Pre-cutover rows keep their
 legacy shapes (the audit log is append-only).
 
-The table below covers the most-emitted event types. The full
-list lives in `EVENT_SCHEMAS`.
-
-| event_type | When |
-|---|---|
-| `session.created` | new session |
-| `session.updated` | edit form save (incl. `changes: {field: [old, new]}`) |
-| `session.deleted` | session deletion (`session_id=None` in the row, original id in `detail`) |
-| `reviewers.imported` | reviewer CSV save (incl. `cascaded_assignment_count`) |
-| `reviewees.imported` | reviewee CSV save (incl. `cascaded_assignment_count`) |
-| `reviewers.deleted_all` | delete-all from roster Manage view |
-| `reviewees.deleted_all` | delete-all from roster Manage view |
-| `assignments.generated` | FullMatrix or Manual save (incl. `mode`, `excluded_counts`) |
-| `assignments.deleted_all` | delete-all from assignments hub |
-| `responses.saved` | reviewer saves a draft (incl. `count`, `reviewer_id`) |
-| `responses.submitted` | reviewer submits (incl. `count`, `missing_required_count`, `acknowledged_missing`) |
-| `responses.cleared` | reviewer clears all their responses in a session |
-| `responses.deleted_all` | operator-driven Delete Data on session detail (`detail.deleted_count`); allowed in any session status, including `ready` |
-| `session.activated` | operator flips session draft→ready (`detail.override_warnings`) |
-| `session.reverted_to_draft` | operator flips session ready→draft (`detail.closed_instrument_ids`, `response_count_at_revert`) |
-| `session.invalidated` | operator flips session validated→draft (`detail.reason ∈ {"operator_revert", …}`); also auto-emitted by setup-mutating service code when the session was previously `validated` |
-| `session.validated` | session marked validated on `?validated=1` when no blocking errors |
-| `instrument.opened` | the deadline observer reopening an instrument a live session still had closed (`detail.reason = session_wide`), since per-instrument Open / Close was removed (2026-10-01); older rows are the retired manual open |
-| `instrument.closed` | lazy-deadline close (`detail.reason = deadline`); older rows may carry `manual` |
-| `instrument.described` | operator edits the friendly description (`detail.description: [old, new]`) |
-| `instrument.field_added` | operator adds a response field (`detail.field_key`, `label`, `response_type`, `required`, `validation`, `help_text`, `help_text_visible`) |
-| `instrument.field_updated` | operator edits a response field (`detail.changes: {key: [old, new]}` for each changed key only) |
-| `instrument.field_deleted` | operator deletes a response field (`detail.snapshot`, `cascaded_response_count`) |
-| `instrument.fields_reordered` | up/down move OR bulk fields-save when response order changes (`detail.old_order`, `detail.new_order` as `field_key` lists; scoped to response fields) |
-| `instrument.display_field_added` | operator adds a display field (`detail.source_type`, `source_field`, `label`, `order`, `visible`) |
-| `instrument.display_field_updated` | operator edits a display field (`detail.changes: {key: [old, new]}` for each changed key only — `(source_type, source_field)` are immutable) |
-| `instrument.display_field_deleted` | operator deletes a display field (`detail.snapshot`); no cascade since display fields have no per-row dependents |
-| `instrument.display_fields_saved` | bulk fields-save when display rows' label / visibility / order changed (`detail.added` / `removed` always `[]` in 10B-2; `detail.updated` carries `[{source_type, source_field, changes: {key: [old, new]}}, …]`) |
-| ~~`instruments.bulk_accepting_responses`~~ / ~~`instruments.bulk_visibility_when_closed`~~ | **Retired 18R Item 3** with their emitters (`bulk_set_accepting` / `bulk_set_visibility`). |
-| `instrument.created` | operator creates a new instrument via the Instruments page **+Instrument** button (`detail.instrument_id`, `detail.session_id`, `detail.order`, `detail.after_instrument_id`). Multi-instrument is live. |
-| `instrument.deleted` | operator deletes an instrument (`detail.instrument_id`, `detail.session_id`, `detail.name`, `detail.order`); cascade to response fields / display fields / assignments / responses runs via FK delete-orphan |
-| `instrument.replicated` | operator clones a card's content into a new instrument after the source (Segment 13C **Replicate** button) |
-| `invitations.generated` | bulk-create invitations on a ready session (`detail.count`, `detail.invitation_ids`, `detail.reviewer_ids`) |
-| `invitation.sent` | outbox row written + invitation flipped to `sent` |
-| `invitation.opened` | first valid token follow with matching email |
-| `invitation.regenerated` | per-row token rotation + reset to `pending` |
-| `reminders.sent` | batch reminder send — manual path (`detail.count`, `detail.invitation_ids`, `detail.reviewer_ids`, `detail.fell_back_count`) |
-| `session.scheduled_activation_skipped` / `_retry` / `_failed_persistent` | Segment 18G Part 1 — lazy-observer outcomes for the scheduled `validated → ready` flip (`detail.reason`) |
-| `session.scheduled_invites_skipped` / `_fired` | Segment 18G Part 2 — auto-send invitations on `invite_offsets` (`context.{anchor_at, offset_index, scheduled_at, actual_fired_at}`) |
-| `session.scheduled_reminders_skipped` / `_fired` | Segment 18G Part 3 — auto-send reminders on `reminder_offsets`; precondition guard skips with `reason ∈ {not_ready, no_invitations, outside_response_window}` |
-| `session.invite_schedule_updated` / `reminder_schedule_updated` / `activation_scheduled` | editor diffs / scheduling (Segment 18G Parts 1 + 2 + 3) |
-| `session.responses_released` / `responses_release_stopped` | Workflow card Row 3 manual buttons (PR #1810) |
-| `session.archived` / `unarchived` | manual / row-expander archive (Segment 18A) |
-| `session.purged` | "Purge and archive" — selective hard-delete of responses / rosters / audit log (Segment 18C); `detail.counts` carries per-category drop counts |
-| `session.settings_extracted` / `reviewers_extracted` / `reviewees_extracted` / `relationships_extracted` / `assignments_extracted` / `responses_extracted` / `observers_extracted` / `participant_tokens_extracted` / `data_shape_extracted` / `audit_log_extracted` | per-Extract Setup / Extract data tile downloads (Segments 12A / 12B / 18D + the participant model token-keys + Extract data tab) |
-| `session.owner_added` / `owner_removed` | per-session Owners card on the Edit Session page (Segment 16B PR 2) |
-| `observer.created` / `updated` / `deleted` / `bulk_inactivated` / `bulk_reactivated` | per-row + bulk observer service (`app/services/observers.py`) |
-| `observers.imported` / `deleted_all` | Observers CSV save / delete-all |
-| `observer.cohort_rule_assigned` | per-observer cohort-rule editor (Observers Setup page) |
-| `reviewee.results_acknowledged` | reviewee clicks Acknowledge on `/me/sessions/{id}/results` |
-| `data_shape.created` / `updated` / `deleted` | Extract data tab Data shaper authoring |
-| `assignments.reconciled` | `replace_assignments` diff-and-reconcile (insert new / drop orphan + responses / keep matched) — replaces `assignments.generated` post-Reconciling-assignment-regeneration |
-| `session.session_config_imported` | Quick Setup Settings slot apply (Segment 12A-3 PR 3) |
-
-`excluded_counts` is a generic map (`{"self_review": N,
-"inactive_reviewer": M, ...}`) so RuleBased exclusions in Segment 13 can
-plug in additional reasons without a schema change. Today's keys are
-`self_review`, `inactive_reviewer`, `inactive_reviewee`.
+**The event-type table that followed was replaced by this pointer on
+2026-10-02** (findings `I8`, `guide/findings_2026-10-01_corpus.md`). It
+listed about 50 rows against 148 event types registered in
+`EVENT_SCHEMAS`, and several rows described retired emitters or old
+detail keys. The source of truth is `EVENT_SCHEMAS` in
+`app/services/audit.py`: one entry per event type, with the payload
+envelope and the keys each may carry, validated on every write. To list
+them, run
+`PYTHONPATH=. python -c "from app.services.audit import EVENT_SCHEMAS; print(*sorted(EVENT_SCHEMAS), sep='\n')"`.
 
 ---
 
@@ -1061,7 +951,7 @@ plug in additional reasons without a schema change. Today's keys are
 
 | Capability | Lands in |
 |---|---|
-| *(removed)* Vanilla-JS autosave on top of the reviewer `/save` endpoint — **shipped as Segment 17B on 2026-05-16 → 2026-05-20.** Cell-level autosave (debounced `fetch` to `/save`) layered as targeted progressive enhancement; no JS framework. | Done. |
+| Vanilla-JS autosave on top of the reviewer `/save` endpoint — cell-level autosave (debounced `fetch` to `/save`) layered as targeted progressive enhancement; no JS framework. **Not shipped:** deferred from Segment 17B on 2026-05-16. *(Corrected 2026-10-02: this row said it shipped as 17B and was struck as done.)* | Deferred — `guide/deferred_consolidated.md` ("17B — Cell-level autosave") |
 | Activating SMTP / Graph / ACS / third-party transactional sends out of the dev outbox (today: outbox stamps `status="queued"` and never sends); institutional Microsoft 365 tenants typically block basic SMTP AUTH, so the realistic production path is one of Options B–D in `spec/email_infra_options.md`. **Deliberately gated on institutional Azure provisioning (decision 2026-09-05)** — and operationally optional meanwhile: since the participant model, access is roster + sign-in, so an operator's own generic email pointing at the app URL covers invitations (the in-app Guide's "Give reviewers access"); the real gap is per-reviewer reminders, chased by hand from the Responses page until then (rationale: `guide/segment_14B_email_infrastructure.md` Status) | **Segment 14B Parts A → H** (Part A consumes the 11E `EmailTransport` interface against the audit-log columns Segment 11C Part 2 scaffolds, with subsequent Parts F → H landing each non-SMTP backend driven by deployment / IT demand) |
 | Audit-events export | **Segment 12B** (export shipped 2026-05-10; folded out of the original Segment 12 plan when Extract Data moved into 12A) |
 | Scheduled / policy-driven retention — a per-deployment (or per-session) retention policy that purges aged responses / audit rows / archived sessions on a schedule. The operator-triggered half shipped as Segment 18C 2026-05-17. Deferred 2026-05-21 — the scheduled / policy-driven variant adds ops burden (cron, monitoring) for a need pilot data hasn't yet motivated. | Deferred — `guide/deferred_consolidated.md` ("18G Part 5 — Scheduled / policy-driven purge") |
@@ -1080,9 +970,9 @@ plug in additional reasons without a schema change. Today's keys are
 | Role delegation among multiple operators (today: `SessionOperator` table exists with no UI for add / remove) | **Segment 16B** — shipped 2026-05-11; plan archived at `guide/archive/segment_16B_role_delegation.md` |
 | Richer in-app audit views (today: 8-column CSV download only; no filter / search / drill-in / timeline) | **Segment 16C** — MVP shipped 2026-05-11; plan archived at `guide/archive/segment_16C_richer_audit_views.md`. PRs 4 + 5 (entity drill-in, cross-session search) carved out to `guide/deferred_consolidated.md`. |
 | *(removed)* Sort-affordance refinements on the reviewer surface — **shipped as Segment 13B on 2026-05-12.** Sortable columns on reviewer + operator tables; operator default + reviewer live override. | Done. |
-| AG Grid replacement of the reviewer-surface table (today: plain HTML `<input>` / `<textarea>` / `<select>` per cell, form-based save). Second half of workplan §11 that never landed. | **Off the roadmap** (2026-05-16) — a JS data-grid is judged overkill; recorded as an aspirational item in `guide/deferred_consolidated.md`. The reviewer-surface ergonomics it would have delivered (autosave, sticky headers, visible progress) fold into **Segment 17B** as progressive enhancement. |
+| AG Grid replacement of the reviewer-surface table (today: plain HTML `<input>` / `<textarea>` / `<select>` per cell, form-based save). Second half of workplan §11 that never landed. | **Off the roadmap** (2026-05-16) — a JS data-grid is judged overkill; recorded as an aspirational item in `guide/deferred_consolidated.md`. The reviewer-surface ergonomics it would have delivered (autosave, sticky headers, visible progress) fold into **Segment 17B** as progressive enhancement; 17B shipped the progress pills and the sticky action row, and deferred autosave. |
 | *(partial)* Reviewee + Observer participant surfaces — **shipped 2026-05-30 → 2026-06-03** under the participant-model upgrade umbrella. Reviewee `/me/sessions/{id}/results` body across all three visibility modes (Raw / Anonymized / Summarized) + Acknowledge; Observer `/me/sessions/{id}/collation` MVP with per-instrument 3-row stats + tokenized Anonymized downloads + per-observer cohort-rule editor; Workflow card Row 3 release / archive buttons; explicit per-instrument × per-audience × per-window visibility policy in `instrument_view_policies`. Remaining magic-link participation rides with Segment 14B email-side. Spec at `spec/participant_model.md`. | Mostly done; magic-link landing rides with **Segment 14B**. |
-| *(removed)* Reviewer surface refinements — **shipped as Segment 17B on 2026-05-16 → 2026-05-20.** v2 polish + buttons order + status card location + row height tweaks; cell-level autosave; sticky bottom-grid action row. | Done. |
+| *(removed)* Reviewer surface refinements — **shipped as Segment 17B on 2026-05-16 → 2026-05-20.** v2 polish + buttons order + status card location + row height tweaks; sticky bottom-grid action row. Cell-level autosave was deferred, not shipped (the autosave row above). | Done. |
 | Queue-based batch invitation sending (today: synchronous in-request loop over eligible reviewers; fine with the dev outbox, doesn't survive real SMTP latency + provider rate limits). Picks up workplan §12 work item #7. | **Segment 14B Part C** (bulk-send queue + background worker; plan at `guide/segment_14B_email_infrastructure.md`) |
 | Technical-support contact (global env var, surfaces on app chrome footer + error pages + invalid-link landing). Distinct from the operational help contact on `ReviewSession` (which lives in #24). **Moved out of Segment 20 on 2026-09-05**: an unset env var renders nothing, so the mechanism needs no deployed host — only the address does. | **Unhomed** — a stub in `guide/todo_master.md` (Upcoming → Stubs) for the mechanism, + **Segment 20** (the address itself, at deploy). *(Corrected 2026-09-08: this cell read "Segment 19C Item 8", which was never true — Item 8 is the input-boundaries work, and the support contact sat unnumbered in 19C's Future items, unbuilt. It moved to `todo_master` when 19C closed.)* |
 | Operator-facing **documentation of the deployed service** — a single administrator guide for the institutional host, the institutional half of `docs/troubleshooting.md`, and a currency pass over the in-app Guide (canonical since 19E rung 2, formerly `docs/quickstart.md`) + `docs/known_limitations.md`. The other six workplan §18 items are either already shipped (validation explanations, operator guide, developer setup guide, known limitations page) or moved out — three to **19E**, and the technical-support contact to what this file then called "19C Item 8". *(Corrected 2026-09-08: that was never true — 19C Item 8 is the input-boundaries work, and the contact sat unnumbered in 19C's Future items, unbuilt. It is now a stub in `guide/todo_master.md`.)* See the audit table in the plan. | **Segment 20** — **reserved 2026-09-05, gated on the institutional Azure deployment concluding** (`docs/deployment_nus.md`); plan at `guide/segment_20_operator_polish_and_documentation.md` <!-- path-ref-ok --> |

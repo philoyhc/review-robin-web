@@ -66,9 +66,12 @@ super-admin actor; demote/revoke/remove refuse a super-admin *target*
 `DATABASE_URL` lives in two places that must hold identical
 values — the App Service App Setting and the GitHub Actions
 `DATABASE_URL` secret. Rotate both together, then restart the
-app. `SMTP_ENCRYPTION_KEY`, once email infrastructure lands
-(Segment 14B), follows the same dual-location pattern. There is
-no Key Vault indirection yet (deferred — see
+app. `SMTP_ENCRYPTION_KEY` is needed now: the operator Settings
+page stores each operator's SMTP credentials encrypted with it,
+even though no transport sends mail yet. It is an App Setting
+only, since no workflow reads it. Rotating it leaves the stored
+SMTP passwords undecryptable, so each operator re-enters theirs
+afterwards. There is no Key Vault indirection yet (deferred — see
 `docs/security_posture.md`).
 
 ## Re-running a failed deploy

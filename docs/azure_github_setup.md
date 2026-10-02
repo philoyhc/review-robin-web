@@ -1,5 +1,12 @@
 # RRW — Azure + GitHub Setup: Step-by-Step & Checklist
 
+> **Superseded (2026-10-02).** The NUS environment was provisioned on a
+> different shape from this draft (one PRD environment, private endpoints,
+> an Application Gateway and a self-hosted runner). Its runbook is
+> [`deployment_nus.md`](deployment_nus.md) and its verified state is
+> [`nus_azure_status_v7.md`](nus_azure_status_v7.md). Kept as the record of
+> the two-environment draft; do not execute from it.
+
 > **This is the forward-looking two-environment scale-up target, not the
 > current deployment plan.** The pilot ships as a **single sandboxed
 > environment** — see `docs/deployment_nus.md` (the active NUS-host
@@ -71,6 +78,11 @@
   GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO rrw_app;
   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rrw_app;
   ```
+  A DML-only role **cannot run the Alembic migrations**, which need DDL
+  (`CREATE` / `ALTER` / `DROP`). The deploy workflows' `migrate` job uses
+  the same `DATABASE_URL` as the app, so either grant the app role schema
+  rights (as `deployment_nus.md` §8 does) or run migrations under a
+  separate owner role.
 - [ ] Store `rrw_app` connection string in Key Vault as `rrw-db-connection`
 - [ ] Web App setting `DATABASE_URL` = Key Vault reference: `@Microsoft.KeyVault(SecretUri=...)`
 - [ ] Verify from a local machine that the app role can connect and the admin role is **not** used by the app
@@ -83,7 +95,7 @@
 ## Phase 3 — Identity: Entra App Registration + Easy Auth
 
 - [ ] Create app registration for RRW `[MANUAL if IT-gated]`
-  - [ ] **Single-tenant** (accounts in the institutional directory only) — matches RRW's current design; `docs/security_posture.md` and `docs/security_posture.md` both scope the pilot posture (including the CSRF decision) to single-tenant. If IT deliberately wants multi-tenant, revisit CSRF and add a `tid` claim filter before flipping.
+  - [ ] **Single-tenant** (accounts in the institutional directory only) — matches RRW's current design; `docs/security_posture.md` scopes the pilot posture (including the CSRF decision) to single-tenant. If IT deliberately wants multi-tenant, revisit CSRF and add a `tid` claim filter before flipping.
   - [ ] Redirect URI: `https://<app-hostname>/.auth/login/aad/callback` (add the custom/gateway domain later too)
   - [ ] Create client secret → Key Vault (`rrw-aad-client-secret`); set expiry reminder (max 24 mo)
 - [ ] Configure **Easy Auth** on the Web App:
@@ -106,8 +118,8 @@
 - [ ] Role assignment: grant it **Website Contributor** scoped to each `rg-nrrw-*` (or just the Web Apps) `[MANUAL if you lack User Access Administrator]`
 - [ ] In GitHub repo settings:
   - [ ] Create **environments** `production` and `staging`; on `production`, enable required reviewer (you) so PRD deploys need a click
-  - [ ] Environment variables: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_WEBAPP_NAME` (no secrets needed — that's the point of OIDC)
-- [ ] Workflow `.github/workflows/deploy.yml`:
+  - [ ] Environment variables: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_WEBAPP_NAME` (no secrets needed — that's the point of OIDC). *What shipped instead:* `.github/workflows/deploy_nus.yml` reads repository secrets `NUS_AZURE_CLIENT_ID`, `NUS_AZURE_TENANT_ID`, `NUS_AZURE_SUBSCRIPTION_ID`, `NUS_DATABASE_URL` and the variable `NUS_WEBAPP_NAME` (`deployment_nus.md` §6.2).
+- [ ] Workflow `.github/workflows/deploy.yml` (shipped as `deploy_nus.yml`, `workflow_dispatch`-only):
   - [ ] Trigger: push to `main` → deploy `staging`; manual approval gate (environment protection) → deploy `production`. (Or: tag-based PRD deploys — decide and record.)
   - [ ] Jobs: checkout → setup Python (pinned) → install deps → **run tests** → `azure/login@v2` (OIDC) → `azure/webapps-deploy@v3`
   - [ ] Concurrency group so parallel deploys queue rather than race
@@ -139,7 +151,7 @@
 ## Phase 6 — Migrations & Data Operations
 
 - [ ] Migration zero committed to repo; migrations run **before** app deploy in the workflow (separate job, OIDC login, connection via Key Vault-sourced string) — or manually via `psql` for the first cut `[decision point: automate now or later]`
-- [ ] Rehearse locally first: Docker Postgres (existing setup guide) → NPRD → PRD, in that order, always
+- [ ] Rehearse first: the `ci-postgres` job's Postgres 16 container → NPRD → PRD, in that order, always (local Docker Postgres is deferred; `docs/database.md`)
 - [ ] Document the restore runbook: server-level PITR restores to a **new server**; note the steps to extract/reconnect. Ten minutes of writing now, an hour saved under stress later.
 
 ---

@@ -207,7 +207,7 @@ After the app is running on `http://127.0.0.1:8000/`:
 | URL                         | Expected (with `ALLOW_FAKE_AUTH=true`)                       |
 |-----------------------------|--------------------------------------------------------------|
 | `/health`                   | `200` JSON `{"status": "ok"}`                                |
-| `/`                         | `200` JSON service metadata.                                 |
+| `/`                         | `302` to `/operator/sessions` (operator) or `/me`.           |
 | `/auth/me`                       | `200` JSON for the fake user (`is_fake: true`).              |
 | `/auth/me/debug`                 | `200` HTML page; "fake auth" pill shown; "No claims found".  |
 | `/docs`                     | FastAPI's automatic Swagger UI.                              |

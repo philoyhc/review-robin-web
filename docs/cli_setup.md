@@ -34,13 +34,15 @@ they're cheap.
 | **`jq`** | Parsing `az ... -o json` output in shell scripts (e.g. extracting App Service outbound IPs for the Postgres firewall). |
 | **`openssl`** | Generating the `rrw_app` DB role password before storing in Key Vault (`openssl rand -base64 24`). |
 | **`curl`** | Smoke-testing `/health`, the Easy Auth login redirect, and the App Gateway probe path end-to-end. |
-| **`docker`** | Running local Postgres for Phase 6 migration rehearsal before touching NPRD (matches `docs/local_setup.md`). |
+| **`docker`** | Optional: a throwaway Postgres container to reproduce a dialect-only issue. Local Postgres is deferred (`docs/database.md`); the `ci-postgres` job is the parity gate. |
 | **`bicep`** or **`terraform`** | Only if you want Phase 1 provisioning codified rather than clicked. Not required for v1; useful once NPRD stabilises and you want PRD to be a deterministic replay. `bicep` ships bundled with modern `az`. |
-| **Python 3.12 + `pip`** | On your box only for local test runs before pushing; CI has its own Python. |
+| **Python 3.12+ + `pip`** | On your box only for local test runs before pushing; CI has its own Python. `pyproject.toml` requires 3.12 or later. |
+| **`node`** | Local test runs: `tests/integration/test_inline_scripts_parse.py` parses the inline scripts with it and skips silently without it. No JS build step. |
 
 Not needed (worth calling out because they're the obvious
-guesses): `kubectl` (RRW is App Service, not AKS), `node` / `npm`
-(no JS build step by design), `azd` (its opinionated scaffold
+guesses): `kubectl` (RRW is App Service, not AKS), `npm`
+(no JS build step by design; `node` itself is needed only for the test
+above), `azd` (its opinionated scaffold
 doesn't match RRW's hand-rolled workflow — use plain `az`
 instead), `func` (Functions Core Tools; only if you actually
 build a function, which Phase 1 defers).
@@ -225,8 +227,13 @@ sudo apt install -y postgresql-client-16
 # Useful adjuncts
 sudo apt install -y jq openssl curl unzip
 
-# Python 3.12 (for local test runs; optional but useful)
+# Python 3.12+ (for local test runs; optional but useful). Ubuntu 24.04's
+# python3 is 3.12; on 22.04 it is 3.10, which is too old — install a
+# 3.12 interpreter (e.g. the deadsnakes PPA's python3.12) instead.
 sudo apt install -y python3 python3-pip python3-venv
+
+# Node (for the inline-script parse test)
+sudo apt install -y nodejs
 ```
 
 ### A.4 Verify versions
@@ -237,7 +244,8 @@ gh --version                     # expect >= 2.40
 az --version                     # expect >= 2.60 (top line)
 psql --version                   # expect 16.x
 jq --version
-python3 --version                # expect 3.12.x on recent Ubuntu; 3.10.x is fine, CI is 3.12
+python3 --version                # expect >= 3.12 (pyproject.toml's floor; CI is 3.12)
+node --version
 ```
 
 If any of these come back older than the "expect" line, upgrade
@@ -615,8 +623,8 @@ psql "host=<pg-server>.postgres.database.azure.com port=5432 \
 Expected: `current_user = rrw_app`, `count` = whatever the row
 count is. If you get `permission denied for table users`, the
 `GRANT` from Phase 2 of the runbook was skipped on this server
-— see `docs/deployment_dev.md` §Database configuration for the
-grant statements.
+— see `docs/deployment_dev.md` "First-time database bootstrap" for
+the grant statements.
 
 ### B.10 If any test fails
 

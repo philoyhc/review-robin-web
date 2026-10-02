@@ -1,5 +1,12 @@
 # Azure provisioning list — Review Robin Web
 
+> **Superseded (2026-10-02).** This pre-provisioning shopping list has been
+> overtaken by the NUS environment that was actually provisioned. For what
+> exists now, read [`nus_azure_status_v7.md`](nus_azure_status_v7.md); for
+> the topology, [`architecture.md`](architecture.md); for the deploy steps,
+> [`deployment_nus.md`](deployment_nus.md). Kept as the record of the
+> estimate; do not plan from it.
+
 **Purpose:** the concrete list of Azure resources to price in the
 [Azure pricing calculator](https://azure.microsoft.com/en-us/pricing/calculator/)
 so IT can quote hosting **Review Robin Web (RRW)** as a sanctioned
@@ -134,7 +141,9 @@ Both are comfortably met by the tiers in §A.
    D2ds_v5** (more RAM → higher connection cap) — a scale event, not the
    pilot provision.
 3. **Key Vault.** Holds the Postgres connection string (and later the
-   Entra client secret + SMTP creds). Standard tier, priced per 10k
+   Entra client secret). SMTP credentials are not Key Vault secrets: each
+   operator saves their own, encrypted in the database with
+   `SMTP_ENCRYPTION_KEY`. Standard tier, priced per 10k
    operations — RRW reads a handful of secrets at boot, so this is
    effectively free but belongs on the estimate for completeness.
 4. **Log Analytics / Application Insights.** The observability floor.
@@ -145,8 +154,10 @@ Both are comfortably met by the tiers in §A.
    largest line if included** — WAF v2 bills a fixed gateway hourly rate
    *plus* capacity units even when idle (order of a few hundred USD/month
    before traffic). RRW does **not** need it functionally: its
-   state-changing routes are all POST behind Easy Auth, reachable only by
-   authenticated tenant users. Include this row **only if institutional
+   state-changing routes are POSTs behind Easy Auth, reachable only by
+   authenticated tenant users (the one GET that writes, Session Home's
+   scheduled-event observer, takes no input; `security_posture.md`, "CSRF
+   posture"). Include this row **only if institutional
    policy mandates a WAF in front of web apps**. The default sandbox
    posture is *no gateway* — App Service default hostname behind Easy
    Auth, with App Service **access restrictions** limiting inbound to

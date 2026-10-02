@@ -47,8 +47,10 @@ GitHub Actions workflow name:
 The workflow triggers on push to `main` (or via `workflow_dispatch`) and
 runs three jobs in order: **build → migrate → deploy**.
 
-1. **build** packages `app/`, `alembic/`, `alembic.ini`, `requirements.txt`,
-   and `pyproject.toml` into the deployment artifact.
+1. **build** installs `requirements.txt` into a prebuilt `antenv/`
+   virtualenv and packages `app/`, `alembic/`, `alembic.ini`,
+   `requirements.txt`, `pyproject.toml` and `antenv/` into the deployment
+   artifact, so App Service uses that venv rather than re-running the build.
 2. **migrate** runs `alembic upgrade head` against Azure Postgres using
    the `DATABASE_URL` GitHub Actions secret. If migration fails, the
    workflow stops here and the deploy job is skipped — the app never
@@ -114,7 +116,10 @@ restart the app after a change.
 | `OPERATOR_CONTACT_EMAIL` | unset | Optional contact address shown on the `/about` access card. |
 | `ALLOW_FAKE_AUTH` | `false` | Local-only fake-identity escape hatch. **Must stay `false`** in any deployed environment. |
 | `FAKE_AUTH_EMAIL` / `FAKE_AUTH_NAME` / `FAKE_AUTH_PRINCIPAL_ID` / `FAKE_AUTH_OPERATOR` / `FAKE_AUTH_SYS_ADMIN` / `FAKE_AUTH_SUPER_ADMIN` | dev values | Tune the fake identity; inert unless `ALLOW_FAKE_AUTH=true`. `FAKE_AUTH_SUPER_ADMIN` (default on) makes the local fake operator a super-admin. |
-| `SMTP_ENCRYPTION_KEY` | unset | Fernet key encrypting operator SMTP passwords at rest. Needed once email infrastructure (Segment 14B) is in use. |
+| `SMTP_ENCRYPTION_KEY` | unset | Fernet key encrypting operator SMTP passwords at rest. **Needed now**: the operator Settings page stores each operator's SMTP credentials, and saving them fails without a valid key (no transport sends mail yet; Segment 14B). Rotating it leaves stored passwords undecryptable, so operators re-enter theirs. |
+| `SCHEDULED_OPERATIONAL_LEAD_HOURS` | `1` | Minimum lead time, in hours, between now and a scheduled activation set at save (`spec/lifecycle.md` §8.2). |
+| `REVIEWER_NOTICE_MIN_HOURS` | `1` | Minimum gap, in hours, between an auto-sent invitation and the scheduled activation (`spec/lifecycle.md` §8.2). |
+| `REHYDRATE_ENABLED` | `false` | Opens the Rehydrate surface. Off by default and deferred; the test suite turns it on. |
 | `AUDIT_STRICT_MODE` | `false` | When true, `audit.write_event` raises on a detail-shape violation. Tests enable it; production leaves it off. |
 
 `APP_NAME`, `APP_VERSION`, and `DEBUG` also exist but are
@@ -208,8 +213,9 @@ Expected response:
 {"status": "ok"}
 ```
 
-The root endpoint `/` returns service metadata pointing at `/health` and `/docs`
-and is useful for a quick sanity check in a browser.
+The root endpoint `/` does not serve a JSON body: it 302-redirects a signed-in
+operator to `/operator/sessions` and anyone else to `/me`. `/health` is the
+only liveness endpoint.
 
 ## Viewing logs
 
@@ -311,16 +317,18 @@ pick up new flags — or want to fix roles straight from the
 database — you have two manual escape hatches (the in-app Sys
 Admin page is the normal path):
 
-1. **Wipe the row.** Connect to the database as `rrw_app` and
-   `DELETE FROM users WHERE email = '<email>'`. The next sign-in
-   recreates the row and runs the bootstrap. **⚠ Any
-   `session_operators` rows attached to this user cascade-delete**
-   — the user loses session access until re-added.
+1. **Wiping the row usually fails.** `DELETE FROM users` does not
+   cascade: `session_operators.user_id`,
+   `review_sessions.created_by_user_id` and
+   `audit_events.actor_user_id` reference `users.id` with no
+   `ON DELETE`, so Postgres refuses the delete for any user who has
+   owned or created a session or has an audit row. Use the `UPDATE`
+   below instead.
 2. **Flip the column directly.** Connect to the database and
    `UPDATE users SET is_sys_admin = true WHERE email = '<email>'`
-   (or `is_operator`). Cheaper than a wipe; preserves
-   session_operators rows; no audit-event trail (which the 16A
-   PR 6 in-app path will emit).
+   (or `is_operator`). Preserves session_operators rows; leaves no
+   audit-event trail, unlike the in-app Sys Admin path, which
+   writes one.
 
 ### First 16A deploy: backfill pre-existing user rows
 
@@ -376,9 +384,10 @@ order:
 
 4. **Sign in.** The gate now passes via `is_sys_admin`.
 
-Prefer `UPDATE` over `DELETE` for this step: a delete cascades to
-the user's `session_operators` rows and orphans them from any
-sessions they own. The UPDATE leaves session membership intact.
+Use `UPDATE`, not `DELETE`, for this step: the foreign keys that
+reference `users.id` have no `ON DELETE`, so a delete fails for any
+user who owns or created a session or has an audit row. The UPDATE
+leaves session membership intact.
 
 ### Local-dev mirror
 

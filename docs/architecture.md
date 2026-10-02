@@ -23,28 +23,40 @@ flowchart LR
 
     subgraph AZ["Institutional Azure — resource group · Southeast Asia"]
         Entra["Microsoft Entra ID<br/>institutional tenant"]
-        App["Azure App Service · P0V3<br/>FastAPI + Jinja · Python 3.12<br/>[ Easy Auth ]"]
-        KV["Key Vault<br/>app secrets"]
-        PG[("PostgreSQL<br/>Flexible Server · B2s · 32 GiB")]
+        subgraph VNET["NUS VNet · private"]
+            AGW["Application Gateway<br/>private frontend"]
+            App["Azure App Service · P0V3<br/>FastAPI + Jinja · Python 3.12<br/>[ Easy Auth ] · private endpoint"]
+            KV["Key Vault<br/>private endpoint"]
+            PG[("PostgreSQL<br/>Flexible Server · B2s · 32 GiB<br/>private")]
+            RUN["Self-hosted runner VM<br/>(not yet created)"]
+        end
         MON["Azure Monitor<br/>Log Analytics + App Insights"]
         ST["Storage Account<br/>Block Blob · 10 GB"]
     end
 
-    User -->|HTTPS| App
+    User -->|"HTTPS · public IP + NUS DNAT"| AGW
+    AGW --> App
     App ---|"sign-in / identity headers"| Entra
-    App -->|"secrets (managed identity)"| KV
+    App -.->|"secrets (planned)"| KV
     App -->|"app data + audit log"| PG
     App -->|logs| MON
     App -->|"diagnostics / artifacts"| ST
     GH -->|"deploy · OIDC"| App
     GH -->|"migrate first (Alembic)"| PG
+    GH -.->|"jobs (planned)"| RUN
 
     classDef heart fill:#e6f0fb,stroke:#1668c1,stroke-width:2px,color:#12395f;
     class App heart;
 ```
 
-Runtime request path runs left to right: a browser reaches App Service
-over HTTPS. **Easy Auth** delegates sign-in to Entra ID and hands the app
+Runtime request path runs left to right: a browser reaches a public IP,
+which the NUS perimeter DNATs to the **Application Gateway**'s private
+frontend; the gateway forwards to the Web App's **private endpoint**. The
+Web App, PostgreSQL and Key Vault are private-only inside the NUS VNet,
+and a self-hosted GitHub runner VM is planned in its own subnet so that
+deploys and migrations can reach them. The verified state, addresses and
+open blockers are in [`nus_azure_status_v7.md`](nus_azure_status_v7.md).
+**Easy Auth** delegates sign-in to Entra ID and hands the app
 a verified identity — the application holds no passwords and runs no login
 code. Everything the app persists lives in one PostgreSQL database inside a
 single Azure resource group.
@@ -63,7 +75,9 @@ Microsoft Customer Agreement, pay-as-you-go, monthly USD):
 | Azure Monitor | Log Analytics + Application Insights | 0.00 |
 | **Total** | | **148.41** |
 
-Summary estimate, not a quote. Reserved-instance / savings-plan discounts
+Summary estimate, not a quote. It predates the NUS network design and
+does not price the Application Gateway, its public IP or the runner VM.
+Reserved-instance / savings-plan discounts
 on the always-on compute (App Service, Postgres) are not applied. For the
 line-item calculator walk-through and the sizing rationale, see
 [`azure_provision.md`](azure_provision.md).
@@ -78,17 +92,19 @@ line-item calculator walk-through and the sizing rationale, see
 - **Data.** One **PostgreSQL Flexible Server**. Every mutating action
   writes an append-only `audit_events` row, so the database doubles as a
   compliance / incident-review record. See [`database.md`](database.md).
-- **Secrets.** The database connection string lives in **Key Vault**; App
-  Service reads it through its **system-assigned managed identity**, so no
-  secret sits in the repository or in plaintext App Settings.
+- **Secrets.** A **Key Vault** is provisioned behind a private endpoint,
+  but App Settings do not reference it yet: secrets live as plain App
+  Settings and GitHub secrets today, and Key Vault references through a
+  managed identity are deferred
+  ([`security_posture.md`](security_posture.md), "Deferred hardening").
 - **Deploy.** **GitHub Actions over OIDC federation** — no publish
   profiles or long-lived cloud credentials in GitHub. The pipeline is
   build → migrate → deploy; Alembic migrations run against Postgres
   *before* the App Service swap, so the app never ships against a stale
   schema.
-- **Observability.** App Service streams structured JSON logs (with
-  correlation IDs) to **Azure Monitor** (Log Analytics + Application
-  Insights).
+- **Observability.** App Service streams structured JSON logs to **Azure
+  Monitor** (Log Analytics + Application Insights). Correlation IDs are
+  stamped on `audit_events` rows, not on log lines.
 - **Storage.** A small **10 GB Block Blob** account for **diagnostics and
   deployment artifacts only** — the application itself has no blob
   dependency (CSV imports are parsed in-request, not persisted to blob).
@@ -97,27 +113,27 @@ line-item calculator walk-through and the sizing rationale, see
 
 Not part of RRW's shape, so not in the topology or the estimate:
 
-- **No WAF / Application Gateway** — the app's state-changing routes are
-  all POST behind Easy Auth; add a gateway only if institutional policy
-  mandates one in front of web apps.
 - **No Azure SQL** — RRW is Postgres-only.
 - **No Redis / cache tier** — the app holds no session or cache state
   outside Postgres.
 - **No Front Door / CDN, no Static Web App** — server-rendered HTML, no
   separate frontend build.
 - **No Container Registry** — deploy is a code push via
-  `azure/webapps-deploy` (Oryx build on the platform), not a container
-  image.
+  `azure/webapps-deploy`, not a container image. The workflow ships a
+  prebuilt `antenv/` virtualenv in the package, so the platform does not
+  re-run the build.
 
 ## Related documents
 
 - [`azure_provision.md`](azure_provision.md) — the resource list as a
   pricing-calculator walk-through, with sizing rationale for larger
-  reviews.
+  reviews (superseded; kept as the record of the estimate).
 - [`azure_ask.md`](../azure_ask.md) — the governance ask (sponsorship,
   data policy, cost cap) for hosting on institutional Azure.
-- [`azure_github_setup.md`](azure_github_setup.md) — the step-by-step
-  build runbook that stands this topology up.
+- [`nus_azure_status_v7.md`](nus_azure_status_v7.md) — the verified NUS
+  state and its blockers, and [`deployment_nus.md`](deployment_nus.md),
+  the runbook that deploys to it. (`azure_github_setup.md`, the earlier
+  two-environment draft, is superseded.)
 - [`security_posture.md`](security_posture.md) — authorization model,
   identity trust, CSRF posture.
 - [`spec/architecture.md`](../spec/architecture.md) — the application

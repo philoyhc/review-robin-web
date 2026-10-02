@@ -7,6 +7,16 @@ bugs — they trace to the Segment 14A plan and
 
 ## Deployment / infrastructure
 
+The entries below describe the **personal Azure dev slot**, which is
+still the only environment serving the app. The **NUS environment is
+provisioned but not yet serving**: a P0V3 App Service, private
+Postgres and Key Vault behind private endpoints, an Application
+Gateway in front, and Log Analytics with Application Insights. It
+waits on a runner VM and a production hostname
+(`docs/nus_azure_status_v7.md`). At cutover the F1, public-database
+and Application Insights entries stop applying; secrets stay plain
+App Settings until Key Vault references are wired.
+
 - **Single environment.** One Azure **dev** slot. There is no
   staging slot and no production environment; no manual-approval
   deploy gate. A push to `main` deploys straight to the dev slot.
@@ -49,6 +59,11 @@ bugs — they trace to the Segment 14A plan and
   is genuinely missing is **targeted reminders** to reviewers who
   have not submitted; until 14B, chase them by hand from the
   Responses page's coverage view.
+- **Reviewer answers are not autosaved.** The reviewer surface
+  saves only when the reviewer presses Save or Submit, and it has
+  no leave-page (`beforeunload`) guard, so navigating away (the
+  Previous / Next page links included) or closing the tab loses
+  unsaved answers without a prompt.
 - **No automatic data expiry.** Nothing is purged on a schedule;
   retention is entirely operator-driven (see
   `docs/backup_restore.md`).
