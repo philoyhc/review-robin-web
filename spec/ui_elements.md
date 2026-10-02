@@ -231,8 +231,14 @@ classes.
 > pages; a **list** of destructive rows (the sessions-lobby /
 > archived expanders) uses its own per-node script for the same
 > disabled-until-checked behaviour, because the app-wide `querySelector`
-> can't address N buttons. The confirm-checkbox label uses the
-> affirmative **"Yes, delete …"** voice everywhere (full sentence in a
+> can't address N buttons under one key. **A list whose rows each carry
+> a unique key does use the app-wide pairing**: the Instruments page's
+> per-instrument delete keys on the instrument id, and the Extract data
+> page's Data shaper keys each shape card's Delete `shape-{id}` (saved),
+> `shape-new-0` (initial blank) or `shape-new-N` (spawned in JS), per
+> `spec/extract_data.md`. That Delete is a `fetch`, not a form submit,
+> so its confirm has no form to be `required` in. The confirm-checkbox
+> label uses the affirmative **"Yes, delete …"** voice everywhere (full sentence in a
 > danger-zone card; compact "Yes, delete" in the expander toolbar) —
 > never a permissive "Allow delete".
 >

@@ -748,7 +748,7 @@ Each sub-card carries:
      and is enabled only while the sub-card's own confirm box
      is ticked (see item 3). Removes the sub-card (and the
      saved shape, at once) and transfers the selected state
-     to a neighbour if necessary; on the only sub-card in the
+     to a neighbor if necessary; on the only sub-card in the
      stack it resets that card to blank instead (mirroring
      the Response Fields builder's always-present empty row).
    - **`+Shape`** (`data-shape-add`) — clones a fresh blank

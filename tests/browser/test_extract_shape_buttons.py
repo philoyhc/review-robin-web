@@ -141,6 +141,10 @@ def test_delete_waits_for_its_confirm_tick_and_the_tick_resets(
     # wait for the response before reloading or the reload can win.
     spawned_delete.click()
     expect(spawned).to_have_count(0)
+    # The deleted card was the active one, so selection passes to its
+    # neighbor — and the click bubbling on to the removed card's own
+    # listener must not take it back to the detached card.
+    expect(second).to_have_attribute("data-shape-selected", "true")
     second_tick.check()
     with page.expect_response(
         lambda r: r.request.method == "DELETE"
@@ -156,4 +160,35 @@ def test_delete_waits_for_its_confirm_tick_and_the_tick_resets(
     expect(
         page.locator(f'[data-shape][data-shape-id="{first_id}"]')
     ).to_have_count(1)
+
+
+def test_deleting_the_only_editing_shape_selects_the_fresh_blank(
+    page: Page, api: httpx.Client, new_session: Callable[[], int]
+) -> None:
+    """Delete on the only card resets it to a fresh blank card, which
+    becomes the selected edit target. The Delete click goes on to
+    bubble to the replaced card's own listener; that card is in edit
+    mode, and before the fix it re-activated itself, leaving the fresh
+    card unselected and the chips aimed at a detached card."""
+    session_id = new_session()
+    shape_id = _save_shape(api, session_id, "Only")
+
+    page.goto(f"/operator/sessions/{session_id}/extract-data")
+    card = page.locator(f'[data-shape][data-shape-id="{shape_id}"]')
+    card.locator("[data-shape-edit]").click()
+    expect(card).to_have_attribute("data-shape-mode", "edit")
+    card.locator("[data-delete-confirm]").check()
+    card.locator("[data-shape-delete]").click()
+
+    expect(card).to_have_count(0)
+    fresh = page.locator("[data-shape]")
+    expect(fresh).to_have_count(1)
+    expect(fresh).to_have_attribute("data-shape-selected", "true")
+    expect(fresh.locator("[data-delete-confirm]")).to_have_attribute(
+        "data-delete-confirm", "shape-new-1"
+    )
+    expect(fresh.locator("[data-shape-delete]")).to_be_disabled()
+    expect(page.locator("#extract-data-shaper")).to_have_attribute(
+        "data-shaper-chips-locked", "false"
+    )
 

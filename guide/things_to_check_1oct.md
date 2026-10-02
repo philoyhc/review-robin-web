@@ -27,7 +27,6 @@ E1, E2 and E4 were checked by the author when they merged.
   **Save** shows and **Edit** hides. Click **Cancel**: they swap back.
 - [x] **A new shape's buttons still work.** Click **+Shape**. The new
   card shows **Save**, not **Edit**. Name it, pick columns, and Save it.
-
 - [x] **Disabled link buttons match.** On the Reviewers page, switch
   the table into edit mode. The toolbar's **Add new**, a link, should be
   exactly as faint as any other disabled button (0.5, not 0.55).

@@ -2,7 +2,9 @@
 carrying its load-time pass.
 
 `data-delete-confirm="{key}"` enables its paired `data-delete-btn="{key}"`
-only while ticked. Ten templates use it.
+only while ticked. Ten templates tag a pair (counted 2026-10-02 by
+`data-delete-confirm=` outside `base.html`; `session_assignments.html`
+names the pairing only in a comment, so it is not one).
 
 Three properties, each load-bearing for a different reason:
 
@@ -132,7 +134,7 @@ def test_every_programmatic_dispatch_is_reachable(pairing: str) -> None:
     # replaced predicted. Every roster page rebuilds its panel wholesale
     # on each selection change, so a fresh panel carries a fresh unticked
     # checkbox and there is no surviving one to re-run a gate on. No
-    # template dispatches at a confirm checkbox any more.
+    # roster page dispatches at a confirm checkbox any more.
     #
     # That note asked whoever landed this rung to replace the floor with
     # the real claim rather than lower it to zero, which would be the
@@ -141,11 +143,12 @@ def test_every_programmatic_dispatch_is_reachable(pairing: str) -> None:
     # directly: the set is enumerated, and for every member `unreachable`
     # below is what has to hold.
     #
-    # **E36 brought one back.** The Data shaper's sub-cards persist
-    # across a change of shape rather than being rebuilt, so a tick left
-    # on would outlive the selection it was given under; the page clears
-    # it and dispatches so the pairing re-closes `Delete`. It bubbles,
-    # and the pairing is capture-bound besides.
+    # **E36 brought one back, on a page that is not a roster.** The Data
+    # shaper's sub-cards persist across a change of shape rather than
+    # being rebuilt, so a tick left on would outlive the selection it was
+    # given under; the page clears it and dispatches so the pairing
+    # re-closes `Delete`. It bubbles, and the pairing is capture-bound
+    # besides.
     assert dispatches == [
         ("session_extract_data.html", "deleteConfirm", True),
     ], (

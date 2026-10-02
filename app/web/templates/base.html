@@ -5248,11 +5248,15 @@
            version of this comment was waiting for. All four rebuild the
            panel wholesale on every selection change, so a fresh panel
            carries a fresh unticked checkbox and there is nothing left
-           to re-run a gate on (`tests/unit/test_delete_confirm_pairing`
-           asserts the set is empty).
+           to re-run a gate on. **One caller came back with E36**: the
+           Extract data page's Data shaper keeps its shape cards across
+           a change of shape, so it unticks every card's confirm on
+           Cancel or a switch and dispatches a bubbling `change` to
+           re-close each Delete. `tests/unit/test_delete_confirm_pairing`
+           enumerates the callers and pins that one.
 
-           The capture binding stays, and is now the only thing keeping
-           the remaining real-user path correct —
+           The capture binding stays, and is what keeps a
+           non-bubbling dispatch correct —
            `deleteConfirm.dispatchEvent(new Event("change"))` — and
            `new Event` does NOT bubble by default. A bubble-phase
            delegated listener never sees those, so the tick would clear
