@@ -449,8 +449,8 @@ def require_reviewee_with_current_grant(
     Composes the roster gate above with the visibility question:
     an active, email-identified reviewee reaches ``/results`` only while
     ``visibility_policies.reviewee_has_current_grant`` holds for the
-    session — at least one instrument granting them a mode under the
-    windows open right now.
+    session — at least one instrument granting them a mode inside the
+    open response-release window.
 
     **404, the same one the roster gate raises**, so "no such session",
     "you are not a reviewee here" and "you are a reviewee with nothing

@@ -292,8 +292,7 @@ A reviewee can:
 - **Open the results surface** (`/me/sessions/{id}/results`) —
   per-instrument sections rendering the responses collected *about
   them* in the operator-chosen form (Raw / Anonymized /
-  Summarized) and only while the per-instrument visibility policy's
-  window is open.
+  Summarized) and only inside the open response-release window.
 - **Acknowledge** they have seen their results (a one-shot,
   idempotent gesture stamping `results_acknowledged_at`).
 
@@ -302,7 +301,7 @@ roster check — an active reviewee row whose `email_or_identifier`
 parses as a real email matching the signed-in user,
 case-insensitively — **plus a currently-resolving visibility
 grant**, meaning at least one instrument granting this reviewee a
-mode under a window that is open right now. The roster check alone
+mode inside the open response-release window. The roster check alone
 is not enough; without a grant the route answers 404 (see
 [§10.9](#109-reviewee-results-surface)).
 **Confidential reviewees** (non-email identifiers, used for
@@ -1826,11 +1825,14 @@ An email-identified reviewee reaches
 `require_reviewee_with_current_grant` — the roster check plus a
 currently-resolving visibility grant; without one the
 route answers 404). The body is per-instrument
-sections — one section per instrument that carries a `reviewee`
-visibility policy — rendering the responses collected *about this
+sections — one section per instrument whose `reviewee` visibility
+policy resolves to a mode and that has an included assignment to this
+reviewee — rendering the responses collected *about this
 reviewee* in the policy's mode:
 
-- **Raw** — one row per reviewer who responded, identified.
+- **Raw** — one row per reviewer with an included assignment to this
+  reviewee, identified; a reviewer who has not submitted shows empty
+  value cells.
 - **Anonymized** — the same per-row table with every
   identification cell stripped to a muted em-dash.
 - **Summarized** — one aggregate row per instrument, with
@@ -1838,8 +1840,9 @@ reviewee* in the policy's mode:
   max / N; List: per-choice frequency; String: total + average
   length).
 
-Sections only surface values while the policy's window
-(`while_ongoing` / `after_release`) is open. An **Acknowledge
+A reviewee grant is after-release only: outside the open
+response-release window no section renders, and a stored
+`while_ongoing` reviewee mode opens nothing. An **Acknowledge
 card** at the foot lets the reviewee confirm they've seen their
 results — a one-shot, idempotent gesture stamping
 `results_acknowledged_at` and emitting
@@ -2435,8 +2438,8 @@ and gate 5 additionally by a visibility grant:
    submit / clear, and the post-submit summary.
 5. **Reviewee in session, with a current grant** — the reviewee
    results surface. The roster match alone is not enough: at
-   least one instrument must grant this reviewee a mode under a
-   window open right now, or the route answers 404
+   least one instrument must grant this reviewee a mode inside the
+   open response-release window, or the route answers 404
    ([§4.4](#44-reviewee)). A reviewee whose identifier is not
    an email can never reach it.
 6. **Observer in session** — the observer collation surface.

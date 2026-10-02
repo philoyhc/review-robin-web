@@ -72,16 +72,16 @@ Three surfaces are participant-role-specific. All three render the reviewer-surf
 
 ### 4.1 Reviewee results surface (W16 + W19, live)
 
-`GET /me/sessions/{id}/results` renders the reviewer-surface chrome plus a list of per-instrument sections built by `app/web/views/_reviewee_results.py::build_reviewee_results_context`. Sections appear only for instruments that have a `reviewee` visibility policy row; the section's mode is one of:
+`GET /me/sessions/{id}/results` renders the reviewer-surface chrome plus a list of per-instrument sections built by `app/web/views/_reviewee_results.py::build_reviewee_results_context`. Sections appear only for instruments whose `reviewee` visibility policy row resolves to a mode and that have at least one included assignment to this reviewee; the section's mode is one of:
 
-- **`raw`** — one row per reviewer who responded; Reviewer name + email shown in the identity column.
+- **`raw`** — one row per reviewer with an included assignment to the reviewee (an excluded pair has no row); Reviewer name + email shown in the identity column.
 - **`anonymized`** — same per-row table; every identification cell (Reviewer name, email, display-field cells) collapsed to a muted em-dash.
 - **`summarized`** — per-instrument sections collapse to one aggregate row. The identity column header reads "Summary" and the cell carries two counts: "Number of reviewers assigned" and "Number of reviewers with some responses". Response-field cells render per data type:
   - `Integer` / `Decimal`: Average, Median, Min, Max, (based on N responses). At zero responses, all labels render with em-dash placeholders.
   - `List`: per-choice frequency lines e.g. `A: 2 (33.3%)`. Every declared option surfaces including zeros.
   - `String` (and unknown types): Total length (characters) + Average length (characters), (based on N responses). At zero responses, labels render with em-dash placeholders.
 
-When a policy's window is not open, Raw and Anonymized sections still render their row scaffolding (reviewer identity visible, value cells empty); Summarized sections are omitted entirely because the aggregate has nothing to show.
+A section renders only when its reviewee mode resolves right now, and then always with its values. A reviewee's grant is after-release only, so the builder passes the while-ongoing window as closed: a stored while-ongoing reviewee mode, which only rows written before the per-cell validation can carry, opens nothing. A reviewer who has not submitted still shows as a row with empty value cells.
 
 The **Acknowledge card** (`section.card.rs-acknowledge-card`) always renders at the foot of the page — bottom-right half-width, `border-color: var(--card-active-border)` + a 1px shadow in the same token + a `--card-active-bg` tint. Pre-acknowledgement: checkbox (required by JS `data-delete-confirm` / `data-delete-btn` pattern) + "Acknowledge" submit button gated by the checkbox. Post-acknowledgement: the form collapses to a passive "✓ Acknowledged on {date}" strip; the page header gains a `pill-success` "✓ Acknowledged" chip.
 
@@ -107,7 +107,7 @@ The `/me` dashboard (`reviewer_dashboard` in `app/web/routes_reviewer/_dashboard
 
 **Union rule.** For the signed-in user, the dashboard runs three queries (reviewer / reviewee-with-email-identification / observer, `status = active` only, case-insensitive email match) and merges by `session_id`. Each row carries the `roles` list — a subset of `["reviewer", "reviewee", "observer"]` in that priority order.
 
-**The reviewee role additionally requires a currently-resolving grant.** An active, email-identified reviewee row is necessary but not sufficient: `visibility_policies.reviewee_has_current_grant(db, session)` must also return `True`, meaning at least one instrument in the session has a `reviewee` policy row whose mode resolves **under the windows open right now**. With no such grant the `reviewee` entry never enters `roles`, so there is no pill, no link, and no reachable surface: `/results` answers the same bare 404 a stranger gets.
+**The reviewee role additionally requires a currently-resolving grant.** An active, email-identified reviewee row is necessary but not sufficient: `visibility_policies.reviewee_has_current_grant(db, session)` must also return `True`, meaning at least one instrument in the session has a `reviewee` policy row whose mode resolves **inside the open response-release window** — a reviewee grant is after-release only. With no such grant the `reviewee` entry never enters `roles`, so there is no pill, no link, and no reachable surface: `/results` answers the same bare 404 a stranger gets.
 
 Three properties of that rule, each deliberate:
 
@@ -158,7 +158,7 @@ Both fields ride through `SessionCreate` end-to-end (`create_session` writes; `u
 
 The four schedule datetimes (Start / End / Release-from / Release-until) carry a strict ordering chain enforced at save time by `scheduled_events.validate_schedule_ordering` plus the per-field parsers (see `spec/lifecycle.md` §8.2.7). Each `datetime-local` input also carries `min` / `max` attributes the browser picker honours; a small shared partial live-updates the bounds as the operator types.
 
-**Consumer status.** W16's `build_reviewee_results_context` and W17's `build_observer_collation_context` both consume `responses_release_at` / `responses_release_until` inside the per-instrument window gate (via `session_lifecycle.is_response_release_window_open`). The routes themselves do not gate reachability on this window — sections / instrument cards simply don't surface values until the relevant window opens.
+**Consumer status.** W16's `build_reviewee_results_context` and W17's `build_observer_collation_context` both consume `responses_release_at` / `responses_release_until` inside the per-instrument window gate (via `session_lifecycle.is_response_release_window_open`). The reviewee route also gates reachability on a current grant (above), so its sections render only with values; the observer route does not gate on the window, and its instrument cards simply don't surface values until the relevant window opens.
 
 ---
 

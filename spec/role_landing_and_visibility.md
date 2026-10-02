@@ -152,16 +152,15 @@ The reviewee role does not follow the lifecycle; it follows the
 | yes | listed | **yes** | 200 |
 
 A grant resolves when at least one instrument in the session has a
-`reviewee` policy row whose mode is live **under the windows open right
-now** (`visibility_policies.reviewee_has_current_grant`). Because a
-reviewee's `while_ongoing` cell is always off by construction, in
-practice this means *inside an open response-release window*, and never
-on an archived session — the archive override closes every non-operator
-grant.
+`reviewee` policy row whose after-release mode is live **inside an open
+response-release window** (`visibility_policies.reviewee_has_current_grant`).
+A reviewee's `while_ongoing` cell is off by construction, and a stored
+while-ongoing mode on a row older than the per-cell validation grants
+nothing. No grant resolves on an archived session — the archive
+override closes every non-operator grant.
 
-**The grant needs two things, and lifecycle is one of them.** A
-reviewee's `while_ongoing` cell is off by construction, so
-their grant lives entirely in the after-release window — and that window
+**The grant needs two things, and lifecycle is one of them.** The
+grant lives entirely in the after-release window, and that window
 now requires `sessions.status = "expired"` as well as a reached anchor,
 because responses are released *because the session is over*
 (`spec/visibility_policy.md` §3.2). Take one session and vary it:

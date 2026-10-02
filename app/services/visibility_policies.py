@@ -262,21 +262,25 @@ def reviewee_has_current_grant(
     Three ways this returns ``False``, and they are deliberately
     indistinguishable to the caller: the session is archived (the
     override in ``spec/visibility_policy.md`` forces every non-operator
-    audience off), neither window is open, or no instrument's
+    audience off), the response-release window is not open, or no instrument's
     ``reviewee`` row resolves to a mode.
 
-    Note the shape a reviewee grant can take: their ``while_ongoing``
-    cell is *always* off by construction (see ``_PER_CELL_VALID_MODES``
-    — reviewees do not watch responses arrive), so in practice this is
-    ``True`` only inside an open response-release window.
+    A reviewee grant is after-release only: their ``while_ongoing``
+    cell is off by construction (see ``_PER_CELL_VALID_MODES`` —
+    reviewees do not watch responses arrive), so the while-ongoing
+    window is passed as closed. A row written before the per-cell
+    validation can still store a while-ongoing reviewee mode; it grants
+    nothing here, as it renders nothing in
+    ``build_reviewee_results_context`` — the gate and the page read the
+    rule the same way. This is ``True`` only inside an open
+    response-release window.
     """
     if lifecycle.is_archived(review_session):
         return False
-    while_ongoing_open = lifecycle.is_ready(review_session)
     after_release_open = lifecycle.is_response_release_window_open(
         review_session
     )
-    if not (while_ongoing_open or after_release_open):
+    if not after_release_open:
         # `resolve_mode` would return None for every row anyway; skip
         # the query rather than ask the database to prove it.
         return False
@@ -294,7 +298,7 @@ def reviewee_has_current_grant(
     return any(
         resolve_mode(
             row,
-            while_ongoing_open=while_ongoing_open,
+            while_ongoing_open=False,
             after_release_open=after_release_open,
         )
         is not None
