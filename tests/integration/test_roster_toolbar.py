@@ -186,7 +186,7 @@ def test_the_filter_strip_renders_in_the_toolbars_right_pane(
     right = _pane(html, "right")
     assert 'name="q"' in right, "the search box did not move"
     assert 'class="filter-status"' in right, "the status select did not move"
-    assert ">Search</button>" in right
+    assert 'type="submit">Search</button>' in right, "Search disabled outside edit"
     assert ">Add new</a>" in right, "Add did not move, or kept its old label"
 
 

@@ -1018,6 +1018,16 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(
         "the moved filter stays live while a row is being added"
     )
 
+    # Search and Add new disable with the lock, and only with it.
+    assert 'type="submit">Search</button>' in _markup(client.get(base).text)
+    for url in (f"{base}?edit_id={row_id}", f"{base}?add=1"):
+        locked = _markup(client.get(url).text)
+        assert 'type="submit" disabled>Search</button>' in locked, url
+        assert (
+            '<a class="btn secondary disabled" aria-disabled="true">Add new</a>'
+            in locked
+        ), url
+
     # The rule that gives the class its effect.
     edit_body = client.get(f"{base}?edit_id={row_id}").text
     assert ".operator-actions-filter.is-locked" in edit_body, (

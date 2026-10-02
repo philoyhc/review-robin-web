@@ -2135,3 +2135,6 @@ def test_add_new_is_disabled_while_a_row_is_being_edited(client, db):
         in right
     ), right[-500:]
     assert "?add=1" not in right, "a live Add new while a row is being edited"
+    assert 'type="submit" disabled>Search</button>' in right, (
+        "a live Search while a row is being edited"
+    )
