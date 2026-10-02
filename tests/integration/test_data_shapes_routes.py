@@ -18,6 +18,8 @@ Covers:
 
 from __future__ import annotations
 
+import re
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -301,6 +303,93 @@ def test_page_renders_initial_blank_when_no_shapes_exist(
         'id="extract-data-shaper-zip"'
     )[0]
     assert 'data-shape-mode="edit"' in stack_block
+
+
+# --------------------------------------------------------------------------- #
+# Delete's confirm tick (E36)
+# --------------------------------------------------------------------------- #
+
+
+def _ships_disabled(tag: str) -> bool:
+    """``"disabled" in tag`` would match ``aria-disabled`` too."""
+    return re.search(r"(?<![-\w])disabled(?=[\s=>])", tag) is not None
+
+
+def _delete_pair(markup: str, key: str) -> tuple[str, str]:
+    """The Delete button and confirm checkbox paired on ``key``."""
+    button = re.search(
+        rf'<button[^>]*data-delete-btn="{re.escape(key)}"[^>]*>', markup
+    )
+    checkbox = re.search(
+        rf'<input[^>]*data-delete-confirm="{re.escape(key)}"[^>]*>', markup
+    )
+    assert button and checkbox, f"no Delete pair keyed {key!r}"
+    return button.group(0), checkbox.group(0)
+
+
+def test_saved_shape_delete_ships_disabled_behind_a_confirm_tick(
+    client: TestClient, db: Session
+) -> None:
+    """A saved shape's Delete is gated by the app-wide
+    confirm-checkbox pairing (``spec/operator_button_audit.md``
+    convention 6). It ships disabled, keyed on the shape id so two
+    saved cards never share a pair, and its tick sits on its own
+    line after the action row rather than inside it."""
+    review_session = _make_session(client, db, code="del-confirm")
+    first = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json=_payload(name="First"),
+    ).json()
+    second = client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json=_payload(name="Second"),
+    ).json()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+    stack_block = body.split("<div data-shaper-stack>")[1].split(
+        'id="extract-data-shaper-zip"'
+    )[0]
+
+    for shape in (first, second):
+        button, checkbox = _delete_pair(stack_block, f"shape-{shape['id']}")
+        assert "data-shape-delete" in button
+        assert _ships_disabled(button)
+        assert 'aria-disabled="true"' in button
+        assert "checked" not in checkbox
+
+    card = stack_block.split(f'data-shape-id="{first["id"]}"')[1].split(
+        f'data-shape-id="{second["id"]}"'
+    )[0]
+    actions = card.split('<div class="data-shape-actions">')[1]
+    row, after = actions.split('<div class="data-shape-delete-confirm">')
+    assert "data-shape-delete" in row
+    assert "data-delete-confirm" not in row
+    assert '<label class="confirm-label">' in after
+    assert "Yes, delete this shape. There is no undo." in after
+
+
+def test_unsaved_shape_cards_ship_delete_disabled_too(
+    client: TestClient, db: Session
+) -> None:
+    """The unsaved cards: the initial blank card keys its pair
+    ``shape-new-0``, and the spawn template carries the same gated
+    markup. The template's placeholder key is re-keyed by the page
+    script on every clone, so spawned cards never collide."""
+    review_session = _make_session(client, db, code="del-confirm-blank")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/extract-data"
+    ).text
+    template, stack_block = body.split(
+        "<template data-shaper-shape-card-template>"
+    )[1].split("</template>", 1)
+    stack_block = stack_block.split('id="extract-data-shaper-zip"')[0]
+
+    for markup, key in ((stack_block, "shape-new-0"), (template, "shape-new")):
+        button, _ = _delete_pair(markup, key)
+        assert _ships_disabled(button)
+        assert 'aria-disabled="true"' in button
+        assert '<div class="data-shape-delete-confirm">' in markup
 
 
 # --------------------------------------------------------------------------- #

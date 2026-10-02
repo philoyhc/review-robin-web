@@ -36,8 +36,9 @@ extract card (`spec/session_home.md` §2).
 > data-type filtering, `List items` fan-out for List fields,
 > `Discrete steps` fan-out for low-cardinality numeric fields),
 > a stack of Data shape sub-cards (preview row + Save / Edit /
-> Cancel / Delete / +Shape / Download action row), and the
-> outer `Zip all` button.
+> Cancel / Delete / +Shape / Download action row, with Delete's
+> confirm tick on its own line beneath), and the outer `Zip all`
+> button.
 >
 > All four empty-row-drop chips are two-state cycling pills with
 > an explicit label per state, one shape across the cards.
@@ -743,11 +744,13 @@ Each sub-card carries:
      transient unsaved-chip selections are visually dropped;
      chip visual state in the scope/content rows is **not**
      reverted (still open — see "Out of scope" below).
-   - **`Delete`** (`data-shape-delete`) — disabled when this
-     is the only sub-card in the stack (mirroring the
-     Response Fields builder's always-present empty row).
-     Otherwise removes the sub-card and transfers the
-     selected state to a neighbour if necessary.
+   - **`Delete`** (`data-shape-delete`) — ships `disabled`
+     and is enabled only while the sub-card's own confirm box
+     is ticked (see item 3). Removes the sub-card (and the
+     saved shape, at once) and transfers the selected state
+     to a neighbor if necessary; on the only sub-card in the
+     stack it resets that card to blank instead (mirroring
+     the Response Fields builder's always-present empty row).
    - **`+Shape`** (`data-shape-add`) — clones a fresh blank
      sub-card immediately after this one, makes it the new
      selected target, and closes the previously-editing
@@ -760,10 +763,25 @@ Each sub-card carries:
      Renders disabled (`href="#"` + `aria-disabled="true"`)
      for unsaved (brand-new, never-persisted) sub-cards.
 
-   Every button gates its enabled state on the active
-   shape's validity via a single ``updateButtonStates(shape)``
-   helper that runs on every chip toggle, name input,
-   mode flip, and card spawn / delete.
+   Every button except `Delete` gates its enabled state on
+   the active shape's validity via a single
+   ``updateButtonStates(shape)`` helper that runs on every
+   chip toggle, name input, mode flip, and card spawn /
+   delete. `Delete` is left to its confirm tick.
+3. A **Delete confirm** on its own line beneath the action
+   row, flushed right (`.data-shape-delete-confirm`): a
+   checkbox and the sentence "Yes, delete this shape. There
+   is no undo." in a `.confirm-label`. It is the app-wide
+   pairing (`spec/operator_button_audit.md` convention 6):
+   `data-delete-confirm="KEY"` on the checkbox,
+   `data-delete-btn="KEY"` on `Delete`, with no gate logic on
+   the page. The key is unique page-wide — `shape-{id}` on a
+   saved card, `shape-new-0` on the initial blank card, and
+   `shape-new-N` on a spawned one. **The tick resets**: a
+   change of active shape (`Edit`, `+Shape`, a `Delete` that
+   moves the selection, the only-card reset) and `Cancel`
+   clear every tick in the stack, which re-disables `Delete`.
+   A click inside the active card keeps its tick.
 
 The **always-present blank sub-card** on initial load gives
 the operator an immediate edit target without requiring a

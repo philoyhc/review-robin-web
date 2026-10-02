@@ -2510,6 +2510,18 @@
            collapses to zero when the input is visible. */
         margin-right: 10px;
       }
+      /* E36 — the Delete confirm tick on each Data shape sub-card,
+         on its own line beneath ``.data-shape-actions`` and flushed
+         right under the buttons it gates. A wrapper rather than a
+         right-aligned label, so the empty space to its left is not
+         a click target for the checkbox. No margin of its own: the
+         ``.confirm-label`` inside keeps the primitive's
+         ``--space-4`` top margin, which sets it apart from the
+         buttons as it does from every other control it gates. */
+      body.ui-v2 .data-shape-delete-confirm {
+        display: flex;
+        justify-content: flex-end;
+      }
       @media (max-width: 800px) {
         body.ui-v2 .extract-data-grid {
           grid-template-columns: 1fr;
@@ -5236,11 +5248,15 @@
            version of this comment was waiting for. All four rebuild the
            panel wholesale on every selection change, so a fresh panel
            carries a fresh unticked checkbox and there is nothing left
-           to re-run a gate on (`tests/unit/test_delete_confirm_pairing`
-           asserts the set is empty).
+           to re-run a gate on. **One caller came back with E36**: the
+           Extract data page's Data shaper keeps its shape cards across
+           a change of shape, so it unticks every card's confirm on
+           Cancel or a switch and dispatches a bubbling `change` to
+           re-close each Delete. `tests/unit/test_delete_confirm_pairing`
+           enumerates the callers and pins that one.
 
-           The capture binding stays, and is now the only thing keeping
-           the remaining real-user path correct —
+           The capture binding stays, and is what keeps a
+           non-bubbling dispatch correct —
            `deleteConfirm.dispatchEvent(new Event("change"))` — and
            `new Event` does NOT bubble by default. A bubble-phase
            delegated listener never sees those, so the tick would clear
@@ -5250,10 +5266,10 @@
            all three cases — non-bubbling dispatch, bubbling dispatch,
            real user tick.
 
-           Fixing the primitive rather than the four callers is
-           deliberate: the two lobby dispatches already pass
-           `{ bubbles: true }`, so both idioms are in the tree and a
-           listener handling only one is a trap for the fifth caller. */
+           Fixing the primitive rather than each caller is
+           deliberate: dispatches with and without `{ bubbles: true }`
+           have both existed in the tree, and a listener handling only
+           one is a trap for the next caller. */
         document.addEventListener("change", function (event) {
           var cb = event.target;
           if (!cb || !cb.getAttribute) return;

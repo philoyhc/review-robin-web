@@ -2493,6 +2493,18 @@
            collapses to zero when the input is visible. */
         margin-right: 10px;
       }
+      /* E36 — the Delete confirm tick on each Data shape sub-card,
+         on its own line beneath ``.data-shape-actions`` and flushed
+         right under the buttons it gates. A wrapper rather than a
+         right-aligned label, so the empty space to its left is not
+         a click target for the checkbox. No margin of its own: the
+         ``.confirm-label`` inside keeps the primitive's
+         ``--space-4`` top margin, which sets it apart from the
+         buttons as it does from every other control it gates. */
+      body.ui-v2 .data-shape-delete-confirm {
+        display: flex;
+        justify-content: flex-end;
+      }
       @media (max-width: 800px) {
         body.ui-v2 .extract-data-grid {
           grid-template-columns: 1fr;

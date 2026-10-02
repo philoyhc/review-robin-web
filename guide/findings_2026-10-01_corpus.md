@@ -175,8 +175,8 @@ the spec should say so.
 **New from the fix batches (2026-10-02).** Each was found while
 fixing a no-ruling row (#2731–#2738). **All eight ruled 2026-10-02.**
 
-- **E36** — **Ruled: a delete-confirmation checkbox and warning below
-  the Data shaper's button row, flush right.** Code PR to follow.
+- ~~**E36**~~ — **Ruled: a delete-confirmation checkbox and warning below
+  the Data shaper's button row, flush right. Done in #2741.**
 - ~~**C1**~~ — **Ruled: follow the code. Done in #2739.** The Lock /
   Unlock toggle renders only while the card is available (`draft`,
   no responses); `quick_setup_card_spec.md` and `session_home.md` now
@@ -383,7 +383,7 @@ One line each: id · severity · where · finding · decides. A line with no
 - `operator_button_audit.md`
   - ~~E30 med-low · rows #11–13 and #123–125 each appear twice; give the later rows the next free ids.~~ Done in #2737.
   - E31 med · write/deepen · ~~unaudited: the lobby expander, Extract data, the Instruments toggles, the chrome Guide/Admin links~~ done in #2737 (Rehydrate stays unaudited while it is gated off) · ~~the R/≡ toggle role is *author*~~ ruled Toggle, done in #2739.
-  - E36 med · new · the Data shaper's Delete (audit row 217) is `btn destructive` with no confirm step, against the audit's cross-page convention 6 · author.
+  - ~~E36 med · new · the Data shaper's Delete (audit row 217) is `btn destructive` with no confirm step, against the audit's cross-page convention 6 · author.~~ Done in #2741.
   - E32 med · code (§2).
   - ~~E33 low-med · `:808` · `.tab-strip-page` uses tokens, not those literals.~~ Done in #2737.
   - ~~E34 low · rows 119, 121.~~ Done in #2737.

@@ -620,7 +620,7 @@ once, as are the Extract Setup card's per-entity rows
 | 214 | Data shaper, shape sub-card | Save | `<button type="button">` | `btn secondary` | Secondary | `POST …/extract-data/shapes`, or `PATCH …/shapes/{shape_id}` once saved. Enabled in edit mode when the shape is valid and has unsaved changes |
 | 215 | Data shaper, shape sub-card | Edit | `<button type="button">` | `btn secondary` | Secondary | Saved mode only; switches the sub-card into edit mode |
 | 216 | Data shaper, shape sub-card | Cancel | `<button type="button">` | `btn secondary` | Secondary | Abandons unsaved edits and unselects the sub-card; disabled outside edit mode |
-| 217 | Data shaper, shape sub-card | Delete | `<button type="button">` | `btn destructive` | Destructive | `DELETE …/shapes/{shape_id}`. Always enabled and **not** behind a confirm checkbox (compare convention 6 below); on the only sub-card it resets that card to blank |
+| 217 | Data shaper, shape sub-card | Delete | `<button type="button">` | `btn destructive` | Destructive | `DELETE …/shapes/{shape_id}`. Ships `disabled aria-disabled="true"`; the sub-card's confirm checkbox beneath the action row, flushed right, enables it (convention 6, keyed `shape-{id}` / `shape-new-N`). Cancel or a change of shape clears the tick. On the only sub-card it resets that card to blank |
 | 218 | Data shaper, shape sub-card | +Shape | `<button type="button">` | `btn secondary` | Secondary | Spawns a blank sub-card after this one and selects it |
 | 219 | Data shaper, shape sub-card | Download | `<a download>` | `btn secondary` | Secondary (Disabled until saved) | `aria-disabled` until the shape has an id, then `GET …/shapes/{shape_id}/download.csv` |
 | 220 | Data shaper | Zip all | `<a>` | `btn secondary` | Secondary (Disabled) | `href="#"` and `aria-disabled="true"` unconditionally — a placeholder |
@@ -874,13 +874,16 @@ per-field overrides.
 ### 6. Confirm-checkbox-gates-button
 
 Every destructive button (delete-all, delete-data, delete-session,
-revert, replace-upload, per-instrument delete, clear-responses) ships
-`disabled` and is enabled only while a paired confirm checkbox is
-ticked. **The pairing is declarative and there is one implementation**:
-`data-delete-confirm="KEY"` on the checkbox, `data-delete-btn="KEY"` on
-the button, wired by a single global JS block in
-`app/web/templates/base.html`. Any operator or reviewer page picks it
+revert, replace-upload, per-instrument delete, per-shape delete,
+clear-responses) ships `disabled` and is enabled only while a paired
+confirm checkbox is ticked. **The pairing is declarative and there is
+one implementation**: `data-delete-confirm="KEY"` on the checkbox,
+`data-delete-btn="KEY"` on the button, wired by a single global JS block
+in `app/web/templates/base.html`. Any operator or reviewer page picks it
 up by tagging the pair; no page carries its own confirm-checkbox JS.
+The one thing a page may do is **clear** a tick whose context has gone
+— uncheck it and dispatch `change` — as the Data shaper does on Cancel
+or a change of shape (#217); the pairing then re-disables the button.
 
 ## Maintenance
 

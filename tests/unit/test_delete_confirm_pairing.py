@@ -2,16 +2,20 @@
 carrying its load-time pass.
 
 `data-delete-confirm="{key}"` enables its paired `data-delete-btn="{key}"`
-only while ticked. Nine templates use it.
+only while ticked. Ten templates tag a pair (counted 2026-10-02 by
+`data-delete-confirm=` outside `base.html`; `session_assignments.html`
+names the pairing only in a comment, so it is not one).
 
 Three properties, each load-bearing for a different reason:
 
 1. **Delegated**, so a pair injected after load works with no
    registration. 19P.1 rung 2b builds a confirm and a Delete inside the
    row expander in JS; a listener bound at load could never reach them.
-2. **Capture-bound**, because four roster pages re-run the gate by hand
-   with `dispatchEvent(new Event("change"))` and `new Event` does not
-   bubble. A bubble-phase delegated listener misses those entirely: the
+2. **Capture-bound**, because a page that re-runs the gate by hand
+   with `dispatchEvent(new Event("change"))` sends an event that does
+   not bubble. The four roster pages did until 19P.3; the Data shaper
+   (E36) does today, with `{ bubbles: true }`. A bubble-phase delegated
+   listener misses a non-bubbling dispatch entirely: the
    tick clears while `Delete` stays enabled — a destructive control
    whose disabled state lies. Reproduced in Chromium before the fix.
 3. **The load-time pass**, because it sets each button's starting
@@ -132,18 +136,28 @@ def test_every_programmatic_dispatch_is_reachable(pairing: str) -> None:
     # replaced predicted. Every roster page rebuilds its panel wholesale
     # on each selection change, so a fresh panel carries a fresh unticked
     # checkbox and there is no surviving one to re-run a gate on. No
-    # template dispatches at a confirm checkbox any more.
+    # roster page dispatches at a confirm checkbox any more.
     #
     # That note asked whoever landed this rung to replace the floor with
     # the real claim rather than lower it to zero, which would be the
     # vacuity it was guarding — "found nothing" and "there is nothing to
     # find" are the same result under a `>= 0`. So the claim is stated
-    # directly: the set is empty, and if a template ever dispatches
-    # again, `unreachable` below is what has to hold.
-    assert dispatches == [], (
-        "a template dispatches `change` at a confirm checkbox again. That "
-        "is allowed, but it has to bubble or be capture-bound — see the "
-        "assertion below, which is the rule this file exists for."
+    # directly: the set is enumerated, and for every member `unreachable`
+    # below is what has to hold.
+    #
+    # **E36 brought one back, on a page that is not a roster.** The Data
+    # shaper's sub-cards persist across a change of shape rather than
+    # being rebuilt, so a tick left on would outlive the selection it was
+    # given under; the page clears it and dispatches so the pairing
+    # re-closes `Delete`. It bubbles, and the pairing is capture-bound
+    # besides.
+    assert dispatches == [
+        ("session_extract_data.html", "deleteConfirm", True),
+    ], (
+        "the set of templates dispatching `change` at a confirm checkbox "
+        f"changed: {dispatches}. That is allowed, but each has to bubble "
+        "or be capture-bound — see the assertion below, which is the rule "
+        "this file exists for — and this list is updated to name it."
     )
     unreachable = [d for d in dispatches if not d[2] and not capture_bound]
     assert not unreachable, (
