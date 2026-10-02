@@ -403,12 +403,24 @@ def send_invitation(
 def lookup_invitation_by_token(
     db: Session, raw_token: str
 ) -> tuple[Invitation, ReviewSession, Reviewer] | None:
+    """The invitation a raw token names, or None.
+
+    Only an **active** reviewer's invitation resolves. An inactive
+    reviewer is treated as if they were not a reviewer at all (author's
+    ruling, 2026-10-02), so their token answers as an unknown one —
+    the landing's 404, the same answer ``require_reviewer_in_session``
+    gives a signed-in non-reviewer — for whoever follows it, and the
+    landing never reaches ``record_open``.
+    """
     token_hash = hash_token(raw_token)
     row = db.execute(
         select(Invitation, ReviewSession, Reviewer)
         .join(ReviewSession, ReviewSession.id == Invitation.session_id)
         .join(Reviewer, Reviewer.id == Invitation.reviewer_id)
-        .where(Invitation.token_hash == token_hash)
+        .where(
+            Invitation.token_hash == token_hash,
+            Reviewer.status == "active",
+        )
     ).first()
     if row is None:
         return None
