@@ -25,29 +25,35 @@ useful while the session is mid-lifecycle:
 - **Operations-row pages** — full-width, just below the chrome,
   on Assignments / Validate / Invitations / Responses. (Previews was
   the fifth until it retired at 19Q Item 1.)
+- **Extract data** (`/operator/sessions/{id}/extract-data`) — just
+  below the chrome.
 
 The card does not render on Setup-row pages (Reviewers / Reviewees /
 Relationships / Observers / Instruments / Email Template) or on the
-Extract data and outbox surfaces.
+outbox surfaces.
 
-Each host page sets `next_action_return_to` to its Operations-row
-slug so that every POST the card emits — `/workflow/prepare`,
-`/workflow/activate`, `/workflow/close`,
-`/workflow/release-responses`, `/workflow/stop-release`,
+Each host page sets `next_action_return_to` to its slug so that
+every POST the card emits — `/workflow/prepare`, `/workflow/activate`,
+`/workflow/close`, `/workflow/release-responses`, `/workflow/stop-release`,
 `/workflow/archive`, `/revert`,
 `/invitations/send-all`, `/invitations/remind-incomplete` —
 303s back to the page that rendered the card (except Archive,
-which 303s to `/operator/sessions/archived`). Allowed slugs:
+which 303s to `/operator/sessions/archived`). The host pages pass
+`home` (Session Home), `assignments`, `validate`, `invitations`,
+`responses` and `extract-data`.
 
-- `home` (Session Home; resolved server-side to
-  `/operator/sessions/{id}`)
-- `reviewers` / `reviewees` / `assignments` / `instruments` (Setup
-  + Assignments)
-- `validate` / `invitations` / `responses` (the
-  remaining Operations-row pages)
-
-The allowlist is `_REVERT_RETURN_TO` in
-`app/web/routes_operator/_shared.py`.
+There are two allowlists. `_REVERT_RETURN_TO` in
+`app/web/routes_operator/_shared.py` governs the card's POST
+redirects: `reviewers` / `reviewees` /
+`relationships` / `observers` / `assignments` / `instruments` /
+`validate` / `invitations` / `responses` / `extract-data`, each
+resolving to `/operator/sessions/{id}/{slug}`. `home` is not in it;
+it, and any value outside the list, resolves to
+`/operator/sessions/{id}`. `_WORKFLOW_RETURN_TO`
+(`_REVERT_RETURN_TO | {"home"}`, in
+`app/web/routes_operator/_workflow.py`) governs which `return_to`
+the Activate warnings-detour URL carries through to Validate, so
+`home` survives that hop.
 
 ## Inputs the card reads
 
@@ -76,10 +82,11 @@ returns:
   instrument is not configured (checked via
   `instruments.has_unconfigured`, which returns `True` when the
   session has zero instruments OR any instrument fails the
-  per-model `is_configured(instrument)` predicate). Legacy
-  instruments are configured iff `rule_set_id IS NOT NULL`;
-  new-model instruments are configured iff they have at least
-  one `visible=True` response field.
+  `is_configured(db, instrument)` predicate). There is one rule
+  for every instrument: configured iff it has at least one
+  `visible=True` response field **and** all three Band 1 links
+  touched (`band1_touched_links`). A NULL `rule_set_id` does not
+  fail it.
 - `is_pre_generate` — retained for external consumers; the card's
   state cascade does not branch on it.
 - `invitations_generated` — `True` iff at least one `Invitation`
@@ -106,7 +113,8 @@ returns:
   `lifecycle.build_readiness_report`.
 - `setup_checklist` — three-boolean dict (`reviewers_ok`,
   `reviewees_ok`, `instruments_configured_ok`) driving the
-  State 1 right-column checklist.
+  right-column checklist, which renders in every draft state
+  (1, 2 and 3), not State 1 alone.
 - `super_failure` — `dict | None` decoded from the redirect's
   `?super_status=failed&super_button=...&super_step=...&super_error=...`
   query-param set via `views.parse_super_failure`. Slots:
@@ -133,10 +141,10 @@ returns:
   modal payload for the Activate button when a manual Activate
   click would cancel pending auto-sends, built by
   `build_manual_activate_cancellation`. Shape:
-  `{"text": "N scheduled auto-send(s) will be cancelled…",
-  "count": int, "pending_fires": list[str]}`. `None` when nothing
-  would be cancelled. The modal lives on the button itself, not
-  the right column — see §"Manual-activate cancellation modal".
+  `{"pending_count": int, "message": str}`. `None` unless the
+  session is `validated`, `scheduled_activate_at` is set and
+  `invite_offsets` is non-empty. The modal lives on the button
+  itself, not the right column — see §"Manual-activate cancellation modal".
 - `next_action_return_to` — the `return_to` slug, passed
   through.
 
@@ -499,7 +507,7 @@ between Prepare and Activate is caught before the live flip.
 When the report has non-blocking findings, the route 303s to
 the **warnings detour** at `/validate?activate=1`; the operator
 acknowledges warnings inline and the Validate page's banner
-re-POSTs to `/workflow/activate` with
+POSTs to the per-step `/activate` route (`session_activate`) with
 `acknowledge_warnings=true`. When the report has errors (a
 regression vs the Prepare report), Activate raises and the route
 303s back with `super_status=failed`.
@@ -521,8 +529,9 @@ directly. Instead it 303s to
 `/operator/sessions/{id}/validate?activate=1&return_to=...`. The
 Validate page renders a yellow `.banner.banner-warning` with the
 warnings inline + an "Acknowledge and activate" submit; the
-operator clicks Acknowledge, and a follow-up `/workflow/activate`
-POST fires from that banner with `acknowledge_warnings=true`.
+operator clicks Acknowledge, and a follow-up `/activate` POST
+(not `/workflow/activate`) fires from that banner with
+`acknowledge_warnings=true`.
 
 Under the `W` overlay — States 4, 5 or 6 with `needs_acknowledge` — the
 workflow card renders the Activate session button as an `<a>` to the same
@@ -595,8 +604,9 @@ Pre-flight gates:
 - **Activate** — session not yet `validated` → 303 with
   `super_button=activate&super_step=precondition&super_error=Run+Prepare+session+before+activating.`
 - `is_setup_empty` is True → no defensive gate at the route
-  layer; the workflow card renders the Prepare button as inert
-  in State 1 so the form can't post.
+  layer; the workflow card renders no Prepare button in State 1
+  (`prepare_visible` excludes a setup-empty draft), so there is no
+  form to post.
 
 ### Other button slots
 
@@ -678,7 +688,7 @@ sub-module (`app/web/routes_operator/_workflow.py`):
 
 - **Close session** posts to
   `/operator/sessions/{id}/workflow/close` via
-  `next-action-close-form`. Live in State 9 only
+  `next-action-close-form`. Live in States 7, 8 and 9
   (`close_visible = is_ready`). Calls `lifecycle.expire_session`
   — the service keeps the enum's name, the button keeps the
   operator's — for `ready → expired` + closes every instrument
@@ -753,9 +763,9 @@ item; there's no separate heading row.
 
 | State | Per-state status detail |
 | --- | --- |
-| **1** (setup empty) | **Setup checklist** — three inline entries (Reviewers / Reviewees / Instruments), each prefixed by a ✓ or ✗ pill and linked to the relevant Operations-row page. Wraps on narrow viewports. The Instruments entry is `instruments_configured_ok`, i.e. `not has_unconfigured`: every instrument has at least one visible response field **and** all three Band 1 links touched (`instruments/_instrument_crud.py` `configured_counts`). It is **not** a rule-pinning check — a NULL `rule_set_id` is the Full Matrix default and does not fail it. |
-| **2** (draft, not yet validated) | (no detail) |
-| **3** (draft + validation errors) | **Validation issues** — error / warning / info count pills inline, followed by a single **Review on Validate** link (rendered by `operator/partials/_next_action_issue_list.html`). The card carries the counts, not the issues: the Validate page is the authoritative diagnostic surface, and reproducing its table here repeated one *Fix* link per issue (19Q Item 4). |
+| **1** (setup empty) | **Setup checklist** — renders in every draft state (1, 2 and 3), not State 1 alone, so an all-✓ row confirms the operator is ready to Prepare. Three inline entries (Reviewers / Reviewees / Instruments), each prefixed by a ✓ or ✗ pill and linked to the relevant Operations-row page. Wraps on narrow viewports. The Instruments entry is `instruments_configured_ok`, i.e. `not has_unconfigured`: every instrument has at least one visible response field **and** all three Band 1 links touched (`instruments/_instrument_crud.py` `configured_counts`). It is **not** a rule-pinning check — a NULL `rule_set_id` is the Full Matrix default and does not fail it. |
+| **2** (draft, not yet validated) | **Setup checklist** only (as State 1). |
+| **3** (draft + validation errors) | **Setup checklist** (as State 1), then **Validation issues** — error / warning / info count pills inline, followed by a single **Review on Validate** link (rendered by `operator/partials/_next_action_issue_list.html`). The card carries the counts, not the issues: the Validate page is the authoritative diagnostic surface, and reproducing its table here repeated one *Fix* link per issue (19Q Item 4). |
 | **4** (validated, no invites) | **Status** — "Setup validated." |
 | **4Err** (validated + errors, defensive) | Same shape as State 3 — **Validation issues** + pill row + Validate link. |
 | **5** (validated + invites generated) | Same as State 4 — **Status** — "Setup validated." |
@@ -829,12 +839,15 @@ anchor):
 
 | Session state | `scheduled_activate_at` | Signal |
 | --- | --- | --- |
-| `draft` | unset | (none) |
-| `draft` | set, in future | ⚠ "Scheduled activation at «X» — currently inactive: Prepare session before then or the schedule will skip." |
-| `draft` | set, in past (after a skip) | ⓘ "Scheduled activation at «X» skipped — session was not validated." One-shot, clears on next operator interaction. |
-| `validated` | unset | (none) |
-| `validated` | set, in future | ✓ "System will auto-activate at «X». You can also click Activate now." |
+| any but `ready` | unset, no skip / failure event (below) | (none) |
+| `draft`, `expired` or `archived` | set | ⚠ "Scheduled activation at «X» — currently inactive: Prepare session before then or the schedule will skip." |
+| any but `ready` | unset, and the session's newest audit event is `session.scheduled_activation_skipped` / `session.scheduled_activation_failed_persistent` | ⓘ "Scheduled activation at «X» — reason: «reason»." (the failed event reads "Scheduled activation gave up at «X» — …"), «X» and «reason» from that event. One-shot: any newer audit event for the session clears it. |
+| `validated` | set | ✓ "System will auto-activate at «X». You can also click Activate now." |
 | `ready` | (any — moot post-activation) | (none — the existing "Activated at «X»" treatment covers it) |
+
+`build_scheduled_activation_caption` returns `None` early only for
+`ready`, so the skip / failure notice and the ⚠ row also reach
+`expired` and `archived`.
 
 See `guide/archive/segment_18G_scheduled_events.md` Part 1 for the
 service-side contract (editor gate, persistence across
@@ -844,7 +857,8 @@ invalidation, fire-time skip semantics).
 
 Built by `views.build_auto_send_invites_caption` from
 `sessions.invite_offsets` + `scheduled_activate_at` + session
-state + whether any `Invitation` rows exist. Two preconditions
+state + whether any `Invitation` rows exist. «X» is the earliest
+fire moment the offsets resolve to against Start. Two preconditions
 gate the trigger:
 
 - **Prepared** — `session.status` is `validated` or `ready`. The
@@ -858,17 +872,28 @@ gate the trigger:
 | `invite_offsets` | `scheduled_activate_at` | Prepared? | Invitations created? | Signal |
 | --- | --- | --- | --- | --- |
 | empty / null | (any) | (any) | (any) | (none) |
-| set | unset | (any) | (any) | ⓘ "Auto-send invites are configured but currently inactive — no Start to anchor against. They reactivate when Start is re-set." |
+| set | unset | (any) | (any) | ⓘ "Auto-send invites are configured (N entries) but currently inactive — no Start to anchor against. They reactivate when Start is re-set." |
 | set | set | no (draft) | (any) | ⚠ "Auto-send scheduled at «X» — currently inactive: Prepare session before then or these will skip." |
-| set | set | yes | no | ⚠ "Auto-send scheduled at «X» — currently inactive: create invitations before then or these will skip." |
+| set | set | yes (`validated`) | no | ⚠ "Auto-send scheduled at «X» — currently inactive: there are no invitations to send. Prepare creates one per eligible reviewer — run Prepare session before then, or these will skip." |
+| set | set | yes (`ready`) | no | ⚠ "Auto-send scheduled at «X» — currently inactive: there are no invitations to send. Creating them needs Prepare, which an open session cannot run — revert to draft (this stops responses), fix the roster, then Prepare and activate again before then, or these will skip." |
 | set | set | yes | yes | ✓ "Auto-send scheduled at «X». System will dispatch automatically; you can also Send all now." |
+
+In this table **Prepared?** follows the trigger: `validated` or `ready`.
+**Known defect:** the caption builder tests `is_draft` and then
+`is_ready`, so it treats `expired` and `archived` as prepared. It can
+show those states the ✓ "System will dispatch automatically" row,
+though the trigger skips them with `not_prepared` (`is_prepared` in
+`app/services/scheduled_events/_invites.py`). The fix belongs in
+`build_auto_send_invites_caption`. Until then, the caption in those two
+states is wrong, not the contract.
 
 #### Auto-send reminders signal
 
 Built by `views.build_auto_send_reminders_caption` from
 `sessions.reminder_offsets` + `deadline` + session state +
-whether any `Invitation` rows exist. Two preconditions gate the
-trigger:
+whether any `Invitation` rows exist. «X» is the earliest fire
+moment the offsets resolve to against End. Two preconditions gate
+the trigger:
 
 - **Prepared + activated** — `session.status == "ready"`. This
   subsumes the auto-send-invites "Prepared" condition; reminders
@@ -882,9 +907,9 @@ trigger:
 | `reminder_offsets` | `deadline` | Session `ready`? | Invitations created? | Signal |
 | --- | --- | --- | --- | --- |
 | empty / null | (any) | (any) | (any) | (none) |
-| set | unset | (any) | (any) | ⓘ "Auto-send reminders are configured but currently inactive — no End to anchor against. They reactivate when End is re-set." |
+| set | unset | (any) | (any) | ⓘ "Auto-send reminders are configured (N entries) but currently inactive — no End to anchor against. They reactivate when End is re-set." |
 | set | set | no | (any) | ⚠ "Auto-send reminders scheduled at «X» — currently inactive: activate the session before then or these will skip." |
-| set | set | yes | no | ⚠ "Auto-send reminders scheduled at «X» — currently inactive: create invitations before then or these will skip." |
+| set | set | yes | no | ⚠ "Auto-send reminders scheduled at «X» — currently inactive: there are no invitations, so there is nobody to remind. This caption renders only once the session is open, and an open session cannot run Prepare — revert to draft (this stops responses), fix the roster, then Prepare and activate again before then, or these will skip." |
 | set | set | yes | yes | ✓ "Auto-send reminders scheduled at «X». System will dispatch automatically; you can also Send reminders to incomplete now." |
 
 ### Manual-activate cancellation modal
@@ -892,11 +917,14 @@ trigger:
 Drives a browser confirm dialog on the Activate button, not a
 right-column signal. The `manual_activate_cancellation` context
 key is populated when a manual Activate click would cancel
-pending auto-sends — i.e. when `scheduled_activate_at` is set in
-the future or one or more `invite_offsets` entries still resolve
-to a future fire moment. Payload: a count, a list of pending-fire
-labels, and the prose ("N scheduled auto-send(s) will be
-cancelled. Continue with manual activation?"). On confirm, the
+pending auto-sends — i.e. when the session is `validated`,
+`scheduled_activate_at` is set (the builder does not test that it
+is in the future) **and** `invite_offsets` has at least one entry.
+Payload: `pending_count`, the length of the whole `invite_offsets`
+list rather than the future-only subset, and `message`, which the
+Activate form carries as `data-manual-activate-confirm` ("N
+scheduled auto-send invitation(s) will be cancelled by activating
+now. Continue with manual activation?"). On confirm, the
 existing `/workflow/activate` POST runs and `scheduled_activate_at`
 clears in the same transaction; `invite_offsets` stays on the
 column but becomes inert via the §8.2.2 anchor-null rule (per
@@ -915,7 +943,7 @@ routes:
 | `POST /operator/sessions/{id}/workflow/release-responses` | `lifecycle.release_responses_now` | not `archived` | unchanged (stamps `responses_release_at = now()`, clears `responses_release_until`) | `session.responses_released` |
 | `POST /operator/sessions/{id}/workflow/stop-release` | `lifecycle.stop_responses_release` | not `archived` | unchanged (stamps `responses_release_until = now()`) | `session.responses_release_stopped` |
 | `POST /operator/sessions/{id}/workflow/archive` | `lifecycle.archive_session` | any non-archived state | `archived`; 303 → `/operator/sessions/archived` | `session.archived` |
-| `POST /operator/sessions/{id}/assignments/generate` | `assignments.replace_assignments` | `draft` or `validated` | unchanged | `assignments.generated` |
+| `POST /operator/sessions/{id}/assignments/generate` | `assignments.replace_assignments` | `draft` or `validated` | `draft` (`replace_assignments` calls `lifecycle.invalidate_if_validated`, so `validated` falls back to `draft`) | `assignments.generated`; `session.invalidated` (reason `assignments_generated`) when it was `validated` |
 | `POST /operator/sessions/{id}/activate` | `lifecycle.activate_session` | `validated` | `ready` | `session.activated` |
 | `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.invalidate_session` | `validated` | `draft` | `session.invalidated` |
 | `POST /operator/sessions/{id}/revert` (when `is_ready` or `is_expired`) | `lifecycle.revert_session_to_draft` | `ready` or `expired` | `draft` | `session.reverted_to_draft` |

@@ -44,12 +44,13 @@ draft                    validated                    ready           expired
 | `validated` | Validated | Readiness check passed; setup still open but signals "ready to activate". |
 | `ready` | **Activated** | Reviewer surface accepting writes; setup locked. |
 | `expired` | Closed | Session closed by the operator's Workflow-card **Close session** button (`ready → expired`, `expire_session`). Every instrument is closed; responses (drafts + submitted) are preserved. From `expired` the operator can Revert to draft (`revert_session_to_draft`) to reopen for editing. |
-| `archived` | Archived | Filed out of the active lobby; deletes no data. Written by `archive_session` / `unarchive_session`. `archive_session` accepts **any non-archived** starting state (draft / validated / ready / expired), so the Workflow card's per-session Archive button can fire from any state; the lobby bulk-archive pre-filters to `draft`. `unarchive_session` restores `archived → draft`. |
+| `archived` | Archived | Filed out of the active lobby; deletes no data. Written by `archive_session` / `unarchive_session`. `archive_session` accepts **any non-archived** starting state (draft / validated / ready / expired), so the Workflow card's `/workflow/archive` route can fire from any state, though the card renders its Archive button only in `expired` (`archive_visible`); the lobby's **Purge and archive** and the Extract data page's Archive card both go through `session_purge.purge_and_archive`, which skips any session failing `can_archive` (so `draft`, `validated` and `expired` archive, and `ready` does not). `unarchive_session` restores `archived → draft`. |
 
 The internal enum is `SessionStatus` in
 `app/services/session_lifecycle.py`. The display-label divergence
 on `ready → "Activated"` is implemented by
-`app/services/lifecycle_display.py::lifecycle_label` and applied
+`app/services/lifecycle_display.py::lifecycle_display_label`
+(registered as the Jinja filter `lifecycle_label`) and applied
 to every operator-facing surface; the enum value remains `ready`
 in URLs, logs, audit events, and CSS classes.
 
@@ -108,29 +109,17 @@ No-op for any status other than `validated`. The key invariant:
 **any setup mutation invalidates a prior validated state**, so
 the readiness check stays meaningful.
 
-Call sites (every setup-mutating service in the codebase):
-
-- `app/services/sessions.py` (session metadata edit)
-- `app/services/csv_imports.py` (reviewer + reviewee roster
-  imports)
-- `app/services/reviewers.py` (per-row reviewer CRUD + bulk
-  status flips)
-- `app/services/reviewees.py` (per-row reviewee CRUD + bulk
-  status flips)
-- `app/services/relationships.py` (pair-context import +
-  delete-all + per-row CRUD)
-- `app/services/assignments/` (`replace_assignments` +
-  `delete_all_assignments`)
-- `app/services/field_labels.py` (per-session friendly-label
-  set / clear)
-- `app/services/session_config_io/_apply.py::apply_session_config`
-  (full settings import)
-- `app/services/instruments/_instrument_crud.py`
-  (instrument CRUD)
-- `app/services/instruments/_response_fields.py` (response
-  field CRUD + bulk save)
-- `app/services/instruments/_display_fields.py` (display
-  field CRUD)
+**The rule:** every service that mutates what the readiness check
+reads — session metadata, rosters (per-row, bulk and CSV import),
+relationships, observers, instruments and their Band 1 links, fields
+and pagination, visibility policies, field labels, assignment
+generate and delete-all, and the full settings import — calls
+`invalidate_if_validated`. The Assignments page's include toggles
+(per-row Inactivate / Activate and the per-instrument Self review
+toggle) do not, and are allowed in `validated`. A list of call
+sites goes stale with the next setup service;
+`grep -rln invalidate_if_validated app/services` gives the current
+one.
 
 The invariant lives at the **mutation site**, not the route, so a
 route that forgets to wrap its service call cannot silently break
@@ -157,11 +146,15 @@ instrument in the same transaction. Pre-conditions:
   `needs_acknowledge`.)
 
 Activation also clears `Instrument.deadline_closed_at` on every
-instrument — a previously deadline-closed instrument re-opens.
+instrument — a previously deadline-closed instrument re-opens. In
+the same transaction it clears `scheduled_activate_at` (a manual
+Activate and the scheduled trigger both consume the schedule) and
+stamps `activated_at` if it is still NULL.
 
 Audit event: `session.activated` with `counts={"warnings": N,
 "info": N, "instruments": N}` and `context={"prev_status":
-"validated", "override_warnings": bool}`.
+"validated", "override_warnings": bool, "trigger": "operator" |
+"scheduled"}`.
 
 ### 2.5 `ready`/`expired → draft` — `revert_session_to_draft(...)`
 
@@ -228,10 +221,16 @@ state machine at the request boundary:
 Raises **HTTP 409 Conflict** when the session is not `draft` or
 `validated`. Operator setup-mutation endpoints (session edit,
 roster import, roster delete-all, relationships CRUD, assignment
-generate, assignment delete-all, Quick Setup, settings import,
-etc.) call this **first**.
+generate, assignment delete-all, etc.) call this **first**.
 
-Three exceptions to that list, all easy to mis-read:
+Four exceptions to that list, all easy to mis-read:
+
+- **Quick Setup and the settings import do not call this helper.**
+  Their handlers in `app/web/routes_operator/_quick_setup.py` test
+  `lifecycle.is_editable` inline — the same predicate — and on failure
+  return the `lifecycle` reason token, which the route turns into a
+  303 carrying `quick_setup_error=…&quick_setup_reason=lifecycle`
+  rather than a 409.
 
 - **Instrument CRUD does not call this helper.** Its ~24 route
   sites call `_require_instrument_editable` →
@@ -332,9 +331,12 @@ open or every instrument is closed.
   decides nothing now (§4 field table); its route has no UI and no
   lifecycle gate; **does not invalidate** per §2.3.
 - `observe_deadline(...)` — lazy deadline-close. Idempotent. Called
-  by the reviewer write-path predicate
-  `session_accepts_responses` and by operator GETs that render
-  per-instrument status. The first request after the deadline
+  on the reviewer surface — its GET (`review_surface` and
+  `_surface_context`; the operator preview skips it), Recall, and the write gate
+  `_require_session_accepting` ahead of save / submit / clear — and by
+  the operator Instruments page GET (`instruments_index`). The
+  predicate `session_accepts_responses` does not call it; it compares
+  `now()` with the deadline itself (§4.1). The first request after the deadline
   passes sets `accepting_responses=False` + stamps
   `deadline_closed_at` + emits one `instrument.closed
   reason=deadline` audit event per instrument.
@@ -554,7 +556,7 @@ are read-mostly so they work in any state.
 |---|---|---|
 | `session.validated` | `mark_validated` | `counts={"warnings": N, "info": N}` |
 | `session.invalidated` | `invalidate_session` (called via `invalidate_if_validated` or directly) | `reason=<string>` (`setup_mutation`, `operator_revert`, etc.) |
-| `session.activated` | `activate_session` | `counts={"warnings": N, "info": N, "instruments": N}` + `context={"prev_status": "validated", "override_warnings": bool}` |
+| `session.activated` | `activate_session` | `counts={"warnings": N, "info": N, "instruments": N}` + `context={"prev_status": "validated", "override_warnings": bool, "trigger": "operator" \| "scheduled"}` |
 | `session.reverted_to_draft` | `revert_session_to_draft` | `counts={"closed_instruments": N, "responses_at_revert": N}` |
 | `session.expired` | `expire_session` (Workflow-card **Close session**) | `counts={"closed_instruments": N}` |
 | `session.archived` | `archive_session` | `changes={"status": [<from_status>, "archived"]}` |

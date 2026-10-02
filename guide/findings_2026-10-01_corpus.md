@@ -256,22 +256,22 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~A26 low · `:268-274` · the lobby and Archived pages adopt it too, with other cookie names.~~ Done in #2732.
   - A27 low-med · `:104-116` · the server drops `response:N` keys, so a response-only cookie flickers · author: there is no flicker. The cookie decodes to `[]` and the rows keep insertion order while the badge shows a sort; fix by sorting response keys on the server, or by reordering on load.
 - `assignments.md`
-  - B1 high · `:87-90,500-511,682` · there is no `Assignment.group_key` column; it is derived by `responses.group_keys`.
+  - ~~B1 high · `:87-90,500-511,682` · there is no `Assignment.group_key` column; it is derived by `responses.group_keys`.~~ Done in #2733.
   - ~~B2 high · `:68-70,566` · inactive rows are generated · author.~~ Ruled: kept, excluded.
-  - B3 med · `:891-894` · `col_data_sample` is gone.
+  - ~~B3 med · `:891-894` · `col_data_sample` is gone.~~ Done in #2733.
   - ~~B4 med · `:1151-1167` · Validation-surfaces rules: scope, never-generated and links are *spec*; `include` is *author*.~~ Ruled: active work only.
-  - B5 low · `:159` · helper name.
-  - B6 low · `:1019,1084` · no UI posts to `/assignments/generate`.
+  - ~~B5 low · `:159` · helper name.~~ Done in #2733.
+  - ~~B6 low · `:1019,1084` · no UI posts to `/assignments/generate`.~~ Done in #2733.
   - B7 low · `:426-461` · group self-review · author.
 - `reconciling_regeneration.md` — current.
 - `workflow_card.md`
-  - B8 high · `:500-525` · the banner posts to `/activate`, not `/workflow/activate` (contradicts its own `:925`).
-  - B9 med · `:107,754` · the checklist renders in every draft state.
-  - B10 med · `:132-139,890-903` · `manual_activate_cancellation` shape, condition and copy.
-  - B11 med · `:74-82` · `is_configured` has one rule, not a legacy split.
-  - B12 med · `:830-888` · skip-notice and auto-send copy.
-  - B13 low · `:44,597,681` · Close in States 7–9; State 1 renders no Prepare; slug list.
-  - B14 low · `:918,923` · generate invalidates `validated`; the remind gate is B17.
+  - ~~B8 high · `:500-525` · the banner posts to `/activate`, not `/workflow/activate` (contradicts its own `:925`).~~ Done in #2733.
+  - ~~B9 med · `:107,754` · the checklist renders in every draft state.~~ Done in #2733.
+  - ~~B10 med · `:132-139,890-903` · `manual_activate_cancellation` shape, condition and copy.~~ Done in #2733.
+  - ~~B11 med · `:74-82` · `is_configured` has one rule, not a legacy split.~~ Done in #2733.
+  - ~~B12 med · `:830-888` · skip-notice and auto-send copy.~~ Done in #2733.
+  - ~~B13 low · `:44,597,681` · Close in States 7–9; State 1 renders no Prepare; slug list.~~ Done in #2733.
+  - ~~B14 low · `:918,923` · generate invalidates `validated`; the remind gate is B17.~~ Done in #2733.
 - `lifecycle.md`
   - B15 med · `:76-78` · `mark_validated` callers; `?validated=1` · spec + author.
   - ~~B16 med · `:260-269` · response-loss ack callers · author.~~ Ruled: the tick is the ack.
@@ -279,17 +279,17 @@ One line each: id · severity · where · finding · decides. A line with no
   - B18 med · `:663-668` · `resolve_offset` has no callers · author.
   - B19 med · `:759-770` · sweep trigger · ruled: awaits Azure (`post_azure_todo_checklist.md` item 7).
   - B20 low · `:786-799` · retry is activation-only · author.
-  - B21 med · `:306-313,552` · close reason is `manual`, not `operator` (spec); the ungated routes are *author*.
-  - B22 low · `:165,542` · `session.activated` context adds `trigger`, and activation clears `scheduled_activate_at`.
-  - B23 low · `:111-133` · state the `invalidate_if_validated` rule, not a partial call-site list.
-  - B24 low · `:51` · `lifecycle_display_label`; `lifecycle_label` is the filter.
-  - B25 low · `:237` · Quick Setup and settings import test `is_editable` inline.
-  - B26 low · `:318-324` · `observe_deadline` callers.
-  - Also G6 `:47` "pre-filters to `draft`".
+  - B21 med · `:306-313,552` · ~~close reason is `manual`, not `operator` (spec)~~ already right after #2722; the ungated routes are *author*.
+  - ~~B22 low · `:165,542` · `session.activated` context adds `trigger`, and activation clears `scheduled_activate_at`.~~ Done in #2733.
+  - ~~B23 low · `:111-133` · state the `invalidate_if_validated` rule, not a partial call-site list.~~ Done in #2733.
+  - ~~B24 low · `:51` · `lifecycle_display_label`; `lifecycle_label` is the filter.~~ Done in #2733.
+  - ~~B25 low · `:237` · Quick Setup and settings import test `is_editable` inline.~~ Done in #2733.
+  - ~~B26 low · `:318-324` · `observe_deadline` callers.~~ Done in #2733.
+  - ~~Also G6 `:47` "pre-filters to `draft`".~~ Done in #2733.
 - `validate_page.md`
   - B27 med · `:137-141` · dead verdict and lifecycle fields; the copy branches on `closed` · spec + author.
-  - B28 low · `:390` · grouped by `(gate, source)`.
-  - B29 med · `:270-273,425-430` · dead deep link · code (§2); `reviewer_missing` scope.
+  - ~~B28 low · `:390` · grouped by `(gate, source)`.~~ Done in #2733.
+  - ~~B29 med · `:270-273,425-430` · dead deep link · code (§2); `reviewer_missing` scope.~~ Done in #2733.
   - B30 med · `:409` · the §5.3 table: Prepare is the live gate (= B15).
 - `setup_pages.md`
   - ~~C11 med · `:243-245` · the Reviewees label editor is one row of three tag cells.~~ Done in #2731.
