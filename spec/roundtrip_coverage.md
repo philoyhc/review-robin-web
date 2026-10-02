@@ -63,6 +63,7 @@ responses. See `spec/rehydrate.md`.
 | `accepting_responses` | ✅ | ❌ | Settings-CSV restores the runtime open/closed flag; clone resets it (fresh draft) |
 | `order` | ⚠️ | ✅ | Settings-CSV serializes + parses it but **apply ignores it** — 1-based CSV position wins. Value round-trips only because export order matches position |
 | **`band1_touched_links`** | ✅ | ✅ | `instruments[n].band1_touched_links` in the Settings CSV; clone copies the column |
+| `session_seq` (the stable `Instrument_{N}` number) | ⚠️ | ✅ | Not in the Settings CSV. Import rebuilds the instruments and the column default numbers them 1…n in file order, so a gap (1, 3) or a post-drag sequence (1, 3, 2) comes back renumbered. Clone copies the value verbatim |
 | `deadline_closed_at`, `cached_group_pair_count/_stamp` | — | — | Runtime / cache |
 
 ### Instrument display fields (`instrument_display_fields`)

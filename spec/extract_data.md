@@ -12,16 +12,19 @@ data along the dimension the operator asks for so the actual
 analysis can happen in Excel / pandas / a notebook with the
 shape the operator already wants.
 
-The page also carries the **Extract setup** card, which exports the
+The page also carries the **Extract Setup** card, which exports the
 round-trippable Reviewers / Reviewees / Relationships / Settings CSVs
-for porting or cloning a session (`spec/csv_contracts.md`). **Both
+(and Observers, when enabled) for porting or cloning a session
+(`spec/csv_contracts.md`), and the **Archive session** card. **Both
 kinds of extract are downloaded from here** — Session Home carries no
 extract card (`spec/session_home.md` §2).
 
-> **Every card on the page drives a download route.** The intro
-> `Extract all data` card, the `By instrument` card, the two
-> metadata cards (Reviewer / Reviewee response metadata), and the
-> full-width `Data shaper` card. Chip state persists per session via
+> **Every card on the page but one drives a download route.** The
+> intro `Extract all data` card, the `By instrument` card, the two
+> metadata cards (Reviewer / Reviewee response metadata), the
+> full-width `Data shaper` card, the `Token keys` card and the
+> `Extract Setup` card. The exception is the `Archive session` card,
+> which posts a purge-and-archive. Chip state persists per session via
 > `localStorage` for the canned-lens cards and **per-shape via the
 > `data_shapes` table** for the Data shaper; every download emits an
 > audit event.
@@ -99,6 +102,10 @@ Three regions, top to bottom:
 3. **Full-width `Data shaper` card** below the grid (see
    the dedicated "Data shaper card" section below for the
    chip vocabulary + the row-key contract).
+4. **Wrap-up grid** — a second `.extract-data-grid`
+   (`align-items: start`). Left column: `Token keys` (only when
+   `observers_enabled`) with `Archive session` directly beneath
+   it; right column: `Extract Setup`.
 
 Each card on the grid shares a uniform body shape:
 
@@ -111,9 +118,11 @@ Each card on the grid shares a uniform body shape:
   single `Zip all` secondary button that issues the
   download.
 
-Chip state on every card persists via `localStorage`, keyed
-to the session id (`rrw-extract-data-chips-{session_id}`).
-Reload preserves the operator's selection.
+Chip state on every grid card persists via `localStorage`,
+keyed to the session id (`rrw-extract-data-chips-{session_id}`;
+the Self-review handling chips use
+`rrw-self-review-handling-{session_id}`). Reload preserves the
+operator's selection.
 
 ## Chip vocabulary
 
@@ -149,19 +158,24 @@ Three families of chip live on the page:
   toggle (single-label) that drops the meta-header block
   on each CSV. All toggles default to the "include" state.
 - **Self-review handling chip** (metadata cards + Data
-  shaper scope row) — single-pill three-state cycle
-  (`Include self` → `Exclude self` → `Both` → …). Drives the column-name
-  suffix (`_self` / `_noself` / `_both`) on every
-  aggregate column, the filename suffix on the download
-  (`{code}_reviewer_metadata{_suffix}.csv` and friends),
+  shaper scope row) — single-pill three-state cycle whose
+  label reads `Self-review: Include` → `Self-review: Exclude` →
+  `Self-review: Both` → … (states `include_self` /
+  `exclude_self` / `both`). Drives the column-name
+  suffix on every aggregate column (`_self` / `_noself`;
+  `both` emits the two blocks side by side), the filename
+  suffix on the download (`_self` / `_noself` / `_both`, as
+  `{code}_reviewer_metadata{_suffix}.csv` and friends),
   and the audit-event `context.self_review_handling`
   slot. The `exclude_self` state adds
   `Assignment.is_self_review.is_(False)` to the pool
   query against the canonical column from
   `guide/archive/self_review_consolidate.md`. On the
-  metadata cards the chip state lives only in the query
-  string (one-shot per download); on the Data shaper it
-  persists per-shape on
+  metadata cards the chip state reaches the server only in
+  the query string, and persists in the browser under its
+  own `localStorage` key, `rrw-self-review-handling-{session_id}`
+  (one entry per card), separate from the page's chip store;
+  on the Data shaper it persists per-shape on
   `data_shapes.self_review_handling` and round-trips
   through Settings CSV.
 
@@ -193,7 +207,7 @@ configurable surfaces below.
 
 | Chip slot | Label | Role |
 |---|---|---|
-| `by-instruments` | `By instruments` | Scope: include the by-instrument CSVs |
+| `by-instruments` | `By instrument` | Scope: include the by-instrument CSVs |
 | `reviewer-metadata` | `Reviewer response metadata` | Scope: include the reviewer metadata CSV |
 | `reviewee-metadata` | `Reviewee response metadata` | Scope: include the reviewee metadata CSV |
 | `data-shaper` | `Data shaper` | Scope: include the Data shaper outputs — drives `?data_shapes=0` on the bundle URL when off. |
@@ -250,11 +264,13 @@ greys the `Zip all` button (`aria-disabled="true"` +
 **Member CSV shape** (per
 `app/services/extracts/by_instrument_extract.py`):
 
-1. **Meta header** — instrument identity (Instrument /
-   Description / Data Type rows), per-response-field
-   metadata sub-block (Response field / Data Type / Min /
-   Max / Step / List / Helptext / **Shown when**), assignment count, pool /
-   unit-of-review / self-review configuration. **Shown when** (or
+1. **Meta header** — instrument identity (`Instrument` /
+   `Description` rows), per-response-field metadata
+   sub-block (`Response field` / `Data Type` / one
+   `Min, Max, Step, List` row carrying four cells /
+   `Helptext` / **Shown when**), then `Number of assignments`,
+   `Pool of reviewers`, `Pool of reviewees`, `Unit of review`
+   and `Self-review excluded`. **Shown when** (or
    **Required when**, under a require-mode parent) appears
    only for a field governed by a branch
    (`guide/advanced_instruments.md` Item 1), stating its parent's
@@ -313,7 +329,7 @@ type.
 | Body copy | "Per-reviewer metadata about the responses each reviewer produced — how many, when saved / submitted, against which instruments. Optimised for reviewer audit and coaching." | "Per-reviewee metadata about the responses produced about each reviewee — how many, when saved / submitted, against which instruments. Optimised for the feedback packet handed to the reviewed person." |
 | Button id | `extract-data-reviewer-metadata-zip` | `extract-data-reviewee-metadata-zip` |
 | Button target | `/operator/sessions/{id}/export/reviewer_metadata.csv` | `/operator/sessions/{id}/export/reviewee_metadata.csv` |
-| Filename | `{code}_reviewer_metadata.csv` | `{code}_reviewee_metadata.csv` |
+| Filename | `{code}_reviewer_metadata{_suffix}.csv` | `{code}_reviewee_metadata{_suffix}.csv` |
 | Audit event | `session.reviewer_metadata_extracted` | `session.reviewee_metadata_extracted` |
 
 The button label reads `Download` (not `Zip all`) on both
@@ -344,8 +360,9 @@ All default-selected.
   is off.
 - `?self_review_handling=` — `include_self` (default) /
   `exclude_self` / `both`. Drives the Self-review handling
-  chip's three-state filter + column-name suffix +
-  filename suffix (`_self` / `_noself` / `_both`). Unknown
+  chip's three-state filter, the column-name suffix
+  (`_self` / `_noself`) and the filename suffix (`_self` /
+  `_noself` / `_both`). Unknown
   values silently fall through to `include_self` so today's
   chip-less direct-URL workflows keep working.
 
@@ -532,13 +549,15 @@ Self-review handling chip, separated by vertical pipes (`|`):
 
 3. **Self-review handling chip** — inline after the empty-
    row drop chip, before the first `|`. Three-state cycle
-   (`Include self` → `Exclude self` → `Both` → …).
+   (`Self-review: Include` → `Self-review: Exclude` →
+   `Self-review: Both` → …).
    Persists per-shape on the
    `data_shapes.self_review_handling` column (see
    `spec/settings_inventory.md` §9.5). Drives the
-   column-name suffix (`_self` / `_noself` / `_both`) on
-   every aggregate column in the extract, the filename
-   suffix on the download, and the audit-event
+   column-name suffix (`_self` / `_noself`; `both` emits the
+   two blocks side by side) on every aggregate column in the
+   extract, the filename suffix (`_self` / `_noself` /
+   `_both`) on the download, and the audit-event
    `context.self_review_handling` slot. Carries
    `data-shaper-self-review-chip="data-shaper"` so the
    chips-lock-when-no-edit-mode CSS rule on
@@ -789,13 +808,11 @@ member-assignment counts on its own).
 
 ### Cross-cutting behaviours specific to the Data shaper
 
-- **Chip-state persistence.** Every chip on the page —
-  including the Data shaper card's axis, instrument,
-  response-field, identification, and aggregate chips —
-  persists `aria-pressed` via the shared
-  `rrw-extract-data-chips-{session_id}` `localStorage`
-  store described in the page's "Cross-cutting
-  behaviours" section below.
+- **Chip-state persistence.** The Data shaper's chips are
+  **not** in the page's `localStorage` stores: a shape's
+  axis, scope and column chips persist only per-shape on
+  the `data_shapes` row, and an unsaved edit is lost on
+  reload.
 - **Dynamic chip pools.** Two slots host chips that
   mount / unmount on selection:
   `data-shaper-relevant-chips` (the per-axis content
@@ -827,6 +844,13 @@ name)` with `UNIQUE (session_id, name)` so the operator
 can't save two shapes with the same name on the same
 session. Per-session (not per-operator) — every operator
 on the session sees the same shape library.
+
+**Shapes travel with a clone.** `session_clone` copies every
+saved shape in both clone modes, remapping `instrument_id` /
+`response_field_id` to the clone's rows and stamping the
+cloning operator as `created_by_user_id`. They also round-trip
+through the Settings CSV (`data_shapes[N].*`,
+`spec/csv_contracts.md` §3.3).
 
 Columns:
 
@@ -867,9 +891,13 @@ every state.
 
 #### File naming
 
-Each `Download` button serves `{code}_{slug(name)}.csv`,
-where `slug(name)` uses the same alphanumeric-plus-underscore
-sanitisation as `by_instrument_filename_slug`. Filename
+Each `Download` button serves
+`{code}_{slug}{_suffix}.csv`, where `{slug}` is
+`_slug_shape_name(name)` — alphanumerics, `-` and `_` kept,
+other runs collapsed to `_`, the same sanitization as
+`by_instrument_filename_slug`, falling back to `shape` when
+nothing survives — and `{_suffix}` is the shape's Self-review
+handling suffix (`_self` / `_noself` / `_both`). Filename
 collisions can't happen because the underlying name is
 session-unique.
 
@@ -975,8 +1003,6 @@ The wiring slice doesn't cover:
 - **Column-chip drag-to-reorder + sort-icon click** inside
   the preview row. The chips currently render in
   chip-selection order; reorder is a follow-up.
-- **Cross-session shape copy.** Saved shapes don't travel
-  when the operator clones a session. Possible v2.
 - **Per-operator privacy.** All operators on a session see
   every saved shape — no per-operator scoping.
 - **Data shaper `Zip all` integration.** Each shape's
@@ -986,15 +1012,15 @@ The wiring slice doesn't cover:
 
 ## `Token keys` card
 
-Half-width card on the left, below the full-width `Data
-shaper` card. **Conditional**: renders only when
+Half-width card at the top of the wrap-up grid's left
+column, below the full-width `Data shaper` card.
+**Conditional**: renders only when
 `session.observers_enabled` is on — the tokens are the
 deanonymization key for the observer-side Anonymized
 output and have no other consumer today, so the chrome
 matches the intro card's `token-keys` chip in being
-gated on the same flag. The right column on this row is
-intentionally empty so the card reads as a deliberate
-half-width affordance under the full-width Data shaper.
+gated on the same flag. With it off, `Archive session`
+moves up to the top of the column.
 
 | Field | Value |
 |---|---|
@@ -1022,14 +1048,81 @@ download. Closes `guide/archive/observers_clean_up.md` item 15 (originally
 planned as a paste-a-token widget on the Observers Setup
 page).
 
+## `Archive session` card
+
+Half-width card in the wrap-up grid's left column, beneath
+`Token keys` (or at the top of the column when observers are
+off). The page's one non-download card: it files the session out
+of the active lobby once the operator has the data they need.
+
+| Field | Value |
+|---|---|
+| Heading | `Archive session` |
+| Body copy | "Files the session out of the active lobby once you've extracted the data you need. Optionally purge responses, rosters, and/or the audit log first; archiving is otherwise non-destructive and reversible from the archived-sessions page." |
+| Form | `POST /operator/sessions/bulk-archive` with `session_ids={id}` and `return_to=archived` |
+| Purge checkboxes | `Archive after purging`: `Responses` (`purge=responses`), `Rosters` (`purge=rosters`), `Audit log` (`purge=audit_log`); none ticked by default |
+| Button | `.btn.danger-solid` (Alert, `spec/ui_elements.md` §6) — `Purge and archive`, or `Already archived` on an archived session |
+
+**Same route and service as the lobby's "Purge and archive"**
+(`spec/sessions_overview.md`): `session_purge.purge_and_archive`
+applies the ticked purges in the order audit log → responses →
+rosters, each a hard delete with its own audit event
+(`session.audit_log_purged` / `session.responses_purged` /
+`session.rosters_purged`), then archives. With nothing ticked it is
+a plain archive. The redirect lands on the archived-sessions index.
+
+**Gate.** `lifecycle.can_archive` — any session that is neither
+`ready` nor `archived` (`spec/lifecycle.md`). Outside it the
+checkboxes and the button render disabled, and an archived session
+adds "This session is already archived." The server re-checks the
+gate and skips a session that fails it.
+
+## `Extract Setup` card
+
+Half-width card in the wrap-up grid's right column. Exports the
+round-trippable setup CSVs (`spec/csv_contracts.md` §2 and §6) for
+porting or archiving a session. Markup in
+`operator/partials/_extract_data_card.html`; rows built by
+`build_extract_data_context` (`app/web/views/_extract_data.py`).
+
+| Field | Value |
+|---|---|
+| Heading | `Extract Setup` |
+| Body copy | "Download the setup CSVs for porting or archiving this session. Use the **Extract data** tab to download the reviewers' response data." |
+| Left column | `Reviewers`, `Reviewees` |
+| Right column | `Relationships`, `Observers` (only when `observers_enabled`), `Session settings`, `Zip all` |
+
+Each row is a title and a `Download` button (`.btn secondary`,
+with the `download` attribute). The four roster rows show their
+count in parentheses and **disable** at zero ("No reviewers to
+download yet" and so on); `Session settings` and `Zip all` are
+always live.
+
+| Row | Route (`/operator/sessions/{id}/export/…`) | Filename | Audit event |
+|---|---|---|---|
+| Reviewers | `reviewers.csv` | `{code}_reviewers.csv` | `session.reviewers_extracted` |
+| Reviewees | `reviewees.csv` | `{code}_reviewees.csv` | `session.reviewees_extracted` |
+| Relationships | `relationships.csv` | `{code}_relationships.csv` | `session.relationships_extracted` |
+| Observers | `observers.csv` | `{code}_observers.csv` | `session.observers_extracted` |
+| Session settings | `settings.csv` | `{code}_settings.csv` | `session.settings_extracted` |
+| Zip all | `bundle.zip` | `{code}_setup.zip` | `session.setup_bundle_extracted` |
+
+`Zip all` carries the four setup CSVs, plus the Observers CSV when
+`observers_enabled`. **No lifecycle gate**: the card is live in every
+session state.
+
 ## Cross-cutting behaviours
 
-**Chip-state persistence.** Every chip on the page persists
-its `aria-pressed` state via `localStorage` keyed to the
-session id (`rrw-extract-data-chips-{session_id}`). Reload
-restores the operator's last selection across all four
-cards. The store is per-session so cross-session contamination
-doesn't happen.
+**Chip-state persistence.** Every chip on the four canned-lens
+cards persists its `aria-pressed` state via `localStorage` keyed
+to the session id (`rrw-extract-data-chips-{session_id}`). The
+two metadata cards' Self-review handling chips keep their
+three-state value in a separate store,
+`rrw-self-review-handling-{session_id}`. Reload restores the
+operator's last selection across all four cards. Both stores
+are per-session so cross-session contamination doesn't happen.
+The Data shaper is outside both (see its own cross-cutting
+behaviours).
 
 **Live button-href sync.** A single inline-JS module wires
 every chip on the page to two sync functions (one for the

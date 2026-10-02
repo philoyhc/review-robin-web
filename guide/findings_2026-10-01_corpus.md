@@ -360,38 +360,38 @@ One line each: id · severity · where · finding · decides. A line with no
   - E34 low · rows 119, 121.
   - E35 low · provenance in cells; the repeated Inactivate note.
 - `csv_contracts.md`
-  - D1 med · `:451,470,686` · `session_rule_sets` keys are ordinal only, every row is emitted, and types are lowercase.
-  - D2 low · `:184` · responses are ordered by email.
-  - D3 med · `:218` · stats files are not the roster shape.
-  - D4 med · `:900` · bundle members: `observers.csv`, data shapes, `participant_tokens.csv`.
-  - D5 med · write/deepen · `:44-50,744` · the 1 MiB / 5,000-row caps; the `_read_dict_rows` shape.
-  - D6 low · bundled: 14 extract modules, "Pair context N", compact `DetailJson`, keyword-only signatures, the `visible=False` drop.
+  - ~~D1 med · `:451,470,686` · `session_rule_sets` keys are ordinal only, every row is emitted, and types are lowercase.~~ Done in #2735.
+  - ~~D2 low · `:184` · responses are ordered by email.~~ Done in #2735.
+  - ~~D3 med · `:218` · stats files are not the roster shape.~~ Done in #2735.
+  - ~~D4 med · `:900` · bundle members: `observers.csv`, data shapes, `participant_tokens.csv`.~~ Done in #2735.
+  - ~~D5 med · write/deepen · `:44-50,744` · the 1 MiB / 5,000-row caps; the `_read_dict_rows` shape.~~ Done in #2735.
+  - ~~D6 low · bundled: 14 extract modules, "Pair context N", compact `DetailJson`, keyword-only signatures, the `visible=False` drop.~~ Done in #2735.
 - `extract_data.md`
   - D7 high · `:202-207` · bundle contents · author.
-  - D8 med · write/deepen · `:21-27,987` · the Archive session (purge) card and the Extract Setup card are unspecced.
-  - D9 med · `:151-166` · the self-review chip copy and its own storage key.
-  - D10 med · `:868` · the `_self`/`_noself`/`_both` suffix.
-  - D11 med · `:978` · clone does copy DataShapes.
-  - D12 low · bundled labels, helper name, slug, identity rows.
+  - ~~D8 med · write/deepen · `:21-27,987` · the Archive session (purge) card and the Extract Setup card are unspecced.~~ Done in #2735.
+  - ~~D9 med · `:151-166` · the self-review chip copy and its own storage key.~~ Done in #2735.
+  - ~~D10 med · `:868` · the `_self`/`_noself`/`_both` suffix.~~ Done in #2735.
+  - ~~D11 med · `:978` · clone does copy DataShapes.~~ Done in #2735.
+  - ~~D12 low · bundled labels, helper name, slug, identity rows.~~ Done in #2735.
   - D13 low · `:129` · `Instrument_{N}` fallback · author.
 - `roundtrip_coverage.md`
   - D14 med · `:127` · `results_acknowledged_at` is cloned · author (likely code).
-  - D15 low · `session_seq` is absent from the matrix.
+  - ~~D15 low · `session_seq` is absent from the matrix.~~ Done in #2735.
 - `rehydrate.md`
   - D16 med · analyzer · author.
   - D17 med · code (§2).
   - D18 med · parser · author.
-  - D19 low · `:377` · closed-branch drops.
-  - D20 low · `:7` · four routes 404, not three.
+  - ~~D19 low · `:377` · closed-branch drops.~~ Done in #2735.
+  - ~~D20 low · `:7` · four routes 404, not three.~~ Done in #2735.
 - `settings_inventory.md`
-  - D21 med · §7 · missing browser keys and cookies (`rrw-extract-data-chips-*`, `rrw-self-review-handling-*`, both tag filters, `rrw_instruments_pending_open`, both sort cookies); "Photo".
-  - D22 med · §4/§5 · missing columns: five instrument ones, `profile_link`, `cohort_rule`, the observer unique constraint.
-  - D23 low · `:111` · `archive_offset` has no editor.
-  - D24 low · §8 · five env vars missing (= H12).
+  - ~~D21 med · §7 · missing browser keys and cookies (`rrw-extract-data-chips-*`, `rrw-self-review-handling-*`, both tag filters, `rrw_instruments_pending_open`, both sort cookies); "Photo".~~ Done in #2735.
+  - ~~D22 med · §4/§5 · missing columns: five instrument ones, `profile_link`, `cohort_rule`, the observer unique constraint.~~ Done in #2735.
+  - ~~D23 low · `:111` · `archive_offset` has no editor.~~ Done in #2735.
+  - ~~D24 low · §8 · five env vars missing (= H12).~~ Done in #2735.
 - `email_template_editor.md`
   - ~~D25 high · `:195,198` · email zone · author (= C18).~~ Done in #2720.
-  - D26 med · `:87-89` · fields are empty with a placeholder (contradicts `:57`).
-  - D27 low · `:289-299` · test counts; label punctuation.
+  - ~~D26 med · `:87-89` · fields are empty with a placeholder (contradicts `:57`).~~ Done in #2735.
+  - ~~D27 low · `:289-299` · test counts; label punctuation.~~ Done in #2735.
 - `architecture.md`
   - ~~F1 high · `:528,542,352` · locked Name/Email rows *are* seeded (conflicts with `instruments.md:875`).~~ Done in #2734.
   - ~~F2 med · `:320,361` · headings use `short_label`.~~ Done in #2734.

@@ -4,7 +4,8 @@
 > `/operator/sessions/rehydrate` page (Validate + Rehydrate), the
 > pre-flight analyzer, the operator-scoped stash, the responses importer,
 > and the `session_rehydrate.rehydrate_session` orchestrator — but
-> `rehydrate_enabled` ships **false**, the three routes 404, and the
+> `rehydrate_enabled` ships **false**, the four routes (the page,
+> `validate`, `commit` and `dropped.csv`) 404, and the
 > lobby button does not render. **The author ruled it incomplete on
 > 2026-10-01**: the pipeline has never been exercised on live data, and
 > a failure other than `RehydrateError` still answers 500 where
@@ -382,8 +383,11 @@ A row is dropped when any identity above fails to resolve (unknown
 reviewer, instrument, response field or reviewee), when `SavedAt` will not
 parse, when a group-scoped row's identity matches no group or the group
 has no member assignments, or when the pair exists on the roster but
-generation did not produce an assignment for it. Nothing is created to
-make a row fit.
+generation did not produce an assignment for it. A row is also dropped
+when it answers a governed field whose branch the parent field's
+imported answer closes ("its branch is closed by the parent field's
+answer") — reported once per row even when a group row fanned out.
+Nothing is created to make a row fit.
 
 `ResponseLoadResult.dropped` carries each dropped row with its reason, and
 `serialize_dropped_responses` renders the set as a CSV: the responses
