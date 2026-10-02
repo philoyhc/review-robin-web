@@ -837,8 +837,11 @@ and direct POSTs bypass the picker entirely).
   committed, such as sent invitations, stays) and is logged,
   `session.scheduled_event_failed` records it (`context.trigger`,
   `reason`; not repeated while that trigger's latest one says the
-  same), the page still renders, and the next visit tries again with
-  no attempt cap. The guard also covers activation: if writing its own
+  same, checked under the session-row lock), the page still renders,
+  and the next visit tries again with no attempt cap. A failed invites
+  pass holds activation for that pass: activation clears
+  `scheduled_activate_at`, the anchor the invite offsets resolve
+  against, so activating would strand the failed invitations. The guard also covers activation: if writing its own
   retry or skip row fails, that attempt is rolled back uncounted, so
   the three-retry cap above holds only while those writes succeed. An
   audit-schema error is re-raised — it only raises in strict mode,

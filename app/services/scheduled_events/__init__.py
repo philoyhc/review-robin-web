@@ -150,7 +150,7 @@ def observe_scheduled_events(
     pass) is the natural order below.
     """
     current = now or datetime.now(timezone.utc)
-    _run_guarded(
+    invites_ok = _run_guarded(
         db,
         session,
         trigger="invites",
@@ -163,15 +163,20 @@ def observe_scheduled_events(
             build_invite_url=build_invite_url,
         ),
     )
-    _run_guarded(
-        db,
-        session,
-        trigger="activation",
-        correlation_id=correlation_id,
-        fire=lambda: _observe_scheduled_activation(
-            db, session, now=current, correlation_id=correlation_id
-        ),
-    )
+    # Activation clears ``scheduled_activate_at``, the anchor the invite
+    # offsets resolve against, so activating after an invite failure
+    # would leave the failed invitations with no anchor to retry from.
+    # Hold activation until the invites pass succeeds.
+    if invites_ok:
+        _run_guarded(
+            db,
+            session,
+            trigger="activation",
+            correlation_id=correlation_id,
+            fire=lambda: _observe_scheduled_activation(
+                db, session, now=current, correlation_id=correlation_id
+            ),
+        )
     _run_guarded(
         db,
         session,
@@ -194,8 +199,9 @@ def _run_guarded(
     trigger: str,
     correlation_id: str | None,
     fire: Callable[[], None],
-) -> None:
+) -> bool:
     """Run one trigger so that its failure never fails the page.
+    Returns whether it ran without raising.
 
     Activation has its own retry and ``failed_persistent`` terminal
     state; invites and reminders do not yet (work in progress awaiting
@@ -211,6 +217,7 @@ def _run_guarded(
     session_id = session.id
     try:
         fire()
+        return True
     except audit.AuditDetailValidationError:
         raise
     except Exception as exc:  # noqa: BLE001 — observer must keep page rendering
@@ -225,6 +232,7 @@ def _run_guarded(
             error_text=repr(exc)[:200],
             correlation_id=correlation_id,
         )
+        return False
 
 
 def _record_failure(
@@ -240,8 +248,15 @@ def _record_failure(
     failure repeated on every page load leaves one row per trigger
     rather than one per visit. A failure to write it is logged and
     rolled back; an audit-schema error is re-raised (see
-    :func:`_run_guarded`)."""
+    :func:`_run_guarded`).
+
+    The session row is locked across the check and the write, so two
+    loads failing at once cannot both find no row and both insert one."""
     try:
+        review_session = db.get(ReviewSession, session_id)
+        if review_session is None:
+            return
+        review_session = lock_session(db, review_session)
         rows = db.execute(
             select(AuditEvent)
             .where(
@@ -255,11 +270,9 @@ def _record_failure(
             context = detail.get("context") or {}
             if isinstance(context, dict) and context.get("trigger") == trigger:
                 if detail.get("reason") == error_text:
+                    db.rollback()  # release the row lock
                     return
                 break
-        review_session = db.get(ReviewSession, session_id)
-        if review_session is None:
-            return
         audit.write_event(
             db,
             event_type=SCHEDULED_EVENT_FAILED,

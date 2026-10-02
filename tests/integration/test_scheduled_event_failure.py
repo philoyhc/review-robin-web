@@ -80,12 +80,10 @@ def test_later_triggers_still_run_after_one_raises(
     review_session = _make_session(client, db, "b20-later")
     ran: list[str] = []
     monkeypatch.setattr(
-        scheduled_events, "_observe_scheduled_invites", _boom("invites failed")
+        scheduled_events, "_observe_scheduled_invites", lambda *a, **k: None
     )
     monkeypatch.setattr(
-        scheduled_events,
-        "_observe_scheduled_activation",
-        lambda *a, **k: ran.append("activation"),
+        scheduled_events, "_observe_scheduled_activation", _boom("activation failed")
     )
     monkeypatch.setattr(
         scheduled_events,
@@ -95,7 +93,7 @@ def test_later_triggers_still_run_after_one_raises(
 
     scheduled_events.observe_scheduled_events(db, review_session)
 
-    assert ran == ["activation", "reminders"]
+    assert ran == ["reminders"]
 
 
 def test_a_repeated_failure_is_recorded_once(
@@ -210,3 +208,30 @@ def test_an_audit_schema_error_recording_the_failure_propagates(
 
     with pytest.raises(scheduled_events.audit.AuditDetailValidationError):
         scheduled_events.observe_scheduled_events(db, review_session)
+
+
+def test_an_invites_failure_holds_activation_for_that_pass(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Activation clears ``scheduled_activate_at``, the invite offsets'
+    anchor; activating after an invite failure would strand the failed
+    invitations. Reminders, anchored on the deadline, still run."""
+    review_session = _make_session(client, db, "b20-hold")
+    ran: list[str] = []
+    monkeypatch.setattr(
+        scheduled_events, "_observe_scheduled_invites", _boom("invites failed")
+    )
+    monkeypatch.setattr(
+        scheduled_events,
+        "_observe_scheduled_activation",
+        lambda *a, **k: ran.append("activation"),
+    )
+    monkeypatch.setattr(
+        scheduled_events,
+        "_observe_scheduled_reminders",
+        lambda *a, **k: ran.append("reminders"),
+    )
+
+    scheduled_events.observe_scheduled_events(db, review_session)
+
+    assert ran == ["reminders"]
