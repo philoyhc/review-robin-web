@@ -32,7 +32,7 @@ The audience name implies a **scope rule** the resolver applies in addition to t
 |---|---|
 | Peer reviewer | The reviewer's **own** submitted responses on this instrument — **never** responses keyed in by another reviewer. The stored name `peer_reviewer` is wider than the grant it names: the policy governs a reviewer viewing **their own** work post-submit / across pages of the review, never a peer's. |
 | Reviewee | Responses **about this reviewee** — or about a group this reviewee is a member of, for group-scoped instruments. Never about another reviewee or another group. |
-| Observer | All responses by all reviewers about all reviewees on the session, on instruments this observer is granted (subject to `observer_tag`). Observers are the only audience whose grant is cross-cohort. |
+| Observer | Responses on instruments granted to observers, within the observer's own **cohort rule** (`app/services/observer_cohort.py`): an observer with no rule sees no one. The grant is per instrument and applies to every observer; which observer sees which instruments is not configurable (instrument scoping inside the cohort rule is deferred, `guide/deferred_consolidated.md`). Observers are the only audience whose grant is cross-cohort. |
 
 ---
 
@@ -187,17 +187,14 @@ instrument_view_policies
   after_release_granularity     String(16)  NULL  'row' | 'aggregated' | NULL
   after_release_identification  String(16)  NULL  'identified' | 'deidentified' | NULL
 
-  observer_tag    String        NULL      (observer audience only — restrict the
-                                           grant to observers carrying this tag;
-                                           NULL = all observers on the session)
   created_at      DateTime(tz) NOT NULL
   updated_at      DateTime(tz) NOT NULL
   UNIQUE (instrument_id, audience)
 ```
 
 - One row per (instrument, audience). Upserts cover both the create and update cases.
-- Rows with both windows off (all four pair columns NULL) persist so the operator's `observer_tag` choice survives a toggle-everything-off / toggle-back-on cycle.
-- `observer_tag` only carries meaning when `audience = "observer"`; the service layer enforces NULL otherwise (no DB CHECK constraint).
+- Rows with both windows off (all four pair columns NULL) persist; the resolver reads them as off.
+- An `observer_tag` column, meant to restrict the observer grant to observers carrying a tag, was dropped unread on 2026-10-02 (`guide/findings_2026-10-01_corpus.md` A19). A settings CSV from before then still carries `…view_policies[observer].observer_tag`; the import accepts the row and drops it.
 
 ### 4.1 Default state
 

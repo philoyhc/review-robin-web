@@ -36,3 +36,55 @@ E1, E2 and E4 were checked by the author when they merged.
   run Prepare, then add a reviewer. On Validate, the
   reviewer-missing warning's **Fix on Assignments** should open
   Assignments at the top, with no dead `#reviewer-row-…` in the URL.
+
+## Email dates in the session's zone (#2720)
+
+- [ ] **The deadline reads in the session's zone.** On a session whose
+  display zone is not UTC (Singapore, say) with a 17:00 deadline, preview
+  the invitation email. `$deadline` should read 17:00, not 09:00.
+- [ ] **The submitted time does too.** Preview the responses-received
+  email for a reviewer who has submitted; `$submitted_at` reads in the
+  same zone.
+
+## Per-instrument Open / Close removed (#2722)
+
+- [ ] **No Open / Close on an instrument.** On the Instruments page of
+  an activated session, no instrument card offers Open or Close.
+- [ ] **Accepting is session-wide.** Activate a session: every
+  instrument accepts. Close session: none does, and the reviewer
+  surface goes read-only on every page.
+
+## Closed surface and reading back your own answers (#2723)
+
+- [ ] **Prev / Next survive the close.** Close a two-page session. The
+  reviewer surface shows the read-only form with Prev / Next and no
+  Save / Cancel / Submit.
+- [ ] **Raw shows them.** Set "Who can see what you wrote" → You →
+  Responses released to Raw and open a release window. The reviewer
+  sees their own values on the surface and on the summary page.
+- [ ] **Off hides them.** Set that cell off. The surface says the
+  values are hidden; the summary says the responses are not shown and
+  has no CSV link.
+- [ ] **Archive hides everything.** Archive the session; the summary
+  shows nothing.
+
+## Blocked Submit and stale sort keys (#2724)
+
+- [ ] **A blocked Submit stays on its page.** On a two-page session,
+  leave a required field empty, go to page 2 and press Submit. The
+  missing-fields card shows over page 2, and its Cancel stays on page 2.
+- [ ] **A deleted sort field doesn't block the save.** On an instrument
+  sorted by a display field, delete that field, then save the card. It
+  saves, and the remaining sort keys renumber 1, 2…
+
+## Observer tag retired (A19)
+
+- [ ] **Migrate first.** Run `alembic upgrade head`; the app then
+  starts and the Instruments page loads.
+- [ ] **An old settings CSV still imports.** Import a settings CSV
+  exported before this change (it has `…observer_tag` rows) through
+  Quick Setup. It applies without an error, and a fresh export has no
+  `observer_tag` rows.
+- [ ] **Observers still see their cohort.** On the observer collation
+  page, an observer with a cohort rule sees their counts; one with no
+  rule sees the "no rule" message.

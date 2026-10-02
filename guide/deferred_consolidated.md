@@ -819,6 +819,20 @@ database).
 
 ---
 
+#### Instrument scoping inside an observer's cohort rule (findings A19)
+
+> Ruled by the author, 2026-10-02, when `observer_tag` was retired.
+
+**Ships when taken up.** An instrument list on `Observer.cohort_rule`, so
+one observer sees some instruments and another sees others. The rule is
+JSON, so no migration; the work is the rule's schema (it forbids unknown
+keys), a picker in the rule editor, a filter in
+`materialize_cohort_assignments`, and the settings CSV. Key the list by
+the instrument's per-session number (`Instrument.session_seq`), not its
+id, or a clone and a settings import point it at the wrong instruments.
+**Lift trigger:** an operator needs different observers to see different
+instruments.
+
 #### Rehydrate is incomplete and not exposed (findings D16–D18)
 
 > Ruled by the author, 2026-10-01, on `guide/findings_2026-10-01_corpus.md`.

@@ -69,9 +69,9 @@ the spec should say so.
 
 - **A18 = G11** — The peer-reviewer `after_release` grant is authored,
   shown to reviewers on the transparency card, and read by nothing.
-- **A19** — `observer_tag` is never enforced. An editor save used to
-  wipe an imported tag as well; that half is fixed in #2719 (§2), and the
-  ruling on enforcing the tag stays open.
+- ~~**A19**~~ — **Ruled 2026-10-02: retire `observer_tag`.** Nothing read
+  it; an observer's cohort rule decides who they see. Instrument scoping
+  inside the cohort rule is deferred (`guide/deferred_consolidated.md`).
 - **F11** — The configurable welcome message, institution name and magic
   links (`spec/audience_and_identity_model.md`).
 - **F15** — The Draft/Receiving/Closed instrument statuses and the
@@ -183,7 +183,7 @@ stay in §3.
 - **B29** — `assignments.reviewer_missing` sets
   `fix_anchor="#reviewer-row-{id}"`, but its `fix_url` is `/assignments`.
   The anchor exists only on the Reviewers page, so the deep link is dead.
-- **A19** — An editor save wipes `observer_tag` (see §1).
+- ~~**A19** — An editor save wipes `observer_tag` (see §1).~~ The column is retired (§1).
 - **E32** — The Extract data page's **Purge and archive** is `btn alert`
   (the lock-card role), while the lobby uses `danger-solid` for the same
   action. Three buttons there carry inline `style="display: none;"`
@@ -239,7 +239,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - A17 low · `:59` · the observer events omit `cohort_rule_assigned` and `bulk_deleted`.
 - `visibility_policy.md`
   - A18 high · `:73-78,116` · peer grant has no reader · author.
-  - A19 high · `:35,180-190` · `observer_tag` is unenforced and wiped · author + code.
+  - ~~A19 high · `:35,180-190` · `observer_tag` is unenforced and wiped · author + code.~~ Ruled: retired.
   - A20 med · `:117` · the reviewee cell "Default `after_release`" contradicts §4.1. Read `test_doc_conventions.py` before editing the tokens.
   - A21 low · `:217` · `resolve_mode` applies no scope; the views do.
 - `sort_by_reviewee.md`

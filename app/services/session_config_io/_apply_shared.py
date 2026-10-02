@@ -65,14 +65,13 @@ class _ViewPolicySpec:
     """One ``instruments[N].view_policies[<audience>].*`` row group —
     Segment 18P PR A2. The five columns of one
     ``InstrumentViewPolicy`` row (the two per-window
-    ``(granularity, identification)`` pairs + ``observer_tag``);
+    ``(granularity, identification)`` pairs);
     the audience is the dict key on ``_InstrumentSpec``."""
 
     while_ongoing_granularity: str | None = None
     while_ongoing_identification: str | None = None
     after_release_granularity: str | None = None
     after_release_identification: str | None = None
-    observer_tag: str | None = None
 
 
 @dataclass

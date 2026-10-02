@@ -125,8 +125,6 @@ class VisibilityPolicyError(ValueError):
     - ``invalid_audience`` — ``audience`` not in :data:`AUDIENCES`.
     - ``invalid_mode`` — ``mode`` outside the per-(audience, window)
       set.
-    - ``observer_tag_misuse`` — non-NULL ``observer_tag`` supplied
-      for a non-observer audience.
     """
 
     def __init__(self, code: str, message: str) -> None:
@@ -374,7 +372,6 @@ def _validate_per_window(
     audience: str,
     while_ongoing_mode: str | None,
     after_release_mode: str | None,
-    observer_tag: str | None,
 ) -> None:
     """Per-(audience, window) cell validation for the redesigned
     visibility editor. Same error codes as :func:`_validate` so the
@@ -397,12 +394,6 @@ def _validate_per_window(
                 f"accepts modes in "
                 f"{sorted(repr(v) for v in allowed)}; got {mode!r}.",
             )
-    if observer_tag is not None and audience != "observer":
-        raise VisibilityPolicyError(
-            "observer_tag_misuse",
-            "observer_tag is only meaningful for the observer "
-            "audience.",
-        )
 
 
 def upsert_policy(
@@ -413,7 +404,6 @@ def upsert_policy(
     audience: str,
     while_ongoing_mode: str | None,
     after_release_mode: str | None,
-    observer_tag: str | None = None,
     user: User,
     correlation_id: str | None = None,
 ) -> tuple[InstrumentViewPolicy, dict[str, list[object]]]:
@@ -446,7 +436,6 @@ def upsert_policy(
         audience=audience,
         while_ongoing_mode=while_ongoing_mode,
         after_release_mode=after_release_mode,
-        observer_tag=observer_tag,
     )
 
     while_ongoing_pair: tuple[str | None, str | None] = (None, None)
@@ -468,7 +457,6 @@ def upsert_policy(
         "while_ongoing_identification": while_ongoing_pair[1],
         "after_release_granularity": after_release_pair[0],
         "after_release_identification": after_release_pair[1],
-        "observer_tag": observer_tag,
     }
     changes: dict[str, list[object]] = {}
     if existing is None:
@@ -531,17 +519,9 @@ def upsert_many(
 ) -> list[tuple[str, dict[str, list[object]]]]:
     """Upsert several audience rows in one call. ``rows`` is an
     iterable of dicts with keys ``audience`` /
-    ``while_ongoing_mode`` / ``after_release_mode`` / optional
-    ``observer_tag``. Each mode value is either ``None``
+    ``while_ongoing_mode`` / ``after_release_mode``. Each mode value is either ``None``
     ("off in this window") or one of the operator-facing labels
     ``"raw"`` / ``"anonymized"`` / ``"summarized"``.
-
-    **A row without an ``observer_tag`` key keeps the stored tag**;
-    an explicit ``None`` clears it. The instrument card's editor has no
-    tag control, so its rows carry no key, and before this a save wrote
-    every observer row back with ``observer_tag=None``, wiping a tag a
-    settings import had set (``spec/visibility_policy.md`` §4:
-    *"observer_tag choice survives"*; post_assessment_1oct E6).
 
     Validation is per-row — the first violation raises; rows
     already applied stay flushed because the route layer wraps
@@ -558,24 +538,6 @@ def upsert_many(
         text = str(value).strip()
         return text or None
 
-    def _observer_tag_for(row: dict[str, object]) -> str | None:
-        if "observer_tag" in row:
-            value = row["observer_tag"]
-            return str(value) if value is not None else None
-        # Only the observer audience keeps a tag (§4: the service holds
-        # every other row to NULL). A settings import can still store
-        # one on another audience; carrying it here would refuse the
-        # card's save with ``observer_tag_misuse``, so it is cleared.
-        if str(row["audience"]) != "observer":
-            return None
-        existing = db.execute(
-            select(InstrumentViewPolicy.observer_tag).where(
-                InstrumentViewPolicy.instrument_id == instrument.id,
-                InstrumentViewPolicy.audience == str(row["audience"]),
-            )
-        ).scalar_one_or_none()
-        return existing
-
     result: list[tuple[str, dict[str, list[object]]]] = []
     for row in rows:
         _, changes = upsert_policy(
@@ -585,7 +547,6 @@ def upsert_many(
             audience=str(row["audience"]),
             while_ongoing_mode=_mode_or_none(row.get("while_ongoing_mode")),
             after_release_mode=_mode_or_none(row.get("after_release_mode")),
-            observer_tag=_observer_tag_for(row),
             user=user,
             correlation_id=correlation_id,
         )

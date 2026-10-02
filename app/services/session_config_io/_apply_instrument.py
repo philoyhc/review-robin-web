@@ -193,7 +193,10 @@ def _apply_instrument_kv(
                 )
             setattr(vp, attr, value or None)
         elif attr == "observer_tag":
-            vp.observer_tag = value or None
+            # Retired 2026-10-02 (findings A19): nothing ever read it,
+            # and an observer's cohort rule decides who they see.
+            # Older bundles still carry the row; accept and drop it.
+            pass
         else:
             raise _ParseError(f"unknown view_policies[] attribute {attr!r}")
         return
@@ -490,7 +493,6 @@ def _apply_instruments(
                     after_release_identification=(
                         vp_spec.after_release_identification
                     ),
-                    observer_tag=vp_spec.observer_tag,
                 )
             )
             counts["view_policies"] += 1

@@ -749,9 +749,9 @@ def test_round_trip_carries_band1_touched_links(db: Session) -> None:
 def test_round_trip_carries_instrument_view_policies(db: Session) -> None:
     """18P PR A2 — the Band 3 visibility grid
     (``instrument_view_policies``) survives a serialize → apply
-    round-trip. Two audiences with distinct per-window pairs + an
-    ``observer_tag``; pre-A2 every policy was silently dropped and the
-    imported session reverted to default visibility."""
+    round-trip. Two audiences with distinct per-window pairs; pre-A2
+    every policy was silently dropped and the imported session reverted
+    to default visibility."""
     from app.db.models import InstrumentResponseField, InstrumentViewPolicy
 
     src = _session(db, code="rt-vp-src")
@@ -787,7 +787,6 @@ def test_round_trip_carries_instrument_view_policies(db: Session) -> None:
                 while_ongoing_identification="deidentified",
                 after_release_granularity="row",
                 after_release_identification="identified",
-                observer_tag="cohort-A",
             ),
         ]
     )
@@ -811,14 +810,58 @@ def test_round_trip_carries_instrument_view_policies(db: Session) -> None:
     assert rv.while_ongoing_identification is None
     assert rv.after_release_granularity == "aggregated"
     assert rv.after_release_identification == "deidentified"
-    assert rv.observer_tag is None
 
     ob = policies["observer"]
     assert ob.while_ongoing_granularity == "aggregated"
     assert ob.while_ongoing_identification == "deidentified"
     assert ob.after_release_granularity == "row"
     assert ob.after_release_identification == "identified"
-    assert ob.observer_tag == "cohort-A"
+    assert not any("observer_tag" in r.field for r in rows)
+
+
+def test_an_old_bundles_observer_tag_row_is_accepted_and_dropped(
+    db: Session,
+) -> None:
+    """``observer_tag`` was retired on 2026-10-02 (findings A19). A
+    settings CSV exported before then still carries the row; the import
+    accepts it and drops the value rather than refusing the bundle."""
+    from app.db.models import InstrumentViewPolicy
+
+    src = _session(db, code="rt-vp-old-src")
+    inst = Instrument(session_id=src.id, name="VP instrument", order=1)
+    db.add(inst)
+    db.flush()
+    db.add(
+        InstrumentViewPolicy(
+            instrument_id=inst.id,
+            audience="observer",
+            after_release_granularity="row",
+            after_release_identification="identified",
+        )
+    )
+    db.flush()
+    rows = serialize_session_config(db, src)
+    prefix = next(
+        r.field.rsplit(".", 1)[0]
+        for r in rows
+        if r.field.endswith(".after_release_granularity")
+    )
+    rows.append(Row(f"{prefix}.observer_tag", "cohort-A", "string"))
+
+    dst = _bare_session(db, code="rt-vp-old-dst")
+    result = apply_session_config(
+        db,
+        review_session=dst,
+        rows=rows,
+        user=_user(db, email="rt-vp-old@e.edu"),
+    )
+    assert result.errors == []
+    db.expire_all()
+    dst_inst = db.execute(
+        select(Instrument).where(Instrument.session_id == dst.id)
+    ).scalar_one()
+    (policy,) = dst_inst.view_policies
+    assert policy.after_release_granularity == "row"
 
 
 def test_round_trip_carries_starts_new_page(db: Session) -> None:
