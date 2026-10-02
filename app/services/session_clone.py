@@ -64,11 +64,18 @@ def _column_values(obj: object, *, skip: set[str]) -> dict[str, Any]:
     }
 
 
+def _with_suffix(base: str, suffix: str, limit: int) -> str:
+    """``base + suffix`` within ``limit`` characters, trimming ``base``
+    rather than the suffix: cutting the suffix off a long ``base`` made
+    every candidate the same string, and the search below never ended."""
+    return base[: limit - len(suffix)] + suffix
+
+
 def _unique_code(db: Session, base: str) -> str:
     """A ``sessions.code`` not yet taken — ``{base}-copy``, then
-    ``{base}-copy-2`` … (codes are unique). Truncated to the column
-    width."""
-    candidate = f"{base}-copy"[:_CODE_MAX_LENGTH]
+    ``{base}-copy-2`` … (codes are unique), with ``base`` trimmed so the
+    suffix always fits the column."""
+    candidate = _with_suffix(base, "-copy", _CODE_MAX_LENGTH)
     n = 2
     while (
         db.execute(
@@ -76,7 +83,7 @@ def _unique_code(db: Session, base: str) -> str:
         ).first()
         is not None
     ):
-        candidate = f"{base}-copy-{n}"[:_CODE_MAX_LENGTH]
+        candidate = _with_suffix(base, f"-copy-{n}", _CODE_MAX_LENGTH)
         n += 1
     return candidate
 

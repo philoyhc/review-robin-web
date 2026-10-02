@@ -192,15 +192,17 @@ def derive_rehydrate_name(
         ).scalars()
     }
 
-    def _fit(candidate: str) -> str:
-        return candidate[:_NAME_MAX]
+    # Trim the name, not the suffix: cutting the suffix off a long name
+    # made every candidate the same string, and the loop never ended.
+    def _fit(suffix: str) -> str:
+        return original_name[: _NAME_MAX - len(suffix)] + suffix
 
-    base = _fit(f"{original_name}_REHYD")
+    base = _fit("_REHYD")
     if base not in existing:
         return base
     n = 1
     while True:
-        candidate = _fit(f"{original_name}_REHYD_{n}")
+        candidate = _fit(f"_REHYD_{n}")
         if candidate not in existing:
             return candidate
         n += 1
@@ -208,8 +210,13 @@ def derive_rehydrate_name(
 
 def derive_unique_code(db: Session, *, original_code: str) -> str:
     """A ``sessions.code`` not yet taken — ``<original>-rehyd``, then
-    ``-rehyd-2`` … (codes are globally unique)."""
-    candidate = f"{original_code}-rehyd"[:_CODE_MAX]
+    ``-rehyd-2`` … (codes are globally unique), with the original
+    trimmed so the suffix always fits the column."""
+
+    def _fit(suffix: str) -> str:
+        return original_code[: _CODE_MAX - len(suffix)] + suffix
+
+    candidate = _fit("-rehyd")
     n = 2
     while (
         db.execute(
@@ -217,7 +224,7 @@ def derive_unique_code(db: Session, *, original_code: str) -> str:
         ).first()
         is not None
     ):
-        candidate = f"{original_code}-rehyd-{n}"[:_CODE_MAX]
+        candidate = _fit(f"-rehyd-{n}")
         n += 1
     return candidate
 

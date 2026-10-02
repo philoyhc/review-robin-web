@@ -255,7 +255,8 @@ is truncated to fit. Rehydrating an already-`_REHYD` session yields
 **Code.** The original `session.code` from `settings.csv` **cannot** be
 reused — `sessions.code` has a unique index. Derive a fresh unique code
 the way `session_clone._unique_code` does: `"<original code>-rehyd"`, then
-`"-rehyd-2"`, … until free.
+`"-rehyd-2"`, … until free, with the original trimmed so the suffix always
+fits the 64-char column.
 
 **Description.** Take the original `session.description` and append a
 provenance paragraph that states, succinctly, what was and wasn't brought
