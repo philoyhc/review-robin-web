@@ -36,6 +36,11 @@ log = get_logger(__name__)
 
 INVITATION_KIND = "invitation"
 
+# ``email_outbox.subject`` is ``String(255)``; Postgres refuses a longer
+# value, and a long session name can push a rendered subject past it,
+# so every outbox writer cuts the subject to fit.
+_SUBJECT_MAX = 255
+
 
 def detach_outbox(
     db: Session,
@@ -365,7 +370,7 @@ def send_invitation(
         to_email=reviewer.email,
         cc_emails=cc_emails,
         bcc_emails=bcc_emails,
-        subject=subject,
+        subject=subject[:_SUBJECT_MAX],
         body=body,
         status="queued",
     )
@@ -724,7 +729,7 @@ def send_reminder(
         to_email=reviewer.email,
         cc_emails=cc_emails,
         bcc_emails=bcc_emails,
-        subject=subject,
+        subject=subject[:_SUBJECT_MAX],
         body=body,
         status="queued",
     )
@@ -811,11 +816,6 @@ def send_reminders_to_incomplete(
         reviewer_ids=sent_reviewer_ids,
         fell_back_count=fell_back,
     )
-
-
-# ``email_outbox.subject`` is ``String(255)``; Postgres refuses a longer
-# value, and a long session name can push a rendered subject past it.
-_SUBJECT_MAX = 255
 
 
 def queue_responses_received(
