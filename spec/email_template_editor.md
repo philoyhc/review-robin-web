@@ -84,9 +84,10 @@ fixed order:
 | `cc` | text input | raw comma-separated addresses, stored verbatim |
 | `bcc` | text input | as `cc` |
 
-Each field renders pre-filled with the **effective** value — the
-operator's override if one is set, otherwise the in-code default — so
-the operator always edits the text that would actually go out. When
+Each field renders **empty unless overridden**, with the in-code
+default as its `placeholder` (shown in grey); a field with an override
+renders the override as its value, and its label (`Subject` / `Body` /
+`Cc` / `Bcc`) adds a muted "— overridden". When
 (and only when) a field has an override, a **Reset *field* to default**
 control renders beside it: a `.btn-reset` link-styled button that
 submits a *separate* one-field form (`…/setup-invite/reset`, hidden
@@ -96,7 +97,7 @@ forms sit outside the composer form's HTML scope. Saving a field
 
 On the **Responses received** tab only, one extra control sits above
 the fields: a checkbox **"Send this confirmation when a reviewer
-submits?"** (`name="enabled"`), checked by default. There is no
+submits."** (`name="enabled"`), checked by default. There is no
 separate reset for it — re-checking the box *is* the reset.
 
 **Right card — Merge tags** (`.card.merge-tags`, `<h2>` "Merge

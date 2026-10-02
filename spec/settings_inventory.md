@@ -108,7 +108,7 @@ Owners card on Session Home, `spec/session_owners.md`).
 | `scheduled_activate_at` | `DateTime(timezone=True)` | Operator-set Start anchor. When set, the lazy observer fires the scheduled `validated → ready` transition at this moment. Editor sits in the Schedule sub-grid of Create / Edit Session; save-time validator enforces a minimum lead-time of `SCHEDULED_OPERATIONAL_LEAD_HOURS` (default 1), plus the cross-field ordering rule **Start ≤ End** via `scheduled_events.validate_schedule_ordering`. Cleared as a side effect of activation (auto or manual). Persists across `validated → draft` reverts. |
 | `invite_offsets` | `JSON` (`list[str] \| None`) | Operator-set list of ISO 8601 durations anchored on `scheduled_activate_at`. Each entry resolves to a fire moment `scheduled_activate_at + offset` for the auto-send-invites trigger. Editor entries are comma-separated; per-entry save-time rules: must parse as ISO 8601 duration, must be negative (fires before Start), `\|offset\| >=` `REVIEWER_NOTICE_MIN_HOURS`, `\|offset\| <=` 10 days, resolved fire moment `>= now + SCHEDULED_OPERATIONAL_LEAD_HOURS`. Inert when `scheduled_activate_at` is unset (§8.2.2 anchor-null). |
 | `reminder_offsets` | `JSON` (`list[str] \| None`) | Operator-set list of ISO 8601 durations anchored on `deadline`. Each entry resolves to a fire moment `deadline + offset` for the auto-send-reminders trigger. Same per-entry rules as `invite_offsets` (must be negative; 10-day magnitude cap; lead-time + notice-gap minimums). Inert when `deadline` is unset. |
-| `archive_offset` | `String(16)` | Operator-set ISO 8601 duration anchored on `deadline`, resolving to `deadline + archive_offset` for the auto-archive trigger. Editor default `P30D`. **Pre-positioned inert — no consumer wired yet.** |
+| `archive_offset` | `String(16)` | ISO 8601 duration anchored on `deadline`, meant to resolve to `deadline + archive_offset` for an auto-archive trigger. **No editor**: no form writes it, so it is set only by a Settings CSV import (and carried by its export). **Pre-positioned inert — no consumer wired yet.** |
 | `responses_release_at` | `DateTime(timezone=True)` | Operator-set Release-from anchor — the moment reviewees / observers can start viewing collated results. Editor sits in the Schedule sub-grid of Create / Edit Session. Save-time validator `parse_and_validate_responses_release_at` converts a `datetime-local` value to UTC; **no minimum lead-time floor** (the operator can backdate to "immediately viewable"). Cross-field ordering rule **End ≤ Release-from** enforced by `scheduled_events.validate_schedule_ordering` after parse. |
 | `responses_release_until` | `DateTime(timezone=True)` | Operator-set absolute close datetime for the responses-release window. Editor in the Schedule sub-grid alongside Release-from — a `datetime-local` input matching the Release-from shape. Save-time validator `parse_and_validate_responses_release_until` in `app/services/scheduled_events/` enforces ordering (must close *after* `responses_release_at` when both are set) and a 365-day magnitude check (must be within 365 days of `responses_release_at`). Accepts an until without an anchor (the resolver treats the window as inert per the §8.2.2 anchor-null rule). An absolute datetime rather than an offset, so the form input and the operator's forthcoming **Stop release** button write to the same column. |
 | `relationships_enabled` | `Boolean` | Per-session toggle enabling the Relationships Setup tab and roster. Default `False`. Authored on the **User interface settings** card on the Create Session form and the Edit Session Details form. When `True`, the Relationships tab appears in the Setup chrome and the `/operator/sessions/{id}/relationships` routes resolve; when `False` those routes return 404 (gated by `require_relationships_enabled_session` in `app/web/routes_operator/_shared.py`). |
@@ -254,12 +254,17 @@ a per-instrument Danger sub-card.
 | `short_label` | `String(32)` | Short label used in the reviewer-surface chrome and in dashboards. |
 | `description` | `String(2000)` | Operator-visible explanation. |
 | `order` | `Integer` | Position within the session. |
+| `session_seq` | `Integer` | The instrument's stable per-session number — the `N` in the `Instrument_{N}` fallback label and the key for the card tint. Assigned once at creation (`max + 1` within the session) and never updated, so a drag that changes `order` leaves it alone. Not operator-editable. |
+| `starts_new_page` | `Boolean` | Page break before this instrument on the reviewer surface. Set by the Instruments page's `+Page break` / clear actions and by reorder; ignored on the first instrument. |
 | `accepting_responses` | `Boolean` | Whether reviewers can write. Set on every instrument by Activate and cleared on every instrument by the deadline, Close session or Revert; no per-instrument control. |
 | `responses_visible_when_closed` | `Boolean` | Decides nothing; kept for config round-trip. The visibility policy decides what a reviewer reads back after close (`spec/reviewer-surface.md`). |
 | `deadline_closed_at` | `DateTime` | Auto-closed timestamp; populated when the deadline passes. |
 | `sort_display_fields` | `JSON` | Operator-defined default sort spec for this instrument's reviewer-surface table. Canonical shape: `[{"display_field_id": int, "dir": "asc|desc"}, ...]`, max 3 entries. NULL or `[]` = "no operator default" (insertion order). Edited via the Sort column on the per-instrument Display Fields card; reviewer-side override + cookie persistence on top, see `spec/sort_by_reviewee.md`. |
 | `group_kind` | `String(32)` | Group-scoping flavour — one shared answer covers a whole group of reviewees instead of per-reviewee. NULL = "regular per-reviewee instrument". |
 | `rule_set_id` | `Integer` (FK → `session_rule_sets.id` ON DELETE SET NULL) | Per-instrument selection of which `session_rule_sets` row applies. NULL = "no RuleSet currently selected" — the initial state for a new instrument and the state after a reset-assignments action. |
+| `band1_touched_links` | `JSON` (`list[str] \| None`) | Which Band 1 link pills (`link1` / `link2` / `link3`) the operator has deliberately set. Until all three are present the instrument reads as not yet configured. NULL reads as none. |
+| `column_widths` | `JSON` | Per-column pixel widths from drag-resizing the Band 2 preview table (`{"identity": 200, "df_<id>": 150, ...}`); the reviewer-surface table uses them. NULL = auto layout. |
+| `band2_state` | `JSON` | The card's Band 2 display-key selections and response-field rows as last saved (`set_band2_state`). NULL = nothing selected. |
 | Display fields (per-instrument list) | rows in `instrument_display_fields` | Operator picks which reviewee attributes (name, email, tags, etc.) the reviewer sees on the response surface. |
 | Response fields (per-instrument list) | rows in `instrument_response_fields` | The actual question schema — labels, types, options. **This table is the sole source of truth for response fields.** Data type + bounds live inline on the row (`_inline_data_type` / `_inline_response_type` / `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_csv`), alongside `visible` (Boolean, default true), `help_text` and `help_text_visible`. There is no FK to a per-session type table. **Branching** (`guide/advanced_instruments.md` Item 1) adds `branch_parent_id` (self FK, `ON DELETE SET NULL`), `branch_op` (`String(8)` token), `branch_value` (Text) and, on a parent, `branch_mode` (`String(8)`, nullable; `require`, or null for Show) — written by the card's Save and the Settings CSV; see `spec/instruments.md` § "Branching between response fields". |
 
@@ -288,6 +293,7 @@ bulk inactivate-reactivate on all four pages, observers included.
 |---|---|---|
 | `name` | `String(255)` | |
 | `email` | `String(320)` | Identity used for invitation matching. |
+| `profile_link` | `String(2000)` | Optional URL. Mirrors the reviewee column. |
 | `status` | `String(32)` | `active` / `inactive`. Flipped via the per-row Edit / bulk inactivate-reactivate UI. |
 | `tag_1`, `tag_2`, `tag_3` | `String(255)` | Free-form labels. Used by rule-based assignment matching and surfaced on the reviewer surface when the corresponding column toggle is enabled. |
 
@@ -325,10 +331,11 @@ enrolled in the reviewer response surface.
 
 | Field | Type | Notes |
 |---|---|---|
-| `email` | `String(320)` | Required. Unique per session (case-insensitive check at service layer in `app/services/observers.py`). |
+| `email` | `String(320)` | Required. Unique per session: a case-insensitive check at the service layer in `app/services/observers.py`, backed by the `uq_observer_session_email` constraint on `(session_id, email)`. |
 | `display_name` | `String(255)` | Optional human-facing label. |
 | `status` | `String(32)` | `active` / `inactive`. Managed via per-row Edit / bulk inactivate-reactivate on the Observers Setup page. |
 | `tag_1` | `String(255)` | Single free-form label (no `tag_2` / `tag_3`). |
+| `cohort_rule` | `JSON` | The observer's cohort match rule — which reviewees they see — authored in the Observers page's Cohort match rule editor and validated by `CohortRuleSet`. NULL = not authored. |
 
 **Canonical spec:** `spec/setup_pages.md` (Reviewers / Reviewees /
 Relationships / Observers preview tables, column toggles, per-page
@@ -348,18 +355,23 @@ preference stored?" finds the answer quickly.
 |---|---|---|
 | `qsu_{session_id}=1` | path `/`, `HttpOnly`, `SameSite=Lax` | Quick Setup card unlock state. Set by `POST /operator/sessions/{id}/quick-setup/lock?action=unlock`; cleared by a Starlette middleware in `app/main.py` whenever the operator navigates anywhere that isn't **this session's** Home or one of its `/operator/sessions/{id}/quick-setup/...` or `/owners/...` endpoints (so leaving Home for the lobby, operator settings, `/about` or another session's Home relocks the card on return). The path is `/` so the cookie is visible on every subsequent request — without that, navigations outside `/operator/sessions/{id}/` couldn't observe and clear the cookie. |
 | `oou_{session_id}=1` | path `/`, `HttpOnly`, `SameSite=Lax` | Session Home Owners card unlock state (19S, the `qsu_` cookie's twin). Set by `POST /operator/sessions/{id}/owners/lock` with `action=unlock`; cleared by the same middleware, which keeps both cookies on the same paths — this session's Home and its `/quick-setup/...` and `/owners/...` endpoints. Visual only — the owners routes don't read it (`spec/session_owners.md` §2). |
-| `rrw-sort-{surface}-{session_id}[-{instrument_id}]` | path `/{operator\|reviewer}/sessions/{id}`, `SameSite=Lax`, 1-year Max-Age, **not** `HttpOnly` | Per-(browser, session, table) sort spec for any opt-in `<table data-rrw-sortable="...">`. Carries JSON `[{"key": "...", "dir": "asc|desc"}, ...]` in cascade order (max 3 entries; malformed JSON / unknown keys silently drop), **percent-encoded** by the browser (`encodeURIComponent`), so the SSR decoders must `unquote()` before `json.loads` (see `spec/sort_by_reviewee.md`). Surfaces: `rs` (reviewer-surface, one cookie per instrument), `reviewers` / `reviewees` / `relationships` / `assignments` / `invitations` / `responses` (operator setup + operations tables, one cookie per page). The three Setup tables also offer an `updated_at` sort key. Written by `_rrwWriteCookie` in `base.html` on every click; read by the JS on `DOMContentLoaded` to seed badges + by the route layer at render time so the initial HTML lands in the persisted order (no JS-reorder flicker). Clearing the sort writes an expired cookie. |
+| `rrw-sort-{surface}-{session_id}[-{instrument_id}]` | path `/operator/sessions/{id}` (`/me/sessions/{id}` for `rs`), `SameSite=Lax`, 1-year Max-Age, **not** `HttpOnly` | Per-(browser, session, table) sort spec for any opt-in `<table data-rrw-sortable="...">`. Carries JSON `[{"key": "...", "dir": "asc|desc"}, ...]` in cascade order (max 3 entries; malformed JSON / unknown keys silently drop), **percent-encoded** by the browser (`encodeURIComponent`), so the SSR decoders must `unquote()` before `json.loads` (see `spec/sort_by_reviewee.md`). Surfaces: `rs` (reviewer-surface, one cookie per instrument), `reviewers` / `reviewees` / `relationships` / `assignments` / `invitations` / `responses` (operator setup + operations tables, one cookie per page). The three Setup tables also offer an `updated_at` sort key. Written by `_rrwWriteCookie` in `base.html` on every click; read by the JS on `DOMContentLoaded` to seed badges + by the route layer at render time so the initial HTML lands in the persisted order (no JS-reorder flicker). Clearing the sort writes an expired cookie. |
+| `rrw-sort-lobby` / `rrw-sort-archived` | path `/`, `SameSite=Lax`, 1-year Max-Age, **not** `HttpOnly` | The same sort-spec cookie for the two session-list tables — the Sessions lobby and the archived-sessions index. Not session-scoped, so no id in the name, and read at render time by the lobby routes like the per-session ones. |
 
 ### `localStorage` (per browser, per origin; survives sessions)
 
 | Key | Surface | Purpose |
 |---|---|---|
 | `rrw-reviewer-tag-visibility` | Setup > Reviewers preview table | Per-column toggle state (Tag1 / Tag2 / Tag3). |
-| `rrw-reviewee-tag-visibility` | Setup > Reviewees preview table | Per-column toggle state (Photo / Tag1 / Tag2 / Tag3). |
+| `rrw-reviewee-tag-visibility` | Setup > Reviewees preview table | Per-column toggle state (Profile / Tag1 / Tag2 / Tag3). |
 | `rrw-relationship-tag-visibility` | Setup > Relationships preview table | Per-column toggle state (Tag1 / Tag2 / Tag3). |
 | `rrw-assignment-col-visibility` | Operations > Assignments preview table | Per-column toggle state — three groups of three (Reviewer Tag{n} / Reviewee Tag{n} / Relationship Ctx{n}). Three chip rows, one key: the key rides on the table, not the row. |
 | `rrw-invitation-tag-visibility` | Operations > Invitations table | Per-column toggle state (reviewer Tag1 / Tag2 / Tag3). |
 | `rrw-response-tag-visibility` | Operations > Responses table | Per-column toggle state (reviewee Tag1 / Tag2 / Tag3). |
+| `rrw-lobby-tag-filter` | Sessions lobby tag-filter strip | The selected tag chips and the `OR` / `AND` mode chip, as `{"tags": [...], "mode": "or"\|"and"}`. Stored tags no longer in the operator's vocabulary are dropped on load. |
+| `rrw-archived-tag-filter` | Archived-sessions tag-filter strip | The selected tag chips, as a JSON list; no mode. Same vocabulary pruning on load. |
+| `rrw-extract-data-chips-{session_id}` | Extract data page — the four canned-lens cards | `aria-pressed` state of every chip on the intro, By-instrument and two metadata cards (`spec/extract_data.md`). |
+| `rrw-self-review-handling-{session_id}` | Extract data page — the two metadata cards | Each card's Self-review handling chip state (`include_self` / `exclude_self` / `both`). |
 | `rrw-theme` | Chrome light/dark toggle (every page) | Display mode. Values `"light"` / `"dark"` (absent = light). Applied as `data-theme` on `<html>` — Light removes the attribute (bare `:root`), Dark stamps `data-theme="dark"` (the `:root[data-theme="dark"]` palette + `color-scheme: dark`). A synchronous no-FOUC `<script>` at the top of `base.html`'s `<head>` reads the key and sets the attribute before first paint; the shared `_partials/theme_toggle.html` pill (in the operator chrome + reviewer top bar) writes it. **Two-state, no OS-follow** (no `prefers-color-scheme`). Browser-local only — never synced to the server. `error.html` (standalone) carries its own copy of the same read-script + palette. |
 
 **The six column-visibility keys share one implementation and no
@@ -377,6 +389,7 @@ the pattern itself is specified in `spec/setup_pages.md`.
 | Key | Surface | Purpose |
 |---|---|---|
 | `instrumentsScrollY:{path}` | Instruments page | Restore scroll position after a Save/Edit cycle reload. |
+| `rrw_instruments_pending_open` | Instruments page | Each instrument card's open / collapsed state, captured before a reload the page triggers itself (drag reorder, `+Page break`, Cancel's discard) and restored once, then removed. |
 
 ### URL state
 
@@ -428,6 +441,16 @@ deployed environments. Source: `app/config.py`.
 | `DATABASE_URL` | `sqlite:///./review_robin_web.db` | SQLAlchemy connection string. Postgres in deployed environments; SQLite locally / in tests. |
 | `SMTP_ENCRYPTION_KEY` | `None` | Symmetric Fernet key (Base64-urlsafe-encoded 32 bytes) used to encrypt operator SMTP passwords at rest. Generate with `cryptography.fernet.Fernet.generate_key()`. Fail-loud at encrypt / decrypt time, not at startup, so local dev / tests that don't touch Operator Settings don't need it set. |
 | `AUDIT_STRICT_MODE` | `False` | When `True`, `audit.write_event` raises on a detail-shape violation. Production stays `False` (logs + writes through). Test runner flips to `True` so drift surfaces in CI. |
+| `OPERATOR_CONTACT_EMAIL` | `None` | Optional contact address on `/about` (the signed-in-but-no-access landing). When set, the page renders a `mailto:` access-request link; when unset, generic copy. |
+| `LOG_LEVEL` | `INFO` | Root level for the structured logging `app.logging_config.configure_logging` sets up. Any standard `logging` level name; an unrecognized value falls back to `INFO`. |
+| `SCHEDULED_OPERATIONAL_LEAD_HOURS` | `1` | Minimum lead time (hours) between now and a `scheduled_activate_at` set at save, and between now and each resolved auto-send fire moment (§2). |
+| `REVIEWER_NOTICE_MIN_HOURS` | `1` | Minimum `\|offset\|` (hours) of each `invite_offsets` / `reminder_offsets` entry (§2). |
+| `REHYDRATE_ENABLED` | `False` | Gates the Rehydrate page and its routes, which 404 while it is off, and the lobby button (`spec/rehydrate.md`). The test suite turns it on. |
+
+One more variable is read outside `Settings`:
+`PARTICIPANT_TOKEN_SALT` (`app/services/participant_tokens.py`), the
+deployment salt mixed into every participant token. Unset, it falls
+back to a fixed built-in default.
 
 **Canonical spec:** `docs/local_setup.md` (env-var setup),
 `docs/deployment_dev.md` (deployment-side configuration),
