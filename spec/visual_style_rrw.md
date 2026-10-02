@@ -41,7 +41,7 @@ Review Robin themes **light or dark**, chosen per-viewer and stored browser-loca
 
 ## Lifecycle state colors
 
-Sessions move through three live states (and two reserved future states; see `app/services/session_lifecycle.py` for the canonical enum). Each renders as a badge in the status strip and (where relevant) inline elsewhere:
+Sessions move through five live states (see `app/services/session_lifecycle.py` for the canonical enum and `spec/lifecycle.md` for the transitions). Each renders as a badge in the status strip and (where relevant) inline elsewhere:
 
 Each state has its **own** token pair (`--lifecycle-<state>-bg` / `-fg`, catalogued in `spec/color_tokens.md`), so a state's colour can move without disturbing the status-pill vocabulary that happens to share its hue:
 
@@ -152,26 +152,24 @@ The session-scoped chrome consists of:
 
 Specifics:
 - **Home** is double-height to span both rows, signalling that it's one level up from the phase tabs rather than a peer of any of them.
-- **Row labels** ("SETUP", "OPERATIONS") sit at the left edge of each row, in tiny text, medium weight. The `▶` glyph sits adjacent to indicate the row's tabs follow.
+- **Row labels** ("SETUP", "OPERATIONS") sit at the left edge of each row, in tiny uppercase text at weight 700. A CSS-drawn `▶` triangle sits adjacent to indicate the row's tabs follow.
 - **Row backgrounds** use a very subtle tint of the row's own accent — `--nav-strip-setup-bg` for Setup, `--nav-strip-ops-bg` for Operations.
 - **Active tab** uses an underline in the row's marker tone (`--nav-marker-setup` for Setup, `--nav-marker-ops` for Operations) — lighter than the full accent so the marker signals position without competing with the label.
 - **Active row** (the one containing the active tab): the row label renders at `--text-body` instead of `--text-subtle`, and the triangle after it emphasizes correspondingly.
 - **Hovering a tab** in a non-active row previews-emphasizes that row's label without transferring active state — gives the operator a sense of "this is the row you're about to enter."
 - **Same tab shape** across both rows. Differences between rows are carried by row labels and row tints, not by tab shape.
-- **Relationships and Observers are optional Setup tabs**, each rendered only when its per-session toggle is enabled (User interface settings on Edit Session Details). When disabled, the tab is omitted and the Setup row is correspondingly shorter.
+- **Relationships and Observers are optional Setup tabs**, each rendered only when its per-session toggle is enabled (User interface settings on Session Home's `#session-config` card). When disabled, the tab is omitted and the Setup row is correspondingly shorter.
 
 **On Home itself**: chrome renders in the same shape, with no tab active. Both rows remain visible and clickable.
-
-**On sub-pages of Home** (Edit Session, etc.): chrome renders normally. The sub-page identifies itself in the page body via H1, not in the chrome.
 
 **On Preview pages** that are children of a Setup tab: chrome renders normally with the parent Setup tab active.
 
 ### Status strip
 
-The status strip sits below the chrome and above the page body on all session-scoped pages. Composition, left to right:
+The status strip sits inside the session nav card, below the two tab rows, on all session-scoped pages. Composition, left to right:
 
 ```
-Session: [LIFECYCLE_BADGE]  ·  Reviewers: [count]  ·  Reviewees: [count]  ·  Relationships: [count]  ·  Observers: [count]  ·  Instruments: [configured / total]  ·  Email Template: [count or NOT SET UP]  ·  Invitations: [state]  ·  Responses: [state]
+Session: [LIFECYCLE_BADGE]  ·  Reviewers: [count]  ·  Reviewees: [count]  ·  Relationships: [count]  ·  Observers: [count]  ·  Instruments: [configured / total]  ·  Email Template: [Set up / Not set up]  ·  Invitations: [state]  ·  Responses: [state]
 ```
 
 Lifecycle badge first, then the Setup entities in canonical order (Reviewers, Reviewees, Relationships, Observers, Instruments, Email Template — Relationships and Observers report only when their optional Setup tab is enabled), then the two operations indicators (Invitations, Responses) at the right. Counts use the standard count-badge styling; missing/empty states use the amber empty-indicator badge.
@@ -230,7 +228,6 @@ Page-level identity is established by the breadcrumb and the active chrome tab i
 
 Exceptions:
 - **Home (Session Home / Control Panel)** — H1 is the session name, since the session is what Home represents. Lifecycle state appears as a badge in the status strip; no need to repeat in the page body.
-- **Sub-pages of Home** (Edit Session) — H1 is the sub-page name ("Edit Session"), since the chrome doesn't distinguish sub-pages from Home.
 - **Operator's Overview** (sessions list) — H1 is "Sessions" or similar, since this page sits outside session-scoped chrome.
 - **Preview pages** that are children of a Setup tab — H1 is the preview's name ("Reviewer surface preview"), not the parent tab's name.
 
@@ -293,7 +290,7 @@ Pages the operator visits when *not* working inside a specific session: the Sess
 
 **Minimal and quiet.** Non-session operator pages are visited rarely and usually as detours from the operator's main work (which happens inside sessions). The chrome should not invest visual weight in navigating between them, since operators rarely navigate between non-session pages directly.
 
-The two-row session chrome (Setup row, Operations row) **does not appear** on these pages. The status strip does not appear. Lifecycle badges do not appear. These are session-scoped affordances and have no meaning outside a session.
+The two-row session chrome (Setup row, Operations row) **does not appear** on these pages. The status strip does not appear. These are session-scoped affordances and have no meaning outside a session. Lifecycle pills appear only where a row or a count names sessions' states — the lobby's Status column and its summary pills — never as a page-level badge.
 
 #### Top bar
 
@@ -329,21 +326,14 @@ Non-session operator pages share a simple structure:
    - **H1 page title.**
    - Page content.
 
-No breadcrumb is needed; the page hierarchy is too shallow. The H1 and the user menu together orient the operator sufficiently.
+The breadcrumb is at most two deep: `Sessions` on the lobby (and on Settings), `Sessions` → `New session` / `Archived` on the lobby's children (and `Sessions` → `Rehydrate session` on the rehydrate page, which is gated off by default); About, the Guide and the Sys Admin pages render none. The H1 and the user menu together orient the operator.
 
 #### Operator's Overview (Sessions list)
 
 This page is the operator's "lobby" and is the natural landing page when signing in or returning from a session. It deserves slightly more care than other non-session pages, but uses the same chrome.
 
 - **H1:** "Sessions" or "My Sessions".
-- **Body:** A table inside a single `.card`. Columns:
-  - **Session Name** — linked to that session's Home. The name is the row's primary affordance; there's no separate Access button.
-  - **Session Code** — rendered in `<code>`.
-  - **Deadline** — `.pill.pill-info` carrying the ISO date when set; plain muted "No deadline" when unset.
-  - **Created by** — display name of the operator who created the session (falls back to email).
-  - **Created** — `YYYY-MM-DD`.
-  - **Last Modified** — `YYYY-MM-DD`.
-  - **Action** — unlabelled trailing column carrying a select-row checkbox. The column carries **no per-row Delete**: deletion from the lobby is a bulk action over the checkbox selection, so a per-row affordance here would be a second route to the same thing.
+- **Body:** A table inside a single `.card`. Its columns, their order and how each renders are specified in `spec/sessions_overview.md` § *Columns*. The Session Name links to that session's Home and is the row's primary affordance; there's no separate Access button. The trailing select-row checkbox column carries **no per-row Delete**: deletion from the lobby is an action over the checkbox selection, in the row expander, so a per-row affordance here would be a second route to the same thing.
 - **Create Session affordance:** a single Primary button labeled "Add new session", in the Filter card, present in every lobby state. **It is the page's only route to `/operator/sessions/new`** — the empty state's first-run card names this button rather than carrying a second one, because two buttons to one route is two affordances for one action (`spec/sessions_overview.md`).
 
 **A table, not a grid of session cards.** At the operator's lobby dense scannable rows matter more than per-card framing, and every column above has a natural width budget. The table takes the row-only borders and muted header treatment from the app's default table (`spec/ui_elements.md` §7) and adds no framing of its own.
@@ -465,18 +455,17 @@ The chrome stops at the action row; what happens *inside* the form (table layout
 
 #### Submission confirmation
 
-Shown after the reviewer submits all required responses for the session.
+There is no separate thank-you page. A submit that closes out every assignment in the session lands on the reviewer's **summary page** (`/me/sessions/{id}/summary`); one that leaves assignments open returns to the review surface. `spec/reviewer-surface.md` owns both routes.
 
 **Chrome:** standard reviewer top bar + page body.
 
-**Body:**
+**Body (summary page):**
 
-- Brief acknowledgement: "Thank you. Your responses have been received."
-- Optional: summary ("You completed 3 instruments across 7 reviewees.").
-- Optional: link back to the reviewer's review list, if other reviews remain.
-- No page navigation; the task is complete.
+- H1 "Your responses — [session name]", with a muted "Submitted on [date]" line under it.
+- The reviewer's submitted responses, one section per instrument, as far as the visibility policy allows.
+- A short action row: download the responses as CSV (only when at least one section is visible), recall the submission while the session is still Activated, and a link back to the reviewer dashboard.
 
-Tone: calm and brief. The reviewer is finished; the page should confirm and let them go.
+Tone: calm and brief. The reviewer is finished; the page should confirm what was received and let them go.
 
 #### Error / expired states
 
@@ -683,9 +672,10 @@ navigation"; restating in this principle's context:
   "#1: Skills" / "#2: Cultural Fit" / "#3: Recommendation", so
   operators should choose `short_label` values with
   reviewer-comprehension in mind.
-- **Description renders beside it.** The longer description is the
-  subtitle on the same row as the H2, baseline-aligned, so "what is
-  this page, and what's it for" reads in one glance. With both
+- **Description renders below it.** The longer description is a
+  muted subtitle directly under the H2, in the same heading card
+  (`.rs-instrument-subtitle`), so "what is this page, and what's it
+  for" reads in one glance. With both
   fields empty in a single-instrument session, no H2 row renders at
   all; with only a description set on such a session, the
   description takes the H2 itself (a deliberate deviation recorded
@@ -791,36 +781,6 @@ that may not work well in tabular form.
   its own reviewer pattern — alongside this one, not replacing or
   toggling it.
 
-### Doc impact
-
-`spec/operator_ui_concept.md`:
-
-- The reviewer-facing pages section gains a brief reference to this
-  principle.
-
-This document (further down):
-
-- The "Multi-instrument navigation" subsection above already
-  aligns with this principle. A one-line cross-reference here
-  clarifies the underlying rationale (added in the same change as
-  this section).
-
-`spec/instruments.md` owns the operator-side instrument surface. Not
-yet specced there, and still open design notes:
-
-- Explicit guidance to operators that instrument boundaries are
-  pacing tools, not just data-grouping tools.
-- The optional per-instrument description affordance recommended
-  above.
-- Soft-warning logic for column-type ergonomics.
-
-`spec/reviewer-surface.md` owns the response form. Not yet specced
-there, and still open design notes:
-
-- The full large-table ergonomics design.
-- Specific handling of auto-save, return-to-place, sticky headers,
-  keyboard navigation, and submission semantics.
-
 ### Cross-references for this principle
 
 - `spec/audience_and_identity_model.md` — the audience and surface
@@ -831,11 +791,9 @@ there, and still open design notes:
 - `spec/reviewer-surface.md` — the multi-instrument-aware response
   surface spec; the URL pattern, page anatomy, form scope, and
   per-page status pills implementing this principle on the live
-  surface.
+  surface. The large-table handling above is not yet written there.
 - `spec/instruments.md` — operator-side instrument design, where
   pacing decisions are made.
-- `spec/reviewer-surface.md` — the response form itself; the
-  large-table handling above is not yet written there.
 
 ---
 

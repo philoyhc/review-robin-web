@@ -321,44 +321,45 @@ One line each: id · severity · where · finding · decides. A line with no
 - `preview_hub.md`
   - ~~C21 low · `:15-18` · the `GET …/preview` 308 is unlisted.~~ Done in #2731.
 - `ui_elements.md`
-  - E1 med · retire · `:439` · `.btn-cta` has no rule (also `operator_button_audit.md:47`; drop it from `test_cascade_ties.py` CANONICAL); `.btn.danger` row.
+  - ~~E1 med · retire · `:439` · `.btn-cta` has no rule (also `operator_button_audit.md:47`; drop it from `test_cascade_ties.py` CANONICAL); `.btn.danger` row.~~ Done in #2737.
   - E2 low-med · `:690` · dead §10 primitives · author.
-  - E3 med · `:140` · status-strip slots: no Assignments pill; point at `visual_style_rrw.md`.
+  - ~~E3 med · `:140` · status-strip slots: no Assignments pill; point at `visual_style_rrw.md`.~~ Done in #2737.
   - E4 med · `:125` · hover foreground · author.
   - E5 med · `:111` · Setup underline token · author.
   - E6 low · `:457` · anchor opacity 0.55 · code (§2).
   - E7 low-med · `:275` · Workflow body min-height · author.
   - E8 low-med · §4 · grid gap 16px · author (measure first).
-  - E9 low · tallies and provenance; keep the 6px rail and the specificity tuples, which tests read.
+  - ~~E9 low · tallies and provenance; keep the 6px rail and the specificity tuples, which tests read.~~ Done in #2737.
 - `color_tokens.md`
-  - E10 low · `:308` · 4.14 / 3.55, not 3.96 / 3.41 (also in `status_history.md`, which is dated).
-  - E11 low · `:182` · `--slate-deep` is shared with the dark help-card border.
+  - ~~E10 low · `:308` · 4.14 / 3.55, not 3.96 / 3.41 (also in `status_history.md`, which is dated).~~ Done in #2737.
+  - ~~E11 low · `:182` · `--slate-deep` is shared with the dark help-card border.~~ Done in #2737.
 - `visual_style_rrw.md`
-  - E12 med · `:44` · five live states.
+  - ~~E12 med · `:44` · five live states.~~ Done in #2737.
   - E13 low-med · `:56` · status-strip surface · author.
-  - E14 med · `:161-233` · Edit Session is retired (spec); Home H1 · author (also `operator_ui_concept.md:195`).
-  - E15 med · `:339` · lobby columns; point at `sessions_overview.md` (also `operator_ui_concept.md:230`).
-  - E16 low-med · `:466` · there is no thank-you page.
-  - E17 med · `:686` · the description renders below the H2.
-  - E18 low · `:155,174,296,332` · label weight, the Email pill copy, lobby lifecycle pills, breadcrumbs.
-  - E19 low · retire · `:794-838` · the "Doc impact" section is plan residue.
+  - E14 med · `:161-233` · ~~Edit Session is retired (spec)~~ done in #2737; Home H1 · author (also `operator_ui_concept.md:195`).
+  - ~~E15 med · `:339` · lobby columns; point at `sessions_overview.md` (also `operator_ui_concept.md:230`).~~ Done in #2737.
+  - ~~E16 low-med · `:466` · there is no thank-you page.~~ Done in #2737.
+  - ~~E17 med · `:686` · the description renders below the H2.~~ Done in #2737.
+  - ~~E18 low · `:155,174,296,332` · label weight, the Email pill copy, lobby lifecycle pills, breadcrumbs.~~ Done in #2737.
+  - ~~E19 low · retire · `:794-838` · the "Doc impact" section is plan residue.~~ Done in #2737.
 - `visual_style_general.md`
   - E25–E29 med · treatments contradicted by the app · author.
   - E28 also write/deepen: a contrast-floor paragraph.
 - `operator_ui_concept.md`
-  - E20 low-med · `:208` · the app identity is a `<span>` (contradicts `:399`).
-  - E21 med · `:71,82,175` · Relationships is feature-gated too.
+  - ~~E20 low-med · `:208` · the app identity is a `<span>` (contradicts `:399`).~~ Done in #2737.
+  - ~~E21 med · `:71,82,175` · Relationships is feature-gated too.~~ Done in #2737.
   - E22 med-low · `:240` · code uniqueness (= G16).
-  - E23 med · consolidate · `:352` · reduce the Validate page description to a pointer at `validate_page.md`.
-  - E24 low · `:459` · nine operator Guide sections.
+  - ~~E23 med · consolidate · `:352` · reduce the Validate page description to a pointer at `validate_page.md`.~~ Done in #2737.
+  - ~~E24 low · `:459` · nine operator Guide sections.~~ Done in #2737.
   - Also A22 `:94`.
 - `operator_button_audit.md`
-  - E30 med-low · rows #11–13 and #123–125 each appear twice; give the later rows the next free ids.
-  - E31 med · write/deepen · unaudited: the lobby expander, Extract data, Rehydrate, the Instruments toggles, the chrome Guide/Admin links · the R/≡ toggle role is *author*.
+  - ~~E30 med-low · rows #11–13 and #123–125 each appear twice; give the later rows the next free ids.~~ Done in #2737.
+  - E31 med · write/deepen · ~~unaudited: the lobby expander, Extract data, the Instruments toggles, the chrome Guide/Admin links~~ done in #2737 (Rehydrate stays unaudited while it is gated off) · the R/≡ toggle role is *author* (audit rows 223–224 read "TBD (author)").
+  - E36 med · new · the Data shaper's Delete (audit row 217) is `btn destructive` with no confirm step, against the audit's cross-page convention 6 · author.
   - E32 med · code (§2).
-  - E33 low-med · `:808` · `.tab-strip-page` uses tokens, not those literals.
-  - E34 low · rows 119, 121.
-  - E35 low · provenance in cells; the repeated Inactivate note.
+  - ~~E33 low-med · `:808` · `.tab-strip-page` uses tokens, not those literals.~~ Done in #2737.
+  - ~~E34 low · rows 119, 121.~~ Done in #2737.
+  - ~~E35 low · provenance in cells; the repeated Inactivate note.~~ Done in #2737.
 - `csv_contracts.md`
   - ~~D1 med · `:451,470,686` · `session_rule_sets` keys are ordinal only, every row is emitted, and types are lowercase.~~ Done in #2735.
   - ~~D2 low · `:184` · responses are ordered by email.~~ Done in #2735.

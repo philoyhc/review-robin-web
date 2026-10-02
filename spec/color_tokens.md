@@ -179,9 +179,11 @@ exact 3:1, are in `guide/archive/segment_19C_refinements.md`.
 Two consequences worth knowing. `--decor-muted` also resolves to `--slate-dim`
 in dark, so the border and the decorative dividers share a value there — they
 are **independently mapped, not coupled**, and either can move alone. And
-`--marker-neutral` has `--gray-soft` / `--slate-deep` to itself: repointing
-`--border-default` rather than editing those primitives is what keeps the
-neutral nav-tab markers where they are, and is the move to repeat next time.
+`--marker-neutral` has `--gray-soft` to itself in light, and in dark shares
+`--slate-deep` with `--card-help-border`: repointing `--border-default`
+rather than editing those primitives is what keeps the neutral nav-tab
+markers (and the dark help-card edge) where they are, and is the move to
+repeat next time.
 
 ### The AA floor on text
 
@@ -306,7 +308,7 @@ token, not a borrowed one, so the next change to a border token cannot reach
 it (`--gray-mist` light / `--ink-muted` dark, carrying body text at 14.3:1 and
 11.7:1). Filled with `--border-default` instead it would read acceptably only
 while that token stayed very light, and at 3:1-plus the body text on it falls
-to 3.96:1 light / 3.41:1 dark, both under AA. See "Card accents" below and
+to 4.14:1 light / 3.55:1 dark, both under AA. See "Card accents" below and
 `spec/ui_elements.md` §"Reviewer help cards".
 
 ### Buttons [P]

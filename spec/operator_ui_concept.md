@@ -68,7 +68,7 @@ Home's body, layout, and per-state behaviour are specified in **`spec/session_ho
 
 ### 3. Per Session Setup Pages
 
-The six surfaces where the operator does the work needed to make the session run properly (Observers renders only when enabled — see its gate below). Each one has full edit affordance while the session is `draft` / `validated`, and locks down once it is not — `ready`, `expired` or `archived` (yellow lock card pattern; see `spec/visual_style_rrw.md` "Warning surfaces — shared brown framing"). The card branches per locked state and `archived` carries no control; `spec/lifecycle.md` §5 is the contract.
+The six surfaces where the operator does the work needed to make the session run properly (Relationships and Observers render only when enabled — see their gate below). Each one has full edit affordance while the session is `draft` / `validated`, and locks down once it is not — `ready`, `expired` or `archived` (yellow lock card pattern; see `spec/visual_style_rrw.md` "Warning surfaces — shared brown framing"). The card branches per locked state and `archived` carries no control; `spec/lifecycle.md` §5 is the contract.
 
 | Page | Template | URL |
 |---|---|---|
@@ -79,11 +79,12 @@ The six surfaces where the operator does the work needed to make the session run
 | Instruments | `instruments_index.html` | `/sessions/{id}/instruments` |
 | Email Template | `session_setupinvite.html` | `/sessions/{id}/setup-invite` |
 
-**Observers page gate.** The Observers tab is only visible in the
-Setup chrome and only routes to a page (rather than 404) when
-`session.observers_enabled == True`. The operator sets this toggle
-via the **User interface settings** card on the Create Session form
-or on Session Home's `#session-config` card.
+**Relationships and Observers page gate.** Each of the two tabs is
+only visible in the Setup chrome, and its routes only resolve (rather
+than 404), when its own toggle is on — `session.relationships_enabled`
+or `session.observers_enabled`. The operator sets these toggles via
+the **User interface settings** card on the Create Session form or on
+Session Home's `#session-config` card.
 
 The URL slug is `setup-invite`; the page's name is **Email Template**. The two differ and the slug stays — it is in operator bookmarks and in the route table — so prose naming the page uses the name, not the slug. The page houses the email-template editor: per-template overrides for Invitation / Reminder / Responses-received emails, with merge-tag reference, per-field reset, and a "Send confirmation when a reviewer submits?" toggle. The run-time invitation management lives in the Operations Page below.
 
@@ -172,10 +173,11 @@ A double-height **Home** anchor on the left, two rows of phase tabs to its right
 └────────┴─ OPERATIONS ▶ [Assignments][Validate][Invitations][Responses][Extract data]
 ```
 
-The Observers tab renders conditionally — only when
-`session.observers_enabled == True`. When disabled the tab is
-hidden from the chrome so the Setup row stays uncluttered for
-sessions that don't use observers.
+The Relationships and Observers tabs render conditionally — each only
+when its toggle (`session.relationships_enabled` /
+`session.observers_enabled`) is on. When disabled the tab is hidden
+from the chrome so the Setup row stays uncluttered for sessions that
+don't use it.
 
 - **Home** is double-height to span both rows, signalling that it's one level up from the phase tabs rather than a peer of any of them. It carries the session's identity, so the chrome itself answers *"which session am I in?"* The session's lifecycle state surfaces in the status row below the chrome, not inside the Home anchor.
 - **Row labels** ("SETUP", "OPERATIONS") sit at the left edge of each row. Labels carry the row-identity job; row tints reinforce but shouldn't be the only signal.
@@ -205,7 +207,7 @@ Below the chrome, a **status row** renders the at-a-glance session status, ident
 
 Every operator page (session-scoped or not) renders the same outer chrome before the session top nav and page body:
 
-- **App identity (top left).** "Review Robin Web App (version {num})" rendered small as a link to `/about`.
+- **App identity (top left).** "Review Robin Web App (version {num})" rendered small as plain text (`.chrome-app-identity`, a `<span>`, not a link); `/about` is reached from the user card's link row.
 - **User card (top right).** "Signed in as {user name}" plus a Sign-out control (`/.auth/logout`). A sys-admin's name carries a tier suffix — ` (super admin)` or ` (sys admin)`, the former winning when both apply — matching the three-tier model in `spec/audience_and_identity_model.md` §4.
 - **Breadcrumb trail** (below the app identity) reflecting the page's position in the surface hierarchy. Each segment except the current page is a link to that ancestor; the current page renders as a plain non-link label.
   - Operator root: `Sessions` → `/operator/sessions`.
@@ -227,7 +229,7 @@ A short contract per page: URL + template + role + key affordances. For per-rout
 
 ### `/operator/sessions` — Sessions list
 
-Top-level operator lobby. A table of sessions, one row per session, columns: **Name**, **Code**, **Status**, **Deadline**, **Created**, **Created by**, plus a per-row **expander** (rename / tag / clone / purge-and-archive / delete) — see `spec/sessions_overview.md`. The **Add new session** button sits in the Filter card above the table, not below it, and is the page's only create affordance. There are no per-row Access or Delete buttons outside the expander.
+Top-level operator lobby. A table of sessions, one row per session — its columns are specified in `spec/sessions_overview.md` § *Columns* — with a trailing select-row checkbox that opens a row **expander** (edit / clone / purge-and-archive / delete; § *Row affordances*). The **Add new session** button sits in the Filter card above the table, not below it, and is the page's only create affordance. There are no per-row Access or Delete buttons outside the expander.
 
 ### `/operator/sessions/{id}` — Session Home / Control Panel
 
@@ -351,13 +353,7 @@ The composer's `?template=` query param keeps each tab bookmarkable. The `respon
 
 ### `/operator/sessions/{id}/validate` — Setup validation
 
-Operations row tab. Read-only deep-dive of every setup issue, intended for the operator who needs the per-issue breakdown beyond the at-a-glance counts on Home.
-
-- **Page intro** (form-help text): "Read-only view of setup readiness for this session. Errors must be cleared before activation. Warnings can be acknowledged and overridden. Activate from the Workflow card at the top of any session page."
-- **Severity counts** (three pills inline): error / warning / info counts.
-- **Per-issue list** (rendered via the `operator/partials/validation_results.html` partial) — one entry per issue, with severity pill, source (e.g. "Reviewers", "Assignments"), and human description.
-
-There is no standalone Activate button on this page body; activation fires from the Workflow card's Activate session button. The Validate page does still own the **warnings-detour banner** (`/validate?activate=1`) — the Activate button redirects there when the readiness report has non-blocking findings so the operator can acknowledge them before the underlying `/activate` POST fires.
+Operations row tab. **Detailed spec: `spec/validate_page.md`.** The find-and-fix readiness surface: every setup issue the session has, with per-issue deep-links to the row that triggered it. There is no Activate button in the page body — activation fires from the Workflow card — but the page owns the warnings-detour banner (`/validate?activate=1`) that the Activate button redirects to when there are non-blocking findings to acknowledge.
 
 ### `/operator/sessions/{id}/previews` — retired hub redirect
 
@@ -455,7 +451,7 @@ narrows; it never admits everything.** `visible_audiences()` unions the
 viewer's operator flag — taken from `require_operator`'s own predicate,
 `is_operator or is_sys_admin`, rather than restated — with whatever roles are
 disclosable to them, via `participants.disclosable_roles`. So an operator
-sees the eight operator sections and not the three role-addressed ones; a
+sees the nine operator sections and not the three role-addressed ones; a
 reviewer sees `For reviewers`; someone who is both sees both sets.
 
 **A viewer who resolves no audiences is redirected to `/about`** — never
