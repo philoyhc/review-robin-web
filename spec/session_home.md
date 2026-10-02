@@ -470,10 +470,10 @@ navigation middleware can expire it anywhere; `spec/settings_inventory.md`
 
 State-conditional copy only — the card frame is constant:
 
-- **Default (any state):** "Bulk-populate {the slots} from files in
+- **Default (no responses):** "Bulk-populate {the slots} from files in
   one place. Available only when session is in draft mode and does
   not have any responses." The slot list follows the slots rendered.
-- **When the session holds responses:** the same opening, then
+- **When the session holds responses (any state):** the same opening, then
   "Quick Setup is locked because this session already holds reviewer
   responses from a prior activation. Use the individual Setup pages
   to make changes."
@@ -507,7 +507,7 @@ page reuses the same class without further design work.
 | `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; no buttons rendered | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional; empty-count tiles grey their Download button) |
 | `draft` / Draft, rosters populated, pre-generate | State 2: Prepare session live (Primary; runs Generate + Validate + Invite in sequence) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
 | `draft` / Draft, validated_just_ran with errors | State 3: Prepare session re-runnable (Primary); right column carries validation pill row + Validate link | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
-| `validated` / Validated | States 4 / 4Err / 5 / 6: Activate session live (Primary; under the `W` overlay it detours through `/validate?activate=1`); Prepare session re-runnable (Secondary); Revert to draft live (Secondary); Send invites surfaces once invitations exist (Primary, State 5) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
+| `validated` / Validated | States 4 / 4Err / 5 / 6: Activate session live (Primary; under the `W` overlay it detours through `/validate?activate=1`); Prepare session re-runnable (Secondary); Revert to draft live (Secondary); Send invites surfaces once invitations exist (Primary, State 5) | Body-greyed; no Lock / Unlock toggle | Live (4–5 tiles, Observers conditional) |
 | `ready` / Activated | States 7 / 8 / 9: Send invites / Send reminders forward stages (whichever is next renders Primary; State 7 — no invitations — has none, and the copy names Revert to draft); Close session + Release responses live (Secondary); Revert to draft live (Secondary; the `ready → draft` form) | Body-greyed; no Lock / Unlock toggle | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
 | `expired` / Closed | State 10: Release responses (or Stop releasing when the window's open) · Archive session (Danger); Revert to draft live (Secondary, reopens for editing) | Body-greyed; no Lock / Unlock toggle | Live |
 | `archived` / Archived | No buttons rendered (the Workflow card surfaces no actions on archived sessions) | Body-greyed | Live |

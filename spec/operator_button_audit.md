@@ -446,16 +446,16 @@ are full-size, like its other row buttons; the display-field row's are
 the short size, `btn secondary btn-short` (19T Item 9, on the author's
 ruling) — see `spec/instruments.md` "Display-field table".
 
-The response-field row's **R** (required) and **≡** (help-text card)
-are two-state toggles, and no §6 role covers a toggle: each renders
-`btn` (Primary's fill) when on and `btn secondary` when off, with
-`aria-pressed` carrying the state.
+The response-field row's **R** (required), **≡** (help-text card) and
+**⑂** (branch) take §6's **Toggle** role: each renders `btn` (Primary's
+fill) when on and `btn secondary` when off, with `aria-pressed`
+carrying the state.
 
 | # | Card / sub-section | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 223 | Response-field row | R | `<button type="button">` | `btn` (on) / `btn secondary` (off) | **Toggle** | Toggles the field's `required`; disabled ("Enter a field name first.") while the row has no field name, and while a Require branch governs the field |
 | 224 | Response-field row | ≡ | `<button type="button">` | `btn` (on) / `btn secondary` (off) | **Toggle** | Toggles the field's help-text card on the reviewer surface (`help_text_visible`); disabled ("Enter a field name first.") while the row has no field name |
-| 230 | Response-field row | ⑂ | `<button type="button">` | `btn rf-glyph` (on) / `btn secondary rf-glyph` (off) | **Toggle** | Adds a branch below the field. On (`aria-pressed="true"`) once the field has a branch, and disabled then; also disabled for a String field, and inside a branch whose responses lock it (`branch_locked`) |
+| 230 | Response-field row | ⑂ | `<button type="button">` | `btn rf-glyph` (on) / `btn secondary rf-glyph` (off) | **Toggle** | Adds a branch below the field. On (`aria-pressed="true"`) once the field has a branch, and disabled then; also disabled while the row has no field name, for a String field, and inside a branch whose responses lock it (`branch_locked`). Absent on level-2 rows, which cannot branch again |
 
 ---
 

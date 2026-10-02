@@ -20,7 +20,7 @@ Position in the Home body, top to bottom:
 
 ### Visibility
 
-The card is always rendered on Home for `draft` and `validated` sessions. Visibility does not depend on whether setup data exists — the card is a stable, learnable location for bulk setup regardless of session population.
+The card is always rendered on Home, in every state. Visibility does not depend on whether setup data exists — the card is a stable, learnable location for bulk setup regardless of session population.
 
 The card is **available** only in `draft` with no persisted responses (`is_available` in `app/web/views/_quick_setup.py`). There the Lock / Unlock toggle renders, and the card still defaults to locked. In every other state — `draft` with responses, `validated`, `ready`, `expired` — the body is greyed (`.quick-setup-body.locked`) and the **toggle is hidden** (`show_lock_toggle = is_available`), so the operator cannot unlock it; the lifecycle table below gives each state. Per `spec/session_home.md` ("Disabled treatment on Home is plain greying-out, not yellow lock cards"), Home does not stack a yellow lock card on top of the body greying. Current-state indicators (counts, rule label) render in every state.
 
@@ -144,7 +144,7 @@ The card does not appear in the page taxonomy or the chrome. The chrome (two-row
 
 - Reuse the existing per-entity CSV parsing and validation modules. The card is a UI affordance over the same import paths the Setup pages already expose.
 - Reuse the cascading-clearance logic that the per-entity pages already implement (or should implement) when reviewers/reviewees are replaced — the card should not introduce a parallel cascade implementation.
-- The card's locked-state styling is a single `.quick-setup-body.locked` body wrapper applied uniformly across `draft` / `validated` / `ready`, and includes the H2 title + the card-level confirmation checkbox alongside the slot controls. On top of the greying, a locked card's slot file inputs and confirmation checkbox carry the HTML `disabled` attribute (the `quick_setup_slot` macro takes a `locked` flag; the checkbox keys off `quick_setup.is_locked`) so the controls are genuinely inert, not merely dimmed. The Lock / Unlock toggle is the consistent affordance; lifecycle-driven differences live in the description copy and the route layer's `_require_editable` rejection, not in a separate visual primitive.
+- The card's locked-state styling is a single `.quick-setup-body.locked` body wrapper, the same in every state that applies it, and includes the H2 title + the card-level confirmation checkbox alongside the slot controls. On top of the greying, a locked card's slot file inputs and confirmation checkbox carry the HTML `disabled` attribute (the `quick_setup_slot` macro takes a `locked` flag; the checkbox keys off `quick_setup.is_locked`) so the controls are genuinely inert, not merely dimmed. The Lock / Unlock toggle renders only while the card is available (Visibility, above); otherwise the differences live in the description copy, not in a separate visual primitive.
 - The card-level confirmation checkbox is a plain `<input type="checkbox">` outside any slot form. Inline JS on each form's `submit` event mirrors the checkbox state into a hidden `confirm_replace` input on the form. Server-side `confirm_replace == "true"` gate stays the source of truth — the JS just spares the operator from per-slot bookkeeping.
 
 The intent throughout: Quick Setup is a thin convenience surface over existing import primitives. It should not own meaningful logic of its own.
