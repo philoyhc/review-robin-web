@@ -2510,12 +2510,6 @@
         var addBtn = shape.querySelector("[data-shape-add]");
 
         shape.addEventListener("click", function () {
-          // A Delete click still bubbles here after its handler has
-          // removed (or replaced) this card: the propagation path is
-          // fixed at dispatch. Re-activating a detached card would
-          // undo the handler's own hand-off to the neighbor or the
-          // fresh blank, so a card no longer in the page is ignored.
-          if (!shape.isConnected) return;
           if (shape.getAttribute("data-shape-mode") === "edit") {
             setActiveShape(shape);
           }
