@@ -70,8 +70,10 @@ unambiguous zone — localises to it:
   (e.g. `2026-06-02T08:00:00+08:00`) — a precise, round-trip-safe
   machine format whose offset reflects the session zone. The
   audit-events extract (`app/services/extracts/audit_events_extract.py`)
-  is the exception: its `CreatedAt` is ISO 8601 in UTC, matching the
-  UTC audit-log viewer below.
+  is the exception: its `CreatedAt` is ISO 8601 with the stored
+  value's own offset, never converted to the session zone (a naive
+  SQLite readback is stamped UTC), matching the UTC audit-log viewer
+  below.
 
 **The sessions lobby** (`/operator/sessions`) and the
 **archived-sessions page** (`/operator/sessions/archived`) each
