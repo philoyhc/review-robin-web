@@ -600,21 +600,17 @@ def _active_assignment_presence(
     }
 
 
-def _included_instrument_ids(db: Session, session_id: int) -> set[int]:
-    """Instruments with at least one ``include=True`` row — the test
+def _included_instrument_ids(inputs: ValidationInputs) -> set[int]:
+    """Instruments with at least one ``include=True`` row, read off the
+    same ``included_count_by_instrument`` snapshot that
     ``assignments.no_included_pairs`` and ``instruments.zero_included``
-    apply, so the per-reviewer rules stand down on exactly the
+    use, so the per-reviewer rules stand down on exactly the
     instruments those siblings report."""
-    return set(
-        db.execute(
-            select(Assignment.instrument_id)
-            .where(
-                Assignment.session_id == session_id,
-                Assignment.include.is_(True),
-            )
-            .distinct()
-        ).scalars()
-    )
+    return {
+        instrument_id
+        for instrument_id, count in inputs.included_count_by_instrument.items()
+        if count
+    }
 
 
 def _active_reviewers(inputs: ValidationInputs) -> list[Reviewer]:
@@ -648,7 +644,7 @@ def _check_assignments_reviewer_missing(
         return
     if len(inputs.instruments) != 1:
         return
-    if not _included_instrument_ids(db, review_session.id):
+    if not _included_instrument_ids(inputs):
         # Nothing is included at all: ``assignments.no_included_pairs``
         # reports it once, rather than once per reviewer.
         return
@@ -709,7 +705,7 @@ def _check_assignments_reviewer_missing_for_instrument(
     ):
         if instrument_id in presence:
             presence[instrument_id].add(reviewer_id)
-    included = _included_instrument_ids(db, review_session.id)
+    included = _included_instrument_ids(inputs)
     active = _active_reviewers(inputs)
     for instrument in inputs.instruments:
         if instrument.id not in included:

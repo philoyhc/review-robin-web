@@ -165,45 +165,85 @@ def _excluded_group_members(
     db: Session,
     reviewer: Reviewer,
     session_id: int,
+    *,
+    assignments: list[Assignment],
     group_instrument_ids: set[int],
-) -> list[Assignment]:
-    """This reviewer's **excluded** rows on group-scoped instruments.
+    group_key_by_assignment: dict[int, tuple[str, ...]],
+) -> tuple[list[Assignment], dict[int, tuple[str, ...]]]:
+    """This reviewer's excluded rows that belong to a group they still
+    review, with those rows' group keys.
 
     A group's answers are kept on every member's row, and the form reads
-    one representative's copy. A member excluded because they went
-    inactive (findings B2), or by hand, is out of everything a reviewer
-    sees, but their row still belongs to the group. Saves, submits,
-    recalls and clears reach it too (author's ruling 2026-10-02), so
-    reactivating the member brings back the group's current answers
-    rather than the ones from before they left.
+    one included member's copy. A member excluded because they went
+    inactive (findings B2), or by hand, is out of what the reviewer sees,
+    but their row is still the group's: saves, submits, recalls and
+    clears reach it too (author's ruling 2026-10-02), so reactivating
+    the member brings back the group's current answers.
+
+    Only members of a group with at least one **included** member
+    qualify. A group excluded whole — by the self-review toggle, or
+    because every member is inactive — is not the reviewer's to answer,
+    and nothing here reaches it.
     """
     if not group_instrument_ids:
-        return []
-    stmt = (
-        select(Assignment)
-        .where(
-            Assignment.session_id == session_id,
-            Assignment.reviewer_id == reviewer.id,
-            Assignment.include.is_(False),
-            Assignment.instrument_id.in_(group_instrument_ids),
-        )
-        .order_by(Assignment.id)
+        return [], {}
+    candidates = list(
+        db.execute(
+            select(Assignment)
+            .where(
+                Assignment.session_id == session_id,
+                Assignment.reviewer_id == reviewer.id,
+                Assignment.include.is_(False),
+                Assignment.instrument_id.in_(group_instrument_ids),
+            )
+            .order_by(Assignment.id)
+        ).scalars()
     )
-    return list(db.execute(stmt).scalars())
+    if not candidates:
+        return [], {}
+    included_groups = {
+        (a.instrument_id, group_key_by_assignment.get(a.id, ()))
+        for a in assignments
+        if a.instrument_id in group_instrument_ids
+    }
+    keys = _group_key_by_assignment(
+        db,
+        assignments=candidates,
+        group_instrument_ids=group_instrument_ids,
+        session_id=session_id,
+    )
+    members = [
+        a
+        for a in candidates
+        if (a.instrument_id, keys.get(a.id, ())) in included_groups
+    ]
+    return members, {a.id: keys.get(a.id, ()) for a in members}
 
 
 def _with_excluded_group_members(
     db: Session, reviewer: Reviewer, session_id: int
 ) -> list[Assignment]:
     """The reviewer's included rows plus :func:`_excluded_group_members`
-    — the rows a submit, recall or clear acts on."""
+    — the rows a recall or clear acts on."""
     assignments = _reviewer_assignments(db, reviewer, session_id)
     group_instrument_ids = _group_instrument_ids(
         db, {a.instrument_id for a in assignments}
     )
-    return assignments + _excluded_group_members(
-        db, reviewer, session_id, group_instrument_ids
+    group_key_by_assignment = _group_key_by_assignment(
+        db,
+        assignments=assignments,
+        group_instrument_ids=group_instrument_ids,
+        session_id=session_id,
     )
+    excluded, _ = _excluded_group_members(
+        db,
+        reviewer,
+        session_id,
+        assignments=assignments,
+        group_instrument_ids=group_instrument_ids,
+        group_key_by_assignment=group_key_by_assignment,
+    )
+    return assignments + excluded
 
 
 def _instrument_fields_by_id(
@@ -547,6 +587,11 @@ def save_draft(
     # Validate the raw upserts first — a group-scoped instrument's
     # surface posts one upsert per group (keyed to a representative
     # member), so a bad value yields one error, not one per member.
+    # Only the reviewer's included rows take a posted value. Any other
+    # id is dropped here, before validation and the group fan-out, so
+    # an excluded row's id can never carry an unchecked value into a
+    # group (it used to be dropped later, at the write).
+    upserts = [u for u in upserts if u.assignment_id in assignment_index]
     valid_upserts, errors = _split_validated(
         upserts=upserts,
         assignment_index=assignment_index,
@@ -554,20 +599,17 @@ def save_draft(
         position_by_instrument_id=_session_position_map(db, review_session.id),
     )
     # Then fan the valid upserts out to every member of their group.
-    # An excluded member of a group still gets the group's answer
-    # (``_excluded_group_members``).
-    excluded = _excluded_group_members(
-        db, reviewer, review_session.id, group_instrument_ids
+    # An excluded member of a group the reviewer still reviews gets the
+    # group's answer too (``_excluded_group_members``).
+    excluded, excluded_keys = _excluded_group_members(
+        db,
+        reviewer,
+        review_session.id,
+        assignments=assignments,
+        group_instrument_ids=group_instrument_ids,
+        group_key_by_assignment=group_key_by_assignment,
     )
-    group_key_by_assignment = {
-        **group_key_by_assignment,
-        **_group_key_by_assignment(
-            db,
-            assignments=excluded,
-            group_instrument_ids=group_instrument_ids,
-            session_id=review_session.id,
-        ),
-    }
+    group_key_by_assignment = {**group_key_by_assignment, **excluded_keys}
     valid_upserts = _expand_group_upserts(
         valid_upserts,
         assignments=assignments + excluded,
@@ -665,26 +707,28 @@ def submit(
     # Validate the raw upserts before fanning group answers out, so a
     # bad value on a group-scoped instrument yields one error rather
     # than one per member.
+    # Only the reviewer's included rows take a posted value. Any other
+    # id is dropped here, before validation and the group fan-out, so
+    # an excluded row's id can never carry an unchecked value into a
+    # group (it used to be dropped later, at the write).
+    upserts = [u for u in upserts if u.assignment_id in assignment_index]
     valid_upserts, errors = _split_validated(
         upserts=upserts,
         assignment_index=assignment_index,
         field_index=field_index,
         position_by_instrument_id=position_by_instrument_id,
     )
-    # An excluded member of a group still gets the group's answer
-    # (``_excluded_group_members``).
-    excluded = _excluded_group_members(
-        db, reviewer, review_session.id, group_instrument_ids
+    # An excluded member of a group the reviewer still reviews gets the
+    # group's answer too (``_excluded_group_members``).
+    excluded, excluded_keys = _excluded_group_members(
+        db,
+        reviewer,
+        review_session.id,
+        assignments=assignments,
+        group_instrument_ids=group_instrument_ids,
+        group_key_by_assignment=group_key_by_assignment,
     )
-    group_key_by_assignment = {
-        **group_key_by_assignment,
-        **_group_key_by_assignment(
-            db,
-            assignments=excluded,
-            group_instrument_ids=group_instrument_ids,
-            session_id=review_session.id,
-        ),
-    }
+    group_key_by_assignment = {**group_key_by_assignment, **excluded_keys}
     valid_upserts = _expand_group_upserts(
         valid_upserts,
         assignments=assignments + excluded,
@@ -767,10 +811,7 @@ def submit(
         )
         for row in rows:
             row.submitted_at = now
-            # An excluded member's copy is stamped too, so it reads
-            # submitted if they come back, but not counted.
-            if assignment.include:
-                submitted_count += 1
+            submitted_count += 1
     db.flush()
 
     audit.write_event(

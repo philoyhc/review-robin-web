@@ -370,7 +370,8 @@ Two supported affordances, answering different questions —
 - **Per-instrument Self-review toggle.** Self-review pairs *are*
   materialised; flip the toggle on the Assignments page to set
   `Assignment.include=False` on every `(R, R)` row in that
-  instrument. The session-level `ReviewSession.self_reviews_active`
+  instrument whose two sides are both active (a row with an inactive
+  side stays excluded by status, findings B2). The session-level `ReviewSession.self_reviews_active`
   (default True) seeds this on first generation. Reversible
   without a re-Generate, and it destroys nothing.
 
@@ -539,13 +540,20 @@ group — extraction and aggregation respect this contract (see
 
 **An excluded member still receives the group's answers.** A member
 whose row is `include=False` (inactive, findings B2, or excluded by
-hand) is out of everything a reviewer, an invitation or a count sees,
-but their row is still the group's: saves and submits write its copy,
-and recall and Clear all reach it (author's ruling 2026-10-02). The
-form reads the lowest-id member's copy, so without this, reactivating
-an excluded member could show the reviewer stale or blank answers and a
-save would copy them back to the whole group. A group the self-review
-toggle excludes is excluded whole, so no answer reaches it.
+hand) is out of what the reviewer sees, of invitations and of the
+`include`-aware counts, but their row is still the group's: saves and
+submits write its copy, and recall and Clear all reach it (author's
+ruling 2026-10-02). The form reads the lowest-id **included** member's
+copy, so without this, reactivating an excluded member could show the
+reviewer stale or blank answers and a save would copy them back to the
+whole group. This reaches only members of a group with at least one
+included member: a group excluded whole — by the self-review toggle,
+or because every member is inactive — is not the reviewer's, and no
+save, submit, recall or clear touches it. A posted value is accepted
+only on an included row; any other id is dropped before validation and
+the fan-out. Readers that ignore `include` (the observer collation pool,
+the responses and entity-stats extracts) see the copy, as they always
+saw the row.
 
 ### Self-review interaction
 
@@ -600,7 +608,8 @@ Steps:
      directly, so it already reports what that Prepare will leave;
      invitations and the reviewer's surface read `include` (and the
      reviewer's own status). A roster status change returns the
-     session to draft, so Prepare runs again before it is live. The
+     session to draft; the Workflow card's path back to `ready` runs
+     Prepare. The
      Self review column and its toggle count and flip only rows with
      both sides active: an inactive side's row stays excluded by
      status, not by the toggle.
@@ -703,7 +712,7 @@ Columns (left → right):
 | Type | "Individual" or "Group" (driven by `Instrument.group_kind`). |
 | Generated | Pill carrying the row count. "Not generated yet" when zero. A `stale` pill rides alongside when the rows have fallen out of step — see "Staleness". |
 | Groups | Group count (distinct `(reviewer, group_key)` over the rows) for group instruments; "—" for individual. |
-| Self review | Pill carrying the total self-review row count, plus an inline checkbox that bulk-flips `Assignment.include` on every self-review row in this instrument. Pill colour is `pill-info` (blue) when all are active, `pill-warning` (yellow) when not. The checkbox renders only when `self_review_total > 0`; on a session with no roster overlaps it doesn't render. |
+| Self review | Pill carrying the self-review row count, plus an inline checkbox that bulk-flips `Assignment.include` on those rows in this instrument — counting and flipping only rows whose reviewer and reviewee are both active (an inactive side's row stays excluded by status, findings B2). Pill colour is `pill-info` (blue) when all are active, `pill-warning` (yellow) when not. The checkbox renders only when `self_review_total > 0`; on a session with no roster overlaps it doesn't render. |
 | Included | Pill carrying the count of `include=True` rows. "—" before Generate. |
 | Show | Per-instrument filter checkbox — client-side DOM toggle that hides / shows the instrument's pairs in the preview table below. Default: checked when any row materialised. |
 | (action) | "Edit on Instruments page" deep-link to the instrument's card. |
@@ -723,8 +732,8 @@ with `active=true|false`. The service helper
    reviewer / reviewee.
 2. Computes the self-review subset
    (`_self_review_assignment_ids`, group-aware).
-3. Flips `include` on every self-review row whose current value
-   differs from the target.
+3. Flips `include` on every self-review row with both sides active
+   whose current value differs from the target.
 4. Emits an audit event
    `assignments.instrument_self_reviews_active_set` with
    `counts.flipped` + `context.active` + `refs.instrument_id`.
@@ -1181,10 +1190,11 @@ that fire on this page's domain:
   not checked (findings B4).
 - **`assignments.reviewer_missing_for_instrument`** (warning) —
   per-instrument variant on a multi-instrument session: an active
-  reviewer with no such row on a specific instrument that gives
-  someone work. An instrument that gives no one work is reported
-  once, by `assignments.instrument_empty` or
-  `instruments.zero_included`, instead.
+  reviewer with no such row on a specific instrument. An instrument
+  with no included row at all is reported once, by
+  `assignments.instrument_empty` or `instruments.zero_included`,
+  instead; one whose included rows all have an inactive side is not,
+  since no sibling reports it, so each active reviewer is named.
 - **`assignments.instrument_empty`** (warning) — an instrument
   has zero materialised rows. Likely caused by an over-
   restrictive rule.

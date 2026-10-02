@@ -2594,6 +2594,31 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
         assert _rating(by_reviewee["Dan"]) is None
     assert db.get(Assignment, eve.id).include is False
 
+    # Posting the excluded row's id directly writes nothing: it is not
+    # the reviewer's to answer, and an out-of-range value must not ride
+    # the group fan-out past validation.
+    for url in ("save", "submit"):
+        rae_client.post(
+            f"/me/sessions/{review_session.id}/{url}",
+            data={f"response[{eve.id}][rating]": "99"},
+            follow_redirects=False,
+        )
+        db.expire_all()
+        assert _rating(by_reviewee["Carol"]) == "2"
+        assert _rating(eve) == "2"
+
+    # Team B, excluded whole (Dan is its only member), is not the
+    # reviewer's group: a clear leaves its old answer alone.
+    dan = by_reviewee["Dan"]
+    field_id = db.execute(
+        select(Response.response_field_id).where(
+            Response.assignment_id == by_reviewee["Carol"].id
+        )
+    ).scalar_one()
+    dan.include = False
+    db.add(Response(assignment_id=dan.id, response_field_id=field_id, value="3"))
+    db.commit()
+
     response = rae_client.post(
         f"/me/sessions/{review_session.id}/clear",
         data={"confirm": "true"},
@@ -2602,3 +2627,5 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
     assert response.status_code == 303, response.text
     db.expire_all()
     assert _rating(eve) is None
+    assert _rating(by_reviewee["Carol"]) is None
+    assert _rating(dan) == "3"
