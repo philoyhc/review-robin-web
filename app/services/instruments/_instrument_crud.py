@@ -41,6 +41,11 @@ from app.services.instruments._state import _instrument_label
 
 DEFAULT_INSTRUMENT_NAME = "Default"
 
+# ``instruments.name`` is ``String(255)``; Postgres refuses a longer
+# value, so a replica's suffixed name trims the source name to fit.
+_NAME_MAX = 255
+_COPY_SUFFIX = " (copy)"
+
 
 def ensure_default_instrument(
     db: Session, review_session: ReviewSession
@@ -287,7 +292,8 @@ def replicate_instrument(
     fields (incl. each row's ``visible`` Include flag),
     ``group_kind``, and ``sort_display_fields``. The copy's name
     is the source name +
-    " (copy)"; it starts ``accepting_responses=False`` and carries
+    " (copy)", the source name trimmed so the whole fits the 255-char
+    column; it starts ``accepting_responses=False`` and carries
     **no** pinned rule (``rule_set_id``). Activation opens it with
     every other instrument.
 
@@ -316,7 +322,7 @@ def replicate_instrument(
 
     instrument = Instrument(
         session_id=review_session.id,
-        name=f"{source.name} (copy)",
+        name=source.name[: _NAME_MAX - len(_COPY_SUFFIX)] + _COPY_SUFFIX,
         description=source.description,
         order=new_order,
         accepting_responses=False,

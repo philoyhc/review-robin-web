@@ -52,6 +52,8 @@ _SKIP_BASE: frozenset[str] = frozenset({"id", "created_at", "updated_at"})
 _SKIP_REVIEWEE: frozenset[str] = frozenset({"results_acknowledged_at"})
 
 _CODE_MAX_LENGTH = 64
+# ``sessions.name`` is ``String(255)``; Postgres refuses a longer value.
+_NAME_MAX_LENGTH = 255
 
 
 def _column_values(obj: object, *, skip: set[str]) -> dict[str, Any]:
@@ -115,7 +117,7 @@ def clone_session(
         raise ValueError(f"Unknown clone mode {mode!r}")
 
     clone = ReviewSession(
-        name=f"Copy of {source.name}",
+        name=f"Copy of {source.name}"[:_NAME_MAX_LENGTH],
         code=_unique_code(db, source.code),
         description=source.description,
         status="draft",

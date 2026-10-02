@@ -166,3 +166,12 @@ E1, E2 and E4 were checked by the author when they merged.
   the rows stay in descending order.
 - [ ] **A display-column sort is unchanged.** Sort by a display column
   and reload: the rows arrive already sorted, with no visible move.
+
+## Long names survive Duplicate and Replicate
+
+- [ ] **Duplicate keeps a long name.** Rename a session to about 250
+  characters, then Duplicate it from the lobby. The copy opens, named
+  "Copy of …" cut at the end, with no error page.
+- [ ] **Replicate keeps its suffix.** Rename an instrument to about 250
+  characters, then Replicate it. The copy's name still ends " (copy)",
+  with the source name trimmed to fit.
