@@ -519,14 +519,20 @@ terms as the Invitations progress columns above.
 
 ### Coverage state definitions
 
-Operator-meaningful summaries computed by the view adapter:
+Operator-meaningful summaries computed in `app/services/monitoring.py`
+(`per_reviewee_coverage`, classified by `_classify_coverage`). The unit
+is the reviewee's **included assignments**, one per reviewer ×
+instrument, not distinct reviewers. An assignment is complete when it
+has a response row and every required field on its instrument carries a
+non-empty, submitted answer (an instrument with no required field counts
+any row). Coverage is the fraction of assignments complete:
 
-- **complete** — all assigned reviewers have responded.
-- **adequate** — partial coverage above an app-default threshold.
-- **at risk** — partial coverage below threshold (or session
-  deadline approaching with low coverage).
-- **no responses** — zero reviewers have responded for this
-  reviewee.
+- **complete** — every included assignment is complete.
+- **adequate** — partial coverage at or above
+  `AT_RISK_THRESHOLDS["adequate_fraction"]` (0.5).
+- **at risk** — partial coverage below that threshold. Coverage is the
+  only input; the deadline plays no part.
+- **no responses** — no included assignment is complete yet.
 
 These are guidance, not enforcement. The operator decides what to
 do; the coverage state helps them prioritize.
@@ -649,37 +655,25 @@ assignments and responses as ORM rows, the accepted cost of route (a);
 route (b), a stored open-branch table the SQL could join instead,
 stays in reserve.
 
-All three pages are now **flat in the roster**: the query count does not
-move between a 25 × 25 and a 200 × 200 session. Measured through the
-real routes (SQLite, in-process, one render each, 2026-09-21):
-
-| roster | assignments | Assignments | Invitations | Responses |
-|---|---:|---:|---:|---:|
-| 25 × 25 | 625 | 49 | 35 | 30 |
-| 50 × 50 | 2,500 | 49 | 35 | 30 |
-| 100 × 100 | 10,000 | 49 | 35 | 30 |
-| 200 × 200 | 40,000 | 49 | 35 | 30 |
-
-The Invitations and Responses columns replace a per-roster budget that
-ran to 434 at the largest size — roughly two queries per reviewer, from
-per-reviewer assignment and field lookups that no longer exist.
-Assignments was never in that regime; its `LIMIT 200` and its indexes
-are what hold it flat, and the whole table was re-taken here rather
-than edited in place, because two of its old rows had drifted by a
-query or two before this item began.
+The Assignments, Invitations and Responses pages are **flat in the
+roster**: the query count does not move with the roster size. The
+per-size query counts (25 × 25 to 200 × 200) are in
+`guide/app_responsiveness.md`, Finding 2, "Re-taken 2026-09-21 — flat
+in the roster".
 
 **Flat is the contract; the figures are the reading.** A legitimately
 added query moves a number without breaking anything, so the guards in
 `tests/integration/test_monitoring_prefetch.py` pin the flatness and
-the ORM-row bound, not these four columns. A change that makes any
-column grow with the roster belongs here, re-measured.
+the ORM-row bound, not the figures. A change that makes any page's
+query count grow with the roster breaks the contract, and its figures
+are re-taken there.
 
-**Paging must not change any of these counts**: the slice is applied
-after every row is built.
+**Paging must not change the query count**: the slice is applied after
+every row is built.
 
-These are SQLite figures at roughly 0.2 ms per query. Production
-Postgres pays a network round trip per query, so **the query count is
-the portable number and the wall times are a floor, not a ceiling.**
+Production Postgres pays a network round trip per query, so **the query
+count is the portable number and local wall times are a floor, not a
+ceiling.**
 
 ## Implementation pointers
 
@@ -705,5 +699,7 @@ the portable number and the wall times are a floor, not a ceiling.**
   mapping its slots to column classes. See `spec/setup_pages.md`.
 - "At risk" thresholds and coverage-state definitions on the
   Responses page are computed in one place in
-  `app/web/views/_responses.py`. Future operator configuration of
-  the threshold becomes a small change to that one location.
+  `app/services/monitoring.py` (`AT_RISK_THRESHOLDS`,
+  `_classify_coverage`); `app/web/views/_responses.py` only carries the
+  state. Future operator configuration of the threshold becomes a small
+  change to that one location.

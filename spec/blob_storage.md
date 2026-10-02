@@ -30,7 +30,7 @@ should clear that bar on its own before it lands; several never will.
 | Uploaded roster / config / responses CSVs | Parsed **in memory** and discarded once the import completes; only the resulting rows persist. |
 | Reviewee / reviewer photos | `profile_link` is an **external URL** the operator supplies — the app hosts no image bytes. |
 | Operator SMTP password | `smtp_password_encrypted` — Fernet ciphertext in a `bytea` column, not a file. |
-| Deployment artifacts | Azure **does** use blob for build/deploy artifacts, but that is platform-level and outside the app (`docs/architecture.md` — "the application itself has no blob storage"). |
+| Deployment artifacts | Azure **does** use blob for build/deploy artifacts, but that is platform-level and outside the app (`docs/architecture.md` — "the application itself has no blob dependency"). |
 
 The line to hold: **small, transient, or already-in-Postgres** payloads
 stay where they are. Blob storage earns its place only when a payload is
@@ -168,10 +168,11 @@ opportunistically; #4 waits on its own feature.
 
 This ladder is planned in detail — with a comprehensive Phase 0 covering
 dependencies, config, CI (an Azurite job), deploy/runtime wiring, and
-provisioning docs — in **`guide/segment_18Q_blob.md`**. Institutional Azure
-blob provisioning has been requested (account awaiting finalization);
-Phase 0 + Tier-1 testing are buildable on localhost now (memory /
-filesystem backends + the Azurite emulator) without the account.
+provisioning docs — in **`guide/segment_18Q_blob.md`**, which is gated on
+institutional Azure blob storage being confirmed; its Status line says
+where that stands. Phase 0 + Tier-1 testing are buildable on localhost
+(memory / filesystem backends + the Azurite emulator) without the
+account.
 
 ---
 

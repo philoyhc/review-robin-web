@@ -29,7 +29,11 @@ Status: five values, all live — `draft`, `validated`, `ready`,
 `expired` as **Closed** (`app/services/lifecycle_display.py`).
 Archiving files a session out of the active lobby; it is
 **reversible and deletes no data** (`archive_session`), so it is a
-filing state, not a disposal one.
+filing state, not a disposal one. The archive *action* can delete,
+though: "Purge and archive" (`purge_and_archive` in
+`app/services/session_purge.py`) first hard-deletes whichever of the
+responses, rosters and audit log the operator ticks, and unarchiving
+does not bring them back.
 
 Session can be edited when instruments are closed/paused; if there
 are ongoing reviews, reviewers need to be notified.

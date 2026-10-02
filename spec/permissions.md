@@ -115,8 +115,9 @@ Two things the table implies and the code relies on:
 | reviewer surface, save / submit / clear, post-submit summary | `require_reviewer_in_session` | per route |
 | `/me/sessions/{id}/results` (+ acknowledge) | `require_reviewee_with_current_grant` | per route — composes the roster gate with `visibility_policies.reviewee_has_current_grant`; both the GET and the acknowledge POST share it |
 | `/me/sessions/{id}/collation` (+ CSV) | `require_observer_in_session` | per route |
-| `/me` dashboard, `/me/invite/{token}`, `/` | `get_or_create_user` only | any signed-in user; `/me` renders an empty dashboard for a user with no roles; `/` **302s by role** — operator or sys-admin → `/operator/sessions`, everyone else → `/me` (never 301: the target follows a role that can change) |
-| `/about`, `/auth/me`, `/auth/me/debug` | `get_current_user` only (no `users` row created) | identity display and diagnostics |
+| `/me` dashboard, `/me/invite/{token}`, `/`, `/about`, `/guide` | `get_or_create_user` only | any signed-in user; `/me` renders an empty dashboard for a user with no roles; `/` **302s by role** — operator or sys-admin → `/operator/sessions`, everyone else → `/me` (never 301: the target follows a role that can change); `/about` is the "signed in but no access" landing; `/guide` **303s to `/about`** for a viewer with no Guide audience |
+| bare `/me/sessions/{id}` | none | a 303 to `/me/sessions/{id}/1`, whose handler applies `require_reviewer_in_session` |
+| `/auth/me`, `/auth/me/debug`, `/templates/starter.zip` / `demo.zip` / `full.zip` | `get_current_user` only (no `users` row created) | identity display and diagnostics; the setup-template downloads |
 | bare `/operator`, `/operator/` | none | a 302 to the lobby, deliberately unguarded so that one place — the lobby's `require_operator` — decides operator access |
 | `/health` | none | liveness only |
 
@@ -275,7 +276,7 @@ a case when a gate changes.
 |---|---|
 | allowlist bootstrap, case-insensitive match, once-only seeding, super-admin self-heal, fake-auth toggles, revoked-operator redirect | `tests/integration/test_operator_allowlist_gate.py` (21) |
 | participant-only user bounced from lobby + per-session route; workspace operator non-owner 404 + lobby exclusion; sys-admin reaches another owner's session only via adopt | `tests/integration/test_operator_lobby_access_gate.py` (6) |
-| session ids are not enumerable: for each of the four session-scoped gates, an existing session the caller holds no role on is byte-identical to an id that does not exist | `tests/integration/test_session_enumeration_gate.py` (6) |
+| session ids are not enumerable: for each of the four session-scoped gates, an existing session the caller holds no role on is byte-identical to an id that does not exist | `tests/integration/test_session_enumeration_gate.py` (7) |
 | owner add / remove invariants, last-owner 409, self-remove, sys-admin self-add via the relaxed gate | `tests/integration/test_session_owners.py` (19) |
 | the seven Accounts Management actions and every guard code | `tests/integration/test_sys_admin_users.py` (48) |
 | super-admin resolver (config membership, fake fold-in) | `tests/unit/test_roles_super_admin.py` (6) |
