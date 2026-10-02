@@ -105,9 +105,12 @@ the spec should say so.
 
 **Shipped behavior differs from the spec. Which is the contract?**
 
-- **A1** — Replicate does not share `rule_set_id` and does not copy the
-  labels or Band 1 state. A replica starts closed and "Not set up". Tests
-  pin the code.
+- ~~**A1**~~ — **Ruled 2026-10-02: Replicate copies them. Done in
+  #2759.** The copy now carries the short label, Band 1 touched links
+  and Band 2 state, and a clone of the source's rule set (cloned rather
+  than shared, since Band 1 edits update the row in place). Sort entries
+  and column widths are re-pointed at its fields. Not copied: the
+  page-break flag (it is about position) and the visibility policies.
 - **A22, A23** — Sorting. The spec has a Sort column on the display-field
   table, a per-column click cycle and a Reset link. What ships is header
   badges, a replace-cascade on click, and no Reset.
@@ -237,6 +240,11 @@ stay in §3.
   which beats the single 0.5 rule `ui_elements.md` specifies.
 - **C4** — The `needs_confirm` banner says the checkbox is "at the top of
   Quick Setup", but it sits below the grid.
+- **A28** — Session Duplicate and settings import copy an instrument's
+  `sort_display_fields` and `column_widths` verbatim, so a copy's sort
+  and widths name the source's display and response field ids
+  (`session_clone.py`, `session_config_io/_apply_instrument.py`).
+  Replicate re-points them since #2759. Found in #2759's read.
 - **B31** — A scheduled reminder pass that fails partway re-queues the
   reminders it already queued. `send_reminder` commits each outbox row
   with no `correlation_id`; `_dispatch_scheduled_reminders` only flushes
@@ -269,7 +277,7 @@ One line each: id · severity · where · finding · decides. A line with no
 ### `spec/`
 
 - `instruments.md`
-  - A1 med · `:1500-1519` · Replicate contract (§1) · author.
+  - ~~A1 med · `:1500-1519` · Replicate contract (§1) · author.~~ Done in #2759.
   - ~~A2 med · `:1417,1476` · "+Instrument is empty": it seeds Rating, Comments and the locked Name/Email rows.~~ Done in #2732.
   - ~~A3 med · `:722` · "sole surface" for self-review contradicts `:571-577` (the Link 3 checkbox owns the rule).~~ Done in #2732.
   - ~~A4 low · `:662` · `_new_model_usable_tags` → `new_model_usable_tags` (also B5, C17).~~ Done in #2732.

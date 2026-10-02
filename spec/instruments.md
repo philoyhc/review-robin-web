@@ -1504,7 +1504,8 @@ Bottom row of the card, right-aligned, in this order:
 ### `Replicate` semantics
 
 Clones every field of the source instrument except the surrogate
-key + the `order` slot:
+key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
+`deadline_closed_at` and the `cached_*` columns:
 
 - Identity (`name` gets a `" (copy)"` suffix, the source name trimmed
   so the whole fits 255 characters; `short_label` / `description`
@@ -1513,17 +1514,28 @@ key + the `order` slot:
 - Response fields (cloned in order — including the inline
   bounds and the help text, and a branch: the parent's condition
   is copied and a governed field re-pointed at its parent's copy).
-- Band 1's `rule_set_id` — **shared, not deep-cloned.** The
-  clone points at the same `SessionRuleSet` row. Operator edits
-  on the clone's Band 1 will materialise a new `SessionRuleSet`
-  on first non-empty save.
+- Band 1's rule set — **cloned, not shared** (author's ruling,
+  2026-10-02, A1). The copy gets its own `SessionRuleSet` row with the
+  source's rules, combinator and self-review setting. Three Band 1
+  writers update the pinned row in place, so a shared row would carry
+  an edit to either instrument into the other.
 - `group_kind` — copied as-is.
 - `band1_touched_links` — copied as-is. The clone inherits the
   source's touched state; the operator doesn't have to re-click
   pills.
-- `column_widths`, `sort_display_fields` — copied as-is.
+- `band2_state` — copied as-is.
+- `starts_new_page` — **not** copied. It marks a page break before the
+  instrument, a fact about position; the copy, slotted straight after
+  its source, continues the source's page like any new instrument.
+- `sort_display_fields`, `column_widths` — copied, re-pointed at the
+  copy's own display and response fields (both name fields by id).
 - `accepting_responses` / `responses_visible_when_closed` —
   copied as-is.
+
+**Not cloned: visibility policies.** The copy has no
+`InstrumentViewPolicy` rows, so every audience starts off for it
+(`spec/visibility_policy.md` §4.1) until the operator sets them, as
+session clone does (`spec/roundtrip_coverage.md`).
 
 **Not cloned: assignment rows.** The duplicate starts with no pairs and
 gets them from the next Generate, exactly as `+Instrument` does. A
