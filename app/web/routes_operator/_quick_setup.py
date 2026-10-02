@@ -201,6 +201,16 @@ async def create_session(
             detail=exc.message,
         ) from exc
 
+    # A taken code is a form error like the others, not the unique
+    # constraint's IntegrityError (which answered 500).
+    try:
+        sessions.ensure_code_available(db, code)
+    except sessions.SessionCodeTakenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     # One correlation id for the whole create, so every audit event it
     # produces — the session, each Quick Setup slot, tags, owners — groups
     # as one request. ``request_correlation_id`` mints a fresh id per call

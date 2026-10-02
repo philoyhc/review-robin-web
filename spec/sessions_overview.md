@@ -257,7 +257,8 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   `sessions.update_session` for name, code and deadline only when
   `lifecycle.is_draft` holds, and otherwise ignores those fields
   rather than refusing the post, so a stale form cannot slip past the
-  gate. This is narrower than Session Home's details card, whose
+  gate. In `draft` a code another session holds answers **422** before
+  the tags are written, so a refused Save changes nothing. This is narrower than Session Home's details card, whose
   `/config` accepts `draft` and `validated`.
 - **Tags have four write surfaces, two of them off this page.** The
   lobby's two — the row expander's `{id}/lobby-edit` and the toolbar's
