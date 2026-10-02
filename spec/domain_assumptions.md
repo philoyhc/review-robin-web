@@ -35,8 +35,12 @@ though: "Purge and archive" (`purge_and_archive` in
 responses, rosters and audit log the operator ticks, and unarchiving
 does not bring them back.
 
-Session can be edited when instruments are closed/paused; if there
-are ongoing reviews, reviewers need to be notified.
+Session setup can be edited only in `draft` or `validated`; an
+Activated or Closed session is reverted to draft first. The exceptions
+are in `spec/lifecycle.md` §3.1: the Observers roster accepts edits
+until the session is archived, and the email-template editor is not
+gated at all. Reviewers are not notified of edits (author's ruling,
+2026-10-02, F15).
 
 Note: While Session is the top level structure, there should be a
 way to put arbitrarily assign them to Groups. Sessions can be
@@ -47,15 +51,16 @@ duplicated (without the response data).
 Associated with one set of response questions (ratings, comments,
 etc.) and their instructions.
 
-Status: Draft, Receiving responses, Closed/Paused.
-
-Closed/Paused defaults to keeping existing responses invisible to
-reviewers, but visibility can be turned on.
-
-Instrument can be edited when closed/paused; if there are ongoing
-reviews, reviewers need to be notified.
-
-Instrument automatically closes upon session deadline.
+An instrument has no operator-set status. Accepting responses is
+session-wide: the lifecycle sets every instrument's
+`accepting_responses` together, so all accept while the session is
+Activated and none does once it closes (at its deadline or by the
+operator) or reverts to draft. What a reviewer sees
+of their answers after close is the instrument's visibility policy.
+Instruments are edited under the session's rule above, and reviewers
+are not notified of edits. (A per-instrument Draft / Receiving /
+Closed status and a notify-on-edit step were struck, author's ruling,
+2026-10-02, F15.)
 
 ## UI vocabulary — see
 
