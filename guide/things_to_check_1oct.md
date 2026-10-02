@@ -139,3 +139,30 @@ E1, E2 and E4 were checked by the author when they merged.
   on another shape, or **+Shape**: the tick clears and **Delete** is
   disabled again. Ticked, **Delete** removes the shape, and it stays
   gone after a reload.
+- [ ] **A deleted card stays gone (#2742).** Tick and **Delete** a
+  shape: no other card opens or highlights in its place, and **+Shape**
+  or **Edit** on another card behaves as before.
+
+## An inactive reviewer is not a reviewer (#2740)
+
+- [ ] **Their invite link answers 404.** Send a reviewer an invitation,
+  copy the link from the outbox, then set that reviewer inactive. Open
+  the link: the page is a plain 404, not the "issued to …" mismatch
+  page. Set them active again and the same link works.
+- [ ] **No reminder for them.** On Manage Invitations the inactive
+  reviewer has no row, so no **Send reminder**; the Pending reminders
+  count leaves them out.
+- [ ] **No observer CSV once archived.** As an observer, note a
+  per-instrument CSV link on `/collation`, archive the session, then
+  open that link's address directly: 404.
+
+## A stored response sort re-sorts on load (A27, #2743)
+
+- [ ] **Rows follow the badge after a reload.** On the reviewer surface
+  of a multi-row instrument, click a response column's header, then
+  reload. The rows keep the clicked order and match the badge; blank
+  answers stay last. Rows may move once as the page loads.
+- [ ] **Descending holds too.** Click the same header again, reload:
+  the rows stay in descending order.
+- [ ] **A display-column sort is unchanged.** Sort by a display column
+  and reload: the rows arrive already sorted, with no visible move.
