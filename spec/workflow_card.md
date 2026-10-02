@@ -42,13 +42,18 @@ which 303s to `/operator/sessions/archived`). The host pages pass
 `home` (Session Home), `assignments`, `validate`, `invitations`,
 `responses` and `extract-data`.
 
-The allowlist is `_REVERT_RETURN_TO` in
-`app/web/routes_operator/_shared.py`: `reviewers` / `reviewees` /
+There are two allowlists. `_REVERT_RETURN_TO` in
+`app/web/routes_operator/_shared.py` governs the card's POST
+redirects: `reviewers` / `reviewees` /
 `relationships` / `observers` / `assignments` / `instruments` /
 `validate` / `invitations` / `responses` / `extract-data`, each
 resolving to `/operator/sessions/{id}/{slug}`. `home` is not in it;
 it, and any value outside the list, resolves to
-`/operator/sessions/{id}`.
+`/operator/sessions/{id}`. `_WORKFLOW_RETURN_TO`
+(`_REVERT_RETURN_TO | {"home"}`, in
+`app/web/routes_operator/_workflow.py`) governs which `return_to`
+the Activate warnings-detour URL carries through to Validate, so
+`home` survives that hop.
 
 ## Inputs the card reads
 
@@ -834,12 +839,15 @@ anchor):
 
 | Session state | `scheduled_activate_at` | Signal |
 | --- | --- | --- |
-| `draft` | unset | (none) |
-| `draft` | set | ⚠ "Scheduled activation at «X» — currently inactive: Prepare session before then or the schedule will skip." |
-| `draft` or `validated` | unset, and the session's newest audit event is `session.scheduled_activation_skipped` / `session.scheduled_activation_failed_persistent` | ⓘ "Scheduled activation at «X» — reason: «reason»." (the failed event reads "Scheduled activation gave up at «X» — …"), «X» and «reason» from that event. One-shot: any newer audit event for the session clears it. |
-| `validated` | unset, no such event | (none) |
-| `validated` | set, in future | ✓ "System will auto-activate at «X». You can also click Activate now." |
+| any but `ready` | unset, no skip / failure event (below) | (none) |
+| `draft`, `expired` or `archived` | set | ⚠ "Scheduled activation at «X» — currently inactive: Prepare session before then or the schedule will skip." |
+| any but `ready` | unset, and the session's newest audit event is `session.scheduled_activation_skipped` / `session.scheduled_activation_failed_persistent` | ⓘ "Scheduled activation at «X» — reason: «reason»." (the failed event reads "Scheduled activation gave up at «X» — …"), «X» and «reason» from that event. One-shot: any newer audit event for the session clears it. |
+| `validated` | set | ✓ "System will auto-activate at «X». You can also click Activate now." |
 | `ready` | (any — moot post-activation) | (none — the existing "Activated at «X»" treatment covers it) |
+
+`build_scheduled_activation_caption` returns `None` early only for
+`ready`, so the skip / failure notice and the ⚠ row also reach
+`expired` and `archived`.
 
 See `guide/archive/segment_18G_scheduled_events.md` Part 1 for the
 service-side contract (editor gate, persistence across
@@ -866,9 +874,13 @@ gate the trigger:
 | empty / null | (any) | (any) | (any) | (none) |
 | set | unset | (any) | (any) | ⓘ "Auto-send invites are configured (N entries) but currently inactive — no Start to anchor against. They reactivate when Start is re-set." |
 | set | set | no (draft) | (any) | ⚠ "Auto-send scheduled at «X» — currently inactive: Prepare session before then or these will skip." |
-| set | set | yes (`validated`) | no | ⚠ "Auto-send scheduled at «X» — currently inactive: there are no invitations to send. Prepare creates one per eligible reviewer — run Prepare session before then, or these will skip." |
+| set | set | yes (any non-draft state but `ready`: `validated`, `expired`, `archived`) | no | ⚠ "Auto-send scheduled at «X» — currently inactive: there are no invitations to send. Prepare creates one per eligible reviewer — run Prepare session before then, or these will skip." |
 | set | set | yes (`ready`) | no | ⚠ "Auto-send scheduled at «X» — currently inactive: there are no invitations to send. Creating them needs Prepare, which an open session cannot run — revert to draft (this stops responses), fix the roster, then Prepare and activate again before then, or these will skip." |
 | set | set | yes | yes | ✓ "Auto-send scheduled at «X». System will dispatch automatically; you can also Send all now." |
+
+In this table **Prepared? means not `draft`**: the caption builder tests
+`is_draft` and then `is_ready`, so `expired` and `archived` take the
+"yes" rows too.
 
 #### Auto-send reminders signal
 

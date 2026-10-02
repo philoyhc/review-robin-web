@@ -1058,9 +1058,11 @@ carries the algorithm and the reasons it may not be simplified
 back.
 
 When Generate runs — inside the Workflow card's Prepare step, the
-only UI path to it, or through
+only UI path to it on an existing session, or through
 `POST /operator/sessions/{session_id}/assignments/generate`, which no
-page posts to — then for each instrument:
+page posts to; or, with Rehydrate (deferred and off by default), on
+the new session it builds (`spec/rehydrate.md`) — then for each
+instrument:
 
 1. Run the engine over the current rule + roster.
 2. Compute the diff against existing `Assignment` rows:
@@ -1127,7 +1129,8 @@ roster entry cascades its rows away, and the empty rules carry it.
 
 Regeneration is always the operator's own act — nothing auto-regenerates,
 and **Prepare session**, which runs Generate, is the only path in the
-UI; no page carries a Generate button of its own. **Staleness is a
+UI on an existing session (Rehydrate's run on the session it builds
+aside); no page carries a Generate button of its own. **Staleness is a
 prompt, never a blocker:** it is a warning, so it does not gate activation.
 
 **The verdict is cached against its inputs.** Answering it runs the
