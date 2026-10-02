@@ -258,7 +258,8 @@ Five exceptions to that list, all easy to mis-read:
   `ready`, so both work on a `draft`, `validated`, `expired` or
   `archived` session (author's ruling, 2026-10-02,
   `guide/findings_2026-10-01_corpus.md` C7). The lobby's bulk Delete
-  still filters on `is_editable`.
+  accepts `draft`, `validated` and `expired` (`is_editable` or
+  `is_expired`); archived sessions go through the archived page.
 
 Detail message: `"Session is <status>; revert to draft to edit"`.
 

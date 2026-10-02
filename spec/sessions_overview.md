@@ -498,8 +498,9 @@ button is gated behind a "Yes, delete" checkbox
 2. **Per-id filter.** For each id, the handler:
    - calls `sessions.get_for_user(db, user, id)` — returns `None`
      when the caller isn't an operator on that session.
-   - calls `lifecycle.is_editable(...)` — returns `False` for
-     `ready` (Activated), `expired` and `archived` sessions.
+   - accepts the session only when it is `draft`, `validated` or
+     `expired` (`lifecycle.is_editable(...) or lifecycle.is_expired(...)`),
+     so `ready` (Activated) and `archived` sessions are skipped.
    - skips silently on either miss.
 3. **Delete loop.** For each surviving session, calls
    `sessions.delete_session(...)`, which cascades reviewers /
@@ -510,9 +511,11 @@ button is gated behind a "Yes, delete" checkbox
 
 #### Lifecycle eligibility
 
-`lifecycle.is_editable` returns `True` for `draft` and `validated`
-sessions; `ready` (Activated), `expired` and `archived` sessions are
-not deletable through this surface. Non-eligible ticks are silently
+`draft`, `validated` and `expired` sessions are deletable through this
+surface (author's ruling, 2026-10-02: a finished session is deletable
+from the lobby as from its Session Home). `ready` (Activated) sessions
+are not, and `archived` ones are deleted from the archived page's own
+`bulk-delete-archived`. Non-eligible ticks are silently
 dropped — there is no flash banner. (If field feedback shows operators
 are confused, layer a `?skipped=N` flash on top.)
 
@@ -579,7 +582,7 @@ are confused, layer a `?skipped=N` flash on top.)
   - `delete_session(db, *, review_session, user, correlation_id)` —
     cascades dependent rows + writes the `session.deleted` audit
     event.
-- **Lifecycle gate:** `is_editable` in `app/services/session_lifecycle.py`.
+- **Lifecycle gate:** `is_editable` or `is_expired` in `app/services/session_lifecycle.py`.
 - **Tests:** `tests/integration/test_operator_sessions.py`,
   `tests/integration/test_chrome_breadcrumbs.py` (header /
   checkbox markup assertions).
