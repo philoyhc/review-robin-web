@@ -108,20 +108,63 @@ to `/me/sessions/{id}`. The cookie carries the canonical
 (the browser primitive writes it via `encodeURIComponent`); the server
 reads it at render time, `unquote()`-s the raw value before
 `json.loads`, and threads the decoded spec through
-`views.order_rows_by_sort_spec` so the initial HTML already lands in
-the persisted order (no JS-reorder flicker). Clearing the sort writes
-an expired cookie, returning the next render to the operator default.
-Cookie scope is per-(browser, session, instrument) — different
-browsers / devices / cleared cookies all return cleanly to the
-operator default.
+`views.order_rows_by_sort_spec`. Clearing the sort writes an expired
+cookie, returning the next render to the operator default. Cookie
+scope is per-(browser, session, instrument) — different browsers /
+devices / cleared cookies all return cleanly to the operator default.
+
+**Who applies which key on load** (ruling A27). The server cannot
+sort by response values, so the work splits by what the stored spec
+holds:
+
+- **A display-only spec is applied by the server** (`reviewee.name`,
+  `reviewee.email_or_identifier`, `display:N`). It replaces the
+  operator default rather than tie-breaking with it, so rows tied on
+  every cookie key stay in insertion order. The page lands in it with
+  no client reorder.
+- **A spec holding any `response:N` key is applied by the on-load
+  script.** The decoder returns no override for it, so the server
+  renders the operator default. `_rrwHydrateFromCookies` in
+  `base.html` then re-sorts the rows by the whole spec, display keys
+  included, through `_rrwApplySort`: the routine a header click runs,
+  comparing with `_rrwCompareValues` and firing `rrw:sorted`.
+  Rows tied on every key keep the order the script found them in,
+  which is the operator default. **A reload therefore shows exactly
+  the order the click produced, ties and blank cells included, when
+  that click was made on a page with no stored sort.** A click on such
+  a page also finds the rows in the operator default.
+- **Group instruments** are covered by the same script. The server
+  ignores their cookie (see "Group-scoped instruments"), and a group
+  table's only sortable headers are its response columns.
+- **The exception is a display-only spec.** The server compares the
+  way Python does: case first, digit runs as text, and ties left in
+  insertion order. A click compares with `localeCompare`
+  (`{numeric: true}`) and breaks ties by the order the page was in
+  when the first sort ran on it — the operator default on a page with
+  no stored sort. The
+  two can differ on mixed-case or numbered values and on tied rows.
+  This predates A27.
+- **A click made over a stored display-only sort is a second
+  exception.** That page is in the server's display-sorted order, and
+  the click's first `_rrwApplySort` stamps `rrwOriginalIndex` from it,
+  so ties break by the old display sort. The reload of the resulting
+  response-key cookie breaks them by the operator default instead. For
+  example, with an operator default of name descending, Charlie = 2,
+  Alpha = Bravo = 4, and Delta and Echo unanswered: click Name,
+  reload, click Rating. The click shows
+  `Charlie, Alpha, Bravo, Delta, Echo`, and the reload that follows
+  shows `Charlie, Bravo, Alpha, Echo, Delta`. Only the order of rows
+  tied on every key differs; the design accepts this.
+- On every load, `_rrwHydrateFromCookies` redraws the badges from the
+  cookie, whichever of the two applied the spec.
 
 **The `unquote()` is not optional, and a test cannot be trusted to
 say so.** Starlette does not percent-decode cookie values, so without
 it `json.loads` fails on the browser's own encoding and SSR falls back
-to insertion order — silently, because the client-side JS re-sorts
-after paint and the badge still shows the column sorted. A
-cookie-decoding test must therefore write the value the way the
-browser writes it; one that sets raw JSON exercises nothing.
+to the operator default — silently, because the on-load script still draws
+the badge from the cookie and, for a display-only spec, does not
+re-sort. A cookie-decoding test must therefore write the value the
+way the browser writes it; one that sets raw JSON exercises nothing.
 
 **Persistence is safe because the sort is visible.** Every sortable
 header carries a `rrw-sort-badge`: `↕` while the column is not in the
@@ -223,7 +266,7 @@ A group-scoped instrument (`Instrument.group_kind` set; `spec/instruments.md`) r
 
 - **Default order.** `_collapse_group_rows` (`app/web/routes_reviewer/_surface/_group_collapse.py`) emits the group rows in ascending order of their group key — the tuple of boundary tag values from `responses.group_keys`, or `()` when the instrument has no boundary tag. A group row carries no per-reviewee display cells or sort values, so display-field entries in the spec are not applied.
 - **The `-1` key.** `GROUP_IDENTITY_SORT_KEY` (`-1`, in `app/services/instruments/_display_fields.py`) is a sentinel `display_field_id` for the composed Group cell, not an `instrument_display_fields` row. `set_sort_display_fields` keeps it where it would drop an unknown id, and `order_rows_by_sort_spec` exempts it from the known-id filter. The operator sets it from the sort badge on the Group header of Band 2's group preview. On a group instrument it is the only entry the reviewer surface reads (`app/web/routes_reviewer/_surface/_context.py`): `"dir": "desc"` reverses the default group-key order, `"asc"` keeps it. On a per-reviewee instrument it resolves to no value on every row and changes nothing.
-- **No server-side reviewer override.** The Group header carries no `↕` button, and the server does not read the `rrw-sort-rs-{session_id}-{instrument_id}` cookie for a group instrument. Its response-column headers keep their `↕` buttons, so a reviewer can still reorder the group rows in the browser by their own answers.
+- **No server-side reviewer override.** The Group header carries no `↕` button, and the server does not read the `rrw-sort-rs-{session_id}-{instrument_id}` cookie for a group instrument. Its response-column headers keep their `↕` buttons, so a reviewer can still reorder the group rows in the browser by their own answers, and the on-load script re-applies that order from the cookie on the next visit.
 
 ---
 

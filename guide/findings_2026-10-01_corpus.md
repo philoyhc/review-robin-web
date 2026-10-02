@@ -181,8 +181,9 @@ fixing a no-ruling row (#2731–#2738). **All eight ruled 2026-10-02.**
   Unlock toggle renders only while the card is available (`draft`,
   no responses); `quick_setup_card_spec.md` and `session_home.md` now
   say so.
-- **A27** — **Ruled: fix; the rows should sort.** The server orders
-  `response:N` keys. Code PR to follow.
+- ~~**A27**~~ — **Ruled: fix; the rows should sort. Done in #2743**: a
+  stored spec with a `response:N` key renders the operator default and
+  the on-load script re-sorts it through the click path.
 - ~~**Invite landing ignores `Reviewer.status`**~~ — **Ruled: an inactive
   reviewer is treated as not a reviewer at all. Done in #2740**: their
   token resolves as not found (404), and per-row Remind refuses them
@@ -282,7 +283,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~A24 med · `:162-169` · no auto-compact · author.~~ Ruled: follow the spec; done in #2724.
   - ~~A25 med · write/deepen · the group `-1` key and group-surface sorting are unspecced.~~ Done in #2732.
   - ~~A26 low · `:268-274` · the lobby and Archived pages adopt it too, with other cookie names.~~ Done in #2732.
-  - A27 low-med · `:104-116` · the server drops `response:N` keys, so a response-only cookie flickers · author: there is no flicker. The cookie decodes to `[]` and the rows keep insertion order while the badge shows a sort; fix by sorting response keys on the server, or by reordering on load.
+  - ~~A27 low-med · `:104-116` · the server drops `response:N` keys, so a response-only cookie flickers · author: there is no flicker. The cookie decodes to `[]` and the rows keep insertion order while the badge shows a sort; fix by sorting response keys on the server, or by reordering on load.~~ Done in #2743.
 - `assignments.md`
   - ~~B1 high · `:87-90,500-511,682` · there is no `Assignment.group_key` column; it is derived by `responses.group_keys`.~~ Done in #2733.
   - ~~B2 high · `:68-70,566` · inactive rows are generated · author.~~ Ruled: kept, excluded.
