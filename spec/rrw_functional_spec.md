@@ -590,7 +590,8 @@ A per-reviewer, per-session record carrying a unique sign-in
 token.
 
 **Fields:** reviewer id, hashed token (the raw token is not on this
-row; it is in the email body, which the outbox keeps — §11.1),
+row; a sent invitation's is in its email body, which the outbox keeps
+— §11.1),
 created-at, sent-at, opened-at, status.
 
 An invitation is created when the operator (or auto-send
@@ -794,10 +795,12 @@ Two entry paths exist:
 
 - **Unique invitation link** (`/me/invite/{token}`). The
   token is per-reviewer, per-session, redeemed to a durable session
-  URL. The invitation row stores only its hash; the raw token is in
-  the email body, and the `email_outbox` row keeps that body, so a
-  sys admin can re-read the link. The link stays usable until the next
-  send rotates the token. It is a pointer, not a credential:
+  URL. The invitation row stores only its hash. A send mints a fresh
+  token and puts it in the email body, which the `email_outbox` row
+  keeps, so a sys admin can re-read the link that was sent. The link
+  stays usable until the next send or a Regenerate rotates the token;
+  a token minted at create time or by Regenerate is never written
+  anywhere in the clear. It is a pointer, not a credential:
   redemption requires sign-in and a matching email (G21, below).
   Redemption matches token → reviewer, checks the signed-in user's
   email matches the invited reviewer's email, stamps `opened_at`
@@ -1773,9 +1776,12 @@ creates one **invitation** row carrying:
 - The reviewer's email.
 - A unique **token** — generated at create time, embedded in the
   email body as a sign-in URL, and stored on the invitation row only
-  as a SHA-256 **hash**. The email body, raw token included, is kept
-  on its `email_outbox` row (visible to sys admins). The link is
-  reusable until the next send rotates the token. **It is not a
+  as a SHA-256 **hash**. Each send mints a fresh token; that email
+  body, raw token included, is kept on its `email_outbox` row (visible
+  to sys admins). The link is reusable until the next send or a
+  Regenerate (per invitation or bulk) rotates the token, after which
+  the outbox copy is stale. A token minted at create time or by
+  Regenerate is never stored in the clear. **It is not a
   credential:** redemption requires Easy Auth sign-in and returns 403
   unless the signed-in email matches the invited reviewer, so a reused
   or leaked link admits no one else (author's ruling 2026-10-02,
@@ -1907,8 +1913,8 @@ The following invitation-and-email surface is **wired**:
 - Per-session invitation, reminder, and responses-received
   templates with merge-tag substitution, reset-to-default
   per-field, and per-template cc/bcc.
-- Invitation rows with per-reviewer tokens (hashed on the row; the
-  raw token in the email body, which the outbox keeps — §11.1).
+- Invitation rows with per-reviewer tokens (hashed on the row; a
+  sent token in its email body, which the outbox keeps — §11.1).
 - The opened-at idempotent stamping on token redemption,
   with the `invitation.opened` audit event.
 - The outbox ledger — every send attempt writes a row
