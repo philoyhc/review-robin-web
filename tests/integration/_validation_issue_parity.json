@@ -179,15 +179,7 @@
     {
       "field": "reviewer_id:1|instrument_id:1",
       "fix_anchor": "#instrument-1",
-      "message": "Reviewer 'Cal' (cal@example.edu) is missing assignments for the 'Instrument_1' instrument",
-      "rule_key": "assignments.reviewer_missing_for_instrument",
-      "severity": "warning",
-      "source": "assignments"
-    },
-    {
-      "field": "reviewer_id:1|instrument_id:2",
-      "fix_anchor": "#instrument-2",
-      "message": "Reviewer 'Cal' (cal@example.edu) is missing assignments for the 'Instrument_2' instrument",
+      "message": "Reviewer 'Cal' (cal@example.edu) has no active assignments on the 'Instrument_1' instrument",
       "rule_key": "assignments.reviewer_missing_for_instrument",
       "severity": "warning",
       "source": "assignments"
@@ -229,7 +221,7 @@
     {
       "field": "reviewer_id:2",
       "fix_anchor": null,
-      "message": "Reviewer 'Cal' (cal@example.edu) is missing assignments",
+      "message": "Reviewer 'Cal' (cal@example.edu) has no active assignments",
       "rule_key": "assignments.reviewer_missing",
       "severity": "warning",
       "source": "assignments"

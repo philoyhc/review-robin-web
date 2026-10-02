@@ -66,8 +66,11 @@ An Assignment connects three entities:
   to three tag columns (`tag_1 / 2 / 3`).
 - **Reviewee** — a row in `reviewees`. Has Name +
   email-or-identifier + up to three tag columns. `status`
-  flags rosters: only `status='active'` reviewees are
-  candidates for generation.
+  flags rosters: only pairs whose reviewer **and** reviewee are
+  `status='active'` are assigned work. An inactive side's pairs
+  are still materialised, with `include=False`, so their responses
+  survive a deactivate → Prepare → reactivate round trip (author's
+  ruling 2026-10-02, `guide/findings_2026-10-01_corpus.md` B2).
 - **Instrument** — a row in `instruments`. Owns the rule (via
   `rule_set_id` or the synthetic Full Matrix when NULL) and
   the unit-of-review (`group_kind`).
@@ -102,7 +105,7 @@ For one instrument:
 ```
         full universe              ────────────────────────────────
         (every reviewer ×          1. Universe (assembled from the
-          every active reviewee)      session's rosters)
+          every reviewee)             session's rosters)
                   │
                   ▼
         FILTER (Link 1 + Link 2    2. Filter (drop pairs that fail
@@ -564,7 +567,7 @@ result = engine.evaluate(
 Steps:
 
 1. **Build the universe.** Cartesian product of `reviewers` and
-   `reviewees` (active only).
+   `reviewees`, whatever their `status` (step 5 decides `include`).
 2. **Run the rule list.** Each rule in `rule_set_schema.rules`
    contributes a per-pair predicate; the top-level `combinator`
    wraps them.
@@ -580,7 +583,11 @@ Steps:
    - Individual: one row per surviving pair.
    - Group: one row per pair, with `group_key` populated.
    - `include` = `True` for non-self pairs;
-     `session.self_reviews_active` for self pairs.
+     `session.self_reviews_active` for self pairs; and `False`
+     whenever the reviewer or the reviewee is inactive. A status
+     change reaches the row at the next Prepare, which recomputes
+     `include` on every kept row; until then invitations, the
+     reviewer's surface and Validate read `status` directly.
 
 The engine is pure (no DB writes); the materialise step is the
 caller's responsibility. `app/services/assignments/` is the
@@ -1151,13 +1158,16 @@ that fire on this page's domain:
 - **`assignments.no_included_pairs`** (warning) — every row on
   every instrument has `include=False`. The reviewer page would
   show nothing.
-- **`assignments.reviewer_missing`** (warning) — a reviewer has
-  zero `include=True` rows across every instrument. They'd
-  receive an invitation pointing at an empty surface.
+- **`assignments.reviewer_missing`** (warning) — an **active**
+  reviewer has no `include=True` row on an active reviewee. They'd
+  see an empty surface and get no invitation. An inactive reviewer is
+  not checked (findings B4).
 - **`assignments.reviewer_missing_for_instrument`** (warning) —
-  per-instrument variant: a reviewer has rows on some
-  instruments but zero `include=True` on a specific one.
-  Surfaces the per-instrument empty-page risk.
+  per-instrument variant on a multi-instrument session: an active
+  reviewer with no such row on a specific instrument that gives
+  someone work. An instrument that gives no one work is reported
+  once, by `assignments.instrument_empty` or
+  `instruments.zero_included`, instead.
 - **`assignments.instrument_empty`** (warning) — an instrument
   has zero materialised rows. Likely caused by an over-
   restrictive rule.

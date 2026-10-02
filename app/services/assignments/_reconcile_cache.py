@@ -167,11 +167,12 @@ def _roster_digest(rows: Iterable[Any], *, side: str) -> list[list[Any]]:
     Sorted by id here rather than trusting the caller's ordering, so
     the stamp does not depend on which query loaded the rows.
 
-    ``status`` is **over-coverage today**: the engine reads the roster
-    unfiltered, so deactivating a reviewer does not move the fan-out.
-    It is carried because the plan's Semantics commits to it and
-    because the cost of being wrong in this direction is one recompute,
-    while the cost in the other direction is a badge that lies.
+    ``status`` does not move the fan-out: the engine reads the roster
+    unfiltered, and an inactive side's pairs are kept with
+    ``include=False`` (findings B2). It is carried because the plan's
+    Semantics commits to it and because the cost of being wrong in this
+    direction is one recompute, while the cost in the other direction
+    is a badge that lies.
     """
     attributes = _side_attributes(side)
     return [

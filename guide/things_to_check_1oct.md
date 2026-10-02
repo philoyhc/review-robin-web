@@ -99,3 +99,17 @@ E1, E2 and E4 were checked by the author when they merged.
 - [ ] **A stored summary reads as off.** An instrument whose You cell
   was Anonymized summaries before migrating now shows —, and the
   reviewer's own card shows — in that cell too.
+
+## Inactive people keep their pairs, excluded (B2, B4)
+
+- [ ] **Deactivating excludes, not deletes.** On a prepared session
+  with a saved response, set that reviewer's reviewee inactive and run
+  Prepare. On Assignments the pair is still there, shown inactive; the
+  Prepare card warns of no response loss.
+- [ ] **Reactivating brings the answer back.** Set the reviewee active
+  and Prepare again. The pair is included, and the reviewer sees their
+  saved answer on the surface.
+- [ ] **Validate names a reviewer left with nothing.** Make every
+  reviewee of one active reviewer inactive. Validate warns that the
+  reviewer "has no active assignments"; an inactive reviewer is never
+  named.

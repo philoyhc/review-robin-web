@@ -418,8 +418,15 @@ def _diff_one_instrument(
             # will never create.
             excluded_by_rule += 1
             continue
+        # An inactive reviewer or reviewee keeps their pairs, written
+        # ``include=False`` (author's ruling 2026-10-02, findings B2):
+        # they are never assigned work, and their responses survive a
+        # deactivate / reactivate round trip, which leaving the pair
+        # out would delete.
         pair_include = (
-            review_session.self_reviews_active if is_self else True
+            (review_session.self_reviews_active if is_self else True)
+            and _is_active(reviewer)
+            and _is_active(reviewee)
         )
         new_pairs[(reviewer.id, reviewee.id)] = (
             reviewer,
@@ -563,8 +570,8 @@ def _materialise_one_instrument(
     # Matched pairs keep their row + responses. ``include`` is
     # recomputed, not preserved: the expected value is
     # ``self_reviews_active`` for a self-review pair and ``True`` for
-    # every other, so this also resets a row an operator inactivated
-    # by hand. Deliberate for now — assignment-row status round-trips
+    # every other, and ``False`` whenever either side is inactive, so
+    # this also resets a row an operator inactivated by hand. Deliberate for now — assignment-row status round-trips
     # through nothing, and restoring it is future work (19N Item 1,
     # Semantics 6 / ``spec/roundtrip_coverage.md``).
     for key in diff.to_keep:
