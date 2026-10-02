@@ -268,8 +268,8 @@ the signature for the loads a single rule still owns.
 | `instruments.no_rule_pinned` | instruments | warning | **Inert by design** — raises no findings, and must not be revived as written: a NULL `rule_set_id` is never "not set up", because every instrument defaults to the synthetic Full Matrix on untouched Band 1. `instruments.no_visible_response_fields` below covers the readiness gap. The key stays registered so audit history remains addressable. |
 | `instruments.no_visible_response_fields` | instruments | warning | An instrument has zero `visible=True` `InstrumentResponseField` rows — reviewers would see an empty page even though assignments exist. Toggle a response-field chip in Band 2 to make a field visible. |
 | `assignments.no_included_pairs` | assignments | warning | Sum of `included_count` across every instrument is zero — never generated, or every row deactivated. |
-| `assignments.reviewer_missing` | assignments | warning | An active reviewer has no included assignment on an active reviewee (the pinned rule excluded them, their reviewees are all inactive, or they joined the roster after the last Generate). Inactive reviewers are not checked. |
-| `assignments.reviewer_missing_for_instrument` | assignments | warning | An active reviewer has work on some instruments but none on others — a partial review surface on a multi-instrument session. |
+| `assignments.reviewer_missing` | assignments | warning | An active reviewer has no included assignment on an active reviewee (the pinned rule excluded them, their reviewees are all inactive, or they joined the roster after the last Generate). Inactive reviewers are not checked. **Single-instrument sessions only** — the `_for_instrument` sibling covers multi-instrument ones — and skipped while the session has never been generated (`assignment_mode` NULL) or nothing is included at all, which `assignments.no_included_pairs` reports once. No row anchor: its Fix link is the Assignments page, which has no per-reviewer row (the `#reviewer-row-{id}` ids live on the Reviewers page). |
+| `assignments.reviewer_missing_for_instrument` | assignments | warning | An active reviewer has work on some instruments but none on others — a partial review surface on a multi-instrument session. Multi-instrument sessions only; Fix links to the instrument's card on the Instruments page. |
 | `assignments.instrument_empty` | assignments | warning | An instrument has zero assignment rows — invisible to every reviewer. |
 | `email_template.no_help_contact` | email_template | info | Session has no `help_contact` set (advisory; reviewer-facing emails still send). |
 | `instruments.no_display_fields` | instruments | warning | At least one instrument has zero display fields beyond the always-on identity column. |
@@ -388,7 +388,8 @@ the current `?severity=` filter + the session, returns a
 - `severity_chips` — `list[SeverityChip]` with per-chip count
   and `is_active`.
 - `issue_groups` — `list[IssueSourceGroup]` of issues
-  post-filter, grouped by `source` in registry order.
+  post-filter, grouped by `(gate, source)`: setup-gate groups
+  first, then operations-gate, each in registry order (§2.4).
 - `filtered_issue_count` — total after the severity filter.
 - `error_count` / `warning_count` / `info_count` — pre-filter
   totals used by the chip strip.

@@ -8,10 +8,10 @@ boolean controlling whether the reviewer actually sees the
 reviewee on their per-instrument page. Assignments are not
 authored row-by-row; they're **generated** by running a per-
 instrument rule pass over the session's reviewer × reviewee
-matrix and slotting one row per surviving pair (Individual) or
-per (reviewer, group_key) (Group). **The rule engine
-(`assignments.replace_assignments`) is the only path that creates
-an `Assignment` row** — nothing hand-creates, uploads or edits one
+matrix and slotting one row per surviving pair — on Group
+instruments too, where the rows collapse into groups on read.
+**The rule engine (`assignments.replace_assignments`) is the only
+path that creates an `Assignment` row** — nothing hand-creates, uploads or edits one
 into existence; a process that cannot place a row (e.g. rehydrate's
 responses importer, `spec/rehydrate.md` §6.3) drops it rather than
 fabricating one.
@@ -87,10 +87,11 @@ Generation produces zero or more `Assignment` rows per
 instrument. Each row carries:
 
 - `reviewer_id`, `reviewee_id`, `instrument_id`.
-- `group_key: str | NULL` — for group-scoped instruments, the
-  comma-joined values of the boundary tags that make this
-  reviewee a member of one group. NULL on Individual
-  instruments.
+- No group key column. On a group-scoped instrument a row's
+  group key is derived on read by `responses.group_keys`: the
+  tuple of the boundary-tag values that make this reviewee a
+  member of one group (see *Boundary key*). Rows on Individual
+  instruments have none.
 - `include: bool` — whether the reviewer sees this reviewee on
   their per-instrument page. Defaults to True; the
   Assignments-page **Self review** toggle (and the per-row
@@ -121,10 +122,10 @@ For one instrument:
                   │
                   ▼
         Surviving pairs             5. Materialise into Assignment
-                  │                    rows (one per pair for
-                  ▼                    Individual; one per
-        SELF-REVIEW (drop or keep      (reviewer, group_key) for
-         based on rule-set              Group)
+                  │                    rows (one per pair, on
+                  ▼                    Individual and Group
+        SELF-REVIEW (drop or keep      instruments alike)
+         based on rule-set
          exclude_self_reviews)
 ```
 
@@ -159,7 +160,7 @@ A `MATCH` rule carries a `predicate` of `{field, operator, operand, case_sensiti
 
 Only namespace + slot combinations with at least one populated
 roster row appear in the Band 1 dropdowns
-(`views._instruments._new_model_usable_tags`).
+(`views._instruments.new_model_usable_tags`).
 
 **Operators** (UI → engine internal):
 
@@ -423,7 +424,7 @@ On a **group-scoped** instrument (`Instrument.group_kind`
 non-NULL — see *Group-scoped fan-out* below), one logical
 review-of-a-group is stored as **multiple `Assignment` rows**:
 one row per `(reviewer, group_member)` pair, sharing a single
-`group_key`. The reviewer fills out one answer for the whole
+derived group key. The reviewer fills out one answer for the whole
 group; the save layer copies that answer onto every member
 row.
 
@@ -503,15 +504,18 @@ means "all active reviewees form one global group per reviewer."
 
 ### Storage shape
 
-One `Assignment` row per **(reviewer, reviewee)** pair, with
-the boundary key copied into `Assignment.group_key`:
+One `Assignment` row per **(reviewer, reviewee)** pair. The
+boundary key is **not stored**: `responses.group_keys` derives it
+per row from the reviewee's tags and the pair's active
+`Relationship`, so a row's group always follows the current tags.
+The last column below is that derived key, not a column:
 
 ```
-reviewer_id | reviewee_id | instrument_id | group_key   | include
-------------+-------------+---------------+-------------+--------
-1           | 10          | 5             | "Team Red"  | True
-1           | 11          | 5             | "Team Red"  | True
-1           | 12          | 5             | "Team Blue" | True
+reviewer_id | reviewee_id | instrument_id | include | (group key)
+------------+-------------+---------------+---------+-------------
+1           | 10          | 5             | True    | ("Team Red",)
+1           | 11          | 5             | True    | ("Team Red",)
+1           | 12          | 5             | True    | ("Team Blue",)
 ```
 
 The decision to store per-reviewee rows (not per-group rows) is
@@ -523,7 +527,8 @@ both flavours; collapse-on-read instead of fork-on-write.
 ### Collapse-on-read
 
 The reviewer surface groups the rows by `(reviewer_id,
-instrument_id, group_key)` and renders one card per group:
+instrument_id)` and the derived group key, and renders one card
+per group:
 
 - Identity cell: bold comma-joined boundary-tag values on top,
   member names below (truncated to first 10 with a `... + N
@@ -562,7 +567,7 @@ group containing the reviewer as one of its members**. The
 self-review toggle drops the **whole group** when toggled off,
 not just the self-row inside it. The implementation:
 `_self_review_assignment_ids` in
-`app/services/assignments/` walks group_key membership rather
+`app/services/assignments/` walks group-key membership rather
 than per-row reviewer/reviewee identity.
 
 ## Evaluation algorithm
@@ -599,7 +604,8 @@ Steps:
 4. **Apply QUOTA.** Currently inert — no Band-1 QUOTA emission.
 5. **Materialise.**
    - Individual: one row per surviving pair.
-   - Group: one row per pair, with `group_key` populated.
+   - Group: one row per pair, the same shape as Individual; the
+     group key is derived on read (*Boundary key*).
    - `include` = `True` for non-self pairs;
      `session.self_reviews_active` for self pairs; and `False`
      whenever the reviewer or the reviewee is inactive. A status
@@ -714,7 +720,7 @@ Columns (left → right):
 | Instrument | `block.instrument_label` — the operator-facing label from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{session_seq}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md`, the operator-identifier policy) — it is not part of the label chain, so a search or a label built from it would match a string no operator can see. The column's server-side sort key is the SQL form of the same rule (`assignments/_coverage.py::_instrument_label_sql`), pinned against the Python one by `tests/integration/test_instrument_session_seq.py` after 19Q Item 6 found them drifted: the Python form moved to `session_seq` and the SQL stayed on `id`, so the page sorted by a string it no longer displayed. |
 | Type | "Individual" or "Group" (driven by `Instrument.group_kind`). |
 | Generated | Pill carrying the row count. "Not generated yet" when zero. A `stale` pill rides alongside when the rows have fallen out of step — see "Staleness". |
-| Groups | Group count (distinct `(reviewer, group_key)` over the rows) for group instruments; "—" for individual. |
+| Groups | Group count (distinct `(reviewer, group key)` over the rows, the key derived by `responses.group_keys`) for group instruments; "—" for individual. |
 | Self review | Pill carrying the self-review row count, plus an inline checkbox that bulk-flips `Assignment.include` on those rows in this instrument — counting and flipping only rows whose reviewer and reviewee are both active (an inactive side's row stays excluded by status, findings B2). Pill color is `pill-info` (blue) when every counted row is included, `pill-warning` (yellow) when not. The checkbox renders only when `self_review_total > 0`: not on a session with no roster overlaps, nor when every self-review row has an inactive side. |
 | Included | Pill carrying the count of `include=True` rows. "—" before Generate. |
 | Show | Per-instrument filter checkbox — client-side DOM toggle that hides / shows the instrument's pairs in the preview table below. Default: checked when any row materialised. |
@@ -923,10 +929,10 @@ the pairs matching *both* filters, `M` every pair in the session.
 That is the roster pages' own reading of the same sentence
 (`views/_filters.py`: *"Filters compose: status + search"*).
 
-**The column chips ignore both filters.** `col_data_sample` is built
-from an unfiltered `list_pairs` so narrowing the view never flips a
-chip's enabled state. It is aliased to the filtered sample only when
-*neither* filter is active, purely to skip a second query.
+**The column chips ignore both filters.** `col_data` is answered
+over the session's rosters — `tag_slot_presence` per side, the
+pair-context side active-only — rather than over the pairs, so
+narrowing the view never flips a chip's enabled state.
 
 The value is normalised at the route before it reaches the context,
 because it also rides the bulk form's hidden `filter_status` field
@@ -1051,8 +1057,10 @@ re-run survive with them. `spec/reconciling_regeneration.md`
 carries the algorithm and the reasons it may not be simplified
 back.
 
-When Generate runs — on its own, or inside the Workflow card's
-Prepare step — then for each instrument:
+When Generate runs — inside the Workflow card's Prepare step, the
+only UI path to it, or through
+`POST /operator/sessions/{session_id}/assignments/generate`, which no
+page posts to — then for each instrument:
 
 1. Run the engine over the current rule + roster.
 2. Compute the diff against existing `Assignment` rows:
@@ -1118,9 +1126,9 @@ roster was emptied reads as never-generated rather than stale: deleting a
 roster entry cascades its rows away, and the empty rules carry it.
 
 Regeneration is always the operator's own act — nothing auto-regenerates,
-and the Generate button (or Prepare session, which runs Generate
-transitively) is the only path. **Staleness is a prompt, never a
-blocker:** it is a warning, so it does not gate activation.
+and **Prepare session**, which runs Generate, is the only path in the
+UI; no page carries a Generate button of its own. **Staleness is a
+prompt, never a blocker:** it is a warning, so it does not gate activation.
 
 **The verdict is cached against its inputs.** Answering it runs the
 engine once per instrument, which costs seconds per instrument at roster
@@ -1190,7 +1198,8 @@ that fire on this page's domain:
 - **`assignments.reviewer_missing`** (warning) — an **active**
   reviewer has no `include=True` row on an active reviewee. They'd
   see an empty surface and get no invitation. An inactive reviewer is
-  not checked (findings B4).
+  not checked (findings B4). Single-instrument sessions only, and
+  skipped before the first Generate or while nothing is included.
 - **`assignments.reviewer_missing_for_instrument`** (warning) —
   per-instrument variant on a multi-instrument session: an active
   reviewer with no such row on a specific instrument. An instrument
@@ -1202,9 +1211,9 @@ that fire on this page's domain:
   has zero materialised rows. Likely caused by an over-
   restrictive rule.
 
-All four surface through the standard Validate page with
-"Fix on Assignments" deep-link targeting the per-instrument
-row.
+All four surface through the standard Validate page. The first
+two fix on the Assignments page with no row anchor; the last two fix
+on the Instruments page at the instrument's `#instrument-{id}` card.
 
 ## Worked example
 
@@ -1233,8 +1242,8 @@ each team to evaluate the team's overall collaboration.
   reviewee) materialise but their `include` is `True` until
   the operator clicks the per-instrument Self-review toggle on
   the Assignments page, which bulk-flips them to `False`.
-- For **Team retro**: same surviving pairs, but
-  `group_key` = team name. Rows still per-reviewee (10 rows
+- For **Team retro**: same surviving pairs, but the derived
+  group key is the team name. Rows still per-reviewee (10 rows
   for a 5-team session), but the reviewer surface collapses
   them into one card per team. Self-review groups (the team
   the reviewer belongs to) are dropped via the toggle.
