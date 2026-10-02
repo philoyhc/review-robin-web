@@ -84,8 +84,9 @@ dedicated **Timezone** column names each row's own session zone
 (see Rendering format below for its compact form).
 
 **The Sys Admin audit-log viewer is the deliberate
-exception — UTC end-to-end**, and the audit-events extract
-follows it. A forensic surface correlating
+exception — UTC end-to-end**. The audit-events extract does not
+convert to the session zone either, but it keeps the stored value's
+own offset rather than normalizing to UTC (above). A forensic surface correlating
 events across sessions and operators reads most clearly in one
 fixed zone; its "When" column header and its From / To date
 filter are labelled `(UTC)`.
