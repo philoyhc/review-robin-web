@@ -67,7 +67,7 @@ CANONICAL = frozenset({
     "danger-solid", "danger", "btn-icon",
     # §10 primitives that live on an element rather than in a combinator
     "table-pager-step", "table-pager-cluster", "table-pager-menu",
-    "btn-row", "btn-pair", "chip-group",
+    "btn-pair", "chip-group",
 })
 
 _SIMPLE = re.compile(r"^(?:body\.ui-v2\s+)?(?:\.[A-Za-z0-9_-]+)+$")
