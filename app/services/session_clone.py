@@ -3,8 +3,10 @@ fresh ``draft`` session (Segment 18A Part 1).
 
 Two modes:
 
-- ``"all"`` — copies the full setup, including the reviewer /
-  reviewee / relationship roster.
+- ``"all"`` — copies the full setup, including every roster:
+  reviewers, reviewees, relationships and observers (author's ruling,
+  2026-10-02 — observers, cohort rules included, were not copied
+  before).
 - ``"config"`` — copies the configuration shell only (instruments,
   rule sets, field-label overrides, settings, tags, saved Data
   shapes) but not the roster.
@@ -27,6 +29,7 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
+    Observer,
     Relationship,
     Reviewee,
     Reviewer,
@@ -276,6 +279,7 @@ def clone_session(
 
     # Roster — copied in ``"all"`` mode only.
     reviewer_count = reviewee_count = relationship_count = 0
+    observer_count = 0
     if mode == "all":
         reviewer_map: dict[int, int] = {}
         for reviewer in source.reviewers:
@@ -321,6 +325,19 @@ def clone_session(
             )
             relationship_count += 1
 
+        # Observers carry no roster ids — a cohort rule matches on tag
+        # fields and observer attributes only — so each copies as is.
+        for observer in source.observers:
+            db.add(
+                Observer(
+                    session_id=clone.id,
+                    **_column_values(
+                        observer, skip=set(_SKIP_BASE) | {"session_id"}
+                    ),
+                )
+            )
+            observer_count += 1
+
     db.flush()
     audit.write_event(
         db,
@@ -335,6 +352,7 @@ def clone_session(
             reviewers=reviewer_count,
             reviewees=reviewee_count,
             relationships=relationship_count,
+            observers=observer_count,
             instruments=instrument_count,
         ),
         refs={"source_session_id": source.id},

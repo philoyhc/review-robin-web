@@ -1074,12 +1074,12 @@ The lobby supports:
   first; with nothing ticked to purge it is a plain archive
   ([§16.5](#165-operator-triggered-purge-and-archive)).
 - **Per-row clone** in two flavours: **Duplicate** (the setup plus
-  the reviewer, reviewee and relationship rosters) and **Duplicate
-  settings only** (metadata, email templates, instruments, rules,
-  friendly labels, tags and saved data shapes; no rosters). Neither
-  copies responses, assignments, invitations, observers or audit
-  history: the clone is a fresh `draft` owned by the operator who
-  cloned it.
+  every roster: reviewers, reviewees, relationships and observers,
+  with their cohort rules) and **Duplicate settings only** (metadata,
+  email templates, instruments, rules, friendly labels, tags and saved
+  data shapes; no rosters). Neither copies responses, assignments,
+  invitations or audit history: the clone is a fresh `draft` owned
+  by the operator who cloned it.
 
 The **archived-sessions child page** (`/operator/sessions/archived`)
 lists sessions in `archived` state with the lobby's table, sort, search

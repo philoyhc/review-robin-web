@@ -13,6 +13,7 @@ from app.db.models import (
     DataShape,
     Instrument,
     InstrumentResponseField,
+    Observer,
     Relationship,
     ReviewSession,
     Reviewee,
@@ -192,8 +193,58 @@ def test_clone_all_does_not_copy_results_acknowledgement(
     assert source_reviewee.results_acknowledged_at is not None
 
 
+def test_clone_all_copies_observers_with_their_cohort_rules(
+    db: Session,
+) -> None:
+    """Duplicate copies every roster, observers included (author's
+    ruling, 2026-10-02), each with its status, tag and cohort rule."""
+    source, op = _source_session(db, "clone-obs")
+    rule = {
+        "combinator": "AND",
+        "rules": [
+            {"field": "reviewee.tag1", "op": "IS THE SAME AS",
+             "operand_tag": "observer.tag1", "operand_value": ""}
+        ],
+    }
+    db.add(
+        Observer(
+            session_id=source.id,
+            email="obs@example.edu",
+            display_name="Obs",
+            status="inactive",
+            tag_1="north",
+            cohort_rule=rule,
+        )
+    )
+    db.commit()
+
+    clone = session_clone.clone_session(
+        db, source=source, user=op, mode="all"
+    )
+
+    clone_observer = db.execute(
+        select(Observer).where(Observer.session_id == clone.id)
+    ).scalar_one()
+    assert (
+        clone_observer.email,
+        clone_observer.display_name,
+        clone_observer.status,
+        clone_observer.tag_1,
+    ) == ("obs@example.edu", "Obs", "inactive", "north")
+    assert clone_observer.cohort_rule == rule
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "session.cloned",
+            AuditEvent.session_id == clone.id,
+        )
+    ).scalar_one()
+    assert event.detail["counts"]["observers"] == 1
+
+
 def test_clone_config_skips_roster(db: Session) -> None:
     source, op = _source_session(db, "clone-config")
+    db.add(Observer(session_id=source.id, email="obs-cfg@example.edu"))
+    db.commit()
 
     clone = session_clone.clone_session(
         db, source=source, user=op, mode="config"
@@ -208,6 +259,12 @@ def test_clone_config_skips_roster(db: Session) -> None:
     assert (
         db.execute(
             select(Relationship).where(Relationship.session_id == clone.id)
+        ).scalars().all()
+        == []
+    )
+    assert (
+        db.execute(
+            select(Observer).where(Observer.session_id == clone.id)
         ).scalars().all()
         == []
     )
@@ -235,6 +292,7 @@ def test_clone_writes_audit_event(db: Session) -> None:
     ).scalar_one()
     assert event.detail["context"]["mode"] == "all"
     assert event.detail["refs"]["source_session_id"] == source.id
+    assert event.detail["counts"]["observers"] == 0
 
 
 def test_clone_derives_a_unique_code(db: Session) -> None:
