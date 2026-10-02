@@ -286,6 +286,25 @@ are still built either way. R2 below is the recommendation that follows
 from that, and this finding is why it is worth stating separately: a
 query count is not a cost.
 
+### Re-taken 2026-09-21 — flat in the roster
+
+After 19R Item 3, all three pages are flat. Measured through the real
+routes (SQLite, in-process, one render each, roughly 0.2 ms per query),
+moved here from `spec/operations_pages.md`, which keeps the rule:
+
+| roster | assignments | Assignments | Invitations | Responses |
+|---|---:|---:|---:|---:|
+| 25 × 25 | 625 | 49 | 35 | 30 |
+| 50 × 50 | 2,500 | 49 | 35 | 30 |
+| 100 × 100 | 10,000 | 49 | 35 | 30 |
+| 200 × 200 | 40,000 | 49 | 35 | 30 |
+
+The Invitations and Responses columns replace a per-roster budget that
+ran to 434 at the largest size — roughly two queries per reviewer, the
+lookups this finding names. Assignments was never in that regime; its
+`LIMIT 200` and its indexes hold it flat, and its column was re-taken
+whole because two of its old rows had drifted by a query or two.
+
 ## Finding 3 — five counts are answered by fetching the rows
 
 ```bash

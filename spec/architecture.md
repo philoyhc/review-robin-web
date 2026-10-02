@@ -232,7 +232,7 @@ than inventing a third contract (consistency-audit R1 / R4). The
 instrument-card AJAX endpoints (`_instruments_band2.py`,
 `_instruments_pagination.py`) do not follow it. R4 shipped and
 resolved that deliberately the other way: both now call
-`require_json_object` (`_shared.py:377-400`), which factors out the
+`require_json_object` (`_shared.py`), which factors out the
 hand-rolled parse but **keeps** the 400-plus-tailored-message
 contract their client JS expects rather than converting them to a
 Pydantic 422. The convergence rule above governs *new* endpoints.
@@ -279,7 +279,7 @@ perspective:
   Link carries filter / group rules) or leaves `rule_set_id=NULL`
   and inherits the synthetic **Full Matrix** default. The rule
   engine lives in `app/services/rules/` (`engine.py`,
-  `predicates.py`, `quotas.py`, `preview.py`, `fields.py`) and is
+  `predicates.py`, `quotas.py`, `fields.py`) and is
   pure — it evaluates a rule set against the reviewer × active-
   reviewee universe and returns surviving pairs. The write-side
   caller (`app/services/assignments/`) materialises those pairs into
@@ -317,10 +317,13 @@ instrument the reviewer is assigned on. Within a single instrument:
 - **Per-field help text** above the table explains each response
   field in plain prose; visibility is per-field via
   `InstrumentResponseField.help_text_visible`.
-- **Section heading** is the instrument's operator-editable
-  `description`; the system handle (`Default` on the auto-created
-  instrument; operator-chosen on any future ones) is internal-only
-  and never reviewer-visible.
+- **Section heading** is composed from the instrument's
+  `short_label` (prefixed `#{N}: ` when the session has more than one
+  instrument), with its `description` as the subtitle
+  (`instrument_heading` in `app/web/views/_instruments.py`; the
+  composition table is `spec/reviewer-surface.md` "Above the table —
+  heading + help block"). The system handle (`name`; `Default` on the
+  auto-created instrument) is internal-only and never reviewer-visible.
 
 Across instruments — a reviewer assigned on multiple instruments for
 the same session sees one such tabular artifact per instrument,
@@ -341,7 +344,8 @@ authoritative "what works today" list, read **`docs/status.md`**
 
 - Session creation auto-seeds one instrument (system handle
   `Default`) with two response fields (`rating` integer 1–5
-  required, `comments` long text optional). Display fields are
+  required, `comments` long text optional) and the two locked
+  display-field rows, Name and Email. The other display fields are
   seeded lazily from import data, not on session creation (see
   "Lazy display-field seeding" below). See
   `app/services/instruments/_instrument_crud.py`
@@ -359,8 +363,9 @@ authoritative "what works today" list, read **`docs/status.md`**
   toggles, live preview). See `spec/instruments.md` for the
   per-section contract.
 - The reviewer surface renders one tabular artifact per instrument
-  in DOM order, with section heading from `Instrument.description`
-  (fallback to handle) and a per-field help block above each table.
+  in DOM order, with section heading from `Instrument.short_label`
+  (subtitle `Instrument.description`) and a per-field help block above
+  each table.
 - Schema + services + operator UI are multi-instrument-aware
   (`create_instrument`, `delete_instrument`, FK cascades; the
   `Add an instrument` and `Delete this instrument` buttons).
@@ -433,8 +438,9 @@ becomes stale.
 
 State machine: `pending` → `sent` → `opened`. Generate is idempotent
 (operator-paced, no auto-trigger on activation). All invitation
-actions require `session.status == "ready"` (409 otherwise) so the
-emailed link never points at a draft session.
+actions require the session to be `validated` or `ready`
+(`_require_validated_or_ready`, 409 otherwise) so the emailed link
+never points at a draft session.
 
 `/me/invite/{token}` requires Easy Auth sign-in (no magic-link
 anonymous access — that's deferred to Segment 16A). The route looks up
@@ -474,8 +480,10 @@ reminder action falls back to `send_invitation` (mints a fresh token,
 writes a `kind='invitation'` row); the operator's intent always lands
 as a deliverable message in one click. `Invitation.last_reminder_at`
 stamps every successful reminder. There is no throttle. Bulk reminders
-emit a single `reminders.sent` audit event with `detail.count` and the
-list of invitation/me ids.
+emit a single `reminders.sent` audit event: a `set_changes` envelope
+whose `updated` list carries one `{invitation_id, reviewer_id}` entry
+per reminder sent, plus `context.fell_back`, the number that fell back
+to `send_invitation`.
 
 ### Pair-level context
 
@@ -519,14 +527,18 @@ registered in `EVENT_SCHEMAS`.
 
 #### Lazy display-field seeding
 
-`InstrumentDisplayField` rows are seeded **lazily** from import
-data, never unconditionally on session creation. An unconditional
+Apart from the two locked rows, `InstrumentDisplayField` rows are
+seeded **lazily** from import data, never unconditionally on session
+creation. An unconditional
 seed assumes something will populate every slot; on a full-matrix
 session nothing does, and the reviewer is shown three blank
 `Pair Context` columns that look like lost data.
 
-- `ensure_default_instrument` and `create_instrument` create no
-  display-field rows.
+- `ensure_default_instrument` and `create_instrument` create only the
+  two locked rows, Name (`reviewee` / `name`, order 0) and Email
+  (`reviewee` / `email_or_identifier`, order 1), through
+  `ensure_locked_display_fields`. They are always kept, can't be
+  hidden, moved or deleted, and pruning skips them.
 - After a successful reviewees CSV import, `save_reviewees` calls
   `seed_display_fields_from_reviewees`, which adds a row for any
   reviewee column (`profile_link`, `tag_1/2/3`) with at least one
@@ -539,10 +551,11 @@ session nothing does, and the reviewer is shown three blank
   slot with at least one populated value across the session's
   relationships. Sessions without populated pair-context slots
   are a no-op.
-- Reviewee Name and Email are not display fields; they're
-  rendered by the hardcoded reviewee-identity column in
-  `review_surface.html`. The Display Fields card on the
-  Instruments page surfaces only the configurable extras.
+- On the reviewer surface Name and Email are still rendered by the
+  hardcoded reviewee-identity column in `review_surface.html`, not as
+  display-field columns. On the Instruments page they are the
+  display-field table's locked first two rows (`spec/instruments.md`
+  "Display-field table").
 
 ## Audit-event detail schema
 
@@ -620,7 +633,7 @@ to ISO-8601 strings by the helper.
 ```
 
 For events where the row is the subject — `session.created`,
-`session.deleted`, `instrument.deleted`, `reviewer.deleted`.
+`session.deleted`, `instrument.deleted`, `reviewer.created`.
 Snapshot keys mirror DB column names; nested objects are
 allowed (e.g. `snapshot.instruments` on `session.deleted`).
 
@@ -716,15 +729,15 @@ through every event's bespoke detail shape.
 #### `context` — descriptive scalar metadata
 
 ```jsonc
-{ "context": { "mode": "full_matrix", "filename": "manual.csv" } }
+{ "context": { "mode": "rule_based", "filename": "reviewers.csv" } }
 ```
 
 For events that carry descriptive scalars that are part of the
 audit story but don't fit any payload envelope or other slot —
-`assignments.generated`'s `mode` (`"full_matrix"` /
-`"manual"`), `csv_imports`' `filename`,
+`assignments.generated`'s `mode` (`"rule_based"`, the only mode),
+`csv_imports`' `filename`,
 `email_template.updated`'s `template`,
-`session.activated`'s `prev_status` and `override_warnings`.
+`session.activated`'s `prev_status`, `override_warnings` and `trigger`.
 Keys are
 short identifiers; values are `str`, `int`, or `bool` (no
 nesting, no lists). `refs` stays int-PKs only and `counts`
@@ -752,13 +765,13 @@ canonical "no payload" marker.
 | `session.deleted` | `snapshot` (no top-level identity) | `{"snapshot": {"id": 17, "code": "CS101", "name": "Final Review"}}` |
 | `session.invalidated` | `reason` (no payload) | `{"session_id": 17, "session_code": "CS101", "reason": "setup_mutation"}` |
 | `instrument.closed` | `reason` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "reason": "deadline", "context": {"deadline": "2026-06-01T00:00:00+00:00"}}` |
-| `assignments.generated` | `counts` + `context` | `{"session_id": 17, "session_code": "CS101", "counts": {"assignments": 104, "pairs": 13, "instruments": 8, "replaced": 0}, "context": {"mode": "full_matrix"}}` |
-| `responses.saved` | `refs` + `counts` | `{"session_id": 17, "session_code": "CS101", "refs": {"reviewer_id": 42}, "counts": {"saved": 5, "validation_errors": 0}}` |
+| `assignments.generated` | `counts` + `context` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "counts": {"new": 104, "deleted": 0, "kept": 0, "responses_deleted": 0, "pairs": 104, "instruments": 1}, "context": {"mode": "rule_based"}}` |
+| `responses.saved` | `refs` + `counts` | `{"session_id": 17, "session_code": "CS101", "refs": {"reviewer_id": 42}, "counts": {"assignments_touched": 3, "responses_saved": 5}}` |
 | `instrument.display_fields_saved` | `set_changes` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "set_changes": {"added": [], "removed": [], "updated": [...]}}` |
 | `session.owner_added` | `snapshot` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"target_user_id": 42}, "snapshot": {"user_id": 42, "email": "bob@example.edu", "role": "owner"}}` |
 | `session.activation_scheduled` | `changes` | `{"session_id": 17, "session_code": "CS101", "changes": {"scheduled_activate_at": [null, "2026-06-01T09:00:00+00:00"]}}` |
 | `session.scheduled_activation_skipped` | `reason` + `context` | `{"session_id": 17, "session_code": "CS101", "reason": "not_validated", "context": {"scheduled_at": "2026-06-01T09:00:00+00:00", "status_at_fire": "draft"}}` |
-| `session.scheduled_activation_retry` / `_failed_persistent` | `reason` + `context` | `{"session_id": 17, ..., "reason": "<repr(exc)>", "context": {"scheduled_at": "...", "attempt": 1}}` |
+| `session.scheduled_activation_retry` / `_failed_persistent` | `reason` + `context` | `{"session_id": 17, ..., "reason": "<repr(exc)>", "context": {"scheduled_at": "...", "attempt": 1}}` (`attempts` on `_failed_persistent`) |
 | `session.invite_schedule_updated` / `session.reminder_schedule_updated` | `changes` | `{"session_id": 17, ..., "changes": {"invite_offsets": [null, ["-P1D", "-PT2H"]]}}` |
 | `session.scheduled_invites_fired` | `counts` + `context` | `{"session_id": 17, ..., "counts": {"sent": 12}, "context": {"anchor_at": "2026-06-01T09:00:00+00:00", "offset_index": 0, "offset": "-P1D", "scheduled_at": "2026-05-31T09:00:00+00:00", "actual_fired_at": "2026-05-31T09:00:42+00:00"}}` |
 | `session.scheduled_invites_skipped` | `reason` + `context` | `{"session_id": 17, ..., "reason": "not_prepared" \| "invitations_not_created", "context": {"anchor_at": "...", "offset_index": 0, "offset": "-P1D", "scheduled_at": "..."}}` |
@@ -771,7 +784,9 @@ canonical "no payload" marker.
 |---|---|
 | `observer.created` | `snapshot` (+ identity) |
 | `observer.updated` | `changes` + `refs` (+ identity) |
+| `observer.cohort_rule_assigned` | `snapshot` + `refs` (+ identity) |
 | `observer.bulk_inactivated` / `.bulk_reactivated` | `snapshot` (+ identity) |
+| `observer.bulk_deleted` | `counts` (+ identity) |
 | `observers.imported` | `counts` + `context` (+ identity) |
 | `observers.deleted_all` | `counts` (+ identity) |
 

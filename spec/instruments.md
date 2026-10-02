@@ -871,9 +871,11 @@ Each row holds:
   `spec/ui_elements.md` §10), absent on a locked row. An unticked row
   can still be moved.
 
-**Name and Email are locked**: a ticked, disabled checkbox, no move
-buttons, and a tooltip naming the pinned slot — "Always shown — pinned
-first" (Name) / "Always shown — pinned second" (Email). **On a
+**Name and Email are locked**: every instrument is created with these
+two rows (`ensure_locked_display_fields`, called by
+`ensure_default_instrument` and `create_instrument`), and each renders
+a ticked, disabled checkbox, no move buttons, and a tooltip naming the
+pinned slot — "Always shown — pinned first" (Name) / "Always shown — pinned second" (Email). **On a
 group-scoped instrument**, a field a group row can't show — Email
 included — renders unticked and disabled, tooltip "Not shown on group
 rows"; Name is always selectable in group mode and stays ticked (see

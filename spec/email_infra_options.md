@@ -181,6 +181,7 @@ Today's `email_outbox` table is the audit log. Its shape:
 | `body` | text | The merged body. |
 | `status` | enum | Canonical set `EMAIL_OUTBOX_STATUSES` — `{queued, sending, sent, failed}`. Only `queued` and `sent` are ever persisted: the enqueue path writes `queued` and flips it to `sent` in the same transaction, with no transport call. `sending` and `failed` exist for a dispatcher that does not yet run. |
 | `created_at` | timestamp | When the row was written. |
+| `sent_at` | timestamp | When the row flipped to `sent`; null while `queued`. |
 
 **A row outlives its reviewer — except when the session goes.** Both FK
 columns carry no `ON DELETE`, so the roster-delete and purge paths clear
@@ -199,11 +200,11 @@ state, and its vocabulary is the closed `EMAIL_OUTBOX_STATUSES` pinned by
 member is a schema change with a test behind it, to say what two existing
 columns already say.
 
-**Segment 11C Part 2 (truncated)** lands the audit-log columns
+**Segment 11C Part 2 (truncated)** landed the audit-log columns
 the production send path will write at send time, as inert
-schema scaffolding — no wiring, no service-layer reads. The
-columns are populated by **Segment 14B Part A** when the
-dispatch helper goes live:
+schema scaffolding — no wiring, no service-layer reads. They are
+on `email_outbox` today and nothing writes them; they are populated
+by **Segment 14B Part A** when the dispatch helper goes live:
 
 - `error_message` (Text, nullable) — captured on failure so the
   Outbox / Invitations diagnostic surfaces can render the
@@ -286,7 +287,9 @@ should:
   for the app; replies route to the operator's regular inbox.
 
 The reply-to header is set at the `EmailTransport` interface
-level, not per backend.
+level, not per backend. **Not built:** `EmailMessage` (in
+`app/services/email_send.py`) has no Reply-To field and
+`_build_message` sets no Reply-To header.
 
 ---
 
@@ -347,11 +350,11 @@ Invitations send path against the audit-log columns
 **Considerations.**
 
 - SMTP doesn't return a message ID until after submission; the
-  audit log's future `backend_message_id` field may be empty or
+  audit log's `backend_message_id` field may be empty or
   contain the SMTP server's queue ID.
 - SMTP delivery confirmation (delivered vs. bounced) typically
   requires receiving and parsing bounce messages, which is out
-  of scope for this spec. The audit log's future `delivered_at`
+  of scope for this spec. The audit log's `delivered_at`
   field will not be populated by this backend.
 - Deliverability depends entirely on the SMTP server's
   reputation and DNS configuration (SPF, DKIM, DMARC for the
@@ -582,14 +585,13 @@ to all. ✅ = shipped, ◻ = pending.
    `EmailMessage` value type and a `SendResult` return type.
 2. ✅ **A factory or DI registration** that selects the active
    implementation from configuration (`transport_for(settings)`).
-3. ◻ **The audit log table extensions** described above —
-   `cc_emails` / `bcc_emails` are in place;
-   `error_message` + the future-target columns (`from_address` /
-   `backend` / `backend_message_id` / `delivered_at` /
-   `payload_hash` / `correlation_id`) and the widened status /
-   kind value-sets land in **Segment 11C Part 2** as inert
-   schema scaffolding. **Segment 14B Part A** is the first call
-   site that writes to them.
+3. ✅ **The audit log table extensions** described above —
+   `cc_emails` / `bcc_emails`, `error_message` + the future-target
+   columns (`from_address` / `backend` / `backend_message_id` /
+   `delivered_at` / `payload_hash` / `correlation_id`) and the
+   widened status / kind value-sets are in place as inert schema
+   scaffolding (**Segment 11C Part 2**). **Segment 14B Part A** is
+   the first call site that writes to them.
 4. ◻ **A `correlation_id` strategy** for idempotent sends
    across invitation, reminder, and other kinds — Segment 14B
    Part B.
@@ -631,8 +633,8 @@ A reasonable sequence:
 1. ✅ **Sender abstraction + SMTP backend.**
 2. ✅ **Operator credential storage** — per-operator SMTP
    credentials on `users`, encrypted at rest.
-3. ◻ **Outbox audit-log column scaffolding** — Segment 11C
-   Part 2. Inert; populated at send time by Step 4. Lands the
+3. ✅ **Outbox audit-log column scaffolding** — Segment 11C
+   Part 2. Inert; populated at send time by Step 4. Landed the
    columns (`error_message` + future-target additions) and the
    widened status / kind value-sets so the wiring in Step 4
    doesn't have to ship Alembic churn alongside its logic
@@ -664,24 +666,3 @@ A reasonable sequence:
 
 Steps 9–11 are independent; do them in whatever order
 deployments demand.
-
-## Doc impact
-
-`spec/operator_ui_concept.md`:
-
-- The Outbox Operations page description gets a small update:
-  the page is currently dev-mode SMTP-only, will generalise to
-  a backend-agnostic diagnostic surface showing recent sends
-  from the audit log.
-
-`spec/operator_ui_concept.md` "Per-page contracts":
-
-- The Outbox page gets a layout contract update once the
-  generalised diagnostic surface is designed.
-
-Future segment specs:
-
-- Each backend implementation that ships is its own engineering
-  ticket but doesn't need its own functional spec — this
-  document is the source of truth for what each backend
-  requires.
