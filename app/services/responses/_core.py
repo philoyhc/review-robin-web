@@ -445,8 +445,9 @@ def _split_validated(
     position_by_instrument_id: dict[int, int],
 ) -> tuple[list[ResponseUpsert], list[ValidationError]]:
     """Partition upserts into (valid, errors) by running ``validate_value``
-    against each. Upserts that target an unknown assignment / field key are
-    treated as valid here — ``_apply_upserts`` already silently drops them."""
+    against each. Both callers drop upserts on any row but the reviewer's
+    included ones first; one on an unknown field key is treated as valid
+    here, and ``_apply_upserts`` silently drops it."""
     valid: list[ResponseUpsert] = []
     errors: list[ValidationError] = []
     for u in upserts:

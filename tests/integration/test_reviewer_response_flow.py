@@ -2629,3 +2629,24 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
     assert _rating(eve) is None
     assert _rating(by_reviewee["Carol"]) is None
     assert _rating(dan) == "3"
+
+    # Submit and recall leave the whole excluded group alone too: its
+    # old answer is never stamped submitted on the reviewer's behalf.
+    def _dan_submitted() -> bool:
+        db.expire_all()
+        row = db.execute(
+            select(Response).where(Response.assignment_id == dan.id)
+        ).scalar_one()
+        return row.submitted_at is not None
+
+    rae_client.post(
+        f"/me/sessions/{review_session.id}/submit",
+        data={f"response[{by_reviewee['Carol'].id}][rating]": "1"},
+        follow_redirects=False,
+    )
+    assert not _dan_submitted()
+    rae_client.post(
+        f"/me/sessions/{review_session.id}/recall", follow_redirects=False
+    )
+    assert not _dan_submitted()
+    assert _rating(dan) == "3"

@@ -551,9 +551,9 @@ included member: a group excluded whole — by the self-review toggle,
 or because every member is inactive — is not the reviewer's, and no
 save, submit, recall or clear touches it. A posted value is accepted
 only on an included row; any other id is dropped before validation and
-the fan-out. Readers that ignore `include` (the observer collation pool,
-the responses and entity-stats extracts) see the copy, as they always
-saw the row.
+the fan-out. Readers that ignore `include` (e.g. the observer collation
+pool, the responses and entity-stats extracts, the session response
+counts) see the copy, as they always saw the row.
 
 ### Self-review interaction
 
@@ -712,7 +712,7 @@ Columns (left → right):
 | Type | "Individual" or "Group" (driven by `Instrument.group_kind`). |
 | Generated | Pill carrying the row count. "Not generated yet" when zero. A `stale` pill rides alongside when the rows have fallen out of step — see "Staleness". |
 | Groups | Group count (distinct `(reviewer, group_key)` over the rows) for group instruments; "—" for individual. |
-| Self review | Pill carrying the self-review row count, plus an inline checkbox that bulk-flips `Assignment.include` on those rows in this instrument — counting and flipping only rows whose reviewer and reviewee are both active (an inactive side's row stays excluded by status, findings B2). Pill colour is `pill-info` (blue) when all are active, `pill-warning` (yellow) when not. The checkbox renders only when `self_review_total > 0`; on a session with no roster overlaps it doesn't render. |
+| Self review | Pill carrying the self-review row count, plus an inline checkbox that bulk-flips `Assignment.include` on those rows in this instrument — counting and flipping only rows whose reviewer and reviewee are both active (an inactive side's row stays excluded by status, findings B2). Pill color is `pill-info` (blue) when every counted row is included, `pill-warning` (yellow) when not. The checkbox renders only when `self_review_total > 0`: not on a session with no roster overlaps, nor when every self-review row has an inactive side. |
 | Included | Pill carrying the count of `include=True` rows. "—" before Generate. |
 | Show | Per-instrument filter checkbox — client-side DOM toggle that hides / shows the instrument's pairs in the preview table below. Default: checked when any row materialised. |
 | (action) | "Edit on Instruments page" deep-link to the instrument's card. |

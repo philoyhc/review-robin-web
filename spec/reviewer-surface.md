@@ -283,14 +283,18 @@ group, since they're all in the DOM. The route distinguishes:
 - **Submit** persists pending writes session-wide (treating the
   whole form body as a session-wide save), then validates required
   fields across every instrument. With acknowledge (or no missing
-  required), it stamps `submitted_at` on every Response row in the
-  session and writes a `responses.submitted` audit event. Editing a
+  required), it stamps `submitted_at` on every Response row of the
+  reviewer's included assignments in the session (and on an excluded
+  member's copy in a group they still review, `spec/assignments.md`
+  "Group-scoped fan-out") and writes a `responses.submitted` audit event. Editing a
   previously-submitted required field to empty deletes its
   `Response` row (including the `submitted_at` stamp), which flips
   the dashboard pill back to `in progress` on next render — no
   per-row resubmit required.
-- **Clear all** deletes every `Response` row for this reviewer in
-  this session, across every instrument. No partial undo. Writes a
+- **Clear all** deletes every `Response` row of this reviewer's
+  included assignments in this session, across every instrument, and
+  an excluded member's copy in a group they still review (a group
+  excluded whole is left alone). No partial undo. Writes a
   `responses.cleared` audit event.
 - **Cancel** is a plain GET reload of the current page (an
   `<a href>`) — no DB write, no audit. The reload re-renders the
@@ -727,7 +731,8 @@ reviewer-surface specifics:
   same value for every group-boundary tag (`responses.group_keys`).
   Each group is one table row. `_collapse_group_rows` in
   `routes_reviewer/_surface/_group_collapse.py` does the collapse; the
-  lowest-id member assignment is the row's **representative** —
+  lowest-id **included** member assignment is the row's
+  **representative** —
   the response inputs key off it (`response[{rep_id}][{field}]`)
   and the write fan-out spreads the answer to every member of the
   group. A branch's cells (above) are judged on the representative's
