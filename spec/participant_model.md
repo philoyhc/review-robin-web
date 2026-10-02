@@ -22,11 +22,11 @@ All three rosters carry the same `status` column with `active` / `inactive` valu
 
 ### Identity matching
 
-The participant gates (`require_reviewer_in_session`, `require_reviewee_in_session`, `require_observer_in_session` in `app/web/deps.py`) compare the authenticated user's email against the roster column **case-insensitively**:
+The participant gates (`require_reviewer_in_session`, `require_reviewee_in_session`, `require_observer_in_session` in `app/web/deps.py`) compare the authenticated user's email against the roster column **case-insensitively**, through `normalize_email` in `app/services/email_identity.py`: strip surrounding whitespace, then `str.lower`. It is deliberately not `casefold`, which folds `ß` to `ss` and so would merge two distinct mailboxes into one identity.
 
-- **Reviewer**: `casefold(Reviewer.email) == casefold(user.email)`.
-- **Reviewee**: `casefold(Reviewee.email_or_identifier) == casefold(user.email)` **and** the identifier passes `participants.is_email_identified(reviewee)` (i.e. parses as an email). Reviewees with confidential / opaque identifiers cannot reach the reviewee surface by construction — there is no email inbox to authenticate against.
-- **Observer**: `casefold(Observer.email) == casefold(user.email)`.
+- **Reviewer**: `normalize_email(Reviewer.email) == normalize_email(user.email)`.
+- **Reviewee**: `normalize_email(Reviewee.email_or_identifier) == normalize_email(user.email)` **and** the identifier passes `participants.is_email_identified(reviewee)` (i.e. parses as an email). Reviewees with confidential / opaque identifiers cannot reach the reviewee surface by construction — there is no email inbox to authenticate against.
+- **Observer**: `normalize_email(Observer.email) == normalize_email(user.email)`.
 
 The same case-insensitive email match is the basis for the cross-role union (§5 below).
 
@@ -38,10 +38,10 @@ Two boolean columns on `sessions` gate which of the optional Setup tabs render a
 
 | Column | Default | Gates | Authored on |
 |---|---|---|---|
-| `relationships_enabled` | `False` | The Relationships Setup tab + every route in `_setup_relationships.py` (via `require_relationships_enabled_session`). | User interface settings card on Session Edit Details and Create New Session. |
-| `observers_enabled` | `False` | The Observers Setup tab + every route in `_setup_observers.py` (via `require_observers_enabled_session`); the observer collation surface gate `require_observer_in_session` is independent of this flag. | Same card on both forms. |
+| `relationships_enabled` | `False` | The Relationships Setup tab + every route in `_setup_relationships.py` (via `require_relationships_enabled_session`). | User interface settings card on Create New Session and on Session Home's Session details card (`spec/session_home.md`). |
+| `observers_enabled` | `False` | The Observers Setup tab + every route in `_setup_observers.py` (via `require_observers_enabled_session`); the observer collation surface gate `require_observer_in_session` is independent of this flag. | Same card in both places. |
 
-The card on both forms lives above the Quick Setup card. Saving the form persists both flags through `SessionCreate` to `sessions.create_session` (on the Create form) or `sessions.update_session` (on Edit).
+The card on both forms lives above the Quick Setup card. Saving the form persists both flags through `SessionCreate` to `sessions.create_session` (on the Create form) or `sessions.update_session` (on the Session details card).
 
 **Lock-on-data invariant.** Once a roster has at least one row, the corresponding flag cannot flip True → False — `sessions.update_session` silently no-ops the flip (the UI also renders the checkbox `disabled` in this case). This prevents orphaning data behind a hidden tab. Both `_has_relationships(db, session_id)` and `_has_observers(db, session_id)` are the load-bearing readers.
 
@@ -56,7 +56,7 @@ The Setup-Observers page is documented in `spec/setup_pages.md` (Observers secti
 - Routes mounted at `/operator/sessions/{id}/observers/*` are uniformly gated by `require_observers_enabled_session`. The page 404s when `observers_enabled = False`.
 - The model carries a **single `tag_1`** (not three) and an optional `display_name`; `email` is the required identity. The friendly-label editor the other three roster pages carry in their Unlock panel is intentionally absent — single-tag observers don't benefit from it, and its absence is what makes this page's panel two-tenanted and its `.card-columns` fallback home unnecessary (`spec/setup_pages.md` § *The roster card and the Unlock panel*).
 - The CSV import contract is documented in `spec/csv_contracts.md` §3.2b — required `ObserverEmail`, optional `ObserverName` / `ObserverTag1`.
-- Audit events: `observer.created` (snapshot), `observer.updated` (changes + refs), `observer.bulk_inactivated` / `observer.bulk_reactivated` (snapshot), `observers.imported` (counts + context), `observers.deleted_all` (counts). All registered in `EVENT_SCHEMAS`.
+- Audit events: `observer.created` (snapshot), `observer.updated` (changes + refs), `observer.cohort_rule_assigned` (snapshot + refs), `observer.bulk_inactivated` / `observer.bulk_reactivated` (snapshot), `observer.bulk_deleted` (counts), `observers.imported` (counts + context), `observers.deleted_all` (counts). All registered in `EVENT_SCHEMAS`.
 
 ---
 
@@ -147,14 +147,14 @@ Full contract in `spec/role_navigator.md`. Key seam: every surface route calls `
 
 ## 7. Sessions schedule — release-responses window
 
-The Create New Session and Session Edit Details forms author two extra schedule fields on the session:
+The Create New Session form and Session Home's Session details card author two extra schedule fields on the session:
 
 | Field | Form input | Service | Validator |
 |---|---|---|---|
 | `responses_release_at` | `<input type="datetime-local">` "Release responses from (optional)" | Persisted on `sessions.responses_release_at`. | `scheduled_events.parse_and_validate_responses_release_at(raw, *, timezone_name)`. No minimum-lead floor — operator may backdate. |
 | `responses_release_until` | `<input type="datetime-local">` "Release responses until (optional)" | Persisted on `sessions.responses_release_until`. | `scheduled_events.parse_and_validate_responses_release_until(raw, *, timezone_name, responses_release_at)`. Datetime parse; must close *after* `responses_release_at` when both are set, and within 365 days of it. |
 
-Both fields ride through `SessionCreate` end-to-end (`create_session` writes; `update_session` diffs them alongside the existing scheduled fields). The §8.2.2 anchor-null rule applies — `responses_release_until` is inert (treated as "no scheduled close") whenever `responses_release_at` is `NULL`. The check happens at view time, not save time; saving an until without an anchor is allowed and harmless. `responses_release_until` is an **absolute datetime, never a duration offset** (`release_until_offset`), so the form input and the operator's forthcoming Stop-release button write the same column rather than two representations of one close time.
+Both fields ride through `SessionCreate` end-to-end (`create_session` writes; `update_session` diffs them alongside the existing scheduled fields). The §8.2.2 anchor-null rule applies — `responses_release_until` is inert (treated as "no scheduled close") whenever `responses_release_at` is `NULL`. The check happens at view time, not save time; saving an until without an anchor is allowed and harmless. `responses_release_until` is an **absolute datetime, never a duration offset** (`release_until_offset`), so the form input and the operator's Stop-release button (`POST /operator/sessions/{id}/workflow/stop-release`) write the same column rather than two representations of one close time.
 
 The four schedule datetimes (Start / End / Release-from / Release-until) carry a strict ordering chain enforced at save time by `scheduled_events.validate_schedule_ordering` plus the per-field parsers (see `spec/lifecycle.md` §8.2.7). Each `datetime-local` input also carries `min` / `max` attributes the browser picker honours; a small shared partial live-updates the bounds as the operator types.
 

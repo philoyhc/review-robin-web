@@ -224,37 +224,37 @@ One line each: id · severity · where · finding · decides. A line with no
 
 - `instruments.md`
   - A1 med · `:1500-1519` · Replicate contract (§1) · author.
-  - A2 med · `:1417,1476` · "+Instrument is empty": it seeds Rating, Comments and the locked Name/Email rows.
-  - A3 med · `:722` · "sole surface" for self-review contradicts `:571-577` (the Link 3 checkbox owns the rule).
-  - A4 low · `:662` · `_new_model_usable_tags` → `new_model_usable_tags` (also B5, C17).
+  - ~~A2 med · `:1417,1476` · "+Instrument is empty": it seeds Rating, Comments and the locked Name/Email rows.~~ Done in #2732.
+  - ~~A3 med · `:722` · "sole surface" for self-review contradicts `:571-577` (the Link 3 checkbox owns the rule).~~ Done in #2732.
+  - ~~A4 low · `:662` · `_new_model_usable_tags` → `new_model_usable_tags` (also B5, C17).~~ Done in #2732.
   - Also G10 `:144-149,345-360`.
 - `reviewer-surface.md`
   - ~~A5 high · `:831` · Prev/Next hidden when closed · author.~~ Done in #2723.
   - ~~A6 high · `:799-810` · write gate session-wide · author.~~ Ruled: per-instrument Open / Close removed; done in #2722.
   - ~~A7 med · `:780-793` · blocked Submit → page 1 · author.~~ Ruled: the page submitted from; done in #2724.
-  - A8 med · `:62,1557` · the dashboard links `/summary` once submitted, built in `_dashboard.py`.
+  - ~~A8 med · `:62,1557` · the dashboard links `/summary` once submitted, built in `_dashboard.py`.~~ Done in #2732.
   - ~~A9 low · `:230` · Submit redirects to the bare URL; only the current page posts.~~ Done in #2724.
-  - A10 low · `:119` · pill reads `{label}: {state}`.
-  - A11 low · `:281,566,1339` · no acknowledge path; fraction 0.5, not 75%; invite lands on the bare URL.
-  - A12 med · `:874,1334` · identity is `normalize_email` (strip + lower), not casefold.
+  - ~~A10 low · `:119` · pill reads `{label}: {state}`.~~ Done in #2732.
+  - ~~A11 low · `:281,566,1339` · no acknowledge path; fraction 0.5, not 75%; invite lands on the bare URL.~~ Done in #2732.
+  - ~~A12 med · `:874,1334` · identity is `normalize_email` (strip + lower), not casefold.~~ Done in #2732.
 - `participant_model.md`
   - A13 med · `:84` vs `:97` · scaffolding contradiction · author (builder code).
-  - A14 med · `:25-29` · casefold → `normalize_email`.
-  - A15 low · `:41-44,150` · the "Session Edit Details" page is retired (also `visibility_policy.md:94,149`).
-  - A16 low · `:157` · Stop-release exists.
-  - A17 low · `:59` · the observer events omit `cohort_rule_assigned` and `bulk_deleted`.
+  - ~~A14 med · `:25-29` · casefold → `normalize_email`.~~ Done in #2732.
+  - ~~A15 low · `:41-44,150` · the "Session Edit Details" page is retired (also `visibility_policy.md:94,149`).~~ Done in #2732.
+  - ~~A16 low · `:157` · Stop-release exists.~~ Done in #2732.
+  - ~~A17 low · `:59` · the observer events omit `cohort_rule_assigned` and `bulk_deleted`.~~ Done in #2732.
 - `visibility_policy.md`
   - ~~A18 high · `:73-78,116` · peer grant has no reader · author.~~ Ruled: Raw or off.
   - ~~A19 high · `:35,180-190` · `observer_tag` is unenforced and wiped · author + code.~~ Ruled: retired.
-  - A20 med · `:117` · the reviewee cell "Default `after_release`" contradicts §4.1. Read `test_doc_conventions.py` before editing the tokens.
-  - A21 low · `:217` · `resolve_mode` applies no scope; the views do.
+  - ~~A20 med · `:117` · the reviewee cell "Default `after_release`" contradicts §4.1. Read `test_doc_conventions.py` before editing the tokens.~~ Done in #2732.
+  - ~~A21 low · `:217` · `resolve_mode` applies no scope; the views do.~~ Done in #2732.
 - `sort_by_reviewee.md`
   - A22 high · `:39-90` · operator sort UI · author (also `operator_ui_concept.md:94`).
   - A23 med-high · `:94-100` · click semantics and Reset · author.
   - ~~A24 med · `:162-169` · no auto-compact · author.~~ Ruled: follow the spec; done in #2724.
-  - A25 med · write/deepen · the group `-1` key and group-surface sorting are unspecced.
-  - A26 low · `:268-274` · the lobby and Archived pages adopt it too, with other cookie names.
-  - A27 low-med · `:104-116` · the server drops `response:N` keys, so a response-only cookie flickers.
+  - ~~A25 med · write/deepen · the group `-1` key and group-surface sorting are unspecced.~~ Done in #2732.
+  - ~~A26 low · `:268-274` · the lobby and Archived pages adopt it too, with other cookie names.~~ Done in #2732.
+  - A27 low-med · `:104-116` · the server drops `response:N` keys, so a response-only cookie flickers · author: there is no flicker. The cookie decodes to `[]` and the rows keep insertion order while the badge shows a sort; fix by sorting response keys on the server, or by reordering on load.
 - `assignments.md`
   - B1 high · `:87-90,500-511,682` · there is no `Assignment.group_key` column; it is derived by `responses.group_keys`.
   - ~~B2 high · `:68-70,566` · inactive rows are generated · author.~~ Ruled: kept, excluded.
@@ -407,10 +407,10 @@ One line each: id · severity · where · finding · decides. A line with no
 - `audience_and_identity_model.md`
   - F11 med · unbuilt contract · author.
 - `role_landing_and_visibility.md`
-  - F12 low · `:112` · a reviewer's `ready` can still be closed.
+  - ~~F12 low · `:112` · a reviewer's `ready` can still be closed.~~ Done in #2732.
 - `role_navigator.md`
-  - F13 high · `:86-88` · casefold → `.lower()` (= A12, A14).
-  - F14 low · `:64` · pre-open renders 200.
+  - ~~F13 high · `:86-88` · casefold → `.lower()` (= A12, A14).~~ Done in #2732.
+  - ~~F14 low · `:64` · pre-open renders 200.~~ Done in #2732.
 - `domain_assumptions.md`
   - F15 med · statuses · author.
   - F16 low · `:29` · purge-and-archive can delete.

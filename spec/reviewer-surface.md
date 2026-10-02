@@ -59,9 +59,10 @@ then the only valid page.
 rows keep working. Out-of-range pages (e.g. `/me/sessions/5/9` when
 the session has only 2 pages) return **404**.
 
-The reviewer dashboard at `/me` always links each row to `/1`,
-since the dashboard summarises the session as a whole and page 1 is a
-safe default landing.
+The reviewer dashboard at `/me` links a reviewer row to `/1`, since
+page 1 is a safe default landing, until the reviewer's session pill
+reads `submitted`; from then on it links to `/me/sessions/{id}/summary`.
+The target is built in `app/web/routes_reviewer/_dashboard.py`.
 
 **URL semantics across the four routes.**
 
@@ -119,7 +120,8 @@ Top-to-bottom, the page renders:
      session is no longer accepting responses; does not push other
      layout around.
    - **Per-page status pills** — one pill per instrument labelled
-     e.g. `Page 1: in progress`, `Page 2: complete`. State computed
+     `{label}: {state}`, e.g. `#1 Skills: in progress`, `#2: complete`.
+     State computed
      server-side from response data (see "Per-page status" below).
 
    The card is omitted entirely only when there is neither a
@@ -282,9 +284,10 @@ group, since they're all in the DOM. The route distinguishes:
   page's saved values when only the current page should change.
 - **Submit** persists pending writes session-wide (treating the
   whole form body as a session-wide save), then validates required
-  fields across every instrument. With acknowledge (or no missing
-  required), it stamps `submitted_at` on every Response row of the
-  reviewer's included assignments in the session (and on an excluded
+  fields across every instrument. With no required field missing
+  (Submit is a hard gate; there is no acknowledge path), it stamps
+  `submitted_at` on every Response row of the reviewer's included
+  assignments in the session (and on an excluded
   member's copy in a group they still review, `spec/assignments.md`
   "Group-scoped fan-out") and writes a `responses.submitted` audit event. Editing a
   previously-submitted required field to empty deletes its
@@ -571,7 +574,7 @@ paused), every input renders `disabled`.
 
 **Textarea height derivation.** Long-text textareas size their
 initial `rows` attribute so a typical response — assumed to cluster
-around **75%** of the configured `max_length` — fits at the column's
+around **50%** of the configured `max_length` — fits at the column's
 current width:
 
 ```
@@ -902,14 +905,26 @@ The lazy-close is idempotent — subsequent observers see
 ## Identity matching
 
 A signed-in user is matched to `Reviewer` rows by **case-insensitive
-email equality** (`casefold()` both sides). Only `Reviewer` rows
-with `status == "active"` grant access; inactive / removed reviewers
-are invisible.
+email equality**, folded by `normalize_email` in
+`app/services/email_identity.py`: strip whitespace, then `str.lower`
+(deliberately not `casefold()`, which would merge distinct mailboxes
+such as `ß` and `ss`). Three callers apply it, each slightly
+differently:
 
-Both rules live in `app/services/responses` (and the per-session
-lookup that drives the surface route). The reviewer dashboard, the
-session surface, and the invitation-landing email-match check all
-use the same rule.
+- **Session surface** — `require_reviewer_in_session` in
+  `app/web/deps.py` folds both sides in Python and admits only
+  `status == "active"` rows; inactive / removed reviewers get a 404.
+- **Dashboard** (`/me`, `app/web/routes_reviewer/_dashboard.py`) —
+  matches in SQL, `func.lower(Reviewer.email) == normalize_email(user.email)`,
+  also `status == "active"` only. SQLite's `lower()` is ASCII-only
+  while Postgres's is Unicode-aware, so the two sides agree on ASCII
+  addresses only.
+- **Invitation landing** — folds both sides through `normalize_email`,
+  but `invitations.lookup_invitation_by_token` applies no status
+  filter. Today an inactive reviewer therefore passes the invite
+  check, and the redirect then lands on the surface's 404. This is a
+  known gap (`guide/findings_2026-10-01_corpus.md`), not the
+  contract.
 
 A user can have at most one active `Reviewer` row per session. A
 session can have multiple reviewers, each tied to a distinct user.
@@ -1368,13 +1383,14 @@ Behaviour:
    sign-in and back).
 2. Look up the invitation by `sha256(token)`. Not found → **404**.
 3. **Email match check** — case-insensitive comparison of the
-   signed-in email (`casefold()`) against `Invitation.reviewer_email`.
+   signed-in email against the invited reviewer's `Reviewer.email`,
+   both sides through `normalize_email` (strip + `str.lower`).
    On mismatch, render `invite_mismatch.html` (HTTP 403; see
    "Invitation-mismatch page" below).
 4. On match, stamp `Invitation.opened_at` once (idempotent on
    subsequent visits — only the first call writes), emit one
-   `invitation.opened` audit event on first open, and 303 →
-   `/me/sessions/{id}/1`.
+   `invitation.opened` audit event on first open, and 303 → the bare
+   `/me/sessions/{id}` (which 303s on to `/1`).
 
 ### Invitation-mismatch page
 
@@ -1591,6 +1607,7 @@ them can be updated:
   Auth resolves.
 - **Bookmarks and returning reviewers** hold the same bare URL.
 - **Reviewer dashboard rows** are the one caller that *can* be
-  updated, and `reviewer/dashboard.html` links straight at page `1`.
+  updated, and `app/web/routes_reviewer/_dashboard.py` links them
+  straight at page `1` (or at `/summary` once submitted).
 
 No data migration is involved — the fallback is the whole mechanism.

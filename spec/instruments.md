@@ -657,7 +657,7 @@ stacked list of MATCH-rule cells. Each cell has:
   Link 1: `reviewer.tag1 / tag2 / tag3 + pair_context.tag1 / tag2 / tag3`).
   Only namespaces with at least one populated row in the
   session appear — the dropdown's options come from
-  `views._instruments._new_model_usable_tags`.
+  `views._instruments.new_model_usable_tags`.
 - An operator-cycle button. Link 1 cycles through `IS | IS NOT`;
   Link 2 cycles through `IS | IS NOT | IS THE SAME AS | IS DIFFERENT FROM`
   (the cross-side operators take a reviewer-side tag as operand
@@ -718,8 +718,9 @@ Band 1 saves through `app/services/instruments/_band1.py:set_band1_assignment_ru
   `_create_band1_rule_set`. Stored shape:
   - `combinator="ALL_OF"` (the outer wrap that intersects Links).
   - `exclude_self_reviews=False` — aligned with the synthetic
-    Full Matrix default; the per-instrument Self review toggle
-    on the Assignments page is the sole include/exclude surface.
+    Full Matrix default; the Link 3 column's **Self reviews**
+    checkbox (§ *Self-review exclusion* above) is the control
+    that sets it.
   - `rules_json` carries one COMPOSITE per Link with the
     operator's MATCH rules inside.
   - `name` follows the pattern `"New-model instrument #{id} Band 1"`
@@ -1413,7 +1414,9 @@ Bottom row of the card, right-aligned, in this order:
   this is the only instrument in the session, or the session is not
   editable.
 - **+Instrument** — spawns a new instrument with default
-  Identity + empty Bands 1+2+3 immediately after this card.
+  Identity, an empty Band 1, and the default response and display
+  fields (see "`+Instrument` semantics" below) immediately after
+  this card.
   POSTs to `/sessions/{sid}/instruments/add-new-model` with
   `after={iid}`. Same disable conditions as Replicate, and the
   only affordance that creates an instrument.
@@ -1471,8 +1474,11 @@ Bottom row of the card, right-aligned, in this order:
 - Side effects: creates a new `Instrument` row with default
   `name="instrument_{n}"` (the count of existing instruments plus
   one — an internal handle, never rendered; **not** zero-padded and
-  **not** `#`-prefixed), no display
-  fields, no response fields, NULL `rule_set_id`, NULL
+  **not** `#`-prefixed), the two locked display fields (reviewee
+  Name and Email, via `ensure_locked_display_fields`), the default
+  response fields from `DEFAULT_RESPONSE_FIELDS` (a required 1–5
+  Integer **Rating** and an optional **Comments** long text, as on a
+  new session's default instrument), NULL `rule_set_id`, NULL
   `group_kind`. Lifecycle-aware:
   - `is_draft` → succeeds, no invalidation.
   - `is_validated` → succeeds, invalidates the session back to

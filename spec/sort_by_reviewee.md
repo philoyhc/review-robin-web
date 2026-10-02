@@ -152,7 +152,7 @@ Shape:
 
 - Up to 3 entries; service-enforced (DB doesn't enforce a length cap).
 - `dir ∈ {"asc", "desc"}` — service validates.
-- `display_field_id` references `instrument_display_fields(id)` — service drops an id that is not this instrument's (see "Cascade behaviour").
+- `display_field_id` references `instrument_display_fields(id)` — service drops an id that is not this instrument's (see "Cascade behaviour") — or is the `-1` Group sentinel, which is kept (see "Group-scoped instruments").
 - Empty list `[]` or NULL → fall back to **implicit insertion order** (today's behaviour, zero change for existing sessions).
 
 JSON over three explicit FK columns: simpler schema, easier to extend to 4+ slots later if it ever matters, and the FK-orphan risk is small (handled by render-time defense + auto-compact on next save). See "Cascade behaviour" below.
@@ -217,6 +217,16 @@ The Display Fields available to sort are scoped to the instrument's own display 
 
 ---
 
+## Group-scoped instruments
+
+A group-scoped instrument (`Instrument.group_kind` set; `spec/instruments.md`) renders one row per group rather than one per reviewee, and sorts differently on both sides:
+
+- **Default order.** `_collapse_group_rows` (`app/web/routes_reviewer/_surface/_group_collapse.py`) emits the group rows in ascending order of their group key — the tuple of boundary tag values from `responses.group_keys`, or `()` when the instrument has no boundary tag. A group row carries no per-reviewee display cells or sort values, so display-field entries in the spec are not applied.
+- **The `-1` key.** `GROUP_IDENTITY_SORT_KEY` (`-1`, in `app/services/instruments/_display_fields.py`) is a sentinel `display_field_id` for the composed Group cell, not an `instrument_display_fields` row. `set_sort_display_fields` keeps it where it would drop an unknown id, and `order_rows_by_sort_spec` exempts it from the known-id filter. The operator sets it from the sort badge on the Group header of Band 2's group preview. On a group instrument it is the only entry the reviewer surface reads (`app/web/routes_reviewer/_surface/_context.py`): `"dir": "desc"` reverses the default group-key order, `"asc"` keeps it. On a per-reviewee instrument it resolves to no value on every row and changes nothing.
+- **No server-side reviewer override.** The Group header carries no `↕` button, and the server does not read the `rrw-sort-rs-{session_id}-{instrument_id}` cookie for a group instrument. Its response-column headers keep their `↕` buttons, so a reviewer can still reorder the group rows in the browser by their own answers.
+
+---
+
 ## Out of scope for the initial slice
 
 - Sort by **Response Fields** on the operator side. Excluded by design (see "Scope" above).
@@ -268,8 +278,9 @@ Key landmarks in the codebase:
   `spec/ui_elements.md` under `.session-row-selected`.
 - **Reviewer template** (`review_surface.html`) +
   **operator tables** — Reviewers / Reviewees / Relationships
-  (Setup) and Assignments / Invitations / Responses (Operations),
-  six in all: each annotated with
+  (Setup), Assignments / Invitations / Responses (Operations), and
+  the Sessions lobby and Archived sessions page
+  (`app/web/routes_operator/_lobby.py`): each annotated with
   `<table data-rrw-sortable="...">`, `th.rrw-sortable`,
   `data-sort-key`, `data-sort-value` cells, and
   `<tbody class="rrw-rows">`.
@@ -294,7 +305,9 @@ Key landmarks in the codebase:
   carrying the canonical
   `[{"key": "...", "dir": "asc|desc"}, ...]` shape,
   percent-encoded (`encodeURIComponent`) — the SSR decoders
-  `unquote()` before parsing.
+  `unquote()` before parsing. The two session-list pages carry no
+  session id: `rrw-sort-lobby` and `rrw-sort-archived`, which the
+  primitive scopes to path `/` rather than to a session's path.
 - **Tests:**
   - `tests/unit/test_order_rows_by_sort_spec.py` — the pure helper.
   - `tests/integration/test_set_sort_display_fields.py` — the
