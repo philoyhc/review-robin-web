@@ -25,7 +25,11 @@ def _apply_email_kv(
     if slot == "enabled":
         # ``responses_received.enabled`` boolean; the legacy
         # ``responses_received_enabled`` key in the JSON dict is
-        # the canonical home (matches the resolver).
+        # the canonical home (matches the resolver). It is the only
+        # kind with a toggle, so ``enabled`` on any other kind is an
+        # unknown slot rather than a write to this one.
+        if kind != "responses_received":
+            raise _ParseError(f"unknown email override slot {field_path!r}")
         plan.email_overrides[RESPONSES_RECEIVED_ENABLED_KEY] = _parse_bool(
             value, default=True
         )
