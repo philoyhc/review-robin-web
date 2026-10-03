@@ -475,6 +475,25 @@ def snapshot_pair_context_group_keys(
     return group_keys(db, assignments=targets, session_id=session_id)
 
 
+def copy_group_answers_to_new_assignments(
+    db: Session, *, session_id: int, assignment_ids: set[int]
+) -> int:
+    """Give each newly generated assignment on a group-scoped
+    instrument its group's existing answer (findings B13, 2026-10-03).
+
+    Generate inserts a new member's assignment with no responses; when
+    its group is already answered, the per-row readers (extracts,
+    counts, monitoring, the collation pool) would read that member as
+    unanswered while the surface shows the group's answer. This is the
+    re-fan half of the relocation path: rows that already carry
+    responses, and groups nobody has answered, are left alone. The
+    caller flushes the inserts first. Returns the number of
+    ``Response`` rows written."""
+    return _refan_group_responses(
+        db, session_id=session_id, assignment_ids=assignment_ids
+    )
+
+
 def reconcile_moved_pair_context_groups(
     db: Session,
     *,

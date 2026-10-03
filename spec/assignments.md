@@ -595,6 +595,16 @@ no tags, deletes nothing. The triggering audit
 event's `context` counts the copies deleted as
 `defuncted_group_responses`.
 
+**A new member takes its group's answer.** Generate (and Prepare, which
+runs it) inserts a row for a member new to a group — a reviewee added
+to an answered team while the session is back in draft, say. When
+another member of that group already holds an answer, the new row gets
+a copy, `submitted_at` included, so the extracts, counts and monitoring
+read the member as the surface does (findings B13, 2026-10-03). Rows
+that already carry responses, and groups nobody has answered, are left
+alone. `assignments.generated` counts the copies as
+`group_responses_copied`.
+
 ### Self-review interaction
 
 On a group-scoped instrument, a "self review group" is **any

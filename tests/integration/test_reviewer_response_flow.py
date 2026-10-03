@@ -2788,3 +2788,127 @@ def test_page_save_emits_audit_row_with_counts_keys(
     assert counts["responses_saved"] == 2
     assert "saved" not in counts
     assert "validation_errors" not in counts
+
+
+def test_generate_gives_a_new_group_member_the_groups_answer(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Findings B13 (2026-10-03): a reviewee added to an already-answered
+    group gets that group's answer on the next Generate, as a member
+    moved in by a tag edit does, so per-row readers agree with the
+    surface."""
+    import datetime as dt
+
+    from app.services import assignments as assignments_service
+
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Grp New", "code": "grp-new-member"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "grp-new-member")
+    ).scalar_one()
+    group = add_group_instrument(db, review_session)
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Team A\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    group.group_kind = "r1"
+    db.commit()
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+
+    rating = next(
+        f for f in group.response_fields if f.field_key == "rating"
+    )
+    [carol_row] = db.scalars(
+        select(Assignment).where(Assignment.instrument_id == group.id)
+    ).all()
+    db.add(
+        Response(
+            assignment_id=carol_row.id,
+            response_field_id=rating.id,
+            value="4",
+            submitted_at=dt.datetime.now(dt.timezone.utc),
+        )
+    )
+    db.add_all(
+        [
+            Reviewee(
+                session_id=review_session.id,
+                name="Eve",
+                email_or_identifier="eve@example.edu",
+                tag_1="Team A",
+            ),
+            # A new member of a group nobody has answered gets nothing.
+            Reviewee(
+                session_id=review_session.id,
+                name="Dan",
+                email_or_identifier="dan@example.edu",
+                tag_1="Team B",
+            ),
+        ]
+    )
+    db.commit()
+
+    assignments_service.replace_assignments(
+        db,
+        review_session=review_session,
+        user=review_session.created_by_user,
+        correlation_id="b13",
+    )
+
+    eve_row = db.execute(
+        select(Assignment)
+        .where(Assignment.instrument_id == group.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .where(Reviewee.name == "Eve")
+    ).scalar_one()
+    copied = db.execute(
+        select(Response).where(Response.assignment_id == eve_row.id)
+    ).scalar_one()
+    assert copied.value == "4"
+    assert copied.submitted_at is not None
+
+    dan_row = db.execute(
+        select(Assignment)
+        .where(Assignment.instrument_id == group.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .where(Reviewee.name == "Dan")
+    ).scalar_one()
+    assert db.execute(
+        select(Response).where(Response.assignment_id == dan_row.id)
+    ).first() is None
+
+    event = db.execute(
+        select(AuditEvent)
+        .where(AuditEvent.event_type == "assignments.generated")
+        .where(AuditEvent.correlation_id == "b13")
+    ).scalars().all()
+    [group_event] = [
+        e for e in event if e.detail["refs"]["instrument_id"] == group.id
+    ]
+    assert group_event.detail["counts"]["group_responses_copied"] == 1

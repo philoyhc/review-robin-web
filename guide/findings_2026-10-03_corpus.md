@@ -157,7 +157,7 @@ stricter until ruled on.
   test consumer and costs queries per render.
 - ~~**B21**~~ — **Ruled 2026-10-03: retire. Done in #2801**: the rows go, and a note says the window is read-time. Release-from/until preconditions and skip reasons in
   `lifecycle.md:729-730` that nothing emits.
-- ~~**B11**~~, **B13**, ~~**A25, C16, F4**~~ — **Ruled 2026-10-03: fix as recommended.** B11 (Clear shows for a status filter), C16 (identity and Profile labels are literals on Reviewees too) and F4 (308) **done in #2801**; A25 (an archived session's page says it has closed) **done in #2804**. Clear's visibility with a status filter; a
+- ~~**B11, B13, A25, C16, F4**~~ — **Ruled 2026-10-03: fix as recommended.** B13 (Generate copies an answered group's answer onto a new member) **done in #2805**; B11 (Clear shows for a status filter), C16 (identity and Profile labels are literals on Reviewees too) and F4 (308) **done in #2801**; A25 (an archived session's page says it has closed) **done in #2804**. Clear's visibility with a status filter; a
   new member of an answered group gets no answer copy on Generate; the
   pre-open page also serving `archived`; identity labels through the
   resolver; `/monitoring`'s 303 against the 308 house rule.
