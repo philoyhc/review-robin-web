@@ -13,8 +13,6 @@ test on localhost exactly as today**. After NUS is verified and serving,
 > This runbook mirrors the *working* dev setup documented in
 > `docs/deployment_dev.md` — read that first; NUS is the same topology in a
 > different subscription + tenant. Companion runbooks:
-> `docs/azure_github_setup.md` (full greenfield Azure+GitHub setup),
-> `docs/azure_provision.md` (SKU/pricing shopping list),
 > `docs/cli_setup.md` (workstation CLIs), `guide/deferred_consolidated.md`
 > (hardening deferred until a real deployment forces it).
 >

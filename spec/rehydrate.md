@@ -180,9 +180,8 @@ expiry; a foreign or expired token is rejected and the page asks for a
 re-upload). It is backed by a `rehydrate_stashes` row — the zipped file set
 in a `bytea` (`LargeBinary`) `payload` column
 (`app/db/models/rehydrate_stash.py`, migration `a3f1c7e9b204`). This survives
-instance recycle **and** scale-out — which matters because the app is sized
-to autoscale to 2–3 App Service instances under load (`docs/architecture.md`,
-`docs/azure_provision.md`), so a Validate on one instance and Commit on
+instance recycle **and** scale-out — which matters if the App Service plan
+runs more than one instance, so a Validate on one instance and Commit on
 another still find the stash — using infrastructure already provisioned (the
 database), with no Storage Account. A local temp file or a
 re-upload-on-commit would not survive that: **scale-out is the constraint

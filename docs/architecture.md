@@ -78,9 +78,9 @@ Microsoft Customer Agreement, pay-as-you-go, monthly USD):
 Summary estimate, not a quote. It predates the NUS network design and
 does not price the Application Gateway, its public IP or the runner VM.
 Reserved-instance / savings-plan discounts
-on the always-on compute (App Service, Postgres) are not applied. For the
-line-item calculator walk-through and the sizing rationale, see
-[`azure_provision.md`](azure_provision.md).
+on the always-on compute (App Service, Postgres) are not applied. The
+line-item calculator walk-through and the sizing rationale are kept in the
+retired [`archive/azure_provision.md`](archive/azure_provision.md).
 
 ## How the pieces fit
 
@@ -125,15 +125,11 @@ Not part of RRW's shape, so not in the topology or the estimate:
 
 ## Related documents
 
-- [`azure_provision.md`](azure_provision.md) — the resource list as a
-  pricing-calculator walk-through, with sizing rationale for larger
-  reviews (superseded; kept as the record of the estimate).
 - [`azure_ask.md`](../azure_ask.md) — the governance ask (sponsorship,
   data policy, cost cap) for hosting on institutional Azure.
 - [`nus_azure_status_v7.md`](nus_azure_status_v7.md) — the verified NUS
   state and its blockers, and [`deployment_nus.md`](deployment_nus.md),
-  the runbook that deploys to it. (`azure_github_setup.md`, the earlier
-  two-environment draft, is superseded.)
+  the runbook that deploys to it.
 - [`security_posture.md`](security_posture.md) — authorization model,
   identity trust, CSRF posture.
 - [`spec/architecture.md`](../spec/architecture.md) — the application

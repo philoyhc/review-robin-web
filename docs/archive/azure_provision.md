@@ -1,10 +1,10 @@
 # Azure provisioning list — Review Robin Web
 
-> **Superseded (2026-10-02).** This pre-provisioning shopping list has been
+> **Superseded (2026-10-02); retired to `docs/archive/` 2026-10-03.** This pre-provisioning shopping list has been
 > overtaken by the NUS environment that was actually provisioned. For what
-> exists now, read [`nus_azure_status_v7.md`](nus_azure_status_v7.md); for
-> the topology, [`architecture.md`](architecture.md); for the deploy steps,
-> [`deployment_nus.md`](deployment_nus.md). Kept as the record of the
+> exists now, read [`nus_azure_status_v7.md`](../nus_azure_status_v7.md); for
+> the topology, [`architecture.md`](../architecture.md); for the deploy steps,
+> [`deployment_nus.md`](../deployment_nus.md). Kept as the record of the
 > estimate; do not plan from it.
 
 **Purpose:** the concrete list of Azure resources to price in the
@@ -25,7 +25,7 @@ this single sandbox. Read their SKUs and PRD/NPRD split as the *scale-up
 graduation target*, and this doc's single-environment sizing as the pilot
 you actually provision first:
 
-- **[`../azure_ask.md`](../azure_ask.md)** — the wish list + governance
+- **[`../azure_ask.md`](../../azure_ask.md)** — the wish list + governance
   ask (sponsorship, data policy, cost cap) and the *why*; its §1 is the
   pilot ask, §2 the scale-up.
 - **[`azure_github_setup.md`](azure_github_setup.md)** — the step-by-step

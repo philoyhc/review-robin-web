@@ -98,7 +98,7 @@ through them and decide each one's fate.
 | `docs/troubleshooting.md` | 71 | Opens *"for the deployed dev slot"*. Re-scope. |
 | `docs/backup_restore.md` | 83 | Opens *"Scoped to the current single Azure **dev** slot"* — and backup policy is the one of these that an institutional host may dictate rather than leave to us. |
 | `docs/deployment_nus.md` | 452 | **A migration runbook whose migration is over.** Does it become the operations reference, or retire to `docs/archive/` with the operational half lifted out first? Easy to forget precisely because it is the document being worked from. |
-| `docs/azure_github_setup.md` | 177 | The forward-looking PRD/NPRD scale-up, a `v0.1 draft` carrying a banner saying it is *not* the current plan. Is it still the shape to grow into, or has the NUS reality superseded it? |
+| ~~`docs/azure_github_setup.md`~~ <!-- path-ref-ok --> | 177 | **Retired 2026-10-03** to `docs/archive/azure_github_setup.md`, superseded by `docs/deployment_nus.md` (findings 2026-10-03 H-retire). |
 | `docs/cli_setup.md` | 641 | Companion to the above, and **the largest of the Azure documents** (third-largest in `docs/`, after `status.md` and the practice audit) — workstation CLI setup attached to the plan that was never executed. Its fate follows its parent's. |
 | `docs/architecture.md` | 124 | Infra topology and the provisioned-resource cost table. Both change at cutover. |
 | `azure_ask.md` (root) | 244 | The governance ask. Once IT has answered it, it stops being an ask and becomes a record — and it is **not indexed in `docs/README.md`** except inside another row's prose. |

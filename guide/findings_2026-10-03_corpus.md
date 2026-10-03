@@ -167,8 +167,8 @@ stricter until ruled on.
   headings.
 
 **Old findings reopened.**
-- **H-retire (old H21, H24)**: `docs/azure_provision.md` and
-  `docs/azure_github_setup.md` were bannered "Superseded" (c74bc155), not
+- ~~**H-retire (old H21, H24)**~~ — **Ruled 2026-10-03: retire. Done in #2796**, moved to `docs/archive/` with `docs/README.md` rows, as `archive/quickstart.md` was. `docs/azure_provision.md` and <!-- path-ref-ok -->
+  `docs/azure_github_setup.md` were bannered "Superseded" (c74bc155), not <!-- path-ref-ok -->
   retired; the old register's "Done in #2738" overstates. Inbound
   references to repoint first: `docs/README.md:27-29`,
   `docs/architecture.md:83,128,135`, `docs/cli_setup.md:3,648`,
@@ -179,7 +179,7 @@ stricter until ruled on.
   record".
 - **I5**: `docs/status.md` has no timeline row for #2720–#2780 (this
   sweep's row is the first since #2718).
-- **I7, H23**: `known_limitations.md` does not say scheduled sends fire
+- ~~**I7, H23**~~ — **Ruled 2026-10-03: update the documents. Done in #2796.** `known_limitations.md` does not say scheduled sends fire
   only on a Session Home visit (old B19); the backup, runbook and
   troubleshooting docs have no NUS coverage until cutover.
 
@@ -413,7 +413,7 @@ stricter until ruled on.
 - `deployment_nus.md`:
   - H12 med-low doc · :87-90, 180-196, 273-283: the whole `deploy_nus.yml` moves in-VNet per v7.
   - H13 low-med consolidate · :116-134: reduce §3 to a pointer to v7.
-- `cli_setup.md`: H15 low-med doc: reframe around `deployment_nus.md`, `NUS_*` secrets and no NPRD names.
+- `cli_setup.md`: H15 low-med doc: reframe around `deployment_nus.md`, `NUS_*` secrets and no NPRD names. (#2796 repointed its companion line and closing pointer when its parent retired; the body's "Phase N" references to the retired runbook remain.)
 - `azure_github_setup.md` / `azure_provision.md`: H16 author (two contradictory banners), H17 and H18 moot once retired.
 - `local_setup.md`: H2 low-med (drop the ~35s figure), H3 low (`node` in the tool tables), H19 low (without fake auth every route 401s).
 - `deployment_dev.md`: H20 low (repoint the env-var rules to `lifecycle.md` §2), H22 low (no Oryx build).
