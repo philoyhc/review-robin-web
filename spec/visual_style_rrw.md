@@ -680,9 +680,10 @@ navigation"; restating in this principle's context:
   The system handle `Instrument.name` is **not** reviewer-facing
   — it carries audit-event copy and is otherwise invisible.
 - **The per-instrument heading carries the operator's framing.**
-  `short_label` reaches the reviewer in two places, neither of
-  them a control: the H2 above each table, and the per-page status
-  pill's label. The navigation cluster shows only `Page {N} of
+  `short_label` reaches the reviewer in three places, none of
+  them a control: the H2 above each table, the per-page status
+  pill's label, and the missing-required and invalid-value cards,
+  which reuse that label. The navigation cluster shows only `Page {N} of
   {M}`, which grounds position without naming content. The H2 reads `#{N}: {short_label}` on a multi-instrument
   session and bare `{short_label}` on a single-instrument one
   (no `#1:` prefix needed when there is only one). Note the

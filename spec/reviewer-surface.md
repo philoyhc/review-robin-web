@@ -171,9 +171,12 @@ Top-to-bottom, the page renders:
    Exactly one instrument's content renders per page.
 7. **Missing-required warning card** — `.rs-missing-card`, full-width
    below the overview card, two-column flow. Renders only after a
-   blocked Submit attempt; enumerates gaps as `Page N: Reviewee X —
-   field Y`. Submit is a **hard gate** (no acknowledge-and-submit-
-   anyway path); the reviewer fills the gaps and resubmits.
+   blocked Submit attempt; enumerates gaps as `#N Label: Reviewee X —
+   field Y`, naming the instrument as its status pill does (bare `#N`
+   without a short label). `N` is the instrument's position, not a
+   page: several instruments can share one. Submit is a **hard gate**
+   (no acknowledge-and-submit-anyway path); the reviewer fills the gaps
+   and resubmits.
    `data-rs-errors-card` (same chrome) surfaces server-side numeric
    validation rejections, with the typed value preserved in the
    originating input so the reviewer can correct in place.
@@ -792,8 +795,8 @@ field before the submit lands.
 2. Server returns 400 + re-renders the page they were on (whichever
    `{page_n}` they submitted from) with the full-width
    `.rs-missing-card` below the overview card, enumerating the gaps as
-   `Page N: Reviewee X — field Y` so the reviewer knows where to
-   navigate.
+   `#N Label: Reviewee X — field Y` so the reviewer knows which
+   instrument to find.
 3. The reviewer fills the gaps (using the per-page navigation
    to reach each one) and re-clicks Submit. There is no checkbox and
    no `acknowledged_missing` audit detail. The flag that turns the
@@ -1439,14 +1442,16 @@ The operator authors **two distinct strings** per instrument, both
 optional:
 
 - **`Instrument.short_label`** (`String(32) | None`, nullable) — the
-  operator's reviewer-facing framing. Lands in two places, neither
+  operator's reviewer-facing framing. Lands in three places, none
   of them a control: the per-instrument **H2 title**, composed per
   the table in "Above the table — heading + help block"
   (`#{N}: {short_label}` on a multi-instrument session, bare
   `{short_label}` on a single-instrument one), and the **per-page
   status pill** label (`#{N} {short_label}` — a space, not a colon;
-  see "Per-page status"). Capped at 32 characters at the schema
-  layer; no rationale for that number is recorded.
+  see "Per-page status"). The missing-required and invalid-value
+  cards reuse the pill label to name each gap's instrument. Capped
+  at 32 characters at the schema layer; no rationale for that number
+  is recorded.
 - **`Instrument.description`** (`String(2000) | None`, nullable) — the
   longer per-instrument blurb. Lands as the subtitle next to the H2
   title above each table.

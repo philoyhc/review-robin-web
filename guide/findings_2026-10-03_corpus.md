@@ -57,7 +57,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
 - ~~**A1**~~ med — **Done in #2785.** Observer collation numbers instruments from `#0`
   (`_observer_collation.py:146` enumerates without `start=1`). Every
   other surface starts at 1. No test covers it.
-- **A2 med, author** — The reviewer's missing-required and error cards
+- ~~**A2**~~ med — **Ruled 2026-10-03: name the instrument by its label. Done in #2794.** Each entry now starts with the instrument's status-pill label (`#2 Peer review:`, bare `#2` without a short label). The reviewer's missing-required and error cards
   say "Page N" where N is the session-wide instrument position
   (`_session_position_map`; `review_surface.html:161,191`), so with two
   instruments on page 1 the second's gap reads "Page 2". Fix the number,
@@ -114,7 +114,7 @@ The author's calls. Where the spec is stricter than the code it is left
 stricter until ruled on.
 
 **Behavior that reaches people.**
-- **A2** (above): "Page N" or "#N" on the reviewer's missing-answer cards.
+- ~~**A2**~~ (above; ruled 2026-10-03, done in #2794): "Page N" or "#N" on the reviewer's missing-answer cards.
 - **A3**: the observer collation renders `visible=False` response fields
   (`_observer_collation.py:189`, `collation.py:87`); every other surface
   hides them, and `instruments.md:1040-1045` never names observers.

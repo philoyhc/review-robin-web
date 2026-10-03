@@ -180,6 +180,14 @@ when it is checked; sections with unticked rows sit above the ticked ones.
   instead and upload again. The page shows "Could not import session
   settings." and the session is unchanged.
 
+## Missing answers name the instrument (A2)
+
+- [ ] **Two instruments on one page.** On a session with two
+  instruments on the same page, give the second a short label (say
+  "Peer"). As a reviewer, leave a required field blank on the second
+  and Submit. The card's entry starts with `#2 Peer:`, not `Page 2:`,
+  matching the `#2 Peer` status pill above it.
+
 ## Setup tabs underline in blue (findings register E5)
 
 - [x] **Light and dark.** On any Setup page (Reviewers, say), the active

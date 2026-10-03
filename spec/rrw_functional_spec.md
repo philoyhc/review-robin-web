@@ -1789,7 +1789,8 @@ every page. On click:
 3. If any required cell is empty, the submit is blocked and the
    page Submit was pressed on re-renders with a full-width
    "Required fields missing." card enumerating the gaps row-by-row
-   (`Page N: Reviewee X — field Y`). No partial submit happens.
+   (`#N Label: Reviewee X — field Y`, the instrument named as its
+   status pill names it). No partial submit happens.
 4. If validation passes, every populated cell receives a
    `submitted_at` timestamp in one atomic transaction; per-
    page status pills flip to `submitted` and each row's trailing
