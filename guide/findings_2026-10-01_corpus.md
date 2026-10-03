@@ -320,7 +320,9 @@ The spec halves of C4 and E32 stay in §3.
   inactivate / reactivate and a status edit moved a pair-context group
   key without one, so the flag lagged until the next Generate. Predates
   #2765; found in its read.
-- **B34** — The same relationship changes leave group answers on the
+- ~~**B34**~~ — **Done in #2778.** Each of these changes now compares
+  pair-context group keys before and after, and reconciles only the
+  rows whose key moved. The same relationship changes leave group answers on the
   wrong group. A group instrument's answer is copied onto every
   assignment in the group, and `update_relationship` deletes and
   re-copies the affected pairs' copies when a tag edit or a re-point

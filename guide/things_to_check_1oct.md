@@ -281,3 +281,14 @@ E1, E2 and E4 were checked by the author when they merged.
 - [ ] **Tabs.** On any session page, in light and dark themes, the
   selected Setup or Operations tab still has its white (dark: near-black)
   background, and hovering another tab paints it the same way.
+
+## Relationship changes move group answers (B34)
+
+- [ ] **Inactivate a group member.** In a session whose instrument
+  groups by a relationship tag, answer a group as a reviewer. On
+  Relationships, inactivate one member's row. The reviewer surface
+  shows that member outside the group, without the group's answer;
+  the rest of the group keeps it. Reactivate the row and the member
+  rejoins the group with its answer.
+- [ ] **Re-import unchanged.** Download the relationships CSV and import
+  it again unchanged. Every answer is still there.

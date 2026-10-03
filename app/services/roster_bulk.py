@@ -31,6 +31,32 @@ from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 
 
+def relationship_group_keys_before(db: Session, *, session_id: int) -> dict:
+    """The pair-context group keys a relationship change could move,
+    snapshotted before it (findings B34). Empty when no pair-context
+    group instrument has an answer yet."""
+    from app.services import responses as responses_service
+
+    return responses_service.snapshot_pair_context_group_keys(
+        db, session_id=session_id
+    )
+
+
+def reconcile_relationship_groups(
+    db: Session, *, session_id: int, before: dict
+) -> dict[str, int] | None:
+    """Re-derive the group answer copies of every assignment a
+    relationship change moved to another pair-context group (findings
+    B34), after the change is flushed. Returns the audit ``context``
+    counting the copies that went, or ``None``."""
+    from app.services import responses as responses_service
+
+    defuncted = responses_service.reconcile_moved_pair_context_groups(
+        db, session_id=session_id, before=before
+    )
+    return {"defuncted_group_responses": defuncted} if defuncted else None
+
+
 def bulk_set_status(
     db: Session,
     *,
@@ -85,13 +111,23 @@ def bulk_set_status(
         correlation_id=correlation_id,
     )
 
+    before = (
+        relationship_group_keys_before(db, session_id=review_session.id)
+        if model is Relationship
+        else {}
+    )
     flipped_ids = [row.id for row in flipped]
     for row in flipped:
         row.status = clean_target
     db.flush()
+    context = None
     if model is Relationship:
         # An inactive relationship resolves to empty pair-context tags,
-        # so the flip can move a group key (findings B33).
+        # so the flip can move a group key: the self-review flag
+        # (findings B33) and the group answer copies (B34) follow it.
+        context = reconcile_relationship_groups(
+            db, session_id=review_session.id, before=before
+        )
         from app.services.assignments import (
             recompute_self_review_classification,
         )
@@ -110,6 +146,7 @@ def bulk_set_status(
         actor_user_id=user.id,
         session=review_session,
         payload=audit.snapshot({f"{entity_noun}_ids": flipped_ids}),
+        context=context,
         correlation_id=correlation_id,
     )
     db.commit()
@@ -302,9 +339,21 @@ def bulk_delete(
             reviewer_ids=row_ids,
             reviewers_deleted=True,
         )
+    before = (
+        relationship_group_keys_before(db, session_id=review_session.id)
+        if model is Relationship
+        else {}
+    )
     for row in rows:
         db.delete(row)
     db.flush()
+    context = None
+    if model is Relationship:
+        # A deleted relationship takes its pair-context tags with it, so
+        # the pair's group answer copies follow its new key (B34).
+        context = reconcile_relationship_groups(
+            db, session_id=review_session.id, before=before
+        )
     if model is Reviewee or model is Relationship:
         # Group self-review membership is read off the roster (findings
         # B7): deleting a reviewer's own reviewee row takes them out of
@@ -339,6 +388,7 @@ def bulk_delete(
                 else {}
             ),
         ),
+        context=context,
         correlation_id=correlation_id,
     )
     db.commit()

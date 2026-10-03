@@ -89,6 +89,8 @@ from ._group_reconciliation import (
     group_keys,
     reconcile_group_responses_for_relationship_change,
     reconcile_group_responses_for_tag_change,
+    reconcile_moved_pair_context_groups,
+    snapshot_pair_context_group_keys,
 )
 
 
@@ -156,4 +158,6 @@ __all__ = [
     "group_keys",
     "reconcile_group_responses_for_relationship_change",
     "reconcile_group_responses_for_tag_change",
+    "reconcile_moved_pair_context_groups",
+    "snapshot_pair_context_group_keys",
 ]

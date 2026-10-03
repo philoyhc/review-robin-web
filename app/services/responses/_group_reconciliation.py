@@ -516,6 +516,106 @@ def reconcile_group_responses_for_relationship_change(
     return len(response_ids)
 
 
+def _answered_pair_context_assignments(
+    db: Session, *, session_id: int
+) -> list[Assignment]:
+    """Every assignment on a group instrument whose boundary reads a
+    pair-context tag, or ``[]`` when none of those assignments carries
+    an answer — with nothing fanned, a relationship change has nothing
+    to mis-attribute."""
+    from app.services import instruments as instruments_service
+
+    instrument_ids = {
+        instrument.id
+        for instrument in db.execute(
+            select(Instrument).where(
+                Instrument.session_id == session_id,
+                Instrument.group_kind.is_not(None),
+            )
+        ).scalars()
+        if any(
+            source_type == "pair_context"
+            for source_type, _ in instruments_service.decode_group_kind(
+                instrument.group_kind
+            )
+        )
+    }
+    if not instrument_ids:
+        return []
+    answered = db.execute(
+        select(Response.id)
+        .join(Assignment, Assignment.id == Response.assignment_id)
+        .where(Assignment.instrument_id.in_(instrument_ids))
+        .limit(1)
+    ).first()
+    if answered is None:
+        return []
+    return list(
+        db.execute(
+            select(Assignment).where(Assignment.instrument_id.in_(instrument_ids))
+        ).scalars()
+    )
+
+
+def snapshot_pair_context_group_keys(
+    db: Session, *, session_id: int
+) -> dict[int, tuple[str, ...]]:
+    """The group key of every assignment a relationship change could
+    move, taken **before** the change, for
+    :func:`reconcile_moved_pair_context_groups` to compare against.
+    Empty when no pair-context group instrument has an answer yet."""
+    targets = _answered_pair_context_assignments(db, session_id=session_id)
+    if not targets:
+        return {}
+    return group_keys(db, assignments=targets, session_id=session_id)
+
+
+def reconcile_moved_pair_context_groups(
+    db: Session,
+    *,
+    session_id: int,
+    before: dict[int, tuple[str, ...]],
+) -> int:
+    """Reconcile the group answer copies of every assignment whose
+    pair-context group key moved since ``before`` was taken (findings
+    B34).
+
+    The counterpart of :func:`reconcile_group_responses_for_relationship_change`
+    for the changes that move a pair's tags wholesale rather than one
+    tag at a time: a relationship created, imported, deleted, or
+    switched active / inactive (an inactive or missing relationship
+    reads as empty tags). The rule is the same: a moved assignment's
+    copies are mis-attributed, so they are deleted and it is re-fanned
+    from its new group. Only the assignments whose key changed are
+    touched, so re-importing an unchanged file deletes nothing. The
+    caller flushes the change first. Returns the number of
+    ``Response`` rows deleted (the re-fan is a side effect)."""
+    if not before:
+        return 0
+    targets = list(
+        db.execute(
+            select(Assignment).where(Assignment.id.in_(list(before)))
+        ).scalars()
+    )
+    after = group_keys(db, assignments=targets, session_id=session_id)
+    moved = {
+        assignment_id
+        for assignment_id, key in before.items()
+        if assignment_id in after and after[assignment_id] != key
+    }
+    if not moved:
+        return 0
+    response_ids = list(
+        db.execute(
+            select(Response.id).where(Response.assignment_id.in_(moved))
+        ).scalars()
+    )
+    if response_ids:
+        db.execute(delete(Response).where(Response.id.in_(response_ids)))
+    _refan_group_responses(db, session_id=session_id, assignment_ids=moved)
+    return len(response_ids)
+
+
 def _expand_group_upserts(
     upserts: list[ResponseUpsert],
     *,
