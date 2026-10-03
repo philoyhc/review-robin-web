@@ -10,7 +10,8 @@ script in a browser, since the template test cannot run it.
 E36 added a confirm tick that gates each card's Delete; the second test
 drives that gate and the page's clearing of it on Cancel or a change of
 shape. The third checks that deleting the only card, while it is being
-edited, leaves the fresh blank card it is replaced with selected.
+edited, leaves the fresh blank card it is replaced with selected. The
+fourth holds a DELETE open to check that the card's Zip all waits for it.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import httpx
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, Route, expect
 
 
 def test_edit_and_cancel_swap_the_saved_shapes_buttons(
@@ -192,3 +193,64 @@ def test_deleting_the_only_editing_shape_selects_the_fresh_blank(
     expect(page.locator("#extract-data-shaper")).to_have_attribute(
         "data-shaper-chips-locked", "false"
     )
+
+
+def test_zip_all_waits_for_a_shape_delete_to_land(
+    page: Page, api: httpx.Client, new_session: Callable[[], int]
+) -> None:
+    """D13's Zip all downloads every saved shape. Delete removes its
+    card before the server answers, so Zip all stays off until the
+    DELETE lands: a click in between could otherwise fetch a bundle
+    that still holds the deleted shape (Codex on #2800). A DELETE that
+    fails leaves the shape on the server, so Zip all comes back on even
+    though no card shows it."""
+    session_id = new_session()
+    first_id = _save_shape(api, session_id, "First")
+    second_id = _save_shape(api, session_id, "Second")
+
+    held: list[Route] = []
+    page.route(
+        f"**/extract-data/shapes/{first_id}", lambda route: held.append(route)
+    )
+    page.goto(f"/operator/sessions/{session_id}/extract-data")
+    zip_all = page.locator("#extract-data-shaper-zip")
+    expect(zip_all).not_to_have_attribute("aria-disabled", "true")
+
+    first = page.locator(f'[data-shape][data-shape-id="{first_id}"]')
+    first.locator("[data-delete-confirm]").check()
+    # Wait for the request so the route has caught it before ``held``
+    # is read below.
+    with page.expect_request(
+        lambda r: r.method == "DELETE"
+        and r.url.endswith(f"/extract-data/shapes/{first_id}")
+    ):
+        first.locator("[data-shape-delete]").click()
+    expect(first).to_have_count(0)
+    # The DELETE is held: one card still shows a saved shape, but Zip
+    # all waits.
+    expect(page.locator("[data-shape][data-shape-id]")).to_have_count(1)
+    expect(zip_all).to_have_attribute("aria-disabled", "true")
+    expect(zip_all).to_have_attribute("href", "#")
+
+    with page.expect_response(
+        lambda r: r.request.method == "DELETE"
+        and r.url.endswith(f"/extract-data/shapes/{first_id}")
+    ):
+        held[0].continue_()
+    expect(zip_all).not_to_have_attribute("aria-disabled", "true")
+    expect(zip_all).to_have_attribute(
+        "href", f"/operator/sessions/{session_id}/export/data_shapes_bundle.zip"
+    )
+
+    # A failed DELETE on the last card: the server keeps the shape, so
+    # Zip all stays live once the answer is in.
+    page.route(
+        f"**/extract-data/shapes/{second_id}",
+        lambda route: route.fulfill(status=500, body=""),
+    )
+    second = page.locator(f'[data-shape][data-shape-id="{second_id}"]')
+    second.locator("[data-delete-confirm]").check()
+    second.locator("[data-shape-delete]").click()
+    expect(second).to_have_count(0)
+    expect(page.locator("[data-shape][data-shape-id]")).to_have_count(0)
+    expect(zip_all).not_to_have_attribute("aria-disabled", "true")

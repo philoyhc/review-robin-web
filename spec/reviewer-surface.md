@@ -42,8 +42,14 @@ Cross-references:
 GET  /me/sessions/{session_id}/{page_n}
 POST /me/sessions/{session_id}/{page_n}/save
 POST /me/sessions/{session_id}/submit
+POST /me/sessions/{session_id}/recall
 POST /me/sessions/{session_id}/clear
 ```
+
+Recall is posted from the post-submit summary page (see "Per-session
+summary" below). Save is per page: the consolidated
+`POST /me/sessions/{session_id}/save` that nothing posted to was
+retired (findings A16, 2026-10-03).
 
 `{page_n}` is the **1-indexed operator-defined page number** within the
 session. Pages are derived from `Instrument.starts_new_page`:
@@ -843,8 +849,14 @@ GET requests behave differently depending on which gate fails:
   "opens later" suffix, an info banner explaining the review
   hasn't opened yet, the deadline + zone if one is set, and a
   link back to the reviewer dashboard. No response form is
-  rendered. Applies for `draft`, `validated` and `archived`
-  alike.
+  rendered. Applies for `draft` and `validated`.
+
+- **Session `archived`** (reached through an old invitation link or
+  a bookmark; the dashboard lists it unlinked). The same template
+  renders closed copy instead: "{session name} — closed" in the h1,
+  a banner saying the review has closed and responses are no longer
+  accepted or shown, no deadline line, and the dashboard link
+  (findings A25, 2026-10-03).
 
 - **Session `ready`, response window closed**
   (`accepting_responses=false` on every instrument, because the
@@ -1231,7 +1243,7 @@ dashboard's Session column once Reviewer Status is
   which reuses 18H Part 2's `_response_row_tuple` so a
   per-cell rename here flows through to every related file.
 
-### Pre-open page (`/me/sessions/{id}/{page_n}` on a not-yet-ready session)
+### Pre-open page (`/me/sessions/{id}/{page_n}` on a not-yet-ready or archived session)
 
 A dedicated **pre-open** rendering serves a reviewer who follows an
 invitation token (or a dashboard link) to a session that's been
@@ -1240,7 +1252,8 @@ dropping the reviewer into a silently-disabled form, the
 route returns `reviewer/pre_open.html` — h1 with "{session
 name} — opens later", an info banner explaining the review
 hasn't opened yet, the deadline + zone when one is set, and a
-link back to the reviewer dashboard. See
+link back to the reviewer dashboard. An `archived` session renders
+the same template with closed copy (see the gate list above). See
 `spec/lifecycle.md` §4.1 "The reviewer write-path predicate"
 for the gate semantics.
 
@@ -1556,7 +1569,7 @@ requirements (since the app's positioning depends on tabular review
 artifacts at scale): auto-save, return-to-place, visible progress,
 sticky column headers, filter-to-incomplete, keyboard navigation,
 and column-type ergonomics. **Segment 17B owns these**, pursued as
-targeted progressive enhancement (debounced `fetch` to `POST /save`,
+targeted progressive enhancement (debounced `fetch` to `POST …/{page_n}/save`,
 small inline scripts, CSS) — *not* a JS data-grid framework. (Sticky
 column headers are the one item ruled out — see below.) A wholesale
 grid swap (AG Grid or equivalent) is off the roadmap as overkill, and

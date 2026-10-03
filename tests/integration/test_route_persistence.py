@@ -483,3 +483,52 @@ def test_data_shapes_zip_all_audit_row_persists(
                 AuditEvent.event_type == "session.data_shapes_bundle_extracted",
             )
         ).scalar_one() is not None
+
+
+@pytest.mark.parametrize(
+    ("path", "event_type"),
+    [
+        ("settings.csv", "session.settings_extracted"),
+        ("reviewers.csv", "session.reviewers_extracted"),
+        ("reviewees.csv", "session.reviewees_extracted"),
+        ("relationships.csv", "session.relationships_extracted"),
+        ("observers.csv", "session.observers_extracted"),
+        ("participant_tokens.csv", "session.participant_tokens_extracted"),
+        ("responses.csv", "session.responses_extracted"),
+        ("bundle.zip", "session.setup_bundle_extracted"),
+        ("responses_bundle.zip", "session.responses_bundle_extracted"),
+        ("by_instrument_bundle.zip", "session.by_instrument_bundle_extracted"),
+        ("reviewer_metadata.csv", "session.reviewer_metadata_extracted"),
+        ("reviewee_metadata.csv", "session.reviewee_metadata_extracted"),
+    ],
+)
+def test_extract_audit_rows_persist(
+    committed_client: TestClient,
+    committed_engine: Engine,
+    path: str,
+    event_type: str,
+) -> None:
+    """Every Extract download commits its audit row (findings D33,
+    2026-10-03): ``write_event`` only flushes and ``get_db`` closes
+    without committing, so none of these rows survived the request.
+    ``audit_log.csv`` (sys-admin only) and ``data_shapes_bundle.zip``
+    (covered above) are the two left out."""
+    from app.db.models import AuditEvent
+
+    session_id, _ = _bootstrap(
+        committed_client,
+        committed_engine,
+        code=f"x-{path.replace('.', '-').replace('_', '-')}",
+    )
+    response = committed_client.get(
+        f"/operator/sessions/{session_id}/export/{path}"
+    )
+    assert response.status_code == 200, response.text
+
+    with Session(committed_engine) as s:
+        assert s.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == session_id,
+                AuditEvent.event_type == event_type,
+            )
+        ).scalar_one() is not None

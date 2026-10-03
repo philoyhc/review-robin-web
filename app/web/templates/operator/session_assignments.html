@@ -315,13 +315,12 @@
                 </datalist>
               </label>
             </div>
-            {# `Clear` and the submit only. The selected count and the
-               bulk buttons are the selection-driven half and live in
-               the row expander, not here — rung 1 wrote this while
-               they were still in the card awaiting rung 2, which has
-               since taken them. #}
+            {# `Clear` and the submit only. `Clear` shows whenever a
+               filter is on, status included, as on the other table
+               pages (findings B11). The selected count and the bulk
+               buttons live in the row expander. #}
             <div class="filter-actions">
-              {% if filter_q %}
+              {% if filter_q or filter_status != "all" %}
                 <a class="btn secondary"
                    href="/operator/sessions/{{ session.id }}/assignments#{{ pager_anchor }}">Clear</a>
               {% endif %}

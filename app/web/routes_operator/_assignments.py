@@ -1,11 +1,10 @@
-"""Assignments hub: the index page plus the six POSTs that act on a
+"""Assignments hub: the index page plus the POSTs that act on a
 session's generated set.
 
 All paths below are under the package's ``/operator`` prefix:
 
 - ``GET  /sessions/{id}/assignments`` — the page
 - ``POST /sessions/{id}/assignments/generate`` — run the rule engine
-- ``POST /sessions/{id}/assignments/delete-all``
 - three bulk toggles (activate / inactivate / per-instrument
   self-reviews)
 
@@ -28,7 +27,6 @@ from fastapi import (
     APIRouter,
     Depends,
     Form,
-    HTTPException,
     Query,
     Request,
     status,
@@ -440,33 +438,6 @@ def assignments_generate(
             db, review_session, acknowledge_response_loss
         )
     assignments.replace_assignments(
-        db,
-        review_session=review_session,
-        user=user,
-        correlation_id=request_correlation_id(),
-    )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/assignments",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-
-
-@router.post("/sessions/{session_id}/assignments/delete-all")
-def assignments_delete_all(
-    confirm: str | None = Form(default=None),
-    acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    _require_editable(review_session)
-    if confirm != "true":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="confirm checkbox required",
-        )
-    _require_response_loss_ack(db, review_session, acknowledge_response_loss)
-    assignments.delete_all_assignments(
         db,
         review_session=review_session,
         user=user,

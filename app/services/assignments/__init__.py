@@ -13,8 +13,7 @@ Layout:
   invariant gate) + ``_is_active`` (row-active predicate).
 - ``_coverage.py`` — read-only summaries the Validate page +
   Workflow card + Assignments page consume (counts, staleness,
-  roster + pairs queries, the per-session destructive
-  ``delete_all_assignments`` op).
+  roster + pairs queries).
 - ``_self_review.py`` — canonical self-review classification +
   recompute / verify invariant + breakdown reporters +
   per-instrument bulk include flip.
@@ -34,7 +33,6 @@ from ._coverage import (
     _apply_pair_search,  # noqa: F401
     assignment_fields_with_data,
     count_pairs,
-    delete_all_assignments,
     display_source_presence,
     existing_count,
     existing_count_per_instrument,
@@ -94,7 +92,6 @@ __all__ = [
     "count_self_review_candidates",
     "count_self_reviews_in_assignments",
     "coverage_stats",
-    "delete_all_assignments",
     "display_source_presence",
     "existing_count",
     "existing_count_per_instrument",

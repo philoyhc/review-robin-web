@@ -243,20 +243,6 @@ def test_assignments_generate_invalidates_validated(
     _assert_invalidated(db, session, expected_reason="assignments_generated")
 
 
-def test_assignments_delete_all_invalidates_validated(
-    client: TestClient, db: Session
-) -> None:
-    session = _validated_session(client, db, code="inv-ada")
-
-    client.post(
-        f"/operator/sessions/{session.id}/assignments/delete-all",
-        data={"confirm": "true"},
-        follow_redirects=False,
-    )
-
-    _assert_invalidated(db, session, expected_reason="assignments_deleted_all")
-
-
 def test_session_edit_invalidates_validated(
     client: TestClient, db: Session
 ) -> None:

@@ -6829,7 +6829,7 @@ def test_action_row_retires_add_instrument_and_add_group_buttons(
     are gone from the per-instrument action row. The +Instrument
     button (renamed from +New model) is the sole 'create new
     instrument' affordance. The /add and /add-group POST routes
-    still exist server-side — only the buttons are retired."""
+    are retired too (findings A22)."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="w4-retire-add-buttons"
     )

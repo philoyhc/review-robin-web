@@ -84,6 +84,7 @@ from ._branching import (
     hide_below_hidden_parents,
 )
 from ._group_reconciliation import (
+    copy_group_answers_to_new_assignments,
     group_key_for_pair,
     GroupKeyable,
     group_keys,
@@ -152,6 +153,7 @@ __all__ = [
     "branch_structure_errors",
     "condition_error",
     # _group_reconciliation
+    "copy_group_answers_to_new_assignments",
     "group_key_for_pair",
     "GroupKeyable",
     "group_keys",

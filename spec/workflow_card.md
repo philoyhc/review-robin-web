@@ -85,8 +85,6 @@ returns:
   `visible=True` response field **and** all three Band 1 links
   touched (`band1_touched_links`). A NULL `rule_set_id` does not
   fail it.
-- `is_pre_generate` — retained for external consumers; the card's
-  state cascade does not branch on it.
 - `invitations_generated` — `True` iff at least one `Invitation`
   row exists for the session.
 - `invitations_sent` — `True` iff at least one `Invitation` row
@@ -567,10 +565,9 @@ so the workflow-failure signal line adapts.
 
 - **Activate raises.** The except branch calls
   `lifecycle.invalidate_session(reason="workflow_run_rollback")`
-  if the session was promoted to `validated`, which emits a
-  `session.invalidated` audit event (the predicate
-  `needs_regeneration_after_revert` then resolves the card to a
-  draft state on the next render). Redirect carries
+  if the session was promoted to `validated`; that returns the
+  session to `draft` and emits `session.invalidated`, so the card
+  renders a draft state on the next load. Redirect carries
   `super_button=activate&super_step=activate`.
 
 Each route emits two audit events bracketing the run:

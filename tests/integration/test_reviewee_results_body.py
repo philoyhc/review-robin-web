@@ -40,6 +40,7 @@ from app.db.models import (
     User,
 )
 from app.services import visibility_policies
+from ._instrument_states import add_group_instrument
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -1112,10 +1113,7 @@ def test_results_body_group_scoped_drops_display_field_columns(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "grp-res")
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-group",
-        follow_redirects=False,
-    )
+    add_group_instrument(db, review_session)
     operator.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -1394,10 +1392,7 @@ def test_results_body_excludes_responses_about_other_groups(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "multi-grp")
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-group",
-        follow_redirects=False,
-    )
+    add_group_instrument(db, review_session)
     operator.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -1559,10 +1554,7 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "pool-tur")
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-group",
-        follow_redirects=False,
-    )
+    add_group_instrument(db, review_session)
     # Drop the seeded per-reviewee instrument so this test is
     # scoped to the group-by-team instrument.
     pri = db.execute(
@@ -1579,7 +1571,7 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
         .where(Instrument.group_kind.is_not(None))
     ).scalar_one()
     # Configure the group boundary as ``reviewee.tag_3`` (the
-    # "team" tag). The seeded ``group_kind`` from add-group may
+    # "team" tag). The seeded ``group_kind`` from the helper may
     # be different; override directly so the fan-out keys by
     # team.
     group_instrument.group_kind = "r3"

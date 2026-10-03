@@ -24,10 +24,26 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+from app.services import instruments as instruments_service
 
 EDITABLE = ("draft", "validated")
 LOCKED = ("ready", "expired", "archived")
 ALL_STATES = EDITABLE + LOCKED
+
+
+def add_group_instrument(db: Session, review_session: ReviewSession) -> Instrument:
+    """A group-scoped instrument, seeded with the default fields, as the
+    retired ``POST …/instruments/add-group`` back door made one
+    (findings A22, 2026-10-03). Operators reach group scope through
+    Band 1 on a ``+Instrument`` card; fixtures go through the service."""
+    instrument = instruments_service.create_instrument(
+        db,
+        review_session=review_session,
+        actor=review_session.created_by_user,
+        group_kind=instruments_service.GROUP_KIND_SENTINEL,
+    )
+    db.commit()
+    return instrument
 
 
 def seed_session_with_instruments(

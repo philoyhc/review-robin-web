@@ -22,6 +22,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
+from ._instrument_states import add_group_instrument
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -1433,10 +1434,7 @@ def test_group_instrument_save_fans_out_to_all_members(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "grp-fan")
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-group",
-        follow_redirects=False,
-    )
+    add_group_instrument(db, review_session)
     operator.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -1521,10 +1519,7 @@ def test_group_instrument_fan_out_stays_within_boundary_group(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "grp-bnd")
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-group",
-        follow_redirects=False,
-    )
+    add_group_instrument(db, review_session)
     operator.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -1631,10 +1626,7 @@ def test_group_boundary_tag_change_defuncts_that_reviewees_responses(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "grp-tagedit")
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-group",
-        follow_redirects=False,
-    )
+    add_group_instrument(db, review_session)
     operator.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -1750,10 +1742,7 @@ def test_tag_change_into_answered_group_refans_the_answer(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "grp-join")
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-group",
-        follow_redirects=False,
-    )
+    add_group_instrument(db, review_session)
     operator.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -2123,10 +2112,7 @@ def test_group_self_review_toggle_rules_out_whole_group(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "grp-sr")
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-group",
-        follow_redirects=False,
-    )
+    add_group_instrument(db, review_session)
     # One reviewer, R, who is also a reviewee — so R is a member of
     # the Team X group. Team Y has no R.
     operator.post(
@@ -2234,10 +2220,7 @@ def test_group_instrument_surface_renders_one_row_per_group(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "grp-rnd")
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-group",
-        follow_redirects=False,
-    )
+    add_group_instrument(db, review_session)
     operator.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -2320,10 +2303,7 @@ def test_group_instrument_counts_once_per_group_in_reviewer_state(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "grp-st")
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-group",
-        follow_redirects=False,
-    )
+    add_group_instrument(db, review_session)
     operator.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -2525,10 +2505,7 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "grp-excl")
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-group",
-        follow_redirects=False,
-    )
+    add_group_instrument(db, review_session)
     operator.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -2711,10 +2688,7 @@ def test_surface_marks_a_self_review_group_row(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "grp-self-pill")
     ).scalar_one()
-    operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-group",
-        follow_redirects=False,
-    )
+    add_group_instrument(db, review_session)
     operator.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={
@@ -2772,3 +2746,169 @@ def test_surface_marks_a_self_review_group_row(
     assert len(group_cells) == 2
     assert len(flagged) == 1
     assert "Team A" in flagged[0]
+
+
+def test_page_save_emits_audit_row_with_counts_keys(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """One ``responses.saved`` row per Save, its ``counts`` carrying
+    ``assignments_touched`` + ``responses_saved``. Moved here from the
+    retired consolidated save's tests (findings A16, 2026-10-03)."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-save-counts",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    [assignment] = db.scalars(
+        select(Assignment).where(Assignment.session_id == review_session.id)
+    ).all()
+
+    response = make_client(rae).post(
+        f"/me/sessions/{review_session.id}/1/save",
+        data={
+            f"response[{assignment.id}][rating]": "5",
+            f"response[{assignment.id}][comments]": "wonderful",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    event = db.execute(
+        select(AuditEvent)
+        .where(AuditEvent.event_type == "responses.saved")
+        .where(AuditEvent.session_id == review_session.id)
+    ).scalar_one()
+    counts = event.detail["counts"]
+    assert counts["assignments_touched"] == 1
+    assert counts["responses_saved"] == 2
+    assert "saved" not in counts
+    assert "validation_errors" not in counts
+
+
+def test_generate_gives_a_new_group_member_the_groups_answer(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Findings B13 (2026-10-03): a reviewee added to an already-answered
+    group gets that group's answer on the next Generate, as a member
+    moved in by a tag edit does, so per-row readers agree with the
+    surface."""
+    import datetime as dt
+
+    from app.services import assignments as assignments_service
+
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Grp New", "code": "grp-new-member"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "grp-new-member")
+    ).scalar_one()
+    group = add_group_instrument(db, review_session)
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Team A\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    group.group_kind = "r1"
+    db.commit()
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+
+    rating = next(
+        f for f in group.response_fields if f.field_key == "rating"
+    )
+    [carol_row] = db.scalars(
+        select(Assignment).where(Assignment.instrument_id == group.id)
+    ).all()
+    db.add(
+        Response(
+            assignment_id=carol_row.id,
+            response_field_id=rating.id,
+            value="4",
+            submitted_at=dt.datetime.now(dt.timezone.utc),
+        )
+    )
+    db.add_all(
+        [
+            Reviewee(
+                session_id=review_session.id,
+                name="Eve",
+                email_or_identifier="eve@example.edu",
+                tag_1="Team A",
+            ),
+            # A new member of a group nobody has answered gets nothing.
+            Reviewee(
+                session_id=review_session.id,
+                name="Dan",
+                email_or_identifier="dan@example.edu",
+                tag_1="Team B",
+            ),
+        ]
+    )
+    db.commit()
+
+    assignments_service.replace_assignments(
+        db,
+        review_session=review_session,
+        user=review_session.created_by_user,
+        correlation_id="b13",
+    )
+
+    eve_row = db.execute(
+        select(Assignment)
+        .where(Assignment.instrument_id == group.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .where(Reviewee.name == "Eve")
+    ).scalar_one()
+    copied = db.execute(
+        select(Response).where(Response.assignment_id == eve_row.id)
+    ).scalar_one()
+    assert copied.value == "4"
+    assert copied.submitted_at is not None
+
+    dan_row = db.execute(
+        select(Assignment)
+        .where(Assignment.instrument_id == group.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .where(Reviewee.name == "Dan")
+    ).scalar_one()
+    assert db.execute(
+        select(Response).where(Response.assignment_id == dan_row.id)
+    ).first() is None
+
+    event = db.execute(
+        select(AuditEvent)
+        .where(AuditEvent.event_type == "assignments.generated")
+        .where(AuditEvent.correlation_id == "b13")
+    ).scalars().all()
+    [group_event] = [
+        e for e in event if e.detail["refs"]["instrument_id"] == group.id
+    ]
+    assert group_event.detail["counts"]["group_responses_copied"] == 1

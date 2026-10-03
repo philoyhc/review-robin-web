@@ -191,3 +191,19 @@ def test_an_unrecognised_status_is_normalised_before_it_round_trips(
 
     assert '<input type="hidden" name="filter_status" value="all">' in body
     assert "nonsense" not in body
+
+
+def test_clear_shows_for_a_status_filter_alone(
+    db: Session, client: TestClient
+) -> None:
+    """Status counts as a filter, so `Clear` renders with no search
+    term too, as on the other table pages (findings B11, 2026-10-03)."""
+    s = _seed(client, db, code="asf-clear")
+
+    bare = client.get(f"/operator/sessions/{s.id}/assignments").text
+    filtered = client.get(
+        f"/operator/sessions/{s.id}/assignments?status=inactive"
+    ).text
+
+    assert ">Clear</a>" not in bare
+    assert ">Clear</a>" in filtered

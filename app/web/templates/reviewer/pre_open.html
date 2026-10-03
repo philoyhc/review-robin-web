@@ -6,15 +6,32 @@
    from the Prepared state to give reviewers a heads-up that the
    review will open; the reviewer clicks the link and lands here
    instead of the response form.
+
+   An ``archived`` session reaches the same route (an old invitation
+   link or a bookmark) and gets closed copy instead: "opens later"
+   would be false (findings A25, 2026-10-03).
 #}
 {% extends "base.html" %}
 
-{% block title %}Review opens later — Review Robin Web{% endblock %}
+{% block title %}{% if is_archived %}Review closed{% else %}Review opens later{% endif %} — Review Robin Web{% endblock %}
 
 {% block body_class %}ui-v2 reviewer{% endblock %}
 {% block top_bar %}{% include "reviewer/_top_bar.html" %}{% endblock %}
 
 {% block content %}
+  {% if is_archived %}
+  <h1>{{ session.name }} — closed</h1>
+
+  <div class="card">
+    <div class="banner banner-info" style="margin: 0;">
+      <p class="banner-headline">This review has closed.</p>
+      <p>
+        The session operator has archived the review, so responses
+        are no longer accepted or shown here.
+      </p>
+    </div>
+  </div>
+  {% else %}
   <h1>{{ session.name }} — opens later</h1>
 
   <div class="card">
@@ -33,6 +50,7 @@
       {% endif %}
     </div>
   </div>
+  {% endif %}
 
   <div class="btn-pair" style="margin-top: var(--space-4);">
     <a class="btn secondary" href="/me">Your reviewer dashboard</a>

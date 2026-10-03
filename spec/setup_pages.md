@@ -264,11 +264,13 @@ below describe what that panel holds and what it replaced.
    the entity is non-empty (or when Add mode is active), regardless of
    lifecycle state. A **leftmost checkbox column** drives the **row
    expander** injected beneath the selection (a header select-all
-   checkbox toggles every visible row). Column headers render the
+   checkbox toggles every visible row). Tag column headers render the
    resolved friendly label via
    `operator/partials/_field_label_header.html`; when an override is
    set, the canonical name appears as `.field-label-canonical` muted
-   subtext below the friendly label and the sort `↕` button. While a
+   subtext below the friendly label and the sort `↕` button. Identity
+   and `Profile` headers are literals (see "Labels come from the same
+   place the table's headers do" below). While a
    row is being edited (`?edit_id=`) or a blank Add row is active
    (`?add=1`), that row's cells render as inputs / pickers — see
    "Per-row Edit / Add / bulk actions".
@@ -443,11 +445,14 @@ populated — which is exactly when the table renders them, because both
 read the same `col_data` flags.
 
 **Labels come from the same place the table's headers do, which is not
-one place.** A renamable column goes through `field_labels.resolve_pair`,
-so an override shows in the chip and the `<th>` together. An identity
-column is a literal, because `field_labels.upsert` refuses an identity
-slot — the built-in default is the only string either surface can
-render, and routing it through the resolver would suggest otherwise.
+one place.** A renamable column (a tag slot) goes through
+`field_labels.resolve_pair`, so an override shows in the chip and the
+`<th>` together. An identity column, and the display-only `Profile`,
+is a literal on every roster page, because `field_labels.upsert`
+refuses those slots — the built-in default is the only string either
+surface can render, and routing it through the resolver would suggest
+otherwise (Reviewees followed the resolver until findings C16,
+2026-10-03).
 Observers is literals throughout: it has no labels editor at all.
 
 **Relationships lists its pair-context tags and nothing else**, and is
@@ -1350,7 +1355,7 @@ is only a bug when it points at a different shape.*
 |---|---|---|---|
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the **row expander** below |
 | 1 | Name | — | `reviewee.name` |
-| 2 | Email / Identifier | — | `<code>{{ reviewee.email_or_identifier }}</code>` |
+| 2 | Email (`Email / Identifier` in edit mode) | — | `<code>{{ reviewee.email_or_identifier }}</code>` |
 | 3 | Profile | ✓ | Conditional: rendered only when at least one reviewee has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>`. `data-col-toggle="profile"` / `class="profile-col"`. Uses the display-only `("reviewee", "profile_link")` label "Profile"; it is not in `_VALID_SOURCE_FIELDS`, so a session cannot rename it. |
 | 4 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
 | 5 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |

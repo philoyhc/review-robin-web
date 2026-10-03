@@ -205,23 +205,6 @@ def test_assignments_replace_invalidates(
     assert review_session.status == "draft"
 
 
-def test_assignments_delete_all_invalidates(
-    setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
-    db: Session,
-) -> None:
-    op, review_session, *_ = setup
-
-    assignments_service.delete_all_assignments(
-        db,
-        review_session=review_session,
-        user=op,
-        correlation_id="c1",
-    )
-
-    db.refresh(review_session)
-    assert review_session.status == "draft"
-
-
 def test_instrument_create_invalidates(
     setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
     db: Session,

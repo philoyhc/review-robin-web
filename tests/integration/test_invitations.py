@@ -2484,3 +2484,33 @@ def test_state_6_copy_does_not_claim_reviewers_were_told(
     card = _next_action_body(client.get(f"/operator/sessions/{session.id}").text)
     assert "no mail leaves the app" in card
     assert "have been notified" not in card
+
+
+def test_reviewer_pre_open_page_says_closed_for_an_archived_session(
+    client: TestClient,
+    db: Session,
+    make_client,
+) -> None:
+    """Findings A25 (2026-10-03): an archived session reaches the same
+    page through an old link, and says it has closed rather than that
+    it opens later."""
+    import datetime as _dt
+
+    session = _validated_session(client, db, "arch-preopen")
+    # A deadline, so the absence of its line below means something.
+    session.deadline = _dt.datetime(2030, 1, 1, tzinfo=_dt.timezone.utc)
+    session.status = "archived"
+    db.commit()
+    rae = AuthenticatedUser(
+        principal_id="rae-oid",
+        email="rae@example.edu",
+        name="Rae",
+        provider="aad",
+    )
+    body = make_client(rae).get(f"/me/sessions/{session.id}/1").text
+    assert "<title>Review closed" in body
+    assert "— closed</h1>" in body
+    assert "This review has closed." in body
+    assert "Deadline:" not in body
+    assert "opens later" not in body
+    assert "hasn't opened yet" not in body

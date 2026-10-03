@@ -199,10 +199,10 @@ the method), not 301.
 relationship/membership without destroying the far side
 (`owners/{uid}/remove`, `users/{id}/remove-from-all-sessions`).
 Creation is `{collection}/add` for a single-kind collection
-(`owners/add`); a collection with **multiple creation kinds** stays
-verb-first to name the kind (`instruments/add-group`,
-`instruments/add-new-model`) rather than inventing artificial
-sub-collections — this is a deliberate, documented divergence
+(`owners/add`). `instruments/add-new-model` keeps its verb-first,
+kind-naming shape from when instruments had several creation kinds;
+`instruments/add-group`, the other, is retired (findings A22,
+2026-10-03), so it is now a single legacy name rather than a pattern
 (consistency-audit R7).
 
 **Whole-set saves end in `/save`, verb last**:
@@ -423,7 +423,7 @@ Setup is open only while the session is **editable** — `draft` OR
 `validated` (`is_editable`). Once the session leaves that band
 (`ready` / `expired` / `archived`), every operator setup-mutation
 endpoint (session edit, roster import + delete-all, instrument
-CRUD, assignment generate + delete-all) returns **HTTP 409** via the
+CRUD, assignment generate) returns **HTTP 409** via the
 `_require_editable` route gate in
 `app/web/routes_operator/_shared.py`. Session Home's Delete Data and
 Delete session are an exception: `_require_not_ready` refuses them
@@ -467,7 +467,7 @@ There is no standalone monitoring page: reviewer progress lives on the
 **Invitations** Operations page (reviewer-centric) and reviewee
 coverage on the **Responses** page (reviewee-centric); see
 `spec/operations_pages.md`. `GET /operator/sessions/{id}/monitoring`
-303s to `/operator/sessions/{id}/invitations` so an old bookmark still
+308s to `/operator/sessions/{id}/invitations` so an old bookmark still
 lands somewhere real.
 
 A reviewer is **incomplete** iff their session pill is anything other

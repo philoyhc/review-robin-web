@@ -865,7 +865,7 @@
             <th class="rrw-sortable" data-sort-key="email">Email<button type="button" class="rrw-sort-btn"
                 aria-label="Sort by Email"
                 onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
-            {% if show_profile_link %}<th class="profile-col">{{ field_label_header(session, "reviewer", "profile_link") }}{{ field_label_canonical_subtext(session, "reviewer", "profile_link") }}</th>{% endif %}
+            {% if show_profile_link %}<th class="profile-col">Profile</th>{% endif %}
             {% if show_tag[1] %}
             <th class="tag-col tag-col-1 rrw-sortable" data-sort-key="tag_1">{{ field_label_header(session, "reviewer", "tag_1") }}<button type="button" class="rrw-sort-btn"
                 aria-label="Sort by Tag1"

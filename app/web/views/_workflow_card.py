@@ -13,7 +13,7 @@ The builder owns:
 - the lifecycle convenience booleans
   (``is_draft`` / ``is_validated`` / ``is_ready``);
 - the workflow-card state predicates
-  (``is_setup_empty`` / ``is_pre_generate``);
+  (``is_setup_empty``);
 - the readiness summary + per-issue breakdown
   (``validation_summary`` / ``validation_issues_by_severity``);
 - the invitation lifecycle flags
@@ -139,16 +139,6 @@ def build_workflow_card_context(
     is_setup_empty = is_draft and (
         reviewer_count == 0 or reviewee_count == 0 or has_unconfigured
     )
-    is_pre_generate = (
-        is_draft
-        and not is_setup_empty
-        and (
-            assignments.existing_count(db, review_session.id) == 0
-            or lifecycle.needs_regeneration_after_revert(
-                db, review_session.id
-            )
-        )
-    )
 
     prepare_confirm_ctx: dict[str, int] | None = None
     if prepare_confirm == "responses" and lifecycle.session_has_responses(
@@ -231,7 +221,6 @@ def build_workflow_card_context(
         "stop_release_visible": stop_release_visible,
         "archive_visible": archive_visible,
         "is_setup_empty": is_setup_empty,
-        "is_pre_generate": is_pre_generate,
         "invitations_generated": invitations_generated,
         "invitations_sent": invitations_sent,
         "validation_summary": validation_summary,

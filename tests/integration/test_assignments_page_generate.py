@@ -28,6 +28,7 @@ from app.db.models import (
     Instrument,
     ReviewSession,
 )
+from ._instrument_states import add_group_instrument
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -99,10 +100,7 @@ def test_status_block_reports_group_type_and_group_count(
     "Group" and, once generated, a Groups count — distinct
     (reviewer, group_key) over its assignments (Segment 13C)."""
     review_session = _make_session(client, db, code="page-group")
-    client.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-group",
-        follow_redirects=False,
-    )
+    add_group_instrument(db, review_session)
     client.post(
         f"/operator/sessions/{review_session.id}/reviewers/import",
         files={

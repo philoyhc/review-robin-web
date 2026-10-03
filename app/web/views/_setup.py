@@ -338,7 +338,8 @@ def reviewer_column_state(
     literals because ``field_labels.upsert`` refuses an identity slot —
     the built-in default is the only string either surface can render,
     and going through the resolver for it would suggest otherwise.
-    (`Profile` is renamable, so it does go through the resolver.)
+    `Profile` is display-only (not renamable either), so it is a
+    literal too (findings C16, 2026-10-03).
 
     **`Profile` was missing until 19P.3 rung 5c.** 19P.1 wrote this
     function Reviewers-shaped and deliberately guessed nothing, leaving
@@ -369,9 +370,7 @@ def reviewer_column_state(
         readouts.append(
             ColumnReadout(
                 slot="profile",
-                label=field_labels_service.resolve_pair(
-                    review_session, "reviewer", "profile_link"
-                ).friendly,
+                label="Profile",
                 count=profile_count,
             )
         )
@@ -461,10 +460,10 @@ def reviewee_column_state(
     most columns of the four. So identity (`Name`, `Email`) always, then
     `Profile` and each tag slot **only where populated**.
 
-    Chips carry the field labels, not the table's headings: the `<th>`s
-    read `Email / Identifier` and `Profile link`, the chips `Email` and
-    `Profile`, because both come from `field_labels` and an operator who
-    renames a field sees the rename in both places.
+    Identity and `Profile` labels are literals, as on Reviewers: none
+    of them is renamable, and the table's headings use the same strings
+    (findings C16, 2026-10-03). Tag labels come from the resolver, so
+    an operator who renames a tag sees the rename in both places.
 
     "Only where populated" is this helper's own `count > 0`, deliberately
     NOT the template's `show_*` flags — those are `edit_mode or
@@ -484,16 +483,12 @@ def reviewee_column_state(
     readouts = [
         ColumnReadout(
             slot="name",
-            label=field_labels_service.resolve_pair(
-                review_session, "reviewee", "name"
-            ).friendly,
+            label="Name",
             count=slot_row_count(db, session_id=sid, column=Reviewee.name),
         ),
         ColumnReadout(
             slot="email",
-            label=field_labels_service.resolve_pair(
-                review_session, "reviewee", "email_or_identifier"
-            ).friendly,
+            label="Email",
             count=slot_row_count(
                 db, session_id=sid, column=Reviewee.email_or_identifier
             ),
@@ -503,9 +498,7 @@ def reviewee_column_state(
         readouts.append(
             ColumnReadout(
                 slot="profile",
-                label=field_labels_service.resolve_pair(
-                    review_session, "reviewee", "profile_link"
-                ).friendly,
+                label="Profile",
                 count=profile_count,
             )
         )

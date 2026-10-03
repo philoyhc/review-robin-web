@@ -1,5 +1,9 @@
 """Extract downloads — per-entity CSVs + the zip bundles.
 
+Every route commits after its ``audit.write_event``: the emit only
+flushes and ``get_db`` closes without committing, so a route that does
+not commit loses its audit row (findings D33, 2026-10-03).
+
 GET routes, among them:
 
 - Settings (12A-1 PR 1) — 3-column key/value/data-type CSV.
@@ -98,6 +102,7 @@ def export_settings_csv(
         session=review_session,
         payload=audit.counts(rows=len(rows)),
     )
+    db.commit()
 
     download_name = filename(review_session, "settings")
     return StreamingResponse(
@@ -130,6 +135,7 @@ def export_reviewers_csv(
         session=review_session,
         payload=audit.counts(rows=body_count),
     )
+    db.commit()
 
     download_name = filename(review_session, "reviewers")
     return StreamingResponse(
@@ -161,6 +167,7 @@ def export_reviewees_csv(
         session=review_session,
         payload=audit.counts(rows=body_count),
     )
+    db.commit()
 
     download_name = filename(review_session, "reviewees")
     return StreamingResponse(
@@ -192,6 +199,7 @@ def export_relationships_csv(
         session=review_session,
         payload=audit.counts(rows=body_count),
     )
+    db.commit()
 
     download_name = filename(review_session, "relationships")
     return StreamingResponse(
@@ -223,6 +231,7 @@ def export_observers_csv(
         session=review_session,
         payload=audit.counts(rows=body_count),
     )
+    db.commit()
 
     download_name = filename(review_session, "observers")
     return StreamingResponse(
@@ -265,6 +274,7 @@ def export_participant_tokens_csv(
         session=review_session,
         payload=audit.counts(rows=body_count),
     )
+    db.commit()
 
     download_name = filename(review_session, "participant_tokens")
     return StreamingResponse(
@@ -301,6 +311,7 @@ def export_responses_csv(
         session=review_session,
         payload=audit.counts(rows=body_count),
     )
+    db.commit()
 
     download_name = filename(review_session, "responses")
     # ``serialize_responses`` is a streaming generator (yield_per
@@ -341,6 +352,7 @@ def export_bundle_zip(
         session=review_session,
         payload=audit.counts(**counts),
     )
+    db.commit()
 
     code = (review_session.code or "session").strip() or "session"
     return Response(
@@ -480,6 +492,7 @@ def export_responses_bundle_zip(
         }
         or None,
     )
+    db.commit()
 
     code = (review_session.code or "session").strip() or "session"
     return Response(
@@ -540,6 +553,7 @@ def export_by_instrument_bundle_zip(
         session=review_session,
         payload=audit.counts(**counts),
     )
+    db.commit()
 
     code = (review_session.code or "session").strip() or "session"
     return Response(
@@ -661,6 +675,7 @@ def export_reviewer_metadata_csv(
         ),
         context={"self_review_handling": state},
     )
+    db.commit()
 
     download_name = metadata_filename(review_session, "reviewer_metadata", state)
     return StreamingResponse(
@@ -716,6 +731,7 @@ def export_reviewee_metadata_csv(
         ),
         context={"self_review_handling": state},
     )
+    db.commit()
 
     download_name = metadata_filename(review_session, "reviewee_metadata", state)
     return StreamingResponse(
@@ -792,6 +808,7 @@ def export_audit_log_csv(
         payload=audit_event_payload,
         context=filters.as_audit_context() or None,
     )
+    db.commit()
 
     download_name = filename(review_session, "audit_log")
     # ``serialize_audit_events`` streams via a ``yield_per(1000)``

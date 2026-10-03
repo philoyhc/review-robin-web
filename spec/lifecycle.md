@@ -111,7 +111,7 @@ the readiness check stays meaningful.
 reads — session metadata, rosters (per-row, bulk and CSV import),
 relationships, observers, instruments and their Band 1 links, fields
 and pagination, visibility policies, field labels, assignment
-generate and delete-all, and the full settings import — calls
+generate, and the full settings import — calls
 `invalidate_if_validated`. The Assignments page's include toggles
 (per-row Inactivate / Activate and the per-instrument Self review
 toggle) do not, and are allowed in `validated`. A list of call
@@ -216,7 +216,7 @@ in `app/web/routes_operator/_operations.py`.
 Raises **HTTP 409 Conflict** when the session is not `draft` or
 `validated`. Operator setup-mutation endpoints (session edit,
 roster import, roster delete-all, relationships CRUD, assignment
-generate, assignment delete-all, etc.) call this **first**.
+generate, etc.) call this **first**.
 
 Five exceptions to that list, all easy to mis-read:
 
@@ -262,7 +262,7 @@ the request didn't carry `acknowledge_response_loss=true`. Called
 from routes whose mutations would invalidate stored reviewer
 responses: reviewer and reviewee delete-all, the Reviewers and
 Reviewees Setup-page CSV import (`_shared.py` `_handle_import`),
-assignment Generate and delete-all, and Quick Setup's roster and
+assignment Generate, and Quick Setup's roster and
 settings replaces (which answer `needs_confirm` rather than 400).
 **Relationship changes do not call it**, although moving a pair to
 another pair-context group deletes the group answer copy it carried
@@ -369,11 +369,14 @@ POST routes (save / submit / clear) call this directly and 403
 on failure. The reviewer-surface **GET** route branches
 upstream of this check:
 
-- If the session is not yet `ready` (draft or validated), the
-  route renders the dedicated **pre-open page**
+- If the session is neither `ready` nor `expired` (draft,
+  validated or archived), the route renders the dedicated
+  **pre-open page**
   (`reviewer/pre_open.html`) — "this review hasn't opened yet,
   check back later". The reviewer reached here via roster + an
-  invitation token that was sent ahead of activation.
+  invitation token that was sent ahead of activation. An `archived`
+  session renders the same page with closed copy ("this review has
+  closed"), no deadline line.
 - If the session is `ready` but the predicate returns `False`
   (the deadline passed),
   the existing surface template renders read-only with the "no
@@ -726,8 +729,12 @@ without retrying. Per-event preconditions:
 | Auto-send reminders | `session.status == "ready"` (subsumes Prepared) **and** invitations exist **and** within accepting-responses window | `not_ready` / `no_invitations` / `outside_response_window` |
 | Auto-archive | `session.status == "draft"` | `not_draft` |
 | Auto-delete after archive | `session.status == "archived"` | `not_archived` |
-| Release-from (Participants platform) | session has been closed after at least one run (responses exist) | `no_responses_run` |
-| Release-until (Participants platform) | Release-from has already fired | `release_not_started` |
+
+Release-from and Release-until are not fired events. The release
+window is evaluated at read time by
+`session_lifecycle.is_response_release_window_open` and is open only
+on an `expired` session, so there is no fire-time guard and no skip
+reason (findings B21, 2026-10-03).
 
 The "End" anchor (`deadline`) is the trivial case: it's
 conditional on activation (`status == "ready"`) because there's
@@ -759,8 +766,8 @@ control, not as derived behaviour.
 
 **8.2.6 Multiple offsets per event.** Events that fire on a
 sequence (invites, reminders) carry a JSON list; events that
-fire once (archive, release-until, auto-delete) carry a single
-ISO 8601 string. Per-list-entry dedup uses the entry's index
+fire once (archive, auto-delete) carry a single ISO 8601 string.
+Per-list-entry dedup uses the entry's index
 (e.g. `reminder:{session_id}:{reviewer_id}:{offset_index}`) so a
 re-ordered list doesn't re-fire already-sent reminders.
 

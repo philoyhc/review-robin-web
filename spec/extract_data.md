@@ -525,7 +525,7 @@ above it cover the common cases without configuration.
 | Body copy | "Compose a custom data shape — pick the axes (reviewer / reviewee / instrument / response field), the grouping, and the aggregations — and export the result alongside the canned lens CSVs." |
 | Card id | `extract-data-shaper` |
 | Button id | `extract-data-shaper-zip` |
-| Button target | `GET …/export/data_shapes_bundle.zip` (`href="#"` + `aria-disabled` while no shape is saved) |
+| Button target | `GET …/export/data_shapes_bundle.zip` (`href="#"` + `aria-disabled` while no shape is saved, and while a shape's `DELETE` is in flight; a `DELETE` that fails keeps it live) |
 
 The chip-driven UX, shape persistence (`data_shapes` table), the
 per-shape `Download` button (backed by

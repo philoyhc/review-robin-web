@@ -215,6 +215,16 @@ when it is checked; sections with unticked rows sit above the ticked ones.
   without a reload and downloads `{code}_data_shapes.zip`, holding
   that shape's file under the name its own Download gives it. Save a
   second, download again: both files. Delete both: the button greys.
+  (Between a Delete click and the server's answer it is greyed too,
+  which is too quick to see on localhost; the browser test holds it.)
+
+## An archived session says it has closed (A25)
+
+- [ ] **Closed copy.** Archive a session a reviewer was invited to, then
+  open that reviewer's old invitation link (or `/me/sessions/{id}/1`)
+  as them. The page reads "{name} — closed" and "This review has
+  closed.", with no deadline line and a link back to the dashboard. A
+  Prepared session still reads "opens later".
 
 ## Setup tabs underline in blue (findings register E5)
 
