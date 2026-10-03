@@ -220,12 +220,16 @@ E1, E2 and E4 were checked by the author when they merged.
 - [ ] **The copy is set up.** On a draft session, set an instrument's
   Band 1 links and a filter rule, a short label, a column width and a
   default sort, then Replicate it. The copy shows the same Band 1 pills
-  and rule (not "Not set up"), the same label, widths and sort.
+  and rule (not "Not set up"), the same widths and sort, and the label
+  marked "Copy of …".
 - [ ] **Edits stay separate.** Change the copy's Band 1 rule and save:
   the source's rule is unchanged.
-- [ ] **No new page break, visibility starts off.** Replicate an
-  instrument that starts a new page: the copy sits on the same reviewer
-  page as its source. The copy's Visibility settings are all off.
+- [ ] **No new page break.** Replicate an instrument that starts a new
+  page: the copy sits on the same reviewer page as its source.
+- [ ] **Visibility and label (2026-10-03).** Give an instrument a
+  Visibility setting (reviewees see it Anonymized after release, say)
+  and the short label "Peer", then Replicate it. The copy's Visibility
+  matches the source's, and its card title reads "Copy of Peer".
 
 ## Setup tabs underline in blue (findings register E5)
 
