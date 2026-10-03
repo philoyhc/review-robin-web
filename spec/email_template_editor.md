@@ -194,7 +194,7 @@ never an error — so a typo in an override cannot fail a send.
 | `$reviewer_name` | ✓ | ✓ | ✓ | roster name; `""` in previews with no reviewer |
 | `$session_name` | ✓ | ✓ | ✓ | `session.name` |
 | `$deadline` | ✓ | ✓ | ✓ | `session.deadline` in the session's resolved zone (`sessions.resolve_session_timezone`, as `spec/timezone_display.md` requires): `YYYY-MM-DD HH:MM`, plus the zone token when `SHOW_ZONE_TOKEN` is on; `""` when unset |
-| `$help_contact` | ✓ | ✓ | ✓ | `session.help_contact` or `""` |
+| `$help_contact` | ✓ | ✓ | ✓ | `session.help_contact` trimmed; `""` when unset or blank |
 | `$invite_url` | ✓ | ✓ | — | the reviewer's `/me/invite/{token}` URL; a fixed placeholder in previews |
 | `$submitted_at` | — | — | ✓ | latest `Response.submitted_at` for the reviewer in this session, `YYYY-MM-DD HH:MM` in the session's resolved zone (plus the zone token when `SHOW_ZONE_TOKEN` is on); `"(not yet submitted)"` when none (previews only, in practice) |
 
@@ -211,10 +211,11 @@ behaviour):
 - Responses received — subject `Responses received: $session_name`;
   body `Hi $reviewer_name,` / `Thanks. Your responses for
   $session_name are recorded as of $submitted_at.` / `Questions?
-  Contact $help_contact.` — and **when `help_contact` is unset and the
-  body is not overridden, the "Questions?" line is dropped** rather
-  than rendering `Contact .`. An overridden body that references
-  `$help_contact` substitutes the empty string verbatim; operator
+  Contact $help_contact.` — and **when `help_contact` is unset or
+  blank and the body is not overridden, the "Questions?" line is
+  dropped** rather than rendering `Contact .`. An overridden body that
+  references `$help_contact` keeps its line and substitutes the
+  contact trimmed, so an unset or blank one renders empty; operator
   intent wins.
 
 **Cc / Bcc.** `cc_bcc_for(session, kind)` returns the raw operator

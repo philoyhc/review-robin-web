@@ -233,6 +233,26 @@ def test_render_responses_received_treats_a_blank_help_contact_as_unset() -> Non
     assert "Questions?" not in body
 
 
+def test_override_body_gets_an_empty_contact_for_a_blank_help_contact() -> None:
+    """An operator body naming ``$help_contact`` renders it empty, not
+    as the spaces stored, on both emails that take the tag."""
+    session = _session(
+        help_contact="   ",
+        overrides={
+            "invitation_body": "Contact [$help_contact]",
+            "responses_received_body": "Contact [$help_contact]",
+        },
+    )
+    _, invitation = email_templates.render_invitation(
+        session, _reviewer(), invite_url="https://app/x"
+    )
+    _, received = email_templates.render_responses_received(
+        session, _reviewer("Rae")
+    )
+    assert invitation == "Contact []"
+    assert received == "Contact []"
+
+
 def test_render_responses_received_uses_help_contact_default_when_set() -> None:
     session = _session(help_contact="help@example.edu")
     _, body = email_templates.render_responses_received(

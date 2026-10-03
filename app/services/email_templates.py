@@ -70,10 +70,10 @@ DEFAULT_RESPONSES_RECEIVED_BODY = (
     "Questions? Contact $help_contact.\n"
 )
 # Variant rendered automatically when ``session.help_contact`` is
-# unset and the operator hasn't overridden the body — printing
-# "Questions? Contact ()" reads worse in a closing confirmation
-# than just dropping the line. Override bodies that reference
-# ``$help_contact`` always go through the substitute path verbatim,
+# unset or blank and the operator hasn't overridden the body —
+# printing "Questions? Contact ." reads worse in a closing
+# confirmation than just dropping the line. Override bodies that
+# reference ``$help_contact`` always go through the substitute path,
 # so such a body renders an empty contact.
 DEFAULT_RESPONSES_RECEIVED_BODY_NO_HELP_CONTACT = (
     "Hi $reviewer_name,\n"
@@ -142,6 +142,12 @@ def _format_deadline(review_session: ReviewSession) -> str:
     )
 
 
+def _help_contact(review_session: ReviewSession) -> str:
+    """The contact as a merge value: spaces alone are no contact, so an
+    override body renders it empty rather than as whitespace."""
+    return (review_session.help_contact or "").strip()
+
+
 def _merge_context(
     review_session: ReviewSession,
     reviewer: Reviewer | None,
@@ -151,7 +157,7 @@ def _merge_context(
         "reviewer_name": (reviewer.name if reviewer is not None else ""),
         "session_name": review_session.name,
         "deadline": _format_deadline(review_session),
-        "help_contact": review_session.help_contact or "",
+        "help_contact": _help_contact(review_session),
         "invite_url": invite_url,
     }
 
@@ -244,17 +250,17 @@ def render_responses_received(
 
     Drops ``$invite_url`` (moot post-submit); adds ``$submitted_at``,
     formatted ``YYYY-MM-DD HH:MM`` in the session's zone. When the operator hasn't
-    overridden the body and ``session.help_contact`` is unset, the
+    overridden the body and ``session.help_contact`` is unset or blank, the
     "Questions? Contact …" line is dropped from the default body
     rather than rendering a hollow ``Contact .`` — operator-supplied
-    bodies that reference ``$help_contact`` substitute verbatim
-    (empty string), preserving operator intent."""
+    bodies that reference ``$help_contact`` substitute it (an empty
+    string when unset or blank), preserving operator intent."""
     submitted_at = _latest_submitted_at(review_session, reviewer)
     merge: dict[str, str] = {
         "reviewer_name": (reviewer.name if reviewer is not None else ""),
         "session_name": review_session.name,
         "deadline": _format_deadline(review_session),
-        "help_contact": review_session.help_contact or "",
+        "help_contact": _help_contact(review_session),
         "submitted_at": _format_submitted_at(review_session, submitted_at),
     }
     subject = _substitute(
@@ -268,7 +274,7 @@ def render_responses_received(
     body_override = get_override(review_session, "responses_received_body")
     if body_override is not None and body_override.strip():
         body_template = body_override
-    elif (review_session.help_contact or "").strip():
+    elif merge["help_contact"]:
         body_template = DEFAULT_RESPONSES_RECEIVED_BODY
     else:
         body_template = DEFAULT_RESPONSES_RECEIVED_BODY_NO_HELP_CONTACT

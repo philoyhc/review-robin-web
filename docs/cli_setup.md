@@ -1,6 +1,18 @@
 # CLI setup for the Azure + GitHub runbook
 
-Companion to [`deployment_nus.md`](deployment_nus.md).
+Written as the companion to the retired greenfield plan,
+[`archive/azure_github_setup.md`](archive/azure_github_setup.md). Its
+Phase numbers, `production` / `staging` environments and `AZURE_*`
+variables belong to that plan. The NUS runbook,
+[`deployment_nus.md`](deployment_nus.md), has one environment, `NUS_*`
+GitHub secrets and a variable (§6.2) and its own provisioning
+checklist (§3). The tools, shell notes, one-time auth and both
+appendices still serve it, with two exceptions: NUS Postgres is
+administered through the self-hosted runner inside the VNet
+([`nus_azure_status_v7.md`](nus_azure_status_v7.md)), not by `psql`
+from a workstation, and B.9's dev slot retires at cutover. Read the
+`*-nprd` resource names in the examples as the NUS `*-prd-*-01` ones.
+
 Covers the CLIs you need on your workstation to execute the
 runbook, the one-time auth steps, and a set of tests that
 prove you can reach the RRW GitHub repo and Azure before you
