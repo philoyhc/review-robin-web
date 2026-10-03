@@ -67,13 +67,6 @@
       cursor: not-allowed;
       opacity: 0.7;
     }
-    /* Segment 13B PR 2 — Display Fields Sort column. The
-       per-row Sort cell hosts a tri-state click button + a
-       priority badge. */
-    body.ui-v2 .sort-cell {
-      text-align: center;
-      vertical-align: middle;
-    }
     /* Match the reviewer surface's compact .rrw-sort-btn dimensions
        so the Band 2 preview header doesn't bloat the row height. */
     body.ui-v2 .sort-btn {
@@ -575,40 +568,6 @@
        visibility-when-closed toggle on this page (the session-level
        bulk toggle retired in 18R Item 3). #}
 
-
-  {# Display Fields Sort cell (Segment 13B tri-state control). Used by
-     the group-scoped card's Display Fields table; ``toggleSort`` and
-     the ``#sort-spec-inputs-{id}`` slot carry the spec to the
-     bulk-save form. #}
-  {% macro sort_cell(instrument, df, sort_spec, is_editing) %}
-    {% set _entry = (sort_spec
-          | selectattr('display_field_id', 'equalto', df.id) | first) %}
-    {% set _priority = (sort_spec
-          | map(attribute='display_field_id') | list).index(df.id) + 1
-          if _entry else 0 %}
-    {# Segment 18R Item 2 PR 1 — always render the interactive sort
-       button; the Band 2 region's ``inert`` makes it read-only when
-       the card is locked (no separate static-text branch). #}
-    <td class="sort-cell">
-      <button type="button"
-              class="sort-btn"
-              data-df-id="{{ df.id }}"
-              data-instrument-id="{{ instrument.id }}"
-              data-priority="{{ _priority }}"
-              data-dir="{{ _entry.dir if _entry else '' }}"
-              onclick="toggleSort(this)"
-              title="Click to cycle sort: unsorted → asc → desc → unsorted">
-        {% if _entry %}
-          <span class="sort-badge">{{ _priority }}{{ '↑' if _entry.dir == 'asc' else '↓' }}</span>
-        {% else %}
-          <span class="sort-badge sort-badge-empty">↕</span>
-        {% endif %}
-      </button>
-    </td>
-  {% endmacro %}
-
-  {# Response Fields table — shared by the ordinary instrument card
-     and the group-scoped card. Read-only unless ``is_editing``. #}
 
   {# Response Fields Help table — shared, full-width. #}
   {% macro response_fields_help_table(instrument, is_editing) %}
@@ -2472,11 +2431,9 @@
           // column's <th>. Reads the persisted spec from the
           // band2 wrapper's data-new-model-band2-sort-spec attr,
           // matches by display_field_id, returns either a
-          // toggleSort-wired <button> (edit mode) or a static
-          // <span> (view mode). Shape mirrors the legacy
-          // sort_cell macro so the existing toggleSort /
-          // _refreshSortBadges / _rebuildSortInputs JS works
-          // unchanged.
+          // toggleSort-wired <button> (edit mode), which toggleSort /
+          // _refreshSortBadges / _rebuildSortInputs read, or a
+          // static <span> (view mode).
           function sortBadgeHtml(card, dfId) {
             if (!dfId) { return ''; }
             var instrumentId = card.getAttribute(

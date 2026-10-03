@@ -139,10 +139,9 @@ def test_the_hint_counts_both_filters(
 def test_the_column_chips_ignore_the_status_filter(
     db: Session, client: TestClient
 ) -> None:
-    """`col_data_sample` is built unfiltered on purpose — the chips'
-    enabled state must not flip because the operator narrowed the
-    view. The template comment says so for the search; the status
-    filter inherits the same rule.
+    """`col_data` is answered over the session's rosters, not the
+    filtered rows, on purpose — the chips' enabled state must not flip
+    because the operator narrowed the view by status.
 
     Asserts the **enabled** chip set (`is-selected`), and that it is
     non-empty: an earlier draft matched `data-col-chip`, an attribute
