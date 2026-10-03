@@ -200,6 +200,63 @@ def test_collation_renders_per_instrument_table_with_two_stats_rows(
     assert "Download CSV" in body
 
 
+def test_collation_numbers_instruments_from_one(
+    client: TestClient, db: Session
+) -> None:
+    """With two instruments the headings read ``#1`` and ``#2``, as on
+    every other reader surface, not ``#0`` and ``#1`` (findings
+    2026-10-03 A1)."""
+    review_session = _make_session(client, db, code="col-body-numbers")
+    # Creating a session seeds a default instrument; drop it so these
+    # two are the only ones counted.
+    for default in db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalars():
+        db.delete(default)
+    db.commit()
+    seeded = _seed_one_instrument(db, review_session)
+    seeded["instrument"].short_label = "First"
+    second = Instrument(
+        session_id=review_session.id,
+        name="Instrument 2",
+        short_label="Second",
+        order=1,
+    )
+    db.add(second)
+    db.flush()
+    db.add(
+        InstrumentViewPolicy(
+            instrument_id=second.id,
+            audience="observer",
+            while_ongoing_granularity="row",
+            while_ongoing_identification="identified",
+        )
+    )
+    db.commit()
+    _add_observer(
+        db,
+        review_session,
+        email="alice@example.edu",
+        cohort_rule={
+            "combinator": "AND",
+            "rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_tag": "",
+                    "operand_value": "mathcohort",
+                }
+            ],
+        },
+    )
+
+    body = client.get(f"/me/sessions/{review_session.id}/collation").text
+
+    assert "#1: First" in body
+    assert "#2: Second" in body
+    assert "#0:" not in body
+
+
 def test_collation_summarized_mode_omits_download_button(
     client: TestClient, db: Session
 ) -> None:
