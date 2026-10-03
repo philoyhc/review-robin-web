@@ -1843,8 +1843,8 @@
       }
       /* Page-grid / bottom-grid wrappers default to a 20px
          margin-bottom (off the spacing scale) — bring them onto
-         space-4 so the gap below a grid matches the gap between
-         two stacked cards. */
+         space-4 (16px). Two stacked cards still sit 20px apart, on
+         the base `.card` margin. */
       body.ui-v2 .page-grid,
       body.ui-v2 .bottom-grid {
         margin-bottom: var(--space-4);

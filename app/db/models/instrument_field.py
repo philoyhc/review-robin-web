@@ -70,8 +70,9 @@ class InstrumentResponseField(Base):
     # 19T Item 10 — branching. A governed field names its parent; the
     # parent carries the branch's one condition (``branch_op`` is a token
     # from ``app.services.responses.BRANCH_OPS``; ``branch_value`` a
-    # number, or List options comma-separated). One level: a parent is
-    # never governed. ``app.services.responses._branching`` owns the rules.
+    # number, or List options comma-separated). Two levels at most: a
+    # governed field may be a parent, one inside a nested branch may not
+    # (19T Item 14). ``app.services.responses._branching`` owns the rules.
     branch_parent_id: Mapped[int | None] = mapped_column(
         ForeignKey(
             "instrument_response_fields.id",

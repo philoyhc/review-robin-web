@@ -278,9 +278,8 @@ The spec is right and the code is wrong; each ships as its own code PR.
 All of these were confirmed by reading the code at `68f28224`.
 
 **The six defects are done in #2719** (`guide/post_assessment_1oct.md`
-E6), one commit and test each. The stale comments below stay open: each
-is fixed with the next edit to its file. The spec halves of C4 and E32
-stay in §3.
+E6), one commit and test each. The stale comments below are all fixed.
+The spec halves of C4 and E32 stay in §3.
 
 - ~~**D17**~~ — **Done in #2719.** `app/services/session_rehydrate.py` joins `apply_result.errors`,
   which are `ApplyError` dataclasses, with `"; ".join`. The `TypeError`
@@ -336,7 +335,7 @@ stay in §3.
   but no operator control sets it: the Reviewee identity header's badge
   sorts by Name, and Email has none. Either the scope or the header
   changes. Found in #2764.
-- **A30** — The `sort_cell` macro in
+- ~~**A30**~~ — **Done in #2777.** The `sort_cell` macro in
   `app/web/templates/operator/instruments_index.html` is the retired Sort
   column's cell; nothing calls it. Delete it. Found in #2764.
 - ~~**E37**~~ — **Ruled 2026-10-03: delete them. Done in #2776.** The
@@ -347,7 +346,7 @@ stay in §3.
   shown nowhere, yet `tests/unit/test_session_nav_hover.py`
   (`test_tab_hover_takes_the_selected_background`) pins the v1 hover
   rule's color. Found in #2764.
-- **E38** — The `base.html` comment on `body.ui-v2 .page-grid,
+- ~~**E38**~~ — **Done in #2777.** The `base.html` comment on `body.ui-v2 .page-grid,
   .bottom-grid { margin-bottom: var(--space-4) }` says it makes the gap
   below a grid match the gap between two stacked cards; stacked cards
   sit 20px apart and the grid 16px. Found in #2764.
@@ -358,15 +357,15 @@ stay in §3.
   `spec/rehydrate.md` §7 says every failing step is reported. Rehydrate
   is off by default.
 - **Stale code comments.** Fix these with the next edit to each file:
-  - `instrument_field.py:70-74` says "one level"; branching has two.
+  - ~~`instrument_field.py:70-74` says "one level"; branching has two.~~ Fixed in #2777.
   - ~~The `scheduled_events/__init__.py` docstring names three trigger pages.~~ Fixed in #2757.
   - ~~`session_lifecycle.py:692` says "pre-filters to `draft`".~~ Gone from the file (checked 2026-10-03).
   - ~~The `responses/_core.py:826` docstring says "any status".~~ Gone from the file (checked 2026-10-03).
   - ~~The `_reviewee_results.py` docstring (see A13).~~ Done in #2754.
-  - The `test_assignments_status_filter.py:142` docstring names
-    `col_data_sample`.
-  - `.env.example` cites `guide/segment_05A.md`, which is now under <!-- path-ref-ok -->
-    `guide/archive/`.
+  - ~~The `test_assignments_status_filter.py:142` docstring names
+    `col_data_sample`.~~ Fixed in #2777.
+  - ~~`.env.example` cites `guide/segment_05A.md`, which is now under <!-- path-ref-ok -->
+    `guide/archive/`.~~ Fixed in #2777.
 
 ## 3. Findings by file
 
@@ -405,7 +404,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~A22 high · `:39-90` · operator sort UI · author (also `operator_ui_concept.md:94`).~~ Done in #2764.
   - ~~A23 med-high · `:94-100` · click semantics and Reset · author.~~ Done in #2764.
   - ~~A29 low · Scope lists email; no operator control sets it.~~ Ruled: drop email from the scope; done in #2775.
-  - A30 low · the `sort_cell` macro is dead (code).
+  - ~~A30 low · the `sort_cell` macro is dead (code).~~ Done in #2777.
   - ~~A24 med · `:162-169` · no auto-compact · author.~~ Ruled: follow the spec; done in #2724.
   - ~~A25 med · write/deepen · the group `-1` key and group-surface sorting are unspecced.~~ Done in #2732.
   - ~~A26 low · `:268-274` · the lobby and Archived pages adopt it too, with other cookie names.~~ Done in #2732.
