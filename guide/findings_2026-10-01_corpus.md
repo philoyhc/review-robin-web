@@ -330,7 +330,8 @@ stay in §3.
   delete-all, the selected delete, bulk inactivate / reactivate and a
   status edit move the key too, without that reconcile. Found in #2774's
   read; predates it.
-- **A29** — `spec/sort_by_reviewee.md` "Scope" lists email among the
+- ~~**A29**~~ — **Done in #2775.** Ruled 2026-10-03: drop email from
+  the scope. `spec/sort_by_reviewee.md` "Scope" lists email among the
   fields the operator's default sort can use, and the service accepts it,
   but no operator control sets it: the Reviewee identity header's badge
   sorts by Name, and Email has none. Either the scope or the header
@@ -400,7 +401,7 @@ One line each: id · severity · where · finding · decides. A line with no
 - `sort_by_reviewee.md`
   - ~~A22 high · `:39-90` · operator sort UI · author (also `operator_ui_concept.md:94`).~~ Done in #2764.
   - ~~A23 med-high · `:94-100` · click semantics and Reset · author.~~ Done in #2764.
-  - A29 low · Scope lists email; no operator control sets it.
+  - ~~A29 low · Scope lists email; no operator control sets it.~~ Ruled: drop email from the scope; done in #2775.
   - A30 low · the `sort_cell` macro is dead (code).
   - ~~A24 med · `:162-169` · no auto-compact · author.~~ Ruled: follow the spec; done in #2724.
   - ~~A25 med · write/deepen · the group `-1` key and group-surface sorting are unspecced.~~ Done in #2732.

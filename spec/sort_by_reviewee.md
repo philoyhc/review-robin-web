@@ -28,7 +28,7 @@ Sort is **row sorting**, distinct from **Order** (column ordering on the same su
 
 ## Scope: Display Fields only on the operator side
 
-The operator's default sort is restricted to **Display Fields** — reviewee attributes that exist at form-render time (name, email, profile_link, tag_1/2/3, pair_context_1/2/3).
+The operator's default sort is restricted to **Display Fields** — reviewee attributes that exist at form-render time (name, profile_link, tag_1/2/3, pair_context_1/2/3). **Email is not a key** (findings A29): it shares the identity column with the name, whose badge sorts by name, and a save drops a key naming it. Only the save drops one: a key already stored (nothing current writes one) still sorts the reviewer surface until the card is next saved, and Duplicate, Replicate and the Settings CSV carry it as they find it.
 
 **Response Fields are excluded** from the operator-side sort. No response data exists when the form first renders, so sorting by it would produce empty-cell sorts that shuffle as the reviewer types — surprising and useless.
 
@@ -205,7 +205,7 @@ Shape:
 
 - Up to 3 entries; service-enforced (DB doesn't enforce a length cap).
 - `dir ∈ {"asc", "desc"}` — service validates.
-- `display_field_id` references `instrument_display_fields(id)` — service drops an id that is not this instrument's (see "Cascade behaviour") — or is the `-1` Group sentinel, which is kept (see "Group-scoped instruments").
+- `display_field_id` references `instrument_display_fields(id)` — service drops an id that is not this instrument's (see "Cascade behaviour") or that names the reviewee email (see "Scope") — or is the `-1` Group sentinel, which is kept (see "Group-scoped instruments").
 - Empty list `[]` or NULL → fall back to **implicit insertion order** (today's behaviour, zero change for existing sessions).
 
 JSON over three explicit FK columns: simpler schema, easier to extend to 4+ slots later if it ever matters, and the FK-orphan risk is small (handled by render-time defense + auto-compact on next save). See "Cascade behaviour" below.
@@ -301,7 +301,7 @@ Key landmarks in the codebase:
   ::set_sort_display_fields` with `SortSpecError` (codes
   `too_many` / `unknown_dir` / `duplicate_id` / `bad_id`; an id
   that is not this instrument's display field is dropped, per
-  "Cascade behaviour").
+  "Cascade behaviour", and so is the reviewee email's, per "Scope").
 - **Audit event:** `instrument.sort_fields_updated` registered
   in `app/services/audit.py::EVENT_SCHEMAS`.
 - **Read path:** `app/web/views/_sort.py
