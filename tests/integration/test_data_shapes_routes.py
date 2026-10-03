@@ -755,3 +755,75 @@ def test_saved_card_ships_column_aggregates_attr_parallel_to_headers(
     assert (
         "data-shape-column-aggregates='[false, false, true]'"
     ) in body
+
+
+# --------------------------------------------------------------------------- #
+# The card's Zip all (findings D13, 2026-10-03)
+# --------------------------------------------------------------------------- #
+
+
+def _shaper_zip_tag(body: str) -> str:
+    start = body.index('id="extract-data-shaper-zip"')
+    return body[body.rindex("<a", 0, start) : body.index(">", start) + 1]
+
+
+def test_zip_all_bundles_every_saved_shape_file(
+    client: TestClient, db: Session
+) -> None:
+    """Each member is named as that shape's own Download names it,
+    and nothing else ships."""
+    import io
+    import zipfile
+
+    from app.db.models import AuditEvent
+
+    review_session = _make_session(client, db, code="zip-shapes")
+    for name in ("First", "Second"):
+        assert client.post(
+            f"/operator/sessions/{review_session.id}/extract-data/shapes",
+            json=_payload(name=name),
+        ).status_code == 201
+
+    response = client.get(
+        f"/operator/sessions/{review_session.id}"
+        "/export/data_shapes_bundle.zip"
+    )
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == (
+        'attachment; filename="zip-shapes_data_shapes.zip"'
+    )
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        assert sorted(archive.namelist()) == [
+            "zip-shapes_First_self.csv",
+            "zip-shapes_Second_self.csv",
+        ]
+
+    db.expire_all()
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "session.data_shapes_bundle_extracted",
+            AuditEvent.session_id == review_session.id,
+        )
+    ).scalar_one()
+    assert event.detail["counts"] == {"data_shapes": 2}
+
+
+def test_zip_all_is_greyed_until_a_shape_is_saved(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="zip-greyed")
+    page = f"/operator/sessions/{review_session.id}/extract-data"
+    url = f"/operator/sessions/{review_session.id}/export/data_shapes_bundle.zip"
+
+    tag = _shaper_zip_tag(client.get(page).text)
+    assert 'aria-disabled="true"' in tag
+    assert 'href="#"' in tag
+    assert client.get(url).status_code == 404
+
+    client.post(
+        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        json=_payload(),
+    )
+    tag = _shaper_zip_tag(client.get(page).text)
+    assert "aria-disabled" not in tag
+    assert f'href="{url}"' in tag

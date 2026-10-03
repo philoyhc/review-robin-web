@@ -2312,7 +2312,8 @@ Coverage:
   `reviewee.results_acknowledged`,
   `session.feature_toggled`.
 - **Extract data** — `session.data_shape_saved` /
-  `_deleted` / `_extracted`, `session.by_instrument_bundle_extracted`,
+  `_deleted` / `_extracted`, `session.data_shapes_bundle_extracted`,
+  `session.by_instrument_bundle_extracted`,
   `session.participant_tokens_extracted`.
 - **Scheduled-event lifecycle** — a scheduled activation writes
   `session.activated` with `context.trigger="scheduled"`, or

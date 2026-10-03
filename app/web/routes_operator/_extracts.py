@@ -1,4 +1,4 @@
-"""Extract downloads — per-entity CSVs + two zip bundles.
+"""Extract downloads — per-entity CSVs + the zip bundles.
 
 GET routes, among them:
 
@@ -60,6 +60,7 @@ from app.services.extracts.zip_bundle import (
     ByInstrumentOptions,
     MetadataOptions,
     build_by_instrument_bundle,
+    build_data_shapes_bundle,
     build_responses_bundle,
     build_setup_bundle,
 )
@@ -547,6 +548,48 @@ def export_by_instrument_bundle_zip(
         headers={
             "Content-Disposition": (
                 f'attachment; filename="{code}_by_instrument.zip"'
+            ),
+        },
+    )
+
+
+@router.get("/sessions/{session_id}/export/data_shapes_bundle.zip")
+def export_data_shapes_bundle_zip(
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """The Data shaper card's Zip all — every saved shape's file,
+    named as its own Download names it. Filename:
+    ``{code}_data_shapes.zip``. With no saved shape the button is
+    greyed, so a 404 here means a stale page (findings D13)."""
+    zip_bytes, counts = build_data_shapes_bundle(db, review_session)
+    if not counts["data_shapes"]:
+        raise HTTPException(status_code=404, detail="No saved data shapes.")
+
+    audit.write_event(
+        db,
+        event_type="session.data_shapes_bundle_extracted",
+        summary=(
+            f"Extracted every saved data shape for session "
+            f"{review_session.code}"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(**counts),
+    )
+    # ``write_event`` only flushes; ``get_db`` closes without
+    # committing, so the row is lost unless committed here, as the
+    # per-shape Download does.
+    db.commit()
+
+    code = (review_session.code or "session").strip() or "session"
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="{code}_data_shapes.zip"'
             ),
         },
     )
