@@ -22,7 +22,7 @@ Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
 (independent slots; marked `@coupled` for deliberate coupling; dark `:root`
 remaps semantics onto the one primitive palette) are in `guide/archive/semantic_tokens.md`.
 
-**80 primitives · 107 semantic tokens · 16 non-colour scale tokens.**
+**80 primitives · 106 semantic tokens · 16 non-colour scale tokens.**
 
 ---
 
@@ -393,7 +393,6 @@ to 4.14:1 light / 3.55:1 dark, both under AA. See "Card accents" below and
 |---|---|---|---|---|
 | `--nav-marker-setup` | `--blue-soft` | `--blue-bright` | `#93c5fd` | `#3b82f6` |
 | `--nav-marker-ops` | `--green-soft` | `--green-abyss` | `#a7f3d0` | `#065f46` |
-| `--nav-tab-active-fg` | `--blue-deeper` | `--blue-soft` | `#1e40af` | `#93c5fd` |
 | `--nav-tab-active-bg` | `--white` | `--ink-abyss` | `#ffffff` | `#0f141b` |
 | `--nav-strip-setup-bg` | `--blue-pale` | `--blue-abyss-soft` | `#dbeafe` | `#12283f` |
 | `--nav-strip-ops-bg` | `--green-wash` | `--green-abyss-faint` | `#ddf4e3` | `#0c2419` |

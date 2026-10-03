@@ -275,3 +275,9 @@ E1, E2 and E4 were checked by the author when they merged.
   inactivate the row that puts a reviewer's group-mate in their group.
   Back on Assignments, without generating again, the self-review count
   drops by that row. Reactivate it and the count comes back.
+
+## Session nav looks the same (E37)
+
+- [ ] **Tabs.** On any session page, in light and dark themes, the
+  selected Setup or Operations tab still has its white (dark: near-black)
+  background, and hovering another tab paints it the same way.

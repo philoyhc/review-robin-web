@@ -41,23 +41,16 @@ def test_the_tab_strip_no_longer_hovers_to_a_hardcoded_white() -> None:
     """The literal this change removed. Asserted by absence from the
     declarations rather than from the file, because the comment that
     explains the change quotes it."""
-    for selector in (
-        '.nav-tab:not(.disabled):not([aria-disabled="true"]):hover',
-        'body.ui-v2 .nav-tab:not(.disabled):not([aria-disabled="true"]):hover',
-    ):
-        assert "rgba(255, 255, 255" not in _rule(selector), selector
-
-
-def test_tab_hover_takes_the_selected_background() -> None:
-    rule = _rule('.nav-tab:not(.disabled):not([aria-disabled="true"]):hover')
-    assert "background: var(--nav-tab-active-bg);" in rule
-    assert "color: var(--nav-tab-active-fg);" in rule
+    selector = (
+        'body.ui-v2 .nav-tab:not(.disabled):not([aria-disabled="true"]):hover'
+    )
+    assert "rgba(255, 255, 255" not in _rule(selector)
 
 
 def test_v2_tab_hover_matches_the_v2_selected_tab() -> None:
-    """v2's ``.nav-tab.active`` overrides only the colour and inherits
-    v1's background, so hover has to do the same or the two versions
-    disagree about what "selected" looks like."""
+    """v2's ``.nav-tab.active`` sets only the color and takes its
+    background from the unscoped ``.nav-tab.active`` rule, so hover has
+    to wear both or the two disagree about what "selected" looks like."""
     hover = _rule(
         'body.ui-v2 .nav-tab:not(.disabled):not([aria-disabled="true"]):hover'
     )
@@ -65,6 +58,9 @@ def test_v2_tab_hover_matches_the_v2_selected_tab() -> None:
     assert "background: var(--nav-tab-active-bg);" in hover
     assert "color: var(--text-body);" in hover
     assert "color: var(--text-body);" in active
+    assert "background: var(--nav-tab-active-bg);" in _rule(
+        "      .nav-tab.active {"
+    )
 
 
 def test_the_home_anchor_hover_matches_its_own_selected_style() -> None:
@@ -89,11 +85,7 @@ def test_a_disabled_tab_is_excluded_from_hover() -> None:
     (0,3,1) and ``.nav-tab.disabled:hover`` is (0,3,0), so the disabled
     guard has been losing on every v2 page. The ``:not()`` pair settles
     it by never matching, rather than by out-ranking."""
-    for selector in (
-        ".nav-tab:not(.disabled):not(",
-        "body.ui-v2 .nav-tab:not(.disabled):not(",
-    ):
-        assert selector in CSS, selector
+    assert "body.ui-v2 .nav-tab:not(.disabled):not(" in CSS
     # And no unguarded hover rule survives to re-open the hole.
     assert not re.search(r"\.nav-tab:hover\s*\{", CSS)
     assert not re.search(r"body\.ui-v2 \.nav-tab:hover\s*\{", CSS)
