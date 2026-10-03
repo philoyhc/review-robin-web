@@ -954,7 +954,9 @@ while creating the session.
    in `cascaded_relationships` beside `cascaded_assignments`
    (`spec/architecture.md` § *Audit-event detail schema*).
    Relationships' own replace has no further cascade — it *is* the
-   leaf.
+   leaf — except that a pair it moves to another pair-context group
+   gives up its group answer copy (`spec/assignments.md` "Group-scoped
+   fan-out").
 
 3. **Two-phase parse + apply (Settings).** Parse everything,
    collect every error, then apply or rollback. The operator

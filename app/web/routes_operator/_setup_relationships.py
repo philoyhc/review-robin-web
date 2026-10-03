@@ -696,9 +696,6 @@ def _render_relationships_page(
             # ruled 2026-10-03 that this asks for no acknowledgement,
             # as a tag edit asks for none. The route's gate reaches
             # the same answer on its own via ``cascade_counts``.
-            # Always ``False`` / ``0``: deleting a relationship reaches
-            # no assignment and no response (Segment 19I Item 2,
-            # measured from the model graph).
             "delete_discards_assignments": False,
             "roster_response_count": 0,
             "delete_discards_responses": False,

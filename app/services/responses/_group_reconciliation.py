@@ -337,8 +337,9 @@ def _refan_group_responses(
         ]
         if copies:
             db.add_all(copies)
-            # A later target in the same group may copy from this one,
-            # as it could when each sibling was read from the database.
+            # A later target in the same group may copy from this one;
+            # either way the answer comes from the same answered
+            # sibling, so the copies are identical.
             rows_by_assignment[target.id] = copies
             written += len(copies)
             refanned.add(target.id)

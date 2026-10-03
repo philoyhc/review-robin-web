@@ -310,7 +310,7 @@ def test_importing_moves_only_the_pairs_whose_group_changed(
     }
 
 
-def test_a_status_edit_with_a_re_point_moves_both_pairs(db: Session) -> None:
+def test_a_status_edit_with_a_re_point_moves_the_old_pair(db: Session) -> None:
     """One save that inactivates Bob's relationship and re-points it at
     Cal moves Bob out (his tags leave) and leaves Cal where an inactive
     row puts him, with Dan, so both take the empty-tag group's answer."""
