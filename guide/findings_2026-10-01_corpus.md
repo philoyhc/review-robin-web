@@ -33,8 +33,8 @@ is left stricter until ruled on. Grouped by what the ruling is about.
   (`format_datetime` with no zone), so a Singapore session's 17:00
   deadline was sent as 09:00. They now resolve the session's zone, and
   `spec/email_template_editor.md` says so.
-- **B19** — **Ruled 2026-10-01: incomplete work awaiting Azure**, carried
-  as `guide/post_azure_todo_checklist.md` item 7. Scheduled activation, invites and reminders fire only when
+- ~~**B19**~~ — **Ruled 2026-10-01: incomplete work awaiting Azure.
+  Carried** as `guide/post_azure_todo_checklist.md` item 7. Scheduled activation, invites and reminders fire only when
   someone opens Session Home. `observe_scheduled_events` has one caller.
   `spec/lifecycle.md` §8.3 says Session Home, the Operations pages and the
   lobby; the function's own docstring repeated that until #2757.
@@ -91,8 +91,8 @@ the spec should say so.
 - ~~**G13**~~ — **Ruled 2026-10-02: strike. Done in #2764.** Export
   validation at row-write time is gone from `spec/rrw_functional_spec.md`
   (it was §13.4).
-- **D16, D18** — **Ruled 2026-10-01: Rehydrate is incomplete and not
-  exposed to operators** (`rehydrate_enabled` ships false), carried in
+- ~~**D16, D18**~~ — **Ruled 2026-10-01: Rehydrate is incomplete and not
+  exposed to operators** (`rehydrate_enabled` ships false). **Carried** in
   `guide/deferred_consolidated.md` with D17's rest. The Rehydrate analyzer
   checks, and a streaming, bounded responses parser.
 - ~~**C2**~~ — **Ruled 2026-10-02: the removal stands. Done in #2764.**
@@ -282,21 +282,21 @@ E6), one commit and test each. The stale comments below stay open: each
 is fixed with the next edit to its file. The spec halves of C4 and E32
 stay in §3.
 
-- **D17** — `app/services/session_rehydrate.py` joins `apply_result.errors`,
+- ~~**D17**~~ — **Done in #2719.** `app/services/session_rehydrate.py` joins `apply_result.errors`,
   which are `ApplyError` dataclasses, with `"; ".join`. The `TypeError`
   replaces the operator's message, though the rollback still happens. It
   is untested, and Rehydrate is off by default.
-- **B29** — `assignments.reviewer_missing` sets
+- ~~**B29**~~ — **Done in #2719.** `assignments.reviewer_missing` sets
   `fix_anchor="#reviewer-row-{id}"`, but its `fix_url` is `/assignments`.
   The anchor exists only on the Reviewers page, so the deep link is dead.
 - ~~**A19** — An editor save wipes `observer_tag` (see §1).~~ The column is retired (§1).
-- **E32** — The Extract data page's **Purge and archive** is `btn alert`
+- ~~**E32**~~ — **Done in #2719.** The Extract data page's **Purge and archive** was `btn alert`
   (the lock-card role), while the lobby uses `danger-solid` for the same
   action. Three buttons there carry inline `style="display: none;"`
   (`spec/ui_elements.md` §6 calls an inline style a defect).
-- **E6** — `body.ui-v2 a.btn[aria-disabled="true"]` sets opacity 0.55,
+- ~~**E6**~~ — **Done in #2719.** `body.ui-v2 a.btn[aria-disabled="true"]` set opacity 0.55,
   which beats the single 0.5 rule `ui_elements.md` specifies.
-- **C4** — The `needs_confirm` banner says the checkbox is "at the top of
+- ~~**C4**~~ — **Done in #2719.** The `needs_confirm` banner said the checkbox is "at the top of
   Quick Setup", but it sits below the grid.
 - **A28** — Session Duplicate and settings import copy an instrument's
   `sort_display_fields` and `column_widths` verbatim, so a copy's sort
@@ -336,7 +336,7 @@ stay in §3.
   .bottom-grid { margin-bottom: var(--space-4) }` says it makes the gap
   below a grid match the gap between two stacked cards; stacked cards
   sit 20px apart and the grid 16px. Found in #2764.
-- **D17, the rest (deferred with Rehydrate, §1 D16).** #2719 catches `RehydrateError`, so a settings
+- ~~**D17, the rest**~~ — **Deferred with Rehydrate (§1 D16).** #2719 catches `RehydrateError`, so a settings
   failure reaches the operator. Any other failure inside
   `rehydrate_session` (an `IntegrityError` from a roster save, a
   `ResponsesFormatError`) still answers 500 after the rollback, and
@@ -345,8 +345,8 @@ stay in §3.
 - **Stale code comments.** Fix these with the next edit to each file:
   - `instrument_field.py:70-74` says "one level"; branching has two.
   - ~~The `scheduled_events/__init__.py` docstring names three trigger pages.~~ Fixed in #2757.
-  - `session_lifecycle.py:692` says "pre-filters to `draft`".
-  - The `responses/_core.py:826` docstring says "any status".
+  - ~~`session_lifecycle.py:692` says "pre-filters to `draft`".~~ Gone from the file (checked 2026-10-03).
+  - ~~The `responses/_core.py:826` docstring says "any status".~~ Gone from the file (checked 2026-10-03).
   - ~~The `_reviewee_results.py` docstring (see A13).~~ Done in #2754.
   - The `test_assignments_status_filter.py:142` docstring names
     `col_data_sample`.
@@ -365,7 +365,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~A2 med · `:1417,1476` · "+Instrument is empty": it seeds Rating, Comments and the locked Name/Email rows.~~ Done in #2732.
   - ~~A3 med · `:722` · "sole surface" for self-review contradicts `:571-577` (the Link 3 checkbox owns the rule).~~ Done in #2732.
   - ~~A4 low · `:662` · `_new_model_usable_tags` → `new_model_usable_tags` (also B5, C17).~~ Done in #2732.
-  - Also G10 `:144-149,345-360`.
+  - ~~Also G10 `:144-149,345-360`.~~ Done in #2723.
 - `reviewer-surface.md`
   - ~~A5 high · `:831` · Prev/Next hidden when closed · author.~~ Done in #2723.
   - ~~A6 high · `:799-810` · write gate session-wide · author.~~ Ruled: per-instrument Open / Close removed; done in #2722.
@@ -417,7 +417,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~B16 med · `:260-269` · response-loss ack callers · author.~~ Ruled: the tick is the ack.
   - ~~B17 med · `:271-291` · `_require_validated_or_ready` lives in `_operations.py`; reminders gate.~~ Done in #2745.
   - ~~B18 med · `:663-668` · `resolve_offset` has no callers · author.~~ Done in #2764.
-  - B19 med · `:759-770` · sweep trigger · ruled: awaits Azure (`post_azure_todo_checklist.md` item 7).
+  - ~~B19 med · `:759-770` · sweep trigger.~~ Ruled: awaits Azure (`post_azure_todo_checklist.md` item 7).
   - ~~B20 low · `:786-799` · retry is activation-only.~~ Recorded in #2755; errors caught in #2757.
   - ~~B21 med · `:306-313,552` · the close reason was already right after #2722; the ungated routes are *author*.~~ Done in #2771.
   - ~~B22 low · `:165,542` · `session.activated` context adds `trigger`, and activation clears `scheduled_activate_at`.~~ Done in #2733.
@@ -466,7 +466,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~E3 med · `:140` · status-strip slots: no Assignments pill; point at `visual_style_rrw.md`.~~ Done in #2737.
   - ~~E4 med · `:125` · hover foreground · author.~~ Done in #2764.
   - ~~E5 med · `:111` · Setup underline token · author.~~ Done in #2762.
-  - E6 low · `:457` · anchor opacity 0.55 · code (§2).
+  - ~~E6 low · `:457` · anchor opacity 0.55 · code (§2).~~ Done in #2719.
   - ~~E7 low-med · `:275` · Workflow body min-height · author.~~ Done in #2764.
   - ~~E8 low-med · §4 · grid gap 16px · author (measure first).~~ Done in #2764.
   - ~~E9 low · tallies and provenance; keep the 6px rail and the specificity tuples, which tests read.~~ Done in #2737.
@@ -494,9 +494,9 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~Also A22 `:94`.~~ Done in #2764.
 - `operator_button_audit.md`
   - ~~E30 med-low · rows #11–13 and #123–125 each appear twice; give the later rows the next free ids.~~ Done in #2737.
-  - E31 med · write/deepen · ~~unaudited: the lobby expander, Extract data, the Instruments toggles, the chrome Guide/Admin links~~ done in #2737 (Rehydrate stays unaudited while it is gated off) · ~~the R/≡ toggle role is *author*~~ ruled Toggle, done in #2739.
+  - ~~E31 med · write/deepen · unaudited pages; the R/≡ toggle role.~~ Done in #2737 and #2739 (Rehydrate stays unaudited while it is gated off).
   - ~~E36 med · new · the Data shaper's Delete (audit row 217) is `btn destructive` with no confirm step, against the audit's cross-page convention 6 · author.~~ Done in #2741.
-  - E32 med · code (§2).
+  - ~~E32 med · code (§2).~~ Done in #2719.
   - ~~E33 low-med · `:808` · `.tab-strip-page` uses tokens, not those literals.~~ Done in #2737.
   - ~~E34 low · rows 119, 121.~~ Done in #2737.
   - ~~E35 low · provenance in cells; the repeated Inactivate note.~~ Done in #2737.
@@ -520,9 +520,9 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~D14 med · `:127` · `results_acknowledged_at` is cloned.~~ Done in #2744.
   - ~~D15 low · `session_seq` is absent from the matrix.~~ Done in #2735.
 - `rehydrate.md`
-  - D16 med · analyzer · author.
-  - D17 med · code (§2).
-  - D18 med · parser · author.
+  - ~~D16 med · analyzer · author.~~ Ruled: deferred with Rehydrate.
+  - ~~D17 med · code (§2).~~ Done in #2719; the rest deferred with Rehydrate.
+  - ~~D18 med · parser · author.~~ Ruled: deferred with Rehydrate.
   - ~~D19 low · `:377` · closed-branch drops.~~ Done in #2735.
   - ~~D20 low · `:7` · four routes 404, not three.~~ Done in #2735.
 - `settings_inventory.md`
@@ -628,7 +628,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~H18 **high** · `:372` · Rehydrate as the data-carry path is off by default.~~ Done in #2738.
   - ~~H19 low · `:386` · §6.3 → §6.4.~~ Done in #2738.
 - `azure_provision.md`
-  - H20 med · email is wired · **premise wrong:** nothing calls the SMTP transport. `app/services/invitations.py` stamps outbox rows `sent` without sending, and real sending is Segment 14B. Item 8 stays "not yet wired"; nothing to fix.
+  - ~~H20 med · email is wired.~~ **Declined, premise wrong:** nothing calls the SMTP transport. `app/services/invitations.py` stamps outbox rows `sent` without sending, and real sending is Segment 14B. Item 8 stays "not yet wired"; nothing to fix.
   - ~~H21 med · overtaken; retire.~~ Done in #2738.
   - ~~H22 low · SMTP credentials are per user, encrypted in the DB.~~ Done in #2738.
 - `azure_github_setup.md`
