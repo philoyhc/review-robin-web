@@ -10,7 +10,8 @@ script in a browser, since the template test cannot run it.
 E36 added a confirm tick that gates each card's Delete; the second test
 drives that gate and the page's clearing of it on Cancel or a change of
 shape. The third checks that deleting the only card, while it is being
-edited, leaves the fresh blank card it is replaced with selected.
+edited, leaves the fresh blank card it is replaced with selected. The
+fourth holds a DELETE open to check that the card's Zip all waits for it.
 """
 
 from __future__ import annotations
@@ -217,7 +218,13 @@ def test_zip_all_waits_for_a_shape_delete_to_land(
 
     first = page.locator(f'[data-shape][data-shape-id="{first_id}"]')
     first.locator("[data-delete-confirm]").check()
-    first.locator("[data-shape-delete]").click()
+    # Wait for the request so the route has caught it before ``held``
+    # is read below.
+    with page.expect_request(
+        lambda r: r.method == "DELETE"
+        and r.url.endswith(f"/extract-data/shapes/{first_id}")
+    ):
+        first.locator("[data-shape-delete]").click()
     expect(first).to_have_count(0)
     # The DELETE is held: one card still shows a saved shape, but Zip
     # all waits.
