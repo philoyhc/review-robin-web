@@ -114,7 +114,7 @@ def test_a_required_governed_field_is_required_only_while_open(
     with reviewer.expect_navigation():
         reviewer.get_by_role("button", name="Submit").first.click()
     expect(reviewer.get_by_text("Required fields missing.")).to_be_visible()
-    expect(reviewer.get_by_text("Page 1: Carol — Why")).to_be_visible()
+    expect(reviewer.get_by_text("#1: Carol — Why")).to_be_visible()
     # The server-rendered count includes the open governed field: Rating and Why.
     expect(required_pill).to_have_text(re.compile(r"/2\s*$"))
 

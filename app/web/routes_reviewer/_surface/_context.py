@@ -690,6 +690,12 @@ def _surface_context(
         "any_closed_with_shown_values": any_closed_with_shown_values,
         "dropped_fields": dropped_fields,
         "page_statuses": page_statuses,
+        # The missing-answer and error cards name an instrument by its
+        # status-pill label (findings A2, 2026-10-03): ``position`` is
+        # the instrument's place in the session, not its page.
+        "instrument_label_by_position": {
+            ps.position: ps.label for ps in page_statuses
+        },
         "session_status": _session_status(page_statuses),
         "current_page_n": safe_page_n,
         "page_count": page_count,

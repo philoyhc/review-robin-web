@@ -133,16 +133,16 @@ def rae() -> AuthenticatedUser:
 # ── MissingPosition.position is populated session-wide ───────────────────
 
 
-def test_submit_missing_carries_page_number_for_each_gap(
+def test_submit_missing_names_the_instrument_of_each_gap(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Submit with required gaps on Page 1 *and* Page 2 returns a
-    ``MissingPosition`` per gap, each carrying the page number the
-    reviewer needs to navigate to. Sort order is (position, name,
-    field) so the banner reads top-to-bottom in walk order."""
+    """Submit with required gaps on both instruments returns a
+    ``MissingPosition`` per gap, each named by its instrument's label
+    (findings A2). Sort order is (position, name, field) so the banner
+    reads top-to-bottom in walk order."""
     operator = make_client(alice)
     review_session, first, second = _setup_two_instrument_session(
         operator, db, code="rae-e-pos-pages"
@@ -168,20 +168,22 @@ def test_submit_missing_carries_page_number_for_each_gap(
         follow_redirects=False,
     )
     body = response.text
-    # Banner enumerates each gap, prefixed with `Page N:` per spec.
+    # Banner enumerates each gap, prefixed with the instrument's
+    # status-pill label (findings A2, 2026-10-03), not a page number.
     assert "Required fields missing" in body
-    assert "<strong>Page 1:</strong>" in body
-    assert "<strong>Page 2:</strong>" in body
+    assert "<strong>#1 Self-eval:</strong>" in body
+    assert "<strong>#2 Peer review:</strong>" in body
+    assert "<strong>Page" not in body
 
 
-def test_submit_missing_only_on_page_two_still_carries_page_number(
+def test_submit_missing_only_on_the_second_instrument_names_it(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Required gap only on Page 2 → banner names Page 2 explicitly so
-    the reviewer doesn't waste time looking on the current page."""
+    """Required gap only on the second instrument → the banner names
+    that instrument so the reviewer doesn't look on the current one."""
     operator = make_client(alice)
     review_session, first, second = _setup_two_instrument_session(
         operator, db, code="rae-e-pos-2only"
@@ -203,7 +205,38 @@ def test_submit_missing_only_on_page_two_still_carries_page_number(
     )
     body = response.text
     assert "Required fields missing" in body
-    assert "<strong>Page 2:</strong>" in body
+    assert "<strong>#2 Peer review:</strong>" in body
+    assert "<strong>#1 Self-eval:</strong>" not in body
+
+
+def test_submit_invalid_value_names_the_instrument(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The invalid-value card names its instrument the same way as the
+    missing-required card (findings A2)."""
+    operator = make_client(alice)
+    review_session, _first, second = _setup_two_instrument_session(
+        operator, db, code="rae-e-pos-invalid"
+    )
+    second_assignment = db.execute(
+        select(Assignment)
+        .where(Assignment.session_id == review_session.id)
+        .where(Assignment.instrument_id == second.id)
+    ).scalar_one()
+
+    rae_client = make_client(rae)
+    response = rae_client.post(
+        f"/me/sessions/{review_session.id}/submit",
+        data={f"response[{second_assignment.id}][rating]": "99"},
+        follow_redirects=False,
+    )
+    body = response.text
+    assert "data-rs-errors-card" in body
+    assert "<strong>#2 Peer review:</strong>" in body
+    assert "<strong>Page" not in body
 
 
 # ── Missing-required card — full-width, two-column, dismissible ──────────

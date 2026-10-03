@@ -63,10 +63,11 @@ class MissingPosition:
     field_key: str
     field_label: str
     reviewee_name: str
-    # Session-wide page number (1-based) the assignment's instrument
-    # sits at, so the missing-required banner can prefix entries with
-    # ``Page N:``. Resolved from ``(Instrument.order, Instrument.id)``
-    # at submit time. Per-PR-ε of Segment 11D follow-on.
+    # Session-wide position (1-based) of the assignment's instrument,
+    # resolved from ``(Instrument.order, Instrument.id)`` at submit
+    # time. Not a page number: several instruments can share a page.
+    # The missing-required card prefixes each entry with that
+    # instrument's status-pill label (findings A2, 2026-10-03).
     position: int
 
 
@@ -367,8 +368,8 @@ def _compute_missing_required(
                 )
             )
     # Sort by (position, reviewee_name, field_label) so the rendered
-    # banner reads top-to-bottom in the same order the reviewer can
-    # walk the pages — Page 1 entries first, then Page 2, etc.
+    # banner reads top-to-bottom in the order the reviewer walks the
+    # instruments — #1's entries first, then #2's, etc.
     missing.sort(
         key=lambda m: (m.position, m.reviewee_name, m.field_label)
     )
@@ -701,8 +702,8 @@ def submit(
         for field in fields:
             field_index[(instrument_id, field.field_key)] = field
 
-    # Resolve session-wide page positions so MissingPosition / ValidationError
-    # entries carry the page number the reviewer needs to navigate to.
+    # Resolve session-wide instrument positions so MissingPosition /
+    # ValidationError entries can name their instrument (findings A2).
     position_by_instrument_id = _session_position_map(db, review_session.id)
 
     # Validate the raw upserts before fanning group answers out, so a

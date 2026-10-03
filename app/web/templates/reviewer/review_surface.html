@@ -158,7 +158,7 @@
       <ul class="rs-missing-list">
         {% for e in errors %}
           <li>
-            {% if e.position %}<strong>Page {{ e.position }}:</strong> {% endif %}<strong>{{ e.reviewee_name }}</strong> — <code>{{ e.field_label }}</code> — {{ e.message }}
+            {% if e.position %}<strong>{{ instrument_label_by_position.get(e.position, "#" ~ e.position) }}:</strong> {% endif %}<strong>{{ e.reviewee_name }}</strong> — <code>{{ e.field_label }}</code> — {{ e.message }}
           </li>
         {% endfor %}
       </ul>
@@ -188,7 +188,7 @@
       <ul class="rs-missing-list">
         {% for m in missing %}
           <li>
-            {% if m.position %}<strong>Page {{ m.position }}:</strong> {% endif %}<strong>{{ m.reviewee_name }}</strong> — <code>{{ m.field_label }}</code>
+            {% if m.position %}<strong>{{ instrument_label_by_position.get(m.position, "#" ~ m.position) }}:</strong> {% endif %}<strong>{{ m.reviewee_name }}</strong> — <code>{{ m.field_label }}</code>
           </li>
         {% endfor %}
       </ul>
