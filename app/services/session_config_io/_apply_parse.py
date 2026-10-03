@@ -18,6 +18,7 @@ from ._apply_shared import (
     _ParseError,
 )
 from ._rows import Row
+from app.services.instruments._band2 import INTEGER_WHOLE_BOUNDS_MESSAGE
 from app.services.instruments._response_fields import (
     DEFAULT_RESPONSE_FIELDS,
     _inline_kwargs_from_default_spec,
@@ -456,6 +457,25 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                 )
             else:
                 seen_keys[rf.field_key] = m
+            # Band 2 refuses a fractional bound on an Integer field
+            # (``_band2._integer_bounds_error``). The import must too:
+            # its ``validation`` block casts bounds with ``int``, so
+            # 1.5 would be stored as 1 for the reviewer while the
+            # field's own Min still read 1.5.
+            if rf.data_type == "Integer":
+                for key in ("min", "max", "step"):
+                    value = getattr(rf, key)
+                    if value is not None and not float(value).is_integer():
+                        errors.append(
+                            ApplyError(
+                                row_number=0,
+                                field=(
+                                    f"instruments[{n}].response_fields"
+                                    f"[{m}].{key}"
+                                ),
+                                message=INTEGER_WHOLE_BOUNDS_MESSAGE,
+                            )
+                        )
             if not rf.label:
                 errors.append(
                     ApplyError(

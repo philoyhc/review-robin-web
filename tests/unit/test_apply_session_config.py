@@ -386,6 +386,53 @@ def test_enabled_on_another_email_kind_is_an_unknown_slot(
     assert not (review_session.email_template_overrides or {})
 
 
+def _integer_field_rows(min_: str, step: str) -> list[Row]:
+    prefix = "instruments[1].response_fields[1]"
+    return [
+        Row("instruments[1].name", "Peer", "string"),
+        Row(f"{prefix}.field_key", "score", "string"),
+        Row(f"{prefix}.label", "Score", "string"),
+        Row(f"{prefix}.response_type", "Score", "string"),
+        Row(f"{prefix}.data_type", "Integer", "string"),
+        Row(f"{prefix}.min", min_, "decimal"),
+        Row(f"{prefix}.max", "10", "decimal"),
+        Row(f"{prefix}.step", step, "decimal"),
+    ]
+
+
+def test_a_fractional_integer_bound_is_refused(db: Session) -> None:
+    """Band 2 refuses a fractional Min, Max or Step on an Integer field;
+    the import refuses it too, rather than storing 1.5 on the field and
+    1 in the reviewer's ``validation`` block (findings 2026-10-03 A5)."""
+    review_session = _bare_session(db, code="int-bounds")
+    result = apply_session_config(
+        db, review_session, _integer_field_rows("1.5", "0.5")
+    )
+
+    assert not result.ok
+    assert [e.field for e in result.errors] == [
+        "instruments[1].response_fields[1].min",
+        "instruments[1].response_fields[1].step",
+    ]
+    assert {e.message for e in result.errors} == {
+        "Integer fields take whole-number Min, Max and Step. "
+        "Choose Decimal for steps like 0.5."
+    }
+
+
+def test_whole_integer_bounds_written_as_decimals_are_accepted(
+    db: Session,
+) -> None:
+    """A whole value written as ``1.0`` (hand-edited; the export writes
+    ``1``) is not fractional."""
+    review_session = _bare_session(db, code="int-bounds-ok")
+    result = apply_session_config(
+        db, review_session, _integer_field_rows("1.0", "1")
+    )
+
+    assert result.ok, result.errors
+
+
 def test_apply_emits_settings_imported_audit_event(db: Session) -> None:
     review_session = _bare_session(db, code="auditemit")
     user = _user(db, email="auditor@example.edu")

@@ -342,6 +342,13 @@ the whole rehydrate rolls back, and the operator gets the message. (An older ext
 extract taken from a session the editor authored cannot trip this: the
 forbidden cells serialize as empty and parse back to "off".
 
+**So does an extract carrying a fractional Min, Max or Step on an
+`Integer` response field** (`spec/instruments.md`, the Bounds rules).
+Band 2 keeps such a bound only on a field that already has responses,
+so only an older session can carry one; the analysis step does not
+catch it, and the rehydrate fails at this step with the import's
+whole-number message.
+
 ### 6.3 Import populations and regenerate assignments
 
 1. **Reviewers / Reviewees / Observers** via `csv_imports.save_reviewers`

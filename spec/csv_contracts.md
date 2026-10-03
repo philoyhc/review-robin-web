@@ -455,7 +455,9 @@ the round-trip notes below.
    its instrument. Each is an `ApplyError` naming the first
    occurrence, not a database error. A repeated session tag is
    deduplicated and a repeated `view_policies[<audience>]` block
-   merges, so neither is an error.
+   merges, so neither is an error. A fractional Min, Max or Step on an
+   `Integer` response field is an error too, as on Band 2
+   (`spec/instruments.md`, the Bounds rules).
 2. **Phase 2 — Apply the typed plan.** Wipe-and-replace within
    the affected section (e.g. all instruments for a session).
    `session_rule_sets` is the exception: an upsert by name that
