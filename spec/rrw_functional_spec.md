@@ -2143,22 +2143,19 @@ Group-scoped instruments collapse one row per group rather
 than per member. The file streams to the operator without
 buffering the full dataset in memory.
 
-### 12.4 Per-instrument response files (no longer shipped)
+### 12.4 Per-instrument response files (retired)
 
-`{code}_instrument_{n}.csv` — same 21-column shape, narrowed
-to one instrument per file, sorted reviewee-first then by
-reviewer email. The zip-all bundle carried it until findings D28
+`{code}_instrument_{n}.csv` — the unified file narrowed to one
+instrument — rode only in the zip-all bundle. Findings D28
 (2026-10-03) made the bundle a pass-through of the Extract data
-cards; no download carries it now.
+cards, and the file was retired (`spec/csv_contracts.md` §2.7).
 
-### 12.5 Entity-stats files (no longer shipped)
+### 12.5 Entity-stats files (retired)
 
-`{code}_reviewer_stats.csv` and `{code}_reviewee_stats.csv`
-— roster columns plus per-instrument response-activity
-metrics (draft pairs, submitted pairs, distinct partners,
-fields-answered counts, required-fields-answered counts,
-string-typed character counts). The zip-all bundle carried them
-until findings D28 (2026-10-03); no download carries them now.
+`{code}_reviewer_stats.csv` and `{code}_reviewee_stats.csv` —
+per-roster-row response-activity counts — rode only in the zip-all
+bundle until findings D28 (2026-10-03) dropped them, and were then
+retired (`spec/csv_contracts.md` §2.6).
 
 ### 12.6 Audit-events file
 

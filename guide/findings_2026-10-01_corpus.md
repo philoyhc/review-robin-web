@@ -187,8 +187,9 @@ the spec should say so.
   its card's own button downloads, under the same name. The stats and
   per-instrument long files left the bundle. Rehydrate ignores
   By-instrument files by name. The four half-width cards were reordered: metadata on
-  the left; By instrument, then Extract all data, on the right. Found in
-  #2761.
+  the left; By instrument, then Extract all data, on the right. The
+  stats and per-instrument serializers it left without a caller were
+  retired in #2770. Found in #2761.
 - ~~**G16 = E22**~~ — **Ruled 2026-10-02: keep workspace-wide, correct
   the spec. Done in #2746.** Session codes are unique across the
   workspace; the specs said per operator.

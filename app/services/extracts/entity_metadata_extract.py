@@ -35,7 +35,7 @@ The ``all_*`` toggle gates which roster entries get a row:
 
 Group-scoped instruments fan responses across every member
 assignment at save time. The two sides handle that asymmetry
-the same way ``entity_stats_extract.py`` does:
+differently:
 
 * **Reviewer side** — a reviewer fills one form per group, not
   one per member; the save layer copies the answer onto every

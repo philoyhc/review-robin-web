@@ -44,7 +44,7 @@ from app.services.extracts.entity_metadata_extract import (
 
 
 # --------------------------------------------------------------------------- #
-# Fixtures (lifted from test_entity_stats_extract for shape parity).
+# Fixtures.
 # --------------------------------------------------------------------------- #
 
 

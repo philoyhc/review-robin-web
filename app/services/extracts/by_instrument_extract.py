@@ -18,9 +18,9 @@ Group-scoped instruments collapse the same way the unified
 Responses CSV does — one data row per ``(reviewer × group)``
 with the composed group identity in ``RevieweeName``.
 
-Distinct from ``serialize_responses_for_instrument`` (long
-format, 21 columns × responses) — different lens, different
-analyst use case.
+Distinct from the unified Responses CSV (long format, 21
+columns × responses) — different lens, different analyst use
+case.
 """
 
 from __future__ import annotations
