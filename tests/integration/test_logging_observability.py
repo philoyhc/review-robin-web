@@ -116,3 +116,54 @@ def test_permission_denial_logs_warning(
     assert len(denied) == 1
     assert denied[0].gate == "require_operator"
     assert denied[0].user_id == bob.id
+
+
+def test_grant_denial_logs_the_user_and_the_reviewee(
+    db: Session, caplog: pytest.LogCaptureFixture
+) -> None:
+    """``require_reviewee_with_current_grant`` logged the reviewee's id
+    under ``user_id``; it now logs the signed-in user's id there and the
+    reviewee's under ``reviewee_id`` (findings 2026-10-03 A4)."""
+    from fastapi import HTTPException
+
+    from app.db.models import Reviewee
+    from app.web.deps import require_reviewee_with_current_grant
+
+    owner = User(email="owner-a4@example.edu", display_name="Owner")
+    ree = User(email="ree-a4@example.edu", display_name="Ree")
+    db.add_all([owner, ree])
+    db.flush()
+    review_session = ReviewSession(
+        name="A4", code="a4-log", created_by_user_id=owner.id
+    )
+    db.add(review_session)
+    db.flush()
+    # Pad the reviewee table so the two ids cannot coincide.
+    db.add_all(
+        Reviewee(
+            session_id=review_session.id,
+            name=f"Pad {n}",
+            email_or_identifier=f"pad{n}@example.edu",
+        )
+        for n in range(ree.id + 1)
+    )
+    reviewee = Reviewee(
+        session_id=review_session.id,
+        name="Ree",
+        email_or_identifier=ree.email,
+    )
+    db.add(reviewee)
+    db.flush()
+    assert reviewee.id != ree.id
+
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(HTTPException):
+            require_reviewee_with_current_grant(
+                reviewee_session=(reviewee, review_session), user=ree, db=db
+            )
+
+    denied = _records(caplog, "permission denied")
+    assert len(denied) == 1
+    assert denied[0].gate == "require_reviewee_with_current_grant"
+    assert denied[0].user_id == ree.id
+    assert denied[0].reviewee_id == reviewee.id

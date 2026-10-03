@@ -442,6 +442,7 @@ def require_reviewee_with_current_grant(
     reviewee_session: tuple[Reviewee, ReviewSession] = Depends(
         require_reviewee_in_session
     ),
+    user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Reviewee, ReviewSession]:
     """The reviewee results surface's gate (Segment 19F PR 4).
@@ -475,7 +476,8 @@ def require_reviewee_with_current_grant(
             "permission denied",
             extra={
                 "gate": "require_reviewee_with_current_grant",
-                "user_id": reviewee.id,
+                "user_id": user.id,
+                "reviewee_id": reviewee.id,
                 "session_id": review_session.id,
             },
         )
