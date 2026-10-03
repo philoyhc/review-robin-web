@@ -138,8 +138,12 @@ the spec should say so.
 - ~~**B4**~~ — **Ruled 2026-10-02: warn an active reviewer with no active
   assignments.** `reviewer_missing` tested whether a row existed, so a
   reviewer whose rows were all excluded was not flagged.
-- **B7** — Group self-review: `include` follows the roster, while the
-  `is_self_review` column follows the materialised rows.
+- ~~**B7**~~ — **Ruled 2026-10-03: the column follows the roster. Done in
+  #2765.** Group self-review: `include` followed the roster, while the
+  `is_self_review` column followed the materialized rows, so a group whose
+  `(R, R)` row a Link rule filtered out read as an ordinary review in the
+  extracts and the toggle. `classify_self_review_pairs` now takes
+  membership from the roster, as Generate does.
 - ~~**B17 = F3, with F17**~~ — **Ruled 2026-10-02: `ready` only. Done in
   #2745.** Reminders and per-row invitation actions: routes accepted
   `validated`, and the Invitations template allowed them only in
@@ -372,7 +376,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~B4 med · `:1151-1167` · Validation-surfaces rules: scope, never-generated and links are *spec*; `include` is *author*.~~ Ruled: active work only.
   - ~~B5 low · `:159` · helper name.~~ Done in #2733.
   - ~~B6 low · `:1019,1084` · no UI posts to `/assignments/generate`.~~ Done in #2733.
-  - B7 low · `:426-461` · group self-review · author.
+  - ~~B7 low · `:426-461` · group self-review · author.~~ Ruled: roster; done in #2765.
 - `reconciling_regeneration.md` — current.
 - `workflow_card.md`
   - ~~B8 high · `:500-525` · the banner posts to `/activate`, not `/workflow/activate` (contradicts its own `:925`).~~ Done in #2733.

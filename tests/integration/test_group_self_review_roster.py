@@ -1,0 +1,181 @@
+"""Group self-review membership follows the roster (findings B7).
+
+On a group-scoped instrument a Link rule can filter the reviewer's own
+``(R, R)`` row out of the fan-out while keeping a group-mate. Generate
+already decided membership from the roster, so the group stayed a
+self-review group for ``include`` and the exclusion. The stored
+``Assignment.is_self_review`` column decided it from the written rows,
+so the same group read as an ordinary review: ``FALSE`` in the
+responses CSV, counted as a peer review by the "exclude self" data
+shapes, and out of reach of the per-instrument toggle. The author ruled
+2026-10-03 that the column follows the roster too.
+"""
+
+from __future__ import annotations
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.models import (
+    Assignment,
+    Instrument,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+    SessionRuleSet,
+    User,
+)
+from app.services import assignments
+from app.services.instruments import ensure_default_instrument
+
+_LINK_KEEPS_OTHER_ONLY = [
+    {
+        "id": "link2",
+        "kind": "COMPOSITE",
+        "enabled": True,
+        "op": "AND",
+        "rules": [
+            {
+                "id": "link2-r0",
+                "kind": "MATCH",
+                "enabled": True,
+                "predicate": {
+                    "field": "reviewee.tag2",
+                    "operator": "equals",
+                    "operand": "OTHER",
+                    "case_sensitive": False,
+                },
+            }
+        ],
+    }
+]
+
+
+def _seed(
+    db: Session, *, self_reviews_active: bool
+) -> tuple[User, ReviewSession, Instrument]:
+    """Sam and Zoe share TeamA (tag_1); the instrument groups by
+    tag_1. The rule keeps only tag_2 == OTHER, so Sam's own reviewee
+    row (tag_2 == SELF) is filtered out and Zoe's survives. The rule
+    set's own exclusion is off."""
+    user = User(email="op-b7@example.edu")
+    db.add(user)
+    db.flush()
+    review_session = ReviewSession(
+        name="B7",
+        code="b7",
+        created_by_user_id=user.id,
+        self_reviews_active=self_reviews_active,
+    )
+    db.add(review_session)
+    db.flush()
+    db.add_all(
+        [
+            Reviewer(
+                session_id=review_session.id,
+                name="Sam",
+                email="sam@example.edu",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Sam",
+                email_or_identifier="Sam@Example.edu",
+                tag_1="TeamA",
+                tag_2="SELF",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Zoe",
+                email_or_identifier="zoe@example.edu",
+                tag_1="TeamA",
+                tag_2="OTHER",
+            ),
+            Reviewee(
+                session_id=review_session.id,
+                name="Kit",
+                email_or_identifier="kit@example.edu",
+                tag_1="TeamB",
+                tag_2="OTHER",
+            ),
+        ]
+    )
+    db.flush()
+    instrument = ensure_default_instrument(db, review_session)
+    rule_set = SessionRuleSet(
+        session_id=review_session.id,
+        name="Link",
+        description="",
+        combinator="ALL_OF",
+        exclude_self_reviews=False,
+        seed=None,
+        rules_json=_LINK_KEEPS_OTHER_ONLY,
+    )
+    db.add(rule_set)
+    db.flush()
+    instrument.rule_set_id = rule_set.id
+    instrument.group_kind = "r1"
+    db.flush()
+    return user, review_session, instrument
+
+
+def _rows_by_reviewee(db: Session, instrument: Instrument) -> dict[str, Assignment]:
+    rows = db.execute(
+        select(Assignment, Reviewee)
+        .join(Reviewee, Reviewee.id == Assignment.reviewee_id)
+        .where(Assignment.instrument_id == instrument.id)
+    ).all()
+    return {reviewee.name: assignment for assignment, reviewee in rows}
+
+
+def test_own_group_is_flagged_when_the_self_row_is_filtered(db: Session) -> None:
+    user, review_session, instrument = _seed(db, self_reviews_active=True)
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="b7"
+    )
+    rows = _rows_by_reviewee(db, instrument)
+    assert "Sam" not in rows, "the Link rule should filter Sam's own row"
+    assert rows["Zoe"].is_self_review is True, (
+        "Sam is on TeamA's roster, so reviewing TeamA through Zoe is a "
+        "self-review even though his own row was filtered out"
+    )
+    assert rows["Kit"].is_self_review is False
+
+
+def test_flag_and_include_agree_when_self_reviews_are_off(db: Session) -> None:
+    """With self-reviews off, Generate writes the row ``include=False``;
+    the flag now says why, and the instrument toggle can reach it."""
+    user, review_session, instrument = _seed(db, self_reviews_active=False)
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="b7"
+    )
+    zoe = _rows_by_reviewee(db, instrument)["Zoe"]
+    assert zoe.include is False
+    assert zoe.is_self_review is True
+
+    assignments.set_instrument_self_reviews_active(
+        db,
+        review_session=review_session,
+        instrument_id=instrument.id,
+        user=user,
+        active=True,
+        correlation_id="b7-toggle",
+    )
+    db.refresh(zoe)
+    assert zoe.include is True, (
+        "the per-instrument toggle reads the flag; before B7 it skipped "
+        "this row and left it off with no control to turn it back on"
+    )
+
+
+def test_recompute_keeps_the_roster_answer(db: Session) -> None:
+    """The recompute every edit trigger calls agrees with Generate, so
+    the strict-mode verify gate stays quiet and a later recompute does
+    not flip the row back."""
+    user, review_session, instrument = _seed(db, self_reviews_active=True)
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="b7"
+    )
+    assignments.recompute_self_review_classification(
+        db, session_id=review_session.id
+    )
+    assert _rows_by_reviewee(db, instrument)["Zoe"].is_self_review is True
