@@ -407,11 +407,16 @@
                     {% elif not row.group_identity.tag_line %}
                       <span class="muted">{{ row.group_label }}</span>
                     {% endif %}
+                    {# A self-review group flags every member's row, so
+                       the representative's flag speaks for the group. #}
+                    {% if row.assignment.is_self_review %}
+                      <br><span class="pill pill-info">Self review</span>
+                    {% endif %}
                   </td>
                 {% else %}
                   <td class="rs-reviewee"
                       data-sort-value="{{ row.assignment.reviewee.name }}">
-                    <strong>{{ row.assignment.reviewee.name }}</strong><br>
+                    <strong>{{ row.assignment.reviewee.name }}</strong>{% if row.assignment.is_self_review %} <span class="pill pill-info">Self review</span>{% endif %}<br>
                     <code>{{ row.assignment.reviewee.email_or_identifier }}</code>
                   </td>
                 {% endif %}

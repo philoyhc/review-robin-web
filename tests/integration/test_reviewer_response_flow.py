@@ -2659,3 +2659,116 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
     )
     assert not _dan_submitted()
     assert _rating(dan) == "3"
+
+
+def test_surface_marks_the_reviewers_own_row_as_a_self_review(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """``spec/rrw_functional_spec.md`` §10.3 (findings G7, 2026-10-03):
+    the reviewer's row for themselves carries a "Self review" pill;
+    another reviewee's row does not."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-self-pill",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    [assignment] = db.scalars(
+        select(Assignment).where(Assignment.session_id == review_session.id)
+    ).all()
+    rae_client = make_client(rae)
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
+    assert "Self review</span>" not in body
+
+    # The pill reads the stored flag; generation sets it (tested with
+    # the self-review rules), so set it here to test the render alone.
+    assignment.is_self_review = True
+    db.commit()
+    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
+    assert '<span class="pill pill-info">Self review</span>' in body
+
+
+def test_surface_marks_a_self_review_group_row(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Findings G7: on a group instrument the collapsed row carries the
+    pill under the group identity when its group is a self-review group
+    (every member's assignment flagged); another group's row does not."""
+    operator = make_client(alice)
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Grp Self", "code": "grp-self-pill"},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "grp-self-pill")
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-group",
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nR,rae@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Team A\n"
+                b"Eve,eve@example.edu,Team A\n"
+                b"Dan,dan@example.edu,Team B\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    group = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.group_kind.is_not(None))
+    ).scalar_one()
+    group.group_kind = "r1"
+    db.commit()
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    _activate(operator, db, review_session)
+
+    # Flag Team A's pairs as a self-review group, as generation does
+    # when the reviewer is a member (tested with the self-review rules).
+    for assignment in db.scalars(
+        select(Assignment)
+        .where(Assignment.instrument_id == group.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .where(Reviewee.tag_1 == "Team A")
+    ):
+        assignment.is_self_review = True
+    db.commit()
+
+    body = make_client(rae).get(f"/me/sessions/{review_session.id}/1").text
+    group_cells = body.split('<td class="rs-group">')[1:]
+    flagged = [
+        cell.split("</td>")[0]
+        for cell in group_cells
+        if "Self review</span>" in cell.split("</td>")[0]
+    ]
+    assert len(group_cells) == 2
+    assert len(flagged) == 1
+    assert "Team A" in flagged[0]
