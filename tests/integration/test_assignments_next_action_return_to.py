@@ -96,7 +96,7 @@ def test_workflow_card_right_column_renders_once_validated(
 ) -> None:
     """A validated session → the right-column aside renders, and the
     left-column body does not carry the generate form or a second pill
-    row. (State 3, a draft with validation issues, is unreachable —
+    row. (State 3, a draft with validation issues, is retired —
     findings B32.)"""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-state3")
     client.post(
@@ -117,10 +117,8 @@ def test_workflow_card_right_column_renders_once_validated(
     left_body_block = body.split('class="next-action-main"', 1)[1].split(
         'class="next-action-status"', 1
     )[0]
-    assert ">Validation didn't pass.</strong>" not in left_body_block or (
-        ">1 error" not in left_body_block
-        and ">1 warning" not in left_body_block
-    )
+    assert ">1 error" not in left_body_block
+    assert ">1 warning" not in left_body_block
 
 
 def test_workflow_card_renders_two_column_grid(
