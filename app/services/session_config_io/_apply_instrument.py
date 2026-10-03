@@ -20,6 +20,7 @@ from app.db.models import (
     ReviewSession,
     SessionRuleSet,
 )
+from app.services.instruments._band2 import _BAND2_DATA_TYPE_TO_INLINE
 from app.services.instruments._field_refs import (
     sort_from_positions,
     widths_from_positions,
@@ -125,7 +126,21 @@ def _apply_instrument_kv(
         # bounds (NULL → empty cell), ``list_csv`` for List
         # options, and a ``boolean`` for the Band 2 chip flag.
         elif attr == "data_type":
-            rf.data_type = value or None
+            # Any case imports as the capitalised model value, which is
+            # what every consumer compares against (findings D2,
+            # 2026-10-03); anything else is refused rather than stored
+            # as a type nothing recognizes.
+            if value:
+                canonical = _BAND2_DATA_TYPE_TO_INLINE.get(value.strip().lower())
+                if canonical is None:
+                    raise _ParseError(
+                        f"unknown response field data_type {value!r}; "
+                        f"expected one of "
+                        f"{sorted(_BAND2_DATA_TYPE_TO_INLINE.values())}"
+                    )
+                rf.data_type = canonical
+            else:
+                rf.data_type = None
         elif attr == "min":
             rf.min = _parse_decimal(value)
         elif attr == "max":

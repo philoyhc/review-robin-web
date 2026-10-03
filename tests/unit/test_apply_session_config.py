@@ -19,7 +19,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 
-
+import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -386,27 +386,33 @@ def test_enabled_on_another_email_kind_is_an_unknown_slot(
     assert not (review_session.email_template_overrides or {})
 
 
-def _integer_field_rows(min_: str, step: str) -> list[Row]:
+def _integer_field_rows(
+    min_: str, step: str, data_type: str = "Integer"
+) -> list[Row]:
     prefix = "instruments[1].response_fields[1]"
     return [
         Row("instruments[1].name", "Peer", "string"),
         Row(f"{prefix}.field_key", "score", "string"),
         Row(f"{prefix}.label", "Score", "string"),
         Row(f"{prefix}.response_type", "Score", "string"),
-        Row(f"{prefix}.data_type", "Integer", "string"),
+        Row(f"{prefix}.data_type", data_type, "string"),
         Row(f"{prefix}.min", min_, "decimal"),
         Row(f"{prefix}.max", "10", "decimal"),
         Row(f"{prefix}.step", step, "decimal"),
     ]
 
 
-def test_a_fractional_integer_bound_is_refused(db: Session) -> None:
+@pytest.mark.parametrize("data_type", ["Integer", "integer"])
+def test_a_fractional_integer_bound_is_refused(
+    db: Session, data_type: str
+) -> None:
     """Band 2 refuses a fractional Min, Max or Step on an Integer field;
     the import refuses it too, rather than storing 1.5 on the field and
-    1 in the reviewer's ``validation`` block (findings 2026-10-03 A5)."""
+    1 in the reviewer's ``validation`` block (findings 2026-10-03 A5),
+    whatever case the type is written in (D2)."""
     review_session = _bare_session(db, code="int-bounds")
     result = apply_session_config(
-        db, review_session, _integer_field_rows("1.5", "0.5")
+        db, review_session, _integer_field_rows("1.5", "0.5", data_type)
     )
 
     assert not result.ok
@@ -431,6 +437,49 @@ def test_whole_integer_bounds_written_as_decimals_are_accepted(
     )
 
     assert result.ok, result.errors
+
+
+@pytest.mark.parametrize("data_type", ["integer", "INTEGER", " Integer "])
+def test_a_response_field_type_in_any_case_imports_capitalised(
+    db: Session, data_type: str
+) -> None:
+    """``spec/csv_contracts.md`` round-trip rule 5: a response field's
+    type matches in any case and is stored as the model value, so the
+    field is numeric and its bounds reach the ``validation`` block
+    (findings 2026-10-03 D2)."""
+    from app.db.models import InstrumentResponseField
+
+    review_session = _bare_session(db, code="int-case")
+    result = apply_session_config(
+        db, review_session, _integer_field_rows("1", "1", data_type)
+    )
+    assert result.ok, result.errors
+
+    field = db.scalars(
+        select(InstrumentResponseField)
+        .join(Instrument)
+        .where(Instrument.session_id == review_session.id)
+    ).one()
+    assert field._inline_data_type == "Integer"
+    assert field.validation == {"min": 1, "max": 10, "step": 1}
+
+
+def test_an_unknown_response_field_type_is_refused(db: Session) -> None:
+    """A type outside String / Integer / Decimal / List is a row error,
+    not a field stored with a type nothing recognizes (D2)."""
+    review_session = _bare_session(db, code="int-unknown")
+    result = apply_session_config(
+        db, review_session, _integer_field_rows("1", "1", "Boolean")
+    )
+
+    assert not result.ok
+    assert [(e.row_number, e.message) for e in result.errors] == [
+        (
+            5,
+            "unknown response field data_type 'Boolean'; expected one of "
+            "['Decimal', 'Integer', 'List', 'String']",
+        )
+    ]
 
 
 def test_apply_emits_settings_imported_audit_event(db: Session) -> None:

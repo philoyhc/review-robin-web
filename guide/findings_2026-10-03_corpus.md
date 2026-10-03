@@ -42,7 +42,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   phase 2 hits the unique constraint and `_run_quick_setup_settings`
   (`_quick_setup.py:1090`) has no handler. *Reproduced.* Breaks the
   two-phase promise in `spec/csv_contracts.md` §3.3 and §7.3.
-- **D2 med, author** — A lowercase response-field `data_type`
+- ~~**D2**~~ med — **Ruled 2026-10-03: case-fold in code. Done in #2793.** A lowercase response-field `data_type`
   (`integer`) is stored verbatim with no validation, so the field is
   silently mistyped (`_apply_instrument.py:127-128, 437-442`).
   `csv_contracts.md` §4.5 says it is accepted. Case-fold in code, or
@@ -128,7 +128,7 @@ stricter until ruled on.
 - **G5**: the session self-reviews-active flag has no editor; only the
   Settings CSV and Duplicate set it. Build one, or say it is config-only
   (also `settings_inventory.md:104`).
-- **D2** (above) and **D6**: `email_template.no_help_contact` says emails
+- ~~**D2**~~ (above; ruled 2026-10-03, done in #2793) and **D6**: `email_template.no_help_contact` says emails
   fall back to a placeholder; the editor spec and the defaults drop the
   line.
 - **D13**: the Data shaper's outer Zip all is an inert placeholder in
