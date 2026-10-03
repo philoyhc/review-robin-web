@@ -436,7 +436,7 @@ a name: `session_rule_sets[N]` counts the session's rule sets in `id`
 order and carries the name in its own `.name` row. Ordinals are
 1-based except `data_shapes[N]`, which counts from 0. The one keyed
 bracket is `instruments[N].view_policies[<audience>]`. The export
-writes `data_type` in lowercase (`string`, `datetime`, `boolean`,
+writes the third column, `data_type`, in lowercase (`string`, `datetime`, `boolean`,
 `integer`, `decimal`, `json`, `enum`). See `serialize_session_config` for the
 sections (session-level → email templates → instruments
 → session RuleSets → data shapes → session tags) and their
@@ -727,10 +727,12 @@ Concrete guarantees the importers + serialisers maintain:
    (`String`, `DateTime`) must validate identically to the
    documented lowercase ones — otherwise a hand-edited or older
    bundle fails on a cell whose meaning is unambiguous. A response
-   field's `data_type` accepts both
-   lowercase tokens (`long_text`) and capitalised model values
-   (`Long_text`) on import; serialise emits the capitalised
-   form.
+   field's `data_type` value (`instruments[n].response_fields[m].data_type`)
+   is matched the same way, ignoring surrounding spaces: `integer`,
+   `INTEGER` and `Integer` all import as the model value `Integer`,
+   which serialise emits. A blank value imports the default response
+   field's type and bounds, not the row's own; any other value than
+   `String`, `Integer`, `Decimal` or `List` is an error.
 6. **Empty-string handling.** A `null` cell in storage is an
    empty CSV cell on serialise; an empty CSV cell on parse is
    `None`. No `"None"` strings, no `"null"` strings.

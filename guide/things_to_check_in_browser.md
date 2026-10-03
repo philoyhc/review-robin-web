@@ -168,6 +168,18 @@ when it is checked; sections with unticked rows sit above the ticked ones.
   The Band 2 preview no longer offers one of those teammates as its
   sample; with the exclusion off, it does.
 
+## A lowercase response type imports as typed (D2)
+
+- [ ] **`integer` makes a number field.** Export a session's Settings
+  CSV. On an Integer field's `instruments[n].response_fields[m].data_type`
+  row, change the `value` cell to `integer`. Upload it to another session
+  through Quick Setup. On that session's reviewer surface the field has
+  a number box. The Instruments page is no test: it read as Integer even
+  before the fix.
+- [ ] **An unknown type is refused.** Change the value to `Boolean`
+  instead and upload again. The page shows "Could not import session
+  settings." and the session is unchanged.
+
 ## Setup tabs underline in blue (findings register E5)
 
 - [x] **Light and dark.** On any Setup page (Reviewers, say), the active

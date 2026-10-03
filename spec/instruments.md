@@ -1124,14 +1124,14 @@ The Band 3 row's "Type" picker is a plain `data_type` dropdown
 with four canonical values (`String / Integer / Decimal /
 List`) plus a `<optgroup>` of pre-filled List presets:
 
-| Preset | Stored `data_type` | Stored `list_options` |
+| Preset | Posted `data_type` | Stored `list_options` |
 |---|---|---|
 | Boolean (Yes / No) | `list` | `Yes, No` |
 | Agreement (Likert 5) | `list` | `Strongly agree, Agree, Neutral, Disagree, Strongly disagree` |
 | Grades | `list` | `A+, A, A-, B+, B, B-, C+, C, D+, D, F` |
 
-Picking a preset snaps the select back to `List` (`data_type=list`)
-and then pre-fills the `list_options` input from the option's
+Picking a preset snaps the select back to `List` (`data_type=list`,
+stored as `List`) and then pre-fills the `list_options` input from the option's
 `data-preset-options` attribute. The order matters for a branch
 parent: filling the options recomputes the row, and it must already
 read as a List, or a condition's "is not" is rebuilt as "is" (19T Item
