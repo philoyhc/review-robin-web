@@ -523,7 +523,7 @@
               {% if col_data["profile"] %}
                 <span class="pill pill-count tag-chip is-selected"
                       data-col-toggle="profile" role="button" tabindex="0"
-                      aria-pressed="true">{{ field_label_header(session, "reviewee", "profile_link") }}</span>
+                      aria-pressed="true">Profile</span>
               {% endif %}
               {% for slot in [1, 2, 3] if col_data["tag-" ~ slot] %}
                 <span class="pill pill-count tag-chip is-selected"
@@ -675,13 +675,13 @@
             <th>Status</th>
             <th>Updated</th>
           {% else %}
-            <th class="rrw-sortable" data-sort-key="name">{{ field_label_header(session, "reviewee", "name") }}<button type="button" class="rrw-sort-btn"
+            <th class="rrw-sortable" data-sort-key="name">Name<button type="button" class="rrw-sort-btn"
                 aria-label="Sort by Name"
-                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "name") }}</th>
-            <th class="rrw-sortable" data-sort-key="email_or_identifier">{{ field_label_header(session, "reviewee", "email_or_identifier") }}<button type="button" class="rrw-sort-btn"
-                aria-label="Sort by Email / Identifier"
-                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button>{{ field_label_canonical_subtext(session, "reviewee", "email_or_identifier") }}</th>
-            {% if show_profile_link %}<th class="profile-col">{{ field_label_header(session, "reviewee", "profile_link") }}{{ field_label_canonical_subtext(session, "reviewee", "profile_link") }}</th>{% endif %}
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            <th class="rrw-sortable" data-sort-key="email_or_identifier">Email<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by Email"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+            {% if show_profile_link %}<th class="profile-col">Profile</th>{% endif %}
             {% if show_tag[1] %}
             <th class="tag-col tag-col-1 rrw-sortable" data-sort-key="tag_1">{{ field_label_header(session, "reviewee", "tag_1") }}<button type="button" class="rrw-sort-btn"
                 aria-label="Sort by Tag1"

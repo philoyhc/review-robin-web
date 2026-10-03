@@ -865,11 +865,12 @@ def session_monitoring_redirect(
 ) -> RedirectResponse:
     """Segment 11C Part 1 PR 3 retired the Monitoring template; the
     consolidated Manage Invitations page (PR 2) absorbed its
-    reviewer-centric surface. Existing bookmarks land here and 303
-    forward to ``/invitations``."""
+    reviewer-centric surface. Existing bookmarks land here and 308
+    forward to ``/invitations``, the house rule for a moved GET
+    (``spec/architecture.md``; findings F4, 2026-10-03)."""
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}/invitations",
-        status_code=status.HTTP_303_SEE_OTHER,
+        status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
 
 

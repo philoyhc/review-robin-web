@@ -89,6 +89,12 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   `field_key` over 255 characters passes phase 1 and fails phase 2 on
   Postgres as a `DataError`, a 500 (`data_shape.py:58`,
   `instrument_field.py:51`).
+- **B35 low spec** (found while fixing B21) — `lifecycle.md` §8.2.3
+  keeps Auto-archive (`not_draft`) and Auto-delete (`not_archived`)
+  skip rows, but those columns have no consumer (`lifecycle.md:622-623`)
+  and no `…_skipped` event exists for either; the codes are only the
+  manual routes' errors. Trim them as B21 did, or keep them as the
+  deferred design.
 - **Stale code comments and dead code.** `_assignments.py:410-420`
   (generate docstring) and the `missing_confirm` banner naming a form
   that does not exist (B2); `session_lifecycle.py:1-6, 54-55, 333, 659,
@@ -142,9 +148,9 @@ stricter until ruled on.
 - **A22**: `POST /instruments/add-group`, a fixture back door.
 - **B15**: `is_pre_generate`, kept "for external consumers", has only a
   test consumer and costs queries per render.
-- **B21**: Release-from/until preconditions and skip reasons in
+- ~~**B21**~~ — **Ruled 2026-10-03: retire. Done in #2801**: the rows go, and a note says the window is read-time. Release-from/until preconditions and skip reasons in
   `lifecycle.md:729-730` that nothing emits.
-- **B11, B13, A25, C16, F4**: Clear's visibility with a status filter; a
+- ~~**B11**~~, **B13, A25**, ~~**C16, F4**~~ — **Ruled 2026-10-03: fix as recommended.** B11 (Clear shows for a status filter), C16 (identity and Profile labels are literals on Reviewees too) and F4 (308) **done in #2801**. Clear's visibility with a status filter; a
   new member of an answered group gets no answer copy on Generate; the
   pre-open page also serving `archived`; identity labels through the
   resolver; `/monitoring`'s 303 against the 308 house rule.

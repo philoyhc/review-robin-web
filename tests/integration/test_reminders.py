@@ -126,7 +126,7 @@ def test_monitoring_url_redirects_to_invitations(
     client: TestClient, db: Session
 ) -> None:
     """Segment 11C Part 1 PR 3 retired the Monitoring page; existing
-    bookmarks 303 forward to ``/invitations``."""
+    bookmarks 308 forward to ``/invitations`` (findings F4)."""
     session = _ready_session(
         client, db, "mon-redir", reviewers=["rae@example.edu"]
     )
@@ -134,7 +134,7 @@ def test_monitoring_url_redirects_to_invitations(
         f"/operator/sessions/{session.id}/monitoring",
         follow_redirects=False,
     )
-    assert response.status_code == 303
+    assert response.status_code == 308
     assert response.headers["location"].endswith(
         f"/operator/sessions/{session.id}/invitations"
     )

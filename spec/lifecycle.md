@@ -726,8 +726,12 @@ without retrying. Per-event preconditions:
 | Auto-send reminders | `session.status == "ready"` (subsumes Prepared) **and** invitations exist **and** within accepting-responses window | `not_ready` / `no_invitations` / `outside_response_window` |
 | Auto-archive | `session.status == "draft"` | `not_draft` |
 | Auto-delete after archive | `session.status == "archived"` | `not_archived` |
-| Release-from (Participants platform) | session has been closed after at least one run (responses exist) | `no_responses_run` |
-| Release-until (Participants platform) | Release-from has already fired | `release_not_started` |
+
+Release-from and Release-until are not fired events. The release
+window is evaluated at read time by
+`session_lifecycle.is_response_release_window_open` and is open only
+on an `expired` session, so there is no fire-time guard and no skip
+reason (findings B21, 2026-10-03).
 
 The "End" anchor (`deadline`) is the trivial case: it's
 conditional on activation (`status == "ready"`) because there's
@@ -759,8 +763,8 @@ control, not as derived behaviour.
 
 **8.2.6 Multiple offsets per event.** Events that fire on a
 sequence (invites, reminders) carry a JSON list; events that
-fire once (archive, release-until, auto-delete) carry a single
-ISO 8601 string. Per-list-entry dedup uses the entry's index
+fire once (archive, auto-delete) carry a single ISO 8601 string.
+Per-list-entry dedup uses the entry's index
 (e.g. `reminder:{session_id}:{reviewer_id}:{offset_index}`) so a
 re-ordered list doesn't re-fire already-sent reminders.
 

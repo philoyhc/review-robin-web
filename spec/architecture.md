@@ -467,7 +467,7 @@ There is no standalone monitoring page: reviewer progress lives on the
 **Invitations** Operations page (reviewer-centric) and reviewee
 coverage on the **Responses** page (reviewee-centric); see
 `spec/operations_pages.md`. `GET /operator/sessions/{id}/monitoring`
-303s to `/operator/sessions/{id}/invitations` so an old bookmark still
+308s to `/operator/sessions/{id}/invitations` so an old bookmark still
 lands somewhere real.
 
 A reviewer is **incomplete** iff their session pill is anything other
