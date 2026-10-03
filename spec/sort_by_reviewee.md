@@ -36,68 +36,78 @@ The reviewer-side override at view time spans **both display and response fields
 
 ---
 
-## Operator UI: a "Sort" column on the Display Fields table
+## Operator UI: sort badges on the Band 2 preview headers
 
-### Single column, no new card
+(Author's ruling, 2026-10-02, findings A22.) The operator sets the default
+sort from the column headers of the per-instrument card's Band 2 preview
+("Preview review instrument", `spec/instruments.md`), the table that mirrors
+the reviewer surface. **No Sort column on the Display Fields table, no new
+card, no separate sort-builder dialog.** Each controllable header carries a
+badge button (`.sort-btn`) that reads `↕` while the column is not in the
+spec and `N↑` / `N↓` while it is the Nth key.
 
-A new **Sort** column joins the existing per-row controls (Friendly Label, Visible, Order ▲/▼) on the per-instrument card's Display Fields table. **No new card, no separate sort-builder dialog.** Existing Save/Edit locked state machine governs interaction — Sort cells are interactive when the card is unlocked, read-only when locked.
+Where the control lives:
 
-This is a deliberate constraint. Adding a separate sort-builder card would proliferate the per-instrument surface. The Sort column lives next to Order on the same row because the two ideas are siblings (column-ordering vs row-ordering of the same data).
+- **Display-field columns** — each carries its own badge.
+- **The Reviewee identity header** — its badge sets the Name field's key.
+  Email shares that cell and has no control of its own, so the operator
+  cannot sort by it. With Name not selected the header carries no control.
+- **A group-scoped instrument** — only the Group header carries a badge
+  (the `-1` key; see "Group-scoped instruments").
+- **Response columns** — an inert `↕` only. Response Fields are excluded
+  from the operator-side sort (see "Scope").
 
-### Click semantics: tri-state with priority
+### Click semantics: per-column cycle with priority
 
-Each row's Sort cell is a tri-state widget:
+A click acts on its own column and leaves the others where they are. It
+**appends**; it does not replace the cascade, which is the reviewer-side
+behavior (next section).
 
-| State | Render | Meaning |
-|---|---|---|
-| **Empty** | `☐` | This field is not part of the sort spec. |
-| **Priority N ascending** | `N↑` | This field is the Nth sort key, ascending. |
-| **Priority N descending** | `N↓` | This field is the Nth sort key, descending. |
-| **Disabled** | `☐` greyed | Three priorities are already assigned and this row isn't one of them. |
+| State | Click |
+|---|---|
+| Unsorted (`↕`) | → ascending, at the next free priority. At three keys it is refused with an alert. |
+| `N↑` | → `N↓`, same priority. |
+| `N↓` | → unsorted. Every key numbered after it moves up one, so the numbers stay contiguous. |
 
-Transitions on click:
-
-- Empty → `N↑`, where `N` is the next free priority slot (1, 2, or 3).
-- `N↑` → `N↓`.
-- `N↓` → Empty. **Other slots auto-compact** — if "2" is removed, the existing "3" becomes "2". This keeps priority numbers contiguous so the operator never has to think about "wait, where did 2 go?"
-- Empty (when 3 already assigned) → no-op (cell renders disabled).
-
-The widget is server-rendered for read state; the unlocked-state interactions are JS-driven. The operator's live state is `[(display_field_id, dir), ...]` in click order; on Save the form serializes the same list.
-
-### Visual mock
-
-```
-| Source              | Friendly Label | Visible | Order | Sort         |
-|---------------------|----------------|---------|-------|--------------|
-| reviewee.name       | Name           |   ✓     |  ▲▼  | 1↑           |
-| reviewee.email      | Email          |   ✓     |  ▲▼  | 3↓           |
-| reviewee.tag_1      | Cohort         |   ✓     |  ▲▼  | 2↑           |
-| reviewee.tag_2      | (—)            |         |  ▲▼  | ☐            |
-| reviewee.profile... | Photo          |   ✓     |  ▲▼  | ☐ (disabled) |
-```
-
-In this state: rows would render on the reviewer surface sorted by Name (ascending) → Cohort (ascending) → Email (descending).
+The live state is the list of `(display_field_id, dir)` in priority order.
+Each click rebuilds it into the hidden `sort_display_field_id` / `sort_dir`
+inputs that ride the card's `dfsave-{id}` form, and the Save request carries
+them as parallel arrays.
 
 ### Locked / unlocked
 
-Same as the rest of the Display Fields card:
-
-- **Locked (default):** Sort cells render their current state in plain text; not clickable.
-- **Unlocked (Edit clicked):** Sort cells become interactive per the click semantics above.
-- **Save:** persists the sort spec; emits audit event; lifecycle-invalidates `validated → draft`.
-- **Cancel:** discards uncommitted Sort changes alongside other discarded edits.
+- **Locked (default):** no buttons. A column in the spec shows its badge as
+  static text; every other sortable header shows the inert `↕`.
+- **Unlocked (Edit):** the badges are buttons. A click marks the card dirty.
+- **Save:** the card's consolidated Save persists the spec through
+  `set_sort_display_fields` — emits the audit event and lifecycle-invalidates
+  `validated → draft`. A rejected spec comes back as a save error on the card.
+- **Cancel:** reloads the card from persisted state, discarding the unsaved
+  sort with the other edits.
 
 ---
 
-## Reviewer UI: clickable column headers, view-time override
+## Reviewer UI: header buttons, view-time override
 
-The reviewer surface table renders by default with the operator's configured sort applied. The reviewer can override at view time by clicking column headers:
+The reviewer surface table renders with the operator's configured sort
+applied. Each sortable header carries a `↕` button (`rrw-sort-btn`) that runs
+the shared `rrwSortHeaderClick`. The reviewer's override is a cascade of at
+most three keys (author's ruling, 2026-10-02, findings A23):
 
-- **Click empty header** → ascending sort by that column.
-- **Click ascending header** → descending.
-- **Click descending header** → remove from sort spec (revert to operator default for that column's slot).
-- **Shift-click** → add as secondary (subsequent shift-clicks add tertiary).
-- **Reset link** → snap back to operator's full sort spec.
+- **Plain click** on a column that is not sorted, or that is one of several
+  sorted columns → the cascade becomes that column alone, ascending
+  (**replace**, not append).
+- **Plain click** on the sole sorted column → ascending, then descending,
+  then cleared.
+- **Shift-click** on an unsorted column → appended to the cascade,
+  ascending. Ignored once the cascade holds three keys.
+- **Shift-click** on a sorted column → ascending, then descending, then
+  dropped from the cascade; the other keys keep their order.
+- **No Reset control.** The way back to the operator default is to clear
+  the cascade, which expires the cookie (below).
+
+The operator default carries no badges on the reviewer surface; a badge
+appears only for a key in the reviewer's own cascade.
 
 The reviewer's override **spans both display and response columns**. Sort by display field is a read on existing reviewee data; sort by response field is a read on the reviewer's own response values (their `100int` rating, their `Yes_no` choice, etc.).
 
@@ -246,7 +256,7 @@ entirely on a no-op save (when `old_value == normalised`).
 
 Sort config edits **invalidate `validated → draft`** via `lifecycle.invalidate_if_validated()`, as every other instrument-mutating service does. Setting a sort doesn't change assignment data, but it changes the reviewer-facing form render, which the validation snapshot covers.
 
-The instrument card's edit lock applies — whenever the session is **not editable** (`ready`, `expired` or `archived`) Sort cells render locked alongside the rest of the Display Fields card, and the operator must leave that state to change them. Nothing in the Sort cells reads the lifecycle directly: Band 2 is `inert` unless the card is unlocked, and `editing_instrument_id` is forced to `None` whenever `can_edit` — `lifecycle.is_editable` — is false (`app/web/views/_instruments.py`), so the three non-editable states are covered by one predicate rather than by each cell's own guard. The way out is the state's own: Revert to draft from `ready` or `expired`, Unarchive from `archived` (`spec/lifecycle.md` §5).
+The instrument card's edit lock applies — whenever the session is **not editable** (`ready`, `expired` or `archived`) the sort badges render locked alongside the rest of the card, and the operator must leave that state to change them. Nothing in the badges reads the lifecycle directly: they are buttons only while the card is unlocked, and `editing_instrument_id` is forced to `None` whenever `can_edit` — `lifecycle.is_editable` — is false (`app/web/views/_instruments.py`), so the three non-editable states are covered by one predicate rather than by each badge's own guard. The way out is the state's own: Revert to draft from `ready` or `expired`, Unarchive from `archived` (`spec/lifecycle.md` §5).
 
 Reviewer-side override is view-only and never invalidates anything.
 
@@ -274,7 +284,7 @@ A group-scoped instrument (`Instrument.group_kind` set; `spec/instruments.md`) r
 
 - Sort by **Response Fields** on the operator side. Excluded by design (see "Scope" above).
 - **Multi-column sort beyond 3.** Diminishing returns; the catalog can re-open the cap if a real session needs it.
-- A separate **sort-builder card or dialog**. The design constraint is "no new card; one Sort column on the Display Fields table."
+- A separate **sort-builder card or dialog**. The design constraint is "no new card; the sort lives on the Band 2 preview's column headers."
 - Sort by **computed values** (e.g., per-reviewer "completion %"). Display fields and response fields only.
 - Sort **across instruments** (e.g., a session-wide sort applied to every instrument). Each instrument is independent by design.
 - Mass operator UI for "apply this sort to every instrument" (could be added later as a bulk action).
@@ -303,12 +313,13 @@ Key landmarks in the codebase:
   value before `json.loads` (the browser writes it
   percent-encoded; Starlette does not percent-decode cookie
   values).
-- **Operator template** (`instruments_index.html`): Sort
-  column on the per-instrument Display Fields table; each
-  cell hosts a JS-driven `<button class="sort-btn">` that
-  cycles state into hidden `sort_display_field_id` /
-  `sort_dir` form arrays. Save path lands in the bulk-save
-  route in `_instruments.py`.
+- **Operator template** (`instruments_index.html`): the
+  Band 2 preview's headers carry `<button class="sort-btn">`
+  badges (`sortBadgeHtml`); `toggleSort` cycles state into
+  hidden `sort_display_field_id` / `sort_dir` form arrays.
+  Save path: `instrument_consolidated_save` (and the no-JS
+  `instrument_bulk_save_fields`) in
+  `app/web/routes_operator/_instruments.py`.
 - **Shared sort primitive:** `base.html` ships the
   `rrwSortHeaderClick` + `_rrwApplySort` + cookie-I/O JS;
   every sortable table gains a tiny `↕` button next to
@@ -356,7 +367,7 @@ Key landmarks in the codebase:
   - `tests/integration/test_set_sort_display_fields.py` — the
     service writer and its `SortSpecError` codes.
   - `tests/integration/test_instruments_sort_column.py` — the
-    operator Sort column.
+    operator sort badges' save path.
   - `tests/integration/test_reviewer_surface_sort.py` +
     `tests/integration/test_reviewer_surface_sort_cookies.py` — the
     reviewer surface and its cookie.

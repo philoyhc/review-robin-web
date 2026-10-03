@@ -300,7 +300,8 @@ the row height across states (regardless of which buttons
 render, every cell is the same height) and absorb the narrower
 visual width the 25% column-width grid gives each button.
 
-The body div above the buttons carries a `min-height` so the card
+The body div above the buttons carries `min-height: 7.5em` (see
+"Stable card height" above) so the card
 height stays stable when the visible-button count drops from 4 to 0,
 and the buttons land at the same Y position in every state.
 

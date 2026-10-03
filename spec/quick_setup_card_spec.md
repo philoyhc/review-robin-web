@@ -22,7 +22,7 @@ Position in the Home body, top to bottom:
 
 The card is always rendered on Home, in every state. Visibility does not depend on whether setup data exists — the card is a stable, learnable location for bulk setup regardless of session population.
 
-The card is **available** only in `draft` with no persisted responses (`is_available` in `app/web/views/_quick_setup.py`). There the Lock / Unlock toggle renders, and the card still defaults to locked. In every other state — `draft` with responses, `validated`, `ready`, `expired` — the body is greyed (`.quick-setup-body.locked`) and the **toggle is hidden** (`show_lock_toggle = is_available`), so the operator cannot unlock it; the lifecycle table below gives each state. Per `spec/session_home.md` ("Disabled treatment on Home is plain greying-out, not yellow lock cards"), Home does not stack a yellow lock card on top of the body greying. Current-state indicators (counts, rule label) render in every state.
+The card is **available** only in `draft` with no persisted responses (`is_available` in `app/web/views/_quick_setup.py`). There the Lock / Unlock toggle renders, and the card still defaults to locked. In every other state — `draft` with responses, `validated`, `ready`, `expired` — the body is greyed (`.quick-setup-body.locked`) and the **toggle is hidden** (`show_lock_toggle = is_available`), so the operator cannot unlock it; the lifecycle table below gives each state. Per `spec/session_home.md` ("Disabled treatment on Home is plain greying-out, not yellow lock cards"), Home does not stack a yellow lock card on top of the body greying. The card shows no current-state indicators (see **Slots**).
 
 ### Slots
 
@@ -30,22 +30,20 @@ The card contains four always-present live slots (Reviewers, Reviewees, Relation
 
 **Layout.** A two-column grid hosts the slots. Reviewers + Reviewees stack in the left column; Relationships + Settings (+ Observers when visible) stack in the right column. There is no horizontal divider between the slot groups.
 
+**No count indicators.** Each slot's heading is its label and the inline action "Upload a CSV"; it does not show how many rows the session holds. The per-slot counts were removed deliberately in `40bc2549`, and the removal stands (author's ruling, 2026-10-02, findings C2): the per-entity Setup pages carry the counts.
+
 **Slot 1 — Reviewers** (left column, top).
 - File upload accepting CSV.
-- Passive indicator showing current count: "Reviewers (8 currently)" or "Reviewers (none yet)".
 
 **Slot 2 — Reviewees** (left column, bottom).
 - Same shape as Reviewers.
-- Passive indicator: "Reviewees (13 currently)" or "Reviewees (none yet)".
 
 **Slot 3 — Relationships** (right column, top).
 - File upload accepting a Relationships CSV (`ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`, `Status`).
-- Passive indicator: "Relationships (87 currently)" or "Relationships (none yet)".
 - The CSV's `tag_N` slots flow through to the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names; `status` defaults to `active` when omitted.
 
 **Slot 4 — Settings** (right column, bottom).
 - File upload accepting a session-settings CSV (the inverse shape of `serialize_session_config`'s wide CSV output — see `app/services/session_config_io/`).
-- Passive indicator: a "Settings configured" pill (always populated — a session always has settings).
 - Applies through `apply_session_config(...)`. The two-phase parse + apply contract validates every row first, then wipes and replaces; round-trip stable on the export's own output.
 
 There is **no** per-slot Submit button. The card carries a single bottom Submit (see "Submission semantics" below) that runs every slot whose input is present.
@@ -84,13 +82,12 @@ The single card-level checkbox covers the cascade: its copy (quoted under **Repl
 
 ### Result reporting
 
-After a slot's submission completes, the slot reports the outcome inline:
+The card reports failures only; success messages and per-row errors were removed with the counts in `40bc2549`, and the removal stands (findings C2).
 
-- **Success:** "8 reviewers loaded." / "87 relationships loaded." / "Settings applied." The passive count indicator updates to reflect the new state.
-- **Parse error:** "Could not parse CSV: row 5, column 'email' is empty." Errors are scoped to the offending slot and as specific as the parser can make them. The slot remains populated with the operator's selection so they can see what they uploaded; existing data is not replaced.
-- **Validation error:** "Reviewer ID 'r-99' on row 12 is not unique." Same scoping; same non-destructive behavior.
+- **Success:** no message. Submit redirects back to Home at the last slot that ran (`#quick-setup-{kind}`).
+- **Failure:** a `banner-error` above the slot grid, tied to the failing slot by its `quick-setup-{kind}-error-banner` id, carrying one short sentence from `_quick_setup_error_message` in `app/web/views/_quick_setup.py`. A file that fails to parse or validate reads "Could not import reviewers. Open the Reviewers Setup page for per-row error details." — the per-entity Setup page is where per-row errors are shown. A missing confirmation tick and a lifecycle refusal each have their own sentence.
 
-Errors in one slot do not affect other slots' submissions or existing data.
+A failing slot replaces nothing of its own dataset. Slots run in the order given under **Per-slot dispatch**, so a slot that succeeded before the failure stays applied, and the slots after it do not run.
 
 ### Validation scope
 
@@ -103,7 +100,7 @@ The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Relat
 ### Out of scope
 
 - Per-record editing within the card (no inline tables, no row-level controls).
-- CSV preview before submission (current count + filename is sufficient).
+- CSV preview before submission (the browser's file input shows the filename).
 - Wizard-style stepping. Slots are independent; no enforced order.
 - Cross-entity validation (handled by Validate).
 - Auto-regeneration of assignments after a reviewer/reviewee replacement.
@@ -117,7 +114,7 @@ The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Relat
 | `draft` | None | **Available.** Fully interactive. Lock / Unlock toggle visible; unlocking reveals the slot controls. |
 | `draft` | Any | **Unavailable.** Body greyed via `.quick-setup-body.locked`; Lock / Unlock toggle hidden entirely. Operator routes to per-entity Setup pages (which have the response-loss-acknowledgment flow) for any further changes. |
 | `validated` | (any) | **Unavailable.** Same body-greying + no-toggle treatment as `draft`-with-responses. The validated state is meant to be a final-check state; bulk re-uploads route through per-entity Setup pages instead. |
-| `ready` | (any) | **Unavailable.** Same treatment. Counts / rule still display in the greyed body for context. |
+| `ready` | (any) | **Unavailable.** Same treatment. |
 | `expired` | (any) | Same as `ready`. |
 
 The description copy explains the rule from the operator's vantage point. It has two variants: the default ("Available only when session is in draft mode and does not have any responses.") and a responses-specific one shown when the session holds responses — typically a session activated then reverted to draft, which keeps its responses and so lands `draft`-but-locked. The responses variant names the reason ("Quick Setup is locked because this session already holds reviewer responses from a prior activation.") and points the operator at the per-entity Setup pages. Both gates otherwise show up as the same visual signal (greyed body with disabled controls, no toggle). Defense-in-depth route gates (`_require_editable` + `_require_response_loss_ack`) stay in place but never fire from this surface because the submit forms aren't reachable when the body's locked.

@@ -518,8 +518,9 @@ Display fields draw from **nine sources**:
 
 For each display field on each instrument, the operator chooses
 which source feeds it, an optional friendly-label override, an
-include/exclude flag, an order, and (for the operator-side
-default) a tri-state sort-priority slot.
+include/exclude flag and an order. The operator-side default
+sort is set from badges on the Band 2 preview's column headers
+(`spec/sort_by_reviewee.md`).
 
 The reviewee's name and email are always present (cannot be
 turned off — they are the two locked rows); the other **seven**
@@ -1724,10 +1725,11 @@ whatever the parent's answer (unless a Show branch above them is
 closed) and required only while the condition holds.
 
 **Sortability** — every column header on the review surface is
-clickable to sort the rows by that column; Shift-click adds a
-secondary priority. A "Reset" link snaps back to the
-operator-configured default sort. The reviewer's choices
-persist in a per-(browser, session, instrument) cookie.
+clickable to sort the rows by that column alone; Shift-click adds
+a secondary priority, up to three. There is no Reset link:
+clearing the sort returns to the operator-configured default
+(`spec/sort_by_reviewee.md`). The reviewer's choices persist in a
+per-(browser, session, instrument) cookie.
 
 **Self-review** — when the reviewer's own email matches a
 reviewee row in the session (case-insensitive), the reviewer
@@ -2233,13 +2235,6 @@ block the submit and are enumerated row by row in the
 "Required fields missing." card. Invalid numeric values block the
 submit with a per-cell error and preserve the user's typed
 value.
-
-### 13.4 Export validation
-
-CSV exports are validated at row-write time — every row's
-required columns are present, datetimes are normalised to
-the session zone (or UTC for audit), and the row count
-matches the expected entity count.
 
 ---
 

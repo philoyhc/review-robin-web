@@ -574,3 +574,26 @@ and stamp them per item 8.
 
 **Done when** a reviewer who submits on a session with the box ticked
 receives the confirmation, and one with it unticked receives nothing.
+
+## 10. Settle which Graph permission the Graph backend uses
+
+**Status:** open, **awaiting Azure** (author's ruling, 2026-10-02, on
+`guide/findings_2026-10-01_corpus.md` F23).
+
+**What is wrong.** The two descriptions of the unbuilt Graph backend
+disagree. The `GraphEmailTransport` stub's docstring in
+`app/services/email_send.py` describes a delegated send
+(`/me/sendMail` with each operator's token), while
+`spec/email_infra_options.md` puts delegated permission out of scope
+and makes the stub Option B: an application permission on a shared
+mailbox (`/users/{mailbox}/sendMail`). The stub sends nothing, so no
+behavior depends on either.
+
+**Why it waits here.** Which permission is possible is the NUS tenant's
+answer, not the repository's (`spec/email_infra_options.md`, Option B).
+
+**Do, with that answer.** Implement the stub to the permission the
+tenant grants, and make its docstring and the spec say the same thing.
+
+**Done when** the docstring and `spec/email_infra_options.md` name the
+same permission, and that permission is the one the tenant granted.

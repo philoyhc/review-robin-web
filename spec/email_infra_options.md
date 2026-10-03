@@ -53,7 +53,9 @@ Not in scope:
   workflow. (Distinct from the typed-stub `GraphEmailTransport`
   in `app/services/email_send.py` — that placeholder will become
   Option B's application-permission implementation, not the
-  delegated one.)
+  delegated one. The stub's docstring still describes a delegated
+  send; that waits on the tenant's answer,
+  `guide/post_azure_todo_checklist.md` item 10, findings F23.)
 - Logic Apps as an indirection layer. Adds operational complexity
   without enough payoff for this app's scope.
 

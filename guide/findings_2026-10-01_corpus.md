@@ -75,8 +75,12 @@ the spec should say so.
 - ~~**A19**~~ — **Ruled 2026-10-02: retire `observer_tag`.** Nothing read
   it; an observer's cohort rule decides who they see. Instrument scoping
   inside the cohort rule is deferred (`guide/deferred_consolidated.md`).
-- **F11** — The configurable welcome message, institution name and magic
-  links (`spec/audience_and_identity_model.md`).
+- ~~**F11**~~ — **Ruled 2026-10-02: defer them. Done in #2764.** Of the
+  configurable reviewer content in `spec/audience_and_identity_model.md`,
+  the institution name and magic links are unbuilt; they are marked
+  deferred there and carried in `guide/deferred_consolidated.md`. The
+  welcome message and contact line are built, as the session's
+  `description` and `help_contact`, and the spec now says so.
 - ~~**F15**~~ — **Ruled 2026-10-02: strike. Done in #2755.** The
   Draft/Receiving/Closed instrument statuses and the reviewer
   notification on edit are gone from `spec/domain_assumptions.md`.
@@ -84,24 +88,27 @@ the spec should say so.
   awaiting Azure. Done in #2753.** The Responses-received switch had no
   consumer at submit time; a successful submit now queues the
   confirmation (`guide/post_azure_todo_checklist.md` item 9).
-- **G13** — Export validation at row-write time
-  (`spec/rrw_functional_spec.md` §13.4).
+- ~~**G13**~~ — **Ruled 2026-10-02: strike. Done in #2764.** Export
+  validation at row-write time is gone from `spec/rrw_functional_spec.md`
+  (it was §13.4).
 - **D16, D18** — **Ruled 2026-10-01: Rehydrate is incomplete and not
   exposed to operators** (`rehydrate_enabled` ships false), carried in
   `guide/deferred_consolidated.md` with D17's rest. The Rehydrate analyzer
   checks, and a streaming, bounded responses parser.
-- **C2** — Quick Setup's count indicators, success messages and per-row
-  errors were removed deliberately in `40bc2549`. Confirm the removal
-  stands.
+- ~~**C2**~~ — **Ruled 2026-10-02: the removal stands. Done in #2764.**
+  Quick Setup's count indicators, success messages and per-row errors
+  were removed deliberately in `40bc2549`; `spec/quick_setup_card_spec.md`
+  no longer describes them.
 - ~~**B20**~~ — **Ruled 2026-10-02: work in progress awaiting Azure.
   Recorded in #2755** as part of `guide/post_azure_todo_checklist.md`
   item 7. Retry and `failed_persistent` exist for scheduled activation
   only. **Ruled again 2026-10-02: catch the failure now. Done in #2757:**
   a trigger that raises is logged and recorded as
   `session.scheduled_event_failed`, and the page still loads.
-- **B18** — `spec/lifecycle.md` §8.2.2 names one call site, `resolve_offset`,
-  which has no callers. Should the code be consolidated onto it, or the
-  contract restated?
+- ~~**B18**~~ — **Ruled 2026-10-02: restate the contract. Done in #2764.**
+  `spec/lifecycle.md` §8.2.2 named one call site, `resolve_offset`, which
+  has no callers; it now says each reader of an anchor + offset applies
+  the anchor-null rule itself, and names them.
 
 **Shipped behavior differs from the spec. Which is the contract?**
 
@@ -111,9 +118,11 @@ the spec should say so.
   than shared, since Band 1 edits update the row in place). Sort entries
   and column widths are re-pointed at its fields. Not copied: the
   page-break flag (it is about position) and the visibility policies.
-- **A22, A23** — Sorting. The spec has a Sort column on the display-field
-  table, a per-column click cycle and a Reset link. What ships is header
-  badges, a replace-cascade on click, and no Reset.
+- ~~**A22, A23**~~ — **Ruled 2026-10-02: fix the spec. Done in #2764.**
+  Sorting. The spec had a Sort column on the display-field table, a
+  per-column click cycle and a Reset link. What ships is header badges
+  on the Band 2 preview, a replace-cascade on a reviewer's plain click,
+  and no Reset; `spec/sort_by_reviewee.md` now says so.
 - ~~**A24**~~ — **Ruled 2026-10-01: follow the spec. Done in #2724.** A
   stale sort id was not compacted on save: it failed the save with
   `cross_instrument` until a sort click rebuilt the inputs. The save now
@@ -174,7 +183,9 @@ the spec should say so.
   and one-shot. The link is not a credential (sign-in plus a matching
   email), so the spec now says what is true. `docs/security_posture.md`
   made no such claim.
-- **F23** — The Graph stub docstring says delegated `/me/sendMail`, and
+- ~~**F23**~~ — **Ruled 2026-10-02: awaiting Azure. Recorded in #2764**
+  as `guide/post_azure_todo_checklist.md` item 10. The Graph stub
+  docstring says delegated `/me/sendMail`, and
   `spec/email_infra_options.md` says Option B is an app permission.
 - ~~**C1**~~ — **Ruled 2026-10-02: follow the code. Done in #2739.**
   Quick Setup's Lock/Unlock prose said the toggle renders in
@@ -185,21 +196,27 @@ the spec should say so.
 - ~~**E5**~~ — **Ruled 2026-10-02: follow the spec. Done in #2762.** The
   Setup row's active underline was `--marker-neutral` (grey); it is now
   `--nav-marker-setup`, the blue Setup identity three specs name.
-- **E4, E13** — The tab hover foreground is `--text-body`, not
-  `--nav-tab-active-fg`, which no page shows. The status strip's surface
-  is `--surface-page`, not `--surface-card`.
-- **E7, E8** — The Workflow card body has a 7.5em minimum (in
-  `workflow_card.md`), and `ui_elements.md` and `session_home.md` say
-  there is none. The grid gap is 16px, against a 20px stack; measure that
-  in a browser.
-- **E14** — Session Home has no H1, and `visual_style_rrw.md` says the
-  session name is its H1. Add one, or drop the clause?
-- **E25–E29** — Where `visual_style_general.md` (said to win on
-  treatment) contradicts what ships: the 2px focus ring, link underlines,
-  row borders and heading gap, example hexes below the AA floor,
-  confirmations, loading indicators, font and line-height. The likely
-  ruling is app-override notes in `visual_style_rrw.md`, as the status
-  strip already has.
+- ~~**E4, E13**~~ — **Ruled 2026-10-02: fix the spec. Done in #2764.** The
+  tab hover foreground is `--text-body`, not `--nav-tab-active-fg`, which
+  no page shows. The status strip's surface is `--surface-page`, not
+  `--surface-card`. `spec/ui_elements.md` and `spec/visual_style_rrw.md`
+  now say so.
+- ~~**E7, E8**~~ — **Ruled 2026-10-02: follow what ships; the card looks
+  right in a browser. Done in #2764.** The Workflow card body's 7.5em
+  minimum is now in `ui_elements.md`, `session_home.md` and
+  `workflow_card.md` alike. Stacked cards and the grids' own gaps are
+  20px; a grid wrapper sits 16px above what follows it, a stated
+  exception in `spec/ui_elements.md` §4.
+- ~~**E14**~~ — **Ruled 2026-10-02: drop the clause. Done in #2764.**
+  `visual_style_rrw.md` said the session name is Session Home's H1; Home
+  has none, and the spec (with `operator_ui_concept.md`) now says so.
+- ~~**E25–E29**~~ — **Ruled 2026-10-02: app-override notes. Done in
+  #2764.** Where `visual_style_general.md` contradicts what ships (the
+  focus ring, link underlines, row borders and heading gap, muted text
+  tiers, confirmations, loading indicators, font and line height),
+  `visual_style_rrw.md` "Other overrides of `visual_style_general.md`"
+  says the app wins, row by row. `visual_style_general.md` gains a
+  contrast-floor paragraph (E28).
 - ~~**E2**~~ — **Ruled 2026-10-02: retire them. Done in #2763.**
   `.btn-row`, `.setup-grid`, `.card-half` and `.session-status-row` had
   CSS and no markup; their rules, their `spec/ui_elements.md` §10 rows
@@ -272,6 +289,23 @@ stay in §3.
   drops it and the next visit queues those reminders again. Found in
   #2757's read; it predates that PR, which made the page load instead of
   failing.
+- **A29** — `spec/sort_by_reviewee.md` "Scope" lists email among the
+  fields the operator's default sort can use, and the service accepts it,
+  but no operator control sets it: the Reviewee identity header's badge
+  sorts by Name, and Email has none. Either the scope or the header
+  changes. Found in #2764.
+- **A30** — The `sort_cell` macro in
+  `app/web/templates/operator/instruments_index.html` is the retired Sort
+  column's cell; nothing calls it. Delete it. Found in #2764.
+- **E37** — Every page sets `ui-v2`, so the v1 `.nav-tab` hover and
+  active rules in `base.html` (`--nav-tab-active-fg`) are shadowed and
+  shown nowhere, yet `tests/unit/test_session_nav_hover.py`
+  (`test_tab_hover_takes_the_selected_background`) pins the v1 hover
+  rule's color. Found in #2764.
+- **E38** — The `base.html` comment on `body.ui-v2 .page-grid,
+  .bottom-grid { margin-bottom: var(--space-4) }` says it makes the gap
+  below a grid match the gap between two stacked cards; stacked cards
+  sit 20px apart and the grid 16px. Found in #2764.
 - **D17, the rest (deferred with Rehydrate, §1 D16).** #2719 catches `RehydrateError`, so a settings
   failure reaches the operator. Any other failure inside
   `rehydrate_session` (an `IntegrityError` from a roster save, a
@@ -323,8 +357,10 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~A20 med · `:117` · the reviewee cell "Default `after_release`" contradicts §4.1. Read `test_doc_conventions.py` before editing the tokens.~~ Done in #2732.
   - ~~A21 low · `:217` · `resolve_mode` applies no scope; the views do.~~ Done in #2732.
 - `sort_by_reviewee.md`
-  - A22 high · `:39-90` · operator sort UI · author (also `operator_ui_concept.md:94`).
-  - A23 med-high · `:94-100` · click semantics and Reset · author.
+  - ~~A22 high · `:39-90` · operator sort UI · author (also `operator_ui_concept.md:94`).~~ Done in #2764.
+  - ~~A23 med-high · `:94-100` · click semantics and Reset · author.~~ Done in #2764.
+  - A29 low · Scope lists email; no operator control sets it.
+  - A30 low · the `sort_cell` macro is dead (code).
   - ~~A24 med · `:162-169` · no auto-compact · author.~~ Ruled: follow the spec; done in #2724.
   - ~~A25 med · write/deepen · the group `-1` key and group-surface sorting are unspecced.~~ Done in #2732.
   - ~~A26 low · `:268-274` · the lobby and Archived pages adopt it too, with other cookie names.~~ Done in #2732.
@@ -350,7 +386,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~B15 med · `:76-78` · `mark_validated` callers; `?validated=1` · spec + author.~~ Done in #2760.
   - ~~B16 med · `:260-269` · response-loss ack callers · author.~~ Ruled: the tick is the ack.
   - ~~B17 med · `:271-291` · `_require_validated_or_ready` lives in `_operations.py`; reminders gate.~~ Done in #2745.
-  - B18 med · `:663-668` · `resolve_offset` has no callers · author.
+  - ~~B18 med · `:663-668` · `resolve_offset` has no callers · author.~~ Done in #2764.
   - B19 med · `:759-770` · sweep trigger · ruled: awaits Azure (`post_azure_todo_checklist.md` item 7).
   - ~~B20 low · `:786-799` · retry is activation-only.~~ Recorded in #2755; errors caught in #2757.
   - B21 med · `:306-313,552` · ~~close reason is `manual`, not `operator` (spec)~~ already right after #2722; the ungated routes are *author*.
@@ -375,7 +411,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~C17 low · `:28,182` · Edit page retired; helper name.~~ Done in #2731.
 - `quick_setup_card_spec.md`
   - ~~C1 high · `:23-25` · lock-toggle prose · author (likely spec).~~ Ruled: follow the code. Done in #2739.
-  - C2 med · `:34-49,87-91` · counts and messages removed · author.
+  - ~~C2 med · `:34-49,87-91` · counts and messages removed · author.~~ Done in #2764.
   - ~~C3 med · `:77` · settings replace cascades · author.~~ Ruled: gated on the server; the spec names the cascade.
   - ~~C4 low · `:67,79,131` · checkbox below the grid; copy (+ code banner, §2).~~ Done in #2731.
   - ~~C5 low · `:25,121` · `closed` → `expired`.~~ Done in #2731.
@@ -398,34 +434,34 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~E1 med · retire · `:439` · `.btn-cta` has no rule (also `operator_button_audit.md:47`; drop it from `test_cascade_ties.py` CANONICAL); `.btn.danger` row.~~ Done in #2737.
   - ~~E2 low-med · `:690` · dead §10 primitives · author.~~ Done in #2763.
   - ~~E3 med · `:140` · status-strip slots: no Assignments pill; point at `visual_style_rrw.md`.~~ Done in #2737.
-  - E4 med · `:125` · hover foreground · author.
+  - ~~E4 med · `:125` · hover foreground · author.~~ Done in #2764.
   - ~~E5 med · `:111` · Setup underline token · author.~~ Done in #2762.
   - E6 low · `:457` · anchor opacity 0.55 · code (§2).
-  - E7 low-med · `:275` · Workflow body min-height · author.
-  - E8 low-med · §4 · grid gap 16px · author (measure first).
+  - ~~E7 low-med · `:275` · Workflow body min-height · author.~~ Done in #2764.
+  - ~~E8 low-med · §4 · grid gap 16px · author (measure first).~~ Done in #2764.
   - ~~E9 low · tallies and provenance; keep the 6px rail and the specificity tuples, which tests read.~~ Done in #2737.
 - `color_tokens.md`
   - ~~E10 low · `:308` · 4.14 / 3.55, not 3.96 / 3.41 (also in `status_history.md`, which is dated).~~ Done in #2737.
   - ~~E11 low · `:182` · `--slate-deep` is shared with the dark help-card border.~~ Done in #2737.
 - `visual_style_rrw.md`
   - ~~E12 med · `:44` · five live states.~~ Done in #2737.
-  - E13 low-med · `:56` · status-strip surface · author.
-  - E14 med · `:161-233` · ~~Edit Session is retired (spec)~~ done in #2737; Home H1 · author (also `operator_ui_concept.md:195`).
+  - ~~E13 low-med · `:56` · status-strip surface · author.~~ Done in #2764.
+  - ~~E14 med · `:161-233` · Edit Session is retired (spec), done in #2737; Home H1 · author (also `operator_ui_concept.md:195`).~~ Done in #2764.
   - ~~E15 med · `:339` · lobby columns; point at `sessions_overview.md` (also `operator_ui_concept.md:230`).~~ Done in #2737.
   - ~~E16 low-med · `:466` · there is no thank-you page.~~ Done in #2737.
   - ~~E17 med · `:686` · the description renders below the H2.~~ Done in #2737.
   - ~~E18 low · `:155,174,296,332` · label weight, the Email pill copy, lobby lifecycle pills, breadcrumbs.~~ Done in #2737.
   - ~~E19 low · retire · `:794-838` · the "Doc impact" section is plan residue.~~ Done in #2737.
 - `visual_style_general.md`
-  - E25–E29 med · treatments contradicted by the app · author.
-  - E28 also write/deepen: a contrast-floor paragraph.
+  - ~~E25–E29 med · treatments contradicted by the app · author.~~ Done in #2764.
+  - ~~E28 also write/deepen: a contrast-floor paragraph.~~ Done in #2764.
 - `operator_ui_concept.md`
   - ~~E20 low-med · `:208` · the app identity is a `<span>` (contradicts `:399`).~~ Done in #2737.
   - ~~E21 med · `:71,82,175` · Relationships is feature-gated too.~~ Done in #2737.
   - ~~E22 med-low · `:240` · code uniqueness (= G16).~~ Done in #2746.
   - ~~E23 med · consolidate · `:352` · reduce the Validate page description to a pointer at `validate_page.md`.~~ Done in #2737.
   - ~~E24 low · `:459` · nine operator Guide sections.~~ Done in #2737.
-  - Also A22 `:94`.
+  - ~~Also A22 `:94`.~~ Done in #2764.
 - `operator_button_audit.md`
   - ~~E30 med-low · rows #11–13 and #123–125 each appear twice; give the later rows the next free ids.~~ Done in #2737.
   - E31 med · write/deepen · ~~unaudited: the lobby expander, Extract data, the Instruments toggles, the chrome Guide/Admin links~~ done in #2737 (Rehydrate stays unaudited while it is gated off) · ~~the R/≡ toggle role is *author*~~ ruled Toggle, done in #2739.
@@ -481,7 +517,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~F9 med · `:119` · `/about` creates a user row; §3 omits `/guide`, `/templates/*.zip` and the `/me/sessions/{id}` 303.~~ Done in #2734.
   - ~~F10 low · `:276` · test counts.~~ Done in #2734.
 - `audience_and_identity_model.md`
-  - F11 med · unbuilt contract · author.
+  - ~~F11 med · unbuilt contract · author.~~ Ruled: deferred; done in #2764.
 - `role_landing_and_visibility.md`
   - ~~F12 low · `:112` · a reviewer's `ready` can still be closed.~~ Done in #2732.
 - `role_navigator.md`
@@ -498,7 +534,7 @@ One line each: id · severity · where · finding · decides. A line with no
 - `email_infra_options.md`
   - ~~F21 low · the audit scaffolding has landed.~~ Done in #2734.
   - ~~F22 low · Reply-To is not built.~~ Done in #2734.
-  - F23 low · Graph docstring · author.
+  - ~~F23 low · Graph docstring · author.~~ Ruled: awaiting Azure; recorded in #2764.
   - ~~F24 low · `sent_at`; retire the stale "Doc impact" section.~~ Done in #2734.
 - `blob_storage.md`
   - ~~F25 low · `:33` misquote; `:171` time-bound claim.~~ Done in #2734.
@@ -518,7 +554,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~G10 med-high · `:418,1210,1568` · visibility-when-closed · author.~~ Ruled: policy decides; done in #2723.
   - ~~G11 low-med · peer grant (= A18).~~ Ruled: Raw or off (A18).
   - ~~G12 med · `:2088-2102` · readiness checklist overstated; consolidate with `validate_page.md`.~~ Done in #2736.
-  - G13 low-med · `:2123` · export validation · author.
+  - ~~G13 low-med · `:2123` · export validation · author.~~ Ruled: struck; done in #2764.
   - ~~G14 low-med · `:1835-1851` · invites fire from `validated`; the captions are on the Workflow card.~~ Done in #2736.
   - ~~G15 med · `:1012` · clone never copies responses or assignments.~~ Done in #2736.
   - ~~G16 low-med · `:349,853` · code uniqueness (also `operator_ui_concept.md:240`).~~ Done in #2746.

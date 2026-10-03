@@ -695,12 +695,23 @@ lock-out), and any other reader treats the resolved time as
   no scheduled close of the response-viewing window (you can't
   have an end without a start; treat the window as inert).
 
-This is enforced at **one** call site: a `resolve_offset(session,
-anchor_field, offset_field) -> datetime | None` helper that every
-scheduler path uses. Anchor-null short-circuits to `None`;
-unset offset short-circuits to `None`; otherwise the helper adds
-the parsed ISO 8601 duration to the anchor and returns the
-resulting datetime.
+There is no single call site: each reader of an offset applies
+the rule itself. The two list-valued schedules resolve every entry
+to "no fire time" when the anchor is null —
+`_resolve_invite_fires` in
+`app/services/scheduled_events/_invites.py` against
+`scheduled_activate_at`, and `_resolve_reminder_fires` in
+`app/services/scheduled_events/_reminders.py` against `deadline` —
+and each trigger also returns early on a null anchor. The schedule
+captions in `app/web/views/_workflow_card.py` show such offsets as
+inactive. The release window is open only once
+`responses_release_at` is set and reached
+(`session_lifecycle.is_response_release_window_open`), so a
+`responses_release_until` with no start is inert. A new reader of an
+anchor + offset pair owes the same rule (author's ruling,
+2026-10-02, findings B18). The single-valued helper
+`resolve_offset` in `app/services/scheduled_events/_duration.py`
+implements it but has no callers.
 
 **8.2.3 Event-precondition guard.** Beyond the anchor, each
 scheduled event has its own operational preconditions — system

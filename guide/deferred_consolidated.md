@@ -1782,3 +1782,17 @@ a deployment, so they don't belong in that checklist.
 
 **Lift trigger:** a pilot operator on Safari or using a screen reader, or
 an accessibility review before the pilot opens.
+
+### Institution name and magic links (findings F11, author's ruling 2026-10-02)
+
+`spec/audience_and_identity_model.md` names an institution name beside
+the session name in the reviewer page header, and magic links as the
+sign-in fallback for reviewers without institutional SSO. Neither is
+built: no column or setting carries an institution name, and reviewers
+sign in through Easy Auth only. (The spec's welcome message and contact
+line are built, as the session's `description` and `help_contact`.)
+The spec marks both as deferred and points here.
+
+**Lift trigger:** a pilot session with external reviewers who have no
+institutional account (magic links), or an operator asking for their
+institution's name on the reviewer page.

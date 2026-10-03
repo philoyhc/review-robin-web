@@ -57,11 +57,29 @@ Lifecycle state always appears first in the status strip, leftmost, before per-e
 spec's Patterns entry gives the generic strip a `bg-muted` fill with
 `border-subtle` top *and* bottom borders, sitting between the chrome and
 the page body. Review Robin's `.status-row` sits **inside** the session
-nav card and takes `--surface-card` with a **top border only**: the card
+nav card and takes `--surface-page` — the card's own fill — with a
+**top border only**: the card
 already supplies the surrounding frame, so a second fill and a second
 bottom border would read as a box inside a box. Placement and fill move
 together — the general spec's values apply to a strip that stands alone,
-which this one does not.
+which this one does not (author's ruling, 2026-10-02, findings E13).
+
+---
+
+## Other overrides of `visual_style_general.md`
+
+Where the shipped treatment differs from `spec/visual_style_general.md`, **the app wins**: the rows below are the contract for Review Robin, and the general spec stays the portable default (author's ruling, 2026-10-02, findings E25–E29). The status strip's override is under "Lifecycle state colors".
+
+| Topic | General spec | Review Robin |
+|---|---|---|
+| **Focus** | Border color change, "no thick outline ring". | Text inputs, textareas and selects take the border change plus a 1px `--focus-ring-halo` shadow on `:focus`, **and** a 2px solid `--focus-ring` outline (1px offset) on `:focus-visible` — `base.html`'s `body.ui-v2 input[type="text"]:focus-visible` rule set. Sort buttons (`.rrw-sort-btn:focus-visible`) take a 2px `--focus-ring-strong` outline. |
+| **Links** | No underline at rest, underline on hover, "within prose: same treatment". | Chrome and navigation links follow the general rule (`.breadcrumb a`, `.back-link`, `.chrome-user .chrome-link`, `.chrome-app-identity`). **Links in page content keep the browser's resting underline**: the base `a` rule sets only `--text-link`. |
+| **Table row borders** | `border-subtle` 1px bottom border per row. | `--border-default` 1px bottom border on every `th` / `td` (`body.ui-v2 th, td`); padding, header fill and row hover are as the general spec. |
+| **Card heading gap** | H2 has 16px below it. | `--space-3` (12px) below an H2, in a card or out of one (`body.ui-v2 h2`, `body.ui-v2 .card h2`; `spec/ui_elements.md` §3). |
+| **Muted text tiers** | `text-secondary` and `text-muted`, two tiers. | One muted tier, `--text-subtle`, held to the AA floor; there is no lighter text tier (`spec/color_tokens.md` "The AA floor on text"). |
+| **Confirmations** | Inline, no modal: the trigger becomes a row with a destructive Confirm and a Cancel. | Destructive submits are **disabled-until-checked**: the Destructive button is present but disabled from the start and a paired "Yes, delete …" checkbox enables it (`spec/ui_elements.md` §4, "Delete-confirm standard"). Some confirmations use the native `window.confirm()` dialog: the Activate form's auto-send cancellation (`app/web/templates/operator/partials/next_action_card.html`), an owner removing themselves (`app/web/templates/operator/session_detail.html`), a reviewer recalling a submission (`app/web/templates/reviewer/summary.html`), and "Discard unsaved changes?". |
+| **Loading** | No indicator under 1 second; beyond that a disabled copy of the trigger with an inline spinner. | A 3px indeterminate bar fixed to the top of the viewport arms ~200 ms after a same-origin link click or form submit; the clicked control takes `aria-busy="true"` and a reduced opacity and is **never disabled**; there is no spinner (`spec/ui_elements.md` §1, "Navigation busy indicator"). |
+| **Font and line height** | `system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`; body line height 1.5. | `-apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`; body line height 1.35 (`body` in `base.html`). Headings are 1.3, as the general spec. |
 
 ---
 
@@ -227,11 +245,12 @@ The gate is deliberately data-driven, not lifecycle-driven: the numbers appear a
 Page-level identity is established by the breadcrumb and the active chrome tab in combination. Most pages do not need a redundant H1 echoing the active tab name.
 
 Exceptions:
-- **Home (Session Home / Control Panel)** — H1 is the session name, since the session is what Home represents. Lifecycle state appears as a badge in the status strip; no need to repeat in the page body.
 - **Operator's Overview** (sessions list) — H1 is "Sessions" or similar, since this page sits outside session-scoped chrome.
 - **Preview pages** that are children of a Setup tab — H1 is the preview's name ("Reviewer surface preview"), not the parent tab's name.
 
-For all other session-scoped pages (the five Setup pages, the Operations pages), no H1 is needed. The chrome tab and breadcrumb together establish identity.
+For all other session-scoped pages (the Setup pages, the Operations pages), no H1 is needed. The chrome tab and breadcrumb together establish identity.
+
+**Session Home has no H1 either**: the session name is the breadcrumb's current segment and the Name field of the Session details card. Lifecycle state appears as a badge in the status strip; no need to repeat it in the page body (author's ruling, 2026-10-02, findings E14).
 
 ### Warning surfaces — shared brown framing
 
