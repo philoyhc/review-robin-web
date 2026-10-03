@@ -876,8 +876,10 @@ def test_results_body_summarized_zero_responses_shows_label_scaffolding(
     assert "Median:" in body
     assert "Min:" in body
     assert "Max:" in body
-    # String labels show likewise.
+    # String labels show likewise, an em-dash in place of a value
+    # (findings A18, 2026-10-03).
     assert "Total length:" in body
+    assert "Total length: 0 characters" not in body
     assert "Average length:" in body
     assert "(based on 0 responses)" in body
 

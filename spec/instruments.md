@@ -979,7 +979,7 @@ join, `td.rf-slot`, keep six leading columns on every row — see
 
 | Control | Bound to | Notes |
 |---|---|---|
-| **Active** checkbox | `InstrumentResponseField.visible` | The field's selection — whether it renders on the reviewer surface, the reviewer summary and the reviewer-record CSV (see below). Unticking a field with saved responses asks to confirm first — "Hide … from the reviewer surface?", naming the response count and that the data is preserved for audit. An inactive row is not dimmed. |
+| **Active** checkbox | `InstrumentResponseField.visible` | The field's selection — whether it renders on the participant surfaces and their CSVs (see below). Unticking a field with saved responses asks to confirm first — "Hide … from the reviewer surface?", naming the response count and that the data is preserved for audit. An inactive row is not dimmed. |
 | **+** button | — | Inserts a new row (its own `<tbody>` group) directly after this one's, seeded with the next default label (see "A field's default label" below). On a governed row it adds a field to the same branch instead, directly after the row's unit — the row, its condition row and every deeper row (see ["Branching between response fields"](#branching-between-response-fields)). |
 | **⑂** / **↰** / **↳** | `branch_parent_id` / `branch_op` / `branch_value` / `branch_mode` | Fork, join and detach — see ["Branching between response fields"](#branching-between-response-fields) below. |
 | Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Empty until typed — see "A field's default label" below. |
@@ -1039,10 +1039,12 @@ routes `/band2-state`, `/column-widths`, `/display-fields/order` and
 
 `InstrumentResponseField.visible` — read live off each row's Active
 checkbox — is what the reviewer surface form, the reviewer summary
-HTML and the reviewer-record CSV filter response fields by
-(`visible.is_(True)`): unticking Active drops the column from every
-reviewer-facing render in one step, while the row itself stays present
-in Band 3 so its bounds and help text remain editable.
+HTML, the reviewer-record CSV, the reviewee results page and the
+observer collation page and its per-instrument CSV filter response
+fields by (the observer page and CSV since findings A3, 2026-10-03).
+Unticking Active drops the column from every participant-facing render
+in one step. The operator's own extracts keep it, and the row itself
+stays present in Band 3 so its bounds and help text remain editable.
 
 **The operator's reviewer-side counts filter it too** (19R Item 3):
 `monitoring.per_reviewer_progress` excludes an invisible `required`

@@ -110,6 +110,7 @@ def serialize_by_instrument(
     include_empty_assignments: bool = True,
     row_filter: Callable[[Assignment], bool] | None = None,
     identification: str = "raw",
+    visible_only: bool = False,
 ) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for one instrument's wide-format extract.
 
@@ -145,11 +146,19 @@ def serialize_by_instrument(
       tag columns blanked so the only identifier is the
       token). ``"summarized"`` is a no-op at the row level —
       callers handle the no-download path before calling.
+    - ``visible_only`` — drop the response fields the operator marked
+      not visible, as the observer collation page does (findings A3).
+      The operator's extract keeps them.
     """
 
     session_zone = resolve_session_timezone(review_session)
     fields = sorted(
-        instrument.response_fields, key=lambda f: (f.order, f.id)
+        (
+            f
+            for f in instrument.response_fields
+            if f.visible or not visible_only
+        ),
+        key=lambda f: (f.order, f.id),
     )
 
     tokenizer = (

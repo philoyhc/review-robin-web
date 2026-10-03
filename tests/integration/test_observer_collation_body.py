@@ -367,6 +367,127 @@ def test_collation_csv_serves_raw_rows_for_cohort(
     assert ",4," in body or body.endswith(",4\n") or "4" in body
 
 
+_MATH_RULE = {
+    "combinator": "AND",
+    "rules": [
+        {
+            "field": "reviewer.tag1",
+            "op": "IS",
+            "operand_tag": "",
+            "operand_value": "mathcohort",
+        }
+    ],
+}
+
+
+def _add_hidden_and_empty_fields(db: Session, seeded: dict) -> None:
+    """A not-visible field with an answer, and a visible String field
+    nobody answered."""
+    inst = seeded["instrument"]
+    hidden = InstrumentResponseField(
+        instrument_id=inst.id,
+        field_key="secret",
+        label="Secret note",
+        _inline_data_type="String",
+        required=False,
+        visible=False,
+        order=1,
+    )
+    notes = InstrumentResponseField(
+        instrument_id=inst.id,
+        field_key="notes",
+        label="Notes",
+        _inline_data_type="String",
+        required=False,
+        order=2,
+    )
+    db.add_all([hidden, notes])
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=seeded["assignment"].id,
+            response_field_id=hidden.id,
+            value="HIDDEN-ANSWER",
+            submitted_at=datetime.now(timezone.utc),
+        )
+    )
+    db.commit()
+    db.refresh(inst)
+
+
+def test_collation_leaves_out_fields_marked_not_visible(
+    client: TestClient, db: Session
+) -> None:
+    """Findings A3 (2026-10-03): the observer page and its CSV drop a
+    response field the operator marked not visible, as every other
+    participant surface does. The operator's extract keeps it."""
+    from app.services.extracts.by_instrument_extract import (
+        serialize_by_instrument,
+    )
+
+    review_session = _make_session(client, db, code="col-hidden")
+    seeded = _seed_one_instrument(db, review_session)
+    _add_hidden_and_empty_fields(db, seeded)
+    _add_observer(
+        db, review_session, email="alice@example.edu", cohort_rule=_MATH_RULE
+    )
+
+    body = client.get(f"/me/sessions/{review_session.id}/collation").text
+    assert "Rating" in body
+    assert "Notes" in body
+    assert "Secret note" not in body
+    csv_response = client.get(
+        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"{seeded['instrument'].id}.csv"
+    )
+    assert csv_response.status_code == 200
+    csv_body = csv_response.text
+    assert "Rating" in csv_body
+    assert "Secret note" not in csv_body
+    assert "HIDDEN-ANSWER" not in csv_body
+
+    from app.services.collation import build_cohort_stats_for_instrument
+    from app.services.observer_cohort import materialize_cohort_assignments
+
+    observer = db.scalars(
+        select(Observer).where(Observer.session_id == review_session.id)
+    ).one()
+    cohort = materialize_cohort_assignments(
+        db, observer=observer, instrument_id=seeded["instrument"].id
+    )
+    reviewer_row, _ = build_cohort_stats_for_instrument(
+        db, instrument=seeded["instrument"], cohort=cohort
+    )
+    # The Rating answer counts; the hidden field's answer does not.
+    assert reviewer_row.response_count == 1
+    assert len(reviewer_row.field_cells) == 2
+
+    operator_rows = "\n".join(
+        ",".join(row)
+        for row in serialize_by_instrument(
+            db, review_session, seeded["instrument"], position=0
+        )
+    )
+    assert "HIDDEN-ANSWER" in operator_rows
+
+
+def test_collation_string_cell_at_zero_responses_shows_a_dash(
+    client: TestClient, db: Session
+) -> None:
+    """Findings A18 (2026-10-03): a String field nobody answered reads
+    an em-dash, not "Total length: 0 characters"."""
+    review_session = _make_session(client, db, code="col-zero-string")
+    seeded = _seed_one_instrument(db, review_session)
+    _add_hidden_and_empty_fields(db, seeded)
+    _add_observer(
+        db, review_session, email="alice@example.edu", cohort_rule=_MATH_RULE
+    )
+
+    body = client.get(f"/me/sessions/{review_session.id}/collation").text
+    assert "Total length:" in body
+    assert "Total length: 0 characters" not in body
+
+
 def test_collation_csv_anonymized_swaps_names_for_tokens(
     client: TestClient, db: Session
 ) -> None:

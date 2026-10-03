@@ -188,6 +188,17 @@ when it is checked; sections with unticked rows sit above the ticked ones.
   and Submit. The card's entry starts with `#2 Peer:`, not `Page 2:`,
   matching the `#2 Peer` status pill above it.
 
+## Observers see what reviewers see (A3, A18)
+
+- [ ] **A hidden field stays hidden.** On an instrument, untick a
+  response field's Active box. As an observer on the collation page,
+  the field has no column, and the instrument's Download CSV has no
+  column for it either. The operator's By-instrument extract still has
+  it.
+- [ ] **An unanswered text field reads a dash.** On the collation page,
+  or a reviewee's results page with a summarized policy, a text field
+  nobody has answered shows "Total length: —", not "0 characters".
+
 ## Setup tabs underline in blue (findings register E5)
 
 - [x] **Light and dark.** On any Setup page (Reviewers, say), the active
