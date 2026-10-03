@@ -425,6 +425,10 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                         message="source_type is required",
                     )
                 )
+        # ``field_key`` is unique within an instrument
+        # (``uq_instrument_field_key``); a repeat would reach the
+        # constraint in phase 2 as an ``IntegrityError``.
+        seen_keys: dict[str, int] = {}
         for m, rf in sorted(instrument.response_fields.items()):
             if not rf.field_key:
                 errors.append(
@@ -436,6 +440,22 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                         message="field_key is required",
                     )
                 )
+            elif rf.field_key in seen_keys:
+                errors.append(
+                    ApplyError(
+                        row_number=0,
+                        field=(
+                            f"instruments[{n}].response_fields[{m}].field_key"
+                        ),
+                        message=(
+                            f"duplicate field_key {rf.field_key!r} "
+                            f"(also at instruments[{n}].response_fields"
+                            f"[{seen_keys[rf.field_key]}])"
+                        ),
+                    )
+                )
+            else:
+                seen_keys[rf.field_key] = m
             if not rf.label:
                 errors.append(
                     ApplyError(
@@ -457,4 +477,25 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                         message="response_type is required",
                     )
                 )
+    # Data-shape names are unique within a session
+    # (``uq_data_shape_session_name``). Only the shapes phase 2 writes
+    # count: one with no name or an unknown axis is skipped there
+    # (``_apply_data_shapes``), so it cannot collide.
+    seen_shapes: dict[str, int] = {}
+    for n, shape in sorted(plan.data_shapes.items()):
+        if not shape.name or shape.axis not in ("reviewer", "reviewee"):
+            continue
+        if shape.name in seen_shapes:
+            errors.append(
+                ApplyError(
+                    row_number=0,
+                    field=f"data_shapes[{n}].name",
+                    message=(
+                        f"duplicate data_shapes name {shape.name!r} "
+                        f"(also at data_shapes[{seen_shapes[shape.name]}])"
+                    ),
+                )
+            )
+        else:
+            seen_shapes[shape.name] = n
     return errors

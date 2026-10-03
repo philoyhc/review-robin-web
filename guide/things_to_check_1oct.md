@@ -155,6 +155,14 @@ E1, E2 and E4 were checked by the author when they merged.
   Deadline before the session's Start and Save: the page answers with
   "End must be on or after Start." and nothing changes, tags included.
 
+## A repeated name in a Settings CSV is a row error (D1)
+
+- [ ] **No 500 on a repeated shape name.** Export a session's Settings
+  CSV with a saved data shape, copy that shape's `data_shapes[0].*`
+  rows to `data_shapes[1].*`, and upload it to another session through
+  Quick Setup. The page shows the settings slot's "Could not import
+  session settings." message, not a 500, and the session is unchanged.
+
 ## Setup tabs underline in blue (findings register E5)
 
 - [x] **Light and dark.** On any Setup page (Reviewers, say), the active
