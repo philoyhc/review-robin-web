@@ -430,7 +430,7 @@ which are string-only.
 | Required counts | See Item 2 | **Untouched by Item 1**, since governed fields are never required | — |
 | Builder | `app/web/templates/operator/instruments_index.html` (Item 3's Band 3 rows, the stager), `app/services/instruments/_band2.py` `set_band2_state` (whitelists keys; order is list index; new rows get ids mid-loop) | Branch rows and the condition row; up / down limits within a branch; the parent reference resolved by row before new ids exist | Medium |
 | Copies and round-trips | `app/services/session_config_io/_serialize.py` and `_apply_instrument.py` (settings CSV), `app/services/session_clone.py`, `app/services/instruments/_instrument_crud.py` `replicate_instrument` | Every copy path learns the parent and the condition | Medium |
-| Exports and summaries | `app/services/extracts/by_instrument_extract.py` (metadata block), `app/services/extracts/data_shape_extract.py` (`assigned` counts every assignment × field), `app/services/extracts/entity_stats_extract.py` | Averages and counts already skip absent values. The metadata block gains the condition. The `assigned` denominator can't tell not-applicable from skipped | Light |
+| Exports and summaries | `app/services/extracts/by_instrument_extract.py` (metadata block), `app/services/extracts/data_shape_extract.py` (`assigned` counts every assignment × field), the entity-stats extract (retired 2026-10-03) | Averages and counts already skip absent values. The metadata block gains the condition. The `assigned` denominator can't tell not-applicable from skipped | Light |
 
 ### Pre-positioning for Item 2
 

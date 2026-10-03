@@ -24,7 +24,6 @@ from app.schemas.responses import ResponseUpsert
 from app.services import monitoring
 from app.services import responses as responses_service
 from app.services.extracts.by_instrument_extract import serialize_by_instrument
-from app.services.extracts.entity_stats_extract import build_entity_stats
 
 from .test_monitoring_rollup_parity import (
     REVIEWEE_IMPLEMENTATIONS,
@@ -337,24 +336,6 @@ def test_the_by_instrument_extract_reads_required_when(db: Session) -> None:
     meta = rows[: rows.index([])]
     assert ["Required when", "Rating ≥ 4"] in meta
     assert all(row[:1] != ["Shown when"] for row in meta)
-
-
-def test_entity_stats_count_a_require_mode_answer_as_required_only_while_it_holds(
-    db: Session,
-) -> None:
-    _, _, review_session, (a1, a2), rating, comments = _require_seed(db)
-    for assignment, value in ((a1, "2"), (a2, "5")):
-        _answer(db, assignment, rating, value)
-        _answer(db, assignment, comments, "text")
-    reviewer_rows, reviewee_rows = build_entity_stats(db, review_session)
-    header = reviewee_rows[0]
-    col = next(i for i, h in enumerate(header) if "equired" in h)
-    by_name = {row[0]: row for row in reviewee_rows[1:]}
-    # Carol (Rating 2): only Rating counts; Dan (Rating 5): Rating and Comments.
-    assert [by_name[n][col] for n in ("Carol", "Dan")] == ["1", "2"]
-    reviewer_header = reviewer_rows[0]
-    rcol = next(i for i, h in enumerate(reviewer_header) if "equired" in h)
-    assert reviewer_rows[1][rcol] == "3"
 
 
 # The reviewer summary and the reviewee's results mark "*" by

@@ -209,60 +209,22 @@ per-session Diagnostics row.
 **Row order:** `(created_at ASC, id ASC)`. **Streaming:**
 `yield_per(1000)`.
 
-### 2.6 Entity stats — `extracts/entity_stats_extract.py`
+### 2.6 Entity stats — retired
 
-Two CSVs — a Reviewer stats file and a Reviewee stats file —
-that the Zip-all bundle carried until findings D28 (2026-10-03)
-made it a pass-through of the other cards (§10's Zip all row), so
-**no download carries them now**. They were never offered as
-individual downloads and have **no importer**: the round-trippable Reviewers / Reviewees
-CSVs keep that role, and adding stats columns to them would break
-the importer contract. The module exposes `build_entity_stats`
-(not a streaming serialiser); it returns both header-led row lists
-in one pass.
+A Reviewer stats file and a Reviewee stats file (draft / submitted
+response-activity counts per roster row) rode only in the Zip-all
+bundle. Findings D28 (2026-10-03) made that bundle a pass-through of
+the Extract data cards, which dropped them, and the serializer was
+retired. No other download carries their Draft / Submitted split. The number is
+kept so later sections keep theirs.
 
-Each leads with the roster's identity columns — name, email and
-the three tags, plus `ProfileLink` on the Reviewee file — but **not
-the full roster shape**: neither carries `Status`, and the Reviewer
-file has no `ProfileLink`. Rows keep the roster order (active first,
-then name, then email). The aggregate response-activity columns
-follow, every metric reported as a
-**Draft / Submitted** pair (`submitted_at` unset vs set). Only
-responses with a non-empty value count. A group-scoped
-instrument's fanned-out answer counts once per group for the
-field / char metrics on the reviewer side; both member reviewees
-are still credited under `RevieweesReviewed*`.
+### 2.7 Per-instrument responses — retired
 
-Reviewer stats extra columns: `RevieweesReviewedDraft/Submitted`
-(distinct reviewees with ≥1 non-empty response),
-`FieldsAnsweredDraft/Submitted`,
-`RequiredFieldsAnsweredDraft/Submitted` (answers to `required`
-fields; under a require-mode parent a visible governed
-field's answer counts only where the parent's saved answer met the
-condition, whatever its own `required`, and a hidden one's never),
-`StringResponseCharsDraft/Submitted` (sum of `len(value)` over
-`String`-typed fields). Reviewee stats extra columns:
-`ReviewersDraft/Submitted` (distinct reviewers) plus the same
-three field / char pairs.
-
-### 2.7 Per-instrument responses — `extracts/responses_extract.py` (`serialize_responses_for_instrument`)
-
-Sibling files to the unified Responses CSV that the Zip-all
-bundle carried until findings D28 (2026-10-03); **no download
-carries them now** — one ``{code}_instrument_{n}.csv`` per instrument,
-named positionally to match the ``instrument_{n}`` vocabulary
-used in §2.4's preamble and ``InstrumentName`` column. No
-individual download tile; no importer.
-
-Same 21-column long-format header as §2.4, so an analyst can
-concatenate the per-instrument files and reconstruct the unified
-file. Each file carries a single-instrument preamble (its field
-dictionary), a blank-row gap, the header, then data rows scoped
-to that instrument. **Sort order:** ``(RevieweeName → ReviewerEmail
-→ field.order)`` — the reviewee-centric reading order. Group-scoped
-instruments collapse the fan-out (one row per (reviewer, group,
-field)) and post-sort by the composed group identity so a group's
-rows cluster together.
+One long-format `{code}_instrument_{n}.csv` per instrument, a slice
+of §2.4's file, rode only in the Zip-all bundle until findings D28
+(2026-10-03); the serializer was then retired. The By instrument
+card's wide files are the per-instrument download. The number is
+kept so later sections keep theirs.
 
 ### 2.8 Reviewer session summary — `extracts/responses_extract.py` (`serialize_reviewer_session_summary`)
 
@@ -285,9 +247,8 @@ Responses CSV. A response field with `visible=False` is dropped from
 both the preamble and the data rows, so the file matches the form the
 reviewer saw. Group-scoped instruments collapse the same way
 (one row per (this reviewer, instrument, group, field)).
-Builds on the same `_response_row_tuple` factored out in §2.7
-so a per-cell rename flows through to every file in this
-family.
+Builds on the same `_response_row_tuple` as §2.4, so a
+per-cell rename flows through to every file in this family.
 
 ### 2.9 Participant tokens — `extracts/participant_tokens_extract.py`
 

@@ -570,8 +570,8 @@ or because every member is inactive — is not the reviewer's, and no
 save, submit, recall or clear touches it. A posted value is accepted
 only on an included row; any other id is dropped before validation and
 the fan-out. Readers that ignore `include` (e.g. the observer collation
-pool, the responses and entity-stats extracts, the session response
-counts) see the copy, as they always saw the row.
+pool, the responses extract, the session response counts) see the
+copy, as they always saw the row.
 
 ### Self-review interaction
 

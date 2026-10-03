@@ -51,7 +51,6 @@ from app.services import visibility_policies
 __all__ = [
     "HEADER",
     "serialize_responses",
-    "serialize_responses_for_instrument",
     "serialize_reviewer_session_summary",
 ]
 
@@ -389,123 +388,6 @@ def serialize_responses(
         )
 
 
-def serialize_responses_for_instrument(
-    db: Session,
-    review_session: ReviewSession,
-    instrument: Instrument,
-    *,
-    position: int,
-) -> Iterable[tuple[str, ...]]:
-    """Yield CSV rows for one instrument's responses, sorted
-    reviewee-first.
-
-    Same 21-column shape as :func:`serialize_responses`, scoped to
-    a single instrument and sorted ``(reviewee → reviewer →
-    field)`` — the reading order optimised for "show me what each
-    reviewee got." Used by the Zip-all bundle to emit one
-    per-instrument file alongside the unified Responses CSV.
-
-    ``position`` is the instrument's 1-based positional index in
-    the session (its position in the canonical
-    ``(Instrument.order, Instrument.id)`` ordering) — used to
-    render the preamble's ``instrument_{n}`` label so the
-    per-instrument file matches the unified CSV's vocabulary.
-
-    The query streams via ``yield_per`` but data rows are
-    collected and post-sorted by the composed output identity so
-    a group-scoped instrument's rows still cluster by group
-    identity (the underlying assignment's reviewee email — what
-    the SQL ``ORDER BY`` would see — is the *member's* email, not
-    the group's, so SQL-level sort can't put group rows in the
-    intuitive order).
-    """
-
-    session_zone = resolve_session_timezone(review_session)
-
-    label = f"instrument_{position}"
-    yield (label,)
-    fields = sorted(
-        instrument.response_fields, key=lambda f: (f.order, f.id)
-    )
-    for field in fields:
-        yield (field.field_key, field.help_text or "")
-    yield ()
-    yield HEADER
-
-    if instrument.group_kind is not None:
-        group_key_by_assignment, group_identity = _group_export_index(
-            db, review_session
-        )
-    else:
-        group_key_by_assignment, group_identity = {}, {}
-    seen_group_cells: set[tuple[int, int, tuple[str, ...], int]] = set()
-
-    stmt = (
-        select(
-            Response,
-            Reviewer,
-            Reviewee,
-            Instrument,
-            InstrumentResponseField,
-            Assignment.is_self_review,
-        )
-        .join(Assignment, Response.assignment_id == Assignment.id)
-        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
-        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
-        .join(Instrument, Assignment.instrument_id == Instrument.id)
-        .join(
-            InstrumentResponseField,
-            Response.response_field_id == InstrumentResponseField.id,
-        )
-        .where(Assignment.session_id == review_session.id)
-        .where(Assignment.instrument_id == instrument.id)
-        .order_by(
-            Reviewer.email,
-            Reviewee.email_or_identifier,
-            InstrumentResponseField.order,
-            InstrumentResponseField.id,
-        )
-        .execution_options(yield_per=1000)
-    )
-
-    collected: list[tuple[tuple[str, str, int, int], tuple[str, ...]]] = []
-    for (
-        response,
-        reviewer,
-        reviewee,
-        instr,
-        field,
-        is_self_review_value,
-    ) in db.execute(stmt):
-        group_key = group_key_by_assignment.get(response.assignment_id)
-        if group_key is not None:
-            cell = (reviewer.id, instr.id, group_key, field.id)
-            if cell in seen_group_cells:
-                continue
-            seen_group_cells.add(cell)
-        row = _response_row_tuple(
-            response,
-            reviewer,
-            reviewee,
-            instr,
-            field,
-            instrument_label=label,
-            group_key=group_key,
-            group_identity=group_identity,
-            session_zone=session_zone,
-            is_self_review_value=is_self_review_value,
-        )
-        # Sort key: composed ``RevieweeName`` (col 5) → reviewer
-        # email (col 1) → field order (carried separately to
-        # preserve the instrument's authored field order rather
-        # than alphabetising by ``FieldKey``).
-        collected.append(((row[5], row[1], field.order, field.id), row))
-
-    collected.sort(key=lambda pair: pair[0])
-    for _, row in collected:
-        yield row
-
-
 def serialize_reviewer_session_summary(
     db: Session,
     review_session: ReviewSession,
@@ -515,9 +397,9 @@ def serialize_reviewer_session_summary(
     session — the participation-record download backing the 17B
     Phase 2 PR B summary page.
 
-    Same 21-column shape as :func:`serialize_responses` /
-    :func:`serialize_responses_for_instrument` so the file can sit
-    alongside an operator's bundle download with no schema drift.
+    Same 21-column shape as :func:`serialize_responses` so the file
+    can sit alongside an operator's bundle download with no schema
+    drift.
     The output structure mirrors the unified
     :func:`serialize_responses` file: a per-instrument preamble
     block (one ``(instrument_{n},)`` row + one
@@ -526,8 +408,8 @@ def serialize_reviewer_session_summary(
     gap, :data:`HEADER`, then the data rows scoped to this
     reviewer. Instruments the reviewer has no responses on are
     skipped from the preamble — operators get the cross-reviewer
-    coverage from the bundle's per-instrument files; the
-    reviewer-record file is intentionally narrower.
+    coverage from the unified Responses file; the reviewer-record
+    file is intentionally narrower.
 
     Group-scoped instruments collapse the same way the unified
     file does (one row per ``(reviewer, instrument, group_key,

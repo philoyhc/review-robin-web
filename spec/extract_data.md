@@ -486,9 +486,6 @@ sees `Assigned = 6` (3 × 2), and an individual member of
 one of those groups, reviewed by 3 reviewers, sees the
 same `Assigned = 6` (3 × 2) on the reviewee side.
 
-This matches the dedupe contract `entity_stats_extract.py`
-enforces for the analogous draft/submitted activity rollup.
-
 ### Audit envelope
 
 Both routes emit a `_IDENTITY | {"counts", "context"}` event
