@@ -431,6 +431,29 @@ def test_settings_card_renders_timezone_sample(
     assert 'timeZoneName: "shortOffset"' in body
 
 
+def test_settings_card_shows_a_bare_utc_once(
+    client: TestClient, db: Session
+) -> None:
+    """The sample line names the zone as ``gmt_offset_zone_label`` does:
+    ``GMT+8 Asia/Singapore``, but a bare ``UTC`` once, not ``UTC UTC``
+    (findings 2026-10-03 C3)."""
+    client.post(
+        "/operator/settings/timezone",
+        data={"display_timezone": "UTC"},
+        follow_redirects=False,
+    )
+    body = client.get("/operator/settings").text
+    assert '<strong id="tz-sample-zone">UTC</strong>' in body
+
+    client.post(
+        "/operator/settings/timezone",
+        data={"display_timezone": "Asia/Singapore"},
+        follow_redirects=False,
+    )
+    body = client.get("/operator/settings").text
+    assert '<strong id="tz-sample-zone">GMT+8 Asia/Singapore</strong>' in body
+
+
 def test_config_card_timezone_field_uses_gmt_offset_datalist(
     client: TestClient, db: Session
 ) -> None:
