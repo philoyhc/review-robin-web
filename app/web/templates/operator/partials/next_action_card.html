@@ -111,14 +111,10 @@
     {% if is_setup_empty %}
       {# State 1 #}
       <p>Session not fully set up. Make sure that reviewers, reviewees, relationships (optional), and instruments have been set up before continuing.</p>
-    {% elif is_draft and validation_summary %}
-      {# State 3 — a draft with a validation summary. Unreachable: the
-         builder computes the summary only for a validated session
-         (findings B32). #}
-      <p><strong>Validation didn't pass.</strong></p>
-      <p>Resolve the errors and re-run <strong>Prepare session</strong>.</p>
     {% elif is_draft %}
-      {# State 2 — setup populated, no validation summary yet. #}
+      {# State 2 — setup populated. A Prepare whose Validate step fails
+         lands here too, with the failure signal line below; State 3
+         (a draft with a validation summary) is retired (findings B32). #}
       <p>Run <strong>Prepare session</strong> to generate the assignment pairs, create an invitation for each eligible reviewer, and validate that the setup is ready for prime time. Nothing goes live until you activate.</p>
     {% elif is_validated %}
       {% if validation_summary and validation_summary.can_activate %}
@@ -370,20 +366,11 @@
           </span>
         </p>
       {% endif %}
-      {% if is_draft and validation_summary %}
-        {# State 3 (unreachable, findings B32): validation issues. Label + count pills inline,
-           then a link to Validate — 19Q Item 4 retired the per-issue
-           list that used to follow here. #}
-        <p class="next-action-status-line">
-          <strong>Validation issues</strong> —
-          <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>
-          <span class="pill pill-empty">{{ validation_summary.warning_count }} warning{% if validation_summary.warning_count != 1 %}s{% endif %}</span>
-          <span class="pill pill-count">{{ validation_summary.info_count }} info</span>
-        </p>
-        {% include "operator/partials/_next_action_issue_list.html" %}
-      {% elif is_validated and validation_summary and not validation_summary.can_activate %}
+      {% if is_validated and validation_summary and not validation_summary.can_activate %}
         {# State 4Err defensive — validated lifecycle but a fresh
-           validate surfaces errors. Same shape as State 3. #}
+           validate surfaces errors. Label + count pills inline, then a
+           link to Validate — 19Q Item 4 retired the per-issue list
+           that used to follow here. #}
         <p class="next-action-status-line">
           <strong>Validation issues</strong> —
           <span class="pill pill-error">{{ validation_summary.error_count }} error{% if validation_summary.error_count != 1 %}s{% endif %}</span>

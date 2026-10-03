@@ -156,7 +156,6 @@ def _render_assignments_hub(
     review_session: ReviewSession,
     user: User,
     *,
-    issues: list | None = None,
     missing_confirm: bool = False,
     is_blocked: bool = False,
     super_failure: dict[str, str] | None = None,
@@ -361,7 +360,6 @@ def _render_assignments_hub(
             "filter_search_options": search_options,
             "filter_status_options": views.ASSIGNMENTS_STATUS_OPTIONS,
             "pair_context_lookup": pair_context_lookup,
-            "issues": issues,
             "missing_confirm": missing_confirm,
             "is_blocked": is_blocked,
             "breadcrumbs": breadcrumbs.operator_session_child(

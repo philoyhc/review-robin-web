@@ -10,13 +10,12 @@ a session with several assignment warnings repeated "Assignments" down
 the column.
 
 **Coverage, stated rather than implied.** The partial is included at
-three sites — State 3 (unreachable since the ``?validated=1`` path was
-retired; findings B32), State 4Err, and the ``W`` overlay — with
-identical content, so the behaviour is pinned once at the site that has
-a deterministic fixture (``W``), and
-``test_the_card_includes_the_partial_at_exactly_three_sites`` keeps that
-one case standing in for the other two. If a later change gives the
-sites different content, that structural test fails and this file needs
+two sites — State 4Err and the ``W`` overlay; State 3 retired with
+findings B32 — with identical content, so the behaviour is pinned once
+at the site that has a deterministic fixture (``W``), and
+``test_the_card_includes_the_partial_at_exactly_two_sites`` keeps that
+one case standing in for the other. If a later change gives the sites
+different content, that structural test fails and this file needs
 per-state fixtures rather than one.
 """
 
@@ -111,7 +110,7 @@ def _render_partial(**context: object) -> str:
     """The partial alone, with a context handed to it directly.
 
     Through a page it cannot be reached with an empty issue set: the
-    two unconditional include sites (States 3 and 4Err) both require a
+    one unconditional include site (State 4Err) requires a
     ``validation_summary``, which only a validated session carries, and
     a validated session with nothing to report renders neither. So
     a page-level "clean session" test exercises the *absence of the
@@ -169,12 +168,12 @@ def test_a_state_without_issues_never_reaches_the_partial(
     assert f'href="/operator/sessions/{session.id}/validate"' not in aside
 
 
-def test_the_card_includes_the_partial_at_exactly_three_sites() -> None:
-    """What lets the `W` case above stand in for States 3 and 4Err.
+def test_the_card_includes_the_partial_at_exactly_two_sites() -> None:
+    """What lets the `W` case above stand in for State 4Err.
 
-    All three includes render the same partial with the same context,
-    so one measured case covers them — but only while there are three
-    of them and nothing else renders issues. A fourth site, or a site
+    Both includes render the same partial with the same context, so one
+    measured case covers them — but only while there are two of them
+    and nothing else renders issues. A third site, or a site
     that stops including the partial, means this file's coverage claim
     has changed.
     """
@@ -186,8 +185,8 @@ def test_the_card_includes_the_partial_at_exactly_three_sites() -> None:
         r'{%\s*include\s+"operator/partials/_next_action_issue_list\.html"\s*%}',
         source,
     )
-    assert len(includes) == 3, (
-        f"expected 3 includes of the issue partial in {CARD}, found "
+    assert len(includes) == 2, (
+        f"expected 2 includes of the issue partial in {CARD}, found "
         f"{len(includes)} — see this file's docstring on coverage"
     )
     for marker in RETIRED_MARKUP:

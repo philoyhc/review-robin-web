@@ -1378,7 +1378,7 @@ preserves.
 The Workflow card on Session Home (and on every Operations-row
 page as chrome) drives the lifecycle. **Its state machine is
 `spec/workflow_card.md`'s to state, and is not restated here** —
-eleven states over ten numbers, each with its own body copy and button
+ten states over nine live numbers (number 3 retired), each with its own body copy and button
 set, plus a `W` overlay that adds a help-line to three of them and
 changes no button. Functionally, what a reader needs from here is the
 shape:

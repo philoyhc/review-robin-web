@@ -159,7 +159,7 @@ above the row.
 
 **Contents by lifecycle state:** see **`spec/workflow_card.md`**.
 That spec is the canonical source for the ten-state cascade
-(States 1 / 2 / 3 / 4 / 4Err / 5 / 6 / 7 / 8 / 9 / 10, plus the
+(States 1 / 2 / 4 / 4Err / 5 / 6 / 7 / 8 / 9 / 10, State 3 retired, plus the
 `W` overlay that rides on 4 / 5 / 6 when validation has
 non-blocking findings),
 the single-row button layout (≤ 4 visible buttons per state,
@@ -508,8 +508,7 @@ page reuses the same class without further design work.
 | State (enum / display) | Workflow card | Quick Setup | Extract Data |
 |---|---|---|---|
 | `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; no buttons rendered | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional; empty-count tiles grey their Download button) |
-| `draft` / Draft, rosters populated, pre-generate | State 2: Prepare session live (Primary; runs Generate + Validate + Invite in sequence) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
-| `draft` / Draft, validation summary with errors (unreachable: no draft carries a summary) | State 3: Prepare session re-runnable (Primary); right column carries validation pill row + Validate link | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
+| `draft` / Draft, rosters populated (before Prepare, or after a Prepare that failed) | State 2: Prepare session live (Primary; runs Generate + Validate + Invite in sequence) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
 | `validated` / Validated | States 4 / 4Err / 5 / 6: Activate session live (Primary; under the `W` overlay it detours through `/validate?activate=1`); Prepare session re-runnable (Secondary); Revert to draft live (Secondary); Send invites surfaces once invitations exist (Primary, State 5) | Body-greyed; no Lock / Unlock toggle | Live (4–5 tiles, Observers conditional) |
 | `ready` / Activated | States 7 / 8 / 9: Send invites / Send reminders forward stages (whichever is next renders Primary; State 7 — no invitations — has none, and the copy names Revert to draft); Close session + Release responses live (Secondary); Revert to draft live (Secondary; the `ready → draft` form) | Body-greyed; no Lock / Unlock toggle | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
 | `expired` / Closed | State 10: Release responses (or Stop releasing when the window's open) · Archive session (Danger); Revert to draft live (Secondary, reopens for editing) | Body-greyed; no Lock / Unlock toggle | Live |

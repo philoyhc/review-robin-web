@@ -159,8 +159,11 @@ the spec should say so.
   `verdict_*`, `lifecycle_copy` and `last_validated_text` fields. Tests
   that used the GET to validate a session call the service through
   `tests/integration/_validated.py`.
-- **B32** — The Workflow card's State 3 (a draft with a validation
-  summary: error counts and a Validate link) was reachable only through
+- ~~**B32**~~ — **Ruled 2026-10-03: retire them. Done in #2767.** The
+  card's State 3 branches and the Assignments page's include are gone;
+  the number 3 is kept, unused. The Workflow card's State 3 (a draft with
+  a validation summary: error counts and a Validate link) was reachable
+  only through
   the retired `?validated=1` path. `spec/workflow_card.md` says a Prepare
   whose Validate step fails lands there; it lands in State 2 with the
   failure signal line instead. Likewise the Assignments page includes

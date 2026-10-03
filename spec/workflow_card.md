@@ -111,7 +111,7 @@ returns:
 - `setup_checklist` — three-boolean dict (`reviewers_ok`,
   `reviewees_ok`, `instruments_configured_ok`) driving the
   right-column checklist, which renders in every draft state
-  (1, 2 and 3), not State 1 alone.
+  (1 and 2), not State 1 alone.
 - `super_failure` — `dict | None` decoded from the redirect's
   `?super_status=failed&super_button=...&super_step=...&super_error=...`
   query-param set via `views.parse_super_failure`. Slots:
@@ -160,20 +160,21 @@ helper falls back from the step name (`generate` / `validate` →
 
 ## State machine
 
-The card has **eleven states over ten numbers** — 1-10, with `4Err`
-branching off 4 — plus a **`W` overlay** that rides on States 4, 5 and 6
-rather than replacing them. Prose elsewhere calls this the *ten-state
-cascade*, counting the numbers; the table below counts the rows. Both are
-right, and the difference is worth knowing before reconciling one against the
-other. The body and right column are chosen by this cascade in
-`next_action_card.html`. **State 3 is unreachable:** the builder computes
-`validation_summary` only for a `validated` session, so no draft carries
-one; its rows below describe the template branch, not a state an operator
-sees.
+The card has **ten states over nine live numbers** — 1-10, with
+`4Err` branching off 4 and **number 3 retired** — plus a **`W`
+overlay** that rides on States 4, 5 and 6 rather than replacing them.
+Prose elsewhere calls this the *ten-state cascade*, counting the states.
+The body and right column are chosen by this cascade in
+`next_action_card.html`. **State 3 is retired** (author's ruling,
+2026-10-03, findings B32): a draft with a validation summary was
+reachable only through the retired `?validated=1` path, since the
+builder computes `validation_summary` only for a `validated` session. A
+Prepare whose Validate step fails lands in State 2 with the failure
+signal line. The number is kept, not reused, so the other states keep
+theirs.
 
 ```
 if is_setup_empty:                              → State 1
-elif is_draft and validation_summary:           → State 3 (unreachable)
 elif is_draft:                                  → State 2
 elif is_validated:
     if not validation_summary.can_activate:     → State 4Err
@@ -216,7 +217,7 @@ missed).
 | --- | --- | --- |
 | **1** | `is_setup_empty` | "Session not fully set up. Make sure that reviewers, reviewees, relationships (optional), and instruments have been set up before continuing." |
 | **2** | `is_draft`, no `validation_summary` | "Run **Prepare session** to generate the assignment pairs, create an invitation for each eligible reviewer, and validate that the setup is ready for prime time. Nothing goes live until you activate." |
-| **3** | `is_draft` + `validation_summary` | "**Validation didn't pass.** Resolve the errors and re-run **Prepare session**." |
+| ~~**3**~~ | Retired (findings B32) | — |
 | **4** | `is_validated` + `can_activate` + no invitations | "Setup is prepared and the reviewer surface is previewable, but there are no invitations. **Prepare session** creates one per eligible reviewer — run it, and if it still creates none, no reviewer is both active and assigned. Or Activate now to receive responses." |
 | **4Err** | `is_validated`, not `can_activate` (defensive) | "Validation shows that there are error(s). Resolve them and re-run **Prepare session** before activating." |
 | **5** | `is_validated`, invites generated, none sent | "Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards." |
@@ -274,7 +275,7 @@ on the right collapse.
 enough vertical space that the button row lands at the same Y
 position in every state. The card doesn't grow / shrink as
 the state-specific copy or the visible-button count varies.
-Multi-paragraph states (e.g. State 3's two-line body) or the
+Multi-paragraph states or the
 prepare-confirm banner still expand the body beyond the min —
 the rule sets a floor, not a ceiling.
 
@@ -345,10 +346,10 @@ style, blank = not rendered. Order preserved across the row;
 blank cells collapse so the row reads left-to-right with no
 gaps.
 
-| Button | 1 | 2 | 3 | 4 | 4Err | 5 | 6 | 7 | 8 | 9 | 10 | 10‡ |
+| Button | 1 | 2 | ~~3~~ | 4 | 4Err | 5 | 6 | 7 | 8 | 9 | 10 | 10‡ |
 | --- | - | - | - | - | ---- | - | - | - | - | - | -- | --- |
 | Revert to draft | | | | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec | Sec |
-| Prepare session | | Pri | Pri | Sec | Sec | Sec | Sec | | | | | |
+| Prepare session | | Pri | | Sec | Sec | Sec | Sec | | | | | |
 | Send invites | | | | | Pri† | Pri | | | Pri | | | |
 | Activate session | | | | Pri | Pri | Pri | Pri | | | | | |
 | Send reminders | | | | | | | | | | Pri | | |
@@ -356,7 +357,7 @@ gaps.
 | Release responses | | | | | | | | | | | Sec | |
 | Stop releasing | | | | | | | | | | | | Sec |
 | Archive session | | | | | | | | | | | Dgr | Dgr |
-| **Visible total** | **0** | **1** | **1** | **3** | **3–4†** | **4** | **3** | **2** | **3** | **3** | **3** | **3** |
+| **Visible total** | **0** | **1** | — | **3** | **3–4†** | **4** | **3** | **2** | **3** | **3** | **3** | **3** |
 
 **The `W` overlay has no column**, because it changes no cell's visibility:
 in States 4, 5 and 6 with `needs_acknowledge`, the same buttons render and
@@ -760,11 +761,11 @@ item; there's no separate heading row.
 
 | State | Per-state status detail |
 | --- | --- |
-| **1** (setup empty) | **Setup checklist** — renders in every draft state (1, 2 and 3), not State 1 alone, so an all-✓ row confirms the operator is ready to Prepare. Three inline entries (Reviewers / Reviewees / Instruments), each prefixed by a ✓ or ✗ pill and linked to the relevant Operations-row page. Wraps on narrow viewports. The Instruments entry is `instruments_configured_ok`, i.e. `not has_unconfigured`: every instrument has at least one visible response field **and** all three Band 1 links touched (`instruments/_instrument_crud.py` `configured_counts`). It is **not** a rule-pinning check — a NULL `rule_set_id` is the Full Matrix default and does not fail it. |
+| **1** (setup empty) | **Setup checklist** — renders in every draft state (1 and 2), not State 1 alone, so an all-✓ row confirms the operator is ready to Prepare. Three inline entries (Reviewers / Reviewees / Instruments), each prefixed by a ✓ or ✗ pill and linked to the relevant Operations-row page. Wraps on narrow viewports. The Instruments entry is `instruments_configured_ok`, i.e. `not has_unconfigured`: every instrument has at least one visible response field **and** all three Band 1 links touched (`instruments/_instrument_crud.py` `configured_counts`). It is **not** a rule-pinning check — a NULL `rule_set_id` is the Full Matrix default and does not fail it. |
 | **2** (draft, not yet validated) | **Setup checklist** only (as State 1). |
-| **3** (draft + validation errors) | **Setup checklist** (as State 1), then **Validation issues** — error / warning / info count pills inline, followed by a single **Review on Validate** link (rendered by `operator/partials/_next_action_issue_list.html`). The card carries the counts, not the issues: the Validate page is the authoritative diagnostic surface, and reproducing its table here repeated one *Fix* link per issue (19Q Item 4). |
+| ~~**3**~~ | Retired (findings B32). |
 | **4** (validated, no invites) | **Status** — "Setup validated." |
-| **4Err** (validated + errors, defensive) | Same shape as State 3 — **Validation issues** + pill row + Validate link. |
+| **4Err** (validated + errors, defensive) | **Validation issues** — error / warning / info count pills inline, followed by a single **Review on Validate** link (rendered by `operator/partials/_next_action_issue_list.html`). The card carries the counts, not the issues: the Validate page is the authoritative diagnostic surface, and reproducing its table here repeated one *Fix* link per issue (19Q Item 4). |
 | **5** (validated + invites generated) | Same as State 4 — **Status** — "Setup validated." |
 | **6** (validated + invites sent) | Same as State 4 — **Status** — "Setup validated." |
 | **7** (ready, no invitations yet) | (no detail) |
@@ -778,7 +779,7 @@ they're about to acknowledge before clicking the detour — and read what, on
 Validate. (The left column's help-line already says "review on Validate before
 activating", so the overlay names Validate in both columns.) That block hangs off
 the shared `is_validated` + `can_activate` branch, so it renders over States 4,
-5 and 6 alike — not over 4Err, which takes the State 3 shape above instead.
+5 and 6 alike — not over 4Err, which takes its own shape above instead.
 
 States 5 / 6 otherwise share State 4's status block; an
 invite-counter / deadline aside can land as a follow-up.
@@ -823,7 +824,7 @@ invitations", `activate` → "Activate session", `close` → "Close
 session", `precondition` → "pre-flight check"), and **the step
 phrase is suppressed when it repeats the button label** — "Close session failed at the Close
 session." says nothing twice. The error detail (when
-present) renders inline below the headline. State 3 / 4Err
+present) renders inline below the headline. State 4Err's
 validation counts and their Validate link continue to render in
 the per-state detail block — the failure signal doesn't suppress
 them.
