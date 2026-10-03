@@ -1,9 +1,10 @@
 # Review Robin Web — Constitution
 
-Six rules the practice holds itself to. Each is the decision line of one
-core decision in `rrw_sdd_in_practice.md` §6, with its rationale and its
-trade-off and nothing else — the evidence, the history and the numbers
-live there. This document is derived from that one: change the practice
+Six rules the practice holds itself to. Five are the decision lines of
+core decisions in `rrw_sdd_in_practice.md` §6 (6.1, 6.3, 6.4, 6.6 and
+6.7); the sixth is the rule §6.3's trade-off implies. Each carries its
+rationale and its trade-off and nothing else — the evidence, the
+history and the numbers live there. This document is derived from that one: change the practice
 document first, then this.
 
 A rule here binds every change to the repository, by whoever or whatever

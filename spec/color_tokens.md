@@ -3,6 +3,7 @@
 The app's colour system is **two-tier**, defined in `app/web/templates/base.html`'s
 `:root` blocks. **Tier 1 primitives** hold the raw palette; **Tier 2 semantic**
 tokens name every role and are the *only* thing components and templates consume.
+The standalone `error.html` is the exception (`spec/ui_elements.md`, opening).
 
 **There is no flat colour-named token.** `--accent-blue`, `--bg-page` and their
 kind are not part of the model and must not be reintroduced: a name that says
@@ -209,11 +210,7 @@ is darker than any `--surface-*` token and carries muted text on the
 Session Home anchor, so it — not `--surface-tint-5` — is the binding
 constraint on `--text-subtle`: **4.53:1** at the shipped value against
 5.11:1 on the worst surface. A sweep of the Text cluster against the
-Surfaces cluster never reads that pair at all. The worked case:
-`--slate` at `#667080` scores 4.56 on the worst surface and passes,
-while the Session Home anchor sits at **4.04** — only a pair sweep
-catches that. `#667080` is named here because it is the only way to
-check the 4.04; it maps to nothing.
+Surfaces cluster never reads that pair at all.
 
 **Decoration is outside the floor, and has its own token so that it
 stays outside.** WCAG 1.4.3 governs text; a 3px divider and the two

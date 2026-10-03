@@ -214,7 +214,7 @@ Small inline labels for state. 2px vertical padding, 8px horizontal padding, 999
 - **Multiple colors competing on one page** for non-semantic decoration. Reduce to neutrals plus accents that carry meaning.
 - **Drop shadows and elevation effects.** Cards stand out via borders, not shadows.
 - **Decorative icons.** Icons appear only where they carry meaning the text alone doesn't.
-- **Heavy borders or thick rules.** Borders are 1px; horizontal rules are 1px in `border-subtle`.
+- **Heavy borders or thick rules.** Borders are 1px, except card outlines (2px, see Cards), the few controls and row-group rules that match a card's weight, and the Band 3 builder's 4px branch connector. Horizontal rules are 1px in `border-subtle` (findings E23, 2026-10-03).
 - **Mixed corner radii.** All components use the radii defined above. Mixed radii on a single page reads as inconsistency.
 
 ---

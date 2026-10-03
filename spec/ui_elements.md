@@ -9,7 +9,11 @@ contract they implement.
 Every page template sets its `body_class` block to `ui-v2` (reviewer
 templates to `ui-v2 reviewer`), so the `body.ui-v2`-scoped rules are the
 treatment; the unprefixed rules earlier in the sheet apply only where that
-block does not override them.
+block does not override them. **The one exception is `error.html`**: it
+does not extend `base.html`, because it must render when the request
+context that `base.html` needs is broken (`app/web/error_handlers.py`),
+so it carries its own small light / dark palette in raw hex and sits
+outside this catalogue and the contrast audit (findings E9, 2026-10-03).
 
 > **Reference implementation.** `app/web/templates/operator/session_reviewers.html`
 > + the `body.ui-v2`-scoped block in `app/web/templates/base.html`

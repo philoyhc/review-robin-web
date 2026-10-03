@@ -30,7 +30,7 @@ should clear that bar on its own before it lands; several never will.
 | Uploaded roster / config / responses CSVs | Parsed **in memory** and discarded once the import completes; only the resulting rows persist. |
 | Reviewee / reviewer photos | `profile_link` is an **external URL** the operator supplies — the app hosts no image bytes. |
 | Operator SMTP password | `smtp_password_encrypted` — Fernet ciphertext in a `bytea` column, not a file. |
-| Deployment artifacts | Azure **does** use blob for build/deploy artifacts, but that is platform-level and outside the app (`docs/architecture.md` — "the application itself has no blob dependency"). |
+| Deployment artifacts | Travel as GitHub Actions artifacts, not through the storage account, which is provisioned and earmarked for this segment but unused (`docs/architecture.md` "Storage"). |
 
 The line to hold: **small, transient, or already-in-Postgres** payloads
 stay where they are. Blob storage earns its place only when a payload is

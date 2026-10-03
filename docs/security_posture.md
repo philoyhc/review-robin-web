@@ -445,3 +445,4 @@ Tracked in `guide/deferred_consolidated.md`.
 | Staging slot + manual-approval production deploy gate | Deferred — single dev slot today (see `docs/deployment_dev.md`) |
 | Application Insights resource | Deferred — logs are already structured/JSON and ingestible once it exists (PR 1) |
 | Postgres-specific column types / `ENUM` / `JSONB` GIN indexes | Deferred infrastructure (`guide/deferred_consolidated.md`) |
+| CSV formula injection | Deferred — extracts write cells verbatim, participant answers included, so a spreadsheet evaluates a leading `=` / `+` / `-` / `@` (`spec/csv_contracts.md` §2) |

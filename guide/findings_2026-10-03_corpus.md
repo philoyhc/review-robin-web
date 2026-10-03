@@ -166,17 +166,17 @@ stricter until ruled on.
 - **E3, E4, E14**: retire the dead `.btn-icon` modifiers, unrendered
   classes and three consumerless tokens (`--text-on-amber`, `--space-12`,
   `--space-16`), or keep them on purpose.
-- **E9, E18, E19, E23, E16**: `error.html`'s raw-hex palette; no H1 on
+- ~~**E9, E18**~~, **E19**, ~~**E23, E16**~~ — **Ruled 2026-10-03: update the spec. Done in #2806** (E19's underline goes with the dead-code deletion): `error.html`'s raw-hex palette; no H1 on
   the Create page; the app-identity span; 1px vs 2px borders; the
   `#667080` counterfactual.
-- **D9, D11, D23**: the golden-fixture claim for Settings CSV order;
+- ~~**D9, D11**~~, **D23** — **Ruled 2026-10-03: update the spec.** D9 and D11 (the posture stated; phase 2's wipe names the assignments and responses) **done in #2806**; D23 goes with the dead-code deletion: the golden-fixture claim for Settings CSV order;
   formula-injection posture for extracts; `DEBUG` / `APP_NAME` unread and
   `APP_ENV` called informational though it gates boot.
-- **H10**: one stated purpose for the storage account (diagnostics only,
+- ~~**H10**~~ — **Ruled 2026-10-03: update the docs. Done in #2806**: provisioned, earmarked for 18Q, unused. one stated purpose for the storage account (diagnostics only,
   or the planned blob store).
-- **I12**: README.md says a group instrument needs a pinned rule before it
+- ~~**I12**~~ — **Ruled 2026-10-03. Done in #2806.** README.md says a group instrument needs a pinned rule before it
   can open; nothing in code or spec says so.
-- **I18**: "six decisions" of `rrw_sdd_in_practice.md` §6 against seven
+- ~~**I18**~~ — **Ruled 2026-10-03. Done in #2806**: five §6 decisions plus §6.3's trade-off make the six articles. "six decisions" of `rrw_sdd_in_practice.md` §6 against seven
   headings.
 
 **Old findings reopened.**

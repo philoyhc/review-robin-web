@@ -104,6 +104,15 @@ constant. The serialiser yields the header first, then one tuple
 per row in a deterministic order so re-export of the same session
 is byte-stable.
 
+**No extract neutralises spreadsheet formulas.** Every cell, the
+participant-typed response values included, is written verbatim
+through `csv.writer`, so an operator opening an extract in a
+spreadsheet sees a cell that starts with `=`, `+`, `-` or `@`
+evaluated as a formula. The general fix, a guard on write that the
+importer strips, would change this contract for every cell, so it is
+deferred with the settings CSV's own guard
+(`guide/deferred_consolidated.md`).
+
 ### 2.1 Reviewers — `extracts/reviewers_extract.py`
 
 | # | Column | Source | Notes |
@@ -459,7 +468,8 @@ the round-trip notes below.
    `Integer` response field is an error too, as on Band 2
    (`spec/instruments.md`, the Bounds rules).
 2. **Phase 2 — Apply the typed plan.** Wipe-and-replace within
-   the affected section (e.g. all instruments for a session).
+   the affected section (e.g. all instruments for a session, which
+   also deletes every assignment and response in it).
    `session_rule_sets` is the exception: an upsert by name that
    deletes the rows the CSV omits (§4 item 7).
    Atomic transaction. On any apply error, raise; the caller's
@@ -710,9 +720,12 @@ Concrete guarantees the importers + serialisers maintain:
 1. **Deterministic row order.** Active rows first, then by the
    first sort key documented per extract. Every `session_rule_sets`
    row emits, in `id` order.
-2. **Deterministic field order.** Section ordering pinned in
-   `serialize_session_config`'s docstring + a golden-fixture
-   unit test.
+2. **Deterministic field order.** Section ordering is pinned in
+   `serialize_session_config`'s docstring.
+   `test_section_ordering_is_deterministic` asserts a byte-identical
+   re-export and the order of the first three sections; the later
+   sections are pinned by the docstring alone (findings D9,
+   2026-10-03).
 3. **Encoding parity.** UTF-8 in, UTF-8 out. BOM stripped on
    read, never emitted on write.
 4. **Datetime normalisation.** Naive readbacks (SQLite without
