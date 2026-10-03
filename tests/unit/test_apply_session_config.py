@@ -573,21 +573,142 @@ def test_round_trip_carries_18g_scheduled_event_columns(db: Session) -> None:
     assert dst.retention_overrides == src.retention_overrides
 
 
+def _instrument_with_field_refs(db: Session, *, code: str):
+    """A session whose one instrument has two display fields and two
+    response fields, a default sort on the second display field and the
+    Group sentinel, and widths on one field of each kind (findings A28)."""
+    from app.db.models import InstrumentDisplayField, InstrumentResponseField
+
+    src = _session(db, code=code)
+    inst = Instrument(session_id=src.id, name="Refs", order=1)
+    db.add(inst)
+    db.flush()
+    name = InstrumentDisplayField(
+        instrument_id=inst.id, label="", source_type="reviewee",
+        source_field="name", order=1, visible=True,
+    )
+    tag = InstrumentDisplayField(
+        instrument_id=inst.id, label="", source_type="reviewee",
+        source_field="tag_1", order=2, visible=True,
+    )
+    rating = InstrumentResponseField(
+        instrument_id=inst.id, field_key="rating", label="Rating", order=1,
+        _inline_data_type="Integer", _inline_response_type="Likert5",
+        _inline_min=1.0, _inline_max=5.0, _inline_step=1.0,
+    )
+    notes = InstrumentResponseField(
+        instrument_id=inst.id, field_key="notes", label="Notes", order=2,
+        _inline_data_type="String", _inline_response_type="Long text",
+    )
+    db.add_all([name, tag, rating, notes])
+    db.flush()
+    inst.sort_display_fields = [
+        {"display_field_id": tag.id, "dir": "desc"},
+        {"display_field_id": -1, "dir": "asc"},
+    ]
+    inst.column_widths = {
+        "identity": 200,
+        f"df_{tag.id}": 150,
+        f"rf_{notes.id}": 120,
+    }
+    db.flush()
+    return src, inst
+
+
+def _refs_by_name(db: Session, session_id: int):
+    from app.db.models import InstrumentDisplayField, InstrumentResponseField
+
+    inst = db.execute(
+        select(Instrument).where(Instrument.session_id == session_id)
+    ).scalar_one()
+    displays = {
+        f.source_field: f.id
+        for f in db.execute(
+            select(InstrumentDisplayField).where(
+                InstrumentDisplayField.instrument_id == inst.id
+            )
+        ).scalars()
+    }
+    fields = {
+        f.field_key: f.id
+        for f in db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == inst.id
+            )
+        ).scalars()
+    }
+    return inst, displays, fields
+
+
 def test_round_trip_carries_instrument_column_widths(db: Session) -> None:
-    """``Instrument.column_widths`` (drag-gripper widths) survives
-    the round-trip — pre-PR-5 the silent drop meant every imported
-    session lost its preview-table layout."""
-    src = _populated_round_trip_session(db, code="rt-cw-src")
+    """``Instrument.column_widths`` and ``sort_display_fields`` survive
+    the round-trip, re-pointed at the imported fields (findings A28):
+    they name fields by id, so the CSV carries them by position and the
+    import maps each back to the field it creates."""
+    src, _ = _instrument_with_field_refs(db, code="rt-cw-src")
     rows = serialize_session_config(db, src)
+    by_field = {r.field: r.value for r in rows}
+    assert json.loads(by_field["instruments[1].column_widths"]) == {
+        "identity": 200,
+        "df@2": 150,
+        "rf@2": 120,
+    }
+    assert json.loads(by_field["instruments[1].sort_display_fields"]) == [
+        {"display_field": 2, "dir": "desc"},
+        {"display_field_id": -1, "dir": "asc"},
+    ]
+
     dst = _bare_session(db, code="rt-cw-dst")
-    apply_session_config(
+    result = apply_session_config(
         db, review_session=dst, rows=rows, user=_user(db, email="rt-cw@e.edu")
     )
+    assert result.errors == []
     db.expire_all()
-    dst_inst = db.execute(
-        select(Instrument).where(Instrument.session_id == dst.id)
-    ).scalar_one()
-    assert dst_inst.column_widths == {"identity": 200, "df_1": 150}
+    dst_inst, displays, fields = _refs_by_name(db, dst.id)
+    assert dst_inst.column_widths == {
+        "identity": 200,
+        f"df_{displays['tag_1']}": 150,
+        f"rf_{fields['notes']}": 120,
+    }
+    assert dst_inst.sort_display_fields == [
+        {"display_field_id": displays["tag_1"], "dir": "desc"},
+        {"display_field_id": -1, "dir": "asc"},
+    ]
+
+
+def test_an_old_bundles_id_keyed_sort_and_widths_are_dropped(
+    db: Session,
+) -> None:
+    """A settings CSV exported before A28 names fields by the source
+    session's ids, which the import never has. Those entries are dropped
+    rather than left pointing at another session's fields; the Group
+    sentinel and the identity width, which name no field, are kept."""
+    src, inst = _instrument_with_field_refs(db, code="rt-old-src")
+    rows = [
+        Row(r.field, r.value, r.data_type)
+        for r in serialize_session_config(db, src)
+    ]
+    old_widths = json.dumps(inst.column_widths)
+    old_sort = json.dumps(inst.sort_display_fields)
+    rows = [
+        Row(r.field, old_widths, r.data_type)
+        if r.field == "instruments[1].column_widths"
+        else Row(r.field, old_sort, r.data_type)
+        if r.field == "instruments[1].sort_display_fields"
+        else r
+        for r in rows
+    ]
+    dst = _bare_session(db, code="rt-old-dst")
+    result = apply_session_config(
+        db, review_session=dst, rows=rows, user=_user(db, email="rt-old@e.edu")
+    )
+    assert result.errors == []
+    db.expire_all()
+    dst_inst, _, _ = _refs_by_name(db, dst.id)
+    assert dst_inst.column_widths == {"identity": 200}
+    assert dst_inst.sort_display_fields == [
+        {"display_field_id": -1, "dir": "asc"}
+    ]
 
 
 def test_serialize_omits_field_labels(db: Session) -> None:

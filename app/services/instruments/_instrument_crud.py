@@ -25,8 +25,6 @@ Saves emit ``instrument.created`` / ``.deleted`` /
 from __future__ import annotations
 
 import copy as _copy
-import re
-from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -43,7 +41,7 @@ from app.db.models import (
 from app.services import session_lifecycle as lifecycle
 from app.services import audit
 from app.services.instruments._band1 import _band1_rule_set_name
-from app.services.instruments._display_fields import GROUP_IDENTITY_SORT_KEY
+from app.services.instruments._field_refs import repoint_sort, repoint_widths
 from app.services.instruments._response_fields import DEFAULT_RESPONSE_FIELDS
 from app.services.instruments._state import _instrument_label
 
@@ -419,10 +417,10 @@ def replicate_instrument(
     db.flush()
     display_ids = {old: new.id for old, new in display_copy_of.items()}
     field_ids = {old: new.id for old, new in copy_of.items()}
-    instrument.sort_display_fields = _repoint_sort(
+    instrument.sort_display_fields = repoint_sort(
         source.sort_display_fields, display_ids
     )
-    instrument.column_widths = _repoint_widths(
+    instrument.column_widths = repoint_widths(
         source.column_widths, display_ids=display_ids, field_ids=field_ids
     )
     _copy_view_policies(db, review_session, source, instrument, actor)
@@ -573,56 +571,6 @@ def _clone_rule_set(
         },
     )
     return clone.id
-
-
-_WIDTH_KEY = re.compile(r"^(df|rf)_(\d+)$")
-
-
-def _repoint_sort(
-    entries: list[dict[str, Any]] | None, display_ids: dict[int, int]
-) -> list[dict[str, Any]] | None:
-    """A replica's sort entries, re-pointed at its own display fields.
-    The group-identity sentinel (``GROUP_IDENTITY_SORT_KEY``, a group
-    instrument's composed Group column) names no field and is kept as
-    it is; an entry naming no source display field is dropped."""
-    if not isinstance(entries, list) or not entries:
-        return entries if isinstance(entries, list) else None
-    out = []
-    for entry in entries:
-        if not isinstance(entry, dict):
-            continue
-        old_id = entry.get("display_field_id")
-        if old_id == GROUP_IDENTITY_SORT_KEY:
-            out.append(dict(entry))
-            continue
-        new_id = display_ids.get(old_id) if isinstance(old_id, int) else None
-        if new_id is not None:
-            out.append({**entry, "display_field_id": new_id})
-    return out
-
-
-def _repoint_widths(
-    widths: dict[str, Any] | None,
-    *,
-    display_ids: dict[int, int],
-    field_ids: dict[int, int],
-) -> dict[str, Any] | None:
-    """A replica's column widths, ``df_<id>`` / ``rf_<id>`` keys re-pointed
-    at its own fields. Other keys (``identity``) are kept; a key naming
-    no source field is dropped."""
-    if not isinstance(widths, dict) or not widths:
-        return widths if isinstance(widths, dict) else None
-    out: dict[str, Any] = {}
-    for key, value in widths.items():
-        match = _WIDTH_KEY.match(key) if isinstance(key, str) else None
-        if match is None:
-            out[key] = value
-            continue
-        ids = display_ids if match.group(1) == "df" else field_ids
-        new_id = ids.get(int(match.group(2)))
-        if new_id is not None:
-            out[f"{match.group(1)}_{new_id}"] = value
-    return out
 
 
 class LastInstrumentError(Exception):

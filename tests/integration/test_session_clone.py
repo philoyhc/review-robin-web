@@ -403,3 +403,102 @@ def test_a_clone_does_not_trip_the_never_generated_rules(
         "the clone has no assignments, so the never-Generated skip "
         "should suppress this rule"
     )
+
+
+def test_a_clone_repoints_sort_and_widths_at_its_own_fields(
+    db: Session,
+) -> None:
+    """Findings A28: the default sort and column widths name fields by
+    id. A clone used to copy them verbatim, so they named the source's
+    fields and the clone lost its sort and widths. They now name the
+    clone's own fields, as Replicate does; the Group sentinel and the
+    identity width, which name no field, ride as they are."""
+    from app.db.models import InstrumentDisplayField
+
+    source, op = _source_session(db, "clone-refs")
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == source.id)
+    ).scalar_one()
+    display = InstrumentDisplayField(
+        instrument_id=instrument.id, label="", source_type="reviewee",
+        source_field="tag_1", order=9, visible=True,
+    )
+    db.add(display)
+    db.flush()
+    field = db.execute(
+        select(InstrumentResponseField)
+        .where(InstrumentResponseField.instrument_id == instrument.id)
+        .order_by(InstrumentResponseField.order)
+    ).scalars().first()
+    instrument.sort_display_fields = [
+        {"display_field_id": display.id, "dir": "desc"},
+        {"display_field_id": -1, "dir": "asc"},
+    ]
+    instrument.column_widths = {
+        "identity": 210,
+        f"df_{display.id}": 140,
+        f"rf_{field.id}": 90,
+    }
+    db.commit()
+
+    clone = session_clone.clone_session(db, source=source, user=op, mode="all")
+
+    copy = db.execute(
+        select(Instrument).where(Instrument.session_id == clone.id)
+    ).scalar_one()
+    copy_display = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == copy.id,
+            InstrumentDisplayField.source_field == "tag_1",
+        )
+    ).scalar_one()
+    copy_field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == copy.id,
+            InstrumentResponseField.field_key == field.field_key,
+        )
+    ).scalar_one()
+    assert copy.sort_display_fields == [
+        {"display_field_id": copy_display.id, "dir": "desc"},
+        {"display_field_id": -1, "dir": "asc"},
+    ]
+    assert copy.column_widths == {
+        "identity": 210,
+        f"df_{copy_display.id}": 140,
+        f"rf_{copy_field.id}": 90,
+    }
+    assert copy_display.id != display.id
+
+
+def test_a_clone_drops_a_width_naming_another_instruments_field(
+    db: Session,
+) -> None:
+    """Each instrument's widths re-point against its own fields only, as
+    Replicate's do: a stray ``rf_<id>`` naming an earlier instrument's
+    field is dropped, not re-pointed at that field's clone."""
+    source, op = _source_session(db, "clone-stray")
+    first = db.execute(
+        select(Instrument).where(Instrument.session_id == source.id)
+    ).scalar_one()
+    first_field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == first.id
+        )
+    ).scalars().first()
+    second = Instrument(
+        session_id=source.id,
+        name="Second",
+        order=first.order + 1,
+        column_widths={"identity": 180, f"rf_{first_field.id}": 70},
+    )
+    db.add(second)
+    db.commit()
+
+    clone = session_clone.clone_session(db, source=source, user=op, mode="all")
+
+    copy = db.execute(
+        select(Instrument).where(
+            Instrument.session_id == clone.id, Instrument.name == "Second"
+        )
+    ).scalar_one()
+    assert copy.column_widths == {"identity": 180}

@@ -91,7 +91,9 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    the unqualified import unchanged:
    - `app/services/instruments/` — `_state.py`, `_display_fields.py`,
      `_response_fields.py`, `_band1.py`, `_band2.py`, `_pagination.py`,
-     `_instrument_crud.py`, `_field_presets.py`.
+     `_instrument_crud.py`, `_field_presets.py`, and `_field_refs.py`
+     (an instrument's sort and widths re-pointed across a copy; imported
+     directly by the clone and the settings CSV, not re-exported).
    - `app/services/assignments/` — `_shared.py`, `_coverage.py`,
      `_self_review.py`, `_generate.py` (18O Track B carve),
      `_reconcile_cache.py` (19R Item 2 — the staleness verdict's

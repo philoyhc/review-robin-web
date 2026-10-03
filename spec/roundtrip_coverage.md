@@ -59,7 +59,7 @@ responses. See `spec/rehydrate.md`.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `name`, `short_label`, `description`, `sort_display_fields`, `group_kind`, `rule_set_id` (by name), `column_widths`, `starts_new_page`, `band2_state` | ✅ | ✅ | Full config round-trip both paths |
+| `name`, `short_label`, `description`, `sort_display_fields`, `group_kind`, `rule_set_id` (by name), `column_widths`, `starts_new_page`, `band2_state` | ✅ | ✅ | Full config round-trip both paths. `sort_display_fields` and `column_widths` name fields by id, so both paths re-point them at the copy's fields (findings A28): the clone through its id maps, the Settings CSV by field position (`spec/csv_contracts.md` §3.3) |
 | `accepting_responses` | ✅ | ❌ | Settings-CSV restores the runtime open/closed flag; clone resets it (fresh draft) |
 | `order` | ⚠️ | ✅ | Settings-CSV serializes + parses it but **apply ignores it** — 1-based CSV position wins. Value round-trips only because export order matches position |
 | **`band1_touched_links`** | ✅ | ✅ | `instruments[n].band1_touched_links` in the Settings CSV; clone copies the column |

@@ -298,11 +298,12 @@ stay in §3.
   which beats the single 0.5 rule `ui_elements.md` specifies.
 - ~~**C4**~~ — **Done in #2719.** The `needs_confirm` banner said the checkbox is "at the top of
   Quick Setup", but it sits below the grid.
-- **A28** — Session Duplicate and settings import copy an instrument's
-  `sort_display_fields` and `column_widths` verbatim, so a copy's sort
-  and widths name the source's display and response field ids
-  (`session_clone.py`, `session_config_io/_apply_instrument.py`).
-  Replicate re-points them since #2759. Found in #2759's read.
+- ~~**A28**~~ — **Done in #2773.** Session Duplicate and settings import
+  copied an instrument's `sort_display_fields` and `column_widths`
+  verbatim, so a copy's sort and widths named the source's display and
+  response field ids. Duplicate now re-points them through its id maps,
+  as Replicate has since #2759; the Settings CSV carries them by field
+  position (`spec/csv_contracts.md` §3.3). Found in #2759's read.
 - ~~**B31**~~ — **Ruled 2026-10-03: fix it in its own PR. Done in
   #2768.** `send_reminder` now writes the dedupe key onto the outbox row
   before its commit. A scheduled reminder pass that failed partway
