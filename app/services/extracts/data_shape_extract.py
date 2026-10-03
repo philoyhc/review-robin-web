@@ -35,6 +35,7 @@ the count of in-scope responses matching that value.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field as dc_field
 from statistics import mean, median
 
@@ -53,11 +54,15 @@ from app.db.models import (
 )
 from app.services import field_labels
 from app.services import responses as responses_service
+from app.services.extracts.entity_metadata_extract import (
+    self_review_handling_filename_suffix,
+)
 
 
 __all__ = [
     "DISCRETE_STEPS_THRESHOLD",
     "build_shape_rows",
+    "shape_filename",
     "compose_shape_preview_headers",
     "compose_shape_preview_aggregates",
     "discrete_step_values",
@@ -476,6 +481,20 @@ def _data_shape_state_suffix(state: str) -> str:
         return "_noself"
     # ``include_self`` and any future single-state default.
     return "_self"
+
+
+def shape_filename(review_session: ReviewSession, shape: DataShape) -> str:
+    """A saved shape's download name:
+    ``{code}_{slug(name)}{suffix}.csv``. The slug keeps
+    alphanumerics, ``-`` and ``_`` and collapses other runs to
+    ``_``, falling back to ``shape`` when nothing survives; the
+    suffix is the shape's Self-review handling state, named as the
+    metadata cards name theirs. Shared by the shape's Download
+    route and the Zip-all bundle."""
+    code = (review_session.code or "session").strip() or "session"
+    slug = re.sub(r"[^A-Za-z0-9_-]+", "_", shape.name).strip("_")
+    suffix = self_review_handling_filename_suffix(shape.self_review_handling)
+    return f"{code}_{slug or 'shape'}{suffix}.csv"
 
 
 def _compose_identity_header(

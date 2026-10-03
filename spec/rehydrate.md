@@ -227,13 +227,25 @@ with a specific, actionable error and creates **no** session — e.g.
 *"responses.csv header doesn't match the expected format; re-export via
 Extract data → Extract all data."* Filenames are matched by suffix
 (`*_settings.csv` etc.), tolerating the `{code}_` prefix the extracts
-emit and any operator renaming that preserves the suffix.
+emit and any operator renaming that preserves the suffix and does not
+put `_by_instrument_` in the name (see Ignored files below).
 
-**Ignored files.** `reviewer_stats.csv`, `reviewee_stats.csv`, the
-per-instrument `*_instrument_{N}.csv`, saved data-shape CSVs, and
-`participant_tokens.csv` may be present in the bundle but are **not read**
-by rehydrate (stats/tokens are derived; per-instrument CSVs duplicate
-`responses.csv`). They are silently ignored, not errors.
+**Ignored files.** The By-instrument CSVs, the two response metadata
+CSVs, saved data-shape CSVs and `participant_tokens.csv` may be present
+in the Zip-all bundle, and older bundles also carry `reviewer_stats.csv`,
+`reviewee_stats.csv` and per-instrument `*_instrument_{N}.csv`. None is
+**read** by rehydrate (each is derived from, or a cut of, the files
+above); they are silently ignored, not errors. A By-instrument file is
+ignored **by name** (`_by_instrument_` anywhere in it): it is named
+`{code}_by_instrument_{slug}.csv` after the instrument's short label, and
+one labelled `responses` or `Peer relationships` would otherwise end in a
+file kind's suffix — for the optional relationships and observers files,
+with no real file present to win. **Accepted limitation:** a session
+whose code (in any case) contains `_by_instrument_`, or ends in
+`_by_instrument` — the `{code}_` prefix supplies the final underscore —
+has every file skipped, so rehydrate reports its files missing; renaming
+them (keeping the suffix) clears it. A clear error on that rare code was preferred to name rules
+that misread a By-instrument file on an ordinary renamed upload.
 
 ## 5. Naming and description
 
@@ -528,6 +540,10 @@ Stated plainly so the card copy and the PR description stay honest:
   `participant_tokens.csv`). These match `session_clone`'s existing
   exclusions and are acceptable for a working copy — and are the basis of
   the [description note](#5-naming-and-description)'s "not restored" line.
+- **A session code containing `_by_instrument_`, or ending in
+  `_by_instrument`, can't be rehydrated from its files as named**: they
+  are skipped as By-instrument CSVs and reported missing until renamed
+  (Ignored files, [§4](#4-required-file-set)).
 - **Group-scoped instruments / self-reviews** reconstruct correctly as
   long as the rule sets + `group_kind` in `settings.csv` regenerate the
   same graph. Where they do not, the affected responses are dropped and

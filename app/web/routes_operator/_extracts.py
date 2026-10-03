@@ -1,6 +1,6 @@
 """Extract downloads — per-entity CSVs + two zip bundles.
 
-Eight GET routes:
+GET routes, among them:
 
 - Settings (12A-1 PR 1) — 3-column key/value/data-type CSV.
 - Reviewers / Reviewees (12A-1 PR 2) — wide CSVs that
@@ -11,11 +11,11 @@ Eight GET routes:
   the importer shipped by 15D PR 1.
 - Setup bundle — ``bundle.zip`` (filename ``{code}_setup.zip``).
   Setup-only members (Reviewers + Reviewees + Relationships +
-  Settings) for the Session Home Extract Setup card.
+  Settings, plus Observers when enabled) for the Extract Setup card.
 - Responses bundle — ``responses_bundle.zip`` (filename
-  ``{code}_responses.zip``). Backs the new Extract data
-  Operations-strip tab's "Zip all" button. Members: unified
-  Responses + reviewer/reviewee stats + per-instrument files.
+  ``{code}_responses.zip``). Backs the Extract data tab's
+  intro-card "Zip all": the unified Responses CSV plus each
+  chosen card's own download, as that card is configured.
 - Audit log (12B PR 1) — wide CSV of ``audit_events`` rows
   for the session; system-emitted, no import counterpart.
 
@@ -45,7 +45,7 @@ from app.services.extracts.entity_metadata_extract import (
     SELF_REVIEW_HANDLING_STATES,
     build_reviewee_metadata,
     build_reviewer_metadata,
-    self_review_handling_filename_suffix,
+    metadata_filename,
 )
 from app.services.extracts.observers_extract import serialize_observers
 from app.services.extracts.participant_tokens_extract import (
@@ -56,6 +56,8 @@ from app.services.extracts.responses_extract import serialize_responses
 from app.services.extracts.reviewees_extract import serialize_reviewees
 from app.services.extracts.reviewers_extract import serialize_reviewers
 from app.services.extracts.zip_bundle import (
+    ByInstrumentOptions,
+    MetadataOptions,
     build_by_instrument_bundle,
     build_responses_bundle,
     build_setup_bundle,
@@ -350,35 +352,90 @@ def export_bundle_zip(
 
 @router.get("/sessions/{session_id}/export/responses_bundle.zip")
 def export_responses_bundle_zip(
+    by_instrument: int = Query(default=1),
+    bi_instrument: list[int] | None = Query(
+        default=None, alias="by_instrument.instrument"
+    ),
+    bi_meta: int = Query(default=1, alias="by_instrument.meta"),
+    bi_all_rows: int = Query(default=1, alias="by_instrument.all_rows"),
+    reviewer_metadata: int = Query(default=1),
+    rvr_instrument: list[int] | None = Query(
+        default=None, alias="reviewer_metadata.instrument"
+    ),
+    rvr_all: int = Query(default=1, alias="reviewer_metadata.all"),
+    rvr_self_review_handling: str = Query(
+        default=SELF_REVIEW_HANDLING_DEFAULT,
+        alias="reviewer_metadata.self_review_handling",
+    ),
+    reviewee_metadata: int = Query(default=1),
+    rve_instrument: list[int] | None = Query(
+        default=None, alias="reviewee_metadata.instrument"
+    ),
+    rve_all: int = Query(default=1, alias="reviewee_metadata.all"),
+    rve_self_review_handling: str = Query(
+        default=SELF_REVIEW_HANDLING_DEFAULT,
+        alias="reviewee_metadata.self_review_handling",
+    ),
     data_shapes: int = Query(default=1),
     tokens: int = Query(default=1),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> Response:
-    """The Extract data tab's Zip-all bundle — the unified
-    Responses CSV + reviewer/reviewee stats + one per-instrument
-    CSV in one archive. Built fully in memory.
+    """The Extract data tab's Zip-all bundle: ``responses.csv``
+    plus, per intro-card chip, the files that card's own button
+    downloads. Built fully in memory.
 
-    ``?data_shapes=0`` excludes the saved Data shape CSVs
-    from the bundle — driven by the intro card's
-    ``Data shaper`` chip. Default (chip on) includes every
-    saved shape, one CSV each named
-    ``{code}_{slug(name)}.csv``.
+    Each chip is a flag, ``0`` to leave the card out:
+    ``?by_instrument=``, ``?reviewer_metadata=``,
+    ``?reviewee_metadata=``, ``?data_shapes=``, ``?tokens=``.
+    A card's own query rides namespaced by the card, read as that
+    card's route reads it: ``?by_instrument.instrument=42`` (and
+    ``.meta`` / ``.all_rows``) as on ``by_instrument_bundle.zip``;
+    ``?reviewer_metadata.instrument=42`` (and ``.all`` /
+    ``.self_review_handling``) as on ``reviewer_metadata.csv``, and
+    likewise for reviewees. Saved shapes carry their own chips, so
+    ``data_shapes`` has no options. The page composes the URL from
+    the cards' chips; an omitted option takes the card route's own
+    default.
 
-    ``?tokens=0`` excludes ``participant_tokens.csv`` from the
-    bundle — driven by the intro card's ``Token keys`` chip.
-    The chip + CSV only render / ship when the session has
-    ``observers_enabled`` on; without observers the tokens
-    have no consumer.
-
-    Filename: ``{code}_responses.zip``. Per
-    ``guide/extract_data.md`` the per-card lens downloads are
-    the fine-grained alternative; this button is the one-click
-    "all response files" shortcut."""
+    Filename: ``{code}_responses.zip``."""
+    reviewer_options = (
+        MetadataOptions(
+            instrument_ids=set(rvr_instrument) if rvr_instrument else None,
+            all_rows=rvr_all != 0,
+            self_review_handling=_normalise_self_review_handling(
+                rvr_self_review_handling
+            ),
+        )
+        if reviewer_metadata != 0
+        else None
+    )
+    reviewee_options = (
+        MetadataOptions(
+            instrument_ids=set(rve_instrument) if rve_instrument else None,
+            all_rows=rve_all != 0,
+            self_review_handling=_normalise_self_review_handling(
+                rve_self_review_handling
+            ),
+        )
+        if reviewee_metadata != 0
+        else None
+    )
     zip_bytes, counts = build_responses_bundle(
         db,
         review_session,
+        by_instrument=(
+            ByInstrumentOptions(
+                instrument_ids=set(bi_instrument) if bi_instrument else None,
+                include_metadata=bi_meta != 0,
+                include_empty_assignments=bi_all_rows != 0,
+            )
+            if by_instrument != 0
+            else None
+        ),
+        reviewer_metadata=reviewer_options,
+        reviewee_metadata=reviewee_options,
         include_data_shapes=(data_shapes != 0),
         include_participant_tokens=(tokens != 0),
     )
@@ -392,6 +449,17 @@ def export_responses_bundle_zip(
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(**counts),
+        # Which self-review pool each metadata file carries, as
+        # the cards' own extract events record it.
+        context={
+            f"{kind}_self_review_handling": options.self_review_handling
+            for kind, options in (
+                ("reviewer_metadata", reviewer_options),
+                ("reviewee_metadata", reviewee_options),
+            )
+            if options is not None
+        }
+        or None,
     )
 
     code = (review_session.code or "session").strip() or "session"
@@ -476,19 +544,6 @@ def _normalise_self_review_handling(raw: str | None) -> str:
     return SELF_REVIEW_HANDLING_DEFAULT
 
 
-def _metadata_download_name(
-    review_session: ReviewSession, kind: str, suffix: str
-) -> str:
-    """Insert the Self-review handling chip's filename suffix
-    (``_self`` / ``_noself`` / ``_both``) between the kind slug
-    and the ``.csv`` extension. Falls through to :func:`filename`
-    so the canonical-name policy stays in one place."""
-    base = filename(review_session, kind)
-    if base.endswith(".csv"):
-        return base[: -len(".csv")] + suffix + ".csv"
-    return base + suffix
-
-
 @router.get("/sessions/{session_id}/export/reviewer_metadata.csv")
 def export_reviewer_metadata_csv(
     instrument: list[int] | None = Query(default=None),
@@ -538,11 +593,7 @@ def export_reviewer_metadata_csv(
         context={"self_review_handling": state},
     )
 
-    download_name = _metadata_download_name(
-        review_session,
-        "reviewer_metadata",
-        self_review_handling_filename_suffix(state),
-    )
+    download_name = metadata_filename(review_session, "reviewer_metadata", state)
     return StreamingResponse(
         stream_csv(rows),
         media_type="text/csv",
@@ -591,11 +642,7 @@ def export_reviewee_metadata_csv(
         context={"self_review_handling": state},
     )
 
-    download_name = _metadata_download_name(
-        review_session,
-        "reviewee_metadata",
-        self_review_handling_filename_suffix(state),
-    )
+    download_name = metadata_filename(review_session, "reviewee_metadata", state)
     return StreamingResponse(
         stream_csv(rows),
         media_type="text/csv",

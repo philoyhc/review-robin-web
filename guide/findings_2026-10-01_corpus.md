@@ -179,10 +179,16 @@ the spec should say so.
   change nothing. The extracts' `Instrument_{N}` fallback is the
   instrument's `session_seq`, as on screen, not its position — the
   operator CSVs and the observer collation CSV alike.
-- **D28** — The Extract data page's intro card says Zip all downloads
-  the response files "as configured using the other cards". None of the
-  other cards' settings reach the bundle. Reword the copy, or make the
-  bundle honour them? Found in #2761.
+- ~~**D28**~~ — **Ruled 2026-10-03: the bundle is a pass-through of
+  the other cards. Done in #2769.** The intro card said Zip all
+  downloaded the response files "as configured using the other cards",
+  but none of those settings reached the bundle. Now it always carries
+  `responses.csv`, for Rehydrate. Each chip that is on adds exactly what
+  its card's own button downloads, under the same name. The stats and
+  per-instrument long files left the bundle. Rehydrate ignores
+  By-instrument files by name. The four half-width cards were reordered: metadata on
+  the left; By instrument, then Extract all data, on the right. Found in
+  #2761.
 - ~~**G16 = E22**~~ — **Ruled 2026-10-02: keep workspace-wide, correct
   the spec. Done in #2746.** Session codes are unique across the
   workspace; the specs said per operator.
@@ -503,7 +509,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~D11 med · `:978` · clone does copy DataShapes.~~ Done in #2735.
   - ~~D12 low · bundled labels, helper name, slug, identity rows.~~ Done in #2735.
   - ~~D13 low · `:129` · `Instrument_{N}` fallback · author.~~ Done in #2761.
-  - D28 low · `:203` · Zip all's body copy overstates what it scopes · author.
+  - ~~D28 low · `:203` · Zip all's body copy overstates what it scopes · author.~~ Done in #2769.
 - `roundtrip_coverage.md`
   - ~~D14 med · `:127` · `results_acknowledged_at` is cloned.~~ Done in #2744.
   - ~~D15 low · `session_seq` is absent from the matrix.~~ Done in #2735.

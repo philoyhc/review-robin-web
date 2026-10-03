@@ -66,6 +66,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services import responses as responses_service
+from app.services.extracts import filename
 from app.services.instruments import _instrument_label
 
 __all__ = [
@@ -75,6 +76,7 @@ __all__ = [
     "SELF_REVIEW_HANDLING_STATES",
     "SELF_REVIEW_HANDLING_DEFAULT",
     "self_review_handling_filename_suffix",
+    "metadata_filename",
 ]
 
 
@@ -106,6 +108,22 @@ def self_review_handling_filename_suffix(state: str) -> str:
     if state == "both":
         return "_both"
     return _SUFFIX_BY_STATE.get(state, "_self")
+
+
+def metadata_filename(
+    review_session: ReviewSession, kind: str, state: str
+) -> str:
+    """The Reviewer / Reviewee response metadata card's download
+    name: ``{code}_{kind}{suffix}.csv``, the Self-review handling
+    chip's suffix (``_self`` / ``_noself`` / ``_both``) before the
+    extension. Shared by the card's route and the Zip-all bundle
+    so a file reads the same whichever button produced it."""
+    base = filename(review_session, kind)
+    return (
+        base[: -len(".csv")]
+        + self_review_handling_filename_suffix(state)
+        + ".csv"
+    )
 
 
 def compute_self_review_data_state(

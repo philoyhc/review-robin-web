@@ -39,9 +39,9 @@ _NAME_MAX = 255
 _CODE_MAX = 64
 
 # Extract file kinds → the suffix that identifies them. The extracts emit
-# ``{code}_<kind>.csv``; a loose ``<kind>.csv`` also matches. Stats /
-# metadata / per-instrument / token / data-shape files don't end in any of
-# these, so they're ignored.
+# ``{code}_<kind>.csv``; a loose ``<kind>.csv`` also matches. Metadata,
+# token and data-shape files don't end in any of these, so they're
+# ignored; by-instrument files are skipped by name (``_resolve_files``).
 _KIND_SUFFIX = {
     "settings": "settings.csv",
     "reviewers": "reviewers.csv",
@@ -50,6 +50,8 @@ _KIND_SUFFIX = {
     "observers": "observers.csv",
     "responses": "responses.csv",
 }
+
+_BY_INSTRUMENT_MARK = "_by_instrument_"
 
 _RX_SHORT_LABEL = re.compile(r"^instruments\[(\d+)\]\.short_label$")
 _RX_FIELD_KEY = re.compile(
@@ -82,10 +84,23 @@ class RehydrateReport:
 
 def _resolve_files(files: dict[str, bytes]) -> dict[str, bytes]:
     """Map each uploaded file to a kind by suffix. First match per kind
-    wins; unrecognised files are ignored."""
+    wins; unrecognized files are ignored.
+
+    By-instrument CSVs (``_by_instrument_`` in the name) are skipped.
+    They are named ``{code}_by_instrument_{slug}.csv`` after the
+    instrument's short label, so one labelled ``responses`` or ``Peer
+    relationships`` would otherwise end in a kind's suffix — and an
+    optional kind such as relationships has no real file to lose to.
+    The Zip-all bundle carries them when its By instrument chip is on.
+    The cost, accepted: a session whose code contains
+    ``_by_instrument_``, or ends in ``_by_instrument`` (the ``{code}_``
+    prefix adds the underscore), has every file skipped and is
+    reported as missing its files, which renaming them clears."""
     resolved: dict[str, bytes] = {}
     for name, content in files.items():
         lname = name.lower()
+        if _BY_INSTRUMENT_MARK in lname:
+            continue
         for kind, suffix in _KIND_SUFFIX.items():
             if kind not in resolved and lname.endswith(suffix):
                 resolved[kind] = content

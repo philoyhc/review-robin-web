@@ -211,10 +211,11 @@ per-session Diagnostics row.
 
 ### 2.6 Entity stats — `extracts/entity_stats_extract.py`
 
-Two **bundle-only** CSVs — a Reviewer stats
-file and a Reviewee stats file — added to the Zip-all bundle.
-They are deliberately **not** offered as individual downloads and
-have **no importer**: the round-trippable Reviewers / Reviewees
+Two CSVs — a Reviewer stats file and a Reviewee stats file —
+that the Zip-all bundle carried until findings D28 (2026-10-03)
+made it a pass-through of the other cards (§10's Zip all row), so
+**no download carries them now**. They were never offered as
+individual downloads and have **no importer**: the round-trippable Reviewers / Reviewees
 CSVs keep that role, and adding stats columns to them would break
 the importer contract. The module exposes `build_entity_stats`
 (not a streaming serialiser); it returns both header-led row lists
@@ -246,8 +247,9 @@ three field / char pairs.
 
 ### 2.7 Per-instrument responses — `extracts/responses_extract.py` (`serialize_responses_for_instrument`)
 
-**Bundle-only** sibling files to the unified
-Responses CSV — one ``{code}_instrument_{n}.csv`` per instrument,
+Sibling files to the unified Responses CSV that the Zip-all
+bundle carried until findings D28 (2026-10-03); **no download
+carries them now** — one ``{code}_instrument_{n}.csv`` per instrument,
 named positionally to match the ``instrument_{n}`` vocabulary
 used in §2.4's preamble and ``InstrumentName`` column. No
 individual download tile; no importer.
@@ -292,9 +294,9 @@ family.
 The operator-side deanonymization key. Downloaded from the Extract
 data tab's `Token keys` card
 (`GET /sessions/{id}/export/participant_tokens.csv`) and
-included in the responses-bundle Zip-all archive when
-`session.observers_enabled` is on (driven by the intro
-card's `Token keys` chip — `?tokens=0` excludes).
+included, under the same name, in the responses-bundle Zip-all
+archive when `session.observers_enabled` is on (driven by the
+intro card's `Token keys` chip — `?tokens=0` excludes).
 
 **No importer**: this CSV is a one-way reference, not a
 round-trippable shape. Sibling `reviewers.csv` /
@@ -930,7 +932,7 @@ while creating the session.
 | Extract Data — Responses tile | Out | `serialize_responses` | same |
 | Extract Data — Settings tile | Out | `serialize_session_config` (via `_session_config_csv`) | same |
 | Extract Setup — Zip all tile | Out | `build_setup_bundle` — a zip of the four setup CSVs above, plus `{code}_observers.csv` when `observers_enabled` (`GET /export/bundle.zip`, filename `{code}_setup.zip`) | same |
-| Extract data tab — Zip all button | Out | `build_responses_bundle` — a zip of the unified Responses CSV plus the two bundle-only entity-stats CSVs and one `instrument_{n}.csv` per instrument; plus one `{code}_{slug}.csv` per saved Data shape (omitted by `?data_shapes=0`) and, when `observers_enabled`, `{code}_participant_tokens.csv` (omitted by `?tokens=0`) (`GET /export/responses_bundle.zip`, filename `{code}_responses.zip`) | `guide/archive/extract_data.md` |
+| Extract data tab — Zip all button | Out | `build_responses_bundle` — always the unified Responses CSV; plus, for each intro chip that is on, the files that card's own button downloads under the same names and as the card is configured: the By-instrument CSVs (`?by_instrument=0` omits), the Reviewer and Reviewee metadata CSVs (`?reviewer_metadata=0` / `?reviewee_metadata=0`), every saved Data shape's CSV (`?data_shapes=0`) and, when `observers_enabled`, `{code}_participant_tokens.csv` (`?tokens=0`); each card's own query rides as `?{flag}.{param}` (`spec/extract_data.md`, Extract all data card) (`GET /export/responses_bundle.zip`, filename `{code}_responses.zip`) | `guide/archive/extract_data.md` |
 | Extract data tab — By-instrument Zip all button | Out | `build_by_instrument_bundle` — a zip of one wide-format CSV per instrument (`GET /export/by_instrument_bundle.zip`, filename `{code}_by_instrument.zip`; members named `{code}_by_instrument_{slug}.csv` where `{slug}` comes from the instrument's short label or the `Instrument_{session_seq}` fallback). Each member starts with a key/value meta block (instrument identity + per-response-field type/constraint rows + assignment count + pool / unit-of-review / self-review configuration) + blank row + wide data table (one row per assignment, columns = identity + tags + one per response field + SelfReview/SavedAt/SubmittedAt). | `guide/archive/extract_data.md` |
 | `GET /export/audit_log.csv` | Out | `serialize_audit_events` | Sys Admin → Sessions Diagnostics per-row "Audit log" link |
 | Reviewer summary — "Download my responses (CSV)" | Out | `serialize_reviewer_session_summary` (`GET /me/sessions/{id}/summary.csv`) | `spec/reviewer-surface.md` "Per-session summary" |

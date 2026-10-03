@@ -236,3 +236,23 @@ E1, E2 and E4 were checked by the author when they merged.
 - [ ] **Light and dark.** On any Setup page (Reviewers, say), the active
   Setup tab's underline is blue rather than grey, in both themes. The
   Operations row's green underline is unchanged.
+
+## Zip all follows the other cards (D28)
+
+- [ ] **Card order.** On Extract data, the left column holds Reviewer
+  response metadata above Reviewee response metadata. The right column
+  holds By instrument above Extract all data. The intro reads "Use
+  **Zip all** to download a complete set of response data, plus
+  whichever files are selected below, as each card configures them."
+- [ ] **Same files as the cards.** On By instrument, turn off one
+  instrument and Include metadata. On Reviewer response metadata, cycle
+  Self-review to Exclude. Download each card's own file, then the intro's
+  Zip all. The zip holds `…_responses.csv` and the same files under the
+  same names, and each opens identical to its card's download.
+- [ ] **Chips leave cards out.** Turn off the intro's Reviewee response
+  metadata and Data shaper chips. Zip all no longer holds the reviewee
+  metadata file or any shape files. No stats or `…_instrument_1.csv`
+  files appear in any case.
+- [ ] **Rehydrate still takes it.** Give an instrument the short label
+  `responses`, then download Extract Setup's Zip all and this Zip all.
+  Rehydrate both zips on the lobby: it accepts them.
