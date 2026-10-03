@@ -464,6 +464,34 @@ def test_a_response_field_type_in_any_case_imports_capitalised(
     assert field.validation == {"min": 1, "max": 10, "step": 1}
 
 
+@pytest.mark.parametrize("data_type", ["", "  "])
+def test_a_blank_response_field_type_imports_as_the_default(
+    db: Session, data_type: str
+) -> None:
+    """A blank type, spaces included, is an empty cell (round-trip rule
+    6): the field takes the default response field's type rather than
+    an error."""
+    from app.db.models import InstrumentResponseField
+    from app.services.instruments._response_fields import (
+        DEFAULT_RESPONSE_FIELDS,
+        _inline_kwargs_from_default_spec,
+    )
+
+    review_session = _bare_session(db, code="int-blank")
+    result = apply_session_config(
+        db, review_session, _integer_field_rows("1", "1", data_type)
+    )
+    assert result.ok, result.errors
+
+    field = db.scalars(
+        select(InstrumentResponseField)
+        .join(Instrument)
+        .where(Instrument.session_id == review_session.id)
+    ).one()
+    default = _inline_kwargs_from_default_spec(DEFAULT_RESPONSE_FIELDS[0])
+    assert field._inline_data_type == default["_inline_data_type"]
+
+
 def test_an_unknown_response_field_type_is_refused(db: Session) -> None:
     """A type outside String / Integer / Decimal / List is a row error,
     not a field stored with a type nothing recognizes (D2)."""

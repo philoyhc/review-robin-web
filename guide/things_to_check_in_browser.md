@@ -171,10 +171,11 @@ when it is checked; sections with unticked rows sit above the ticked ones.
 ## A lowercase response type imports as typed (D2)
 
 - [ ] **`integer` makes a number field.** Export a session's Settings
-  CSV, change an Integer response field's `data_type` value to
-  `integer`, and upload it to another session through Quick Setup. On
-  that session's Instruments page the field reads as Integer with its
-  Min, Max and Step, and the reviewer surface gives it a number box.
+  CSV. On an Integer field's `instruments[n].response_fields[m].data_type`
+  row, change the `value` cell to `integer`. Upload it to another session
+  through Quick Setup. On that session's reviewer surface the field has
+  a number box. The Instruments page is no test: it read as Integer even
+  before the fix.
 - [ ] **An unknown type is refused.** Change the value to `Boolean`
   instead and upload again. The page shows "Could not import session
   settings." and the session is unchanged.

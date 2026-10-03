@@ -42,7 +42,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   phase 2 hits the unique constraint and `_run_quick_setup_settings`
   (`_quick_setup.py:1090`) has no handler. *Reproduced.* Breaks the
   two-phase promise in `spec/csv_contracts.md` §3.3 and §7.3.
-- ~~**D2**~~ med — **Ruled 2026-10-03: case-fold in code. Done in #2793.** A lowercase response-field `data_type`
+- ~~**D2**~~ med — **Ruled 2026-10-03: case-fold in code. Done in #2793.** No backfill: a field an earlier import stored lowercase is mended by a Band 2 save or an export and re-import. A lowercase response-field `data_type`
   (`integer`) is stored verbatim with no validation, so the field is
   silently mistyped (`_apply_instrument.py:127-128, 437-442`).
   `csv_contracts.md` §4.5 says it is accepted. Case-fold in code, or

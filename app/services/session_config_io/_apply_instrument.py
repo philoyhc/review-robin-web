@@ -130,7 +130,7 @@ def _apply_instrument_kv(
             # what every consumer compares against (findings D2,
             # 2026-10-03); anything else is refused rather than stored
             # as a type nothing recognizes.
-            if value:
+            if value.strip():
                 canonical = _BAND2_DATA_TYPE_TO_INLINE.get(value.strip().lower())
                 if canonical is None:
                     raise _ParseError(
