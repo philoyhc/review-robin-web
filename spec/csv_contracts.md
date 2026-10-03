@@ -583,6 +583,23 @@ boundary.
   the rows dropped rather than failing. Stated on its own because the
   guarantee is the import's, not an aside of the friendly-labels rule
   that happens to cite it.
+- **A default sort and column widths travel by field position**
+  (findings A28, 2026-10-03). `Instrument.sort_display_fields` and
+  `column_widths` name fields by id, and an import creates new ones, so
+  the export writes positions instead: a sort entry's
+  `display_field_id` becomes `display_field`, the 1-based `m` of the
+  field's `display_fields[m]` rows (`{"display_field": 2, "dir":
+  "desc"}`), and a width key `df_<id>` / `rf_<id>` becomes `df@<m>` /
+  `rf@<m>`, `m` counting that instrument's `display_fields[m]` or
+  `response_fields[m]` rows respectively. The import maps each back to
+  the field it creates. The Group sentinel (`"display_field_id": -1`)
+  and width keys that are not `df_` / `rf_` keys (`identity`) ride as
+  they are. On export, a `df_` / `rf_` key or sort entry whose id is not
+  one of the instrument's fields is dropped. On import, an entry whose
+  position names no created field (or is not an integer) is dropped, as
+  are an older bundle's id-keyed entries, which name the source
+  session's fields, and a second sort entry naming a field, or the Group
+  sentinel, already named.
 - **A retired `instruments[n].responses_visible_when_closed` row is
   accepted and dropped** (findings B21, 2026-10-03). The column is
   gone and the export no longer writes the row; an older bundle that

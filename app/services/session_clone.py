@@ -41,6 +41,7 @@ from app.db.models import (
     User,
 )
 from app.services import audit
+from app.services.instruments._field_refs import repoint_sort, repoint_widths
 
 CLONE_MODES: tuple[str, ...] = ("all", "config")
 
@@ -202,13 +203,16 @@ def clone_session(
         db.flush()
         instrument_map[instrument.id] = new_instrument.id
         instrument_count += 1
+        display_field_map: dict[int, int] = {}
+        instrument_field_map: dict[int, int] = {}
         for field in instrument.display_fields:
-            db.add(
-                InstrumentDisplayField(
-                    instrument_id=new_instrument.id,
-                    **_column_values(field, skip={"id", "instrument_id"}),
-                )
+            new_display = InstrumentDisplayField(
+                instrument_id=new_instrument.id,
+                **_column_values(field, skip={"id", "instrument_id"}),
             )
+            db.add(new_display)
+            db.flush()
+            display_field_map[field.id] = new_display.id
         # 19T Item 10 — a governed field's parent is re-pointed at the
         # parent's clone once every field of the instrument has one; the
         # condition (``branch_op`` / ``branch_value``, and from 19T Item 13
@@ -227,10 +231,22 @@ def clone_session(
             db.add(new_field)
             db.flush()
             response_field_map[field.id] = new_field.id
+            instrument_field_map[field.id] = new_field.id
             if field.branch_parent_id is not None:
                 governed.append((new_field, field.branch_parent_id))
         for new_field, source_parent_id in governed:
             new_field.branch_parent_id = response_field_map[source_parent_id]
+        # The default sort and column widths name the source's fields by
+        # id; re-point them at the clone's (findings A28), as Replicate
+        # does.
+        new_instrument.sort_display_fields = repoint_sort(
+            instrument.sort_display_fields, display_field_map
+        )
+        new_instrument.column_widths = repoint_widths(
+            instrument.column_widths,
+            display_ids=display_field_map,
+            field_ids=instrument_field_map,
+        )
 
     # Field-label overrides + tags.
     for label in source.field_labels:

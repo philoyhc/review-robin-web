@@ -20,6 +20,10 @@ from app.db.models import (
     ReviewSession,
     SessionRuleSet,
 )
+from app.services.instruments._field_refs import (
+    sort_from_positions,
+    widths_from_positions,
+)
 from app.services.instruments._response_fields import (
     DEFAULT_RESPONSE_FIELDS,
     _inline_kwargs_from_default_spec,
@@ -378,12 +382,10 @@ def _apply_instruments(
             description=spec.description,
             order=n,  # 1-based CSV position wins over ``order`` cell
             accepting_responses=spec.accepting_responses,
-            sort_display_fields=spec.sort_display_fields,
             group_kind=spec.group_kind,
             rule_set_id=resolved_rule_set_id,
             # Segment 18N PR 5 — three round-trip-added columns
             # the pre-PR-5 import would silently NULL out.
-            column_widths=spec.column_widths,
             starts_new_page=spec.starts_new_page,
             band2_state=spec.band2_state,
             band1_touched_links=spec.band1_touched_links,
@@ -392,19 +394,19 @@ def _apply_instruments(
         db.flush()  # populate ``instrument.id``
         counts["instruments"] += 1
 
+        created_displays: dict[int, InstrumentDisplayField] = {}
         for m in sorted(spec.display_fields.keys()):
             df_spec = spec.display_fields[m]
             assert df_spec.source_type is not None
-            db.add(
-                InstrumentDisplayField(
-                    instrument_id=instrument.id,
-                    label=df_spec.label or "",
-                    source_type=df_spec.source_type,
-                    source_field=df_spec.source_field or "",
-                    order=m,
-                    visible=df_spec.visible,
-                )
+            created_displays[m] = InstrumentDisplayField(
+                instrument_id=instrument.id,
+                label=df_spec.label or "",
+                source_type=df_spec.source_type,
+                source_field=df_spec.source_field or "",
+                order=m,
+                visible=df_spec.visible,
             )
+            db.add(created_displays[m])
             counts["display_fields"] += 1
 
         # Per-session ``response_type_definitions`` table retired
@@ -476,6 +478,27 @@ def _apply_instruments(
             db.add(created_fields[-1][1])
             counts["response_fields"] += 1
         _apply_branches(db, n, created_fields)
+
+        # The CSV carries the default sort and column widths by field
+        # position; re-point them at the fields just created (findings
+        # A28). An older bundle's id-keyed entries name the source's
+        # fields and are dropped.
+        db.flush()
+        display_ids = {m: f.id for m, f in created_displays.items()}
+        field_ids = {
+            m: field.id
+            for m, (_, field) in zip(
+                sorted(spec.response_fields.keys()), created_fields
+            )
+        }
+        instrument.sort_display_fields = sort_from_positions(
+            spec.sort_display_fields, display_ids
+        )
+        instrument.column_widths = widths_from_positions(
+            spec.column_widths,
+            display_ids_by_position=display_ids,
+            field_ids_by_position=field_ids,
+        )
 
         # Segment 18P PR A2 — recreate the Band 3 visibility grid.
         # View policies are children of the instrument, so the

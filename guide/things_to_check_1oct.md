@@ -256,3 +256,13 @@ E1, E2 and E4 were checked by the author when they merged.
 - [ ] **Rehydrate still takes it.** Give an instrument the short label
   `responses`, then download Extract Setup's Zip all and this Zip all.
   Rehydrate both zips on the lobby: it accepts them.
+
+## A copy keeps its default sort and widths (A28)
+
+- [ ] **Duplicate.** On an instrument, set a default sort with a header
+  badge and drag a column wider, then Duplicate the session from the
+  lobby. The copy's instrument shows the same sort badge and column
+  width, and its reviewer surface sorts the same way.
+- [ ] **Settings round-trip.** Download Extract Setup's Settings CSV from
+  that session and import it through another session's Quick Setup. The
+  imported instrument keeps the sort and the width.

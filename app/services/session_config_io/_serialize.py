@@ -21,6 +21,10 @@ from app.db.models import (
     SessionTag,
 )
 from app.services.date_formatting import iso_in_zone
+from app.services.instruments._field_refs import (
+    sort_to_positions,
+    widths_to_positions,
+)
 from app.services.email_templates import (
     OVERRIDE_KEYS,
     RESPONSES_RECEIVED_ENABLED_KEY,
@@ -320,6 +324,12 @@ def _instrument_rows(
         if instrument.rule_set_id is not None
         else None
     )
+    # The default sort and column widths name fields by id; the CSV
+    # carries them by position instead (``display_fields[m]`` /
+    # ``response_fields[m]``), so the import can re-point them at the
+    # fields it creates (findings A28). Same ordering as the field rows.
+    display_positions = _field_positions(instrument.display_fields)
+    field_positions = _field_positions(instrument.response_fields)
     rows = [
         Row(f"{prefix}.name", _str(instrument.name), "string"),
         Row(
@@ -340,7 +350,11 @@ def _instrument_rows(
         ),
         Row(
             f"{prefix}.sort_display_fields",
-            _json(instrument.sort_display_fields or []),
+            _json(
+                sort_to_positions(
+                    instrument.sort_display_fields, display_positions
+                )
+            ),
             "json",
         ),
         Row(
@@ -359,7 +373,13 @@ def _instrument_rows(
         # Band 2 selections / sample-reviewee pick JSON blob.
         Row(
             f"{prefix}.column_widths",
-            _json(instrument.column_widths or {}),
+            _json(
+                widths_to_positions(
+                    instrument.column_widths,
+                    display_positions=display_positions,
+                    field_positions=field_positions,
+                )
+            ),
             "json",
         ),
         Row(
@@ -382,6 +402,14 @@ def _instrument_rows(
         ),
     ]
     return rows
+
+
+def _field_positions(fields) -> dict[int, int]:
+    """Field id → its 1-based position in the CSV's field rows, in the
+    ``(order, id)`` order ``_display_field_rows`` and
+    ``_response_field_rows`` write them."""
+    ordered = sorted(fields, key=lambda f: (f.order, f.id))
+    return {field.id: m for m, field in enumerate(ordered, start=1)}
 
 
 def _display_field_rows(instrument: Instrument, n: int) -> list[Row]:
