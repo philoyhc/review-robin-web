@@ -431,9 +431,14 @@ row.
 The canonical self-review rule under this fan-out is the
 **whole-group rule**: a review of a group counts as a
 self-review iff **the reviewer is themselves a member of the
-group they're reviewing** (i.e., one of the `(R, member)`
-pairs in the group has `member == R` by the `is_self_review`
-identity test). When the rule fires, **every** `Assignment`
+group they're reviewing**: some reviewee on the session roster
+matches the reviewer by the `is_self_review` identity test and
+falls in that group. **The roster decides membership, not the
+written rows** (author's ruling, 2026-10-03, findings B7): a Link
+rule can filter out the reviewer's own `(R, R)` row while keeping
+their group-mates, and the group is still theirs. Generate's
+`include` and exclusion and the `Assignment.is_self_review` column
+apply the same test. When the rule fires, **every** `Assignment`
 row in that group is a self-review row, not just the `(R, R)`
 member pair. Excluding self-reviews on a group-scoped
 instrument rules the whole group out, not just the `(R, R)`
@@ -457,10 +462,18 @@ site** — no other path creates an `Assignment` row — and it calls
 `assignments.recompute_self_review_classification` as part of
 materialising each pass. Every edit trigger (reviewer email, reviewee
 identifier or
-boundary tag, relationship pair-context tag, instrument
+boundary tag, a reviewee added or deleted — membership is read off the
+roster — relationship pair-context tag, instrument
 `group_kind`) calls
 `assignments.recompute_self_review_classification` so the
-column never drifts. Every downstream reader (extracts,
+column never drifts. A row whose flag the recompute flips also moves
+its `include` towards what Generate would write (findings B7): a row
+that stops being a self-review comes back on unless either side is
+inactive, and a row that becomes one is switched off when
+`self_reviews_active` is off. A manual exclusion on a row that stops
+being a self-review is therefore not kept, as Generate does not keep
+one either. When the recompute changes any `include`, it writes
+`assignments.include_reconciled` with the counts. Every downstream reader (extracts,
 audit counters, the in-app `Assignments`-page status
 blocks, the `set_instrument_self_reviews_active` toggle
 backend) consumes the column directly. The

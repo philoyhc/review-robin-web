@@ -40,7 +40,14 @@ def normalise_status(value: str, *, error_cls: type[Exception]) -> str:
     return status
 
 
+def status_is_active(status: str | None) -> bool:
+    """True iff a roster ``status`` value means active — unset counts
+    as active (the roster default). For callers that project the column
+    rather than load the row."""
+    return (status or "active") == "active"
+
+
 def is_active(row: object) -> bool:
     """True iff a roster row is active — ``status`` unset counts as
     active (the roster default). Accepts any row exposing ``status``."""
-    return (getattr(row, "status", None) or "active") == "active"
+    return status_is_active(getattr(row, "status", None))

@@ -25,6 +25,7 @@ from app.db.models import (
 )
 from app.services import audit
 from app.services.email_identity import normalize_email
+from app.services.roster_status import is_active, status_is_active
 
 
 def is_self_review(reviewer: Reviewer, reviewee: Reviewee) -> bool:
@@ -156,10 +157,12 @@ def classify_self_review(
       reviewer / reviewee.
     * **Group-scoped instrument**: the whole-group rule — true iff
       the reviewer is themselves a member of the group they're
-      reviewing (i.e. any ``(R, member)`` pair in that group has
-      ``member == R`` by the pair-level test). When the rule fires,
-      *every* assignment in the group is flagged, not just the
-      ``(R, R)`` cell.
+      reviewing: some reviewee on the session roster matches the
+      reviewer by the pair-level test and falls in that group. The
+      roster decides, not the written rows, so a group whose ``(R, R)``
+      row a rule filtered out still counts (findings B7). When the
+      rule fires, *every* assignment in the group is flagged, not just
+      the ``(R, R)`` cell.
 
     Entity-shaped adapter over :func:`classify_self_review_pairs`,
     which holds the rule. Callers that already have the three entities
@@ -208,20 +211,55 @@ def classify_self_review_pairs(
     """
     from app.services.responses import group_keys
 
-    group_key_by_assignment = group_keys(
-        db, assignments=pairs, session_id=session_id
-    )
-    # (group instrument, reviewer) -> group key of the group that
-    # reviewer is a member of (i.e. groups where the (R, R) member
-    # pair exists, identifying the group as a self-review group).
-    self_group_key: dict[tuple[int, int], tuple[str, ...]] = {}
+    # (group instrument, reviewer) -> the group keys of the groups that
+    # reviewer is a member of. **Membership comes from the roster, not
+    # from the rows passed in** (author's ruling 2026-10-03, findings
+    # B7), as Generate decides it (``_diff_one_instrument``): a Link
+    # rule can filter the reviewer's own ``(R, R)`` row out while
+    # keeping their group-mates, and the group is still theirs. Each
+    # roster reviewee matching the reviewer's email rides the same
+    # ``group_keys`` call as the real rows, as a synthetic row with a
+    # negative id, so the boundary and pair-context lookups are the
+    # ones the real rows use and are loaded once.
+    roster_by_email: dict[str, list[Reviewee]] = {}
+    for reviewee in db.execute(
+        select(Reviewee).where(Reviewee.session_id == session_id)
+    ).scalars():
+        if "@" in reviewee.email_or_identifier:
+            roster_by_email.setdefault(
+                normalize_email(reviewee.email_or_identifier), []
+            ).append(reviewee)
+    membership: list[AssignmentPair] = []
+    seen: set[tuple[int, int]] = set()
     for pair in pairs:
-        if pair.id in group_key_by_assignment and _is_self_review_pair(
-            pair.reviewer_email, pair.reviewee.email_or_identifier
-        ):
-            self_group_key[(pair.instrument_id, pair.reviewer_id)] = (
-                group_key_by_assignment[pair.id]
+        slot = (pair.instrument_id, pair.reviewer_id)
+        if slot in seen:
+            continue
+        seen.add(slot)
+        for own in roster_by_email.get(normalize_email(pair.reviewer_email), []):
+            membership.append(
+                AssignmentPair(
+                    id=-(len(membership) + 1),
+                    instrument_id=pair.instrument_id,
+                    reviewer_id=pair.reviewer_id,
+                    reviewee_id=own.id,
+                    reviewer_email=pair.reviewer_email,
+                    reviewee=own,
+                    is_self_review=True,
+                )
             )
+    keys = group_keys(
+        db, assignments=[*pairs, *membership], session_id=session_id
+    )
+    # Synthetic rows on individual-scoped instruments get no key and
+    # drop out here; only group instruments read ``member_keys``.
+    member_keys: dict[tuple[int, int], set[tuple[str, ...]]] = {}
+    for row in membership:
+        if row.id in keys:
+            member_keys.setdefault(
+                (row.instrument_id, row.reviewer_id), set()
+            ).add(keys[row.id])
+    group_key_by_assignment = keys
     result: dict[int, bool] = {}
     for pair in pairs:
         group_key = group_key_by_assignment.get(pair.id)
@@ -232,9 +270,8 @@ def classify_self_review_pairs(
             )
         else:
             # Group-scoped: whole-group rule.
-            result[pair.id] = (
-                self_group_key.get((pair.instrument_id, pair.reviewer_id))
-                == group_key
+            result[pair.id] = group_key in member_keys.get(
+                (pair.instrument_id, pair.reviewer_id), set()
             )
     return result
 
@@ -263,12 +300,15 @@ def recompute_self_review_classification(
     """Recompute :attr:`Assignment.is_self_review` for every
     assignment in the session and persist any row whose stored
     value diverged from what :func:`classify_self_review` now
-    returns.
+    returns. A row whose flag flips also has its ``include`` moved the
+    way the flip calls for (findings B7; see the inline comment), and
+    when that changes any ``include`` an
+    ``assignments.include_reconciled`` event records the count.
 
-    The whole-group rule requires seeing every ``(R, member)``
-    pair in a group to detect self-groups correctly; the
-    whole-session scope is the only one that always includes
-    them all without expensive expansion. Beta-scale session
+    Group membership is read off the roster (findings B7), so the
+    rule no longer needs every ``(R, member)`` row in view; the
+    whole-session scope is kept because it is what every edit trigger
+    can shift and costs one pass. Beta-scale session
     sizes make this cheap; if it ever turns hot a scoped
     variant can wrap the same canonical helper.
 
@@ -291,6 +331,24 @@ def recompute_self_review_classification(
     ``Reviewer`` / ``Reviewee`` joins stay because the rule reads them;
     only the ``Assignment`` entity is gone.
     """
+    rows = db.execute(
+        select(
+            Assignment.id,
+            Assignment.instrument_id,
+            Assignment.reviewer_id,
+            Assignment.reviewee_id,
+            Assignment.is_self_review,
+            Reviewer.email,
+            Reviewee,
+            Reviewer.status,
+            Assignment.include,
+        )
+        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .where(Assignment.session_id == session_id)
+    ).all()
+    if not rows:
+        return 0
     pairs = [
         AssignmentPair(
             id=row_id,
@@ -309,31 +367,54 @@ def recompute_self_review_classification(
             stored,
             reviewer_email,
             reviewee,
-        ) in db.execute(
-            select(
-                Assignment.id,
-                Assignment.instrument_id,
-                Assignment.reviewer_id,
-                Assignment.reviewee_id,
-                Assignment.is_self_review,
-                Reviewer.email,
-                Reviewee,
-            )
-            .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
-            .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
-            .where(Assignment.session_id == session_id)
-        ).all()
+            _reviewer_status,
+            _include,
+        ) in rows
     ]
-    if not pairs:
-        return 0
+    both_active = {
+        row_id: is_active(reviewee) and status_is_active(reviewer_status)
+        for row_id, *_, reviewee, reviewer_status, _include in rows
+    }
+    included = {row[0]: bool(row[-1]) for row in rows}
     classification = classify_self_review_pairs(
         db, session_id=session_id, pairs=pairs
     )
-    changed = [
-        {"id": pair.id, "is_self_review": classification[pair.id]}
-        for pair in pairs
-        if pair.is_self_review != classification[pair.id]
+    flipped = [
+        pair for pair in pairs if pair.is_self_review != classification[pair.id]
     ]
+    changed: list[dict[str, object]] = []
+    if flipped:
+        # A row whose classification flips moves its ``include`` towards
+        # what Generate would write (findings B7, Codex on #2765). A row
+        # that stops being a self-review comes back on unless a side is
+        # inactive — otherwise it stays excluded where the per-instrument
+        # toggle, which reads the flag, cannot reach it. A row that
+        # becomes one is switched off when the session has self-reviews
+        # off, and otherwise keeps its value, so a first classification
+        # never overrides an ``include`` written with the row.
+        self_reviews_active = bool(
+            db.execute(
+                select(ReviewSession.self_reviews_active).where(
+                    ReviewSession.id == session_id
+                )
+            ).scalar_one()
+        )
+        for pair in flipped:
+            is_self = classification[pair.id]
+            changed.append(
+                {
+                    "id": pair.id,
+                    "is_self_review": is_self,
+                    "include": (
+                        included[pair.id] and self_reviews_active
+                        if is_self
+                        else included[pair.id] or both_active[pair.id]
+                    ),
+                }
+            )
+    include_changed = sum(
+        1 for row in changed if row["include"] != included[row["id"]]
+    )
     if changed:
         # ORM bulk UPDATE by primary key. Unlike the bulk *insert* in
         # ``_materialise_one_instrument``, this form keeps the identity
@@ -345,6 +426,23 @@ def recompute_self_review_classification(
         # ``tests/unit/test_recompute_self_review_bulk_update.py``.
         db.execute(update(Assignment), changed)
         db.flush()
+    if include_changed:
+        # ``include`` is operator-controlled (the per-row Include and the
+        # per-instrument toggle both audit their writes), so a recompute
+        # that moves it says so, beside the edit that triggered it.
+        audit.write_event(
+            db,
+            event_type="assignments.include_reconciled",
+            summary=(
+                f"Self-review reclassification switched {include_changed} "
+                f"assignment{'s' if include_changed != 1 else ''} "
+                f"on or off"
+            ),
+            session=db.get(ReviewSession, session_id),
+            payload=audit.counts(
+                reclassified=len(changed), include_changed=include_changed
+            ),
+        )
     return len(changed)
 
 
