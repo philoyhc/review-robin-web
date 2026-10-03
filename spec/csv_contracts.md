@@ -583,6 +583,10 @@ boundary.
   the rows dropped rather than failing. Stated on its own because the
   guarantee is the import's, not an aside of the friendly-labels rule
   that happens to cite it.
+- **A retired `instruments[n].responses_visible_when_closed` row is
+  accepted and dropped** (findings B21, 2026-10-03). The column is
+  gone and the export no longer writes the row; an older bundle that
+  carries it imports without it.
 - **A retired `instruments[n].view_policies[…].observer_tag` row is
   accepted and dropped.** The column is gone; an older bundle that
   carries the row imports without it, rather than failing on an

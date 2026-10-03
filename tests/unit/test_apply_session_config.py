@@ -497,7 +497,6 @@ def _populated_round_trip_session(
         name="Round-trip instrument",
         order=1,
         accepting_responses=False,
-        responses_visible_when_closed=False,
         column_widths={"identity": 200, "df_1": 150},
         starts_new_page=False,
         band2_state={
@@ -864,6 +863,40 @@ def test_an_old_bundles_observer_tag_row_is_accepted_and_dropped(
     assert policy.after_release_granularity == "row"
 
 
+def test_an_old_bundles_responses_visible_when_closed_row_is_dropped(
+    db: Session,
+) -> None:
+    """``responses_visible_when_closed`` retired with its column on
+    2026-10-03 (findings B21). The export no longer writes the row; an
+    older settings CSV still carries it, and the import accepts it and
+    drops the value rather than refusing the bundle."""
+    src = _session(db, code="rt-rvwc-src")
+    db.add(Instrument(session_id=src.id, name="Closed view", order=1))
+    db.flush()
+    rows = serialize_session_config(db, src)
+    assert not any("responses_visible_when_closed" in r.field for r in rows)
+    prefix = next(
+        r.field.rsplit(".", 1)[0]
+        for r in rows
+        if r.field.endswith(".accepting_responses")
+    )
+    rows.append(Row(f"{prefix}.responses_visible_when_closed", "true", "boolean"))
+
+    dst = _bare_session(db, code="rt-rvwc-dst")
+    result = apply_session_config(
+        db,
+        review_session=dst,
+        rows=rows,
+        user=_user(db, email="rt-rvwc@e.edu"),
+    )
+    assert result.errors == []
+    db.expire_all()
+    (dst_inst,) = db.execute(
+        select(Instrument).where(Instrument.session_id == dst.id)
+    ).scalars()
+    assert dst_inst.name == "Closed view"
+
+
 def test_round_trip_carries_starts_new_page(db: Session) -> None:
     """``Instrument.starts_new_page`` (the 18M page-break flag)
     survives the round-trip. Tests both flag states across two
@@ -1111,7 +1144,6 @@ def test_round_trip_preserves_group_scoped_instrument(db: Session) -> None:
             name="Group instrument",
             order=1,
             accepting_responses=False,
-            responses_visible_when_closed=False,
             group_kind="r1,p2",
         )
     )

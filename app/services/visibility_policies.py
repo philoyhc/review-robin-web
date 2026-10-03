@@ -345,9 +345,6 @@ def reviewer_sees_own_responses(
       since ``summarized`` was retired, findings A18).
     - **Anything else** (``expired`` outside the window, ``draft``,
       ``validated``) — never.
-
-    ``responses_visible_when_closed`` is not read: it round-trips for
-    config only.
     """
     if lifecycle.is_archived(review_session):
         return False

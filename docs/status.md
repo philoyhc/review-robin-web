@@ -866,8 +866,9 @@ flags this on Setup).
   **HTTP 403** unless the session is `ready`, the assigned
   instrument is `accepting_responses`, and `now() <
   session.deadline`. When the gate is closed, the surface renders
-  read-only; saved values are hidden unless the operator turns on
-  `responses_visible_when_closed` on the per-instrument sub-page.
+  read-only; whether saved values show is the instrument's
+  visibility policy's call (G10; the old `responses_visible_when_closed`
+  flag retired in B21).
   Deadline closure is observed lazily on every reviewer GET/POST
   and on the per-instrument operator page; the first observer flips
   `accepting_responses=false`, stamps `deadline_closed_at`, and

@@ -101,9 +101,6 @@ class Instrument(Base, TimestampMixin):
     accepting_responses: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
-    responses_visible_when_closed: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
-    )
     starts_new_page: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=text("false"), nullable=False
     )

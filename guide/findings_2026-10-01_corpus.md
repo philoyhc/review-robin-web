@@ -151,8 +151,13 @@ the spec should say so.
   `validated`, and the Invitations template allowed them only in
   `ready`. The routes now refuse outside `ready`; bulk Send invites
   keeps `validated`.
-- **B21** — ~~`close_instrument`~~ (removed in #2722, with A6) and the
-  visibility-when-closed route have no lifecycle gate.
+- ~~**B21**~~ — **Ruled 2026-10-03: retire the flag entirely. Done in
+  #2771.** `close_instrument` went in #2722, with A6. The
+  visibility-when-closed route had no lifecycle gate, but no page called
+  it, and the `responses_visible_when_closed` flag it set decided nothing
+  after G10. The route, its service, the column (migration
+  `a2d16ffeb59a`) and the Settings CSV row are gone. An older Settings
+  CSV that carries the row still imports, with the value dropped.
 - ~~**B15, B27**~~ — **Ruled 2026-10-02: retire them. Done in #2760.**
   `GET /assignments?validated=1` (and the Workflow card builder's
   promotion behind it) is gone, as are the Validate page's unread
@@ -414,7 +419,7 @@ One line each: id · severity · where · finding · decides. A line with no
   - ~~B18 med · `:663-668` · `resolve_offset` has no callers · author.~~ Done in #2764.
   - B19 med · `:759-770` · sweep trigger · ruled: awaits Azure (`post_azure_todo_checklist.md` item 7).
   - ~~B20 low · `:786-799` · retry is activation-only.~~ Recorded in #2755; errors caught in #2757.
-  - B21 med · `:306-313,552` · ~~close reason is `manual`, not `operator` (spec)~~ already right after #2722; the ungated routes are *author*.
+  - ~~B21 med · `:306-313,552` · the close reason was already right after #2722; the ungated routes are *author*.~~ Done in #2771.
   - ~~B22 low · `:165,542` · `session.activated` context adds `trigger`, and activation clears `scheduled_activate_at`.~~ Done in #2733.
   - ~~B23 low · `:111-133` · state the `invalidate_if_validated` rule, not a partial call-site list.~~ Done in #2733.
   - ~~B24 low · `:51` · `lifecycle_display_label`; `lifecycle_label` is the filter.~~ Done in #2733.

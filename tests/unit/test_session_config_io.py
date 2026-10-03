@@ -232,7 +232,6 @@ def test_instrument_block_emits_canonical_fields(db: Session) -> None:
         description="Mid-semester peer review",
         order=0,
         accepting_responses=True,
-        responses_visible_when_closed=False,
     )
     db.add(instr)
     db.flush()
@@ -270,10 +269,8 @@ def test_instrument_block_emits_canonical_fields(db: Session) -> None:
     )
     assert by_field["instruments[1].order"].value == "0"
     assert by_field["instruments[1].accepting_responses"].value == "true"
-    assert (
-        by_field["instruments[1].responses_visible_when_closed"].value
-        == "false"
-    )
+    # Retired with its column (findings B21): no longer exported.
+    assert "instruments[1].responses_visible_when_closed" not in by_field
     # Inert-but-included rows always emit defaults today.
     assert by_field["instruments[1].sort_display_fields"] == Row(
         "instruments[1].sort_display_fields", "[]", "json"

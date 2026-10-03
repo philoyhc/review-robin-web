@@ -100,7 +100,6 @@ def test_default_instrument_starts_closed(client: TestClient, db: Session) -> No
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalar_one()
     assert instrument.accepting_responses is False
-    assert instrument.responses_visible_when_closed is False
     assert instrument.deadline_closed_at is None
 
 
@@ -441,17 +440,13 @@ def test_past_the_deadline_a_ready_session_still_shows_the_reviewer_their_values
     """While the session is ``ready`` the reviewer is inside the
     ``while_ongoing`` window, whose ``peer_reviewer`` cell is Raw by
     rule, so once the deadline closes the instruments their own saved
-    values stay readable (read-only). The visibility policy decides,
-    not ``responses_visible_when_closed`` (G10, 2026-10-01)."""
+    values stay readable (read-only). The visibility policy decides
+    (G10, 2026-10-01)."""
     operator = make_client(alice)
     session = _build_ready_session(operator, db, code="visibility")
     assignment = db.execute(
         select(Assignment).where(Assignment.session_id == session.id)
     ).scalar_one()
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalar_one()
-    assert instrument.responses_visible_when_closed is False
 
     rae = AuthenticatedUser(
         principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"

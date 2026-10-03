@@ -140,22 +140,21 @@ Below it, left-aligned under the pill row:
   No state persistence across refresh — operators get a
   fresh all-collapsed default on each page load.
 
-**No session-level bulk flip of `accepting_responses` or
-`responses_visible_when_closed`, and none per instrument
-either.** Accepting is session-wide: Activate opens every
+**No session-level bulk flip of `accepting_responses`, and none per
+instrument either.** Accepting is session-wide: Activate opens every
 instrument, and the deadline, Close session or Revert closes them
-all (`spec/lifecycle.md`). Visibility-when-closed has no operator
-control at all — it is governed by the per-instrument **visibility policy**
-(`spec/visibility_policy.md`), with the
-`responses_visible_when_closed` column persisting for config
-round-trip only. The one-line status row therefore reports an
-accepting count and no "showing when closed" count.
+all (`spec/lifecycle.md`). What shows once an instrument closes is
+governed by the per-instrument **visibility policy**
+(`spec/visibility_policy.md`); the old `responses_visible_when_closed`
+flag retired with its column on 2026-10-03 (findings B21). The
+one-line status row therefore reports an accepting count and no
+"showing when closed" count.
 
 ## Instrument data model
 
 Beyond the standard rows (id / session_id / name /
 short_label / description / order /
-accepting_responses / responses_visible_when_closed) one
+accepting_responses) one
 boolean carries the operator-controlled page-break layout:
 
 - **`starts_new_page: Boolean NOT NULL`** (Alembic
@@ -354,10 +353,11 @@ expanded):
 
 **Visibility when closed has no operator control** — neither
 per-card nor session-wide. It is governed by the per-instrument
-**visibility policy** (`spec/visibility_policy.md`); the
-`responses_visible_when_closed` column and its route
-`POST /sessions/{sid}/instruments/{iid}/visibility` live on
-for config round-trip / programmatic use only.
+**visibility policy** (`spec/visibility_policy.md`). The
+`responses_visible_when_closed` column, its route
+`POST /sessions/{sid}/instruments/{iid}/visibility` and its Settings
+CSV row retired on 2026-10-03 (findings B21); an older Settings CSV
+that still carries the row imports with the value dropped.
 
 `short_label` and `description` are **not** rendered in
 the Identity heading — `short_label` is edited from the
@@ -1532,8 +1532,7 @@ key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
   its source, continues the source's page like any new instrument.
 - `sort_display_fields`, `column_widths` — copied, re-pointed at the
   copy's own display and response fields (both name fields by id).
-- `accepting_responses` / `responses_visible_when_closed` —
-  copied as-is.
+- `accepting_responses` — copied as-is.
 - Visibility policies — copied row for row (author's ruling,
   2026-10-03, A1): the copy shows its responses to the same audiences,
   in the same modes, as its source. Each row goes through

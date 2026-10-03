@@ -51,7 +51,6 @@ def _bare_instrument(db: Session, session: ReviewSession) -> Instrument:
         name="instrument_1",
         order=0,
         accepting_responses=False,
-        responses_visible_when_closed=False,
     )
     db.add(instrument)
     db.flush()

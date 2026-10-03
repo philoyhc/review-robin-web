@@ -89,8 +89,7 @@ SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
         "spec/timezone_display.md",  # the Date & time card at /operator/settings
     ),
     # --- operator: instruments + assignments ---------------------------
-    # incl. POST .../{id}/visibility, documented at instruments.md:331 —
-    # spec/visibility_policy.md describes the policy model, not the route.
+    # spec/visibility_policy.md describes the policy model, not a route.
     "app.web.routes_operator._instruments": ("spec/instruments.md",),
     "app.web.routes_operator._instruments_band2": ("spec/instruments.md",),
     "app.web.routes_operator._instruments_pagination": ("spec/instruments.md",),

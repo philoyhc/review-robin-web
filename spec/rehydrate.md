@@ -317,8 +317,8 @@ the parsed `settings.csv` rows, **after rewriting two rows**: replace the
 with the derived code (otherwise apply would restore the original name and
 collide on code). `apply` rebuilds instruments (+ display/response
 fields), session rule sets, email overrides, and data
-shapes, and restores per-instrument runtime flags including
-`accepting_responses` and `responses_visible_when_closed`. Tag friendly
+shapes, and restores the per-instrument runtime flag
+`accepting_responses`. Tag friendly
 labels are rebuilt separately from the roster CSV headers when those files
 import, not from `settings.csv`.
 
