@@ -3,13 +3,15 @@
 > **Status: stub / not built.** Review Robin Web has **no application
 > blob storage** today, by deliberate choice — every current need is met
 > with Postgres `bytea`, on-the-fly streaming, or external URLs (see
-> "Current posture" below). Provisioning an Azure Blob container (or
-> S3-compatible bucket) is **deferred infrastructure**
-> (`guide/deferred_consolidated.md` §1 — needs the Azure portal + a managed
-> identity + a storage account). This doc exists to **capture the
-> candidate uses** so that, if and when blob storage is provisioned, the
-> decision is made against a considered list rather than reached for
-> reflexively. It is a companion to `docs/backup_restore.md` (which
+> "Current posture" below). Wiring an Azure Blob container (or
+> S3-compatible bucket) into the app is **deferred infrastructure**:
+> the NUS storage account is provisioned and unused
+> (`docs/deployment_nus.md`), and what remains is a container, a
+> managed-identity role on the account, and the seam below. This doc
+> exists to
+> **capture the candidate uses** so that, if and when blob storage is
+> wired in, the decision is made against a considered list rather
+> than reached for reflexively. It is a companion to `docs/backup_restore.md` (which
 > records that exports are stream-only) and `spec/email_infra_options.md`
 > (the sibling "options" spec for the email backend).
 
@@ -30,7 +32,7 @@ should clear that bar on its own before it lands; several never will.
 | Uploaded roster / config / responses CSVs | Parsed **in memory** and discarded once the import completes; only the resulting rows persist. |
 | Reviewee / reviewer photos | `profile_link` is an **external URL** the operator supplies — the app hosts no image bytes. |
 | Operator SMTP password | `smtp_password_encrypted` — Fernet ciphertext in a `bytea` column, not a file. |
-| Deployment artifacts | Travel as GitHub Actions artifacts, not through the storage account, which is provisioned and earmarked for this segment but unused (`docs/architecture.md` "Storage"). |
+| Deployment artifacts | Travel as GitHub Actions artifacts, not through the storage account, which is provisioned and earmarked for blob storage (`guide/segment_18Q_blob.md`) but unused (`docs/architecture.md` "Storage"). |
 
 The line to hold: **small, transient, or already-in-Postgres** payloads
 stay where they are. Blob storage earns its place only when a payload is
@@ -119,7 +121,7 @@ dependency structure, not just value: the six all sit on a foundation
 that isn't itself one of them, and two of them share plumbing.
 
 ### Phase 0 — the prerequisite (gates everything)
-Provision the storage account + build the thin
+Provision the container on the storage account + build the thin
 `app/services/blob_store.py` seam (`put` / `get` / `signed_url` / <!-- path-ref-ok -->
 `delete` / `sweep`, same shape as `rehydrate_stash`) + the optional
 `blob_*` config that degrades to today's `bytea` / streaming paths. Not

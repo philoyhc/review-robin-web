@@ -201,9 +201,8 @@ relationship/membership without destroying the far side
 Creation is `{collection}/add` for a single-kind collection
 (`owners/add`). `instruments/add-new-model` keeps its verb-first,
 kind-naming shape from when instruments had several creation kinds;
-`instruments/add-group`, the other, is retired (findings A22,
-2026-10-03), so it is now a single legacy name rather than a pattern
-(consistency-audit R7).
+`instruments/add-group`, the other, is retired, so it is now a single
+legacy name rather than a pattern (consistency-audit R7).
 
 **Whole-set saves end in `/save`, verb last**:
 `instruments/{id}/fields/save` (the Band 1 + Link 3 + visibility

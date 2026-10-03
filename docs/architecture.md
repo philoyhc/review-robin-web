@@ -109,8 +109,7 @@ retired [`archive/azure_provision.md`](archive/azure_provision.md).
   earmarked as the Segment 18Q blob store (`guide/segment_18Q_blob.md`);
   nothing uses it yet. The application has no blob dependency (CSV
   imports are parsed in-request, not persisted), and deploy artifacts
-  travel as GitHub Actions artifacts, not through it (findings H10,
-  2026-10-03).
+  travel as GitHub Actions artifacts, not through it.
 
 ## Deliberately absent
 

@@ -345,7 +345,7 @@ Non-session operator pages share a simple structure:
    - **H1 page title** (not on Create or Rehydrate; see below).
    - Page content.
 
-The breadcrumb is at most two deep: `Sessions` on the lobby (and on Settings), `Sessions` → `New session` / `Archived` on the lobby's children (and `Sessions` → `Rehydrate session` on the rehydrate page, which is gated off by default); About, the Guide and the Sys Admin pages render none. The H1 and the user menu together orient the operator. **Create (`New session`) and the gated Rehydrate page carry no H1**: the breadcrumb's last segment and the first card's H2 name the page (findings E18, 2026-10-03).
+The breadcrumb is at most two deep: `Sessions` on the lobby (and on Settings), `Sessions` → `New session` / `Archived` on the lobby's children (and `Sessions` → `Rehydrate session` on the rehydrate page, which is gated off by default); About, the Guide and the Sys Admin pages render none. The H1 and the user menu together orient the operator. **Create (`New session`) and the gated Rehydrate page carry no H1**: the breadcrumb's last segment names the page, and on Rehydrate the first card's H2 does too (Create's first card is "Session details").
 
 #### Operator's Overview (Sessions list)
 

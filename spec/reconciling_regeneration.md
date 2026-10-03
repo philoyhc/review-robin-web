@@ -35,7 +35,7 @@ against the existing rows. Per instrument:
      `Assignment` row each (current `mode` as `created_by_mode`,
      `include` computed as below). On a group-scoped instrument, a
      new row whose group already holds an answer takes a copy of it
-     (findings B13, 2026-10-03; `spec/assignments.md`).
+     (`spec/assignments.md`).
    - **`to_delete = E - N`** — pairs the rule no longer produces
      (e.g. a removed reviewer, or a relationship change). Delete
      their `Response` rows first, then the `Assignment` rows. The
@@ -130,7 +130,7 @@ terms, one event per instrument (`refs.instrument_id`):
 - `kept` — `len(to_keep)`
 - `responses_deleted` — `Response` rows removed with `to_delete`
 - `group_responses_copied` — `Response` rows copied onto new members
-  of answered groups, present only when non-zero (findings B13)
+  of answered groups, present only when non-zero
 - `pairs` / `instruments` / `excluded_*`.
 
 `replace_assignments` returns a `(replaced, new)` 2-tuple, where

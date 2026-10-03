@@ -734,7 +734,7 @@ Release-from and Release-until are not fired events. The release
 window is evaluated at read time by
 `session_lifecycle.is_response_release_window_open` and is open only
 on an `expired` session, so there is no fire-time guard and no skip
-reason (findings B21, 2026-10-03).
+reason.
 
 The "End" anchor (`deadline`) is the trivial case: it's
 conditional on activation (`status == "ready"`) because there's

@@ -724,8 +724,7 @@ Concrete guarantees the importers + serialisers maintain:
    `serialize_session_config`'s docstring.
    `test_section_ordering_is_deterministic` asserts a byte-identical
    re-export and the order of the first three sections; the later
-   sections are pinned by the docstring alone (findings D9,
-   2026-10-03).
+   sections are pinned by the docstring alone.
 3. **Encoding parity.** UTF-8 in, UTF-8 out. BOM stripped on
    read, never emitted on write.
 4. **Datetime normalisation.** Naive readbacks (SQLite without

@@ -1041,7 +1041,7 @@ routes `/band2-state`, `/column-widths`, `/display-fields/order` and
 checkbox — is what the reviewer surface form, the reviewer summary
 HTML, the reviewer-record CSV, the reviewee results page and the
 observer collation page and its per-instrument CSV filter response
-fields by (the observer page and CSV since findings A3, 2026-10-03).
+fields by it.
 Unticking Active drops the column from every participant-facing render
 in one step. The operator's own extracts keep it, and the row itself
 stays present in Band 3 so its bounds and help text remain editable.
