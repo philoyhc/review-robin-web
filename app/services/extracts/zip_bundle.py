@@ -220,21 +220,9 @@ def build_responses_bundle(
 
     data_shape_files = 0
     if include_data_shapes:
-        shapes = list(
-            db.execute(
-                select(DataShape)
-                .where(DataShape.session_id == review_session.id)
-                .order_by(DataShape.name, DataShape.id)
-            ).scalars()
-        )
-        for shape in shapes:
-            members.append(
-                (
-                    shape_filename(review_session, shape),
-                    list(build_shape_rows(db, review_session, shape)),
-                )
-            )
-            data_shape_files += 1
+        shape_members = _data_shape_members(db, review_session)
+        members.extend(shape_members)
+        data_shape_files = len(shape_members)
 
     # Token keys ride only when the session has observers: the
     # tokens are the deanonymization key for the observer-side
@@ -259,6 +247,35 @@ def build_responses_bundle(
         "participant_tokens": participant_tokens_rows,
     }
     return _zip_named(members), counts
+
+
+def _data_shape_members(
+    db: Session, review_session: ReviewSession
+) -> list[tuple[str, list[tuple[str, ...]]]]:
+    """Every saved shape's Download, ``{code}_{slug}{suffix}.csv``,
+    each with its own saved chips, ordered by name then id."""
+    shapes = db.execute(
+        select(DataShape)
+        .where(DataShape.session_id == review_session.id)
+        .order_by(DataShape.name, DataShape.id)
+    ).scalars()
+    return [
+        (
+            shape_filename(review_session, shape),
+            list(build_shape_rows(db, review_session, shape)),
+        )
+        for shape in shapes
+    ]
+
+
+def build_data_shapes_bundle(
+    db: Session, review_session: ReviewSession
+) -> tuple[bytes, dict[str, int]]:
+    """The Data shaper card's Zip all: every saved shape's file, as
+    its own Download names it, and nothing else (findings D13,
+    2026-10-03). Returns ``(zip_bytes, {"data_shapes": n})``."""
+    members = _data_shape_members(db, review_session)
+    return _zip_named(members), {"data_shapes": len(members)}
 
 
 def build_by_instrument_bundle(

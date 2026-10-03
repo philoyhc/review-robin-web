@@ -207,6 +207,15 @@ when it is checked; sections with unticked rows sit above the ticked ones.
   still saves. On a group instrument, the group row the reviewer
   belongs to shows it under the group name.
 
+## The Data shaper's Zip all works (D13)
+
+- [ ] **Greyed with no shape.** On Extract data with no saved shape,
+  the Data shaper card's Zip all is greyed and does nothing.
+- [ ] **Live once a shape saves.** Save a shape: Zip all turns live
+  without a reload and downloads `{code}_data_shapes.zip`, holding
+  that shape's file under the name its own Download gives it. Save a
+  second, download again: both files. Delete both: the button greys.
+
 ## Setup tabs underline in blue (findings register E5)
 
 - [x] **Light and dark.** On any Setup page (Reviewers, say), the active

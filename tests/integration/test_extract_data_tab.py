@@ -98,14 +98,13 @@ def test_extract_data_tab_breadcrumbs(
     assert "Extract data" in body
 
 
-def test_data_shaper_placeholder_card_renders(
+def test_data_shaper_card_renders(
     client: TestClient, db: Session
 ) -> None:
-    """The Data shaper placeholder lives below the 2-column
-    grid as a full-width card; the intro card's chip row
-    carries a matching ``Data shaper`` selector defaulting to
-    selected so the shaper output can be folded into the
-    top-level ``Zip all`` once the engine ships."""
+    """The Data shaper lives below the 2-column grid as a
+    full-width card; the intro card's chip row carries a matching
+    ``Data shaper`` selector defaulting to selected, so the top-level
+    ``Zip all`` bundles every saved shape."""
     review_session = _make_session(client, db, code="ed-shaper")
     body = client.get(
         f"/operator/sessions/{review_session.id}/extract-data"
@@ -113,8 +112,8 @@ def test_data_shaper_placeholder_card_renders(
 
     # Intro card chip.
     assert 'data-extract-all-chip="data-shaper"' in body
-    # Placeholder card shell + bottom ``Zip all`` button stays
-    # disabled in this slice (no file-gen wiring yet).
+    # Card shell + its own ``Zip all`` (findings D13; its states are
+    # in ``test_data_shapes_routes.py``).
     assert 'id="extract-data-shaper"' in body
     assert ">Data shaper</h2>" in body
     assert 'id="extract-data-shaper-zip"' in body

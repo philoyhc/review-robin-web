@@ -276,14 +276,9 @@
        action row (name input + ``✓`` save + ``✗`` delete +
        ``➕`` add new shape below).
 
-     **No file-generation wiring in this slice.** The intro
-     card's ``Data shaper`` chip stays default-selected so the
-     forthcoming Zip-all hook is one wiring away, and the
-     bottom ``Zip all`` button stays a placeholder
-     (``href="#"``, ``aria-disabled``). Persistence of saved
-     shapes is also deferred — the save / edit / delete
-     buttons flip visual state in this slice but nothing
-     survives reload yet. #}
+     Saved shapes persist; each saved card has its own Download,
+     and the bottom ``Zip all`` bundles every saved shape's file
+     (``export/data_shapes_bundle.zip``, findings D13). #}
   <div class="card extract-data-card-stack" id="extract-data-shaper">
     <div>
       <h2 style="margin-top: 0;">Data shaper</h2>
@@ -810,10 +805,14 @@
     </div>
 
     <div class="extract-data-card-actions">
+      {# Every saved shape's file in one zip; greyed until a shape is
+         saved, since an empty zip is never a useful download. The
+         card's script re-syncs it as shapes save and delete. #}
+      {% set shaper_zip_href = "/operator/sessions/" ~ session.id ~ "/export/data_shapes_bundle.zip" %}
       <a class="btn secondary"
          id="extract-data-shaper-zip"
-         href="#"
-         aria-disabled="true">
+         data-zip-href="{{ shaper_zip_href }}"
+         {% if saved_shapes %}href="{{ shaper_zip_href }}" download{% else %}href="#" aria-disabled="true"{% endif %}>
         Zip all
       </a>
     </div>
@@ -2125,6 +2124,28 @@
 
       function updateAllButtonStates() {
         stack.querySelectorAll("[data-shape]").forEach(updateButtonStates);
+        syncShaperZip();
+      }
+
+      // The card's Zip all downloads every saved shape (findings
+      // D13), so it is live only while one exists. Saves and
+      // deletes are fetch calls, so the state follows the DOM.
+      var shaperZip = document.getElementById("extract-data-shaper-zip");
+      var shaperZipHref = shaperZip
+        ? shaperZip.getAttribute("data-zip-href")
+        : null;
+      function syncShaperZip() {
+        if (!shaperZip) return;
+        var anySaved = !!stack.querySelector("[data-shape][data-shape-id]");
+        if (anySaved) {
+          shaperZip.setAttribute("href", shaperZipHref);
+          shaperZip.setAttribute("download", "");
+          shaperZip.removeAttribute("aria-disabled");
+        } else {
+          shaperZip.setAttribute("href", "#");
+          shaperZip.removeAttribute("download");
+          shaperZip.setAttribute("aria-disabled", "true");
+        }
       }
 
       // Chip toggles drive Save's validity gate — every

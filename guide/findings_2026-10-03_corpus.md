@@ -131,7 +131,7 @@ stricter until ruled on.
 - ~~**D2**~~ (above; ruled 2026-10-03, done in #2793) and ~~**D6**~~ (ruled 2026-10-03: follow the code; done in #2797, the message now says the responses-received email omits the line): `email_template.no_help_contact` said emails
   fall back to a placeholder; the editor spec and the defaults drop the
   line.
-- **D13**: the Data shaper's outer Zip all is an inert placeholder in
+- ~~**D13**~~ — **Ruled 2026-10-03: zip every data-shaped response. Done in #2800**, `GET /export/data_shapes_bundle.zip`. The Data shaper's outer Zip all was an inert placeholder in
   code and spec, while the intro card's Zip all already bundles every
   saved shape. Remove the button or specify it.
 

@@ -730,6 +730,10 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.by_instrument_bundle_extracted": EventSchema(
         _IDENTITY | {"counts"}
     ),
+    # The Data shaper card's Zip all (findings D13, 2026-10-03).
+    "session.data_shapes_bundle_extracted": EventSchema(
+        _IDENTITY | {"counts"}
+    ),
     # Extract data tab — Data shaper card saved-shape
     # lifecycle. Per the wiring decisions in
     # ``spec/extract_data.md`` "Audit events":

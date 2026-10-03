@@ -38,7 +38,7 @@ extract card (`spec/session_home.md` §2).
 > a stack of Data shape sub-cards (preview row + Save / Edit /
 > Cancel / Delete / +Shape / Download action row, with Delete's
 > confirm tick on its own line beneath), and the outer `Zip all`
-> button.
+> button, which downloads every saved shape's file.
 >
 > All four empty-row-drop chips are two-state cycling pills with
 > an explicit label per state, one shape across the cards.
@@ -525,14 +525,18 @@ above it cover the common cases without configuration.
 | Body copy | "Compose a custom data shape — pick the axes (reviewer / reviewee / instrument / response field), the grouping, and the aggregations — and export the result alongside the canned lens CSVs." |
 | Card id | `extract-data-shaper` |
 | Button id | `extract-data-shaper-zip` |
-| Button target | `#` (placeholder — `aria-disabled`) |
+| Button target | `GET …/export/data_shapes_bundle.zip` (`href="#"` + `aria-disabled` while no shape is saved) |
 
-The chip-driven UX, shape persistence (`data_shapes` table), and
+The chip-driven UX, shape persistence (`data_shapes` table), the
 per-shape `Download` button (backed by
-`…/shapes/{id}/download.csv`) are the card's live surface. The
-outer `Zip all` button renders `aria-disabled="true"` — bundle
-integration is the remaining follow-up (see "Out of scope"
-below).
+`…/shapes/{id}/download.csv`) and the outer `Zip all` are the card's
+live surface. **Zip all** (findings D13, 2026-10-03) downloads
+`{code}_data_shapes.zip`: every saved shape's file, named as its own
+`Download` names it (`{code}_{slug}{suffix}.csv`, with that shape's
+saved chips), ordered by name then id, and nothing else. A repeated
+name gains `_2`, as in the Extract all data bundle. With no saved shape
+the button is greyed, since an empty zip is never a useful download;
+the card's script re-syncs it as shapes save and delete.
 
 ### Two stacked chip rows
 
@@ -877,10 +881,9 @@ member-assignment counts on its own).
   `data-shaper-relevant-for` filter rather than cloned
   in / out.
 - **Lifecycle behaviour.** The card renders identically
-  in every session lifecycle state. Once the file-gen
-  pipeline wires the `Zip all` button, the same
-  no-yellow-lock-card behaviour the rest of the page
-  already has will apply.
+  in every session lifecycle state, `Zip all` included,
+  with the same no-yellow-lock-card behaviour the rest of
+  the page has.
 
 ### Wiring contract
 
@@ -954,13 +957,14 @@ bundle the later one gains `_2` (Extract all data card).
 
 #### Audit events
 
-Three event types are registered in `EVENT_SCHEMAS`:
+Four event types are registered in `EVENT_SCHEMAS`:
 
 | Event type | Envelope | Notes |
 |---|---|---|
 | `session.data_shape_saved` | `_IDENTITY \| {"snapshot", "refs"}` | Fires on POST + PATCH. `snapshot` captures the shape's persisted columns (axis, instrument_id, response_field_id, column_chip_slots, self_review_handling, include_empty_rows, name); `refs.shape_id` carries the row's id. |
 | `session.data_shape_deleted` | `_IDENTITY \| {"snapshot", "refs"}` | Fires on DELETE. `snapshot` captures the deleted row's columns so the audit trail can reconstruct what existed pre-delete. |
 | `session.data_shape_extracted` | `_IDENTITY \| {"counts", "refs", "context"}` | Fires on the GET download route. `counts.rows` = body row count (header excluded); `refs.shape_id` carries which shape was extracted; `context.self_review_handling` records the chip state the download was generated under. |
+| `session.data_shapes_bundle_extracted` | `_IDENTITY \| {"counts"}` | Fires on the card's `Zip all`. `counts.data_shapes` = files in the zip. |
 
 #### Validation rules
 
@@ -1056,10 +1060,6 @@ The wiring slice doesn't cover:
   chip-selection order; reorder is a follow-up.
 - **Per-operator privacy.** All operators on a session see
   every saved shape — no per-operator scoping.
-- **Data shaper `Zip all` integration.** Each shape's
-  `Download` button is wired; the outer `Zip all` button on
-  the Data shaper card still renders `aria-disabled="true"`
-  (bundle integration is a follow-up).
 
 ## `Token keys` card
 
@@ -1196,7 +1196,8 @@ valid post-close use case. No yellow lock card wrap.
 - `app/web/routes_operator/_extract_data.py` — page route.
 - `app/web/routes_operator/_extracts.py` — all download
   routes (`reviewer_metadata.csv`, `reviewee_metadata.csv`,
-  `by_instrument_bundle.zip`, plus the top-level
+  `by_instrument_bundle.zip`, the Data shaper's
+  `data_shapes_bundle.zip`, plus the top-level
   `responses_bundle.zip` driven by the intro card).
 - `app/web/templates/operator/session_extract_data.html` —
   template + inline chip-sync JS.
@@ -1206,7 +1207,8 @@ valid post-close use case. No yellow lock card wrap.
   per-instrument extract serialiser.
 - `app/services/extracts/zip_bundle.py` —
   `build_by_instrument_bundle` zip wrapper consumed by
-  `export_by_instrument_bundle_zip`, and `build_responses_bundle`,
+  `export_by_instrument_bundle_zip`, `build_data_shapes_bundle`
+  for the Data shaper's Zip all, and `build_responses_bundle`,
   the intro card's pass-through bundle.
 - `discrete_step_values` in
   `app/services/extracts/data_shape_extract.py` — the

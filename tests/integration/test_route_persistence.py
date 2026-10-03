@@ -449,3 +449,37 @@ def test_bulk_save_emits_aligned_arrays_when_display_label_input_retired(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
+
+
+def test_data_shapes_zip_all_audit_row_persists(
+    committed_client: TestClient, committed_engine: Engine
+) -> None:
+    """The Data shaper's Zip all (findings D13) commits its audit row;
+    ``write_event`` alone only flushes."""
+    from app.db.models import AuditEvent
+
+    session_id, _ = _bootstrap(
+        committed_client, committed_engine, code="zip-shapes-commit"
+    )
+    assert committed_client.post(
+        f"/operator/sessions/{session_id}/extract-data/shapes",
+        json={
+            "name": "One",
+            "axis": "reviewer",
+            "instrument_id": None,
+            "response_field_id": None,
+            "column_chip_slots": ["reviewer:name"],
+        },
+    ).status_code == 201
+    response = committed_client.get(
+        f"/operator/sessions/{session_id}/export/data_shapes_bundle.zip"
+    )
+    assert response.status_code == 200
+
+    with Session(committed_engine) as s:
+        assert s.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == session_id,
+                AuditEvent.event_type == "session.data_shapes_bundle_extracted",
+            )
+        ).scalar_one() is not None
