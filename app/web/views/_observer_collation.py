@@ -143,7 +143,7 @@ def build_observer_collation_context(
     total = len(instruments)
 
     sections: list[InstrumentCollationSection] = []
-    for position, instrument in enumerate(instruments):
+    for position, instrument in enumerate(instruments, start=1):
         policies = visibility_policies.list_for_instrument(
             db, instrument.id
         )

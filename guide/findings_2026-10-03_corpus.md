@@ -54,7 +54,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   whole roster. When a Link rule filters the reviewer's own row, the
   preview shows a sample Generate would exclude. `spec/assignments.md`
   :334-341 is right.
-- **A1 med** — Observer collation numbers instruments from `#0`
+- ~~**A1**~~ med — **Done in #2785.** Observer collation numbers instruments from `#0`
   (`_observer_collation.py:146` enumerates without `start=1`). Every
   other surface starts at 1. No test covers it.
 - **A2 med, author** — The reviewer's missing-required and error cards
