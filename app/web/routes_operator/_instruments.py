@@ -1006,38 +1006,11 @@ async def instrument_consolidated_save(
 
 
 
-# Wave 5 PR 5.3 — the legacy ``/instruments/add`` POST route
-# retired (its ``+Add instrument`` button retired in Wave 4 PR
-# 4c). ``+Instrument`` (the ``/add-new-model`` route below)
-# is the sole UI affordance. ``/add-group`` survives as a back-
-# door for fixtures + programmatic creation; the matching
-# ``+Group instrument`` button retired in Wave 4 PR 4c, so
-# operators reach group-scoped mode by toggling Band 1 Link 3 to
-# "Grouped" on a fresh +Instrument card.
-
-
-@router.post("/sessions/{session_id}/instruments/add-group")
-def instruments_add_group(
-    after: int | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    """Create a group-scoped instrument. Back-door for fixtures +
-    programmatic callers; the corresponding ``+Group instrument``
-    button retired in Wave 4 PR 4c."""
-    _require_instrument_editable(review_session)
-    instrument = instruments_service.create_instrument(
-        db,
-        review_session=review_session,
-        after_instrument_id=after,
-        actor=user,
-        group_kind=instruments_service.GROUP_KIND_SENTINEL,
-    )
-    return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/instruments#instrument-{instrument.id}",
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
+# The legacy ``/instruments/add`` and ``/instruments/add-group`` POST
+# routes are retired (Wave 5 PR 5.3; findings A22, 2026-10-03).
+# ``+Instrument`` (``/add-new-model`` below) is the sole create
+# affordance; operators reach group scope by toggling Band 1 Link 3 to
+# "Grouped" on a fresh card.
 
 
 @router.post("/sessions/{session_id}/instruments/add-new-model")

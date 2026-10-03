@@ -545,6 +545,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "assignments.generated": EventSchema(
         _IDENTITY | {"counts", "context", "refs"}
     ),
+    # Emitterless — the unreached delete-all route and its service
+    # retired (findings B7, 2026-10-03). Kept registered so historic
+    # rows stay filterable, as ``instrument.rule_pinned`` is.
     "assignments.deleted_all": EventSchema(_IDENTITY | {"counts", "refs"}),
     "assignments.instrument_self_reviews_active_set": EventSchema(
         _IDENTITY | {"counts", "context", "refs"}

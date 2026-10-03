@@ -42,8 +42,14 @@ Cross-references:
 GET  /me/sessions/{session_id}/{page_n}
 POST /me/sessions/{session_id}/{page_n}/save
 POST /me/sessions/{session_id}/submit
+POST /me/sessions/{session_id}/recall
 POST /me/sessions/{session_id}/clear
 ```
+
+Recall is posted from the post-submit summary page (see "Per-session
+summary" below). Save is per page: the consolidated
+`POST /me/sessions/{session_id}/save` that nothing posted to was
+retired (findings A16, 2026-10-03).
 
 `{page_n}` is the **1-indexed operator-defined page number** within the
 session. Pages are derived from `Instrument.starts_new_page`:
@@ -1556,7 +1562,7 @@ requirements (since the app's positioning depends on tabular review
 artifacts at scale): auto-save, return-to-place, visible progress,
 sticky column headers, filter-to-incomplete, keyboard navigation,
 and column-type ergonomics. **Segment 17B owns these**, pursued as
-targeted progressive enhancement (debounced `fetch` to `POST /save`,
+targeted progressive enhancement (debounced `fetch` to `POST …/{page_n}/save`,
 small inline scripts, CSS) — *not* a JS data-grid framework. (Sticky
 column headers are the one item ruled out — see below.) A wholesale
 grid swap (AG Grid or equivalent) is off the roadmap as overkill, and

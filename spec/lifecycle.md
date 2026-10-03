@@ -111,7 +111,7 @@ the readiness check stays meaningful.
 reads — session metadata, rosters (per-row, bulk and CSV import),
 relationships, observers, instruments and their Band 1 links, fields
 and pagination, visibility policies, field labels, assignment
-generate and delete-all, and the full settings import — calls
+generate, and the full settings import — calls
 `invalidate_if_validated`. The Assignments page's include toggles
 (per-row Inactivate / Activate and the per-instrument Self review
 toggle) do not, and are allowed in `validated`. A list of call
@@ -216,7 +216,7 @@ in `app/web/routes_operator/_operations.py`.
 Raises **HTTP 409 Conflict** when the session is not `draft` or
 `validated`. Operator setup-mutation endpoints (session edit,
 roster import, roster delete-all, relationships CRUD, assignment
-generate, assignment delete-all, etc.) call this **first**.
+generate, etc.) call this **first**.
 
 Five exceptions to that list, all easy to mis-read:
 
@@ -262,7 +262,7 @@ the request didn't carry `acknowledge_response_loss=true`. Called
 from routes whose mutations would invalidate stored reviewer
 responses: reviewer and reviewee delete-all, the Reviewers and
 Reviewees Setup-page CSV import (`_shared.py` `_handle_import`),
-assignment Generate and delete-all, and Quick Setup's roster and
+assignment Generate, and Quick Setup's roster and
 settings replaces (which answer `needs_confirm` rather than 400).
 **Relationship changes do not call it**, although moving a pair to
 another pair-context group deletes the group answer copy it carried

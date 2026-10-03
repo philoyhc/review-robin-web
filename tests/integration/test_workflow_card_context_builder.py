@@ -83,7 +83,6 @@ _EXPECTED_KEYS = {
     "stop_release_visible",
     "archive_visible",
     "is_setup_empty",
-    "is_pre_generate",
     "invitations_generated",
     "invitations_sent",
     "validation_summary",
@@ -118,7 +117,6 @@ def test_builder_state_1_setup_empty_carries_checklist_falses(
     )
     assert ctx["is_draft"] is True
     assert ctx["is_setup_empty"] is True
-    assert ctx["is_pre_generate"] is False
     # Wave 5 follow-up — the "Not set" pill safety gate forces
     # every Band 1 link to be deliberately clicked before
     # ``instruments_configured_ok`` flips True. A bare session's
@@ -145,7 +143,6 @@ def test_builder_state_1a_flips_when_rosters_and_rule_pinned(
         db, review_session, return_to="assignments"
     )
     assert ctx["is_setup_empty"] is False
-    assert ctx["is_pre_generate"] is True  # no assignments rows yet
     assert ctx["setup_checklist"] == {
         "reviewers_ok": True,
         "reviewees_ok": True,

@@ -243,49 +243,6 @@ def test_delete_all_reviewees_cascades_assignments(
     }
 
 
-def test_delete_all_assignments_clears_mode(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _seed_with_assignments(client, db, code="a-del")
-    db.refresh(review_session)
-    assert review_session.assignment_mode == "rule_based"
-
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/delete-all",
-        data={"confirm": "true"},
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 303
-    assert (
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).first()
-        is None
-    )
-    db.refresh(review_session)
-    assert review_session.assignment_mode is None
-
-    # Reviewer + reviewee still there
-    assert (
-        db.execute(
-            select(Reviewer).where(Reviewer.session_id == review_session.id)
-        ).first()
-        is not None
-    )
-    assert (
-        db.execute(
-            select(Reviewee).where(Reviewee.session_id == review_session.id)
-        ).first()
-        is not None
-    )
-
-    event = db.execute(
-        select(AuditEvent).where(AuditEvent.event_type == "assignments.deleted_all")
-    ).scalar_one()
-    assert event.detail["counts"] == {"deleted": 1}
-
-
 def test_non_operator_gets_404_on_destructive_routes(
     db: Session,
     alice: AuthenticatedUser,
@@ -314,7 +271,6 @@ def test_non_operator_gets_404_on_destructive_routes(
     for path in (
         f"/operator/sessions/{review_session.id}/reviewers/delete-all",
         f"/operator/sessions/{review_session.id}/reviewees/delete-all",
-        f"/operator/sessions/{review_session.id}/assignments/delete-all",
     ):
         r = bob_client.post(path, data={"confirm": "true"}, follow_redirects=False)
         assert r.status_code == 404, path

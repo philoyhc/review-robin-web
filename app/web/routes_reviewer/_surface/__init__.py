@@ -62,7 +62,6 @@ from ._routes import (
     reviewer_clear,  # noqa: F401
     reviewer_recall,  # noqa: F401
     reviewer_save,  # noqa: F401
-    reviewer_save_consolidated,  # noqa: F401
     reviewer_submit,  # noqa: F401
     router,
     submit_redirect_url,  # noqa: F401

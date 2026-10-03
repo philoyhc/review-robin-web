@@ -149,11 +149,11 @@ stricter until ruled on.
   saved shape. Remove the button or specify it.
 
 **Routes and controls with no contract.**
-- **B7**: `POST /assignments/delete-all` exists with gates but no page
+- ~~**B7**~~ — **Ruled 2026-10-03: retire. Done in #2803**; the audit key stays registered so old rows filter. `POST /assignments/delete-all` existed with gates but no page
   posts to it and `assignments.md` says assignments are never deleted.
-- **A16**: the inert consolidated `POST /me/sessions/{id}/save`.
-- **A22**: `POST /instruments/add-group`, a fixture back door.
-- **B15**: `is_pre_generate`, kept "for external consumers", has only a
+- ~~**A16**~~ — **Ruled 2026-10-03: retire. Done in #2803**; Recall, which is live, joins the spec's route list. The inert consolidated `POST /me/sessions/{id}/save`.
+- ~~**A22**~~ — **Ruled 2026-10-03: retire. Done in #2803**; tests use an `add_group_instrument` helper. `POST /instruments/add-group`, a fixture back door.
+- ~~**B15**~~ — **Ruled 2026-10-03: retire. Done in #2803**, with `needs_regeneration_after_revert`, its only input. `is_pre_generate`, kept "for external consumers", had only a
   test consumer and costs queries per render.
 - ~~**B21**~~ — **Ruled 2026-10-03: retire. Done in #2801**: the rows go, and a note says the window is read-time. Release-from/until preconditions and skip reasons in
   `lifecycle.md:729-730` that nothing emits.

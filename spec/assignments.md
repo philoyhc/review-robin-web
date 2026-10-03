@@ -847,7 +847,7 @@ The Assignments page splits the way the roster Setup pages do
   checkboxes, the select-all header cell, the hidden
   `assignments-bulk-form` they post to, the selected count,
   `Inactivate` / `Activate` and the wiring script render only on
-  `draft` and `validated`, which is what all five mutating routes
+  `draft` and `validated`, which is what all four mutating routes
   enforce.
 - **The read-only half renders in every state** — the `Search by:`
   select, the search box, `Clear` and the `Search` button. The count

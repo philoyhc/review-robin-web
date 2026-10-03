@@ -571,54 +571,6 @@ def test_existing_count_filters_by_instrument(db: Session) -> None:
     )
 
 
-def test_delete_all_scoped_keeps_other_instruments(db: Session) -> None:
-    """``delete_all_assignments(..., instrument_id=...)`` deletes only
-    the named instrument's rows and leaves ``assignment_mode``
-    untouched (the session is still rule-based on other
-    instruments)."""
-
-    user, review_session, inst_a, inst_b, rule_set = _seed_two_instruments(db)
-    inst_a.rule_set_id = rule_set.id
-    inst_b.rule_set_id = rule_set.id
-    db.flush()
-
-    assignments.replace_assignments(
-        db, review_session=review_session, user=user, correlation_id="c1"
-    )
-    mode_before = review_session.assignment_mode
-    assert mode_before is not None
-
-    assignments.delete_all_assignments(
-        db,
-        review_session=review_session,
-        user=user,
-        correlation_id="c2",
-        instrument_id=inst_a.id,
-    )
-
-    db.refresh(review_session)
-    # Mode untouched — other instrument still has its rows.
-    assert review_session.assignment_mode == mode_before
-    assert (
-        assignments.existing_count(
-            db, review_session.id, instrument_id=inst_a.id
-        )
-        == 0
-    )
-    assert (
-        assignments.existing_count(
-            db, review_session.id, instrument_id=inst_b.id
-        )
-        == 4
-    )
-
-
-# --------------------------------------------------------------------- #
-# 19O Item 1 rung 3 — per-instrument self-review exclusion, honored
-# after the engine's fan-out.
-# --------------------------------------------------------------------- #
-
-
 def _self_review_rows(db: Session, instrument_id: int) -> list[Assignment]:
     return list(
         db.execute(
@@ -807,7 +759,6 @@ def test_exclude_self_reviews_deletes_saved_responses(db: Session) -> None:
         db, review_session=review_session, user=user, correlation_id="c2"
     )
     assert db.get(Response, resp_id) is None
-
 
 
 def test_exclude_self_reviews_survives_a_link_rule_hiding_the_self_pair(

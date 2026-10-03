@@ -20,6 +20,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 from app.services import session_lifecycle as lifecycle
+from ._instrument_states import add_group_instrument
 from ._validated import validate_session
 
 
@@ -253,7 +254,6 @@ def test_each_mutating_endpoint_returns_409_while_ready(
             },
             {},
         ),
-        (f"/operator/sessions/{sid}/assignments/delete-all", {"confirm": "true"}, {}),
     ]
     for url, data, files in targets:
         response = client.post(url, data=data, files=files or None, follow_redirects=False)
@@ -550,14 +550,8 @@ def test_lazy_deadline_close_audit_carries_correlation_id(
 # --------------------------------------------------------------------------- #
 
 
-def _add_group_instrument(
-    client: TestClient, db: Session, session_id: int
-) -> Instrument:
-    response = client.post(
-        f"/operator/sessions/{session_id}/instruments/add-group",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303, response.text
+def _add_group_instrument(db: Session, session_id: int) -> Instrument:
+    add_group_instrument(db, db.get(ReviewSession, session_id))
     return db.execute(
         select(Instrument)
         .where(Instrument.session_id == session_id)
@@ -570,7 +564,7 @@ def test_activation_opens_a_group_instrument(
 ) -> None:
     """Activation opens a group-scoped instrument like any other."""
     session = _create_session(client, db, code="grp-rule")
-    group = _add_group_instrument(client, db, session.id)
+    group = _add_group_instrument(db, session.id)
     _populate_rosters(client, session.id)
     _generate_full_matrix(client, db, session.id)
     validate_session(session)

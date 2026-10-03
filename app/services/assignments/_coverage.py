@@ -1,9 +1,9 @@
 """Coverage / staleness / counts + roster queries.
 
-Read-only (with one destructive tail — ``delete_all_assignments``)
-summaries the Validate page, the Workflow card, and the Assignments
-page consume. Writes nothing apart from the explicit
-``delete_all_assignments`` destructive op.
+Read-only summaries the Validate page, the Workflow card, and the
+Assignments page consume. Writes nothing (the unreached
+``delete_all_assignments`` was retired, findings B7 2026-10-03: no
+assignment is deleted by hand, ``spec/assignments.md``).
 """
 from __future__ import annotations
 
@@ -30,9 +30,7 @@ from app.db.models import (
     Reviewee,
     Reviewer,
     ReviewSession,
-    User,
 )
-from app.services import audit, session_lifecycle as lifecycle
 from app.services._queries import session_scoped, slot_has_data
 from app.services.email_identity import normalize_email
 
@@ -649,53 +647,3 @@ def count_pairs(
     # duplicate a row and the count needs no ``DISTINCT``.
     count_stmt = stmt.with_only_columns(func.count(Assignment.id))
     return int(db.execute(count_stmt).scalar_one())
-
-
-def delete_all_assignments(
-    db: Session,
-    *,
-    review_session: ReviewSession,
-    user: User,
-    correlation_id: str,
-    instrument_id: int | None = None,
-) -> int:
-    """Remove ``Assignment`` rows from the session.
-
-    ``instrument_id=None`` (default): clears every row and resets
-    ``assignment_mode`` to NULL. ``instrument_id=<id>``: scoped delete
-    that leaves rows on other instruments untouched and does NOT
-    clear ``assignment_mode``.
-    """
-    lifecycle.invalidate_if_validated(
-        db,
-        review_session=review_session,
-        user=user,
-        reason="assignments_deleted_all",
-        correlation_id=correlation_id,
-    )
-    stmt = session_scoped(Assignment, review_session.id)
-    if instrument_id is not None:
-        stmt = stmt.where(Assignment.instrument_id == instrument_id)
-    rows = list(db.execute(stmt).scalars())
-    deleted = len(rows)
-    for row in rows:
-        db.delete(row)
-    if instrument_id is None:
-        review_session.assignment_mode = None
-    db.flush()
-
-    refs: dict[str, int] | None = (
-        {"instrument_id": instrument_id} if instrument_id is not None else None
-    )
-    audit.write_event(
-        db,
-        event_type="assignments.deleted_all",
-        summary=f"Deleted all {deleted} assignments",
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.counts(deleted=deleted),
-        refs=refs,
-        correlation_id=correlation_id,
-    )
-    db.commit()
-    return deleted

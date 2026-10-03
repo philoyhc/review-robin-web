@@ -221,7 +221,7 @@ service writes an `audit_events` row).
 | Delete session (`/delete`, `/bulk-delete`, `/bulk-delete-archived`) | `confirm=true`, **plus `_require_not_ready`** on `/delete` (any state but `ready`); `/bulk-delete` skips sessions that are `ready` or `archived` (it accepts `draft`, `validated` and `expired`), and `/bulk-delete-archived` deletes only archived ones | `require_session_operator` / per-id check | ✓ |
 | Close / reopen session (`/activate`, `/revert`, `/workflow/activate`) | `activate_confirm` banner | `require_session_operator` | ✓ |
 | Replace reviewers / reviewees roster | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
-| Replace assignments (import / generate / `delete-all`) | `confirm`/`confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
+| Replace assignments (generate) | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
 | Replace relationships (`delete-all`) | `confirm=true` | `require_session_operator` | ✓ |
 | Replace settings (`/import-config`, Quick Setup Settings) — rebuilds every instrument, deleting assignments and responses | `confirm_replace` + response-loss ack (findings C3) | `require_session_operator` | ✓ |
 | Delete instrument / field | `confirm=true` | `require_session_operator` (via helper) | ✓ |
