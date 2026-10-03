@@ -231,3 +231,54 @@ def test_deleting_the_reviewers_own_row_clears_the_flag(
         db, review_session=review_session, reviewee_ids=[sam_own.id], user=user
     )
     assert _rows_by_reviewee(db, instrument)["Zoe"].is_self_review is False
+
+
+def test_a_row_that_stops_being_a_self_review_is_included_again(
+    db: Session,
+) -> None:
+    """Codex on #2765: with self-reviews off, Zoe's row is written
+    ``include=False`` as a self-review. Deleting Sam's own reviewee row
+    makes it an ordinary review, which must come back on: the toggle
+    reads the flag and could no longer reach it."""
+    user, review_session, instrument = _seed(db, self_reviews_active=False)
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="b7"
+    )
+    assert _rows_by_reviewee(db, instrument)["Zoe"].include is False
+    sam_own = db.execute(
+        select(Reviewee).where(Reviewee.name == "Sam")
+    ).scalar_one()
+    reviewees_service.delete_selected(
+        db, review_session=review_session, reviewee_ids=[sam_own.id], user=user
+    )
+    zoe = _rows_by_reviewee(db, instrument)["Zoe"]
+    assert zoe.is_self_review is False
+    assert zoe.include is True
+
+
+def test_a_row_that_becomes_a_self_review_follows_the_session_setting(
+    db: Session,
+) -> None:
+    """The inverse: adding Sam's own row after Generate makes Zoe's row
+    a self-review, so with self-reviews off it is excluded, as Generate
+    would have written it."""
+    user, review_session, instrument = _seed(
+        db, self_reviews_active=False, with_own_row=False
+    )
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="b7"
+    )
+    assert _rows_by_reviewee(db, instrument)["Zoe"].include is True
+    reviewees_service.create_reviewee(
+        db,
+        review_session=review_session,
+        name="Sam",
+        email_or_identifier="sam@example.edu",
+        tag_1="TeamA",
+        tag_2="SELF",
+        user=user,
+    )
+    zoe = _rows_by_reviewee(db, instrument)["Zoe"]
+    assert zoe.is_self_review is True
+    assert zoe.include is False
+

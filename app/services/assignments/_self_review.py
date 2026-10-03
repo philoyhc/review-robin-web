@@ -327,6 +327,24 @@ def recompute_self_review_classification(
     ``Reviewer`` / ``Reviewee`` joins stay because the rule reads them;
     only the ``Assignment`` entity is gone.
     """
+    rows = db.execute(
+        select(
+            Assignment.id,
+            Assignment.instrument_id,
+            Assignment.reviewer_id,
+            Assignment.reviewee_id,
+            Assignment.is_self_review,
+            Reviewer.email,
+            Reviewee,
+            Reviewer.status,
+            Assignment.include,
+        )
+        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .where(Assignment.session_id == session_id)
+    ).all()
+    if not rows:
+        return 0
     pairs = [
         AssignmentPair(
             id=row_id,
@@ -345,31 +363,51 @@ def recompute_self_review_classification(
             stored,
             reviewer_email,
             reviewee,
-        ) in db.execute(
-            select(
-                Assignment.id,
-                Assignment.instrument_id,
-                Assignment.reviewer_id,
-                Assignment.reviewee_id,
-                Assignment.is_self_review,
-                Reviewer.email,
-                Reviewee,
-            )
-            .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
-            .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
-            .where(Assignment.session_id == session_id)
-        ).all()
+            _reviewer_status,
+            _include,
+        ) in rows
     ]
-    if not pairs:
-        return 0
+    both_active = {
+        row_id: reviewer_status == "active" and reviewee.status == "active"
+        for row_id, *_, reviewee, reviewer_status, _include in rows
+    }
+    included = {row[0]: bool(row[-1]) for row in rows}
     classification = classify_self_review_pairs(
         db, session_id=session_id, pairs=pairs
     )
-    changed = [
-        {"id": pair.id, "is_self_review": classification[pair.id]}
-        for pair in pairs
-        if pair.is_self_review != classification[pair.id]
+    flipped = [
+        pair for pair in pairs if pair.is_self_review != classification[pair.id]
     ]
+    changed: list[dict[str, object]] = []
+    if flipped:
+        # A row whose classification flips moves its ``include`` towards
+        # what Generate would write (findings B7, Codex on #2765). A row
+        # that stops being a self-review comes back on unless a side is
+        # inactive — otherwise it stays excluded where the per-instrument
+        # toggle, which reads the flag, cannot reach it. A row that
+        # becomes one is switched off when the session has self-reviews
+        # off, and otherwise keeps its value, so a first classification
+        # never overrides an ``include`` written with the row.
+        self_reviews_active = bool(
+            db.execute(
+                select(ReviewSession.self_reviews_active).where(
+                    ReviewSession.id == session_id
+                )
+            ).scalar_one()
+        )
+        for pair in flipped:
+            is_self = classification[pair.id]
+            changed.append(
+                {
+                    "id": pair.id,
+                    "is_self_review": is_self,
+                    "include": (
+                        included[pair.id] and self_reviews_active
+                        if is_self
+                        else included[pair.id] or both_active[pair.id]
+                    ),
+                }
+            )
     if changed:
         # ORM bulk UPDATE by primary key. Unlike the bulk *insert* in
         # ``_materialise_one_instrument``, this form keeps the identity

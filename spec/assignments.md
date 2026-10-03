@@ -466,7 +466,11 @@ boundary tag, a reviewee added or deleted — membership is read off the
 roster — relationship pair-context tag, instrument
 `group_kind`) calls
 `assignments.recompute_self_review_classification` so the
-column never drifts. Every downstream reader (extracts,
+column never drifts. A row whose flag the recompute flips also moves
+its `include` towards what Generate would write (findings B7): a row
+that stops being a self-review comes back on unless either side is
+inactive, and a row that becomes one is switched off when
+`self_reviews_active` is off. Every downstream reader (extracts,
 audit counters, the in-app `Assignments`-page status
 blocks, the `set_instrument_self_reviews_active` toggle
 backend) consumes the column directly. The
