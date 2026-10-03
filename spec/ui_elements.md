@@ -124,8 +124,8 @@ classes.
 > Operations tab, or the Home anchor — paints it in that target's own
 > **selected** colors: `--nav-tab-active-bg` as the background and
 > `--text-body` as the foreground for a tab — the selected tab's
-> foreground is `--text-body` too, and `--nav-tab-active-fg` paints
-> neither — and the anchor's selected background for Home (author's
+> foreground is `--text-body` too — and the anchor's selected background
+> for Home (author's
 > ruling, 2026-10-02, findings E4).
 > **A hover value must be a token, never a literal.** A literal
 > near-white (the shape this replaced) cannot follow the theme: it reads

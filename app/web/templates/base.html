@@ -227,7 +227,6 @@
         /* Navigation [A] */
         --nav-marker-setup: var(--blue-soft);
         --nav-marker-ops: var(--green-soft);
-        --nav-tab-active-fg: var(--blue-deeper);
         --nav-tab-active-bg: var(--white);
         --nav-strip-setup-bg: var(--blue-pale);
         --nav-strip-ops-bg: var(--green-wash);
@@ -382,7 +381,6 @@
         /* Navigation [A] */
         --nav-marker-setup: var(--blue-bright);
         --nav-marker-ops: var(--green-abyss);
-        --nav-tab-active-fg: var(--blue-soft);
         --nav-tab-active-bg: var(--ink-abyss);
         --nav-strip-setup-bg: var(--blue-abyss-soft);
         --nav-strip-ops-bg: var(--green-abyss-faint);
@@ -938,30 +936,10 @@
         background: transparent;
         position: relative;
       }
-      /* Hover wears the selected tab's colours (author, 2026-09-11:
-         "mouse hover over style = tab selected style"). Before this
-         the strip hovered to a hardcoded `rgba(255, 255, 255, 0.7)` —
-         70% white, which reads as a tinted near-white over the light
-         strips and as a glaring pale block over the dark ones, since
-         the value is a literal and cannot follow the theme.
-
-         The `::after` marker stays on `.active` alone: it is the
-         "you are here" signal, and painting it under the cursor would
-         leave the operator unable to tell which page they are on
-         while they hover. Everything else matches.
-
-         `:not()` rather than a later override, because
-         `body.ui-v2 .nav-tab:hover` (0,3,1) outranks
-         `.nav-tab.disabled:hover` (0,3,0) — a disabled tab has been
-         taking the hover background on every v2 page. */
-      .nav-tab:not(.disabled):not([aria-disabled="true"]):hover {
-        background: var(--nav-tab-active-bg);
-        color: var(--nav-tab-active-fg);
-      }
+      /* The selected tab's background. Its color and weight are the
+         `body.ui-v2` rules' below; every page sets `ui-v2`. */
       .nav-tab.active {
         background: var(--nav-tab-active-bg);
-        color: var(--nav-tab-active-fg);
-        font-weight: 500;
       }
       .nav-tab.disabled,
       .nav-tab[aria-disabled="true"]:not(.active) {
@@ -3973,10 +3951,17 @@
         border-bottom-color: var(--border-subtle);
       }
       body.ui-v2 .nav-tab { color: var(--text-subtle); font-weight: 600; }
-      /* Hover wears the selected tab's colours; the v1 :hover rule is
-         shadowed by the v2 base on equal specificity, so re-emit.
-         v2's `.nav-tab.active` overrides only the colour and inherits
-         v1's background, so hover matches on both. */
+      /* Hover wears the selected tab's colors (author, 2026-09-11:
+         "mouse hover over style = tab selected style"): the
+         `.nav-tab.active` background above and the color below. A
+         literal near-white hover cannot follow the theme. The `::after`
+         marker stays on `.active` alone, so the operator can still tell
+         which page they are on while they hover.
+
+         `:not()` rather than a later override, because
+         `body.ui-v2 .nav-tab:hover` (0,3,1) would outrank
+         `.nav-tab.disabled:hover` (0,3,0) and give a disabled tab the
+         hover background. */
       body.ui-v2 .nav-tab:not(.disabled):not([aria-disabled="true"]):hover {
         color: var(--text-body);
         background: var(--nav-tab-active-bg);

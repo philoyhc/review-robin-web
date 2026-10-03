@@ -339,7 +339,10 @@ stay in §3.
 - **A30** — The `sort_cell` macro in
   `app/web/templates/operator/instruments_index.html` is the retired Sort
   column's cell; nothing calls it. Delete it. Found in #2764.
-- **E37** — Every page sets `ui-v2`, so the v1 `.nav-tab` hover and
+- ~~**E37**~~ — **Ruled 2026-10-03: delete them. Done in #2776.** The
+  v1 active rule keeps its background, which the v2 rule inherits;
+  `--nav-tab-active-fg` paints nothing after and is retired. Every page
+  sets `ui-v2`, so the v1 `.nav-tab` hover and
   active rules in `base.html` (`--nav-tab-active-fg`) are shadowed and
   shown nowhere, yet `tests/unit/test_session_nav_hover.py`
   (`test_tab_hover_takes_the_selected_background`) pins the v1 hover
