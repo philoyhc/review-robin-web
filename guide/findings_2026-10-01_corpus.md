@@ -293,6 +293,13 @@ stay in §3.
   drops it and the next visit queues those reminders again. Found in
   #2757's read; it predates that PR, which made the page load instead of
   failing.
+- **B33** — `spec/assignments.md` lists a relationship pair-context tag
+  edit among the triggers that recompute `Assignment.is_self_review`, but
+  only `update_relationship` does. `create_relationship`,
+  `save_relationships`, `delete_all_relationships`, the selected delete
+  and bulk inactivate / reactivate can move a pair-context group key
+  without a recompute, so the flag can lag until the next Generate.
+  Predates #2765; found in its read.
 - **A29** — `spec/sort_by_reviewee.md` "Scope" lists email among the
   fields the operator's default sort can use, and the service accepts it,
   but no operator control sets it: the Reviewee identity header's badge
