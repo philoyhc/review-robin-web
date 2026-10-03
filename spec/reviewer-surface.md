@@ -500,7 +500,11 @@ In rendered order:
 1. **Reviewee** (always first, mandatory; class `.rs-reviewee`):
    reviewee `name` in **bold**, `email_or_identifier` in `<code>`
    beneath. Both are sourced from the `Reviewee` row pointed at by
-   the assignment.
+   the assignment. A self-review row (`Assignment.is_self_review`) adds
+   a `.pill.pill-info` **Self review** after the name, the label the
+   operator's Assignments page uses; writes are not blocked
+   (`spec/rrw_functional_spec.md` §10.3). A group row's equivalent is
+   under "Group-scoped instruments".
 2. **Display fields** (in operator-configured `InstrumentDisplayField.order`):
    one column per visible row in `display_fields_by_instrument`.
    Filtered to exclude duplicates of the always-rendered Reviewee
@@ -749,7 +753,10 @@ reviewer-surface specifics:
   `RevieweeName` Display Field is Included, the member-name list
   on a second line — the first `GROUP_MEMBER_NAME_LIMIT` (10)
   names, then a `+N more` suffix. No separate display-field
-  columns render.
+  columns render. When the group is a self-review group, a
+  `.pill.pill-info` **Self review** follows on its own line: every
+  member's assignment is flagged then, so the representative's flag
+  speaks for the group (findings G7, 2026-10-03).
 - **Fixed table layout.** The group table is `table-layout: fixed`
   (`table.rs-group-table`): the `Group` column is pinned to a
   third of the table width (`th.rs-group { width: 33% }`), and

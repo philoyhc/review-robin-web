@@ -199,6 +199,14 @@ when it is checked; sections with unticked rows sit above the ticked ones.
   or a reviewee's results page with a summarized policy, a text field
   nobody has answered shows "Total length: —", not "0 characters".
 
+## The reviewer's own row is marked (G7)
+
+- [ ] **A Self review pill.** In a session where a reviewer is also a
+  reviewee and self-reviews are active, sign in as that reviewer: their
+  own row shows a blue "Self review" pill after the name, and the row
+  still saves. On a group instrument, the group row the reviewer
+  belongs to shows it under the group name.
+
 ## Setup tabs underline in blue (findings register E5)
 
 - [x] **Light and dark.** On any Setup page (Reviewers, say), the active

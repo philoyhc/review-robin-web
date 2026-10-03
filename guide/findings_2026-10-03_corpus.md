@@ -123,8 +123,8 @@ stricter until ruled on.
   `participant_model.md:82` and `visibility_policy.md:65` ask for.
 - ~~**B18**~~ — **Ruled 2026-10-03: update the spec. Done in #2797.** `lifecycle.md:321` promised an "auto-closed at X" pill from
   `deadline_closed_at`; nothing renders one.
-- **G7**: `rrw_functional_spec.md` §10.3 says the reviewer surface marks
-  a self-review row; nothing does.
+- ~~**G7**~~ — **Ruled 2026-10-03: mark it. Done in #2799**, a "Self review" pill after the name. `rrw_functional_spec.md` §10.3 says the reviewer surface marks
+  a self-review row; nothing did.
 - ~~**G5**~~ — **Ruled 2026-10-03: config-only. Done in #2797.** The session self-reviews-active flag has no editor; only the
   Settings CSV and Duplicate set it. Build one, or say it is config-only
   (also `settings_inventory.md:104`).
