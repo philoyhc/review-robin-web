@@ -773,6 +773,13 @@ def test_surface_renders_help_contact_line_when_set(
     body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert "Questions? Contact Prof X" in body
 
+    # Blank, or spaces alone, hides the line (findings D6).
+    for blank in (None, "   "):
+        review_session.help_contact = blank
+        db.commit()
+        body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
+        assert "Questions? Contact" not in body
+
 
 def test_surface_renders_constraint_summary_row_above_table(
     db: Session,

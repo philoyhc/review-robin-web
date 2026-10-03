@@ -950,8 +950,8 @@ def _check_email_template_no_help_contact(
             severity=Severity.info,
             source="email_template",
             message=(
-                "No help contact set — reviewer-facing emails will fall "
-                "back to a generic placeholder"
+                "No help contact set — the responses-received email "
+                "omits its 'Questions? Contact …' line"
             ),
         )
 
@@ -1271,10 +1271,12 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         source="email_template",
         severity=Severity.info,
         why=(
-            "Reviewer-facing emails include a 'Questions? Contact …' "
-            "line that falls back to a generic placeholder when help "
-            "contact is unset. Setting one improves the reviewer "
-            "experience but isn't required."
+            "The default responses-received email ends with a "
+            "'Questions? Contact …' line, and the reviewer surface "
+            "shows one under its title; both are dropped when help "
+            "contact is unset, and an overridden body that names "
+            "$help_contact gets it blank. Setting one improves the "
+            "reviewer experience but isn't required."
         ),
         fix_url=_session_edit_url,
         fix_page_label="Edit session",

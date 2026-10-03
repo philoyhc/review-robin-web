@@ -1013,7 +1013,8 @@ Each session carries a **self-reviews active** flag. When true,
 self-review pairs (reviewer reviewing themselves on a given
 instrument) participate in the review surface; when false, they
 are inactive in bulk. Per-pair include overrides apply
-post-flip. The flag is editable only in `draft` / `validated`.
+post-flip. The flag has no editor; it is set by the Settings CSV
+import or Duplicate.
 
 ### 8.7 Per-operator settings
 

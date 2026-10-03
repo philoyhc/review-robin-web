@@ -224,6 +224,15 @@ def test_render_responses_received_uses_no_help_contact_default_when_unset() -> 
     )
 
 
+def test_render_responses_received_treats_a_blank_help_contact_as_unset() -> None:
+    """Spaces alone are no contact: the line is dropped, as the
+    ``email_template.no_help_contact`` notice says (findings D6)."""
+    _, body = email_templates.render_responses_received(
+        _session(help_contact="   "), _reviewer("Rae")
+    )
+    assert "Questions?" not in body
+
+
 def test_render_responses_received_uses_help_contact_default_when_set() -> None:
     session = _session(help_contact="help@example.edu")
     _, body = email_templates.render_responses_received(
@@ -241,8 +250,7 @@ def test_render_responses_received_uses_help_contact_default_when_set() -> None:
 
 def test_render_responses_received_override_body_substitutes_verbatim() -> None:
     """Operator-supplied bodies that reference ``$help_contact`` get
-    the placeholder behaviour (empty string) — that's their decision
-    to make."""
+    it empty when unset — that's their decision to make."""
     session = _session(
         overrides={
             "responses_received_body": (

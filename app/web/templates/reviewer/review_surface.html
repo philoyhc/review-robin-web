@@ -82,7 +82,7 @@
       <span class="muted">Deadline: {{ session.deadline | format_datetime }}
         ({{ deadline_timezone_label }})</span>
     {% endif %}
-    {% if session.help_contact %}
+    {% if session.help_contact and session.help_contact.strip() %}
       <span class="muted">Questions? Contact {{ session.help_contact }}</span>
     {% endif %}
   </div>
