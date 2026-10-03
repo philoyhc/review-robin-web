@@ -318,7 +318,7 @@ open or every instrument is closed.
 | Column | Type | Meaning |
 |---|---|---|
 | `accepting_responses` | `Boolean` | Reviewers can save / submit. **Session-wide in practice:** set on every instrument by activate, cleared on every instrument by revert, Close session and deadline-close. No operator control sets it per instrument. |
-| `deadline_closed_at` | `DateTime \| None` | Timestamp the deadline-close fired. Used to render the "auto-closed at X" pill. |
+| `deadline_closed_at` | `DateTime \| None` | Timestamp the deadline-close fired. Read only by `observe_deadline`, which skips an instrument already stamped; cleared by Activate and by a reopen while live (a `ready` session whose deadline is unset or moved into the future). No surface renders it. |
 
 What a reviewer reads back after close is the visibility policy's call
 (`spec/reviewer-surface.md` "Lifecycle gating"). The

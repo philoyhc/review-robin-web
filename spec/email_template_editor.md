@@ -263,8 +263,8 @@ JSON column wholesale** from the parsed dict.
 ## 9. Validation
 
 One rule touches this page, at **info** severity:
-`email_template.no_help_contact` — "No help contact set —
-reviewer-facing emails will fall back to a generic placeholder". It
+`email_template.no_help_contact` — "No help contact set — the
+responses-received email omits its 'Questions? Contact …' line". It
 sits in the Validate page's *setup* group; being info-level it never
 blocks activation and does not trigger the warnings acknowledgement
 (`spec/validate_page.md`). The Validate page's setup-coverage grid

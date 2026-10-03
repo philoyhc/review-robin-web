@@ -69,8 +69,9 @@ On reconcile:
 
 - `to_insert` rows compute `include` the same way.
 - `to_keep` rows: recompute the expected `include`; if it differs
-  from the stored value (operator toggled `self_reviews_active`
-  during the pause), `UPDATE` the single column in place. This is
+  from the stored value (the per-instrument Self review toggle
+  flipped it, or a side's status changed), `UPDATE` the single column
+  in place. This is
   metadata-only and never touches responses. The expected value is
   `True` for every non-self-review pair between two active people, so
   a row an operator inactivated by hand is reset to `True` here too — the

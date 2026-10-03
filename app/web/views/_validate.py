@@ -182,7 +182,7 @@ def _setup_coverage_rows(
         )
     )
     has_email_overrides = bool(review_session.email_template_overrides)
-    help_contact_set = bool(review_session.help_contact)
+    help_contact_set = bool((review_session.help_contact or "").strip())
     assignment_mode = review_session.assignment_mode
 
     def _err_warn(source: str) -> tuple[int, int]:

@@ -74,8 +74,7 @@ DEFAULT_RESPONSES_RECEIVED_BODY = (
 # "Questions? Contact ()" reads worse in a closing confirmation
 # than just dropping the line. Override bodies that reference
 # ``$help_contact`` always go through the substitute path verbatim,
-# so an operator who explicitly wants the placeholder behaviour
-# gets it.
+# so such a body renders an empty contact.
 DEFAULT_RESPONSES_RECEIVED_BODY_NO_HELP_CONTACT = (
     "Hi $reviewer_name,\n"
     "\n"
@@ -269,7 +268,7 @@ def render_responses_received(
     body_override = get_override(review_session, "responses_received_body")
     if body_override is not None and body_override.strip():
         body_template = body_override
-    elif review_session.help_contact:
+    elif (review_session.help_contact or "").strip():
         body_template = DEFAULT_RESPONSES_RECEIVED_BODY
     else:
         body_template = DEFAULT_RESPONSES_RECEIVED_BODY_NO_HELP_CONTACT

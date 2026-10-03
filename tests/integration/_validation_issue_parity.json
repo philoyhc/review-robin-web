@@ -27,7 +27,7 @@
     {
       "field": null,
       "fix_anchor": null,
-      "message": "No help contact set \u2014 reviewer-facing emails will fall back to a generic placeholder",
+      "message": "No help contact set \u2014 the responses-received email omits its 'Questions? Contact \u2026' line",
       "rule_key": "email_template.no_help_contact",
       "severity": "info",
       "source": "email_template"
@@ -127,7 +127,7 @@
     {
       "field": null,
       "fix_anchor": null,
-      "message": "No help contact set \u2014 reviewer-facing emails will fall back to a generic placeholder",
+      "message": "No help contact set \u2014 the responses-received email omits its 'Questions? Contact \u2026' line",
       "rule_key": "email_template.no_help_contact",
       "severity": "info",
       "source": "email_template"

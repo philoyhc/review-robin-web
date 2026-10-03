@@ -121,14 +121,14 @@ stricter until ruled on.
 - **A18**: String summarize at zero responses shows "Total length: 0
   characters" (`results.html:81`), not the em-dash
   `participant_model.md:82` and `visibility_policy.md:65` ask for.
-- **B18**: `lifecycle.md:321` promises an "auto-closed at X" pill from
+- ~~**B18**~~ — **Ruled 2026-10-03: update the spec. Done in #2797.** `lifecycle.md:321` promised an "auto-closed at X" pill from
   `deadline_closed_at`; nothing renders one.
 - **G7**: `rrw_functional_spec.md` §10.3 says the reviewer surface marks
   a self-review row; nothing does.
-- **G5**: the session self-reviews-active flag has no editor; only the
+- ~~**G5**~~ — **Ruled 2026-10-03: config-only. Done in #2797.** The session self-reviews-active flag has no editor; only the
   Settings CSV and Duplicate set it. Build one, or say it is config-only
   (also `settings_inventory.md:104`).
-- ~~**D2**~~ (above; ruled 2026-10-03, done in #2793) and **D6**: `email_template.no_help_contact` says emails
+- ~~**D2**~~ (above; ruled 2026-10-03, done in #2793) and ~~**D6**~~ (ruled 2026-10-03: follow the code; done in #2797, the message now says the responses-received email omits the line): `email_template.no_help_contact` said emails
   fall back to a placeholder; the editor spec and the defaults drop the
   line.
 - **D13**: the Data shaper's outer Zip all is an inert placeholder in
