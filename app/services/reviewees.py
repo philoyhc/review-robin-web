@@ -185,6 +185,18 @@ def create_reviewee(
     db.add(reviewee)
     db.flush()
 
+    # Group self-review membership is read off the roster (findings
+    # B7): a new reviewee sharing a reviewer's email puts that reviewer
+    # in a group, which can flag rows that already exist.
+    if "@" in clean_identifier:
+        from app.services.assignments import (
+            recompute_self_review_classification,
+        )
+
+        recompute_self_review_classification(
+            db, session_id=review_session.id
+        )
+
     audit.write_event(
         db,
         event_type="reviewee.created",

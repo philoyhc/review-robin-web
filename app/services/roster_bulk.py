@@ -295,6 +295,17 @@ def bulk_delete(
     for row in rows:
         db.delete(row)
     db.flush()
+    if model is Reviewee:
+        # Group self-review membership is read off the roster (findings
+        # B7): deleting a reviewer's own reviewee row takes them out of
+        # the group, so the surviving rows' flag can change.
+        from app.services.assignments import (
+            recompute_self_review_classification,
+        )
+
+        recompute_self_review_classification(
+            db, session_id=review_session.id
+        )
 
     audit.write_event(
         db,

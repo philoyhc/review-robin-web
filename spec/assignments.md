@@ -462,7 +462,8 @@ site** — no other path creates an `Assignment` row — and it calls
 `assignments.recompute_self_review_classification` as part of
 materialising each pass. Every edit trigger (reviewer email, reviewee
 identifier or
-boundary tag, relationship pair-context tag, instrument
+boundary tag, a reviewee added or deleted — membership is read off the
+roster — relationship pair-context tag, instrument
 `group_kind`) calls
 `assignments.recompute_self_review_classification` so the
 column never drifts. Every downstream reader (extracts,

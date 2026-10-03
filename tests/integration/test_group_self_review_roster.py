@@ -26,6 +26,7 @@ from app.db.models import (
     User,
 )
 from app.services import assignments
+from app.services import reviewees as reviewees_service
 from app.services.instruments import ensure_default_instrument
 
 _LINK_KEEPS_OTHER_ONLY = [
@@ -52,7 +53,7 @@ _LINK_KEEPS_OTHER_ONLY = [
 
 
 def _seed(
-    db: Session, *, self_reviews_active: bool
+    db: Session, *, self_reviews_active: bool, with_own_row: bool = True
 ) -> tuple[User, ReviewSession, Instrument]:
     """Sam and Zoe share TeamA (tag_1); the instrument groups by
     tag_1. The rule keeps only tag_2 == OTHER, so Sam's own reviewee
@@ -69,20 +70,25 @@ def _seed(
     )
     db.add(review_session)
     db.flush()
-    db.add_all(
-        [
-            Reviewer(
-                session_id=review_session.id,
-                name="Sam",
-                email="sam@example.edu",
-            ),
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Sam",
+            email="sam@example.edu",
+        )
+    )
+    if with_own_row:
+        db.add(
             Reviewee(
                 session_id=review_session.id,
                 name="Sam",
                 email_or_identifier="Sam@Example.edu",
                 tag_1="TeamA",
                 tag_2="SELF",
-            ),
+            )
+        )
+    db.add_all(
+        [
             Reviewee(
                 session_id=review_session.id,
                 name="Zoe",
@@ -167,15 +173,61 @@ def test_flag_and_include_agree_when_self_reviews_are_off(db: Session) -> None:
     )
 
 
-def test_recompute_keeps_the_roster_answer(db: Session) -> None:
-    """The recompute every edit trigger calls agrees with Generate, so
-    the strict-mode verify gate stays quiet and a later recompute does
-    not flip the row back."""
+def test_moving_the_reviewer_to_another_team_moves_the_flag(
+    db: Session,
+) -> None:
+    """Editing Sam's own reviewee row moves his membership without a
+    regenerate: TeamA stops being his group and TeamB becomes it."""
     user, review_session, instrument = _seed(db, self_reviews_active=True)
     assignments.replace_assignments(
         db, review_session=review_session, user=user, correlation_id="b7"
     )
-    assignments.recompute_self_review_classification(
-        db, session_id=review_session.id
+    sam_own = db.execute(
+        select(Reviewee).where(Reviewee.name == "Sam")
+    ).scalar_one()
+    reviewees_service.update_reviewee(
+        db, reviewee=sam_own, tag_1="TeamB", user=user
+    )
+    rows = _rows_by_reviewee(db, instrument)
+    assert rows["Zoe"].is_self_review is False
+    assert rows["Kit"].is_self_review is True
+
+
+def test_adding_the_reviewers_own_row_flags_existing_rows(
+    db: Session,
+) -> None:
+    """A reviewee added after Generate that shares the reviewer's email
+    puts him in a group; the rows already written are flagged."""
+    user, review_session, instrument = _seed(
+        db, self_reviews_active=True, with_own_row=False
+    )
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="b7"
+    )
+    assert _rows_by_reviewee(db, instrument)["Zoe"].is_self_review is False
+    reviewees_service.create_reviewee(
+        db,
+        review_session=review_session,
+        name="Sam",
+        email_or_identifier="sam@example.edu",
+        tag_1="TeamA",
+        tag_2="SELF",
+        user=user,
     )
     assert _rows_by_reviewee(db, instrument)["Zoe"].is_self_review is True
+
+
+def test_deleting_the_reviewers_own_row_clears_the_flag(
+    db: Session,
+) -> None:
+    user, review_session, instrument = _seed(db, self_reviews_active=True)
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="b7"
+    )
+    sam_own = db.execute(
+        select(Reviewee).where(Reviewee.name == "Sam")
+    ).scalar_one()
+    reviewees_service.delete_selected(
+        db, review_session=review_session, reviewee_ids=[sam_own.id], user=user
+    )
+    assert _rows_by_reviewee(db, instrument)["Zoe"].is_self_review is False

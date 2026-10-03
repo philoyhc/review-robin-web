@@ -210,58 +210,55 @@ def classify_self_review_pairs(
     """
     from app.services.responses import group_keys
 
-    group_key_by_assignment = group_keys(
-        db, assignments=pairs, session_id=session_id
-    )
     # (group instrument, reviewer) -> the group keys of the groups that
     # reviewer is a member of. **Membership comes from the roster, not
     # from the rows passed in** (author's ruling 2026-10-03, findings
     # B7), as Generate decides it (``_diff_one_instrument``): a Link
     # rule can filter the reviewer's own ``(R, R)`` row out while
     # keeping their group-mates, and the group is still theirs. Each
-    # roster reviewee matching the reviewer's email is keyed through
-    # ``group_keys`` itself, as a synthetic row with a negative id, so
-    # the boundary and pair-context lookups are the ones the real rows
-    # use.
-    member_keys: dict[tuple[int, int], set[tuple[str, ...]]] = {}
-    group_pairs = [p for p in pairs if p.id in group_key_by_assignment]
-    if group_pairs:
-        roster_by_email: dict[str, list[Reviewee]] = {}
-        for reviewee in db.execute(
-            select(Reviewee).where(Reviewee.session_id == session_id)
-        ).scalars():
-            if "@" in reviewee.email_or_identifier:
-                roster_by_email.setdefault(
-                    normalize_email(reviewee.email_or_identifier), []
-                ).append(reviewee)
-        membership: list[AssignmentPair] = []
-        seen: set[tuple[int, int]] = set()
-        for pair in group_pairs:
-            slot = (pair.instrument_id, pair.reviewer_id)
-            if slot in seen:
-                continue
-            seen.add(slot)
-            for own in roster_by_email.get(
-                normalize_email(pair.reviewer_email), []
-            ):
-                membership.append(
-                    AssignmentPair(
-                        id=-(len(membership) + 1),
-                        instrument_id=pair.instrument_id,
-                        reviewer_id=pair.reviewer_id,
-                        reviewee_id=own.id,
-                        reviewer_email=pair.reviewer_email,
-                        reviewee=own,
-                        is_self_review=True,
-                    )
+    # roster reviewee matching the reviewer's email rides the same
+    # ``group_keys`` call as the real rows, as a synthetic row with a
+    # negative id, so the boundary and pair-context lookups are the
+    # ones the real rows use and are loaded once.
+    roster_by_email: dict[str, list[Reviewee]] = {}
+    for reviewee in db.execute(
+        select(Reviewee).where(Reviewee.session_id == session_id)
+    ).scalars():
+        if "@" in reviewee.email_or_identifier:
+            roster_by_email.setdefault(
+                normalize_email(reviewee.email_or_identifier), []
+            ).append(reviewee)
+    membership: list[AssignmentPair] = []
+    seen: set[tuple[int, int]] = set()
+    for pair in pairs:
+        slot = (pair.instrument_id, pair.reviewer_id)
+        if slot in seen:
+            continue
+        seen.add(slot)
+        for own in roster_by_email.get(normalize_email(pair.reviewer_email), []):
+            membership.append(
+                AssignmentPair(
+                    id=-(len(membership) + 1),
+                    instrument_id=pair.instrument_id,
+                    reviewer_id=pair.reviewer_id,
+                    reviewee_id=own.id,
+                    reviewer_email=pair.reviewer_email,
+                    reviewee=own,
+                    is_self_review=True,
                 )
-        for synthetic, key in group_keys(
-            db, assignments=membership, session_id=session_id
-        ).items():
-            row = membership[-synthetic - 1]
+            )
+    keys = group_keys(
+        db, assignments=[*pairs, *membership], session_id=session_id
+    )
+    # Synthetic rows on individual-scoped instruments get no key and
+    # drop out here; only group instruments read ``member_keys``.
+    member_keys: dict[tuple[int, int], set[tuple[str, ...]]] = {}
+    for row in membership:
+        if row.id in keys:
             member_keys.setdefault(
                 (row.instrument_id, row.reviewer_id), set()
-            ).add(key)
+            ).add(keys[row.id])
+    group_key_by_assignment = keys
     result: dict[int, bool] = {}
     for pair in pairs:
         group_key = group_key_by_assignment.get(pair.id)
@@ -304,10 +301,10 @@ def recompute_self_review_classification(
     value diverged from what :func:`classify_self_review` now
     returns.
 
-    The whole-group rule requires seeing every ``(R, member)``
-    pair in a group to detect self-groups correctly; the
-    whole-session scope is the only one that always includes
-    them all without expensive expansion. Beta-scale session
+    Group membership is read off the roster (findings B7), so the
+    rule no longer needs every ``(R, member)`` row in view; the
+    whole-session scope is kept because it is what every edit trigger
+    can shift and costs one pass. Beta-scale session
     sizes make this cheap; if it ever turns hot a scoped
     variant can wrap the same canonical helper.
 
