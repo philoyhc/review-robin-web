@@ -849,8 +849,14 @@ GET requests behave differently depending on which gate fails:
   "opens later" suffix, an info banner explaining the review
   hasn't opened yet, the deadline + zone if one is set, and a
   link back to the reviewer dashboard. No response form is
-  rendered. Applies for `draft`, `validated` and `archived`
-  alike.
+  rendered. Applies for `draft` and `validated`.
+
+- **Session `archived`** (reached through an old invitation link or
+  a bookmark; the dashboard lists it unlinked). The same template
+  renders closed copy instead: "{session name} — closed" in the h1,
+  a banner saying the review has closed and responses are no longer
+  accepted or shown, no deadline line, and the dashboard link
+  (findings A25, 2026-10-03).
 
 - **Session `ready`, response window closed**
   (`accepting_responses=false` on every instrument, because the
@@ -1237,7 +1243,7 @@ dashboard's Session column once Reviewer Status is
   which reuses 18H Part 2's `_response_row_tuple` so a
   per-cell rename here flows through to every related file.
 
-### Pre-open page (`/me/sessions/{id}/{page_n}` on a not-yet-ready session)
+### Pre-open page (`/me/sessions/{id}/{page_n}` on a not-yet-ready or archived session)
 
 A dedicated **pre-open** rendering serves a reviewer who follows an
 invitation token (or a dashboard link) to a session that's been
@@ -1246,7 +1252,8 @@ dropping the reviewer into a silently-disabled form, the
 route returns `reviewer/pre_open.html` — h1 with "{session
 name} — opens later", an info banner explaining the review
 hasn't opened yet, the deadline + zone when one is set, and a
-link back to the reviewer dashboard. See
+link back to the reviewer dashboard. An `archived` session renders
+the same template with closed copy (see the gate list above). See
 `spec/lifecycle.md` §4.1 "The reviewer write-path predicate"
 for the gate semantics.
 

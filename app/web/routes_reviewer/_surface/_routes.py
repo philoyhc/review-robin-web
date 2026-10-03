@@ -147,6 +147,7 @@ def review_surface(
                 "session": review_session,
                 "deadline_text": deadline_text,
                 "deadline_timezone_label": deadline_timezone_label,
+                "is_archived": lifecycle.is_archived(review_session),
             },
         )
     pages = _pages_for_session(db, review_session.id)

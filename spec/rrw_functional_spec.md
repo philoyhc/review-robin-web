@@ -752,9 +752,10 @@ treats the session in lobby and extract surfaces.
 The reviewer surface is open for writes **only in `ready`**, before
 the deadline. Past the deadline, and in `expired`, it still loads
 read-only: inputs render disabled and the Save / Submit / Clear
-affordances are hidden. In `draft`,
-`validated` and `archived` the reviewer gets the pre-open page
-instead ([§10.2](#102-pre-open-and-post-close-behaviour)).
+affordances are hidden. In `draft` and
+`validated` the reviewer gets the pre-open page instead, and in
+`archived` the same page with closed copy
+([§10.2](#102-pre-open-and-post-close-behaviour)).
 
 ### 6.2 Editable vs locked semantics
 
@@ -1654,11 +1655,12 @@ session without bouncing through `/me`.
 
 ### 10.2 Pre-open and post-close behaviour
 
-If the session is in `draft`, `validated` or `archived` — not yet
-accepting responses, reverted to draft (*paused*), or filed away —
-the reviewer sees a **pre-open landing card** explaining the session
-is not open, naming the deadline, and offering a return link to the
-dashboard. No review form renders.
+If the session is in `draft` or `validated` — not yet accepting
+responses, or reverted to draft (*paused*) — the reviewer sees a
+**pre-open landing card** explaining the session is not open, naming
+the deadline, and offering a return link to the dashboard. In
+`archived` the same card says the review has closed, with no
+deadline. No review form renders.
 
 If the session is `ready` but past its deadline, or `expired`, the
 reviewer's **review surface still loads** but renders read-only:

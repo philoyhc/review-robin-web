@@ -369,11 +369,14 @@ POST routes (save / submit / clear) call this directly and 403
 on failure. The reviewer-surface **GET** route branches
 upstream of this check:
 
-- If the session is not yet `ready` (draft or validated), the
-  route renders the dedicated **pre-open page**
+- If the session is neither `ready` nor `expired` (draft,
+  validated or archived), the route renders the dedicated
+  **pre-open page**
   (`reviewer/pre_open.html`) — "this review hasn't opened yet,
   check back later". The reviewer reached here via roster + an
-  invitation token that was sent ahead of activation.
+  invitation token that was sent ahead of activation. An `archived`
+  session renders the same page with closed copy ("this review has
+  closed"), no deadline line.
 - If the session is `ready` but the predicate returns `False`
   (the deadline passed),
   the existing surface template renders read-only with the "no
