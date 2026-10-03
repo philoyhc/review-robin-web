@@ -48,7 +48,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   `csv_contracts.md` §4.5 says it is accepted. Case-fold in code, or
   narrow the spec (which also muddles `long_text`, a response type).
   *Reproduced.*
-- **B1 med** — The Band 2 preview does not follow old B7. It builds
+- ~~**B1**~~ med — **Done in #2784.** The Band 2 preview does not follow old B7. It builds
   `self_groups` from the surviving pairs (`_band1.py:1002-1009`) and
   loads active reviewees only (`:876`); Generate reads membership off the
   whole roster. When a Link rule filters the reviewer's own row, the
