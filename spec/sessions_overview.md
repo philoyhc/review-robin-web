@@ -257,9 +257,18 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   `sessions.update_session` for name, code and deadline only when
   `lifecycle.is_draft` holds, and otherwise ignores those fields
   rather than refusing the post, so a stale form cannot slip past the
-  gate. In `draft` a code another session holds answers **422** before
-  the tags are written, so a refused Save changes nothing. This is narrower than Session Home's details card, whose
-  `/config` accepts `draft` and `validated`.
+  gate. The draft write starts from the session's stored values
+  (`sessions.edit_payload`), so a Save changes those three fields, plus
+  the tags, and nothing else on the session. In `draft` a code another
+  session holds, a name or code empty or too long for its column, a
+  malformed deadline, or a changed deadline that does not fit the
+  stored schedule answers **422** before the tags are written, so a
+  refused Save changes nothing. The deadline check
+  (`scheduled_events.validate_deadline_change`) is the two Session Home
+  runs on End: ordering against the stored Start and Release-from, and
+  each stored reminder offset re-resolved on the new End. An unchanged
+  deadline skips it. This is narrower than Session Home's details card,
+  whose `/config` accepts `draft` and `validated`.
 - **Tags have four write surfaces, two of them off this page.** The
   lobby's two — the row expander's `{id}/lobby-edit` and the toolbar's
   `bulk-tags` — were the only ones until 19S Item 6 put a **Tags box on

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Callable
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,7 +16,7 @@ from app.db.models import (
     SessionTag,
     User,
 )
-from app.services import session_tags
+from app.services import session_tags, sessions
 
 
 def test_create_redirects_to_edit(client: TestClient, db: Session) -> None:
@@ -364,6 +366,208 @@ def test_lobby_edit_skips_name_code_when_not_draft(
     assert session_tags.tags_for_sessions(db, [session_id])[session_id] == [
         "live-tag",
     ]
+
+
+_START = dt.datetime(2030, 1, 10, 9)
+_END = dt.datetime(2030, 1, 20, 9)
+_RELEASE_FROM = dt.datetime(2030, 1, 25, 9)
+_RELEASE_UNTIL = dt.datetime(2030, 2, 25, 9)
+
+
+def _utc(value: dt.datetime) -> dt.datetime:
+    return value.replace(tzinfo=dt.timezone.utc)
+
+
+def _naive(value: dt.datetime | None) -> dt.datetime | None:
+    """SQLite hands back naive datetimes; compare on the wall clock."""
+    return None if value is None else value.replace(tzinfo=None)
+
+
+def _draft_with_schedule(client: TestClient, db: Session, code: str) -> int:
+    """A draft whose every field outside Name / Code / Deadline is set,
+    with Start → End → Release-from in order."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Scheduled", "code": code},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == code)
+    ).scalar_one()
+    review_session.display_timezone = "UTC"
+    review_session.description = "Kept description"
+    review_session.help_contact = "help@example.edu"
+    review_session.scheduled_activate_at = _utc(_START)
+    review_session.deadline = _utc(_END)
+    review_session.invite_offsets = ["-P1D"]
+    review_session.reminder_offsets = ["-P2D"]
+    review_session.relationships_enabled = True
+    review_session.observers_enabled = True
+    review_session.responses_release_at = _utc(_RELEASE_FROM)
+    review_session.responses_release_until = _utc(_RELEASE_UNTIL)
+    db.commit()
+    return review_session.id
+
+
+def _lobby_save(
+    client: TestClient,
+    session_id: int,
+    *,
+    name: str = "Renamed",
+    code: str,
+    deadline: str,
+    tags: str = "",
+):
+    return client.post(
+        f"/operator/sessions/{session_id}/lobby-edit",
+        data={"name": name, "code": code, "deadline": deadline, "tags": tags},
+        follow_redirects=False,
+    )
+
+
+def test_lobby_edit_keeps_every_field_it_does_not_show(
+    client: TestClient, db: Session
+) -> None:
+    """The expander edits Name, Code and Deadline only; a Save keeps the
+    schedule, the send offsets, the release window, the roster toggles,
+    the description and the help contact, and writes no schedule or
+    toggle audit event (findings 2026-10-03 C1)."""
+    session_id = _draft_with_schedule(client, db, "kept-1")
+
+    response = _lobby_save(
+        client, session_id, code="kept-2", deadline="2030-01-21T09:00"
+    )
+
+    assert response.status_code == 303
+    db.expire_all()
+    updated = db.get(ReviewSession, session_id)
+    assert (updated.name, updated.code) == ("Renamed", "kept-2")
+    assert _naive(updated.deadline) == dt.datetime(2030, 1, 21, 9)
+    assert updated.description == "Kept description"
+    assert updated.help_contact == "help@example.edu"
+    assert _naive(updated.scheduled_activate_at) == _START
+    assert updated.invite_offsets == ["-P1D"]
+    assert updated.reminder_offsets == ["-P2D"]
+    assert updated.relationships_enabled is True
+    assert updated.observers_enabled is True
+    assert _naive(updated.responses_release_at) == _RELEASE_FROM
+    assert _naive(updated.responses_release_until) == _RELEASE_UNTIL
+    assert not db.execute(
+        select(AuditEvent.event_type).where(
+            AuditEvent.session_id == session_id,
+            AuditEvent.event_type.in_(
+                [
+                    "session.activation_scheduled",
+                    "session.invite_schedule_updated",
+                    "session.reminder_schedule_updated",
+                    "session.feature_toggled",
+                ]
+            ),
+        )
+    ).all()
+
+
+@pytest.mark.parametrize(
+    ("deadline", "message"),
+    [
+        ("2030-01-05T09:00", "End must be on or after Start"),
+        ("2030-01-26T09:00", "Release responses from must be on or after End"),
+    ],
+)
+def test_lobby_edit_refuses_a_deadline_out_of_order(
+    client: TestClient, db: Session, deadline: str, message: str
+) -> None:
+    """With the schedule kept, a deadline before Start or after
+    Release-from is refused as the Session Home card refuses it, and the
+    tags are not written either."""
+    session_id = _draft_with_schedule(client, db, "order-1")
+
+    response = _lobby_save(
+        client, session_id, code="order-1", deadline=deadline, tags="never"
+    )
+
+    assert response.status_code == 422
+    assert message in response.text
+    db.expire_all()
+    assert db.get(ReviewSession, session_id).name == "Scheduled"
+    assert session_tags.tags_for_sessions(db, [session_id])[session_id] == []
+
+
+def test_lobby_edit_refuses_a_deadline_that_strands_a_reminder(
+    client: TestClient, db: Session
+) -> None:
+    """A stored reminder is re-resolved on the new deadline: one that
+    would now fire in the past is refused, as on Session Home."""
+    session_id = _draft_with_schedule(client, db, "remind-1")
+    review_session = db.get(ReviewSession, session_id)
+    review_session.scheduled_activate_at = None
+    review_session.responses_release_at = None
+    review_session.responses_release_until = None
+    db.commit()
+    soon = dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=1)
+
+    response = _lobby_save(
+        client,
+        session_id,
+        code="remind-1",
+        deadline=soon.strftime("%Y-%m-%dT%H:%M"),
+        tags="never",
+    )
+
+    assert response.status_code == 422
+    assert "resolves to before now" in response.text
+    db.expire_all()
+    assert db.get(ReviewSession, session_id).name == "Scheduled"
+    assert session_tags.tags_for_sessions(db, [session_id])[session_id] == []
+
+
+def test_lobby_edit_rename_skips_the_checks_when_the_deadline_is_unchanged(
+    client: TestClient, db: Session
+) -> None:
+    """A stored schedule already out of order (a Settings CSV applies it
+    unchecked) does not block a rename that leaves End where it is."""
+    session_id = _draft_with_schedule(client, db, "aged-1")
+    review_session = db.get(ReviewSession, session_id)
+    review_session.scheduled_activate_at = _utc(dt.datetime(2030, 1, 30, 9))
+    db.commit()
+
+    response = _lobby_save(
+        client, session_id, code="aged-1", deadline="2030-01-20T09:00"
+    )
+
+    assert response.status_code == 303
+    db.expire_all()
+    assert db.get(ReviewSession, session_id).name == "Renamed"
+
+
+def test_lobby_edit_refuses_an_over_long_name_before_the_tags(
+    client: TestClient, db: Session
+) -> None:
+    session_id = _draft_with_schedule(client, db, "long-1")
+
+    response = _lobby_save(
+        client,
+        session_id,
+        name="x" * 256,
+        code="long-1",
+        deadline="2030-01-20T09:00",
+        tags="never",
+    )
+
+    assert response.status_code == 422
+    assert "name: " in response.text
+    db.expire_all()
+    assert db.get(ReviewSession, session_id).name == "Scheduled"
+    assert session_tags.tags_for_sessions(db, [session_id])[session_id] == []
+
+
+def test_edit_payload_rejects_a_field_update_session_does_not_write(
+    client: TestClient, db: Session
+) -> None:
+    session_id = _draft_with_schedule(client, db, "typo-1")
+
+    with pytest.raises(TypeError, match="nmae"):
+        sessions.edit_payload(db.get(ReviewSession, session_id), nmae="x")
 
 
 def test_lobby_renders_real_session_tags(

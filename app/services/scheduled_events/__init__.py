@@ -28,6 +28,9 @@ Layout:
 - ``_release.py`` — responses-release window parsers +
   ``validate_schedule_ordering`` (cross-field ordering).
 
+:func:`validate_deadline_change` also lives here, since it calls into
+both ``_release.py`` and ``_reminders.py``.
+
 The :func:`observe_scheduled_events` orchestrator lives here in
 ``__init__`` — it dispatches across the three trigger sub-modules
 without depending on any of them; keeping it at the package root
@@ -104,6 +107,7 @@ __all__ = [
     "parse_and_validate_scheduled_activate_at",
     "parse_iso_duration",
     "resolve_offset",
+    "validate_deadline_change",
     "validate_schedule_ordering",
 ]
 
@@ -111,6 +115,37 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 SCHEDULED_EVENT_FAILED = "session.scheduled_event_failed"
+
+
+def validate_deadline_change(
+    review_session: ReviewSession, deadline: datetime | None
+) -> None:
+    """Check a new End against ``review_session``'s stored schedule, for
+    a save that edits End alone (the sessions-lobby expander).
+
+    Runs the two checks Session Home's details card runs on End:
+    ordering against the stored Start and Release-from, and each stored
+    reminder offset re-resolved on the new End. A no-op when End is
+    unchanged, so a rename is never refused over a schedule that has
+    aged since it was saved. Raises :class:`ScheduledActivateError`.
+    """
+    stored = review_session.deadline
+    if stored is None and deadline is None:
+        return
+    if (
+        stored is not None
+        and deadline is not None
+        and _ensure_aware_utc(stored) == _ensure_aware_utc(deadline)
+    ):
+        return
+    validate_schedule_ordering(
+        scheduled_activate_at=review_session.scheduled_activate_at,
+        deadline=deadline,
+        responses_release_at=review_session.responses_release_at,
+    )
+    parse_and_validate_reminder_offsets(
+        ", ".join(review_session.reminder_offsets or []), deadline=deadline
+    )
 
 
 def observe_scheduled_events(
