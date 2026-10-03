@@ -93,11 +93,12 @@ Three regions, top to bottom:
 2. **Two-column grid of half-width cards**, in the
    `.extract-data-grid` layout (`align-items: end` so
    neighbouring cards bottom-align across columns):
-   - **Left column (response data lenses)** — `Extract all
-     data` intro card on top, `By instrument` card below.
-   - **Right column (metadata lenses)** — `Reviewer response
+   - **Left column (metadata lenses)** — `Reviewer response
      metadata` card on top, `Reviewee response metadata` card
      below.
+   - **Right column** — `By instrument` card on top, the
+     `Extract all data` card below it (the author's order,
+     findings D28, 2026-10-03).
 
    The grid collapses to a single column on narrow viewports.
 3. **Full-width `Data shaper` card** below the grid (see
@@ -132,9 +133,9 @@ selectable-chip primitive (`spec/ui_elements.md` §10), with
 `is-selected` + `aria-pressed` driving the visual state.
 Three families of chip live on the page:
 
-- **Family / scope toggles** (intro card) — two of them
-  (`data-shaper`, `token-keys`) scope the top-level `Zip all`;
-  the other three change nothing (see the Extract all data card).
+- **Family / scope toggles** (intro card) — one per card whose
+  files the top-level `Zip all` can carry (see the Extract all
+  data card).
 - **Instrument chips** (by-instrument + the two metadata
   cards) — one per session instrument, labelled
   `#{N}: {short_label}` where `{N}` is the instrument's
@@ -194,14 +195,14 @@ ships a valid CSV carrying only the cross-instrument totals
 
 ## `Extract all data` card (intro)
 
-Top-left card. The page's "I trust the default, give me
-everything" affordance, sitting alongside the per-card
-configurable surfaces below.
+Right column, below `By instrument`. The page's one-click
+download: the response data, plus the other cards' files as
+those cards are configured.
 
 | Field | Value |
 |---|---|
 | Heading | `Extract all data` |
-| Body copy | "Configure what you need on the lens cards and download the specific files. Use **Zip all** to download all response files (as configured using the other cards) at once." |
+| Body copy | "Use **Zip all** to download a complete set of response data, plus whichever files are selected below, as each card configures them." |
 | Button id | `extract-data-zip-all` |
 | Button target | `/operator/sessions/{id}/export/responses_bundle.zip` |
 
@@ -209,32 +210,50 @@ configurable surfaces below.
 
 | Chip slot | Label | Role |
 |---|---|---|
-| `by-instruments` | `By instrument` | Toggles and persists, but changes nothing: the bundle carries no By-instrument CSVs. |
-| `reviewer-metadata` | `Reviewer response metadata` | Toggles and persists, but changes nothing: the bundle carries no reviewer metadata CSV. |
-| `reviewee-metadata` | `Reviewee response metadata` | Toggles and persists, but changes nothing: the bundle carries no reviewee metadata CSV. |
-| `data-shaper` | `Data shaper` | Scope: include the Data shaper outputs — drives `?data_shapes=0` on the bundle URL when off. |
-| `token-keys` | `Token keys` | Scope: include `participant_tokens.csv` in the bundle — drives `?tokens=0` when off. **Conditional**: chip + the matching Token keys card below only render when `session.observers_enabled` is on, since the tokens have no consumer without observers today. |
+| `by-instruments` | `By instrument` | Adds what the By instrument card's `Zip all` downloads, flattened: one `{code}_by_instrument_{slug}.csv` per chosen instrument. |
+| `reviewer-metadata` | `Reviewer response metadata` | Adds the card's `Download`, `{code}_reviewer_metadata{suffix}.csv`. |
+| `reviewee-metadata` | `Reviewee response metadata` | Adds the card's `Download`, `{code}_reviewee_metadata{suffix}.csv`. |
+| `data-shaper` | `Data shaper` | Adds every saved shape's `Download`, `{code}_{slug}{suffix}.csv`, each with its own saved chips. |
+| `token-keys` | `Token keys` | Adds the Token keys card's `{code}_participant_tokens.csv`. **Conditional**: chip + the matching Token keys card below only render when `session.observers_enabled` is on, since the tokens have no consumer without observers today. |
 
-Only `data-shaper` + `token-keys` scope the top-level
-`Zip all` zip; they are wired
-(drive `?data_shapes=0` / `?tokens=0` on the bundle URL);
-`by-instruments` / `reviewer-metadata` / `reviewee-metadata`
-change nothing, because the bundle carries none of those files.
-What it carries (`build_responses_bundle`, each member named
-`{code}_…`): `responses.csv`, `reviewer_stats.csv`,
-`reviewee_stats.csv`, one `instrument_{n}.csv` per instrument (`n`
-its display position), the Data shaper outputs and, when observers
-are on, `participant_tokens.csv`. The By-instrument CSVs and the two
-metadata CSVs come from their own cards' downloads, and none of the
-other cards' settings reach the bundle — so the card's body copy,
-"as configured using the other cards", overstates it (findings
-D28).
+**The bundle is a pass-through of the other cards** (findings
+D28, ruled 2026-10-03). It always carries `{code}_responses.csv`,
+the file Rehydrate reads (`spec/rehydrate.md` §4), whatever the
+chips say. Each chip that is on adds exactly the files its card's
+own button would download at that moment, under the same names
+and with the same bytes; a chip that is off leaves them out. A
+card with nothing to download — By instrument with no instrument
+chip on — rides as off. The reviewer and reviewee stats files and
+the per-instrument long `instrument_{n}.csv` files the bundle used
+to carry are no longer in it. A shape whose name makes it collide
+with another member gains `_2` before `.csv` in the bundle only.
+
+**Query contract** (`build_responses_bundle`). Each chip is a flag
+that is `0` when off: `?by_instrument=`, `?reviewer_metadata=`,
+`?reviewee_metadata=`, `?data_shapes=`, `?tokens=`. A card's own
+query rides namespaced by its flag and is read exactly as that
+card's route reads it: `?by_instrument.instrument=42`,
+`.meta=0`, `.all_rows=0`; `?reviewer_metadata.instrument=42`,
+`.all_instruments=1`, `.all=0`, `.self_review_handling=both`;
+likewise `reviewee_metadata.*`. An omitted option takes the card
+route's own default. The page script composes the link from the
+cards' chips on every toggle. **With every instrument chip on, the
+link carries no id list** (Codex on #2769): By instrument reads an
+omitted list as every instrument, and the metadata cards take
+`all_instruments=1`, since for them an omitted list means totals
+only. Their own Download links use the same form. A partial
+selection still lists its chosen ids, once per card, so only a
+session with some hundreds of instruments and a partial selection
+could still pass a gateway's URL limit. The audit event
+`session.responses_bundle_extracted` counts response rows, the
+files from each card and token rows, and records each included
+metadata card's self-review pool in `context`.
 The chips persist via the shared `localStorage` plumbing so
 the operator's intent survives reload.
 
 ## `By instrument` card
 
-Below the intro on the left. Cross-reviewer comparison on a
+Top of the right column, above the intro card. Cross-reviewer comparison on a
 single rubric — "how did everyone score on this instrument?"
 
 | Field | Value |
@@ -317,7 +336,7 @@ count).
 
 ## `Reviewer` / `Reviewee response metadata` cards
 
-Right column. **Activity rollups, not response data.** A
+Left column. **Activity rollups, not response data.** A
 single CSV per card, one row per reviewer (or reviewee),
 with cross-instrument totals plus optional per-field
 aggregates broken out by instrument. The intended analysis
@@ -366,6 +385,12 @@ All default-selected.
   means *no* per-field blocks (cross-instrument totals
   scan **every** session instrument so they stay
   meaningful).
+- `?all_instruments=1` — every session instrument, as if each
+  were listed; it wins over any `?instrument=`. The page sends it
+  instead of the list when every instrument chip is on, and the
+  server-rendered link carries it when the session has instruments,
+  so the default link is short and matches the chips before the
+  script runs.
 - `?all=0` — set when `All reviewers` / `All reviewees`
   is off.
 - `?self_review_handling=` — `include_self` (default) /
@@ -462,8 +487,7 @@ one of those groups, reviewed by 3 reviewers, sees the
 same `Assigned = 6` (3 × 2) on the reviewee side.
 
 This matches the dedupe contract `entity_stats_extract.py`
-already enforces for the analogous draft/submitted activity
-rollup that ships inside the top-level responses bundle.
+enforces for the analogous draft/submitted activity rollup.
 
 ### Audit envelope
 
@@ -921,14 +945,15 @@ every state.
 #### File naming
 
 Each `Download` button serves
-`{code}_{slug}{_suffix}.csv`, where `{slug}` is
-`_slug_shape_name(name)` — alphanumerics, `-` and `_` kept,
+`{code}_{slug}{_suffix}.csv` (`shape_filename`), where `{slug}`
+keeps alphanumerics, `-` and `_`,
 other runs collapsed to `_`, the same sanitization as
 `by_instrument_filename_slug`, falling back to `shape` when
 nothing survives — and `{_suffix}` is the shape's Self-review
-handling suffix (`_self` / `_noself` / `_both`). Filename
-collisions can't happen because the underlying name is
-session-unique.
+handling suffix (`_self` / `_noself` / `_both`). Shape names are
+unique per session but the slug is lossy, so two shapes (`My Shape`,
+`My_Shape`) can download under the same name; in the Zip-all
+bundle the later one gains `_2` (Extract all data card).
 
 #### Audit events
 
@@ -1184,7 +1209,8 @@ valid post-close use case. No yellow lock card wrap.
   per-instrument extract serialiser.
 - `app/services/extracts/zip_bundle.py` —
   `build_by_instrument_bundle` zip wrapper consumed by
-  `export_by_instrument_bundle_zip`.
+  `export_by_instrument_bundle_zip`, and `build_responses_bundle`,
+  the intro card's pass-through bundle.
 - `discrete_step_values` in
   `app/services/extracts/data_shape_extract.py` — the
   Data shaper's `Discrete steps` step vocabulary for

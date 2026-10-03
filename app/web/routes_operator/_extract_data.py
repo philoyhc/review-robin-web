@@ -10,7 +10,6 @@ downloads is the follow-up.
 from __future__ import annotations
 
 import json
-import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -31,21 +30,13 @@ from app.services.extracts.data_shape_extract import (
     compose_shape_preview_aggregates,
     compose_shape_preview_headers,
     discrete_step_values,
+    shape_filename,
 )
 from app.web import breadcrumbs, views
 from app.web.deps import get_or_create_user, require_session_operator
 from app.web.routes_operator._shared import _templates
 
 router = APIRouter()
-
-
-def _slug_shape_name(name: str) -> str:
-    """Alphanumeric-plus-underscore slug for the shape's
-    filename. Mirrors ``by_instrument_filename_slug`` so the
-    output naming reads consistently. Empty slug after
-    sanitisation falls back to ``shape``."""
-    slug = re.sub(r"[^A-Za-z0-9_-]+", "_", name).strip("_")
-    return slug or "shape"
 
 
 # --------------------------------------------------------------------------- #
@@ -359,10 +350,10 @@ def download_data_shape(
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
     """Stream the saved Data shape's CSV. Filename:
-    ``{code}_{slug(shape.name)}.csv`` per the wiring
-    decisions. Emits ``session.data_shape_extracted`` with
-    ``counts.rows`` (body row count, header excluded) +
-    ``refs.shape_id``."""
+    ``{code}_{slug(shape.name)}{suffix}.csv`` (``shape_filename``),
+    the name the Zip-all bundle also gives it. Emits
+    ``session.data_shape_extracted`` with ``counts.rows`` (body
+    row count, header excluded) + ``refs.shape_id``."""
     shape = data_shapes.get_shape(db, review_session, shape_id)
     if shape is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -392,13 +383,7 @@ def download_data_shape(
     # (``_self`` / ``_noself`` / ``_both``) per the spec's Q2
     # resolution — downstream consumers can tell which pool the
     # file represents at a glance.
-    code = (review_session.code or "session").strip() or "session"
-    suffix = _self_review_handling_filename_suffix(
-        shape.self_review_handling
-    )
-    download_name = (
-        f"{code}_{_slug_shape_name(shape.name)}{suffix}.csv"
-    )
+    download_name = shape_filename(review_session, shape)
     return StreamingResponse(
         stream_csv(rows),
         media_type="text/csv",
@@ -408,19 +393,3 @@ def download_data_shape(
             ),
         },
     )
-
-
-def _self_review_handling_filename_suffix(state: str) -> str:
-    """Per-state Data shape filename suffix. ``include_self`` →
-    ``_self``; ``exclude_self`` → ``_noself``; ``both`` →
-    ``_both``. Mirrors the metadata-card suffix policy shipped in
-    PR A (``self_review_handling_filename_suffix`` in
-    ``entity_metadata_extract.py``) so the two surfaces read
-    identically; not reused directly because the Data shape side
-    operates on a per-shape persisted state, not a query-param
-    state."""
-    if state == "exclude_self":
-        return "_noself"
-    if state == "both":
-        return "_both"
-    return "_self"

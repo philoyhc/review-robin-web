@@ -718,8 +718,10 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # original ``session.bundle_extracted`` event type retires —
     # nothing in the live code paths emits it anymore.
     "session.setup_bundle_extracted": EventSchema(_IDENTITY | {"counts"}),
+    # D28 (2026-10-03): the bundle passes each lens card through,
+    # so ``context`` carries the metadata cards' self-review pools.
     "session.responses_bundle_extracted": EventSchema(
-        _IDENTITY | {"counts"}
+        _IDENTITY | {"counts", "context"}
     ),
     "session.by_instrument_bundle_extracted": EventSchema(
         _IDENTITY | {"counts"}

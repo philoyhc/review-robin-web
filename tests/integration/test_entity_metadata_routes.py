@@ -142,12 +142,12 @@ def test_extract_data_page_links_both_metadata_buttons(
     assert 'id="extract-data-reviewer-metadata-zip"' in body
     assert (
         f'href="/operator/sessions/{review_session.id}'
-        f'/export/reviewer_metadata.csv"' in body
+        f'/export/reviewer_metadata.csv?all_instruments=1"' in body
     )
     assert 'id="extract-data-reviewee-metadata-zip"' in body
     assert (
         f'href="/operator/sessions/{review_session.id}'
-        f'/export/reviewee_metadata.csv"' in body
+        f'/export/reviewee_metadata.csv?all_instruments=1"' in body
     )
 
 

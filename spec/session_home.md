@@ -238,8 +238,8 @@ The Observers tile is gated on `review_session.observers_enabled` — when the t
 
 **This card is setup-side only.** Its Zip-all bundle carries the four
 setup CSVs and nothing else, exported as `{code}_setup.zip`. The
-response-side downloads — unified Responses CSV, reviewer / reviewee
-stats, per-instrument files — belong to a separate bundle at
+response-side downloads — the unified Responses CSV plus the Extract
+data cards' files — belong to a separate bundle at
 `/export/responses_bundle.zip` (filename `{code}_responses.zip`),
 behind the Extract data tab's own Zip-all button.
 

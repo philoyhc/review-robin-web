@@ -29,6 +29,7 @@ from app.services.extracts.reviewees_extract import serialize_reviewees
 from app.services.extracts.reviewers_extract import serialize_reviewers
 from app.services.extracts.responses_extract import serialize_responses
 from app.services.session_rehydrate import (
+    _resolve_files,
     analyze_rehydrate_set,
     derive_rehydrate_name,
 )
@@ -125,6 +126,70 @@ def test_clean_set_passes_with_preview(db: Session) -> None:
     assert report.preview["reviewees"] == 1
     assert report.preview["instruments"] == 1
     assert report.preview["responses"] == 1
+
+
+def test_a_by_instrument_file_named_like_a_kind_is_ignored(
+    db: Session,
+) -> None:
+    """D28: the Zip-all bundle can carry By-instrument CSVs, named
+    after the instrument's short label. One labelled ``reviewers``
+    ends in ``reviewers.csv``; read first, it must not stand in for
+    the reviewer roster."""
+    user, rs = _seed(db)
+    files = {
+        f"{rs.code}_by_instrument_reviewers.csv": b"Instrument,#1\r\n",
+        **_file_set(db, rs),
+    }
+    report = analyze_rehydrate_set(db, files=files, user=user)
+    assert report.ok, report.errors
+
+
+def test_a_code_containing_the_by_instrument_mark_is_reported_missing(
+    db: Session,
+) -> None:
+    """The accepted limitation (spec/rehydrate.md §4): every file of a
+    session whose code contains the mark, or ends in ``_by_instrument``,
+    is skipped, and rehydrate says the files are missing rather than
+    misreading any of them."""
+    user, rs = _seed(db)
+    for code in ("x_by_instrument_spring", "Peer_BY_INSTRUMENT"):
+        files = {
+            name.replace(rs.code, code, 1): content
+            for name, content in _file_set(db, rs).items()
+        }
+        assert all(code in name for name in files)
+        report = analyze_rehydrate_set(db, files=files, user=user)
+        assert not report.ok
+        assert any("settings.csv" in e for e in report.errors)
+
+
+def test_a_by_instrument_file_never_stands_in_for_an_optional_file() -> None:
+    """D28: relationships and observers are optional, so a
+    By-instrument file named after one has no real file to lose to. It
+    must still not be read as one."""
+    resolved = _resolve_files(
+        {
+            "s_settings.csv": b"",
+            "s_reviewers.csv": b"",
+            "s_reviewees.csv": b"",
+            "s_responses.csv": b"",
+            "s_by_instrument_Peer_relationships.csv": b"wide",
+            "s_by_instrument_Observers.csv": b"wide",
+        }
+    )
+    assert set(resolved) == {"settings", "reviewers", "reviewees", "responses"}
+    # Loosely renamed kind files, an untouched
+    # By-instrument file. It is still never read as relationships.
+    resolved = _resolve_files(
+        {
+            "settings.csv": b"",
+            "reviewers.csv": b"",
+            "reviewees.csv": b"",
+            "responses.csv": b"",
+            "S_by_instrument_Peer_relationships.csv": b"wide",
+        }
+    )
+    assert set(resolved) == {"settings", "reviewers", "reviewees", "responses"}
 
 
 def test_missing_required_file_blocks(db: Session) -> None:

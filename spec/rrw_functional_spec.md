@@ -109,9 +109,12 @@ The system must:
    schedules are configured) triggers the timed dispatch of
    invitations and reminders.
 10. **Export** the session as CSV — five per-entity files
-    (reviewers, reviewees, relationships, settings, responses) plus
-    a per-instrument response file in the zip-all bundle and an
-    audit-events file behind the sys-admin gate.
+    (reviewers, reviewees, relationships, settings, responses), the
+    first four (plus observers, when enabled) zipped as a setup
+    bundle; the Extract data tab's lens
+    files (by instrument, per-entity metadata, saved data shapes,
+    token keys), zipped with the responses file as a responses
+    bundle; and an audit-events file behind the sys-admin gate.
 11. **Archive** and (separately) **purge** sessions whose work is
     done, with manual operator control and per-session retention
     overrides.
@@ -1510,9 +1513,10 @@ offline analysis. It is deliberately not an in-app analysis tool
 (no charts, no pivots); it cuts the response data along the
 dimension the operator asks for. Cards:
 
-- **Extract all data** — a top-level `Zip all` of the response
-  files (`{code}_responses.zip`); its Data shaper and Token keys
-  chips scope it.
+- **Extract all data** — a top-level `Zip all`
+  (`{code}_responses.zip`): always the unified responses file, plus
+  each other card's files, as that card is configured, for each of
+  its chips that is on.
 - **By instrument** — one wide CSV per instrument (rows =
   reviewer × reviewee pairs, columns = response fields
   side-by-side) for cross-reviewer comparison.
@@ -2079,8 +2083,8 @@ hosts the response-shaping lenses + Data shaper, and the **Extract
 Setup** card on that same tab hosts the round-trip
 setup CSVs — Reviewers, Reviewees, Relationships (gated),
 Observers (gated), Settings — plus a `{code}_setup.zip` bundle.
-The response CSVs (unified Responses, per-instrument files, and
-entity-stats files) ship via the `{code}_responses.zip` bundle.
+The `{code}_responses.zip` bundle carries the unified Responses CSV
+plus the lens cards' files, as each card is configured.
 The **audit-events CSV** is reachable from the per-session
 audit-log viewer behind the admin gate.
 
@@ -2139,20 +2143,22 @@ Group-scoped instruments collapse one row per group rather
 than per member. The file streams to the operator without
 buffering the full dataset in memory.
 
-### 12.4 Per-instrument response files (bundle only)
+### 12.4 Per-instrument response files (no longer shipped)
 
 `{code}_instrument_{n}.csv` — same 21-column shape, narrowed
 to one instrument per file, sorted reviewee-first then by
-reviewer email. Shipped inside the zip-all bundle.
+reviewer email. The zip-all bundle carried it until findings D28
+(2026-10-03) made the bundle a pass-through of the Extract data
+cards; no download carries it now.
 
-### 12.5 Entity-stats files (bundle only)
+### 12.5 Entity-stats files (no longer shipped)
 
 `{code}_reviewer_stats.csv` and `{code}_reviewee_stats.csv`
 — roster columns plus per-instrument response-activity
 metrics (draft pairs, submitted pairs, distinct partners,
 fields-answered counts, required-fields-answered counts,
-string-typed character counts). Shipped inside the zip-all
-bundle.
+string-typed character counts). The zip-all bundle carried them
+until findings D28 (2026-10-03); no download carries them now.
 
 ### 12.6 Audit-events file
 

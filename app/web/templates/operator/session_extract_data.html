@@ -16,135 +16,20 @@
   {% include "operator/partials/next_action_card.html" %}
 
   {# Two independent columns of cards (not a row-aligned grid):
-     left column = ``Extract all data`` intro + ``By instrument``
-     (the response-data lenses); right column = ``Reviewer
-     response metadata`` + ``Reviewee response metadata``. Each
+     left column = ``Reviewer response metadata`` + ``Reviewee
+     response metadata``; right column = ``By instrument`` +
+     ``Extract all data`` (author's order, D28 2026-10-03). Each
      column flows with natural card heights so neighbouring
      cards across columns don't have to align top or bottom.
      Collapses to a single column on narrow viewports. #}
   <div class="extract-data-grid">
     <div class="extract-data-column">
-      <div class="card extract-data-card-stack" id="extract-data-intro">
-        <div>
-          <h2 style="margin-top: 0;">Extract all data</h2>
-          <p class="form-help" style="margin-bottom: 0;">
-            Configure what you need on the lens cards and download
-            the specific files. Use <strong>Zip all</strong>
-            to download all response files (as configured using the
-            other cards) at once.
-          </p>
-        </div>
-        <p class="col-chip-row" style="margin: 0;">
-          <span class="pill pill-count tag-chip is-selected"
-                data-extract-all-chip="by-instruments"
-                role="button"
-                tabindex="0"
-                aria-pressed="true">By instrument</span>
-          <span class="pill pill-count tag-chip is-selected"
-                data-extract-all-chip="reviewer-metadata"
-                role="button"
-                tabindex="0"
-                aria-pressed="true">Reviewer response metadata</span>
-          <span class="pill pill-count tag-chip is-selected"
-                data-extract-all-chip="reviewee-metadata"
-                role="button"
-                tabindex="0"
-                aria-pressed="true">Reviewee response metadata</span>
-          <span class="pill pill-count tag-chip is-selected"
-                data-extract-all-chip="data-shaper"
-                role="button"
-                tabindex="0"
-                aria-pressed="true">Data shaper</span>
-          {# Token keys chip — only meaningful when observers
-             exist on the session (the tokens are the deanonymization
-             key for the observer-side Anonymized output). Mirrors
-             the per-observer ``observers.csv`` gating on the
-             Setup-bundle. When ``observers_enabled`` is off the
-             intro chip + the matching card below the Data shaper
-             both stay hidden. #}
-          {% if session.observers_enabled %}
-            <span class="pill pill-count tag-chip is-selected"
-                  data-extract-all-chip="token-keys"
-                  role="button"
-                  tabindex="0"
-                  aria-pressed="true">Token keys</span>
-          {% endif %}
-        </p>
-        <div class="extract-data-card-actions">
-          <a class="btn secondary"
-             id="extract-data-zip-all"
-             href="/operator/sessions/{{ session.id }}/export/responses_bundle.zip" download>
-            Zip all
-          </a>
-        </div>
-      </div>
-
-      {# By instrument — left column, below the intro. Text
-         styling matches the intro card (``h2`` + ``form-help``).
-         Selectable chips below the body text let the operator
-         scope the export: one chip per instrument (``#{n}``, with
-         the short label when set) plus the two
-         cross-cutting toggles (``Include metadata``,
-         ``All assignment rows``). All chips default to
-         selected; filter wiring lands in a follow-up PR. #}
-      <div class="card extract-data-card-stack" id="extract-data-by-instrument">
-        <div>
-          <h2 style="margin-top: 0;">By instrument</h2>
-          <p class="form-help" style="margin-bottom: 0;">
-            One CSV per instrument; rows = (reviewer × reviewee)
-            pairs; columns = response fields side-by-side.
-            Optimised for cross-reviewer comparison on a single
-            rubric.
-          </p>
-        </div>
-        <p class="col-chip-row" style="margin: 0;">
-          {# Chip label mirrors the Reviewer-surface heading
-             (``app/web/views/_instruments.py::instrument_heading``):
-             ``#{n}: {short_label}`` when set, ``#{n}`` otherwise.
-             Inlined rather than reusing the helper because the
-             heading helper drops the ``#{n}`` prefix on
-             single-instrument sessions — the chip always carries
-             it so the positional ordering reads consistently. #}
-          {% for instr in instruments %}
-            {% set chip_short = (instr.short_label or "").strip() %}
-            {% set chip_label = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
-            <span class="pill pill-count tag-chip is-selected"
-                  data-by-instrument-chip="instrument-{{ instr.id }}"
-                  role="button"
-                  tabindex="0"
-                  aria-pressed="true">{{ chip_label }}</span>
-          {% endfor %}
-          <span class="pill pill-count tag-chip is-selected"
-                data-by-instrument-chip="include-metadata"
-                role="button"
-                tabindex="0"
-                aria-pressed="true">Include metadata</span>
-          <span class="pill pill-count tag-chip is-selected"
-                data-by-instrument-chip="all-assignment-rows"
-                data-label-on="All assignment rows"
-                data-label-off="Assignment rows with data"
-                role="button"
-                tabindex="0"
-                aria-pressed="true">All assignment rows</span>
-        </p>
-        <div class="extract-data-card-actions">
-          <a class="btn secondary"
-             id="extract-data-by-instrument-zip"
-             href="/operator/sessions/{{ session.id }}/export/by_instrument_bundle.zip" download>
-            Zip all
-          </a>
-        </div>
-      </div>
-    </div>
-
-    <div class="extract-data-column">
-      {# Reviewer response metadata — right column, top. Per-
+      {# Reviewer response metadata — left column, top. Per-
          reviewer / per-reviewee response data is trivially
          reshaped from the By-instrument export via a spreadsheet
          sort or Power Query; these cards focus on *metadata
          about responses* (counts, timestamps, which
-         instruments). ``Zip all`` is a placeholder — wiring
-         lands in a follow-up PR. #}
+         instruments). #}
       <div class="card extract-data-card-stack" id="extract-data-by-reviewer">
         <div>
           <h2 style="margin-top: 0;">Reviewer response metadata</h2>
@@ -196,15 +81,14 @@
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-reviewer-metadata-zip"
-             href="/operator/sessions/{{ session.id }}/export/reviewer_metadata.csv" download>
+             href="/operator/sessions/{{ session.id }}/export/reviewer_metadata.csv{% if instruments %}?all_instruments=1{% endif %}" download>
             Download
           </a>
         </div>
       </div>
 
-      {# Reviewee response metadata — right column, below the
-         Reviewer-metadata card. Placeholder ``Zip all`` per the
-         same rationale as the Reviewer metadata card. #}
+      {# Reviewee response metadata — left column, below the
+         Reviewer-metadata card; same chips as that card. #}
       <div class="card extract-data-card-stack" id="extract-data-by-reviewee">
         <div>
           <h2 style="margin-top: 0;">Reviewee response metadata</h2>
@@ -246,8 +130,126 @@
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-reviewee-metadata-zip"
-             href="/operator/sessions/{{ session.id }}/export/reviewee_metadata.csv" download>
+             href="/operator/sessions/{{ session.id }}/export/reviewee_metadata.csv{% if instruments %}?all_instruments=1{% endif %}" download>
             Download
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="extract-data-column">
+      {# By instrument — right column, top. Text styling
+         matches the intro card (``h2`` + ``form-help``).
+         Selectable chips below the body text let the operator
+         scope the export: one chip per instrument (``#{n}``, with
+         the short label when set) plus the two
+         cross-cutting toggles (``Include metadata``,
+         ``All assignment rows``). All chips default to
+         selected. #}
+      <div class="card extract-data-card-stack" id="extract-data-by-instrument">
+        <div>
+          <h2 style="margin-top: 0;">By instrument</h2>
+          <p class="form-help" style="margin-bottom: 0;">
+            One CSV per instrument; rows = (reviewer × reviewee)
+            pairs; columns = response fields side-by-side.
+            Optimised for cross-reviewer comparison on a single
+            rubric.
+          </p>
+        </div>
+        <p class="col-chip-row" style="margin: 0;">
+          {# Chip label mirrors the Reviewer-surface heading
+             (``app/web/views/_instruments.py::instrument_heading``):
+             ``#{n}: {short_label}`` when set, ``#{n}`` otherwise.
+             Inlined rather than reusing the helper because the
+             heading helper drops the ``#{n}`` prefix on
+             single-instrument sessions — the chip always carries
+             it so the positional ordering reads consistently. #}
+          {% for instr in instruments %}
+            {% set chip_short = (instr.short_label or "").strip() %}
+            {% set chip_label = "#" ~ loop.index ~ (": " ~ chip_short if chip_short else "") %}
+            <span class="pill pill-count tag-chip is-selected"
+                  data-by-instrument-chip="instrument-{{ instr.id }}"
+                  role="button"
+                  tabindex="0"
+                  aria-pressed="true">{{ chip_label }}</span>
+          {% endfor %}
+          <span class="pill pill-count tag-chip is-selected"
+                data-by-instrument-chip="include-metadata"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">Include metadata</span>
+          <span class="pill pill-count tag-chip is-selected"
+                data-by-instrument-chip="all-assignment-rows"
+                data-label-on="All assignment rows"
+                data-label-off="Assignment rows with data"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">All assignment rows</span>
+        </p>
+        <div class="extract-data-card-actions">
+          <a class="btn secondary"
+             id="extract-data-by-instrument-zip"
+             href="/operator/sessions/{{ session.id }}/export/by_instrument_bundle.zip" download>
+            Zip all
+          </a>
+        </div>
+      </div>
+
+      {# Extract all data — right column, below By instrument.
+         Zip all always ships ``responses.csv`` (what Rehydrate
+         reads); each chip adds the files its card's own button
+         would download, as that card is configured (D28,
+         2026-10-03). #}
+      <div class="card extract-data-card-stack" id="extract-data-intro">
+        <div>
+          <h2 style="margin-top: 0;">Extract all data</h2>
+          <p class="form-help" style="margin-bottom: 0;">
+            Use <strong>Zip all</strong> to download a complete set
+            of response data, plus whichever files are selected
+            below, as each card configures them.
+          </p>
+        </div>
+        <p class="col-chip-row" style="margin: 0;">
+          <span class="pill pill-count tag-chip is-selected"
+                data-extract-all-chip="by-instruments"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">By instrument</span>
+          <span class="pill pill-count tag-chip is-selected"
+                data-extract-all-chip="reviewer-metadata"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">Reviewer response metadata</span>
+          <span class="pill pill-count tag-chip is-selected"
+                data-extract-all-chip="reviewee-metadata"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">Reviewee response metadata</span>
+          <span class="pill pill-count tag-chip is-selected"
+                data-extract-all-chip="data-shaper"
+                role="button"
+                tabindex="0"
+                aria-pressed="true">Data shaper</span>
+          {# Token keys chip — only meaningful when observers
+             exist on the session (the tokens are the deanonymization
+             key for the observer-side Anonymized output). Mirrors
+             the per-observer ``observers.csv`` gating on the
+             Setup-bundle. When ``observers_enabled`` is off the
+             intro chip + the matching card below the Data shaper
+             both stay hidden. #}
+          {% if session.observers_enabled %}
+            <span class="pill pill-count tag-chip is-selected"
+                  data-extract-all-chip="token-keys"
+                  role="button"
+                  tabindex="0"
+                  aria-pressed="true">Token keys</span>
+          {% endif %}
+        </p>
+        <div class="extract-data-card-actions">
+          <a class="btn secondary"
+             id="extract-data-zip-all"
+             href="/operator/sessions/{{ session.id }}/export/responses_bundle.zip" download>
+            Zip all
           </a>
         </div>
       </div>
@@ -928,6 +930,12 @@
        is **valid** here — the export still ships, carrying just
        the cross-instrument totals.
 
+     The Extract all data card's chips pick which cards ride in
+     its Zip all, and each rides with that card's own query,
+     namespaced: ``?by_instrument.instrument=42``,
+     ``?reviewer_metadata.all=0``. A chip that is off sends
+     ``?by_instrument=0`` (or the card's flag).
+
      Chip state survives reload via ``localStorage`` keyed to
      the session id. #}
   <script>
@@ -988,20 +996,7 @@
           chip.setAttribute("aria-pressed", pressed ? "true" : "false");
           syncLabel(chip);
           persist();
-          syncByInstrumentButton();
-          syncMetadataButton(
-            "data-reviewer-metadata-chip",
-            "extract-data-reviewer-metadata-zip",
-            "reviewer_metadata",
-            "all-reviewers"
-          );
-          syncMetadataButton(
-            "data-reviewee-metadata-chip",
-            "extract-data-reviewee-metadata-zip",
-            "reviewee_metadata",
-            "all-reviewees"
-          );
-          syncTopZipAllButton();
+          syncAllButtons();
         }
         chip.addEventListener("click", toggle);
         chip.addEventListener("keydown", function (e) {
@@ -1022,10 +1017,12 @@
           window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         } catch (e) {}
       }
-      function syncByInstrumentButton() {
-        var btn = document.getElementById("extract-data-by-instrument-zip");
-        if (!btn) return;
+      // Each card's own query, exactly as its button sends it.
+      // The Extract all data card's Zip all reuses these, so the
+      // bundle carries what each card would download.
+      function byInstrumentParams() {
         var instrumentIds = [];
+        var instrumentChips = 0;
         var meta = true;
         var allRows = true;
         document
@@ -1034,6 +1031,7 @@
             var slot = chip.getAttribute("data-by-instrument-chip");
             var on = chip.getAttribute("aria-pressed") === "true";
             if (slot.indexOf("instrument-") === 0) {
+              instrumentChips += 1;
               if (on) {
                 instrumentIds.push(slot.substring("instrument-".length));
               }
@@ -1043,27 +1041,45 @@
               allRows = on;
             }
           });
-        var disabled = instrumentIds.length === 0;
-        btn.setAttribute("aria-disabled", disabled ? "true" : "false");
-        if (disabled) {
+        // No instrument chip on = nothing to download; the card's
+        // button greys out.
+        if (instrumentIds.length === 0) return null;
+        var params = new URLSearchParams();
+        // Every chip on = no list: the route reads an omitted list as
+        // every instrument, and the link stays short however many
+        // instruments there are (Zip all repeats it per card).
+        if (instrumentIds.length < instrumentChips) {
+          instrumentIds.forEach(function (id) {
+            params.append("instrument", id);
+          });
+        }
+        if (!meta) params.set("meta", "0");
+        if (!allRows) params.set("all_rows", "0");
+        return params;
+      }
+      function syncByInstrumentButton() {
+        var btn = document.getElementById("extract-data-by-instrument-zip");
+        if (!btn) return;
+        var params = byInstrumentParams();
+        btn.setAttribute("aria-disabled", params ? "false" : "true");
+        if (!params) {
           btn.setAttribute("href", "#");
           return;
         }
-        var params = new URLSearchParams();
-        instrumentIds.forEach(function (id) {
-          params.append("instrument", id);
-        });
-        if (!meta) params.set("meta", "0");
-        if (!allRows) params.set("all_rows", "0");
         var base =
           "/operator/sessions/" + sessionId + "/export/by_instrument_bundle.zip";
         var qs = params.toString();
         btn.setAttribute("href", qs ? base + "?" + qs : base);
       }
-      function syncMetadataButton(chipAttr, btnId, slug, allSlot) {
-        var btn = document.getElementById(btnId);
-        if (!btn) return;
+      // ``card`` is ``reviewer-metadata`` or ``reviewee-metadata``:
+      // the chip attribute, the button id, the URL slug and the
+      // Self-review handling chip all derive from it.
+      function metadataParams(card) {
+        var chipAttr = "data-" + card + "-chip";
+        var allSlot =
+          card === "reviewer-metadata" ? "all-reviewers" : "all-reviewees";
         var instrumentIds = [];
+        var instrumentChips = 0;
         var allOn = true;
         document
           .querySelectorAll("[" + chipAttr + "]")
@@ -1071,6 +1087,7 @@
             var slot = chip.getAttribute(chipAttr);
             var on = chip.getAttribute("aria-pressed") === "true";
             if (slot.indexOf("instrument-") === 0) {
+              instrumentChips += 1;
               if (on) {
                 instrumentIds.push(slot.substring("instrument-".length));
               }
@@ -1079,86 +1096,94 @@
             }
           });
         var params = new URLSearchParams();
-        instrumentIds.forEach(function (id) {
-          params.append("instrument", id);
-        });
+        // Every chip on = ``all_instruments=1`` rather than a list (an
+        // omitted list here means totals only), keeping the link short.
+        if (instrumentIds.length > 0 &&
+            instrumentIds.length === instrumentChips) {
+          params.set("all_instruments", "1");
+        } else {
+          instrumentIds.forEach(function (id) {
+            params.append("instrument", id);
+          });
+        }
         if (!allOn) params.set("all", "0");
         // Self-review handling chip — three-state cycle drives
-        // ``?self_review_handling=`` on the metadata download
-        // URLs per ``guide/extract_data.md`` § *Self-review
-        // handling*. The chip's card-scope matches the URL's
-        // slug (``reviewer_metadata`` / ``reviewee_metadata``)
-        // via the ``data-self-review-handling-chip`` attribute.
-        var srhCard = slug === "reviewer_metadata"
-          ? "reviewer-metadata"
-          : (slug === "reviewee_metadata" ? "reviewee-metadata" : null);
-        if (srhCard) {
-          var srhChip = document.querySelector(
-            '[data-self-review-handling-chip="' + srhCard + '"]'
-          );
-          if (srhChip) {
-            var state = srhChip.getAttribute(
-              "data-self-review-handling-state"
-            ) || "include_self";
-            if (state !== "include_self") {
-              params.set("self_review_handling", state);
-            }
+        // ``?self_review_handling=`` per ``guide/extract_data.md``
+        // § *Self-review handling*.
+        var srhChip = document.querySelector(
+          '[data-self-review-handling-chip="' + card + '"]'
+        );
+        if (srhChip) {
+          var state = srhChip.getAttribute(
+            "data-self-review-handling-state"
+          ) || "include_self";
+          if (state !== "include_self") {
+            params.set("self_review_handling", state);
           }
         }
+        return params;
+      }
+      function syncMetadataButton(card) {
+        var btn = document.getElementById("extract-data-" + card + "-zip");
+        if (!btn) return;
         var base =
-          "/operator/sessions/" + sessionId + "/export/" + slug + ".csv";
-        var qs = params.toString();
+          "/operator/sessions/" + sessionId + "/export/" +
+          card.replace("-", "_") + ".csv";
+        var qs = metadataParams(card).toString();
         btn.setAttribute("href", qs ? base + "?" + qs : base);
       }
-      // Top-level Zip-all button — the intro card's
-      // ``Data shaper`` chip drives ``?data_shapes=0`` when
-      // off so the bundle skips folding in each saved
-      // shape's CSV. The other three intro-card chips
-      // (``By instruments`` / Reviewer / Reviewee metadata)
-      // are placeholder for the eventual scope split — they
-      // don't currently affect the URL.
+      function extractAllChipOn(name) {
+        var chip = document.querySelector(
+          '[data-extract-all-chip="' + name + '"]'
+        );
+        // ``token-keys`` renders only when observers are enabled;
+        // absent reads as on and the bundle's own
+        // ``observers_enabled`` gate decides.
+        return !chip || chip.getAttribute("aria-pressed") === "true";
+      }
+      // Top-level Zip all (D28, 2026-10-03). ``responses.csv``
+      // always ships; each intro chip adds its card's files. A
+      // chip that is off, or a card with nothing to download,
+      // sends ``{flag}=0``; otherwise the card's own query rides
+      // namespaced as ``{flag}.{param}``.
       function syncTopZipAllButton() {
         var btn = document.getElementById("extract-data-zip-all");
         if (!btn) return;
-        var shaperChip = document.querySelector(
-          '[data-extract-all-chip="data-shaper"]'
-        );
-        var includeShapes =
-          !shaperChip ||
-          shaperChip.getAttribute("aria-pressed") === "true";
-        var tokensChip = document.querySelector(
-          '[data-extract-all-chip="token-keys"]'
-        );
-        // ``token-keys`` chip only renders when the session has
-        // observers enabled; when absent, default to "include"
-        // and the bundle's own ``observers_enabled`` gate makes
-        // the param a no-op.
-        var includeTokens =
-          !tokensChip ||
-          tokensChip.getAttribute("aria-pressed") === "true";
         var params = new URLSearchParams();
-        if (!includeShapes) params.set("data_shapes", "0");
-        if (!includeTokens) params.set("tokens", "0");
+        function passThrough(flag, cardParams) {
+          if (!cardParams) {
+            params.set(flag, "0");
+            return;
+          }
+          cardParams.forEach(function (value, key) {
+            params.append(flag + "." + key, value);
+          });
+        }
+        passThrough(
+          "by_instrument",
+          extractAllChipOn("by-instruments") ? byInstrumentParams() : null
+        );
+        ["reviewer-metadata", "reviewee-metadata"].forEach(function (card) {
+          passThrough(
+            card.replace("-", "_"),
+            extractAllChipOn(card) ? metadataParams(card) : null
+          );
+        });
+        if (!extractAllChipOn("data-shaper")) params.set("data_shapes", "0");
+        if (!extractAllChipOn("token-keys")) params.set("tokens", "0");
         var base =
           "/operator/sessions/" + sessionId +
           "/export/responses_bundle.zip";
         var qs = params.toString();
         btn.setAttribute("href", qs ? base + "?" + qs : base);
       }
-      syncByInstrumentButton();
-      syncTopZipAllButton();
-      syncMetadataButton(
-        "data-reviewer-metadata-chip",
-        "extract-data-reviewer-metadata-zip",
-        "reviewer_metadata",
-        "all-reviewers"
-      );
-      syncMetadataButton(
-        "data-reviewee-metadata-chip",
-        "extract-data-reviewee-metadata-zip",
-        "reviewee_metadata",
-        "all-reviewees"
-      );
+      function syncAllButtons() {
+        syncByInstrumentButton();
+        syncMetadataButton("reviewer-metadata");
+        syncMetadataButton("reviewee-metadata");
+        syncTopZipAllButton();
+      }
+      syncAllButtons();
 
       // ----------------------------------------------------- //
       // Self-review handling chips (PR A of the chip slice per
@@ -1227,19 +1252,8 @@
               % SRH_STATES.length;
             srhSetState(chip, SRH_STATES[nextIdx]);
             srhPersist();
-            // Refresh the matching Download URL.
-            syncMetadataButton(
-              "data-reviewer-metadata-chip",
-              "extract-data-reviewer-metadata-zip",
-              "reviewer_metadata",
-              "all-reviewers"
-            );
-            syncMetadataButton(
-              "data-reviewee-metadata-chip",
-              "extract-data-reviewee-metadata-zip",
-              "reviewee_metadata",
-              "all-reviewees"
-            );
+            // Refresh the matching Download URL and Zip all.
+            syncAllButtons();
           }
           chip.addEventListener("click", cycle);
           chip.addEventListener("keydown", function (e) {
@@ -1249,21 +1263,10 @@
             }
           });
         });
-      // Re-sync the metadata buttons once with the restored
-      // chip state so a reloaded page's Download URL reflects
-      // any persisted ``self_review_handling`` selection.
-      syncMetadataButton(
-        "data-reviewer-metadata-chip",
-        "extract-data-reviewer-metadata-zip",
-        "reviewer_metadata",
-        "all-reviewers"
-      );
-      syncMetadataButton(
-        "data-reviewee-metadata-chip",
-        "extract-data-reviewee-metadata-zip",
-        "reviewee_metadata",
-        "all-reviewees"
-      );
+      // Re-sync once with the restored chip state so a reloaded
+      // page's Download URLs and Zip all reflect any persisted
+      // ``self_review_handling`` selection.
+      syncAllButtons();
     })();
   </script>
 
