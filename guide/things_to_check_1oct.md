@@ -139,12 +139,6 @@ E1, E2 and E4 were checked by the author when they merged.
   Back on Assignments, without generating again, the self-review count
   drops by that row. Reactivate it and the count comes back.
 
-## Session nav looks the same (E37)
-
-- [ ] **Tabs.** On any session page, in light and dark themes, the
-  selected Setup or Operations tab still has its white (dark: near-black)
-  background, and hovering another tab paints it the same way.
-
 ## Relationship changes move group answers (B34)
 
 - [ ] **Inactivate a group member.** In a session whose instrument
@@ -155,6 +149,12 @@ E1, E2 and E4 were checked by the author when they merged.
   rejoins the group with its answer.
 - [ ] **Re-import unchanged.** Download the relationships CSV and import
   it again unchanged. Every answer is still there.
+
+## Session nav looks the same (E37)
+
+- [x] **Tabs.** On any session page, in light and dark themes, the
+  selected Setup or Operations tab still has its white (dark: near-black)
+  background, and hovering another tab paints it the same way.
 
 ## E5 — Assignments and Validate before the first Prepare (#2717)
 
