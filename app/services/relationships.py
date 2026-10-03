@@ -42,7 +42,12 @@ from app.services.csv_imports import (
     decode_csv,
 )
 from app.services.email_identity import normalize_email
-from app.services.roster_bulk import bulk_delete, bulk_set_status
+from app.services.roster_bulk import (
+    bulk_delete,
+    bulk_set_status,
+    reconcile_relationship_groups,
+    relationship_group_keys_before,
+)
 from app.services.roster_status import ROSTER_STATUSES, normalise_status
 
 
@@ -282,6 +287,7 @@ def save_relationships(
             select(Relationship).where(Relationship.session_id == session.id)
         ).scalars()
     )
+    before = relationship_group_keys_before(db, session_id=session.id)
     replaced = len(existing_rows)
     for row in existing_rows:
         db.delete(row)
@@ -290,6 +296,13 @@ def save_relationships(
     for row in rows:
         db.add(_relationship_to_orm(row, session.id))
     db.flush()
+    context = {"filename": filename} if filename else {}
+    context.update(
+        reconcile_relationship_groups(
+            db, session_id=session.id, before=before
+        )
+        or {}
+    )
     _recompute_self_review(db, session_id=session.id)
 
     audit.write_event(
@@ -299,7 +312,7 @@ def save_relationships(
         actor_user_id=user.id,
         session=session,
         payload=audit.counts(new=len(rows), replaced=replaced),
-        context={"filename": filename} if filename else None,
+        context=context or None,
         correlation_id=correlation_id,
     )
 
@@ -382,10 +395,14 @@ def delete_all_relationships(
             )
         ).scalars()
     )
+    before = relationship_group_keys_before(db, session_id=review_session.id)
     deleted = len(existing_rows)
     for row in existing_rows:
         db.delete(row)
     db.flush()
+    context = reconcile_relationship_groups(
+        db, session_id=review_session.id, before=before
+    )
     _recompute_self_review(db, session_id=review_session.id)
 
     audit.write_event(
@@ -395,6 +412,7 @@ def delete_all_relationships(
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(deleted=deleted),
+        context=context,
         correlation_id=correlation_id,
     )
 
@@ -541,6 +559,7 @@ def create_relationship(
         correlation_id=correlation_id,
     )
 
+    before = relationship_group_keys_before(db, session_id=review_session.id)
     relationship = Relationship(
         session_id=review_session.id,
         reviewer_id=reviewer_id,
@@ -552,6 +571,9 @@ def create_relationship(
     )
     db.add(relationship)
     db.flush()
+    context = reconcile_relationship_groups(
+        db, session_id=review_session.id, before=before
+    )
     _recompute_self_review(db, session_id=review_session.id)
 
     audit.write_event(
@@ -571,6 +593,7 @@ def create_relationship(
                 "tag_3": clean_tag_3,
             }
         ),
+        context=context,
         correlation_id=correlation_id,
     )
     db.commit()
@@ -659,45 +682,24 @@ def update_relationship(
         correlation_id=correlation_id,
     )
 
-    # Snapshot the pre-edit pair before ``setattr`` applies a
-    # re-point — the old pair's group-scoped responses need
-    # defuncting too.
-    old_pair = (relationship.reviewer_id, relationship.reviewee_id)
+    # A relationship edit can move its pair, or the pair it is
+    # re-pointed off, to another pair-context group: a grouping tag
+    # value changes, the row is re-pointed (its tags leave the old pair
+    # for the new one), or its status flips (an inactive relationship
+    # reads as empty tags). Each assignment whose group key moved gives
+    # up the answer copy it carried and is re-fanned from its new group
+    # (Segment 13C PR 5; re-point handling Segment 18H; status and the
+    # key comparison findings B34).
+    before = relationship_group_keys_before(db, session_id=session_id)
 
     for field, (_, new_value) in changes.items():
         setattr(relationship, field, new_value)
     db.flush()
 
-    # A relationship edit mis-attributes the answer copies fanned
-    # onto group-scoped Response rows two ways: a grouping
-    # pair-context tag value changes, or the row is re-pointed to a
-    # different pair (its tags move off the old pair and onto the
-    # new one). The affected pairs' rows are deleted and re-fanned
-    # from their new groups so each group re-derives cleanly
-    # (Segment 13C PR 5; re-point handling Segment 18H). No-op
-    # unless a group instrument is boundaried on pair context.
-    from app.services import responses as responses_service
-
-    repointed = "reviewer_id" in changes or "reviewee_id" in changes
-    defuncted = (
-        responses_service.reconcile_group_responses_for_relationship_change(
-            db,
-            session_id=session_id,
-            pairs={
-                old_pair,
-                (relationship.reviewer_id, relationship.reviewee_id),
-            },
-            changed_tag_fields={
-                f for f in changes if f.startswith("tag_")
-            },
-            repointed=repointed,
-        )
+    context = reconcile_relationship_groups(
+        db, session_id=session_id, before=before
     )
-    # The reconcile above recomputes for a tag edit or a re-point; a
-    # status flip moves the pair's group key on its own (an inactive
-    # relationship resolves to empty tags).
-    if "status" in changes:
-        _recompute_self_review(db, session_id=session_id)
+    _recompute_self_review(db, session_id=session_id)
 
     audit.write_event(
         db,
@@ -707,9 +709,7 @@ def update_relationship(
         session=relationship.session,
         payload=audit.changes(changes),
         refs={"relationship_id": relationship.id},
-        context=(
-            {"defuncted_group_responses": defuncted} if defuncted else None
-        ),
+        context=context,
         correlation_id=correlation_id,
     )
     db.commit()

@@ -689,15 +689,13 @@ def _render_relationships_page(
             "existing_count": len(all_rows),
             "total_row_count": len(all_rows),
             # Always ``False`` (Segment 19I Item 2). Deleting a
-            # relationship destroys no response — nothing references
-            # one, measured from the model graph at PR 2 — so the
-            # strip must not offer an acknowledgement for a loss
-            # that cannot happen. The route's gate reaches the
-            # same answer on its own via ``cascade_counts``; this
-            # keeps the page from saying otherwise.
-            # Always ``False`` / ``0``: deleting a relationship reaches
-            # no assignment and no response (Segment 19I Item 2,
-            # measured from the model graph).
+            # relationship cascades to no response — nothing
+            # references one, measured from the model graph at PR 2.
+            # A pair it moves to another pair-context group gives up
+            # its group answer copy (findings B34), and the author
+            # ruled 2026-10-03 that this asks for no acknowledgement,
+            # as a tag edit asks for none. The route's gate reaches
+            # the same answer on its own via ``cascade_counts``.
             "delete_discards_assignments": False,
             "roster_response_count": 0,
             "delete_discards_responses": False,

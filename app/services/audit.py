@@ -594,7 +594,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     ),
     "reviewers.deleted_all": EventSchema(_IDENTITY | {"counts"}),
     "reviewees.deleted_all": EventSchema(_IDENTITY | {"counts"}),
-    "relationships.deleted_all": EventSchema(_IDENTITY | {"counts"}),
+    "relationships.deleted_all": EventSchema(_IDENTITY | {"counts", "context"}),
     # Segment 15F PR 1 — per-row reviewer authoring + bulk status flips.
     # ``app/services/reviewers.py`` is the sole emitter; the inline-edit
     # form path always emits ``reviewer.updated`` (decision 13) while
@@ -620,12 +620,16 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "reviewee.results_acknowledged": EventSchema(_IDENTITY | {"snapshot"}),
     # Segment 15F PR 5 — per-row relationship authoring + bulk
     # status flips. ``app/services/relationships.py`` emits.
-    "relationship.created": EventSchema(_IDENTITY | {"snapshot"}),
+    "relationship.created": EventSchema(_IDENTITY | {"snapshot", "context"}),
     "relationship.updated": EventSchema(
         _IDENTITY | {"changes", "refs", "context"}
     ),
-    "relationship.bulk_inactivated": EventSchema(_IDENTITY | {"snapshot"}),
-    "relationship.bulk_reactivated": EventSchema(_IDENTITY | {"snapshot"}),
+    "relationship.bulk_inactivated": EventSchema(
+        _IDENTITY | {"snapshot", "context"}
+    ),
+    "relationship.bulk_reactivated": EventSchema(
+        _IDENTITY | {"snapshot", "context"}
+    ),
     # Participant-model Phase 1 — event-schema allowlist entries
     # for the post-MVP arc. Registered here ahead of any emitter
     # (so adding the emitter in a later slice is a one-line code
@@ -653,7 +657,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "reviewer.bulk_deleted": EventSchema(_IDENTITY | {"counts"}),
     "reviewee.bulk_deleted": EventSchema(_IDENTITY | {"counts"}),
     "observer.bulk_deleted": EventSchema(_IDENTITY | {"counts"}),
-    "relationship.bulk_deleted": EventSchema(_IDENTITY | {"counts"}),
+    "relationship.bulk_deleted": EventSchema(_IDENTITY | {"counts", "context"}),
     "instrument.view_policy_set": EventSchema(
         _IDENTITY | {"changes", "refs"}
     ),

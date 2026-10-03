@@ -868,9 +868,13 @@ row. A surviving row with `reviewer_id IS NULL` **and** `sent_at` set is
 exactly that: sent, recipient since removed — `spec/email_infra_options.md`
 "Audit log" owns the column-level detail. **Observers
 and Relationships cascade to nothing** — no table references them — so
-their delete can never lose a response, their gate never fires, and
-their strip never offers the acknowledgement. A page that offered it
-would be describing a loss that cannot happen.
+their gate never fires and their strip never offers the
+acknowledgement. An Observers delete loses no response. A
+Relationships delete can: a pair it moves to another pair-context
+group gives up the group answer copy it carried, and the author ruled
+2026-10-03 that this asks for no acknowledgement, as a tag edit asks
+for none (`spec/assignments.md` "Group-scoped fan-out"; findings
+B34).
 
 **The confirmation names what goes**, on the pattern of the
 Instruments page's *"Yes, delete Instrument_1 and its associated

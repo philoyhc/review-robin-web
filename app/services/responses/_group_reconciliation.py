@@ -32,7 +32,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol
 
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -290,6 +290,18 @@ def _refan_group_responses(
             (sib.reviewer_id, sib.instrument_id, group_key), []
         ).append(sib)
 
+    # Every sibling's answer rows, read once: a bulk relationship change
+    # can relocate a whole session's rows, and a query per target and
+    # per sibling grew with the square of the group size (findings B34).
+    rows_by_assignment: dict[int, list[Response]] = {}
+    for row in db.execute(
+        select(Response)
+        .join(Assignment, Assignment.id == Response.assignment_id)
+        .where(Assignment.instrument_id.in_(group_instrument_ids))
+        .order_by(Response.id)
+    ).scalars():
+        rows_by_assignment.setdefault(row.assignment_id, []).append(row)
+
     written = 0
     refanned: set[int] = set()
     for target in targets:
@@ -300,14 +312,7 @@ def _refan_group_responses(
             continue
         # Already consistent — a non-relocated assignment keeps its
         # copy; skip it (and stay idempotent).
-        if (
-            db.execute(
-                select(Response.id).where(
-                    Response.assignment_id == target.id
-                )
-            ).first()
-            is not None
-        ):
+        if rows_by_assignment.get(target.id):
             continue
         source_rows: list[Response] = []
         for sib in by_group.get(
@@ -315,28 +320,28 @@ def _refan_group_responses(
         ):
             if sib.id == target.id:
                 continue
-            rows = list(
-                db.execute(
-                    select(Response).where(
-                        Response.assignment_id == sib.id
-                    )
-                ).scalars()
-            )
+            rows = rows_by_assignment.get(sib.id)
             if rows:
                 source_rows = rows
                 break
-        for row in source_rows:
-            db.add(
-                Response(
-                    assignment_id=target.id,
-                    response_field_id=row.response_field_id,
-                    value=row.value,
-                    saved_at=row.saved_at,
-                    submitted_at=row.submitted_at,
-                    version=row.version,
-                )
+        copies = [
+            Response(
+                assignment_id=target.id,
+                response_field_id=row.response_field_id,
+                value=row.value,
+                saved_at=row.saved_at,
+                submitted_at=row.submitted_at,
+                version=row.version,
             )
-            written += 1
+            for row in source_rows
+        ]
+        if copies:
+            db.add_all(copies)
+            # A later target in the same group may copy from this one;
+            # either way the answer comes from the same answered
+            # sibling, so the copies are identical.
+            rows_by_assignment[target.id] = copies
+            written += len(copies)
             refanned.add(target.id)
     if written:
         db.flush()
@@ -416,104 +421,105 @@ def reconcile_group_responses_for_tag_change(
     return len(response_ids)
 
 
-def reconcile_group_responses_for_relationship_change(
+def _answered_pair_context_assignments(
+    db: Session, *, session_id: int
+) -> list[Assignment]:
+    """Every assignment on a group instrument whose boundary reads a
+    pair-context tag, or ``[]`` when none of those assignments carries
+    an answer — with nothing fanned, a relationship change has nothing
+    to mis-attribute."""
+    from app.services import instruments as instruments_service
+
+    instrument_ids = {
+        instrument.id
+        for instrument in db.execute(
+            select(Instrument).where(
+                Instrument.session_id == session_id,
+                Instrument.group_kind.is_not(None),
+            )
+        ).scalars()
+        if any(
+            source_type == "pair_context"
+            for source_type, _ in instruments_service.decode_group_kind(
+                instrument.group_kind
+            )
+        )
+    }
+    if not instrument_ids:
+        return []
+    answered = db.execute(
+        select(Response.id)
+        .join(Assignment, Assignment.id == Response.assignment_id)
+        .where(Assignment.instrument_id.in_(instrument_ids))
+        .limit(1)
+    ).first()
+    if answered is None:
+        return []
+    return list(
+        db.execute(
+            select(Assignment).where(Assignment.instrument_id.in_(instrument_ids))
+        ).scalars()
+    )
+
+
+def snapshot_pair_context_group_keys(
+    db: Session, *, session_id: int
+) -> dict[int, tuple[str, ...]]:
+    """The group key of every assignment a relationship change could
+    move, taken **before** the change, for
+    :func:`reconcile_moved_pair_context_groups` to compare against.
+    Empty when no pair-context group instrument has an answer yet."""
+    targets = _answered_pair_context_assignments(db, session_id=session_id)
+    if not targets:
+        return {}
+    return group_keys(db, assignments=targets, session_id=session_id)
+
+
+def reconcile_moved_pair_context_groups(
     db: Session,
     *,
     session_id: int,
-    pairs: set[tuple[int, int]],
-    changed_tag_fields: set[str],
-    repointed: bool,
+    before: dict[int, tuple[str, ...]],
 ) -> int:
-    """Pair-context counterpart of
-    :func:`reconcile_group_responses_for_tag_change`.
+    """Reconcile the group answer copies of every assignment whose
+    pair-context group key moved since ``before`` was taken (findings
+    B34).
 
-    A ``Relationship`` row carries the pair-context tags of one
-    ``(reviewer, reviewee)`` pair. Editing it shifts a group key
-    two ways: a grouping pair-context **tag value** changes, or
-    the row is **re-pointed** to a different pair — its tags move
-    off the old pair and onto the new one. Either way the
-    group-scoped ``Response`` rows fanned onto the affected
-    pair(s) are mis-attributed: they are **deleted** and the
-    affected assignments are **re-fanned** from their new groups
-    so each group re-derives cleanly (Segment 13C PR 5; re-point
-    handling Segment 18H).
-
-    ``pairs`` is the set of ``(reviewer_id, reviewee_id)`` pairs to
-    reconcile — for a pure tag edit the single unchanged pair; for
-    a re-point both the old and the new pair. ``repointed`` widens
-    the affected-instrument set to *every* pair-context-boundaried
-    group instrument, since a re-point moves all of the pair's
-    pair-context tags (a pure tag edit only affects instruments
-    whose boundary uses a changed tag number). Returns the number
-    of rows deleted (the re-fan is a side effect)."""
-    if not pairs:
+    The pair-context counterpart of
+    :func:`reconcile_group_responses_for_tag_change`, for every
+    relationship change: a tag edit, a re-point, a relationship created,
+    imported or deleted, or one switched active / inactive (an inactive
+    or missing relationship reads as empty tags). A moved assignment's
+    copies are mis-attributed, so they are deleted and it is re-fanned
+    from its new group; when no other member of that group holds an
+    answer, the answer is gone (author's ruling 2026-10-03). Only the
+    assignments whose key changed are touched, so re-importing an
+    unchanged file, or re-pointing a relationship with no tags, deletes
+    nothing. The
+    caller flushes the change first. Returns the number of
+    ``Response`` rows deleted (the re-fan is a side effect)."""
+    if not before:
         return 0
-    changed_numbers = {
-        field.removeprefix("tag_")
-        for field in changed_tag_fields
-        if field.startswith("tag_")
+    targets = list(
+        db.execute(
+            select(Assignment).where(Assignment.id.in_(list(before)))
+        ).scalars()
+    )
+    after = group_keys(db, assignments=targets, session_id=session_id)
+    moved = {
+        assignment_id
+        for assignment_id, key in before.items()
+        if assignment_id in after and after[assignment_id] != key
     }
-    if not changed_numbers and not repointed:
+    if not moved:
         return 0
-    from app.services import instruments as instruments_service
-
-    affected_instrument_ids: set[int] = set()
-    for instrument in db.execute(
-        select(Instrument).where(
-            Instrument.session_id == session_id,
-            Instrument.group_kind.is_not(None),
-        )
-    ).scalars():
-        boundary = instruments_service.decode_group_kind(
-            instrument.group_kind
-        )
-        if any(
-            source_type == "pair_context"
-            and (repointed or source_field in changed_numbers)
-            for source_type, source_field in boundary
-        ):
-            affected_instrument_ids.add(instrument.id)
-    if not affected_instrument_ids:
-        return 0
-
-    pair_clause = or_(
-        *(
-            and_(
-                Assignment.reviewer_id == reviewer_id,
-                Assignment.reviewee_id == reviewee_id,
-            )
-            for reviewer_id, reviewee_id in pairs
-        )
-    )
-    target_assignment_ids = set(
-        db.execute(
-            select(Assignment.id).where(
-                pair_clause,
-                Assignment.instrument_id.in_(affected_instrument_ids),
-            )
-        ).scalars()
-    )
-    response_ids = list(
-        db.execute(
-            select(Response.id).where(
-                Response.assignment_id.in_(target_assignment_ids)
-            )
-        ).scalars()
-    )
-    if response_ids:
-        db.execute(delete(Response).where(Response.id.in_(response_ids)))
-    _refan_group_responses(
-        db, session_id=session_id, assignment_ids=target_assignment_ids
-    )
-    # Pair-context boundary tag edits / re-points can shift group
-    # composition and therefore the whole-group self-review rule;
-    # recompute against the session.
-    from app.services.assignments import (
-        recompute_self_review_classification,
-    )
-
-    recompute_self_review_classification(db, session_id=session_id)
-    return len(response_ids)
+    # Deleted by assignment, not by response id: one bound parameter per
+    # moved row rather than one per row and field.
+    defuncted = db.execute(
+        delete(Response).where(Response.assignment_id.in_(moved))
+    ).rowcount
+    _refan_group_responses(db, session_id=session_id, assignment_ids=moved)
+    return defuncted or 0
 
 
 def _expand_group_upserts(
