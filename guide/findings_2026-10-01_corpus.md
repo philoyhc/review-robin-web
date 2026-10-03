@@ -313,13 +313,23 @@ stay in §3.
   rollback after a later reviewer's failure dropped it. Found in #2757's
   read; it predated that PR, which made the page load instead of
   failing.
-- **B33** — `spec/assignments.md` lists a relationship pair-context tag
-  edit among the triggers that recompute `Assignment.is_self_review`, but
-  only `update_relationship` does. `create_relationship`,
-  `save_relationships`, `delete_all_relationships`, the selected delete
-  and bulk inactivate / reactivate can move a pair-context group key
-  without a recompute, so the flag can lag until the next Generate.
-  Predates #2765; found in its read.
+- ~~**B33**~~ — **Done in #2774.** Every relationship change now
+  recomputes `Assignment.is_self_review`. `spec/assignments.md` listed a
+  relationship pair-context tag edit among the triggers, but only
+  `update_relationship` recomputed, and only for a tag edit or a
+  re-point. Create, import, delete-all, the selected delete, bulk
+  inactivate / reactivate and a status edit moved a pair-context group
+  key without one, so the flag lagged until the next Generate. Predates
+  #2765; found in its read.
+- **B34** — The same relationship changes leave group answers on the
+  wrong group. A group instrument's answer is copied onto every
+  assignment in the group, and `update_relationship` deletes and
+  re-copies the affected pairs' copies when a tag edit or a re-point
+  moves a pair-context group key
+  (`reconcile_group_responses_for_relationship_change`). Create, import,
+  delete-all, the selected delete, bulk inactivate / reactivate and a
+  status edit move the key too, without that reconcile. Found in #2774's
+  read; predates it.
 - **A29** — `spec/sort_by_reviewee.md` "Scope" lists email among the
   fields the operator's default sort can use, and the service accepts it,
   but no operator control sets it: the Reviewee identity header's badge

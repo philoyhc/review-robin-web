@@ -266,3 +266,12 @@ E1, E2 and E4 were checked by the author when they merged.
 - [ ] **Settings round-trip.** Download Extract Setup's Settings CSV from
   that session and import it through another session's Quick Setup. The
   imported instrument keeps the sort and the width.
+
+## Relationship changes update self-reviews (B33)
+
+- [ ] **Inactivate a relationship.** In a session whose instrument
+  groups by a relationship tag, generate assignments and note the
+  instrument's self-review count on Assignments. On Relationships,
+  inactivate the row that puts a reviewer's group-mate in their group.
+  Back on Assignments, without generating again, the self-review count
+  drops by that row. Reactivate it and the count comes back.

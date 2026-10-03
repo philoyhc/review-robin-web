@@ -89,6 +89,16 @@ def bulk_set_status(
     for row in flipped:
         row.status = clean_target
     db.flush()
+    if model is Relationship:
+        # An inactive relationship resolves to empty pair-context tags,
+        # so the flip can move a group key (findings B33).
+        from app.services.assignments import (
+            recompute_self_review_classification,
+        )
+
+        recompute_self_review_classification(
+            db, session_id=review_session.id
+        )
 
     audit.write_event(
         db,
@@ -295,10 +305,11 @@ def bulk_delete(
     for row in rows:
         db.delete(row)
     db.flush()
-    if model is Reviewee:
+    if model is Reviewee or model is Relationship:
         # Group self-review membership is read off the roster (findings
         # B7): deleting a reviewer's own reviewee row takes them out of
-        # the group, so the surviving rows' flag can change.
+        # the group, so the surviving rows' flag can change. A deleted
+        # relationship takes its pair-context tags with it (B33).
         from app.services.assignments import (
             recompute_self_review_classification,
         )
