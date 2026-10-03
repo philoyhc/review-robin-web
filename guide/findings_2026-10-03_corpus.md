@@ -73,7 +73,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   says a bare UTC shows once.
 - ~~**A4**~~ low — **Done in #2790.** `require_reviewee_with_current_grant` logs
   `"user_id": reviewee.id` (`deps.py:478`), a reviewee id.
-- **A5 low** — Integer placeholders and the constraint line truncate
+- ~~**A5**~~ low — **Ruled 2026-10-03: refuse non-whole bounds. Done in #2792.** The defect is upstream of the reviewer surface: Band 2 refuses a fractional Integer bound, but the Settings CSV import stored it on the field while `validation` cast it to a whole number. The import now refuses it. As found: Integer placeholders and the constraint line truncate
   bounds with `int(...)` (`views/_instruments.py:187,226`);
   `reviewer-surface.md:450-454` says bounds print as entered.
 - ~~**B3 = C4**~~ low — **Done in #2791.** `_require_not_archived` (`_shared.py:191-204`) says

@@ -1075,7 +1075,11 @@ response-type display names — and enforces:
   exempt when it has responses and its type and bounds are unchanged
   from what's stored, since those bounds are locked and refusing them
   would block every Save of the card; a stored field without
-  responses meets the rule on its next Save.
+  responses meets the rule on its next Save. A Settings CSV import
+  applies the same rule in its parse phase, with no exemption
+  (`spec/csv_contracts.md` §3.3): Quick Setup's replace acknowledges
+  the responses it deletes, and Rehydrate refuses such an extract
+  (`spec/rehydrate.md` §6.2).
 - `String`: the `max` slot is read as `max_length` and must be `> 0`
   when set.
 - `List`: at least one option once blanks are trimmed.
