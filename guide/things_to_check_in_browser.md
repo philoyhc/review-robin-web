@@ -215,6 +215,8 @@ when it is checked; sections with unticked rows sit above the ticked ones.
   without a reload and downloads `{code}_data_shapes.zip`, holding
   that shape's file under the name its own Download gives it. Save a
   second, download again: both files. Delete both: the button greys.
+  (Between a Delete click and the server's answer it is greyed too,
+  which is too quick to see on localhost; the browser test holds it.)
 
 ## Setup tabs underline in blue (findings register E5)
 

@@ -2128,16 +2128,22 @@
       }
 
       // The card's Zip all downloads every saved shape (findings
-      // D13), so it is live only while one exists. Saves and
-      // deletes are fetch calls, so the state follows the DOM.
+      // D13), so it is live only while one exists. Delete removes
+      // its card before the server answers, so the DOM runs ahead
+      // of the server: Zip all stays off while any DELETE is in
+      // flight, and a DELETE that fails leaves a shape on the
+      // server that no card shows, which keeps Zip all live.
       var shaperZip = document.getElementById("extract-data-shaper-zip");
       var shaperZipHref = shaperZip
         ? shaperZip.getAttribute("data-zip-href")
         : null;
+      var pendingShapeDeletes = 0;
+      var failedShapeDeletes = 0;
       function syncShaperZip() {
         if (!shaperZip) return;
-        var anySaved = !!stack.querySelector("[data-shape][data-shape-id]");
-        if (anySaved) {
+        var anySaved = failedShapeDeletes > 0
+          || !!stack.querySelector("[data-shape][data-shape-id]");
+        if (anySaved && pendingShapeDeletes === 0) {
           shaperZip.setAttribute("href", shaperZipHref);
           shaperZip.setAttribute("download", "");
           shaperZip.removeAttribute("aria-disabled");
@@ -2615,11 +2621,20 @@
 
         deleteBtn.addEventListener("click", function () {
           if (deleteBtn.disabled) return;
-          // Fire-and-forget the server delete; the visual
-          // removal happens immediately for a snappy feel.
-          // Idempotent on the server side so a stale local
-          // ``data-shape-id`` doesn't 404 — it just no-ops.
-          deleteShapeOnServer(shape);
+          // The visual removal happens immediately for a snappy
+          // feel; the server delete runs alongside. Idempotent on
+          // the server side so a stale local ``data-shape-id``
+          // doesn't 404 — it just no-ops. Only Zip all waits for
+          // the answer (``syncShaperZip``).
+          pendingShapeDeletes += 1;
+          deleteShapeOnServer(shape).then(function (ok) {
+            if (!ok) failedShapeDeletes += 1;
+          }, function () {
+            failedShapeDeletes += 1;
+          }).then(function () {
+            pendingShapeDeletes -= 1;
+            syncShaperZip();
+          });
           var isOnlyShape = stack.querySelectorAll("[data-shape]").length <= 1;
           var wasSelected = activeShape === shape;
           if (isOnlyShape) {
