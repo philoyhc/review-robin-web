@@ -825,6 +825,26 @@ def test_a_session_without_relationships_is_not_told_their_cost(
     assert "clears any assignments already generated" in prose
 
 
+def test_relationships_guidance_does_not_claim_an_upload_clears_assignments(
+    client: TestClient, db: Session
+) -> None:
+    """``save_relationships`` deletes no assignment, so the Relationships
+    page must not say an upload clears them (findings 2026-10-03 C2)."""
+    rs = _mk(client, db, "relcc-c2")
+    rs.relationships_enabled = True
+    db.commit()
+
+    body = client.get(f"/operator/sessions/{rs.id}/relationships").text
+    start = body.index('<details class="card page-guidance')
+    prose = " ".join(
+        re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)])
+        .split()
+    )
+
+    assert "clears any assignments" not in prose
+    assert "Assignments already generated are not cleared" in prose
+
+
 # ── Rung 4: the empty state and the inactive `Add new` ─────────────────
 
 
