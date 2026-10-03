@@ -76,7 +76,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
 - **A5 low** — Integer placeholders and the constraint line truncate
   bounds with `int(...)` (`views/_instruments.py:187,226`);
   `reviewer-surface.md:450-454` says bounds print as entered.
-- **B3 = C4 low** — `_require_not_archived` (`_shared.py:191-204`) says
+- ~~**B3 = C4**~~ low — **Done in #2791.** `_require_not_archived` (`_shared.py:191-204`) says
   "cohort rule edits are not allowed" for all eight Observers routes.
 - **A6 low** — Integer/Decimal shape check skips `step <= max - min`
   when `max == min` (`_band2.py:464-470`). The spec is stricter; leave it.

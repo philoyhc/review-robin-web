@@ -576,6 +576,32 @@ def test_observer_cohort_rule_save_rejected_when_session_is_archived(
     assert obs.cohort_rule is None
 
 
+def test_an_archived_session_refuses_any_observer_edit_by_name(
+    client: TestClient, db: Session
+) -> None:
+    """The archived refusal is shared by every Observers route, so it
+    names observer edits, not only cohort-rule ones (findings
+    2026-10-03 B3)."""
+    review_session = _make_session(client, db, "obs-archived-msg")
+    _enable_observers(db, review_session)
+    obs = Observer(
+        session_id=review_session.id, email="y@example.org", display_name="Y"
+    )
+    db.add(obs)
+    review_session.status = "archived"
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/observers/bulk-inactivate",
+        data={"observer_ids": [obs.id]},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 409
+    assert "observer edits are not allowed" in response.text
+    assert "cohort rule" not in response.text
+
+
 def test_observer_cohort_rule_save_pads_short_operand_arrays(
     client: TestClient, db: Session
 ) -> None:
