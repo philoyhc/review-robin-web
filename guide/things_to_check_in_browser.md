@@ -1,10 +1,9 @@
-# Things to check in a browser — 1 October
+# Things to check in a browser
 
-Browser checks owed on `guide/post_assessment_1oct.md` work, and on the
-`guide/findings_2026-10-01_corpus.md` and `guide/findings_2026-10-03_corpus.md`
-fixes that followed it, that the test
-suite cannot settle. Run them locally (`uvicorn`, fake auth). Tick a row
-when it is checked, and retire the file once every row is ticked.
+Browser checks owed on merged changes that the test suite cannot settle:
+layout, in-browser behavior and what a page shows. Every PR that owes one
+adds a section here. Run them locally (`uvicorn`, fake auth). Tick a row
+when it is checked; sections with unticked rows sit above the ticked ones.
 
 E1, E2 and E4 were checked by the author when they merged.
 
