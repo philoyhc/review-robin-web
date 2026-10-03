@@ -68,7 +68,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
 - ~~**D3**~~ low — **Done in #2788.** `email_overrides.<any kind>.enabled` in a Settings CSV
   flips `responses_received_enabled` (`_apply_email.py:25-33`).
   *Reproduced* with `invitation.enabled=false`.
-- **C3 low** — Operator Settings' sample line reads "UTC UTC" for a UTC
+- ~~**C3**~~ low — **Done in #2789.** Operator Settings' sample line reads "UTC UTC" for a UTC
   operator (`operator_settings.html:123`); `timezone_display.md:107-108`
   says a bare UTC shows once.
 - **A4 low** — `require_reviewee_with_current_grant` logs
