@@ -847,9 +847,10 @@ def find_sample_in_scope_reviewee(
       pre-Gap-10 unconstrained partition for those cases).
 
     Returns ``None`` when the rules narrow the candidate pair space
-    down to zero. The roster bytes loaded here are the same set the
-    actual assignment generator uses, so the picked sample is one
-    the operator's reviewers would really see when generation runs.
+    down to zero. Samples are drawn from active reviewees only, so the
+    picked sample is one the operator's reviewers would really see
+    when generation runs; self-review group membership is read off the
+    whole roster, as the generator reads it.
     """
     # Local imports to avoid pulling the rule engine + roster
     # primitives at module-load time (this module is imported during
@@ -869,14 +870,17 @@ def find_sample_in_scope_reviewee(
             .order_by(Reviewer.name, Reviewer.id)
         ).scalars()
     )
-    reviewees = list(
+    # The whole reviewee roster decides self-review group membership
+    # below, as it does in Generate; only the active reviewees are
+    # offered to the engine as samples.
+    roster_reviewees = list(
         db.execute(
             sa_select(Reviewee)
             .where(Reviewee.session_id == review_session.id)
-            .where(Reviewee.status == "active")
             .order_by(Reviewee.name, Reviewee.id)
         ).scalars()
     )
+    reviewees = [e for e in roster_reviewees if e.status == "active"]
     if not reviewers or not reviewees:
         return None
     pair_context_lookup = {
@@ -999,9 +1003,24 @@ def find_sample_in_scope_reviewee(
             )
 
         if instrument.group_kind is not None:
+            # Membership from the roster, not from the surviving pairs,
+            # as Generate reads it (``_generate._diff_one_instrument``):
+            # a Link rule, or an inactive reviewee row, can take the
+            # ``(R, R)`` pair out of ``pairs`` while the reviewer's
+            # group-mates stay, and the group is still the reviewer's
+            # own. Candidates are narrowed by normalized address, and
+            # ``is_self_review`` still decides each one.
+            from app.services.email_identity import normalize_email
+
+            by_address: dict[str, list[Any]] = {}
+            for e in roster_reviewees:
+                by_address.setdefault(
+                    normalize_email(e.email_or_identifier), []
+                ).append(e)
             self_groups = {
                 (r.id, _group_key(r, e))
-                for r, e in pairs
+                for r in reviewers
+                for e in by_address.get(normalize_email(r.email), [])
                 if is_self_review(r, e)
             }
             pairs = [

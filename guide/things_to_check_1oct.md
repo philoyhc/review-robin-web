@@ -163,6 +163,14 @@ E1, E2 and E4 were checked by the author when they merged.
   Quick Setup. The page shows the settings slot's "Could not import
   session settings." message, not a 500, and the session is unchanged.
 
+## The preview drops a self-review group Generate drops (B1)
+
+- [ ] **A filtered self-row still excludes the group.** On a grouped
+  instrument with **Self reviews** excluded, add a Link 2 rule that
+  keeps a reviewer's teammates but not the reviewer's own reviewee row.
+  The Band 2 preview no longer offers one of those teammates as its
+  sample; with the exclusion off, it does.
+
 ## Setup tabs underline in blue (findings register E5)
 
 - [x] **Light and dark.** On any Setup page (Reviewers, say), the active

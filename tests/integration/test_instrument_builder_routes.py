@@ -7837,6 +7837,116 @@ def test_preview_sample_exclusion_keys_like_the_generator(
     )
 
 
+def test_preview_sample_reads_group_membership_off_the_roster(
+    client: TestClient, db: Session
+) -> None:
+    """An inactive reviewee row takes the ``(Sam, Sam)`` pair out of the
+    preview's fan-out but not out of the roster. Generate reads
+    membership off the roster, so Sam's group is still his own and Zoe
+    is excluded with it; the preview must not offer her (findings
+    2026-10-03 B1)."""
+    review_session, instrument, rule_set = _preview_session_with_self_pair(
+        client, db, "prev-roster"
+    )
+    sam = db.execute(
+        select(Reviewee).where(
+            Reviewee.session_id == review_session.id,
+            Reviewee.email_or_identifier == "sam@example.edu",
+        )
+    ).scalar_one()
+    sam.status = "inactive"
+    instrument.group_kind = "r1"
+    db.commit()
+
+    # Control: with the exclusion off, Zoe is the sample.
+    kept = _sample(db, instrument)
+    assert kept is not None and kept[0].name == "Zoe"
+
+    rule_set.exclude_self_reviews = True
+    db.commit()
+    assert _sample(db, instrument) is None
+
+
+def test_preview_sample_membership_matches_addresses_as_normalized(
+    client: TestClient, db: Session
+) -> None:
+    """Both addresses differ from the canonical form, and from each
+    other, only in case and whitespace; it is still a self-review, so
+    the group goes."""
+    review_session, instrument, rule_set = _preview_session_with_self_pair(
+        client, db, "prev-case"
+    )
+    sam_r = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalar_one()
+    sam_r.email = " Sam@Example.edu"
+    sam_e = db.execute(
+        select(Reviewee).where(
+            Reviewee.session_id == review_session.id,
+            Reviewee.name == "Sam",
+        )
+    ).scalar_one()
+    sam_e.email_or_identifier = "SAM@example.EDU "
+    sam_e.status = "inactive"
+    instrument.group_kind = "r1"
+    db.commit()
+
+    kept = _sample(db, instrument)
+    assert kept is not None and kept[0].name == "Zoe"
+
+    rule_set.exclude_self_reviews = True
+    db.commit()
+    assert _sample(db, instrument) is None
+
+
+def test_preview_sample_membership_survives_a_link_rule(
+    client: TestClient, db: Session
+) -> None:
+    """A Link 2 rule that filters Sam's own reviewee row out while
+    keeping Zoe leaves the group Sam's own, as in Generate."""
+    from app.services import instruments as instruments_service
+
+    review_session, instrument, rule_set = _preview_session_with_self_pair(
+        client, db, "prev-link"
+    )
+    zoe = db.execute(
+        select(Reviewee).where(
+            Reviewee.session_id == review_session.id,
+            Reviewee.name == "Zoe",
+        )
+    ).scalar_one()
+    zoe.tag_2 = "Keep"
+    instrument.group_kind = "r1"
+    rule_set.exclude_self_reviews = True
+    db.commit()
+
+    def sample(exclude: bool):
+        rule_set.exclude_self_reviews = exclude
+        db.commit()
+        return instruments_service.find_sample_in_scope_reviewee(
+            db,
+            instrument=instrument,
+            link1_mode="all",
+            link1_combinator="AND",
+            link1_rules=[],
+            link2_mode="filter",
+            link2_combinator="AND",
+            link2_rules=[
+                {
+                    "field": "reviewee.tag2",
+                    "op": "IS",
+                    "operand_value": "Keep",
+                    "operand_tag": "",
+                }
+            ],
+        )
+
+    # Control: the rule alone leaves Zoe as the sample.
+    kept = sample(False)
+    assert kept is not None and kept[0].name == "Zoe"
+    assert sample(True) is None
+
+
 # --------------------------------------------------------------------- #
 # 19O Item 2 — the self-review control's heading and live copy.
 # --------------------------------------------------------------------- #
