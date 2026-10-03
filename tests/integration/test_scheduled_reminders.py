@@ -478,3 +478,56 @@ def test_unparseable_offset_skipped_silently(db: Session) -> None:
     fired = _audit_rows(db, rs, "session.scheduled_reminders_fired")
     assert len(fired) == 1
     assert fired[0].detail["context"]["offset"] == "-PT8H"
+
+
+def test_partial_failure_does_not_requeue_sent_reminders(
+    db: Session, monkeypatch
+) -> None:
+    """Findings B31: a pass that fails partway must not re-queue the
+    reminders it already queued.
+
+    ``send_reminder`` commits each outbox row. The dedupe stamp used to
+    be set afterwards and only flushed, so the guard's rollback after a
+    later reviewer's failure dropped it; the next pass found no stamp
+    and queued the first reviewer's reminder again. The stamp now rides
+    on the row and commits with it."""
+    rs = _ready_session_with_invitations(db, "partial-rem", reviewer_count=2)
+    rs.deadline = datetime.now(timezone.utc) + timedelta(hours=4)
+    rs.reminder_offsets = ["-PT8H"]
+    db.flush()
+    db.commit()
+
+    real_send = invitations_service.send_reminder
+    calls = {"n": 0}
+
+    def _second_fails(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise RuntimeError("transport down for the second reviewer")
+        return real_send(*args, **kwargs)
+
+    monkeypatch.setattr(invitations_service, "send_reminder", _second_fails)
+    scheduled_events.observe_scheduled_events(
+        db, rs, build_invite_url=_stub_build_url
+    )
+    monkeypatch.setattr(invitations_service, "send_reminder", real_send)
+    scheduled_events.observe_scheduled_events(
+        db, rs, build_invite_url=_stub_build_url
+    )
+
+    db.expire_all()
+    reviewers = db.execute(
+        select(Reviewer).where(Reviewer.session_id == rs.id)
+    ).scalars().all()
+    for reviewer in reviewers:
+        rows = db.execute(
+            select(EmailOutbox).where(
+                EmailOutbox.session_id == rs.id,
+                EmailOutbox.reviewer_id == reviewer.id,
+            )
+        ).scalars().all()
+        assert len(rows) == 1, (
+            f"{reviewer.email} got {len(rows)} messages; the first pass's "
+            "send was queued again after the rollback"
+        )
+        assert rows[0].correlation_id == f"reminder:{rs.id}:{reviewer.id}:0"

@@ -291,12 +291,14 @@ stay in §3.
   and widths name the source's display and response field ids
   (`session_clone.py`, `session_config_io/_apply_instrument.py`).
   Replicate re-points them since #2759. Found in #2759's read.
-- **B31** — A scheduled reminder pass that fails partway re-queues the
-  reminders it already queued. `send_reminder` commits each outbox row
-  with no `correlation_id`; `_dispatch_scheduled_reminders` only flushes
-  the dedupe stamp, so the rollback after a later reviewer's failure
-  drops it and the next visit queues those reminders again. Found in
-  #2757's read; it predates that PR, which made the page load instead of
+- ~~**B31**~~ — **Ruled 2026-10-03: fix it in its own PR. Done in
+  #2768.** `send_reminder` now writes the dedupe key onto the outbox row
+  before its commit. A scheduled reminder pass that failed partway
+  re-queued the reminders it had already queued: `send_reminder`
+  committed each outbox row with no `correlation_id`, and
+  `_dispatch_scheduled_reminders` only flushed the dedupe stamp, so the
+  rollback after a later reviewer's failure dropped it. Found in #2757's
+  read; it predated that PR, which made the page load instead of
   failing.
 - **B33** — `spec/assignments.md` lists a relationship pair-context tag
   edit among the triggers that recompute `Assignment.is_self_review`, but

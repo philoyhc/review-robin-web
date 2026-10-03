@@ -214,6 +214,7 @@ def _observe_scheduled_reminders(
             locked,
             offset_index=offset_index,
             build_invite_url=build_invite_url,
+            correlation_id=correlation_id,
         )
 
         audit.write_event(
@@ -245,6 +246,7 @@ def _dispatch_scheduled_reminders(
     *,
     offset_index: int,
     build_invite_url: Callable[[str], str],
+    correlation_id: str | None = None,
 ) -> int:
     """Send a reminder to every incomplete reviewer on the session.
 
@@ -272,21 +274,20 @@ def _dispatch_scheduled_reminders(
         ).scalar_one_or_none()
         if existing is not None:
             continue
-        result = invitations_service.send_reminder(
+        # The dedupe stamp rides on the outbox row and commits with it
+        # (findings B31). Stamping it after ``send_reminder`` returned
+        # left it flushed but uncommitted, so a later reviewer's failure
+        # rolled it back and the next pass queued this reminder again.
+        invitations_service.send_reminder(
             db,
             invitation=row.invitation,
             review_session=session,
             reviewer=row.reviewer,
             user=None,
             build_invite_url=build_invite_url,
-            correlation_id=cid,
+            correlation_id=correlation_id,
+            outbox_correlation_id=cid,
         )
-        # Stamp the new outbox row so the next observer pass dedups
-        # this reviewer at this offset.
-        outbox = db.get(EmailOutbox, result.outbox_id)
-        if outbox is not None:
-            outbox.correlation_id = cid
-            db.flush()
         sent += 1
     return sent
 
