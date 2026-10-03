@@ -38,7 +38,13 @@ register:
 - `ui_elements.md`: `.card-columns`, `.pill-role-*`, the skip link.
 - `rrw_functional_spec.md`: dashboard columns (G12), Create's Quick Setup card (G13), relationship moves (G18).
 - `setup_pages.md`: the Relationships gate and the Observers `CohortRule` column (C21, C22).
-- `reviewer-surface.md`, `instruments.md`, `lifecycle.md`, `validate_page.md`, `settings_inventory.md`, `email_template_editor.md`, `visual_style_general.md`: small gaps (A21, A23, A24, B25, B32, D25, D29, E22).
+- `reviewer-surface.md`: the help-contact header and `observe_deadline` (A23, A24).
+- `instruments.md`: the expanded card's top button row (A21).
+- `lifecycle.md`: the selected-response loss acknowledgement (B25).
+- `validate_page.md`: two checks' preconditions (B32).
+- `settings_inventory.md`: operator flags, the clear-all card, `activated_at` (D25).
+- `email_template_editor.md`: the composer's From and To rows (D29).
+- `visual_style_general.md`: two override rows (E22).
 
 ## 2. Update in place
 
@@ -46,7 +52,7 @@ Ids are in the findings register. A **bold** count means a medium-or-higher
 finding is among them.
 
 - `spec/instruments.md`: 3, plus provenance (A20–A22).
-- `spec/reviewer-surface.md`: **12**, plus provenance (A7–A16, A23–A25).
+- `spec/reviewer-surface.md`: **13**, plus provenance (A7–A16, A23–A25).
 - `spec/participant_model.md`: 2 (A17, A18).
 - `spec/visibility_policy.md`: 2, plus provenance (A18, A19).
 - `spec/sort_by_reviewee.md`: provenance only.
@@ -109,7 +115,8 @@ finding is among them.
 
 ## 4. Retire
 
-- `docs/azure_provision.md` and `docs/azure_github_setup.md` (re-opened H21, H24); repoint the inbound references the register lists first.
+- `docs/azure_provision.md` (re-opened H21); repoint its inbound references, listed in the register, first.
+- `docs/azure_github_setup.md` (re-opened H24); likewise.
 - `rrw_functional_spec.md` §12.4 and §12.5 stubs (G15), and the "Pause" sentences (G3).
 - `setup_pages.md`'s stale cap paragraph (C7).
 - `ui_elements.md`'s entries with no markup (E1), with their dead CSS.
@@ -123,10 +130,15 @@ finding is among them.
 - `spec/role_landing_and_visibility.md`.
 - `spec/blob_storage.md`: `app/services/blob_store.py` is a planned path, escaped and correct.
 - `spec/sort_by_reviewee.md`: matches the code; provenance only.
-- `docs/backup_restore.md`, `docs/operations_runbook.md`, `docs/troubleshooting.md`: current for the dev slot (H23 is the cutover gap).
-- `docs/nus_azure_status_v7.md`, `docs/README.md`.
-- `new_project_practices_setup.md`, `rrw_design_rationale.md`.
-- `docs/practice-audit-2026-09-04.md` and `docs/status_history.md`: dated records, read as history.
+- `docs/backup_restore.md`: current for the dev slot (H23 is the cutover gap).
+- `docs/operations_runbook.md`: current for the dev slot.
+- `docs/troubleshooting.md`: current for the dev slot.
+- `docs/nus_azure_status_v7.md`.
+- `docs/README.md`.
+- `new_project_practices_setup.md`.
+- `rrw_design_rationale.md`.
+- `docs/practice-audit-2026-09-04.md`: a dated record, read as history.
+- `docs/status_history.md`: a dated record, read as history.
 
 ## 7. Not read
 
@@ -142,7 +154,7 @@ None. Read but **not verified**:
 
 - **Staleness.** 5 of 68 files untouched since 2026-10-01; 33 were edited
   this week, most by the previous register's fixes.
-- **Dropped commitments.** 707 of 719 committed paths honoured; 9 of the 12
+- **Dropped commitments.** 707 of 719 committed paths honored; 9 of the 12
   misses no longer exist. Unchanged since the last sweep.
 - **Orphan specs.** The same 17 as last time; none surprised.
 - **Dead references.** Two live candidates: `spec/blob_storage.md` →
