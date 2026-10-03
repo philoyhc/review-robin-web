@@ -393,3 +393,41 @@ def test_half_width_cards_follow_the_authors_order(
     assert right.index('id="extract-data-by-instrument"') < right.index(
         'id="extract-data-intro"'
     )
+
+
+def test_all_instruments_stands_for_every_instrument_chip(
+    client: TestClient, db: Session
+) -> None:
+    """Codex on #2769: the page sends ``all_instruments=1`` rather than
+    one id per chip when every chip is on, so the Zip-all link stays
+    under a gateway's URL limit. It means exactly the full list, on the
+    card's own route and in the bundle."""
+    review_session = _make_session(client, db, code="rb-allinst")
+    ids = _instrument_ids(db, review_session)
+    base = f"/operator/sessions/{review_session.id}/export"
+    listed = "&".join(f"instrument={i}" for i in ids)
+    for kind in ("reviewer_metadata", "reviewee_metadata"):
+        name, body = _download(client, f"{base}/{kind}.csv?{listed}")
+        assert _download(
+            client, f"{base}/{kind}.csv?all_instruments=1"
+        ) == (name, body)
+        assert _download(client, f"{base}/{kind}.csv")[1] != body
+        archive = _bundle(
+            client, review_session, f"?{kind}.all_instruments=1"
+        )
+        assert archive.read(name) == body
+        # It wins over an explicit list, on the card and in the bundle.
+        # Naming only the field-less second instrument would change the
+        # file, so a list that won would fail here.
+        assert _download(client, f"{base}/{kind}.csv?instrument={ids[1]}")[
+            1
+        ] != body
+        assert _download(
+            client, f"{base}/{kind}.csv?all_instruments=1&instrument={ids[1]}"
+        )[1] == body
+        archive = _bundle(
+            client,
+            review_session,
+            f"?{kind}.all_instruments=1&{kind}.instrument={ids[1]}",
+        )
+        assert archive.read(name) == body

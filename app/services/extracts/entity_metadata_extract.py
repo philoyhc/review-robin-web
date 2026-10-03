@@ -77,6 +77,7 @@ __all__ = [
     "SELF_REVIEW_HANDLING_DEFAULT",
     "self_review_handling_filename_suffix",
     "metadata_filename",
+    "metadata_instrument_scope",
 ]
 
 
@@ -124,6 +125,30 @@ def metadata_filename(
         + self_review_handling_filename_suffix(state)
         + ".csv"
     )
+
+
+def metadata_instrument_scope(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    instrument: list[int] | None,
+    all_instruments: bool,
+) -> set[int] | None:
+    """The metadata cards' instrument chips as the builders take them:
+    ``None`` (no chip on) ships only the cross-instrument totals.
+    ``all_instruments`` stands for every chip on, so the Download and
+    Zip-all links stay short however many instruments the session
+    has (an explicit id per chip, three cards over, could pass a
+    gateway's URL limit)."""
+    if all_instruments:
+        return set(
+            db.execute(
+                select(Instrument.id).where(
+                    Instrument.session_id == review_session.id
+                )
+            ).scalars()
+        ) or None
+    return set(instrument) if instrument else None
 
 
 def compute_self_review_data_state(

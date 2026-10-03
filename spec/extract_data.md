@@ -234,10 +234,17 @@ that is `0` when off: `?by_instrument=`, `?reviewer_metadata=`,
 query rides namespaced by its flag and is read exactly as that
 card's route reads it: `?by_instrument.instrument=42`,
 `.meta=0`, `.all_rows=0`; `?reviewer_metadata.instrument=42`,
-`.all=0`, `.self_review_handling=both`; likewise
-`reviewee_metadata.*`. An omitted option takes the card route's
-own default. The page script composes the link from the cards'
-chips on every toggle. The audit event
+`.all_instruments=1`, `.all=0`, `.self_review_handling=both`;
+likewise `reviewee_metadata.*`. An omitted option takes the card
+route's own default. The page script composes the link from the
+cards' chips on every toggle. **With every instrument chip on, the
+link carries no id list** (Codex on #2769): By instrument reads an
+omitted list as every instrument, and the metadata cards take
+`all_instruments=1`, since for them an omitted list means totals
+only. Their own Download links use the same form. A partial
+selection still lists its chosen ids, once per card, so only a
+session with some hundreds of instruments and a partial selection
+could still pass a gateway's URL limit. The audit event
 `session.responses_bundle_extracted` counts response rows, the
 files from each card and token rows, and records each included
 metadata card's self-review pool in `context`.
@@ -378,6 +385,12 @@ All default-selected.
   means *no* per-field blocks (cross-instrument totals
   scan **every** session instrument so they stay
   meaningful).
+- `?all_instruments=1` — every session instrument, as if each
+  were listed; it wins over any `?instrument=`. The page sends it
+  instead of the list when every instrument chip is on, and the
+  server-rendered link carries it when the session has instruments,
+  so the default link is short and matches the chips before the
+  script runs.
 - `?all=0` — set when `All reviewers` / `All reviewees`
   is off.
 - `?self_review_handling=` — `include_self` (default) /

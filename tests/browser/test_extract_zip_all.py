@@ -18,6 +18,8 @@ from urllib.parse import parse_qs, urlsplit
 import httpx
 from playwright.sync_api import Page
 
+from ._builder import add_instrument
+
 
 def _zip_all_query(page: Page) -> dict[str, list[str]]:
     href = page.locator("#extract-data-zip-all").get_attribute("href")
@@ -30,17 +32,13 @@ def test_zip_all_carries_each_cards_chips(
 ) -> None:
     session_id = new_session()
     page.goto(f"/operator/sessions/{session_id}/extract-data")
-    instrument_chip = page.locator(
-        "[data-by-instrument-chip^='instrument-']"
-    ).first
-    instrument_id = instrument_chip.get_attribute(
-        "data-by-instrument-chip"
-    ).removeprefix("instrument-")
 
+    # Every instrument chip on: no id lists, so the link stays short
+    # however many instruments the session has (Codex on #2769).
     query = _zip_all_query(page)
-    assert query["by_instrument.instrument"] == [instrument_id]
-    assert query["reviewer_metadata.instrument"] == [instrument_id]
-    assert query["reviewee_metadata.instrument"] == [instrument_id]
+    assert not any(key.endswith(".instrument") for key in query)
+    assert query["reviewer_metadata.all_instruments"] == ["1"]
+    assert query["reviewee_metadata.all_instruments"] == ["1"]
 
     page.locator("[data-by-instrument-chip='include-metadata']").click()
     page.locator(
@@ -83,3 +81,44 @@ def test_a_by_instrument_card_with_nothing_chosen_rides_as_off(
     query = _zip_all_query(page)
     assert query["by_instrument"] == ["0"]
     assert not any(key.startswith("by_instrument.") for key in query)
+
+
+def test_a_partial_selection_lists_its_ids(
+    page: Page, api: httpx.Client, new_session: Callable[[], int]
+) -> None:
+    """With two instruments and one chip off, each card lists the one
+    left on, both on its own link and in Zip all; with both on again,
+    no list rides (second D28 URL-bound read)."""
+    session_id = new_session()
+    add_instrument(api, session_id)
+    page.goto(f"/operator/sessions/{session_id}/extract-data")
+    for card in ("by-instrument", "reviewer-metadata", "reviewee-metadata"):
+        chips = page.locator(f"[data-{card}-chip^='instrument-']")
+        assert chips.count() == 2
+        chips.nth(0).click()
+    kept = (
+        page.locator("[data-by-instrument-chip^='instrument-']")
+        .nth(1)
+        .get_attribute("data-by-instrument-chip")
+        .removeprefix("instrument-")
+    )
+
+    query = _zip_all_query(page)
+    for flag in ("by_instrument", "reviewer_metadata", "reviewee_metadata"):
+        assert query[f"{flag}.instrument"] == [kept]
+        assert f"{flag}.all_instruments" not in query
+    for card, path in (
+        ("by-instrument", "by_instrument_bundle.zip"),
+        ("reviewer-metadata", "reviewer_metadata.csv"),
+        ("reviewee-metadata", "reviewee_metadata.csv"),
+    ):
+        href = page.locator(f"#extract-data-{card}-zip").get_attribute("href")
+        assert path in href
+        assert parse_qs(urlsplit(href).query)["instrument"] == [kept]
+
+    for card in ("by-instrument", "reviewer-metadata", "reviewee-metadata"):
+        page.locator(f"[data-{card}-chip^='instrument-']").nth(0).click()
+    query = _zip_all_query(page)
+    assert not any(key.endswith(".instrument") for key in query)
+    href = page.locator("#extract-data-reviewer-metadata-zip").get_attribute("href")
+    assert parse_qs(urlsplit(href).query) == {"all_instruments": ["1"]}

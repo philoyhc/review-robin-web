@@ -46,6 +46,7 @@ from app.services.extracts.entity_metadata_extract import (
     build_reviewee_metadata,
     build_reviewer_metadata,
     metadata_filename,
+    metadata_instrument_scope,
 )
 from app.services.extracts.observers_extract import serialize_observers
 from app.services.extracts.participant_tokens_extract import (
@@ -363,6 +364,9 @@ def export_responses_bundle_zip(
         default=None, alias="reviewer_metadata.instrument"
     ),
     rvr_all: int = Query(default=1, alias="reviewer_metadata.all"),
+    rvr_all_instruments: int = Query(
+        default=0, alias="reviewer_metadata.all_instruments"
+    ),
     rvr_self_review_handling: str = Query(
         default=SELF_REVIEW_HANDLING_DEFAULT,
         alias="reviewer_metadata.self_review_handling",
@@ -372,6 +376,9 @@ def export_responses_bundle_zip(
         default=None, alias="reviewee_metadata.instrument"
     ),
     rve_all: int = Query(default=1, alias="reviewee_metadata.all"),
+    rve_all_instruments: int = Query(
+        default=0, alias="reviewee_metadata.all_instruments"
+    ),
     rve_self_review_handling: str = Query(
         default=SELF_REVIEW_HANDLING_DEFAULT,
         alias="reviewee_metadata.self_review_handling",
@@ -392,8 +399,9 @@ def export_responses_bundle_zip(
     A card's own query rides namespaced by the card, read as that
     card's route reads it: ``?by_instrument.instrument=42`` (and
     ``.meta`` / ``.all_rows``) as on ``by_instrument_bundle.zip``;
-    ``?reviewer_metadata.instrument=42`` (and ``.all`` /
-    ``.self_review_handling``) as on ``reviewer_metadata.csv``, and
+    ``?reviewer_metadata.instrument=42`` (and ``.all_instruments`` /
+    ``.all`` / ``.self_review_handling``) as on
+    ``reviewer_metadata.csv``, and
     likewise for reviewees. Saved shapes carry their own chips, so
     ``data_shapes`` has no options. The page composes the URL from
     the cards' chips; an omitted option takes the card route's own
@@ -402,7 +410,12 @@ def export_responses_bundle_zip(
     Filename: ``{code}_responses.zip``."""
     reviewer_options = (
         MetadataOptions(
-            instrument_ids=set(rvr_instrument) if rvr_instrument else None,
+            instrument_ids=metadata_instrument_scope(
+                db,
+                review_session,
+                instrument=rvr_instrument,
+                all_instruments=rvr_all_instruments != 0,
+            ),
             all_rows=rvr_all != 0,
             self_review_handling=_normalise_self_review_handling(
                 rvr_self_review_handling
@@ -413,7 +426,12 @@ def export_responses_bundle_zip(
     )
     reviewee_options = (
         MetadataOptions(
-            instrument_ids=set(rve_instrument) if rve_instrument else None,
+            instrument_ids=metadata_instrument_scope(
+                db,
+                review_session,
+                instrument=rve_instrument,
+                all_instruments=rve_all_instruments != 0,
+            ),
             all_rows=rve_all != 0,
             self_review_handling=_normalise_self_review_handling(
                 rve_self_review_handling
@@ -548,6 +566,7 @@ def _normalise_self_review_handling(raw: str | None) -> str:
 def export_reviewer_metadata_csv(
     instrument: list[int] | None = Query(default=None),
     all: int = Query(default=1),
+    all_instruments: int = Query(default=0),
     self_review_handling: str = Query(default=SELF_REVIEW_HANDLING_DEFAULT),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -556,7 +575,9 @@ def export_reviewer_metadata_csv(
     """Backs the Extract data tab's Reviewer response metadata
     card. ``?instrument=<id>`` (repeated) drives the per-(instrument,
     field) column blocks; omitted = no per-field blocks (just the
-    cross-instrument totals). ``?all=0`` filters body rows to
+    cross-instrument totals). ``?all_instruments=1`` stands for every
+    instrument, which the page sends when every chip is on so the link
+    stays short. ``?all=0`` filters body rows to
     reviewers with at least one non-empty response in scope.
 
     ``?self_review_handling=`` ∈ ``{"include_self", "exclude_self",
@@ -567,7 +588,12 @@ def export_reviewer_metadata_csv(
     links keep working unchanged.
     """
     state = _normalise_self_review_handling(self_review_handling)
-    instrument_ids = set(instrument) if instrument else None
+    instrument_ids = metadata_instrument_scope(
+        db,
+        review_session,
+        instrument=instrument,
+        all_instruments=all_instruments != 0,
+    )
     rows = build_reviewer_metadata(
         db,
         review_session,
@@ -607,6 +633,7 @@ def export_reviewer_metadata_csv(
 def export_reviewee_metadata_csv(
     instrument: list[int] | None = Query(default=None),
     all: int = Query(default=1),
+    all_instruments: int = Query(default=0),
     self_review_handling: str = Query(default=SELF_REVIEW_HANDLING_DEFAULT),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -616,7 +643,12 @@ def export_reviewee_metadata_csv(
     card — symmetric to ``export_reviewer_metadata_csv``. See
     that route for the ``?self_review_handling=`` contract."""
     state = _normalise_self_review_handling(self_review_handling)
-    instrument_ids = set(instrument) if instrument else None
+    instrument_ids = metadata_instrument_scope(
+        db,
+        review_session,
+        instrument=instrument,
+        all_instruments=all_instruments != 0,
+    )
     rows = build_reviewee_metadata(
         db,
         review_session,
