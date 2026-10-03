@@ -1,8 +1,7 @@
 """Instruments slice — instrument CRUD (page, add, delete, edit
 description, bulk save fields), per-instrument response/display
-field CRUD (add / edit / delete / move + bulk save), and the
-visibility-when-closed flag. There is no per-instrument or bulk
-accepting control: accepting is session-wide.
+field CRUD (add / edit / delete / move + bulk save). There is no
+per-instrument or bulk accepting control: accepting is session-wide.
 
 Slice 10 of the major refactor. Response Type Definition CRUD
 was carved into the sibling ``_response_types.py`` slice in
@@ -1228,26 +1227,3 @@ async def instrument_set_identity(
         )
     db.commit()
     return JSONResponse({"ok": True}, status_code=status.HTTP_200_OK)
-
-
-@router.post("/sessions/{session_id}/instruments/{instrument_id}/visibility")
-def instrument_visibility(
-    visible_when_closed: str | None = Form(default=None),
-    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    instrument, review_session = bundle
-    lifecycle.set_responses_visible_when_closed(
-        db,
-        instrument=instrument,
-        review_session=review_session,
-        user=user,
-        visible=visible_when_closed == "true",
-        correlation_id=request_correlation_id(),
-    )
-    return _instruments_redirect(
-        review_session.id, fragment=f"instrument-{instrument.id}"
-    )
-
-

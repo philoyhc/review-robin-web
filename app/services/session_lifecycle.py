@@ -268,11 +268,6 @@ def invalidate_if_validated(
     the ``validated → draft`` invariant is enforced where the mutation
     happens, not where the request happens — a route that forgets to
     wrap its service call no longer silently breaks the invariant.
-
-    Visibility-when-closed services (``bulk_set_visibility``,
-    ``set_responses_visible_when_closed``) deliberately do **not** call
-    this helper: ``responses_visible_when_closed`` is a display flag
-    that doesn't affect the validation snapshot. See ``docs/status.md``.
     """
     if is_validated(review_session):
         invalidate_session(
@@ -730,25 +725,6 @@ def unarchive_session(
 # were removed with their routes on 2026-10-01.
 
 
-def set_responses_visible_when_closed(
-    db: Session,
-    *,
-    instrument: Instrument,
-    review_session: ReviewSession,
-    user: User,
-    visible: bool,
-    correlation_id: str | None = None,
-) -> Instrument:
-    # #16 — visibility-when-closed is a display flag, not part of the
-    # validation snapshot. Deliberately does NOT call
-    # ``invalidate_if_validated``.
-    instrument.responses_visible_when_closed = bool(visible)
-    db.flush()
-    db.commit()
-    db.refresh(instrument)
-    return instrument
-
-
 # --------------------------------------------------------------------------- #
 # Acceptance predicate + lazy deadline observer
 # --------------------------------------------------------------------------- #
@@ -1049,7 +1025,6 @@ __all__ = [
     "release_responses_now",
     "stop_responses_release",
     "unarchive_session",
-    "set_responses_visible_when_closed",
     "session_accepts_responses",
     "observe_deadline",
     "session_has_responses",

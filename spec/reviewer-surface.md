@@ -881,8 +881,8 @@ GET requests behave differently depending on which gate fails:
   The same rule decides the summary page and its CSV, per
   instrument: a hidden instrument is left out, and a banner says some
   or all responses are not shown; with none shown, the CSV link goes.
-  `responses_visible_when_closed` no longer decides anything; it
-  round-trips for config only.
+  The `responses_visible_when_closed` flag that once decided this
+  retired with its column on 2026-10-03 (findings B21).
 
 ### Lazy deadline-close
 

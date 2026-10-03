@@ -77,7 +77,6 @@ def ensure_default_instrument(
             name=DEFAULT_INSTRUMENT_NAME,
             order=0,
             accepting_responses=False,
-            responses_visible_when_closed=False,
         )
         db.add(instrument)
         db.flush()
@@ -217,7 +216,6 @@ def create_instrument(
         name=f"instrument_{next_num}",
         order=new_order,
         accepting_responses=False,
-        responses_visible_when_closed=False,
         group_kind=group_kind,
     )
     db.add(instrument)
@@ -350,7 +348,6 @@ def replicate_instrument(
         order=new_order,
         short_label=_copy_short_label(source.short_label),
         accepting_responses=source.accepting_responses,
-        responses_visible_when_closed=source.responses_visible_when_closed,
         group_kind=source.group_kind,
         band1_touched_links=_copy.deepcopy(source.band1_touched_links),
         band2_state=_copy.deepcopy(source.band2_state),
@@ -1158,6 +1155,6 @@ def set_column_widths(
 # wired into the UI and dropped from the spec, and per-instrument
 # open/close went too (2026-10-01): accepting is session-wide. The bulk visibility-when-
 # closed toggle was removed from the Instruments page — visibility
-# when closed is now governed by the per-instrument visibility policy.
-# The per-instrument ``set_responses_visible_when_closed`` service
-# (session_lifecycle) still backs config round-trip.
+# when closed is now governed by the per-instrument visibility policy,
+# and the ``responses_visible_when_closed`` column itself retired on
+# 2026-10-03 (findings B21).

@@ -123,12 +123,6 @@ The invariant lives at the **mutation site**, not the route, so a
 route that forgets to wrap its service call cannot silently break
 it.
 
-**Visibility-when-closed exemption.** The
-`set_responses_visible_when_closed` service deliberately does
-**not** invalidate. The `responses_visible_when_closed` flag decides
-nothing (it round-trips for config only) and doesn't affect the
-validation snapshot.
-
 ### 2.4 `validated → ready` — `activate_session(...)`
 
 Called by `POST /operator/sessions/{id}/activate` and by
@@ -313,16 +307,19 @@ read-only banners but the source of truth is the route gate.
 
 ## 4. Per-instrument lifecycle
 
-Each instrument carries an `accepting_responses` flag and a
-`responses_visible_when_closed` flag, which decides nothing (below). Accepting is set and cleared
+Each instrument carries an `accepting_responses` flag. It is set and cleared
 session-wide, below, so within a `ready` session every instrument is
 open or every instrument is closed.
 
 | Column | Type | Meaning |
 |---|---|---|
 | `accepting_responses` | `Boolean` | Reviewers can save / submit. **Session-wide in practice:** set on every instrument by activate, cleared on every instrument by revert, Close session and deadline-close. No operator control sets it per instrument. |
-| `responses_visible_when_closed` | `Boolean` | **Decides nothing.** Kept for config round-trip only; what a reviewer reads back after close is the visibility policy's call (`spec/reviewer-surface.md` "Lifecycle gating"). |
 | `deadline_closed_at` | `DateTime \| None` | Timestamp the deadline-close fired. Used to render the "auto-closed at X" pill. |
+
+What a reviewer reads back after close is the visibility policy's call
+(`spec/reviewer-surface.md` "Lifecycle gating"). The
+`responses_visible_when_closed` flag that once decided it retired with
+its column on 2026-10-03 (findings B21).
 
 **Services:**
 
@@ -344,9 +341,6 @@ open or every instrument is closed.
   session is `ready` and before its deadline, emitting
   `instrument.opened reason="session_wide"`. Past the deadline it
   closes instead, as before.
-- `set_responses_visible_when_closed(...)` — writes the flag, which
-  decides nothing now (§4 field table); its route has no UI and no
-  lifecycle gate; **does not invalidate** per §2.3.
 - `observe_deadline(...)` — lazy deadline-close. Idempotent. Called
   on the reviewer surface — its GET (`review_surface` and
   `_surface_context`; the operator preview skips it), Recall, and the write gate

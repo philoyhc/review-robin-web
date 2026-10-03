@@ -57,7 +57,6 @@ def test_replicate_clones_the_rule_and_copies_the_setup(db: Session) -> None:
     source.band1_touched_links = ["link1", "link2", "link3"]
     source.band2_state = {"selected_display_keys": ["reviewee.name"]}
     source.starts_new_page = True
-    source.responses_visible_when_closed = True
     source.accepting_responses = True
     db.get(SessionRuleSet, source.rule_set_id).exclude_self_reviews = True
     db.commit()
@@ -76,7 +75,6 @@ def test_replicate_clones_the_rule_and_copies_the_setup(db: Session) -> None:
     assert replica.short_label == "Copy of Peer"
     assert replica.band1_touched_links == ["link1", "link2", "link3"]
     assert replica.band2_state == {"selected_display_keys": ["reviewee.name"]}
-    assert replica.responses_visible_when_closed is True
     assert replica.accepting_responses is True
     assert replica.starts_new_page is False
     created = db.execute(

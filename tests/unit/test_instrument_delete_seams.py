@@ -48,7 +48,6 @@ def _add_instrument(db: Session, session: ReviewSession, order: int) -> Instrume
         name=f"instrument_{order}",
         order=order,
         accepting_responses=False,
-        responses_visible_when_closed=False,
     )
     db.add(instrument)
     db.flush()

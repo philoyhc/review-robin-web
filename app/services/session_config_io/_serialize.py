@@ -339,11 +339,6 @@ def _instrument_rows(
             "boolean",
         ),
         Row(
-            f"{prefix}.responses_visible_when_closed",
-            _bool(instrument.responses_visible_when_closed),
-            "boolean",
-        ),
-        Row(
             f"{prefix}.sort_display_fields",
             _json(instrument.sort_display_fields or []),
             "json",

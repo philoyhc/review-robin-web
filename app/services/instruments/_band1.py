@@ -398,12 +398,8 @@ def set_exclude_self_reviews(
     the seed is only ever read inside the quota-rule loop, which an
     empty rule set never enters.
 
-    **This invalidates a validated session**, unlike the
-    visibility-when-closed services that
-    ``session_lifecycle.invalidate_if_validated`` names as deliberate
-    non-callers. Those skip it because
-    ``responses_visible_when_closed`` is a display flag outside the
-    validation snapshot. This one is not a display flag: it is an
+    **This invalidates a validated session**: it is not a display
+    flag outside the validation snapshot but an
     assignment-rule input whose only purpose is to change which rows
     generate (from rung 3 of 19O Item 1). Invalidating from the rung
     that ships the control, rather than the rung that honors it,

@@ -264,28 +264,3 @@ def test_response_field_add_invalidates(
 
     db.refresh(review_session)
     assert review_session.status == "draft"
-
-
-# -- #16: visibility services must NOT invalidate ---------------------------
-# (``bulk_set_visibility`` retired in 18R Item 3; the per-instrument
-# ``set_responses_visible_when_closed`` service remains and is covered
-# below.)
-
-
-def test_set_responses_visible_when_closed_does_not_invalidate(
-    setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
-    db: Session,
-) -> None:
-    op, review_session, _, _, assignment = setup
-    instrument = assignment.instrument
-
-    lifecycle.set_responses_visible_when_closed(
-        db,
-        instrument=instrument,
-        review_session=review_session,
-        user=op,
-        visible=True,
-    )
-
-    db.refresh(review_session)
-    assert review_session.status == "validated"

@@ -217,7 +217,10 @@ def _apply_instrument_kv(
     elif attr == "accepting_responses":
         instrument.accepting_responses = _parse_bool(value)
     elif attr == "responses_visible_when_closed":
-        instrument.responses_visible_when_closed = _parse_bool(value)
+        # Retired 2026-10-03 (findings B21): the column is gone. An
+        # older Settings CSV may still carry the row; accept it and
+        # drop the value, so its import still succeeds.
+        pass
     elif attr == "sort_display_fields":
         instrument.sort_display_fields = _parse_json(value, default=[])
     elif attr == "group_kind":
@@ -375,7 +378,6 @@ def _apply_instruments(
             description=spec.description,
             order=n,  # 1-based CSV position wins over ``order`` cell
             accepting_responses=spec.accepting_responses,
-            responses_visible_when_closed=spec.responses_visible_when_closed,
             sort_display_fields=spec.sort_display_fields,
             group_kind=spec.group_kind,
             rule_set_id=resolved_rule_set_id,

@@ -10,8 +10,8 @@ ruling, 2026-10-01, on ``guide/findings_2026-10-01_corpus.md`` G10;
 - ``expired`` outside the window: nothing;
 - archived: nothing, on the summary page or its CSV either.
 
-``responses_visible_when_closed`` no longer decides anything; it
-round-trips for config only, and setting it changes nothing here.
+The ``responses_visible_when_closed`` flag that once decided this
+retired with its column on 2026-10-03 (findings B21).
 """
 
 from __future__ import annotations
@@ -164,7 +164,6 @@ def _close_after_rae_submits(
     code: str,
     released_mode: str | None,
     open_release: bool,
-    retired_flag: bool = True,
     second_instrument_mode: str | None = "unused",
 ) -> tuple[ReviewSession, TestClient]:
     """Rae submits 5 / "great review"; the operator authors the
@@ -203,8 +202,6 @@ def _close_after_rae_submits(
             after_release_mode=mode,
             user=operator,
         )
-        # The retired toggle: it must no longer decide anything.
-        instrument.responses_visible_when_closed = retired_flag
     db.commit()
     close_resp = client.post(
         f"/operator/sessions/{review_session.id}/workflow/close",
@@ -225,11 +222,10 @@ def _close_after_rae_submits(
 def test_released_raw_shows_the_reviewers_own_values(
     client: TestClient, db: Session, alice, rae, make_client
 ) -> None:
-    """The policy alone shows them: the retired toggle is off here."""
+    """The policy alone shows them."""
     review_session, rae_client = _close_after_rae_submits(
         client, db, alice, rae, make_client,
         code="vis-raw", released_mode="raw", open_release=True,
-        retired_flag=False,
     )
     body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
     assert 'value="5"' in body
@@ -261,7 +257,7 @@ def test_otherwise_a_closed_session_hides_them(
     open_release: bool,
 ) -> None:
     """Outside the release window, or with the released cell off, the
-    reviewer's values are hidden — even with the retired toggle set."""
+    reviewer's values are hidden."""
     review_session, rae_client = _close_after_rae_submits(
         client, db, alice, rae, make_client,
         code=f"vis-hide-{released_mode}-{open_release}",

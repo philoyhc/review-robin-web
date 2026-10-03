@@ -81,7 +81,6 @@ class _InstrumentSpec:
     description: str | None = None
     order: int | None = None
     accepting_responses: bool = False
-    responses_visible_when_closed: bool = False
     sort_display_fields: list[Any] | None = None
     group_kind: str | None = None
     rule_set_name: str | None = None
