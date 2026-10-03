@@ -115,9 +115,9 @@ App Settings until Key Vault references are wired.
   `--ink`, giving **5.33** at rest and **6.98** for the hover that had
   been the worst pair in the palette at 2.54.
 
-  That follows the pattern the palette already used: `--text-on-amber`
-  is `--white` in light and `--ink` in dark, as is `--btn-alert-fg`,
-  because the dark alert fill is bright. The accent family had been the
+  That follows the pattern the palette already used: `--btn-alert-fg`
+  is `--white` in light and `--ink` in dark, because the dark alert
+  fill is bright. The accent family had been the
   outlier. Details in `spec/color_tokens.md`, "The AA floor on text".
 
 - **Three further pairs are under AA and accepted** (author,

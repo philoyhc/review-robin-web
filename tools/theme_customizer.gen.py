@@ -174,7 +174,6 @@ TARGETS = [
     (".pill-info", "Info pill", [("infill", "bg", "--status-info-bg"), ("text", "fg", "--text-body")]),
     (".pill-success", "Success pill", [("infill", "bg", "--status-success-bg"), ("text", "fg", "--status-success-accent")]),
     _pill("super", "Super pill"),
-    (".pill-handle", "Handle pill", [("infill", "bg", "--surface-muted"), ("text", "fg", "--text-body")]),
     (".warning-banner", "Warning banner",
      [("background", "bg", "--status-warning-bg"), ("text", "fg", "--status-warning-fg"),
       ("border", "border", "--status-warning-border")]),
@@ -206,7 +205,6 @@ TARGETS = [
      [("text", "fg", "--text-subtle"), ("strip", "bg", "--nav-strip-ops-bg")]),
     (".tag-chip.is-selected", "Selected tag chip", [("infill", "bg", "--selected-bg"), ("text", "fg", "--selected-fg")]),
     (".back-link", "Back link", [("text", "fg", "--text-link")]),
-    (".help-preview", "Help preview text", [("text", "fg", "--text-body")]),
 ]
 TARGETS += [(f".ph-tint:nth-child({i})", f"Instrument tint {i}", [("background", "bg", f"--surface-tint-{i}")])
             for i in range(1, 7)]

@@ -117,7 +117,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   `.description-text`, `.help-preview`, the `.page-grid` placement
   classes, `.btn-icon.danger/.action`, `.order-cell/.order-arrows`,
   `.pill-handle`, `.form-error`, `.card.disabled`, `.quick-setup-divider`,
-  `.rule-edit-row`, `.btn.alert-solid` (E1–E4); test comments citing
+  `.rule-edit-row`, `.btn.alert-solid` (E1–E4; all but E2's `.page-grid` placement classes deleted in #2807, with `DEBUG` / `APP_NAME`); test comments citing
   `rrw_functional_spec.md:1114` (G); `test_monitoring_prefetch.py:387-395`
   (F25).
 
@@ -163,13 +163,13 @@ stricter until ruled on.
   resolver; `/monitoring`'s 303 against the 308 house rule.
 
 **Spec contracts the tree no longer meets.**
-- **E3, E4, E14**: retire the dead `.btn-icon` modifiers, unrendered
+- ~~**E3, E4, E14**~~ — **Ruled 2026-10-03: delete the code and the spec rows. Done in #2807.** Retire the dead `.btn-icon` modifiers, unrendered
   classes and three consumerless tokens (`--text-on-amber`, `--space-12`,
   `--space-16`), or keep them on purpose.
-- ~~**E9, E18**~~, **E19**, ~~**E23, E16**~~ — **Ruled 2026-10-03: update the spec. Done in #2806** (E19's underline goes with the dead-code deletion): `error.html`'s raw-hex palette; no H1 on
+- ~~**E9, E18, E19, E23, E16**~~ — **Ruled 2026-10-03: update the spec. Done in #2806**; E19's underline deleted in #2807: `error.html`'s raw-hex palette; no H1 on
   the Create page; the app-identity span; 1px vs 2px borders; the
   `#667080` counterfactual.
-- ~~**D9, D11**~~, **D23** — **Ruled 2026-10-03: update the spec.** D9 and D11 (the posture stated; phase 2's wipe names the assignments and responses) **done in #2806**; D23 goes with the dead-code deletion: the golden-fixture claim for Settings CSV order;
+- ~~**D9, D11, D23**~~ — **Ruled 2026-10-03: update the spec.** D9 and D11 (the posture stated; phase 2's wipe names the assignments and responses) **done in #2806**; D23 **done in #2807** (`APP_NAME` and `DEBUG` deleted, `APP_ENV`'s boot gate stated): the golden-fixture claim for Settings CSV order;
   formula-injection posture for extracts; `DEBUG` / `APP_NAME` unread and
   `APP_ENV` called informational though it gates boot.
 - ~~**H10**~~ — **Ruled 2026-10-03: update the docs. Done in #2806**: provisioned, earmarked for 18Q, unused. one stated purpose for the storage account (diagnostics only,
@@ -325,7 +325,7 @@ stricter until ruled on.
 **E — UI and visual style**
 
 - `ui_elements.md`:
-  - E1 med retire · :598-603, 704 (and `visual_style_rrw.md:105`): `.display-edit`, `.instrument-edit`, `.field-builder`, `.locked` have no markup.
+  - ~~E1~~ med retire, **done in #2807** · :598-603, 704 (and `visual_style_rrw.md:105`): `.display-edit`, `.instrument-edit`, `.field-builder`, `.locked` have no markup.
   - E2 low-med spec · :699, 1024: the `.page-grid` placement classes and the L-shape claim.
   - E3, E4 author (above).
   - E5 low spec · :519: `.col-shrink` is on the Timezone and select-all columns.

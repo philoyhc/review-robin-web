@@ -8,7 +8,7 @@ Instantiates the general visual style spec (`spec/visual_style_general.md`) for 
 Read alongside:
 
 - `spec/visual_style_general.md` — the design system this document instantiates. Components and visual vocabulary defined there (palette, typography, spacing, button shapes, card shapes, badge shapes, etc.) apply uniformly across all surfaces.
-- `spec/ui_elements.md` — element catalogue the app-level UI vocabulary lives in: the six canonical `.btn` roles (Primary / Secondary / Destructive [outline red] / Alert [filled amber] / Outline-amber [lock-card recovery] / Toggle [two-state per-row flag]) in §6, where `.alert-solid` resolves to Primary and `.danger` is a context class; the inline error / warning banner convention (mandatory `.btn.alert` Cancel, `banner-scroll-target` auto-scroll, `#source-row` Cancel-return fragment) in §5a; and the `.page-grid` / `.bottom-grid` layout primitives in §10. When this doc names a button or banner pattern, the mechanics live there.
+- `spec/ui_elements.md` — element catalogue the app-level UI vocabulary lives in: the six canonical `.btn` roles (Primary / Secondary / Destructive [outline red] / Alert [filled amber] / Outline-amber [lock-card recovery] / Toggle [two-state per-row flag]) in §6, where `.danger` is a context class; the inline error / warning banner convention (mandatory `.btn.alert` Cancel, `banner-scroll-target` auto-scroll, `#source-row` Cancel-return fragment) in §5a; and the `.page-grid` / `.bottom-grid` layout primitives in §10. When this doc names a button or banner pattern, the mechanics live there.
 - `spec/domain_assumptions.md` — load-bearing domain (Session + Instrument) assumptions only; the UI vocabulary lives in `spec/ui_elements.md`.
 - `spec/audience_and_identity_model.md` — audience definitions, auth posture, and customization boundaries that this document's chrome decisions implement.
 
@@ -73,7 +73,7 @@ Where the shipped treatment differs from `spec/visual_style_general.md`, **the a
 | Topic | General spec | Review Robin |
 |---|---|---|
 | **Focus** | Border color change, "no thick outline ring". | Text inputs, textareas and selects take the border change plus a 1px `--focus-ring-halo` shadow on `:focus`, **and** a 2px solid `--focus-ring` outline (1px offset) on `:focus-visible` — `base.html`'s `body.ui-v2 input[type="text"]:focus-visible` rule set. Sort buttons (`.rrw-sort-btn:focus-visible`) take a 2px `--focus-ring-strong` outline. |
-| **Links** | No underline at rest, underline on hover, "within prose: same treatment". | Chrome and navigation links follow the general rule (`.breadcrumb a`, `.back-link`, `.chrome-user .chrome-link`, `.chrome-app-identity`). **Links in page content keep the browser's resting underline**: the base `a` rule sets only `--text-link`. |
+| **Links** | No underline at rest, underline on hover, "within prose: same treatment". | Chrome and navigation links follow the general rule (`.breadcrumb a`, `.back-link`, `.chrome-user .chrome-link`). `.chrome-app-identity` is plain text, not a link, and takes no hover underline. **Links in page content keep the browser's resting underline**: the base `a` rule sets only `--text-link`. |
 | **Table row borders** | `border-subtle` 1px bottom border per row. | `--border-default` 1px bottom border on every `th` / `td` (`body.ui-v2 th, td`); padding, header fill and row hover are as the general spec. |
 | **Card heading gap** | H2 has 16px below it. | `--space-3` (12px) below an H2, in a card or out of one (`body.ui-v2 h2`, `body.ui-v2 .card h2`; `spec/ui_elements.md` §3). |
 | **Muted text tiers** | `text-secondary` and `text-muted`, two tiers. | One muted tier, `--text-subtle`, held to the AA floor; there is no lighter text tier (`spec/color_tokens.md` "The AA floor on text"). |
@@ -102,7 +102,7 @@ Cards are either **half-width** or **full-width**:
   - Per-instrument cards on the Instruments page, each of which hosts nested half-width Display Fields + Response Fields children.
   - Top-of-page status / overview cards that span the chrome's status strip width. The Validate page's **Setup coverage** card is one such case — `.card.setup-coverage` in `session_validate.html`, on a page with no `.card-columns` at all. (The Instruments status card was the example here until 19O Item 6; it is **half-width** in a `.card-columns` pair beside that page's guidance card, so it was the wrong one — see `spec/instruments.md`.)
   - Multi-column forms whose grouping exceeds a half-width column.
-- **Nested half-within-full.** Inside a full-width card, two half-width sub-cards can sit side-by-side when the parent's affordance benefits from that arrangement. Example: each per-instrument card on the Instruments page is full-width, with Display Fields + Response Fields half-cards side-by-side inside (the `.field-builder` `.bottom-grid` pattern).
+- **Nested half-within-full.** Inside a full-width card, two half-width sub-cards can sit side-by-side when the parent's affordance benefits from that arrangement.
 
 `.page-grid` (with `align-items: stretch` for L-shape equal-height layouts and explicit placement classes `.card-tl` / `.card-tr` / `.card-bl` / `.card-br`) is a legacy primitive; **`.bottom-grid` is preferred** for new pairings since natural heights almost always read better than stretched ones.
 

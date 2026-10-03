@@ -26,8 +26,6 @@
         --space-4: 16px;
         --space-6: 24px;
         --space-8: 32px;
-        --space-12: 48px;
-        --space-16: 64px;
         /* Radii */
         --radius-button: 6px;
         --radius-card: 8px;
@@ -133,7 +131,6 @@
         --text-body: var(--ink);
         --text-subtle: var(--slate);
         --text-on-accent: var(--white);
-        --text-on-amber: var(--white);
         --text-link: var(--blue-strong);
         --text-link-strong: var(--blue-deep);
         /* Borders & focus [P] */
@@ -242,8 +239,6 @@
         /* Selection, toggles & markers [P]/[A] */
         --selected-bg: var(--blue-strong);
         --selected-fg: var(--white);
-        --icon-btn-action-fg: var(--blue-strong);
-        --icon-btn-danger-fg: var(--red-strong);
         --focus-ring-strong: var(--blue-deep);
         --row-pending-marker: var(--amber);
         --chip-active-border: var(--blue-strong);
@@ -290,7 +285,6 @@
         --text-body: var(--paper);
         --text-subtle: var(--slate-pale);
         --text-on-accent: var(--ink);
-        --text-on-amber: var(--ink);
         --text-link: var(--blue-glow-soft);
         --text-link-strong: var(--blue-soft);
         /* Borders & focus [P] */
@@ -385,8 +379,6 @@
         /* Selection, toggles & markers [P]/[A] */
         --selected-bg: var(--blue-glow);
         --selected-fg: var(--ink);
-        --icon-btn-action-fg: var(--blue-glow);
-        --icon-btn-danger-fg: var(--red-bright);
         --focus-ring-strong: var(--blue-soft);
         --row-pending-marker: var(--amber-deep-dk);
         --chip-active-border: var(--blue-glow);
@@ -421,19 +413,6 @@
         border: 0;
         border-top: 1px solid var(--border-default);
         margin: 16px 0 12px 0;
-      }
-      .pill.pill-handle {
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        background: var(--surface-muted);
-        color: var(--text-body);
-        text-transform: none;
-        font-weight: 500;
-      }
-      .help-preview {
-        white-space: pre-wrap;
-        font-size: 0.9em;
-        color: var(--text-body);
-        margin: 0;
       }
       /*
        * Reviewer-surface help-text primitives — visual_style_general.md-aligned
@@ -493,7 +472,6 @@
         color: var(--text-subtle);
         text-decoration: none;
       }
-      .chrome-app-identity:hover { text-decoration: underline; }
       .breadcrumb { font-size: 0.95em; }
       .breadcrumb a { color: var(--text-link); text-decoration: none; }
       .breadcrumb a:hover { text-decoration: underline; }
@@ -636,16 +614,9 @@
         box-shadow: inset 3px 0 0 0 var(--row-pending-marker);
       }
       .muted { color: var(--text-subtle); }
-      /*
-       * Note (2026-05-03): the .btn variants below (default / .secondary /
-       * .danger / .danger-solid / .alert / .alert-solid) are the
-       * high-contrast saturated palette that spec/visual_style_general.md retires.
-       * spec/visual_style_general.md is now authoritative for button styling
-       * (Primary / Secondary / Destructive on a muted, low-contrast
-       * vocabulary). The CSS here has not been migrated yet — that's the
-       * "First PR — button restyle" called out in unfinished_business.md
-       * #21. Until that ships, the rules below remain live.
-       */
+      /* Behavior every .btn role shares: hidden and disabled. The
+         role rules themselves (spec/ui_elements.md §6) are the
+         body.ui-v2 .btn blocks further down. */
       .btn[hidden], button.btn[hidden], a.btn[hidden] { display: none; }
       .btn:disabled, button.btn:disabled, a.btn.disabled {
         opacity: 0.5;
@@ -964,13 +935,6 @@
       }
       .status-row p { margin: 0; }
       .status-row p + p { margin-top: 4px; }
-      .instrument-edit:has(details[open]) .description-text { display: none; }
-      .instrument-edit details[open] > summary { display: none; }
-      .display-edit[open] > summary { display: none; }
-      .field-builder.locked details > summary { pointer-events: none; cursor: default; }
-      .field-builder.locked details summary span[title="Edit"],
-      .field-builder.locked a[title="Delete row"],
-      .field-builder.locked a[title="Add row after"] { display: none; }
       .page-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -1474,10 +1438,9 @@
       /* `text-decoration: none` here, even though 19J.7 rung 4 took
          exactly that property *off* `.table-pager-link` — the two are
          different surfaces. A range in a strip was inline prose and had
-         to read as the link it was; these are the `.btn-icon` role, the
-         same borderless glyph button as the move-up / move-down arrows,
-         and an underlined `»` reads as a typo. The hover darkening is
-         what says it is live. */
+         to read as the link it was; these are the `.btn-icon` role, a
+         borderless glyph button, and an underlined `»` reads as a
+         typo. The hover darkening is what says it is live. */
       /* `.btn-icon.table-pager-step`, not `.table-pager-step`, and the
          extra class is load-bearing rather than decorative:
          `body.ui-v2 .btn-icon` further down this sheet is (0,2,1) — the
@@ -2069,13 +2032,6 @@
          duplicate that signal — see spec/session_home.md
          "Disabled treatment on Home is plain greying-out, not
          yellow lock cards". */
-      body.ui-v2 .card.disabled {
-        opacity: 0.55;
-      }
-      body.ui-v2 .card.disabled,
-      body.ui-v2 .card.disabled * {
-        cursor: not-allowed;
-      }
       /* Placeholder card — single canonical treatment for cards
          whose underlying feature is not yet implemented (today:
          Quick Setup and Extract Data on Session Home). Both
@@ -2106,7 +2062,7 @@
       }
       /* Segment 11H scaffolds — Quick Setup + Extract Data cards
          on Session Home. Slot / row layout primitives. Inert until
-         11J / 12A wire the controls; greying handled by .card.disabled
+         11J / 12A wire the controls; greying handled by .locked
          (Quick Setup) and the disabled / aria-disabled attributes on
          individual controls (Extract Data has no lifecycle gate). */
       body.ui-v2 .quick-setup-slot {
@@ -2131,18 +2087,11 @@
       body.ui-v2 .quick-setup-top-grid > * {
         min-width: 0;
       }
-      body.ui-v2 .quick-setup-divider {
-        margin: var(--space-4) 0 var(--space-3) 0;
-        border: 0;
-        border-top: 2px solid var(--border-default);
-      }
       /* Locked-body greying — applied to the .quick-setup-body
          wrapper inside the card when the session is editable but
          the operator hasn't unlocked the card yet. The Lock /
          Unlock button sits in .quick-setup-card-footer outside
-         this wrapper so it stays vivid. Distinct from
-         .card.disabled (which greys the whole card on Activated
-         sessions and never has a Lock button). .lockable-body is the
+         this wrapper so it stays vivid. .lockable-body is the
          same greying for another card with its own Lock / Unlock —
          Session Home's Owners card (19S). */
       body.ui-v2 .quick-setup-body.locked,
@@ -2564,12 +2513,6 @@
         color: var(--btn-alert-fg);
         border-color: var(--btn-alert-border);
       }
-      /* Spec collapses .alert-solid into Primary. */
-      body.ui-v2 .btn.alert-solid {
-        background: var(--btn-primary-bg);
-        border-color: var(--btn-primary-border);
-        color: var(--btn-primary-fg);
-      }
       /* Alert (outline brown) — for the recovery action inside a
          lock card. Uses the same brown that frames the lock card
          so the action sits in the card's color family rather than
@@ -2606,11 +2549,6 @@
         background: var(--btn-alert-bg-hover);
         color: var(--btn-alert-fg);
         border-color: var(--btn-alert-bg-hover);
-      }
-      body.ui-v2 .btn.alert-solid:hover {
-        background: var(--btn-primary-bg-hover);
-        border-color: var(--btn-primary-bg-hover);
-        color: var(--btn-primary-fg);
       }
       body.ui-v2 .btn.alert:hover {
         background: var(--btn-amber-bg-hover);
@@ -3357,7 +3295,7 @@
       }
       body.ui-v2 .exp-actions-right { justify-content: flex-end; }
       /* Forms — input padding 8/12, tokenized borders, labels at
-         medium weight with 4px gap, .form-help / .form-error for
+         medium weight with 4px gap, .form-help for
          supporting text. */
       body.ui-v2 label {
         display: block;
@@ -3521,38 +3459,10 @@
         color: var(--text-subtle);
         margin: var(--space-1) 0 var(--space-3) 0;
       }
-      body.ui-v2 .form-error {
-        font-size: var(--fs-small);
-        color: var(--status-error-accent);
-        margin: var(--space-1) 0 0 0;
-      }
-      /* Icon-button modifiers — borderless single-glyph affordances
-         used in dense rows (e.g. ✗ delete, ✚ add a row). The base
-         .btn-icon rule lives in the legacy block above; v2 adds two
-         semantic colour modifiers so templates can drop their
-         inline color: # styles. */
+      /* Icon button — a borderless single-glyph affordance; the row
+         pager's steps are its one caller. The base .btn-icon rule
+         lives in the legacy block above. */
       body.ui-v2 .btn-icon { color: var(--text-subtle); font-size: 1em; }
-      body.ui-v2 .btn-icon.danger { color: var(--icon-btn-danger-fg); }
-      body.ui-v2 .btn-icon.action { color: var(--icon-btn-action-fg); }
-      /* Order cell — number on the left, ▲/▼ stacked vertically on
-         the right (up above, down below). Used in the Display Fields
-         + Response Fields tables on the Instruments page. The
-         .order-num / .move-up / .move-down hooks the JS reads stay
-         put; this just re-arranges visually. */
-      body.ui-v2 .order-cell {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-      }
-      body.ui-v2 .order-arrows {
-        display: inline-flex;
-        flex-direction: column;
-        line-height: 0.7;
-      }
-      body.ui-v2 .order-arrows .btn-icon {
-        padding: 0;
-        font-size: 0.7em;
-      }
       /* Next Action card on Session Home — constant title + frame,
          state-conditional body and button row. Fixed min-height
          keeps the card frame from reflowing as the session moves
@@ -4358,27 +4268,6 @@
         }
       }
 
-      /* Rule Builder per-rule rows (`_rule_builder_card.html`).
-         Each row carries a left-edge bar that visually demarcates the
-         rule. The bar is rendered as an absolutely-positioned ::before
-         so it can be thicker than the row's border AND shorter than
-         the row's full height, giving a visible gap between
-         consecutive rows. The bar colour comes from the inline
-         ``--rule-bar-color`` custom property (defaults to #ddd; the
-         template sets #999 on COMPOSITE rows). */
-      body.ui-v2 .rule-edit-row {
-        position: relative;
-      }
-      body.ui-v2 .rule-edit-row::before {
-        content: "";
-        position: absolute;
-        top: 6px;
-        bottom: 6px;
-        left: 0;
-        width: 6px;
-        background-color: var(--rule-bar-color, var(--border-default));
-        border-radius: 1px;
-      }
 
       /* Segment 13B Part 2 PR 4 — shared sort primitive.
          Headers stay non-clickable; the small ``rrw-sort-btn``
@@ -4575,7 +4464,7 @@
       <button data-set="dark" aria-pressed="false">Dark</button>
     </span>
     <span class="ph-note">Read-only preview of base.html's real two-tier palette
-      (80 primitives · 106 semantic).
+      (80 primitives · 103 semantic).
       Design tool only — not wired into the app. To edit, use theme_customizer.</span>
   </div>
 
@@ -4625,7 +4514,6 @@
         <span class="tag-chip is-selected">Mentor</span>
         <span class="tag-chip">External</span>
       </div>
-      <p class="help-preview">A .help-preview block — the pre-wrapped help text shown under a response field.</p>
     </section>
 
     <section class="ph-section">
@@ -4729,7 +4617,6 @@
         <span class="pill pill-info">info</span>
         <span class="pill pill-success">success</span>
         <span class="pill pill-super">super</span>
-        <span class="pill pill-handle">HANDLE_ID</span>
       </div>
     </section>
 
@@ -4868,13 +4755,12 @@
         <tr><td class="pv-name">surface tint 5<code>--surface-tint-5</code></td><td><span class="pv-dot" style="background: var(--surface-tint-5);"></span><code>--tint-rose</code> <span class="pv-hex">#fff1f2</span></td><td><code>--tint-rose-dark</code> <span class="pv-hex">#241318</span></td></tr>
         <tr><td class="pv-name">surface tint 6<code>--surface-tint-6</code></td><td><span class="pv-dot" style="background: var(--surface-tint-6);"></span><code>--tint-cream</code> <span class="pv-hex">#fffbeb</span></td><td><code>--tint-cream-dark</code> <span class="pv-hex">#221d0e</span></td></tr>
       </tbody></table></details>
-      <details class="pv-cluster" open><summary>Text & links [P] · 6</summary>
+      <details class="pv-cluster" open><summary>Text & links [P] · 5</summary>
       <table class="pv-sem"><thead><tr><th>Semantic token</th><th>Light → primitive</th><th>Dark → primitive</th></tr></thead>
       <tbody>
         <tr><td class="pv-name">text body<code>--text-body</code></td><td><span class="pv-dot" style="background: var(--text-body);"></span><code>--ink</code> <span class="pv-hex">#111827</span></td><td><code>--paper</code> <span class="pv-hex">#e6eaf2</span></td></tr>
         <tr><td class="pv-name">text subtle<code>--text-subtle</code></td><td><span class="pv-dot" style="background: var(--text-subtle);"></span><code>--slate</code> <span class="pv-hex">#616874</span></td><td><code>--slate-pale</code> <span class="pv-hex">#a9b4c6</span></td></tr>
         <tr><td class="pv-name">text on accent<code>--text-on-accent</code></td><td><span class="pv-dot" style="background: var(--text-on-accent);"></span><code>--white</code> <span class="pv-hex">#ffffff</span></td><td><code>--ink</code> <span class="pv-hex">#111827</span></td></tr>
-        <tr><td class="pv-name">text on amber<code>--text-on-amber</code></td><td><span class="pv-dot" style="background: var(--text-on-amber);"></span><code>--white</code> <span class="pv-hex">#ffffff</span></td><td><code>--ink</code> <span class="pv-hex">#111827</span></td></tr>
         <tr><td class="pv-name">text link<code>--text-link</code></td><td><span class="pv-dot" style="background: var(--text-link);"></span><code>--blue-strong</code> <span class="pv-hex">#2563eb</span></td><td><code>--blue-glow-soft</code> <span class="pv-hex">#60a5fa</span></td></tr>
         <tr><td class="pv-name">text link strong<code>--text-link-strong</code></td><td><span class="pv-dot" style="background: var(--text-link-strong);"></span><code>--blue-deep</code> <span class="pv-hex">#1d4ed8</span></td><td><code>--blue-soft</code> <span class="pv-hex">#93c5fd</span></td></tr>
       </tbody></table></details>
@@ -4990,13 +4876,11 @@
         <tr><td class="pv-name">card help border<code>--card-help-border</code></td><td><span class="pv-dot" style="background: var(--card-help-border);"></span><code>--gray</code> <span class="pv-hex">#9ca3af</span></td><td><code>--slate-deep</code> <span class="pv-hex">#3a465c</span></td></tr>
         <tr><td class="pv-name">card help fg<code>--card-help-fg</code></td><td><span class="pv-dot" style="background: var(--card-help-fg);"></span><code>--ink</code> <span class="pv-hex">#111827</span></td><td><code>--paper</code> <span class="pv-hex">#e6eaf2</span></td></tr>
       </tbody></table></details>
-      <details class="pv-cluster" open><summary>Selection, toggles & markers [P]/[A] · 11</summary>
+      <details class="pv-cluster" open><summary>Selection, toggles & markers [P]/[A] · 9</summary>
       <table class="pv-sem"><thead><tr><th>Semantic token</th><th>Light → primitive</th><th>Dark → primitive</th></tr></thead>
       <tbody>
         <tr><td class="pv-name">selected bg<code>--selected-bg</code></td><td><span class="pv-dot" style="background: var(--selected-bg);"></span><code>--blue-strong</code> <span class="pv-hex">#2563eb</span></td><td><code>--blue-glow</code> <span class="pv-hex">#4b8bf5</span></td></tr>
         <tr><td class="pv-name">selected fg<code>--selected-fg</code></td><td><span class="pv-dot" style="background: var(--selected-fg);"></span><code>--white</code> <span class="pv-hex">#ffffff</span></td><td><code>--ink</code> <span class="pv-hex">#111827</span></td></tr>
-        <tr><td class="pv-name">icon btn action fg<code>--icon-btn-action-fg</code></td><td><span class="pv-dot" style="background: var(--icon-btn-action-fg);"></span><code>--blue-strong</code> <span class="pv-hex">#2563eb</span></td><td><code>--blue-glow</code> <span class="pv-hex">#4b8bf5</span></td></tr>
-        <tr><td class="pv-name">icon btn danger fg<code>--icon-btn-danger-fg</code></td><td><span class="pv-dot" style="background: var(--icon-btn-danger-fg);"></span><code>--red-strong</code> <span class="pv-hex">#dc2626</span></td><td><code>--red-bright</code> <span class="pv-hex">#f87171</span></td></tr>
         <tr><td class="pv-name">focus ring strong<code>--focus-ring-strong</code></td><td><span class="pv-dot" style="background: var(--focus-ring-strong);"></span><code>--blue-deep</code> <span class="pv-hex">#1d4ed8</span></td><td><code>--blue-soft</code> <span class="pv-hex">#93c5fd</span></td></tr>
         <tr><td class="pv-name">row pending marker<code>--row-pending-marker</code></td><td><span class="pv-dot" style="background: var(--row-pending-marker);"></span><code>--amber</code> <span class="pv-hex">#f59e0b</span></td><td><code>--amber-deep-dk</code> <span class="pv-hex">#b45309</span></td></tr>
         <tr><td class="pv-name">chip active border<code>--chip-active-border</code></td><td><span class="pv-dot" style="background: var(--chip-active-border);"></span><code>--blue-strong</code> <span class="pv-hex">#2563eb</span></td><td><code>--blue-glow</code> <span class="pv-hex">#4b8bf5</span></td></tr>

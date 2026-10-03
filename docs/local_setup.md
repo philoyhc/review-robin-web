@@ -97,8 +97,6 @@ Edit `.env`:
 
 ```text
 APP_ENV=local
-APP_NAME=Review Robin Web
-DEBUG=true
 
 ALLOW_FAKE_AUTH=true
 FAKE_AUTH_EMAIL=operator@example.edu

@@ -6674,7 +6674,7 @@
     var _SORT_MAX_KEYS = 3;
     function toggleSort(button) {
       var instrumentId = button.getAttribute('data-instrument-id');
-      var card = button.closest('.card.field-builder, .card');
+      var card = button.closest('.card');
       // Collect every sort button inside the same Display Fields
       // table so we can re-derive priorities after the click.
       var table = button.closest('table');

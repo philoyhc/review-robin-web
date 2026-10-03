@@ -6,9 +6,7 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_env: str = "local"
-    app_name: str = "Review Robin Web"
     app_version: str = "dev"
-    debug: bool = True
 
     allow_fake_auth: bool = False
     fake_auth_principal_id: str = "local-dev"

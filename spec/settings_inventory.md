@@ -422,10 +422,8 @@ deployed environments. Source: `app/config.py`.
 
 | Var | Default | Purpose |
 |---|---|---|
-| `APP_ENV` | `local` | `local` / `dev` / `prod` — informational. |
-| `APP_NAME` | `Review Robin Web` | Display name. |
-| `APP_VERSION` | `dev` | Surfaced in the chrome footer. |
-| `DEBUG` | `True` | FastAPI debug mode. |
+| `APP_ENV` | `local` | `local` / `dev` / `prod`. Any value but `local` turns on the boot-time checks: startup fails when `OPERATOR_EMAILS` and `SYS_ADMIN_EMAILS` are both empty (`app/config.py`), and logs a warning when no super-admin is configured (`app/main.py`). |
+| `APP_VERSION` | `dev` | Labels the build in the operator top bar and on the About page. |
 | `ALLOW_FAKE_AUTH` | `False` | When `True`, bypasses Azure Easy Auth and injects a fake operator. **Must remain `False` in deployed environments.** |
 | `FAKE_AUTH_PRINCIPAL_ID` | `local-dev` | Fake-auth identity slot. |
 | `FAKE_AUTH_EMAIL` | `operator@example.edu` | Fake-auth identity slot. |
