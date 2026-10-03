@@ -211,7 +211,10 @@ populated by **Segment 14B Part A** when the dispatch helper goes live.
 `correlation_id` is already in use: scheduled reminders stamp it
 (`reminder:{session_id}:{reviewer_id}:{offset_index}`) and read it back
 to skip a reviewer already reminded at that offset
-(`app/services/scheduled_events/_reminders.py`):
+(`app/services/scheduled_events/_reminders.py`). The stamp is written
+with the row, in the same commit, through `send_reminder`'s
+`outbox_correlation_id`; stamping it afterwards let a failed pass roll
+it back and re-queue the reminder (findings B31):
 
 - `error_message` (Text, nullable) — captured on failure so the
   Outbox / Invitations diagnostic surfaces can render the

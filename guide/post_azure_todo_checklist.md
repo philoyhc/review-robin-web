@@ -513,10 +513,10 @@ before any transport exists, at a render or an outbox or audit write.
 Since 2026-10-02 (B20, author's second ruling) `observe_scheduled_events`
 catches that: it rolls back, logs, writes `session.scheduled_event_failed`
 and lets the page render, retrying on the next visit with no cap and no
-terminal state. One known gap under that catch: when one reviewer's
-scheduled reminder fails, the rollback also drops the dedupe stamp on
-the reminders already queued in that pass, so the next visit queues
-them again (`guide/findings_2026-10-01_corpus.md` B31). Give the clock trigger the same retry and terminal state
+terminal state. A reminder already queued in a pass that then fails
+keeps its dedupe stamp, which commits with its outbox row, so the next
+visit does not queue it again (`guide/findings_2026-10-01_corpus.md`
+B31, fixed 2026-10-03). Give the clock trigger the same retry and terminal state
 as activation for both, covering those queue-stage failures as well as
 transport ones.
 

@@ -334,6 +334,7 @@ def send_invitation(
     build_invite_url: Callable[[str], str],
     correlation_id: str | None = None,
     trigger: str = "operator",
+    outbox_correlation_id: str | None = None,
 ) -> SendResult:
     """Mint a fresh token, write an outbox row, flip invitation to ``sent``.
 
@@ -350,6 +351,11 @@ def send_invitation(
     ``None`` in that case, matching the ``observe_deadline`` /
     scheduled-activation convention). ``trigger`` flows into
     ``context.trigger`` on the ``invitation.sent`` audit event.
+
+    ``outbox_correlation_id`` is the outbox row's own idempotency key
+    (``EmailOutbox.correlation_id``), written with the row so it
+    commits with it; ``correlation_id`` is the request's, for the
+    audit event.
     """
     raw_token, token_hash = _new_token()
     invitation.token_hash = token_hash
@@ -373,6 +379,7 @@ def send_invitation(
         subject=subject[:_SUBJECT_MAX],
         body=body,
         status="queued",
+        correlation_id=outbox_correlation_id,
     )
     db.add(outbox)
     db.flush()
@@ -685,6 +692,7 @@ def send_reminder(
     user: User | None,
     build_invite_url: Callable[[str], str],
     correlation_id: str | None = None,
+    outbox_correlation_id: str | None = None,
 ) -> ReminderResult:
     """Send a reminder reusing the previously-issued invitation URL.
 
@@ -696,6 +704,10 @@ def send_reminder(
     ``user`` is ``None`` for the 18G Part 3 scheduled-reminder trigger
     (matches ``send_invitation``'s scheduled-trigger convention); the
     fallback ``send_invitation`` call below tolerates that.
+
+    ``outbox_correlation_id`` is stamped on the outbox row before the
+    commit, so a caller that dedups on it (the scheduled-reminder pass)
+    never loses the stamp to a later rollback (findings B31).
     """
     existing_url = most_recent_invitation_url(db, invitation_id=invitation.id)
     if existing_url is None:
@@ -707,6 +719,7 @@ def send_reminder(
             user=user,
             build_invite_url=build_invite_url,
             correlation_id=correlation_id,
+            outbox_correlation_id=outbox_correlation_id,
         )
         invitation.last_reminder_at = datetime.now(timezone.utc)
         db.flush()
@@ -732,6 +745,7 @@ def send_reminder(
         subject=subject[:_SUBJECT_MAX],
         body=body,
         status="queued",
+        correlation_id=outbox_correlation_id,
     )
     db.add(outbox)
     db.flush()
