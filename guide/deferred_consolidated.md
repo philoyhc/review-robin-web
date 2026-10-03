@@ -838,11 +838,15 @@ instruments.
 > Ruled by the author, 2026-10-01, on `guide/findings_2026-10-01_corpus.md`.
 
 `rehydrate_enabled` ships false, so the lobby button does not render and
-the three routes 404 (`spec/rehydrate.md`, header). Open before it can be
+the four routes 404 (`spec/rehydrate.md`, header). Open before it can be
 exposed: the analyzer checks (D16); a failure other than `RehydrateError`
 inside `rehydrate_session` still answers 500 after the rollback, where
 `spec/rehydrate.md` §7 says every failing step is reported (D17's rest);
-and a streaming, bounded responses parser (D18). **Lift trigger:** an
+a streaming, bounded responses parser (D18); and a pre-flight that runs
+the Settings CSV's phase-1 validation, so an extract the settings import
+refuses (a fractional Integer bound, #2792; an unknown response-field
+type, #2793) fails at Validate rather than at commit (marked part of the
+incomplete feature by the author, 2026-10-03). **Lift trigger:** an
 operator needs to restore a session from its extract.
 
 #### Rehydrate does not run the cross-roster identity check (19Q Item 7)
