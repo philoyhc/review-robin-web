@@ -173,6 +173,40 @@ def get_for_user(db: Session, user: User, session_id: int) -> ReviewSession | No
     return db.execute(stmt).scalar_one_or_none()
 
 
+# Every field ``update_session`` writes from its payload.
+_UPDATED_FIELDS = (
+    "name",
+    "code",
+    "description",
+    "deadline",
+    "help_contact",
+    "scheduled_activate_at",
+    "invite_offsets",
+    "reminder_offsets",
+    "relationships_enabled",
+    "observers_enabled",
+    "responses_release_at",
+    "responses_release_until",
+)
+
+
+def edit_payload(review_session: ReviewSession, **changes: object) -> SessionCreate:
+    """``review_session``'s current values as an ``update_session``
+    payload, with ``changes`` applied.
+
+    ``update_session`` writes every field it lists, so a caller that
+    edits only some of them (the lobby expander edits Name, Code and
+    Deadline) starts from this rather than a bare ``SessionCreate``,
+    whose defaults would clear the rest.
+    """
+    unknown = changes.keys() - set(_UPDATED_FIELDS)
+    if unknown:
+        raise TypeError(f"not an update_session field: {sorted(unknown)}")
+    fields = {name: getattr(review_session, name) for name in _UPDATED_FIELDS}
+    fields.update(changes)
+    return SessionCreate(**fields)
+
+
 def update_session(
     db: Session,
     *,
@@ -190,20 +224,7 @@ def update_session(
         correlation_id=correlation_id,
     )
     diffs: dict[str, list[object]] = {}
-    for field_name in (
-        "name",
-        "code",
-        "description",
-        "deadline",
-        "help_contact",
-        "scheduled_activate_at",
-        "invite_offsets",
-        "reminder_offsets",
-        "relationships_enabled",
-        "observers_enabled",
-        "responses_release_at",
-        "responses_release_until",
-    ):
+    for field_name in _UPDATED_FIELDS:
         old = getattr(review_session, field_name)
         new = getattr(payload, field_name)
         if old != new:

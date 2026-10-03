@@ -9,12 +9,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.schemas.sessions import SessionCreate
+from app.services import scheduled_events
 from app.services import session_clone
 from app.services import session_purge
 from app.services import sessions
@@ -297,8 +298,11 @@ def lobby_edit_submit(
     """
     correlation_id = request_correlation_id()
 
-    # Checked before the tag write, so a taken code refuses the whole
-    # save rather than reaching the unique constraint as a 500.
+    # Checked before the tag write, so a taken code, a deadline that
+    # does not fit the stored schedule, or a name too long refuses the
+    # whole save rather than landing the tags alone (a taken code would
+    # otherwise reach the unique constraint as a 500).
+    payload = None
     if lifecycle.is_draft(review_session):
         try:
             sessions.ensure_code_available(
@@ -309,6 +313,33 @@ def lobby_edit_submit(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(exc),
             ) from exc
+        parsed_deadline = parse_session_deadline(
+            deadline, sessions.resolve_session_timezone(review_session)
+        )
+        try:
+            scheduled_events.validate_deadline_change(
+                review_session, parsed_deadline
+            )
+        except scheduled_events.ScheduledActivateError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
+        # Only Name, Code and Deadline are on the expander; every other
+        # field keeps its stored value.
+        try:
+            payload = sessions.edit_payload(
+                review_session, name=name, code=code, deadline=parsed_deadline
+            )
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="; ".join(
+                    f"{'.'.join(map(str, error['loc'])) or 'session'}: "
+                    f"{error['msg']}"
+                    for error in exc.errors()
+                ),
+            ) from exc
 
     session_tags.set_tags(
         db,
@@ -318,20 +349,12 @@ def lobby_edit_submit(
         correlation_id=correlation_id,
     )
 
-    if lifecycle.is_draft(review_session):
-        timezone_name = sessions.resolve_session_timezone(review_session)
-        parsed_deadline = parse_session_deadline(deadline, timezone_name)
+    if payload is not None:
         sessions.update_session(
             db,
             review_session=review_session,
             user=user,
-            payload=SessionCreate(
-                name=name,
-                code=code,
-                description=review_session.description,
-                deadline=parsed_deadline,
-                help_contact=review_session.help_contact,
-            ),
+            payload=payload,
             correlation_id=correlation_id,
         )
 

@@ -1,7 +1,8 @@
 # Things to check in a browser — 1 October
 
 Browser checks owed on `guide/post_assessment_1oct.md` work, and on the
-`guide/findings_2026-10-01_corpus.md` fixes that followed it, that the test
+`guide/findings_2026-10-01_corpus.md` and `guide/findings_2026-10-03_corpus.md`
+fixes that followed it, that the test
 suite cannot settle. Run them locally (`uvicorn`, fake auth). Tick a row
 when it is checked, and retire the file once every row is ticked.
 
@@ -143,6 +144,16 @@ E1, E2 and E4 were checked by the author when they merged.
   rejoins the group with its answer.
 - [ ] **Re-import unchanged.** Download the relationships CSV and import
   it again unchanged. Every answer is still there.
+
+## The lobby Save keeps the schedule (C1)
+
+- [ ] **A rename keeps everything else.** On a draft with a Start, an
+  End, invite and reminder offsets, a release window and Relationships
+  turned on, open its lobby row, change the Name, Save. Session Home
+  still shows every one of those settings.
+- [ ] **An End before Start is refused.** In the same row, set the
+  Deadline before the session's Start and Save: the page answers with
+  "End must be on or after Start." and nothing changes, tags included.
 
 ## Setup tabs underline in blue (findings register E5)
 

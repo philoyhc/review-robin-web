@@ -27,7 +27,7 @@ strip, keeping the reason it carried.
 
 Confirmed by reading the code; the ones marked *reproduced* were also run.
 
-- **C1 high** — **The lobby row-expander Save wipes a draft session's
+- ~~**C1**~~ high — **Done in #2782.** **The lobby row-expander Save wipes a draft session's
   other settings.** `_lobby.py:321-336` builds `SessionCreate(name, code,
   description, deadline, help_contact)` and `sessions.update_session`
   (`sessions.py:193-211`) writes every field it lists from that payload.
