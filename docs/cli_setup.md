@@ -1,6 +1,6 @@
 # CLI setup for the Azure + GitHub runbook
 
-Companion to [`azure_github_setup.md`](azure_github_setup.md).
+Companion to [`deployment_nus.md`](deployment_nus.md).
 Covers the CLIs you need on your workstation to execute the
 runbook, the one-time auth steps, and a set of tests that
 prove you can reach the RRW GitHub repo and Azure before you
@@ -645,5 +645,4 @@ the grant statements.
 
 Once B.1 through B.8 pass (institutional side) — plus B.9 if
 you're maintaining the personal dev slot in parallel — you're
-ready to work through [`azure_github_setup.md`](azure_github_setup.md)
-Phase 1 onwards.
+ready to work through [`deployment_nus.md`](deployment_nus.md).

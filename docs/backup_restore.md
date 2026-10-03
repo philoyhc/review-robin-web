@@ -5,6 +5,14 @@ Scoped to the current single Azure **dev** slot. This is a pilot
 institutional deployment would need to align them with
 institutional policy.
 
+The **NUS environment** is provisioned but not yet serving
+(`docs/nus_azure_status_v7.md`). Its PostgreSQL server is private, so
+a restored server is reachable only from inside the network (see
+`docs/deployment_nus.md` §5), and its backup settings are not recorded
+here yet.
+This document is re-scoped at cutover
+(`guide/post_azure_todo_checklist.md` item 2).
+
 ## Database backup
 
 The application database is **Azure Database for PostgreSQL

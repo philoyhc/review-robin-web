@@ -59,6 +59,19 @@ App Settings until Key Vault references are wired.
   is genuinely missing is **targeted reminders** to reviewers who
   have not submitted; until 14B, chase them by hand from the
   Responses page's coverage view.
+- **Scheduled sends wait for a Session Home visit.** Scheduled
+  activation, invitations and reminders have no clock of their own:
+  they fire when an operator next opens that session's Session Home,
+  the only page that runs the scheduler
+  (`app/web/routes_operator/_session_home.py`). A reminder set for
+  09:00 goes out when an operator next looks, and nothing fires while
+  nobody opens the page. A failed invitation or reminder pass is
+  logged (`session.scheduled_event_failed`) and retried on the next
+  visit; scheduled activation retries a fixed number of times, then
+  stops.
+  Until a clock-driven trigger lands after the Azure cutover
+  (`guide/post_azure_todo_checklist.md` item 7), open Session Home at
+  or after each scheduled time.
 - **Reviewer answers are not autosaved.** The reviewer surface
   saves only when the reviewer presses Save or Submit, and it has
   no leave-page (`beforeunload`) guard, so navigating away (the

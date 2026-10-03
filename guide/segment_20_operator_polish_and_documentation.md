@@ -50,7 +50,7 @@ had already shipped under other segments; three move out; three stay.
 | 4. Sample CSV templates | **not built** — nothing downloadable, no blank-template route | **19E** |
 | 5. Sample session fixture | **not built** — no seed / demo / fixture session | **19E** |
 | 6. Operator guide | **✅ shipped**, and **relocated 2026-09-06**: was `docs/quickstart.md`, now the in-app Guide at `/guide` (Segment 19E rung 2), with the file retired to `docs/archive/quickstart.md` | currency pass stays here, against the Guide |
-| 7. Administrator guide | **partial, and host-dependent.** The material exists scattered across `docs/operations_runbook.md`, `docs/deployment_dev.md`, `docs/azure_provision.md`, `docs/backup_restore.md`, `docs/security_posture.md`; there is no single administrator guide, and the one that matters describes the *institutional* host | **stays — the gated item** |
+| 7. Administrator guide | **partial, and host-dependent.** The material exists scattered across `docs/operations_runbook.md`, `docs/deployment_dev.md`, `docs/deployment_nus.md`, `docs/backup_restore.md`, `docs/security_posture.md`; there is no single administrator guide, and the one that matters describes the *institutional* host | **stays — the gated item** |
 | 8. Developer setup guide | **✅ shipped** as `docs/local_setup.md` (322 lines) | done |
 | 9. Troubleshooting guide | **✅ shipped for the dev slot** as `docs/troubleshooting.md`. Its failure modes are the personal-Azure ones; the institutional host will have its own (tenant, Easy Auth, NUS network policy) | institutional half stays here |
 | 10. Known limitations page | **✅ shipped** as `docs/known_limitations.md` | currency pass stays here |

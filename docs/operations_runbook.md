@@ -4,6 +4,11 @@ Day-to-day procedures for operating the deployed Review Robin Web
 service. Scoped to the current single Azure **dev** slot — there
 is no production environment yet (see `docs/known_limitations.md`).
 
+The NUS environment is provisioned but not yet serving. Its deploy
+path, App Settings and cutover steps are in `docs/deployment_nus.md`
+and its verified state in `docs/nus_azure_status_v7.md`; nothing below
+applies to it until cutover.
+
 For the resource names, CI/CD pipeline, and first-time bootstrap,
 see `docs/deployment_dev.md`. For symptom-driven diagnosis see
 `docs/troubleshooting.md`.
