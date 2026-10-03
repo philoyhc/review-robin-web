@@ -62,7 +62,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   (`_session_position_map`; `review_surface.html:161,191`), so with two
   instruments on page 1 the second's gap reads "Page 2". Fix the number,
   or label it `#N`. `reviewer-surface.md:174,795`.
-- **C2 med** — The Relationships page guidance says an upload "clears
+- ~~**C2**~~ med — **Done in #2786.** The Relationships page guidance says an upload "clears
   any assignments already generated" (`session_relationships.html:122-124`);
   `save_relationships` deletes none.
 - **D3 low** — `email_overrides.<any kind>.enabled` in a Settings CSV
