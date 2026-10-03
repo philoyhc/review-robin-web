@@ -235,6 +235,34 @@ def test_set_sort_drops_a_foreign_id(
     assert new_value == [{"display_field_id": f1.id, "dir": "desc"}]
 
 
+def test_set_sort_drops_the_reviewee_email(
+    db: Session, client: TestClient
+) -> None:
+    """The email shares the identity column with the name, whose badge
+    sorts by name; no operator control sets an email key, so a save
+    drops one (findings A29)."""
+    review_session = _make_session(client, db, code="ssdf-email")
+    _populate_rosters(client, review_session.id)
+    instrument = _instrument(db, review_session.id)
+    f1, _ = _seed_two_display_fields(db, instrument)
+    # The locked Email row ``ensure_default_instrument`` seeds.
+    email = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == instrument.id,
+            InstrumentDisplayField.source_type == "reviewee",
+            InstrumentDisplayField.source_field == "email_or_identifier",
+        )
+    ).scalar_one()
+
+    new_value, _ = instruments.set_sort_display_fields(
+        db,
+        instrument=instrument,
+        fields=[(email.id, "asc"), (f1.id, "desc")],
+        actor=_actor(db),
+    )
+    assert new_value == [{"display_field_id": f1.id, "dir": "desc"}]
+
+
 def test_a_save_compacts_a_sort_key_whose_field_was_deleted(
     db: Session, client: TestClient
 ) -> None:

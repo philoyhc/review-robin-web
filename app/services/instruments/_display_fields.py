@@ -810,8 +810,10 @@ def set_sort_display_fields(
     instrument's display fields — one deleted since the card rendered,
     or never this instrument's — is dropped rather than refused, so the
     save compacts the spec (``spec/sort_by_reviewee.md`` "Cascade
-    behaviour"; findings A24). The remaining entries keep their order,
-    which is their priority, so the numbering stays contiguous.
+    behaviour"; findings A24). So is one naming the reviewee email,
+    which is not an operator sort key (its "Scope"; findings A29). The
+    remaining entries keep their order, which is their priority, so the
+    numbering stays contiguous.
 
     Lifecycle-invalidates if the session was previously validated
     (sort spec is a setup-shape change, not a runtime knob).
@@ -821,11 +823,20 @@ def set_sort_display_fields(
     normalised = _normalise_sort_spec(fields)
     # Query display-field IDs directly rather than relying on the
     # relationship cache — callers may have added display fields
-    # earlier in the same transaction without expiring it.
+    # earlier in the same transaction without expiring it. The
+    # reviewee email is not a sort key: it shares the identity column
+    # with the name, whose badge sorts by name (findings A29).
     valid_ids = set(
         db.execute(
             select(InstrumentDisplayField.id).where(
-                InstrumentDisplayField.instrument_id == instrument.id
+                InstrumentDisplayField.instrument_id == instrument.id,
+                ~(
+                    (InstrumentDisplayField.source_type == "reviewee")
+                    & (
+                        InstrumentDisplayField.source_field
+                        == "email_or_identifier"
+                    )
+                ),
             )
         ).scalars()
     )
