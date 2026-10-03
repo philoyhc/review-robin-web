@@ -185,6 +185,7 @@ def observer_collation_instrument_csv(
             position=position,
             row_filter=_row_in_cohort,
             identification=mode,
+            visible_only=True,
         ):
             writer.writerow(row)
             yield buffer.getvalue().encode("utf-8")

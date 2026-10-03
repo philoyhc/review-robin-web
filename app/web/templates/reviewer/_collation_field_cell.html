@@ -20,7 +20,7 @@
       <span class="muted">No list options defined.</span>
     {% endif %}
   {% else %}
-    Total length: {{ cell.total_length }} characters<br>
+    Total length: {% if cell.response_count > 0 %}{{ cell.total_length }} characters{% else %}<span class="muted">—</span>{% endif %}<br>
     Average length: {% if cell.response_count > 0 %}{{ cell.average_length }} characters{% else %}<span class="muted">—</span>{% endif %}<br>
     <span class="muted">(based on {{ cell.response_count }} responses)</span>
   {% endif %}

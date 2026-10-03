@@ -69,22 +69,22 @@ class CohortStatsRow:
 
     response_count: int
     """Number of non-empty submitted response cells in the
-    in-cohort pool — summed across every response field on the
-    instrument. Same on both rows."""
+    in-cohort pool — summed across the instrument's visible response
+    fields. Same on both rows."""
 
     field_cells: list[SummarizedFieldCell]
-    """One per response field, in field-order. Same on both
+    """One per visible response field, in field-order. Same on both
     rows."""
 
 
-def _ordered_response_fields(
+def observer_response_fields(
     instrument: Instrument,
 ) -> list[InstrumentResponseField]:
-    """Pin the per-instrument response field order. SQLAlchemy
-    already orders ``Instrument.response_fields`` by ``order, id``;
-    this helper is a thin facade so the surface code reads
-    naturally."""
-    return list(instrument.response_fields)
+    """The response fields the observer collation shows, in field
+    order. SQLAlchemy already orders ``Instrument.response_fields`` by
+    ``order, id``. A field the operator marked not visible is left out,
+    as on every other participant surface (findings A3, 2026-10-03)."""
+    return [f for f in instrument.response_fields if f.visible]
 
 
 def build_cohort_stats_for_instrument(
@@ -110,7 +110,7 @@ def build_cohort_stats_for_instrument(
     NULL``) contribute. In-progress drafts don't appear in the
     aggregates.
     """
-    fields = _ordered_response_fields(instrument)
+    fields = observer_response_fields(instrument)
     empty_cells = [
         SummarizedFieldCell(data_type=f.data_type) for f in fields
     ]

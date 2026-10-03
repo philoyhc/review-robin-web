@@ -115,10 +115,10 @@ stricter until ruled on.
 
 **Behavior that reaches people.**
 - ~~**A2**~~ (above; ruled 2026-10-03, done in #2794): "Page N" or "#N" on the reviewer's missing-answer cards.
-- **A3**: the observer collation renders `visible=False` response fields
+- ~~**A3**~~ — **Ruled 2026-10-03: hide them. Done in #2798.** The observer collation rendered `visible=False` response fields
   (`_observer_collation.py:189`, `collation.py:87`); every other surface
   hides them, and `instruments.md:1040-1045` never names observers.
-- **A18**: String summarize at zero responses shows "Total length: 0
+- ~~**A18**~~ — **Ruled 2026-10-03: follow the spec. Done in #2798**, on the results page and the observer collation alike. String summarize at zero responses showed "Total length: 0
   characters" (`results.html:81`), not the em-dash
   `participant_model.md:82` and `visibility_policy.md:65` ask for.
 - ~~**B18**~~ — **Ruled 2026-10-03: update the spec. Done in #2797.** `lifecycle.md:321` promised an "auto-closed at X" pill from

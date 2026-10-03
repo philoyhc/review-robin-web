@@ -45,6 +45,7 @@ from app.services import visibility_policies
 from app.services.collation import (
     CohortStatsRow,
     build_cohort_stats_for_instrument,
+    observer_response_fields,
 )
 from app.services.observer_cohort import (
     materialize_cohort_assignments,
@@ -186,7 +187,7 @@ def build_observer_collation_context(
                 instrument_id=instrument.id,
                 title=heading.title,
                 description=heading.subtitle,
-                fields=list(instrument.response_fields),
+                fields=observer_response_fields(instrument),
                 mode=mode,
                 reviewer_stats=reviewer_stats,
                 reviewee_stats=reviewee_stats,
