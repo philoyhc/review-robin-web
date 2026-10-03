@@ -365,6 +365,27 @@ def test_apply_replaces_email_overrides_wholesale(db: Session) -> None:
     assert overrides.get("responses_received_enabled") is False
 
 
+def test_enabled_on_another_email_kind_is_an_unknown_slot(
+    db: Session,
+) -> None:
+    """Only ``responses_received`` has a toggle. ``enabled`` on any other
+    kind used to flip that toggle; it is now refused as an unknown slot
+    and nothing is written (findings 2026-10-03 D3)."""
+    review_session = _bare_session(db, code="emails-d3")
+    result = apply_session_config(
+        db,
+        review_session,
+        [Row("email_overrides.invitation.enabled", "false", "boolean")],
+    )
+
+    assert not result.ok
+    assert [e.message for e in result.errors] == [
+        "unknown email override slot 'email_overrides.invitation.enabled'"
+    ]
+    db.refresh(review_session)
+    assert not (review_session.email_template_overrides or {})
+
+
 def test_apply_emits_settings_imported_audit_event(db: Session) -> None:
     review_session = _bare_session(db, code="auditemit")
     user = _user(db, email="auditor@example.edu")

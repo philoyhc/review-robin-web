@@ -5,8 +5,6 @@ layout, in-browser behavior and what a page shows. Every PR that owes one
 adds a section here. Run them locally (`uvicorn`, fake auth). Tick a row
 when it is checked; sections with unticked rows sit above the ticked ones.
 
-E1, E2 and E4 were checked by the author when they merged.
-
 ## Email dates in the session's zone (#2720)
 
 - [ ] **The deadline reads in the session's zone.** On a session whose

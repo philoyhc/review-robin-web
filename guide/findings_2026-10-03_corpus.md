@@ -65,7 +65,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
 - ~~**C2**~~ med — **Done in #2786.** The Relationships page guidance says an upload "clears
   any assignments already generated" (`session_relationships.html:122-124`);
   `save_relationships` deletes none.
-- **D3 low** — `email_overrides.<any kind>.enabled` in a Settings CSV
+- ~~**D3**~~ low — **Done in #2788.** `email_overrides.<any kind>.enabled` in a Settings CSV
   flips `responses_received_enabled` (`_apply_email.py:25-33`).
   *Reproduced* with `invitation.enabled=false`.
 - **C3 low** — Operator Settings' sample line reads "UTC UTC" for a UTC
