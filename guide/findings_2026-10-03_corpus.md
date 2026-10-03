@@ -36,7 +36,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   `relationships_enabled` / `observers_enabled` off unless their roster
   has rows. *Reproduced.* `spec/sessions_overview.md:252-262` says Save
   changes Name, Code and Deadline.
-- **D1 med** — **A Settings CSV with a duplicate data-shape name, or two
+- ~~**D1**~~ med — **Done in #2783.** **A Settings CSV with a duplicate data-shape name, or two
   response fields with one `field_key` in an instrument, answers 500.**
   Phase 1 (`_apply_parse._cross_row_errors`) checks rule-set names only;
   phase 2 hits the unique constraint and `_run_quick_setup_settings`
@@ -80,6 +80,15 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   "cohort rule edits are not allowed" for all eight Observers routes.
 - **A6 low** — Integer/Decimal shape check skips `step <= max - min`
   when `max == min` (`_band2.py:464-470`). The spec is stricter; leave it.
+- **D31 low** (found while fixing D1) — Quick Setup's Settings upload
+  discards `ApplyResult.errors`: `_run_quick_setup_settings` returns
+  `"parse"` and the slot shows only "Could not import session
+  settings." `spec/csv_contracts.md` §3.3 ("the route surfaces them")
+  and §7 item 3 ("the full validation report") promise more.
+- **D32 low** (found while fixing D1) — A Settings CSV data-shape name or
+  `field_key` over 255 characters passes phase 1 and fails phase 2 on
+  Postgres as a `DataError`, a 500 (`data_shape.py:58`,
+  `instrument_field.py:51`).
 - **Stale code comments and dead code.** `_assignments.py:410-420`
   (generate docstring) and the `missing_confirm` banner naming a form
   that does not exist (B2); `session_lifecycle.py:1-6, 54-55, 333, 659,

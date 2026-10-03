@@ -448,7 +448,14 @@ the round-trip notes below.
 
 1. **Phase 1 — Parse + validate every row.** Collect every error
    into `ApplyResult.errors`. One bad row doesn't mask the next.
-   No DB writes.
+   No DB writes. Three keys phase 2 writes as unique are errors
+   when repeated: a `session_rule_sets` name (§4 item 7), a
+   `data_shapes` name among the shapes phase 2 writes (those with a
+   name and a known axis), and a response field's `field_key` within
+   its instrument. Each is an `ApplyError` naming the first
+   occurrence, not a database error. A repeated session tag is
+   deduplicated and a repeated `view_policies[<audience>]` block
+   merges, so neither is an error.
 2. **Phase 2 — Apply the typed plan.** Wipe-and-replace within
    the affected section (e.g. all instruments for a session).
    `session_rule_sets` is the exception: an upsert by name that

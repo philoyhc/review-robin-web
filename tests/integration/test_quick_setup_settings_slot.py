@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     AuditEvent,
+    DataShape,
     Instrument,
     ReviewSession,
 )
@@ -213,6 +214,38 @@ def test_submit_all_settings_parse_error_surfaces_in_settings_slot(
 # --------------------------------------------------------------------------- #
 # Create New Session dispatch
 # --------------------------------------------------------------------------- #
+
+
+def test_submit_all_settings_with_a_repeated_shape_name_is_a_parse_error(
+    client: TestClient, db: Session
+) -> None:
+    """Two data shapes sharing a name are refused in the parse phase, so
+    the upload redirects with ``parse`` and writes nothing, rather than
+    reaching ``uq_data_shape_session_name`` as a 500 (findings
+    2026-10-03 D1)."""
+    review_session = _make_session(client, db, code="qsc-dup")
+    payload = _settings_csv(
+        [
+            ("data_shapes[0].name", "By reviewer", "string"),
+            ("data_shapes[0].axis", "reviewer", "enum"),
+            ("data_shapes[1].name", "By reviewer", "string"),
+            ("data_shapes[1].axis", "reviewer", "enum"),
+        ]
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        data={"confirm_replace": "true"},
+        files={"settings_file": ("c.csv", payload, "text/csv")},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    location = response.headers["location"]
+    assert "quick_setup_error=settings" in location
+    assert "quick_setup_reason=parse" in location
+    db.expire_all()
+    assert not db.execute(
+        select(DataShape.id).where(DataShape.session_id == review_session.id)
+    ).first()
 
 
 def test_create_session_with_settings_file_processes_upload(
