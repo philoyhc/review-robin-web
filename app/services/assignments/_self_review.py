@@ -313,10 +313,9 @@ def recompute_self_review_classification(
     variant can wrap the same canonical helper.
 
     Every write site that creates / changes assignments, and
-    every edit site that can shift the rule's input
-    (reviewer email, reviewee identifier or boundary tag,
-    relationship boundary tag, instrument ``group_kind``)
-    calls this after its own flush. The function flushes
+    every edit site that can shift the rule's input calls this
+    after its own flush; ``spec/assignments.md`` "Source of truth"
+    lists those triggers. The function flushes
     automatically when at least one row changed.
 
     Returns the number of rows whose stored value changed.

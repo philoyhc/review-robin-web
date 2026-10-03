@@ -290,6 +290,7 @@ def save_relationships(
     for row in rows:
         db.add(_relationship_to_orm(row, session.id))
     db.flush()
+    _recompute_self_review(db, session_id=session.id)
 
     audit.write_event(
         db,
@@ -341,6 +342,19 @@ def _relationship_to_orm(
     )
 
 
+def _recompute_self_review(db: Session, *, session_id: int) -> None:
+    """Re-derive ``Assignment.is_self_review`` after a relationship
+    change (findings B33). A group instrument boundaried on pair
+    context reads its group keys off the active relationship rows, so
+    adding, removing, retagging or (in)activating one can move a
+    reviewer into or out of a group."""
+    from app.services.assignments import (
+        recompute_self_review_classification,
+    )
+
+    recompute_self_review_classification(db, session_id=session_id)
+
+
 def delete_all_relationships(
     db: Session,
     *,
@@ -372,6 +386,7 @@ def delete_all_relationships(
     for row in existing_rows:
         db.delete(row)
     db.flush()
+    _recompute_self_review(db, session_id=review_session.id)
 
     audit.write_event(
         db,
@@ -537,6 +552,7 @@ def create_relationship(
     )
     db.add(relationship)
     db.flush()
+    _recompute_self_review(db, session_id=review_session.id)
 
     audit.write_event(
         db,
@@ -677,6 +693,11 @@ def update_relationship(
             repointed=repointed,
         )
     )
+    # The reconcile above recomputes for a tag edit or a re-point; a
+    # status flip moves the pair's group key on its own (an inactive
+    # relationship resolves to empty tags).
+    if "status" in changes:
+        _recompute_self_review(db, session_id=session_id)
 
     audit.write_event(
         db,

@@ -460,13 +460,14 @@ The boolean column on the `assignments` table persists the
 canonical classification for every row. **Regenerate is the only write
 site** — no other path creates an `Assignment` row — and it calls
 `assignments.recompute_self_review_classification` as part of
-materialising each pass. Every edit trigger (reviewer email, reviewee
-identifier or
-boundary tag, a reviewee added or deleted — membership is read off the
-roster — relationship pair-context tag, instrument
-`group_kind`) calls
+materialising each pass. Every edit trigger calls
 `assignments.recompute_self_review_classification` so the
-column never drifts. A row whose flag the recompute flips also moves
+column never drifts. The triggers are a reviewer email edit, a reviewee
+identifier or boundary tag edit, a reviewee added or deleted (membership
+is read off the roster), an instrument `group_kind` edit, and a
+relationship added, deleted, retagged, re-pointed or switched active /
+inactive (pair-context group keys are read off the active relationship
+rows; findings B33). A row whose flag the recompute flips also moves
 its `include` towards what Generate would write (findings B7): a row
 that stops being a self-review comes back on unless either side is
 inactive, and a row that becomes one is switched off when
