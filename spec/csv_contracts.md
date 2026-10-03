@@ -730,9 +730,9 @@ Concrete guarantees the importers + serialisers maintain:
    field's `data_type` value (`instruments[n].response_fields[m].data_type`)
    is matched the same way, ignoring surrounding spaces: `integer`,
    `INTEGER` and `Integer` all import as the model value `Integer`,
-   which serialise emits. A blank value imports as the default response
-   field's type; any other value than `String`, `Integer`, `Decimal` or
-   `List` is an error.
+   which serialise emits. A blank value imports the default response
+   field's type and bounds, not the row's own; any other value than
+   `String`, `Integer`, `Decimal` or `List` is an error.
 6. **Empty-string handling.** A `null` cell in storage is an
    empty CSV cell on serialise; an empty CSV cell on parse is
    `None`. No `"None"` strings, no `"null"` strings.
