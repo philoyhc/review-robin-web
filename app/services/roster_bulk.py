@@ -31,7 +31,9 @@ from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 
 
-def relationship_group_keys_before(db: Session, *, session_id: int) -> dict:
+def relationship_group_keys_before(
+    db: Session, *, session_id: int
+) -> dict[int, tuple[str, ...]]:
     """The pair-context group keys a relationship change could move,
     snapshotted before it (findings B34). Empty when no pair-context
     group instrument has an answer yet."""
@@ -43,7 +45,7 @@ def relationship_group_keys_before(db: Session, *, session_id: int) -> dict:
 
 
 def reconcile_relationship_groups(
-    db: Session, *, session_id: int, before: dict
+    db: Session, *, session_id: int, before: dict[int, tuple[str, ...]]
 ) -> dict[str, int] | None:
     """Re-derive the group answer copies of every assignment a
     relationship change moved to another pair-context group (findings
@@ -155,11 +157,12 @@ def bulk_set_status(
 
 # Which ``Assignment`` column points back at each roster model, for the
 # exact cascade count below. Observers and Relationships are absent on
-# purpose: nothing references them, so deleting one destroys no
+# purpose: nothing references them, so deleting one cascades to no
 # assignment and no response — measured from the model graph
-# (Segment 19I Item 2 PR 2), which is what answers the item's open
-# question about whether Relationships needs a response-loss gate. It
-# does not.
+# (Segment 19I Item 2 PR 2). A relationship change can still move a
+# pair to another pair-context group, which deletes the group answer
+# copy the pair carried (findings B34); the author ruled 2026-10-03
+# that this takes no response-loss gate, as a tag edit takes none.
 _ASSIGNMENT_FK = {
     Reviewer: Assignment.reviewer_id,
     Reviewee: Assignment.reviewee_id,

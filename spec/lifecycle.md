@@ -264,6 +264,10 @@ responses: reviewer and reviewee delete-all, the Reviewers and
 Reviewees Setup-page CSV import (`_shared.py` `_handle_import`),
 assignment Generate and delete-all, and Quick Setup's roster and
 settings replaces (which answer `needs_confirm` rather than 400).
+**Relationship changes do not call it**, although moving a pair to
+another pair-context group deletes the group answer copy it carried
+(`spec/assignments.md` "Group-scoped fan-out"; author's ruling
+2026-10-03, findings B34), as a reviewee tag edit does.
 **Delete Data does not call it**: its own confirm tick names the loss
 ("Yes, delete every reviewer response on …") and is the
 acknowledgement (author's ruling 2026-10-02,

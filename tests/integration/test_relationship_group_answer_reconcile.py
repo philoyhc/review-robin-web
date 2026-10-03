@@ -191,6 +191,9 @@ def test_inactivating_drops_the_copy_and_reactivating_restores_it(
         user=world.user,
     )
     assert _answers(db, world) == {"Ann": "4", "Bob": None}
+    assert _last_context(db, "relationship.bulk_inactivated") == {
+        "defuncted_group_responses": 1
+    }
 
     relationships_service.bulk_reactivate(
         db,
@@ -260,6 +263,9 @@ def test_deleting_every_relationship_moves_each_pair_to_the_empty_group(
 
     # Dan never moved; the others join his group and take its answer.
     assert _answers(db, world) == {"Ann": "7", "Cal": "7", "Dan": "7"}
+    assert _last_context(db, "relationships.deleted_all") == {
+        "defuncted_group_responses": 2
+    }
 
 
 def test_importing_moves_only_the_pairs_whose_group_changed(
@@ -302,3 +308,115 @@ def test_importing_moves_only_the_pairs_whose_group_changed(
         "filename": "relationships.csv",
         "defuncted_group_responses": 1,
     }
+
+
+def test_a_status_edit_with_a_re_point_moves_both_pairs(db: Session) -> None:
+    """One save that inactivates Bob's relationship and re-points it at
+    Cal moves Bob out (his tags leave) and leaves Cal where an inactive
+    row puts him, with Dan, so both take the empty-tag group's answer."""
+    world = _seed(
+        db,
+        tags={"Ann": "A", "Bob": "A", "Cal": None, "Dan": None},
+        answers={"Ann": "4", "Bob": "4", "Cal": "7", "Dan": "7"},
+    )
+
+    relationships_service.update_relationship(
+        db,
+        relationship=_relationship(db, world, "Bob"),
+        reviewee_id=world.reviewees["Cal"].id,
+        status="inactive",
+        user=world.user,
+    )
+
+    assert _answers(db, world) == {
+        "Ann": "4",
+        "Bob": "7",
+        "Cal": "7",
+        "Dan": "7",
+    }
+    assert _last_context(db, "relationship.updated") == {
+        "defuncted_group_responses": 1
+    }
+
+
+def test_re_pointing_an_untagged_relationship_moves_nothing(
+    db: Session,
+) -> None:
+    """Both pairs read as empty tags before and after, so no group key
+    moves and no answer is touched."""
+    world = _seed(
+        db,
+        tags={"Ann": "", "Bob": None},
+        answers={"Ann": "7", "Bob": "7"},
+    )
+
+    relationships_service.update_relationship(
+        db,
+        relationship=_relationship(db, world, "Ann"),
+        reviewee_id=world.reviewees["Bob"].id,
+        user=world.user,
+    )
+
+    assert _answers(db, world) == {"Ann": "7", "Bob": "7"}
+    assert _last_context(db, "relationship.updated") is None
+
+
+def test_another_reviewers_answers_are_untouched(db: Session) -> None:
+    world = _seed(
+        db, tags={"Ann": "A", "Bob": "A"}, answers={"Ann": "4", "Bob": "4"}
+    )
+    other = Reviewer(
+        session_id=world.review_session.id,
+        name="Ola",
+        email="ola@example.edu",
+    )
+    db.add(other)
+    db.flush()
+    instrument_id = world.rows["Ann"].instrument_id
+    field_id = db.execute(
+        select(Response.response_field_id).limit(1)
+    ).scalar_one()
+    other_rows = {}
+    for name in ("Ann", "Bob"):
+        db.add(
+            Relationship(
+                session_id=world.review_session.id,
+                reviewer_id=other.id,
+                reviewee_id=world.reviewees[name].id,
+                tag_1="A",
+            )
+        )
+        row = Assignment(
+            session_id=world.review_session.id,
+            reviewer_id=other.id,
+            reviewee_id=world.reviewees[name].id,
+            instrument_id=instrument_id,
+        )
+        db.add(row)
+        db.flush()
+        db.add(
+            Response(
+                assignment_id=row.id,
+                response_field_id=field_id,
+                value="5",
+                saved_at=_SAVED,
+                version=1,
+            )
+        )
+        other_rows[name] = row.id
+    db.commit()
+
+    relationships_service.bulk_inactivate(
+        db,
+        review_session=world.review_session,
+        relationship_ids=[_relationship(db, world, "Bob").id],
+        user=world.user,
+    )
+
+    assert _answers(db, world) == {"Ann": "4", "Bob": None}
+    assert {
+        name: db.execute(
+            select(Response.value).where(Response.assignment_id == row_id)
+        ).scalar_one()
+        for name, row_id in other_rows.items()
+    } == {"Ann": "5", "Bob": "5"}

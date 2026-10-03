@@ -578,7 +578,10 @@ copy, as they always saw the row.
 the current tags, so a change that moves a row to another group leaves
 it carrying the old group's answer. The copy is deleted, and the row
 takes its new group's answer when another member already holds one
-(`responses._group_reconciliation`). The moves are:
+(`responses._group_reconciliation`); when none does, the answer is
+gone. None of these changes asks for the response-loss
+acknowledgement (author's ruling 2026-10-03, findings B34). The moves
+are:
 
 - a reviewee boundary-tag edit;
 - a relationship's pair-context tag edit or re-point;
@@ -587,7 +590,8 @@ takes its new group's answer when another member already holds one
   tags (findings B34).
 
 Only the rows whose key changed are touched, so re-importing an
-unchanged relationships file deletes nothing. The triggering audit
+unchanged relationships file, or re-pointing a relationship that has
+no tags, deletes nothing. The triggering audit
 event's `context` counts the copies deleted as
 `defuncted_group_responses`.
 

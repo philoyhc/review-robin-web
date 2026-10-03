@@ -320,17 +320,17 @@ The spec halves of C4 and E32 stay in §3.
   inactivate / reactivate and a status edit moved a pair-context group
   key without one, so the flag lagged until the next Generate. Predates
   #2765; found in its read.
-- ~~**B34**~~ — **Done in #2778.** Each of these changes now compares
-  pair-context group keys before and after, and reconciles only the
-  rows whose key moved. The same relationship changes leave group answers on the
-  wrong group. A group instrument's answer is copied onto every
-  assignment in the group, and `update_relationship` deletes and
-  re-copies the affected pairs' copies when a tag edit or a re-point
-  moves a pair-context group key
-  (`reconcile_group_responses_for_relationship_change`). Create, import,
-  delete-all, the selected delete, bulk inactivate / reactivate and a
-  status edit move the key too, without that reconcile. Found in #2774's
-  read; predates it.
+- ~~**B34**~~ — **Done in #2778.** Every relationship change, a tag
+  edit and a re-point included, now compares pair-context group keys
+  before and after and reconciles only the rows whose key moved. A
+  group instrument's answer is copied onto every assignment in the
+  group, and only a tag edit or a re-point re-copied a moved pair's
+  copies; create, import, delete-all, the selected delete, bulk
+  inactivate / reactivate and a status edit moved the key without it,
+  leaving the old group's answer on the row. Ruled 2026-10-03: a moved
+  row's copy is deleted even when it was the group's last answer, with
+  no response-loss acknowledgement, as a tag edit does. Found in
+  #2774's read; predated it.
 - ~~**A29**~~ — **Done in #2775.** Ruled 2026-10-03: drop email from
   the scope. `spec/sort_by_reviewee.md` "Scope" lists email among the
   fields the operator's default sort can use, and the service accepts it,
