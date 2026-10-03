@@ -95,7 +95,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   and no `…_skipped` event exists for either; the codes are only the
   manual routes' errors. Trim them as B21 did, or keep them as the
   deferred design.
-- ~~**D33**~~ med (found while fixing D13) — **Done in #2802.** No Extract
+- ~~**D33**~~ med (found while fixing D13) — **Done in #2801.** No Extract
   download committed its audit row: `audit.write_event` only flushes and
   `get_db` closes without committing, and none of the 12 older routes in
   `_extracts.py` committed, so every `session.*_extracted` row rolled
@@ -149,15 +149,15 @@ stricter until ruled on.
   saved shape. Remove the button or specify it.
 
 **Routes and controls with no contract.**
-- ~~**B7**~~ — **Ruled 2026-10-03: retire. Done in #2803**; the audit key stays registered so old rows filter. `POST /assignments/delete-all` existed with gates but no page
+- ~~**B7**~~ — **Ruled 2026-10-03: retire. Done in #2801**; the audit key stays registered so old rows filter. `POST /assignments/delete-all` existed with gates but no page
   posts to it and `assignments.md` says assignments are never deleted.
-- ~~**A16**~~ — **Ruled 2026-10-03: retire. Done in #2803**; Recall, which is live, joins the spec's route list. The inert consolidated `POST /me/sessions/{id}/save`.
-- ~~**A22**~~ — **Ruled 2026-10-03: retire. Done in #2803**; tests use an `add_group_instrument` helper. `POST /instruments/add-group`, a fixture back door.
-- ~~**B15**~~ — **Ruled 2026-10-03: retire. Done in #2803**, with `needs_regeneration_after_revert`, its only input. `is_pre_generate`, kept "for external consumers", had only a
+- ~~**A16**~~ — **Ruled 2026-10-03: retire. Done in #2801**; Recall, which is live, joins the spec's route list. The inert consolidated `POST /me/sessions/{id}/save`.
+- ~~**A22**~~ — **Ruled 2026-10-03: retire. Done in #2801**; tests use an `add_group_instrument` helper. `POST /instruments/add-group`, a fixture back door.
+- ~~**B15**~~ — **Ruled 2026-10-03: retire. Done in #2801**, with `needs_regeneration_after_revert`, its only input. `is_pre_generate`, kept "for external consumers", had only a
   test consumer and costs queries per render.
 - ~~**B21**~~ — **Ruled 2026-10-03: retire. Done in #2801**: the rows go, and a note says the window is read-time. Release-from/until preconditions and skip reasons in
   `lifecycle.md:729-730` that nothing emits.
-- ~~**B11, B13, A25, C16, F4**~~ — **Ruled 2026-10-03: fix as recommended.** B13 (Generate copies an answered group's answer onto a new member) **done in #2805**; B11 (Clear shows for a status filter), C16 (identity and Profile labels are literals on Reviewees too) and F4 (308) **done in #2801**; A25 (an archived session's page says it has closed) **done in #2804**. Clear's visibility with a status filter; a
+- ~~**B11, B13, A25, C16, F4**~~ — **Ruled 2026-10-03: fix as recommended. Done in #2801**: B13 (Generate copies an answered group's answer onto a new member), B11 (Clear shows for a status filter), C16 (identity and Profile labels are literals on Reviewees too), F4 (308) and A25 (an archived session's page says it has closed). Clear's visibility with a status filter; a
   new member of an answered group gets no answer copy on Generate; the
   pre-open page also serving `archived`; identity labels through the
   resolver; `/monitoring`'s 303 against the 308 house rule.
