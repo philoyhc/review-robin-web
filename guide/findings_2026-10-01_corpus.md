@@ -117,7 +117,9 @@ the spec should say so.
   and Band 2 state, and a clone of the source's rule set (cloned rather
   than shared, since Band 1 edits update the row in place). Sort entries
   and column widths are re-pointed at its fields. Not copied: the
-  page-break flag (it is about position) and the visibility policies.
+  page-break flag (it is about position). **Ruled again 2026-10-03:
+  copy the visibility policies, and mark the short label `Copy of …`.
+  Done in #2766.**
 - ~~**A22, A23**~~ — **Ruled 2026-10-02: fix the spec. Done in #2764.**
   Sorting. The spec had a Sort column on the display-field table, a
   per-column click cycle and a Reset link. What ships is header badges

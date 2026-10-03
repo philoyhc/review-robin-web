@@ -2,8 +2,9 @@
 its fields.
 
 The copy gets its own clone of the source's pinned rule set and copies
-its short label, Band 1 touched links, Band 2 state and the
-visible-when-closed flag; it does not take the page-break flag. Sort entries and column widths name fields by id, so they are
+its Band 1 touched links, Band 2 state, the visible-when-closed flag
+and (2026-10-03) its visibility policies; its short label comes across
+marked ``Copy of …``. It does not take the page-break flag. Sort entries and column widths name fields by id, so they are
 re-pointed at the copy's own fields (``spec/instruments.md``
 "Replicate semantics")."""
 from __future__ import annotations
@@ -16,6 +17,7 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
+    InstrumentViewPolicy,
     SessionRuleSet,
     User,
 )
@@ -71,7 +73,7 @@ def test_replicate_clones_the_rule_and_copies_the_setup(db: Session) -> None:
     assert clone.rules_json == original.rules_json
     assert clone.combinator == original.combinator
     assert clone.exclude_self_reviews is True
-    assert replica.short_label == "Peer"
+    assert replica.short_label == "Copy of Peer"
     assert replica.band1_touched_links == ["link1", "link2", "link3"]
     assert replica.band2_state == {"selected_display_keys": ["reviewee.name"]}
     assert replica.responses_visible_when_closed is True
@@ -187,3 +189,140 @@ def test_replicate_keeps_the_group_identity_sort(db: Session) -> None:
     assert replica.sort_display_fields == [
         {"display_field_id": instruments.GROUP_IDENTITY_SORT_KEY, "dir": "asc"}
     ]
+
+
+def _policy_rows(db: Session, instrument_id: int) -> set[tuple]:
+    return {
+        (
+            p.audience,
+            p.while_ongoing_granularity,
+            p.while_ongoing_identification,
+            p.after_release_granularity,
+            p.after_release_identification,
+        )
+        for p in db.execute(
+            select(InstrumentViewPolicy).where(
+                InstrumentViewPolicy.instrument_id == instrument_id
+            )
+        ).scalars()
+    }
+
+
+def test_replicate_copies_the_visibility_policies(db: Session) -> None:
+    """2026-10-03 (A1): the copy shows its responses to the same
+    audiences, in the same modes, as its source — one
+    ``instrument.view_policy_set`` per copied row, as any write."""
+    review_session, source, op = _setup(db)
+    db.add_all(
+        [
+            InstrumentViewPolicy(
+                instrument_id=source.id,
+                audience="peer_reviewer",
+                while_ongoing_granularity="row",
+                while_ongoing_identification="identified",
+                after_release_granularity="row",
+                after_release_identification="identified",
+            ),
+            InstrumentViewPolicy(
+                instrument_id=source.id,
+                audience="reviewee",
+                after_release_granularity="row",
+                after_release_identification="deidentified",
+            ),
+            InstrumentViewPolicy(
+                instrument_id=source.id,
+                audience="observer",
+                while_ongoing_granularity="aggregated",
+                while_ongoing_identification="deidentified",
+            ),
+        ]
+    )
+    db.commit()
+
+    replica = instruments.replicate_instrument(
+        db, review_session=review_session, source=source, actor=op
+    )
+
+    assert _policy_rows(db, replica.id) == _policy_rows(db, source.id)
+    assert len(_policy_rows(db, replica.id)) == 3
+    events = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type == "instrument.view_policy_set",
+        )
+    ).scalars().all()
+    assert sorted(
+        e.detail["refs"]["instrument_id"] for e in events
+    ) == [replica.id] * 3
+
+
+def test_replicate_does_not_carry_an_illegal_cell(db: Session) -> None:
+    """A stored cell the per-cell rule rejects (an observer seeing Raw
+    while the session is ongoing, say, from an import that predates the
+    rule) is not copied: it falls back to off, and the legal cell in the
+    same row survives."""
+    review_session, source, op = _setup(db)
+    db.add(
+        InstrumentViewPolicy(
+            instrument_id=source.id,
+            audience="observer",
+            while_ongoing_granularity="row",
+            while_ongoing_identification="identified",
+            after_release_granularity="row",
+            after_release_identification="deidentified",
+        )
+    )
+    db.commit()
+
+    db.add_all(
+        [
+            # Off is not allowed here; the cell's one mode is Raw.
+            InstrumentViewPolicy(
+                instrument_id=source.id,
+                audience="peer_reviewer",
+                after_release_granularity="row",
+                after_release_identification="identified",
+            ),
+            # The reserved-incoherent pair decodes to nothing: off.
+            InstrumentViewPolicy(
+                instrument_id=source.id,
+                audience="reviewee",
+                after_release_granularity="aggregated",
+                after_release_identification="identified",
+            ),
+        ]
+    )
+    db.commit()
+
+    replica = instruments.replicate_instrument(
+        db, review_session=review_session, source=source, actor=op
+    )
+
+    assert _policy_rows(db, replica.id) == {
+        ("observer", None, None, "row", "deidentified"),
+        ("peer_reviewer", "row", "identified", "row", "identified"),
+        ("reviewee", None, None, None, None),
+    }
+
+
+def test_replicate_marks_a_long_label_within_its_column(db: Session) -> None:
+    review_session, source, op = _setup(db)
+    source.short_label = "x" * 32
+    db.commit()
+    replica = instruments.replicate_instrument(
+        db, review_session=review_session, source=source, actor=op
+    )
+    assert replica.short_label == "Copy of " + "x" * 24
+    assert len(replica.short_label) == 32
+
+
+def test_replicate_of_an_unlabelled_instrument_has_no_label(
+    db: Session,
+) -> None:
+    review_session, source, op = _setup(db)
+    source.short_label = None
+    db.commit()
+    replica = instruments.replicate_instrument(
+        db, review_session=review_session, source=source, actor=op
+    )
+    assert replica.short_label is None

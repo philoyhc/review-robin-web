@@ -35,6 +35,7 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
+    InstrumentViewPolicy,
     ReviewSession,
     SessionRuleSet,
     User,
@@ -52,6 +53,10 @@ DEFAULT_INSTRUMENT_NAME = "Default"
 # value, so a replica's suffixed name trims the source name to fit.
 _NAME_MAX = 255
 _COPY_SUFFIX = " (copy)"
+# ``instruments.short_label`` is ``String(32)``; a replica's label is
+# marked as a copy at the front, the source label trimmed to fit.
+_SHORT_LABEL_MAX = 32
+_COPY_LABEL_PREFIX = "Copy of "
 
 
 def ensure_default_instrument(
@@ -296,7 +301,7 @@ def replicate_instrument(
     "Replicate semantics").
 
     Copies every column but the key, ``order``, ``session_seq``,
-    ``starts_new_page``, the caches and ``deadline_closed_at``: description, ``short_label``,
+    ``starts_new_page``, the caches and ``deadline_closed_at``: description,
     the response fields (incl. help text, ``visible`` and branches),
     the display fields (incl. each row's ``visible``), ``group_kind``,
     ``band1_touched_links``, ``band2_state`` and the two acceptance
@@ -310,7 +315,10 @@ def replicate_instrument(
     instrument into the other. ``sort_display_fields`` and
     ``column_widths`` name fields by id, so they are re-pointed at the
     copy's fields. The name is the source name + " (copy)", the source
-    name trimmed so the whole fits the 255-char column.
+    name trimmed so the whole fits the 255-char column; the short label
+    is ``Copy of`` + the source's, trimmed to its 32-char column. The
+    visibility policies are copied through ``upsert_policy`` (author's
+    ruling, 2026-10-03, A1; see :func:`_copy_view_policies`).
 
     **No ``Assignment`` rows are created**, here or in
     :func:`create_instrument`. Both cloned them until Segment 19N.1, so
@@ -340,7 +348,7 @@ def replicate_instrument(
         name=source.name[: _NAME_MAX - len(_COPY_SUFFIX)] + _COPY_SUFFIX,
         description=source.description,
         order=new_order,
-        short_label=source.short_label,
+        short_label=_copy_short_label(source.short_label),
         accepting_responses=source.accepting_responses,
         responses_visible_when_closed=source.responses_visible_when_closed,
         group_kind=source.group_kind,
@@ -420,6 +428,7 @@ def replicate_instrument(
     instrument.column_widths = _repoint_widths(
         source.column_widths, display_ids=display_ids, field_ids=field_ids
     )
+    _copy_view_policies(db, review_session, source, instrument, actor)
     db.flush()
 
     # A duplicated instrument gets **no assignment rows** either
@@ -447,6 +456,76 @@ def replicate_instrument(
     )
     db.commit()
     return instrument
+
+
+def _copy_view_policies(
+    db: Session,
+    review_session: ReviewSession,
+    source: Instrument,
+    replica: Instrument,
+    actor: User,
+) -> None:
+    """The source's visibility policies, written onto the replica
+    (author's ruling, 2026-10-03, A1): the copy shows its responses to
+    the same audiences, in the same modes.
+
+    Through ``visibility_policies.upsert_policy``, the visibility
+    editor's writer, so each copied row is checked against the per-cell rule
+    and emits its own ``instrument.view_policy_set``
+    (``spec/visibility_policy.md`` §3.1, §5). A stored cell the rule
+    rejects — a row imported before the rule existed — is not carried
+    across: it falls back to off, or to the cell's one permitted mode
+    where off is not allowed."""
+    from app.services import visibility_policies as vp
+
+    policies = db.execute(
+        select(InstrumentViewPolicy)
+        .where(InstrumentViewPolicy.instrument_id == source.id)
+        .order_by(InstrumentViewPolicy.audience)
+    ).scalars().all()
+    for policy in policies:
+        if policy.audience not in vp.AUDIENCES:
+            continue
+        modes: dict[str, str | None] = {}
+        for window in ("while_ongoing", "after_release"):
+            granularity = getattr(policy, f"{window}_granularity")
+            identification = getattr(policy, f"{window}_identification")
+            mode: str | None = None
+            if granularity is not None and identification is not None:
+                try:
+                    mode = vp.decode_mode(granularity, identification)
+                except vp.VisibilityPolicyError:
+                    mode = None
+            allowed = vp.valid_modes_for_cell(policy.audience, window)
+            # Off where the cell allows it; otherwise the cell's one
+            # permitted mode (only peer_reviewer while_ongoing = raw
+            # today). A future cell with several modes and no off would
+            # need a decision here, not the alphabetical first.
+            if mode not in allowed:
+                mode = None if None in allowed else sorted(
+                    m for m in allowed if m is not None
+                )[0]
+            modes[window] = mode
+        vp.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=replica,
+            audience=policy.audience,
+            while_ongoing_mode=modes["while_ongoing"],
+            after_release_mode=modes["after_release"],
+            user=actor,
+        )
+
+
+def _copy_short_label(label: str | None) -> str | None:
+    """A replica's short label: the source's, marked ``Copy of …`` so
+    the two cards can be told apart (author's ruling, 2026-10-03, A1),
+    the source label trimmed so the whole fits the 32-char column. A
+    source with no short label gives a copy with none; the copy's
+    ``Instrument_{session_seq}`` fallback already differs."""
+    if not label:
+        return label
+    return _COPY_LABEL_PREFIX + label[: _SHORT_LABEL_MAX - len(_COPY_LABEL_PREFIX)]
 
 
 def _clone_rule_set(

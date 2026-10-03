@@ -1507,9 +1507,12 @@ Clones every field of the source instrument except the surrogate
 key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
 `deadline_closed_at` and the `cached_*` columns:
 
-- Identity (`name` gets a `" (copy)"` suffix, the source name trimmed
-  so the whole fits 255 characters; `short_label` / `description`
-  carried as-is).
+- Identity: `name` gets a `" (copy)"` suffix, the source name trimmed
+  so the whole fits 255 characters; `short_label` gets a `Copy of `
+  prefix, the source label trimmed so the whole fits 32 characters, so
+  the two cards can be told apart (author's ruling, 2026-10-03, A1). A
+  source with no short label gives a copy with none. `description` is
+  carried as-is.
 - Display fields (cloned in order).
 - Response fields (cloned in order — including the inline
   bounds and the help text, and a branch: the parent's condition
@@ -1531,11 +1534,15 @@ key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
   copy's own display and response fields (both name fields by id).
 - `accepting_responses` / `responses_visible_when_closed` —
   copied as-is.
-
-**Not cloned: visibility policies.** The copy has no
-`InstrumentViewPolicy` rows, so every audience starts off for it
-(`spec/visibility_policy.md` §4.1) until the operator sets them, as
-session clone does (`spec/roundtrip_coverage.md`).
+- Visibility policies — copied row for row (author's ruling,
+  2026-10-03, A1): the copy shows its responses to the same audiences,
+  in the same modes, as its source. Each row goes through
+  `visibility_policies.upsert_policy`, so it is checked against the
+  per-cell rule and emits its own `instrument.view_policy_set`
+  (`spec/visibility_policy.md` §5); a stored cell the rule rejects (a
+  row imported before the rule) falls back to off, or to the cell's one
+  permitted mode. Session clone still does not copy them
+  (`spec/roundtrip_coverage.md`).
 
 **Not cloned: assignment rows.** The duplicate starts with no pairs and
 gets them from the next Generate, exactly as `+Instrument` does. A

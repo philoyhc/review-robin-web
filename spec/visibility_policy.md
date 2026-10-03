@@ -199,7 +199,7 @@ instrument_view_policies
 
 ### 4.1 Default state
 
-Default on instrument create: no rows. Resolver treats a missing row as "off in both windows" — instrument is invisible to that audience. The operator opts each audience in deliberately on the instrument's visibility editor.
+Default on instrument create: no rows. Resolver treats a missing row as "off in both windows" — instrument is invisible to that audience. The operator opts each audience in deliberately on the instrument's visibility editor. **Replicate is the exception:** the copy starts with its source's rows (author's ruling, 2026-10-03, findings A1), written through the same `upsert_policy` writer, so each is checked against the per-cell rule and audited as in §5; a stored cell the rule rejects is not carried across (`spec/instruments.md` "Replicate semantics").
 
 ---
 
