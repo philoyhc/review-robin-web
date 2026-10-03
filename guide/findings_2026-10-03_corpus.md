@@ -95,6 +95,13 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   and no `…_skipped` event exists for either; the codes are only the
   manual routes' errors. Trim them as B21 did, or keep them as the
   deferred design.
+- ~~**D33**~~ med (found while fixing D13) — **Done in #2802.** No Extract
+  download committed its audit row: `audit.write_event` only flushes and
+  `get_db` closes without committing, and none of the 12 older routes in
+  `_extracts.py` committed, so every `session.*_extracted` row rolled
+  back in production. The SAVEPOINT test fixture hid it; a real-commit
+  test now covers eleven of them (the sys-admin audit log is the one
+  left out).
 - **Stale code comments and dead code.** `_assignments.py:410-420`
   (generate docstring) and the `missing_confirm` banner naming a form
   that does not exist (B2); `session_lifecycle.py:1-6, 54-55, 333, 659,
