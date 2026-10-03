@@ -600,7 +600,7 @@ runs it) inserts a row for a member new to a group — a reviewee added
 to an answered team while the session is back in draft, say. When
 another member of that group already holds an answer, the new row gets
 a copy, `submitted_at` included, so the extracts, counts and monitoring
-read the member as the surface does (findings B13, 2026-10-03). Rows
+read the member as the surface does. Rows
 that already carry responses, and groups nobody has answered, are left
 alone. `assignments.generated` counts the copies as
 `group_responses_copied`.

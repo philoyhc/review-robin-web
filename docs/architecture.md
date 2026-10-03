@@ -105,9 +105,11 @@ retired [`archive/azure_provision.md`](archive/azure_provision.md).
 - **Observability.** App Service streams structured JSON logs to **Azure
   Monitor** (Log Analytics + Application Insights). Correlation IDs are
   stamped on `audit_events` rows, not on log lines.
-- **Storage.** A small **10 GB Block Blob** account for **diagnostics and
-  deployment artifacts only** — the application itself has no blob
-  dependency (CSV imports are parsed in-request, not persisted to blob).
+- **Storage.** A **10 GB Block Blob** account is provisioned and
+  earmarked as the Segment 18Q blob store (`guide/segment_18Q_blob.md`);
+  nothing uses it yet. The application has no blob dependency (CSV
+  imports are parsed in-request, not persisted), and deploy artifacts
+  travel as GitHub Actions artifacts, not through it.
 
 ## Deliberately absent
 

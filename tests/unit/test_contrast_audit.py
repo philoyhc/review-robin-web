@@ -104,17 +104,16 @@ MUTED_TEXT = "--text-subtle"
 DECORATION = "--decor-muted"
 
 #: The fill each ``--text-on-*`` token belongs to. The one hand-kept
-#: list here, and it exists because these two pairings are derivable no
-#: other way: the names do not match (``--text-on-amber`` /
-#: ``--btn-alert-bg``) and no single rule sets both halves, so all
-#: three gathering passes miss them. Pairing them with surfaces
+#: list here, and it exists because this pairing is derivable no
+#: other way: the names do not match (``--text-on-accent`` /
+#: ``--btn-primary-bg``) and no single rule sets both halves, so all
+#: three gathering passes miss it. Pairing them with surfaces
 #: instead, as an earlier draft did, measures white-on-white and calls
 #: it a failure. ``test_the_sweep_finds_the_palette_it_claims_to``
 #: asserts every ``--text-on-*`` token in the palette appears here, so
 #: a new one cannot be added and quietly go unchecked.
 ON_FILL = {
     "--text-on-accent": "--btn-primary-bg",
-    "--text-on-amber": "--btn-alert-bg",
 }
 
 #: Pairs under AA normal that are **open** — not accepted, and listed

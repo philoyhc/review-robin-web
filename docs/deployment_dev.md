@@ -122,8 +122,8 @@ restart the app after a change.
 | `REHYDRATE_ENABLED` | `false` | Opens the Rehydrate surface. Off by default and deferred; the test suite turns it on. |
 | `AUDIT_STRICT_MODE` | `false` | When true, `audit.write_event` raises on a detail-shape violation. Tests enable it; production leaves it off. |
 
-`APP_NAME`, `APP_VERSION`, and `DEBUG` also exist but are
-cosmetic / dev-only.
+`APP_VERSION` also exists and is cosmetic: it labels the build in
+the operator top bar and on the About page.
 
 ## Database configuration
 

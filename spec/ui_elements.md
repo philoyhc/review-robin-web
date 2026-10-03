@@ -9,7 +9,11 @@ contract they implement.
 Every page template sets its `body_class` block to `ui-v2` (reviewer
 templates to `ui-v2 reviewer`), so the `body.ui-v2`-scoped rules are the
 treatment; the unprefixed rules earlier in the sheet apply only where that
-block does not override them.
+block does not override them. **The one exception is `error.html`**: it
+does not extend `base.html`, because it must render when the request
+context that `base.html` needs is broken (`app/web/error_handlers.py`),
+so it carries its own small light / dark palette in raw hex and sits
+outside this catalogue and the contrast audit.
 
 > **Reference implementation.** `app/web/templates/operator/session_reviewers.html`
 > + the `body.ui-v2`-scoped block in `app/web/templates/base.html`
@@ -446,12 +450,11 @@ breakpoints for, and narrow-viewport support is a separate spec
 | `.btn` (no modifier) | **Primary** | `--btn-primary-bg` fill, `--btn-primary-fg` label, `--btn-primary-border` border. Reserved for the page's *single* main affirmative action — at most one per page region. "Submit this form" doesn't qualify; routine submits use Secondary. |
 | `.btn.secondary` | **Secondary** | `--btn-secondary-bg` (white) with a `--btn-secondary-fg` label and a `--btn-secondary-border` outline — a medium grey, a shade lighter than the label. The default button. Used for routine submits (Upload, Save), Cancel, View detail, etc. |
 | `.btn.alert` | **Outline-amber (recovery in lock card)** | `--btn-amber-bg` (white) with `--btn-amber-border` + `--btn-amber-fg` — the same warning brown that frames the lock card. Per `visual_style_general.md` P7, recovery actions inside a lock card adopt the card's color family. Used e.g. for "Revert to draft" inside a `.card.lock`. |
-| `.btn.alert-solid` | **Primary** | Resolves to the Primary tokens; there is no separate orange solid. The action's gravity is communicated by the surrounding context (lock card, confirm-step), not the button color. |
 | `.btn.destructive` | **Destructive (outline red)** | `--btn-destructive-bg` (white) with `--btn-destructive-border` + `--btn-destructive-fg`. Irreversible row / collection **deletes** — Delete session, delete-all rosters, bulk-delete, and the delete confirm step inside `.card.danger-zone`. The role also appears **outside** a danger zone: every roster Setup page carries a `Delete` for the checkbox-selected rows in its **row expander**. Nothing sits between `Add new` and `Search` in the toolbar; the one-row constraint that once shortened `Add` went with `Delete`. The expander is not red and does not become so — the button's own role carries the weight, and the destructive act is gated by the confirmation checkbox beside it (`spec/setup_pages.md` § *Roster controls and their route contracts*). |
 | `.btn.danger-solid` | **Alert (filled amber)** | Filled `--btn-alert-bg` with a `--btn-alert-fg` label; lightens to `--btn-alert-bg-hover`. Serious-but-**recoverable** actions — purge-and-archive, Archive session, and the Acknowledge-and-activate confirm. Amber = caution, and the role exists to stay distinct from `.btn.destructive` (red, deletes data) and `.btn.alert` (outline amber, recovery inside a lock card): three amber-or-red treatments that mean three different things, so none may borrow another's fill. |
 | `.btn` ⇄ `.btn.secondary` + `aria-pressed` | **Toggle** | A two-state on/off button for one flag on one row. On takes the Primary tokens (`.btn`), off takes Secondary (`.btn.secondary`), and `aria-pressed` carries the state; whatever changes the flag — the click handler for R and ≡, the row's state sync for ⑂ — sets the class and the attribute together. It reuses the two roles' tokens rather than adding its own, so it is a role by behavior, not a new colour. Used on the Instruments page's response-field rows only: **R** (required), **≡** (help-text card) and **⑂** (branch — on once the field has a branch, and disabled then). It is not a chip: the column chips (`col-chip`), the audience chips (`pill-count is-selected`) and the Light / Dark switch (`.theme-toggle`) toggle too, but each is its own primitive. |
-| `.btn.danger` | *(no rule)* | `.danger` is a context class, not a button role: `base.html` styles it only as `.btn-icon.danger` (below), and nothing renders `.btn.danger`. A `.btn` that enters a confirmation takes Secondary; the destructive treatment lands on the confirm step (`.btn.destructive`). |
-| `.btn-icon` | **Icon button** | Borderless inline action (move-up / move-down / delete-row), `--text-subtle` by default with `.danger` / `.action` modifiers taking `--icon-btn-danger-fg` / `--icon-btn-action-fg`. **Neither of Band 3's tables uses this role for their ▲ ▼ any longer** — both are outlined `btn secondary`, short (`btn-short`, §10) on the display-field table and full-size on the response-field table. **As an anchor** (the row pager's steps): the live cell is `<a class="btn-icon …">` and the unavailable one a `<span class="btn-icon … is-inactive" aria-disabled="true">` — a `<span>` rather than an href-less `<a>`, following `.nav-tab disabled`, because an anchor without an href is focusable-but-inert in some browsers and not others. Inactive is `opacity: 0.4` + `cursor: not-allowed` and takes **no** accent fill, the reserved shade being for things that act. An anchor `.btn-icon` also needs `text-decoration: none` on its own rule — the page's `a` rule underlines it otherwise, and an underlined `»` reads as a typo. **A specialising rule must name `.btn-icon` in its own selector.** `body.ui-v2 .btn-icon` is (0,2,1) and sits late in `base.html`, so `body.ui-v2 .table-pager-step` ties it and loses on source order — silently, if its declarations happen to match what `.btn-icon` already sets. Write `body.ui-v2 .btn-icon.table-pager-step`, which is (0,3,1) and wins. `tests/integration/test_cascade_ties.py` resolves the cascade in Python — rendered class sets against parsed rules — and fails when a canonical class's declaration is dead because an equal-specificity rule sets the same property later. A variant that comes *later* and wins (`.table-pager-cluster-bottom` over `.table-pager-cluster`) is the idiom and is not reported; a specialisation that comes *earlier* and loses is. The check covers simple class selectors on one element only: combinator rules, `@media` blocks, inline `style=` and shorthand-versus-longhand are outside it, each able to make it silent but none able to make it report a tie that is not there. |
+| `.btn.danger` | *(no rule)* | `.danger` is a context class, not a button role: `base.html` gives `.btn.danger` no rule, and nothing renders it. A `.btn` that enters a confirmation takes Secondary; the destructive treatment lands on the confirm step (`.btn.destructive`). |
+| `.btn-icon` | **Icon button** | Borderless single-glyph affordance in `--text-subtle`; the row pager's steps are its one caller. **Neither of Band 3's tables uses this role for their ▲ ▼** — both are outlined `btn secondary`, short (`btn-short`, §10) on the display-field table and full-size on the response-field table. **As an anchor** (the row pager's steps): the live cell is `<a class="btn-icon …">` and the unavailable one a `<span class="btn-icon … is-inactive" aria-disabled="true">` — a `<span>` rather than an href-less `<a>`, following `.nav-tab disabled`, because an anchor without an href is focusable-but-inert in some browsers and not others. Inactive is `opacity: 0.4` + `cursor: not-allowed` and takes **no** accent fill, the reserved shade being for things that act. An anchor `.btn-icon` also needs `text-decoration: none` on its own rule — the page's `a` rule underlines it otherwise, and an underlined `»` reads as a typo. **A specialising rule must name `.btn-icon` in its own selector.** `body.ui-v2 .btn-icon` is (0,2,1) and sits late in `base.html`, so `body.ui-v2 .table-pager-step` ties it and loses on source order — silently, if its declarations happen to match what `.btn-icon` already sets. Write `body.ui-v2 .btn-icon.table-pager-step`, which is (0,3,1) and wins. `tests/integration/test_cascade_ties.py` resolves the cascade in Python — rendered class sets against parsed rules — and fails when a canonical class's declaration is dead because an equal-specificity rule sets the same property later. A variant that comes *later* and wins (`.table-pager-cluster-bottom` over `.table-pager-cluster`) is the idiom and is not reported; a specialisation that comes *earlier* and loses is. The check covers simple class selectors on one element only: combinator rules, `@media` blocks, inline `style=` and shorthand-versus-longhand are outside it, each able to make it silent but none able to make it report a tie that is not there. |
 | `.btn-reset` | **Inline text-button** (revert-this-field) | Single-line link-styled button used to revert a single text field inside an editor without cancelling and exiting the whole editor. Reference example: per-field `Reset {{ field }} to default` on the Email Template page (`session_setupinvite.html`). Reads as a small inline link (`--text-link`, underline on hover); posts a form. The pattern can apply to any editor with per-field overrides — adopt this class instead of inline-styled buttons. |
 | `.back-link` | **Return-to-where-you-came-from** | Top-of-body inline link rendered as `<a class="back-link" href="{{ return_to_url }}">← Back to {{ return_to_label }}</a>`. The canonical "navigate back" affordance for chrome-detour pages and session-level child pages. Used by Operator Settings (`/operator/settings`), About (`/about`), and any page that should return the operator to wherever they came from regardless of the page's working state. Pages that need a "Cancel uncommitted edits" affordance render an inline Cancel button alongside the working-state Save (the back-link still navigates regardless). The `?return_to=<path>` query-param round-trip surfaces as `return_to_url` / `return_to_label` view-shape variables. |
 | `.nav-tab` (chrome class, reused for page-internal) | **Nav button** (page-internal view switcher) | Page-internal tab-like navigation between sibling views inside a single operator page — *not* the chrome. Reference examples: Email Template's `Invitation` / `Reminder` / `Responses received` row (`session_setupinvite.html`); the email-tab strip on the Manage Invitations per-reviewer drill-in (`partials/_email_preview_region.html`). Reuses the chrome's `.nav-tab` styling so the visual vocabulary stays consistent: active view renders `<span class="nav-tab active" aria-current="page">` (non-anchor, current location), sibling views render `<a class="nav-tab">` anchors, "coming soon" reserved tabs render `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `<div class="tab-strip tab-strip-page">` — the `.tab-strip-page` modifier gives the row the chrome's grey tint, a thin border, and rounded corners so the active-tab white background reads against the row tint just like the chrome's Setup row. |
@@ -460,7 +463,7 @@ breakpoints for, and narrow-viewport support is a separate spec
 outline controls gain a subtle tint in their own family. One direction
 everywhere, so "you can click this" reads the same way on every control.
 
-- *Filled* — Primary and `.alert-solid` move to `--btn-primary-bg-hover`;
+- *Filled* — Primary moves to `--btn-primary-bg-hover`;
   `.btn.danger-solid` to `--btn-alert-bg-hover`.
 - *Outline* — Secondary to `--btn-secondary-bg-hover`, `.btn.destructive`
   to `--btn-destructive-bg-hover`, `.btn.alert` to
@@ -564,11 +567,9 @@ everywhere, so "you can click this" reads the same way on every control.
 > own gap **must reset that top margin** or the two stack; three rules in
 > `base.html` do so and say why.
 
-> **Helper text / error text** — `.form-help` (`--fs-small` in
-> `--text-subtle`) and `.form-error` (`--fs-small` in
-> `--status-error-accent`), both below the input. Use these rather than a
-> `<p class="muted">` or a bare `<small>`, so supporting text is one
-> treatment app-wide.
+> **Helper text** — `.form-help` (`--fs-small` in `--text-subtle`), below
+> the input. Use it rather than a `<p class="muted">` or a bare
+> `<small>`, so supporting text is one treatment app-wide.
 >
 > **A card subtitle is not helper text, and takes `<p class="muted">`.**
 > The rule above governs text bound to a *field* — it sits below that
@@ -595,13 +596,6 @@ everywhere, so "you can click this" reads the same way on every control.
 > issues match the current severity filter."*, is an empty-state line
 > under an `<h2>` and is neither.
 
-> **Inline-edit pattern (`.display-edit`, `.instrument-edit`,
-> field-builder `<details>` / `<summary>`)** — `<details>` shells for
-> inline label edits with tick / cross affordances, defined in
-> `base.html` and used on the Instruments page. `.field-builder.locked`
-> suppresses the summary's pointer and hides the edit / delete / add-row
-> affordances, so a locked builder reads as inert rather than as broken.
-
 ### 9. Badges / pills
 
 The base `.pill`: `padding: 2px var(--space-2)`,
@@ -621,7 +615,6 @@ lands on the numbers without bolding the whole sentence.
 | `.pill-success` | `--status-success-bg` / `--status-success-fg` | The `-fg` slot, like every other pill: a pill's label is text, and `-accent` is the marker slot. |
 | `.pill-error` | `--status-error-bg` / `--status-error-fg` | Validation-summary error counts. |
 | `.pill-super` | `--status-super-bg` / `--status-super-fg` | The super-admin tier badge — violet, so the protected top tier is not read as an ordinary blue info pill. |
-| `.pill-handle` | `--surface-muted` / `--text-body` | Monospace, and the one pill that is **not** uppercased — a handle is a literal string and case is part of it. |
 
 ### Label or control
 
@@ -701,7 +694,6 @@ One row per primitive. Colours and spacing come from tokens throughout.
 | `.card-action-row` | A right-flushed row for a card's own action, `--space-3` above it, as the card's **last child**. Three callers: the Owners card on the Create page and on Session Home, and the Invitations reviewer drill-in's Review Progress card — a primitive with more than one caller is a primitive. |
 | `.btn-pair` (inline pair) | Two buttons side by side at their natural widths. |
 | `.fill-col` (flex column whose last child grows) | |
-| `.field-builder` + `.field-builder.locked` | The Display Fields / Response Fields builder, and its inert form (§8). |
 | `.subcard-row` (+ `.stepped`, `.subcard-arrow`) | Equal-width tile row inside a card. Detailed below. |
 | `.guide-figure` (+ `.guide-figure-narrow`) | The `/guide` screencap figure. Detailed below. |
 | `.table-scroll` (`overflow-x: auto`) | A wide table's overflow stays inside its card instead of scrolling the page. **Every table but one sits in one** — see below |
@@ -961,11 +953,10 @@ below, which is what ui-v2's global `h3` rule assumes. Scoped by the
 
 ### 11. Misc one-offs
 
-> **`.btn-icon`** — borderless inline action (move-up, move-down,
-> row-delete, row-add), `--text-subtle` by default. Two semantic
-> modifiers: `.btn-icon.danger` takes `--icon-btn-danger-fg` and
-> `.btn-icon.action` takes `--icon-btn-action-fg`. See the §6 row for the
-> anchor form and the specificity rule a specialising variant must obey.
+> **`.btn-icon`** — a borderless single-glyph affordance in
+> `--text-subtle`; the row pager's steps are its one caller. See the §6
+> row for the anchor form and the specificity rule a specialising
+> variant must obey.
 
 > **`<pre>` blocks (outbox preview)** — render as `.code-block`, the
 > same content-surface family as cards. A raw `<pre>` is not a
