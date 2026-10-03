@@ -94,12 +94,6 @@ E1, E2 and E4 were checked by the author when they merged.
   and the short label "Peer", then Replicate it. The copy's Visibility
   matches the source's, and its card title reads "Copy of Peer".
 
-## Setup tabs underline in blue (findings register E5)
-
-- [ ] **Light and dark.** On any Setup page (Reviewers, say), the active
-  Setup tab's underline is blue rather than grey, in both themes. The
-  Operations row's green underline is unchanged.
-
 ## Zip all follows the other cards (D28)
 
 - [ ] **Card order.** On Extract data, the left column holds Reviewer
@@ -139,12 +133,6 @@ E1, E2 and E4 were checked by the author when they merged.
   Back on Assignments, without generating again, the self-review count
   drops by that row. Reactivate it and the count comes back.
 
-## Session nav looks the same (E37)
-
-- [ ] **Tabs.** On any session page, in light and dark themes, the
-  selected Setup or Operations tab still has its white (dark: near-black)
-  background, and hovering another tab paints it the same way.
-
 ## Relationship changes move group answers (B34)
 
 - [ ] **Inactivate a group member.** In a session whose instrument
@@ -155,6 +143,18 @@ E1, E2 and E4 were checked by the author when they merged.
   rejoins the group with its answer.
 - [ ] **Re-import unchanged.** Download the relationships CSV and import
   it again unchanged. Every answer is still there.
+
+## Setup tabs underline in blue (findings register E5)
+
+- [x] **Light and dark.** On any Setup page (Reviewers, say), the active
+  Setup tab's underline is blue rather than grey, in both themes. The
+  Operations row's green underline is unchanged.
+
+## Session nav looks the same (E37)
+
+- [x] **Tabs.** On any session page, in light and dark themes, the
+  selected Setup or Operations tab still has its white (dark: near-black)
+  background, and hovering another tab paints it the same way.
 
 ## E5 — Assignments and Validate before the first Prepare (#2717)
 
