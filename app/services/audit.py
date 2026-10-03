@@ -549,6 +549,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "assignments.instrument_self_reviews_active_set": EventSchema(
         _IDENTITY | {"counts", "context", "refs"}
     ),
+    # Findings B7: a self-review recompute that moved ``include`` on a
+    # reclassified row (``recompute_self_review_classification``).
+    "assignments.include_reconciled": EventSchema(_IDENTITY | {"counts"}),
     "assignments.bulk_include_set": EventSchema(
         _IDENTITY | {"counts", "context"}
     ),

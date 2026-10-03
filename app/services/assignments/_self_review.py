@@ -25,6 +25,7 @@ from app.db.models import (
 )
 from app.services import audit
 from app.services.email_identity import normalize_email
+from app.services.roster_status import is_active, status_is_active
 
 
 def is_self_review(reviewer: Reviewer, reviewee: Reviewee) -> bool:
@@ -299,7 +300,10 @@ def recompute_self_review_classification(
     """Recompute :attr:`Assignment.is_self_review` for every
     assignment in the session and persist any row whose stored
     value diverged from what :func:`classify_self_review` now
-    returns.
+    returns. A row whose flag flips also has its ``include`` moved the
+    way the flip calls for (findings B7; see the inline comment), and
+    when that changes any ``include`` an
+    ``assignments.include_reconciled`` event records the count.
 
     Group membership is read off the roster (findings B7), so the
     rule no longer needs every ``(R, member)`` row in view; the
@@ -368,7 +372,7 @@ def recompute_self_review_classification(
         ) in rows
     ]
     both_active = {
-        row_id: reviewer_status == "active" and reviewee.status == "active"
+        row_id: is_active(reviewee) and status_is_active(reviewer_status)
         for row_id, *_, reviewee, reviewer_status, _include in rows
     }
     included = {row[0]: bool(row[-1]) for row in rows}
@@ -408,6 +412,9 @@ def recompute_self_review_classification(
                     ),
                 }
             )
+    include_changed = sum(
+        1 for row in changed if row["include"] != included[row["id"]]
+    )
     if changed:
         # ORM bulk UPDATE by primary key. Unlike the bulk *insert* in
         # ``_materialise_one_instrument``, this form keeps the identity
@@ -419,6 +426,23 @@ def recompute_self_review_classification(
         # ``tests/unit/test_recompute_self_review_bulk_update.py``.
         db.execute(update(Assignment), changed)
         db.flush()
+    if include_changed:
+        # ``include`` is operator-controlled (the per-row Include and the
+        # per-instrument toggle both audit their writes), so a recompute
+        # that moves it says so, beside the edit that triggered it.
+        audit.write_event(
+            db,
+            event_type="assignments.include_reconciled",
+            summary=(
+                f"Self-review reclassification switched {include_changed} "
+                f"assignment{'s' if include_changed != 1 else ''} "
+                f"on or off"
+            ),
+            session=db.get(ReviewSession, session_id),
+            payload=audit.counts(
+                reclassified=len(changed), include_changed=include_changed
+            ),
+        )
     return len(changed)
 
 

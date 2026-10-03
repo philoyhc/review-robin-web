@@ -470,7 +470,10 @@ column never drifts. A row whose flag the recompute flips also moves
 its `include` towards what Generate would write (findings B7): a row
 that stops being a self-review comes back on unless either side is
 inactive, and a row that becomes one is switched off when
-`self_reviews_active` is off. Every downstream reader (extracts,
+`self_reviews_active` is off. A manual exclusion on a row that stops
+being a self-review is therefore not kept, as Generate does not keep
+one either. When the recompute changes any `include`, it writes
+`assignments.include_reconciled` with the counts. Every downstream reader (extracts,
 audit counters, the in-app `Assignments`-page status
 blocks, the `set_instrument_self_reviews_active` toggle
 backend) consumes the column directly. The

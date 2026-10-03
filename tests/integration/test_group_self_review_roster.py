@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    AuditEvent,
     Instrument,
     Reviewee,
     Reviewer,
@@ -281,4 +282,50 @@ def test_a_row_that_becomes_a_self_review_follows_the_session_setting(
     zoe = _rows_by_reviewee(db, instrument)["Zoe"]
     assert zoe.is_self_review is True
     assert zoe.include is False
+
+
+def test_an_inactive_side_keeps_a_reclassified_row_off(db: Session) -> None:
+    """Findings B2: a row with an inactive reviewer or reviewee is never
+    assigned work, so stopping being a self-review does not switch it
+    back on."""
+    user, review_session, instrument = _seed(db, self_reviews_active=False)
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="b7"
+    )
+    zoe_e = db.execute(
+        select(Reviewee).where(Reviewee.name == "Zoe")
+    ).scalar_one()
+    reviewees_service.update_reviewee(
+        db, reviewee=zoe_e, status="inactive", user=user
+    )
+    sam_own = db.execute(
+        select(Reviewee).where(Reviewee.name == "Sam")
+    ).scalar_one()
+    reviewees_service.delete_selected(
+        db, review_session=review_session, reviewee_ids=[sam_own.id], user=user
+    )
+    zoe = _rows_by_reviewee(db, instrument)["Zoe"]
+    assert zoe.is_self_review is False
+    assert zoe.include is False
+
+
+def test_an_include_change_is_audited(db: Session) -> None:
+    user, review_session, instrument = _seed(db, self_reviews_active=False)
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="b7"
+    )
+    sam_own = db.execute(
+        select(Reviewee).where(Reviewee.name == "Sam")
+    ).scalar_one()
+    reviewees_service.delete_selected(
+        db, review_session=review_session, reviewee_ids=[sam_own.id], user=user
+    )
+    events = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type == "assignments.include_reconciled",
+        )
+    ).scalars().all()
+    assert len(events) == 1
+    assert events[0].detail["counts"]["include_changed"] == 1
 
