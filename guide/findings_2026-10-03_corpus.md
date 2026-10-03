@@ -71,7 +71,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
 - ~~**C3**~~ low — **Done in #2789.** Operator Settings' sample line reads "UTC UTC" for a UTC
   operator (`operator_settings.html:123`); `timezone_display.md:107-108`
   says a bare UTC shows once.
-- **A4 low** — `require_reviewee_with_current_grant` logs
+- ~~**A4**~~ low — **Done in #2790.** `require_reviewee_with_current_grant` logs
   `"user_id": reviewee.id` (`deps.py:478`), a reviewee id.
 - **A5 low** — Integer placeholders and the constraint line truncate
   bounds with `int(...)` (`views/_instruments.py:187,226`);
