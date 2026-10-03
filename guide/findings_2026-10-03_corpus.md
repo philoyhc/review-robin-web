@@ -190,7 +190,7 @@ stricter until ruled on.
   `guide/todo_master.md:2070`. `guide/post_azure_todo_checklist.md:101`
   still queues the question. Retire, or record "kept as the estimate
   record".
-- **I5**: `docs/status.md` has no timeline row for #2720–#2780 (this
+- ~~**I5**~~ — **Ruled 2026-10-03: update it. Done in #2808.** `docs/status.md` has no timeline row for #2720–#2780 (this
   sweep's row is the first since #2718).
 - ~~**I7, H23**~~ — **Ruled 2026-10-03: update the documents. Done in #2796.** `known_limitations.md` does not say scheduled sends fire
   only on a Session Home visit (old B19); the backup, runbook and
