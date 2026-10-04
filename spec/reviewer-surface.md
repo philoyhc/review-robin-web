@@ -335,8 +335,8 @@ clicks Save (and the page re-renders).
 
 | Pill state | Pill class | Condition |
 |---|---|---|
-| `not started` | `.pill.pill-info` | No saved Response rows for any of this instrument's assignments. |
-| `in progress` | `.pill.pill-warning` | Some Response rows saved, but at least one required field empty across this instrument's assignments. |
+| `not started` | `.pill.pill-info` | No non-empty value shown in any of this instrument's rows. A saved value the reviewer may not read back (see "Lifecycle gating") is not shown, so it counts as none. |
+| `in progress` | `.pill.pill-warning` | At least one non-empty value shown, but neither `complete` nor `submitted` applies. |
 | `complete` | `.pill.pill-success` | Every required field on every assignment of this instrument has a saved value. |
 | `submitted` | `.pill.pill-success` | Every assignment of this instrument has `submitted_at` set (i.e. the session has been submitted; all pills flip together). |
 
@@ -367,8 +367,9 @@ states:
 
 The route adds `session_status: Literal["submitted", "saved",
 "draft"] | None` to context (`None` when the reviewer has no pages,
-so no pill renders). Operator preview builds the same
-`page_statuses`, so it shows both kinds of pill.
+so no pill renders). Operator preview builds `page_statuses` the
+same way, so it shows both kinds of pill ("Operator preview mode"
+notes the one case where its per-page pills differ).
 
 ---
 
@@ -1030,9 +1031,9 @@ In preview mode:
 - The overview card renders normally — `_surface_context` builds
   the per-page status pills the same way as for the reviewer. They
   can differ in one case: preview does not apply the reviewer's
-  read-back policy, so after close a page whose saved values the
-  reviewer may no longer see can read `in_progress` here where the
-  reviewer sees `not_started`.
+  read-back policy, so once responses close, a page whose saved
+  values the reviewer may not read back can read `in_progress` here
+  where the reviewer sees `not_started`.
 - **Real-row rendering.** The preview shows the selected
   reviewer's real assignments (no synthetic-row padding). When
   `?reviewer_email=…` is unset, the route defaults to the first
