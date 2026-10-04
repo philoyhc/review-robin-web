@@ -1,5 +1,10 @@
 # Assumptions
 
+> **Archived 2026-10-04.** The domain half was folded into
+> `spec/architecture.md` "Conceptual hierarchy" and "Session
+> lifecycle"; the UI half was already only pointers to
+> `spec/ui_elements.md` and the visual-style specs.
+
 A short record of load-bearing **domain** assumptions for Review
 Robin Web. **UI vocabulary is not here** — button styles, banners,
 typography and layout primitives live in

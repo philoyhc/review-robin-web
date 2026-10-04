@@ -30,9 +30,6 @@ Cross-references:
   catalogues.
 - **`spec/color_tokens.md`** — the two-tier token catalogue. Every token
   named below resolves there.
-- **`spec/domain_assumptions.md`** — load-bearing domain assumptions
-  only. The banner-behavior contract is this document's §5a, not that
-  one's.
 - **`spec/operator_ui_concept.md`** — page-level chrome and per-page
   layout contracts that consume these primitives.
 - **`spec/reviewer-surface.md`** — reviewer-surface page contracts.

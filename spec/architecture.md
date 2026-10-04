@@ -258,7 +258,11 @@ perspective:
   *universe* of reviewers and reviewees. It does **not** carry a
   single session-wide matrix — assignments are generated
   **per-instrument** (see below), so a session can carry several
-  distinct assignment sets at once.
+  distinct assignment sets at once. Operators group sessions with
+  free-form lobby tags (`app/services/session_tags.py`) and can
+  duplicate one without its responses, assignments, invitations or
+  audit history (`app/services/session_clone.py`). Reviewers are not
+  notified when a session's setup or an instrument is edited.
 - **Instruments** are the *response forms* attached to a session. A
   session has one or more instruments, each defining its own set of
   response fields and display fields **and its own assignment rule**
@@ -272,7 +276,12 @@ perspective:
   `Default`, operator-editable `description`); each instrument card's
   action row carries `+Instrument`, Replicate and Delete, all
   disabled outside the editable window, and Delete is refused on the
-  only instrument (`instruments.LastInstrumentError`).
+  only instrument (`instruments.LastInstrumentError`). Sessions
+  typically carry one to six — a description of usage, not a cap;
+  nothing in the code bounds the count. An instrument has no
+  operator-set status: accepting responses is session-wide
+  (*Session lifecycle* below), and what a reviewer sees of their
+  answers after close is the instrument's visibility policy.
   See `spec/instruments.md`.
 - **Rule sets** drive assignment generation. Each instrument's
   Band 1 either materialises one `session_rule_sets` row (when any
@@ -296,7 +305,10 @@ perspective:
   boundary tags rather than a stored column. The same
   `(reviewer, reviewee)` pair may appear in zero, one, or many
   instruments within a session, depending on how generation ran
-  against each instrument's rule.
+  against each instrument's rule. Every row is the rule engine's:
+  `AssignmentMode` has one member, `rule_based` (`manual` retired in
+  16A with the manual-CSV upload path), and Full Matrix is a rule
+  set rather than a mode of its own.
 - **Responses** are `(assignment, response_field)` rows: the
   reviewer's answer to one field on one instrument for one assigned
   reviewee.
@@ -387,6 +399,16 @@ card's **Close session** button, `ready → expired`); `archived` by
 purely reserved today. The column stays a `String(32)` — the value
 set is enforced at the application layer (the `SessionStatus` enum in
 `app/services/session_lifecycle.py`), not via a DB CHECK constraint.
+Operators read `ready` as **Activated** and `expired` as **Closed**
+(`app/services/lifecycle_display.py`).
+
+Archiving files a session out of the active lobby; it is
+**reversible and deletes no data** (`archive_session`), so it is a
+filing state, not a disposal one. The archive *action* can delete,
+though: "Purge and archive" (`purge_and_archive` in
+`app/services/session_purge.py`) first hard-deletes whichever of the
+responses, rosters and audit log the operator ticks, and unarchiving
+does not bring them back.
 
 **`spec/lifecycle.md` is the single source of truth** for the state
 machine — the transitions (`mark_validated`, `activate_session`,
@@ -425,7 +447,9 @@ CRUD, assignment generate) returns **HTTP 409** via the
 `_require_editable` route gate in
 `app/web/routes_operator/_shared.py`. Session Home's Delete Data and
 Delete session are an exception: `_require_not_ready` refuses them
-only in `ready` (`spec/lifecycle.md` §3.1). The corresponding GET pages
+only in `ready`. So are the Observers roster, which accepts edits
+until the session is archived, and the email-template editor, which
+is not gated at all (`spec/lifecycle.md` §3.1). The corresponding GET pages
 render read-only banners. Operators must revert to draft to make
 further setup changes; if any `Response` rows already exist,
 response-loss acknowledgment (`acknowledge_response_loss=true`) is

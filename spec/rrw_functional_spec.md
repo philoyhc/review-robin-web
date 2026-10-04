@@ -2557,7 +2557,7 @@ reader, so a spec missing from it is a spec nobody is sent to.
 | Auth posture + audience model | `spec/audience_and_identity_model.md` |
 | CSV import / export contracts | `spec/csv_contracts.md` |
 | UI vocabulary (button roles, layout primitives) | `spec/ui_elements.md` |
-| Load-bearing domain assumptions | `spec/domain_assumptions.md` |
+| Load-bearing domain assumptions | `spec/architecture.md` "Conceptual hierarchy" |
 | Email backend options | `spec/email_infra_options.md` |
 | Email Template editor (page contract, overrides, merge tags) | `spec/email_template_editor.md` |
 | Group-scoped instruments | `spec/instruments.md` (operator-card / model side); `spec/assignments.md` (fan-out / aggregation) |
