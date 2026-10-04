@@ -2567,7 +2567,7 @@ reader, so a spec missing from it is a spec nobody is sent to.
 | Operator button audit (canonical styles) | `spec/operator_button_audit.md` |
 | Operator UI shell + chrome | `spec/operator_ui_concept.md` |
 | Permissions / authorization (gates, per-route matrix, role + ownership invariants) | `spec/permissions.md` |
-| Retired Previews hub boundary | `spec/preview_hub.md` |
+| Retired Previews hub (redirects) | `spec/operations_pages.md` "Page identity" |
 | Quick Setup card | `spec/quick_setup_card_spec.md` |
 | Reconciling assignment regeneration | `spec/reconciling_regeneration.md` |
 | Reviewer surface — full contract | `spec/reviewer-surface.md` |
