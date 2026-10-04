@@ -72,8 +72,9 @@ the page's card list; this spec owns its contents.
   card's state (`spec/session_home.md`'s Session details card is the
   surface that swaps; this one doesn't).
 - **Lock / Unlock, as on Quick Setup**, against accidental edits. The
-  card renders **locked** by default: the body (`.lockable-body.locked`) greys, and the picker, Add owner
-  and every Remove are `disabled`. **Unlock** (`.btn.secondary`, right
+  card renders **locked** by default: the body
+  (`.lockable-body.locked`) greys, and the picker, Add owner and every
+  Remove are `disabled`. **Unlock** (`.btn.secondary`, right
   of Add owner) posts `owners/lock` with `action=unlock`, which sets
   the `oou_{session_id}=1` cookie (`spec/settings_inventory.md`
   "Cookies"). **Lock** clears it. The card stays unlocked across its own
