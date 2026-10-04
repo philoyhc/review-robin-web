@@ -787,7 +787,7 @@ a rewrite.
   `--selection-panel-bg`. **The panel is a pill-free zone**: its fill
   resolves to `--status-info-bg`'s primitive, so a `.pill-count` inside
   it reopens the collision one storey down.
-- **Opt-in by class.** Seven templates inject panels with the same
+- **Opt-in by class.** These templates inject panels with the same
   `session-expander` class names from their own scripts, which differ
   deliberately: `sessions_list.html`, `sessions_archived.html`, the four
   roster pages (`session_reviewers.html`, `session_observers.html`,
