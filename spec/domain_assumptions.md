@@ -39,8 +39,7 @@ Session setup can be edited only in `draft` or `validated`; an
 Activated or Closed session is reverted to draft first. The exceptions
 are in `spec/lifecycle.md` §3.1: the Observers roster accepts edits
 until the session is archived, and the email-template editor is not
-gated at all. Reviewers are not notified of edits (author's ruling,
-2026-10-02, F15).
+gated at all. Reviewers are not notified of edits.
 
 Session is the top-level structure. Operators group sessions with
 free-form tags on the lobby (`app/services/session_tags.py`), and can
@@ -59,9 +58,7 @@ Activated and none does once it closes (at its deadline or by the
 operator) or reverts to draft. What a reviewer sees
 of their answers after close is the instrument's visibility policy.
 Instruments are edited under the session's rule above, and reviewers
-are not notified of edits. (A per-instrument Draft / Receiving /
-Closed status and a notify-on-edit step were struck, author's ruling,
-2026-10-02, F15.)
+are not notified of edits.
 
 ## UI vocabulary — see
 
