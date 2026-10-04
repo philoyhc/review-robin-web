@@ -20,8 +20,11 @@ class PageStatus:
     Lands in template context as ``page_statuses: list[PageStatus]``,
     one entry per instrument the reviewer has assignments on. Single-
     instrument sessions still get one entry — the panel always
-    renders. Operator preview passes an empty list (per-page state
-    is moot for synthetic preview rows).
+    renders. Operator preview builds the list the same way, from the
+    previewed reviewer's rows. Preview does not apply the reviewer's
+    read-back policy, so after close a page whose saved values the
+    reviewer may no longer see can show ``in_progress`` there where
+    the reviewer sees ``not_started``.
     """
 
     position: int

@@ -460,15 +460,18 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
 def parse_observer_csv(content: bytes) -> ParseResult:
     """Parse an Observers CSV upload. Required column:
     ``ObserverEmail``. Optional columns: ``ObserverName``,
-    ``ObserverTag1``, ``CohortRule``. Other columns are ignored.
+    ``ObserverTag1``, ``Status``, ``CohortRule``. Other columns are
+    ignored. ``Status`` follows the roster rule in ``_parse_status``:
+    blank is ``active``, ``active`` / ``inactive`` in any case are
+    accepted, anything else is a blocking error.
 
     Observers carry a single ``tag_1`` (not three) per the model
     note in ``app/db/models/observer.py``. Email is the auth-
     bearing identity and is required + strict-shape-validated;
     duplicate emails within the same CSV are blocking errors.
 
-    Segment 18P PR B — a ``CohortRule`` cell (compact JSON) round-
-    trips the per-observer cohort match rule. It's re-validated
+    A ``CohortRule`` cell (compact JSON) round-trips the
+    per-observer cohort match rule. It's re-validated
     through ``CohortRuleSet`` here (bad JSON / bad shape is a
     blocking error), so an imported rule is as trustworthy as one
     saved through the editor.
