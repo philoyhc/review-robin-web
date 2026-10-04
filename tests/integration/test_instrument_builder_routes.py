@@ -147,6 +147,17 @@ def _instrument(db: Session, session_id: int) -> Instrument:
     ).scalar_one()
 
 
+def _band2_card(body: str, instrument_id: int) -> str:
+    """One instrument's Band 2 markup: from its wrapper to the next one's.
+
+    Every instrument renders a Band 2 card, so a page-wide search finds
+    the first instrument's attributes rather than the one under test.
+    """
+    start = body.index(f'data-new-model-band2-instrument-id="{instrument_id}"')
+    end = body.find("data-new-model-band2-instrument-id=", start + 1)
+    return body[start : end if end != -1 else len(body)]
+
+
 def _card_slice(flat: str, instrument_id: int) -> str:
     """Return the flattened HTML for a single instrument card — from
     its ``id="instrument-<id>"`` opening to the next card's opening
@@ -1467,10 +1478,6 @@ def test_band2_state_save_writes_validation_json_for_reviewer_surface(
     assert rec.validation == {"choices": ["Yes", "No", "Maybe"]}
 
 
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — test scoped to legacy/new-model split that retired. "
-    "Underlying behaviour still works; scope-rewrite deferred."
-)
 def test_new_model_band2_group_preview_partitions_by_boundary_tag(
     client: TestClient, db: Session
 ) -> None:
@@ -1541,6 +1548,8 @@ def test_new_model_band2_group_preview_partitions_by_boundary_tag(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
+    page = body
+    body = _band2_card(page, new_model.id)
     flat = " ".join(body.split())
     # Sample-names attr should hold only the Alpha group (Alice +
     # Bob, sorted alphabetically), NOT Carol.
@@ -1558,7 +1567,7 @@ def test_new_model_band2_group_preview_partitions_by_boundary_tag(
     # The Link 3 boundary <select> has an onchange handler that
     # triggers a preview rebuild — live Link 3 movement updates the
     # preview without needing to save.
-    assert "newModelLink3BoundaryChanged" in body
+    assert "newModelLink3BoundaryChanged" in page
 
     # Flip to individual: sample-names goes back to all reviewees.
     client.post(
@@ -1584,7 +1593,7 @@ def test_new_model_band2_group_preview_partitions_by_boundary_tag(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments?editing={new_model.id}"
     ).text
-    flat = " ".join(body.split())
+    flat = " ".join(_band2_card(body, new_model.id).split())
     assert 'data-new-model-band2-sample-names="Alice|Bob|Carol"' in flat
 
 
@@ -2555,10 +2564,6 @@ def test_gap_10_preview_route_returns_rule_surviving_group_member_ids(
     assert member_ids == [by_name["Dan"]]
 
 
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — test scoped to legacy/new-model split that retired. "
-    "Underlying behaviour still works; scope-rewrite deferred."
-)
 def test_gap_10_render_filters_group_members_by_persisted_ids(
     client: TestClient, db: Session
 ) -> None:
@@ -2605,7 +2610,7 @@ def test_gap_10_render_filters_group_members_by_persisted_ids(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    flat = " ".join(body.split())
+    flat = " ".join(_band2_card(body, new_model.id).split())
     # Find the sample-names attribute on the new-model band 2 card.
     needle = 'data-new-model-band2-sample-names="'
     idx = flat.find(needle)
@@ -2977,10 +2982,6 @@ def test_gap_10_band2_wrapper_carries_member_ids_for_js_partition(
     assert attr in body
 
 
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — test scoped to legacy/new-model split that retired. "
-    "Underlying behaviour still works; scope-rewrite deferred."
-)
 def test_gap_10_legacy_band2_state_without_member_ids_falls_back(
     client: TestClient, db: Session
 ) -> None:
@@ -3000,7 +3001,7 @@ def test_gap_10_legacy_band2_state_without_member_ids_falls_back(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    flat = " ".join(body.split())
+    flat = " ".join(_band2_card(body, new_model.id).split())
     needle = 'data-new-model-band2-sample-names="'
     idx = flat.find(needle)
     assert idx != -1
@@ -3190,19 +3191,15 @@ def test_gap_1_omitted_selection_preserves_existing_visibility(
     assert _df_by_key(db, new_model.id)["reviewee.tag_2"].visible is False
 
 
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — test scoped to legacy/new-model split that retired. "
-    "Underlying behaviour still works; scope-rewrite deferred."
-)
-def test_gap_1_view_derives_pill_selection_from_visible(
+def test_gap_1_view_derives_show_checkbox_from_visible(
     client: TestClient, db: Session
 ) -> None:
-    """Gap 1 read path — the rendered pills' is-selected state
+    """Gap 1 read path — each display-field row's Show checkbox
     reflects ``InstrumentDisplayField.visible``, not whatever the
     legacy band2_state.selected_display_keys JSON happens to hold.
     Editing the visible flag directly on the ORM (simulating a
     Gap-7 / future-source change to the field model) shows up on
-    the next render's pill."""
+    the next render's checkbox."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="gap-1-render"
     )
@@ -3216,24 +3213,16 @@ def test_gap_1_view_derives_pill_selection_from_visible(
         f"/operator/sessions/{review_session.id}"
         f"/instruments?editing={new_model.id}"
     ).text
-    flat = " ".join(body.split())
-    # The pills are server-rendered with aria-pressed reflecting
-    # the visible flag. Find the tag_2 pill and check it's unpressed;
-    # tag_1 should still be pressed.
-    tag2_marker = 'data-source-field="tag_2"'
-    tag2_idx = flat.find(tag2_marker)
-    assert tag2_idx != -1
-    # Walk back ~200 chars to find the pill's aria-pressed value.
-    snippet_start = max(0, tag2_idx - 250)
-    tag2_pill = flat[snippet_start:tag2_idx + len(tag2_marker)]
-    assert 'aria-pressed="false"' in tag2_pill
+    card = _band2_card(body, new_model.id)
 
-    tag1_marker = 'data-source-field="tag_1"'
-    tag1_idx = flat.find(tag1_marker)
-    assert tag1_idx != -1
-    snippet_start = max(0, tag1_idx - 250)
-    tag1_pill = flat[snippet_start:tag1_idx + len(tag1_marker)]
-    assert 'aria-pressed="true"' in tag1_pill
+    def _row(key: str) -> str:
+        start = card.index(f'<tr data-new-model-df-row data-key="{key}"')
+        return card[start : card.index("</tr>", start)]
+
+    # Each display field is a row whose Show checkbox is server-rendered
+    # from the visible flag: tag_2 unchecked, tag_1 still checked.
+    assert re.search(r"\schecked[\s>]", _row("reviewee.tag_2")) is None
+    assert re.search(r"\schecked[\s>]", _row("reviewee.tag_1")) is not None
 
 
 # --------------------------------------------------------------------------- #
@@ -3241,10 +3230,6 @@ def test_gap_1_view_derives_pill_selection_from_visible(
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — test scoped to legacy/new-model split that retired. "
-    "Underlying behaviour still works; scope-rewrite deferred."
-)
 def test_gap_3_band2_state_carries_sort_spec(
     client: TestClient, db: Session
 ) -> None:
@@ -3274,7 +3259,7 @@ def test_gap_3_band2_state_carries_sort_spec(
         f"/operator/sessions/{review_session.id}"
         f"/instruments?editing={new_model.id}"
     ).text
-    flat = " ".join(body.split())
+    flat = " ".join(_band2_card(body, new_model.id).split())
 
     needle = "data-new-model-band2-sort-spec='"
     idx = flat.find(needle)

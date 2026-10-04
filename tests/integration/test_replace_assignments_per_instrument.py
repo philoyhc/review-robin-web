@@ -5,11 +5,11 @@ The function reads each instrument's pinned ``rule_set_id``, runs the
 engine internally per-instrument, writes per-instrument
 ``Assignment`` rows, and emits one ``assignments.generated`` audit
 event per processed instrument with ``refs.instrument_id`` set.
-Instruments with NULL ``rule_set_id`` are skipped silently.
+An instrument with NULL ``rule_set_id`` generates against the
+synthetic Full Matrix default.
 """
 from __future__ import annotations
 
-import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -97,69 +97,6 @@ def _seed_two_instruments(db: Session) -> tuple[
     return user, review_session, inst_a, inst_b, rule_set
 
 
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — every instrument now defaults to Full Matrix "
-    "on untouched Band 1; legacy unpinned-instrument skip retired."
-)
-def test_only_pinned_instruments_get_rows(db: Session) -> None:
-    """Cross-instrument default skips instruments with NULL
-    ``rule_set_id`` silently."""
-
-    user, review_session, inst_a, inst_b, rule_set = _seed_two_instruments(db)
-    inst_a.rule_set_id = rule_set.id
-    # inst_b stays NULL — should be silently skipped.
-    db.flush()
-
-    replaced, new = assignments.replace_assignments(
-        db, review_session=review_session, user=user, correlation_id="c1"
-    )
-
-    rows = list(
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).scalars()
-    )
-    instrument_ids = {r.instrument_id for r in rows}
-    assert instrument_ids == {inst_a.id}
-    # 2 reviewers × 2 reviewees = 4 pairs × 1 pinned instrument.
-    assert len(rows) == 4
-    assert (replaced, new) == (0, 4)
-
-
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — every instrument now defaults to Full Matrix "
-    "on untouched Band 1; legacy unpinned-instrument skip retired."
-)
-def test_no_pinned_instruments_is_noop(db: Session) -> None:
-    """Zero pinned instruments returns ``(0, 0)`` and writes nothing —
-    not an error condition."""
-
-    user, review_session, *_ = _seed_two_instruments(db)
-    # No pinning on either instrument.
-
-    replaced, new = assignments.replace_assignments(
-        db, review_session=review_session, user=user, correlation_id="c1"
-    )
-
-    assert (replaced, new) == (0, 0)
-    assert (
-        db.execute(
-            select(Assignment).where(Assignment.session_id == review_session.id)
-        ).first()
-        is None
-    )
-    # No audit event either — nothing materialised.
-    assert (
-        db.execute(
-            select(AuditEvent).where(
-                AuditEvent.session_id == review_session.id,
-                AuditEvent.event_type == "assignments.generated",
-            )
-        ).first()
-        is None
-    )
-
-
 def test_one_event_per_pinned_instrument(db: Session) -> None:
     """Each processed instrument fires its own ``assignments.generated``
     event with ``refs.instrument_id``."""
@@ -232,31 +169,6 @@ def test_scoped_replace_only_touches_named_instrument(db: Session) -> None:
     )
     assert inst_a_rows == 4
     assert inst_b_rows == 4
-
-
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — every instrument now defaults to Full Matrix "
-    "on untouched Band 1; legacy unpinned-instrument skip retired."
-)
-def test_scoped_replace_rejects_unpinned_instrument(db: Session) -> None:
-    """``instrument_id=<id>`` against an instrument with NULL
-    ``rule_set_id`` raises — the caller named a target that has no
-    rule pinned. The cross-instrument default *silently skips* the
-    same condition; the named-target path is strict because the
-    caller is asserting intent."""
-
-    user, review_session, inst_a, inst_b, _rule_set = _seed_two_instruments(db)
-    # inst_b stays unpinned.
-    db.flush()
-
-    with pytest.raises(ValueError, match="no rule pinned"):
-        assignments.replace_assignments(
-            db,
-            review_session=review_session,
-            user=user,
-            correlation_id="c1",
-            instrument_id=inst_b.id,
-        )
 
 
 def _attach_response(

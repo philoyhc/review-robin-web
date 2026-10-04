@@ -13,7 +13,6 @@ Two test families:
 """
 from __future__ import annotations
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -152,51 +151,6 @@ def test_validate_page_skips_operations_gate_when_no_operations_issues(
     ).text
     assert "setup gate" in body
     assert "operations gate" not in body
-
-
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — ``instruments.no_rule_pinned`` retired; the "
-    "test's setup no longer produces a single source split across two "
-    "gate sections. Anchor dedup logic still works."
-)
-def test_validate_page_per_source_anchor_uses_first_gate_only(
-    client: TestClient, db: Session
-) -> None:
-    """When the ``instruments`` source has rules in both gates
-    (``no_fields`` in Setup, ``no_rule_pinned`` in Operations), the
-    page renders the source heading twice — once under each gate
-    — but the ``id="issue-source-instruments"`` anchor only
-    appears on the first (Setup gate) occurrence so the setup-
-    coverage matrix deep-link continues to work."""
-    review_session = _make_session(client, db, code="gate-anchor")
-    db.add(
-        Reviewer(
-            session_id=review_session.id,
-            name="Alice",
-            email="alice@example.edu",
-        )
-    )
-    db.add(
-        Reviewee(
-            session_id=review_session.id,
-            name="Carol",
-            email_or_identifier="carol@example.edu",
-        )
-    )
-    db.flush()
-    # Default instrument exists with no response fields → triggers
-    # instruments.no_fields (Setup). Without a rule_set_id pinned,
-    # instruments.no_rule_pinned (Operations) also fires.
-    from app.services.instruments import ensure_default_instrument
-
-    ensure_default_instrument(db, review_session)
-    db.commit()
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
-    ).text
-    # Only one anchor id for the instruments source, even though the
-    # source <h3> appears in both gate sections.
-    assert body.count('id="issue-source-instruments"') == 1
 
 
 def test_validate_page_setup_coverage_deep_link_still_works(
