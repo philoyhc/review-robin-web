@@ -199,10 +199,11 @@ stricter until ruled on.
 ## 3. Findings by file
 
 **Done in #2805** (2026-10-04): every struck id, trim, write and consolidate below,
-in one PR by area. Unstruck rows are *author*, *code*, *known*, *deferred* or
-*carried*, settled in §1, §2 or `guide/deferred_consolidated.md`; their
-pointers here are struck too, with H16–H18, which lapsed when the two
-Azure docs were retired.
+in one PR by area. Pointers to *author* and *code* rows settled in §1 or §2
+are struck too (#2808), with H16–H18, which lapsed when the two Azure docs
+were retired. **Still open here:** B27 / G6 (*known*), D4 (*deferred*) and
+D19 (*carried*; `guide/deferred_consolidated.md` "Rehydrate is incomplete
+and not exposed").
 
 **A — instruments and the reviewer surface**
 
