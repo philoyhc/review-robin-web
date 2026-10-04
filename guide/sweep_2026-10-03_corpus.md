@@ -137,7 +137,7 @@ finding is among them.
 - `docs/README.md`.
 - `new_project_practices_setup.md`.
 - `rrw_design_rationale.md`.
-- `docs/practice-audit-2026-09-04.md`: a dated record, read as history.
+- `docs/archive/practice-audit-2026-09-04.md`: a dated record, read as history.
 - `docs/status_history.md`: a dated record, read as history.
 
 ## 7. Not read

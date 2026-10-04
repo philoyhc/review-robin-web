@@ -1244,7 +1244,7 @@ drift is caught in CI.
   Easy-Auth-side sign-in record is sufficient.
 - **Automated security scanning in CI.** Nothing scans for
   vulnerabilities on any PR — no SAST, no dependency-vulnerability
-  check (`docs/practice-audit-2026-09-04.md` §1 has the full
+  check (`docs/archive/practice-audit-2026-09-04.md` §1 has the full
   check inventory). Raised in that audit's Appendix A.4 against
   the 2026 reporting that ~45% of AI-generated code samples carry
   a common OWASP issue, and deliberately logged there as a

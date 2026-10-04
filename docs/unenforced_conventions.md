@@ -482,7 +482,7 @@ the growth its own sentence calls a signal went unrecorded, which is the
 class `guide/archive/segment_19S_post_assessment.md` Item 2 gates for two
 hand-maintained indexes and §1.5 leaves to a habit for the rest.)
 
-**Not a replacement for `docs/practice-audit-2026-09-04.md` §2.** That
+**Not a replacement for `docs/archive/practice-audit-2026-09-04.md` §2.** That
 audit is a record of what was true on its date and is not rewritten —
 see the dated note at its head for what has changed since. This file is
 the live view; the audit is the snapshot that prompted it.

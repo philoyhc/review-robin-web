@@ -6,7 +6,7 @@ Review Robin Web (RRW) is a web application for running structured institutional
 
 The practice has a name now. Through 2026 the term **spec-driven development** (SDD) went mainstream for the family of methods in which specifications are the durable source of truth and code is kept in agreement with them. RRW was doing a form of this before the term went mainstream. More usefully for a reader, it is doing a *particular* form of it, with rules about which direction authority runs and when, which the general term does not fix. This document states that form and records why each of its parts is the way it is. It also says plainly where the practice departs from what SDD prescribes and where it falls short of it.
 
-It is not a how-to; `CONTRIBUTING.md`, `CLAUDE.md` and the `segment-plan` skill are that. It is not an audit either; `docs/practice-audit-2026-09-04.md` is that, and this document leans on its findings rather than repeating its evidence. It records the rationale for the practice, in the same register as the design rationale: where a choice could plausibly have gone another way, the point is to record why it went the way it did. `constitution.md` distills Section 6 into six articles that bind every change: five of its seven decisions, plus the rule §6.3's trade-off implies. So change this document first.
+It is not a how-to; `CONTRIBUTING.md`, `CLAUDE.md` and the `segment-plan` skill are that. It is not an audit either; `docs/archive/practice-audit-2026-09-04.md` is that, and this document leans on its findings rather than repeating its evidence. It records the rationale for the practice, in the same register as the design rationale: where a choice could plausibly have gone another way, the point is to record why it went the way it did. `constitution.md` distills Section 6 into six articles that bind every change: five of its seven decisions, plus the rule §6.3's trade-off implies. So change this document first.
 
 The document is drafted with the help of Claude Code, with access to the repository. **The current-state numbers were taken on 2026-09-23 at `main` = `3559c7a7`**, and the appendix lists how to re-take them. A figure that describes a particular day is dated in the sentence that uses it; those are findings about that day, and they stay true when the codebase moves on.
 
@@ -308,9 +308,9 @@ RRW practices a form of spec-driven development in which **plans carry intent in
 | Maker and checker separate | `spec-writer` (at a close; reports divergence otherwise), `diff-reviewer` (cold, report-only, no model pin, once per item) and Codex, automatic on most PRs. Validated retrospectively: run cold at `9b9cc457`, `diff-reviewer` found Codex's P0.2 (`ab043317`) 25 days early | `.claude/agents/`; `CLAUDE.md` "Where work runs"; `python3 tools/pace_audit.py --cut 2460`; the Codex search in the note below |
 | Machine-checkable definition of done | For code and specs, yes: 4,800 tests on two dialects plus the gates. For UI, no: the author, looking | 15/30 fix commits browser-only; `CLAUDE.md` "Where work runs"; `guide/post_azure_todo_checklist.md` |
 | Spec coverage enforced | For absence, yes: every routing module registered, every mapped spec a live file, the declared-debt baseline empty. Adequacy, no | `tests/unit/test_spec_coverage.py`; `app/web/spec_registry.py`; `constitution.md` II |
-| Living spec, continuously synced | Periodic instead: 19 + 3 dated assessments in two model lineages, drift sweeps on a cadence, registers for what they surface | `guide/archive/codebase_assessment_*.md`; `tools/close_check.py --stale`; `docs/practice-audit-2026-09-04.md` §2 |
+| Living spec, continuously synced | Periodic instead: 19 + 3 dated assessments in two model lineages, drift sweeps on a cadence, registers for what they surface | `guide/archive/codebase_assessment_*.md`; `tools/close_check.py --stale`; `docs/archive/practice-audit-2026-09-04.md` §2 |
 | Code as a generated artifact | No. Hand-edited by agents at the author's direction; specs are prose | — |
-| Autonomous agent loops | No, on stated grounds: the definition of done is not machine-checkable for the defects that occur | `docs/practice-audit-2026-09-04.md` A.5 |
+| Autonomous agent loops | No, on stated grounds: the definition of done is not machine-checkable for the defects that occur | `docs/archive/practice-audit-2026-09-04.md` A.5 |
 | The codebase should not take the AI-authored shape | Measured: churn 1.1×, duplication 6.3% at ≥10 lines | `python3 tools/code_metrics.py` (deterministic; a few minutes, most of it the churn walk) |
 
 **Re-taking the numbers.** All the current-state figures above were taken at `3559c7a7`:
@@ -322,4 +322,4 @@ RRW practices a form of spec-driven development in which **plans carry intent in
 - **Cadence figures:** `python3 tools/pace_audit.py --cut 2460`.
 - **Churn and duplication:** `python3 tools/code_metrics.py`.
 - **Codex coverage:** a GitHub search, `is:pr commenter:chatgpt-codex-connector[bot] created:>=2026-09-14` against `is:merged created:>=2026-09-14`, in `repo:philoyhc/review-robin-web`. It needs the API, because PR comments are not in git.
-- **Defect census:** `docs/practice-audit-2026-09-04.md` §4 R2, as of that audit.
+- **Defect census:** `docs/archive/practice-audit-2026-09-04.md` §4 R2, as of that audit.

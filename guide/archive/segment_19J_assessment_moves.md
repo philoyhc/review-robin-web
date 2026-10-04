@@ -198,7 +198,7 @@ $ grep -rln "rrw_functional_spec" --include="*.md" . | grep -v archive # 10 file
 - **1 spec, 2,235 lines, 107 sections** to read.
 - **10 live documents reference it**: `spec/README.md`,
   `spec/permissions.md`, `spec/email_template_editor.md`,
-  `docs/status.md`, `docs/practice-audit-2026-09-04.md`,
+  `docs/status.md`, `docs/archive/practice-audit-2026-09-04.md`,
   `rrw_sdd_in_practice.md`, `guide/todo_master.md`,
   `guide/archive/sweep_2026-09-05_spec-docs.md`, `guide/sweep_template.md`,
   `guide/archive/codebase_assessment_10sep.md`. Only `spec/README.md`'s

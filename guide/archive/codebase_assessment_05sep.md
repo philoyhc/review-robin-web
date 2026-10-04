@@ -86,7 +86,7 @@ correctness, none of it product:
   and the first sweep under it, `guide/archive/sweep_2026-09-05_spec-docs.md` (209
   lines), whose eight findings were then closed as 19C Item 7.
 - **The practice documents** — `rrw_sdd_in_practice.md`, `constitution.md`
-  (six articles), `docs/practice-audit-2026-09-04.md` Appendix A, and the
+  (six articles), `docs/archive/practice-audit-2026-09-04.md` Appendix A, and the
   `segment-plan` skill with `guide/segment_plan_template.md`.
 
 **Unchanged this window:** every product *surface*. No route added or removed,

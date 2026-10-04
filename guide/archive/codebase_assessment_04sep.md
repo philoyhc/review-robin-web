@@ -17,7 +17,7 @@ how the repo is *worked on* rather than what it does.
 - **19C Item 5 — theme customizer** (PRs #2032 → #2083, 2026-08-22 → 09-04).
   A three-part designer in `tools/`, app-agnostic.
 - **Development-practice audit + follow-through** (PRs #2085 → #2095,
-  2026-09-04). `docs/practice-audit-2026-09-04.md` and everything downstream.
+  2026-09-04). `docs/archive/practice-audit-2026-09-04.md` and everything downstream.
   The arc continued past this window's cut: #2096 is this document and #2097
   the churn-metric fix in §6. Both are outside the pinned window and outside
   every number below.
@@ -105,7 +105,7 @@ with no frontend framework and no JS build step.
   parses primitives and clusters out of `base.html`. Surfaced real `base.html`
   fixes as a side effect (nav chrome → `--surface-page`; `sky-*` → `--blue-cyan-*`,
   `danger-*` → `--red-warm-*`).
-- **Development-practice audit** (#2085 → #2095). `docs/practice-audit-2026-09-04.md`
+- **Development-practice audit** (#2085 → #2095). `docs/archive/practice-audit-2026-09-04.md`
   plus: `tests/unit/test_doc_conventions.py` (three checks — lifecycle tables must
   match `DISPLAY_LABELS`, retired button names absent from live prose, `CLAUDE.md`
   and `AGENTS.md` byte-identical), `.claude/agents/diff-reviewer.md`, a

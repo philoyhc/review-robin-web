@@ -182,7 +182,7 @@ reject it.
 - **`guide/segment_*.md`** — current and upcoming segment plans; shipped ones in `guide/archive/`.
 - **`guide/codebase_assessment_*.md`** — latest code-vs-spec snapshot.
 - **`guide/deferred_consolidated.md`** — everything scoped but not scheduled.
-- **`docs/practice-audit-2026-09-04.md`** — what gates a merge here, and which conventions are enforced by a check rather than by noticing.
+- **`CONTRIBUTING.md`** — what gates a merge here (the merge policy, and why it is not branch protection).
 - **`docs/unenforced_conventions.md`** — the conventions deliberately left as guidance rather than a check, each with its reason, plus the queue of ones that could be derived now.
 - **`constitution.md`** — the six rules every change is held to (plan in / spec out; gates derived only from what the repository states; maker ≠ checker; human verifier, no autonomous loop; reasoning travels with the change; retire rather than mechanise badly). Derived from `rrw_sdd_in_practice.md` §6.
 - **`docs/security_posture.md`** / **`docs/database.md`** — deeper dives on those subsystems.

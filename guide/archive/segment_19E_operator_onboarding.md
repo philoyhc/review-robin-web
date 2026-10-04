@@ -421,7 +421,7 @@ repointed — `docs/README.md`'s index row, `docs/known_limitations.md`,
 `docs/status.md` (twice), `guide/segment_20_*`, `guide/todo_master.md`,
 `guide/segment_14B_*`, `guide/deferred_consolidated.md`, and the
 `docs/quickstart.md §4c` docstring example in `tools/close_check.py`. Dated
-history in `todo_master`'s Done rows and `docs/practice-audit-2026-09-04.md`
+history in `todo_master`'s Done rows and `docs/archive/practice-audit-2026-09-04.md`
 was left alone: those record what was true then.
 
 The audience seam landed as planned — `app/web/views/_guide.py` owns the
