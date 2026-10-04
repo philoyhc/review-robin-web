@@ -4884,10 +4884,10 @@
             // Step must be reachable at least once from Min
             // (mirrors _validate_response_field_shape on the
             // server). Equal is fine — min=0, max=1, step=1
-            // yields a Boolean-like 0/1 field.
+            // yields a Boolean-like 0/1 field. Min equal to Max
+            // leaves no room for any step.
             if (
               mn !== null && mx !== null && st !== null
-              && mx > mn
               && st > (mx - mn) + 1e-9
             ) {
               return 'Step must be at most (Max − Min) so the field has at least two valid values.';
