@@ -335,7 +335,7 @@ clicks Save (and the page re-renders).
 
 | Pill state | Pill class | Condition |
 |---|---|---|
-| `not started` | `.pill.pill-info` | No non-empty value shown in any of this instrument's rows. A saved value the reviewer may not read back (see "Lifecycle gating") is not shown, so it counts as none. |
+| `not started` | `.pill.pill-info` | No non-empty value shown in any of this instrument's rows, and neither `complete` nor `submitted` applies. A saved value the reviewer may not read back (see "Lifecycle gating") is not shown, so it counts as none here; `complete` and `submitted` read the saved rows, not the shown values, so they are unaffected. |
 | `in progress` | `.pill.pill-warning` | At least one non-empty value shown, but neither `complete` nor `submitted` applies. |
 | `complete` | `.pill.pill-success` | Every required field on every assignment of this instrument has a saved value. |
 | `submitted` | `.pill.pill-success` | Every assignment of this instrument has `submitted_at` set (i.e. the session has been submitted; all pills flip together). |
