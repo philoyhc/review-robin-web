@@ -7,8 +7,9 @@ Pins:
   ``sort_display_field_id`` + ``sort_dir`` arrays and persists
   via ``instruments.set_sort_display_fields``.
 - Validator rejections (over-cap / unknown direction /
-  duplicates) surface as a per-instrument banner via the
-  redirect. An id that is not this instrument's is dropped, not
+  misaligned arrays) redirect with ``sort_save_error`` and
+  ``sort_save_error_instrument_id`` query parameters, or answer 422
+  JSON on the consolidated save. An id that is not this instrument's is dropped, not
   rejected (findings A24).
 - Empty arrays clear the spec back to the unsorted default.
 
@@ -168,9 +169,6 @@ def _query_param(url: str, name: str) -> str | None:
     qs = parse_qs(urlparse(url).query)
     values = qs.get(name) or []
     return values[0] if values else None
-
-
-# --- Render --------------------------------------------------------------
 
 
 # --- Bulk-save persistence -----------------------------------------------

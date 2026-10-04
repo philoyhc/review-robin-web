@@ -148,10 +148,13 @@ def _instrument(db: Session, session_id: int) -> Instrument:
 
 
 def _band2_card(body: str, instrument_id: int) -> str:
-    """One instrument's Band 2 markup: from its wrapper to the next one's.
+    """The page from one instrument's Band 2 wrapper to the next one's.
 
     Every instrument renders a Band 2 card, so a page-wide search finds
     the first instrument's attributes rather than the one under test.
+    The slice holds this card from Band 2 on (its display-field rows
+    included) but also the next card's opening and Band 1, so a
+    negative check belongs on a narrower piece of it.
     """
     start = body.index(f'data-new-model-band2-instrument-id="{instrument_id}"')
     end = body.find("data-new-model-band2-instrument-id=", start + 1)
