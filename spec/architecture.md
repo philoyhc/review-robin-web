@@ -277,8 +277,8 @@ perspective:
   action row carries `+Instrument`, Replicate and Delete, all
   disabled outside the editable window, and Delete is refused on the
   only instrument (`instruments.LastInstrumentError`). Sessions
-  typically carry one to six — a description of usage, not a cap;
-  nothing in the code bounds the count. An instrument has no
+  typically carry one to six, which describes usage and is not a
+  cap. An instrument has no
   operator-set status: accepting responses is session-wide
   (*Session lifecycle* below), and what a reviewer sees of their
   answers after close is the instrument's visibility policy.
@@ -306,9 +306,8 @@ perspective:
   `(reviewer, reviewee)` pair may appear in zero, one, or many
   instruments within a session, depending on how generation ran
   against each instrument's rule. Every row is the rule engine's:
-  `AssignmentMode` has one member, `rule_based` (`manual` retired in
-  16A with the manual-CSV upload path), and Full Matrix is a rule
-  set rather than a mode of its own.
+  `AssignmentMode` has one member, `rule_based`, and Full Matrix is a
+  rule set rather than a mode of its own.
 - **Responses** are `(assignment, response_field)` rows: the
   reviewer's answer to one field on one instrument for one assigned
   reviewee.
@@ -443,9 +442,11 @@ Setup is open only while the session is **editable** — `draft` OR
 `validated` (`is_editable`). Once the session leaves that band
 (`ready` / `expired` / `archived`), every operator setup-mutation
 endpoint (session edit, roster import + delete-all, instrument
-CRUD, assignment generate) returns **HTTP 409** via the
+CRUD, assignment generate) refuses. Most return **HTTP 409** via the
 `_require_editable` route gate in
-`app/web/routes_operator/_shared.py`. Session Home's Delete Data and
+`app/web/routes_operator/_shared.py`; instrument CRUD applies the same
+predicate through `_require_instrument_editable`, and Quick Setup and
+the settings import test it inline and answer with a 303 instead. Session Home's Delete Data and
 Delete session are an exception: `_require_not_ready` refuses them
 only in `ready`. So are the Observers roster, which accepts edits
 until the session is archived, and the email-template editor, which
