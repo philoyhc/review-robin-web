@@ -97,7 +97,77 @@ def _parse_rows(rows: list[Row]) -> tuple[_ParsedConfig, list[ApplyError]]:
     _drop_retired_view_policy_modes(plan)
     errors.extend(_view_policy_cell_errors(plan))
     errors.extend(_branch_errors(plan))
+    errors.extend(_length_errors(plan))
     return plan, errors
+
+
+def _column_length(model: type, name: str) -> int | None:
+    """The declared length of ``model``'s ``name`` column, or ``None``
+    when there is no such column or it has no cap (``Text``)."""
+    column = model.__table__.columns.get(name)
+    return getattr(column.type, "length", None) if column is not None else None
+
+
+def _length_errors(plan: _ParsedConfig) -> list[ApplyError]:
+    """A value longer than the column it lands in passes SQLite and
+    fails phase 2 on Postgres as a ``DataError`` — a 500, not a report
+    (findings D32). Check every string the import writes against its
+    column's declared length, so the limits cannot drift from the
+    schema. Tags are checked by ``normalize_tag`` already."""
+    from dataclasses import fields as _fields
+
+    from app.db.models import (
+        DataShape,
+        Instrument,
+        InstrumentDisplayField,
+        InstrumentResponseField,
+        ReviewSession,
+        SessionRuleSet,
+    )
+
+    errors: list[ApplyError] = []
+
+    def check(field: str, value: object, limit: int | None) -> None:
+        if isinstance(value, str) and limit is not None and len(value) > limit:
+            errors.append(
+                ApplyError(
+                    row_number=0,
+                    field=field,
+                    message=(
+                        f"{len(value)} characters; at most {limit} fit"
+                    ),
+                )
+            )
+
+    def check_spec(prefix: str, spec: object, model: type) -> None:
+        for f in _fields(spec):
+            check(
+                f"{prefix}.{f.name}",
+                getattr(spec, f.name),
+                _column_length(model, f.name),
+            )
+
+    for key, value in plan.session_overrides.items():
+        check(f"session.{key}", value, _column_length(ReviewSession, key))
+    for n, instrument in sorted(plan.instruments.items()):
+        check_spec(f"instruments[{n}]", instrument, Instrument)
+        for m, df in sorted(instrument.display_fields.items()):
+            check_spec(
+                f"instruments[{n}].display_fields[{m}]",
+                df,
+                InstrumentDisplayField,
+            )
+        for m, rf in sorted(instrument.response_fields.items()):
+            check_spec(
+                f"instruments[{n}].response_fields[{m}]",
+                rf,
+                InstrumentResponseField,
+            )
+    for n, rule_set in sorted(plan.session_rule_sets.items()):
+        check_spec(f"session_rule_sets[{n}]", rule_set, SessionRuleSet)
+    for n, shape in sorted(plan.data_shapes.items()):
+        check_spec(f"data_shapes[{n}]", shape, DataShape)
+    return errors
 
 
 @dataclass

@@ -466,7 +466,10 @@ the round-trip notes below.
    deduplicated and a repeated `view_policies[<audience>]` block
    merges, so neither is an error. A fractional Min, Max or Step on an
    `Integer` response field is an error too, as on Band 2
-   (`spec/instruments.md`, the Bounds rules).
+   (`spec/instruments.md`, the Bounds rules). So is a value longer
+   than the column it lands in (a data-shape name or `field_key` over
+   255 characters, a `short_label` over 32), read from each column's
+   declared length; a session tag over 64 is refused by the tag rules.
 2. **Phase 2 — Apply the typed plan.** Wipe-and-replace within
    the affected section (e.g. all instruments for a session, which
    also deletes every assignment and response in it).
