@@ -952,7 +952,7 @@ when rows already exist; audit event records old count, new count,
 and any cascaded downstream deletions.
 
 Assignment **regeneration** is the deliberate exception (2026-05-16,
-`spec/reconciling_regeneration.md`). `replace_assignments`
+`spec/assignments.md` "Reconcile + regenerate"). `replace_assignments`
 reconciles instead of wholesale-replacing: it diffs the rule
 engine's pair set against the existing `Assignment` rows, inserts
 newly eligible pairs, deletes pairs the rule no longer produces

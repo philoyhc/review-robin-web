@@ -410,7 +410,7 @@ The steps:
    materialises one `Assignment` row per `(reviewer, reviewee,
    instrument)` triple eligible under each instrument's pinned
    rule. It **reconciles** the existing rows (see
-   `spec/reconciling_regeneration.md`) — inserting newly eligible
+   `spec/assignments.md` "Reconcile + regenerate") — inserting newly eligible
    pairs, deleting pairs the rule no longer produces along with
    their responses, and leaving matched pairs and their responses
    untouched. The saved-response confirmation detour below gates

@@ -1,5 +1,8 @@
 # Reconciling assignment regeneration
 
+> **Archived 2026-10-04.** Folded into `spec/assignments.md`
+> "Reconcile + regenerate", which is the live contract.
+
 How `assignments.replace_assignments(...)` materialises `Assignment`
 rows from each instrument's rule without destroying saved responses.
 

@@ -24,7 +24,8 @@ This spec covers:
   per-instrument status table, the preview table, and the
   Self-review / Include / Show toggles.
 - The reconcile + regenerate path that preserves saved
-  responses across re-runs.
+  responses across re-runs, and why it may not be simplified
+  back to a replace.
 
 For the instrument side — what an instrument is, how Band 1
 authors a rule, where `group_kind` lives — see
@@ -1071,40 +1072,56 @@ is the catalogue for that copy. Lifecycle-aware (the same
 
 Generate never wholesale-replaces an instrument's rows: it
 **diffs and reconciles**, so responses on pairs that survive the
-re-run survive with them. `spec/reconciling_regeneration.md`
-carries the algorithm and the reasons it may not be simplified
-back.
+re-run survive with them.
+
+**Why not a replace.** `Assignment.responses` is
+`cascade="all, delete-orphan"`, so deleting an instrument's rows and
+inserting the engine's fan-out takes every saved response with it,
+including those on pairs the re-run produces again unchanged. A
+keep-or-lose prompt is the wrong shape for the same reason: the common
+mid-cycle case (reverted to draft, a reviewer or reviewee added or
+removed) wants the affected pairs generated or dropped while every
+unchanged pair keeps its responses. Neither the wholesale replace nor a
+binary prompt may come back.
 
 When Generate runs — inside the Workflow card's Prepare step, the
 only UI path to it on an existing session, or through
 `POST /operator/sessions/{session_id}/assignments/generate`, which no
 page posts to; or, with Rehydrate (deferred and off by default), on
 the new session it builds (`spec/rehydrate.md`) — then for each
-instrument:
+instrument `_materialise_one_instrument`
+(`app/services/assignments/_generate.py`):
 
-1. Run the engine over the current rule + roster.
-2. Compute the diff against existing `Assignment` rows:
-   - **To-insert.** New pairs the engine produced.
+1. Runs the engine over the current rule + roster and reduces its
+   output to a pair set.
+2. Diffs it against the existing `Assignment` rows, both keyed by
+   `(reviewer_id, reviewee_id)`. That is a pair's identity within
+   `(session_id, instrument_id)`, the tuple `uq_assignment_unique`
+   enforces.
+   - **To-insert.** New pairs the engine produced. Each gets
+     `include` and `created_by_mode` as set out below. On a
+     group-scoped instrument, a new row whose group already holds
+     an answer takes a copy of it (§ *Group-scoped fan-out*).
    - **To-delete.** Existing pairs no longer surviving the
      rule. **Their responses are deleted too** — this is the
      destructive part. The Workflow card's **Prepare session**
      button detours through a `prepare_confirm` banner naming
      both counts first, so the operator acknowledges the loss
-     before it happens (`spec/workflow_card.md`).
-   - **To-keep.** Pairs surviving both passes. Their
-     responses survive untouched, but their
-     `Assignment.include` is **recomputed, not preserved**.
-     `_diff_one_instrument` sets the expected value to
-     `self_reviews_active` for a self-review pair, `True`
-     for every other pair, and `False` whenever either side is
-     inactive, and `_materialise_one_instrument`'s
-     to-keep loop writes it back
-     whenever it differs from the stored one — so an
-     operator's manual Inactivate on a non-self pair between two
-     active people is reset to `True` on the next Generate. The
-     reset is deliberate: assignment-row status carries through no
-     export and no clone (`spec/roundtrip_coverage.md` records the
-     gap).
+     before it happens (`spec/workflow_card.md`). The `Response`
+     rows go before the `Assignment` rows, and the order is
+     load-bearing: these are bulk Core deletes, which bypass the
+     ORM cascade, so the other order leaves the responses behind
+     and breaks the foreign key.
+   - **To-keep.** Pairs surviving both passes. The row and its
+     responses are untouched, except that `include` is
+     **recomputed, not preserved** (below).
+3. Emits `assignments.generated` (§ *Audit* below).
+
+There is no separate full-reset mode, and none is needed. On a
+session with no responses, reconcile reaches the same end state a
+delete-then-insert would; when the engine's output diverges
+completely, to-keep is empty and reconcile deletes everything stale
+and inserts everything new.
 
 The direct `/assignments/generate` route has two gates of its own,
 both only once the session has assignment rows: without
@@ -1116,7 +1133,47 @@ whether or not this run would delete one.
 
 The diff is bit-stable (the engine's deterministic seed
 guarantees the same pass produces the same set), so re-running
-Generate without changing anything is a no-op.
+Generate without changing anything is a no-op. A deterministic rule
+(Full Matrix, tag predicates) is also stable under unrelated edits:
+adding one reviewer inserts that reviewer's pairs and keeps the rest.
+A seeded-random rule can legitimately reshuffle its whole output when
+its input changes, so few responses survive; reconcile still works,
+and does not try to pin a random rule's output across input changes.
+
+### `include` and `created_by_mode`
+
+`include` is set per pair: `self_reviews_active` for a self-review
+pair, `True` for every other pair, and `False` whenever either side
+is inactive. A self-review is decided by § *Self-review policy*,
+which on a group-scoped instrument is the whole-group rule, not a
+pair-level test. An inactive side's pairs are kept rather than
+dropped, so a deactivate → Prepare → reactivate round trip keeps
+their responses.
+
+On to-keep rows `_diff_one_instrument` recomputes the expected value
+and the to-keep loop writes it back whenever it differs from the
+stored one — a single-column update that never touches responses. So
+an operator's manual Inactivate on a non-self pair between two active
+people is reset to `True` on the next Generate. The reset is
+deliberate: assignment-row status carries through no export and no
+clone (`spec/roundtrip_coverage.md` records the gap).
+
+`created_by_mode` is the run's `mode` on to-insert rows and the
+original value on to-keep rows. The engine is the only writer and
+`AssignmentMode` has one member, so every row carries `rule_based`.
+The column's default covers direct construction only, and must never
+name a mechanism that cannot write.
+
+### Audit
+
+`assignments.generated` is written once per instrument
+(`refs.instrument_id`), with a `counts` payload in reconcile terms:
+`new`, `deleted` and `kept` pairs; `responses_deleted`, the `Response`
+rows removed with the deleted pairs; `group_responses_copied`, present
+only when non-zero; and `pairs` / `instruments` / `excluded_*`.
+`counts` is freeform, so a new key needs no `EVENT_SCHEMAS` change.
+`replace_assignments` returns a `(replaced, new)` 2-tuple, where
+`replaced` counts the pairs the reconcile deleted.
 
 ### Staleness
 
@@ -1212,6 +1269,25 @@ guarantee depend on ids never being reused; `docs/database.md`
 The Workflow card renders `responses_deleted` and `deleted_pairs`
 from it and gates the re-POST on
 `acknowledge_response_loss=true`.
+
+The confirmation is **impact-driven**: Prepare skips the dry-run
+when `lifecycle.session_has_responses` is false, and runs straight
+through when `responses_deleted` is 0 (`spec/workflow_card.md`
+"Saved-response confirmation detour"). There is no skip-Generate
+choice, because reconcile does not destroy unchanged data.
+
+The dry-run is not cheap at roster scale: one engine walk is seconds
+per instrument on a 1,000 × 1,000 roster. The clean path pays for one,
+the run. **The confirmation path pays for three**: the dry-run on the
+first POST, a second `reconcile_impact` when the redirected GET
+renders the banner, and the run on the acknowledged POST. That is
+accepted because the confirmation has to come from the same engine the
+run will use, and the redisplay is the cost of carrying the counts
+through a 303 rather than holding them in session state. The
+staleness cache does not apply: `reconcile_impact` asks a different
+question and always walks the engine, which it can afford because it
+runs on the POST and on a GET **gated on the `prepare_confirm` query
+parameter**, not on every render.
 
 ## Validation surfaces
 

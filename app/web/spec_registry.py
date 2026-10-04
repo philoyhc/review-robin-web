@@ -65,12 +65,10 @@ SPEC_PENDING: tuple[str, ...] = ()
 #
 # Seeding rule: map the spec that documents the module's **routes, or
 # the surface those routes serve** — not every document that touches the
-# subject. ``spec/reconciling_regeneration.md`` is the design record
-# behind ``POST .../assignments/generate`` and describes no route, so
-# ``_assignments`` maps to ``spec/assignments.md`` alone. A second entry
-# earns its place only where it carries route-level contract the first
-# does not (``_session_home`` → ``spec/permissions.md`` for the two
-# owner routes; ``_operations`` → the Validate and Preview page specs).
+# subject. A second entry earns its place only where it carries
+# route-level contract the first does not (``_session_home`` →
+# ``spec/permissions.md`` for the two owner routes; ``_operations`` →
+# the Validate page and the reviewer surface its redirects land on).
 SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
     # --- operator: session-scoped setup -------------------------------
     "app.web.routes_operator._lobby": ("spec/sessions_overview.md",),
