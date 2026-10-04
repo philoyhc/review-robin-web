@@ -1359,45 +1359,53 @@ before the `_surface` catch-all.
 
 ## Role-navigator chip strip
 
-A shared partial rendered below the session-name H1 on
-four role-specific surfaces: the response surface
-(`review_surface.html`), the summary page (`summary.html`),
-the results page (`results.html`), and the collation page
-(`collation.html`).
+A shared partial rendered below the page header on the four
+role-specific surfaces, so a multi-role user can swap surfaces
+without going back through `/me`:
 
-**Template partial** — `reviewer/_role_chips.html`. Included in
-each of the four surfaces; suppressed in `preview_mode` on the
-reviewer surface (operator preview doesn't have role context).
+| Surface route | Template | `active_role` |
+|---|---|---|
+| `GET /me/sessions/{id}/{page_n}` | `reviewer/review_surface.html` | `"reviewer"` |
+| `GET /me/sessions/{id}/summary` | `reviewer/summary.html` | `"reviewer"` |
+| `GET /me/sessions/{id}/results` | `reviewer/results.html` | `"reviewee"` |
+| `GET /me/sessions/{id}/collation` | `reviewer/collation.html` | `"observer"` |
+
+`/me` itself carries no strip: it is what the strip lets a user skip.
+The reviewer surface wraps the include in `{% if not preview_mode %}`,
+so the operator preview (§ *Operator preview mode*) shows no "you are
+here" chip for the reviewer being inspected.
 
 **Builder** — `build_role_chips(db, *, user, review_session,
-active_role)` in `app/web/routes_reviewer/_shared.py`. Queries
-all three rosters for the signed-in user's email
-(case-insensitive, `status == "active"` only), constructs a chip
-list in `_ROLE_PRIORITY` order (`reviewer` → `reviewee` →
-`observer`), and returns only the roles the user actually holds.
-
-Each chip carries:
+active_role)` in `app/web/routes_reviewer/_shared.py`. It returns one
+chip per role the signed-in user holds on the session, in
+`_ROLE_PRIORITY` order (`reviewer` → `reviewee` → `observer`); roles
+the user does not hold are absent, so a single-role user sees one
+chip. Each chip carries:
 
 | Key | Type | Meaning |
 |---|---|---|
-| `role` | `str` | `"reviewer"` / `"reviewee"` / `"observer"` |
+| `role` | `str` | `"reviewer"` / `"reviewee"` / `"observer"`; the CSS class is `pill-role-<role>` |
 | `target` | `str` | URL this chip links to (only used when `active == False` and `enabled == True`) |
-| `active` | `bool` | `True` for the current surface's role — full colour, no anchor |
+| `active` | `bool` | `True` for `active_role`, which the route knows from its own URL — full color, no anchor |
 | `enabled` | `bool` | `True` when the role's surface is currently reachable |
 
-**CSS** — `.rs-role-nav` strip in `base.html` with
-`.rs-role-nav-active` (full colour, current role) and
-`.rs-role-nav-muted` (greyed-out, disabled or inactive role)
-modifiers.
+Membership is matched on `user.email` with both sides folded through
+`normalize_email` in Python, never a SQL `lower()` (whose behavior
+differs between SQLite and Postgres); the fold itself is the one
+§ *Identity matching* defines, and is part of this contract. The
+matches are an `active` `Reviewer` by `email`, an `active` `Reviewee`
+that passes `participants.is_email_identified` by
+`email_or_identifier` (confidential and non-email reviewees never
+match), and an `active` `Observer` by `email`.
 
 Reachability mirrors the dashboard's `role_links.enabled` logic, for
 all three roles rather than only the reviewer:
 
-| Role | Chip |
-|---|---|
-| reviewer | Reachable when `session_status != "not opened"`; greyed otherwise. |
-| reviewee | **Omitted entirely** unless `visibility_policies.reviewee_has_current_grant` resolves — not greyed. A greyed chip still says *you are a reviewee on this session*, which is the disclosure `/me` stops making, so the chip goes with the role. |
-| observer | Present for any active observer, **greyed on an archived session** (`lifecycle.is_archived`), live otherwise. Being an observer is not a disclosure about the observer, so this one greys rather than disappearing. |
+| Role | Target | Chip |
+|---|---|---|
+| reviewer | `/me/sessions/{id}/summary` once the reviewer's pill is `submitted`, else `/me/sessions/{id}/1` | Reachable when `session_status != "not opened"`; grayed otherwise (a `draft`, `validated` or `archived` session, where the surface answers with `reviewer/pre_open.html`). |
+| reviewee | `/me/sessions/{id}/results` | **Omitted entirely** unless `visibility_policies.reviewee_has_current_grant` resolves — not grayed. A grayed chip still says *you are a reviewee on this session*, which is the disclosure `/me` stops making, so the chip goes with the role. |
+| observer | `/me/sessions/{id}/collation` | Present for any active observer, **grayed on an archived session** (`lifecycle.is_archived`), live otherwise. Being an observer is not a disclosure about the observer, so this one grays rather than disappearing. |
 
 **`build_role_chips` must not answer from roster membership alone.** A
 membership-only answer hands a user who holds another role on the
@@ -1406,6 +1414,37 @@ session a live Reviewee chip pointing at the 404 `/results` gives them
 surface asks the question for itself: a caller on `/collation` has
 passed the observer gate and nothing else, so their reviewee chip needs
 its own answer.
+
+**Template partial** — `reviewer/_role_chips.html`, inside a
+`<div class="rs-role-nav">`. An empty list renders nothing. Each chip
+is a `pill pill-role-<role>` labeled with the capitalized role name:
+
+- active → `<span>` with `rs-role-nav-active`;
+- not active, enabled → `<a href="{{ chip.target }}">` with
+  `rs-role-nav-muted`;
+- not active, not enabled → `<span>` with `rs-role-nav-muted`.
+
+The partial branches on chip state, never on role, so a fourth role
+would touch only `_ROLE_PRIORITY`, the per-role branch in
+`build_role_chips`, and a `.pill-role-<role>` palette in `base.html`.
+A new surface adds the strip by passing `role_chips` from its route
+and including the partial under its page header and before any
+description card, wrapped in
+`{% if not preview_mode %}` if it also renders as an operator
+preview.
+
+**CSS** — in `base.html` beside the `.pill-role-*` palette, every
+selector scoped under `body.ui-v2`:
+
+- `.rs-role-nav` — `display: flex; flex-wrap: wrap;
+  gap: var(--space-1); margin: 0 0 var(--space-4) 0;`
+- `.rs-role-nav .rs-role-nav-muted` — `background: var(--surface-muted);
+  color: var(--text-subtle); text-decoration: none;`, overriding the
+  role palette so the chip reads as not selected.
+- `.rs-role-nav a.rs-role-nav-muted:hover` — `color: var(--text-body);
+  text-decoration: underline;`, the affordance that says clickable.
+- `.rs-role-nav .rs-role-nav-active` — `font-weight: 600;`, keeping the
+  role's own palette to read as selected.
 
 **W17 (observer)** still applies the `responses_release_at` +
 `responses_release_until` gates inside the per-instrument render only —

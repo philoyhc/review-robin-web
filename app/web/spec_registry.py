@@ -114,8 +114,6 @@ SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
     "app.web.routes_operator._rehydrate": ("spec/rehydrate.md",),
     "app.web.routes_operator._sys_admin": ("spec/permissions.md",),
     # --- participant surfaces ------------------------------------------
-    # /me itself carries no role-chip strip (it is what the chips let a
-    # multi-role user skip), so spec/role_navigator.md does not govern it.
     "app.web.routes_reviewer._dashboard": ("spec/reviewer-surface.md",),
     "app.web.routes_reviewer._invite": ("spec/reviewer-surface.md",),
     "app.web.routes_reviewer._surface._routes": (

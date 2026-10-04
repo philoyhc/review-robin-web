@@ -1,5 +1,8 @@
 # Role navigator (chip strip)
 
+> **Archived 2026-10-04.** Folded into `spec/reviewer-surface.md`
+> "Role-navigator chip strip", which is the live contract.
+
 The role-navigator is the small chip strip that appears immediately below the page header on every participant-facing `/me` surface. It lets a multi-role user swap surfaces (reviewer surface ↔ reviewer summary ↔ reviewee results ↔ observer collation) without bouncing back through the `/me` dashboard.
 
 This spec documents the partial. The broader cross-cutting participant-model contract is in `spec/participant_model.md`; the dashboard side that informs the same priority rules is in `spec/reviewer-surface.md`.
