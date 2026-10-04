@@ -443,13 +443,8 @@ the edge, which is tolerable only for a tinted slab nested *inside*
 another card, where an edge would be `.card`'s 2px `--border-default`
 cutting across a nested block. A help card standing **alone in a column**
 reads as unanchored without one, and `.page-guidance` is exactly that
-case — including on the four roster pages, where 19P moved the card out
-of `.card-columns` to full width above everything else. The argument is
-about a card with nothing beside it to anchor against, which a
-full-width card at the top of a page is even more plainly; the token
-set and the reasoning are both unchanged by the move, and the
-placement the sentence assumes is stated here rather than left to be
-inferred from a container the page no longer uses.
+case — on the four roster pages it sits full width above everything
+else, with nothing beside it to anchor against.
 
 `--card-help-border` and `--card-help-bg` are **two independent mappings,
 not a coupling**: the border points at a primitive, never at

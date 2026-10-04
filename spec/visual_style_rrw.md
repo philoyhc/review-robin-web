@@ -62,13 +62,13 @@ nav card and takes `--surface-page` — the card's own fill — with a
 already supplies the surrounding frame, so a second fill and a second
 bottom border would read as a box inside a box. Placement and fill move
 together — the general spec's values apply to a strip that stands alone,
-which this one does not (author's ruling, 2026-10-02, findings E13).
+which this one does not.
 
 ---
 
 ## Other overrides of `visual_style_general.md`
 
-Where the shipped treatment differs from `spec/visual_style_general.md`, **the app wins**: the rows below are the contract for Review Robin, and the general spec stays the portable default (author's ruling, 2026-10-02, findings E25–E29). The status strip's override is under "Lifecycle state colors".
+Where the shipped treatment differs from `spec/visual_style_general.md`, **the app wins**: the rows below are the contract for Review Robin, and the general spec stays the portable default. The status strip's override is under "Lifecycle state colors".
 
 | Topic | General spec | Review Robin |
 |---|---|---|
@@ -79,6 +79,8 @@ Where the shipped treatment differs from `spec/visual_style_general.md`, **the a
 | **Muted text tiers** | `text-secondary` and `text-muted`, two tiers. | One muted tier, `--text-subtle`, held to the AA floor; there is no lighter text tier (`spec/color_tokens.md` "The AA floor on text"). |
 | **Confirmations** | Inline, no modal: the trigger becomes a row with a destructive Confirm and a Cancel. | Destructive submits are **disabled-until-checked**: the Destructive button is present but disabled from the start and a paired "Yes, delete …" checkbox enables it (`spec/ui_elements.md` §4, "Delete-confirm standard"). Some confirmations use the native `window.confirm()` dialog: the Activate form's auto-send cancellation (`app/web/templates/operator/partials/next_action_card.html`), an owner removing themselves (`app/web/templates/operator/session_detail.html`), a reviewer recalling a submission (`app/web/templates/reviewer/summary.html`), and "Discard unsaved changes?". |
 | **Loading** | No indicator under 1 second; beyond that a disabled copy of the trigger with an inline spinner. | A 3px indeterminate bar fixed to the top of the viewport arms ~200 ms after a same-origin link click or form submit; the clicked control takes `aria-busy="true"` and a reduced opacity and is **never disabled**; there is no spinner (`spec/ui_elements.md` §1, "Navigation busy indicator"). |
+| **Home anchor** | Tinted `accent-blue-bg-soft`, lightening to `accent-blue-bg-faint` on hover. | Rests on `--nav-home-bg`, a neutral grey, and on hover takes its selected colors: `--surface-page` with `--text-body` (`body.ui-v2 .session-home-anchor:hover`; `spec/ui_elements.md` §2, "Hover = selected"). |
+| **Tab hover** | `text-primary` over a subtle white tint on the row strip. | A hovered tab takes the selected tab's colors, `--nav-tab-active-bg` with `--text-body`, without the active underline; a disabled tab never hovers (`spec/ui_elements.md` §2, "Hover = selected"). |
 | **Font and line height** | `system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`; body line height 1.5. | `-apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`; body line height 1.35 (`body` in `base.html`). Headings are 1.3, as the general spec. |
 
 ---
@@ -94,17 +96,17 @@ The general visual spec (`spec/visual_style_general.md` Components > Cards) defi
 Cards are either **half-width** or **full-width**:
 
 - **Half-width is the default.** Half-width cards keep line lengths reasonable — full-width body text and form labels sprawl across the screen and become harder to scan. Pair half-width cards in a `.bottom-grid` (a 2-column grid with `align-items: start` so each side keeps its natural height — never stretches to match the taller column). When two half-width cards naturally belong together side-by-side, write them as a pair; when several stack on one side, wrap them in a `.bottom-left` flex column inside the grid. Example arrangements on operator pages:
-  - **The four roster pages: neither pair, since 19P.** Every mutating card is in one **Unlock panel** inside the roster card — the label editor over the Danger Zone on the left and Upload on the right, mirrored on Observers, which has no label editor — and nothing renders below the preview table. Reviewers arrived at this at 19P.1, Observers 19P.2, Reviewees and Relationships 19P.3. Half-width is still the rule; the container changed, not the measure. The label editor keeps a `.card-columns` fallback home for the states the panel cannot render in (locked, or mid-edit), which is that container's only tenant on the three pages that have one.
-  - Session Home: the **Workflow card** on top full-width, the in-place `#session-config` card below it, then a `.bottom-grid` with **Quick Setup** on the left and the **Owners** card (19S Item 10) stacked over **Danger Zone** on the right (author's ruling, 2026-09-23). There is no Extract Data card on Home; Extract Setup lives on the Extract data page. `spec/session_home.md` §3 is authoritative for this page.
+  - **The four roster pages: neither pair.** Every mutating card is in one **Unlock panel** inside the roster card — the label editor over the Danger Zone on the left and Upload on the right, mirrored on Observers, which has no label editor — and nothing renders below the preview table. Half-width is still the rule inside the panel. The label editor keeps a `.card-columns` fallback home for the states the panel cannot render in (locked, or mid-edit), which is that container's only tenant on the three pages that have one.
+  - Session Home: the **Workflow card** on top full-width, the in-place `#session-config` card below it, then a `.bottom-grid` with **Quick Setup** on the left and the **Owners** card stacked over **Danger Zone** on the right. There is no Extract Data card on Home; Extract Setup lives on the Extract data page. `spec/session_home.md` §3 is authoritative for this page.
   - **There is no Edit Session Details page.** `/operator/sessions/{id}/edit` is a 308 redirect to `…?editing=1#session-config`, which opens the config card in place — session details are edited where they are read, not on a separate page.
 - **Full-width when content requires it.** Reach for full-width only when the card's content genuinely needs more horizontal space:
   - Wide tables (Reviewers / Reviewees / Relationships / Invitations / Responses data tables) where half-width would force horizontal scroll or column truncation.
   - Per-instrument cards on the Instruments page, each of which hosts nested half-width Display Fields + Response Fields children.
-  - Top-of-page status / overview cards that span the chrome's status strip width. The Validate page's **Setup coverage** card is one such case — `.card.setup-coverage` in `session_validate.html`, on a page with no `.card-columns` at all. (The Instruments status card was the example here until 19O Item 6; it is **half-width** in a `.card-columns` pair beside that page's guidance card, so it was the wrong one — see `spec/instruments.md`.)
+  - Top-of-page status / overview cards that span the chrome's status strip width. The Validate page's **Setup coverage** card is one such case — `.card.setup-coverage` in `session_validate.html`, on a page with no `.card-columns` at all. The Instruments page's Session status card is not one: it is **half-width**, in a `.card-columns` pair beside that page's guidance card (`spec/instruments.md`).
   - Multi-column forms whose grouping exceeds a half-width column.
 - **Nested half-within-full.** Inside a full-width card, two half-width sub-cards can sit side-by-side when the parent's affordance benefits from that arrangement.
 
-`.page-grid` (with `align-items: stretch` for L-shape equal-height layouts and explicit placement classes `.card-tl` / `.card-tr` / `.card-bl` / `.card-br`) is a legacy primitive; **`.bottom-grid` is preferred** for new pairings since natural heights almost always read better than stretched ones.
+`.page-grid` stretches both columns to equal height and today mostly pairs form fields rather than cards (`spec/ui_elements.md` §10); **`.bottom-grid` is preferred** for new card pairings since natural heights almost always read better than stretched ones.
 
 ### Mobile ordering = DOM order
 
@@ -124,7 +126,7 @@ A page is composed of cards drawn from a small named vocabulary. The kind sets t
 
 - Session Details card on Session Home.
 - Summary card on the Responses page (assigned / invited / opened / submitted / incomplete pills).
-- "All Instrument Status" card at the top of Instruments.
+- Session status card at the top of Instruments (session deadline and accepting / not-accepting counts; `spec/instruments.md`).
 
 **Action card** — primary content is a form or affordance. The card exists to host the action, with framing copy and any required confirmation around it. Default visual treatment (white background, neutral border). Examples:
 
@@ -250,7 +252,7 @@ Exceptions:
 
 For all other session-scoped pages (the Setup pages, the Operations pages), no H1 is needed. The chrome tab and breadcrumb together establish identity.
 
-**Session Home has no H1 either**: the session name is the breadcrumb's current segment and the Name field of the Session details card. Lifecycle state appears as a badge in the status strip; no need to repeat it in the page body (author's ruling, 2026-10-02, findings E14).
+**Session Home has no H1 either**: the session name is the breadcrumb's current segment and the Name field of the Session details card. Lifecycle state appears as a badge in the status strip; no need to repeat it in the page body.
 
 ### Warning surfaces — shared brown framing
 
@@ -265,16 +267,16 @@ Per **P7**, recovery / primary actions inside these cards adopt the card's color
 
 Used when a page or section is reachable but its actions are disabled because the session lifecycle locks them.
 
-- **On Setup pages** when session is `ready`: lock card explains that setup is locked and offers a "Revert to draft" action where appropriate.
-- **On Operations pages** when session is `draft` or `validated`: lock card explains that operations are unavailable until the session is activated, and links to Home where the Activate action lives.
+- **On the Setup pages that lock** — Reviewers, Reviewees, Relationships and Instruments — whenever the session is `ready`, `expired` (Closed) or `archived`. The card says why the page's mutating controls are absent. From `ready` and `expired` it offers "Revert to draft"; from `archived`, which cannot revert, it points at Unarchive on the Archived sessions page and carries no control.
+- **On Observers** only when the session is `archived`: its roster stays editable through `ready` and `expired` (`spec/lifecycle.md` §5).
 
 The lock card pattern is consistent across all of these. Its prominence and explanatory copy adapt to the specific case, but its visual treatment does not.
 
-**Exception — Session Home.** Per `spec/session_home.md`, Home does *not* render lock cards; the Next Action card carries any explanatory messaging the operator needs about lifecycle. Disabled treatment on Home is plain greying-out. Lock cards remain in use everywhere else.
+**No lock card where the Workflow card renders.** Session Home and the Operations pages carry none: the Workflow card's stepper already makes lifecycle state explicit (`spec/operator_ui_concept.md` P4). Disabled treatment there is plain greying-out.
 
 #### Danger-zone card uses
 
-Groups the destructive actions for a given Setup entity (Delete all reviewers / reviewees / relationships / instruments) and the session-level destructive actions (Delete data, Delete session). H2 is "Danger Zone" in `--card-warning-fg`. Lives at the bottom-right of the page (or in the bottom row of a `.bottom-grid`) so it stays visually grouped with the entity it operates on but isn't the first thing the eye lands on. **On all four roster pages since 19P it is inside the roster card's Unlock panel instead** — grouped with the entity as before, and de-prioritised by being behind a disclosure rather than by sitting low on the page. That substitution is the argument for putting a `Delete all` *above* the roster it deletes: distance down the page was never the safeguard, the confirm gate is, and a disclosure asks for an explicit act before the card is even visible. The amber framing is unchanged and deliberately so: the card keeps `.card.danger-zone` inside the panel, because that class is the only reach for the warning treatment. Instruments and Session Home still carry it outside one. If the framing is ever dropped inside the panel, this section and `spec/ui_elements.md` §`.card.danger-zone` both become false of four pages as a matter of pixels rather than placement.
+Groups the destructive actions for a given Setup entity (Delete all reviewers / reviewees / relationships / instruments) and the session-level destructive actions (Delete data, Delete session). H2 is "Danger Zone" in `--card-warning-fg`. Lives at the bottom-right of the page (or in the bottom row of a `.bottom-grid`) so it stays visually grouped with the entity it operates on but isn't the first thing the eye lands on. **On all four roster pages it is inside the roster card's Unlock panel instead** — grouped with the entity as before, and de-prioritised by being behind a disclosure rather than by sitting low on the page. That substitution is the argument for putting a `Delete all` *above* the roster it deletes: distance down the page was never the safeguard, the confirm gate is, and a disclosure asks for an explicit act before the card is even visible. The amber framing is unchanged and deliberately so: the card keeps `.card.danger-zone` inside the panel, because that class is the only reach for the warning treatment. Instruments and Session Home still carry it outside one. If the framing is ever dropped inside the panel, this section and `spec/ui_elements.md` §`.card.danger-zone` both become false of four pages as a matter of pixels rather than placement.
 
 ---
 
@@ -316,10 +318,12 @@ The two-row session chrome (Setup row, Operations row) **does not appear** on th
 The existing top bar pattern continues:
 
 - **Left:** "Review Robin Web App (version …)" — small, in `--text-subtle`. App identity and version, modest.
-- **Right:** A small **user menu** containing:
-  - "Signed in as [Operator Name]" (informational, not a link).
-  - About — opens About page, with return-to-origin behavior (see below).
-  - Settings — opens Settings page, with return-to-origin behavior.
+- **Right:** A small **user menu** containing, in order:
+  - "Signed in as [Operator Name]" (informational, not a link), with a " (super admin)" or " (sys admin)" suffix for a viewer holding that tier.
+  - Settings — opens Settings, with return-to-origin behavior (see below). Not rendered on Settings itself.
+  - Admin — opens the Sys Admin pages, with return-to-origin behavior. Rendered for sys admins only, and not on the Sys Admin pages.
+  - Guide — opens the Guide, with return-to-origin behavior. Not rendered on `/guide` itself or for a viewer who resolves no Guide audience (the same fail-open flag as the reviewer top bar, below).
+  - About — opens About, with return-to-origin behavior. Not rendered on About itself.
   - Sign out — ends the operator's session.
 
 The user menu can render as inline links (when the menu has three or four items) or as a dropdown triggered by clicking the operator name. Inline is preferred while the menu is small; promote to dropdown when it would otherwise crowd the top bar.
@@ -387,7 +391,7 @@ Reviewer-facing pages have a top bar, but lighter than the operator's:
 
 - **Left:** "Review Robin" — small, `--text-subtle`. App identity as a trust anchor. No version info (operators care about that; reviewers don't).
 - **Right:** A small **user menu** containing:
-  - "Signed in as [Reviewer Name]" — informational. Lets the reviewer confirm correct identity (important on shared computers, useful in institutions where SSO might silently log the wrong person in).
+  - "Signed in as [Reviewer Name]" — informational, with the same tier suffix as the operator's. Lets the reviewer confirm correct identity (important on shared computers, useful in institutions where SSO might silently log the wrong person in).
   - "My Reviews" — link back to the reviewer's review list (only rendered when the reviewer has more than one review pending or completed; suppressed when there's just one).
   - "Guide" — opens the Guide (`/guide?return_to=<path>`, skipped on `/guide` itself), rendered only for a viewer who resolves at least one Guide audience. Gated on the same `request.state.guide_hidden` **hide** flag the operator chrome reads, and **fails open**: an unset flag renders the link, because `/guide` itself bounces a viewer who resolves nothing to `/about`, so a stray link is cosmetic while a missing one hides a page someone is entitled to.
   - "About" — opens the About / access-help page (`/about?return_to=<path>`, skipped on `/about` itself), same as the operator chrome's About link.
@@ -519,7 +523,7 @@ Some patterns from `visual_style_general.md` and the operator session chrome abo
 - **Color palette.** Same neutrals, same accents. Lifecycle accent colors are operator-only (reviewers don't see lifecycle); other accents (blue for action, green for completion, amber for warnings) apply across all surfaces.
 - **Typography.** Same type scale and font stack on all surfaces.
 - **Spacing.** Same 4px grid throughout.
-- **Top bar pattern.** Both operator and reviewer surfaces have a top bar with app identity (left) and user menu (right). Operator's says "Review Robin Web App (version dev)" because operators care about the version; reviewer's says "Review Robin" because they don't. Operator's user menu hosts Guide / About / Settings / Sign out; reviewer's user menu hosts My Reviews / Guide / About / Sign out, with Guide suppressed for a viewer who resolves no Guide audience. Same shape, different contents.
+- **Top bar pattern.** Both operator and reviewer surfaces have a top bar with app identity (left) and user menu (right). Operator's says "Review Robin Web App (version dev)" because operators care about the version; reviewer's says "Review Robin" because they don't. Operator's user menu hosts Settings / Admin / Guide / About / Sign out, with Admin for sys admins only; reviewer's user menu hosts My Reviews / Guide / About / Sign out, with Guide suppressed for a viewer who resolves no Guide audience. Same shape, different contents.
 
 The discipline: components and visual language are uniform; chrome and navigation patterns are audience-specific. An operator and a reviewer should recognize the same app from the visual style; a quick glance at the chrome should tell each which surface they're on.
 
@@ -707,9 +711,8 @@ navigation"; restating in this principle's context:
   the check in `update_short_label`
   (`instruments/_instrument_crud.py`). The cap is a Setup-side
   responsibility and the reviewer surface trusts the value it's
-  given (`spec/instruments.md`). **No rationale for 32 is recorded
-  anywhere**, and nothing downstream depends on it: the cap is the
-  whole of the defence — `base.html` carries no `text-overflow`
+  given (`spec/instruments.md`). Nothing downstream depends on the
+  figure: the cap is the whole of the defence — `base.html` carries no `text-overflow`
   declaration and no single-line constraint on the H2, here or
   anywhere — so a longer label would wrap rather than break.
 - **Per-page status pills** (per "Multi-instrument navigation")
@@ -751,9 +754,9 @@ this principle imposes are:
   header stays visible only if the table becomes its own internal
   scroll viewport (a `max-height` box). The surface keeps
   whole-page scroll and a non-sticky header — a header that stays
-  put does not buy that scroll-model change. **This now reaches every
-  table in the app**, not just this one: 19O Item 8 made the wrapper
-  universal (`spec/ui_elements.md` §10), so a sticky header anywhere
+  put does not buy that scroll-model change. **This reaches every
+  table in the app**, not just this one: every table but one sits in the
+  wrapper (`spec/ui_elements.md` §10), so a sticky header anywhere
   costs the same scroll-model change and is ruled out on the same
   grounds.
 - **Filter to incomplete.** A "show only unscored" toggle is
@@ -811,7 +814,7 @@ that may not work well in tabular form.
 - `spec/reviewer-surface.md` — the multi-instrument-aware response
   surface spec; the URL pattern, page anatomy, form scope, and
   per-page status pills implementing this principle on the live
-  surface. The large-table handling above is not yet written there.
+  surface.
 - `spec/instruments.md` — operator-side instrument design, where
   pacing decisions are made.
 
