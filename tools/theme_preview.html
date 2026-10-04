@@ -943,12 +943,6 @@
         margin-bottom: 20px;
       }
       .page-grid .card { margin-bottom: 0; }
-      .page-grid > .card-tl { grid-column: 1; grid-row: 1; }
-      .page-grid > .card-r  { grid-column: 2; grid-row: 1 / span 2; }
-      .page-grid > .card-bl { grid-column: 1; grid-row: 2; }
-      .page-grid > .card-l  { grid-column: 1; grid-row: 1 / span 2; }
-      .page-grid > .card-tr { grid-column: 2; grid-row: 1; }
-      .page-grid > .card-br { grid-column: 2; grid-row: 2; }
       /* Two independent column stacks — 19E rung 6b tweak. Unlike
          .page-grid / .bottom-grid, which lay cards out in ROWS, each
          child here is a *column* that stacks its own cards. A card
@@ -1732,15 +1726,6 @@
       #danger-zone button.btn { width: 200px; }
       @media (max-width: 800px) {
         .page-grid { grid-template-columns: 1fr; }
-        .page-grid > .card-tl,
-        .page-grid > .card-r,
-        .page-grid > .card-bl,
-        .page-grid > .card-l,
-        .page-grid > .card-tr,
-        .page-grid > .card-br {
-          grid-column: 1;
-          grid-row: auto;
-        }
         /* Stacked, the two sides need the gap the column-gap gave them
            side by side: `.bottom-grid .card` zeroes the cards' margins
            (19T Item 16 entry 3). */
@@ -2718,23 +2703,21 @@
         border-color: transparent;
         box-shadow: none;
       }
-      /* A selected lobby row (19L.1). Edge *and* fill, which is what
-         `.tag-chip.is-selected` already does — the reserved shade as a
-         3px edge, its pale companion as the interior. Before this the
-         only row-level signal was the checkbox's own tick, a ~13px mark
-         at one end of a full-width row: adequate at the instant of
-         clicking, and the weakest thing in the pattern by the time a
-         bulk selection is scattered down the table or a tall panel has
-         pushed the row off-screen.
+      /* A selected lobby row: a rail of the reserved shade on the
+         first and last cells. Without it the only row-level signal is
+         the checkbox's own tick, a ~13px mark at one end of a
+         full-width row: adequate at the instant of clicking, and the
+         weakest thing in the pattern by the time a bulk selection is
+         scattered down the table or a tall panel has pushed the row
+         off-screen.
 
-         The edge sits on the first cell only, as an inset shadow rather
-         than a border, so the row's height does not change when it is
-         selected and the table does not reflow under the pointer.
+         The rails are inset shadows rather than borders, so the row's
+         height does not change when it is selected and the table does
+         not reflow under the pointer.
 
-         6px, doubled from 3px on the author's call once it was seen
-         rendered (19L.1 follow-up). A row is a wide, tall target and the
-         edge is competing with a full width of content; what reads as a
-         deliberate marker on a chip reads as a hairline on a table row.
+         6px: a row is a wide, tall target and the rail is competing
+         with a full width of content; what reads as a deliberate
+         marker on a chip reads as a hairline on a table row.
 
          Not caught by `tests/unit/test_reserved_shade.py`, and not an
          exemption: that guard scans selectors carrying pill / chip /
@@ -3742,8 +3725,7 @@
       body.ui-v2 .rs-role-nav .rs-role-nav-active {
         font-weight: 600;
       }
-      /* Banners — single .banner shell + four semantic variants.
-         Defined for completeness; not rendered on this page. */
+      /* Banners — single .banner shell + four semantic variants. */
       body.ui-v2 .banner {
         border: 1px solid var(--border-subtle);
         border-radius: var(--radius-card);

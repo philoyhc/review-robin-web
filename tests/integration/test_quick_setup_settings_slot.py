@@ -124,7 +124,9 @@ def test_import_config_route_via_quick_setup_slot(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert "config_imported=ok" in response.headers["location"]
+    assert response.headers["location"] == (
+        f"/operator/sessions/{review_session.id}#quick-setup-settings"
+    )
     instruments = (
         db.execute(
             select(Instrument).where(

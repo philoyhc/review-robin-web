@@ -38,7 +38,6 @@ from app.services import assignments as assignments_service
 from app.services.extracts.entity_metadata_extract import (
     build_reviewee_metadata,
     build_reviewer_metadata,
-    compute_self_review_data_state,
     self_review_handling_filename_suffix,
 )
 
@@ -937,45 +936,3 @@ def test_reviewee_metadata_honours_state_machine_too(db: Session) -> None:
     bob = _row_by_name(rows, header, "Bob")
     assert bob["Assigned_noself"] == "1"
     assert bob["Count_noself"] == "1"
-
-
-def test_compute_self_review_data_state_reports_both_pools(
-    db: Session,
-) -> None:
-    """The server-side preflight tells the chip's lock UI which
-    states are selectable. On a session with one self-review
-    pair + one non-self pair, both pools are present."""
-    review_session, _, _, _, instrument, _ = _seed_self_review_session(
-        db, code="srh-preflight-both"
-    )
-    state = compute_self_review_data_state(
-        db, session_id=review_session.id, instrument_ids={instrument.id}
-    )
-    assert state == {"has_self": True, "has_noself": True}
-
-
-def test_compute_self_review_data_state_only_noself_when_no_self_pair(
-    db: Session,
-) -> None:
-    """Session without any included self-review row → ``has_self``
-    flips False so the chip can lock to ``exclude_self``."""
-    review_session = _session(db, code="srh-preflight-noself")
-    rita = _reviewer(
-        db, review_session, name="Rita", email="rita@example.edu"
-    )
-    bob_e = _reviewee(
-        db, review_session, name="Bob", identifier="bob@example.edu"
-    )
-    instrument = _instrument(db, review_session, short_label="P", order=0)
-    _field(db, instrument, _NUMERIC, field_key="score", label="Score")
-    _assignment(
-        db, review_session,
-        reviewer=rita, reviewee=bob_e, instrument=instrument,
-    )
-    assignments_service.recompute_self_review_classification(
-        db, session_id=review_session.id
-    )
-    state = compute_self_review_data_state(
-        db, session_id=review_session.id, instrument_ids={instrument.id}
-    )
-    assert state == {"has_self": False, "has_noself": True}

@@ -1009,11 +1009,11 @@ async def import_session_config(
     ``acknowledge_response_loss=true`` when responses exist (findings
     C3).
 
-    Reachable from Quick Setup slot 4 (PR 4) and as a direct
-    POST endpoint — same success / error redirect shape the
-    other Quick Setup slots use: ``?config_imported=ok`` flash
-    on success, ``?quick_setup_error=settings&quick_setup_reason=...``
-    on failure (lifecycle / parse / apply)."""
+    Reachable from the Quick Setup Settings slot and as a direct
+    POST endpoint — same redirect shape the other Quick Setup
+    slots use: back to the slot on Session Home on success,
+    ``?quick_setup_error=settings&quick_setup_reason=...`` on
+    failure (lifecycle / parse / apply)."""
 
     home_url = f"/operator/sessions/{review_session.id}"
     fragment = "#quick-setup-settings"
@@ -1037,7 +1037,7 @@ async def import_session_config(
         )
 
     return RedirectResponse(
-        url=f"{home_url}?config_imported=ok{fragment}",
+        url=f"{home_url}{fragment}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

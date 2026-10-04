@@ -1,10 +1,9 @@
 """Extract data — Operations-strip tab for fine-grained shaping
-of response data for offline analysis (per ``guide/extract_data.md``).
+of response data for offline analysis (``spec/extract_data.md``).
 
-Ships as a skeleton in this PR: the page renders with the
-Operations chrome and three placeholder lens sections
-(By instrument / By reviewer / By reviewee). Wiring per-lens
-downloads is the follow-up.
+The page itself, the Data shaper's saved-shape create / update /
+delete, and each shape's CSV download. The lens cards' and the
+bundles' downloads live in ``_extracts.py``.
 """
 
 from __future__ import annotations

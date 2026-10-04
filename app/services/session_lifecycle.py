@@ -1,9 +1,8 @@
 """Session lifecycle: status enum, readiness, activation, revert, instrument gates.
 
-Segment 9.1 introduces the operator-controlled lifecycle that gates reviewer
-write access. The canonical session status values live here as a Python enum
-(no DB CHECK constraint); ``expired`` and ``archived`` are reserved for later
-segments and not written by any 9.1 route.
+The operator-controlled lifecycle that gates reviewer write access. The
+canonical session status values live here as a Python enum (no DB CHECK
+constraint); all five are written (``spec/lifecycle.md``).
 """
 from __future__ import annotations
 
@@ -53,8 +52,8 @@ class SessionStatus(str, Enum):
     # Display label is "Activated" — see class docstring and
     # ``app.services.lifecycle_display``.
     ready = "ready"
-    expired = "expired"  # reserved (Segment 9.3+)
-    archived = "archived"  # reserved (Segment 12+)
+    expired = "expired"
+    archived = "archived"
 
 
 def is_ready(review_session: ReviewSession) -> bool:
@@ -328,7 +327,7 @@ def activate_session(
 ) -> ReviewSession:
     """Flip session to ``ready`` and open every instrument.
 
-    Requires the session to be in ``validated`` (T2). Raises ``LifecycleError``
+    Requires the session to be in ``validated``. Raises ``LifecycleError``
     if the readiness report has errors, or if it has warnings/info and the
     operator did not pass ``acknowledge_warnings``.
 
@@ -654,11 +653,11 @@ def archive_session(
     Archiving is reversible (see ``unarchive_session``) and
     deletes no data. Accepts any starting state except
     ``archived`` itself; the audit event records the actual
-    from-state so the round-trip is reconstructible. The
-    bulk-archive route on the lobby page still filters to
-    ``draft`` only via its own pre-check; this widened service
-    backs the workflow card's per-session "Archive session"
-    button, which can fire from any lifecycle state.
+    from-state so the round-trip is reconstructible. The lobby's
+    "Purge and archive" and the Extract data page's Archive card
+    reach it through ``session_purge.purge_and_archive``, which
+    first refuses any session ``can_archive`` rejects; the
+    workflow card's "Archive session" route calls it directly.
     """
     if is_archived(review_session):
         raise LifecycleError(
@@ -966,15 +965,6 @@ def session_response_count(db: Session, review_session: ReviewSession) -> int:
     )
 
 
-def assert_status_draft(review_session: ReviewSession) -> None:
-    """Raise LifecycleError if session is not in draft (used by edit-lock)."""
-    if not is_draft(review_session):
-        raise LifecycleError(
-            "Session is locked while status is not draft",
-            code="locked",
-        )
-
-
 __all__ = [
     "SessionStatus",
     "ReadinessReport",
@@ -1001,5 +991,4 @@ __all__ = [
     "observe_deadline",
     "session_has_responses",
     "session_response_count",
-    "assert_status_draft",
 ]

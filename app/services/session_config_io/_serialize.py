@@ -29,8 +29,6 @@ from app.services.email_templates import (
     OVERRIDE_KEYS,
     RESPONSES_RECEIVED_ENABLED_KEY,
 )
-# Wave 5 PR 5.2 — RuleSet seeding retired; ``_SEEDED_RULE_SETS``
-# import retired.
 from app.services.sessions import resolve_session_timezone
 
 from app.services.session_config_io._rows import (
@@ -41,11 +39,6 @@ from app.services.session_config_io._rows import (
     _json,
     _str,
 )
-
-
-# Wave 5 PR 5.2 — ``_SEEDED_RULE_SET_NAMES`` retired alongside
-# the RuleSet seeding helper. The session_rule_sets export
-# emits every row unconditionally.
 
 
 # --------------------------------------------------------------------------- #
@@ -72,7 +65,7 @@ def serialize_session_config(
        - Instrument-level rows (incl. ``rule_set_name`` if any).
        - Display fields, ``(order, id)``.
        - Response fields, ``(order, id)``.
-    4. Per-session RuleSets (non-seeded only), ``(id)``.
+    4. Per-session RuleSets, every row, ``(id)``.
     5. Data shapes.
     6. Session tags.
 
@@ -288,11 +281,8 @@ def _instrument_blocks(
         .all()
     )
     rule_set_name_by_id = _rule_set_name_lookup(db, review_session)
-    # Wave 5 PR 5.2 — the un-pinned-instrument audit-log fallback
-    # (``_audit_log_rule_set_name``) retired with the
-    # ``operator_rule_sets`` table. Unpinned instruments export
-    # with an empty rule_set_name cell — matches the behaviour for
-    # sessions that never ran rule-based Generate.
+    # An instrument with no ``rule_set_id`` exports an empty
+    # rule_set_name cell.
 
     rows: list[Row] = []
     for n, instrument in enumerate(instruments, start=1):
@@ -317,8 +307,7 @@ def _instrument_rows(
     prefix = f"instruments[{n}]"
     # Per-instrument selection (``Instrument.rule_set_id``, 15B)
     # wins. An un-pinned instrument exports with an empty
-    # rule_set_name cell (Wave 5 PR 5.2 retired the audit-log
-    # fallback that used to resolve seeded names).
+    # rule_set_name cell.
     rule_set_name_value = (
         rule_set_name_by_id.get(instrument.rule_set_id)
         if instrument.rule_set_id is not None
@@ -421,11 +410,9 @@ def _display_field_rows(instrument: Instrument, n: int) -> list[Row]:
         rows.append(
             Row(f"{prefix}.source_field", _str(field.source_field), "string")
         )
-        # ``label`` row retired in Segment 15A Slice 1. The per-
-        # instrument override capability went away with the
-        # session-wide friendly-label resolver; the model column
-        # stays as dead data and the apply phase tolerates legacy
-        # ``label`` rows but silently drops them.
+        # No ``label`` row: display-field labels are session-wide
+        # (the friendly-label resolver). The model column stays as
+        # dead data, and the apply phase drops a legacy ``label`` row.
         rows.append(Row(f"{prefix}.visible", _bool(field.visible), "boolean"))
     return rows
 
@@ -551,20 +538,17 @@ def _view_policy_rows(instrument: Instrument, n: int) -> list[Row]:
 
 
 # --------------------------------------------------------------------------- #
-# Section 5 — per-session RuleSets (non-seeded only)
+# Section 5 — per-session RuleSets
 # --------------------------------------------------------------------------- #
 
 
 def _session_rule_set_rows(
     db: Session, review_session: ReviewSession
 ) -> list[Row]:
-    """Operator-authored ``session_rule_sets`` rows. Seeded ones
-    (name-matches ``SEEDS`` from ``app.services.rules.seeds``) are
-    excluded — they auto-materialise from the same constant on the
-    destination session, so re-emitting them would no-op against
-    ``uq_session_rule_set_session_name`` (Segment 13A-2)."""
+    """Every ``session_rule_sets`` row for the session, in ``id``
+    order. Nothing seeds rule sets, so none is left out."""
 
-    snapshots = _non_seeded_session_rule_sets(db, review_session)
+    snapshots = _session_rule_sets(db, review_session)
     rows: list[Row] = []
     for n, snap in enumerate(snapshots, start=1):
         prefix = f"session_rule_sets[{n}]"
@@ -588,19 +572,13 @@ def _session_rule_set_rows(
                 "json",
             )
         )
-        # Wave 5 PR 5.1 — the 15C ``library_name`` provenance cell
-        # retired alongside the operator-library tier, and the
-        # ``library_origin_id`` column went with it. No export cell.
     return rows
 
 
-def _non_seeded_session_rule_sets(
+def _session_rule_sets(
     db: Session, review_session: ReviewSession
 ) -> list[SessionRuleSet]:
-    # Wave 5 PR 5.2 — every session_rule_sets row emits now (the
-    # seeded-name exclusion retired with the seeding helper).
-    # Function kept by name so callers don't churn; it's effectively
-    # "every session_rule_sets row for the session."
+    """Every ``session_rule_sets`` row for the session, in id order."""
     return list(
         db.execute(
             select(SessionRuleSet)
@@ -612,19 +590,12 @@ def _non_seeded_session_rule_sets(
     )
 
 
-# Wave 5 PR 5.2 — ``_audit_log_rule_set_name`` retired with the
-# ``operator_rule_sets`` table it queried for the seed-name fallback.
-
-
 def _rule_set_name_lookup(
     db: Session, review_session: ReviewSession
 ) -> dict[int, str]:
     """Map every ``session_rule_sets.id`` in this session to its
     name. Used to translate ``Instrument.rule_set_id`` (DB-id FK)
-    into the export's name-based reference. Includes seeded rows
-    too — an instrument may point at a seeded copy, and the
-    destination session will have the same-named seed materialised
-    by ``materialise_seed_rule_sets`` (15C Slice 1)."""
+    into the export's name-based reference."""
 
     return {
         row.id: row.name
