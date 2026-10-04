@@ -72,7 +72,6 @@ from app.services.instruments import _instrument_label
 __all__ = [
     "build_reviewer_metadata",
     "build_reviewee_metadata",
-    "compute_self_review_data_state",
     "SELF_REVIEW_HANDLING_STATES",
     "SELF_REVIEW_HANDLING_DEFAULT",
     "self_review_handling_filename_suffix",
@@ -149,45 +148,6 @@ def metadata_instrument_scope(
             ).scalars()
         ) or None
     return set(instrument) if instrument else None
-
-
-def compute_self_review_data_state(
-    db: Session,
-    *,
-    session_id: int,
-    instrument_ids: set[int] | None = None,
-) -> dict[str, bool]:
-    """Server-side preflight for the chip's locked / selectable
-    state. Returns ``{'has_self': bool, 'has_noself': bool}`` for
-    the active scope.
-
-    ``instrument_ids=None`` ↔ the operator hasn't picked any
-    instrument chips — scope spans every session instrument (the
-    same shape ``_resolve_scope`` uses for the totals-only header).
-    """
-    base = [
-        Assignment.session_id == session_id,
-        Assignment.include.is_(True),
-    ]
-    if instrument_ids:
-        base.append(Assignment.instrument_id.in_(instrument_ids))
-    has_self = (
-        db.execute(
-            select(Assignment.id).where(
-                *base, Assignment.is_self_review.is_(True)
-            ).limit(1)
-        ).scalar()
-        is not None
-    )
-    has_noself = (
-        db.execute(
-            select(Assignment.id).where(
-                *base, Assignment.is_self_review.is_(False)
-            ).limit(1)
-        ).scalar()
-        is not None
-    )
-    return {"has_self": has_self, "has_noself": has_noself}
 
 
 def _column_suffix(state: str) -> str:

@@ -10,8 +10,8 @@ rule sets because "re-emitting would either no-op or trip
   already exists in the destination is *updated*, never inserted. The unique
   constraint is unreachable from this path.
 
-The serializer emits every row (``_non_seeded_session_rule_sets`` is
-"every row for the session" despite its name). These tests pin the behaviour
+The serializer emits every row for the session (``_session_rule_sets``).
+These tests pin the behaviour
 that makes that safe, because *the guarantee had been resting on a claim
 nobody could check* — the spec even cited a test file that does not exist.
 

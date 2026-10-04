@@ -102,7 +102,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   back in production. The SAVEPOINT test fixture hid it; a real-commit
   test now covers eleven of them (the sys-admin audit log is the one
   left out).
-- **Stale code comments and dead code.** `_assignments.py:410-420`
+- ~~**Stale code comments and dead code.**~~ — **Done in #2809**, with #2802 and #2806. `_assignments.py:410-420`
   (generate docstring) and the `missing_confirm` banner naming a form
   that does not exist (B2); `session_lifecycle.py:1-6, 54-55, 333, 659,
   970` and `next_action_card.html:35` (B4, G); `_surface/_status.py:23-24`

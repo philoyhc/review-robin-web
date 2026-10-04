@@ -150,7 +150,7 @@
   {% if missing_confirm %}
     <div class="banner banner-error banner-scroll-target" id="missing-confirm-banner">
       <p style="margin: 0;">
-        Replace not confirmed. Tick the confirm checkbox in the form below before submitting.
+        Replace not confirmed. The existing assignments were kept.
       </p>
     </div>
   {% endif %}
@@ -246,10 +246,11 @@
              19I Item 10 sited the sentence and the cluster together and
              `tests/unit/test_pager.py` pins the order. The count line
              rendered just OUTSIDE the toolbar until this rung, which is
-             not where `spec/rrw_functional_spec.md:1114` ("the
-             preview-count line sits in the toolbar's left pane") and
-             `spec/ui_elements.md:626` ("Left pane: … column chips,
-             pager cluster, count line") put it. #}
+             not where `spec/rrw_functional_spec.md` §9.5 "Populate
+             rosters" ("the preview-count line sits in the toolbar's
+             left pane") and `spec/ui_elements.md` §10
+             (`.table-card-toolbar`) ("Left pane: … column chips, pager
+             cluster, count line") put it. #}
           {% include "operator/partials/_pager_cluster.html" %}
           {% include "operator/partials/_preview_count_line.html" %}
         {% endif %}

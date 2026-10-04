@@ -24,8 +24,9 @@ holds three kinds of check rather than 19K.3's two:
   queries and built every row as an object.
 * **ORM instances loaded** — the 19R Item 3 guards, which is where that
   cost is visible. ``spec/operations_pages.md`` "What these pages cost
-  to render" carries the figures; the tests pin the shape (flat, and
-  bounded), never the numbers, because a legitimately added query
+  to render" states the contract and ``guide/app_responsiveness.md``
+  carries the figures; the tests pin the shape (flat, and bounded),
+  never the numbers, because a legitimately added query
   should not fail a test while the contract still holds.
 
 One guard sits outside all three:
@@ -384,16 +385,16 @@ def test_the_prefetch_loads_only_this_session(
 
 
 # --------------------------------------------------------------------------- #
-# SI-07 — the query budget in spec/operations_pages.md, pinned by a guard
+# Flat in the roster — spec/operations_pages.md, pinned by a guard
 # --------------------------------------------------------------------------- #
 
 
 def test_the_assignments_page_query_count_is_flat_in_the_roster(
     client: TestClient, db: Session
 ) -> None:
-    """`spec/operations_pages.md`'s budget table says every page is flat
-    in the roster, and that the Assignments page is held there by its
-    ``LIMIT 200`` plus its indexes.
+    """`spec/operations_pages.md` "What these pages cost to render" says
+    every page is flat in the roster. The Assignments page is held there
+    by its ``LIMIT 200`` plus its indexes.
 
     When this was written that claim was the Assignments page's alone —
     the other two scaled linearly and had only relative-growth guards.
@@ -408,7 +409,8 @@ def test_the_assignments_page_query_count_is_flat_in_the_roster(
     added query with the contract intact. What cannot change without the
     contract breaking is that the count does not move with the roster at
     all. If this fails, either the `LIMIT 200` or an index has gone —
-    and the spec's table wants re-measuring either way.
+    and the figures in `guide/app_responsiveness.md` want re-taking
+    either way.
     """
     small = _seeded(client, db, 4, code="QBSM")
     large = _seeded(client, db, 8, code="QBLG")
@@ -438,9 +440,9 @@ def test_the_assignments_page_query_count_is_flat_in_the_roster(
         f"the Assignments page is no longer flat in the roster: "
         f"{small_q} queries at {small_assignments} assignments against "
         f"{large_q} at {large_assignments}. spec/operations_pages.md "
-        f"claims flat at every size, held by LIMIT 200 plus indexes — "
-        f"check whether one of those has gone, and re-measure the "
-        f"budget table there."
+        f"says the page is flat at every size; guide/app_responsiveness.md "
+        f"credits LIMIT 200 plus indexes — check whether one of those has "
+        f"gone, and re-take the figures there."
     )
 
 

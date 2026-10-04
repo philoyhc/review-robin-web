@@ -106,8 +106,9 @@ def test_the_count_line_moved_into_the_left_pane(
     client: TestClient, db: Session, page: str
 ) -> None:
     """It rendered just outside the toolbar, where neither
-    `spec/rrw_functional_spec.md:1114` nor `spec/ui_elements.md:626`
-    puts it. Once, not twice: a move that copied would leave both."""
+    `spec/rrw_functional_spec.md` §9.5 "Populate rosters" nor
+    `spec/ui_elements.md` §10 (`.table-card-toolbar`) puts it. Once,
+    not twice: a move that copied would leave both."""
     rs = _ready_session(client, db, code=f"ops-cl-{page[:3]}")
     body = _page(client, rs, page, f"?q={MATCHING_TERM[page]}")
     count_line = '<p class="muted table-showing-hint">'

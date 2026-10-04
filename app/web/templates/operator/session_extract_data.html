@@ -257,28 +257,25 @@
   </div>
 
   {# Data shaper — full-width card below the 2-column grid.
-     A generalised builder for custom CSV shapes (selecting +
-     grouping + aggregating across reviewer / reviewee /
-     instrument / response-field axes). This slice ships the
-     **placeholder UI** per ``guide/extract_data.md`` "Data
-     shaper design":
+     A builder for custom CSV shapes (selecting + grouping +
+     aggregating across reviewer / reviewee / instrument /
+     response-field axes), per ``spec/extract_data.md``:
 
-     * **Axis chip row at the top of the outer card** — three
-       axis-selector chips (Reviewer / Reviewee / Instrument)
-       + a vertical pipe + the relevant column chips that
-       surface as axes toggle on. Multiple axes can be on at
-       once; their chip groups concatenate left-to-right.
+     * **Two chip rows at the top of the outer card** — the
+       scope row (the mutually exclusive Reviewer / Reviewee
+       axis chips, the row and self-review chips, then the
+       instrument and response-field scope chips) and, below
+       it, the column chips for whichever axis is on.
      * **Stack of Data shape sub-cards below** — one card per
-       shape. Always-present blank shape card on first load
-       (matching the band-3 response-field builder pattern).
+       saved shape, or one blank card when none is saved yet.
        Each sub-card has its own preview row (the column
        chips selected so far render as `<th>` cells) plus an
-       action row (name input + ``✓`` save + ``✗`` delete +
-       ``➕`` add new shape below).
+       action row of text buttons (name input, Save / Edit,
+       Cancel, Delete, +Shape, Download).
 
      Saved shapes persist; each saved card has its own Download,
      and the bottom ``Zip all`` bundles every saved shape's file
-     (``export/data_shapes_bundle.zip``, findings D13). #}
+     (``export/data_shapes_bundle.zip``). #}
   <div class="card extract-data-card-stack" id="extract-data-shaper">
     <div>
       <h2 style="margin-top: 0;">Data shaper</h2>
@@ -572,9 +569,9 @@
            one to blank) and is enabled only while the confirm
            tick beneath the row is on; ``+Shape`` spawns a
            fresh blank sub-card after this one and makes it
-           the new selected target; ``Download`` is the
-           placeholder per-shape extract button (``aria-
-           disabled`` until the file-gen wiring slice lands).
+           the new selected target; ``Download`` stays
+           ``aria-disabled`` until the sub-card is saved, then
+           points at the shape's ``download.csv``.
            The whole row sits flushed right inside the
            sub-card via ``.data-shape-actions``'s
            ``justify-content: flex-end`` — the name input is
@@ -751,9 +748,9 @@
            one to blank) and is enabled only while the confirm
            tick beneath the row is on; ``+Shape`` spawns a
            fresh blank sub-card after this one and makes it
-           the new selected target; ``Download`` is the
-           placeholder per-shape extract button (``aria-
-           disabled`` until the file-gen wiring slice lands).
+           the new selected target; ``Download`` stays
+           ``aria-disabled`` until the sub-card is saved, then
+           points at the shape's ``download.csv``.
            The whole row sits flushed right inside the
            sub-card via ``.data-shape-actions``'s
            ``justify-content: flex-end`` — the name input is

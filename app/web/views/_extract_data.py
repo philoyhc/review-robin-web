@@ -1,36 +1,20 @@
-"""Extract Setup card on Session Home — four per-entity rows
-(Reviewers / Reviewees / Relationships / Session settings) plus
-a Zip-all bundle footer.
+"""Extract Setup card on Session Home — one row per setup CSV
+(Reviewers / Reviewees / Relationships / Observers, when enabled /
+Session settings) plus a Zip-all bundle footer.
 
-The card was renamed from "Extract Data" to "Extract Setup" on
-2026-05-29 to mark it as the **porting / archival** surface —
-the CSVs an operator would feed back into Quick Setup, or hand
-off to a colleague cloning the session. The Responses row moved
-to the new **Extract data** Operations-strip tab (per
-``guide/extract_data.md``), which is where fine-grained shaping
-of response data lives. The Zip-all bundle's contents are
-deliberately unchanged in this PR — it still includes
-responses + reviewer/reviewee stats + per-instrument files
-(see ``app/services/extracts/zip_bundle.py``); the bundle slim
-is a follow-up PR.
+The card is the **porting / archival** surface: the CSVs an
+operator would feed back into Quick Setup, or hand to a colleague
+cloning the session. The Zip-all bundle holds the same setup CSVs
+(``app.services.extracts.zip_bundle.build_setup_bundle``); response
+data downloads live on the Extract data Operations-strip tab.
 
-Slice 2 of the §12.B ladder (``guide/archive/major_refactor.md``).
-
-Read-only by nature: Segment 11H shipped every row inert; Segment
-12A's PRs flip ``is_wired`` and supply ``download_url`` per row.
-12A-3 PR 1 added the Relationships row; PR 2 retired the
-Assignments row (assignments are derived post-15D — output, not
-input — so the download has no place in a porting bundle) and
-reordered the row list to the target left/right column layout.
 The card stays interactive in every lifecycle state (no
 lock-card wrap).
 
-Audit log download is *deliberately* not surfaced here — it
-lives at ``GET /operator/sessions/{id}/export/audit_log.csv``
-(Segment 12B PR 1) but per industry best practice (GitHub,
-Stripe, Slack, Notion) audit data belongs behind an admin /
-diagnostics doorway, not alongside everyday data exports. The
-tile relocates to the Sys Admin page when Segment 16 ships.
+The audit-log download is *deliberately* not surfaced here: it
+sits behind the Sys Admin page
+(``GET /operator/sessions/{id}/export/audit_log.csv``), not
+alongside everyday data exports.
 """
 
 from __future__ import annotations

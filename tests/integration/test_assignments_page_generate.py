@@ -322,8 +322,8 @@ def test_generate_materialises_per_instrument(
 def test_generate_with_existing_pairs_requires_confirm(
     client: TestClient, db: Session
 ) -> None:
-    """Re-Generating with existing pairs requires the
-    ``confirm_replace`` checkbox; without it the route 303s with
+    """Re-Generating with existing pairs requires
+    ``confirm_replace=true``; without it the route 303s with
     ``?needs_confirm=1`` and the existing rows survive."""
 
     review_session = _make_session(client, db, code="page-confirm")
@@ -334,6 +334,12 @@ def test_generate_with_existing_pairs_requires_confirm(
     response = generate_via_page_button(client, review_session.id)
     assert response.status_code == 303
     assert "needs_confirm=1" in response.headers["location"]
+    page = client.get(response.headers["location"])
+    assert 'id="missing-confirm-banner"' in page.text
+    assert (
+        "Replace not confirmed. The existing assignments were kept."
+        in page.text
+    )
     assert (
         len(
             list(

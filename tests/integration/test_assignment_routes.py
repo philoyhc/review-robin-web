@@ -178,9 +178,9 @@ def test_full_matrix_fans_pairs_out_per_instrument(
 def test_re_save_without_confirm_blocks(
     client: TestClient, db: Session
 ) -> None:
-    """Re-Generate on a session with existing pairs requires the
-    confirm checkbox; the route 303s back with ``?needs_confirm=1``
-    and the existing rows survive."""
+    """Re-Generate on a session with existing pairs requires
+    ``confirm_replace=true``; without it the route 303s back with
+    ``?needs_confirm=1`` and the existing rows survive."""
 
     review_session = _make_session(client, db)
     _seed_roster(

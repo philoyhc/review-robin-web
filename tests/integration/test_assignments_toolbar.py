@@ -101,10 +101,11 @@ def test_the_chips_pager_and_count_line_are_in_the_left_pane(
 ) -> None:
     """The count line rendered just outside the toolbar until this rung.
 
-    `spec/rrw_functional_spec.md:1114` ("the preview-count line sits in
-    the toolbar's left pane") and `spec/ui_elements.md:626` ("Left
-    pane: … column chips, pager cluster, count line") both put it
-    there, under the pager — the order `tests/unit/test_pager.py` pins
+    `spec/rrw_functional_spec.md` §9.5 "Populate rosters" ("the
+    preview-count line sits in the toolbar's left pane") and
+    `spec/ui_elements.md` §10 (`.table-card-toolbar`) ("Left pane: …
+    column chips, pager cluster, count line") both put it there, under
+    the pager — the order `tests/unit/test_pager.py` pins
     for the pager and the sentence together.
 
     A third citation rode along with this rung's first draft and is

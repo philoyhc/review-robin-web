@@ -113,8 +113,9 @@ def generate_via_page_button(
     confirm_replace: bool = False,
     acknowledge_response_loss: bool = False,
 ) -> Response:
-    """POST to the Slice 3a page-level Generate route. Mirrors what
-    the operator does after pinning rules on the Instruments page.
+    """POST to ``/assignments/generate``. No page form posts there
+    (the Workflow card generates through ``/workflow/prepare``); this
+    drives the route directly to seed assignments in tests.
     """
     data: dict[str, str] = {}
     if confirm_replace:

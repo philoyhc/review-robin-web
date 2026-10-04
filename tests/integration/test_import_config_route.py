@@ -45,7 +45,7 @@ def _build_csv(rows: list[tuple[str, str, str]]) -> bytes:
     return buf.getvalue().encode("utf-8")
 
 
-def test_import_config_success_redirects_with_flash(
+def test_import_config_success_redirects_to_the_slot(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="ic-ok")
@@ -61,7 +61,9 @@ def test_import_config_success_redirects_with_flash(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert "config_imported=ok" in response.headers["location"]
+    assert response.headers["location"] == (
+        f"/operator/sessions/{review_session.id}#quick-setup-settings"
+    )
 
 
 def test_import_config_lifecycle_gate_rejects_ready(
@@ -298,6 +300,8 @@ def test_a_settings_replace_needs_the_tick_and_the_response_loss_ack(
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )
-    assert "config_imported=ok" in response.headers["location"]
+    assert response.headers["location"] == (
+        f"/operator/sessions/{review_session.id}#quick-setup-settings"
+    )
     db.expire_all()
     assert db.execute(select(Response)).scalars().all() == []

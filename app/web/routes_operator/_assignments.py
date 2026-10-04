@@ -10,13 +10,8 @@ All paths below are under the package's ``/operator`` prefix:
 
 **Generating is the only way an assignment row comes into being**
 (``spec/assignments.md``); an operator may inactivate a row, and that is
-the whole manual surface. There is no import here — the manual-CSV
-upload route retired in 16A PR 5 — and this docstring went on offering
-one, alongside two Rule Builder routes
-(``/assignments/rule-based-editor/...``,
-``/assignments/rule-based/generate``) that exist nowhere in the codebase
-and a claim that generate lives elsewhere, when it is at line 406 of
-this file.
+the whole manual surface. There is no assignment import and no Rule
+Builder route; generate is ``assignments_generate`` below.
 """
 
 from __future__ import annotations
@@ -395,13 +390,9 @@ def _render_assignments_hub(
     )
 
 
-# Manual-CSV assignment upload route retired 2026-05-11 (16A PR 5).
-# The dev-only escape hatch kept on the bet that some real bypass
-# need would surface; nine days of pilot prep later no such need
-# appeared. The rule-based engine + Relationships table cover every
-# realistic operator scenario. Tests previously seeding assignments
-# via this route now use the rule-based generate endpoint with the
-# Full Matrix seed RuleSet.
+# There is no manual-CSV assignment upload: the rule engine and the
+# Relationships table cover every operator scenario, and tests seed
+# assignments through the generate route below.
 
 
 @router.post("/sessions/{session_id}/assignments/generate")
@@ -412,15 +403,16 @@ def assignments_generate(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Page-level Generate (Segment 15B Slice 3a).
+    """Generate the session's assignments, every instrument at once.
 
-    Materialises ``Assignment`` rows for every instrument with a
-    pinned ``rule_set_id``. Instruments with NULL ``rule_set_id``
-    are skipped silently by ``replace_assignments(instrument_id=None)``.
-    Any existing rows are replaced wholesale; the
-    ``confirm_replace`` form field gates the destructive path
-    when the session already has assignments — mirroring the
-    pre-Slice-3a Rule Based card flow.
+    ``replace_assignments(instrument_id=None)`` runs each instrument's
+    pinned rule set; an instrument with no ``rule_set_id`` runs the
+    Full Matrix default. Existing rows are replaced wholesale, so once
+    the session has rows the POST needs ``confirm_replace=true`` (else
+    a 303 back to the page with ``?needs_confirm=1``) and, when any
+    response exists, ``acknowledge_response_loss=true``. No page form
+    posts here: the Next Action card generates through
+    ``/workflow/prepare``.
     """
 
     _require_editable(review_session)
