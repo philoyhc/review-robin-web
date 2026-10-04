@@ -19,7 +19,7 @@ This doc reads downstream from:
 - **`spec/visual_style_rrw.md`** — Review-Robin instantiation of the design system, including chrome implementation details. Where this doc says "two-row chrome", `visual_style_rrw.md` says exactly which colors, classes, and tints realize it.
 - **`spec/session_home.md`** — functional spec for the Session Home (Control Panel) page in detail.
 - **`spec/instruments.md`** — locked spec for the Instruments page.
-- **`spec/preview_hub.md`** — Preview Pages contract.
+- **`spec/operations_pages.md`** — the Operations pages, including the email previews and the reviewer-surface link on the Invitations drill-in.
 - **`spec/quick_setup_card_spec.md`** — the Quick Setup card on Session Home.
 
 When this doc disagrees with one of those, the more specific doc wins for the area it covers; this doc is canonical for the *taxonomy*, *navigation model*, and *contract-level page roles*.
@@ -356,7 +356,7 @@ Operations row tab. **Detailed spec: `spec/validate_page.md`.** The find-and-fix
 
 ### `/operator/sessions/{id}/previews` — retired hub redirect
 
-Not an Operations tab. Permanently redirects to Invitations; the drill-in owns email previews and the door to the operator-side reviewer surface. `spec/preview_hub.md` records the retirement boundary.
+Not an Operations tab. Permanently redirects to Invitations; the drill-in owns email previews and the door to the operator-side reviewer surface. `spec/operations_pages.md` "Page identity" lists the redirects.
 
 The reviewer-surface render lives at the satellite route `/operator/sessions/{id}/preview-surface/{page_n}`, reachable from **Open reviewer surface** on the Invitations per-reviewer drill-in. `/operator/sessions/{id}/preview` (singular) is a permanent (308) redirect to `/preview-surface/1`.
 
@@ -512,7 +512,7 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 - **`spec/session_home.md`** — Session Home (Control Panel) functional spec, including layout + lifecycle display-label mapping.
 - **`spec/workflow_card.md`** — Workflow card (the single persistent action card that renders on Session Home + every Operations-row page); ten-state cascade, single-row button layout (≤ 4 visible buttons per state, each at 25% column width, inactive hidden), Prepare-then-Activate split + warnings detour.
 - **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home.
-- **`spec/preview_hub.md`** — retirement boundary for the former Preview hub.
+- **`spec/preview_hub.md`** — a stub pointing at where the former Preview hub's jobs now live.
 - **`spec/operations_pages.md`** — Invitations + Responses functional spec (reviewer-centric Invitations + reviewee-centric Responses; bulk-action affordances live on the Workflow card stepper).
 - **`spec/reviewer-surface.md`** — reviewer-facing surface contracts (separate audience).
 - **`spec/ui_elements.md`** — implementation catalogue mapping the canonical primitives to CSS classes and templates.
