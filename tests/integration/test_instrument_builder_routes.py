@@ -4939,25 +4939,31 @@ def test_step_must_be_at_most_max_minus_min(
     )
     assert response.status_code == 200
 
-    # min == max with a step: no room for any step, refused (A6, the
-    # check used to apply only when max > min). Without a step the
-    # field is one fixed value and is accepted.
-    for name, step in (("Fixed with step", "1"), ("Fixed", "")):
-        response = client.post(
-            f"/operator/sessions/{review_session.id}"
-            f"/instruments/{new_model.id}/band2-state",
-            json={"response_fields": [{
-                "name": name, "data_type": "integer",
-                "min": "3", "max": "3", "step": step, "selected": True,
-            }]},
+    # min == max is one fixed value and its Step is not checked: a
+    # blank Integer Step saves as 1, so a refusal would fail the card's
+    # next Save (A6, ruled 2026-10-04 to leave the code as it is).
+    fixed = {
+        "name": "Fixed", "data_type": "integer",
+        "min": "3", "max": "3", "step": "", "selected": True,
+    }
+    url = (
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/band2-state"
+    )
+    assert client.post(url, json={"response_fields": [fixed]}).status_code == 200
+    db.expire_all()
+    stored = db.scalars(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == new_model.id,
+            InstrumentResponseField.label == "Fixed",
         )
-        if step:
-            assert response.status_code == 422, name
-            assert "at least two" in response.json()["errors"][0][
-                "message"
-            ].lower()
-        else:
-            assert response.status_code == 200, name
+    ).one()
+    assert stored._inline_step == 1
+    # The next Save sends the stored Step back, as the builder does.
+    assert client.post(
+        url,
+        json={"response_fields": [{**fixed, "id": stored.id, "step": "1"}]},
+    ).status_code == 200
 
     # min=1, max=5, step=4 → equal to range, accepted (yields 1, 5).
     response = client.post(

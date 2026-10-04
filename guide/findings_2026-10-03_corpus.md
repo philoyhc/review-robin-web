@@ -78,7 +78,7 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   `reviewer-surface.md:450-454` says bounds print as entered.
 - ~~**B3 = C4**~~ low — **Done in #2791.** `_require_not_archived` (`_shared.py:191-204`) says
   "cohort rule edits are not allowed" for all eight Observers routes.
-- ~~**A6 low**~~ — **Ruled 2026-10-04: fix. Done in #2804.** Integer/Decimal shape check skips `step <= max - min`
+- ~~**A6 low**~~ — **Ruled 2026-10-04: fix; reversed the same day, spec follows code. Done in #2804**: a blank Integer Step saves as 1, so refusing a Step at `max == min` blocked every later Save. Integer/Decimal shape check skips `step <= max - min`
   when `max == min` (`_band2.py:464-470`). The spec is stricter; leave it.
 - ~~**D31 low**~~ (found while fixing D1) — **Ruled 2026-10-04: fix. Done in #2804.** Quick Setup's Settings upload
   discards `ApplyResult.errors`: `_run_quick_setup_settings` returns

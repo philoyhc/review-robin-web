@@ -234,12 +234,6 @@ when it is checked; sections with unticked rows sit above the ticked ones.
   settings." and lists the error underneath (`instruments[1].name: name is
   required`). With seven bad instruments it lists five and "…and 2 more."
 
-## A step on a fixed-value field is refused (A6)
-
-- [ ] **The builder refuses it before Save.** On a response-field row,
-  set Min 3, Max 3 and Step 1: the row shows "Step must be at most (Max −
-  Min)…". Clear the Step and the row is accepted.
-
 ## Setup tabs underline in blue (findings register E5)
 
 - [x] **Light and dark.** On any Setup page (Reviewers, say), the active
