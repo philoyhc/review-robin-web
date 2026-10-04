@@ -512,7 +512,7 @@ first things a new project reaches for:
 
 ## Deliberately not copied
 
-- `rrw_sdd_in_practice.md`, `docs/practice-audit-2026-09-04.md`, the
+- `rrw_sdd_in_practice.md`, `docs/archive/practice-audit-2026-09-04.md`, the
   assessments, sweeps and `docs/status_history.md` — this project's
   record, read for rationale, never transplanted.
 - `spec/` and `app/` — the product, not the practice. `spec_registry.py`

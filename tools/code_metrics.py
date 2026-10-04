@@ -10,7 +10,7 @@ the standard library plus `git` on PATH.
     python3 tools/code_metrics.py --churn-days 30
     python3 tools/code_metrics.py --churn-only --churn-sample 200   # quick, noisy
 
-Why these two. `docs/practice-audit-2026-09-04.md` Appendix A benchmarked
+Why these two. `docs/archive/practice-audit-2026-09-04.md` Appendix A benchmarked
 the practice against the 2026 vibe-coding evidence and found that the two
 figures that literature leans on — duplication ratio and code churn — were
 simply not measured here, while LOC and file sizes were. These are those

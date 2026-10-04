@@ -224,7 +224,7 @@ When parts ship:
 
 **Opened:** 2026-09-05 · **Theme:** make the phase rule's exit *checkable*
 · **Related:** `rrw_sdd_in_practice.md` §6.1 / §6.3, `constitution.md`
-Articles I–II, `docs/practice-audit-2026-09-04.md` §4 R1,
+Articles I–II, `docs/archive/practice-audit-2026-09-04.md` §4 R1,
 `guide/segment_plan_template.md`, `.claude/skills/segment-plan/SKILL.md`.
 Supersedes the Part 3 sketch above. Converted from an externally drafted
 implementation spec after review against the repository; every number

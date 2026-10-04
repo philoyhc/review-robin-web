@@ -139,7 +139,7 @@ And one observation that belongs here because it is the same defect one
 level up. `constitution.md` VI closes: *"The list of them should be
 short, written down, and revisited when a constant appears that would
 make one derivable."* **No such live list exists.** The nearest thing is
-`docs/practice-audit-2026-09-04.md` §2, a dated audit table — and it has
+`docs/archive/practice-audit-2026-09-04.md` §2, a dated audit table — and it has
 itself drifted: rows 1b and 2 are marked "currently violated" and both
 were mechanized the same morning by `tests/unit/test_doc_conventions.py`
 (#2086, 37 minutes after that audit was committed — this read "#2092,
@@ -343,7 +343,7 @@ set — so the 84 is measured on the same corpus before and after.
    constant, or the spec's prose.
 4. **PR 4 — the list VI promises.** Lands: `docs/unenforced_conventions.md`,
    with class D and the rejected class B registry on it, and a pointer
-   from `constitution.md` VI. Names `docs/practice-audit-2026-09-04.md`
+   from `constitution.md` VI. Names `docs/archive/practice-audit-2026-09-04.md`
    §2 as its dated predecessor rather than replacing it in place — an
    audit is a record of its date and is not rewritten. Must not touch:
    the constitution's rule text; VI gains a pointer, not a new rule.
@@ -398,7 +398,7 @@ rather than a loose end of this one. Left here as well, struck through
 nowhere, because the reasoning that produced them belongs with the item
 that found them.
 
-- ~~**Does `docs/practice-audit-2026-09-04.md` §2 want a dated
+- ~~**Does `docs/archive/practice-audit-2026-09-04.md` §2 want a dated
   correction now** that two of its rows have been mechanized and one has
   been overtaken?~~ **Answered at PR 4: yes, as an annotation.** The
   table is untouched and a dated note at the head says which three rows
@@ -434,7 +434,7 @@ PR 4 landed the file and `close_check 19G.1` exits 0 on C1–C6.**
   will look rather than only from an archived plan (PR 4).
 - `constitution.md` — VI gains a pointer to that file (PR 4). Not
   counted by `close_check` — see Open questions.
-- `docs/practice-audit-2026-09-04.md` — a dated annotation recording
+- `docs/archive/practice-audit-2026-09-04.md` — a dated annotation recording
   that rows 1b and 2 were mechanized by **#2086** (this bullet said
   #2092 when written; the annotation itself was corrected before it
   landed — #2092 added a third check to the same file later the same
@@ -616,7 +616,7 @@ good faith.
 not imagined, and writing it found two things.**
 
 **The open question is answered: yes, annotate.**
-`docs/practice-audit-2026-09-04.md` gains a dated note at its head and
+`docs/archive/practice-audit-2026-09-04.md` gains a dated note at its head and
 its §2 table is left exactly as written, which is what Article V
 prescribes for a dated document. Three of its rows had been overtaken —
 rows 1b and 2 mechanized 37 minutes after it was written, row 3's premise
@@ -689,7 +689,7 @@ was independently confirmed and stands. Corrected in
 `docs/unenforced_conventions.md` §2.2, this file, and `docs/status.md`.
 
 **Flag 2 — "mechanised four days later" was 37 minutes.**
-`docs/practice-audit-2026-09-04.md` was committed at 09:12:37 UTC and
+`docs/archive/practice-audit-2026-09-04.md` was committed at 09:12:37 UTC and
 `tests/unit/test_doc_conventions.py` at 09:49:43 UTC — the same morning,
 not four days apart. The error started in this item's Opportunity, was
 carried into the Doc impact bullet, into PR 4's Status entry, and out of

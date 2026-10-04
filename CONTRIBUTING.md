@@ -42,7 +42,7 @@ database: documentation, and dev-only tooling under `tools/`. The faster
 containing executable code, and it takes about three minutes (2026-10-03).
 
 This policy is deliberate rather than a gap: see
-`docs/practice-audit-2026-09-04.md` §1 and §3, which measured it in
+`docs/archive/practice-audit-2026-09-04.md` §1 and §3, which measured it in
 practice and recommended writing it down instead of enforcing it with
 branch protection.
 

@@ -3,7 +3,7 @@
 Same idea as the ``EVENT_SCHEMAS`` strict-mode gate in
 ``app/services/audit.py``: the rule lives in code, so drift fails a test
 rather than waiting for someone to notice it. Added by the 2026-09-04
-practice audit (``docs/practice-audit-2026-09-04.md``), which found the
+practice audit (``docs/archive/practice-audit-2026-09-04.md``), which found the
 ``expired -> "Closed"`` mapping contradicted by three live specs three
 months after it landed — drift that survived a deliberate whole-folder
 documentation sweep.

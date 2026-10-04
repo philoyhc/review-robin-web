@@ -128,7 +128,7 @@ Repoint each inbound reference before deleting; the dead-reference command in `g
 - `docs/nus_azure_status_v7.md`.
 - `CONTRIBUTING.md`.
 - `constitution.md`.
-- `docs/practice-audit-2026-09-04.md` and `docs/status_history.md`: dated records, read as history.
+- `docs/archive/practice-audit-2026-09-04.md` and `docs/status_history.md`: dated records, read as history.
 
 ## 7. Not read
 

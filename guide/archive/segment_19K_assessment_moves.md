@@ -182,7 +182,7 @@ than either end.
   reasoning that keeps them out of C2 and C3 keeps them out of the ratio. The
   `--archived` footer says so **at the print site**, which is what that
   Semantics bullet actually required.
-- **The `docs/practice-audit-2026-09-04.md` bullet assumed a close-check entry
+- **The `docs/archive/practice-audit-2026-09-04.md` bullet assumed a close-check entry
   to extend.** There was none — the tool was absent from the inventory of
   automated checks entirely, which is its own small finding about a document
   whose subject is what gates a merge. The bullet is honoured by adding the
@@ -231,7 +231,7 @@ The Opportunity is left as written, per *never rewrite intent* — the point it
 was making survives either figure, and a hand count that disagrees with the
 tool built to replace it is worth leaving visible. Everywhere the number is
 *used* rather than recorded now carries the parser's: the `GUIDE_PATH` comment
-in `_manifest.py` and the `docs/practice-audit-2026-09-04.md` passage.
+in `_manifest.py` and the `docs/archive/practice-audit-2026-09-04.md` passage.
 
 *`--archived` reads one manifest per plan.* For an item-shaped plan it takes
 the **first** item's `Doc impact` and stops (`_archive.py`, the `next(...)`
@@ -311,7 +311,7 @@ past this twice.
 
 ### Doc impact
 
-- `docs/practice-audit-2026-09-04.md` — the close-check entry gains what
+- `docs/archive/practice-audit-2026-09-04.md` — the close-check entry gains what
   the tool does and does not verify, since that document is where "what
   gates a merge here" is recorded (Item 1).
 - `docs/status.md` — row when the item closes (Item 1).
@@ -1095,7 +1095,7 @@ windows — are settled above with their rejected alternatives.
 - `tools/README.md` — the `close_check.py` row states what `--archived`
   reads, since it is the one live document that describes the sweep and
   currently implies it reads each plan whole (Item 4).
-- `docs/practice-audit-2026-09-04.md` — the close-check passage gains
+- `docs/archive/practice-audit-2026-09-04.md` — the close-check passage gains
   the sweep's own limitation alongside the two 19K.1 recorded, so the
   document that says what gates a merge does not describe a checker
   reading more evidence than it does (Item 4).
@@ -1274,7 +1274,7 @@ Three documentation gaps, all upheld:
   only because of this item, which is a neat closing of the loop.
 - **`tools/README.md` never documented C5**, three touches after it was
   added.
-- `docs/practice-audit-2026-09-04.md`'s C2 line did not say a directory
+- `docs/archive/practice-audit-2026-09-04.md`'s C2 line did not say a directory
   counts, and its `guide/` figure (80 across 35) now measures 78 across
   35 — corpus drift on a dated measurement, now dated in the prose
   rather than corrected into a second undated one.
@@ -1336,7 +1336,7 @@ measurements that rejected them.
 
 - `tools/README.md` — the `close_check.py` row states which roots a
   manifest may commit to and that the rule is leading-position (Item 5).
-- `docs/practice-audit-2026-09-04.md` — the close-check passage's "what
+- `docs/archive/practice-audit-2026-09-04.md` — the close-check passage's "what
   it verifies" list gains the widened path rule (Item 5).
 - `.claude/skills/segment-plan/SKILL.md` — the `Doc impact contract`
   section states all four path rules, not the two it had; this is the
@@ -1706,7 +1706,7 @@ restores the naive regex is one of the seven.
 
 - `spec/ui_elements.md` — §6 records that the canonical roles are
   resolved against the cascade by a test, and what a tie means (Item 6).
-- `docs/practice-audit-2026-09-04.md` — the inventory of automated
+- `docs/archive/practice-audit-2026-09-04.md` — the inventory of automated
   checks gains the row (Item 6).
 - `docs/status.md` — row when the item closes (Item 6).
 

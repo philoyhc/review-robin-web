@@ -2441,7 +2441,7 @@ the sibling of 19A (docs hygiene) and 19B (code consistency).
 
 Not a numbered segment: the first arc to change how the repo is *worked
 on* rather than what it does. Brief and findings:
-`docs/practice-audit-2026-09-04.md`; the practice read as a form of SDD:
+`docs/archive/practice-audit-2026-09-04.md`; the practice read as a form of SDD:
 `rrw_sdd_in_practice.md`; the six rules distilled from it:
 `constitution.md`.
 

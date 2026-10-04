@@ -1137,7 +1137,7 @@ rots visibly, since a sweep record carries its own date and scope.
 
 ### `DT-04` dissolves, and that is the finding
 
-`docs/practice-audit-2026-09-04.md` quotes the old charter and
+`docs/archive/practice-audit-2026-09-04.md` quotes the old charter and
 `guide/todo_master.md` mentions `spec-writer` five times. **Neither is
 changed, and neither is an omission.** The practice audit is a **dated**
 document whose quote was accurate on 2026-09-04, and `todo_master.md`'s
@@ -1172,7 +1172,7 @@ None.
 ### Out of scope
 
 - **Every `CC` row.** Code comments.
-- **`docs/practice-audit-2026-09-04.md` and `guide/todo_master.md`** — see
+- **`docs/archive/practice-audit-2026-09-04.md` and `guide/todo_master.md`** — see
   above; deliberately unchanged.
 
 ### Status — 2026-09-13 (item closed)
