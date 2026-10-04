@@ -5,8 +5,8 @@ procedures see `docs/operations_runbook.md`; for resource names
 and the deploy pipeline see `docs/deployment_dev.md`.
 
 For the NUS environment (provisioned, not yet serving) see
-`docs/nus_azure_status_v7.md` and `docs/deployment_nus.md` §5, the
-migrate-job reachability gotcha. Its Postgres is private, so the
+`docs/nus_azure_status_v7.md` and `docs/deployment_nus.md` §5, which
+moves every pipeline job onto the in-VNet runner. Its Postgres is private, so the
 firewall fixes below do not apply there.
 
 ## Deploy failed

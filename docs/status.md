@@ -708,8 +708,8 @@ accurate by hand, so the code is the source of truth:
   columns are silently ignored. UTF-8 with BOM tolerated.
 - **Browseable Manage views** showing the saved rows in a table,
   with an anchored `Upload CSV` card on the same page (no separate
-  `…/import` GET) and a disabled `Edit Reviewers` / `Edit Reviewees`
-  button reserved for the future inline-edit pattern.
+  `…/import` GET), per-row Edit, Add new and bulk actions
+  (`spec/setup_pages.md`).
 - **Setup validation** page lists structural issues (no reviewers, no
   reviewees, duplicate emails) plus info-level placeholders for not-
   yet-implemented surfaces.
@@ -983,11 +983,11 @@ instrument. See
 The original Segment 13 plan (multi-instrument sessions) is
 archived at
 `guide/archive/segment_13_multi_instrument_sessions_superseded.md`
-since most of its scope shipped early in Segments 10A → 10D. Three
-items did not ship and live in `guide/archive/unfinished_business.md` as
-#27 (FullMatrix per-instrument target picker), #28 (Manual CSV
-`Instrument` column), and #29 (reviewer dashboard per-instrument
-grouping).
+since most of its scope shipped early in Segments 10A → 10D. Of the
+three items it left in `guide/archive/unfinished_business.md`, #27
+(FullMatrix per-instrument target picker) and #29 (reviewer dashboard
+per-instrument grouping) shipped in Segment 15B, and #28 (Manual CSV
+`Instrument` column) was retired after 15D.
 
 ### Pair-level context post-15D
 

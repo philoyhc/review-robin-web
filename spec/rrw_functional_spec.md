@@ -1501,7 +1501,7 @@ previews and an **Open reviewer surface** link. The latter opens an inert
 operator view of that reviewer's production surface in a new tab, using the
 same template and context path as the live surface. There is no separate
 Previews page; its old URL permanently redirects to Invitations
-(`spec/preview_hub.md`).
+(`spec/operations_pages.md` "Page identity").
 
 ### 9.12 Extract data
 
