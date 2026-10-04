@@ -153,7 +153,7 @@ The system does not:
   **required** — required, and missing when empty, only while its
   branch is open. A governed field may itself be a parent, one level
   down (§5.7); a third level, more than one branch per parent, and a
-  String parent remain out of scope (`guide/advanced_instruments.md`
+  String parent remain out of scope (`guide/archive/advanced_instruments.md`
   Items 1 and 6).
 - **Run cross-session analytics.** The lobby lists sessions; it
   does not aggregate metrics across them.

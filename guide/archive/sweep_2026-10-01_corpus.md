@@ -3,7 +3,7 @@
 **Swept:** 2026-10-01 at `68f28224` · **Scope:** `spec/` + `docs/` + root
 practice docs (68 files) · **Previous sweep:**
 `guide/archive/sweep_2026-09-05_spec-docs.md` · **Trigger:** due by merges, 618 of
-500 in 26 days of 56 (`guide/post_assessment_1oct.md` E3).
+500 in 26 days of 56 (`guide/archive/post_assessment_1oct.md` E3).
 
 <!-- sweep-scope: corpus -->
 

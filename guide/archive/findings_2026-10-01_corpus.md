@@ -1,6 +1,6 @@
 # Findings — corpus sweep (2026-10-01)
 
-**Found by:** `guide/archive/sweep_2026-10-01_corpus.md` (`guide/post_assessment_1oct.md`
+**Found by:** `guide/archive/sweep_2026-10-01_corpus.md` (`guide/archive/post_assessment_1oct.md`
 E3) · **Read at:** `68f28224` · **Open:** every row below that is not struck.
 
 Every spec, `docs/` file and root document was read against the code it
@@ -277,7 +277,7 @@ fixing a no-ruling row (#2731–#2738). **All eight ruled 2026-10-02.**
 The spec is right and the code is wrong; each ships as its own code PR.
 All of these were confirmed by reading the code at `68f28224`.
 
-**The six defects are done in #2719** (`guide/post_assessment_1oct.md`
+**The six defects are done in #2719** (`guide/archive/post_assessment_1oct.md`
 E6), one commit and test each. The stale comments below are all fixed.
 The spec halves of C4 and E32 stay in §3.
 

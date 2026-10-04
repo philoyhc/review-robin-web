@@ -201,9 +201,10 @@ stricter until ruled on.
 **Done in #2805** (2026-10-04): every struck id, trim, write and consolidate below,
 in one PR by area. Pointers to *author* and *code* rows settled in §1 or §2
 are struck too (#2808), with H16–H18, which lapsed when the two Azure docs
-were retired. **Still open here:** B27 / G6 (*known*), D4 (*deferred*) and
-D19 (*carried*; `guide/deferred_consolidated.md` "Rehydrate is incomplete
-and not exposed").
+were retired. **Archived 2026-10-04 with nothing open here.** B27 / G6 (*known*)
+are tracked as `guide/post_azure_todo_checklist.md` §7; D4 (*deferred*) and
+D19 (*carried*) as `guide/deferred_consolidated.md` "Rehydrate is incomplete
+and not exposed".
 
 **A — instruments and the reviewer surface**
 

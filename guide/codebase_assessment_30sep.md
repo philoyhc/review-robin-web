@@ -257,7 +257,7 @@ Band 2 bullet and diagram line stale the same way — a preview row alone, where
 group row shows Name only — fixed in `36e4e6a8`.
 
 **One design record was behind its result, and is fixed.**
-`guide/advanced_instruments.md` called Item 6's second level "logged as 19T Item
+`guide/archive/advanced_instruments.md` called Item 6's second level "logged as 19T Item
 14", and `guide/README.md`'s row for it said "the first five are built", though
 19T Item 14 closed 2026-09-29. The Codex read found it and the audit confirmed
 it; both now say every item shipped (`c0bf5bf5`).

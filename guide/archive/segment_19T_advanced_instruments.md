@@ -3,7 +3,7 @@
 > **Closed and archived 2026-09-30.** Seventeen items and 12A, all
 > closed, PRs **#2597 → #2697**; `tools/close_check.py 19T` exits 0.
 > Items 1–6 were small operator-UI adjustments; Items 7–14 built
-> `guide/advanced_instruments.md` (visibility in Band 2's card, display
+> `guide/archive/advanced_instruments.md` (visibility in Band 2's card, display
 > and response fields as Band 3 tables, branching two levels deep with
 > Show and Require conditions and numeric ranges); Item 15 caught the
 > Guide up; Item 16 was a register of seven small fixes; Item 17 laid
@@ -13,13 +13,13 @@
 > author 2026-10-01.
 
 **Opened:** 2026-09-24 · **Theme:** the Instruments page's builder and
-`guide/advanced_instruments.md`, built an item at a time; items close
+`guide/archive/advanced_instruments.md`, built an item at a time; items close
 independently · **Related:** `spec/instruments.md`,
 `guide/archive/segment_19S_post_assessment.md`
 
 Opened as "Odds and ends", a holding segment for small operator-UI
 adjustments (Items 1–6), and renamed 2026-09-27 on the author's
-instruction once most of its items were `guide/advanced_instruments.md`'s
+instruction once most of its items were `guide/archive/advanced_instruments.md`'s
 (Items 7–15; reorganized 2026-09-27 into Items 11–15 on the author's
 instruction). Items 4 and 5 are the two that aren't instrument work. Each
 item has its own `Doc impact` and `Status`; the segment closes when every
@@ -716,7 +716,7 @@ refusal, a 500 on "nan" or "inf", from Integer and Decimal to every type:
 a String Min of "nan" crashed from the UI too. **Scope that moved:** the
 non-finite refusal, which the ruling didn't name. **Owed:** the Guide's
 `instrument-card-preview` capture shows the pill without its `*`; the
-author retakes it with `guide/advanced_instruments.md` Items 4–5's
+author retakes it with `guide/archive/advanced_instruments.md` Items 4–5's
 captures. Browser checks are in `guide/post_azure_todo_checklist.md`
 item 6.
 
@@ -737,7 +737,7 @@ item 6.
 
 ## Item 7 — Visibility edited in Band 2's card
 
-**Opened 2026-09-26 on the author's instruction**: `guide/advanced_instruments.md`
+**Opened 2026-09-26 on the author's instruction**: `guide/archive/advanced_instruments.md`
 Item 4, built ahead of its Item 3 because it doesn't touch the pills. The
 design record holds the rulings. This block holds the build.
 
@@ -861,7 +861,7 @@ author's retake of the Guide's two instrument captures.
 - `spec/permissions.md` — the same wording in the sys-admin row (Item 7).
 - `spec/ui_elements.md` — §10: `row-group-start`, the heavier rule above a
   row that starts a new group (Item 7).
-- `guide/advanced_instruments.md` — Item 4 points to this item as built
+- `guide/archive/advanced_instruments.md` — Item 4 points to this item as built
   (Item 7).
 - `spec/rrw_functional_spec.md` — §9.6's Band 2 / Band 3 summary and
   §5.16's default note move the visibility editor to the card (Item 7;
@@ -876,7 +876,7 @@ author's retake of the Guide's two instrument captures.
 
 ## Item 8 — Display fields as a Band 3 table
 
-**Opened 2026-09-26 on the author's instruction**: `guide/advanced_instruments.md`
+**Opened 2026-09-26 on the author's instruction**: `guide/archive/advanced_instruments.md`
 Item 5, straight after Item 7 into the column it freed. The design record
 holds the rulings and semantics. This block holds the build.
 
@@ -989,7 +989,7 @@ text.
 - `spec/visibility_policy.md` — the operator's locked card shows the
   reviewer's rows as mode pills, where the reviewer's card is plain text
   (Item 8).
-- `guide/advanced_instruments.md` — Item 5 and the header point to this
+- `guide/archive/advanced_instruments.md` — Item 5 and the header point to this
   item as the build (Item 8).
 - `app/web/templates/guide.html` — the preview paragraph sends display
   fields to the table; the author retakes the instrument captures, and
@@ -1000,7 +1000,7 @@ text.
 
 ## Item 9 — Response fields as a Band 3 table; the response pills retire
 
-**Opened 2026-09-26 on the author's instruction**: `guide/advanced_instruments.md`
+**Opened 2026-09-26 on the author's instruction**: `guide/archive/advanced_instruments.md`
 Item 3, after Item 8. The design record holds the 2026-09-24 rulings and
 the semantics. This block holds the build and the author's 2026-09-26
 layout rulings, reached over five mock-ups.
@@ -1185,7 +1185,7 @@ and the author's retake of the Guide's instrument captures.
   `.btn-icon` row, which no longer covers either table's ▲ ▼ (Item 9).
 - `spec/instruments.md` — also the display-field table's ▲ ▼ as
   `btn secondary btn-short`, not `.btn-icon` (Item 9).
-- `guide/advanced_instruments.md` — Item 3 and the header point to this
+- `guide/archive/advanced_instruments.md` — Item 3 and the header point to this
   item as the build, and record the 2026-09-26 layout rulings (Item 9).
 - `app/web/templates/guide.html` — the preview paragraph; the author
   retakes the instrument captures (Item 9).
@@ -1196,7 +1196,7 @@ and the author's retake of the Guide's instrument captures.
 
 ## Item 10 — Branching between response fields, governed fields optional
 
-**Opened 2026-09-26 on the author's instruction**: `guide/advanced_instruments.md`
+**Opened 2026-09-26 on the author's instruction**: `guide/archive/advanced_instruments.md`
 Item 1, built on Items 7–9 as they shipped. The design record holds the
 rulings (structure, order, conditions, governed fields), the recommended
 storage, the settled layout and the pre-positioning for its Item 2. This
@@ -1379,7 +1379,7 @@ All answered by the author, 2026-09-26:
 
 ### Out of scope
 
-- **Required governed fields**: `guide/advanced_instruments.md` Item 2,
+- **Required governed fields**: `guide/archive/advanced_instruments.md` Item 2,
   after this item.
 - **Nested branches, a branch per parent beyond one, String parents**:
   ruled out by the record.
@@ -1468,14 +1468,14 @@ at spec-writer's flag.
 - `spec/settings_inventory.md` — §4's per-response-field attributes gain `branch_parent` / `branch_op` / `branch_value` (Item 10, added at rung 5).
 - `spec/architecture.md` — `InstrumentResponseField`'s branch columns (Item 10).
 - `spec/ui_elements.md` — §10's `rf-table` row: a branch shares one ruled `<tbody>`; the bar and `.rf-glyph` (Item 10, added at the close).
-- `guide/advanced_instruments.md` — Item 1 points to this item as the build (Item 10).
+- `guide/archive/advanced_instruments.md` — Item 1 points to this item as the build (Item 10).
 - `docs/status.md` — row when the item closes (Item 10).
 
 ---
 
 ## Item 11 — Governed fields can be set to required too
 
-**Opened 2026-09-27 on the author's instruction**: `guide/advanced_instruments.md`
+**Opened 2026-09-27 on the author's instruction**: `guide/archive/advanced_instruments.md`
 Item 2, on Item 10 as it shipped. The record holds the rule, the
 required-parent ruling, the blocks and the recommended route; this block
 holds what Item 10 changed underneath them and the ladder.
@@ -1552,7 +1552,7 @@ Taken 2026-09-27 at `3cec7196`:
 ### Pre-positioning for Items 12–14 (recommended)
 
 Each is cheap in the rung that already touches the code, and a rework
-later. The costing is `guide/advanced_instruments.md` Item 6. Measured at
+later. The costing is `guide/archive/advanced_instruments.md` Item 6. Measured at
 `37051c8e`.
 
 1. **One "required for this assignment" helper** (for Item 13).
@@ -1731,7 +1731,7 @@ guards stay on until the rollups are taught**. The item's cumulative
 - `spec/instruments.md` — R inside a branch and the active-required-ungoverned-field rule; the preview's required count (Item 11).
 - `spec/csv_contracts.md` — §3.3: `required` on a governed field needs an active required ungoverned field in the instrument (Item 11).
 - `spec/rrw_functional_spec.md` — required governed fields leave the out-of-scope list (Item 11).
-- `guide/advanced_instruments.md` — Item 2 points to this item as the build (Item 11).
+- `guide/archive/advanced_instruments.md` — Item 2 points to this item as the build (Item 11).
 - `docs/status.md` — row when the item closes (Item 11).
 
 ---
@@ -1739,7 +1739,7 @@ guards stay on until the rollups are taught**. The item's cumulative
 ## Item 12 — Augmented numerical conditions: inside a range, outside a range
 
 **Logged 2026-09-27; planned 2026-09-28** on the author's rulings below.
-Costed in `guide/advanced_instruments.md` Item 6, Q3.
+Costed in `guide/archive/advanced_instruments.md` Item 6, Q3.
 
 ### Opportunity
 
@@ -1886,7 +1886,7 @@ of condition, which reuses these operators.
 - `spec/architecture.md` — the `branch_op` token list (Item 12).
 - `spec/reviewer-surface.md` — the closed cell's hint for a range (Item 12).
 - `spec/extract_data.md` — the "Shown when" row for a range (Item 12).
-- `guide/advanced_instruments.md` — Item 6 Q3 points to this item for the operators and the `low to high` value (Item 12).
+- `guide/archive/advanced_instruments.md` — Item 6 Q3 points to this item for the operators and the `low to high` value (Item 12).
 - `docs/status.md` — row when the item closes (Item 12).
 
 ## Item 12A — Small adjustments to the response-field table
@@ -2009,7 +2009,7 @@ Browser check owed in `guide/post_azure_todo_checklist.md` item 6.
 
 **Logged 2026-09-27; shaped 2026-09-28 on the author's instruction**,
 from a screenshot of a range branch. The costing is
-`guide/advanced_instruments.md` Item 6, Q1, with Codex's three
+`guide/archive/advanced_instruments.md` Item 6, Q1, with Codex's three
 corrections on #2651. It builds on Item 11's `required_field_ids`.
 
 ### Opportunity
@@ -2204,7 +2204,7 @@ item 6's "A Require branch" row passed so far (2026-09-29).
 
 **Logged 2026-09-27; shaped 2026-09-29 on the author's instruction**,
 from their builder mockup and one of ours adding ⑂ to level-1 rows. The
-costing is `guide/advanced_instruments.md` Item 6, Q2. It lifts Item
+costing is `guide/archive/advanced_instruments.md` Item 6, Q2. It lifts Item
 10's one-level ruling.
 
 ### Opportunity

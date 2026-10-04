@@ -846,7 +846,10 @@ a streaming, bounded responses parser (D18); and a pre-flight that runs
 the Settings CSV's phase-1 validation, so an extract the settings import
 refuses (a fractional Integer bound, #2792; an unknown response-field
 type, #2793) fails at Validate rather than at commit (marked part of the
-incomplete feature by the author, 2026-10-03). **Lift trigger:** an
+incomplete feature by the author, 2026-10-03); and duplicate rows in
+`responses.csv` for one (assignment, field), which
+`responses_import._stage` lets the last overwrite silently rather than
+reporting (findings D4, 2026-10-03 register). **Lift trigger:** an
 operator needs to restore a session from its extract.
 
 #### Rehydrate does not run the cross-roster identity check (19Q Item 7)

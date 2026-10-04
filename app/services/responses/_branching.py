@@ -1,5 +1,5 @@
 """Branching between response fields (19T Item 10;
-``guide/advanced_instruments.md`` Item 1).
+``guide/archive/advanced_instruments.md`` Item 1).
 
 A **parent** field carries a condition (``branch_op`` + ``branch_value``)
 and its **governed** fields point at it through ``branch_parent_id``. A

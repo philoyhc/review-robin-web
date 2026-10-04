@@ -2204,7 +2204,7 @@
           // field's state: selection, the name and shape last committed,
           // width, help text. Each row sits in a group
           // (``<tbody data-new-model-rf-group>``), ruled underneath, which
-          // ▲ ▼ and X act on; a branch (``guide/advanced_instruments.md``
+          // ▲ ▼ and X act on; a branch (``guide/archive/advanced_instruments.md``
           // Item 1) will add its governed rows to its parent's group, and
           // every state reader already reads rows, not groups.
           function rfRows(card) {
@@ -4245,7 +4245,7 @@
          still scrolls a table too wide for its column. #}
       <div data-new-model-band3 class="band3-grid">
         {# 19T Item 8 — the display-field table
-           (``guide/advanced_instruments.md`` Item 5). One row per display
+           (``guide/archive/advanced_instruments.md`` Item 5). One row per display
            field, no header row: Active checkbox, field, up, down. The rows
            are the display-field model: their order is the display order,
            each checkbox its selection, and each row carries the field's
@@ -4314,7 +4314,7 @@
           <h3 style="margin: 0 0 12px 0;">Response fields</h3>
           {# 19T Item 9 — the rows are a table (`rf-table`, base.html),
              one <tbody> per field so a branch can later join its parent's
-             group under one rule (guide/advanced_instruments.md Item 1).
+             group under one rule (guide/archive/advanced_instruments.md Item 1).
              Each row reads Active, +, ⑂, join (↰ / ↳, 19T Item 10),
              name, type, bounds, R, ≡, ▲, ▼, X. The Active checkbox is
              the field's selection; ▲ ▼ move the row's <tbody>. A row
@@ -5864,7 +5864,7 @@
             row.removeAttribute('title');
           }
           // 19T Item 9 — the Active checkbox and ▲ ▼, computed here so
-          // branching (``guide/advanced_instruments.md`` Item 1) has one
+          // branching (``guide/archive/advanced_instruments.md`` Item 1) has one
           // place to add its rules. Active follows the row's selection;
           // a new row starts ticked. ▲ is off on the first row, ▼ on the
           // last; any row can move, blank or not.
@@ -5906,7 +5906,7 @@
               );
             }
           }
-          // 19T Item 10 — the branch rules (``guide/advanced_instruments.md``
+          // 19T Item 10 — the branch rules (``guide/archive/advanced_instruments.md``
           // Item 1, as ruled in 19T Item 10). A branch is deleted bottom-up:
           // a parent's X is off while it has a branch, and the last
           // governed field's X takes the condition with it. Governed
@@ -6196,7 +6196,7 @@
         };
         // 19T Item 9 — ▲ ▼ swap a row's group (its <tbody>) with the
         // neighbouring group, so a parent will carry its branch unchanged
-        // (``guide/advanced_instruments.md`` Item 1). The preview follows
+        // (``guide/archive/advanced_instruments.md`` Item 1). The preview follows
         // the new order, and the order is staged for Save. Focus stays
         // on an arrow: the other one when this one has just gone off.
         window.newModelRfMove = window.newModelRfMove || function (btn) {
