@@ -3,7 +3,7 @@
 **Status:** Planning — **gated on institutional Azure blob storage being
 confirmed.** Work does not start until the storage account is finalized and
 blob is confirmed available on the Azure host. Grounded in
-`spec/blob_storage.md` (candidate uses + prioritization) and
+`guide/blob_storage_candidates.md` (candidate uses + prioritization) and
 `guide/deferred_consolidated.md` §1 (the portal-side storage prerequisite).
 
 > **The plan assumes blob storage is available on the Azure host** — that
@@ -29,7 +29,7 @@ blob is confirmed available on the Azure host. Grounded in
 
 ## Why this segment
 
-`spec/blob_storage.md` established that RRW has **no application blob
+`guide/blob_storage_candidates.md` established that RRW has **no application blob
 storage** today (every need met by Postgres `bytea`, on-the-fly streaming,
 or external URLs) and catalogued the candidate uses. The pursued set is
 **#1, #2, #3, #4, #6, #7** (photos #5 + email attachments #8 parked). This
@@ -225,7 +225,7 @@ A small, backend-agnostic service shaped like `rehydrate_stash` so a
   seam exists (SAS TTLs, private container, MI-over-keys).
 - `guide/deferred_consolidated.md` §1 — mark the storage-account + role-assignment
   as the active portal prerequisite for this segment.
-- `spec/blob_storage.md` — cross-link this segment; move its "If it lands —
+- `guide/blob_storage_candidates.md` — cross-link this segment; move its "If it lands —
   where it plugs in" from hypothetical to "implemented in 18Q Phase 0."
 
 **Phase 0 involves no Alembic migration** — the seam is standalone. The
@@ -233,7 +233,7 @@ first *consumer* (#2) adds the first nullable `blob_key` column.
 
 ---
 
-## Consumer phases (from `spec/blob_storage.md` prioritization)
+## Consumer phases (from `guide/blob_storage_candidates.md` prioritization)
 
 Each consumer is additive and keeps its pre-blob path as the fallback when
 `blob_backend == "none"`.
@@ -327,7 +327,7 @@ Concretely:
 
 ## Doc impact
 
-- **New:** this file; cross-linked from `spec/blob_storage.md` +
+- **New:** this file; cross-linked from `guide/blob_storage_candidates.md` +
   `guide/deferred_consolidated.md` §1 + `guide/todo_master.md` roadmap.
 - **Update on Phase 0:** `pyproject.toml`, `requirements.txt`,
   `app/config.py`, `.env.example`, `docs/architecture.md` "Storage" (was `docs/azure_provision.md` §7),
@@ -336,7 +336,7 @@ Concretely:
   `.github/workflows/` (+`ci-azurite.yml`).
 - **Update per consumer:** `spec/rehydrate.md` §3.3 (C1),
   `docs/backup_restore.md` (C5), `docs/status.md` (each shipped slice),
-  `spec/blob_storage.md` (flip uses from "candidate" to "shipped").
+  `guide/blob_storage_candidates.md` (flip uses from "candidate" to "shipped").
 
 ---
 

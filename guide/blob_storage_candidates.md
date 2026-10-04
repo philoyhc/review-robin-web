@@ -1,4 +1,8 @@
-# Blob storage — candidate uses (stub)
+# Blob storage — candidate uses
+
+> Moved from `spec/` on 2026-10-04: it weighs infrastructure that is
+> not built, so it is planning, not a contract. The build plan is
+> `guide/segment_18Q_blob.md`.
 
 > **Status: stub / not built.** Review Robin Web has **no application
 > blob storage** today, by deliberate choice — every current need is met
@@ -13,7 +17,7 @@
 > wired in, the decision is made against a considered list rather
 > than reached for reflexively. It is a companion to `docs/backup_restore.md` (which
 > records that exports are stream-only) and `spec/email_infra_options.md`
-> (the sibling "options" spec for the email backend).
+> (the matching options analysis for the email backend).
 
 Nothing here is a commitment. Adding blob storage is a real cost — a new
 `azure-storage-blob` dependency, container provisioning + lifecycle
@@ -223,5 +227,5 @@ the current stack lacks:
 - `guide/deferred_consolidated.md` §1 — blob provisioning as Azure portal work.
 - `spec/rehydrate.md` §3.3 — the current `bytea` stash ("no blob storage
   required").
-- `spec/email_infra_options.md` — sibling "options" spec (email backend).
+- `spec/email_infra_options.md` — the matching options analysis (email backend).
 - `spec/visibility_policy.md` — the future published-report mechanism (use #4).

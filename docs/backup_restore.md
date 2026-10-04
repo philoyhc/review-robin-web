@@ -51,7 +51,7 @@ CSV exports (`/operator/sessions/{id}/export/*.csv`,
 streamed** to the operator's browser. The app does not write them
 to server-side storage and does not retain them — there is no
 blob storage configured (application blob storage is deferred, see
-`spec/blob_storage.md` and `guide/segment_18Q_blob.md`). The only copy of an export is the
+`guide/blob_storage_candidates.md` and `guide/segment_18Q_blob.md`). The only copy of an export is the
 file the operator downloaded.
 
 ## Import files

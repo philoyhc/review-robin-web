@@ -3,7 +3,7 @@
 Added by the 2026-05-28 operator-preview-surface follow-on to
 Segment 11F (PRs #1530 / #1531), which also retired the hub's
 iframe surface card — not Segment 18Q, which is the unrelated
-no-code blob-storage deferral. See ``spec/preview_hub.md``.
+no-code blob-storage deferral. See ``spec/reviewer-surface.md``.
 
 Mirror of the reviewer's ``GET /me/sessions/{id}/{page_n}`` for
 the operator: renders the same ``reviewer/review_surface.html``
