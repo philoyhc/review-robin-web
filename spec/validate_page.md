@@ -36,7 +36,7 @@ Cross-references:
 | Page name | Validate |
 | URL | `GET /operator/sessions/{id}/validate` |
 | Template | `app/web/templates/operator/session_validate.html` |
-| Operations row position | #2 — after Assignments, before Invitations. (Previews sat between them until it retired at 19Q Item 1.) |
+| Operations row position | #2 — after Assignments, before Invitations. |
 | Audience | Operator (`require_session_operator`). |
 
 The page is reachable in every lifecycle state. It's read-only
@@ -119,8 +119,7 @@ order it emits them:
 5. **Observers** — count, with the `observers`-source counts.
    **Only when `observers_enabled`**: a session with observers
    switched off has no roster to summarise, and a permanently
-   blank row is one the operator learns to skip. Eight rows
-   without it, nine with.
+   blank row is one the operator learns to skip.
 6. **Instruments** — count, or `—`.
 7. **Assignments** — `{count} · {mode}`, or the count, or `—`.
 8. **Email template** — *Custom overrides* / *Default (no
@@ -128,21 +127,11 @@ order it emits them:
 9. **Help contact** — *Set* / `—`. No source, so it never
    badges and never links.
 
-**Three rows this list used to name do not exist.** It opened
-with a composite *"Session metadata (name / code / description
-/ deadline / help contact)"* where the code emits **Session
-name** and **Session code** as separate rows and nothing for
-description or deadline; and it ended with **Relationships**
-and an **Activation readiness** row. There is no verdict line:
-the error / warning / info counts are the severity chip strip.
-Enumerated against the code at
-19Q Item 7's close, after a first pass retired two of the
-three and left the composite standing, which then duplicated
-help contact.
+There is no Relationships row and no verdict line: the error /
+warning / info counts are the severity chip strip.
 
 Every issue `source` that can raise an error has a row here, or
-its findings badge nothing on the grid — see §7 step 5. Observers
-became such a source at 19Q Item 7 and gained this row with it.
+its findings badge nothing on the grid — see §7 step 6.
 
 Each row's status string is a short prose summary (e.g.
 *"5 reviewers"*, *"2 instruments, 3 + 4 fields"*) — the
@@ -151,14 +140,15 @@ drills into Issues for diagnostics.
 
 ### 2.3 Severity filter chip strip
 
-Renders only when at least one issue exists. Four chips:
+Renders only when at least one issue exists. Four chips, each
+labelled with its count in parentheses:
 
 | Chip | URL state | Counts |
 |---|---|---|
-| All | no `?severity=` param (default) | total |
-| Errors | `?severity=error` | error count |
-| Warnings | `?severity=warning` | warning count |
-| Info | `?severity=info` | info count |
+| All issues (N) | no `?severity=` param (default) | total |
+| Errors only (N) | `?severity=error` | error count |
+| Warnings only (N) | `?severity=warning` | warning count |
+| Info (N) | `?severity=info` | info count |
 
 The active chip carries `aria-current="page"` + `.active`
 styling. Clicking a chip is a GET — server-side filter, no JS
@@ -233,7 +223,7 @@ orchestrator stamps `rule_key`, `fix_url`, `fix_page_label`, and
 first duplicate row's `#reviewer-row-{id}`).
 
 **`ValidationInputs` is the third argument, and a check reads what
-it needs from there rather than querying for it** (19R Item 5). It
+it needs from there rather than querying for it**. It
 carries what more than one check loads — the instrument list, the
 three rosters, the per-instrument response-field /
 visible-response-field / display-field presence, and the included
@@ -257,21 +247,21 @@ the signature for the loads a single rule still owns.
 | `reviewers.duplicate_email` | reviewers | error | Same email appears on 2+ reviewer rows. |
 | `reviewees.empty` | reviewees | error | Zero reviewee rows. |
 | `reviewees.duplicate_id` | reviewees | error | Same `email_or_identifier` appears on 2+ reviewee rows. |
-| `reviewees.unreachable_for_results` | reviewees | warning | At least one active reviewee has a non-email `email_or_identifier` — those reviewees can never reach `/me/sessions/{id}/results` because identity matching requires an email-shaped identifier. One umbrella issue carrying the count; Fix link deep-links to the Reviewees Setup page. Severity is warning (non-blocking), gate is `setup`. |
-| `observers.duplicate_email` | observers | error | Same email appears on 2+ observer rows. `uq_observer_session_email` refuses a second row on write — observers carry the only DB-level uniqueness of the three rosters — so this reports a row predating the constraint, or one written by a path around the services. The page's job is to report, and observers were the one roster it had nothing to report with (19Q Item 7). |
+| `reviewees.unreachable_for_results` | reviewees | warning | At least one active reviewee has a non-email `email_or_identifier` — those reviewees can never reach `/me/sessions/{id}/results` because identity matching requires an email-shaped identifier. One umbrella issue carrying the count; Fix link deep-links to the first unreachable reviewee's `#reviewee-row-{id}` on the Reviewees Setup page. Severity is warning (non-blocking), gate is `setup`. |
+| `observers.duplicate_email` | observers | error | Same email appears on 2+ observer rows. `uq_observer_session_email` refuses a second row on write — observers carry the only DB-level uniqueness of the three rosters — so this reports a row predating the constraint, or one written by a path around the services. |
 | `reviewers.cross_roster_identity` | reviewers | error | A reviewer's email is held in another roster under a *different* name. |
 | `reviewees.cross_roster_identity` | reviewees | error | As above, for a reviewee. |
 | `observers.cross_roster_identity` | observers | error | As above, for an observer. |
 | `instruments.no_fields` | instruments | error | At least one instrument has zero response fields. |
 | `instruments.no_rule_pinned` | instruments | warning | **Inert by design** — raises no findings, and must not be revived as written: a NULL `rule_set_id` is never "not set up", because every instrument defaults to the synthetic Full Matrix on untouched Band 1. `instruments.no_visible_response_fields` below covers the readiness gap. The key stays registered so audit history remains addressable. |
-| `instruments.no_visible_response_fields` | instruments | warning | An instrument has zero `visible=True` `InstrumentResponseField` rows — reviewers would see an empty page even though assignments exist. Toggle a response-field chip in Band 2 to make a field visible. |
+| `instruments.no_visible_response_fields` | instruments | warning | An instrument has zero `visible=True` `InstrumentResponseField` rows — reviewers would see an empty page even though assignments exist. One issue per such instrument, anchored at its `#instrument-{id}` card, and only once the session has at least one reviewer and one reviewee. Toggle a response-field chip in Band 2 to make a field visible. |
 | `assignments.no_included_pairs` | assignments | warning | Sum of `included_count` across every instrument is zero — never generated, or every row deactivated. |
 | `assignments.reviewer_missing` | assignments | warning | An active reviewer has no included assignment on an active reviewee (the pinned rule excluded them, their reviewees are all inactive, or they joined the roster after the last Generate). Inactive reviewers are not checked. **Single-instrument sessions only** — the `_for_instrument` sibling covers multi-instrument ones — and skipped while the session has never been generated (`assignment_mode` NULL) or nothing is included at all, which `assignments.no_included_pairs` reports once. No row anchor: its Fix link is the Assignments page, which has no per-reviewer row (the `#reviewer-row-{id}` ids live on the Reviewers page). |
-| `assignments.reviewer_missing_for_instrument` | assignments | warning | An active reviewer has work on some instruments but none on others — a partial review surface on a multi-instrument session. Multi-instrument sessions only; Fix links to the instrument's card on the Instruments page. |
-| `assignments.instrument_empty` | assignments | warning | An instrument has zero assignment rows — invisible to every reviewer. |
+| `assignments.reviewer_missing_for_instrument` | assignments | warning | One issue per active reviewer with no included assignment on an active reviewee on an instrument that has at least one included row — whether or not the reviewer has work elsewhere. An instrument with no included row is left to `assignments.instrument_empty` / `instruments.zero_included`. Multi-instrument sessions only, skipped while the session has never been generated; Fix links to the instrument's card on the Instruments page. |
+| `assignments.instrument_empty` | assignments | warning | An instrument has zero assignment rows — invisible to every reviewer. Multi-instrument sessions only, skipped while the session has never been generated. |
 | `email_template.no_help_contact` | email_template | info | Session has no `help_contact` set (advisory; reviewer-facing emails still send). |
-| `instruments.no_display_fields` | instruments | warning | At least one instrument has zero display fields beyond the always-on identity column. |
-| `instruments.stale_generated` | instruments | warning | One per instrument whose materialised rows have fallen out of step with what the engine would produce now — the pinned rule changed, or the rosters or relationships moved after Generate. The verdict is the engine's own reconcile diff, and since 19R Item 2 it may be served from a stamped cache rather than recomputed on the spot — it still agrees with what Generate would do, under the conditions `spec/assignments.md` § *Staleness* states: the stamp covers every input the diff reads, and Generate writes the fresh verdict through. A never-generated instrument is **not** flagged here: a run would insert its whole fan-out, and an always-on warning is one the operator learns to ignore — the `assignments.*` empty rules carry that case. |
+| `instruments.no_display_fields` | instruments | warning | At least one instrument has zero display fields beyond the always-on identity column. One issue per such instrument, anchored at its `#instrument-{id}` card; an instrument with no response fields is skipped, since `instruments.no_fields` already reports it. |
+| `instruments.stale_generated` | instruments | warning | One per instrument whose materialised rows have fallen out of step with what the engine would produce now — the pinned rule changed, or the rosters or relationships moved after Generate. The verdict is the engine's own reconcile diff, and it may be served from a stamped cache rather than recomputed on the spot — it still agrees with what Generate would do, under the conditions `spec/assignments.md` § *Staleness* states: the stamp covers every input the diff reads, and Generate writes the fresh verdict through. A never-generated instrument is **not** flagged here: a run would insert its whole fan-out, and an always-on warning is one the operator learns to ignore — the `assignments.*` empty rules carry that case. |
 | `instruments.zero_included` | instruments | warning | Instrument has `generated_count > 0` but `included_count == 0` (operator bulk-deactivated rows). |
 
 #### Cross-roster identity — three rules, one generator
@@ -422,7 +412,7 @@ the issue points at a specific row. Conventions:
 | Source | Anchor pattern | Set by check |
 |---|---|---|
 | `reviewers` (row-specific) | `#reviewer-row-{id}` | `_check_reviewers_duplicate_email` |
-| `reviewees` (row-specific) | `#reviewee-row-{id}` | `_check_reviewees_duplicate_id` |
+| `reviewees` (row-specific) | `#reviewee-row-{id}` | `_check_reviewees_duplicate_id`; `_check_reviewees_unreachable_for_results` (the first unreachable reviewee) |
 | `observers` (row-specific) | `#observer-row-{id}` | `_check_observers_duplicate_email` |
 | any roster (row-specific) | that roster's row anchor | `_cross_roster_identity_issues`, via the three `*.cross_roster_identity` rules |
 | `instruments` (row-specific) | `#instrument-{id}` | per-rule |
@@ -462,10 +452,7 @@ natural fragment-jump handles it.
 4. **Add its row to §3.2's table at the same position.**
    `tests/unit/test_doc_conventions.py` derives that table's `key`
    column from `REGISTERED_RULES` and fails on order as well as on
-   membership, so a rule registered without a row fails CI. The check
-   exists because a rule appended to the table where the code inserted
-   it stayed wrong from W8 through a corpus sweep and a `spec-writer`
-   pass (19R Item 6).
+   membership, so a rule registered without a row fails CI.
 5. Add a unit test that constructs a session matching the rule's
    trigger and asserts the rule yields exactly one issue with
    the expected `rule_key`, severity, and (where applicable)

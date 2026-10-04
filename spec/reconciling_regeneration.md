@@ -56,8 +56,8 @@ A pair's identity is `(reviewer_id, reviewee_id)` within the
 
 `_materialise_one_instrument` sets `include` per pair: self-review
 pairs take `review_session.self_reviews_active`; all other pairs are
-`True`; and any pair whose reviewer or reviewee is inactive is `False`
-(findings B2). An inactive side's pairs are kept, not dropped, so a
+`True`; and any pair whose reviewer or reviewee is inactive is `False`.
+An inactive side's pairs are kept, not dropped, so a
 deactivate → Prepare → reactivate round trip keeps their responses.
 
 **What counts as a self-review is not a pair-level test.** On a
@@ -151,7 +151,7 @@ produces an empty `to_delete`.
 
 The **Prepare session** button (`POST
 /operator/sessions/{id}/workflow/prepare`, which runs Generate → Validate →
-`mark_validated`) therefore:
+`mark_validated` → Invite) therefore:
 
 1. Skips the dry-run entirely when `lifecycle.session_has_responses`
    is false — a first preparation has nothing to lose, and this keeps

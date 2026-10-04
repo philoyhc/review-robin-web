@@ -69,8 +69,7 @@ An Assignment connects three entities:
   flags rosters: only pairs whose reviewer **and** reviewee are
   `status='active'` are assigned work. An inactive side's pairs
   are still materialised, with `include=False`, so their responses
-  survive a deactivate → Prepare → reactivate round trip (author's
-  ruling 2026-10-02, `guide/findings_2026-10-01_corpus.md` B2).
+  survive a deactivate → Prepare → reactivate round trip.
 - **Instrument** — a row in `instruments`. Owns the rule (via
   `rule_set_id` or the synthetic Full Matrix when NULL) and
   the unit-of-review (`group_kind`).
@@ -255,10 +254,13 @@ reviewed* / *Unit of review* (see `spec/instruments.md` § Instrument
 assignment rule). "Band 1" and the `link1`–`link3` ids remain the internal
 names. The rule is per-instrument and per-session:
 
-- Each instrument's Band 1 either lazily materialises one
-  `SessionRuleSet` row (when any Link is in `filter` / `group`
-  mode with rules) or leaves `Instrument.rule_set_id=NULL`
-  (when every Link is `all` / `individual`).
+- Each instrument's Band 1 lazily materialises one
+  `SessionRuleSet` row the first time a save produces a non-empty
+  `rules_json` — Link 1 or Link 2 in `filter` mode with at least one
+  complete rule — or turns on the Link 3 self-review exclusion
+  (above). Until then `Instrument.rule_set_id` stays NULL. Link 3's
+  unit of review is stored on `Instrument.group_kind` and
+  materialises nothing.
 - The materialised row is owned by the instrument: deleting the
   instrument leaves the row behind (FK `ON DELETE SET NULL`),
   but the operator's exposure to it is via Band 1 only.
@@ -307,8 +309,8 @@ assignments generation nor during the Band 2 instrument-preview
 sample pick. This is project-wide policy and is enforced in three
 layers so it can't be silently re-enabled.
 
-**The desugar stage, not self-review exclusion as such.** Since
-19O Item 1, an operator *can* exclude self-reviews per instrument,
+**The desugar stage, not self-review exclusion as such.** An
+operator *can* exclude self-reviews per instrument,
 and the generator honors it — but **after** the engine's pair
 fan-out, never inside it. The distinction is the whole policy: by
 the time the fan-out is done, `_diff_one_instrument` already knows
@@ -326,9 +328,9 @@ they are what keeps the exclusion out of the desugar stage.
    `excludeSelfReviews=False` when wrapping a `SessionRuleSet`
    row into a schema — the row's `exclude_self_reviews` column is
    ignored, and this hardcode is what makes the engine ignore it.
-   The column itself is operator-settable (config import today;
-   the Link 3 checkbox from 19O.1 rung 2) and is no longer reset
-   on each Band-1 save, so a `True` can persist in the row and in
+   The column itself is operator-settable (config import and
+   the Link 3 checkbox) and is not reset
+   on a Band-1 save, so a `True` can persist in the row and in
    the by-instrument extract's *Self-review excluded* cell while
    the engine still ignores it.
 3. `instruments._band1.find_sample_in_scope_reviewee` (the
@@ -372,7 +374,7 @@ Two supported affordances, answering different questions —
   materialised; flip the toggle on the Assignments page to set
   `Assignment.include=False` on every `(R, R)` row in that
   instrument whose two sides are both active (a row with an inactive
-  side stays excluded by status, findings B2). The session-level `ReviewSession.self_reviews_active`
+  side stays excluded by status). The session-level `ReviewSession.self_reviews_active`
   (default True) seeds this on first generation. Reversible
   without a re-Generate, and it destroys nothing.
 
@@ -380,14 +382,9 @@ Two supported affordances, answering different questions —
 keeps the rows inspectable. The rule is for the case where the
 operator never wanted the rows at all.
 
-**Formerly listed here and removed:** *"add a Link 2 rule like
-`reviewee.email IS DIFFERENT FROM reviewer.email`"*. No operator
-can author it — the Band 1 field picker offers only
-`tag1`/`tag2`/`tag3`, and the general Rule Builder was retired with
-the library tier. It was also pair-level, so on a group-scoped
-instrument it would drop `(R, R)` and leave the rest of the group
-mis-classified as an ordinary review. The Link 3 checkbox replaces
-it.
+A Link rule cannot stand in for either: the Band 1 field picker offers
+only `tag1`/`tag2`/`tag3`, so no rule can compare a reviewer's email
+with a reviewee's identifier.
 
 Reasoning for keeping exclusion out of the desugar stage: dropping
 self-pairs there (a) is invisible to the operator — the row doesn't
@@ -434,7 +431,7 @@ self-review iff **the reviewer is themselves a member of the
 group they're reviewing**: some reviewee on the session roster
 matches the reviewer by the `is_self_review` identity test and
 falls in that group. **The roster decides membership, not the
-written rows** (author's ruling, 2026-10-03, findings B7): a Link
+written rows**: a Link
 rule can filter out the reviewer's own `(R, R)` row while keeping
 their group-mates, and the group is still theirs. Generate's
 `include` and exclusion and the `Assignment.is_self_review` column
@@ -467,8 +464,8 @@ identifier or boundary tag edit, a reviewee added or deleted (membership
 is read off the roster), an instrument `group_kind` edit, and a
 relationship added, deleted, retagged, re-pointed or switched active /
 inactive (pair-context group keys are read off the active relationship
-rows; findings B33). A row whose flag the recompute flips also moves
-its `include` towards what Generate would write (findings B7): a row
+rows). A row whose flag the recompute flips also moves
+its `include` towards what Generate would write: a row
 that stops being a self-review comes back on unless either side is
 inactive, and a row that becomes one is switched off when
 `self_reviews_active` is off. A manual exclusion on a row that stops
@@ -491,7 +488,7 @@ a helper for the rule-engine desugar paths that operate on
 exists yet). The individual-scoped arm applies the same
 identity test over the two strings rather than the two
 entities, because the write path projects columns rather
-than loading them (19S Item 3). Callers that have an
+than loading them. Callers that have an
 `Assignment` row in hand should read the column.
 
 ## Group-scoped fan-out
@@ -558,11 +555,10 @@ group — extraction and aggregation respect this contract (see
 `spec/csv_contracts.md`).
 
 **An excluded member still receives the group's answers.** A member
-whose row is `include=False` (inactive, findings B2, or excluded by
+whose row is `include=False` (inactive, or excluded by
 hand) is out of what the reviewer sees, of invitations and of the
 `include`-aware counts, but their row is still the group's: saves and
-submits write its copy, and recall and Clear all reach it (author's
-ruling 2026-10-02). The form reads the lowest-id **included** member's
+submits write its copy, and recall and Clear all reach it. The form reads the lowest-id **included** member's
 copy, so without this, reactivating an excluded member could show the
 reviewer stale or blank answers and a save would copy them back to the
 whole group. This reaches only members of a group with at least one
@@ -580,14 +576,13 @@ it carrying the old group's answer. The copy is deleted, and the row
 takes its new group's answer when another member already holds one
 (`responses._group_reconciliation`); when none does, the answer is
 gone. None of these changes asks for the response-loss
-acknowledgement (author's ruling 2026-10-03, findings B34). The moves
-are:
+acknowledgement. The moves are:
 
 - a reviewee boundary-tag edit;
 - a relationship's pair-context tag edit or re-point;
 - a relationship created, imported, deleted, or switched active /
   inactive, since an inactive or missing relationship reads as empty
-  tags (findings B34).
+  tags.
 
 Only the rows whose key changed are touched, so re-importing an
 unchanged relationships file, or re-pointing a relationship that has
@@ -610,10 +605,10 @@ alone. `assignments.generated` counts the copies as
 On a group-scoped instrument, a "self review group" is **any
 group containing the reviewer as one of its members**. The
 self-review toggle drops the **whole group** when toggled off,
-not just the self-row inside it. The implementation:
-`_self_review_assignment_ids` in
-`app/services/assignments/` walks group-key membership rather
-than per-row reviewer/reviewee identity.
+not just the self-row inside it. The toggle reads the
+`Assignment.is_self_review` column (*Source of truth* above), which
+already carries the whole-group classification, so it calls no group
+helper of its own.
 
 ## Evaluation algorithm
 
@@ -701,14 +696,10 @@ The Operations-row page at
    `Search`** — the submit last, as `spec/setup_pages.md` § *The table
    toolbar* has it for the rosters.
 
-   **There was an `Operator-actions card` here until 19P.5**, half
-   width and flush right (`.grid-right` in a `bottom-grid`), carrying
-   both the strip and the bulk Inactivate / Activate row. Rung 1
-   moved the strip into the toolbar, rung 2 moved the actions into
-   the row expander, and the card, its grid and the `.grid-right`
-   rule went with them. **This page took the roster idiom last and
-   is the only Operations page with selection**, which is why it gets
-   both halves where Invitations and Responses get the toolbar alone.
+   The bulk Inactivate / Activate actions are in the row expander
+   (§ *The row expander* below). **This page is the only Operations
+   page with selection**, which is why it gets both halves where
+   Invitations and Responses get the toolbar alone.
 
    The three chip groups sit on one line where they fit. **This page
    labels each group, where the other six say `Show columns:` once** —
@@ -727,13 +718,9 @@ The Operations-row page at
    Relationships Setup page counts every row.
 
    **Both of the page's tables sit in `.table-scroll`** — this one,
-   and the **Per-instrument status** card above it. With all nine tag
-   slots populated the pair table renders 14 columns — 1508px inside a
-   1360px card — so its overflow belongs inside the card rather than
-   scrolling the whole page. The status card looks small enough not to
-   need it and is not: at 700px it was the element pushing this page
-   sideways, while the wide table beside it sat quietly in its wrapper
-   (19O Item 8). Every table in the app carries the wrapper now
+   and the **Per-instrument status** card above it — so a table wider
+   than its card scrolls inside the card rather than scrolling the
+   whole page. Every table in the app carries the wrapper
    (`spec/ui_elements.md` §10).
 
 The page reuses the Workflow card chrome shared with Session
@@ -760,11 +747,11 @@ Columns (left → right):
 
 | Column | Meaning |
 |---|---|
-| Instrument | `block.instrument_label` — the operator-facing label from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{session_seq}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md`, the operator-identifier policy) — it is not part of the label chain, so a search or a label built from it would match a string no operator can see. The column's server-side sort key is the SQL form of the same rule (`assignments/_coverage.py::_instrument_label_sql`), pinned against the Python one by `tests/integration/test_instrument_session_seq.py` after 19Q Item 6 found them drifted: the Python form moved to `session_seq` and the SQL stayed on `id`, so the page sorted by a string it no longer displayed. |
+| Instrument | `block.instrument_label` — the operator-facing label from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{session_seq}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md`, the operator-identifier policy) — it is not part of the label chain, so a search or a label built from it would match a string no operator can see. The column's server-side sort key is the SQL form of the same rule (`assignments/_coverage.py::_instrument_label_sql`), pinned against the Python one by `tests/integration/test_instrument_session_seq.py`, so the page sorts by the string it displays. |
 | Type | "Individual" or "Group" (driven by `Instrument.group_kind`). |
 | Generated | Pill carrying the row count. "Not generated yet" when zero. A `stale` pill rides alongside when the rows have fallen out of step — see "Staleness". |
 | Groups | Group count (distinct `(reviewer, group key)` over the rows, the key derived by `responses.group_keys`) for group instruments; "—" for individual. |
-| Self review | Pill carrying the self-review row count, plus an inline checkbox that bulk-flips `Assignment.include` on those rows in this instrument — counting and flipping only rows whose reviewer and reviewee are both active (an inactive side's row stays excluded by status, findings B2). Pill color is `pill-info` (blue) when every counted row is included, `pill-warning` (yellow) when not. The checkbox renders only when `self_review_total > 0`: not on a session with no roster overlaps, nor when every self-review row has an inactive side. |
+| Self review | Pill carrying the self-review row count, plus an inline checkbox that bulk-flips `Assignment.include` on those rows in this instrument — counting and flipping only rows whose reviewer and reviewee are both active (an inactive side's row stays excluded by status). Pill color is `pill-info` (blue) when every counted row is included, `pill-warning` (yellow) when not. The checkbox renders only when `self_review_total > 0`: not on a session with no roster overlaps, nor when every self-review row has an inactive side. |
 | Included | Pill carrying the count of `include=True` rows. "—" before Generate. |
 | Show | Per-instrument filter checkbox — client-side DOM toggle that hides / shows the instrument's pairs in the preview table below. Default: checked when any row materialised. |
 | (action) | "Edit on Instruments page" deep-link to the instrument's card. |
@@ -780,13 +767,13 @@ The checkbox is bound to a per-instrument form
 with `active=true|false`. The service helper
 `assignments.set_instrument_self_reviews_active`:
 
-1. Loads every assignment row on the instrument with its
-   reviewer / reviewee.
-2. Computes the self-review subset
-   (`_self_review_assignment_ids`, group-aware).
-3. Flips `include` on every self-review row with both sides active
-   whose current value differs from the target.
-4. Emits an audit event
+1. Selects the instrument's rows with `is_self_review` true and both
+   sides active (`_active_self_review_rows`). The column already
+   carries the whole-group classification, so no other rows load and
+   no group helper runs.
+2. Flips `include` on each of those rows whose current value differs
+   from the target.
+3. Emits an audit event
    `assignments.instrument_self_reviews_active_set` with
    `counts.flipped` + `context.active` + `refs.instrument_id`.
 
@@ -805,9 +792,8 @@ and §5 carry the state machine.
 
 **The selection's controls are a row injected into the table** beneath
 the selected row, not a card beside it — the roster idiom
-(`spec/setup_pages.md` § *The row expander*), taken here at 19P.5
-rung 2. It carries the selected count — `N of M selected`, as the
-rosters render it and not the card's bare `N selected` — and the
+(`spec/setup_pages.md` § *The row expander*). It carries the selected count — `N of M selected`, as the
+rosters render it — and the
 status button the selection makes actionable.
 
 **M is the *visible* rows, not the rendered window.** The rosters'
@@ -822,11 +808,8 @@ page is:
 
 - **It offers only the actionable status button** — `Inactivate` when
   every selected pair is included, `Activate` when every one is
-  excluded, both when the selection is mixed. The retired card
-  rendered both always, so a selection of entirely-included rows
-  carried an `Activate` that would no-op on every row. **A behaviour
-  change, not a relocation**, and the same one 19P.1 made on
-  Reviewers.
+  excluded, both when the selection is mixed, so no button renders
+  that would no-op on every selected row.
 - **No `Edit` and no `Delete`.** Assignments are not edited row by
   row and not deleted at all — the operator changes which pairs exist
   by changing the rule or the rosters and regenerating (§ *Reconcile +
@@ -837,8 +820,7 @@ page is:
   per-instrument `Show` checkboxes hide rows with `display: none`,
   which breaks the rosters' unstated assumption that a selectable row
   is a visible one. The panel anchors after the last **visible**
-  selected row and its `colSpan` is recounted on every chip toggle;
-  both were defects when the idiom was first ported. The page's
+  selected row and its `colSpan` is recounted on every chip toggle. The page's
   sortable headers need the same care — `_rrwApplySort` slices
   `tbody.children` with the injected panel among them, so the panel is
   removed before a sort rather than sorted null-last to the foot of
@@ -866,22 +848,17 @@ The Assignments page splits the way the roster Setup pages do
   mid-session is exactly when an operator checks who is assigned to
   whom.
 
-**The split is per-half, not per-card — and since 19P.5 the two
-halves are not in one card at all.** The strip is the table
-toolbar's right pane and the selection controls are in the row
-expander, which is a stronger form of the same rule: a surface that
-renders in every state and a surface that appears only on a ticked
-row cannot share a predicate, because they no longer share an
-element. The rule is kept because the reason outlives the card —
-gating one container on one predicate disagreed with the mutating
-routes on **three of the five lifecycle states**, in both
-directions: on `not is_ready`, `expired` and `archived` offered live
-controls the routes refuse, and `ready` lost the search altogether.
+**The split is per-half, not per-card, and the two halves are not in
+one card at all.** The strip is the table toolbar's right pane and the
+selection controls are in the row expander, so a surface that renders
+in every state and a surface that appears only on a ticked row never
+share a predicate. Gating both on one predicate would disagree with the
+mutating routes in both directions: `not is_ready` offers live controls
+on `expired` and `archived`, which the routes refuse, and loses the
+search on `ready`.
 
-**No lock card here.** The four roster pages have none on
-`expired` / `archived` (`spec/lifecycle.md` §5) while Instruments
-carries one; a third variant would widen that inconsistency
-rather than close it.
+**No lock card here**: the mutating controls disappear rather than
+being explained (`spec/lifecycle.md` §5).
 
 ### Search matching
 
@@ -991,9 +968,9 @@ sentence the seven preview pages share, rendered by
 `operator/partials/_preview_count_line.html` in
 `.table-showing-hint` — the roster pages' class, and not
 `.form-help`, which sets `--fs-small` and would render this page's
-line a size smaller than the identical sentence on a roster. Since
-19P.5 rung 1 it renders **inside the toolbar's left pane**, with the
-chips and the pager, rather than below the toolbar.
+line a size smaller than the identical sentence on a roster. It
+renders **inside the toolbar's left pane**, with the chips and the
+pager.
 
 The noun is **`assignments`**, never `unique pairs`. The branches and
 the rule behind them are in `spec/setup_pages.md`, "Preview tables
@@ -1027,8 +1004,7 @@ translates to `ORDER BY` in `assignments.list_pairs`, including
 rule engine applies.
 
 **The translation preserves `apply_cookie_sort`'s semantics exactly**,
-because the alternative is every sorted table reshuffling on the day
-it lands:
+so this table sorts as the roster tables do:
 
 | Rule | In SQL |
 |---|---|
@@ -1037,13 +1013,11 @@ it lands:
 | Text compares by code point | explicit `COLLATE "C"` on Postgres; SQLite's default BINARY already does |
 | Ties fall through, then to a stable order | the sort keys, then `(reviewer_id, reviewee_id, instrument_id)` |
 
-The third rule is the one with teeth. On Postgres 16, under a
-locale-aware collation seven names order
-`_edge | alpha | ana lim | Ana Lim | Bravo | charlie | Delta`, and
-under `C` they order `Ana Lim | Bravo | Delta | _edge | alpha |
-ana lim | charlie` — the second being what this app renders. Azure
-Postgres commonly carries a locale-aware collation,
-so the guard is load-bearing in production and invisible on SQLite.
+The third rule matters on Postgres only: a locale-aware collation
+orders text differently from code point (it interleaves case and
+ignores leading punctuation), and Azure Postgres commonly carries one,
+so without `COLLATE "C"` the query would not order rows as the app
+renders them.
 
 The fourth rule is what makes paging safe: without a **total** order
 two adjacent pages can show the same row or neither.
@@ -1122,17 +1096,22 @@ instrument:
      `_diff_one_instrument` sets the expected value to
      `self_reviews_active` for a self-review pair, `True`
      for every other pair, and `False` whenever either side is
-     inactive (findings B2), and `_materialise_one_instrument`'s
+     inactive, and `_materialise_one_instrument`'s
      to-keep loop writes it back
      whenever it differs from the stored one — so an
      operator's manual Inactivate on a non-self pair between two
-     active people is reset to `True` on the next Generate. That reset is the
-     deliberate state of the round trip today, not an
-     oversight: assignment-row status carries through no
-     export and no clone, and restoring it is future work
-     (`guide/archive/segment_19N_generated_assignments.md` Item 1,
-     Semantics 6; `spec/roundtrip_coverage.md` records the
+     active people is reset to `True` on the next Generate. The
+     reset is deliberate: assignment-row status carries through no
+     export and no clone (`spec/roundtrip_coverage.md` records the
      gap).
+
+The direct `/assignments/generate` route has two gates of its own,
+both only once the session has assignment rows: without
+`confirm_replace=true` it 303s to the Assignments page with
+`?needs_confirm=1`, which renders a "Replace not confirmed" banner at
+400; and when the session has any responses, it refuses with 400
+unless `acknowledge_response_loss=true` (`_require_response_loss_ack`),
+whether or not this run would delete one.
 
 The diff is bit-stable (the engine's deterministic seed
 guarantees the same pass produces the same set), so re-running
@@ -1244,18 +1223,22 @@ that fire on this page's domain:
 - **`assignments.reviewer_missing`** (warning) — an **active**
   reviewer has no `include=True` row on an active reviewee. They'd
   see an empty surface and get no invitation. An inactive reviewer is
-  not checked (findings B4). Single-instrument sessions only, and
+  not checked. Single-instrument sessions only, and
   skipped before the first Generate or while nothing is included.
 - **`assignments.reviewer_missing_for_instrument`** (warning) —
   per-instrument variant on a multi-instrument session: an active
-  reviewer with no such row on a specific instrument. An instrument
+  reviewer with no such row on a specific instrument. Skipped before
+  the first Generate. An instrument
   with no included row at all is reported once, by
   `assignments.instrument_empty` or `instruments.zero_included`,
   instead; one whose included rows all have an inactive side is not,
   since no sibling reports it, so each active reviewer is named.
-- **`assignments.instrument_empty`** (warning) — an instrument
-  has zero materialised rows. Likely caused by an over-
-  restrictive rule.
+- **`assignments.instrument_empty`** (warning) — on a
+  multi-instrument session, an instrument has zero materialised rows.
+  Likely caused by an over-restrictive rule. Skipped before the first
+  Generate; on a single-instrument session
+  `assignments.no_included_pairs` and `instruments.zero_included`
+  cover the case.
 
 All four surface through the standard Validate page. The first
 two fix on the Assignments page with no row anchor; the last two fix
@@ -1263,43 +1246,42 @@ on the Instruments page at the instrument's `#instrument-{id}` card.
 
 ## Worked example
 
-A program coordinator runs a peer-review session: ten
-reviewers, ten reviewees, three "team" tags. The coordinator
-wants each reviewer to review the four people in their own
-team **except themselves**, and a separate group instrument for
-each team to evaluate the team's overall collaboration.
+A program coordinator runs a peer-review session for ten people in
+two teams of five; each person is both a reviewer and a reviewee. The
+coordinator wants each person to review the four other members of
+their own team, and a separate group instrument on which each person
+rates their own team's collaboration.
 
 **Setup:**
 
-- Reviewer + Reviewee CSVs imported with `tag_1` populated as
-  the team name.
+- Reviewer + Reviewee CSVs imported with the same ten emails and
+  `tag_1` populated as the team name.
 - Two instruments:
 
 | Instrument | Link 1 | Link 2 | Link 3 | Self-review |
 |---|---|---|---|---|
-| Peer review | All (no filter) | reviewee.tag1 IS THE SAME AS reviewer.tag1 | Individual | Excluded via per-instrument toggle |
-| Team retro | All | reviewee.tag1 IS THE SAME AS reviewer.tag1 | Group on reviewee.tag1 | N/A (group contains the reviewer; self-review toggle drops the group) |
+| Peer review | All (no filter) | reviewee.tag1 IS THE SAME AS reviewer.tag1 | Individual | Excluded with the per-instrument toggle |
+| Team retro | All | reviewee.tag1 IS THE SAME AS reviewer.tag1 | Group on reviewee.tag1 | Kept: every group contains its reviewer |
 
-**Generate** runs the engine:
+**Prepare session** runs Generate:
 
-- For **Peer review**: 10 × 10 universe → 10 × 4 surviving
-  (each reviewer's team has 4 others on average; sizes vary)
-  → 30-ish `Assignment` rows. Self-review rows (reviewer ==
-  reviewee) materialise but their `include` is `True` until
-  the operator clicks the per-instrument Self-review toggle on
-  the Assignments page, which bulk-flips them to `False`.
-- For **Team retro**: same surviving pairs, but the derived
-  group key is the team name. Rows still per-reviewee (10 rows
-  for a 5-team session), but the reviewer surface collapses
-  them into one card per team. Self-review groups (the team
-  the reviewer belongs to) are dropped via the toggle.
+- For **Peer review**: the 10 × 10 universe leaves 10 × 5 = 50
+  surviving pairs, so 50 `Assignment` rows. The 10 self-review rows
+  (reviewer == reviewee) materialise with `include=True`, from
+  `self_reviews_active`, until the operator unticks the instrument's
+  Self review toggle on the Assignments page, which flips them to
+  `False` and leaves 40 included.
+- For **Team retro**: the same 50 pairs, but the derived group key is
+  the team name, so each reviewer's five rows form one group. Every
+  group contains its reviewer, so all 50 rows are self-review rows
+  (the whole-group rule) and the toggle stays ticked: unticking it
+  would exclude every row on the instrument.
 
-After **Activate**, the reviewer logs in and sees:
+After **Activate**, each reviewer sees:
 
-- Peer review page: 4 row cards, one per teammate. Click any to
-  fill in.
+- Peer review page: 4 row cards, one per teammate.
 - Team retro page: 1 group card, identity reading the team name
-  with up to 10 member names below.
+  with the five member names below.
 
 ## Open / deferred
 

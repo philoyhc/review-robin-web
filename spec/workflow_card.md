@@ -23,8 +23,7 @@ useful while the session is mid-lifecycle:
 - **Session Home** (`/operator/sessions/{id}`) — full-width, just
   below the chrome.
 - **Operations-row pages** — full-width, just below the chrome,
-  on Assignments / Validate / Invitations / Responses. (Previews was
-  the fifth until it retired at 19Q Item 1.)
+  on Assignments / Validate / Invitations / Responses.
 - **Extract data** (`/operator/sessions/{id}/extract-data`) — just
   below the chrome.
 
@@ -163,13 +162,11 @@ The card has **ten states over nine live numbers** — 1-10, with
 overlay** that rides on States 4, 5 and 6 rather than replacing them.
 Prose elsewhere calls this the *ten-state cascade*, counting the states.
 The body and right column are chosen by this cascade in
-`next_action_card.html`. **State 3 is retired** (author's ruling,
-2026-10-03, findings B32): a draft with a validation summary was
-reachable only through the retired `?validated=1` path, since the
-builder computes `validation_summary` only for a `validated` session. A
-Prepare whose Validate step fails lands in State 2 with the failure
-signal line. The number is kept, not reused, so the other states keep
-theirs.
+`next_action_card.html`. **Number 3 is unused**: the builder computes
+`validation_summary` only for a `validated` session, so a draft never
+carries one, and a Prepare whose Validate step fails lands in State 2
+with the failure signal line. The number is not reused, so the other
+states keep theirs.
 
 ```
 if is_setup_empty:                              → State 1
@@ -198,11 +195,6 @@ and the Validate link in the right column, and the warnings detour on **Activate
 session** ("Warnings detour" below) — and changes no button's visibility,
 because `send_invites_visible` reads invitation state alone.
 
-Recorded as the contract on 2026-09-19 (author's ruling, 19O Item 7 entry
-14). Until then this section tested `needs_acknowledge` *before* invitation
-state, which made `4W` look mutually exclusive with 5 and 6; the template has
-never worked that way.
-
 State 4Err is defensive — `mark_validated` only flips
 `draft → validated` on a clean report, so re-running Validate in
 the `validated` lifecycle and finding errors is rare (it requires
@@ -215,11 +207,11 @@ missed).
 | --- | --- | --- |
 | **1** | `is_setup_empty` | "Session not fully set up. Make sure that reviewers, reviewees, relationships (optional), and instruments have been set up before continuing." |
 | **2** | `is_draft`, no `validation_summary` | "Run **Prepare session** to generate the assignment pairs, create an invitation for each eligible reviewer, and validate that the setup is ready for prime time. Nothing goes live until you activate." |
-| ~~**3**~~ | Retired (findings B32) | — |
+| ~~**3**~~ | Unused | — |
 | **4** | `is_validated` + `can_activate` + no invitations | "Setup is prepared and the reviewer surface is previewable, but there are no invitations. **Prepare session** creates one per eligible reviewer — run it, and if it still creates none, no reviewer is both active and assigned. Or Activate now to receive responses." |
 | **4Err** | `is_validated`, not `can_activate` (defensive) | "Validation shows that there are error(s). Resolve them and re-run **Prepare session** before activating." |
 | **5** | `is_validated`, invites generated, none sent | "Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards." |
-| **6** | `is_validated`, invites sent | "Invitations are marked sent, but no mail leaves the app yet — nobody has actually been told. Activate the session when you’re ready to receive responses." **The copy says what the send path does and not what it looks like it does**: `send_invitation` (`app/services/invitations.py`) writes an `EmailOutbox` row and flips it `queued` → `sent` in one transaction with no transport call — `generate_invitations` only creates the `Invitation` row, at `status="pending"`, and never touches the outbox (`app/services/email_send.py` — "Nothing in the app calls this yet"). Until a transport is wired, this state means *stamped*, not *delivered*. |
+| **6** | `is_validated`, invites sent | "Invitations are marked sent, but no mail leaves the app yet — nobody has actually been told. Activate the session when you’re ready to receive responses." **The copy says what the send path does**: `send_invitation` (`app/services/invitations.py`) writes an `EmailOutbox` row and flips it `queued` → `sent` in one transaction with no transport call (nothing calls `app/services/email_send.py`), so until a transport is wired this state means *stamped*, not *delivered*. |
 | **7** | `is_ready`, no Invitation rows yet | "Session is open for responses, but no invitations exist — nobody has been told they can start. Only **Prepare session** creates them and an open session cannot run it: **Revert to draft** first, which stops responses, then fix the roster, Prepare, and activate again." |
 | **8** | `is_ready`, invites generated, none sent | "Session is open. Send the prepared invitations so reviewers know they can start." |
 | **9** | `is_ready`, invites sent | "Session is open. Send reminders if reviewers fall behind." |
@@ -339,8 +331,9 @@ the manual release shortcut post-deadline.
 
 ### Per-state visible-button table
 
-`Pri` = Primary style, `Sec` = Secondary style, `Dgr` = Danger
-style, blank = not rendered. Order preserved across the row;
+`Pri` = Primary (`.btn`), `Sec` = Secondary (`.btn.secondary`),
+`Alert` = Alert, filled amber (`.btn.danger-solid`), per
+`spec/ui_elements.md` §6; blank = not rendered. Order preserved across the row;
 blank cells collapse so the row reads left-to-right with no
 gaps.
 
@@ -354,44 +347,32 @@ gaps.
 | Close session | | | | | | | | Sec | Sec | Sec | | |
 | Release responses | | | | | | | | | | | Sec | |
 | Stop releasing | | | | | | | | | | | | Sec |
-| Archive session | | | | | | | | | | | Dgr | Dgr |
+| Archive session | | | | | | | | | | | Alert | Alert |
 | **Visible total** | **0** | **1** | — | **3** | **3–4†** | **4** | **3** | **2** | **3** | **3** | **3** | **3** |
 
 **The `W` overlay has no column**, because it changes no cell's visibility:
 in States 4, 5 and 6 with `needs_acknowledge`, the same buttons render and
 **Activate session** becomes an `<a>` to the warnings detour instead of a
 form POST. So `4W` is 3 buttons, `5W` is 4 and `6W` is 3 — the same totals as
-the states they ride on, and the ≤4 cap holds. The table carried a `4W`
-column reading 3 buttons and `Pri (→detour)` until 2026-09-19, which was
-right about 4W and silent about 5W's four.
+the states they ride on, and the ≤4 cap holds.
 
-**4Err renders Activate**, which the matrix omitted until 19Q Item 2
-rung 4's close pass recomputed the totals and found the column short.
-`activate_visible` is `is_validated` alone (`_workflow_card.py`), and
-4Err *is* `is_validated` — so the button ships in a state whose own
-copy says to re-run Prepare first. Measured, not inferred.
-
-**This is intended** (author's ruling, 2026-09-18, on 19O Item 7 entry
-3): the current behavior is correct and the spec follows it. 4Err is
-defensive — it means a fresh validate found errors in a session the
-lifecycle still calls `validated` — and Activate re-runs validation
-before it flips (`_workflow.py`), so pressing it in this state fails
-safely rather than activating a broken session. The copy steers toward
-Prepare because that is the productive move; the button stays because
-removing it would be a lifecycle gate that `activate_visible` does not
-otherwise draw. Recorded as adjudicated rather than merely observed,
-so a later reader treats it as the contract and not as a finding.
+**4Err renders Activate**, by design: `activate_visible` is
+`is_validated` alone (`_workflow_card.py`), and 4Err *is*
+`is_validated`. 4Err is defensive — a fresh validate found errors in a
+session the lifecycle still calls `validated` — and Activate re-runs
+validation before it flips (`_workflow.py`), so pressing it in this
+state fails safely rather than activating a broken session. The copy
+steers toward Prepare because that is the productive move; the button
+stays because removing it would be a lifecycle gate that
+`activate_visible` does not otherwise draw.
 
 † **4Err is the one column that varies with invitation state.** Every
 other state's definition fixes it — State 4 is *"no invitations"*,
 State 5 is *"invites drafted"* — but 4Err is defined by
 `is_validated` and `not can_activate` alone, so a session that was
 Prepared (creating invitations) and then broken renders **Send
-invites** as well: four buttons, not three. Measured. The ≤4 contract
-still holds, with 4Err joining State 5 at the cap. *Named by Codex on
-the close PR, after this file's own first correction read the column
-as a fixed 3 — the probe that established Activate renders here
-printed `send_invites_visible` in the same line, and it was read past.*
+invites** as well: four buttons, not three. The ≤4 contract
+still holds, with 4Err joining State 5 at the cap.
 
 ‡ = `is_response_release_window_open(session)` is True in the `expired` state (i.e. the operator has run Release responses post-close, or a scheduled release has fired). Release and Stop are both gated on `is_expired` — they stay hidden in every pre-expired state regardless of any backdated `responses_release_at`, so the ≤4-button contract holds for every state.
 
@@ -412,15 +393,14 @@ Generate + Validate + Invite in sequence (see below).
 The Prepare session button POSTs to
 `/operator/sessions/{id}/workflow/prepare` in `_workflow.py`,
 which runs three steps in sequence. The run takes seconds on a large
-roster (about 14 s at a 200 × 200 full matrix,
-`guide/app_responsiveness.md`), so on submit the clicked button (this
+roster, so on submit the clicked button (this
 one, or the confirmation's **Regenerate &amp; prepare**, which renders
 with it in normal use) reads `Preparing<br>session…`, keeping the
 two-line `Prepare<br>session` label's height (one-line
 `Preparing…` on Regenerate &amp; prepare), with `aria-busy="true"`,
 and a second submit from either is refused until the page changes or a
 back-forward cache return. No timeout lifts the refusal, since a
-Prepare at scale can outlast any (74.8 s measured once), and a second
+Prepare at scale can outlast any, and a second
 one would run concurrently; a load stopped by hand is recovered by
 reloading. The buttons stay enabled: busy is `aria-busy`, never
 `disabled` (`spec/ui_elements.md` §1, "Navigation busy indicator").
@@ -480,12 +460,12 @@ builder kwarg, which re-runs `reconcile_impact` to populate the
 `responses_deleted` / `deleted_pairs` counts) and renders a
 confirmation banner in the card body:
 
-- **Regenerate & prepare** posts back to `/workflow/prepare`
+- **Regenerate & prepare** (`.btn.danger-solid`) posts back to `/workflow/prepare`
   with `acknowledge_response_loss=true`, which skips the detour
   so the run proceeds: the reconcile deletes the responses on
   the orphaned pairs, keeps the rest, and Validate follows.
-- **Cancel** is a plain link back to the host page — nothing
-  runs.
+- **Cancel** (`.btn.alert`, outline amber) is a plain link back to
+  the host page — nothing runs.
 
 Like the warnings detour on Activate, the confirmation detour
 writes no `workflow_run_failed` event — the run is paused at the
@@ -605,8 +585,7 @@ Pre-flight gates:
 
 ### Other button slots
 
-**Create invites retired at 19Q Item 2 rung 3.** It posted to
-`POST /invitations/generate`, which now 404s. The work moved into
+**There is no Create invites button**; invitations are created by
 Prepare's third step (above): `generate_invitations` idempotently
 creates one `Invitation` row per assigned active reviewer, skipping
 reviewers with no `include=True` assignment and reviewers already
@@ -639,11 +618,8 @@ States 7's copy names Revert to draft.
   **The Manage Invitations table is a fifth surface and a second
   copy.** It reaches the same predicate through
   `monitoring._assigned_active_reviewers`, a separate `select` with
-  the same three filters — which is how the table and the Send all
-  button came to disagree about who was in the session in the first
-  place. Two copies of a query agree by luck, not by construction.
-  Unifying them is recorded as open; until it lands, this paragraph
-  says four and names the fifth rather than claiming five.
+  the same three filters. Two copies of a query agree by luck, not by
+  construction; unifying them is open.
 - **Send reminders** posts to
   `/operator/sessions/{id}/invitations/remind-incomplete` via
   `next-action-send-reminders-form`. Calls
@@ -760,9 +736,9 @@ item; there's no separate heading row.
 | --- | --- |
 | **1** (setup empty) | **Setup checklist** — renders in every draft state (1 and 2), not State 1 alone, so an all-✓ row confirms the operator is ready to Prepare. Three inline entries (Reviewers / Reviewees / Instruments), each prefixed by a ✓ or ✗ pill and linked to the relevant Operations-row page. Wraps on narrow viewports. The Instruments entry is `instruments_configured_ok`, i.e. `not has_unconfigured`: every instrument has at least one visible response field **and** all three Band 1 links touched (`instruments/_instrument_crud.py` `configured_counts`). It is **not** a rule-pinning check — a NULL `rule_set_id` is the Full Matrix default and does not fail it. |
 | **2** (draft, not yet validated) | **Setup checklist** only (as State 1). |
-| ~~**3**~~ | Retired (findings B32). |
+| ~~**3**~~ | Unused. |
 | **4** (validated, no invites) | **Status** — "Setup validated." |
-| **4Err** (validated + errors, defensive) | **Validation issues** — error / warning / info count pills inline, followed by a single **Review on Validate** link (rendered by `operator/partials/_next_action_issue_list.html`). The card carries the counts, not the issues: the Validate page is the authoritative diagnostic surface, and reproducing its table here repeated one *Fix* link per issue (19Q Item 4). |
+| **4Err** (validated + errors, defensive) | **Validation issues** — error / warning / info count pills inline, followed by a single **Review on Validate** link (rendered by `operator/partials/_next_action_issue_list.html`). The card carries the counts, not the issues: the Validate page is the authoritative diagnostic surface. |
 | **5** (validated + invites generated) | Same as State 4 — **Status** — "Setup validated." |
 | **6** (validated + invites sent) | Same as State 4 — **Status** — "Setup validated." |
 | **7** (ready, no invitations yet) | (no detail) |
@@ -875,9 +851,10 @@ gate the trigger:
 
 In this table **Prepared?** follows the trigger: `validated` or `ready`.
 **Known defect, awaiting Azure** (`guide/post_azure_todo_checklist.md` item 7): the caption builder tests `is_draft` and then
-`is_ready`, so it treats `expired` and `archived` as prepared. It can
-show those states the ✓ "System will dispatch automatically" row,
-though the trigger skips them with `not_prepared` (`is_prepared` in
+`is_ready`, so it treats `expired` and `archived` as prepared. With
+invitations it shows those states the ✓ "System will dispatch
+automatically" row; without, the `validated` row's ⚠ "run Prepare
+session before then" copy. The trigger skips both with `not_prepared` (`is_prepared` in
 `app/services/scheduled_events/_invites.py`). The fix belongs in
 `build_auto_send_invites_caption`. Until then, the caption in those two
 states is wrong, not the contract.
@@ -938,7 +915,7 @@ routes:
 | `POST /operator/sessions/{id}/workflow/release-responses` | `lifecycle.release_responses_now` | not `archived` | unchanged (stamps `responses_release_at = now()`, clears `responses_release_until`) | `session.responses_released` |
 | `POST /operator/sessions/{id}/workflow/stop-release` | `lifecycle.stop_responses_release` | not `archived` | unchanged (stamps `responses_release_until = now()`) | `session.responses_release_stopped` |
 | `POST /operator/sessions/{id}/workflow/archive` | `lifecycle.archive_session` | any non-archived state | `archived`; 303 → `/operator/sessions/archived` | `session.archived` |
-| `POST /operator/sessions/{id}/assignments/generate` | `assignments.replace_assignments` | `draft` or `validated` | `draft` (`replace_assignments` calls `lifecycle.invalidate_if_validated`, so `validated` falls back to `draft`) | `assignments.generated`; `session.invalidated` (reason `assignments_generated`) when it was `validated` |
+| `POST /operator/sessions/{id}/assignments/generate` | `assignments.replace_assignments` | `draft` or `validated`; once rows exist it needs `confirm_replace=true` (else 303 to `/assignments?needs_confirm=1`) and, when any response exists, `acknowledge_response_loss=true` (else 400) | `draft` (`replace_assignments` calls `lifecycle.invalidate_if_validated`, so `validated` falls back to `draft`) | `assignments.generated`; `session.invalidated` (reason `assignments_generated`) when it was `validated` |
 | `POST /operator/sessions/{id}/activate` | `lifecycle.activate_session` | `validated` | `ready` | `session.activated` |
 | `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.invalidate_session` | `validated` | `draft` | `session.invalidated` |
 | `POST /operator/sessions/{id}/revert` (when `is_ready` or `is_expired`) | `lifecycle.revert_session_to_draft` | `ready` or `expired` | `draft` | `session.reverted_to_draft` |
@@ -960,8 +937,7 @@ the corresponding child page; values outside the allowlist
 ## Source-of-truth pointers
 
 - Partial: `app/web/templates/operator/partials/next_action_card.html`
-- Right-column Validate-link partial (named for the issue list it
-  rendered until 19Q Item 4):
+- Right-column Validate-link partial:
   `app/web/templates/operator/partials/_next_action_issue_list.html`
 - Context builder: `app/web/views/_workflow_card.py`
 - Prepare + Activate routes: `app/web/routes_operator/_workflow.py`
@@ -970,8 +946,7 @@ the corresponding child page; values outside the allowlist
   `app/web/routes_operator/_assignments.py` (`assignments_generate`)
 - Per-step invitation routes: `app/web/routes_operator/_operations.py`
   (`invitations_send_all` / `invitations_remind_incomplete`).
-  `invitations_generate` retired with the Create invites button in 19Q
-  Item 2 rung 3; Prepare creates the invitations now.
+  Prepare creates the invitations; there is no per-step route.
 - Lifecycle service: `app/services/session_lifecycle.py`
 - Invitations service: `app/services/invitations.py`
 - Audit-event registry: `app/services/audit.py` (`EVENT_SCHEMAS`)
