@@ -21,7 +21,7 @@ policies, observer cohort rules, `band1_touched_links`, reviewer
   an operator sets by hand.
 - **Out of scope, by design:** reviewer-typed **responses** and the
   **audit log** (data, not config); per-operator **UI state** (sort
-  cookies, column-width localStorage — see `settings_inventory.md` §7);
+  cookies, column-toggle localStorage — see `settings_inventory.md` §7);
   deployer **env vars**; and machine-derived runtime state (`status`,
   `activated_at`, `deadline_closed_at`, `cached_*`).
 
@@ -29,7 +29,7 @@ policies, observer cohort rules, `band1_touched_links`, reviewer
 
 | Mechanism | Direction | Carries | Entry points |
 |---|---|---|---|
-| **Settings CSV** | `session_config_io.serialize_session_config` → `apply_session_config` | Config only (no rosters, no data). The `field,value,data_type` file. | Export `GET …/export/settings.csv`; import Quick Setup slot 4 / `POST …/import-config` |
+| **Settings CSV** | `session_config_io.serialize_session_config` → `apply_session_config` | Config only (no rosters, no data). The `field,value,data_type` file. | Export `GET …/export/settings.csv`; import Quick Setup's Settings slot / `POST …/import-config` |
 | **Roster CSVs** | `extracts/*_extract.py` → `csv_imports` / `relationships` | Reviewers, reviewees, observers, relationships | Per-entity export routes; Quick Setup / Setup-page uploads |
 | **Clone** | `session_clone.clone_session` (in-DB, no CSV) | Config graph; `"all"` mode adds rosters | Lobby row-expander → Duplicate / Duplicate settings only |
 
@@ -59,7 +59,7 @@ responses. See `spec/rehydrate.md`.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `name`, `short_label`, `description`, `sort_display_fields`, `group_kind`, `rule_set_id` (by name), `column_widths`, `starts_new_page`, `band2_state` | ✅ | ✅ | Full config round-trip both paths. `sort_display_fields` and `column_widths` name fields by id, so both paths re-point them at the copy's fields (findings A28): the clone through its id maps, the Settings CSV by field position (`spec/csv_contracts.md` §3.3) |
+| `name`, `short_label`, `description`, `sort_display_fields`, `group_kind`, `rule_set_id` (by name), `column_widths`, `starts_new_page`, `band2_state` | ✅ | ✅ | Full config round-trip both paths. `sort_display_fields` and `column_widths` name fields by id, so both paths re-point them at the copy's fields: the clone through its id maps, the Settings CSV by field position (`spec/csv_contracts.md` §3.3) |
 | `accepting_responses` | ✅ | ❌ | Settings-CSV restores the runtime open/closed flag; clone resets it (fresh draft) |
 | `order` | ⚠️ | ✅ | Settings-CSV serializes + parses it but **apply ignores it** — 1-based CSV position wins. Value round-trips only because export order matches position |
 | **`band1_touched_links`** | ✅ | ✅ | `instruments[n].band1_touched_links` in the Settings CSV; clone copies the column |
@@ -80,7 +80,7 @@ responses. See `spec/rehydrate.md`.
 | `field_key`, `label`, `response_type`, `required`, `help_text`, `help_text_visible`, `data_type`, `min`, `max`, `step`, `list_csv`, `visible` | ✅ | ✅ | Inline bounds carried on the response-field row |
 | `validation` (JSON) | ⚠️ | ✅ | Settings-CSV **recomputes** it from the inline bounds on import (derived, not carried); clone copies it verbatim |
 | **`branch_mode`** (a parent's `show` / `require`; null reads `show`) | ✅ | ✅ | The Settings CSV exports `require` or blank and imports `require`, `show` or blank (`spec/csv_contracts.md` §3.3); clone and **Replicate instrument** copy it |
-| **`branch_parent_id`, `branch_op`, `branch_value`** (branching, `guide/advanced_instruments.md` Item 1) | ✅ | ✅ | The parent goes by `field_key` in the Settings CSV (`spec/csv_contracts.md` §3.3), since ids don't survive an export; clone re-points the parent at its own clone via `response_field_map`. **Replicate instrument** (a same-session duplicate, not a session-porting mechanism) also copies the condition and re-points the parent at its copy |
+| **`branch_parent_id`, `branch_op`, `branch_value`** (branching) | ✅ | ✅ | The parent goes by `field_key` in the Settings CSV (`spec/csv_contracts.md` §3.3), since ids don't survive an export; clone re-points the parent at its own clone via `response_field_map`. **Replicate instrument** (a same-session duplicate, not a session-porting mechanism) also copies the condition and re-points the parent at its copy |
 
 ### Instrument visibility policies (`instrument_view_policies`)
 
@@ -92,7 +92,7 @@ responses. See `spec/rehydrate.md`.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `name`, `description`, `combinator`, `exclude_self_reviews`, `seed`, `rules_json` | ✅ | ✅ | `exclude_self_reviews` is operator-settable and load-bearing since 19O Item 1: the rule *engine* still hardcodes `False`, but the generator honors the column after the pair fan-out, so a round-tripped `True` changes which rows generate |
+| `name`, `description`, `combinator`, `exclude_self_reviews`, `seed`, `rules_json` | ✅ | ✅ | `exclude_self_reviews` is operator-settable and load-bearing: the rule *engine* still hardcodes `False`, but the generator honors the column after the pair fan-out, so a round-tripped `True` changes which rows generate |
 
 ### Field labels (`session_field_labels`)
 
@@ -116,7 +116,7 @@ is silently ignored on apply rather than failing the import.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `tag` | ⚠️ | ✅ | `session_tags[i].tag` in the Settings CSV, wipe-and-replace; clone copies them. **One import path overrides the bundle**: a Settings CSV uploaded through the Create page alongside a non-empty Tags box loses its `session_tags[]` rows, because the typed box writes after the bundle by design (`spec/csv_contracts.md` § *Settings CSV — apply precedence*). Every other path round-trips them unconditionally, the empty box included. **Import lowercases** (19S Item 9), so a tag stored with capitals before that change comes back lower case. |
+| `tag` | ⚠️ | ✅ | `session_tags[i].tag` in the Settings CSV, wipe-and-replace; clone copies them. **One import path overrides the bundle**: a Settings CSV uploaded through the Create page alongside a non-empty Tags box loses its `session_tags[]` rows, because the typed box writes after the bundle by design (`spec/csv_contracts.md` § *Settings CSV — apply precedence*). Every other path round-trips them unconditionally, the empty box included. **Import lowercases**, so a tag stored with capitals comes back lower case. |
 
 ### Populations — reviewers / reviewees / observers / relationships
 
@@ -159,8 +159,7 @@ The settings an operator can set that survive **no** export/import path
    turned inactive, and that's the extent of operator manual work and
    export import round trip."* Inactivation is the whole manual surface,
    and it is the part that does not survive a round trip.
-   **Carrying it is future work** — deferred 2026-09-13, recorded here
-   rather than left to be rediscovered as a bug.
+   **Carrying it is deferred future work.**
 3. **Session-operator role grants** — co-operators aren't carried by any
    config path; only the acting operator's own owner row is created.
 

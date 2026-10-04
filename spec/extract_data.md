@@ -60,7 +60,7 @@ first, since neither this page nor the participants' own pages are
 useful before them, then describes this page as the workbench for
 shaping response data for offline analysis — pick the lens, set the
 chips, download a CSV or a zip. It repeats this spec's own framing that
-the page is deliberately not an in-app analysis tool. Expanded at 19K.8.
+the page is deliberately not an in-app analysis tool.
 
 ## Chrome and navigation
 
@@ -87,7 +87,7 @@ useful even after the session closes.
 
 ## Page layout
 
-Three regions, top to bottom:
+Four regions, top to bottom:
 
 1. **Workflow card** — standard Operations-page chrome.
 2. **Two-column grid of half-width cards**, in the
@@ -97,8 +97,7 @@ Three regions, top to bottom:
      metadata` card on top, `Reviewee response metadata` card
      below.
    - **Right column** — `By instrument` card on top, the
-     `Extract all data` card below it (the author's order,
-     findings D28, 2026-10-03).
+     `Extract all data` card below it.
 
    The grid collapses to a single column on narrow viewports.
 3. **Full-width `Data shaper` card** below the grid (see
@@ -216,16 +215,13 @@ those cards are configured.
 | `data-shaper` | `Data shaper` | Adds every saved shape's `Download`, `{code}_{slug}{suffix}.csv`, each with its own saved chips. |
 | `token-keys` | `Token keys` | Adds the Token keys card's `{code}_participant_tokens.csv`. **Conditional**: chip + the matching Token keys card below only render when `session.observers_enabled` is on, since the tokens have no consumer without observers today. |
 
-**The bundle is a pass-through of the other cards** (findings
-D28, ruled 2026-10-03). It always carries `{code}_responses.csv`,
+**The bundle is a pass-through of the other cards.** It always carries `{code}_responses.csv`,
 the file Rehydrate reads (`spec/rehydrate.md` §4), whatever the
 chips say. Each chip that is on adds exactly the files its card's
 own button would download at that moment, under the same names
 and with the same bytes; a chip that is off leaves them out. A
 card with nothing to download — By instrument with no instrument
-chip on — rides as off. The reviewer and reviewee stats files and
-the per-instrument long `instrument_{n}.csv` files the bundle used
-to carry are no longer in it. A shape whose name makes it collide
+chip on — rides as off. A shape whose name makes it collide
 with another member gains `_2` before `.csv` in the bundle only.
 
 **Query contract** (`build_responses_bundle`). Each chip is a flag
@@ -238,7 +234,7 @@ card's route reads it: `?by_instrument.instrument=42`,
 likewise `reviewee_metadata.*`. An omitted option takes the card
 route's own default. The page script composes the link from the
 cards' chips on every toggle. **With every instrument chip on, the
-link carries no id list** (Codex on #2769): By instrument reads an
+link carries no id list**: By instrument reads an
 omitted list as every instrument, and the metadata cards take
 `all_instruments=1`, since for them an omitted list means totals
 only. Their own Download links use the same form. A partial
@@ -302,10 +298,11 @@ greys the `Zip all` button (`aria-disabled="true"` +
    and `Self-review excluded`. **Shown when** (or
    **Required when**, under a require-mode parent) appears
    only for a field governed by a branch
-   (`guide/advanced_instruments.md` Item 1), stating its parent's
+   (`spec/instruments.md` § "Branching between response fields"),
+   stating its parent's
    condition in the same words the reviewer surface hints a closed cell
-   with (`responses.condition_label` — "Rating ≥ 4", or, for a range
-   (19T Item 12), "Rating ≥ 2 and ≤ 4": the field's name first, then
+   with (`responses.condition_label` — "Rating ≥ 4", or, for a range,
+   "Rating ≥ 2 and ≤ 4": the field's name first, then
    both ends, so a negative low end can never start the cell as a
    formula); a field outside any branch adds no row, so an unbranched
    instrument's extract is unchanged. Pool rule
@@ -321,8 +318,7 @@ greys the `Zip all` button (`aria-disabled="true"` +
 4. **Data rows** — one row per (reviewer, reviewee /
    group) pair, sorted by composed reviewee name then
    reviewer. Group-scoped instruments collapse to one row
-   per (reviewer × group × field), same as the unified
-   Responses CSV. Rows with no non-empty response cells
+   per (reviewer × group), the fields still one column each. Rows with no non-empty response cells
    drop out when `all_rows=0`. **A governed field whose branch is
    closed exports blank**, as a skipped one does — the save rule
    (`spec/reviewer-surface.md` § "Branching between response fields")
@@ -425,7 +421,7 @@ suffix on every single-state extract, and emit twice on
 |---|---|
 | `ReviewerName` / `RevieweeName` | Roster name. |
 | `ReviewerEmail` / `RevieweeEmail` | Roster email / identifier. |
-| `Assigned{_self\|_noself}` | Number of response cells the entity is supposed to fill in (or have filled in about them), scoped to the in-scope instruments **AND** the chip's self-review filter. Counts at the (entity × field) cell level — see "Group-scoped semantics" below for the asymmetric dedupe rule. **A governed field counts the same whether its branch is open or closed** (`guide/advanced_instruments.md` Item 1): the denominator can't tell "not applicable" (the branch never opened) from "skipped" (it did, and the reviewer left it blank), and there is no separate marker for either. |
+| `Assigned{_self\|_noself}` | Number of response cells the entity is supposed to fill in (or have filled in about them), scoped to the in-scope instruments **AND** the chip's self-review filter. Counts at the (entity × field) cell level — see "Group-scoped semantics" below for the asymmetric dedupe rule. **A governed field counts the same whether its branch is open or closed** (`spec/instruments.md` § "Branching between response fields"): the denominator can't tell "not applicable" (the branch never opened) from "skipped" (it did, and the reviewer left it blank), and there is no separate marker for either. |
 | `Count{_self\|_noself}` | Number of those cells with a non-empty response. |
 
 On `?self_review_handling=both` the two aggregate columns
@@ -619,8 +615,8 @@ Self-review handling chip, separated by vertical pipes (`|`):
    of option labels), and numeric fields with a finite,
    small (≤12) discrete-value set additionally carry
    `data-shaper-field-discrete-steps` (CSV of step values
-   pre-computed server-side by
-   `_discrete_steps_values(field)` in the route).
+   pre-computed server-side by `discrete_step_values(field)`
+   in `app/services/extracts/data_shape_extract.py`).
 
    The group's leading `|` and the chips themselves render
    only when an instrument is selected — no orphan pipe
@@ -666,7 +662,7 @@ means for the CSV.
 | `Length` | `{axis}:length` | String fields. Marked `data-shaper-relevant-for="string"` — sums character count across non-empty responses. |
 | `|` (trailing pipe) | — (marker `data-shaper-relevant-for="list-or-discrete"`) | Single pipe shared by the two fan-out chips below. Shows iff `List items` or `Discrete steps` will render. |
 | `List items` | `{axis}:list-items` (marker `data-shaper-relevant-for="list-items"`) | List fields with a non-empty options CSV. Selecting the single `List items` chip emits **one preview-row column per list option** (the JS reads the active field chip's `data-shaper-field-list-options` CSV at render time). Same fan-out shape as `Discrete steps`. |
-| `Discrete steps` | `{axis}:discrete-steps` (marker `data-shaper-relevant-for="discrete-steps"`) | Numeric fields with ≤12 discrete values (i.e. `min`, `max`, `step` defined and `(max - min) / step + 1 ≤ 12`). Selecting the single `Discrete steps` chip emits **one preview-row column per step value** (e.g. an Integer 1..5/step 1 yields columns `1` `2` `3` `4` `5`). Step values are read at render time from the active field chip's `data-shaper-field-discrete-steps` CSV. |
+| `Discrete steps` | `{axis}:discrete-steps` (marker `data-shaper-relevant-for="discrete-steps"`) | Numeric fields with ≤12 discrete values (i.e. `min` and `max` defined, a positive `step` — an Integer field with no step counts as step 1 — and `(max - min) / step + 1 ≤ 12`). Selecting the single `Discrete steps` chip emits **one preview-row column per step value** (e.g. an Integer 1..5/step 1 yields columns `1` `2` `3` `4` `5`). Step values are read at render time from the active field chip's `data-shaper-field-discrete-steps` CSV. |
 
 All field-scoped aggregates hide entirely until a response
 field is selected (without one there's no value vector to
@@ -689,7 +685,7 @@ prefix elided):
 
 Below the two chip rows, a `<div data-shaper-stack>` holds
 a stack of **Data shape sub-cards**. One sub-card per
-shape; the operator can add more via the `+` icon on any
+shape; the operator can add more via the `+Shape` button on any
 existing card.
 
 Each sub-card carries:
@@ -923,7 +919,7 @@ Columns:
 | `updated_at` | timestamp (bumps on PATCH) |
 
 The same columns drive both the persisted-shape rebuild
-(when an operator clicks `✎` to re-edit) and the
+(when an operator clicks `Edit` to re-edit) and the
 file-generation pipeline.
 
 #### Routes
@@ -933,8 +929,8 @@ shape; there's no inline / ephemeral download URL.
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/operator/sessions/{id}/extract-data/shapes` | Create a new shape from the current chip state. Body: `name`, `axis`, `instrument_id`, `response_field_id`, `column_chip_slots`. Returns the new `shape_id`. Validation errors (empty name, name conflict, empty column chips) return 422 with an inline error. |
-| `PATCH` | `/operator/sessions/{id}/extract-data/shapes/{shape_id}` | Update an existing shape. Same body shape as POST; renaming clashes with another shape on the session ⇒ 422. |
+| `POST` | `/operator/sessions/{id}/extract-data/shapes` | Create a new shape from the current chip state. JSON body: `name`, `axis`, `instrument_id`, `response_field_id`, `column_chip_slots`, `self_review_handling`, `include_empty_rows`. Returns **201** with the saved row's columns (`id` included) plus its preview `column_headers` / `column_aggregates`. Validation errors (empty name, name conflict, empty column chips) return 422 with an inline error. |
+| `PATCH` | `/operator/sessions/{id}/extract-data/shapes/{shape_id}` | Update an existing shape. Same body as POST; returns 200 with the same response. Renaming onto another shape's name ⇒ 422; a shape id from another session ⇒ 404. |
 | `DELETE` | `/operator/sessions/{id}/extract-data/shapes/{shape_id}` | Delete a shape. Idempotent — re-delete returns 204. |
 | `GET` | `/operator/sessions/{id}/extract-data/shapes/{shape_id}/download.csv` | Stream the shape's CSV. Backs the `Download` button on each saved sub-card. |
 
@@ -968,7 +964,7 @@ Four event types are registered in `EVENT_SCHEMAS`:
 
 #### Validation rules
 
-* **Column chips required.** Save (the `✓` icon) stays
+* **Column chips required.** `Save` stays
   `disabled` until at least one `data-shaper-col-chip`
   on the active shape is `aria-pressed="true"`.
 * **Name required and unique per session.** The name
@@ -983,16 +979,16 @@ Four event types are registered in `EVENT_SCHEMAS`:
 
 #### Edit-icon behaviour
 
-Clicking `✎` on a saved sub-card:
+Clicking `Edit` (a text button, like the rest of the sub-card's
+action row) on a saved sub-card:
 
 1. **Closes any other open sub-card.** Only one sub-card
    can be in edit mode at a time. If another sub-card was
    already in edit mode and has unsaved chip changes, the
    server-side state stays the way it is and the
    client-side chip selection silently switches — the
-   transient unsaved selection is discarded. (Forcing a
-   save / discard prompt is more friction than the
-   placeholder-slice operator needs.)
+   transient unsaved selection is discarded, with no
+   save / discard prompt.
 2. **Restores the saved shape's chip state** into the
    scope row + content row by walking the row's `axis` →
    `instrument_id` → `response_field_id` → `column_chip_slots`
@@ -1000,7 +996,7 @@ Clicking `✎` on a saved sub-card:
 3. **Flips the sub-card's visual state** to "selected"
    via a `data-shape-selected` attribute the CSS gates on
    (see "Selected-sub-card visual cue" below).
-4. The `+` icon also closes the currently-editing
+4. `+Shape` also closes the currently-editing
    sub-card before spawning a new blank one. The new
    sub-card becomes the new selected/editing target.
 
@@ -1095,9 +1091,7 @@ combined, header-excluded).
 output: same `ParticipantTokenizer` (env salt mixed with
 `session.created_at`), so a token here is byte-identical
 to the corresponding token in any Anonymized `by_instrument`
-download. Closes `guide/archive/observers_clean_up.md` item 15 (originally
-planned as a paste-a-token widget on the Observers Setup
-page).
+download.
 
 ## `Archive session` card
 
@@ -1130,9 +1124,10 @@ gate and skips a session that fails it.
 
 ## `Extract Setup` card
 
-Half-width card in the wrap-up grid's right column. Exports the
-round-trippable setup CSVs (`spec/csv_contracts.md` §2 and §6) for
-porting or archiving a session. Markup in
+Half-width card in the wrap-up grid's right column. Its contract —
+tiles, column layout, grey-out at zero, the setup-only Zip all and
+no lifecycle gate — is `spec/session_home.md` §2; the column shapes
+are `spec/csv_contracts.md` §2 and §6. Markup in
 `operator/partials/_extract_data_card.html`; rows built by
 `build_extract_data_context` (`app/web/views/_extract_data.py`).
 
@@ -1140,14 +1135,10 @@ porting or archiving a session. Markup in
 |---|---|
 | Heading | `Extract Setup` |
 | Body copy | "Download the setup CSVs for porting or archiving this session. Use the **Extract data** tab to download the reviewers' response data." |
-| Left column | `Reviewers`, `Reviewees` |
-| Right column | `Relationships`, `Observers` (only when `observers_enabled`), `Session settings`, `Zip all` |
 
-Each row is a title and a `Download` button (`.btn secondary`,
-with the `download` attribute). The four roster rows show their
-count in parentheses and **disable** at zero ("No reviewers to
-download yet" and so on); `Session settings` and `Zip all` are
-always live.
+Each row is a title and a `Download` button (`.btn secondary`, with
+the `download` attribute); a greyed roster row's tooltip reads "No
+reviewers to download yet" and so on.
 
 | Row | Route (`/operator/sessions/{id}/export/…`) | Filename | Audit event |
 |---|---|---|---|
@@ -1157,10 +1148,6 @@ always live.
 | Observers | `observers.csv` | `{code}_observers.csv` | `session.observers_extracted` |
 | Session settings | `settings.csv` | `{code}_settings.csv` | `session.settings_extracted` |
 | Zip all | `bundle.zip` | `{code}_setup.zip` | `session.setup_bundle_extracted` |
-
-`Zip all` carries the four setup CSVs, plus the Observers CSV when
-`observers_enabled`. **No lifecycle gate**: the card is live in every
-session state.
 
 ## Cross-cutting behaviours
 
@@ -1176,12 +1163,13 @@ The Data shaper is outside both (see its own cross-cutting
 behaviours).
 
 **Live button-href sync.** A single inline-JS module wires
-every chip on the page to two sync functions (one for the
-by-instrument card, one shared across the two metadata
-cards). On every toggle: the chip flips its visual state,
-the new state is persisted, and the affected card's `Zip
-all` button has its `href` rebuilt from the current chip
-selection. Right-click "Copy link" therefore yields a URL
+every chip on the four canned-lens cards to three sync
+functions (one for the by-instrument card, one shared across
+the two metadata cards, one for the intro card's `Zip all`,
+which carries the other cards' queries). On every toggle: the
+chip flips its visual state, the new state is persisted, and
+every card's download button has its `href` rebuilt from the
+current chip selection. Right-click "Copy link" therefore yields a URL
 that reflects the live chip configuration — useful for
 operators who want to script the download or paste it into
 a runbook.

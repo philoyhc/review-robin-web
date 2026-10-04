@@ -21,7 +21,9 @@ own the dispatch leg. The design record is
 ## 1. Placement and identity
 
 - **Setup-row tab**, last in the row after Instruments:
-  `[Reviewers][Reviewees][Relationships][Observers][Instruments][Email Template]`.
+  `[Reviewers][Reviewees][Relationships][Observers][Instruments][Email Template]`,
+  where Relationships and Observers render only when
+  `relationships_enabled` / `observers_enabled` is on.
   Tab label and breadcrumb leaf are both **Email Template**; the page
   `<title>` is `Email Template — {session name}`.
 - **The URL slug is `setup-invite`, not the page name.** It does not
@@ -74,8 +76,10 @@ it defaults to `invitation`; any value outside the three kinds is a
 
 **Left card — composer** (`.card.email-composer`, `<h2>` "*Kind*
 email"). One `<form id="setupinvite-form" method="post">` to
-`…/setup-invite`, carrying a hidden `template` and four fields in
-fixed order:
+`…/setup-invite`, carrying a hidden `template`, two read-only muted
+rows — **From:** "(your configured SMTP From email — see Settings)",
+linking to `/operator/settings?return_to=…`, and **To:** "(sent
+individually to each reviewer)" — and four fields in fixed order:
 
 | Field | Control | Notes |
 |---|---|---|
@@ -198,9 +202,7 @@ never an error — so a typo in an override cannot fail a send.
 | `$invite_url` | ✓ | ✓ | — | the reviewer's `/me/invite/{token}` URL; a fixed placeholder in previews |
 | `$submitted_at` | — | — | ✓ | latest `Response.submitted_at` for the reviewer in this session, `YYYY-MM-DD HH:MM` in the session's resolved zone (plus the zone token when `SHOW_ZONE_TOKEN` is on); `"(not yet submitted)"` when none (previews only, in practice) |
 
-**Defaults** (verbatim parameterisations of the pre-11E hard-coded
-strings, so a `NULL` column renders byte-identically to the old
-behaviour):
+**Defaults** (what a `NULL` column renders):
 
 - Invitation — subject `Invitation to review: $session_name`; body
   `You've been invited to review for: $session_name.` / `Open this
@@ -228,9 +230,9 @@ outbox row's `cc_emails` / `bcc_emails` unparsed.
 
 | Consumer | Uses | State |
 |---|---|---|
-| `invitations.send_invitation` / `send_reminder` | `render_invitation` / `render_reminder` + `cc_bcc_for` → an `EmailOutbox` row (`kind`, to / cc / bcc, merged `subject` + `body`) | **Wired, but nothing is transmitted.** The row is written `queued` and flipped to `sent` in the same transaction with no transport call — the dev-mode preview state described in `spec/rrw_functional_spec.md` §11.6. Lighting the `EmailTransport` is Segment 14B. |
+| `invitations.send_invitation` / `send_reminder` | `render_invitation` / `render_reminder` + `cc_bcc_for` → an `EmailOutbox` row (`kind`, to / cc / bcc, merged `subject` + `body`) | **Wired, but nothing is transmitted.** The row is written `queued` and flipped to `sent` in the same transaction with no transport call — the dev-mode preview state described in `spec/rrw_functional_spec.md` §11.6. No `EmailTransport` is wired. |
 | Invitations per-reviewer drill-in (`app/web/views/_previews.py`) | all three renderers, with a placeholder invite URL and the named reviewer | Wired. |
-| Reviewer submit (the responses-received confirmation) | `responses_received_enabled` + `render_responses_received` + `cc_bcc_for` → `invitations.queue_responses_received` | **Queued, and work in progress awaiting Azure.** A successful submit (`/me/sessions/{id}/submit`) writes one `responses_received` `EmailOutbox` row when the toggle is on, and nothing when it is off, the submit is blocked or it recorded no response (author's ruling, 2026-10-02). A reviewer has one queued confirmation: a second submit refreshes it (a read then a write, not a constraint). Queueing runs after the submit commits and never fails it. A recall, a reviewer's clear-all or an operator's Delete Data leaves a queued confirmation in place. The row stays `queued` — unlike invitations and reminders it is not flipped to `sent` — until a transport exists; what to send of it then is decided with the transport (`guide/post_azure_todo_checklist.md` item 9). |
+| Reviewer submit (the responses-received confirmation) | `responses_received_enabled` + `render_responses_received` + `cc_bcc_for` → `invitations.queue_responses_received` | **Queued, and work in progress awaiting Azure.** A successful submit (`/me/sessions/{id}/submit`) writes one `responses_received` `EmailOutbox` row when the toggle is on, and nothing when it is off, the submit is blocked or it recorded no response. A reviewer has one queued confirmation: a second submit refreshes it (a read then a write, not a constraint). Queueing runs after the submit commits and never fails it. A recall, a reviewer's clear-all or an operator's Delete Data leaves a queued confirmation in place. The row stays `queued` — unlike invitations and reminders it is not flipped to `sent` — until a transport exists; what to send of it then is decided with the transport (`guide/post_azure_todo_checklist.md` item 9). |
 | Settings CSV export / import, clone | the JSON wholesale (§8) | Wired. |
 
 ---
@@ -248,7 +250,8 @@ email_overrides.responses_received.enabled boolean  — the toggle
 
 e.g. `email_overrides.invitation.subject`, `email_overrides.reminder.bcc`.
 Export writes every one of the twelve string rows, blank cell when no
-override is set, and the `enabled` row as `TRUE` unless stored `False`.
+override is set, and the `enabled` row as lowercase `true` unless stored
+`False` (then `false`).
 Import (`session_config_io/_apply_email.py`) parses each row against
 `^email_overrides\.(\w+)\.(\w+)$`; a path that does not match, or a
 `<kind>_<slot>` that is not in `OVERRIDE_KEYS`, is a **parse error**
@@ -289,7 +292,7 @@ types are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
 
 ## 11. Tests
 
-- `tests/integration/test_email_template_editor.py` (17) — tab
+- `tests/integration/test_email_template_editor.py` — tab
   rendering and defaults, 404s on unknown kind / field, save persists
   + audits, no-change saves do not audit, blank clears an override,
   reset removes + audits, Reset control renders only for overridden

@@ -22,8 +22,8 @@ Cross-references:
   hold a family of related extracts), plus `zip_bundle.py` and
   `responses_import.py`, and the shared
   `__init__.py` (`stream_csv`, `filename`).
-- **`app/services/csv_imports.py`** — two roster importers
-  (Reviewers, Reviewees) + the shared parsing primitives.
+- **`app/services/csv_imports.py`** — three roster importers
+  (Reviewers, Reviewees, Observers) + the shared parsing primitives.
 - **`app/services/relationships.py`** — the Relationships
   importer.
 - **`app/services/session_config_io/`** —
@@ -31,8 +31,8 @@ Cross-references:
   round-trip). Split into `_serialize.py` (export) + `_apply.py`
   (import) + `_rows.py`, with `__init__.py` re-exporting the
   public surface.
-- **`spec/settings_inventory.md`** §10 — coverage table for the
-  five extracts.
+- **`spec/settings_inventory.md`** §10 — which CSV carries each
+  inventoried setting.
 
 ---
 
@@ -162,8 +162,9 @@ reviewee identifier.
 ### 2.4 Responses — `extracts/responses_extract.py`
 
 Analysis-facing per-session CSV — the consumer is an external
-analyst, not the app. No import counterpart (responses are
-reviewer-generated, not operator-uploaded).
+analyst. No operator-facing importer (responses are
+reviewer-generated); the one reader is Rehydrate, through
+`extracts/responses_import.py` (`spec/rehydrate.md`).
 
 The file has two parts:
 
@@ -173,7 +174,8 @@ The file has two parts:
    response field (a field dictionary). A blank row separates the
    preamble from the table. A session with no instruments emits
    no preamble and no gap.
-2. **Data table** — the 21-column wide format below.
+2. **Data table** — the 21-column long format below, one row per
+   answer.
 
 | Block | Columns |
 |---|---|
@@ -182,7 +184,7 @@ The file has two parts:
 | Instrument (2) | `InstrumentName` (the positional id `instrument_{n}` — the operator's typed name is not exported), `InstrumentShortLabel` |
 | Field context (3) | `FieldKey`, `FieldLabel`, `ResponseType` |
 | Value (1) | `Value` (empty cell ⇒ reviewer cleared the field) |
-| Self-review (1) | `SelfReview` — uppercase `TRUE` / `FALSE` per Excel idiom. Read from the assignment's stored `Assignment.is_self_review` column: on individual-scoped instruments a case-insensitive match of the reviewer's email against the reviewee's email-or-identifier (`FALSE` for a non-email identifier); on group-scoped instruments the whole-group rule (every member row of a group the reviewer belongs to on the session roster counts, even when a rule filtered out the reviewer's own row; findings B7). |
+| Self-review (1) | `SelfReview` — uppercase `TRUE` / `FALSE` per Excel idiom. Read from the assignment's stored `Assignment.is_self_review` column: on individual-scoped instruments a case-insensitive match of the reviewer's email against the reviewee's email-or-identifier (`FALSE` for a non-email identifier); on group-scoped instruments the whole-group rule (every member row of a group the reviewer belongs to on the session roster counts, even when a rule filtered out the reviewer's own row). |
 | Lifecycle (3) | `SavedAt`, `SubmittedAt`, `Version` |
 | Instrument flavour (1) | `InstrumentFlavour` — derived `per-reviewee` / `group-scoped`. **Appended last, not grouped with the other instrument columns**, so the preceding 20 column indices stay stable for analyst pipelines that read by position. |
 
@@ -201,9 +203,16 @@ reviewee.email_or_identifier, instrument.order, field.order)`, with
 
 ### 2.5 Audit events — `extracts/audit_events_extract.py`
 
-No operator-facing tile on the session pages; the route
-`GET /export/audit_log.csv` is reached from the Sys Admin page's
-per-session Diagnostics row.
+No tile on the session pages. `GET /export/audit_log.csv` is
+sys-admin only (`require_sys_admin`) and is reached from the
+`Download CSV` button on the Sys Admin per-session audit-log page
+(`/operator/sys-admin/sessions/{id}/audit-log`, linked from the
+Sessions Diagnostics row). The button carries the page's filters —
+`event_type` and `severity` (repeatable), `actor`, `from`, `to` — so
+the file honors the page's active filter; with none the file holds
+the whole log, and a filter that does not parse is a 422. The
+`session.audit_log_extracted` event records the active filters in its
+`context`.
 
 | # | Column | Source | Notes |
 |---|---|---|---|
@@ -217,23 +226,6 @@ per-session Diagnostics row.
 
 **Row order:** `(created_at ASC, id ASC)`. **Streaming:**
 `yield_per(1000)`.
-
-### 2.6 Entity stats — retired
-
-A Reviewer stats file and a Reviewee stats file (draft / submitted
-response-activity counts per roster row) rode only in the Zip-all
-bundle. Findings D28 (2026-10-03) made that bundle a pass-through of
-the Extract data cards, which dropped them, and the serializer was
-retired. No other download carries their Draft / Submitted split. The number is
-kept so later sections keep theirs.
-
-### 2.7 Per-instrument responses — retired
-
-One long-format `{code}_instrument_{n}.csv` per instrument, a slice
-of §2.4's file, rode only in the Zip-all bundle until findings D28
-(2026-10-03); the serializer was then retired. The By instrument
-card's wide files are the per-instrument download. The number is
-kept so later sections keep theirs.
 
 ### 2.8 Reviewer session summary — `extracts/responses_extract.py` (`serialize_reviewer_session_summary`)
 
@@ -299,8 +291,10 @@ and `parse_reviewee_csv(content: bytes) -> ParseResult`.
 - Reviewees: `RevieweeName`, `RevieweeEmail`.
 
 Missing-required → `ParseResult` carrying one `ValidationIssue`
-per missing column, no rows. The route 303s back with a
-banner-error.
+per missing column, no rows. A blocked file saves nothing. The Setup
+page's upload re-renders the page at **400** with the issue list in
+the upload card; Quick Setup's slot 303s back to Session Home with
+`?quick_setup_error=…`.
 
 **Per-row validation** (every importer):
 
@@ -309,7 +303,7 @@ banner-error.
 | Required cell present | Empty `ReviewerName` / `ReviewerEmail` / `RevieweeName` / `RevieweeEmail` → per-row error. |
 | Email format | `_parse_email` rejects malformed strings on the email columns. Reviewees skip this check when the cell isn't an email (non-email identifier). |
 | Within-file duplicates | Same `ReviewerEmail` / `RevieweeEmail` twice → per-row error on the second occurrence. |
-| Cross-roster identity | `check_cross_table_identity` rejects a row whose email is already held in **another roster under a different name**. Same email + same name is allowed and common — one person is often both reviewer and reviewee, which is the self-review case. Three-way since 19Q Item 7: each roster is compared against the other two, observers included. |
+| Cross-roster identity | `check_cross_table_identity` rejects a row whose email is already held in **another roster under a different name**. Same email + same name is allowed and common — one person is often both reviewer and reviewee, which is the self-review case. Three-way: each roster is compared against the other two, observers included. |
 
 **Optional columns:** any of `ReviewerTag1..3`, `RevieweeTag1..3`,
 `ProfileLink` may be absent. An absent column is `None` for every
@@ -355,7 +349,7 @@ carry a `.<label>` friendly-label suffix (§1a);
 |---|---|
 | Required cell present | Empty `ReviewerEmail` / `RevieweeEmail` → per-row error. |
 | FK resolution | `ReviewerEmail` not in session's reviewers → per-row error. Same for `RevieweeEmail`. |
-| Within-file duplicates | Same `(ReviewerEmail, RevieweeEmail)` pair twice → the second occurrence is rejected **when the first one parsed**. Detection is on the *resolved* pair, so two spellings of one address collide, and the error names the row the survivor is on. A first occurrence that fails a later check reserves nothing, so a valid second occurrence is kept instead of being reported as a duplicate of a row that never parsed (19S Item 4). |
+| Within-file duplicates | Same `(ReviewerEmail, RevieweeEmail)` pair twice → the second occurrence is rejected **when the first one parsed**. Detection is on the *resolved* pair, so two spellings of one address collide, and the error names the row the survivor is on. A first occurrence that fails a later check reserves nothing, so a valid second occurrence is kept instead of being reported as a duplicate of a row that never parsed. |
 | Status value | `Status` must be `active` or `inactive`, **case-insensitively and ignoring surrounding whitespace** (`  ACTIVE  ` is accepted); empty or absent defaults to `active`. |
 
 **A row yields at most one issue.** The checks run in the order of the
@@ -379,7 +373,7 @@ reviewee resolves and imports exactly as an active one does: the parser
 filters no status and all three callers pass the unfiltered rosters. The
 saved relationship's own `Status` comes from the CSV cell, never from
 the roster member's. Whether a pair naming a soft-deleted member *should*
-import is an open product question (19S Item 4 row 7), not a documented
+import is an open product question, not a documented
 intent.
 
 **Save:** `save_relationships(db, *, session, user, rows, filename,
@@ -407,7 +401,7 @@ both round-trip.
 | Required cell present | Empty `ObserverEmail` → per-row error. |
 | Email format | `_parse_email` rejects malformed strings. |
 | Within-file duplicates | Same `ObserverEmail` twice → second occurrence rejected. |
-| Cross-roster identity | As §3.1 — `check_cross_table_identity` with `kind="observers"`, against the reviewer and reviewee rosters. A row with no `ObserverName` is skipped: `Observer.display_name` is nullable and its column optional, and a missing name is not a different one. **This importer did not call the check before 19Q Item 7**, on the reasoning that a person can be both an observer and a reviewer by design — true, and never an argument for the exclusion, since the check has always permitted one person in two roles and blocks only two names on one mailbox. |
+| Cross-roster identity | As §3.1 — `check_cross_table_identity` with `kind="observers"`, against the reviewer and reviewee rosters. A row with no `ObserverName` is skipped: `Observer.display_name` is nullable and its column optional, and a missing name is not a different one. One person may be an observer and a reviewer; the check blocks only two names on one mailbox. |
 | `Status` value | Blank/absent → `active`; `active` / `inactive` only, else per-row error. |
 | `CohortRule` shape | Non-blank cell must be valid JSON **and** pass `CohortRuleSet.model_validate` → per-row error otherwise. Blank cell → `cohort_rule = NULL`. |
 
@@ -496,30 +490,23 @@ the end of its own run. **A third caller that does not commit
 reproduces the defect silently**, which is why the requirement is
 stated here rather than left to the two call sites.
 
-It was a live defect until 2026-09-22 — every settings import through
-the shared helper returned success over work that was then discarded —
-and no test could see it: the integration fixture shares a transaction
-with the app, so a flushed row reads exactly like a committed one, and
-a commit releasing a savepoint fires no `after_commit`. The test that
-does see it spies on `Session.commit` as a **class** attribute.
+The integration fixture shares a transaction with the app, so a
+flushed row reads exactly like a committed one and a commit releasing
+a savepoint fires no `after_commit`; the test that pins the commit
+spies on `Session.commit` as a **class** attribute.
 
 #### Settings CSV — apply precedence
 
-**Written down 2026-09-22** (19S Item 6); before that the rule lived
-only in `app/services/session_config_io/_apply_session.py` and a
-`grep` for *precedence* or *wins* over this file and
-`spec/settings_inventory.md` returned nothing.
-
-All 13 non-tag fields on the Create form also appear in this CSV
-(tags are the fourteenth, and the paragraph after next), and
+Every non-tag field on the Create form also appears in this CSV
+(tags follow below), and
 `POST /operator/sessions` always applies the bundle *after* creating
 the session, so the file runs last. `_apply_session_metadata` then
 resolves each field by one of **two rules** — *fill-blanks* for
 operator-typed identity (`name`, `code`, `description`, `deadline`,
 `help_contact`), where the form wins **only where it was filled in**;
-and *force-apply* for the twelve config keys it writes
+and *force-apply* for every other config key it writes
 (timezone, the schedule anchors and offsets, the two UI toggles and
-four the form does not carry), where the CSV wins. `assignment_mode`
+the keys the form does not carry), where the CSV wins. `assignment_mode`
 and `status` are a third case, **defensively ignored on import** as
 machine-derived. `spec/settings_inventory.md` §10 carries the field
 lists.
@@ -540,8 +527,8 @@ plainly:
 - a bundle carrying **no** `session_tags[]` rows is indistinguishable
   from one asking for none, so it **clears** the session's tags; and
 - the applier is shared with `POST /sessions/{id}/import-config` on an
-  *existing* session, where that wipe is the round-trip behavior 18P
-  PR D2 pinned.
+  *existing* session, where that wipe is the pinned round-trip
+  behavior.
 
 So the rule is delivered by **running the box's `set_tags` after the
 settings block**, not by narrowing the applier for one caller. An
@@ -560,17 +547,14 @@ Create is therefore immune to the wipe above; `import-config` on an
 existing session is **not**, and that remains an open hazard rather
 than a solved one.
 
-**Imported tags are normalized exactly as typed ones are** (19S Item 9,
-2026-09-23 — tags are lower case everywhere). Each `session_tags[]`
+**Imported tags are normalized exactly as typed ones are** — tags are
+lower case everywhere. Each `session_tags[]`
 value goes through `session_tags.normalize_tag`: lowercased, trimmed,
 and two spellings of one tag collapse to one row. A blank or
 whitespace-only value is skipped; one longer than the 64-character
 column is a **parse error**, so the whole bundle is refused with a
-message rather than reaching the insert raw. Before this, `Pilot` was
-stored as written while every typed surface lowercased — and the
-lobby's remove, which normalizes what it is asked for, could not delete
-it. **Rows already stored with capitals are not migrated** (author's
-ruling): they stay until something rewrites them, and saving Session
+message rather than reaching the insert raw. **Rows already stored
+with capitals are not migrated**: they stay until something rewrites them, and saving Session
 Home's details card is one such thing, since its Tags field writes
 through `set_tags`.
 
@@ -581,8 +565,7 @@ force-applies the same datetimes unchecked, and no Validate rule
 covers ordering — so a hand-edited bundle can write a set the
 interactive form would reject. Every consumer guards itself:
 `is_response_release_window_open` returns `False` unless the session
-`is_expired` **whatever the anchors say** (19F PR 2a, added for this
-class), a `responses_release_until` before its anchor leaves the
+`is_expired` **whatever the anchors say**, a `responses_release_until` before its anchor leaves the
 window permanently shut rather than early-open, scheduled activation
 fires only from `validated` and otherwise takes a one-shot audited
 skip, and past-deadline reminders are skipped with an audit event. The
@@ -600,16 +583,12 @@ boundary.
   Dropping the tolerance would make every older bundle fail to import
   for a row that carries nothing.
 - **A retired `rtds[…]` row is silently ignored on import, and that is
-  unconditional.** The per-session response-type table went in
-  2026-05-26 and the export has emitted no `rtds[` row since, but a
-  bundle taken before then still carries them. There is no branch for
-  these keys and none is needed: they land on the same unknown-key
-  ignore as any other unrecognised path, so such a bundle imports with
-  the rows dropped rather than failing. Stated on its own because the
-  guarantee is the import's, not an aside of the friendly-labels rule
-  that happens to cite it.
-- **A default sort and column widths travel by field position**
-  (findings A28, 2026-10-03). `Instrument.sort_display_fields` and
+  unconditional.** The per-session response-type table is gone and the
+  export emits no `rtds[` row, but an older bundle may carry them. They
+  land on the same unknown-key ignore as any other unrecognized path,
+  so such a bundle imports with the rows dropped rather than failing.
+- **A default sort and column widths travel by field position.**
+  `Instrument.sort_display_fields` and
   `column_widths` name fields by id, and an import creates new ones, so
   the export writes positions instead: a sort entry's
   `display_field_id` becomes `display_field`, the 1-based `m` of the
@@ -626,7 +605,7 @@ boundary.
   session's fields, and a second sort entry naming a field, or the Group
   sentinel, already named.
 - **A retired `instruments[n].responses_visible_when_closed` row is
-  accepted and dropped** (findings B21, 2026-10-03). The column is
+  accepted and dropped.** The column is
   gone and the export no longer writes the row; an older bundle that
   carries it imports without it.
 - **A retired `instruments[n].view_policies[…].observer_tag` row is
@@ -648,15 +627,15 @@ boundary.
   always restored empty. The column stays in the schema as dead data;
   the import tolerance is what keeps an older bundle importable.
 
-**Response-field branching** (`guide/advanced_instruments.md` Item 1;
-19T Item 10) adds four `instruments[n].response_fields[m]` attributes:
+**Response-field branching** adds four
+`instruments[n].response_fields[m]` attributes:
 
 | Attribute | Carries | On |
 |---|---|---|
 | `branch_parent` | the parent field's `field_key` within the same instrument — ids don't survive an export | a governed field |
-| `branch_op` | the condition operator token: `eq` / `ne` / `gt` / `ge` / `lt` / `le` (Integer / Decimal, one box) or `is` / `is_not` (List); or, a range (19T Item 12), one of the four tokens `in_inc` / `in_exc` / `out_inc` / `out_exc` | the parent |
+| `branch_op` | the condition operator token: `eq` / `ne` / `gt` / `ge` / `lt` / `le` (Integer / Decimal, one box) or `is` / `is_not` (List); or, for a range, one of the four tokens `in_inc` / `in_exc` / `out_inc` / `out_exc` | the parent |
 | `branch_value` | the condition's number, List options comma-separated, or — for a range token — `low to high` | the parent |
-| `branch_mode` | what the condition does: `require` (the governed fields are required while it holds, else optional), or blank or `show` (Item 10's kind; exported blank). `show` reads exactly as blank, anywhere. Any other value is refused by name; `require` on a field with no branch is an orphan, refused as a lone `branch_value` is | the parent |
+| `branch_mode` | what the condition does: `require` (the governed fields are required while it holds, else optional), or blank or `show` (the governed fields show only while it holds; exported blank). `show` reads exactly as blank, anywhere. Any other value is refused by name; `require` on a field with no branch is an orphan, refused as a lone `branch_value` is | the parent |
 
 **A range's `branch_value`** is exactly two plain numbers joined by
 `" to "`, low strictly below high (`parse_range`,
@@ -686,7 +665,7 @@ never applied with the branch silently dropped. A `branch_parent` may
 name a governed field, two levels deep at most; a third level is
 refused by name. **A required governed
 field needs an active required field outside any branch elsewhere in
-the instrument** (19T Item 11; a visible field under a `require`
+the instrument** (a visible field under a `require`
 parent counts as required governed) — refused by name otherwise, the
 same rule `branch_structure_errors` applies to Save. A lone `branch_value`
 with no operator and no governed field is refused the same way, rather
@@ -703,6 +682,7 @@ builder's Save does.
   the roster and the relationships — no operator-facing CSV
   importer.
 - **Responses.** Reviewer-generated; no operator-facing importer.
+  Rehydrate reads a responses extract back (§2.4).
 - **Audit events.** System-emitted; no importer.
 
 ---
@@ -790,7 +770,7 @@ shares. Public surface:
 | `_missing_columns_issues(fieldnames, required, source)` | Returns one `ValidationIssue` per missing required column. Called at parse time, before per-row iteration. |
 | `_cell(row, key)` | Stripped string read; returns `""` when key absent. |
 | `_none_if_blank(row, key)` | `None` when cell is empty / whitespace-only, else the stripped string. The canonical "optional cell" reader. |
-| `_parse_email(value, *, strict, source, row_number, field)` | Email validation with row-context error message. Used by the reviewer, reviewee and observer parsers on their `*Email` columns. **`strict` decides the non-email case**: reviewers and observers pass `strict=True`, so a cell that is not an address is rejected; reviewees pass `strict=False`, which accepts a cell with **no `@`** as an opaque identifier but still requires `EMAIL_RE` of anything containing one, so `foo@` is caught rather than imported. **Not** used by the Relationships importer, which performs no format validation at all: a malformed `ReviewerEmail` there fails FK resolution and is reported as *"Unknown reviewer"* rather than as a bad address (19S Item 4 row 10). |
+| `_parse_email(value, *, strict, source, row_number, field)` | Email validation with row-context error message. Used by the reviewer, reviewee and observer parsers on their `*Email` columns. **`strict` decides the non-email case**: reviewers and observers pass `strict=True`, so a cell that is not an address is rejected; reviewees pass `strict=False`, which accepts a cell with **no `@`** as an opaque identifier but still requires `EMAIL_RE` of anything containing one, so `foo@` is caught rather than imported. **Not** used by the Relationships importer, which performs no format validation at all: a malformed `ReviewerEmail` there fails FK resolution and is reported as *"Unknown reviewer"* rather than as a bad address. |
 | `check_cross_table_identity(db, *, session_id, rows, kind)` | Cross-roster guard for a parsed CSV — rejects a row whose email another roster already holds under a different name. `kind` is `"reviewers"` / `"reviewees"` / `"observers"`; anything else raises, rather than returning `[]` and reporting success for an import it never checked. |
 | `cross_table_identity_conflict(db, *, session_id, kind, identifier, name)` | The single-row form, for the create / edit services, so the rule has one home and every write path reaches it. Returns the `(roster label, name)` of a holder that disagrees, or `None`. **Any** disagreement is a conflict: a mailbox that already holds two names is not satisfied by matching one of them. |
 | `is_comparable_identity(identifier, name)` | Whether a pair can disagree with another at all — an identifier with no `@`, or a row with no name, cannot. One predicate for the importers, the services and the Validate rules. |
@@ -801,7 +781,7 @@ shares. Public surface:
 
 Three generic template sets an operator downloads **before any
 session exists**. The starter and demo sets carry the same four
-roster files and differ only in their rows; the full set (19T Item 4)
+roster files and differ only in their rows; the full set
 carries two of those four, at a realistic class size.
 
 Routes: `GET /templates/starter.zip`, `GET /templates/demo.zip`,
@@ -937,22 +917,24 @@ while creating the session.
 
 | Surface | Direction | Service | Spec |
 |---|---|---|---|
-| Extract Data card — Reviewers tile | Out | `serialize_reviewers` | `spec/session_home.md` §2 |
-| Extract Data — Reviewees tile | Out | `serialize_reviewees` | same |
-| Extract Data — Relationships tile | Out | `serialize_relationships` | same |
-| Extract Data — Responses tile | Out | `serialize_responses` | same |
-| Extract Data — Settings tile | Out | `serialize_session_config` (via `_session_config_csv`) | same |
-| Extract Setup — Zip all tile | Out | `build_setup_bundle` — a zip of the four setup CSVs above, plus `{code}_observers.csv` when `observers_enabled` (`GET /export/bundle.zip`, filename `{code}_setup.zip`) | same |
-| Extract data tab — Zip all button | Out | `build_responses_bundle` — always the unified Responses CSV; plus, for each intro chip that is on, the files that card's own button downloads under the same names and as the card is configured: the By-instrument CSVs (`?by_instrument=0` omits), the Reviewer and Reviewee metadata CSVs (`?reviewer_metadata=0` / `?reviewee_metadata=0`), every saved Data shape's CSV (`?data_shapes=0`) and, when `observers_enabled`, `{code}_participant_tokens.csv` (`?tokens=0`); each card's own query rides as `?{flag}.{param}` (`spec/extract_data.md`, Extract all data card) (`GET /export/responses_bundle.zip`, filename `{code}_responses.zip`) | `guide/archive/extract_data.md` |
+| Extract Setup card — Reviewers tile | Out | `serialize_reviewers` | `spec/session_home.md` §2 |
+| Extract Setup — Reviewees tile | Out | `serialize_reviewees` | same |
+| Extract Setup — Relationships tile | Out | `serialize_relationships` | same |
+| Extract Setup — Observers tile (when `observers_enabled`) | Out | `serialize_observers` | same |
+| Extract Setup — Settings tile | Out | `serialize_session_config` (via `_session_config_csv`) | same |
+| Extract Setup — Zip all tile | Out | `build_setup_bundle` — a zip of the Reviewers, Reviewees, Relationships and Settings CSVs, plus `{code}_observers.csv` when `observers_enabled` (`GET /export/bundle.zip`, filename `{code}_setup.zip`) | same |
+| Extract data tab — Zip all button | Out | `build_responses_bundle` — always the unified Responses CSV; plus, for each intro chip that is on, the files that card's own button downloads under the same names and as the card is configured: the By-instrument CSVs (`?by_instrument=0` omits), the Reviewer and Reviewee metadata CSVs (`?reviewer_metadata=0` / `?reviewee_metadata=0`), every saved Data shape's CSV (`?data_shapes=0`) and, when `observers_enabled`, `{code}_participant_tokens.csv` (`?tokens=0`); each card's own query rides as `?{flag}.{param}` (`spec/extract_data.md`, Extract all data card) (`GET /export/responses_bundle.zip`, filename `{code}_responses.zip`) | `spec/extract_data.md` |
 | Extract data tab — Data shaper Zip all button | Out | `build_data_shapes_bundle` — every saved Data shape's CSV, each named and built as its own Download (`GET /export/data_shapes_bundle.zip`, filename `{code}_data_shapes.zip`; 404 with no saved shape) | `spec/extract_data.md` |
-| Extract data tab — By-instrument Zip all button | Out | `build_by_instrument_bundle` — a zip of one wide-format CSV per instrument (`GET /export/by_instrument_bundle.zip`, filename `{code}_by_instrument.zip`; members named `{code}_by_instrument_{slug}.csv` where `{slug}` comes from the instrument's short label or the `Instrument_{session_seq}` fallback). Each member starts with a key/value meta block (instrument identity + per-response-field type/constraint rows + assignment count + pool / unit-of-review / self-review configuration) + blank row + wide data table (one row per assignment, columns = identity + tags + one per response field + SelfReview/SavedAt/SubmittedAt). | `guide/archive/extract_data.md` |
-| `GET /export/audit_log.csv` | Out | `serialize_audit_events` | Sys Admin → Sessions Diagnostics per-row "Audit log" link |
+| Extract data tab — By-instrument Zip all button | Out | `build_by_instrument_bundle` — a zip of one wide-format CSV per instrument (`GET /export/by_instrument_bundle.zip`, filename `{code}_by_instrument.zip`; members named `{code}_by_instrument_{slug}.csv` where `{slug}` comes from the instrument's short label or the `Instrument_{session_seq}` fallback). Each member starts with a key/value meta block (instrument identity + per-response-field type/constraint rows + assignment count + pool / unit-of-review / self-review configuration) + blank row + wide data table (one row per assignment, columns = identity + tags + one per response field + SelfReview/SavedAt/SubmittedAt). | `spec/extract_data.md` |
+| `GET /export/responses.csv` | Out | `serialize_responses` — no tile links it; the same file rides in the Extract data tab's Zip all | §2.4 |
+| Sys Admin per-session audit-log page — Download CSV | Out | `serialize_audit_events` (`GET /export/audit_log.csv`) | §2.5 |
 | Reviewer summary — "Download my responses (CSV)" | Out | `serialize_reviewer_session_summary` (`GET /me/sessions/{id}/summary.csv`) | `spec/reviewer-surface.md` "Per-session summary" |
 | Reviewers Setup page — Upload CSV | In | `parse_reviewer_csv` + `save_reviewers` | `spec/setup_pages.md` |
 | Reviewees Setup page — Upload CSV | In | `parse_reviewee_csv` + `save_reviewees` | same |
 | Relationships Setup page — Upload CSV | In | `parse_relationship_csv` + `save_relationships` | same |
-| Quick Setup Slot 1–3 (Reviewers / Reviewees / Relationships) | In | same as per-page Upload — Quick Setup is a thin shell over the per-entity primitives | `spec/quick_setup_card_spec.md` |
-| Quick Setup Slot 4 (Settings) | In | `apply_session_config` | same |
+| Observers Setup page — Upload CSV | In | `parse_observer_csv` + `save_observers` | same |
+| Quick Setup Reviewers / Reviewees / Relationships slots, and Observers when `observers_enabled` | In | same as per-page Upload — Quick Setup is a thin shell over the per-entity primitives | `spec/quick_setup_card_spec.md` |
+| Quick Setup Settings slot | In | `apply_session_config` | same |
 | Guide + lobby first-run card — Download setup templates | Out | `build_zip(starter)` — a zip of four generic roster templates, headers derived from the extracts' `HEADER` tuples, one row each (`GET /templates/starter.zip`). Session-independent; see §5a. | §5a |
 | Guide "Sample session" card — Download sample session data | Out | `build_zip(demo)` — the same four files populated with a two-group cohort (`GET /templates/demo.zip`). Reaches `validated` through Quick Setup with no configuration; see §5a. | §5a |
 | Guide "Sample session" card — Download the full-size sample rosters | Out | `build_zip(full)` — `reviewers.csv` and `reviewees.csv`, the same 154 people in each, tagged Tutor / Group / Team (`GET /templates/full.zip`, filename `review-robin-sample-rosters-154.zip`). No relationships, observers or settings file; see §5a. | §5a |
@@ -974,7 +956,7 @@ while creating the session.
    audit; replace is cleaner and matches the operator's mental
    model ("re-upload the file = re-set the state").
 
-   **A roster replace destroys more than the roster** (19O Item 5).
+   **A roster replace destroys more than the roster.**
    `relationships` holds `ondelete="CASCADE"` foreign keys to both
    rosters, so re-uploading Reviewers or Reviewees deletes every pair
    naming a removed row, alongside the assignments and responses that
