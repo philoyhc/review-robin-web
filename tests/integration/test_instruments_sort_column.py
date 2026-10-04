@@ -3,14 +3,13 @@ Segment 13B PR 2.
 
 Pins:
 
-- The Sort column header + per-row Sort cell render on the
-  per-instrument editing surface.
 - The bulk-save POST parses parallel
   ``sort_display_field_id`` + ``sort_dir`` arrays and persists
   via ``instruments.set_sort_display_fields``.
 - Validator rejections (over-cap / unknown direction /
-  duplicates) surface as a per-instrument banner via the
-  redirect. An id that is not this instrument's is dropped, not
+  misaligned arrays) redirect with ``sort_save_error`` and
+  ``sort_save_error_instrument_id`` query parameters, or answer 422
+  JSON on the consolidated save. An id that is not this instrument's is dropped, not
   rejected (findings A24).
 - Empty arrays clear the spec back to the unsorted default.
 
@@ -20,9 +19,6 @@ to the operator UI.
 """
 from __future__ import annotations
 
-import pytest
-
-import re
 from urllib.parse import parse_qs, urlparse
 
 from fastapi.testclient import TestClient
@@ -175,63 +171,6 @@ def _query_param(url: str, name: str) -> str | None:
     return values[0] if values else None
 
 
-# --- Render --------------------------------------------------------------
-
-
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — legacy Display Fields table retired with "
-    "the legacy card. Sort UI moved to the Band 2 preview header "
-    "badges in Wave 1 Gap 3 (PR #1396) — covered by other tests."
-)
-def test_display_fields_table_renders_sort_column(
-    db: Session, client: TestClient
-) -> None:
-    review_session = _make_session(client, db, code="dfsort-header")
-    _populate_rosters(client, review_session.id)
-    instrument = _instrument(db, review_session)
-    response = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
-        f"?editing={instrument.id}"
-    )
-    assert response.status_code == 200
-    body = response.text
-    # Header cell.
-    assert "<th>Sort</th>" in body
-    # At least one Sort button (locked rows still get one for
-    # editing-mode display).
-    assert 'class="sort-btn"' in body
-
-
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — legacy Display Fields table retired with "
-    "the legacy card. Sort UI moved to the Band 2 preview header "
-    "badges in Wave 1 Gap 3 (PR #1396) — covered by other tests."
-)
-def test_existing_sort_spec_renders_as_priority_badges(
-    db: Session, client: TestClient
-) -> None:
-    review_session = _make_session(client, db, code="dfsort-badge")
-    _populate_rosters(client, review_session.id)
-    instrument = _instrument(db, review_session)
-    f1, f2 = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
-    instrument.sort_display_fields = [
-        {"display_field_id": f1.id, "dir": "asc"},
-        {"display_field_id": f2.id, "dir": "desc"},
-    ]
-    db.commit()
-
-    response = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
-        f"?editing={instrument.id}"
-    )
-    body = response.text
-    # Priority + arrow badges.
-    assert "1↑" in body
-    assert "2↓" in body
-    # Hidden inputs in the slot for the existing spec.
-    assert 'name="sort_display_field_id"' in body
-
-
 # --- Bulk-save persistence -----------------------------------------------
 
 
@@ -377,37 +316,6 @@ def test_bulk_save_unknown_dir_redirects_with_banner(
     assert response.status_code == 303
     msg = _query_param(response.headers["location"], "sort_save_error") or ""
     assert "sideways" in msg or "not one of" in msg
-
-
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — legacy Display Fields table retired with "
-    "the legacy card. Sort UI moved to the Band 2 preview header "
-    "badges in Wave 1 Gap 3 (PR #1396) — covered by other tests."
-)
-def test_sort_error_banner_renders_on_redirect_target(
-    db: Session, client: TestClient
-) -> None:
-    """Following the redirect, the per-instrument card renders
-    the error banner anchored to the offending instrument."""
-    review_session = _make_session(client, db, code="dfsort-banner")
-    _populate_rosters(client, review_session.id)
-    instrument = _instrument(db, review_session)
-    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
-    form = _bulk_save_form(instrument)
-    form["sort_display_field_id"] = [str(f1.id)]
-    form["sort_dir"] = ["sideways"]
-    redirect = client.post(
-        f"/operator/sessions/{review_session.id}/instruments"
-        f"/{instrument.id}/fields/save",
-        data=form,
-        follow_redirects=False,
-    )
-    follow = client.get(redirect.headers["location"])
-    assert follow.status_code == 200
-    body = follow.text
-    # Banner with the error message rendered as banner-error.
-    assert "banner banner-error" in body
-    assert re.search(r"sideways|not one of", body)
 
 
 # ─────────────────────────────────────────────────────────────────

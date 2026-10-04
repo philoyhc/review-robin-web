@@ -13,7 +13,8 @@ Two test families:
 """
 from __future__ import annotations
 
-import pytest
+import re
+
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -154,20 +155,16 @@ def test_validate_page_skips_operations_gate_when_no_operations_issues(
     assert "operations gate" not in body
 
 
-@pytest.mark.skip(
-    reason="Wave 5 PR 5.3 — ``instruments.no_rule_pinned`` retired; the "
-    "test's setup no longer produces a single source split across two "
-    "gate sections. Anchor dedup logic still works."
-)
 def test_validate_page_per_source_anchor_uses_first_gate_only(
     client: TestClient, db: Session
 ) -> None:
     """When the ``instruments`` source has rules in both gates
-    (``no_fields`` in Setup, ``no_rule_pinned`` in Operations), the
-    page renders the source heading twice — once under each gate
-    — but the ``id="issue-source-instruments"`` anchor only
-    appears on the first (Setup gate) occurrence so the setup-
-    coverage matrix deep-link continues to work."""
+    (``no_fields`` in Setup, ``no_visible_response_fields`` in
+    Operations), the page renders the source heading twice — once
+    under each gate — but the ``id="issue-source-instruments"`` anchor
+    only appears on the first (Setup gate) occurrence, so the
+    setup-coverage matrix deep-link keeps working
+    (`spec/validate_page.md` §2.4)."""
     review_session = _make_session(client, db, code="gate-anchor")
     db.add(
         Reviewer(
@@ -183,19 +180,21 @@ def test_validate_page_per_source_anchor_uses_first_gate_only(
             email_or_identifier="carol@example.edu",
         )
     )
-    db.flush()
-    # Default instrument exists with no response fields → triggers
-    # instruments.no_fields (Setup). Without a rule_set_id pinned,
-    # instruments.no_rule_pinned (Operations) also fires.
     from app.services.instruments import ensure_default_instrument
 
-    ensure_default_instrument(db, review_session)
+    instrument = ensure_default_instrument(db, review_session)
+    # An instrument with no response fields fires both rules.
+    for field in list(instrument.response_fields):
+        db.delete(field)
     db.commit()
     body = client.get(
         f"/operator/sessions/{review_session.id}/validate"
     ).text
-    # Only one anchor id for the instruments source, even though the
-    # source <h3> appears in both gate sections.
+    # The instruments source heads a group in both gates...
+    assert 'id="gate-setup"' in body
+    assert 'id="gate-operations"' in body
+    assert len(re.findall(r"<h3[^>]*>\s*instruments\s*<span", body)) == 2
+    # ...and carries the anchor id once.
     assert body.count('id="issue-source-instruments"') == 1
 
 
