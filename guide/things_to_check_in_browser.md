@@ -231,8 +231,8 @@ when it is checked; sections with unticked rows sit above the ticked ones.
 - [ ] **The errors are listed.** On a draft session, upload a Settings
   CSV with an instrument row but no `instruments[1].name` through Quick
   Setup's Settings slot. The banner reads "Could not import session
-  settings." and lists the error underneath (`Row …, instruments[1].name:
-  …`). With seven bad instruments it lists five and "…and 2 more."
+  settings." and lists the error underneath (`instruments[1].name: name is
+  required`). With seven bad instruments it lists five and "…and 2 more."
 
 ## A step on a fixed-value field is refused (A6)
 

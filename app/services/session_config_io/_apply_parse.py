@@ -10,7 +10,7 @@ from ._apply_data_shape import _apply_data_shape_kv
 from ._apply_email import _apply_email_kv
 from ._apply_instrument import _apply_instrument_kv
 from ._apply_rule_set import _apply_rule_set_kv
-from ._apply_session import _apply_session_kv
+from ._apply_session import SESSION_FALLBACK_KEYS, _apply_session_kv
 from ._apply_session_tag import _apply_session_tag_kv
 from ._apply_shared import (
     _VALID_DATA_TYPES,
@@ -147,7 +147,12 @@ def _length_errors(plan: _ParsedConfig) -> list[ApplyError]:
                 _column_length(model, f.name),
             )
 
+    # The fallback keys land only where the destination is blank, which
+    # phase 1 cannot see; ``session_fallback_length_errors`` checks them
+    # against the destination.
     for key, value in plan.session_overrides.items():
+        if key in SESSION_FALLBACK_KEYS:
+            continue
         check(f"session.{key}", value, _column_length(ReviewSession, key))
     for n, instrument in sorted(plan.instruments.items()):
         check_spec(f"instruments[{n}]", instrument, Instrument)
@@ -166,7 +171,47 @@ def _length_errors(plan: _ParsedConfig) -> list[ApplyError]:
     for n, rule_set in sorted(plan.session_rule_sets.items()):
         check_spec(f"session_rule_sets[{n}]", rule_set, SessionRuleSet)
     for n, shape in sorted(plan.data_shapes.items()):
-        check_spec(f"data_shapes[{n}]", shape, DataShape)
+        # Only the shapes phase 2 writes, as for the duplicate-name
+        # rule; ``self_review_handling`` is coerced to a known value
+        # there, so its raw length never reaches the column.
+        if not shape.name or shape.axis not in ("reviewer", "reviewee"):
+            continue
+        check(f"data_shapes[{n}].name", shape.name, _column_length(DataShape, "name"))
+        for f in _fields(shape):
+            if f.name in ("name", "self_review_handling"):
+                continue
+            check(
+                f"data_shapes[{n}].{f.name}",
+                getattr(shape, f.name),
+                _column_length(DataShape, f.name),
+            )
+    return errors
+
+
+def session_fallback_length_errors(
+    plan: _ParsedConfig, review_session: object
+) -> list[ApplyError]:
+    """The length check for the ``session.*`` fallback keys, which land
+    only where ``review_session``'s value is blank. A long value the
+    destination ignores is not an error."""
+    from app.db.models import ReviewSession
+
+    errors: list[ApplyError] = []
+    for key in SESSION_FALLBACK_KEYS:
+        value = plan.session_overrides.get(key)
+        if not isinstance(value, str):
+            continue
+        if getattr(review_session, key, None) not in (None, ""):
+            continue
+        limit = _column_length(ReviewSession, key)
+        if limit is not None and len(value) > limit:
+            errors.append(
+                ApplyError(
+                    row_number=0,
+                    field=f"session.{key}",
+                    message=f"{len(value)} characters; at most {limit} fit",
+                )
+            )
     return errors
 
 

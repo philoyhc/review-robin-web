@@ -33,7 +33,7 @@ from ._apply_instrument import (
     _apply_instruments,
     _wipe_instruments_and_dependents,
 )
-from ._apply_parse import ApplyError, _parse_rows
+from ._apply_parse import ApplyError, _parse_rows, session_fallback_length_errors
 from ._apply_rule_set import _apply_session_rule_sets
 from ._apply_session import _apply_session_metadata
 from ._apply_session_tag import _apply_session_tags
@@ -81,6 +81,7 @@ def apply_session_config(
     on validation failure (apply is not attempted)."""
 
     plan, errors = _parse_rows(rows)
+    errors += session_fallback_length_errors(plan, review_session)
     if errors:
         return ApplyResult(counts={}, errors=errors)
 

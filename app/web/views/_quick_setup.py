@@ -279,9 +279,14 @@ def build_quick_setup_context(
             coming_in=None,
             error_message=_error_for("settings"),
             error_details=(
-                # The lines arrive in the URL, so only as many as the
-                # route sends are shown, whatever the query holds.
-                tuple(error_details)[: SETTINGS_ERROR_DETAIL_LIMIT + 1]
+                # The lines arrive in the URL, so no more and no longer
+                # than the route sends are shown, whatever it holds.
+                tuple(
+                    _clip(line)
+                    for line in tuple(error_details)[
+                        : SETTINGS_ERROR_DETAIL_LIMIT + 1
+                    ]
+                )
                 if error_kind == "settings"
                 else ()
             ),
@@ -333,11 +338,20 @@ def build_quick_setup_context(
     )
 
 
-#: How many Settings CSV errors travel back in the redirect, and how
-#: long each may be: the list rides the URL, so it is capped rather
-#: than whole. A longer list ends with a count of the rest.
+#: How many Settings CSV errors travel back in the redirect, how long
+#: each may be, and how many URL-encoded bytes they may take together:
+#: the list rides the URL, so it is capped rather than whole (a value
+#: quoted in a message can be non-ASCII, nine encoded bytes a
+#: character). A longer list ends with a count of the rest.
 SETTINGS_ERROR_DETAIL_LIMIT = 5
 SETTINGS_ERROR_DETAIL_MAX_CHARS = 200
+SETTINGS_ERROR_DETAIL_MAX_BYTES = 2000
+
+
+def _clip(line: str) -> str:
+    if len(line) > SETTINGS_ERROR_DETAIL_MAX_CHARS:
+        return line[: SETTINGS_ERROR_DETAIL_MAX_CHARS - 1] + "…"
+    return line
 
 
 def settings_error_details(errors: list) -> list[str]:
@@ -345,16 +359,23 @@ def settings_error_details(errors: list) -> list[str]:
     lines the Settings slot's banner lists (findings D31): the row
     and field when the error has them, then the message."""
 
+    from urllib.parse import quote_plus
+
     lines: list[str] = []
+    spent = 0
     for error in errors[:SETTINGS_ERROR_DETAIL_LIMIT]:
         where = []
         if error.row_number:
             where.append(f"Row {error.row_number}")
         if error.field:
             where.append(error.field)
-        line = f"{', '.join(where)}: {error.message}" if where else error.message
-        if len(line) > SETTINGS_ERROR_DETAIL_MAX_CHARS:
-            line = line[: SETTINGS_ERROR_DETAIL_MAX_CHARS - 1] + "…"
+        line = _clip(
+            f"{', '.join(where)}: {error.message}" if where else error.message
+        )
+        cost = len(quote_plus(line))
+        if lines and spent + cost > SETTINGS_ERROR_DETAIL_MAX_BYTES:
+            break
+        spent += cost
         lines.append(line)
     hidden = len(errors) - len(lines)
     if hidden > 0:

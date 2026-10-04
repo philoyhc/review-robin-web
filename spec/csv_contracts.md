@@ -470,6 +470,9 @@ the round-trip notes below.
    than the column it lands in (a data-shape name or `field_key` over
    255 characters, a `short_label` over 32), read from each column's
    declared length; a session tag over 64 is refused by the tag rules.
+   Only values phase 2 writes are checked: a *fill-blanks* `session.*`
+   key (below) only where the destination is blank, and a data shape
+   only when it is written, as for the duplicate-name rule.
 2. **Phase 2 — Apply the typed plan.** Wipe-and-replace within
    the affected section (e.g. all instruments for a session, which
    also deletes every assignment and response in it).
@@ -986,9 +989,11 @@ while creating the session.
    fan-out").
 
 3. **Two-phase parse + apply (Settings).** Parse everything,
-   collect every error, then apply or rollback. The operator
-   sees the full validation report on a single submit rather
-   than playing whack-a-mole.
+   collect every error, then apply or rollback, so one submit
+   reports every error rather than playing whack-a-mole.
+   `ApplyResult.errors` carries the whole report; the Quick Setup
+   Settings slot shows its first five and a count of the rest
+   (`spec/quick_setup_card_spec.md`, "Result reporting").
 
 4. **Streaming where it matters.** Responses + audit-events
    extracts use `yield_per(1000)` cursor streaming. Other

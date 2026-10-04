@@ -221,3 +221,32 @@ def _exported_again(db: Session) -> list[Row]:
         select(ReviewSession).where(ReviewSession.code == "dup-src")
     ).one()
     return serialize_session_config(db, source)
+
+
+def test_only_values_phase_2_writes_are_length_checked(db: Session) -> None:
+    """The D32 check reads "the column it lands in" literally: a long
+    fill-blanks ``session.*`` value is an error only where the
+    destination is blank, and a data shape phase 2 skips (unknown axis)
+    or a ``self_review_handling`` it coerces is not checked."""
+    rows = _exported(db)
+    rows += [
+        Row("session.code", "c" * 65, "string"),
+        Row("session.description", "d" * 2001, "string"),
+        Row("data_shapes[1].name", "n" * 300, "string"),
+        Row("data_shapes[1].axis", "nowhere", "enum"),
+    ]
+    rows = [
+        row._replace(value="x" * 40)
+        if row.field == "data_shapes[0].self_review_handling"
+        else row
+        for row in rows
+    ]
+    destination = _session(db, code="fill-blanks")
+
+    result = apply_session_config(db, destination, rows)
+
+    # ``code`` is set on the destination, so the long one is ignored;
+    # ``description`` is blank there, so it would land and is refused.
+    assert [(e.field, e.message) for e in result.errors] == [
+        ("session.description", "2001 characters; at most 2000 fit")
+    ]
