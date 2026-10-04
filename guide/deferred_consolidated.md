@@ -1769,7 +1769,9 @@ negative low end (`-5 to -1`), can come back from Excel as an error value.
 Re-importing that bundle is then refused, loudly, naming the field.
 Branch operators are stored as tokens for this reason (19T Item 10). The
 general fix, a guard on write that the importer strips, would change
-`spec/csv_contracts.md` for every cell.
+`spec/csv_contracts.md` for every cell. Every extract, participant-typed
+answers included, is written verbatim the same way (findings D11,
+2026-10-03; `spec/csv_contracts.md` §2).
 
 **Lift trigger:** an operator reporting a bundle that broke in a
 spreadsheet round trip.

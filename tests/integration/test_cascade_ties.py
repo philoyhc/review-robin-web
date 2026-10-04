@@ -63,7 +63,7 @@ BASE = pathlib.Path(__file__).resolve().parents[2] / "app/web/templates/base.htm
 # be intentional and is not reported.
 CANONICAL = frozenset({
     # §6 buttons
-    "btn", "secondary", "alert", "alert-solid", "destructive",
+    "btn", "secondary", "alert", "destructive",
     "danger-solid", "danger", "btn-icon",
     # §10 primitives that live on an element rather than in a combinator
     "table-pager-step", "table-pager-cluster", "table-pager-menu",

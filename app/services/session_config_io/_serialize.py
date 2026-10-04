@@ -2,7 +2,7 @@
 
 Produces the deterministic ``list[Row]`` the Extract Data card
 streams at ``GET /operator/sessions/{id}/export/settings.csv``.
-Section ordering is pinned by the unit-test golden fixture.
+Section ordering is pinned by ``serialize_session_config``'s docstring.
 """
 
 from __future__ import annotations
@@ -59,8 +59,8 @@ def serialize_session_config(
     """Return every ``Row`` for the Settings CSV in deterministic
     order.
 
-    Section ordering (also pinned in the unit-test golden
-    fixture):
+    Section ordering (``test_section_ordering_is_deterministic``
+    pins re-export stability and the first three sections):
 
     1. Session-level rows (name → code → description →
        display_timezone → deadline → help_contact →

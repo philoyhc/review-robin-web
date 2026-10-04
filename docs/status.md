@@ -647,8 +647,7 @@ suite against a `postgres:16` service container).
   operator lands back on the same page. The session-detail lock
   card omits `return_to`. While locked, each page hides its own
   mutation affordances (upload cards, Danger Zone, per-instrument
-  Save button); `<input>` / `<select>` elements inside
-  `.field-builder` are disabled. See `spec/operator_ui_concept.md` for
+  Save button). See `spec/operator_ui_concept.md` for
   the per-page contract and `spec/domain_assumptions.md` for the markup.
 - Card-based layout, monospace tabular code spans, severity pills
   (`error` / `warning` / `info`) for validation issues. All inline

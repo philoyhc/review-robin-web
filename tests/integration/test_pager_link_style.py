@@ -121,8 +121,8 @@ def test_the_glyph_buttons_and_menu_rows_carry_no_link_underline(
     That rung took ``text-decoration: none`` **off** ``.table-pager-link``
     so a range would read as the link it was — correct, for inline prose
     in a strip. The cluster's cells are not that: the four steps are the
-    ``.btn-icon`` role, the same borderless glyph button as the
-    move-up / move-down arrows, and an underlined ``»`` reads as a typo;
+    ``.btn-icon`` role, a borderless glyph button, and an underlined
+    ``»`` reads as a typo;
     the menu's entries are rows in a panel, where underlining every one
     makes a list harder to scan rather than easier.
 

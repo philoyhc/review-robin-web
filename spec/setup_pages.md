@@ -451,8 +451,7 @@ one place.** A renamable column (a tag slot) goes through
 is a literal on every roster page, because `field_labels.upsert`
 refuses those slots — the built-in default is the only string either
 surface can render, and routing it through the resolver would suggest
-otherwise (Reviewees followed the resolver until findings C16,
-2026-10-03).
+otherwise.
 Observers is literals throughout: it has no labels editor at all.
 
 **Relationships lists its pair-context tags and nothing else**, and is

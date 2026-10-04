@@ -3,6 +3,7 @@
 The app's colour system is **two-tier**, defined in `app/web/templates/base.html`'s
 `:root` blocks. **Tier 1 primitives** hold the raw palette; **Tier 2 semantic**
 tokens name every role and are the *only* thing components and templates consume.
+The standalone `error.html` is the exception (`spec/ui_elements.md`, opening).
 
 **There is no flat colour-named token.** `--accent-blue`, `--bg-page` and their
 kind are not part of the model and must not be reintroduced: a name that says
@@ -22,7 +23,7 @@ Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
 (independent slots; marked `@coupled` for deliberate coupling; dark `:root`
 remaps semantics onto the one primitive palette) are in `guide/archive/semantic_tokens.md`.
 
-**80 primitives · 106 semantic tokens · 16 non-colour scale tokens.**
+**80 primitives · 103 semantic tokens · 14 non-colour scale tokens.**
 
 ---
 
@@ -149,7 +150,6 @@ resolved hex. `[P]` portable core · `[A]` app-specific.
 | `--text-body` | `--ink` | `--paper` | `#111827` | `#e6eaf2` |
 | `--text-subtle` | `--slate` | `--slate-pale` | `#616874` | `#a9b4c6` |
 | `--text-on-accent` | `--white` | `--ink` | `#ffffff` | `#111827` |
-| `--text-on-amber` | `--white` | `--ink` | `#ffffff` | `#111827` |
 | `--text-link` | `--blue-strong` | `--blue-glow-soft` | `#2563eb` | `#60a5fa` |
 | `--text-link-strong` | `--blue-deep` | `--blue-soft` | `#1d4ed8` | `#93c5fd` |
 
@@ -209,11 +209,7 @@ is darker than any `--surface-*` token and carries muted text on the
 Session Home anchor, so it — not `--surface-tint-5` — is the binding
 constraint on `--text-subtle`: **4.53:1** at the shipped value against
 5.11:1 on the worst surface. A sweep of the Text cluster against the
-Surfaces cluster never reads that pair at all. The worked case:
-`--slate` at `#667080` scores 4.56 on the worst surface and passes,
-while the Session Home anchor sits at **4.04** — only a pair sweep
-catches that. `#667080` is named here because it is the only way to
-check the 4.04; it maps to nothing.
+Surfaces cluster never reads that pair at all.
 
 **Decoration is outside the floor, and has its own token so that it
 stays outside.** WCAG 1.4.3 governs text; a 3px divider and the two
@@ -233,7 +229,7 @@ sub-AA pair fails the suite rather than joining a list**: the accepted
 set is closed, and reopening it is a decision, not a fix.
 
 **A label on a bright dark accent fill inverts rather than staying
-white.** `--text-on-amber` and `--btn-alert-fg` take `--white` in light
+white.** `--btn-alert-fg` takes `--white` in light
 and `--ink` in dark, because the dark alert fill is bright;
 `--btn-primary-fg`, `--selected-fg` and `--text-on-accent` follow the
 same rule for the same reason. White on `--blue-glow` reaches only
@@ -467,8 +463,6 @@ inheriting `--text-body`.
 |---|---|---|---|---|
 | `--selected-bg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
 | `--selected-fg` | `--white` | `--ink` | `#ffffff` | `#111827` |
-| `--icon-btn-action-fg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
-| `--icon-btn-danger-fg` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
 | `--focus-ring-strong` | `--blue-deep` | `--blue-soft` | `#1d4ed8` | `#93c5fd` |
 | `--row-pending-marker` | `--amber` | `--amber-deep-dk` | `#f59e0b` | `#b45309` |
 | `--chip-active-border` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
@@ -544,13 +538,13 @@ to a primitive.
 
 ---
 
-## Non-colour scale tokens (16)
+## Non-colour scale tokens (14)
 
 Theme-agnostic; not redefined per theme.
 
 **Type** — `--fs-tiny` 0.75rem · `--fs-small` 0.875rem · `--fs-body` 1rem · `--fs-h2` 1.125rem · `--fs-h1` 1.5rem.
 
-**Spacing** — `--space-1` 4px · `--space-2` 8px · `--space-3` 12px · `--space-4` 16px · `--space-6` 24px · `--space-8` 32px · `--space-12` 48px · `--space-16` 64px.
+**Spacing** — `--space-1` 4px · `--space-2` 8px · `--space-3` 12px · `--space-4` 16px · `--space-6` 24px · `--space-8` 32px.
 
 **Radius** — `--radius-button` 6px · `--radius-card` 8px · `--radius-pill` 9999px.
 
@@ -560,7 +554,7 @@ Theme-agnostic; not redefined per theme.
 
 - **Dark neutrals invert; accent fills stay hued, and their labels flip.** The
   accent fills remain blue and amber in dark rather than greying out; the
-  labels on them — `--text-on-accent`, `--text-on-amber`, `--btn-alert-fg`,
+  labels on them — `--text-on-accent`, `--btn-alert-fg`,
   `--btn-primary-fg`, `--selected-fg` — take `--ink` rather than `--white`,
   because the dark fills are bright. See **The AA floor on text** above.
 - **A token with no consumer is not kept.** When a rule's last consumer goes,

@@ -530,7 +530,7 @@ above it cover the common cases without configuration.
 The chip-driven UX, shape persistence (`data_shapes` table), the
 per-shape `Download` button (backed by
 `…/shapes/{id}/download.csv`) and the outer `Zip all` are the card's
-live surface. **Zip all** (findings D13, 2026-10-03) downloads
+live surface. **Zip all** downloads
 `{code}_data_shapes.zip`: every saved shape's file, named as its own
 `Download` names it (`{code}_{slug}{suffix}.csv`, with that shape's
 saved chips), ordered by name then id, and nothing else. A repeated

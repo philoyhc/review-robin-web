@@ -27,8 +27,8 @@ other AI coding agent working in this repository.
   per-row flag]). Ask first if a button
   doesn't cleanly fit one of those roles — don't invent a new one
   without confirmation. (The pre-19B six-name scheme — Primary Outline /
-  Alert Outline / Danger Outline — is superseded; `.alert-solid`
-  collapses to Primary and `.danger` is a context class.) This and the
+  Alert Outline / Danger Outline — is superseded, and `.danger` is a
+  context class.) This and the
   lifecycle display-label mapping are enforced by
   `tests/unit/test_doc_conventions.py`.
 - Do not implement Microsoft authentication in app code unless

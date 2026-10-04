@@ -47,9 +47,8 @@ POST /me/sessions/{session_id}/clear
 ```
 
 Recall is posted from the post-submit summary page (see "Per-session
-summary" below). Save is per page: the consolidated
-`POST /me/sessions/{session_id}/save` that nothing posted to was
-retired (findings A16, 2026-10-03).
+summary" below). Save is per page; there is no session-wide save
+route.
 
 `{page_n}` is the **1-indexed operator-defined page number** within the
 session. Pages are derived from `Instrument.starts_new_page`:
@@ -762,7 +761,7 @@ reviewer-surface specifics:
   columns render. When the group is a self-review group, a
   `.pill.pill-info` **Self review** follows on its own line: every
   member's assignment is flagged then, so the representative's flag
-  speaks for the group (findings G7, 2026-10-03).
+  speaks for the group.
 - **Fixed table layout.** The group table is `table-layout: fixed`
   (`table.rs-group-table`): the `Group` column is pinned to a
   third of the table width (`th.rs-group { width: 33% }`), and
@@ -855,8 +854,7 @@ GET requests behave differently depending on which gate fails:
   a bookmark; the dashboard lists it unlinked). The same template
   renders closed copy instead: "{session name} — closed" in the h1,
   a banner saying the review has closed and responses are no longer
-  accepted or shown, no deadline line, and the dashboard link
-  (findings A25, 2026-10-03).
+  accepted or shown, no deadline line, and the dashboard link.
 
 - **Session `ready`, response window closed**
   (`accepting_responses=false` on every instrument, because the

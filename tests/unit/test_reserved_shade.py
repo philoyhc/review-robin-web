@@ -63,20 +63,12 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #:   interactive, and ``is-disabled`` — the one inert variant — cancels
 #:   the edge rather than inheriting it.
 #:
-#: - ``.btn-icon.action`` — the blue "+add" icon button. In this set
-#:   since 19J.10 widened the filter past pills and chips: the class
-#:   now renders inert too (the pager's inactive steps), so it carries
-#:   the ambiguity the rule is about. The inert form takes
-#:   ``--text-subtle`` at 0.4 opacity and never the accent, which is
-#:   the vocabulary holding rather than an exception to it.
-#:
 #: A new entry means a new control surface, and belongs here only once
 #: someone has confirmed it is one. A static pill appearing in this set
 #: is the bug the file exists to catch.
 CONTROL_SELECTORS = {
     "body.ui-v2 .tag-chip.is-selected",
     "body.ui-v2 .severity-chip.active",
-    "body.ui-v2 .btn-icon.action",
     (
         "body.ui-v2 .tag-chip, body.ui-v2 .pill.pill-tag-clear, "
         "body.ui-v2 .pill.tag-mode-chip"

@@ -115,12 +115,11 @@ _BG_RE = re.compile(
 _RULE_RE = re.compile(r"([^{}]*)\{([^{}]*)\}")
 
 #: The fill each ``--text-on-*`` token belongs to. The one hand-kept entry
-#: in the gatherer, because these pairings are derivable no other way: the
-#: names do not match (``--text-on-amber`` / ``--btn-alert-bg``) and no
+#: in the gatherer, because this pairing is derivable no other way: the
+#: names do not match (``--text-on-accent`` / ``--btn-primary-bg``) and no
 #: single rule sets both halves.
 ON_FILL = {
     "--text-on-accent": "--btn-primary-bg",
-    "--text-on-amber": "--btn-alert-bg",
 }
 
 
@@ -408,7 +407,6 @@ def component_sections():
         <span class="tag-chip is-selected">Mentor</span>
         <span class="tag-chip">External</span>
       </div>
-      <p class="help-preview">A .help-preview block — the pre-wrapped help text shown under a response field.</p>
     </section>"""),
         ("text", f"""    <section class="ph-section">
       <h2 class="ph-h">Text &amp; links</h2>
@@ -498,7 +496,6 @@ def component_sections():
         <span class="pill pill-info">info</span>
         <span class="pill pill-success">success</span>
         <span class="pill pill-super">super</span>
-        <span class="pill pill-handle">HANDLE_ID</span>
       </div>
     </section>"""),
         ("banners", """    <section class="ph-section">
