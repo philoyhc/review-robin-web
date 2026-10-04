@@ -91,11 +91,11 @@ this entry. One code PR.
 
 ## ~~E3 — A comprehensive code-vs-spec sweep~~
 
-**Done in #2718.** All 68 files were read against the code in nine verify-mode reads, and no spec was edited. The record is `guide/sweep_2026-10-01_corpus.md`, and `--stale` now reads "not due". The 242 findings are in `guide/findings_2026-10-01_corpus.md`, with who decides each: the rulings needed first, then the code defects, then one line per file.
+**Done in #2718.** All 68 files were read against the code in nine verify-mode reads, and no spec was edited. The record is `guide/archive/sweep_2026-10-01_corpus.md`, and `--stale` now reads "not due". The 242 findings are in `guide/archive/findings_2026-10-01_corpus.md`, with who decides each: the rulings needed first, then the code defects, then one line per file.
 
 **Why now.** The corpus sweep is due by merges:
 `python3 tools/close_check.py --stale` reports 615 merges since the last
-one, against a trigger of 500 (`guide/sweep_2026-09-05_spec-docs.md`,
+one, against a trigger of 500 (`guide/archive/sweep_2026-09-05_spec-docs.md`,
 26 days of 56 elapsed). Since that sweep `app/` changed in 199 files
 (+26,808 / −6,550), and 19T rebuilt the Instruments page, the reviewer
 surface and the instrument model under `guide/advanced_instruments.md`.
@@ -157,7 +157,7 @@ instrument is counted rather than walked. Now 289 ms and 215 ms;
 
 **What is wrong.** The E3 sweep confirmed six places where the spec is
 right and the code is wrong, by reading the code at `68f28224`. They are
-listed in `guide/findings_2026-10-01_corpus.md` §2:
+listed in `guide/archive/findings_2026-10-01_corpus.md` §2:
 
 - **D17.** A Rehydrate whose `settings.csv` fails to apply builds its
   message by joining `ApplyError` dataclasses as strings, which raises a

@@ -11,7 +11,7 @@
 
 **Swept:** 2026-09-13 · **Scope:** one file, `spec/ui_elements.md` (949
 lines) · **Previous sweep:** `guide/archive/sweep_2026-09-10_rrw_functional_spec.md`
-(partial); last corpus sweep `guide/sweep_2026-09-05_spec-docs.md` ·
+(partial); last corpus sweep `guide/archive/sweep_2026-09-05_spec-docs.md` ·
 **Trigger:** not cadence — requested by the author after 19L.4's
 `spec-writer` pass surfaced three stale RTD references. *"Sweep
 ui_elements. RTD was a long time ago!"*

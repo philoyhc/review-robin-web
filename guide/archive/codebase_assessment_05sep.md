@@ -83,7 +83,7 @@ correctness, none of it product:
   warn-only `Status` check. `--archived` reports across the archive in ~3 s;
   `--stale` lists live docs by age and answers whether a sweep is due.
 - **The sweep cadence (#2112 → #2115)** — `guide/sweep_template.md` (179 lines)
-  and the first sweep under it, `guide/sweep_2026-09-05_spec-docs.md` (209
+  and the first sweep under it, `guide/archive/sweep_2026-09-05_spec-docs.md` (209
   lines), whose eight findings were then closed as 19C Item 7.
 - **The practice documents** — `rrw_sdd_in_practice.md`, `constitution.md`
   (six articles), `docs/practice-audit-2026-09-04.md` Appendix A, and the
@@ -196,7 +196,7 @@ pair the 19aug snapshot named and the 04sep one carried unchanged; they had been
 open since 2026-05-11.
 
 **Doc-drift work this window.** The first cadenced sweep ran
-(`guide/sweep_2026-09-05_spec-docs.md`), reading 13 of 64 in-scope live docs and
+(`guide/archive/sweep_2026-09-05_spec-docs.md`), reading 13 of 64 in-scope live docs and
 filing eight findings, all now closed — seven actioned, one declined with a
 reasoned waiver. The archive-wide honour rate measured by `close_check.py
 --archived` is **87 of 103 live committed paths (84%), 22 of 33 plans fully

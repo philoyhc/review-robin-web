@@ -129,7 +129,7 @@ def test_all_five_merge_fields_substitute() -> None:
 
 # ── Dates follow the session zone (spec/timezone_display.md) ─────────────
 # They rendered in UTC until 2026-10-01, so a 17:00 Singapore deadline
-# was mailed as 09:00 (guide/findings_2026-10-01_corpus.md C18 = D25).
+# was mailed as 09:00 (guide/archive/findings_2026-10-01_corpus.md C18 = D25).
 
 _NINE_UTC = datetime(2026, 6, 30, 9, 0, tzinfo=timezone.utc)
 

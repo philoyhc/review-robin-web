@@ -2121,7 +2121,7 @@ with `spec/color_tokens.md` authoritative for shipped identifiers: the
 customizer reads `base.html` directly, so a fourth copy of the names
 would have guaranteed the next drift. Landed on 19C rather than a new
 segment because 19C is deliberately open as a home for small
-refinements. Ledger: `guide/sweep_2026-09-05_spec-docs.md`.
+refinements. Ledger: `guide/archive/sweep_2026-09-05_spec-docs.md`.
 
 **Item 2 (Part 2) — the drift-sweep cadence — ✅ shipped 2026-09-05
 (PRs #2112 → #2115),** closing the segment. `guide/sweep_template.md`
@@ -2130,7 +2130,7 @@ by disposition, then every file read with no finding, then every in-scope
 file not read — and `tools/close_check.py --stale` answers whether one is
 due (8 weeks or 500 merges). The sketch's "every K segments" trigger did
 not survive measurement: plans are archived in batches, so K is noise.
-The first sweep (`guide/sweep_2026-09-05_spec-docs.md`, 13 of 64 files)
+The first sweep (`guide/archive/sweep_2026-09-05_spec-docs.md`, 13 of 64 files)
 validated the carry-forward section on its first run — of six notes the
 August sweep filed as non-actionable and nobody re-read, four are still
 true, one was wrong in the opposite direction, and one is worse than

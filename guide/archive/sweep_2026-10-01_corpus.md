@@ -2,7 +2,7 @@
 
 **Swept:** 2026-10-01 at `68f28224` · **Scope:** `spec/` + `docs/` + root
 practice docs (68 files) · **Previous sweep:**
-`guide/sweep_2026-09-05_spec-docs.md` · **Trigger:** due by merges, 618 of
+`guide/archive/sweep_2026-09-05_spec-docs.md` · **Trigger:** due by merges, 618 of
 500 in 26 days of 56 (`guide/post_assessment_1oct.md` E3).
 
 <!-- sweep-scope: corpus -->
@@ -10,7 +10,7 @@ practice docs (68 files) · **Previous sweep:**
 **Read in full, all 68.** Nine `spec-writer` reads ran in verify mode, split
 by area. Each read every file in its area against the code that file
 describes, and none edited a spec. **This sweep changed no file in scope.**
-Every divergence is recorded in `guide/findings_2026-10-01_corpus.md` with
+Every divergence is recorded in `guide/archive/findings_2026-10-01_corpus.md` with
 who decides it. The register is where to act from; this record says what
 was read and what was found, file by file.
 

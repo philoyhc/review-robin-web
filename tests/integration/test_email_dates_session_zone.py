@@ -3,7 +3,7 @@
 ``spec/timezone_display.md``: reviewer emails render ``$deadline`` and
 ``$submitted_at`` in the session's resolved zone — the session's own
 zone, else its creating operator's default, else UTC. They rendered in
-UTC until 2026-10-01 (``guide/findings_2026-10-01_corpus.md`` C18 =
+UTC until 2026-10-01 (``guide/archive/findings_2026-10-01_corpus.md`` C18 =
 D25). The unit tests pin the rule on stand-ins; this runs it on mapped
 rows, through the relationship the resolver walks.
 """

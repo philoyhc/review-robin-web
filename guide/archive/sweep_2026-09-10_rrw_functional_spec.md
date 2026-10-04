@@ -14,7 +14,7 @@
 
 **Swept:** 2026-09-10 · **Scope:** one file —
 `spec/rrw_functional_spec.md`, all 108 headings · **Previous
-sweep:** `guide/sweep_2026-09-05_spec-docs.md` (folder-scoped;
+sweep:** `guide/archive/sweep_2026-09-05_spec-docs.md` (folder-scoped;
 this file was not among its findings) · **Trigger:** Segment
 19J Item 1, from `guide/archive/codebase_assessment_10sep.md` §8
 recommended move #1.
@@ -73,7 +73,7 @@ moves.
 
 ## 0. Carried forward
 
-`guide/sweep_2026-09-05_spec-docs.md` left no finding against this
+`guide/archive/sweep_2026-09-05_spec-docs.md` left no finding against this
 file, and its own carried-forward section was empty at close. One
 finding arrives from outside the sweep cadence:
 
