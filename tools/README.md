@@ -7,14 +7,12 @@ but aren't part of the app or its test suite.
 |---|---|---|
 | `close_check.py` | Segment close check (read-only) — verifies a plan's `Doc impact` commitments were kept. [Detail](#close_checkpy) | `python3 tools/close_check.py 19A.3` |
 | `code_metrics.py` | Duplication + churn metrics (read-only) for `guide/codebase_assessment_*.md`. [Detail](#code_metricspy) | `python3 tools/code_metrics.py` |
-| `theme_preview.gen.py` → `theme_preview.html` | Theme-preview harness (read-only) — lifts `app/web/templates/base.html`'s real `<style>` and renders a component gallery + token swatch grid. **Open the HTML in a browser**, no server; the toolbar flips Light / Dark. Regenerate after any `base.html` style change. | `python3 tools/theme_preview.gen.py` |
-| `theme_customizer.gen.py` → `theme_customizer.html` | Theme customizer — the same gallery with every colour token editable, live repaint, and the palette's WCAG audit. [Detail](#theme_customizergenpy) | `python3 tools/theme_customizer.gen.py` |
-| `theme_variants.gen.py` | Border-contrast report, plus the machinery for a theme variant when one is needed. [Detail](#theme_variantsgenpy) | `python3 tools/theme_variants.gen.py` |
+| `theme_customizer.gen.py` → `theme_customizer.html` | Theme customizer — lifts `app/web/templates/base.html`'s real `<style>` into a component gallery with every color token editable, live repaint, and the palette's WCAG audit. **Open the HTML in a browser**, no server. Regenerate after any `base.html` style change. [Detail](#theme_customizergenpy) | `python3 tools/theme_customizer.gen.py` |
 | `css_parity_check.py` | CSS-refactor parity check (read-only) — renders every page carrying a shared CSS shape, reads the computed styles Chromium resolves, and diffs two snapshots. Proves a refactor changed nothing, which the suite cannot: it has no layout engine, so which rule *wins* is invisible to it. **Needs `node` + `playwright` + a Chromium binary, none of them repo dependencies**; set `RRW_NODE_ROOT` and `RRW_CHROMIUM`. Unlike the other entries here it **does** lean on the suite — it drives the normally-skipped `tests/integration/test_css_parity_dump.py` (via `RRW_PARITY_DUMP`) so the pages it samples are real template output. Exit codes follow `close_check.py`: 0 no differences, 1 differences found, 2 could not check. Samples every page at **two viewports** (1280 and 700), since a rule inside a media query is invisible at a width where that query is inactive. Not in CI. | `python3 tools/css_parity_check.py --out /tmp/before` |
 | `pace_audit.py` | Pace audit (read-only) — elapsed time per merged slice from merge history, split BEFORE / AFTER a cut PR number; the method behind `rrw_sdd_in_practice.md` §6.4 (2026-09-19). [Detail](#pace_auditpy) | `python3 tools/pace_audit.py --cut 2460` |
 | `practice_kit.py` | Practice kit — the manifest of files a new repository inherits from this one, with `--list` (the table `new_project_practices_setup.md` carries) and `--export DEST`. [Detail](#practice_kitpy) | `python3 tools/practice_kit.py --list` |
 | `bench_roster_scale.py` | Roster-scale benchmark (**writes**) — seeds a synthetic session of a given size into a *local* Postgres, then times every operator page with the SQL / Python split and the per-request query count. The method behind `guide/app_responsiveness.md`. **Needs a Postgres cluster you are willing to write to**, which the suite's in-memory SQLite deliberately is not, so it is not in CI and not a repo dependency; **every subcommand** refuses any non-loopback `DATABASE_URL` (it writes, it drives the real Prepare / Activate routes, and it signs in as whoever `--operator-email` names). Subcommands: `seed` / `seed-lobby` / `pin-rule` / `post` / `bench` (with `--only` to filter the page list) / `profile` — `pin-rule` + `post --path /workflow/prepare` reproduce the post-Generate state, which is the one that hurts. Wall-clock is machine-specific; the query counts and the SQL / Python split are the comparable figures. | `python3 tools/bench_roster_scale.py seed` |
-| `_harness_common.py` | Shared helpers for the two generators — the `base.html` `<style>` lift, the `:root` / `:root[data-theme="dark"]` token parse, the harness CSS, the gallery markup. Not a generator; imported by both. | — |
+| `_harness_common.py` | Shared helpers for the customizer and `tests/unit/test_contrast_audit.py` — the `base.html` `<style>` lift, the `:root` / `:root[data-theme="dark"]` token parse, the contrast pairs, the harness CSS, the gallery markup. Not a generator. | — |
 
 ---
 
@@ -163,16 +161,17 @@ on the tool and **must not be quoted**.
 
 ## `theme_customizer.gen.py`
 
-The `theme_preview` gallery with every colour token **editable** and live
-repaint. Design a light + dark palette (edit each separately via the toggle),
+A component gallery lifted from `base.html`'s real `<style>`, with every
+color token **editable** and live repaint. Open the HTML in a browser, no
+server; the toolbar flips Light / Dark. Regenerate after any `base.html` style
+change — `tests/unit/test_generated_tools_are_current.py` fails until you do. Design a light + dark palette (edit each separately via the toggle),
 then **Export JSON** — `{ primitives, semantic: { light, dark } }`, which a
 coding agent ports 1:1 into `base.html`'s `:root` blocks (primitives, then
 each theme's semantic map). Controls: Load defaults / Re-read `base.html`…
 (file-picker) / Save-as named library (`localStorage`) / Delete / Export +
 Import JSON.
 
-Design reasoning lives in `guide/archive/theme_customizer.md`; this is Plan A,
-manual-editor slice. Seed-and-derive lands later.
+Design reasoning lives in `guide/archive/theme_customizer.md`.
 
 ### Token inspection reads both directions
 
@@ -240,29 +239,6 @@ saved before `--violet-bright` landed re-exported 79 of 80 primitives, and the
 gap surfaced only because someone diffed the file. Missing keys keep their
 default, the document's keys win, keys the build does not know are kept, and the
 status line reports both counts.
-
----
-
-## `theme_variants.gen.py`
-
-A run reads `base.html` and prints the shipped border's contrast in both themes
-plus — while both themes share one border primitive — the best floor any single
-value could reach on that hue (`max_shared_floor()`). `--check` suppresses
-writing.
-
-That ceiling settled the question: `--slate-dim` reaches 4.286:1 light /
-4.312:1 dark against a 4.291:1 ceiling, so there is no better shared value to
-find, and beating it needs two per-theme primitives this tool cannot express.
-
-**`VARIANTS` is empty, so a run writes nothing.** Append to it to build a
-`{version, primitives, semantic}` document for the customizer's **Import JSON**.
-
-The three `beyond-*` variants and `theme_customizer_beyond.html` are
-**retired**: they explored giving inputs and cards their own fill, the route
-lost on the numbers (1.238:1 light / 1.145:1 dark), and previewing it needed a
-second 2.6 MB customizer carrying two tokens `base.html` deliberately does not
-have — which read as a facility rather than a closed experiment. The reasoning
-is in prose in `guide/segment_19C_refinements.md` Item 8.
 
 ---
 

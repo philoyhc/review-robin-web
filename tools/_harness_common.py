@@ -1,9 +1,9 @@
-"""Shared helpers for the theme harness generators.
+"""Shared helpers for the theme customizer and the contrast audit.
 
-Both `theme_preview.gen.py` (read-only preview) and `theme_customizer.gen.py`
-(editable designer) lift base.html's real `<style>` + palette and render the
-same component gallery. This module holds the pieces they share so the gallery
-isn't duplicated. Not production code.
+`theme_customizer.gen.py` lifts base.html's real `<style>` + palette and
+renders the component gallery from here; `tests/unit/test_contrast_audit.py`
+reads the same parse and contrast pairs, so the page and the test cannot
+disagree. Not production code.
 """
 import re
 
@@ -250,32 +250,6 @@ def parse_clusters(base_css):
     return clusters
 
 
-# Coarse hue family for a hex — groups primitives for seed controls (data-driven,
-# no hard-coded token names). Returns one of: neutral, red, amber, green,
-# blue, violet. (Cyan/sky hues fold into blue.)
-def hue_family(hex_value):
-    h = hex_value.lstrip("#")
-    if len(h) == 3:
-        h = "".join(c * 2 for c in h)
-    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
-    mx, mn = max(r, g, b), min(r, g, b)
-    if mx - mn < 24:
-        return "neutral"
-    import colorsys
-    hu = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)[0] * 360
-    if hu < 20 or hu >= 330:
-        return "red"
-    if hu < 45:
-        return "amber"
-    if hu < 90:
-        return "amber" if g < 200 else "green"
-    if hu < 165:
-        return "green"
-    if hu < 255:
-        return "blue"        # includes cyan/sky hues (folded into blue)
-    return "violet"
-
-
 # Harness-only chrome CSS (toolbar + gallery layout). Consumes only the app's
 # Tier-2 **semantic** tokens (like every component now), so it themes for free.
 HARNESS_CSS = """
@@ -339,9 +313,7 @@ HARNESS_CSS = """
 """
 
 
-# The text / links sample markup — shared so the customizer can host it in its
-# own "Text, links & background" zone (with the relevant token chips) while the
-# read-only preview keeps it as a plain gallery section.
+# The text / links sample markup, for the gallery's "Text & links" section.
 TEXT_LINKS_SAMPLE = """      <h1>Heading 1</h1>
       <p class="page-subtitle">A page subtitle in secondary text.</p>
       <p>Body copy with an <a href="#">inline link</a> and some <strong>strong</strong> emphasis.</p>
@@ -519,9 +491,7 @@ def component_sections():
 
 
 def component_gallery():
-    """The full component gallery as one string — every section in order.
-    Used by the read-only preview; the customizer composes from
-    `component_sections()` directly so it can relocate individual zones."""
+    """The full component gallery as one string — every section in order."""
     return "\n\n".join(html for _, html in component_sections()) + "\n"
 
 

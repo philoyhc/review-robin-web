@@ -42,7 +42,7 @@ def _deferred_group_landed(needs: str) -> bool:
     exactly that. Such a group has landed when any member the kit copies
     rather than builds is present, which stays true however far the built
     file is later edited — so editing ``base.html`` can never quietly retire
-    the gate over the other eight theme files."""
+    the gate over the other six theme files."""
     trigger = pk.DEFERRED_GROUPS[needs]
     if trigger not in pk.BUILDERS:
         return (REPO_ROOT / trigger).is_file()
