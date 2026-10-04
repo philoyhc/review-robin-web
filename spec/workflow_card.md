@@ -410,7 +410,7 @@ The steps:
    materialises one `Assignment` row per `(reviewer, reviewee,
    instrument)` triple eligible under each instrument's pinned
    rule. It **reconciles** the existing rows (see
-   `spec/reconciling_regeneration.md`) — inserting newly eligible
+   `spec/assignments.md` "Reconcile + regenerate") — inserting newly eligible
    pairs, deleting pairs the rule no longer produces along with
    their responses, and leaving matched pairs and their responses
    untouched. The saved-response confirmation detour below gates
@@ -458,7 +458,10 @@ back to the host page with `?prepare_confirm=responses`.
 The workflow card decodes that param (via the `prepare_confirm`
 builder kwarg, which re-runs `reconcile_impact` to populate the
 `responses_deleted` / `deleted_pairs` counts) and renders a
-confirmation banner in the card body:
+confirmation banner in the card body: *"Preparing will delete N
+saved responses"* over *"Regenerating drops M assignment pairs that
+the current setup no longer produces, along with their saved
+responses. Responses on unchanged pairs are kept."*, then two buttons:
 
 - **Regenerate & prepare** (`.btn.danger-solid`) posts back to `/workflow/prepare`
   with `acknowledge_response_loss=true`, which skips the detour

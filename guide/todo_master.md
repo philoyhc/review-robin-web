@@ -624,7 +624,8 @@ dry-runs the reconcile (`assignments.reconcile_impact`) and prompts
 only when a run would actually delete responses, showing the precise
 count — `regen_choice` retired for an `acknowledge_response_loss`
 flag. Spec (kept as the design record):
-`spec/reconciling_regeneration.md`.
+`spec/archive/reconciling_regeneration.md`, folded into
+`spec/assignments.md` "Reconcile + regenerate" on 2026-10-04.
 
 ---
 

@@ -867,7 +867,7 @@ is. Every write from that date onward is canonical.
   exception is assignment **regeneration**, which reconciles rather
   than replaces — inserting newly eligible pairs, dropping orphaned
   ones, and leaving matched pairs (and their saved responses)
-  untouched. See `spec/reconciling_regeneration.md`.
+  untouched. See `spec/assignments.md` "Reconcile + regenerate".
 - Materialise rather than virtualise: the rule engine (including the
   synthetic Full Matrix default) generates concrete Assignment rows
   rather than implying them, so downstream features query one uniform

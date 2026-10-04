@@ -2275,7 +2275,7 @@ any, the Workflow card asks the operator to confirm, naming how many
 responses and pairs would go, before the actual reconcile runs.
 Activate does not regenerate.
 
-Full contract: `spec/reconciling_regeneration.md`.
+Full contract: `spec/assignments.md` "Reconcile + regenerate".
 
 ---
 
@@ -2569,7 +2569,6 @@ reader, so a spec missing from it is a spec nobody is sent to.
 | Permissions / authorization (gates, per-route matrix, role + ownership invariants) | `spec/permissions.md` |
 | Retired Previews hub (redirects) | `spec/operations_pages.md` "Page identity" |
 | Quick Setup card | `spec/quick_setup_card_spec.md` |
-| Reconciling assignment regeneration | `spec/reconciling_regeneration.md` |
 | Reviewer surface — full contract | `spec/reviewer-surface.md` |
 | Assignment engine + Assignments page | `spec/assignments.md` |
 | Session Home page contract | `spec/session_home.md` |

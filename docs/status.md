@@ -952,14 +952,14 @@ when rows already exist; audit event records old count, new count,
 and any cascaded downstream deletions.
 
 Assignment **regeneration** is the deliberate exception (2026-05-16,
-`spec/reconciling_regeneration.md`). `replace_assignments`
+`spec/assignments.md` "Reconcile + regenerate"). `replace_assignments`
 reconciles instead of wholesale-replacing: it diffs the rule
 engine's pair set against the existing `Assignment` rows, inserts
 newly eligible pairs, deletes pairs the rule no longer produces
 (with their responses), and leaves matched pairs and their saved
 responses untouched. The `assignments.generated` audit event
 carries `new` / `deleted` / `kept` / `responses_deleted` counts.
-The Activate super-button dry-runs the reconcile
+The Prepare session button dry-runs the reconcile
 (`assignments.reconcile_impact`) and only prompts for confirmation
 when a run would actually delete responses.
 
