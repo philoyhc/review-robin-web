@@ -1028,7 +1028,11 @@ In preview mode:
   go nowhere because the surrounding `<form>` is a `<div>` and the
   Save/Cancel/Submit buttons are disabled.
 - The overview card renders normally — `_surface_context` builds
-  the same per-page status pills the reviewer would see.
+  the per-page status pills the same way as for the reviewer. They
+  can differ in one case: preview does not apply the reviewer's
+  read-back policy, so after close a page whose saved values the
+  reviewer may no longer see can read `in_progress` here where the
+  reviewer sees `not_started`.
 - **Real-row rendering.** The preview shows the selected
   reviewer's real assignments (no synthetic-row padding). When
   `?reviewer_email=…` is unset, the route defaults to the first
