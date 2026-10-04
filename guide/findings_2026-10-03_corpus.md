@@ -78,18 +78,18 @@ Confirmed by reading the code; the ones marked *reproduced* were also run.
   `reviewer-surface.md:450-454` says bounds print as entered.
 - ~~**B3 = C4**~~ low — **Done in #2791.** `_require_not_archived` (`_shared.py:191-204`) says
   "cohort rule edits are not allowed" for all eight Observers routes.
-- **A6 low** — Integer/Decimal shape check skips `step <= max - min`
+- ~~**A6 low**~~ — **Ruled 2026-10-04: fix. Done in #2804.** Integer/Decimal shape check skips `step <= max - min`
   when `max == min` (`_band2.py:464-470`). The spec is stricter; leave it.
-- **D31 low** (found while fixing D1) — Quick Setup's Settings upload
+- ~~**D31 low**~~ (found while fixing D1) — **Ruled 2026-10-04: fix. Done in #2804.** Quick Setup's Settings upload
   discards `ApplyResult.errors`: `_run_quick_setup_settings` returns
   `"parse"` and the slot shows only "Could not import session
   settings." `spec/csv_contracts.md` §3.3 ("the route surfaces them")
   and §7 item 3 ("the full validation report") promise more.
-- **D32 low** (found while fixing D1) — A Settings CSV data-shape name or
+- ~~**D32 low**~~ (found while fixing D1) — **Ruled 2026-10-04: fix. Done in #2804**, for every capped column the import writes. A Settings CSV data-shape name or
   `field_key` over 255 characters passes phase 1 and fails phase 2 on
   Postgres as a `DataError`, a 500 (`data_shape.py:58`,
   `instrument_field.py:51`).
-- **B35 low spec** (found while fixing B21) — `lifecycle.md` §8.2.3
+- ~~**B35 low spec**~~ (found while fixing B21) — **Ruled 2026-10-04: trim. Done in #2804.** `lifecycle.md` §8.2.3
   keeps Auto-archive (`not_draft`) and Auto-delete (`not_archived`)
   skip rows, but those columns have no consumer (`lifecycle.md:622-623`)
   and no `…_skipped` event exists for either; the codes are only the

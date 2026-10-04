@@ -226,6 +226,20 @@ when it is checked; sections with unticked rows sit above the ticked ones.
   closed.", with no deadline line and a link back to the dashboard. A
   Prepared session still reads "opens later".
 
+## A Settings CSV's errors show in Quick Setup (D31)
+
+- [ ] **The errors are listed.** On a draft session, upload a Settings
+  CSV with an instrument row but no `instruments[1].name` through Quick
+  Setup's Settings slot. The banner reads "Could not import session
+  settings." and lists the error underneath (`Row …, instruments[1].name:
+  …`). With seven bad instruments it lists five and "…and 2 more."
+
+## A step on a fixed-value field is refused (A6)
+
+- [ ] **The builder refuses it before Save.** On a response-field row,
+  set Min 3, Max 3 and Step 1: the row shows "Step must be at most (Max −
+  Min)…". Clear the Step and the row is accepted.
+
 ## Setup tabs underline in blue (findings register E5)
 
 - [x] **Light and dark.** On any Setup page (Reviewers, say), the active
