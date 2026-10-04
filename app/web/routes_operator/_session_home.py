@@ -106,6 +106,7 @@ def session_detail(
     request: Request,
     quick_setup_error: str | None = Query(default=None),
     quick_setup_reason: str | None = Query(default=None),
+    quick_setup_detail: list[str] = Query(default=[]),
     super_status: str | None = Query(default=None),
     super_button: str | None = Query(default=None),
     super_step: str | None = Query(default=None),
@@ -160,6 +161,7 @@ def session_detail(
                 is_unlocked=_quick_setup_unlocked(request, review_session),
                 error_kind=quick_setup_error,
                 error_reason=quick_setup_reason,
+                error_details=tuple(quick_setup_detail),
             ),
             "session_timezone_label": date_formatting.gmt_offset_zone_label(
                 session_tz

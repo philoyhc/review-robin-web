@@ -419,7 +419,7 @@ def test_the_settings_slot_commits_its_own_work(
         return real_commit(self, *args, **kwargs)
 
     monkeypatch.setattr(SASession, "commit", _spy)
-    reason = asyncio.run(
+    failure = asyncio.run(
         _quick_setup._run_quick_setup_settings(
             file=UploadFile(
                 filename="s.csv",
@@ -437,7 +437,7 @@ def test_the_settings_slot_commits_its_own_work(
         )
     )
 
-    assert reason is None, f"the bundle was rejected: {reason}"
+    assert failure is None, f"the bundle was rejected: {failure}"
     assert calls, (
         "the settings import never committed — apply_session_config "
         "only flushes and get_db closes without committing, so the "

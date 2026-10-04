@@ -13,7 +13,9 @@ of its tight coupling to the helpers in this slice).
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import datetime
+from urllib.parse import urlencode
 
 from fastapi import (
     APIRouter,
@@ -44,6 +46,7 @@ from app.services import (
     sessions,
 )
 from app.services import session_lifecycle as lifecycle
+from app.web import views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -300,7 +303,7 @@ async def create_session(
         )
 
     def quick_setup_error_redirect(
-        kind: str, reason: str
+        kind: str, reason: str, details: list[str] | None = None
     ) -> RedirectResponse:
         # The typed tags are written here too, so a failed upload does
         # not silently discard something the operator typed on this
@@ -309,11 +312,9 @@ async def create_session(
         # "after the settings CSV" in the only sense that matters.
         write_typed_tags()
         write_staged_owners()
+        query = _quick_setup_error_query(kind, reason, details or ())
         return RedirectResponse(
-            url=(
-                f"{home_url}?quick_setup_error={kind}"
-                f"&quick_setup_reason={reason}#quick-setup-{kind}"
-            ),
+            url=f"{home_url}?{query}#quick-setup-{kind}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
@@ -382,7 +383,7 @@ async def create_session(
         last_fragment = "#quick-setup-observers"
 
     if settings_file is not None and settings_file.filename:
-        reason = await _run_quick_setup_settings(
+        failure = await _run_quick_setup_settings(
             file=settings_file,
             review_session=review_session,
             user=user,
@@ -390,8 +391,10 @@ async def create_session(
             replacing=False,
             correlation_id=correlation_id,
         )
-        if reason is not None:
-            return quick_setup_error_redirect("settings", reason)
+        if failure is not None:
+            return quick_setup_error_redirect(
+                "settings", failure.reason, failure.details
+            )
         last_fragment = "#quick-setup-settings"
 
     write_typed_tags()
@@ -888,12 +891,12 @@ async def quick_setup_submit_all(
 
     home_url = f"/operator/sessions/{review_session.id}"
 
-    def error_redirect(kind: str, reason: str) -> RedirectResponse:
+    def error_redirect(
+        kind: str, reason: str, details: list[str] | None = None
+    ) -> RedirectResponse:
+        query = _quick_setup_error_query(kind, reason, details or ())
         return RedirectResponse(
-            url=(
-                f"{home_url}?quick_setup_error={kind}"
-                f"&quick_setup_reason={reason}#quick-setup-{kind}"
-            ),
+            url=f"{home_url}?{query}#quick-setup-{kind}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
@@ -958,7 +961,7 @@ async def quick_setup_submit_all(
         last_fragment = "#quick-setup-observers"
 
     if settings_file is not None and settings_file.filename:
-        reason = await _run_quick_setup_settings(
+        failure = await _run_quick_setup_settings(
             file=settings_file,
             review_session=review_session,
             user=user,
@@ -967,8 +970,8 @@ async def quick_setup_submit_all(
             confirm_replace=confirm_replace,
             acknowledge_response_loss=acknowledge_response_loss,
         )
-        if reason is not None:
-            return error_redirect("settings", reason)
+        if failure is not None:
+            return error_redirect("settings", failure.reason, failure.details)
         last_fragment = "#quick-setup-settings"
 
     return RedirectResponse(
@@ -1015,7 +1018,7 @@ async def import_session_config(
     home_url = f"/operator/sessions/{review_session.id}"
     fragment = "#quick-setup-settings"
 
-    reason = await _run_quick_setup_settings(
+    failure = await _run_quick_setup_settings(
         file=file,
         review_session=review_session,
         user=user,
@@ -1024,12 +1027,12 @@ async def import_session_config(
         confirm_replace=confirm_replace,
         acknowledge_response_loss=acknowledge_response_loss,
     )
-    if reason is not None:
+    if failure is not None:
+        query = _quick_setup_error_query(
+            "settings", failure.reason, failure.details
+        )
         return RedirectResponse(
-            url=(
-                f"{home_url}?quick_setup_error=settings"
-                f"&quick_setup_reason={reason}{fragment}"
-            ),
+            url=f"{home_url}?{query}{fragment}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
@@ -1037,6 +1040,27 @@ async def import_session_config(
         url=f"{home_url}?config_imported=ok{fragment}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
+
+
+@dataclass(frozen=True)
+class _SettingsFailure:
+    """Why the Settings slot refused an upload: the ``quick_setup_reason``
+    token, plus the CSV's validation errors when it failed on them
+    (findings D31; empty for every other reason)."""
+
+    reason: str
+    details: list[str] = field(default_factory=list)
+
+
+def _quick_setup_error_query(
+    kind: str, reason: str, details: list[str] | tuple[str, ...] = ()
+) -> str:
+    """The ``?quick_setup_error=…`` query a failed slot redirects with;
+    each detail line rides as a ``quick_setup_detail`` value."""
+
+    pairs = [("quick_setup_error", kind), ("quick_setup_reason", reason)]
+    pairs += [("quick_setup_detail", line) for line in details]
+    return urlencode(pairs)
 
 
 async def _run_quick_setup_settings(
@@ -1049,11 +1073,12 @@ async def _run_quick_setup_settings(
     confirm_replace: str | None = None,
     acknowledge_response_loss: str | None = None,
     correlation_id: str | None = None,
-) -> str | None:
+) -> _SettingsFailure | None:
     """Reusable Settings-slot pipeline shared by the per-slot
     route, the submit-all handler, and the create-session
-    handler. Returns the ``quick_setup_reason`` token on
-    failure, ``None`` on success.
+    handler. Returns a ``_SettingsFailure`` on failure — the
+    ``quick_setup_reason`` token, and the CSV's validation errors
+    when it failed on them — and ``None`` on success.
 
     A settings CSV rebuilds every instrument, which deletes the
     session's assignments and any responses with them. On an existing
@@ -1064,28 +1089,28 @@ async def _run_quick_setup_settings(
     ``replacing=False``: there is nothing to replace."""
 
     if not lifecycle.is_editable(review_session):
-        return "lifecycle"
+        return _SettingsFailure("lifecycle")
 
     content = await file.read()
     if not content:
-        return "parse"
+        return _SettingsFailure("parse")
 
     rows, parse_error = _read_settings_csv(content)
     if parse_error is not None:
-        return "parse"
+        return _SettingsFailure("parse")
 
     # Lifecycle, then parse, then the replacement gates: the order the
     # roster slots use, so a malformed file reports ``parse`` whether or
     # not the tick was sent.
     if replacing:
         if confirm_replace != "true":
-            return "needs_confirm"
+            return _SettingsFailure("needs_confirm")
         try:
             _require_response_loss_ack(
                 db, review_session, acknowledge_response_loss
             )
         except HTTPException:
-            return "needs_confirm"
+            return _SettingsFailure("needs_confirm")
 
     result = session_config_io.apply_session_config(
         db,
@@ -1095,7 +1120,9 @@ async def _run_quick_setup_settings(
         correlation_id=correlation_id or request_correlation_id(),
     )
     if not result.ok:
-        return "parse"
+        return _SettingsFailure(
+            "parse", views.settings_error_details(result.errors)
+        )
     # ``apply_session_config`` flushes but does not commit, and
     # ``get_db`` closes without committing — so every one of this
     # helper's three callers returned a success redirect over work that

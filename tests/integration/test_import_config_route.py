@@ -105,6 +105,52 @@ def test_import_config_parse_error_redirects_with_parse_reason(
     assert "quick_setup_reason=parse" in location
 
 
+def test_import_config_validation_errors_reach_the_slot(
+    client: TestClient, db: Session
+) -> None:
+    """D31: the slot used to show only "Could not import session
+    settings." and drop ``ApplyResult.errors``, though
+    ``spec/csv_contracts.md`` §3.3 has the route surface them. The
+    redirect now carries each error, and Session Home lists them under
+    the Settings slot's banner, five at most plus a count of the rest."""
+    from urllib.parse import parse_qs, urlsplit
+
+    review_session = _make_session(client, db, code="ic-detail")
+    url = f"/operator/sessions/{review_session.id}/import-config"
+
+    payload = _build_csv([("instruments[1].short_label", "X", "string")])
+    response = client.post(
+        url,
+        data={"confirm_replace": "true"},
+        files={"file": ("config.csv", payload, "text/csv")},
+        follow_redirects=False,
+    )
+    location = response.headers["location"]
+    details = parse_qs(urlsplit(location).query)["quick_setup_detail"]
+    assert details and any("name" in line for line in details), details
+
+    page = client.get(location.split("#")[0])
+    assert page.status_code == 200
+    for line in details:
+        assert line.replace("'", "&#39;").replace('"', "&#34;") in page.text
+
+    # Seven bad rows: five lines and a count of the other two.
+    payload = _build_csv(
+        [(f"instruments[{n}].short_label", "X", "string") for n in range(1, 8)]
+    )
+    response = client.post(
+        url,
+        data={"confirm_replace": "true"},
+        files={"file": ("config.csv", payload, "text/csv")},
+        follow_redirects=False,
+    )
+    details = parse_qs(urlsplit(response.headers["location"]).query)[
+        "quick_setup_detail"
+    ]
+    assert len(details) == 6, details
+    assert details[-1] == "…and 2 more."
+
+
 def test_import_config_bad_header_rejected(
     client: TestClient, db: Session
 ) -> None:
