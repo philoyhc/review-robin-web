@@ -38,6 +38,10 @@ from app.services.visibility_policies import (
 # orchestrator ``_apply.py``; defined here to keep the dependency
 # graph acyclic.
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.db.models import ReviewSession
 
 # 19T Item 10 — the type a response field without a data_type imports as.
 _DEFAULT_DATA_TYPE = _inline_kwargs_from_default_spec(DEFAULT_RESPONSE_FIELDS[0])[
@@ -189,7 +193,7 @@ def _length_errors(plan: _ParsedConfig) -> list[ApplyError]:
 
 
 def session_fallback_length_errors(
-    plan: _ParsedConfig, review_session: object
+    plan: _ParsedConfig, review_session: ReviewSession
 ) -> list[ApplyError]:
     """The length check for the ``session.*`` fallback keys, which land
     only where ``review_session``'s value is blank. A long value the

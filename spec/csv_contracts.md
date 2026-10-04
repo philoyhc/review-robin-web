@@ -992,7 +992,7 @@ while creating the session.
    collect every error, then apply or rollback, so one submit
    reports every error rather than playing whack-a-mole.
    `ApplyResult.errors` carries the whole report; the Quick Setup
-   Settings slot shows its first five and a count of the rest
+   Settings slot shows its first five at most (fewer when quoted values make them long) and a count of the rest
    (`spec/quick_setup_card_spec.md`, "Result reporting").
 
 4. **Streaming where it matters.** Responses + audit-events

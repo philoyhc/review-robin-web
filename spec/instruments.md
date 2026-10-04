@@ -1072,8 +1072,9 @@ response-type display names — and enforces:
   the field has at least two valid values rather than only `min`.
   Equality is accepted (`min=0, max=1, step=1` is a useful Boolean-like
   field). A field with `min` equal to `max` is one fixed value, and its
-  Step is not checked: a blank Integer Step saves as 1 (below), so
-  refusing it would block every later Save of the card.
+  Step is not checked against the range (`step > 0` and the Integer
+  whole-number rule still apply): a blank Integer Step saves as 1
+  (below), so refusing it would block every later Save of the card.
 - `Integer` only, checked after the rules above: Min, Max and Step
   must each be a whole number — "Integer fields take whole-number Min,
   Max and Step. Choose Decimal for steps like 0.5." A stored field is

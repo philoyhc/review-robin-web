@@ -341,7 +341,7 @@ def build_quick_setup_context(
 #: How many Settings CSV errors travel back in the redirect, how long
 #: each may be, and how many URL-encoded bytes they may take together:
 #: the list rides the URL, so it is capped rather than whole (a value
-#: quoted in a message can be non-ASCII, nine encoded bytes a
+#: quoted in a message can be non-ASCII, up to twelve encoded bytes a
 #: character). A longer list ends with a count of the rest.
 SETTINGS_ERROR_DETAIL_LIMIT = 5
 SETTINGS_ERROR_DETAIL_MAX_CHARS = 200
