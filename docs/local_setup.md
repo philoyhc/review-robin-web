@@ -31,6 +31,7 @@ sections below.
 | VS Code       | Recommended editor; works well with the FastAPI / Pydantic / SQLAlchemy stack. |
 | GitHub Desktop | GUI for clone / branch / commit / push / PR without the command line; handles GitHub sign-in for you. See [§10](#10-windows-setting-up-a-new-machine-from-scratch) for the Windows walkthrough. |
 | GitHub CLI (`gh`) | Easier branch and PR workflows.                       |
+| Node.js (`node`) | `tests/integration/test_inline_scripts_parse.py` runs `node --check` on the templates' inline scripts and skips without it. CI has `node`, so install it to see those failures before CI does. |
 | Azure CLI (`az`) | Needed only if you administer the dev App Service (e.g. tweaking Easy Auth settings via `az webapp auth`). Not needed for day-to-day app development. |
 
 ### Not needed for day-to-day work
@@ -84,10 +85,10 @@ review-robin-web/
 
 The repo intentionally does not commit machine-specific files. You'll need:
 
-### `.env` (required for `/auth/me` and `/auth/me/debug` to work locally)
+### `.env` (required)
 
-Copy the template and turn on fake auth so the auth-gated routes return a
-user instead of a 401:
+Without fake auth every page but `/health` and `/docs` returns 401, so copy
+the template and turn fake auth on:
 
 ```bash
 cp .env.example .env
@@ -165,7 +166,7 @@ Open `http://127.0.0.1:8000/health` — expect `{"status": "ok"}`.
 ## 5. Running the test suite
 
 ```bash
-pytest -n auto        # full suite, ~35s (pytest-xdist parallelism)
+pytest -n auto        # full suite (pytest-xdist parallelism)
 ```
 
 The suite builds its schema straight from the ORM metadata
@@ -245,9 +246,10 @@ Your venv was created with Python 3.11 or older. Recreate with
 ### `ModuleNotFoundError: No module named 'pytest'`
 Either the venv is not activated or `pip install -e .[dev]` was not run.
 
-### `/auth/me` returns 401 locally
+### Every page returns 401 locally
 `ALLOW_FAKE_AUTH=true` is missing in `.env`. Easy Auth headers don't exist
-locally, so without fake auth there is no identity to return.
+locally, so without fake auth there is no identity, and every page but
+`/health` and `/docs` returns 401.
 
 ### Alembic complains about `sqlalchemy.url`
 `alembic.ini` deliberately leaves `sqlalchemy.url` blank — `alembic/env.py`
@@ -482,7 +484,7 @@ points inside `...\review-robin-web\.venv\Scripts`.
 ### H. Run the tests / the app
 
 ```powershell
-pytest -n auto                    # full suite, ~35s
+pytest -n auto                    # full suite
 ruff check .                      # lint
 uvicorn app.main:app --reload     # then open http://127.0.0.1:8000/health
 ```

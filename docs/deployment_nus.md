@@ -84,8 +84,8 @@ Still to confirm / decide before the first deploy:
   for `openid`, `profile` and `email` is complete (v7).
 - [x] **Networking** — **private endpoint / VNet.** The Web App, Postgres and
   Key Vault are private; public ingress is through an Application Gateway.
-  So the `migrate` job needs the self-hosted runner (§5 option 1), whose VM
-  is blocked on regional capacity (v7, "External blocker 1").
+  So every job in `deploy_nus.yml` needs the self-hosted runner (§5), whose
+  VM is blocked on regional capacity (v7, "External blocker 1").
 - [ ] **Custom domain** — a production hostname is required (the default
   `*.azurewebsites.net` name is a backend identity only) and awaits the NUS
   naming decision (v7, "External blocker 2").
@@ -106,52 +106,37 @@ Still to confirm / decide before the first deploy:
 
 ---
 
-## 3. Azure side — provision the NUS environment
+## 3. Azure side — the NUS environment
 
-Mirror the dev topology (`docs/deployment_dev.md` → "Azure resources") in the
-NUS subscription. Can run in parallel while personal Azure keeps serving.
+NUS IT has provisioned it. The inventory and the network design are v7's
+"Completed / verified" and are not repeated here; the project's remaining
+Azure work is v7's "Application Gateway work remaining" and "Remaining
+project-side work after blockers clear". This runbook adds the detail for
+four of those items:
 
-- [ ] **Resource Group** `<nus-rg>` in the approved region.
-- [ ] **App Service Plan** — Linux, **B1+** (Always On capable).
-- [ ] **Web App** `<nus-webapp>` — runtime **Python 3.12**; startup command:
+- [ ] **Startup command** on the Web App (Python 3.12), as on the dev slot:
   ```bash
   gunicorn -w 2 -k uvicorn.workers.UvicornWorker app.main:app
   ```
-  Turn **Always On** on; enable **App Service logs → Application logging
+  Turn **Always On** on, and **App Service logs → Application logging
   (Filesystem)** so Log stream is populated.
-- [ ] **Azure Database for PostgreSQL — Flexible Server** — Postgres **16**,
-  region, SKU (**B1ms+**), storage, backup retention. Then create:
-  - application database **`reviewrobin`** (already exists on NUS)
-  - application user **`rrw_app`** (record its password for `DATABASE_URL`).
-- [ ] **DB networking** — per the §1 policy decision:
-  - *Public + firewall* (simplest, matches dev): enable "Allow Azure
-    services…", add your admin IP for one-off `psql`. **But see §5** for how
-    the GitHub-hosted `migrate` job reaches it.
-  - *Private endpoint / VNet* (if NUS mandates): the App Service reaches the
-    DB via VNet integration; the `migrate` job then needs a network path in
-    (self-hosted runner / manual run) — again §5.
-- [ ] **Already provisioned alongside the app — use them, don't re-create:**
-  - **Key Vault** — put `DATABASE_URL` / `SMTP_ENCRYPTION_KEY` here and wire
-    the App Settings as **Key Vault references** through the Web App's
-    managed identity, removing plaintext secrets from App Settings (the
-    direction `guide/deferred_consolidated.md` §1 anticipated). Optional for the
-    first deploy; recommended before go-live.
-  - **Storage Account** (Block Blob, GPv2) — this is the **Segment 18Q blob
-    store**; once NUS is confirmed, 18Q Phase 0 wires to it
-    (`guide/segment_18Q_blob.md`). Not needed for the app to run.
-  - **Azure Monitor** (Log Analytics + Application Insights) — point App
-    Service diagnostics + application logging here.
-- [x] **App Gateway, private endpoints** — NUS policy required them and NUS
-  IT has provisioned them; the gateway's production listener, TLS and health
-  probe are project work still to do (v7, "Application Gateway work
-  remaining").
+- [ ] **Application role `rrw_app`** in the `reviewrobin` database (v7 step
+  5); record its password for `NUS_DATABASE_URL` (§6.2), then run §8.
+- [ ] **Key Vault references** — put `DATABASE_URL` / `SMTP_ENCRYPTION_KEY`
+  in the provisioned Key Vault and wire the App Settings to them through
+  the Web App's managed identity (`guide/deferred_consolidated.md` §1).
+  Optional for the first deploy; recommended before go-live.
+- [ ] **Azure Monitor** — point App Service diagnostics and application
+  logging at the provisioned Log Analytics / Application Insights.
 
 ---
 
 ## 4. Azure side — Easy Auth (sign-in) in the NUS tenant
 
 Sign-in must move to the **NUS Entra tenant** so students/operators log in
-with NUS MS365 accounts.
+with NUS MS365 accounts. Easy Auth v2 is already enabled and admin consent
+is complete (v7); the redirect URI waits on the production hostname (v7
+step 14).
 
 - [ ] **App registration** in the NUS Entra tenant for the web app:
   - Redirect URI: `https://<nus-webapp>.azurewebsites.net/.auth/login/aad/callback`
@@ -173,30 +158,20 @@ with NUS MS365 accounts.
 
 ---
 
-## 5. Azure side — the migrate-job reachability gotcha ⚠️
+## 5. Azure side — pipeline reachability: every job runs in-VNet ⚠️
 
-The pipeline's **`migrate` job runs `alembic upgrade head` from a
-GitHub-hosted runner**, which is **not** inside Azure. Whether that runner
-can reach the NUS Postgres depends on the §1 networking choice:
+The Web App, Postgres and Key Vault are private (v7), so a GitHub-hosted
+runner reaches none of them: not the database the `migrate` job writes,
+and not the Web App the `deploy` job pushes to. Every job in
+`deploy_nus.yml` therefore moves to the private self-hosted runner in the
+VNet's runner subnet (v7, "Remaining project-side work" step 8), which
+also does the Key Vault and Postgres administration. Today every job is
+still `runs-on: ubuntu-latest`, and the runner VM is blocked on regional
+capacity (v7, "External blocker 1"), so the workflow cannot deploy NUS
+yet.
 
-- **Public + firewall:** GitHub runners have **dynamic egress IPs**, so a
-  narrow allow-list won't admit them. Today's dev setup works because the DB
-  is reachable from the runner; NUS may be locked down. Options, pick one:
-  1. **Self-hosted GitHub runner** inside the NUS network/VNet for the
-     `migrate` job (cleanest under private networking).
-  2. **Run migrations out-of-band** (not in the pipeline): `az webapp ssh`
-     into the App Service (which *can* reach the DB) and run `alembic upgrade
-     head`, or run it from **Azure Cloud Shell**, then let the pipeline do
-     build → deploy only.
-  3. **Temporarily widen** the DB firewall for the migrate step (fragile;
-     avoid for anything but a one-off).
-- **Private endpoint / no public access:** options **(1)** or **(2)** only —
-  a GitHub-hosted runner cannot reach a private DB.
-
-**Decide this before the first NUS deploy**, because it may change the
-`migrate` job (self-hosted runner label, or removing the job and documenting
-a manual migration step). Whatever you choose, keep the invariant: **schema
-is migrated before the new code serves** (no startup-time migration hook).
+Keep the invariant: **schema is migrated before the new code serves** (no
+startup-time migration hook).
 
 ---
 
@@ -210,10 +185,10 @@ the **workflow's target app name**.
 The `deploy` job authenticates with `azure/login@v2` via **OIDC federated
 credentials** (no publish profile). Recreate this in NUS:
 
-- [ ] Create an **app registration / service principal** (or a user-assigned
-  managed identity) **in the NUS tenant**.
-- [ ] Assign it **Contributor** (or **Website Contributor**) on `<nus-rg>` /
-  `<nus-webapp>`.
+- [x] Create an **app registration / service principal** (or a user-assigned
+  managed identity) **in the NUS tenant** — exists (v7).
+- [x] Assign it **Contributor** (or **Website Contributor**) on `<nus-rg>` /
+  `<nus-webapp>` — Website Contributor on the Web App (v7).
 - [ ] Add a **federated credential** on it for this repo:
   - subject `repo:philoyhc/review-robin-web:ref:refs/heads/main`
   - audience `api://AzureADTokenExchange`
@@ -252,8 +227,7 @@ the file to `deploy_nus.yml` and updating the `name:`):
 
 - [ ] `app-name:` → `<nus-webapp>` (in the `deploy` job).
 - [ ] Update the workflow `name:` + header comment off the `-dev` app.
-- [ ] Reflect the §5 migrate decision (self-hosted `runs-on:` label, or
-  drop the `migrate` job in favour of a documented manual step).
+- [ ] Set every job's `runs-on:` to the self-hosted runner's label (§5).
 - [ ] **(Recommended)** add a GitHub **`environment: nus`** with **required
   reviewers** to gate production deploys — and add the matching federated
   credential (§6.1). This is the "manual approval before production" gate
@@ -275,17 +249,20 @@ Same build → migrate → deploy shape as the personal workflow, but:
 
 - authenticates + targets NUS via the **NUS-scoped secrets** +
   `vars.NUS_WEBAPP_NAME` (§6.2), so it coexists with the personal deploy;
-- adds a **`run_migrate`** dispatch input (default `true`) so you can **skip
-  the migrate job** and run `alembic upgrade head` out-of-band when the NUS
-  DB isn't reachable from a GitHub-hosted runner (§5);
+- adds a **`run_migrate`** dispatch input (default `true`) to **skip the
+  migrate job** and run `alembic upgrade head` out-of-band. It assumed only
+  the database would be out of reach; on NUS the Web App is private too,
+  so every job needs the in-VNet runner (§5) and skipping `migrate` gains
+  nothing;
 - uses its own `concurrency` group, independent of the personal pipeline.
 
 **To test a NUS deploy — when you're ready, which is *not now*:**
 
-1. Finish §3–§4 (resources + Easy Auth) and §6.1–§6.2 (identity + the four
-   `NUS_*` secrets + `NUS_WEBAPP_NAME`).
+1. Finish §3–§4 (settings + Easy Auth), §5 (the runner, and every job's
+   `runs-on:` pointed at it) and §6.1–§6.2 (identity + the four `NUS_*`
+   secrets + `NUS_WEBAPP_NAME`).
 2. Actions → **Deploy to NUS Azure (manual test)** → *Run workflow* →
-   optionally untick `run_migrate` → *Run*.
+   *Run*.
 3. Verify per §10.
 
 Until those prerequisites exist the workflow just sits idle. **Adding the
@@ -394,7 +371,8 @@ than start clean:
 
 ## 9. Cutover sequence (recommended order)
 
-1. **Provision NUS** (§3) — parallel; personal still serving.
+1. **Finish the NUS Azure settings** (§3) and **the in-VNet runner** (§5) —
+   parallel; personal still serving.
 2. **NUS Easy Auth** app registration + config (§4).
 3. **NUS App Settings** (§7), incl. `DATABASE_URL` + whitelist.
 4. **DB GRANT bootstrap** (§8); optional data carry-over.
@@ -449,8 +427,8 @@ Only after NUS is verified and serving as primary:
 Depends on the §1 ownership decision. Typical split when NUS grants you a
 subscription with Contributor:
 
-- **You:** §3 provisioning (portal/`az`), §4 Easy Auth config, §6 GitHub
-  secrets + workflow, §7 App Settings, §8 GRANT, §9–§11.
+- **You:** §3 settings (portal/`az`), §4 Easy Auth config, §5 runner, §6
+  GitHub secrets + workflow, §7 App Settings, §8 GRANT, §9–§11.
 - **NUS IT / Entra admin:** subscription + RG + role assignment, **admin
   consent** on the Easy Auth + OIDC app registrations, any mandated
   networking (VNet / private endpoint / App Gateway / WAF), custom-domain DNS

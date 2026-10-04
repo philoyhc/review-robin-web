@@ -39,7 +39,7 @@ flowchart LR
     App ---|"sign-in / identity headers"| Entra
     App -.->|"secrets (planned)"| KV
     App -->|"app data + audit log"| PG
-    App -->|logs| MON
+    App -.->|"logs (planned)"| MON
     App -->|"diagnostics / artifacts"| ST
     GH -.->|"jobs · OIDC (planned)"| RUN
     RUN -.->|"deploy"| App
@@ -90,8 +90,11 @@ retired [`archive/azure_provision.md`](archive/azure_provision.md).
   app implements no password store, no OAuth code, and makes no Microsoft
   Graph calls. See [`security_posture.md`](security_posture.md).
 - **Data.** One **PostgreSQL Flexible Server**. Every mutating action
-  writes an append-only `audit_events` row, so the database doubles as a
-  compliance / incident-review record. See [`database.md`](database.md).
+  writes an `audit_events` row, so the database doubles as an
+  incident-review record. Rows are never edited, but deleting a session
+  deletes its rows, and so does purging its audit log; one event survives
+  to record each (`session.deleted`, `session.audit_log_purged`). See
+  [`database.md`](database.md).
 - **Secrets.** A **Key Vault** is provisioned behind a private endpoint,
   but App Settings do not reference it yet: secrets live as plain App
   Settings and GitHub secrets today, and Key Vault references through a
@@ -102,9 +105,11 @@ retired [`archive/azure_provision.md`](archive/azure_provision.md).
   build → migrate → deploy; Alembic migrations run against Postgres
   *before* the App Service swap, so the app never ships against a stale
   schema.
-- **Observability.** App Service streams structured JSON logs to **Azure
-  Monitor** (Log Analytics + Application Insights). Correlation IDs are
-  stamped on `audit_events` rows, not on log lines.
+- **Observability.** The app writes structured JSON logs to stdout, one
+  object per line (`app/logging_config.py`), which App Service's log
+  stream shows. **Azure Monitor** (Log Analytics + Application Insights)
+  is provisioned, but nothing sends the app's logs to it yet. Correlation
+  IDs are stamped on `audit_events` rows and on a few log lines.
 - **Storage.** A **10 GB Block Blob** account is provisioned and
   earmarked as the Segment 18Q blob store (`guide/segment_18Q_blob.md`);
   nothing uses it yet. The application has no blob dependency (CSV
