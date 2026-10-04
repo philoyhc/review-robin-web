@@ -28,9 +28,9 @@ other AI coding agent working in this repository.
   doesn't cleanly fit one of those roles — don't invent a new one
   without confirmation. (The pre-19B six-name scheme — Primary Outline /
   Alert Outline / Danger Outline — is superseded, and `.danger` is a
-  context class.) This and the
-  lifecycle display-label mapping are enforced by
-  `tests/unit/test_doc_conventions.py`.
+  context class.) The superseded names and the lifecycle display-label
+  mapping are checked in live `spec/` and `docs/` prose by
+  `tests/unit/test_doc_conventions.py`; the migration itself is not.
 - Do not implement Microsoft authentication in app code unless
   explicitly requested; assume Azure App Service Easy Auth will provide
   authenticated identity headers in deployed environments.
@@ -146,7 +146,7 @@ reject it.
 ### Identity and auth
 
 - `app/auth/identity.py` parses Azure Easy Auth headers (`X-MS-CLIENT-PRINCIPAL` and friends) into an `AuthenticatedUser`. When `ALLOW_FAKE_AUTH=true`, a fake user is injected.
-- `app/web/deps.py` exposes `get_current_user` and `get_or_create_user` (the latter ensures the auth principal has a row in `users`). Routes depend on these, not on the headers directly.
+- `get_current_user` (defined in `app/auth/identity.py`) and `get_or_create_user` (in `app/web/deps.py`, which ensures the auth principal has a row in `users`) are the dependencies routes use, not the headers directly.
 - **Operator authorization** goes through `require_session_operator` (in `deps.py`), which combines `get_or_create_user` with a per-session permission check from `app/services/permissions.py`.
 - **Participant authorization** goes through `require_reviewee_with_current_grant` (19F) or `require_observer_in_session` (W3) for the reviewee `/me/sessions/{id}/results` and observer `/me/sessions/{id}/collation` surfaces. Both match the signed-in user's email (case-insensitive) against the session's roster + gate on `Reviewee.status` / `Observer.status` being `"active"`; the reviewee gate does that through `require_reviewee_in_session` (W2), then 404s unless a visibility grant currently resolves (`visibility_policies.reviewee_has_current_grant`). Reviewees with non-email identifiers (anonymous IDs for analysis-only sessions) fail the reachability check — flagged on the Validate page by the `reviewees.unreachable_for_results` soft warning (W8).
 

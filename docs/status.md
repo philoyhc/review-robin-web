@@ -603,97 +603,48 @@ suite against a `postgres:16` service container).
   graphic asset, add the file under `app/web/static/` — the
   `StaticFiles` mount at `/static` in `app/main.py` already serves
   it — and point `href` at its `/static/...` URL.
-- **Manage-page reshape (Segment 9.4C)**: the reviewers, reviewees,
-  and assignments Manage pages now render an always-present
-  `<section id="upload-csv">` card with the existing import form;
-  the Upload CSV button is `<a href="#upload-csv">` (no JS, no
-  `<details>`, stateful via the URL fragment). Validation errors on
-  POST re-render the Manage page itself — there is no longer a
-  standalone `…/import` GET. The assignments page also carries an
-  anchored `<section id="rules">` "Assign by Rules" placeholder
-  (Rule editor — Segment 13) with a Cancel anchor that drops the
-  fragment. **Edit Reviewers / Reviewees / Assignments** buttons
-  render as disabled anchors (`<a class="btn disabled"
-  aria-disabled="true">`) per the 9.4B disabled-affordance
-  convention. New `/operator/sessions/{id}/instruments` index
-  introduced (Segment 10C reshaped this page substantially — see
-  the Segments-shipped 10C entry and the operator URL table for
-  the current contract). New `/operator/sessions/{id}/setupinvite`
-  is the operator-editable email template editor (Segment 11E
-  shipped the editor + the SMTP transport scaffolding; the page
-  was a stub through Segment 11D follow-on). Session-detail
-  Setup table Manage buttons for Instruments and Set up invites
-  are now real links.
-- **Page chrome (Segment 9.4A)** in `app/web/templates/base.html`:
-  top-left "Review Robin Web App (version {num})" link to `/about`,
-  breadcrumb trail rendered just below, top-right user card with
-  "Signed in as ..." + Sign out. Per-page back-links across pages
-  are removed — the breadcrumb replaces them. (Segment 10C
-  reintroduced one in-page Back affordance: the per-instrument
-  card's bottom button row carries a Back button that
-  smooth-scrolls to the top of the Instruments page. This is a
-  same-page navigation aid, not a cross-page back-link.)
-  Operator-page crumbs root at `Sessions → /operator/sessions`;
-  reviewer-page crumbs root at `Reviewer → /me`. Crumb
-  factories live in `app/web/breadcrumbs.py`; the partial is
-  `app/web/templates/_partials/breadcrumb.html`. Version string
-  comes from `app.config.app_version` (`"dev"` for now;
-  pipeline-driven version bumping is a Segment 14A concern).
-- **Setup nav + lock card (Segment 10C)**: every session-scoped
-  operator page (Session detail, Reviewers, Reviewees,
-  Assignments, Instruments, Set up invites) renders a 6-button
-  `.setup-nav` header card and — when the session is `ready` — a
-  reusable yellow lock card immediately below it. The lock card
-  posts to `/operator/sessions/{id}/revert` with a hidden
-  `return_to` field; the route allowlists
-  `{reviewers, reviewees, assignments, instruments}` so the
-  operator lands back on the same page. The session-detail lock
-  card omits `return_to`. While locked, each page hides its own
-  mutation affordances (upload cards, Danger Zone, per-instrument
-  Save button). See `spec/operator_ui_concept.md` for
-  the per-page contract and `spec/domain_assumptions.md` for the markup.
+- **Chrome** in `app/web/templates/base.html`: the top bar reads
+  "Review Robin Web App (version {num})" beside the light / dark
+  toggle, with the breadcrumb below it and a user card on the right
+  ("Signed in as …", Settings, Admin for sys-admins, Guide, About,
+  Sign out). Reviewer pages use a lighter variant. Crumb factories
+  live in `app/web/breadcrumbs.py`, the partial is
+  `app/web/templates/_partials/breadcrumb.html`, and the version string
+  is `app_version` in `app/config.py` (`"dev"` by default). See
+  `spec/operator_ui_concept.md`.
+- **Session navigation**: every session-scoped operator page renders
+  `app/web/templates/operator/partials/session_top_nav.html` — Session
+  Home, a Setup row (Reviewers, Reviewees, Relationships and Observers
+  when enabled, Instruments, Email Template) and an Operations row
+  (Assignments, Validate, Invitations, Responses, Extract data). Where
+  the lifecycle state hides a page's mutating controls, a lock card
+  says why; the roster pages share
+  `app/web/templates/operator/partials/_roster_lock_card.html`, which
+  posts to `/operator/sessions/{id}/revert` with a `return_to`.
+- **Session Home**: the Workflow card at the top, the Session details
+  card below it (edited inline via `?editing=1`), then Quick Setup on
+  the left and Owners above the Danger Zone on the right. See
+  `spec/session_home.md`.
 - Card-based layout, monospace tabular code spans, severity pills
-  (`error` / `warning` / `info`) for validation issues. All inline
-  `<style>` in `base.html`. CSS framework / extraction is a Segment
-  14 concern.
-- **Session Home rebuild (Segment 11B + 2026-05-22 Danger Zone move)**: `session_detail.html`
-  renders the **Next Action card** at the top (constant H2 "Next
-  Action", `accent-blue` border; height grows to fit content; per-state
-  Primary + Secondary buttons at the bottom for most states; the
-  Activated state lays out as two body sections separated by an `<hr>`
-  with their own inline buttons — Manage invitations + Monitor
-  responses, then Pause Session), followed by a two-column bottom
-  grid. Left column: Session Details (with an inline Edit link to
-  `/operator/sessions/{id}/edit`). Right column: Quick Setup, then
-  Extract Data. The Danger Zone card (Delete Data + Delete Session)
-  was moved off Session Home into the bottom-right of the Edit
-  Session Details page on 2026-05-22 (commit b490825). The two
-  placeholder cards plus the Rule Based Assignment card on
-  `/assignments` share the canonical `.card.placeholder` class +
-  `placeholder_card` Jinja macro
-  (`app/web/templates/operator/partials/_placeholder_card.html`), <!-- path-ref-ok -->
-  so all three render with identical typography and contrast.
-  See `spec/session_home.md`.
-- **Lifecycle display label mapping (Segment 11B)**: a single
-  helper in `app/services/lifecycle_display.py` translates
-  `ReviewSession.status` enum values into operator-facing strings.
-  Today's only divergence is `ready` → "Activated"; other states
-  pass through capitalised. Registered as the `lifecycle_label`
-  Jinja filter on the operator templates instance and used by every
-  surface that renders a lifecycle state in user copy (status pill,
-  sessions list table, Session Home prose, lock-card prose on
-  Invitations / Monitoring). URL slugs, query params, API
-  responses, log messages, audit-event detail, and CSS class names
-  continue to use enum values.
+  (`error` / `warning` / `info`) for validation issues. All CSS is
+  inline in `base.html`; buttons take the `.btn` roles in
+  `spec/ui_elements.md` §6 and layout the primitives in §10.
+- **Lifecycle display labels**: `DISPLAY_LABELS` in
+  `app/services/lifecycle_display.py` maps `ready` → "Activated" and
+  `expired` → "Closed"; other states pass through capitalized.
+  Registered as the `lifecycle_label` Jinja filter and used by every
+  surface that renders a lifecycle state in user copy. URL slugs, query
+  params, API responses, log messages, audit-event detail, and CSS
+  class names continue to use enum values.
 
 ### Routes
 
 **This section used to carry a route-by-route table; it was replaced by
 this pointer on 2026-10-02** (findings `I7`,
-`guide/findings_2026-10-01_corpus.md`). The table listed about 80 rows
-against 188 route decorators in the code, and many rows had drifted —
-`GET /` still read "service metadata" when it 302-redirects by role. Too
-large to keep accurate by hand, so the code is the source of truth:
+`guide/findings_2026-10-01_corpus.md`). The table covered a fraction of
+the routes in the code, and many rows had drifted — `GET /` still read
+"service metadata" when it 302-redirects by role. Too large to keep
+accurate by hand, so the code is the source of truth:
 
 - **The routes** are the routing modules: `app/web/routes_*.py` (about,
   auth, guide, health, templates), the operator package
@@ -712,21 +663,14 @@ large to keep accurate by hand, so the code is the source of truth:
 
 - Create with name, code (unique across the workspace), description, deadline.
 - Session creation **also synchronously creates the Default
-  Instrument** with two seed response fields (`rating` integer 1–5
-  required; `comments` long text optional) and three seed display
-  fields (`pair_context_1/2/3`, `visible=true`, `label=''`). Operator
-  edits both kinds via the consolidated `/instruments` page (10A:
-  response-field builder + friendly description; 10B-1: data-driven
-  reviewer-surface render; 10B-2: display-field picker + shared
-  field-order bulk form, replaced by the 10C per-instrument card
-  shape — Display Fields renders a hardcoded 6-row CSV-named
-  placeholder with persistence deferred, while the 10B-2
-  schema-level routes remain in place; Response Fields inline edit
-  + Required auto-submit + row-level Add/Delete are wired). The
-  seven supported display-field sources at the schema layer are
-  `reviewee.tag_1/2/3`, `reviewee.profile_link`, and
-  `pair_context.1/2/3`; `assignment_context_*` is deliberately
-  excluded. See `spec/architecture.md` "Conceptual hierarchy."
+  Instrument** (`ensure_default_instrument`) with two seed response
+  fields (`rating` integer 1–5 required; `comments` long text optional)
+  and the two locked display fields, Name and Email. The operator edits
+  both kinds on the `/instruments` page (`spec/instruments.md`). Display
+  fields draw on nine sources: `reviewee.name`,
+  `reviewee.email_or_identifier`, `reviewee.profile_link`,
+  `reviewee.tag_1/2/3` and `pair_context.1/2/3`. See
+  `spec/architecture.md` "Conceptual hierarchy."
 - View detail with live counts of reviewers, reviewees, assignments,
   and the current `assignment_mode`.
 - **Edit** name / code / description / deadline; changes recorded as
@@ -737,7 +681,10 @@ large to keep accurate by hand, so the code is the source of truth:
   survives in the global audit log. Requires explicit confirm
   checkbox.
 - **Rehydrate** a complete extracted session (Segment 18P Group 2) —
-  the **Rehydrate** button in the lobby Filter-card row opens
+  **off by default**: `rehydrate_enabled` in `app/config.py` is `False`
+  until the dropped-responses export lands, and while it is off the
+  button is hidden and every rehydrate route 404s. When on, the
+  **Rehydrate** button in the lobby Filter-card row opens
   `/operator/sessions/rehydrate`, where a complete set of extract CSVs
   (loose or zipped) is uploaded and **Validate**d (a mandatory
   pre-flight: completeness + cross-file integrity + a `_REHYD`
@@ -778,25 +725,23 @@ large to keep accurate by hand, so the code is the source of truth:
 ### Assignments (post-15D)
 
 - **Operations Assignments page** at
-  `/operator/sessions/{id}/assignments` (chrome row label moved
-  from Setup to Operations in 15D PR 6a). Hosts the **Assignment
-  Rule** card (formerly "Rule Based Assignment"), the
-  **Self-reviews** bulk-toggle card, and an **Assignment pairs**
-  preview table. Assignments are now **always derived** —
-  manual-row authoring retired in 15D PR 6a; the route still exists
-  for test fixtures only (15D PR 7b).
-- **Generation flow**: pick a RuleSet (5 seeds + caller-owned
-  Personal RuleSets) from the Assignment Rule card, click Generate.
-  The rule engine (`app/services/rules/engine.py`) reads pair-
-  context tags from the `relationships` table via
+  `/operator/sessions/{id}/assignments` (`spec/assignments.md`
+  "Assignments operator page"): a **Per-instrument status** card —
+  counts per instrument, a self-review checkbox that bulk-flips
+  `Assignment.include` on that instrument's self-review rows, a Show
+  filter and a link to the instrument's card — above the
+  **Assignments preview** table, with Status and Search filters in its
+  toolbar and bulk Inactivate / Activate in the row expander. Pairs are
+  derived, so the page has no add or remove control.
+- **Generation**: each instrument's rule is authored on Band 1 of its
+  Instruments-page card (no rule means the synthetic Full Matrix), and
+  **Prepare** on the Workflow card runs the rule engine
+  (`app/services/rules/engine.py`) over every instrument. It reads
+  pair-context tags from active `relationships` rows via
   `pair_context_lookup` and runs predicates / combinators / quotas /
-  deterministic ordering against the live populations. Inactive
-  reviewers / reviewees and inactive `relationships` rows are
-  excluded; audit `excluded_counts` records the reasons.
-- **Self-reviews bulk toggle**: a per-session
-  `sessions.self_reviews_active` Boolean drives bulk activation /
-  deactivation of self-review pairs the engine produced. Per-row
-  `Assignment.include` overrides individually post-flip.
+  deterministic ordering. An inactive reviewer's
+  or reviewee's pairs are still materialized with `include=False`, so
+  their responses survive a deactivate / reactivate round trip.
 - **`assignment_mode`** column on `sessions` records the strategy
   that last generated. `AssignmentMode` has one member,
   `rule_based`, so that is the only value written today; NULL means
@@ -805,7 +750,7 @@ large to keep accurate by hand, so the code is the source of truth:
   migration has rewritten them. `Assignment.created_by_mode` records
   the same per row and defaults to `rule_based`; it defaulted to
   `"manual"` until 19N.1, naming a mechanism retired in 16A PR 5.
-- **Per-pair attributes** live on the new `relationships` table
+- **Per-pair attributes** live on the `relationships` table
   (Setup page at `/operator/sessions/{id}/relationships`), not on
   `Assignment.context` — that JSON column dropped in 15D PR 6b.
   See "Pair-level context post-15D" below for the full picture.
@@ -943,9 +888,8 @@ legacy shapes (the audit log is append-only).
 
 **The event-type table that followed was replaced by this pointer on
 2026-10-02** (findings `I8`, `guide/findings_2026-10-01_corpus.md`). It
-listed about 50 rows against 148 event types registered in
-`EVENT_SCHEMAS`, and several rows described retired emitters or old
-detail keys. The source of truth is `EVENT_SCHEMAS` in
+covered a fraction of the event types registered in `EVENT_SCHEMAS`, and
+several rows described retired emitters or old detail keys. The source of truth is `EVENT_SCHEMAS` in
 `app/services/audit.py`: one entry per event type, with the payload
 envelope and the keys each may carry, validated on every write. To list
 them, run
@@ -1024,16 +968,16 @@ The data layer and the operator + reviewer surfaces are
 multi-instrument-aware. Every session seeds one Instrument at
 creation time via `ensure_default_instrument` (system handle
 `Default`, operator-editable `description`, two seed response
-fields, three seed `pair_context_1/2/3` display fields). The
+fields, and the locked Name / Email display fields). The
 schema columns (`Instrument.session_id`, `Instrument.order`,
 `Assignment.instrument_id`) and the FK delete-orphan cascades are
 in place; `create_instrument(after_instrument_id=…)` and
 `delete_instrument(...)` exist as service helpers and emit the
 `instrument.created` / `instrument.deleted` audit events; the
 reviewer surface and the operator's `/instruments` page loop over
-instruments; and the `Add an instrument` / `Delete this instrument`
-operator buttons are wired (10D Slice 5, 2026-05-02) with mutual-
-exclusion + single-instrument-floor gates. See
+instruments; and each instrument card's `+Instrument` and `Delete`
+buttons are wired, with Delete refused on a session's only
+instrument. See
 `spec/architecture.md` "Conceptual hierarchy."
 
 The original Segment 13 plan (multi-instrument sessions) is
