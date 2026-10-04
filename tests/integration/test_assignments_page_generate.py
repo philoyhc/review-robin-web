@@ -340,6 +340,15 @@ def test_generate_with_existing_pairs_requires_confirm(
         "Replace not confirmed. The existing assignments were kept."
         in page.text
     )
+    # The banner's Cancel (spec/ui_elements.md §5a) returns to the page
+    # without the flag.
+    banner = page.text.split('id="missing-confirm-banner"', 1)[1]
+    banner = banner.split("</div>", 1)[0]  # up to the actions row's close
+    assert (
+        f'href="/operator/sessions/{review_session.id}/assignments">Cancel</a>'
+        in banner
+    )
+    assert 'class="btn alert"' in banner
     assert (
         len(
             list(

@@ -234,6 +234,19 @@ when it is checked; sections with unticked rows sit above the ticked ones.
   settings." and lists the error underneath (`instruments[1].name: name is
   required`). With seven bad instruments it lists five and "…and 2 more."
 
+## Assignments' replace banner, and a Settings import's landing (#2809, #2810)
+
+- [ ] **The banner reads true and dismisses.** On a session with
+  assignments, open `/operator/sessions/{id}/assignments?needs_confirm=1`
+  (the page a direct POST to `/assignments/generate` without
+  `confirm_replace` lands on). The red banner reads "Replace not
+  confirmed. The existing assignments were kept." and carries a Cancel
+  button at its bottom right; Cancel returns to the page without the
+  banner.
+- [ ] **A Settings import lands on its slot.** Import a Settings CSV
+  through Quick Setup. The page returns to Session Home at the Settings
+  slot, with no `?config_imported=ok` in the address bar.
+
 ## Setup tabs underline in blue (findings register E5)
 
 - [x] **Light and dark.** On any Setup page (Reviewers, say), the active

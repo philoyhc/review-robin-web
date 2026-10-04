@@ -511,6 +511,7 @@ expander.
 | 71h | Row expander | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/assignments/bulk-activate`; enabled on ≥1 selection **and** `can_edit`. Emitted only when the selection holds an excluded pair — see 71g. **No `Edit` and no `Delete` join them**: assignments are not edited row by row and not deleted, so this expander is the count and the status button(s) — two only on a mixed selection — where the rosters' also carries `Edit`, `Delete` and its confirm. |
 | 71i | Table toolbar | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the "Search by" (All / Reviewers / Reviewees) + search GET; last in the `filter-actions` row, which is now the toolbar's right pane. Carries the `#assignments-table-card` fragment so a search lands on the table. |
 | 71j | Table toolbar | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a **search term** is active — a status-only filter leaves the page filtered with no `Clear`, which is pre-existing and open. |
+| 71k | Replace-not-confirmed banner | Cancel | `<a>` | `btn alert` | Outline-amber | The mandatory Cancel on the `.banner.banner-error` a direct POST to `/assignments/generate` without `confirm_replace` lands on (`?needs_confirm=1`; `spec/ui_elements.md` §5a). Returns to the bare page |
 
 Button numbers in this section carry letter suffixes (`71g` etc.) so
 that inserting the section did not renumber every section after it.
