@@ -20,8 +20,10 @@ class PageStatus:
     Lands in template context as ``page_statuses: list[PageStatus]``,
     one entry per instrument the reviewer has assignments on. Single-
     instrument sessions still get one entry — the panel always
-    renders. Operator preview builds the same list for the reviewer
-    it previews.
+    renders. Operator preview builds the list the same way, from the
+    previewed reviewer's rows (preview shows every saved value, so a
+    page the reviewer could no longer read back can show
+    ``in_progress`` there where the reviewer sees ``not_started``).
     """
 
     position: int
