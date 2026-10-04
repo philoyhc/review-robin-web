@@ -458,7 +458,10 @@ back to the host page with `?prepare_confirm=responses`.
 The workflow card decodes that param (via the `prepare_confirm`
 builder kwarg, which re-runs `reconcile_impact` to populate the
 `responses_deleted` / `deleted_pairs` counts) and renders a
-confirmation banner in the card body:
+confirmation banner in the card body: *"Preparing will delete N
+saved responses"* over *"Regenerating drops M assignment pairs that
+the current setup no longer produces, along with their saved
+responses. Responses on unchanged pairs are kept."*, then two buttons:
 
 - **Regenerate & prepare** (`.btn.danger-solid`) posts back to `/workflow/prepare`
   with `acknowledge_response_loss=true`, which skips the detour

@@ -1112,10 +1112,12 @@ instrument `_materialise_one_instrument`
      load-bearing: these are bulk Core deletes, which bypass the
      ORM cascade, so the other order leaves the responses behind
      and breaks the foreign key.
-   - **To-keep.** Pairs surviving both passes. The row and its
-     responses are untouched, except that `include` is
+   - **To-keep.** Pairs surviving both passes. Their responses
+     are untouched, and so is the row, except that `include` is
      **recomputed, not preserved** (below).
-3. Emits `assignments.generated` (§ *Audit* below).
+3. Runs `recompute_self_review_classification` over the session
+   (§ *Self-review policy*), which keeps `is_self_review` current.
+4. Emits `assignments.generated` (§ *Audit* below).
 
 There is no separate full-reset mode, and none is needed. On a
 session with no responses, reconcile reaches the same end state a
@@ -1256,7 +1258,9 @@ way, which is the point.
 Used by the **Prepare session** button to show the
 `prepare_confirm` banner before any destructive write happens.
 Returns the `new` / `deleted` / `kept` / `responses_deleted` counts
-a real run would cause, **aggregated across the session** — the banner
+a real run would cause, through the same `_load_reconcile_inputs` and
+`_diff_one_instrument` the run uses, so the confirmation and the run
+cannot disagree about the diff. The counts are **aggregated across the session** — the banner
 asks one question and needs one answer. A per-instrument preview reads
 `staleness_by_instrument` instead, which is that shape. The two agree,
 but no longer because they share a call: `reconcile_impact` always walks
