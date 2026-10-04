@@ -822,8 +822,8 @@ and direct POSTs bypass the picker entirely).
   infra. Trade-off: a scheduled event "fires at the next
   operator GET ≥ scheduled time" — which is fine for events
   with reasonable lead time, but constrains *how close to the
-  fire moment* the operator can schedule (see the per-event
-  minimum-lead-time rule below).
+  fire moment* the operator can schedule (the lead-time floors
+  are in `spec/settings_inventory.md` §2).
 - **Past-time editor rule.** The editor **rejects** an anchor
   or offset on **save** if the resolved fire time is in the
   past at the moment of saving. The operator can't *set* a

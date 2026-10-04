@@ -86,15 +86,16 @@ class Settings(BaseSettings):
     # Covers operational fan-out headroom for a large reviewer roster
     # + operator coordination. Per-deployment tunable so a
     # workshop-style flow can lower it. Per ``spec/settings_inventory.md``
-    # §2.
+    # §8 (the rule itself is in §2).
     scheduled_operational_lead_hours: int = 1
 
     # Minimum ``|offset|`` (hours) of each auto-send entry. Enforced
-    # per-entry at save: every ``invite_offsets`` and
-    # ``reminder_offsets`` entry must satisfy ``|offset| ≥ this
-    # floor``, so an invite lands at least this long before Start and
-    # a reminder at least this long before End. Per
-    # ``spec/settings_inventory.md`` §2.
+    # per-entry at save while the entry's anchor is set (Start for
+    # ``invite_offsets``, End for ``reminder_offsets``; an unanchored
+    # entry is inert): ``|offset| ≥ this floor``, so an invite lands
+    # at least this long before Start and a reminder at least this
+    # long before End. Per ``spec/settings_inventory.md`` §8 (the rule
+    # itself is in §2).
     reviewer_notice_min_hours: int = 1
 
     # When True, ``audit.write_event`` raises on a detail-shape violation;
