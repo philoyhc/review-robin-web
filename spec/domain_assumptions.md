@@ -58,8 +58,7 @@ Activated and none does once it closes (at its deadline or by the
 operator) or reverts to draft. What a reviewer sees
 of their answers after close is the instrument's visibility policy.
 Instruments are edited under the session's rule above, and reviewers
-are not notified of edits, and an instrument has no Draft / Receiving /
-Closed status of its own.
+are not notified of edits.
 
 ## UI vocabulary — see
 
