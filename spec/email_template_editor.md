@@ -320,7 +320,7 @@ types are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
   `?template=` UI-state param.
 - `spec/rrw_functional_spec.md` §11 — the subsystem in user terms,
   including what is and is not wired.
-- `spec/preview_hub.md` — the read-only renders of all three emails.
+- `spec/operations_pages.md` "Email previews" — the read-only renders of all three emails, on the Invitations drill-in.
 - `spec/operator_ui_concept.md` "Email Template" — the page in the
   Setup-row taxonomy; `spec/operator_button_audit.md` §10 — its
   buttons (#63–#67).
