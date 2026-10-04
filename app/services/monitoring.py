@@ -112,7 +112,7 @@ def _required_governed_instrument_ids():
     cast that errors on Postgres over a bad value and reads it as 0 on
     SQLite. So both rollups send these instruments down a Python path
     built on ``responses.required_field_ids`` instead ("route (a)" in
-    ``guide/advanced_instruments.md`` Item 2). Visibility is not
+    ``guide/archive/advanced_instruments.md`` Item 2). Visibility is not
     filtered here: routing a hidden field's instrument to Python is only
     slower, never wrong, since the Python half applies the same filters
     as its SQL twin."""

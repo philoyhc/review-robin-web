@@ -3304,7 +3304,7 @@ author 2026-10-01; its Safari and screen-reader rows moved to
 ### Segment 19T — Advanced instruments — ✅ **closed + archived** (**seventeen items and 12A, all closed**; opened 2026-09-24, closed 2026-09-30; PRs #2597 → #2697; plan archived: `guide/archive/segment_19T_advanced_instruments.md`)
 
 Opened as "Odds and ends" for small operator-UI adjustments and renamed
-2026-09-27 once most of its items built `guide/advanced_instruments.md`.
+2026-09-27 once most of its items built `guide/archive/advanced_instruments.md`.
 Items closed independently, each with its own `Doc impact` / `Status`.
 
 - **Items 1–6 — adjustments.** Band 3's response-field rows and an open

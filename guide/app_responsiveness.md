@@ -389,7 +389,7 @@ Three things this measurement says that the plan for it did not:
 
 Taken 2026-10-01 at `c0861809` on a throwaway loopback `postgres:16`
 cluster in the agent container, the same method as the table above
-(`guide/post_assessment_1oct.md` E4): **13.7 / 13.9 / 15.2 s**, SQL
+(`guide/archive/post_assessment_1oct.md` E4): **13.7 / 13.9 / 15.2 s**, SQL
 4.6–5.5 s, 58 queries — unchanged since 19S Item 3. Timed per phase
 without a profiler, the insert is about 4.5 s, the recompute 2.5 s,
 the diff 0.8 s, and **`verify_self_review_classification` about 5 s**:
@@ -652,7 +652,7 @@ a relationship, change the rule, re-pin the instrument, flip self-reviews
 — and asserts the verdict changes. That test is the deliverable as much
 as the cache is.
 
-**Actioned further 2026-10-01** (`guide/post_assessment_1oct.md` E5).
+**Actioned further 2026-10-01** (`guide/archive/post_assessment_1oct.md` E5).
 The 19R cache only became durable through Generate, so a session not
 yet prepared recomputed on every page load: at 1,000 × 1,000 with one
 unpinned instrument, Assignments **6.5 s** and Validate **7.3 s**, SQL

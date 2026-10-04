@@ -98,7 +98,7 @@ this entry. One code PR.
 one, against a trigger of 500 (`guide/archive/sweep_2026-09-05_spec-docs.md`,
 26 days of 56 elapsed). Since that sweep `app/` changed in 199 files
 (+26,808 / −6,550), and 19T rebuilt the Instruments page, the reviewer
-surface and the instrument model under `guide/advanced_instruments.md`.
+surface and the instrument model under `guide/archive/advanced_instruments.md`.
 Both assessments found specs a state behind that survived item closes
 (`guide/codebase_assessment_30sep.md` §5, "The records went stale faster
 than the work, again"). This sweep reads every spec against the code, not

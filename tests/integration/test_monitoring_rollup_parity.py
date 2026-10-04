@@ -94,7 +94,7 @@ def rollups(db: Session) -> Fixture:
     optional field; `grouped` carries `group_kind = "r1"`, so it groups
     by `reviewee.tag_1` and carol + dan are one group.
 
-    Branches (19T Item 10; `guide/advanced_instruments.md` Item 1,
+    Branches (19T Item 10; `guide/archive/advanced_instruments.md` Item 1,
     Pre-positioning 7) — each optional field is governed by its
     instrument's required one, a List parent: `q2` shows when `q1` is
     "yes", `g2` when `g1` is "ok". The governed fields stay **optional**,

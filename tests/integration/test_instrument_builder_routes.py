@@ -9158,7 +9158,7 @@ def test_band3_display_field_table(
     client: TestClient, db: Session
 ) -> None:
     """19T Item 8 — Band 3's left column carries the display-field table
-    (``guide/advanced_instruments.md`` Item 5): one headerless row per
+    (``guide/archive/advanced_instruments.md`` Item 5): one headerless row per
     display field in the pills' order, with an Active checkbox, the
     field, and up / down buttons wired to ``newModelDfToggle`` /
     ``newModelDfMove``. Name and Email have a checkbox that only shows
@@ -9330,7 +9330,7 @@ def test_band3_display_field_table_group_off_field(
 
 def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> None:
     """19T Item 9 rung 1 — Band 3's response fields are a table
-    (``guide/advanced_instruments.md`` Item 3): one ``<tbody>`` per field,
+    (``guide/archive/advanced_instruments.md`` Item 3): one ``<tbody>`` per field,
     ruled underneath in ``base.html`` so a branch can later join its
     parent's group (Item 1). Each row reads Active, +, the held ⑂ column,
     name, type, bounds, R, ≡, ▲, ▼, X. The Active checkbox shows

@@ -1,7 +1,7 @@
 """The save rule for branching (19T Item 10 rung 3): **a closed branch
 holds no value.**
 
-``guide/advanced_instruments.md`` Item 1, Pre-positioning 3: every writer
+``guide/archive/advanced_instruments.md`` Item 1, Pre-positioning 3: every writer
 of ``Response`` rows ends here, so a governed answer never outlives its
 branch closing. Save and submit (``_apply_upserts``) and the group re-fan
 (``_refan_group_responses``) call :func:`drop_closed_branch_answers` after
