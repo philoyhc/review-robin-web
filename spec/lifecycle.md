@@ -135,7 +135,9 @@ instrument in the same transaction. Pre-conditions:
 - Readiness report still has no errors. (Raises `has_errors`.)
 - If warnings exist, the operator must have set
   `acknowledge_warnings=true` on the request. (Raises
-  `needs_acknowledge`.)
+  `needs_acknowledge`.) The scheduled trigger (§8.2.3) passes
+  `acknowledge_warnings=true` itself, so warnings never stop a
+  scheduled activation.
 
 Activation also clears `Instrument.deadline_closed_at` on every
 instrument — a previously deadline-closed instrument re-opens. In
@@ -227,7 +229,7 @@ Five exceptions to that list, all easy to mis-read:
   303 carrying `quick_setup_error=…&quick_setup_reason=lifecycle`
   rather than a 409.
 
-- **Instrument CRUD does not call this helper.** Its ~24 route
+- **Instrument CRUD does not call this helper.** Its route
   sites call `_require_instrument_editable` →
   `_can_edit_instrument`, a separate helper carrying the *same*
   predicate (`is_editable`) and raising the same 409 with its own
@@ -240,16 +242,13 @@ Five exceptions to that list, all easy to mis-read:
   name. **All eight of its mutating routes take it** — `create`,
   `update`, `bulk-inactivate`, `bulk-reactivate`, `bulk-delete`,
   `delete-all`, `import` and `cohort-rule` — so the roster accepts
-  through `ready` and `expired` and 409s only on `archived`.
-  **Seven of the eight were relaxed at 19P.2**; `cohort-rule` already
-  read this gate, which is why the helper's own docstring still
-  describes itself in that narrower case. §5 carries the reason, and
-  the rule that governs a second such exception.
+  through `ready` and `expired` and 409s only on `archived`. §5
+  carries the reason, and the rule that governs a second such
+  exception.
 - **Session Home's Delete Data and Delete session call
   `_require_not_ready` instead** (`_shared.py`), which 409s only in
   `ready`, so both work on a `draft`, `validated`, `expired` or
-  `archived` session (author's ruling, 2026-10-02,
-  `guide/findings_2026-10-01_corpus.md` C7). The lobby's bulk Delete
+  `archived` session. The lobby's bulk Delete
   accepts `draft`, `validated` and `expired` (`is_editable` or
   `is_expired`); archived sessions go through the archived page.
 
@@ -266,17 +265,25 @@ assignment Generate, and Quick Setup's roster and
 settings replaces (which answer `needs_confirm` rather than 400).
 **Relationship changes do not call it**, although moving a pair to
 another pair-context group deletes the group answer copy it carried
-(`spec/assignments.md` "Group-scoped fan-out"; author's ruling
-2026-10-03, findings B34), as a reviewee tag edit does.
+(`spec/assignments.md` "Group-scoped fan-out"), as a reviewee tag edit
+does.
 **Delete Data does not call it**: its own confirm tick names the loss
 ("Yes, delete every reviewer response on …") and is the
-acknowledgement (author's ruling 2026-10-02,
-`guide/findings_2026-10-01_corpus.md` B16). Delete session does not
+acknowledgement. Delete session does not
 call it either; its tick ("Yes, delete <name> and all its data")
 confirms the whole deletion.
 
 Detail message: `"Existing reviewer responses will be discarded;
 tick 'acknowledge response loss' to proceed"`.
+
+**The four roster bulk-deletes call a narrower variant**,
+`_require_selected_response_loss_ack` (`_shared.py`). It counts the
+responses on the selected rows' cascade (`roster_bulk.cascade_counts`)
+and raises the 400 only when that count is non-zero and the request
+lacks `acknowledge_response_loss=true`; its detail names the number
+("Deleting the selected rows will discard N saved responses; …").
+Observers and Relationships cascade to no response, so on those two
+pages it never fires.
 
 ### 3.3 `_require_validated_or_ready(session)`
 
@@ -284,10 +291,9 @@ Raises **HTTP 409 Conflict** when the session is `draft`
 (invitation actions need at least the assignment pairs to be
 settled). The two **bulk** invitation routes in
 `app/web/routes_operator/_operations.py` call it — `send-all` and
-`regenerate-all`. (`POST /invitations/generate` was in this
-list until 19Q Item 2 rung 3 retired it; Prepare creates the
-invitations now, gated by its own `is_editable` precondition rather
-than this one.) It is deliberately looser than "ready
+`regenerate-all`. (Prepare, which creates the invitations, is gated
+by its own `is_editable` precondition rather than this one.) It is
+deliberately looser than "ready
 only" so an operator can notify reviewers **before** activation
 (the Prepared / pre-open scenario).
 
@@ -298,9 +304,7 @@ session has been prepared (validated or ready)."`
 
 The stricter invitation gate, in the same module: per-row `send` /
 `regenerate` / `remind` and the bulk `remind-incomplete` answer
-**409** outside `ready` (author's ruling, 2026-10-02,
-`guide/findings_2026-10-01_corpus.md` B17), as their buttons always
-rendered.
+**409** outside `ready`.
 
 Detail message: `"This action is available only once the session is
 Activated."`
@@ -321,9 +325,7 @@ open or every instrument is closed.
 | `deadline_closed_at` | `DateTime \| None` | Timestamp the deadline-close fired. Read only by `observe_deadline`, which skips an instrument already stamped; cleared by Activate and by a reopen while live (a `ready` session whose deadline is unset or moved into the future). No surface renders it. |
 
 What a reviewer reads back after close is the visibility policy's call
-(`spec/reviewer-surface.md` "Lifecycle gating"). The
-`responses_visible_when_closed` flag that once decided it retired with
-its column on 2026-10-03 (findings B21).
+(`spec/reviewer-surface.md` "Lifecycle gating").
 
 **Services:**
 
@@ -337,14 +339,12 @@ its column on 2026-10-03 (findings B21).
   but only on an editable session, and activation then opens all),
   and the reviewer write gate (`spec/reviewer-surface.md`
   "Lifecycle gating") is session-wide with it.
-- **The heal.** A session that was already `ready` when the
-  per-instrument Close was retired may still carry an instrument it
-  closed, which nothing in the UI can reopen and which would make the
-  gate refuse every write. `observe_deadline`, which runs on every
-  reviewer request and on the Instruments page, reopens it while the
-  session is `ready` and before its deadline, emitting
-  `instrument.opened reason="session_wide"`. Past the deadline it
-  closes instead, as before.
+- **The heal.** `observe_deadline`, which runs on every reviewer
+  request and on the Instruments page, reopens any closed instrument
+  while the session is `ready` and before its deadline, emitting
+  `instrument.opened reason="session_wide"`; past the deadline it
+  closes them instead. Nothing in the UI reopens a single instrument,
+  and one left closed would make the gate refuse every write.
 - `observe_deadline(...)` — lazy deadline-close. Idempotent. Called
   on the reviewer surface — its GET (`review_surface` and
   `_surface_context`; the operator preview skips it), Recall, and the write gate
@@ -396,25 +396,23 @@ are hidden and a **yellow lock card** renders in its place, explaining
 that setup is locked and offering the way out that state has.
 **Observers is a stated exception**, below.
 
-**What is hidden is the same on all four pages since 19P.3.** No
-roster page renders the `.bottom-grid` this paragraph used to describe
-— the two destructive cards, plus the tag-label editor on the three
-pages that have one, are inside the roster card's **Unlock panel**,
-and it is the whole panel that is suppressed.
-Same predicate, one gate instead of a grid, and the Unlock control
+**What is hidden is the same on all four pages.** The two destructive
+cards, plus the tag-label editor on the three pages that have one, are
+inside the roster card's **Unlock panel**, and it is the whole panel
+that is suppressed.
+Same predicate, one gate, and the Unlock control
 itself goes with it: a locked page offers no way to open a panel
 whose contents its routes would refuse. The tag-label editor is the
 one exception and deliberately so — it re-renders outside the panel
 with its inputs disabled and its buttons dropped, because a locked
 page must still let an operator *read* the labels.
 
-**Observers uses a WIDER predicate, and is the first page to do so**
-(19P.2). Its mutating surface reads `not is_archived`, so the roster
-stays editable through `ready` and `expired` and only `archived` closes
-it. **Seven of its eight mutating routes were relaxed** to
-`_require_not_archived` in the same slice — `cohort-rule` already read
-it — so the page and its routes agree and the surface is suppressed
-exactly where they refuse. §3.1 lists all eight.
+**Observers uses a WIDER predicate.** Its mutating surface reads
+`not is_archived`, so the roster stays editable through `ready` and
+`expired` and only `archived` closes it. All eight of its mutating
+routes take `_require_not_archived`, so the page and its routes agree
+and the surface is suppressed exactly where they refuse. §3.1 lists
+all eight.
 
 The reason is what an observer *is*. They never appear in assignments,
 never produce responses, and no readiness rule references them — so
@@ -488,7 +486,7 @@ read the same predicate.
 
 **The roster pages' selection surface follows the same gate**: row
 checkboxes, the selection-driven Edit / Inactivate / Activate /
-Add / Delete controls, the selected-count pill and the delete
+Add / Delete controls, the selected count and the delete
 confirmation render only while editable. The read-only half of
 the strip — the Status filter, the search box and Clear —
 renders in every state, because reading a finished session's
@@ -543,8 +541,8 @@ inert at the service layer).
 **Assignments answers to the same predicate**, and splits the way
 the roster pages do: the selection-driven
 half — row checkboxes, select-all, the bulk form, the
-selected-count pill, `Inactivate` / `Activate` — renders only
-while `is_editable`, which is what its five mutating routes
+selected count, `Inactivate` / `Activate` — renders only
+while `is_editable`, which is what its four mutating routes
 enforce; the read-only half — the `Search by:` select, the search
 box, `Clear` — renders in every state, as does the preview-count
 line above the table. Its
@@ -574,7 +572,7 @@ are read-mostly so they work in any state.
 | Event type | Emitted by | Detail envelope |
 |---|---|---|
 | `session.validated` | `mark_validated` | `counts={"warnings": N, "info": N}` |
-| `session.invalidated` | `invalidate_session` (called via `invalidate_if_validated` or directly) | `reason=<string>` (`setup_mutation`, `operator_revert`, etc.) |
+| `session.invalidated` | `invalidate_session` (called via `invalidate_if_validated` or directly) | `reason=<string>` naming the caller: the mutation for `invalidate_if_validated` (e.g. `reviewer_created`, `assignments_generated`), `operator_revert` from `/revert`, `workflow_run_rollback` from a failed Activate |
 | `session.activated` | `activate_session` | `counts={"warnings": N, "info": N, "instruments": N}` + `context={"prev_status": "validated", "override_warnings": bool, "trigger": "operator" \| "scheduled"}` |
 | `session.reverted_to_draft` | `revert_session_to_draft` | `counts={"closed_instruments": N, "responses_at_revert": N}` |
 | `session.expired` | `expire_session` (Workflow-card **Close session**) | `counts={"closed_instruments": N}` |
@@ -584,6 +582,13 @@ are read-mostly so they work in any state.
 | `session.responses_release_stopped` | `stop_responses_release` (Workflow-card **Stop releasing**) | `snapshot={"responses_release_until": …}` |
 | `session.workflow_run_started` | `POST /workflow/prepare` and `POST /workflow/activate` — bracket the run, once per click | `context={"button": "prepare_session" \| "activate_session"}` |
 | `session.workflow_run_failed` | same two routes when the chain raises | `context={"button": …, "step": "generate" \| "validate" \| "invite" \| "activate", "error_message": …}`. **Not `precondition`** — every precondition return in `_workflow.py` happens *before* the `workflow_run_started` write and redirects with `super_step="precondition"` instead, so no audit row ever carries it. `precondition` is a `super_step` value (the redirect query param the card reads), not a `context.step` one. |
+| `session.activation_scheduled` | `sessions.update_session` when `scheduled_activate_at` changes | `changes={"scheduled_activate_at": [old, new]}` |
+| `session.invite_schedule_updated` / `session.reminder_schedule_updated` | `sessions.update_session` when `invite_offsets` / `reminder_offsets` change | `changes={"invite_offsets" \| "reminder_offsets": [old, new]}` |
+| `session.scheduled_activation_skipped` | the scheduled activation trigger (§8.2.3) | `reason=<skip code>` + `context={"scheduled_at": …, "status_at_fire": …}` |
+| `session.scheduled_activation_retry` / `session.scheduled_activation_failed_persistent` | the scheduled activation trigger on a transition error (§8.3) | `reason=<error text>` + `context={"scheduled_at": …, "attempt" \| "attempts": N}` |
+| `session.scheduled_invites_fired` / `session.scheduled_reminders_fired` | the invite / reminder triggers, once per offset fired | `counts={"sent": N}` + `context={"anchor_at", "offset_index", "offset", "scheduled_at", "actual_fired_at"}` |
+| `session.scheduled_invites_skipped` / `session.scheduled_reminders_skipped` | the invite / reminder triggers, once per offset skipped (§8.2.3) | `reason=<skip code>` + `context={"anchor_at", "offset_index", "offset", "scheduled_at"}` |
+| `session.scheduled_event_failed` | `observe_scheduled_events` when a trigger raises (§8.3) | `reason=<error text>` + `context={"trigger": …}` |
 | `instrument.opened` | `observe_deadline`'s heal (§4) | `refs={"instrument_id": id}` + `reason="session_wide"`. Older rows, from the retired per-instrument Open, carry no reason. |
 | `instrument.closed` | `observe_deadline` | `refs={"instrument_id": id}` + `reason="deadline"` + `context={"deadline": "..."}`. Past rows may carry `reason="manual"` from the retired per-instrument close. |
 
@@ -709,8 +714,7 @@ inactive. The release window is open only once
 `responses_release_at` is set and reached
 (`session_lifecycle.is_response_release_window_open`), so a
 `responses_release_until` with no start is inert. A new reader of an
-anchor + offset pair owes the same rule (author's ruling,
-2026-10-02, findings B18). The single-valued helper
+anchor + offset pair owes the same rule. The single-valued helper
 `resolve_offset` in `app/services/scheduled_events/_duration.py`
 implements it but has no callers.
 
@@ -724,8 +728,8 @@ without retrying. Per-event preconditions:
 
 | Event | Precondition at fire time | Skip reason |
 |---|---|---|
-| Scheduled activation | `session.status == "validated"` | `not_validated` |
-| Auto-send invites | `session.status in {"validated", "ready"}` (Prepared) **and** invitations already created (Prepare creates them; before 19Q Item 2 rung 3 the operator ran Create invites) | `not_prepared` / `invitations_not_created` |
+| Scheduled activation | `session.status == "validated"` **and** a fresh readiness report has no errors; warnings are acknowledged by the trigger itself (§2.4) | `not_validated` / `has_errors` (`needs_acknowledge` is mapped to a skip too, but cannot arise) |
+| Auto-send invites | `session.status in {"validated", "ready"}` (Prepared) **and** invitations already created (Prepare creates them) | `not_prepared` / `invitations_not_created` |
 | Auto-send reminders | `session.status == "ready"` (subsumes Prepared) **and** invitations exist **and** within accepting-responses window | `not_ready` / `no_invitations` / `outside_response_window` |
 
 Release-from and Release-until are not fired events. The release
@@ -818,8 +822,8 @@ and direct POSTs bypass the picker entirely).
   infra. Trade-off: a scheduled event "fires at the next
   operator GET ≥ scheduled time" — which is fine for events
   with reasonable lead time, but constrains *how close to the
-  fire moment* the operator can schedule (see the per-event
-  minimum-lead-time rule below).
+  fire moment* the operator can schedule (the lead-time floors
+  are in `spec/settings_inventory.md` §2).
 - **Past-time editor rule.** The editor **rejects** an anchor
   or offset on **save** if the resolved fire time is in the
   past at the moment of saving. The operator can't *set* a
@@ -863,20 +867,25 @@ and direct POSTs bypass the picker entirely).
   where it is the test suite's gate — except inside activation's own
   transition handler, which records one raised by `activate_session`
   as a retry like any other error.
-- **Operator notification on skip / failure.** MVP: audit
-  events only, plus a **Session Home banner** on the next
-  operator visit ("Scheduled activation skipped at «X» —
-  reason: «reason»"). Email notifications via 14B are deferred
-  until pilot feedback.
-- **Audit events** — each consumer Part defines its own emitters
-  (`session.activated`, `session.archived`, `session.invitations_sent`,
-  `session.reminder_batch_enqueued`, `session.purged`); each
-  scheduled-trigger emit carries `context.trigger="scheduled"`
-  to distinguish from operator-initiated fires. The
-  *configuration-change* events
-  (`session.invite_schedule_updated`,
-  `session.reminder_schedule_updated`, etc.) land alongside the
-  editor surfaces that write them.
+- **Operator notification on skip / failure.** Audit events, plus,
+  for activation only, a **signal line on the Workflow card**
+  ("Scheduled activation at «X» — reason: «reason»."), shown while
+  the session's newest audit event is the skip or the persistent
+  failure (`spec/workflow_card.md` § *Scheduled-activation signal*).
+  Email notification is deferred.
+- **Audit events** — a scheduled activation emits `session.activated`
+  with `context.trigger="scheduled"`; the invite and reminder triggers
+  emit `session.scheduled_invites_fired` /
+  `session.scheduled_reminders_fired`, one per offset fired. Skips and
+  failures have their own events, and the *configuration-change*
+  events (`session.activation_scheduled`,
+  `session.invite_schedule_updated`,
+  `session.reminder_schedule_updated`) are written by the editor
+  surfaces; §6 lists them all. Purging is not scheduled:
+  `session_purge.purge_and_archive` (the lobby's **Purge and archive**
+  and the Extract data page's Archive card) writes
+  `session.responses_purged`, `session.rosters_purged` and
+  `session.audit_log_purged` for the categories ticked.
 - **Settings CSV round-trip** — every scheduled-event column,
   including the two with no consumer yet, is exported and
   imported in the Settings CSV, so a round-trip never silently

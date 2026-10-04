@@ -30,7 +30,7 @@ pip install -e .[dev]
 alembic upgrade head
 ```
 
-That creates `review_robin_web.db` in the project root with all 21 tables.
+That creates `review_robin_web.db` in the project root with the full schema.
 
 ### Pointing at a different database
 

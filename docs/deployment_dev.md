@@ -117,8 +117,8 @@ restart the app after a change.
 | `ALLOW_FAKE_AUTH` | `false` | Local-only fake-identity escape hatch. **Must stay `false`** in any deployed environment. |
 | `FAKE_AUTH_EMAIL` / `FAKE_AUTH_NAME` / `FAKE_AUTH_PRINCIPAL_ID` / `FAKE_AUTH_OPERATOR` / `FAKE_AUTH_SYS_ADMIN` / `FAKE_AUTH_SUPER_ADMIN` | dev values | Tune the fake identity; inert unless `ALLOW_FAKE_AUTH=true`. `FAKE_AUTH_SUPER_ADMIN` (default on) makes the local fake operator a super-admin. |
 | `SMTP_ENCRYPTION_KEY` | unset | Fernet key encrypting operator SMTP passwords at rest. **Needed now**: the operator Settings page stores each operator's SMTP credentials, and saving them fails without a valid key (no transport sends mail yet; Segment 14B). Rotating it leaves stored passwords undecryptable, so operators re-enter theirs. |
-| `SCHEDULED_OPERATIONAL_LEAD_HOURS` | `1` | Minimum lead time, in hours, between now and a scheduled activation set at save (`spec/lifecycle.md` §8.2). |
-| `REVIEWER_NOTICE_MIN_HOURS` | `1` | Minimum gap, in hours, between an auto-sent invitation and the scheduled activation (`spec/lifecycle.md` §8.2). |
+| `SCHEDULED_OPERATIONAL_LEAD_HOURS` | `1` | Minimum lead time, in hours, between now and a scheduled activation set at save, and between now and each resolved auto-send fire moment (`spec/settings_inventory.md` §2). |
+| `REVIEWER_NOTICE_MIN_HOURS` | `1` | Minimum `\|offset\|`, in hours, of each auto-send invite or reminder offset (`spec/settings_inventory.md` §2). |
 | `REHYDRATE_ENABLED` | `false` | Opens the Rehydrate surface. Off by default and deferred; the test suite turns it on. |
 | `AUDIT_STRICT_MODE` | `false` | When true, `audit.write_event` raises on a detail-shape violation. Tests enable it; production leaves it off. |
 
@@ -228,7 +228,8 @@ Three places to look when something goes wrong:
 2. **App Service deployment log** — in the Azure Portal, open the
    `app-review-robin-web-dev` resource and go to
    *Deployment Center → Logs*. This shows what App Service did with the
-   artifact (Oryx build, container start).
+   artifact (unpacking it, starting the container). No Oryx build runs:
+   the package ships a prebuilt `antenv/`.
 3. **Application log stream** — in the Azure Portal, open the App Service and
    go to *Monitoring → Log stream* for live runtime output (gunicorn /
    uvicorn worker logs, Python tracebacks). For this to be populated, ensure

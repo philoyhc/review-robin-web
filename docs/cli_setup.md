@@ -1,22 +1,15 @@
-# CLI setup for the Azure + GitHub runbook
+# CLI setup for the NUS deployment runbook
 
-Written as the companion to the retired greenfield plan,
-[`archive/azure_github_setup.md`](archive/azure_github_setup.md). Its
-Phase numbers, `production` / `staging` environments and `AZURE_*`
-variables belong to that plan. The NUS runbook,
-[`deployment_nus.md`](deployment_nus.md), has one environment, `NUS_*`
-GitHub secrets and a variable (§6.2) and its own provisioning
-checklist (§3). The tools, shell notes, one-time auth and both
-appendices still serve it, with two exceptions: NUS Postgres is
-administered through the self-hosted runner inside the VNet
-([`nus_azure_status_v7.md`](nus_azure_status_v7.md)), not by `psql`
-from a workstation, and B.9's dev slot retires at cutover. Read the
-`*-nprd` resource names in the examples as the NUS `*-prd-*-01` ones.
-
+Workstation companion to [`deployment_nus.md`](deployment_nus.md)
+(written first for the retired greenfield plan,
+[`archive/azure_github_setup.md`](archive/azure_github_setup.md)).
 Covers the CLIs you need on your workstation to execute the
 runbook, the one-time auth steps, and a set of tests that
 prove you can reach the RRW GitHub repo and Azure before you
-start provisioning anything.
+start. NUS Postgres is private
+([`nus_azure_status_v7.md`](nus_azure_status_v7.md)), so `psql`
+against it runs on the self-hosted runner inside the VNet, not on a
+workstation; B.9's dev slot retires at cutover.
 
 If you already have `az`, `gh`, `psql`, and `git` working from
 your shell of choice and can push to `philoyhc/review-robin-web`
@@ -25,7 +18,7 @@ straight to the runbook.
 
 The two appendices at the end cover **setting WSL2 up from a
 clean Windows 11 install** and a **connectivity test set**
-you can run before Phase 1 to catch config problems while
+you can run before you start the runbook to catch config problems while
 they're cheap.
 
 ---
@@ -34,9 +27,9 @@ they're cheap.
 
 | CLI | What it drives | Notes |
 |---|---|---|
-| **`az`** (Azure CLI) | Every Phase 1 resource create, RBAC assignments, App Service config, Postgres firewall + admin bootstrap, Key Vault put/get, Application Gateway config, Application Insights provisioning. The workhorse. | Pin to `>= 2.60` so `az login --scope` and the current `webapp identity assign` shape work. |
-| **`gh`** (GitHub CLI) | Creating repo environments (`production` / `staging`), setting environment variables (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, etc.), attaching required reviewers on `production`, tailing workflow runs, filing PRs. | Alternative to clicking around the GitHub Settings UI; more auditable. |
-| **`psql`** (Postgres client) | Phase 2 — connecting as admin to run `CREATE DATABASE rrw` + `CREATE ROLE rrw_app` + grants, plus ad-hoc troubleshooting. | Version 16+ to match the Flexible Server. |
+| **`az`** (Azure CLI) | App Service config (runbook §3, §7), RBAC and the OIDC deploy identity (§6.1), Key Vault put/get, the Application Gateway listener and probe, diagnostics settings. The workhorse. | Pin to `>= 2.60` so `az login --scope` and the current `webapp identity assign` shape work. |
+| **`gh`** (GitHub CLI) | Setting the `NUS_*` repository secrets and the `NUS_WEBAPP_NAME` variable (runbook §6.2), the optional `nus` environment with required reviewers (§6.3), dispatching and tailing workflow runs, filing PRs. | Alternative to clicking around the GitHub Settings UI; more auditable. |
+| **`psql`** (Postgres client) | Connecting as the server admin to create the `rrw_app` role and run the grants (runbook §3, §8), plus ad-hoc troubleshooting. For NUS it runs on the self-hosted runner; on a workstation it reaches only the dev slot (B.9). | Version 16+ to match the Flexible Server. |
 | **`git`** | Repo operations, branch push, tag-based release triggers if you go that route. | |
 
 ## 2. Useful adjuncts
@@ -47,7 +40,7 @@ they're cheap.
 | **`openssl`** | Generating the `rrw_app` DB role password before storing in Key Vault (`openssl rand -base64 24`). |
 | **`curl`** | Smoke-testing `/health`, the Easy Auth login redirect, and the App Gateway probe path end-to-end. |
 | **`docker`** | Optional: a throwaway Postgres container to reproduce a dialect-only issue. Local Postgres is deferred (`docs/database.md`); the `ci-postgres` job is the parity gate. |
-| **`bicep`** or **`terraform`** | Only if you want Phase 1 provisioning codified rather than clicked. Not required for v1; useful once NPRD stabilises and you want PRD to be a deterministic replay. `bicep` ships bundled with modern `az`. |
+| **`bicep`** or **`terraform`** | Only if you want the project-side Azure config codified rather than clicked. Not required for v1. `bicep` ships bundled with modern `az`. |
 | **Python 3.12+ + `pip`** | On your box only for local test runs before pushing; CI has its own Python. `pyproject.toml` requires 3.12 or later. |
 | **`node`** | Local test runs: `tests/integration/test_inline_scripts_parse.py` parses the inline scripts with it and skips silently without it. No JS build step. |
 
@@ -57,7 +50,7 @@ guesses): `kubectl` (RRW is App Service, not AKS), `npm`
 above), `azd` (its opinionated scaffold
 doesn't match RRW's hand-rolled workflow — use plain `az`
 instead), `func` (Functions Core Tools; only if you actually
-build a function, which Phase 1 defers).
+build a function, which RRW does not).
 
 ---
 
@@ -93,7 +86,7 @@ The `az ... -o json | jq '.foo'` pattern from Azure docs doesn't
 translate. In PowerShell:
 
 ```powershell
-az webapp show --name app-nrrw-nprd --resource-group rg-nrrw-nprd -o json |
+az webapp show --name <nus-webapp> --resource-group rg-nrrw-prd-compute-01 -o json |
     ConvertFrom-Json |
     Select-Object -ExpandProperty defaultHostName
 ```
@@ -132,9 +125,9 @@ az account show --query "{tenantId:tenantId, id:id, user:user.name}" -o table
 gh auth login                                           # HTTPS + browser
 gh auth status                                          # confirm scope includes repo + workflow
 
-# Postgres (later, after Phase 2 provisions the server)
+# Postgres (on the host that runs psql: the runner for NUS)
 # ~/.pgpass keeps the password out of shell history:
-#   psql-nrrw-nprd.postgres.database.azure.com:5432:*:<admin>:<password>
+#   <nus-server>.postgres.database.azure.com:5432:*:<admin>:<password>
 # chmod 0600 ~/.pgpass
 ```
 
@@ -147,8 +140,8 @@ practice:
   on a resource group can silently target the wrong tenant's
   copy of you.
 - **`gh` scope for environment secrets.** `gh` defaults don't
-  include `admin:repo_hook` or environment-secret write. If a
-  Phase 4 "set environment variables" step fails with 403, run
+  include `admin:repo_hook` or environment-secret write. If
+  setting the `NUS_*` secrets (runbook §6.2) fails with 403, run
   `gh auth refresh -s workflow,admin:repo_hook`.
 
 ---
@@ -326,7 +319,7 @@ the legacy `wsl.exe` console window.
 ## Appendix B — Connectivity tests
 
 Run this test set inside WSL (or PowerShell) after Appendix A
-but before Phase 1 of the runbook. Each test proves one
+but before you start the runbook. Each test proves one
 specific reachability + credential story; a failure tells you
 exactly which piece is missing.
 
@@ -385,7 +378,8 @@ login`), and the delete succeeds. If push fails with 403, run
 
 ### B.4 GitHub — workflow-scope credential
 
-Phase 4 needs write access to repo secrets + environments.
+Runbook §6.2 needs write access to repo secrets (and §6.3's optional
+environment).
 Confirm the scope up front:
 
 ```bash
@@ -425,9 +419,10 @@ you. If it shows a personal tenant, run
 
 ### B.6 Azure — role check
 
-You need at minimum `Contributor` on the target resource groups
-to run the runbook, plus `User Access Administrator` (or IT
-assistance) to make role assignments in Phase 4.
+You need `Contributor` on `rg-nrrw-prd-compute-01` to do the
+runbook's project-side Azure work yourself, plus `User Access
+Administrator` (or IT assistance) for role assignments (runbook §6.1). The
+runbook's §1 "Ownership" item asks which of these you have.
 
 ```bash
 az role assignment list \
@@ -439,7 +434,7 @@ az role assignment list \
 Expected: at least one row with `Contributor` (or higher) at
 subscription or the intended resource group scope. If the list
 is empty, IT hasn't granted your account access to the target
-subscription yet — surface that before starting Phase 1.
+subscription yet — surface that before starting the runbook.
 
 ### B.7 Azure — can you provision?
 
@@ -457,7 +452,9 @@ az group delete --name rg-nrrw-clitest --yes --no-wait
 Expected: `az group create` succeeds, `az group show` returns
 `Succeeded`, `az group delete` returns without error. An empty
 RG costs nothing; the `--no-wait` cleanup finishes in the
-background.
+background. With a role scoped to `rg-nrrw-prd-compute-01` rather
+than the subscription, this test fails by design and B.6 is the
+check that matters.
 
 If `az group create` errors with `AuthorizationFailed`, your
 scope from B.6 doesn't include the region or your role is
@@ -466,19 +463,19 @@ IT has an Azure Policy on the subscription (naming, region,
 tags) that this test tripped — either adjust the test to match
 policy or ask IT which naming/region is enforced.
 
-### B.8 Postgres client — sanity only (no server yet)
+### B.8 Postgres client — sanity only
 
-Before Phase 2 you can only check the client:
+From a workstation you can only check the client:
 
 ```bash
 psql --version                                   # expect 16.x
 ```
 
-Once Phase 2 provisions the server, the real reachability test
-is:
+NUS Postgres is private, so the real reachability test runs on the
+self-hosted runner once it exists:
 
 ```bash
-psql "host=psql-nrrw-nprd.postgres.database.azure.com \
+psql "host=<nus-server>.postgres.database.azure.com \
       user=<admin> dbname=postgres sslmode=require" -c "SELECT 1;"
 ```
 
@@ -561,7 +558,7 @@ Expected: one row with `state=Ready` + Postgres `version=16`.
 The `host` value is what goes into the `psql` connection string
 below. If the list is empty, either you're in the wrong
 subscription or the server has been deleted — surface either
-before starting Phase 2.
+before relying on the dev slot.
 
 **B.9.4 Your public IP is in the Postgres firewall allow-list.**
 
@@ -634,7 +631,7 @@ psql "host=<pg-server>.postgres.database.azure.com port=5432 \
 
 Expected: `current_user = rrw_app`, `count` = whatever the row
 count is. If you get `permission denied for table users`, the
-`GRANT` from Phase 2 of the runbook was skipped on this server
+one-time `GRANT` bootstrap was skipped on this server
 — see `docs/deployment_dev.md` "First-time database bootstrap" for
 the grant statements.
 
@@ -649,8 +646,7 @@ the grant statements.
 - **Wrong Azure tenant (B.5).** `az login --tenant <id>` +
   `az account set --subscription "<name>"`.
 - **Insufficient Azure role (B.6, B.7).** Not a self-service
-  fix — ask IT for `Contributor` at the subscription scope, or
-  scoped to the resource groups the runbook creates.
+  fix — ask IT for `Contributor` on `rg-nrrw-prd-compute-01`.
 - **`psql` too old (B.8).** `sudo apt install postgresql-client-16`;
   on non-Ubuntu distros, follow the equivalent for
   postgresql.org's official repo.

@@ -109,9 +109,7 @@ Source: `app/web/templates/operator/sessions_list.html`.
 
 Source: `app/web/templates/operator/sessions_archived.html`.
 
-**Added 19O Item 7 entry 15.** The page shipped at 18A Part 3 and was
-never audited; folding it in alongside the Lobby's filter is what
-surfaced the gap. Its whole body is inside `{% if sessions %}`, so on an
+Its whole body is inside `{% if sessions %}`, so on an
 empty archive none of these render at all — unlike the Lobby, which
 keeps its card and inerts the controls because that card also holds the
 ways out of an empty lobby.
@@ -196,9 +194,8 @@ by `?editing=1`; there is no Edit page to hop to.
 | 157 | Session details footer | Cancel | `<a>` | `btn secondary` | Secondary | Returns to `#session-config` unedited |
 | 158 | Session details footer | Lock / Unlock | `<a>` | `btn secondary` | Secondary | Two-state toggle; adds or drops `?editing=1`. Rendered `aria-disabled` with an explanatory `title` once the session is past `validated` — the lock-card recovery path, not a hidden control |
 
-The Owners card is no longer a sub-card of this one — it moved to its
-own card (19S Item 10), above the Danger Zone since the author's ruling, 2026-09-23. Its buttons, including
-#159, are in §5f.
+The Owners card is its own card, above the Danger Zone, not a sub-card
+of this one; its buttons, including #159, are in §5f.
 
 ### 5c — Quick Setup card
 
@@ -228,7 +225,7 @@ bottom-right of Home's `.bottom-grid`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 17a | Danger Zone | Delete Data | `<button type="submit">` | `btn destructive` | Destructive (outline red) | Ships `disabled aria-disabled="true"`; a confirm checkbox enables it. The checkbox is itself disabled while the session is `ready`, so the button cannot be reached — audit U3 |
+| 17a | Danger Zone | Delete Data | `<button type="submit">` | `btn destructive` | Destructive (outline red) | Ships `disabled aria-disabled="true"`; a confirm checkbox enables it. The checkbox is itself disabled while the session is `ready`, so the button cannot be reached |
 | 17b | Danger Zone | Delete session | `<button type="submit">` | `btn destructive` | Destructive (outline red) | Same gating. Session-delete subsumes data-delete: ticking it shows the data checkbox selected but inert |
 
 These two keep the `17a` / `17b` numbers §4 lists them under, so a
@@ -237,19 +234,18 @@ reader following either reference lands on the same pair.
 ### 5f — Owners card (`#owners-card`)
 
 Source: `session_detail.html`, `.card#owners-card` — stacked above
-Danger Zone in the same `.bottom-left` column (19S Item 10; above it
-since the author's ruling, 2026-09-23). Always
+Danger Zone in the same `.bottom-left` column. Always
 shown, no display/edit swap; full contract in `spec/session_owners.md`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 159 | Owners card | Add owner | `<button type="submit" form="owners-add-form">` | `btn secondary` | Secondary | Posts the picker's address to `owners/add` and saves at once (author's ruling). Sits in the card's action row outside its form, beside Lock / Unlock (#192), and is `disabled` while the card is locked. |
+| 159 | Owners card | Add owner | `<button type="submit" form="owners-add-form">` | `btn secondary` | Secondary | Posts the picker's address to `owners/add` and saves at once. Sits in the card's action row outside its form, beside Lock / Unlock (#192), and is `disabled` while the card is locked. |
 | 190 | Owners card | Remove (per row) | `<button type="submit">` | `chrome-link` | **Not `.btn`** — see #187's note | Its own form per row, posting to `owners/{user_id}/remove`; saves at once. `disabled` when one owner remains and while the card is locked; your own row's form asks first (`confirm()` on submit) |
-| 192 | Owners card | Lock / Unlock | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle, as Quick Setup's #32; posts `owners/lock`. Right of Add owner (#159), which it disables along with the picker and every Remove while locked (author's ruling) |
+| 192 | Owners card | Lock / Unlock | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle, as Quick Setup's #32; posts `owners/lock`. Right of Add owner (#159), which it disables along with the picker and every Remove while locked |
 
 Rows 188, 189 and 191 — the card's staged **Save**, **Cancel** and a
-`<noscript>` Remove fallback — retired with the staging on the author's
-ruling of 2026-09-23; the numbers are not reused.
+`<noscript>` Remove fallback — are retired with the staging; the
+numbers are not reused.
 
 ---
 
@@ -263,22 +259,16 @@ Source: `app/web/templates/operator/session_reviewers.html`.
 > The selection-driven controls, the Upload button and the Danger Zone
 > button render only while the session is `is_editable`
 > (`draft` / `validated`); outside those states they must be
-> **absent**, not disabled. Since each page moved to the Unlock panel
-> — Reviewers 19P.1, Observers 19P.2, Reviewees and Relationships
-> 19P.3 — that is achieved by suppressing the whole panel the cards
-> live in, which is the same rule reaching them through one gate
+> **absent**, not disabled. That is achieved by suppressing the whole
+> Unlock panel the cards live in, which is the same rule reaching them through one gate
 > instead of three. The enable/disable rules in the Notes column
 > describe behavior *within* an editable session. `Clear` and `Search`
 > render in every state.
 >
-> **Observers is the exception, and it is now the whole page, not just
-> its checkboxes.** 19P.2 relaxed all eight of its mutating routes to
-> `_require_not_archived`, so its row actions, its import and its
-> `delete-all` are live through `ready` and `expired` and its Unlock
-> panel is suppressed only on `archived`. The sentence here used to
-> scope the looser gate to the row checkboxes alone, on the reasoning
-> that they drove the cohort rule editor; the editor moved into the
-> expander with the actions and the gate went with it. See
+> **Observers is the exception, for the whole page.** All eight of its
+> mutating routes take `_require_not_archived`, so its row actions, its
+> import and its `delete-all` are live through `ready` and `expired` and
+> its Unlock panel is suppressed only on `archived`. See
 > `spec/lifecycle.md` §5 for why an observer's roster is allowed the
 > wider predicate.
 
@@ -286,7 +276,7 @@ Source: `app/web/templates/operator/session_reviewers.html`.
 |---|---|---|---|---|---|---|
 | 105 | Reviewer tag labels | Cancel | `<button type="button">` | `btn secondary` | Secondary | Inline JS reverts the three tag inputs to their initial snapshot and re-disables the pair. Suppressed whenever the session is not `is_editable`. **In the Unlock panel** — and in the card's `.card-columns` fallback home the editor keeps for the states the panel cannot render in, where the partial drops this pair rather than disabling it. |
 | 106 | Reviewer tag labels | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewers/field-labels`. Starts `disabled`; inline JS flips both Save + Cancel on when the form is dirty. Suppressed whenever the session is not `is_editable` — which is why the whole panel is suppressed rather than disabled, since a locked page must carry no `Save labels` anywhere. **In the Unlock panel**; its redirect carries `?unlocked=1` so the save does not close the panel it was made from. |
-| 34 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | Inside `.card.lock` |
+| 34 | Lock card (when Activated or Closed) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | Inside `.card.lock` |
 | 35 | Upload Reviewers | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewers/import`. **In the roster card's Unlock panel**. |
 | 36 | Row expander | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row; JS navigates to `?edit_id=` with `#reviewer-row-<id>`, so the page lands on the row rather than the top. Rendered into the expander row injected beneath the selection. |
 | 123 | Row expander | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewers/bulk-inactivate`; enabled on ≥1 selection **and** `can_edit`. Rendered **by status, not arity** — `statusActions()` emits `Inactivate` only when the selection holds an active row and `Activate` only when it holds an inactive one, so a single-status selection gets one button rather than two of which one would no-op. The same on all four roster pages (Observers: #168). |
@@ -298,21 +288,22 @@ Source: `app/web/templates/operator/session_reviewers.html`.
 | 128 | Row expander bar (Edit/Add) | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits the `/{id}/update` or `/create` form. **Not "below the divider"**: there is no divider on Reviewers and no editor card — the pair renders in an expander bar directly beneath the edited row, styled as that row's own expander. **Secondary on all four roster pages**; whether the pair *should* be Primary is a question for the page that next revisits it. |
 | 129 | Row expander bar (Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list, carrying the pager anchor so Cancel lands where Save would. |
 | 37 | Danger Zone | Delete all reviewers | `<button type="submit">` | `btn destructive` | Destructive | Posts `/reviewers/delete-all`. **In the roster card's Unlock panel**. Rendered only when the roster has rows — not because the route refuses an empty one (it answers 303 and writes "Deleted all 0 reviewers") but because `_delete_all` invalidates a `validated` session before it counts, so an ungated one demotes to `draft` while deleting nothing. |
+| 231 | Roster card | Unlock / Lock | `<button type="button">` | `btn secondary` | Secondary | Toggles the Unlock panel; renders only while the session is `is_editable` and no row is being edited or added. **One element, two homes**, as Observers' #178: the card's last child when collapsed, inside the panel when open. The label names the state it moves *to*. Each home carries a `<noscript>` twin (`?unlocked=1#roster-card` and back) |
 
 ---
 
 ## Section 7 — Reviewees Setup (`/operator/sessions/{id}/reviewees`)
 
 Source: `app/web/templates/operator/session_reviewees.html`.
-The lifecycle note above §6 governs this section. The page took the
-shared roster shape at 19P.3 — toolbar, row expander, Unlock panel
+The lifecycle note above §6 governs this section. The page takes the
+shared roster shape — toolbar, row expander, Unlock panel
 (`spec/setup_pages.md` § *The roster card and the Unlock panel*).
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 107 | Reviewee field labels | Cancel | `<button type="button">` | `btn secondary` | Secondary | Inline JS reverts the six inputs (Name / Email / Photo / Tag 1-3) to their initial snapshot and re-disables the pair. Suppressed whenever the session is not `is_editable`. |
 | 108 | Reviewee field labels | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewees/field-labels`. Starts `disabled`; dirty-check via inline JS. Suppressed whenever the session is not `is_editable`. |
-| 38 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
+| 38 | Lock card (when Activated or Closed) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
 | 39 | Upload Reviewees | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewees/import`. In the **Unlock panel's right column**; nothing sits below the preview table. Ships `disabled` behind the `replace-roster` confirm whenever the roster has rows. |
 | 40 | Row expander | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row; JS navigates to `?edit_id=`. |
 | 130 | Row expander | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/reviewees/bulk-inactivate`; enabled on ≥1 selection **and** `can_edit`. Rendered **by status, not arity**, as #123. |
@@ -324,6 +315,7 @@ shared roster shape at 19P.3 — toolbar, row expander, Unlock panel
 | 135 | Row expander bar (Edit/Add) | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits the `/{id}/update` or `/create` form; shown below the divider in Edit/Add mode. Secondary, as #128. |
 | 136 | Row expander bar (Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
 | 41 | Danger Zone | Delete all reviewees | `<button type="submit">` | `btn destructive` | Destructive | Posts `/reviewees/delete-all`. In the **Unlock panel's left column**, beneath the tag-labels editor; the card renders only on a roster with rows. |
+| 232 | Roster card | Unlock / Lock | `<button type="button">` | `btn secondary` | Secondary | Toggles the Unlock panel; renders only while the session is `is_editable` and no row is being edited or added. **One element, two homes**, as Observers' #178: the card's last child when collapsed, inside the panel when open. The label names the state it moves *to*. Each home carries a `<noscript>` twin (`?unlocked=1#roster-card` and back) |
 
 ---
 
@@ -331,7 +323,7 @@ shared roster shape at 19P.3 — toolbar, row expander, Unlock panel
 
 Source: `app/web/templates/operator/session_relationships.html`.
 The lifecycle note above §6 governs this section. The per-pair context
-table takes the shared roster shape, as it has since 19P.3 — toolbar,
+table takes the shared roster shape — toolbar,
 row expander, Unlock panel (`spec/setup_pages.md` § *The roster card
 and the Unlock panel*).
 
@@ -339,18 +331,19 @@ and the Unlock panel*).
 |---|---|---|---|---|---|---|
 | 109 | Pair-context labels | Cancel | `<button type="button">` | `btn secondary` | Secondary | Inline JS reverts the three pair-context inputs to their initial snapshot and re-disables the pair. Suppressed whenever the session is not `is_editable`. |
 | 110 | Pair-context labels | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/relationships/field-labels`. Starts `disabled`; dirty-check via inline JS. Suppressed whenever the session is not `is_editable`. |
-| 42 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
+| 42 | Lock card (when Activated or Closed) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
 | 43 | Upload Relationships | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/relationships/import`. CSV columns: `ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`, `Status`. In the **Unlock panel's right column**; nothing sits below the preview table. |
 | 44 | Row expander | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row; JS navigates to `?edit_id=`. |
 | 137 | Row expander | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/relationships/bulk-inactivate`; enabled on ≥1 selection **and** `can_edit`. Rendered **by status, not arity**, as #123. |
 | 138 | Row expander | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/relationships/bulk-reactivate`; enabled on ≥1 selection **and** `can_edit`. Rendered **by status, not arity**, as #123. |
 | 139 | Table toolbar | Add new | `<a>` | `btn secondary` | Secondary | Links to `?add=1`; disabled while editing / when either roster is empty. Labeled `Add new` — see #125. |
-| 163 | Row expander | Delete | `<button type="submit">` | `btn destructive` | Destructive | Deletes the checkbox-selected rows via `/relationships/bulk-delete`. Sits in the row expander with the selection it acts on; nothing sits between `Add new` and `Search` in the toolbar. Two-stage gate: a selection enables the `Yes, delete these` checkbox beside it, which enables this button through the confirm-checkbox-gates-button standard below (`data-delete-btn="relationships-bulk-delete"`). Posts the bulk form via `form=` + `formaction`, like Inactivate / Activate. The server re-checks both gates: `confirm` must be `"true"`, and where the selected rows carry saved responses so must `acknowledge_response_loss`. A relationship carries none, so the second never applies; a pair the delete moves to another pair-context group gives up its group answer copy without one (findings B34). |
+| 163 | Row expander | Delete | `<button type="submit">` | `btn destructive` | Destructive | Deletes the checkbox-selected rows via `/relationships/bulk-delete`. Sits in the row expander with the selection it acts on; nothing sits between `Add new` and `Search` in the toolbar. Two-stage gate: a selection enables the `Yes, delete these` checkbox beside it, which enables this button through the confirm-checkbox-gates-button standard below (`data-delete-btn="relationships-bulk-delete"`). Posts the bulk form via `form=` + `formaction`, like Inactivate / Activate. The server re-checks both gates: `confirm` must be `"true"`, and where the selected rows carry saved responses so must `acknowledge_response_loss`. A relationship carries none, so the second never applies; a pair the delete moves to another pair-context group gives up its group answer copy without one. |
 | 140 | Table toolbar | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the Status + search GET; there is no "Search by" side-picker. Sits last in the `filter-actions` row. The selection-driven buttons are not beside it — they are in the row expander, with the selected count. |
 | 141 | Table toolbar | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered only when a filter is active. |
 | 142 | Row expander bar (Edit/Add) | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits the `/{id}/update` or `/create` form; reviewer / reviewee chosen via name-or-email `<datalist>` pickers. Secondary, as #128. |
 | 143 | Row expander bar (Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
 | 45 | Danger Zone | Delete all relationships | `<button type="submit">` | `btn destructive` | Destructive | Posts `/relationships/delete-all`. In the **Unlock panel's left column**, beneath the pair-context labels editor; the card renders only on a roster with rows. |
+| 233 | Roster card | Unlock / Lock | `<button type="button">` | `btn secondary` | Secondary | Toggles the Unlock panel; renders only while the session is `is_editable` and no row is being edited or added. **One element, two homes**, as Observers' #178: the card's last child when collapsed, inside the panel when open. The label names the state it moves *to*. Each home carries a `<noscript>` twin (`?unlocked=1#roster-card` and back) |
 
 ---
 
@@ -358,13 +351,8 @@ and the Unlock panel*).
 
 Source: `app/web/templates/operator/session_observers.html`.
 
-**Added at the 19P.2 close.** This page had no section: §§6/7/8 were the
-other three rosters and the only Observers row in the file was the nav
-tab (row 8). That was a gap rather than a scoping choice — this file
-audits *every* button on the operator surface — and 19P.2 widened it,
-giving the page a row expander, a table toolbar and an Unlock panel.
-Numbered 8.5 so the three existing roster sections keep their numbers
-and the cross-references to them stay true.
+Numbered 8.5 so the three other roster sections keep their numbers and
+the cross-references to them stay true.
 
 > **Lifecycle.** This page does **not** read `is_editable`. All eight
 > mutating routes take `_require_not_archived`, so **every mutating
@@ -412,7 +400,11 @@ per instrument card.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 49 | Lock card (when Activated) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
+| 49 | Lock card (when Activated or Closed) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
+| 234 | Session status card | Expand all instruments | `<button type="button">` | `btn secondary` | Secondary | Opens every per-instrument card's `<details>` on the page |
+| 235 | Session status card | Collapse all instruments | `<button type="button">` | `btn secondary` | Secondary | Closes every per-instrument card's `<details>` |
+| 236 | Save-error banner (an instrument being edited) | Cancel | `<a>` | `btn alert` | Outline-amber | The mandatory Cancel on the `.banner.banner-error` a rejected bulk save renders (`spec/ui_elements.md` §5a). Returns to `?editing=<id>#instrument-<id>`, so the card stays unlocked |
+| 237 | Save-error banner (no instrument being edited) | Cancel | `<a>` | `btn alert` | Outline-amber | The same banner's Cancel when no `editing` id is carried; returns to the bare page |
 
 ### 9b — Per-instrument card (one set per instrument)
 
@@ -426,6 +418,12 @@ per instrument card.
 | 56 | Bottom action row | +Instrument | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/add-new-model` with `after={iid}`. **The sole "create new instrument" affordance on the row** — every new instrument is a new-model one, so there is no separate `Add instrument` / `Add group instrument` pair. |
 | 56b | Bottom action row | +Page break | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/{iid}/page-break/create` (sets `starts_new_page=true` on the successor). Same Secondary role as +Instrument. Disabled on the last instrument, when the successor already carries a break, or past the editable window. |
 | 57 | Bottom action row | Lock / Unlock | `<a>` | `btn secondary` | Secondary | The gating toggle, both anchors always rendered and swapped in-page by the client lock layer; their `?editing=<id>` hrefs are the no-JS fallback. An in-page Lock strips `?editing` from the URL. Clicking Lock with a dirty Save prompts `confirm()`. Marked disabled (`.disabled`, `aria-disabled`) only when the session is not editable. Same footer shape as the Quick Setup card's. |
+| 238 | Card header (unlocked) | Lock | `<a>` | `btn secondary` | Secondary | Header mirror of #57's Lock, sharing its `data-instrument-lock-toggle` so the dirty-state `confirm()` fires from either; there so the operator need not scroll past Bands 1–3 to change mode. Marked disabled (`.disabled`, `aria-disabled`) when the session is not editable |
+| 239 | Card header (unlocked) | Save | `<button type="submit" form="dfsave-{iid}">` | `btn secondary` | Secondary | Header mirror of #52; starts `disabled` and is enabled in lockstep with it by the dirty tracker |
+| 240 | Card header (unlocked) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Header mirror of #53; starts `disabled`, enabled with Save |
+| 241 | Card header (locked) | Unlock | `<a>` | `btn secondary` | Secondary | Header mirror of #57's Unlock; its `?editing=<id>` href is the no-JS fallback. Marked disabled when the session is not editable |
+| 242 | Page-break card (before an instrument that starts a page) | × | `<button type="submit">` | `page-break-card-delete` | **Not `.btn`** — the page-break card's own control, outside §6 | Posts `/instruments/{iid}/page-break/delete`; `aria-label="Remove page break"`. `disabled`, with a title naming the unlock, while the page cannot be edited. Not rendered before the first instrument |
+| 243 | Band 2, beside the preview heading (unlocked) | ↻ Refresh sample | `<button type="button">` | `btn secondary cohort-combinator-btn` | Secondary | Picks a new preview sample reviewee from the current Link 1 and Link 2 rules. `disabled` until every Band 1 link is set, because running on a Not-set link uses an empty filter |
 
 ### 9c — Row controls — Band 3's display-field and response-field tables
 
@@ -434,17 +432,16 @@ per instrument card.
 and list options live inline on `InstrumentResponseField`'s
 `_inline_*` columns and are edited directly in the response-field row
 (Type select, Min / Max / Step inputs, List options text, R / ≡ / X
-buttons) — see `spec/instruments.md` "Response fields". **✓ retired**
-(19T Item 9): a row commits to the preview by itself once its live name
-and shape are valid.
+buttons) — see `spec/instruments.md` "Response fields". There is no ✓
+button: a row commits to the preview by itself once its live name and
+shape are valid.
 
 Both tables' rows carry an Active checkbox and ▲ ▼ move buttons, both
 `btn secondary`. The bindings differ: a response-field row's checkbox is
 the field's `InstrumentResponseField.visible`; a display-field row's puts
 its key in the instrument's `selected_display_keys`. The response-field row's ▲ ▼
 are full-size, like its other row buttons; the display-field row's are
-the short size, `btn secondary btn-short` (19T Item 9, on the author's
-ruling) — see `spec/instruments.md` "Display-field table".
+the short size, `btn secondary btn-short` — see `spec/instruments.md` "Display-field table".
 
 The response-field row's **R** (required), **≡** (help-text card) and
 **⑂** (branch) take §6's **Toggle** role: each renders `btn` (Primary's
@@ -456,6 +453,9 @@ carrying the state.
 | 223 | Response-field row | R | `<button type="button">` | `btn` (on) / `btn secondary` (off) | **Toggle** | Toggles the field's `required`; disabled ("Enter a field name first.") while the row has no field name, and while a Require branch governs the field |
 | 224 | Response-field row | ≡ | `<button type="button">` | `btn` (on) / `btn secondary` (off) | **Toggle** | Toggles the field's help-text card on the reviewer surface (`help_text_visible`); disabled ("Enter a field name first.") while the row has no field name |
 | 230 | Response-field row | ⑂ | `<button type="button">` | `btn rf-glyph` (on) / `btn secondary rf-glyph` (off) | **Toggle** | Adds a branch below the field. On (`aria-pressed="true"`) once the field has a branch, and disabled then; also disabled while the row has no field name, for a String field, and inside a branch whose responses lock it (`branch_locked`). Absent on level-2 rows, which cannot branch again |
+| 244 | Response-field row | + | `<button type="button">` | `btn secondary rf-glyph` | Secondary | Adds a response field below this one — inside a branch, a field to that branch. The branch's condition row carries one too, which adds a field at the top of the branch and is `disabled` while the branch's responses lock it |
+| 245 | Response-field row | ↰ | `<button type="button">` | `btn secondary rf-glyph` | Secondary | On a row outside any branch, joins the field above; `disabled` on the first row, on a field with a branch and on a field with saved responses. A level-1 row carries a second ↰, before its ↳, that joins the branch inside its own branch ending directly above; `disabled` on a field with a branch, in a locked branch, or when no such branch exists |
+| 246 | Response-field row (inside a branch) | ↳ | `<button type="button">` | `btn secondary rf-glyph` | Secondary | The same control as #245's join on a row a branch governs: moves the field out of its branch, or, on the branch's only field, detaches it and ends the branch. `disabled` on a field with a branch and in a branch whose responses lock it |
 
 ---
 
@@ -500,12 +500,10 @@ Rule Based Assignment card, and no Self-reviews toggle card.
 Per-instrument Self review is an inline checkbox column on the
 Per-instrument status table, and Self review / Show on that table are
 plain form checkboxes rather than `.btn`-shaped controls, so they are
-not enumerated here. **The `.btn`-shaped controls were the
-operator-actions search / bulk card's until 19P.5**, when that card
-went: the filter strip is the preview table's toolbar right pane
-(rung 1) and the selection's status button is the row expander
-(rung 2), the same two homes the four roster pages gave them across
-19P.1-3.
+not enumerated here. **The `.btn`-shaped controls sit where the four
+roster pages put theirs**: the filter strip in the preview table's
+toolbar right pane, the selection's status buttons in the row
+expander.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
@@ -524,23 +522,19 @@ citations.
 
 ## Section 12 — Previews — no page, no picker
 
-**There is no Previews hub.** It retired at **19Q Item 1**, when its two
-jobs moved to the Manage Invitations per-reviewer drill-in: the reviewer
-surface was already reachable per row from 19P.6, and the email preview
-region transplanted at rung 1. `GET /operator/sessions/{id}/previews` is
-a **308 permanent redirect** to `/operator/sessions/{id}/invitations`,
-and `POST /previews/random` is gone outright — a POST is not a bookmark.
-`session_previews.html` and `_preview_picker.html` are deleted.
+**There is no Previews hub.** Its two jobs are on the Manage
+Invitations per-reviewer drill-in. `GET /operator/sessions/{id}/previews`
+is a **308 permanent redirect** to `/operator/sessions/{id}/invitations`,
+and `POST /previews/random` does not exist — a POST is not a bookmark.
+There is no `session_previews.html` or `_preview_picker.html`.
 
 The affordances a reader may be looking for here are on the drill-in:
 **Open reviewer surface** (§13 row 87b, which replaces row 75a's
 `Open full preview`) and the email preview tab strip, whose rows keep
 their numbers below. `Apply` / `← Previous` / `Next →` / `Random`
-retired with the picker and have no successor — `Random` gets no
-replacement; see `guide/archive/segment_19Q_workflow_and_previews.md` Item 1's
-Status.
+retired with the picker and have no successor.
 
-### 12a — Previewing-as picker — **retired 19Q Item 1**
+### 12a — Previewing-as picker — **retired**
 
 Rows kept because other documents cite these numbers; none of these
 buttons renders anywhere today.
@@ -556,8 +550,7 @@ buttons renders anywhere today.
 ### 12b — Email preview tabs (partial) — **moved to the drill-in**
 
 `_email_preview_region.html` survived the hub. It renders on
-`session_invitations_reviewer_detail.html` since 19Q Item 1 rung 1, for
-a named reviewer rather than a picked one; the rows are unchanged.
+`session_invitations_reviewer_detail.html`, for a named reviewer rather than a picked one; the rows are unchanged.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
@@ -583,9 +576,8 @@ Source: `app/web/templates/operator/session_invitations.html`.
 **The page body carries no bulk-action bar.** Send invites and Send
 reminders belong to the Workflow card's stepper (§5a), and the outbox
 is reached from Sessions Diagnostics (§21), not from here —
-`spec/operations_pages.md`. Create invites was a third until 19Q Item
-2 rung 3 retired it: Prepare creates one invitation per eligible
-reviewer, so the step has no button.
+`spec/operations_pages.md`. There is no Create invites button: Prepare
+creates one invitation per eligible reviewer.
 
 ---
 
@@ -640,7 +632,7 @@ Source: `app/web/templates/operator/operator_settings.html`.
 |---|---|---|---|---|---|---|
 | 92 | Email send (SMTP) form | Cancel | `<a>` | `btn secondary` | Secondary | Returns to `?return_to=<path>` |
 | 93 | Email send (SMTP) form | Save | `<button type="submit">` | `btn secondary` | Secondary | Disabled until input touched |
-| 93a | Date & time card (18B) | Save timezone | `<button type="submit">` | `btn secondary` | Secondary | Posts `/operator/settings/timezone`; persists the `display_timezone` preference |
+| 93a | Date & time card | Save timezone | `<button type="submit">` | `btn secondary` | Secondary | Posts `/operator/settings/timezone`; persists the `display_timezone` preference |
 | 94 | Danger Zone | Clear all settings | `<button type="submit">` | `btn destructive` | Destructive | Posts `/operator/settings/clear` |
 
 ---
@@ -664,8 +656,8 @@ enumerated here.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 100 | Chrome user menu | Settings | `<a>` | `chrome-link` | Chrome utility link | Round-trips via `?return_to=<path>` |
-| 101 | Chrome user menu | About | `<a>` | `chrome-link` | Chrome utility link | Same `?return_to=<path>` pattern |
+| 100 | Chrome user menu | Settings | `<a>` | `chrome-link` | Chrome utility link | Round-trips via `?return_to=<path>`. Not rendered on `/operator/settings` itself |
+| 101 | Chrome user menu | About | `<a>` | `chrome-link` | Chrome utility link | Same `?return_to=<path>` pattern. Not rendered on `/about` itself |
 | 102 | Chrome user menu | Sign out | `<a>` | `signout` | Chrome utility link | Hits `/.auth/logout` (Easy Auth) |
 | 225 | Chrome user menu | Admin | `<a>` | `chrome-link` | Chrome utility link | Sys-admins only, and not on the `/operator/sys-admin` pages; same `?return_to=<path>` pattern |
 | 226 | Chrome user menu | Guide | `<a>` | `chrome-link` | Chrome utility link | Same `?return_to=<path>` pattern. Suppressed on `/guide` itself and for a viewer who resolves no Guide audiences (`spec/operator_ui_concept.md` "`/guide` — Guide") |
@@ -699,7 +691,7 @@ canonical role definition is the `.back-link` row in
 ## Section 21 — Sessions Diagnostics (`/operator/sys-admin/sessions`)
 
 Source: `app/web/templates/operator/sys_admin_sessions.html`.
-Sys-admin-gated. Sections 19 and 20 catalogue this page's children and
+Sys-admin-gated. Sections 19, 20 and 22 catalogue this page's children and
 link back to it.
 
 **Section numbers are stable identifiers, not an ordering.** This page
@@ -713,6 +705,9 @@ takes the next free number.
 | 196 | Sessions table, per row (Actions) | Manage | `<button type="submit">` in a `<form>` | `btn secondary` | Secondary | POSTs `…/sessions/{id}/adopt` — self-adds the sys-admin as an owner (audited `session.owner_added`), then opens the session. **The only door**: no row may link straight into a session the sys-admin does not own. |
 | 197 | Sessions table, per row (Actions) | Outbox | `<a>` | `btn secondary` | Secondary | Child page, read-only for a non-owner sys-admin. |
 | 198 | Sessions table, per row (Actions) | Audit log | `<a>` | `btn secondary` | Secondary | Child page (Section 20). |
+| 247 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | Returns to wherever the chrome's Admin link (#225) was followed from |
+| 248 | Sys Admin tab strip | Sessions Diagnostics | `<a>` | `nav-tab` (`.active` on this page and its Outbox and Audit log children) | Nav (page-internal) | `app/web/templates/operator/partials/sys_admin_top_nav.html`, in a `tab-strip tab-strip-page sys-admin-nav` wrapper, on all four Sys Admin pages (§§19–22). The active tab stays an `<a>`, not the `<span aria-current>` convention 4 describes |
+| 249 | Sys Admin tab strip | Accounts Management | `<a>` | `nav-tab` (`.active` on §19's page) | Nav (page-internal) | As #248 |
 
 Notes:
 
@@ -779,9 +774,10 @@ Sys-admin-gated.
 |---|---|---|---|---|---|---|
 | 118 | Page top | ← Back to Sessions Diagnostics | `<a>` | `back-link` | Return-to (`.back-link`) | |
 | 119 | Audit log card heading | Download CSV | `<a download>` | `btn secondary` | Secondary | Links (GET) to `/operator/sessions/{id}/export/audit_log.csv`; the URL forward-carries the active filter set so the CSV matches the on-screen view. |
-| 120 | Filter strip (button row) | Apply filters | `<button type="submit">` | `btn secondary` | Secondary | Right-aligned within a `.btn-pair` with `justify-content: flex-end`; **Secondary, never Primary**, so it doesn't compete with the Download CSV button up at the card heading. |
+| 120 | Filter strip (button row) | Apply filters | `<button type="submit">` | `btn secondary` | Secondary | Right-aligned within a `.btn-pair` whose `justify-content: flex-end` is an inline `style` on the wrapper, not the class's; **Secondary, never Primary**, so it doesn't compete with the Download CSV button up at the card heading. |
 | 121 | Filter strip (button row) | Clear | `<a>` | `btn secondary` | Secondary | Renders only when `filter_form.is_active`, before Apply filters. Resets to the canonical viewer URL with no query string. |
 | 122 | Per-row detail | (expander) | `<summary>` inside `<details>` | `audit-detail summary` | Inline disclosure (custom) | Inline expander surfacing the canonical audit detail envelopes in human-readable sections + raw JSON in a nested `<details>`. Not a `.btn` but interactive — listed for completeness. |
+| 250 | Below the table | Older events → | `<a>` | `chrome-link` | **Not `.btn`** — `chrome-link` reused in page content, as #187 | Renders only when a further page of events exists; carries the cursor and the active filter set |
 
 Notes:
 
@@ -791,9 +787,21 @@ Notes:
   - Right column flows actor email → From / To date selectors
     side-by-side (each half-width, flex children) → severity
     checkboxes on a single inline row.
-- **Button-row gap.** `.btn-pair` carries `margin-top: 16px;
-  margin-bottom: 24px;` so the row sits clear of both the
-  filter strip above and the audit-log table below.
+- **Button-row gap.** The row's `.btn-pair` takes `margin-top: 16px;
+  margin-bottom: 24px;` from an inline `style` on the wrapper — the
+  class sets neither — so the row sits clear of both the filter strip
+  above and the audit-log table below.
+
+---
+
+## Section 22 — Session outbox (`/operator/sys-admin/sessions/{id}/outbox`)
+
+Source: `app/web/templates/operator/sys_admin_session_outbox.html`.
+Sys-admin-gated and read-only; reached from §21's per-row Outbox (#197).
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 251 | Page top | ← Back to Sessions Diagnostics | `<a>` | `back-link` | Return-to (`.back-link`) | |
 
 ---
 
@@ -805,7 +813,7 @@ section.
 ### 1. "Return to where you came from" is one class
 
 Pages reached as a detour from the chrome — Operator Settings (#104),
-About (#103), and the Sys Admin child pages (#111, #118) — carry a
+About (#103), and the Sys Admin pages (#111, #118, #247, #251) — carry a
 **`.back-link`**, rendered as
 `<a class="back-link" href="{{ return_to_url }}">← Back to
 {{ return_to_label }}</a>` at the top of the body, above the working
@@ -827,8 +835,7 @@ prepares or rebuilds local state without sending is Secondary. Both
 apply wherever the pair appears — today the Workflow card's stepper
 (§5a), where Send invites is Primary and Prepare session is
 Secondary in the states that also offer Activate. *Prepare is the
-interesting case for this rule*: since 19Q Item 2 rung 2 it creates
-the invitations, but it does not send them, so it stays Secondary.
+interesting case for this rule*: it creates the invitations, but it does not send them, so it stays Secondary.
 
 Per-row Send / Send reminder (#86, #87) stay **Secondary**: per-row
 context overrides the role-based convention, because a table of

@@ -39,7 +39,7 @@ is first discovered during a production migration.
 **Merging ahead of it is fine** for changes that cannot reach the
 database: documentation, and dev-only tooling under `tools/`. The faster
 `CI` job (`ruff check .` plus the SQLite suite) still applies to anything
-containing executable code, and it usually finishes inside two minutes.
+containing executable code, and it takes about three minutes (2026-10-03).
 
 This policy is deliberate rather than a gap: see
 `docs/practice-audit-2026-09-04.md` §1 and §3, which measured it in

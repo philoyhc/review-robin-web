@@ -318,7 +318,7 @@ def parse_and_validate_invite_offsets(
        - resolved fire moment (``scheduled_activate_at + offset``)
          ≥ ``now + operational_lead_hours``
        - ``|offset|`` ≥ ``notice_min_hours``
-       (per §8.2.1 + the Part 2 plan section's per-offset table)
+       (per ``spec/settings_inventory.md`` §2)
     3. When ``scheduled_activate_at`` is unset: the entry is inert
        per §8.2.2 anchor-null, so only the parse-validity check
        runs. The editor renders the field with a "Set Start first"

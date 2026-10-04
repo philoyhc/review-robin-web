@@ -28,7 +28,7 @@ Sort is **row sorting**, distinct from **Order** (column ordering on the same su
 
 ## Scope: Display Fields only on the operator side
 
-The operator's default sort is restricted to **Display Fields** — reviewee attributes that exist at form-render time (name, profile_link, tag_1/2/3, pair_context_1/2/3). **Email is not a key** (findings A29): it shares the identity column with the name, whose badge sorts by name, and a save drops a key naming it. Only the save drops one: a key already stored (nothing current writes one) still sorts the reviewer surface until the card is next saved, and Duplicate, Replicate and the Settings CSV carry it as they find it.
+The operator's default sort is restricted to **Display Fields** — reviewee attributes that exist at form-render time (name, profile_link, tag_1/2/3, pair_context_1/2/3). **Email is not a key**: it shares the identity column with the name, whose badge sorts by name, and a save drops a key naming it. Only the save drops one: a key already stored (nothing current writes one) still sorts the reviewer surface until the card is next saved, and Duplicate, Replicate and the Settings CSV carry it as they find it.
 
 **Response Fields are excluded** from the operator-side sort. No response data exists when the form first renders, so sorting by it would produce empty-cell sorts that shuffle as the reviewer types — surprising and useless.
 
@@ -38,7 +38,7 @@ The reviewer-side override at view time spans **both display and response fields
 
 ## Operator UI: sort badges on the Band 2 preview headers
 
-(Author's ruling, 2026-10-02, findings A22.) The operator sets the default
+The operator sets the default
 sort from the column headers of the per-instrument card's Band 2 preview
 ("Preview review instrument", `spec/instruments.md`), the table that mirrors
 the reviewer surface. **No Sort column on the Display Fields table, no new
@@ -92,7 +92,7 @@ them as parallel arrays.
 The reviewer surface table renders with the operator's configured sort
 applied. Each sortable header carries a `↕` button (`rrw-sort-btn`) that runs
 the shared `rrwSortHeaderClick`. The reviewer's override is a cascade of at
-most three keys (author's ruling, 2026-10-02, findings A23):
+most three keys:
 
 - **Plain click** on a column that is not sorted, or that is one of several
   sorted columns → the cascade becomes that column alone, ascending
@@ -123,7 +123,7 @@ cookie, returning the next render to the operator default. Cookie
 scope is per-(browser, session, instrument) — different browsers /
 devices / cleared cookies all return cleanly to the operator default.
 
-**Who applies which key on load** (ruling A27). The server cannot
+**Who applies which key on load.** The server cannot
 sort by response values, so the work splits by what the stored spec
 holds:
 
@@ -153,7 +153,6 @@ holds:
   when the first sort ran on it — the operator default on a page with
   no stored sort. The
   two can differ on mixed-case or numbered values and on tied rows.
-  This predates A27.
 - **A click made over a stored display-only sort is a second
   exception.** That page is in the server's display-sorted order, and
   the click's first `_rrwApplySort` stamps `rrwOriginalIndex` from it,
@@ -223,13 +222,11 @@ No explicit FK / cascade migration is needed. The defense is one if-statement at
 
 ---
 
-## Default state and migrations
+## Default state
 
-- New column added via Alembic migration with a NULL default.
-- Backfill is a no-op — every existing instrument starts with `sort_display_fields = NULL`, which renders as today's implicit insertion order.
-- New instruments default to NULL.
-
-Zero behaviour change for any existing session until an operator explicitly configures sort.
+`sort_display_fields` is nullable and every new instrument starts NULL,
+which renders in insertion order: an instrument sorts only once an
+operator configures it.
 
 ---
 
@@ -324,7 +321,7 @@ Key landmarks in the codebase:
   `rrwSortHeaderClick` + `_rrwApplySort` + cookie-I/O JS;
   every sortable table gains a tiny `↕` button next to
   the column label (the click target) via the
-  `rrw-sort-btn` class. Since 19O Item 4 the primitive also
+  `rrw-sort-btn` class. The primitive also
   **removes any injected `.session-expander` panel** before it
   collects or stamps rows, and **dispatches `rrw:sorted`** on
   the table once the rows have landed, for pages that re-anchor

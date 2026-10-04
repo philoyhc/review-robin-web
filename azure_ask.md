@@ -145,9 +145,11 @@ approval path if RRW graduates beyond pilot.
   the firewall list.
 - **Azure Front Door or Application Gateway with WAF** in front
   of production, primarily for DDoS resistance and standard
-  request-shape rules; RRW's own routes are all POST for
-  state-changing actions, so app-layer CSRF risk is low but WAF
-  earns its keep at scale.
+  request-shape rules; RRW's state-changing actions are POSTs,
+  except that a GET of Session Home fires past-due scheduled events
+  and a GET of the Instruments page or a reviewer page closes an
+  instrument past its deadline, each audited. App-layer CSRF risk
+  is low, but WAF earns its keep at scale.
 
 ### 2.3 Secret + credential hardening
 

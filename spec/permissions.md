@@ -69,10 +69,13 @@ the sessions the user has a row for (`sessions.list_for_user`).
 
 ## 2. Gate catalogue
 
-All gates are FastAPI dependencies in `app/web/deps.py`. Each is
-listed with its predicate, what it returns on success, and exactly
-what happens on failure. A `log.warning("permission denied", gate=…)`
-is emitted on every miss.
+All gates are FastAPI dependencies in `app/web/deps.py`, except the
+two feature-toggle wrappers, which live in
+`app/web/routes_operator/_shared.py`. Each is listed with its
+predicate, what it returns on success, and exactly what happens on
+failure. The `deps.py` gates emit a
+`log.warning("permission denied", gate=…)` when they refuse a
+signed-in user.
 
 | Gate | Predicate | Returns | On miss |
 |---|---|---|---|
@@ -84,6 +87,7 @@ is emitted on every miss.
 | `require_relationships_enabled_session` / `require_observers_enabled_session` | wraps `require_session_operator`, then the per-session feature toggle | `ReviewSession` | **404** when the feature is off — a deep link to a disabled tab misses cleanly rather than rendering an orphan page. The permission check still runs first |
 | `require_reviewer_in_session` | an **active** `Reviewer` row in the session whose email matches the signed-in email (case-insensitive) | `(Reviewer, ReviewSession)` | **404**, bare — unknown session and "not an active reviewer" answer identically |
 | `require_reviewee_in_session` | an **active** `Reviewee` row whose `email_or_identifier` *parses as an email* and matches | `(Reviewee, ReviewSession)` | as above. A confidential reviewee (non-email identifier) can never reach the surface, by construction |
+| `require_reviewee_with_current_grant` | wraps `require_reviewee_in_session`, then `visibility_policies.reviewee_has_current_grant` | `(Reviewee, ReviewSession)` | **404**, bare — a reviewee with nothing currently granted is indistinguishable from a stranger |
 | `require_observer_in_session` | an **active** `Observer` row whose email matches | `(Observer, ReviewSession)` | as above |
 
 Two things the table implies and the code relies on:
@@ -94,9 +98,10 @@ Two things the table implies and the code relies on:
 - **Every participant gate is email-identity, never token.** The
   invitation token (`/me/invite/{token}`) is a *landing* route
   gated only by `get_or_create_user`: it looks the invitation up by
-  `sha256(token)` (404 if unknown), compares the invitation's
-  reviewer email to the signed-in email (403 page on mismatch),
-  stamps `opened_at`, and 303s to the reviewer surface — which then
+  `sha256(token)` (404 if unknown or its reviewer is inactive),
+  compares the invitation's reviewer email to the signed-in email
+  (403 page on mismatch), stamps `opened_at`, and 303s to the
+  reviewer surface — which then
   applies `require_reviewer_in_session` itself. A token grants
   nothing on its own.
 
@@ -110,9 +115,9 @@ Two things the table implies and the code relies on:
 | session-scoped operator routes `/operator/sessions/{session_id}/…` | `require_session_operator` | per route, directly or via the two feature-toggle wrappers. **Every** such route carries one. Checking it means following `Depends()` **transitively**: a decorator scan alone reports false positives, because several routes in `_instruments.py` are gated two levels deep through `Depends(_require_instrument_in_session)` and never name `require_session_operator` in their own signature. *A check that flags a correctly-gated route is worse than none, because the next reader believes it.* |
 | the two **relaxed** session routes: `POST …/owners/add`, `POST …/clone` | `require_sys_admin_or_session_operator` | a non-owner sys-admin may reach them; `owners/add` additionally enforces **self-only** for a non-owner in its handler (`self_only` error otherwise); `clone` makes the cloner owner of the copy, leaving the original untouched |
 | lobby bulk routes (tags / archive / bulk-delete) | `require_operator` + per-id re-resolution | each client-supplied `session_id` is re-resolved with `sessions.get_for_user`; non-owned ids are skipped, never acted on |
-| `/operator/sys-admin/*` (13 routes: root redirect, Sessions Diagnostics, per-session Outbox + Audit log children, Accounts Management, adopt, and the seven user actions) | `require_sys_admin` | per route. Sessions Diagnostics also carries the **Visibility grid audit** card — a read-only report of every stored Band 3 cell whose mode its `(audience, window)` pair does not allow. It is workspace-wide by construction: one query across every session's instruments, which is why it sits here and on no per-session operator surface. It writes nothing; clearing an offending cell is the owning operator's action on that instrument's visibility editor (its "Who can see what you wrote" card, unlocked), which refuses to author the value in the first place |
+| `/operator/sys-admin/*` (root redirect, Sessions Diagnostics, per-session Outbox + Audit log children, Accounts Management, adopt, and the seven user actions) | `require_sys_admin` | per route. Sessions Diagnostics also carries the **Visibility grid audit** card — a read-only report of every stored Band 3 cell whose mode its `(audience, window)` pair does not allow. It is workspace-wide by construction: one query across every session's instruments, which is why it sits here and on no per-session operator surface. It writes nothing; clearing an offending cell is the owning operator's action on that instrument's visibility editor (its "Who can see what you wrote" card, unlocked), which refuses to author the value in the first place |
 | `GET …/export/audit_log.csv` | `require_sys_admin` | the one session-scoped export that is *not* owner-reachable: there is no operator-facing entry point to it |
-| reviewer surface, save / submit / recall / clear, post-submit summary | `require_reviewer_in_session` | per route |
+| reviewer surface, save / submit / recall / clear, post-submit summary + `summary.csv` | `require_reviewer_in_session` | per route |
 | `/me/sessions/{id}/results` (+ acknowledge) | `require_reviewee_with_current_grant` | per route — composes the roster gate with `visibility_policies.reviewee_has_current_grant`; both the GET and the acknowledge POST share it |
 | `/me/sessions/{id}/collation` (+ CSV) | `require_observer_in_session` | per route |
 | `/me` dashboard, `/me/invite/{token}`, `/`, `/about`, `/guide` | `get_or_create_user` only | any signed-in user; `/me` renders an empty dashboard for a user with no roles; `/` **302s by role** — operator or sys-admin → `/operator/sessions`, everyone else → `/me` (never 301: the target follows a role that can change); `/about` is the "signed in but no access" landing; `/guide` **303s to `/about`** for a viewer with no Guide audience |
@@ -257,11 +262,12 @@ everyone.
 
 ## 6. Audit
 
-Every operation in §4 writes exactly one canonical audit event
-(envelope contract: `spec/architecture.md` "Audit-event detail
-schema"; all nine `event_type`s above are registered in
-`EVENT_SCHEMAS`). Reads never audit; denied requests log a warning
-but write no event. `docs/security_posture.md` §5.7 is the
+Every operation in §4 writes exactly one canonical audit event,
+except Owners card Lock / Unlock and a Remove from all sessions that
+finds the user on no session, which write none (envelope contract:
+`spec/architecture.md` "Audit-event detail schema"; every `event_type`
+above is registered in `EVENT_SCHEMAS`). Reads never audit; denied
+requests log a warning but write no event. `docs/security_posture.md` §5.7 is the
 destructive-action ledger that confirms each mutating route carries a
 confirm + a gate + an event.
 
@@ -274,13 +280,13 @@ a case when a gate changes.
 
 | Contract | Test file |
 |---|---|
-| allowlist bootstrap, case-insensitive match, once-only seeding, super-admin self-heal, fake-auth toggles, revoked-operator redirect | `tests/integration/test_operator_allowlist_gate.py` (21) |
-| participant-only user bounced from lobby + per-session route; workspace operator non-owner 404 + lobby exclusion; sys-admin reaches another owner's session only via adopt | `tests/integration/test_operator_lobby_access_gate.py` (6) |
-| session ids are not enumerable: for each of the four session-scoped gates, an existing session the caller holds no role on is byte-identical to an id that does not exist | `tests/integration/test_session_enumeration_gate.py` (7) |
-| owner add / remove invariants, last-owner 409, self-remove, sys-admin self-add via the relaxed gate | `tests/integration/test_session_owners.py` (19) |
-| the seven Accounts Management actions and every guard code | `tests/integration/test_sys_admin_users.py` (48) |
-| super-admin resolver (config membership, fake fold-in) | `tests/unit/test_roles_super_admin.py` (6) |
-| audit-log CSV is sys-admin-only | `tests/integration/test_outbox_sys_admin_relax.py` (4) |
+| allowlist bootstrap, case-insensitive match, once-only seeding, super-admin self-heal, fake-auth toggles, revoked-operator redirect | `tests/integration/test_operator_allowlist_gate.py` |
+| participant-only user bounced from lobby + per-session route; workspace operator non-owner 404 + lobby exclusion; sys-admin reaches another owner's session only via adopt | `tests/integration/test_operator_lobby_access_gate.py` |
+| session ids are not enumerable: for each of the four session-scoped gates, an existing session the caller holds no role on is byte-identical to an id that does not exist | `tests/integration/test_session_enumeration_gate.py` |
+| owner add / remove invariants, last-owner 409, self-remove, sys-admin self-add via the relaxed gate | `tests/integration/test_session_owners.py` |
+| the seven Accounts Management actions and every guard code | `tests/integration/test_sys_admin_users.py` |
+| super-admin resolver (config membership, fake fold-in) | `tests/unit/test_roles_super_admin.py` |
+| audit-log CSV is sys-admin-only | `tests/integration/test_outbox_sys_admin_relax.py` |
 | reviewer gate 404s (other session, inactive row) and foreign `assignment_id` dropped | `tests/integration/test_reviewer_response_flow.py` |
 
 ---

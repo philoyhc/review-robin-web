@@ -75,7 +75,7 @@ The peer-reviewer audience is constrained per window:
 | Session ongoing (`while_ongoing`) | **Raw only** — the baseline self-view-during-session guarantee. The editor renders this cell as a static "Raw responses" pill; the operator cannot turn it off. |
 | Responses released (`after_release`) | `None` (off) / **Raw**. The reviewer either sees nothing or their own raw submissions, read-only (no recall / resubmit). |
 
-`Anonymized` (row + deidentified) is **not** offered for peer reviewers — anonymising one's own work against oneself is incoherent. `Summarized` (aggregated + deidentified) was offered until 2026-10-02 and retired (`guide/findings_2026-10-01_corpus.md` A18): no reviewer-facing summary view was ever built, so the cell promised what nothing delivered. Migration `e2a7c4f9b130` set every stored reviewer `aggregated` pair to off; since #2723 that is what the reviewer's read-back already showed, though the transparency card and the editor still labelled it Anonymized summaries. A settings CSV from before then imports the cell as off. The scope rule (§1.1) still holds: the reviewer's grant covers only responses they themselves keyed in.
+`Anonymized` (row + deidentified) is **not** offered for peer reviewers — anonymizing one's own work against oneself is incoherent. Nor is `Summarized` (aggregated + deidentified): there is no reviewer-facing summary view for it to open. A settings CSV that carries a reviewer `summarized` "Responses released" cell imports it as off (§3.1). The scope rule (§1.1) still holds: the reviewer's grant covers only responses they themselves keyed in.
 
 **Where the reviewer cells are read.** Once an instrument stops
 accepting, the review surface, the summary page and its CSV show the
@@ -121,7 +121,7 @@ cells' backticked mode names intact when rewording.
 
 | Audience | `while_ongoing` | `after_release` |
 |---|---|---|
-| `peer_reviewer` | `raw` only — a reviewer sees their own work in full while writing it. | `None` or `raw`. Summarized was retired 2026-10-02 (A18). |
+| `peer_reviewer` | `raw` only — a reviewer sees their own work in full while writing it. | `None` or `raw`. |
 | `reviewee` | **`None` only.** A reviewee may never read responses while the review is running: the two windows mean literally *as data is coming in* and *after the review has closed*, and the second is the only one that is theirs. | `None`, `raw`, `anonymized`, `summarized`. No default: an instrument starts with no row, so this cell is off until the operator opts in (§4.1). |
 | `observer` | `None` or `summarized`. Raw / Anonymized rows are gated on `after_release` — per-row downloads during a live session carry an unfinished-data risk the summary view dodges. | `None`, `raw`, `anonymized`, `summarized`. |
 
@@ -130,9 +130,8 @@ editor refuses an illegal cell in `upsert_policy` → `_validate_per_window`; th
 **Settings-CSV import** refuses it in the parse phase
 (`session_config_io/_apply_parse._view_policy_cell_errors`), naming the
 field and the legal modes, before any row is written. One exception
-runs first: a bundle exported before 2026-10-02 may carry the
-reviewer's retired `summarized` "Responses released" cell, and the
-import reads it as off (`_drop_retired_view_policy_modes`, §2.2). Checking the
+runs first: an older bundle may carry a reviewer `summarized`
+"Responses released" cell, and the import reads it as off (`_drop_retired_view_policy_modes`, §2.2). Checking the
 vocabulary is not enough on the import path: a value can be one of `row`
 / `aggregated` / `identified` / `deidentified` and still be illegal in
 the cell it lands in, so a hand-edited or hand-built bundle would
@@ -195,11 +194,11 @@ instrument_view_policies
 
 - One row per (instrument, audience). Upserts cover both the create and update cases.
 - Rows with both windows off (all four pair columns NULL) persist; the resolver reads them as off.
-- An `observer_tag` column, meant to restrict the observer grant to observers carrying a tag, was dropped unread on 2026-10-02 (`guide/findings_2026-10-01_corpus.md` A19). A settings CSV from before then still carries `…view_policies[observer].observer_tag`; the import accepts the row and drops it.
+- There is no `observer_tag` column. An older settings CSV that still carries `…view_policies[observer].observer_tag` imports the row with that value dropped.
 
 ### 4.1 Default state
 
-Default on instrument create: no rows. Resolver treats a missing row as "off in both windows" — instrument is invisible to that audience. The operator opts each audience in deliberately on the instrument's visibility editor. **Replicate is the exception:** the copy starts with its source's rows (author's ruling, 2026-10-03, findings A1), written through the same `upsert_policy` writer, so each is checked against the per-cell rule and audited as in §5; a stored cell the rule rejects is not carried across (`spec/instruments.md` "Replicate semantics").
+Default on instrument create: no rows. Resolver treats a missing row as "off in both windows" — instrument is invisible to that audience. The operator opts each audience in deliberately on the instrument's visibility editor. **`peer_reviewer` while ongoing is the one cell a missing row does not turn off:** it is `raw` by rule (§2.2), so with no row the reviewer still reads back their own answers while the session is `ready` (`reviewer_sees_own_responses`), and the editor and the transparency card show Raw there (`_BAND3_VISIBILITY_DEFAULTS`, `app/web/views/_instruments.py`). **Replicate is the exception to "no rows":** the copy starts with its source's rows, written through the same `upsert_policy` writer, so each is checked against the per-cell rule and audited as in §5; a stored cell the rule rejects is not carried across (`spec/instruments.md` "Replicate semantics").
 
 ---
 
@@ -220,7 +219,7 @@ A no-op save (operator clicked Save with no changes) emits nothing.
 | Surface | What carries it |
 |---|---|
 | Persistence | `app/services/visibility_policies.py` — mode encoder / decoder, per-audience vocabulary, `upsert_policy`, `upsert_many`. |
-| Band 2's "Who can see what you wrote" card | One card, under the intro card in the left column of Band 2's intro, is both the preview and the editor (19T Item 7; `spec/instruments.md` § *Visibility card*). Locked, it renders `band2_preview_visibility_rows_by_instrument` (`build_reviewer_visibility_rows`, same rows as the reviewer surface's `visibility_rows`) — two rows, Observers omitted, each mode a display-only `pill pill-count` (19T Item 8) rather than the reviewer surface's plain text; whether the reviewer surface should follow is undecided. Unlocked, the chip table renders hidden inputs that hitch on the card's main Save form (`form="dfsave-<id>"`), from `band3_visibility_by_instrument`; both the consolidated `POST /operator/sessions/{id}/instruments/{instrument_id}/save` and its no-JS `/fields/save` fallback read them and call `upsert_many`, so there is no standalone visibility submit to keep in step. A cycle chip (`newModelCycleVisibilityCell`) repaints the locked table's matching cell live on click, so an unsaved edit shows there before Save; Cancel's discard reload restores the saved state. |
+| Band 2's "Who can see what you wrote" card | One card, under the intro card in the left column of Band 2's intro, is both the preview and the editor (`spec/instruments.md` § *Visibility card*). Locked, it renders `band2_preview_visibility_rows_by_instrument` (`build_reviewer_visibility_rows`, same rows as the reviewer surface's `visibility_rows`) — two rows, Observers omitted, each mode a display-only `pill pill-count` rather than the reviewer surface's plain text; whether the reviewer surface should follow is undecided. Unlocked, the chip table renders hidden inputs that hitch on the card's main Save form (`form="dfsave-<id>"`), from `band3_visibility_by_instrument`; both the consolidated `POST /operator/sessions/{id}/instruments/{instrument_id}/save` and its no-JS `/fields/save` fallback read them and call `upsert_many`, so there is no standalone visibility submit to keep in step. A cycle chip (`newModelCycleVisibilityCell`) repaints the locked table's matching cell live on click, so an unsaved edit shows there before Save; Cancel's discard reload restores the saved state. |
 | Reviewer-surface transparency card | `views.build_reviewer_visibility_rows` (in `app/web/views/_instruments.py`) + a read-only "Who can see what you wrote" card under the heading card in the left column of each per-instrument intro (`.rs-intro-columns`; `spec/reviewer-surface.md`, "Intro and help cards") on `review_surface.html`. Two rows (You / Reviewees; Observers omitted) × two windows, with the persisted mode labels (Raw responses / Anonymized responses / Anonymized summaries / —). |
 | Resolver | `app/services/visibility_policies.py::resolve_mode` decodes one `(instrument, audience)` row to a mode for the two window flags its caller passes (`after_release` wins when both are open and it grants). It applies no scope: the callers work out which windows are open, short-circuit on archive (§3.3) and scope the rows — the reviewee to their own assignments, the observer to their cohort (`app/services/observer_cohort.py`). |
 | Reviewer's own read-back | `visibility_policies.reviewer_sees_own_responses` over `peer_reviewer_policies`, applied per instrument by the review surface (`routes_reviewer/_surface/_context.py`), the summary page (`views/_reviewer_summary.py`) and the summary CSV (`extracts/responses_extract.py`). Raw shows, off hides, nothing once archived (§2.2). |

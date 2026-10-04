@@ -6,8 +6,8 @@
 > and the `session_rehydrate.rehydrate_session` orchestrator — but
 > `rehydrate_enabled` ships **false**, the four routes (the page,
 > `validate`, `commit` and `dropped.csv`) 404, and the
-> lobby button does not render. **The author ruled it incomplete on
-> 2026-10-01**: the pipeline has never been exercised on live data, and
+> lobby button does not render. **It is incomplete**: the pipeline has
+> never been exercised on live data, and
 > a failure other than `RehydrateError` still answers 500 where
 > [§7](#7-atomicity-and-audit) says the failing step is reported.
 > What is open before it is exposed is in
@@ -43,8 +43,7 @@ source** and neither copies **responses**. Rehydrate differs on two axes:
 
 1. its source is **external CSV files** (an extract taken earlier, possibly
    from a session that has since been purged or archived), not a live row;
-2. it **repopulates response data**, which nothing in the codebase can do
-   today.
+2. it **repopulates response data**, which no other path does.
 
 ## 2. Capability boundary — what rehydrate can and cannot reconstruct
 
@@ -56,7 +55,7 @@ Grounded in what the extract actually captures and what importers exist:
 | Reviewers / Reviewees / Observers (+ reviewer/reviewee tag friendly labels) | `reviewers.csv` / `reviewees.csv` / `observers.csv` | ✅ `csv_imports.save_*` | Import as-is; tag friendly labels ride the roster header |
 | Relationships (reviewer↔reviewee pairs + status + pair tags + pair-context friendly labels) | `relationships.csv` | ✅ `relationships.save_relationships` | Import as-is; pair-context friendly labels ride the header |
 | **Assignments** | derived (rule-generated) | ⚠️ no importer — regenerated from rules | Regenerate from imported rule sets. Never created to fit a response: a `responses.csv` row naming a pair the rules did not produce is dropped and reported |
-| **Responses** (the data) | `responses.csv` (in the responses bundle) | ❌ **none — output-only** | Its own importer, `responses_import.py` ([§6.4](#64-load-responses)) |
+| **Responses** (the data) | `responses.csv` (in the responses bundle) | ✅ `responses_import.py` — Rehydrate's own; no operator-facing upload | Load through it ([§6.4](#64-load-responses)) |
 | Instrument visibility policies (`instrument_view_policies`) | `settings.csv` | ✅ | Apply as-is |
 | `relationships_enabled` / `observers_enabled` toggles | `settings.csv` | ✅ | Apply as-is |
 | Invitations, email outbox, `results_acknowledged_at`, participant tokens | not reconstructable / regenerated | — | Not restored ([§9](#9-limitations-and-known-gaps)) |
@@ -116,8 +115,9 @@ back to the lobby; no session context yet — this page creates one). Layout:
 
 - **Instructions card (½, top-left).** Brief: what a complete extract set
   is ([§4](#4-required-file-set)) and the restored / not-restored summary
-  (mirrors the description note, [§5](#5-naming-and-description)). Alert
-  tint. No "other inputs ignored" warning — there are none here.
+  (mirrors the description note, [§5](#5-naming-and-description)). A
+  plain `.card`, no tint. No "other inputs ignored" warning — there are
+  none here.
 - **Upload + actions card (½, top-right).** A `multiple` file input taking
   the loose CSVs and/or the two ZIP bundles (Setup + Responses, unpacked
   server-side — [§4](#4-required-file-set)), plus two buttons:
@@ -143,19 +143,25 @@ current upload returns no blocking errors.
 (`app/services/session_rehydrate.py`), so a green preview cannot diverge from
 what the commit actually does. The report carries:
 
-- **Completeness** — required files present, headers matching, and any
-  extra/ignored files ([§4](#4-required-file-set)).
+- **Completeness** — the four required files present
+  ([§4](#4-required-file-set)), `settings.csv`'s header exact,
+  `responses.csv` carrying its 21-column header, `reviewers.csv` /
+  `reviewees.csv` carrying their email column, and `relationships.csv` /
+  `observers.csv` present when `settings.csv` enables them.
 - **Cross-file integrity** — every reviewer/reviewee email in
-  `responses.csv` resolves in the roster CSVs; every instrument short-label
-  + field-key in `responses.csv` resolves in `settings.csv`;
-  relationship/observer emails resolve; `relationships.csv` /
-  `observers.csv` are present iff the settings imply them. These catch the
-  most common real mistake — **files from two different sessions or a stale
-  re-export**.
+  `responses.csv` resolves in the roster CSVs, and every instrument
+  short-label + field-key in `responses.csv` resolves in `settings.csv`.
+  These catch the most common real mistake — **files from two different
+  sessions or a stale re-export**.
 - **Preview** — the derived `_REHYD` name + code and the counts, so the
   operator can confirm it's the right session before committing.
 - **Verdict** — blocking errors (block Rehydrate) vs warnings (allow, but
   surfaced).
+
+The analyzer checks no other header and does not resolve relationship or
+observer emails: those problems surface at commit, when the importers
+parse the files, and fail the whole rehydrate. The fuller pre-flight is
+open work (`guide/deferred_consolidated.md`).
 
 **Straight-from-verdict-to-run flow (the stash design).**
 
@@ -199,11 +205,11 @@ the handler resolves files by name.
 
 **Required always:**
 
-| File | Header (must match) | Provides |
+| File | Header (as extracted) | Provides |
 |---|---|---|
 | `*_settings.csv` | `field,value,data_type` (`session_config_io._rows.HEADER`) | All config: session metadata, instruments + fields, rule sets, email overrides, data shapes |
-| `*_reviewers.csv` | `ReviewerName,ReviewerEmail,ReviewerTag1..3,ProfileLink` | Reviewer population (tag columns may carry a `.<label>` friendly-label suffix) |
-| `*_reviewees.csv` | `RevieweeName,RevieweeEmail,RevieweeTag1..3,ProfileLink` | Reviewee population (tag columns may carry a `.<label>` friendly-label suffix) |
+| `*_reviewers.csv` | `ReviewerName,ReviewerEmail,ReviewerTag1..3,ProfileLink,Status` | Reviewer population (tag columns may carry a `.<label>` friendly-label suffix) |
+| `*_reviewees.csv` | `RevieweeName,RevieweeEmail,RevieweeTag1..3,ProfileLink,Status` | Reviewee population (tag columns may carry a `.<label>` friendly-label suffix) |
 | `*_responses.csv` | the 21-column responses header (`responses_extract.HEADER`) | The response data + `SavedAt`/`SubmittedAt`/`Version` |
 
 Bundles exported before `ProfileLink`'s rename still re-import: rehydrate
@@ -219,12 +225,12 @@ accept the legacy `PhotoLink` header too (§3.1 in `spec/csv_contracts.md`).
 | `*_observers.csv` | the session used observers | `ObserverEmail,ObserverName,ObserverTag1,Status,CohortRule` |
 
 **Completeness validation (the card's promise, enforced).** Before
-creating anything, the handler verifies the four required files are
-present and their headers match. On any miss it rejects the whole upload
-with a specific, actionable error and creates **no** session — e.g.
+creating anything, the analyzer runs the completeness checks of
+[§3.3](#33-pre-flight-validation-mandatory). On any miss it rejects the
+whole upload with a specific, actionable error and creates **no**
+session — e.g.
 *"Missing settings.csv — rehydrate needs the full extract set"* or
-*"responses.csv header doesn't match the expected format; re-export via
-Extract data → Extract all data."* Filenames are matched by suffix
+*"responses.csv is missing its expected 21-column header row"*. Filenames are matched by suffix
 (`*_settings.csv` etc.), tolerating the `{code}_` prefix the extracts
 emit and any operator renaming that preserves the suffix and does not
 put `_by_instrument_` in the name (see Ignored files below).
@@ -313,8 +319,11 @@ instrument (immediately replaced by the settings apply), and writes
 Call `session_config_io.apply_session_config(db, new_session, rows)` with
 the parsed `settings.csv` rows, **after rewriting two rows**: replace the
 `session.name` value with the `_REHYD` name and the `session.code` value
-with the derived code (otherwise apply would restore the original name and
-collide on code). `apply` rebuilds instruments (+ display/response
+with the derived code. The shell already holds both, and `apply` fills
+`name` and `code` only where the destination is blank
+(`spec/csv_contracts.md` § *Settings CSV — apply precedence*), so the
+rewrite is a guard: no path lets the extract's own name or code reach
+the new session. `apply` rebuilds instruments (+ display/response
 fields), session rule sets, email overrides, and data
 shapes, and restores the per-instrument runtime flag
 `accepting_responses`. Tag friendly
@@ -357,16 +366,15 @@ whole-number message.
 
    **The cross-roster identity check does not run here**, and never
    has — this step calls the `save_*` functions directly, while the
-   check sits on the import routes. The sentence above said it did
-   until 19Q Item 7 found otherwise. Deferred rather than closed: the
+   check sits on the import routes. Deferred rather than closed: the
    rehydrated session can hold a conflicting pair, but only one its
    source already held, and the `*.cross_roster_identity` Validate
    rules report it there. Tracked in
    `guide/deferred_consolidated.md`.
 2. **Relationships** (if enabled) via `relationships.save_relationships`,
    resolving emails against the just-imported rosters.
-3. **Assignments** — regenerate from the imported rule sets via the
-   canonical `assignments.generate` path (deterministic given seed + rules
+3. **Assignments** — regenerate from the imported rule sets via
+   `assignments.replace_assignments`, the path Generate uses (deterministic given seed + rules
    + populations, so it reproduces the original assignment graph for
    rule-driven sessions). **This is the only step that creates assignment
    rows.** Loading responses never adds one: assignments are only ever
@@ -518,12 +526,12 @@ Stated plainly so the card copy and the PR description stay honest:
   a hard dependency of rehydrate — so these are not gaps. An extract
   whose `settings.csv` predates that carrier falls back to default view
   policies and presence-inferred toggles ([§6.2](#62-apply-settings)).
-- **Manual per-pair assignment overrides don't round-trip** (confirmed —
-  `spec/roundtrip_coverage.md`). A pair the operator hand-toggled via the
+- **Manual per-pair assignment overrides don't round-trip**
+  (`spec/roundtrip_coverage.md`). A pair the operator hand-toggled via the
   Assignments page's bulk Activate / Inactivate (the `Assignment.include`
   flag) is captured by no export and is reset to `include=True` when
-  assignments regenerate. Rehydrate no longer backfills such a pair, so a
-  response belonging to one is **dropped and reported**
+  assignments regenerate. Rehydrate creates no assignment for such a
+  pair, so a response belonging to one is **dropped and reported**
   ([§6.4](#64-load-responses)) rather than silently given a fabricated
   home; an *empty-but-included* manual assignment won't reappear either.
 - **The gate is a judgement, not an open defect.** The data-loss case

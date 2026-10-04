@@ -1,6 +1,6 @@
 # Implementation status
 
-**As of:** 2026-10-03. **Segment 19T is closed and archived** — advanced instruments, the Instruments page's builder and `guide/advanced_instruments.md` an item at a time (`guide/archive/segment_19T_advanced_instruments.md`; "Odds and ends" until 2026-09-27, for Items 1–6); seventeen items and 12A shipped: the Instruments page's response-field rows (a "+" per row, ✓ only when a row differs from its pill, R and ≡ saved by Save alone, row order through ✓, Save and drag, a 2 : 3 Band 3); an open card no longer disabling the action row; a register of three small fixes (Delete's confirm checkbox, static Name / Email pills, a live Band 2 visibility preview); a full-size sample roster download in the Guide; the roster CSV column `PhotoLink` renamed `ProfileLink`; a second register (a `*` on the Required pill, whole-number Integer bounds); visibility edited in Band 2's "Who can see what you wrote" card; display fields chosen in a compact table in Band 3's left column; and response fields as a table with an Active checkbox and ▲ ▼, the response pills and ✓ retired, added fields defaulting to a muted "Field N", and Band 3 split 1 : 4 (15 : 85 from Item 12A); branching between response fields, with governed fields shown only while their parent's answer meets a condition; governed fields that can be required, counted as required only while their branch is open; a numeric condition that opens inside or outside a range; three small adjustments to the response-field table; a condition that can require the fields below it rather than show them; a branch inside a branch, two levels deep; the in-app Guide caught up with all of it; a register of seven small fixes; and the instrument intro as two columns, name over visibility left and every help card right. **Segment 19R is closed and archived** — optimization and bugfixes, off the responsiveness measurements in `guide/app_responsiveness.md`; eight items shipped and a ninth moved to `guide/deferred_consolidated.md` unbuilt (`guide/archive/segment_19R_optimization_and_bugfixes.md`). **Segment 19S is closed and archived** — the post-assessment register, **ten items, all closed**, PRs #2544 → #2592 — `guide/archive/segment_19S_post_assessment.md`. **Item 1 is the register** of what the 22 September assessment and the independent Codex read surfaced with no home of its own: eight entries, none scheduled, each carrying the trigger that would promote it to an item. **Items 2–4 are what has been promoted out of it**, and all three are now closed: the four index gates (from **E4**) as `tests/unit/test_index_currency.py`; the **investigation** into what `spec/csv_contracts.md` §3.2 actually describes (from **E8**'s first half) as `guide/archive/findings_2026-09-22_csv_contracts.md`, ten rows all dispositioned; and Prepare's per-pair insert (from **E1**, **widened to the recompute pass** after a trace found the insert was one of three full ORM materialisations) as a bulk insert plus a column-projected recompute — **Prepare measured 26.7 s → 13.1 s**, two of the three materialisations gone and the verify pass deferred. **Seven of the eight entries are disposed of** — four closed (**E2**, **E4**, **E6**, **E7**), **E3 retired** on the author's ruling that the ≥1,000 LOC list is not a tripwire but part of an assessment's judgment, **E1** promoted to Item 3, **E8** closed with its first half promoted to Item 4, and **E5** promoted to Item 5 — so every entry is disposed of, and **Item 1 closed on that basis the day it opened**. **Items 6, 7 and 9** were logged separately on the author's instruction: a Tag box on the Create page; typeahead on the two tag boxes; and, once the first shipped, the two halves it scoped out — an Owners card below Tags on Create, and a Tags card below User interface settings on Session Home's details card. **Item 9 is closed**: Create's Owners card stages co-owners that Create session saves, and Session Home's Tags field saves with the details card inside its edit window. **Item 7 is closed**: all four tag boxes complete the tag being typed, after every comma, from the operator's own tags. **Item 8** was logged out of Item 4's own defect record and is **closed**: a pytest node id cited in live prose resolves, checked over 7 citations in two shapes. **Item 5 is closed**: `Blast radius` sections from segment 19S on must state the commit or date they were measured at, checked by G5, and rung 2 decided against building the re-run — `docs/unenforced_conventions.md` §1.10. **Item 6 is closed**: a Tags box on the Create page, submitting with the Create session button and writing after the settings CSV, so a typed tag beats a bundle's rows by ordering rather than by changing the tag applier — plus a bundled P1, the settings apply that never committed. It is deliberately not a queue, which is what both reads asked for. **Segments 19O and 19Q are both closed and archived** — `guide/archive/segment_19O_rosters_and_instruments.md` (eight items) and `guide/archive/segment_19Q_workflow_and_previews.md` (seven). Item 1 retired the Previews hub onto the Invitations per-reviewer drill-in, Item 2 folded invitation creation into Prepare, Item 3 brought the in-app Guide and the Workflow card's own copy up to both, Item 4 fixed a button sitting outside its own column and stopped the card's right column reproducing the Validate page, Item 6 made an instrument's operator-facing number per-session, and Item 7 closed a rule that had one home only the CSV importer could reach — one mailbox under two names. Item 5 took the author's replacement capture set — 19 pairs to 17 — and found that nothing in the suite can tell a light/dark pair from two different screens. 19O's Item 7 ran as a **register of loose ends** — findings that would otherwise live only in a closed item's judgment calls, which is how three of them were lost to a `Status` compaction before it existed. It closed at sixteen entries, and its last two produced 19O Item 8: the Sessions lobby's table overflowing its card, which measurement turned into seven pages and a universal `.table-scroll` rule.
+**As of:** 2026-10-04. **Segment 19T is closed and archived** — advanced instruments, the Instruments page's builder and `guide/advanced_instruments.md` an item at a time (`guide/archive/segment_19T_advanced_instruments.md`; "Odds and ends" until 2026-09-27, for Items 1–6); seventeen items and 12A shipped: the Instruments page's response-field rows (a "+" per row, ✓ only when a row differs from its pill, R and ≡ saved by Save alone, row order through ✓, Save and drag, a 2 : 3 Band 3); an open card no longer disabling the action row; a register of three small fixes (Delete's confirm checkbox, static Name / Email pills, a live Band 2 visibility preview); a full-size sample roster download in the Guide; the roster CSV column `PhotoLink` renamed `ProfileLink`; a second register (a `*` on the Required pill, whole-number Integer bounds); visibility edited in Band 2's "Who can see what you wrote" card; display fields chosen in a compact table in Band 3's left column; and response fields as a table with an Active checkbox and ▲ ▼, the response pills and ✓ retired, added fields defaulting to a muted "Field N", and Band 3 split 1 : 4 (15 : 85 from Item 12A); branching between response fields, with governed fields shown only while their parent's answer meets a condition; governed fields that can be required, counted as required only while their branch is open; a numeric condition that opens inside or outside a range; three small adjustments to the response-field table; a condition that can require the fields below it rather than show them; a branch inside a branch, two levels deep; the in-app Guide caught up with all of it; a register of seven small fixes; and the instrument intro as two columns, name over visibility left and every help card right. **Segment 19R is closed and archived** — optimization and bugfixes, off the responsiveness measurements in `guide/app_responsiveness.md`; eight items shipped and a ninth moved to `guide/deferred_consolidated.md` unbuilt (`guide/archive/segment_19R_optimization_and_bugfixes.md`). **Segment 19S is closed and archived** — the post-assessment register, **ten items, all closed**, PRs #2544 → #2592 — `guide/archive/segment_19S_post_assessment.md`. **Item 1 is the register** of what the 22 September assessment and the independent Codex read surfaced with no home of its own: eight entries, none scheduled, each carrying the trigger that would promote it to an item. **Items 2–4 are what has been promoted out of it**, and all three are now closed: the four index gates (from **E4**) as `tests/unit/test_index_currency.py`; the **investigation** into what `spec/csv_contracts.md` §3.2 actually describes (from **E8**'s first half) as `guide/archive/findings_2026-09-22_csv_contracts.md`, ten rows all dispositioned; and Prepare's per-pair insert (from **E1**, **widened to the recompute pass** after a trace found the insert was one of three full ORM materialisations) as a bulk insert plus a column-projected recompute — **Prepare measured 26.7 s → 13.1 s**, two of the three materialisations gone and the verify pass deferred. **Seven of the eight entries are disposed of** — four closed (**E2**, **E4**, **E6**, **E7**), **E3 retired** on the author's ruling that the ≥1,000 LOC list is not a tripwire but part of an assessment's judgment, **E1** promoted to Item 3, **E8** closed with its first half promoted to Item 4, and **E5** promoted to Item 5 — so every entry is disposed of, and **Item 1 closed on that basis the day it opened**. **Items 6, 7 and 9** were logged separately on the author's instruction: a Tag box on the Create page; typeahead on the two tag boxes; and, once the first shipped, the two halves it scoped out — an Owners card below Tags on Create, and a Tags card below User interface settings on Session Home's details card. **Item 9 is closed**: Create's Owners card stages co-owners that Create session saves, and Session Home's Tags field saves with the details card inside its edit window. **Item 7 is closed**: all four tag boxes complete the tag being typed, after every comma, from the operator's own tags. **Item 8** was logged out of Item 4's own defect record and is **closed**: a pytest node id cited in live prose resolves, checked over 7 citations in two shapes. **Item 5 is closed**: `Blast radius` sections from segment 19S on must state the commit or date they were measured at, checked by G5, and rung 2 decided against building the re-run — `docs/unenforced_conventions.md` §1.10. **Item 6 is closed**: a Tags box on the Create page, submitting with the Create session button and writing after the settings CSV, so a typed tag beats a bundle's rows by ordering rather than by changing the tag applier — plus a bundled P1, the settings apply that never committed. It is deliberately not a queue, which is what both reads asked for. **Segments 19O and 19Q are both closed and archived** — `guide/archive/segment_19O_rosters_and_instruments.md` (eight items) and `guide/archive/segment_19Q_workflow_and_previews.md` (seven). Item 1 retired the Previews hub onto the Invitations per-reviewer drill-in, Item 2 folded invitation creation into Prepare, Item 3 brought the in-app Guide and the Workflow card's own copy up to both, Item 4 fixed a button sitting outside its own column and stopped the card's right column reproducing the Validate page, Item 6 made an instrument's operator-facing number per-session, and Item 7 closed a rule that had one home only the CSV importer could reach — one mailbox under two names. Item 5 took the author's replacement capture set — 19 pairs to 17 — and found that nothing in the suite can tell a light/dark pair from two different screens. 19O's Item 7 ran as a **register of loose ends** — findings that would otherwise live only in a closed item's judgment calls, which is how three of them were lost to a `Status` compaction before it existed. It closed at sixteen entries, and its last two produced 19O Item 8: the Sessions lobby's table overflowing its card, which measurement turned into seven pages and a universal `.table-scroll` rule.
 
 **Its largest arc is accessibility.** `docs/known_limitations.md` had
 recorded a WCAG AA failure since **2026-05-18** naming a token that no
@@ -295,6 +295,7 @@ For the full long-term plan see
 
 | Date | Milestone |
 |---|---|
+| 2026-10-04 | **The 2026-10-03 register's per-file findings, fixed** (#2805; `guide/findings_2026-10-03_corpus.md` §3). About 35 specs and 15 docs now say what the code does, in one PR with a commit per area. Where a spec and the code disagreed and nobody had ruled, the spec moved: the Self-review toggle reads `is_self_review`; scheduled activation also skips on errors; the Settings CSV refuses unknown attributes in every structured section; magic links are not built. Missing contracts were written: the archived-sessions page, the Relationships page gate, the Observers CSV's `CohortRule`, about 20 controls in the button audit. `spec/preview_hub.md` folded into `spec/operations_pages.md` "Page identity", with a stub left for `app/web/spec_registry.py`. The trims took segment, finding and ruling tags, tallies and measurements out of `spec/`, keeping each rule. `docs/deployment_nus.md` now moves every pipeline job onto the in-VNet runner. **Still open:** the rows marked *author*, *code*, *known*, *deferred* or *carried*. |
 | 2026-10-03 | **The 2026-10-03 register's defects and rulings, worked through** (#2782 → #2804; `guide/findings_2026-10-03_corpus.md`, whose strikes name each PR). The no-ruling defects went first, one PR each. The worst was the lobby expander's Save resetting a draft's other settings (C1). A Settings CSV with a repeated shape name or `field_key` now gets a 400, not a 500 (D1). A lowercase response-field type is case-folded on import (D2), and a fractional Integer bound is refused (A5). The Band 2 preview reads self-review groups off the roster (B1), and missing-answer cards name the instrument by its label (A2). Six smaller ones followed (A1, C2, C3, D3, A4, B3). **Then the author's rulings:** Rehydrate is marked an incomplete feature (#2795). The two superseded Azure docs are retired, and the docs cover scheduled sends and NUS (H-retire, I7, H23). Observers see only visible fields, with a dash at zero responses (A3, A18). The reviewer surface marks a self-review row (G7). The Data shaper's Zip all downloads every saved shape (D13). Four unreached routes are retired (B7, A16, A22, B15) and five fixed (B11, C16, F4, A25, B13). Dead CSS, three tokens and two unread settings are deleted (E1, E3, E4, E14, E19, D23). Where the ruling was to update the spec, the specs now say what the code does. **Found on the way:** none of the twelve older extract routes committed, so every `session.*_extracted` audit row was rolled back in production, and the test fixture's SAVEPOINT hid it (D33, #2802). Four late findings followed in #2804: the spec saying a fixed-value field's Step is not checked (A6), Quick Setup listing a Settings CSV's errors (D31), over-long Settings values caught before Postgres (D32), and §8.2.3's unused skip rows trimmed (B35). **Still open:** the per-file prose findings in the register's §3, which stay open until a later pass strikes them. |
 | 2026-10-03 | **Corpus sweep, again: all 68 files re-read against the code two days after the last one** (at `17986214`; not due by the cadence, asked for by the author). All 242 findings of the 2026-10-01 register had closed in the meantime, in the fixes from #2720 to #2780; that register's strikes record each fix, and the two rows below summarize them. Nine verify-mode reads, none editing a file. **About 236 findings** are in `guide/findings_2026-10-03_corpus.md` and the record is `guide/sweep_2026-10-03_corpus.md`. Most are provenance and tallies the specs' own rule forbids, or a fix that reached one file and not the next (nine re-opened). **13 code defects**, the worst losing data on an ordinary action: saving a draft in the lobby row expander resets its schedule, invite and reminder offsets, release window and roster toggles (C1). A malformed Settings CSV can answer 500 or store a mistyped field (D1, D2). No `app/` change. |
 | 2026-10-03 | **The 2026-10-01 register's last fixes** (#2762 → #2780). The Setup row's active underline is the blue Setup identity (E5), and four layout primitives no markup used are retired (E2). `is_self_review` follows roster group membership: an include the recompute moves is audited (B7), and relationship changes re-derive it and reconcile group answer copies (B33, B34). Replicate copies the visibility policies (A1). Workflow card State 3 is retired (B32). The scheduled-reminder dedupe stamp commits with its outbox row (B31). The Zip-all link stays bounded (D28). The entity-stats and per-instrument long serializers are retired, a copy's default sort names its own fields (A28), the reviewee email is no longer an operator sort key (A29), and the shadowed v1 nav rules are deleted (E37). By #2780 all 242 findings had closed. |
@@ -603,97 +604,48 @@ suite against a `postgres:16` service container).
   graphic asset, add the file under `app/web/static/` — the
   `StaticFiles` mount at `/static` in `app/main.py` already serves
   it — and point `href` at its `/static/...` URL.
-- **Manage-page reshape (Segment 9.4C)**: the reviewers, reviewees,
-  and assignments Manage pages now render an always-present
-  `<section id="upload-csv">` card with the existing import form;
-  the Upload CSV button is `<a href="#upload-csv">` (no JS, no
-  `<details>`, stateful via the URL fragment). Validation errors on
-  POST re-render the Manage page itself — there is no longer a
-  standalone `…/import` GET. The assignments page also carries an
-  anchored `<section id="rules">` "Assign by Rules" placeholder
-  (Rule editor — Segment 13) with a Cancel anchor that drops the
-  fragment. **Edit Reviewers / Reviewees / Assignments** buttons
-  render as disabled anchors (`<a class="btn disabled"
-  aria-disabled="true">`) per the 9.4B disabled-affordance
-  convention. New `/operator/sessions/{id}/instruments` index
-  introduced (Segment 10C reshaped this page substantially — see
-  the Segments-shipped 10C entry and the operator URL table for
-  the current contract). New `/operator/sessions/{id}/setupinvite`
-  is the operator-editable email template editor (Segment 11E
-  shipped the editor + the SMTP transport scaffolding; the page
-  was a stub through Segment 11D follow-on). Session-detail
-  Setup table Manage buttons for Instruments and Set up invites
-  are now real links.
-- **Page chrome (Segment 9.4A)** in `app/web/templates/base.html`:
-  top-left "Review Robin Web App (version {num})" link to `/about`,
-  breadcrumb trail rendered just below, top-right user card with
-  "Signed in as ..." + Sign out. Per-page back-links across pages
-  are removed — the breadcrumb replaces them. (Segment 10C
-  reintroduced one in-page Back affordance: the per-instrument
-  card's bottom button row carries a Back button that
-  smooth-scrolls to the top of the Instruments page. This is a
-  same-page navigation aid, not a cross-page back-link.)
-  Operator-page crumbs root at `Sessions → /operator/sessions`;
-  reviewer-page crumbs root at `Reviewer → /me`. Crumb
-  factories live in `app/web/breadcrumbs.py`; the partial is
-  `app/web/templates/_partials/breadcrumb.html`. Version string
-  comes from `app.config.app_version` (`"dev"` for now;
-  pipeline-driven version bumping is a Segment 14A concern).
-- **Setup nav + lock card (Segment 10C)**: every session-scoped
-  operator page (Session detail, Reviewers, Reviewees,
-  Assignments, Instruments, Set up invites) renders a 6-button
-  `.setup-nav` header card and — when the session is `ready` — a
-  reusable yellow lock card immediately below it. The lock card
-  posts to `/operator/sessions/{id}/revert` with a hidden
-  `return_to` field; the route allowlists
-  `{reviewers, reviewees, assignments, instruments}` so the
-  operator lands back on the same page. The session-detail lock
-  card omits `return_to`. While locked, each page hides its own
-  mutation affordances (upload cards, Danger Zone, per-instrument
-  Save button). See `spec/operator_ui_concept.md` for
-  the per-page contract and `spec/domain_assumptions.md` for the markup.
+- **Chrome** in `app/web/templates/base.html`: the top bar reads
+  "Review Robin Web App (version {num})" beside the light / dark
+  toggle, with the breadcrumb below it and a user card on the right
+  ("Signed in as …", Settings, Admin for sys-admins, Guide, About,
+  Sign out). Reviewer pages use a lighter variant. Crumb factories
+  live in `app/web/breadcrumbs.py`, the partial is
+  `app/web/templates/_partials/breadcrumb.html`, and the version string
+  is `app_version` in `app/config.py` (`"dev"` by default). See
+  `spec/operator_ui_concept.md`.
+- **Session navigation**: every session-scoped operator page renders
+  `app/web/templates/operator/partials/session_top_nav.html` — Session
+  Home, a Setup row (Reviewers, Reviewees, Relationships and Observers
+  when enabled, Instruments, Email Template) and an Operations row
+  (Assignments, Validate, Invitations, Responses, Extract data). Where
+  the lifecycle state hides a page's mutating controls, a lock card
+  says why; the roster pages share
+  `app/web/templates/operator/partials/_roster_lock_card.html`, which
+  posts to `/operator/sessions/{id}/revert` with a `return_to`.
+- **Session Home**: the Workflow card at the top, the Session details
+  card below it (edited inline via `?editing=1`), then Quick Setup on
+  the left and Owners above the Danger Zone on the right. See
+  `spec/session_home.md`.
 - Card-based layout, monospace tabular code spans, severity pills
-  (`error` / `warning` / `info`) for validation issues. All inline
-  `<style>` in `base.html`. CSS framework / extraction is a Segment
-  14 concern.
-- **Session Home rebuild (Segment 11B + 2026-05-22 Danger Zone move)**: `session_detail.html`
-  renders the **Next Action card** at the top (constant H2 "Next
-  Action", `accent-blue` border; height grows to fit content; per-state
-  Primary + Secondary buttons at the bottom for most states; the
-  Activated state lays out as two body sections separated by an `<hr>`
-  with their own inline buttons — Manage invitations + Monitor
-  responses, then Pause Session), followed by a two-column bottom
-  grid. Left column: Session Details (with an inline Edit link to
-  `/operator/sessions/{id}/edit`). Right column: Quick Setup, then
-  Extract Data. The Danger Zone card (Delete Data + Delete Session)
-  was moved off Session Home into the bottom-right of the Edit
-  Session Details page on 2026-05-22 (commit b490825). The two
-  placeholder cards plus the Rule Based Assignment card on
-  `/assignments` share the canonical `.card.placeholder` class +
-  `placeholder_card` Jinja macro
-  (`app/web/templates/operator/partials/_placeholder_card.html`), <!-- path-ref-ok -->
-  so all three render with identical typography and contrast.
-  See `spec/session_home.md`.
-- **Lifecycle display label mapping (Segment 11B)**: a single
-  helper in `app/services/lifecycle_display.py` translates
-  `ReviewSession.status` enum values into operator-facing strings.
-  Today's only divergence is `ready` → "Activated"; other states
-  pass through capitalised. Registered as the `lifecycle_label`
-  Jinja filter on the operator templates instance and used by every
-  surface that renders a lifecycle state in user copy (status pill,
-  sessions list table, Session Home prose, lock-card prose on
-  Invitations / Monitoring). URL slugs, query params, API
-  responses, log messages, audit-event detail, and CSS class names
-  continue to use enum values.
+  (`error` / `warning` / `info`) for validation issues. All CSS is
+  inline in `base.html`; buttons take the `.btn` roles in
+  `spec/ui_elements.md` §6 and layout the primitives in §10.
+- **Lifecycle display labels**: `DISPLAY_LABELS` in
+  `app/services/lifecycle_display.py` maps `ready` → "Activated" and
+  `expired` → "Closed"; other states pass through capitalized.
+  Registered as the `lifecycle_label` Jinja filter and used by every
+  surface that renders a lifecycle state in user copy. URL slugs, query
+  params, API responses, log messages, audit-event detail, and CSS
+  class names continue to use enum values.
 
 ### Routes
 
 **This section used to carry a route-by-route table; it was replaced by
 this pointer on 2026-10-02** (findings `I7`,
-`guide/findings_2026-10-01_corpus.md`). The table listed about 80 rows
-against 188 route decorators in the code, and many rows had drifted —
-`GET /` still read "service metadata" when it 302-redirects by role. Too
-large to keep accurate by hand, so the code is the source of truth:
+`guide/findings_2026-10-01_corpus.md`). The table covered a fraction of
+the routes in the code, and many rows had drifted — `GET /` still read
+"service metadata" when it 302-redirects by role. Too large to keep
+accurate by hand, so the code is the source of truth:
 
 - **The routes** are the routing modules: `app/web/routes_*.py` (about,
   auth, guide, health, templates), the operator package
@@ -712,21 +664,14 @@ large to keep accurate by hand, so the code is the source of truth:
 
 - Create with name, code (unique across the workspace), description, deadline.
 - Session creation **also synchronously creates the Default
-  Instrument** with two seed response fields (`rating` integer 1–5
-  required; `comments` long text optional) and three seed display
-  fields (`pair_context_1/2/3`, `visible=true`, `label=''`). Operator
-  edits both kinds via the consolidated `/instruments` page (10A:
-  response-field builder + friendly description; 10B-1: data-driven
-  reviewer-surface render; 10B-2: display-field picker + shared
-  field-order bulk form, replaced by the 10C per-instrument card
-  shape — Display Fields renders a hardcoded 6-row CSV-named
-  placeholder with persistence deferred, while the 10B-2
-  schema-level routes remain in place; Response Fields inline edit
-  + Required auto-submit + row-level Add/Delete are wired). The
-  seven supported display-field sources at the schema layer are
-  `reviewee.tag_1/2/3`, `reviewee.profile_link`, and
-  `pair_context.1/2/3`; `assignment_context_*` is deliberately
-  excluded. See `spec/architecture.md` "Conceptual hierarchy."
+  Instrument** (`ensure_default_instrument`) with two seed response
+  fields (`rating` integer 1–5 required; `comments` long text optional)
+  and the two locked display fields, Name and Email. The operator edits
+  both kinds on the `/instruments` page (`spec/instruments.md`). Display
+  fields draw on nine sources: `reviewee.name`,
+  `reviewee.email_or_identifier`, `reviewee.profile_link`,
+  `reviewee.tag_1/2/3` and `pair_context.1/2/3`. See
+  `spec/architecture.md` "Conceptual hierarchy."
 - View detail with live counts of reviewers, reviewees, assignments,
   and the current `assignment_mode`.
 - **Edit** name / code / description / deadline; changes recorded as
@@ -737,7 +682,10 @@ large to keep accurate by hand, so the code is the source of truth:
   survives in the global audit log. Requires explicit confirm
   checkbox.
 - **Rehydrate** a complete extracted session (Segment 18P Group 2) —
-  the **Rehydrate** button in the lobby Filter-card row opens
+  **off by default**: `rehydrate_enabled` in `app/config.py` is `False`
+  until the dropped-responses export lands, and while it is off the
+  button is hidden and every rehydrate route 404s. When on, the
+  **Rehydrate** button in the lobby Filter-card row opens
   `/operator/sessions/rehydrate`, where a complete set of extract CSVs
   (loose or zipped) is uploaded and **Validate**d (a mandatory
   pre-flight: completeness + cross-file integrity + a `_REHYD`
@@ -761,8 +709,8 @@ large to keep accurate by hand, so the code is the source of truth:
   columns are silently ignored. UTF-8 with BOM tolerated.
 - **Browseable Manage views** showing the saved rows in a table,
   with an anchored `Upload CSV` card on the same page (no separate
-  `…/import` GET) and a disabled `Edit Reviewers` / `Edit Reviewees`
-  button reserved for the future inline-edit pattern.
+  `…/import` GET), per-row Edit, Add new and bulk actions
+  (`spec/setup_pages.md`).
 - **Setup validation** page lists structural issues (no reviewers, no
   reviewees, duplicate emails) plus info-level placeholders for not-
   yet-implemented surfaces.
@@ -778,25 +726,23 @@ large to keep accurate by hand, so the code is the source of truth:
 ### Assignments (post-15D)
 
 - **Operations Assignments page** at
-  `/operator/sessions/{id}/assignments` (chrome row label moved
-  from Setup to Operations in 15D PR 6a). Hosts the **Assignment
-  Rule** card (formerly "Rule Based Assignment"), the
-  **Self-reviews** bulk-toggle card, and an **Assignment pairs**
-  preview table. Assignments are now **always derived** —
-  manual-row authoring retired in 15D PR 6a; the route still exists
-  for test fixtures only (15D PR 7b).
-- **Generation flow**: pick a RuleSet (5 seeds + caller-owned
-  Personal RuleSets) from the Assignment Rule card, click Generate.
-  The rule engine (`app/services/rules/engine.py`) reads pair-
-  context tags from the `relationships` table via
+  `/operator/sessions/{id}/assignments` (`spec/assignments.md`
+  "Assignments operator page"): a **Per-instrument status** card —
+  counts per instrument, a self-review checkbox that bulk-flips
+  `Assignment.include` on that instrument's self-review rows, a Show
+  filter and a link to the instrument's card — above the
+  **Assignments preview** table, with Status and Search filters in its
+  toolbar and bulk Inactivate / Activate in the row expander. Pairs are
+  derived, so the page has no add or remove control.
+- **Generation**: each instrument's rule is authored on Band 1 of its
+  Instruments-page card (no rule means the synthetic Full Matrix), and
+  **Prepare** on the Workflow card runs the rule engine
+  (`app/services/rules/engine.py`) over every instrument. It reads
+  pair-context tags from active `relationships` rows via
   `pair_context_lookup` and runs predicates / combinators / quotas /
-  deterministic ordering against the live populations. Inactive
-  reviewers / reviewees and inactive `relationships` rows are
-  excluded; audit `excluded_counts` records the reasons.
-- **Self-reviews bulk toggle**: a per-session
-  `sessions.self_reviews_active` Boolean drives bulk activation /
-  deactivation of self-review pairs the engine produced. Per-row
-  `Assignment.include` overrides individually post-flip.
+  deterministic ordering. An inactive reviewer's
+  or reviewee's pairs are still materialized with `include=False`, so
+  their responses survive a deactivate / reactivate round trip.
 - **`assignment_mode`** column on `sessions` records the strategy
   that last generated. `AssignmentMode` has one member,
   `rule_based`, so that is the only value written today; NULL means
@@ -805,7 +751,7 @@ large to keep accurate by hand, so the code is the source of truth:
   migration has rewritten them. `Assignment.created_by_mode` records
   the same per row and defaults to `rule_based`; it defaulted to
   `"manual"` until 19N.1, naming a mechanism retired in 16A PR 5.
-- **Per-pair attributes** live on the new `relationships` table
+- **Per-pair attributes** live on the `relationships` table
   (Setup page at `/operator/sessions/{id}/relationships`), not on
   `Assignment.context` — that JSON column dropped in 15D PR 6b.
   See "Pair-level context post-15D" below for the full picture.
@@ -943,9 +889,8 @@ legacy shapes (the audit log is append-only).
 
 **The event-type table that followed was replaced by this pointer on
 2026-10-02** (findings `I8`, `guide/findings_2026-10-01_corpus.md`). It
-listed about 50 rows against 148 event types registered in
-`EVENT_SCHEMAS`, and several rows described retired emitters or old
-detail keys. The source of truth is `EVENT_SCHEMAS` in
+covered a fraction of the event types registered in `EVENT_SCHEMAS`, and
+several rows described retired emitters or old detail keys. The source of truth is `EVENT_SCHEMAS` in
 `app/services/audit.py`: one entry per event type, with the payload
 envelope and the keys each may carry, validated on every write. To list
 them, run
@@ -1024,26 +969,26 @@ The data layer and the operator + reviewer surfaces are
 multi-instrument-aware. Every session seeds one Instrument at
 creation time via `ensure_default_instrument` (system handle
 `Default`, operator-editable `description`, two seed response
-fields, three seed `pair_context_1/2/3` display fields). The
+fields, and the locked Name / Email display fields). The
 schema columns (`Instrument.session_id`, `Instrument.order`,
 `Assignment.instrument_id`) and the FK delete-orphan cascades are
 in place; `create_instrument(after_instrument_id=…)` and
 `delete_instrument(...)` exist as service helpers and emit the
 `instrument.created` / `instrument.deleted` audit events; the
 reviewer surface and the operator's `/instruments` page loop over
-instruments; and the `Add an instrument` / `Delete this instrument`
-operator buttons are wired (10D Slice 5, 2026-05-02) with mutual-
-exclusion + single-instrument-floor gates. See
+instruments; and each instrument card's `+Instrument` and `Delete`
+buttons are wired, with Delete refused on a session's only
+instrument. See
 `spec/architecture.md` "Conceptual hierarchy."
 
 The original Segment 13 plan (multi-instrument sessions) is
 archived at
 `guide/archive/segment_13_multi_instrument_sessions_superseded.md`
-since most of its scope shipped early in Segments 10A → 10D. Three
-items did not ship and live in `guide/archive/unfinished_business.md` as
-#27 (FullMatrix per-instrument target picker), #28 (Manual CSV
-`Instrument` column), and #29 (reviewer dashboard per-instrument
-grouping).
+since most of its scope shipped early in Segments 10A → 10D. Of the
+three items it left in `guide/archive/unfinished_business.md`, #27
+(FullMatrix per-instrument target picker) and #29 (reviewer dashboard
+per-instrument grouping) shipped in Segment 15B, and #28 (Manual CSV
+`Instrument` column) was retired after 15D.
 
 ### Pair-level context post-15D
 

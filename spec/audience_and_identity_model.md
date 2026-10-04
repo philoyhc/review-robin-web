@@ -41,8 +41,8 @@ assigned reviewees, submits responses.
 - **Auth.** Institutional credentials (MS365 SSO) by default.
   Magic links, an enhancement / fallback for cases where SSO is
   unavailable (external evaluators, cross-institution panels), are
-  deferred and not built (findings F11). Reviews are intended to be secure and authenticated;
-  unauthenticated review is not a supported posture.
+  deferred and not built. Reviews are intended to be secure and
+  authenticated; unauthenticated review is not a supported posture.
 - **Account model.** Reviewers have lightweight accounts in Review
   Robin — they sign in and have a session-spanning identity, but
   the app is not their primary workspace. They visit, complete a
@@ -140,6 +140,8 @@ migration; it can't drift from config or be flipped in-app.
 | **Admin** | ✓ | ✗ | ✗ |
 | **Super-admin** | ✓ | ✓ | ✗ (config only) |
 
+With no super-admin configured, the Admin row also reaches Admin.
+
 Two surfaces:
 
 1. **Workspace allowlist** — admit / revoke `users.is_operator`,
@@ -149,8 +151,10 @@ Two surfaces:
    (per-row checkbox + bulk toolbar). Server-side guards
    (`app/services/users.py`):
    - **Actor guard** — `promote` / `demote` require the **actor** to be
-     a super-admin (`requires_super_admin` → 403). Operator admit /
-     revoke stays admin-gated.
+     a super-admin (`requires_super_admin` → 403); with no super-admin
+     configured, any admin may (`spec/permissions.md` §4.1,
+     "No-super-tier fallback"). Operator admit / revoke stays
+     admin-gated.
    - **Target guard** — `demote` / `revoke` / `remove_user` /
      `remove_from_all_sessions` refuse when the **target** is a
      super-admin (`protected_super_admin` → 409), sitting *above* the
@@ -285,8 +289,8 @@ every visit (plain text, not only the first visit). The contact line is
 `help_contact`, shown as "Questions? Contact …" on the reviewer surface
 and in the default responses-received email; both drop the line when it
 is unset. The institution name is **not built** and is
-deferred (author's ruling, 2026-10-02, findings F11;
-`guide/deferred_consolidated.md`, "Institution name and magic links").
+deferred (`guide/deferred_consolidated.md`, "Institution name and magic
+links").
 
 What operators **cannot** configure:
 
@@ -337,7 +341,7 @@ supported for either:
   the relevant response surface.
 
 Magic links are **not built** and are deferred with the institution
-name above (findings F11): today a reviewer signs in through
+name above: today a reviewer signs in through
 institutional SSO only. When built, they are an explicit fallback,
 not the primary mode.
 The "tokenized link replaces auth" pattern is **not** the model;
@@ -418,10 +422,10 @@ everyone and refusing a link the app itself rendered is a worse answer
 than moving the reader somewhere useful; `/about` has carried the
 "signed in but no access" copy. The link-hiding is
 cosmetic and fails **open** — a page that does not stamp the flag still
-renders the link, and following it lands on `/about` anyway. Note that
-the participant chrome (`reviewer/_top_bar.html`) has never offered a
-Guide link at all, so the hiding only bites on `/about` and the operator
-pages.
+renders the link, and following it lands on `/about` anyway. The
+participant chrome (`app/web/templates/reviewer/_top_bar.html`) renders
+the same Guide link behind the same flag as `base.html`, so the hiding
+applies on the participant pages too.
 
 **This filter is not access control.** Nothing on `/guide` is
 privileged and the filter grants no one anything; it is an editorial

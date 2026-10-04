@@ -95,7 +95,7 @@ card sits full-width directly below it — a display ↔ edit swap
 (see §4). Below those two full-width cards, Quick Setup pairs with
 Owners + Danger Zone as a `.bottom-grid` half-width pair; Owners and
 Danger Zone stack in that column, Owners on top (`.bottom-left`,
-`spec/ui_elements.md` §10; author's ruling, 2026-09-23).
+`spec/ui_elements.md` §10).
 
 DOM source order = mobile-collapse order:
 **Workflow → Session details → Quick Setup → Owners → Danger Zone**.
@@ -123,7 +123,7 @@ context that helps the operator decide whether to take it.
   its own, but `.next-action-body` carries `min-height: 7.5em` so the
   button row lands at the same height in every state; states with
   several explanation paragraphs grow past it (`spec/workflow_card.md`
-  "Stable card height"; author's ruling, 2026-10-02, findings E7).
+  "Stable card height").
 
 **Body layout.** Two vertically-stacked blocks inside the card, the
 same in **every** state — there is no Activated-state exception:
@@ -132,15 +132,13 @@ same in **every** state — there is no Activated-state exception:
    Grows to fill available space (`flex: 1 1 auto`).
 2. `.next-action-buttons` — the button row, pinned to the bottom.
    Primary action first, supporting actions following as
-   Secondary buttons. `spec/workflow_card.md` "Single-row button
-   layout" carries the gating contract for which buttons appear.
+   Secondary buttons. `spec/workflow_card.md` "Workflow stepper —
+   single-row button layout" carries the gating contract for which
+   buttons appear.
 
 `.next-action-confirm` and `<hr class="next-action-divider">` are
-**not rendered by any state**. Both once described an Activated-state
-split — two inline sections with their own buttons, no bottom-pinned
-row — that the card has never shipped; the single row above replaced
-it, and a confirm checkbox rides inside the form rather than in a
-block of its own.
+**not rendered by any state**; a confirm checkbox rides inside its
+form rather than in a block of its own.
 
 The empty-draft short-circuit state renders only a single
 paragraph in `.next-action-body` and skips the button row.
@@ -187,7 +185,7 @@ Notes specific to Session Home:
   Send reminders (Primary). **With no invitations at all there is no
   forward action here** — Prepare creates them and a `ready` session
   cannot run Prepare, so the card's copy names Revert to draft
-  instead (19Q Item 2 rung 3). Close session is always Secondary when
+  instead. Close session is always Secondary when
   live; Revert to draft is always Secondary when live — the
   layout never promotes either to Primary. The `ready → draft` form
   carries **no confirmation checkbox**; the lifecycle service's `confirm` gate is
@@ -196,14 +194,14 @@ Notes specific to Session Home:
   one. Email and reviewer-surface previews are reached from an Invitations
   per-reviewer drill-in once assignments exist; Home does not add a second
   door.
-- **Status pills live in the right column**, not the body. States
-  3 and 5 surface the readiness pill row (`pill-error` /
+- **Status pills live in the right column**, not the body. State
+  4Err and the `W` overlay surface the readiness pill row (`pill-error` /
   `pill-empty` / `pill-count`) in the right-column
   `.next-action-status` aside, followed by a single link to the
   Validate page; the left column carries prose only. Home reports
-  *how many*, Validate reports *which* — the column stopped
-  enumerating the issues at 19Q Item 4. See `spec/workflow_card.md`
-  "Right column — per state".
+  *how many*, Validate reports *which*; the column does not enumerate
+  the issues. See `spec/workflow_card.md` "Right-column content by
+  state".
 - **`expired` and `archived` are live states**, and the card's
   behaviour in each is `spec/workflow_card.md`'s State 10 and the
   no-buttons case respectively — see the lifecycle-behavior summary
@@ -290,7 +288,7 @@ Its contents:
   checkbox `disabled`, a "Data deletion is locked while status is
   Activated" note, and the `_require_not_ready` gate on
   `/delete-data`. Once the session has ended (`expired`) or been
-  `archived`, both deletes are live (author's ruling, 2026-10-02).
+  `archived`, both deletes are live.
   During the response window it is a revert-first workflow — Revert to
   draft via the Workflow card, delete the data (the revert preserves the
   `Response` rows), then re-activate.
@@ -330,11 +328,9 @@ A card of its own, half width, stacked above Danger Zone in the same
 `.bottom-left` column (`#owners-card`) — not a sub-card of the Session
 details card, and gated on no lifecycle state: it is always visible,
 in every state, with no `?editing=1`. It has a **Lock / Unlock of its
-own, as Quick Setup does** (author's ruling, 2026-09-23, against
-accidental edits): locked by default, the `oou_{session_id}` cookie
+own, as Quick Setup does**, against accidental edits: locked by default, the `oou_{session_id}` cookie
 when unlocked, relocked on leaving Home, visual only. **Add owner and
-each Remove save at once** — no Save or Cancel (author's ruling,
-2026-09-23). Full contract — the table, the
+each Remove save at once** — no Save or Cancel. Full contract — the table, the
 candidates, and the Create page's matching card, which stages instead
 — in `spec/session_owners.md`.
 
@@ -350,11 +346,12 @@ holds one slot in the same position — a read-only value
 
 **Contents.** The card's `<h2>` is the literal string "Session
 details". Then a two-column body of config fields, each with a
-`form-help` label above its value:
+plain `<label>` above its value:
 
 - **Name / Code** — the two identity fields, top-left.
-- **Description** — full-width `<textarea>` in edit mode; a
-  `.config-value-multiline` block in display mode ("—" when null).
+- **Description** — below Name / Code in the left column; a
+  `<textarea>` in edit mode, a `.config-value-multiline` block in
+  display mode ("—" when null).
 - **Help contact / Timezone** — top-right. Timezone renders the
   resolved zone as a compact GMT-offset + IANA id (e.g. "GMT+8
   Asia/Singapore") via `date_formatting.gmt_offset_zone_label`;
@@ -371,9 +368,7 @@ details". Then a two-column body of config fields, each with a
 Below the field block, a `.bottom-grid` of two **sub-cards**, each its
 own `.bottom-left` column (`spec/ui_elements.md` §10) — **User
 interface settings on the left, Tags on the right** with the Save /
-Cancel / Lock cluster beneath it (author's ruling, 2026-09-23). (Owners
-left this card for one of its own, above the Danger Zone — see §3a /
-`spec/session_owners.md` — and Tags took the slot it vacated.)
+Cancel / Lock cluster beneath it. Owners is a card of its own (§3a).
 
 - **User interface settings** (`#config-ui-settings-card`) — two
   checkboxes: **Relationships tab and page**
@@ -383,7 +378,7 @@ left this card for one of its own, above the Danger Zone — see §3a /
   disabled once the corresponding roster has rows
   (`has_relationships` / `has_observers`), mirroring the
   service-layer guard against orphaning data.
-- **Tags** (`#config-tags-card`, 19S Item 9) — **a field of this
+- **Tags** (`#config-tags-card`) — **a field of this
   card that renders in its own card**, as the toggles beside it do: it
   shares the card's display/edit swap, its edit window and its
   `config-save` form, with no save of its own. Locked, it shows the
@@ -412,7 +407,7 @@ left this card for one of its own, above the Danger Zone — see §3a /
   actually being editable (`is_draft` or `is_validated`) so a
   stale link on an Activated session degrades to display mode.
 - The Save / Cancel / Lock-toggle cluster sits bottom-right of
-  that column, below the Tags sub-card (author's ruling, 2026-09-23).
+  that column, below the Tags sub-card.
   **Unlock** (display mode) links to
   `?editing=1`; **Lock** (edit mode) drops it. **Cancel** and
   **Lock** are anchors carrying real `?editing` hrefs so no-JS
@@ -430,7 +425,7 @@ left this card for one of its own, above the Danger Zone — see §3a /
   response-loss acknowledgement gate.
 - The Details / Schedule / UI-settings / Tags inputs submit as one form
   via the HTML5 `form="config-save-{id}"` association rather than a
-  literal wrapping `<form>`. The Owners card (§3a) is no longer among
+  literal wrapping `<form>`. The Owners card (§3a) is not among
   them — it saves through its own route.
   **Save POSTs to `/operator/sessions/{id}/config`** (shared
   persistence helper `_apply_session_config_form`) and redirects
@@ -489,9 +484,8 @@ State-conditional copy only — the card frame is constant:
 **Session Home carries no placeholder card** — all five of its cards
 are wired. The pattern is documented here because it is the app's one
 shape for an inert card, and any future placeholder on any page must
-match it rather than invent a second. It is a **class, not a macro**:
-a `placeholder_card` macro existed and was retired unused. No live page uses
-the placeholder class today.
+match it rather than invent a second. It is a **class, not a macro**.
+No live page uses the placeholder class today.
 
 - **Class:** `body.ui-v2 .card.placeholder` — `--surface-muted`
   background, with `--text-subtle` on both the heading and the body,
@@ -511,7 +505,7 @@ page reuses the same class without further design work.
 | `draft` / Draft, rosters populated (before Prepare, or after a Prepare that failed) | State 2: Prepare session live (Primary; runs Generate + Validate + Invite in sequence) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
 | `validated` / Validated | States 4 / 4Err / 5 / 6: Activate session live (Primary; under the `W` overlay it detours through `/validate?activate=1`); Prepare session re-runnable (Secondary); Revert to draft live (Secondary); Send invites surfaces once invitations exist (Primary, State 5) | Body-greyed; no Lock / Unlock toggle | Live (4–5 tiles, Observers conditional) |
 | `ready` / Activated | States 7 / 8 / 9: Send invites / Send reminders forward stages (whichever is next renders Primary; State 7 — no invitations — has none, and the copy names Revert to draft); Close session + Release responses live (Secondary); Revert to draft live (Secondary; the `ready → draft` form) | Body-greyed; no Lock / Unlock toggle | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
-| `expired` / Closed | State 10: Release responses (or Stop releasing when the window's open) · Archive session (Danger); Revert to draft live (Secondary, reopens for editing) | Body-greyed; no Lock / Unlock toggle | Live |
+| `expired` / Closed | State 10: Release responses (or Stop releasing when the window's open) · Archive session (Alert); Revert to draft live (Secondary, reopens for editing) | Body-greyed; no Lock / Unlock toggle | Live |
 | `archived` / Archived | No buttons rendered (the Workflow card surfaces no actions on archived sessions) | Body-greyed | Live |
 
 The **Extract Data** column above describes the Extract Setup card
@@ -556,10 +550,10 @@ action card doing the explanatory job.
   Implement as a single block in the template that switches body and
   buttons by lifecycle state.
 - The empty-draft short-circuit (rosters not yet populated) is a
-  special case computed in `build_workflow_card_context` from
-  `lifecycle.is_draft(session)` plus
-  `csv_imports.existing_reviewer_count` /
-  `existing_reviewee_count` / `assignments.existing_count`.
+  special case computed in `build_workflow_card_context`: a draft
+  session with no reviewers (`csv_imports.existing_reviewer_count`),
+  no reviewees (`existing_reviewee_count`), or an unconfigured
+  instrument (`instruments.has_unconfigured`).
 - Reuse the existing Primary / Secondary button styling from the
   visual style spec; do not introduce new button variants for
   this page.

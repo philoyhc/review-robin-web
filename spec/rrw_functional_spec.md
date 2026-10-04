@@ -239,8 +239,8 @@ operator can:
 - **Monitor** invitation and response activity on sessions they
   own.
 - **Download all per-session extracts** for sessions they own.
-- **Revert to draft** on an activated session — the transition other
-  operator copy still calls *Pause* — then edit and re-activate.
+- **Revert to draft** on an activated session, then edit and
+  re-activate.
 - **Archive and unarchive** sessions they own.
 - **Purge and archive** a session they own (operator-triggered
   hard delete of responses + rosters + audit log).
@@ -520,8 +520,10 @@ Display fields draw from **nine sources**:
    row matching `(reviewer, reviewee)`.
 
 For each display field on each instrument, the operator chooses
-which source feeds it, an optional friendly-label override, an
-include/exclude flag and an order. The operator-side default
+which source feeds it, an include/exclude flag and an order. Its
+header is the session-wide friendly label for that source
+([§8.5](#85-friendly-labels)); there is no per-instrument label
+override. The operator-side default
 sort is set from badges on the Band 2 preview's column headers
 (`spec/sort_by_reviewee.md`).
 
@@ -537,9 +539,10 @@ unit "this reviewer will review this reviewee on this
 instrument".
 
 **Fields:** reviewer id, reviewee id, instrument id, include flag
-(used by the assignment-regeneration reconciler, and seeded at
+(used by the assignment-regeneration reconciler, seeded at
 generation from the session's self-reviews-active flag for
-self-review pairs — see [§8.6](#86-self-review-behaviour)),
+self-review pairs — see [§8.6](#86-self-review-behaviour) — and
+false whenever the reviewer or the reviewee is inactive),
 self-review flag.
 
 The self-review flag depends on the instrument's unit of
@@ -555,7 +558,10 @@ review:
 `spec/assignments.md` § *Self-review policy* is the authority.
 
 Assignments are produced by the assignment-generation step from
-the instrument's pinned rule against the active roster. They are
+the instrument's pinned rule against the roster. A pair with an
+inactive side is still materialized, with `include=False`, so its
+responses survive a deactivate → Prepare → reactivate round trip;
+only pairs whose two sides are active are assigned work. They are
 not user-edited row by row; the operator changes them by changing
 the rule or the rosters and regenerating.
 
@@ -587,10 +593,8 @@ Rule predicates match against reviewer tags, reviewee tags, and
 pair-context tags, using per-predicate operators (`IS` / `IS NOT`
 and the cross-side `IS THE SAME AS` / `IS DIFFERENT FROM`).
 
-Every RuleSet is **per-session**. There is no cross-session
-operator RuleSet library, no standalone Rule Builder page, and no
-`personal` / `library` / `seeded` scope distinction — a rule
-belongs to one instrument in one session and nowhere else.
+Every RuleSet is **per-session**: a rule belongs to one
+instrument in one session and nowhere else.
 
 Each instrument owns its rule via **`Instrument.rule_set_id`**,
 authored inline in the instrument card's **Instrument assignment
@@ -665,10 +669,15 @@ materialisation onto assignments).
   `after_release` (the operator's Release-responses window),
   `throughout` (either), stored as a per-window mode pair.
 
-Default on instrument create: no rows — an instrument is invisible
-to every participant audience until the operator opts each one in
-in the instrument card's visibility editor (its "Who can see what
-you wrote" card, unlocked).
+Not every mode is valid in every cell (`spec/visibility_policy.md`
+§3.1). The reviewer's own view has a fixed **Raw** baseline while the
+session is ongoing, which the operator cannot turn off; after release
+it is off or Raw.
+
+Default on instrument create: no rows — beyond that baseline, an
+instrument is invisible to every participant audience until the
+operator opts each one in in the instrument card's visibility editor
+(its "Who can see what you wrote" card, unlocked).
 
 ### 5.17 Feature toggles
 
@@ -726,11 +735,9 @@ treats the session in lobby and extract surfaces.
 - **`ready → draft`** (revert): Operator clicks **Revert to draft**.
   The operator must tick a confirmation checkbox; the reviewer surface
   closes; responses are preserved. The **Workflow card button** for this
-  is labelled *Revert to draft*, not *Pause Session*. The word *Pause*
-  does still ship elsewhere — `session_detail.html` and the Quick Setup
-  lock both tell the operator to "Pause the session" for this same
-  transition — and six other specs use it as live terminology. This
-  section describes the button.
+  is labelled *Revert to draft*, and no operator copy calls the
+  transition anything else; *Pause* survives only as a legacy internal
+  name (the `next-action-pause-form` id).
 - **`ready → expired`** (Close session): Operator clicks the
   Workflow card's **Close session** button. Every instrument is
   closed and all responses are preserved. From `expired` the
@@ -982,8 +989,10 @@ per-field reset-to-default:
   `$session_name`, `$deadline`, `$help_contact`,
   `$submitted_at`.
 
-A per-template enable/disable switch governs whether the
-auto-send-on-submit responses-received email fires.
+The responses-received template alone has an enable/disable switch
+(`responses_received_enabled`), which governs whether the
+auto-send-on-submit email fires; the invitation and reminder
+templates have none.
 
 ### 8.5 Friendly labels
 
@@ -1001,10 +1010,9 @@ are identity, not labels; their built-in defaults always render.)
 Friendly labels rename the *display text* shown for these slots;
 the underlying machine field name does not change. Changing a
 label flows through the reviewer surface, the operator preview,
-every CSV import preview and download, and the schedule-timeline
-caption. The nine renamable **tag** labels are set in one of two
-places: the inline editor on the Reviewers / Reviewees /
-Relationships pages, or the **roster CSV header** as a
+and every CSV import preview and download. The nine renamable
+**tag** labels are set in one of two places: the inline editor on
+the Reviewers / Reviewees / Relationships pages, or the **roster CSV header** as a
 `ReviewerTag1.<label>` suffix — the sole CSV round-trip carrier
 for those labels.
 
@@ -1109,9 +1117,13 @@ carries the User-interface settings toggles
 fields, and an **Owners** card: the creator plus any workspace
 operators the creator stages there, saved by **Create session**
 (the card has no save of its own). An address that is not a
-workspace operator refuses the whole submit. On submit, the session
-is created as `draft`, the operator is set as the first owner
-alongside any staged co-owners, and the operator lands on **Session
+workspace operator refuses the whole submit. It also carries the
+**Quick Setup card**, always unlocked and without its
+replace-confirmation tick: files staged in its slots submit with
+**Create session**, and are imported in slot order once the session
+row exists (`spec/quick_setup_card_spec.md` "New-session variant").
+On submit, the session is created as `draft`, the operator is set
+as the first owner alongside any staged co-owners, and the operator lands on **Session
 Home** — where the Session details config card (`?editing=1`) is
 the surface for filling in any remaining fields. The Sessions-lobby
 Clone action lands on Session Home the same way.
@@ -1194,9 +1206,9 @@ Up to four Setup pages share an identical chrome shape: Reviewers,
 Reviewees, **Relationships** (gated on `relationships_enabled`),
 and **Observers** (gated on `observers_enabled`).
 
-Each page offers the following. **Observers is the exception on four
+Each page offers the following. **Observers is the exception on some
 of these points**, flagged inline; `spec/setup_pages.md`
-§ *Observers page* § *Body layout* counts them in one place.
+§ *Observers page* § *Body layout* lists them in one place.
 
 - **Friendly-label editor card** — inline editors for the
   display labels of this entity's **tag slots only**:
@@ -1221,7 +1233,7 @@ of these points**, flagged inline; `spec/setup_pages.md`
   Cancel pair renders in an expander bar beneath it, and the
   toolbar strip locks with `Add new` and `Search` disabled. The
   preview-count line sits in the toolbar's left pane and is
-  shared by all seven preview pages.
+  shared by every preview page.
 - **Upload card** and **Danger Zone card** — CSV file input +
   Upload submit, replacing the roster wholesale on success; and
   Delete All, confirm-gated, wiping it. Both live in the roster
@@ -1272,17 +1284,14 @@ pill row (session deadline, `N accepting`, `M not accepting`) and
 the **Expand all / Collapse all instruments** buttons, which act on
 the page rather than on any instrument.
 
-It holds **no accepting or visibility control**: there is no bulk
-accepting route and no *Show all when closed* toggle. There is no
-per-instrument accepting control either: Activate opens every
-instrument and the deadline, Close session or Revert closes them
-all. Visibility-when-closed has no operator control at all and
-follows the per-instrument visibility policy, so the status row
-reports an accepting count and no showing-when-closed count.
-`spec/instruments.md` owns that contract and states it in full.
+Accepting follows the lifecycle: Activate opens every instrument,
+and the deadline, Close session or Revert closes them all. What a
+participant sees once an instrument closes follows its visibility
+policy. `spec/instruments.md` owns that contract and states it in
+full.
 
-Below it, one **per-instrument card** per instrument, each a
-collapsible `<details>` with a locked/unlocked edit state (at
+Below the status card, one **per-instrument card** per instrument,
+each a collapsible `<details>` with a locked/unlocked edit state (at
 most one instrument unlocked at a time). Its stripes:
 
 - **Identity** (in the card `<summary>`) — the reviewer-facing
@@ -1305,8 +1314,9 @@ most one instrument unlocked at a time). Its stripes:
   you wrote" card: locked, the reviewer's read-only view of the
   visibility policy; unlocked, the **per-audience visibility-policy
   editor** — a chip grid (You (reviewer) / Reviewees / Observers ×
-  Session-ongoing / Responses-released) picking Raw / Anonymized /
-  Summarized (or off) per audience per window (see
+  Session-ongoing / Responses-released) picking, per audience per
+  window, among the modes that cell allows
+  (`spec/visibility_policy.md` §3.1; see
   [§5.16](#516-visibility-policy)).
 - **Band 3 — Display and response fields** — two tables, 15% and
   85% of the band. The left picks and orders the display fields
@@ -1330,9 +1340,7 @@ most one instrument unlocked at a time). Its stripes:
   Band 1, Band 3, visibility policies, and column widths together
   through the consolidated `/save` endpoint.
 
-There is **no Response Type Definitions card** and no shared type
-catalogue: each Band 3 row carries its own inline `data_type` +
-bounds.
+Each Band 3 row carries its own inline `data_type` + bounds.
 
 ### 9.7 Configure assignments
 
@@ -1383,8 +1391,8 @@ preserves.
 The Workflow card on Session Home (and on every Operations-row
 page as chrome) drives the lifecycle. **Its state machine is
 `spec/workflow_card.md`'s to state, and is not restated here** —
-ten states over nine live numbers (number 3 retired), each with its own body copy and button
-set, plus a `W` overlay that adds a help-line to three of them and
+a cascade of numbered states, each with its own body copy and button
+set, plus a `W` overlay that adds a help-line to States 4–6 and
 changes no button. Functionally, what a reader needs from here is the
 shape:
 
@@ -1394,12 +1402,12 @@ shape:
   and 5 offer Send invites and Activate session together, and States 7
   and 10 offer none at all. The per-state matrix is
   `spec/workflow_card.md`'s.
-- Its **right-hand column** is a setup checklist in State 1 only;
-  validation severity counts plus a link to the Validate page wherever
-  validation has findings to show (3, 4Err, and 4 / 5 / 6 under the `W`
-  overlay); a one-line `Status` in the settled validated states; and
-  nothing in States 2 and 7. The column reports how many findings there
-  are, never which — the Validate page owns the per-issue table.
+- Its **right-hand column** is a setup checklist in every draft state
+  (1 and 2); validation severity counts plus a link to the Validate page
+  wherever validation has findings to show (4Err, and 4 / 5 / 6 under
+  the `W` overlay); a one-line `Status` in the settled validated states;
+  and no detail in States 7–10. The column reports how many findings
+  there are, never which — the Validate page owns the per-issue table.
 - **Prepare session** is the only compound action: it generates the
   assignment pairs, validates, and — only on a clean validation —
   creates an invitation for every active reviewer with at least one
@@ -1417,8 +1425,7 @@ There is no button running Generate → Validate → Activate in one
 click, and no separate *Create invites* step: Prepare covers
 generation, validation and invitations, and Activate is its own
 action. The **card button** for `ready → draft` is labelled **Revert
-to draft**; the word *Pause* survives in other operator copy, per
-§6.1.
+to draft**.
 
 The **Validate page** (`/operator/sessions/{id}/validate`) is the
 read-only deep-dive: setup-coverage grid (per section, per
@@ -1437,7 +1444,7 @@ event. Once active, the reviewer surface opens.
 The Invitations page (`/operator/sessions/{id}/invitations`) is
 a reviewer-centric Operations-row tab.
 
-- **Info card** at the top, full width — eight lifecycle
+- **Info card** at the top, full width — lifecycle
   counters (eligible reviewers, invitations created / sent /
   pending, reminders sent / pending, completed / incomplete
   reviews).
@@ -1494,7 +1501,7 @@ previews and an **Open reviewer surface** link. The latter opens an inert
 operator view of that reviewer's production surface in a new tab, using the
 same template and context path as the live surface. There is no separate
 Previews page; its old URL permanently redirects to Invitations
-(`spec/preview_hub.md`).
+(`spec/operations_pages.md` "Page identity").
 
 ### 9.12 Extract data
 
@@ -1503,10 +1510,10 @@ Extraction now splits across two surfaces:
 **Extract Setup card** (the round-trip / porting CSVs) — on the
 **Extract data** Operations tab, not on Session Home.
 It offers per-entity download tiles — Reviewers, Reviewees,
-Relationships (gated on `relationships_enabled`), Settings, and a
-conditional Observers tile (`observers_enabled`) — plus a Zip-all
-footer bundling the setup CSVs as `{code}_setup.zip`. Each tile
-greys its Download button when its roster is empty; Settings is
+Relationships (always shown, whatever `relationships_enabled` says),
+Settings, and a conditional Observers tile (`observers_enabled`) —
+plus a Zip-all footer bundling the setup CSVs as
+`{code}_setup.zip`. Each tile greys its Download button when its roster is empty; Settings is
 always clickable. Filenames follow `{session_code}_{kind}.csv`.
 
 **Extract data page** (`/operator/sessions/{id}/extract-data`) —
@@ -1568,13 +1575,11 @@ on the left, its "Bring your own SMTP" intro (shown only until an SMTP
 host is saved) below its header and above its fields; Date & time and
 Clear all settings stacked on the right.
 
-(There are no Library response-type or Library RuleSet cards on
-this page: both are per-session, authored on the instrument card.)
-
 ### 9.14 Sys admin surface
 
 The sys-admin surface is workspace-scoped and reachable from
-the chrome's user menu. It carries:
+the chrome's plain **Admin** link, shown to sys admins beside
+Settings, Guide and About. It carries:
 
 - **Accounts Management** — workspace allowlist with per-row
   promote / demote / delete actions and a bulk toolbar.
@@ -1641,7 +1646,9 @@ After sign-in, the reviewer lands on:
   identity touches in any participant role** (reviewer / reviewee
   / observer). One table row per session carries the session name
   with per-role pills beneath it, Start / End / Timezone columns,
-  a Session-status pill, and a Reviewer-status pill. The
+  a Session-status pill, and a Reviewer-status pill. Between End
+  and Timezone sit **View responses** and **Until** columns, which
+  are placeholders: every row renders an em dash in both. The
   session-name link targets the first reachable role in priority
   order Reviewer → Reviewee → Observer; each role pill deep-links
   to its own surface.
@@ -1890,7 +1897,8 @@ not yet shipped.
 For every reviewer the operator wishes to invite, the system
 creates one **invitation** row carrying:
 
-- The reviewer's email.
+- The reviewer it is for, by id; the email is read off the
+  reviewer row, not stored on the invitation.
 - A unique **token** — generated at create time, embedded in the
   email body as a sign-in URL, and stored on the invitation row only
   as a SHA-256 **hash**. Each invitation send mints a fresh token;
@@ -1909,7 +1917,7 @@ creates one **invitation** row carrying:
   one-shot and never stored.
 - Status (`pending` until sent, then `sent`, then `opened`; a
   Regenerate returns it to `pending`).
-- Created-at, sent-at, opened-at timestamps.
+- Created-at, sent-at, opened-at and last-reminder-at timestamps.
 
 When the reviewer clicks the link, the system hashes the URL
 token, matches it to the invitation row, stamps `opened_at`
@@ -2085,8 +2093,8 @@ Extraction splits across two surfaces (see
 [§9.12](#912-extract-data)): the **Extract data** Operations tab
 hosts the response-shaping lenses + Data shaper, and the **Extract
 Setup** card on that same tab hosts the round-trip
-setup CSVs — Reviewers, Reviewees, Relationships (gated),
-Observers (gated), Settings — plus a `{code}_setup.zip` bundle.
+setup CSVs — Reviewers, Reviewees, Relationships, Observers (gated),
+Settings — plus a `{code}_setup.zip` bundle.
 The `{code}_responses.zip` bundle carries the unified Responses CSV
 plus the lens cards' files, as each card is configured.
 The **audit-events CSV** is reachable from the per-session
@@ -2112,7 +2120,7 @@ exception, called out on the file's surface).
 - **Relationships.csv** — `ReviewerEmail, RevieweeEmail,
   PairContextTag1, PairContextTag2, PairContextTag3, Status`.
   Active rows first, by reviewer email, then by reviewee
-  identifier. (Gated on `relationships_enabled`.)
+  identifier. Not gated on `relationships_enabled`.
 - **Observers.csv** — `ObserverEmail, ObserverName, ObserverTag1,
   Status, CohortRule`. Conditional on `observers_enabled`.
 - **Settings.csv** — three-column `field, value, data_type`
@@ -2140,28 +2148,14 @@ though the underlying column is `Reviewee.email_or_identifier`.
 The canonical tuple is `HEADER` in
 `app/services/extracts/responses_extract.py` — the column name and
 its position are both part of the contract
-[§12.7](#127-round-trip-stability) promises, and both break a
+[§12.5](#125-round-trip-stability) promises, and both break a
 downstream consumer if they move.
 
 Group-scoped instruments collapse one row per group rather
 than per member. The file streams to the operator without
 buffering the full dataset in memory.
 
-### 12.4 Per-instrument response files (retired)
-
-`{code}_instrument_{n}.csv` — the unified file narrowed to one
-instrument — rode only in the zip-all bundle. Findings D28
-(2026-10-03) made the bundle a pass-through of the Extract data
-cards, and the file was retired (`spec/csv_contracts.md` §2.7).
-
-### 12.5 Entity-stats files (retired)
-
-`{code}_reviewer_stats.csv` and `{code}_reviewee_stats.csv` —
-per-roster-row response-activity counts — rode only in the zip-all
-bundle until findings D28 (2026-10-03) dropped them, and were then
-retired (`spec/csv_contracts.md` §2.6).
-
-### 12.6 Audit-events file
+### 12.4 Audit-events file
 
 `{code}_audit_log.csv` —
 `EventType, Severity, Summary, ActorEmail, CorrelationId,
@@ -2169,17 +2163,21 @@ CreatedAt (UTC), DetailJson`. Reached from the sys-admin
 audit-log viewer; not surfaced on the operator-facing Extract
 Data card.
 
-### 12.7 Round-trip stability
+### 12.5 Round-trip stability
 
-The four roster pairs (Reviewers, Reviewees, Relationships,
+Four of the five roster pairs (Reviewers, Reviewees, Relationships,
 Settings) are designed for **byte-stable round trip** — an
 export-then-import cycle does not perturb the session's
 config. Deterministic row order, deterministic field order,
 empty-string handling for missing optional cells,
 vocabulary normalisation, and seeded entries omitted from
-the Settings extract together guarantee this.
+the Settings extract together guarantee this. Observers
+round-trips too — it has a wired importer and extract, and
+`Status` and `CohortRule` read back — but is not claimed
+byte-stable (`spec/csv_contracts.md` "Round-trip stability
+contract").
 
-### 12.8 Reviewer's personal extract
+### 12.6 Reviewer's personal extract
 
 In addition to the operator-facing files, the reviewer can
 download their own response history once the session is fully
@@ -2252,7 +2250,8 @@ rules changed), the system does **not** wipe the assignments
 and rebuild from scratch. Instead it **reconciles**:
 
 1. Compute the new set of `(reviewer, reviewee, instrument)`
-   pairs the active rules generate against the active rosters.
+   pairs the active rules generate against the rosters. A pair with
+   an inactive side stays in the set, with `include=False`.
 2. Insert pairs that are in the new set but not the old.
 3. Drop pairs that are in the old set but not the new — and
    cascade-delete their response rows.
@@ -2261,6 +2260,14 @@ and rebuild from scratch. Instead it **reconciles**:
 
 This means a small rule edit or a single reviewer renaming
 does not destroy mid-cycle reviewer work.
+
+One loss happens outside regeneration. On a group-scoped
+instrument, a reviewee boundary-tag edit or any relationship change
+(create, import, delete, tag edit, re-point, status switch) that
+moves a pair to another group deletes the old group's answer copy on
+that row at once, with no response-loss acknowledgement; the row
+takes its new group's answer when one exists
+(`spec/assignments.md` "Group-scoped fan-out").
 
 **Prepare session**, which runs the regeneration, dry-runs the
 reconcile first on a session that has responses; if it would delete
@@ -2457,9 +2464,12 @@ Every gate is enforced server-side; UI affordances that the
 current identity cannot use render either inert (with an
 explanatory tooltip) or hidden, depending on the surface.
 
-Destructive actions universally require **explicit
-confirmation** (a tick-box gating the destructive submit)
-and write one or more audit events.
+Destructive actions require **explicit confirmation** (a
+tick-box gating the destructive submit) and write one or more
+audit events. A tag or relationship change that moves a pair to
+another group on a group-scoped instrument deletes that row's group
+answer copy without a response-loss acknowledgement
+([§14](#14-reconciling-regeneration)).
 
 Per-cell trust: reviewer POST endpoints build the assignment
 index from the authenticated reviewer's own assignments;
@@ -2557,12 +2567,13 @@ reader, so a spec missing from it is a spec nobody is sent to.
 | Operator button audit (canonical styles) | `spec/operator_button_audit.md` |
 | Operator UI shell + chrome | `spec/operator_ui_concept.md` |
 | Permissions / authorization (gates, per-route matrix, role + ownership invariants) | `spec/permissions.md` |
-| Retired Previews hub boundary | `spec/preview_hub.md` |
+| Retired Previews hub (redirects) | `spec/operations_pages.md` "Page identity" |
 | Quick Setup card | `spec/quick_setup_card_spec.md` |
 | Reconciling assignment regeneration | `spec/reconciling_regeneration.md` |
 | Reviewer surface — full contract | `spec/reviewer-surface.md` |
 | Assignment engine + Assignments page | `spec/assignments.md` |
 | Session Home page contract | `spec/session_home.md` |
+| Session owners (Create and Session Home Owners cards) | `spec/session_owners.md` |
 | Sessions lobby page contract | `spec/sessions_overview.md` |
 | Settings inventory (every persisted setting) | `spec/settings_inventory.md` |
 | Setup pages shared shape | `spec/setup_pages.md` |

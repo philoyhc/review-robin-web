@@ -93,11 +93,11 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
      `_response_fields.py`, `_band1.py`, `_band2.py`, `_pagination.py`,
      `_instrument_crud.py`, `_field_presets.py`, and `_field_refs.py`
      (an instrument's sort and widths re-pointed across a copy; imported
-     directly by the clone and the settings CSV, not re-exported).
+     directly by Replicate, the clone and the settings CSV, not
+     re-exported).
    - `app/services/assignments/` — `_shared.py`, `_coverage.py`,
-     `_self_review.py`, `_generate.py` (18O Track B carve),
-     `_reconcile_cache.py` (19R Item 2 — the staleness verdict's
-     content stamp).
+     `_self_review.py`, `_generate.py`, `_reconcile_cache.py` (the
+     staleness verdict's content stamp).
    - `app/services/responses/` — `_core.py`, `_group_reconciliation.py`,
      `_branching.py` (branching between response fields — conditions,
      whether a branch is open, which fields an assignment can answer;
@@ -115,9 +115,9 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    `sqlalchemy.dialects.postgresql` imports here** — Postgres-specific
    column types are deferred infrastructure.
 
-   **One column default queries** (`Instrument.session_seq`, 19Q Item
-   6): a context-sensitive default reading `max(session_seq) + 1`
-   within the row's session. Recorded rather than hidden, because a
+   **One column default queries** (`Instrument.session_seq`): a
+   context-sensitive default reading `max(session_seq) + 1` within the
+   row's session. Recorded rather than hidden, because a
    reader auditing "no logic in models" will find it. It sits here
    instead of in a service so that *no* creation path can forget it —
    the alternative was the same arithmetic repeated at every creation
@@ -127,18 +127,16 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    rule otherwise holds.
 
    **Branching between response fields** (`InstrumentResponseField
-   .branch_parent_id` / `.branch_op` / `.branch_value` / `.branch_mode`,
-   `guide/advanced_instruments.md` Item 1): `branch_parent_id` is a
-   self-referencing FK, `ON DELETE SET NULL` (Alembic `63b1bb107eb0`),
+   .branch_parent_id` / `.branch_op` / `.branch_value` / `.branch_mode`):
+   `branch_parent_id` is a self-referencing FK, `ON DELETE SET NULL`,
    so deleting an instrument's fields in any order passes a Postgres FK
    check — the service, not the database, refuses deleting a parent
    with a branch. `branch_op` is a `String(8)` token (`eq` / `ne` / `gt`
-   / `ge` / `lt` / `le` / `is` / `is_not`, or — a range, 19T Item 12 —
+   / `ge` / `lt` / `le` / `is` / `is_not`, or — a range —
    `in_inc` / `in_exc` / `out_inc` / `out_exc`, with `branch_value` then
    `"low to high"`), not a symbol, since a settings-CSV cell starting
    with `=` or `>` reads as a formula to spreadsheet software.
-   `branch_mode` (Alembic `c4e9a1d27b58`) is `require` or
-   null, which reads Show. The
+   `branch_mode` is `require` or null, which reads Show. The
    rules themselves live in
    `app/services/responses/_branching.py` and `_branch_rule.py`, not on
    the model.
@@ -271,9 +269,10 @@ perspective:
   cascades, `create_instrument` / `delete_instrument` services with
   `instrument.created` / `instrument.deleted` events). Every
   session is auto-created with one instrument (system handle
-  `Default`, operator-editable `description`); the operator's
-  `Add an instrument` and `Delete this instrument` buttons are
-  wired with mutual-exclusion + single-instrument-floor gates.
+  `Default`, operator-editable `description`); each instrument card's
+  action row carries `+Instrument`, Replicate and Delete, all
+  disabled outside the editable window, and Delete is refused on the
+  only instrument (`instruments.LastInstrumentError`).
   See `spec/instruments.md`.
 - **Rule sets** drive assignment generation. Each instrument's
   Band 1 either materialises one `session_rule_sets` row (when any
@@ -360,23 +359,23 @@ authoritative "what works today" list, read **`docs/status.md`**
   presets (`instruments/_field_presets.py`) are convenience only: the
   preset's identity is not stored.
 - `/operator/sessions/{id}/instruments` is the single consolidated
-  page for everything per-instrument: All Instrument Status card +
-  one card per instrument (identity + Bands 1/2/3 — the assignment
-  rule, response fields, display fields — acceptance + visibility
-  toggles, live preview). See `spec/instruments.md` for the
-  per-section contract.
+  page for everything per-instrument: a Session status card (deadline,
+  accepting counts, Expand / Collapse all) + one card per instrument
+  (identity + Bands 1/2/3 — the assignment rule, response fields,
+  display fields — live preview, and the action row). See
+  `spec/instruments.md` for the per-section contract.
 - The reviewer surface renders one tabular artifact per instrument
   in DOM order, with section heading from `Instrument.short_label`
   (subtitle `Instrument.description`; the no-label cases are above)
   and a per-field help block above each table.
 - Schema + services + operator UI are multi-instrument-aware
-  (`create_instrument`, `delete_instrument`, FK cascades; the
-  `Add an instrument` and `Delete this instrument` buttons).
+  (`create_instrument`, `replicate_instrument`, `delete_instrument`,
+  FK cascades; the action row's `+Instrument`, Replicate and Delete).
 
-Items still deliberately deferred (see `docs/status.md` "What's
-deliberately not yet there" for the canonical list): reviewer-
-dashboard per-instrument grouping and response-field type changes
-after creation (data-migration concern).
+What is deliberately deferred is listed in `docs/status.md` ("What's
+deliberately not yet there"). A response field's type and bounds can
+change until it has saved responses, then lock (`spec/instruments.md`
+"Response fields").
 
 ### Session lifecycle
 
@@ -400,10 +399,10 @@ and `spec/lifecycle.md` diverge, the lifecycle spec wins.
 
 **Session status overrides instrument acceptance.** Activation
 (`validated → ready`, `activate_session`) flips every instrument's
-`accepting_responses` to `true`. Revert (`ready → draft`,
-`revert_session_to_draft`) and Close (`ready → expired`,
-`expire_session`) flip them all back to `false` in the same
-transaction — revert emits a single `session.reverted_to_draft`
+`accepting_responses` to `true`. Revert (`ready → draft` or
+`expired → draft`, `revert_session_to_draft`) and Close
+(`ready → expired`, `expire_session`) flip them all back to `false` in
+the same transaction — revert emits a single `session.reverted_to_draft`
 audit event (no per-instrument close events on that path). Existing
 `Response` rows are preserved untouched on revert and on close; the
 reviewer surface returns to read-only.
@@ -448,12 +447,12 @@ Regenerate all require the session to be `validated` or `ready`
 never points at a draft session; per-row Send / Regenerate and every
 reminder require `ready` (`_require_ready`).
 
-`/me/invite/{token}` requires Easy Auth sign-in (no magic-link
-anonymous access — that's deferred to Segment 16A). The route looks up
-the invitation by token hash, refuses with **403** + a dedicated page
-if the signed-in user's email doesn't match the invitation's reviewer
-email, and otherwise stamps `opened_at` once and 303s to
-`/me/sessions/{id}`.
+`/me/invite/{token}` requires Easy Auth sign-in (magic links are not
+built; `spec/audience_and_identity_model.md` "Auth posture"). The route
+looks up the invitation by token hash (404 when unknown or its reviewer
+is inactive), refuses with **403** + a dedicated page if the signed-in
+user's email doesn't match the invitation's reviewer email, and
+otherwise stamps `opened_at` once and 303s to `/me/sessions/{id}`.
 
 The `email_outbox` table is the dev-mode replacement for SMTP.
 Rows synchronously flip `queued → sent` when the operator clicks
@@ -678,7 +677,7 @@ are plural (`reviewers.`), the bulk-delete ones singular
 (`reviewer.`); `app/services/audit.py` is the list.
 `spec/setup_pages.md` states the contract per page.
 
-`cascaded_relationships` arrived at 19O Item 5, because
+`cascaded_relationships` is there because
 `relationships.reviewer_id` / `reviewee_id` are `ondelete="CASCADE"`
 and a roster replace takes every pair with it. It is **omitted rather
 than zero** on the rosters that reach no relationship — all three
@@ -709,15 +708,16 @@ top-level `changes` envelope; one level of nesting only).
 #### `reason` — top-level string
 
 ```jsonc
-{ "reason": "operator_revert", "snapshot": { … } }
+{ "reason": "deadline", "refs": { "instrument_id": 7 } }
 ```
 
-For events triggered by a known cause: invalidation
-(`reason: "setup_mutation"`), revert
-(`reason: "operator_revert"`), cascade close
-(`reason: "deadline"`; past rows may carry `"manual"`). Free-form `str`; emitters
-pick from a small documented set per event family rather than
-typing freely.
+For events triggered by a known cause: `session.invalidated` (a token
+naming the setup mutation, e.g. `"session_edited"` or
+`"instrument_added"`, or `"operator_revert"` when the operator reverts
+a validated session; `session.reverted_to_draft` carries no reason),
+cascade close (`reason: "deadline"`; past rows may carry `"manual"`).
+Free-form `str`; emitters pick from a small documented set per event
+family rather than typing freely.
 
 #### `refs` — cross-entity reference IDs
 
@@ -769,7 +769,7 @@ canonical "no payload" marker.
 | `session.created` | `snapshot` | `{"session_id": 17, "session_code": "CS101", "snapshot": {"id": 17, "code": "CS101", "name": "Final Review"}}` |
 | `session.updated` | `changes` | `{"session_id": 17, "session_code": "CS101", "changes": {"name": ["Spring", "Spring v2"]}}` |
 | `session.deleted` | `snapshot` (no top-level identity) | `{"snapshot": {"id": 17, "code": "CS101", "name": "Final Review"}}` |
-| `session.invalidated` | `reason` (no payload) | `{"session_id": 17, "session_code": "CS101", "reason": "setup_mutation"}` |
+| `session.invalidated` | `reason` (no payload) | `{"session_id": 17, "session_code": "CS101", "reason": "session_edited"}` |
 | `instrument.closed` | `reason` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "reason": "deadline", "context": {"deadline": "2026-06-01T00:00:00+00:00"}}` |
 | `assignments.generated` | `counts` + `context` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "counts": {"new": 104, "deleted": 0, "kept": 0, "responses_deleted": 0, "pairs": 104, "instruments": 1}, "context": {"mode": "rule_based"}}` |
 | `responses.saved` | `refs` + `counts` | `{"session_id": 17, "session_code": "CS101", "refs": {"reviewer_id": 42}, "counts": {"assignments_touched": 3, "responses_saved": 5}}` |

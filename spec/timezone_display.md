@@ -99,9 +99,11 @@ filter are labelled `(UTC)`.
   uniform token is not possible; the token is instead available
   behind the `date_formatting.SHOW_ZONE_TOKEN` source switch
   (`spec/settings_inventory.md` §8.5).
-- Where a **zone identity** is shown to a person — the Settings
-  and Session forms' live previews, the Session Details card's
-  Timezone item, the review-surface deadline labels — it renders as the **compact GMT-offset followed by the
+- Where a **zone identity** is shown to a person — the Operator
+  Settings page's live preview (the only surface that has one), the
+  session timezone pickers' options on the Create page and the
+  Session details card, that card's Timezone item, the review-surface
+  deadline labels — it renders as the **compact GMT-offset followed by the
   raw IANA id**, e.g. `GMT+8 Asia/Singapore`, via
   `date_formatting.gmt_offset_zone_label`. The offset gives
   at-a-glance orientation; the IANA id is the unambiguous
@@ -112,11 +114,8 @@ filter are labelled `(UTC)`.
   `GMT+8 Asia/Singapore` in the cell's hover tooltip.
 - **No surface shows the CLDR long display name** (e.g.
   `Australian Eastern Standard Time`) — the offset-plus-IANA forms
-  above are the only zone renderings. The `timezone_label` helper
-  that produced them has been **deleted**, along with `babel`, the
-  dependency it was the sole importer of: a helper no surface calls
-  does not earn a pinned runtime dependency. Reviving the CLDR form
-  means re-adding both, deliberately.
+  above are the only zone renderings, and the app carries no helper
+  or `babel` dependency that produces it.
 
 ## See also
 

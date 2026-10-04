@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       run_migrate:
-        description: "Run alembic migrations against NUS Postgres. Untick if the DB isn't reachable from a GitHub-hosted runner (run migrations out-of-band instead — see docs/deployment_nus.md §5)."
+        description: "Run alembic migrations against NUS Postgres. Every job needs the in-VNet self-hosted runner on NUS (see docs/deployment_nus.md §5)."
         type: boolean
         default: true
 

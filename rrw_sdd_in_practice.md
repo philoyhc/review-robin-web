@@ -53,7 +53,7 @@ It was replaced by a *contract* spec, `spec/rrw_functional_spec.md`, with a per-
 
 RRW keeps three documentation folders. Each has a README that states its question and indexes its contents, and each has an `archive/` subfolder with a hand-maintained index. The split is by *question answered*, not by audience or format:
 
-| Folder | Answers | Authority | Today |
+| Folder | Answers | Authority | At `3559c7a7` (2026-09-23) |
 |---|---|---|---|
 | `spec/` | *What is X supposed to look like and behave like?* | The contract. "When the code drifts from a spec, the spec is the canonical source — fix the code (or update the spec deliberately as part of a feature change, never silently)." | 40 live files, 24,362 lines; 5 archived |
 | `docs/` | *How does X work today?* | Ship-state. `docs/status.md` is "authoritative for what does the code currently do". | 18 files |
@@ -163,7 +163,7 @@ One more consequence is operational: **a green `ruff` is not evidence**. Most of
 
 ### 6.4 Separate readers
 
-**Decision.** A change is read by something other than what wrote it. Two readers are checked-in agent definitions under `.claude/agents/`, read-only by construction and separate from whichever agent wrote the code:
+**Decision.** A change is read by something other than what wrote it. Two readers are checked-in agent definitions under `.claude/agents/`, separate from whichever agent wrote the code. `diff-reviewer` is given no edit tools; `spec-writer` has them and is held to `spec/` by its charter, not by construction:
 
 - **`spec-writer`** updates `spec/` to match what shipped **at a close**, may write only under `spec/`, and must "flag drift … rather than silently rewriting". Outside a close it verifies and reports.
 - **`diff-reviewer`** reads a PR diff cold, with no prior context, and checks it against the governing spec. Among other things, it reports claims in the commit message that the diff does not support and scope beyond the stated purpose, and it reports nothing at all if nothing is wrong. Its charter says "inventing findings to look thorough makes you worse than no reviewer". It carries no model pin, deliberately, because a reviewer should not be capped at a smaller model than the author.

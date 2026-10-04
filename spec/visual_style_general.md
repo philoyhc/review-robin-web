@@ -85,7 +85,7 @@ Anchor the entire UI on this palette. No off-palette colors should appear withou
 
 The accents are deliberately muted. Saturated, high-contrast colors should not appear. If a color feels saturated enough to draw the eye from across the room, dial it back.
 
-**Contrast floor.** The example hexes above are illustrative, and some pairs sit below the WCAG AA floor for text (4.5:1) — `text-muted` on white, and `accent-green` or `accent-amber` text on its tinted background. A palette built from this system holds every text and background pair to AA, whatever the starting hexes. Review Robin's is held there by `tests/unit/test_contrast_audit.py`, and `spec/color_tokens.md` "The AA floor on text" states the floor; decoration (dividers, gradient stops) is outside it (author's ruling, 2026-10-02, findings E28).
+**Contrast floor.** The example hexes above are illustrative, and some pairs sit below the WCAG AA floor for text (4.5:1) — `text-muted` on white, and `accent-green` or `accent-amber` text on its tinted background. A palette built from this system holds every text and background pair to AA, whatever the starting hexes. Review Robin's is held there by `tests/unit/test_contrast_audit.py`, and `spec/color_tokens.md` "The AA floor on text" states the floor; decoration (dividers, gradient stops) is outside it.
 
 App-specific uses of these accents (e.g., assigning `accent-blue` to a particular navigation group, mapping accents to lifecycle states) belong in the companion app-specific document.
 

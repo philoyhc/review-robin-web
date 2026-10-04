@@ -2,13 +2,11 @@
 
 The security / compliance posture of Review Robin Web: who can do
 what, what the app trusts, and which hardening items are
-deliberately deferred. Absorbs the identity-subsystem write-up
-(formerly `docs/authentication.md`, retired 2026-08-19); pairs with <!-- path-ref-ok -->
-`docs/known_limitations.md`.
+deliberately deferred. Pairs with `docs/known_limitations.md`.
 
 ## Authorization model
 
-Three layers, all in `app/web/deps.py`:
+Every gate is a dependency in `app/web/deps.py`:
 
 - **`require_operator`** — workspace allowlist gate. Mounted as a
   router-level dependency on the whole `routes_operator` package
@@ -174,10 +172,10 @@ second scans **all** of `app/` for a comparison or fold against
 function. The second exists because the first is a list someone has to
 remember to extend, and two verification passes each found a gate it
 had not been extended to; the column set is closed where the module
-set is not. Ten sites carry the marker for that scan — five operator
-picker filters, one audit-log actor filter, three roster dirty checks
-and one picker preview — and three more carry it for the first test,
-all folds of a CSV `Status` value or a tag rather than an address.
+set is not. A fold or comparison that is not an identity match — a
+picker filter, a dirty check, a CSV `Status` value or a tag — stays
+only with a `# not-identity:` comment saying so, which makes whoever
+adds the next one state which kind it is.
 
 Coverage also includes the eszett distinctness and the
 SQLite/Postgres divergence.
@@ -199,6 +197,8 @@ the dependencies above; no route trusts a client-supplied actor id.
 | Reviewee results (`/me/sessions/{id}/results` + acknowledge) | `require_reviewee_with_current_grant` | Active-`Reviewee` email match **plus** a currently-resolving visibility grant (19F); non-email identifiers fail reachability. Every refusal is a bare 404, so "no grant" and "not a reviewee" are indistinguishable. |
 | Observer collation (`/me/sessions/{id}/collation` + CSV) | `require_observer_in_session` | Active-`Observer` email match; refusal is a bare 404 (19F). |
 | `/me/invite/{token}` | identity + token lookup | Email-mismatch → dedicated 403 page. |
+| `/about`, `/guide` | `get_or_create_user` | Authentication only: any signed-in user. `/guide` shows the sections the viewer's roles resolve and 303s to `/about` when none do. |
+| `/templates/*.zip` | `get_current_user` | Authentication only: the payload is the same constant CSV headers and mock rows for everyone, with no session and no database read. |
 
 POST endpoints verified not to trust client-side identifiers:
 reviewer `save`/`submit` build the assignment index from
@@ -219,7 +219,7 @@ service writes an `audit_events` row).
 |---|---|---|---|
 | Delete response data (`/delete-data`) | `confirm=true`, **plus `_require_not_ready`** (any state but `ready`) | `require_session_operator` | ✓ |
 | Delete session (`/delete`, `/bulk-delete`, `/bulk-delete-archived`) | `confirm=true`, **plus `_require_not_ready`** on `/delete` (any state but `ready`); `/bulk-delete` skips sessions that are `ready` or `archived` (it accepts `draft`, `validated` and `expired`), and `/bulk-delete-archived` deletes only archived ones | `require_session_operator` / per-id check | ✓ |
-| Close / reopen session (`/activate`, `/revert`, `/workflow/activate`) | `activate_confirm` banner | `require_session_operator` | ✓ |
+| Close / reopen session (`/activate`, `/revert`, `/workflow/activate`) | `acknowledge_warnings=true` on `/activate` when the readiness report has warnings (`/workflow/activate` sends those to the Validate page instead); `confirm=true` on `/revert` from `ready` or `expired` | `require_session_operator` | ✓ |
 | Replace reviewers / reviewees roster | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
 | Replace assignments (generate) | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
 | Replace relationships (`delete-all`) | `confirm=true` | `require_session_operator` | ✓ |
@@ -436,7 +436,11 @@ reasonable future tightening.
 
 The following are out of scope for the Segment 14A in-app
 hardening ladder — they need the Azure portal or a later segment.
-Tracked in `guide/deferred_consolidated.md`.
+Tracked in `guide/deferred_consolidated.md`. The infrastructure rows
+describe the dev slot (`docs/deployment_dev.md`). The NUS environment
+already has private endpoints for the Web App, Postgres and Key Vault,
+VNet integration, and Application Insights; its secrets are not yet in
+Key Vault (`docs/nus_azure_status_v7.md`).
 
 | Item | Status |
 |---|---|

@@ -14,10 +14,9 @@ the top (per `spec/workflow_card.md`), then a full-width info card
 with inline counters, then a table whose card opens with a two-pane
 toolbar carrying the filter. Bulk-actions
 (Send invites · Send reminders) live on the
-Workflow card's stepper — neither page body carries its own bulk
-action bar. **Create invites** was a third until 19Q Item 2 rung 3:
-Prepare creates one invitation per eligible reviewer, so the step
-has no button of its own.
+Workflow card's button row — neither page body carries its own bulk
+action bar. Creating invites has no button of its own: Prepare creates
+one invitation per eligible reviewer.
 
 ## Page identity
 
@@ -39,6 +38,17 @@ The dev-diagnostic Outbox page (`sys_admin_session_outbox.html`)
 sits **outside the chrome** under the Sys Admin doorway at
 `/operator/sys-admin/sessions/{id}/outbox`. Day-to-day operator work
 shouldn't need it; pilot debugging and send-troubleshooting do.
+
+**There is no Previews tab.** The reviewer-surface preview and the
+email previews are reached from the Invitations per-reviewer drill-in
+("Review Progress card" and "Email previews" below), so the Invitations
+table is their only picker. Three legacy GETs answer a permanent
+**308**: `/operator/sessions/{id}/previews` and
+`/operator/sessions/{id}/monitoring` to
+`/operator/sessions/{id}/invitations`, and
+`/operator/sessions/{id}/preview` to
+`/operator/sessions/{id}/preview-surface/1`. The operator-side reviewer
+surface itself is `spec/reviewer-surface.md`'s.
 
 
 **Documented in the Guide.** `/guide`'s **Watch progress** section
@@ -67,22 +77,18 @@ sides of the running-session conversation.
 
 Both pages render the same four stacked regions, in order — plus, on
 Manage Invitations only, a conditional notice between 2 and 3 when
-`?no_match=` names an address no reviewer holds (19O Item 6):
+`?no_match=` names an address no reviewer holds:
 
 1. **Chrome** — two-row session chrome (top-nav with the active tab
    highlighted) + setup-status row.
 2. **Workflow card** — full-width, per `spec/workflow_card.md`. Same
-   ten-state cascade and five-stage stepper as on every other
-   session-scoped page. The stepper carries the bulk-action
+   ten-state cascade and single row of action buttons as on every
+   other session-scoped page. The button row carries the bulk-action
    affordances (Send invites · Send reminders) so
    the page bodies stay focused on per-row inspection + targeted
    intervention.
 3. **Info card** — full width, an inline middle-dot prose row of
-   lifecycle / coverage counters. It was half of a `bottom-grid`
-   whose other half was a filter card; 19P.5 rung 3 moved the filter
-   into the table toolbar, and a `1fr 1fr` grid with one child is not
-   a grid, so the wrapper went and the card is page width. Half width
-   flush right was the alternative and was rejected: a counters card
+   lifecycle / coverage counters. Full width because a counters card
    is a readout the eye sweeps, and eight pills in half a page wrap
    badly.
 4. **Result table** — a single card that opens with the **two-pane
@@ -110,9 +116,8 @@ the same shared primitives rather than page-local copies:
 - **`.table-scroll`** — both tables sit in the wrapper `base.html`
   provides, so ten columns overflow *inside* the card rather than
   scrolling the page sideways. The wrapper is load-bearing, not
-  defensive: Invitations' natural width is 1496px against a ~1396px
-  page cap, so without it the page scrolls sideways at every viewport
-  up to 1920.
+  defensive: Invitations is wider than the page cap, so without it
+  the page scrolls sideways at every viewport.
 
 Neither page has the rosters' select column or bulk actions —
 they are read-only monitoring surfaces, and nothing here mutates a
@@ -121,24 +126,26 @@ roster row.
 ### Lifecycle behavior
 
 Both pages render content across all session lifecycle states, and
-**neither carries a yellow `.card.lock` notice** — the Workflow card's
-stepper already makes lifecycle state explicit, and a second
+**neither carries a yellow `.card.lock` notice** — the Workflow card
+already makes lifecycle state explicit, and a second
 lifecycle explanation on the same page is redundant (see
 `spec/operator_ui_concept.md` P4).
 
 **The invitation gate: bulk send from `validated`, everything else
-`ready`.** Route and button agree (author's ruling, 2026-10-02, B17 /
-F17), in `app/web/routes_operator/_operations.py`:
+`ready`.** Route and button agree, in
+`app/web/routes_operator/_operations.py`:
 
 - `send-all` and `regenerate-all` call `_require_validated_or_ready`.
-  The Workflow card's **Send invites** is live from `validated` onward
+  The Workflow card's **Send invites** renders in `validated` or
+  `ready` once invitations exist and none has been sent
   (`send_invites_visible`, `app/web/views/_workflow_card.py`), so
   reviewers can be notified before activation. `regenerate-all` has no
   UI caller at all; it is reachable only by POSTing the route.
 - `{iid}/send`, `{iid}/regenerate`, `{iid}/remind` and
   `remind-incomplete` call `_require_ready` and answer **409**
   elsewhere. The Workflow card's **Send reminders** renders only when
-  `is_ready`, and every **per-row** button on this page — Send,
+  `is_ready` and an invitation has been sent, and every **per-row**
+  button on this page — Send,
   Regenerate, Send reminder — carries
   `{% if not is_ready %}disabled{% endif %}`. Reminders fire after the
   response window opens.
@@ -157,12 +164,11 @@ Opens with a `.muted` note on its own row, **above** the counters:
 > Note: Invitation and reminder columns are inactive until email
 > sending is switched on.
 
-Four of the eight counters cannot move until Segment 14B ships email
-delivery, and without the note a page of stuck counters reads as
-broken rather than as not-yet-switched-on. **Retire this note with
-14B** — `guide/segment_14B_email_infrastructure.md` lists it, and
-`tests/integration/test_page_guidance.py` asserts it, so the
-assertion fails when the claim stops being true.
+Four of the eight counters cannot move until email delivery is
+switched on, and without the note a page of stuck counters reads as
+broken rather than as not-yet-switched-on. **Retire the note when
+delivery ships**; `tests/integration/test_page_guidance.py` asserts it,
+so the assertion fails when the claim stops being true.
 
 This is deliberately *not* a `.page-guidance` card. Those are a Setup
 page affordance for explaining a page's whole purpose; one sentence
@@ -185,8 +191,7 @@ reminders, and Incomplete reviews).
 **Two of these count different populations, and the row's arithmetic
 does not close.** `Invitations created` counts **every** `Invitation`
 row on the session; `Pending invitations` counts only the **sendable**
-ones — `pending`, and the reviewer still assigned-and-active
-(19Q Item 2 rung 1). A reviewer invited at an earlier Prepare and
+ones — `pending`, and the reviewer still assigned-and-active. A reviewer invited at an earlier Prepare and
 since made ineligible keeps a row that the first counts, the second
 does not, and the table below does not list. So `created 2 · sent 1 ·
 pending 0` is a correct reading, not a bug.
@@ -210,12 +215,6 @@ preview-count line. The right pane carries the **filter strip**, a
 
 Both panes are bare — card geometry without a card's border, fill or
 padding, because they are regions of one card rather than two cards.
-
-**The strip lived in a half-width `filter-card` beside the info card
-until 19P.5 rung 3.** Five surfaces said `Search` — the four rosters
-and Assignments — and these two said `Apply`; the minority renamed. The class went with them — they were
-its only callers, and `session_validate.html`'s `severity-filter-card`
-is a different token that a substring grep mistakes for a survivor.
 
 The strip is:
 
@@ -249,10 +248,9 @@ pages and Assignments use (`spec/setup_pages.md`, "Preview tables").
 **The whole left pane is gated on there being rows**, chips and pager
 with it, which is where these three Operations pages differ from the
 four rosters: there the pager and count line are included
-unconditionally and self-guard. Pre-existing on all three and
-preserved rather than aligned at 19P.5 — an empty pane and an absent
-pane look the same, and changing it would alter what a no-match search
-shows. The count line's noun here is
+unconditionally and self-guard. The difference is kept: an empty
+pane and an absent pane look the same, and aligning it would alter what
+a no-match search shows. The count line's noun here is
 **`reviewers`**, not "invitations": this table is one row per
 reviewer (`build_invitations_rows` iterates
 `monitoring.per_reviewer_progress`).
@@ -289,7 +287,7 @@ excluded nothing is worth saying.
 | 2 | Tag1 | ✓ | `tag_1` | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"`; header label via `field_label_header(session, "reviewer", "tag_1")` |
 | 3 | Tag2 | ✓ | `tag_2` | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 4 | Tag3 | ✓ | `tag_3` | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
-| 5 | Email Status | — | `email_status` | Pill: the latest invitation outbox row's status, or the literal `not sent` when there is none. **Rendered, not enumerated** (19P.6 rung 3), so the model's `EMAIL_OUTBOX_STATUSES` can widen without a template edit; `sent` takes `pill-count`, everything else `pill-empty` |
+| 5 | Email Status | — | `email_status` | Pill: the latest invitation outbox row's status, or the literal `not sent` when there is none. **Rendered, not enumerated**, so the model's `EMAIL_OUTBOX_STATUSES` can widen without a template edit; `sent` takes `pill-count`, everything else `pill-empty` |
 | 6 | Sent | — | `email_sent_at` | Timestamp pill, or `—` |
 | 7 | Progress | — | `review_progress` | Pill: `submitted (D/T)` or `<state> (D/T)` where state is a per-invitation lifecycle label |
 | 8 | Required<br>Fields | — | `required_fields` | Pill: `(D/T)` |
@@ -300,24 +298,16 @@ The tag columns sit at 2-4, between the identity column and the
 status columns, so the canonical order matches the roster tables.
 
 **Four headers are deliberately terse** — `Progress`, `Sent`,
-`Reminder`, and `Required Fields` stacked onto two lines. The tag
-columns pushed the table 140px past its card at 1440px; narrowing
-these four recovered 172px and it fits exactly. Renaming the
-`Regenerate` button to `Regen` was measured as an alternative and
-rejected — it closed 31px of the remaining 36, leaving a hairline
-scroll, and cost a button label to do it.
+`Reminder`, and `Required Fields` stacked onto two lines — so the table
+fits its card at common desktop widths with the tag columns shown.
 
 **`Progress` and `Required Fields` are counted in SQL for
-per-reviewee instruments** (19R Item 3), rather than by loading a
+per-reviewee instruments**, rather than by loading a
 reviewer's assignments and tallying them. A reviewer's work on
 **group-scoped instruments, and any instrument with a required governed
-field or a require-mode branch** (19T Item 11 — see "What these
-pages cost to render" below), is
-still tallied in Python and added to that — both columns can be the sum
-of the two halves. Neither figure nor the pill state they carry changed
-with the group-scoped split: the rewrite moved where the arithmetic
-happens, not what it says, and a parity test held the two
-implementations to the same answer while it did.
+field or a require-mode branch** (see "What these pages cost to
+render" below), is still tallied in Python and added to that — both
+columns can be the sum of the two halves.
 
 One thing this table does *not* say: a `required` response field that
 is not `visible` is excluded from **both columns**, because the
@@ -356,8 +346,7 @@ All three are `ready`-only, at the button and at the route
 the one way to send before activation.
 
 **Send also has a server-side eligibility gate**, which the button's
-visibility rule does not express. Since 19Q Item 2 rung 1 the route
-refuses with **409** when the reviewer is not
+visibility rule does not express. The route refuses with **409** when the reviewer is not
 `invitations.is_reviewer_eligible_for_invitation` — active, with at
 least one `include=True` assignment — the same test the two bulk send
 paths apply, so all three agree by construction rather than by three
@@ -365,9 +354,9 @@ queries happening to match. The gate is reachable only by a direct
 POST or a stale tab, because the table renders the button only for
 rows it lists and it lists only eligible reviewers. It checks
 eligibility **and not** `pending`: a direct POST re-sending an
-already-sent invitation still rotates its token, as it always has.
+already-sent invitation still rotates its token.
 
-**Send reminder carries the same gate** (2026-10-02): a reminder
+**Send reminder carries the same gate**: a reminder
 carries the invite link, and an inactive reviewer must not be sent it,
 so `/remind` also answers **409** for a reviewer who is not
 `is_reviewer_eligible_for_invitation`. The bulk and scheduled reminder
@@ -381,7 +370,7 @@ The reviewer name is a link to a per-**reviewer** detail page,
 exists.** The page is keyed on the reviewer because the reviewer is its
 subject: the invitation supplies one optional field, while the reviewer
 supplies the heading, the email, the breadcrumb and the row match.
-The pre-19P.6 invitation-keyed URL
+The invitation-keyed URL
 (`.../invitations/{invitation_id}/detail`) is a permanent **308** to
 the reviewer URL, so bookmarks survive.
 
@@ -429,8 +418,8 @@ reviewer's operator to re-run the creator sends them to something that
 cannot reach that reviewer — the card would stay `not created` however
 often they ran it.
 
-The creator has been **Prepare** since 19Q Item 2 rung 2, and the
-eligible row carries the revert caveat because `prepare_visible` is
+The creator is **Prepare**, and the eligible row carries the revert
+caveat because `prepare_visible` is
 `(is_draft and not is_setup_empty) or is_validated`: an open session
 cannot run it.
 
@@ -456,8 +445,7 @@ active tab is selected by `?email=<kind>`; sibling links retain the reviewer
 detail URL and end in `#email-previews`, so changing tabs returns to the
 region rather than the top of the page. Each tab uses the same renderer as
 its eventual send path, with a placeholder invitation URL where previewing
-must not mint or rotate a real token. This region moved intact from the
-retired Previews hub in 19Q Item 1.
+must not mint or rotate a real token.
 
 ### Empty-state copy
 
@@ -512,9 +500,8 @@ count line ever fires.
 | 7 | Last response | — | `last_response_at` | Timestamp pill, or `—` |
 
 `Reviewers completed` is stacked onto two lines for the same reason
-Invitations stacks `Required Fields`: it drops the table's natural
-minimum from 1031px to 962px, which fits the card from 1280 up.
-`Reviewers completed` sorts on completion percentage, on the same
+Invitations stacks `Required Fields`: a narrower table that fits its
+card. It sorts on completion percentage, on the same
 terms as the Invitations progress columns above.
 
 ### Coverage state definitions
@@ -537,11 +524,10 @@ any row). Coverage is the fraction of assignments complete:
 These are guidance, not enforcement. The operator decides what to
 do; the coverage state helps them prioritize.
 
-**Counted in SQL** (19R Item 3), in one aggregate over the session's
+**Counted in SQL**, in one aggregate over the session's
 assignments rather than a per-assignment read; the states and the
-threshold are unchanged. Two differences from the Invitations side are
-long-standing and deliberate here rather than newly introduced, and
-both are pinned by
+threshold are those above. Two differences from the Invitations side
+are deliberate, and both are pinned by
 `tests/integration/test_monitoring_rollup_parity.py`: this page counts
 an assignment complete only when it also carries a `submitted_at`, so a
 saved draft is progress to a reviewer and not yet coverage to a
@@ -619,25 +605,24 @@ per reviewee (`monitoring.per_reviewee_coverage`) **and** calls
 runs the reviewer-side pass a second time.
 
 **For a per-reviewee instrument with no required governed field or
-require-mode branch, neither rollup reads response rows at all** (19R Item 3) — both count
+require-mode branch, neither rollup reads response rows at all** — both count
 in SQL and return one row per person, and `per_reviewee_coverage` is
 that and nothing else in that case. The paragraph after this one is the
 exception: `per_reviewer_progress` still reads the response rows of
 *group-scoped* assignments and any instrument with a **required
-governed field or a require-mode branch** (19T Item 11), and
+governed field or a require-mode branch**, and
 loads those assignments themselves;
 `per_reviewee_coverage` gains the same second path for the latter
 (`_python_routed_coverage`). What the aggregate path may not do is
 materialize a row per assignment — its count is a `func.count`, not a
 `len()` over loaded objects — and the measure that catches a regression
-there is **ORM instances loaded**, not queries: the implementation
-these replaced issued few queries and built every `Assignment` and
-`Response` in the session as an object, 408,027 of them for one render
-at a 1,000 × 1,000 roster (`guide/app_responsiveness.md`).
+there is **ORM instances loaded**, not queries: an implementation that
+issues few queries can still build every `Assignment` and `Response` in
+the session as an object (`guide/app_responsiveness.md`).
 
 `per_reviewer_progress` keeps one Python path, for **group-scoped
 instruments and any instrument with a required governed field or a
-require-mode branch** ("route (a)", 19T Item 11; a require-mode
+require-mode branch** ("route (a)"; a require-mode
 parent's governed fields are required while its condition holds,
 whatever their stored `required`): a group counts once per group, and the key
 is Python's `strip()` over reviewee tags or an active `Relationship`,
@@ -657,9 +642,8 @@ stays in reserve.
 
 The Assignments, Invitations and Responses pages are **flat in the
 roster**: the query count does not move with the roster size. The
-per-size query counts (25 × 25 to 200 × 200) are in
-`guide/app_responsiveness.md`, Finding 2, "Re-taken 2026-09-21 — flat
-in the roster".
+per-size query counts are in `guide/app_responsiveness.md`,
+Finding 2.
 
 **Flat is the contract; the figures are the reading.** A legitimately
 added query moves a number without breaking anything, so the guards in

@@ -226,7 +226,7 @@ search" below.
 | 4 | **Created** | `session.created_at` | `<span class="pill pill-count">{when}</span>`. `YYYY-MM-DD HH:MM` via `format_datetime`. |
 | 5 | **Deadline** | `session.deadline` | `<span class="pill pill-info">{when}</span>` when set, `<span class="muted">No deadline</span>` otherwise. Rendered `YYYY-MM-DD HH:MM` via `format_datetime`. |
 | 6 | **Timezone** | `resolve_session_timezone(session)` (the `session_timezone` Jinja global) | `<abbr class="tz-gmt">` showing the compact GMT-offset (e.g. `GMT+8`, via `gmt_offset_label`), with the full `GMT+8 Asia/Singapore` in the `title` hover tooltip. The lobby lists many sessions, so its per-row timestamp cells render in the *viewing operator's* zone; this column names each row's own resolved session zone. See `spec/timezone_display.md`. |
-| 7 | **Status** | `session.status` | `<span class="pill pill-lifecycle-{status}">{label}</span>` — same lifecycle-tinted variants the session-home `session_setup_status_row.html` and the 16A Admin Sessions Diagnostics table use (draft / validated / ready / closed each carry distinct tints from `base.html`). The label is the human-readable form produced by the `lifecycle_label` Jinja filter. |
+| 7 | **Status** | `session.status` | `<span class="pill pill-lifecycle-{status}">{label}</span>` — same lifecycle-tinted variants the session-home `session_setup_status_row.html` and the Admin Sessions Diagnostics table use (draft / validated / ready / expired, labelled Closed, each carry distinct tints from `base.html`). The label is the human-readable form produced by the `lifecycle_label` Jinja filter. |
 | 8 | **Tags** | `session_tags.tags_for_sessions` | One `pill pill-count` per tag, or a `muted` "No tags". Each row also carries a `data-tags` JSON attribute for the client-side tag filter. |
 | 9 | *select-all checkbox* | `session.id` | Bulk-action select-row checkbox. The column **header** carries a select-all checkbox (see below). |
 
@@ -249,6 +249,11 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   Ticking two or more rows opens the `bulk-expander` instead — bulk
   tag add/remove (`bulk-tags`), bulk purge-and-archive, and a
   gated bulk Delete.
+- **Purge and archive** skips any session `lifecycle.can_archive`
+  refuses (`ready` or already `archived`) — `spec/lifecycle.md` §1. It
+  shares its route and service with the Extract data page's Archive
+  card, whose section in `spec/extract_data.md` (*`Archive session`
+  card*) owns the purge options and their order.
 - **Name / Code / Deadline edit in `draft` only; Tags in any state.**
   On any other lifecycle state the expander seeds those three boxes
   with the row's values and renders them `disabled`, leaving Tags
@@ -270,10 +275,10 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   deadline skips it. This is narrower than Session Home's details card,
   whose `/config` accepts `draft` and `validated`.
 - **Tags have four write surfaces, two of them off this page.** The
-  lobby's two — the row expander's `{id}/lobby-edit` and the toolbar's
-  `bulk-tags` — were the only ones until 19S Item 6 put a **Tags box on
-  the Create page**, so a session can be born tagged, and 19S Item 9
-  put a **Tags field on Session Home's details card**. The box, the
+  lobby's two are the row expander's `{id}/lobby-edit` and the toolbar's
+  `bulk-tags`; the others are a **Tags box on the Create page**, so a
+  session can be born tagged, and a **Tags field on Session Home's
+  details card**. The box, the
   field and the row expander all write through `session_tags.set_tags`,
   a whole-set replace, so none of them is additive — only the toolbar's
   `bulk-tags` is, through `add_tag` / `remove_tag`. **The surfaces are
@@ -287,7 +292,7 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   bailed-out create does not silently discard what was typed.
   `spec/csv_contracts.md` § *Settings CSV — apply precedence*
   owns that rule, and both meanings of an empty box.
-- **The tag boxes complete the tag being typed (19S Item 7).** The
+- **The tag boxes complete the tag being typed.** The
   four comma-separated tag boxes — the row expander's and the bulk
   expander's here, Create's Tags card and Session Home's Tags field —
   share one typeahead, `operator/partials/_tag_typeahead.html`, which
@@ -363,9 +368,6 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   template with editable fields and purge options and a bulk one — so the
   marking function is duplicated rather than shared.*
 
-  The archived-sessions page has no section of its own in this spec, so
-  its selection behaviour is recorded here rather than pointed at.
-
   The class is applied in `refreshExpander()`, which is the one funnel
   every selection path meets: a row tick, a select-all (which sets
   `checked` programmatically and fires no row events), and the
@@ -407,25 +409,23 @@ The lobby carries all three:
   The chosen sort persists in the `rrw-sort-lobby` cookie (shared
   `rrw-sortable` primitive with the Setup preview tables), decoded
   server-side by `views.decode_cookie_sort_spec` /
-  `apply_cookie_sort`. Default order is still `created_at DESC`.
+  `apply_cookie_sort`. Default order is `created_at DESC`.
   A sort with rows selected drops the injected panel and re-anchors
-  it from the shared `rrw:sorted` signal (19O Item 4); the mechanism
+  it from the shared `rrw:sorted` signal; the mechanism
   is in `spec/ui_elements.md` under `.session-row-selected`. Because
   the re-anchor rebuilds the panel from the row's rendered cells, and
   **this panel is editable**, a sort with an unsaved edit in it first
   asks *"Discard unsaved changes?"* — the same string Instruments and
   the Observers cohort editor use (`spec/setup_pages.md`
-  § *The cohort rule builder*). Declining cancels the sort outright, so
+  § *Cohort match rule editor*). Declining cancels the sort outright, so
   the panel, the edit and the row order are all left as they were.
 - **Tag filter.** A `sessions-tag-filter` chip strip ("Show
   sessions tagged with:") with one `tag-chip` per tag in the
   lobby tag vocabulary, an AND/OR mode chip, and a clear chip.
   Client-side filtering against each row's `data-tags`.
-**It is a filter, not a search** (author's ruling, 2026-09-19; 19O Item
-7 entry 15). It hides rows already rendered, live on every keystroke,
-and never queries or navigates — so there is nothing to submit and no
-Search button is missing. Headed `Search` with a `Cancel` beside it
-until that ruling, which is the shape the drawing above used to show.
+**It is a filter, not a search.** It hides rows already rendered, live
+on every keystroke, and never queries or navigates — so there is nothing
+to submit and no Search button is missing.
 
 **What it matches — per column, unioned.** A row is kept when *any* of
 its columns matches:
@@ -439,9 +439,7 @@ its columns matches:
 The same three rules `spec/setup_pages.md` states for the roster and
 operations filters, and for the same reasons: substring on a name makes
 a partial name useful, whole value on a tag keeps `team a` from
-dragging in `team a2`. Until 19O Item 7 entry 15 this concatenated the
-three into one string and matched a substring of *that*, so the tag
-rule did not hold here.
+dragging in `team a2`.
 
 The rule is `rrwSessionFilterMatches` in `base.html`, shared with the
 Archived page rather than copied to it, and executed — not merely
@@ -521,12 +519,39 @@ button is gated behind a "Yes, delete" checkbox
 #### Lifecycle eligibility
 
 `draft`, `validated` and `expired` sessions are deletable through this
-surface (author's ruling, 2026-10-02: a finished session is deletable
-from the lobby as from its Session Home). `ready` (Activated) sessions
+surface — a finished session is deletable from the lobby as from its
+Session Home. `ready` (Activated) sessions
 are not, and `archived` ones are deleted from the archived page's own
 `bulk-delete-archived`. Non-eligible ticks are silently
 dropped — there is no flash banner. (If field feedback shows operators
 are confused, layer a `?skipped=N` flash on top.)
+
+## Archived sessions page
+
+`GET /operator/sessions/archived` (`archived_sessions` in
+`app/web/routes_operator/_lobby.py`) renders
+`app/web/templates/operator/sessions_archived.html`, reached from the
+lobby's `Go to Archive`. Breadcrumb:
+`operator_sessions_child("Archived")`.
+
+- **Rows.** The caller's `archived` sessions from
+  `sessions.list_for_user`. Columns as the lobby's, except **Archived**
+  (`updated_at` — an archived session's last write is the archive) in
+  place of Deadline. Every column but Tags and the checkbox sorts; the
+  sort persists in the `rrw-sort-archived` cookie.
+- **Cards.** An `Archived` card with the `N archived` pill and, when
+  any archived session is tagged, the tag-chip filter; and a `Filter`
+  card with the lobby's per-column filter and typeahead and a `Clear`
+  button. No create, Rehydrate or Archive buttons.
+- **Selection.** One bulk panel for any selection (see "Row
+  affordances" above): **Unarchive** (`bulk-unarchive`,
+  `lifecycle.unarchive_session`, `archived → draft`), a disabled
+  Download placeholder, and **Delete** behind "Yes, delete"
+  (`bulk-delete-archived`, a hard `sessions.delete_session`). Both
+  handlers skip any id that is not a caller-owned archived session and
+  303 back to this page.
+- **Empty.** With no archived sessions the page renders one card, "No
+  archived sessions." — no Filter card and no table.
 
 ## Behaviours
 

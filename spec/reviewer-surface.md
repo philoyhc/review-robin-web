@@ -114,7 +114,9 @@ Top-to-bottom, the page renders:
    renders in the session's resolved zone followed by that zone's
    compact GMT-offset + raw IANA id in parentheses — e.g.
    `Deadline: 2026-06-02 07:59 (GMT+10 Australia/Melbourne)` — via
-   `date_formatting.gmt_offset_zone_label`.
+   `date_formatting.gmt_offset_zone_label`. When `session.help_contact`
+   is non-blank, a `.muted` "Questions? Contact {help_contact}" follows
+   in the same row.
 4. **Overview card** — a single full-width `.card.rs-status-panel`
    rolling together, top to bottom:
    - The session **description**, when `session.description` is set.
@@ -152,8 +154,9 @@ Top-to-bottom, the page renders:
      from the last-saved server values. No JS, no separate write.
    - `Submit` (Primary, `type="submit"` with
      `formaction="…/submit"`) — review-session-wide. Persists the
-     current page's inputs and stamps `submitted_at` on every
-     assignment. (See §"Form HTML mechanics" below.)
+     current page's inputs and stamps `submitted_at` on every saved
+     `Response` row of the reviewer's assignments. (See §"Form HTML
+     mechanics" below.)
    - **Vertical divider** — a `.rs-action-divider` element separating
      the review-level controls (Save / Cancel / Submit) from the
      per-page navigation cluster. 1px wide, full button-height,
@@ -172,8 +175,8 @@ Top-to-bottom, the page renders:
      counter (not a button). There is no per-instrument page button
      and no client-side page swap — every page change is a server
      GET.
-6. **Instrument body** — heading, help-text card(s), reviewer table.
-   Exactly one instrument's content renders per page.
+6. **Instrument body** — heading, help-text card(s), reviewer table,
+   once for each instrument on the page, in position order.
 7. **Missing-required warning card** — `.rs-missing-card`, full-width
    below the overview card, two-column flow. Renders only after a
    blocked Submit attempt; enumerates gaps as `#N Label: Reviewee X —
@@ -241,7 +244,7 @@ intentional-nav escape prompts on the app's own controls.
 | **Save** | Page | POST `…/{page_n}/save` | Submit the page `<form>` to persist the **current page's** inputs to the database. Always enabled (no dirty-tracking gate). On success: 303 → `…/{page_n}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
 | **Cancel** | Page | GET `…/{page_n}` | An `<a href>` back to the current page URL — a plain server reload. Unsaved typing lives only in the current page's DOM, so the reload re-renders from the last-saved server values, dropping the edits. No JS, no separate write, no audit. Other pages' saved state is untouched. |
 | **Prev / Next** | Page | GET `…/{N}` | `<a href>` links to the adjacent page — plain HTTP navigation. Server-side render returns that page's instruments. At a page boundary the link renders as a disabled `<button>`. There is no per-instrument page button and no client-side swap. Unsaved typing on the current page is lost on navigation (no `beforeunload` guard). |
-| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the current page's inputs (the form posts only this page; other pages contribute what their own Save stored), then validate required fields across every instrument and stamp `submitted_at` on every assignment in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the page Submit was pressed on (`?page={page_n}`) with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → the bare session URL (which 303s on to `/1`), or to the summary page once every assignment is submitted (no flash; the per-page pill flips to `submitted` and the status column shows the complete icon on every row whose required fields are filled). |
+| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the current page's inputs (the form posts only this page; other pages contribute what their own Save stored), then validate required fields across every instrument and stamp `submitted_at` on every saved `Response` row of the reviewer's assignments in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the page Submit was pressed on (`?page={page_n}`) with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → the bare session URL (which 303s on to `/1`), or to the summary page once every assignment is submitted (no flash; the per-page pill flips to `submitted` and the status column shows the complete icon on every row whose required fields are filled). |
 | **Clear all** | Review-session | POST `/me/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
 
 ### Why Submit is session-wide
@@ -273,12 +276,12 @@ The whole editing surface lives inside a single `<form>` whose
 default `action` is `…/{page_n}/save` and `method="post"`. Save
 submits to that default action; Submit overrides via
 `formaction="/me/sessions/{id}/submit"`. Both buttons send
-the **entire** form body — every input across every instrument
-group, since they're all in the DOM. The route distinguishes:
+the **entire** form body — every input on the current page, across
+each of its instruments. The route distinguishes:
 
-- Save filters the incoming form to inputs whose `name` matches
-  response fields belonging to `{page_n}`'s instrument and
-  persists those, ignoring everything else.
+- Save keeps only the inputs whose assignment belongs to one of
+  `{page_n}`'s instruments and persists those, ignoring everything
+  else.
 - Submit accepts the entire form body, persists every value, then
   applies the session-wide submission semantics.
 
@@ -288,8 +291,8 @@ group, since they're all in the DOM. The route distinguishes:
   response_field_id)` shape. An empty submitted value **deletes**
   the matching `Response` row (so absence == empty answer); a
   non-empty value upserts. Save never touches `submitted_at`. The
-  filter-by-position keeps Save from accidentally touching another
-  page's saved values when only the current page should change.
+  page filter keeps a stale form from touching another page's saved
+  values when only the current page should change.
 - **Submit** persists pending writes session-wide (treating the
   whole form body as a session-wide save), then validates required
   fields across every instrument. With no required field missing
@@ -313,7 +316,8 @@ group, since they're all in the DOM. The route distinguishes:
   any unsaved typing.
 
 **"Submitted" status on the dashboard.** Once Submit succeeds, every
-assignment in the session has `submitted_at` set. The dashboard's
+saved `Response` row of the reviewer's in the session has
+`submitted_at` set. The dashboard's
 session-level pill ("submitted" / "in progress" / "not started")
 follows the same rule it does today (every assignment submitted →
 "submitted"). With session-wide Submit, the rollup is always
@@ -331,15 +335,15 @@ clicks Save (and the page re-renders).
 
 | Pill state | Pill class | Condition |
 |---|---|---|
-| `not started` | `.pill.pill-empty` | No saved Response rows for any of this page's assignments. |
-| `in progress` | `.pill.pill-warning` | Some Response rows saved, but at least one required field empty across this page's assignments. |
-| `complete` | `.pill.pill-success` | Every required field on every assignment in this page has a saved value. |
-| `submitted` | `.pill.pill-success` | Every assignment in this page has `submitted_at` set (i.e. the session has been submitted; all pages flip together). |
+| `not started` | `.pill.pill-info` | No saved Response rows for any of this instrument's assignments. |
+| `in progress` | `.pill.pill-warning` | Some Response rows saved, but at least one required field empty across this instrument's assignments. |
+| `complete` | `.pill.pill-success` | Every required field on every assignment of this instrument has a saved value. |
+| `submitted` | `.pill.pill-success` | Every assignment of this instrument has `submitted_at` set (i.e. the session has been submitted; all pills flip together). |
 
-Pill copy is `{label}: {state}`, where `label` follows the same
-`#{N} {short_label}` (or bare `#{N}` when no short label is set)
-convention as the per-instrument heading — e.g. `#1 Skills: in
-progress`, `#2: complete`. Single-instrument sessions still show
+Pill copy is `{label}: {state}`, where `label` is `#{N} {short_label}`
+(or bare `#{N}` when no short label is set) — a space where the
+per-instrument heading has a colon (`#{N}: {short_label}`) — e.g.
+`#1 Skills: in progress`, `#2: complete`. Single-instrument sessions still show
 one pill, since the overview card renders whenever there are
 status pills.
 
@@ -363,8 +367,8 @@ states:
 
 The route adds `session_status: Literal["submitted", "saved",
 "draft"] | None` to context (`None` when the reviewer has no pages,
-so no pill renders — and in operator preview, which passes no
-`page_statuses`).
+so no pill renders). Operator preview builds the same
+`page_statuses`, so it shows both kinds of pill.
 
 ---
 
@@ -461,7 +465,7 @@ entered — no rounding, no trailing `.0`, no scientific notation
 (`constraint_summary_for_field` / `placeholder_for_field` /
 `_format_band2_bound`, `app/web/views/_instruments.py`).
 
-`_surface_context` adds a `completion` dict per instrument group
+`_surface_context` adds a `completion` (`GroupCompletion`) per instrument group
 (`required_done` / `required_total` / `all_done` / `all_total`);
 `required_total` sums each row's `required_count`, and `required_done`
 is DB-accurate, derived from each row's `missing_count`. The same
@@ -621,8 +625,7 @@ long `String` variant).
 
 ### Branching between response fields
 
-`guide/advanced_instruments.md` Item 1 (design record, built as 19T
-Item 10); the builder side is `spec/instruments.md` § "Branching between
+The builder side is `spec/instruments.md` § "Branching between
 response fields". Under **Show**, the default, a **governed** field's cell can be answered only
 while its **parent**'s branch is open and its parent itself applies.
 A governed field may itself be a parent, one level down, so a field
@@ -636,7 +639,7 @@ answer to the parent.
 A closed governed cell renders **muted** (`td.rs-branch-closed`) and its
 input **disabled**, titled with its own parent's condition (a cell
 closed by a branch further up still names its parent's) — `views.branch_condition_label`: `"Opens when Rating ≥ 4"`, or, for a
-range (19T Item 12), `"Opens when Rating ≥ 2 and ≤ 4"` — the field's
+range, `"Opens when Rating ≥ 2 and ≤ 4"` — the field's
 name first, then both ends, never `"2 ≤ Rating ≤ 4"`. A value the
 page closes over **stays visible, greyed, and isn't sent**, so if the
 branch is still closed when the reviewer saves, the save rule deletes
@@ -705,24 +708,34 @@ The route builds the table data in `_surface_context` as
 ```python
 {
   "instrument": Instrument,
-  "heading": str,
+  "is_group": bool,
+  "heading": InstrumentHeading,
+  "position": int,
   "rows": [
     {
       "assignment": Assignment,
-      "cells": [{"field": InstrumentResponseField, "value": str, "governed_by": str, "branch_open": bool, "required_now": bool, "may_be_required": bool, "branch_mode": str, "branch_hint": str}, …],
+      "cells": [{"field": InstrumentResponseField, "value": str, "placeholder": str, "governed_by": str, "branch_open": bool, "required_now": bool, "may_be_required": bool, "branch_mode": str, "branch_hint": str}, …],
       "display_cells": [{"field": …, "label": …, "value": …, "is_profile_link": bool}, …],
+      "sort_values": {display_field_id: str},
       "is_complete": bool,
       "missing_count": int,
       "required_count": int,
       "submitted_at": datetime | None,
       "accepting": bool,
       "show_values": bool,
+      # group rows only: "group_identity", "group_label" (below)
     },
     …
   ],
   "help_block_items": [InstrumentResponseField, …],
-  "display_fields": [{"field": …, "label": …, "is_profile_link": bool}, …],
+  "display_fields": [{"field": …, "label": …, "is_profile_link": bool, "width_px": int | None}, …],
+  "identity_width_px": int | None,
+  "response_field_width_by_id": {response_field_id: int},
+  "has_custom_widths": bool,
+  "constraints": [{"label": str, "summary": str}, …],
   "show_status_col": bool,
+  "completion": GroupCompletion,
+  "visibility_rows": […],
 }
 ```
 
@@ -743,7 +756,8 @@ reviewer-surface specifics:
 - **One row per group, not per reviewee.** The reviewer's
   rule-eligible assignments for the instrument are partitioned
   into groups — two reviewees share a group iff they share the
-  same value for every group-boundary tag (`responses.group_keys`).
+  same value for every group-boundary tag (`responses.group_keys`);
+  the boundary decides membership, not the label.
   Each group is one table row. `_collapse_group_rows` in
   `routes_reviewer/_surface/_group_collapse.py` does the collapse; the
   lowest-id **included** member assignment is the row's
@@ -753,11 +767,13 @@ reviewer-surface specifics:
   group. A branch's cells (above) are judged on the representative's
   own answers, carried into the collapsed row along with its cells.
 - **`Group` identity column** replaces the `Reviewee` column and
-  the per-reviewee display columns. It is composed from the
-  group's boundary tag values on one line and, when the
-  `RevieweeName` Display Field is Included, the member-name list
-  on a second line — the first `GROUP_MEMBER_NAME_LIMIT` (10)
-  names, then a `+N more` suffix. No separate display-field
+  the per-reviewee display columns. Its first line joins, with
+  commas, the values of every visible `reviewee.tag_*` display field
+  on the lowest-id member — the tag pills the operator's Band 2
+  preview shows — falling back to the boundary tag values when none
+  yields a value. When the `RevieweeName` Display Field is Included,
+  a second line lists the members — the first
+  `GROUP_MEMBER_NAME_LIMIT` (10) names, then a `+N more` suffix. No separate display-field
   columns render. When the group is a self-review group, a
   `.pill.pill-info` **Self review** follows on its own line: every
   member's assignment is flagged then, so the representative's flag
@@ -901,8 +917,6 @@ GET requests behave differently depending on which gate fails:
   The same rule decides the summary page and its CSV, per
   instrument: a hidden instrument is left out, and a banner says some
   or all responses are not shown; with none shown, the CSV link goes.
-  The `responses_visible_when_closed` flag that once decided this
-  retired with its column on 2026-10-03 (findings B21).
 
 ### Lazy deadline-close
 
@@ -919,6 +933,13 @@ first observer past the deadline:
 
 The lazy-close is idempotent — subsequent observers see
 `deadline_closed_at` already set and skip the side-effect.
+
+Before the deadline (or with none) it heals the other way on a
+`ready` session: any instrument left with `accepting_responses =
+false` is reopened, its `deadline_closed_at` cleared, with one
+`instrument.opened` audit event per instrument and `detail.reason =
+"session_wide"`, since accepting is session-wide and nothing else
+would reopen it.
 
 ---
 
@@ -943,8 +964,7 @@ differently:
   `app/web/routes_reviewer/_invite.py`) — folds both sides through
   `normalize_email`, after `invitations.lookup_invitation_by_token`
   has resolved only an `active` reviewer's invitation. An inactive
-  reviewer is treated as if not a reviewer at all (author's ruling,
-  2026-10-02): their token answers 404 as an unknown one does — the
+  reviewer is treated as if not a reviewer at all: their token answers 404 as an unknown one does — the
   answer the surface gives a signed-in non-reviewer — for whoever
   follows it, and the visit records no open (no `opened_at`, no
   `invitation.opened` event). An active reviewer's token followed by
@@ -985,9 +1005,7 @@ In preview mode:
   reviewer top bar variant.
 - `body_class` drops the `reviewer` modifier (stays `body.ui-v2`).
 - The preview-mode banner (`.banner.banner-info`) renders at the top
-  of the body. Rewritten at 19P.6 rung 2, because the previous copy
-  named a control the page does not have (`Discard`) and called the
-  page read-only when its inputs render enabled:
+  of the body:
 
   > **Operator view.** The reviewer's own surface, showing their saved
   > responses to the fields still being collected. **Nothing you type
@@ -995,9 +1013,9 @@ In preview mode:
   > disabled — and the session-status, deadline and acceptance gates do
   > not apply.
 
-  It opens with **Operator view**, not *Preview*: the surface is now
+  It opens with **Operator view**, not *Preview*: the surface is
   reached to inspect a real reviewer as well as to preview a
-  configuration, and one neutral sentence is true from both doors."
+  configuration, and one neutral sentence is true from both doors.
 - The reviewer write-path `<form>` wrapper is replaced by a plain
   `<div>` so no `formaction=` can re-target a write endpoint. The
   action row still renders (so the operator sees the form chrome
@@ -1016,20 +1034,18 @@ In preview mode:
   `?reviewer_email=…` is unset, the route defaults to the first
   reviewer in the session (alphabetical-by-email); an unmatched value
   redirects to Invitations **carrying the address as `?no_match=`**,
-  which that page renders as a notice naming the lookup that failed
-  (19O Item 6). A blank or whitespace-only value carries nothing — it
+  which that page renders as a notice naming the lookup that failed.
+  A blank or whitespace-only value carries nothing — it
   resolves to `None` only when the session has no reviewers, which is
   not a typo to report. Manage Invitations re-checks the address
   against its own roster before rendering, so a hand-typed `no_match`
   for a reviewer who exists renders nothing.
-- **The dropped-fields notice renders here too** (19P.6 rung 2b).
+- **The dropped-fields notice renders here too.**
   *"Some saved responses are no longer collected: …"* names fields the
   reviewer has an answer on that the operator has since made inactive
-  (the row's Active checkbox in Band 3; the field's `visible`). It was suppressed in `preview_mode` when this surface was
-  a pre-launch preview only — nothing is saved there, so nothing can be
-  dropped — and that stopped being true once the surface was also used
-  to inspect a real reviewer, where a dropped field is exactly what the
-  operator would want to know, since the form omits it silently.
+  (the row's Active checkbox in Band 3; the field's `visible`). When
+  inspecting a real reviewer a dropped field is exactly what the
+  operator needs to know, since the form omits it silently.
 - **Read-only side-effects.** The preview GET emits no audit
   events and **does not** call `lifecycle.observe_deadline(...)`
   — opening a preview must never flip `accepting_responses=false`
@@ -1101,8 +1117,7 @@ reviewee-/observer-only rows show `—` in those cells.
     `session_status` string is what link enablement tests
     (`!= "not opened"`), so a new value would re-link the
     reviewer surface on an archived session. It sits inline and
-    wraps below the status on its own when the column narrows
-    (side by side at 1440px, stacked at 1024px and 820px). No CSS
+    wraps below the status on its own when the column narrows. No CSS
     is added for this — `.pill` is
     `inline-block` with a right margin, so the wrap is the
     browser's, not a breakpoint the app defines. For reviewer rows:
@@ -1191,7 +1206,7 @@ submitted every assigned row on a session.
 `submit_redirect_url(review_session, *, fully_submitted=False)`
 returns this URL when `fully_submitted` — every assigned row now has
 `submitted_at` — and the bare session URL otherwise, which 303s on to
-`/1`. It takes no page position: since 18L the URL slot is the
+`/1`. It takes no page position: the URL slot is the
 operator-defined page number, so a successful submit does not try to return the
 reviewer to the page they were on. The page also stays reachable later from the
 dashboard's Session column once Reviewer Status is
@@ -1220,8 +1235,10 @@ dashboard's Session column once Reviewer Status is
 - **Sections** — one `.card` per instrument the reviewer
   responded on and may read now (§"Lifecycle gating"), in
   `(Instrument.order, Instrument.id)` order.
-  Each section's `<h2>` shows the instrument's short label +
-  full name (when both are set); the body is a `<table>` whose
+  Each section's `<h2>` is the instrument heading title the surface
+  uses (`instrument_heading`, "Above the table" above), falling back
+  to the operator label `Instrument_{session_seq}` when that title is empty —
+  never `Instrument.name`; the body is a `<table>` whose
   header is `Reviewee` + one column per response field
   (carrying the field's operator-given label, in the
   instrument's authored field order). Cells render the
@@ -1238,7 +1255,7 @@ dashboard's Session column once Reviewer Status is
   responded on and may read now; rows of the others are left out.
   Builds via
   `app.services.extracts.responses_extract.serialize_reviewer_session_summary`,
-  which reuses 18H Part 2's `_response_row_tuple` so a
+  which reuses `_response_row_tuple` so a
   per-cell rename here flows through to every related file.
 
 ### Pre-open page (`/me/sessions/{id}/{page_n}` on a not-yet-ready or archived session)
@@ -1500,8 +1517,7 @@ re-architecting; see "Designed-for-extensibility" below.
   overview card and the status column's per-row complete icon are the
   whole signal.
 - **Large-table ergonomics** (cell autosave, return-to-place,
-  filter-to-incomplete) — owned by Segment 17B, as targeted
-  progressive enhancement. A wholesale JS data-grid swap (AG Grid or
+  filter-to-incomplete) — targeted progressive enhancement. A wholesale JS data-grid swap (AG Grid or
   equivalent) is *not* planned; it is overkill for this surface and is
   recorded as an aspirational possibility in
   `guide/deferred_consolidated.md`. See "Large-table ergonomics"
@@ -1566,7 +1582,7 @@ pacing → Large-table ergonomics" pins the following as first-class
 requirements (since the app's positioning depends on tabular review
 artifacts at scale): auto-save, return-to-place, visible progress,
 sticky column headers, filter-to-incomplete, keyboard navigation,
-and column-type ergonomics. **Segment 17B owns these**, pursued as
+and column-type ergonomics. They are pursued as
 targeted progressive enhancement (debounced `fetch` to `POST …/{page_n}/save`,
 small inline scripts, CSS) — *not* a JS data-grid framework. (Sticky
 column headers are the one item ruled out — see below.) A wholesale
@@ -1581,8 +1597,7 @@ compatible either way:
   `.rs-reviewee` / `.rs-textlong`) on `<th>` / `<td>` carry the
   responsive sizing. The data driving each row is built in
   `_surface_context` as a list of dicts with stable, serializable
-  keys (`assignment`, `cells`, `display_cells`, `is_complete`,
-  `missing_count`, `submitted_at`, `accepting`, `show_values`).
+  keys (§"View shape" above).
 - **Design call.** Keep all table-specific markup confined to
   `review_surface.html`; route handlers and view-shape adapters never
   emit HTML. Field metadata (label / data_type / validation) ships
