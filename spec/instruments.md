@@ -99,7 +99,7 @@ Top → bottom:
    operator session chrome (Workflow card, breadcrumbs).
 2. **Guidance card and session status card**, side by side in a
    `.card-columns` pair — so the status card is **half-width**, not
-   full, which this section said until 19O Item 6.
+   full.
 3. **Per-instrument cards** — one card per instrument, ordered
    by `instruments.order` (the operator's preferred display
    order; insertion order by default, mutable via Replicate +
@@ -117,12 +117,8 @@ right card.
 
 ## Session status card
 
-Named the **Status + bulk-actions card** until 19O Item 6, when the
-name outlived the bulk actions: it holds none, and the two it once
-described went separately at 18R Item 3 — `accepting/all-{on,off}`
-existed with no UI driving it, while the **Show all when closed /
-Don't show any when closed** toggle was on the page and was removed.
-See "No session-level bulk flip" below.
+The card holds no bulk actions (see "No session-level bulk flip"
+below).
 
 One-line pill row, left-aligned:
 
@@ -145,9 +141,7 @@ instrument either.** Accepting is session-wide: Activate opens every
 instrument, and the deadline, Close session or Revert closes them
 all (`spec/lifecycle.md`). What shows once an instrument closes is
 governed by the per-instrument **visibility policy**
-(`spec/visibility_policy.md`); the old `responses_visible_when_closed`
-flag retired with its column on 2026-10-03 (findings B21). The
-one-line status row therefore reports an accepting count and no
+(`spec/visibility_policy.md`). The one-line status row therefore reports an accepting count and no
 "showing when closed" count.
 
 ## Instrument data model
@@ -339,8 +333,18 @@ The `<summary>` carries, in document order:
   .instrument-card-toggle-icon` CSS selector — no JS for
   the per-card toggle.
 
-**No per-card `accepting responses` pill.** The Status +
-bulk-actions card's one-line summary already reports how
+**Top button row.** Directly under the `<summary>`, left-aligned, an
+expanded card repeats the bottom action row's lock controls so a long
+card need not be scrolled to change mode: **Lock**, **Save** and
+**Cancel** while unlocked, **Unlock** while locked. They are the same
+controls as the bottom row's (see "Action row" below): Lock and Unlock
+carry the same toggle hooks, so a dirty card's confirm fires from
+either, and Save and Cancel start disabled and are enabled by the same
+dirty tracker in lockstep with the bottom-row copies. Lock and Unlock
+are disabled when the session is not editable.
+
+**No per-card `accepting responses` pill.** The session status
+card's one-line summary already reports how
 many instruments are accepting, so a per-card mirror would
 duplicate it — and visibility-when-closed carries no
 operator control to mirror at all (below).
@@ -353,11 +357,9 @@ expanded):
 
 **Visibility when closed has no operator control** — neither
 per-card nor session-wide. It is governed by the per-instrument
-**visibility policy** (`spec/visibility_policy.md`). The
-`responses_visible_when_closed` column, its route
-`POST /sessions/{sid}/instruments/{iid}/visibility` and its Settings
-CSV row retired on 2026-10-03 (findings B21); an older Settings CSV
-that still carries the row imports with the value dropped.
+**visibility policy** (`spec/visibility_policy.md`). An older
+Settings CSV that still carries a `responses_visible_when_closed` row
+imports with the value dropped.
 
 `short_label` and `description` are **not** rendered in
 the Identity heading — `short_label` is edited from the
@@ -389,7 +391,7 @@ position, which drag-and-drop moves).
   session's live rows, so deleting the *newest* of 1, 2, 3 frees 3 for
   the next instrument created. Interior deletes are safe; this one case
   is not, and a monotonic sequence would need a high-water mark the
-  column does not keep. **Accepted** (author, 2026-09-19): a trailing
+  column does not keep. **Accepted**: a trailing
   slot has no successor, so recycling there disturbs no ordering the
   operator can see. Pinned as it behaves by
   `test_a_trailing_delete_hands_the_number_back`.
@@ -405,7 +407,7 @@ position, which drag-and-drop moves).
   take the same number** — nothing constrains duplicates, and no
   unique index exists on `(session_id, session_seq)`. Latent today:
   every creation path flushes immediately.
-- **Backfilled at 2026-09-19** by revision `b7d4f2a9c153`, ranking each
+- **Backfilled** by revision `b7d4f2a9c153`, ranking each
   session's rows by `id` ascending. **Audit summaries written before
   that migration embed the old `Instrument_{id}` labels** and name
   numbers that may now match a different card — a cutover boundary of
@@ -420,16 +422,9 @@ list). Keyed by the **per-session ordinal — the same number the
 card title shows** — so the tint means something the operator can
 read rather than being a fourth fact about the instrument, and it
 still rides with the instrument across reorders, replicates and
-deletes: a drag moves the card, not its colour.
-
-Keyed by `instrument.id` until 19Q Item 6 (2026-09-19). That is a
-workspace-wide autoincrement displayed on a per-session page, so
-ids 47, 48, 51 rendered tints 5, 6, 3 and two sessions holding
-structurally identical instruments differed by insertion date. The
-id keying was argued *for* drag stability, which `session_seq`
-keeps — it is assigned once at creation and never updated — without
-the arbitrariness. Keying on the loop index would reshuffle every
-colour on every drag and remains rejected.
+deletes: a drag moves the card, not its colour. Not `instrument.id`,
+which is workspace-wide and would tint by insertion date, and not the
+loop index, which would reshuffle every colour on every drag.
 
 #### Page break card
 
@@ -504,7 +499,7 @@ a usable width, and scroll in a `.table-scroll` below it rather than
 spilling past their dividers, locked or not: the grid is the lock
 region, never its scroller. A rule's tag select shrinks from half its
 row to make room for a wider operator, so "IS DIFFERENT FROM" never
-spills either (19T Item 12A).
+spills either.
 
 | Column | Link (operator label) | Vocabulary |
 |---|---|---|
@@ -813,7 +808,7 @@ intro card in the left column of Band 2's intro, laid out as the
 reviewer surface's are (`spec/reviewer-surface.md`, "Intro and help
 cards"), and is both the reviewer-surface preview and
 the visibility editor — the same locked / unlocked swap as the
-description box above it (19T Item 7). **Locked**, it renders the
+description box above it. **Locked**, it renders the
 reviewer's own two-row table (`data-lock-only`), each mode as a
 display-only pill (`pill pill-count`, carrying
 `data-new-model-vp-preview-cell`) rather than plain text — see
@@ -836,13 +831,13 @@ editor lived in Band 3's table, which this card retires.
 The six `*_mode` hidden inputs ride the card's `dfsave-{id}` form and
 render unconditionally, whatever the lock state, so Save always carries
 them. A cycle also repaints the locked table's matching pill
-(`data-new-model-vp-preview-cell`) — the live repaint 19T Item 3 entry 3
-added, kept because Save is a fetch and never reloads.
+(`data-new-model-vp-preview-cell`), since Save is a fetch and never
+reloads.
 
 Locked, the card is not inside a lock region: Band 2's are the intro
 card, this card's editor, the preview and each help card, so the locked
 table, which holds no control, keeps a `.table-scroll` that scrolls. The
-card fades with the intro card above it (19T Item 12A).
+card fades with the intro card above it.
 
 The help cards, JS-built by `rebuildPreview`, fill the right column in
 field order, as on the reviewer surface. Nothing is measured, so they
@@ -880,8 +875,8 @@ group-scoped instrument**, a field a group row can't show — Email
 included — renders unticked and disabled, tooltip "Not shown on group
 rows"; Name is always selectable in group mode and stays ticked (see
 "Group-flavor preview" below). Every other row's tooltip is "Show this
-column". These disabled checkboxes carry the locked-field affordance
-Band 2's chip row used to (`spec/ui_elements.md` "Label or control").
+column". These disabled checkboxes are the locked-field affordance
+(`spec/ui_elements.md` "Label or control").
 
 #### Preview row
 
@@ -935,23 +930,23 @@ change.
 #### Group-flavor preview
 
 When Link 3 is `group`, the preview row's identity cell
-composes **group identity**: bold comma-joined boundary-tag
-values on top, then up to `GROUP_MEMBER_NAME_LIMIT` (10) member
-names below. Reviewees in the rule-surviving subset that share
+composes **group identity**: the sample's values for the selected
+`reviewee.tag_*` display fields, bold and comma-joined, on top, then,
+when Name is selected, up to `GROUP_MEMBER_NAME_LIMIT` (10) member
+names below. The reviewer surface composes its line the same way
+(`spec/reviewer-surface.md` "Group-scoped instruments"). Reviewees in the rule-surviving subset that share
 the sample's boundary key form the group; if more than 10
 qualify, the trailing `... + N more` collapses the overflow.
 
 ### Response fields
 
 Band 3 (`.band3-grid`) splits `grid-template-columns: minmax(0, 3fr) minmax(0, 17fr)` — 15%
-display fields, 85% response fields (the author, 2026-09-28, 19T Item
-12A; a fifth / four fifths from 2026-09-26, one third / two thirds
-before Item 9's table). Both tracks' `0` minimum lets each table scroll
+display fields, 85% response fields. Both tracks' `0` minimum lets each table scroll
 inside its `.table-scroll` on a narrow card rather than widening its
 column past its share; the response-field table keeps a `66rem` floor so
-its boxes stay usable while it scrolls (19T Item 12A). A locked card
+its boxes stay usable while it scrolls. A locked card
 scrolls too: its lock regions are the two tables, not the band, since an
-inert `.table-scroll` couldn't scroll (a later 12A entry). Bands 1 and
+inert `.table-scroll` couldn't scroll. Bands 1 and
 2 follow the same rule: Band 2's preview is the lock region, its
 `.table-scroll` a plain wrapper directly around it. The left column holds
 the display-field table above; the right column, below, is the
@@ -1013,8 +1008,7 @@ the default back. → or Enter in an empty box, or typing into it, takes
 the name as typed, shown in normal style thereafter. **A saved field's
 default never moves** — editing another row's name can't rename it —
 and a saved "Field N" reloads as a typed name in normal style, since
-nothing records that it was ever a default (the author's ruling,
-2026-09-26).
+nothing records that it was ever a default.
 
 **A "+" row lives only on the page until a successful Save**: it
 commits to the preview at once, but the card turns unsaved, and
@@ -1046,7 +1040,7 @@ Unticking Active drops the column from every participant-facing render
 in one step. The operator's own extracts keep it, and the row itself
 stays present in Band 3 so its bounds and help text remain editable.
 
-**The operator's reviewer-side counts filter it too** (19R Item 3):
+**The operator's reviewer-side counts filter it too**:
 `monitoring.per_reviewer_progress` excludes an invisible `required`
 field from the `Required Fields` column and from what makes an
 assignment complete, since a reviewer who was never shown a field
@@ -1091,8 +1085,7 @@ response-type display names — and enforces:
 - `List`: at least one option once blanks are trimmed.
 
 Nothing else is enforced here: there is **no** minimum-step rule tied to
-the type's precision, and **no** duplicate-option check. Both were
-specified once and never built, so do not read them as shipped.
+the type's precision, and **no** duplicate-option check.
 
 **A blank Integer Step saves as 1.** After the rules above pass, the
 card's Save (`_sync_response_fields_to_db`) stores an `Integer` field's
@@ -1140,8 +1133,7 @@ Picking a preset snaps the select back to `List` (`data_type=list`,
 stored as `List`) and then pre-fills the `list_options` input from the option's
 `data-preset-options` attribute. The order matters for a branch
 parent: filling the options recomputes the row, and it must already
-read as a List, or a condition's "is not" is rebuilt as "is" (19T Item
-12A). The preset's
+read as a List, or a condition's "is not" is rebuilt as "is". The preset's
 identity is not stored — only the resulting `data_type` +
 `list_options`. The operator can edit either after picking.
 
@@ -1151,8 +1143,7 @@ No DB migration, no template macro changes.
 
 #### Branching between response fields
 
-`guide/advanced_instruments.md` Item 1 is the design record; 19T Item 10
-built it. A **parent** field (Integer, Decimal or List — never String)
+A **parent** field (Integer, Decimal or List — never String)
 carries a condition; the fields it **governs** can be answered only
 while the condition holds for the assignment's answer to the parent
 (`app/services/responses/_branching.py`). A branch is one ruled group:
@@ -1185,8 +1176,7 @@ level-1 row's. In an answered branch a level-1 row's ⑂ is off, like its "+".
 last field, from the parent's checkbox column rightward, clear of the
 outer branch's bar (`tr.rf-inner-top` / `tr.rf-inner-end`); a
 top-level group's rule stays full width. The checkbox sits
-centered in whichever column holds it (`td.rf-active-cell`, 19T Item
-12A).
+centered in whichever column holds it (`td.rf-active-cell`).
 
 **The condition row** reads "If the above [operator] [value] then
 [mode]", the mode a select of **Show the below** (the default) and
@@ -1195,7 +1185,7 @@ parent's `branch_mode`. The operator sits in the name column at the name box's w
 with "If the above" right-aligned before it, across the columns left of
 the name — the join column and both slots for a top-level condition,
 one fewer a level down
-(`td.rf-condition-lead`, `td.rf-condition-op`, 19T Item 12A); the first
+(`td.rf-condition-lead`, `td.rf-condition-op`); the first
 value box starts at the type column's edge. A List's operator shrinks to
 its label ("is not"), and its box, the List box's width, and "then
 [mode]" follow it in the operator's cell, which spans the rest of the
@@ -1209,7 +1199,7 @@ this field and its branch"). The operators offered follow the parent's
 type. A List parent picks from `is` / `is_not` (shown "is" / "is not"),
 against one option or several comma-separated, read as *any of* / *none
 of*. An Integer or Decimal parent picks from ten, spelled out in the
-select in this order (19T Item 12):
+select in this order:
 
 | Select label | Token | Symbol |
 |---|---|---|
@@ -1229,7 +1219,7 @@ The first six take **one box**, one number. The last four — a
 are as wide as the parent row's own Min box, measured by the row script
 into `--rf-condition-box` and kept in sync by a `ResizeObserver` on that
 box, so a later width change (a column drag, a window resize) still
-matches it (19T Item 12A); a List's box is as wide as
+matches it; a List's box is as wide as
 the parent's List box. A range takes a low and a high
 number, low strictly below high. The second box shows only while the
 selected operator is one of the four; switching away from a range hides
@@ -1276,7 +1266,7 @@ Integer, Decimal or List field, a new branch with an empty condition
 at level 2, when that field has one; otherwise it is off ("No branch inside this branch ends
 directly above"), and off, as ↳ is, on a parent or in a locked branch —
 which a row with saved responses always is, its answers locking it. Joining keeps the
-row's **R** (19T Item 11) — Save refuses the result if the row's R is
+row's **R** — Save refuses the result if the row's R is
 now required with no anchor elsewhere in the instrument. A governed row
 in an unlocked branch can detach (↳) one level up, to directly below
 its branch; detaching the only field of a branch ends that branch, as
@@ -1285,7 +1275,7 @@ it is: its ↳ is off ("A field with a branch can't leave its branch").
 
 **Inside a branch:**
 
-- **R is live** on a governed row (19T Item 11): a required governed
+- **R is live** on a governed row: a required governed
   field is required, and missing when empty, only while its branch is
   open for that assignment. Save and both settings-CSV phases refuse a
   visible required governed field unless the instrument has an active
@@ -1364,14 +1354,14 @@ closed-cell styling (`spec/reviewer-surface.md`), titled "Opens when
 therefore closed. The item count above the preview (mirroring the
 reviewer surface's "*All items completed*" pill) excludes governed
 fields for the same reason, and so does the "*Required items
-completed*" count (`rfRowRequiredNow`, 19T Item 11): a required
+completed*" count (`rfRowRequiredNow`): a required
 governed field isn't required while its branch is closed, and the
 sample row closes every branch. A Require branch's fields
 follow the surface instead: their columns aren't muted, they count as
 items, and they are marked "*" as fields that may be required, but the
 required count leaves them out, since the unanswered sample row fails
 every condition. Inside a branch, that holds only while **every**
-branch above the field is Require (19T Item 14): a Require branch inside
+branch above the field is Require: a Require branch inside
 a Show branch is closed with it on the sample row, so its fields are
 muted and not counted (`item_now` in the view, `rfRowIsItemNow` in the
 row script).
@@ -1418,11 +1408,9 @@ Bottom row of the card, right-aligned, in this order:
   *"Yes, delete **{label}** and its associated assignments
   and reviewer responses."*, where `{label}` is the same
   operator-facing handle the card title shows — `short_label`, else
-  the `Instrument_{session_seq}` fallback. It read
-  `Instrument #{loop.index}` until 19Q Item 6: the display
-  position, which moves under a drag; it ignored `short_label`, so
-  a named instrument was confirmed under a name nobody chose; and
-  `#` is reserved for the reviewer-facing heading. Disabled when
+  the `Instrument_{session_seq}` fallback — never a display position,
+  which moves under a drag, and never `#`, which is reserved for the
+  reviewer-facing heading. Disabled when
   this is the only instrument in the session, or the session is not
   editable.
 - **+Instrument** — spawns a new instrument with default
@@ -1520,15 +1508,14 @@ key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
 - Identity: `name` gets a `" (copy)"` suffix, the source name trimmed
   so the whole fits 255 characters; `short_label` gets a `Copy of `
   prefix, the source label trimmed so the whole fits 32 characters, so
-  the two cards can be told apart (author's ruling, 2026-10-03, A1). A
+  the two cards can be told apart. A
   source with no short label gives a copy with none. `description` is
   carried as-is.
 - Display fields (cloned in order).
 - Response fields (cloned in order — including the inline
   bounds and the help text, and a branch: the parent's condition
   is copied and a governed field re-pointed at its parent's copy).
-- Band 1's rule set — **cloned, not shared** (author's ruling,
-  2026-10-02, A1). The copy gets its own `SessionRuleSet` row with the
+- Band 1's rule set — **cloned, not shared**. The copy gets its own `SessionRuleSet` row with the
   source's rules, combinator and self-review setting. Three Band 1
   writers update the pinned row in place, so a shared row would carry
   an edit to either instrument into the other.
@@ -1543,8 +1530,7 @@ key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
 - `sort_display_fields`, `column_widths` — copied, re-pointed at the
   copy's own display and response fields (both name fields by id).
 - `accepting_responses` — copied as-is.
-- Visibility policies — copied row for row (author's ruling,
-  2026-10-03, A1): the copy shows its responses to the same audiences,
+- Visibility policies — copied row for row: the copy shows its responses to the same audiences,
   in the same modes, as its source. Each row goes through
   `visibility_policies.upsert_policy`, so it is checked against the
   per-cell rule and emits its own `instrument.view_policy_set`
@@ -1570,9 +1556,10 @@ confirm-checkbox guard is the only friction.
 
 The session's `SessionRuleSet` row referenced by
 `Instrument.rule_set_id` is **not** deleted on instrument
-delete (the FK is `ON DELETE SET NULL`). Other instruments may
-share the row; orphaned rows are left behind without harm — a
-future GC pass may reclaim them.
+delete (the FK is `ON DELETE SET NULL`). Replicate gives each copy
+its own row, but a Settings CSV import that names one rule set on
+several instruments pins them all to it, so the row may still be in
+use; an orphaned row is left behind without harm.
 
 The route guards against deleting the **only** instrument
 (returns 400); the UI mirrors this with a disabled Delete
@@ -1622,7 +1609,7 @@ of rules against instruments. Active ones that surface here
   materialized rows have fallen out of step with what the engine
   would produce now: the pinned rule changed, or the rosters or
   relationships moved after Generate. The verdict is the engine's
-  own reconcile diff — since 19R Item 2 it may be served from a
+  own reconcile diff — it may be served from a
   stamped cache rather than recomputed, and it agrees with what
   Generate would do under the conditions `spec/assignments.md`
   § *Staleness* states. An instrument that has never generated is
