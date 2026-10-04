@@ -17,6 +17,11 @@ from ._apply_shared import (
 )
 
 
+#: The ``session.*`` keys applied only where the destination is blank
+#: (``_apply_session_metadata``); the rest are force-applied.
+SESSION_FALLBACK_KEYS = ("name", "code", "description", "deadline", "help_contact")
+
+
 def _apply_session_kv(
     plan: _ParsedConfig, field_path: str, value: str
 ) -> None:
@@ -101,7 +106,7 @@ def _apply_session_metadata(
 
     written = 0
     overrides = plan.session_overrides
-    for key in ("name", "code", "description", "deadline", "help_contact"):
+    for key in SESSION_FALLBACK_KEYS:
         if key not in overrides:
             continue
         existing = getattr(review_session, key, None)

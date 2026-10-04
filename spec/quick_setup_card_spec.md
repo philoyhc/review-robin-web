@@ -82,10 +82,10 @@ The single card-level checkbox covers the cascade: its copy (quoted under **Repl
 
 ### Result reporting
 
-The card reports failures only; success messages and per-row errors were removed with the counts in `40bc2549`, and the removal stands (findings C2).
+The card reports failures only; success messages and the roster slots' per-row errors were removed with the counts in `40bc2549`, and the removal stands (findings C2). The Settings slot is the exception below: it has no Setup page to send the operator to.
 
 - **Success:** no message. Submit redirects back to Home at the last slot that ran (`#quick-setup-{kind}`).
-- **Failure:** a `banner-error` above the slot grid, tied to the failing slot by its `quick-setup-{kind}-error-banner` id, carrying one short sentence from `_quick_setup_error_message` in `app/web/views/_quick_setup.py`. A file that fails to parse or validate reads "Could not import reviewers. Open the Reviewers Setup page for per-row error details." — the per-entity Setup page is where per-row errors are shown. A missing confirmation tick and a lifecycle refusal each have their own sentence.
+- **Failure:** a `banner-error` above the slot grid, tied to the failing slot by its `quick-setup-{kind}-error-banner` id, carrying one short sentence from `_quick_setup_error_message` in `app/web/views/_quick_setup.py`. A file that fails to parse or validate reads "Could not import reviewers. Open the Reviewers Setup page for per-row error details." — the per-entity Setup page is where per-row errors are shown. A Settings CSV that fails validation reads "Could not import session settings." and lists its errors under that sentence, one line each (`instruments[1].name: name is required`, with `Row N, ` ahead of it when the error belongs to one row), five at most (fewer when the quoted values make them long) and then "…and N more." — this is how the route surfaces them, which `spec/csv_contracts.md` §3.3 requires; the lines travel in the redirect as `quick_setup_detail` values. A missing confirmation tick and a lifecycle refusal each have their own sentence.
 
 A failing slot replaces nothing of its own dataset. Slots run in the order given under **Per-slot dispatch**, so a slot that succeeded before the failure stays applied, and the slots after it do not run.
 

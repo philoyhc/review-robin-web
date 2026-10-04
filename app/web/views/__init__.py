@@ -136,6 +136,7 @@ from ._quick_setup import (
     QuickSetupSlot,
     build_new_session_quick_setup_context,
     build_quick_setup_context,
+    settings_error_details,
 )
 
 # Validate page view-shape adapter (sliced in PR 8).
@@ -275,6 +276,7 @@ __all__ = [
     "build_preview_picker_context",
     "extract_email_from_picker_value",
     "build_quick_setup_context",
+    "settings_error_details",
     "build_responses_rows",
     "build_setup_rows",
     "build_validate_context",

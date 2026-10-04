@@ -4884,7 +4884,8 @@
             // Step must be reachable at least once from Min
             // (mirrors _validate_response_field_shape on the
             // server). Equal is fine — min=0, max=1, step=1
-            // yields a Boolean-like 0/1 field.
+            // yields a Boolean-like 0/1 field. Not when Min equals
+            // Max: a fixed value, whose blank Step saves as 1 (A6).
             if (
               mn !== null && mx !== null && st !== null
               && mx > mn

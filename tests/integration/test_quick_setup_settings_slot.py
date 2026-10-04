@@ -362,3 +362,78 @@ def test_submit_all_settings_without_the_tick_is_refused(
         follow_redirects=False,
     )
     assert "quick_setup_reason=parse" in response.headers["location"]
+
+
+def test_settings_errors_reach_the_slot_from_create_and_submit_all(
+    client: TestClient, db: Session
+) -> None:
+    """D31: the create-session and submit-all callers carry the
+    Settings CSV's errors in their redirect too, as ``import-config``
+    does (``tests/integration/test_import_config_route.py``)."""
+    from urllib.parse import parse_qs, urlsplit
+
+    bad = _settings_csv([("instruments[1].short_label", "X", "string")])
+
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Bad settings", "code": "qsc-detail-new", "description": ""},
+        files={"settings_file": ("c.csv", bad, "text/csv")},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    query = parse_qs(urlsplit(response.headers["location"]).query)
+    assert query["quick_setup_reason"] == ["parse"]
+    assert query["quick_setup_detail"] == [
+        "instruments[1].name: name is required"
+    ]
+
+    review_session = _make_session(client, db, code="qsc-detail-all")
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        data={"confirm_replace": "true"},
+        files={"settings_file": ("c.csv", bad, "text/csv")},
+        follow_redirects=False,
+    )
+    query = parse_qs(urlsplit(response.headers["location"]).query)
+    assert query["quick_setup_detail"] == [
+        "instruments[1].name: name is required"
+    ]
+
+    # A crafted link gets no more than the route would send: seven
+    # lines become six, and a long one is clipped.
+    page = client.get(
+        f"/operator/sessions/{review_session.id}",
+        params=[("quick_setup_error", "settings"), ("quick_setup_reason", "parse")]
+        + [("quick_setup_detail", f"qsdmark{n} " + "z" * 500) for n in range(7)],
+    )
+    assert page.text.count("qsdmark") == 6
+    assert "z" * 200 not in page.text
+
+
+def test_settings_error_lines_are_clipped_and_budgeted() -> None:
+    """The lines ride the URL: each is clipped to 200 characters, and
+    they stop once their encoded size passes the budget (a quoted
+    non-ASCII value encodes to nine bytes a character), the rest
+    counted. The view clips what it reads back the same way, so a
+    crafted link cannot put more under the banner than the route
+    would."""
+    from urllib.parse import quote_plus
+
+    from app.services.session_config_io import ApplyError
+
+    long = [ApplyError(row_number=2, field="f", message="x" * 500)]
+    (line,) = views.settings_error_details(long)
+    assert len(line) == views._quick_setup.SETTINGS_ERROR_DETAIL_MAX_CHARS
+    assert line.endswith("…")
+
+    wide = [
+        ApplyError(row_number=n, field="f", message="名" * 300)
+        for n in range(1, 6)
+    ]
+    lines = views.settings_error_details(wide)
+    shown = lines[:-1]
+    assert lines[-1] == f"…and {5 - len(shown)} more."
+    assert 1 <= len(shown) < 5
+    assert sum(len(quote_plus(s)) for s in shown) <= (
+        views._quick_setup.SETTINGS_ERROR_DETAIL_MAX_BYTES
+    )

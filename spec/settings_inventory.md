@@ -396,7 +396,7 @@ the pattern itself is specified in `spec/setup_pages.md`.
 |---|---|---|
 | `?return_to=<path>` | Chrome-detour pages (Operator Settings, About) | Round-trip target for the `← Back to {{ return_to_label }}` back-link. |
 | `?activate=1` | Validate detail page | Surfaces the activate-warns acknowledgment banner. |
-| `?quick_setup_error=…&quick_setup_reason=…` | Session Home | Slot-scoped error feedback after a failed Quick Setup submit. |
+| `?quick_setup_error=…&quick_setup_reason=…` (+ repeated `&quick_setup_detail=…`) | Session Home | Slot-scoped error feedback after a failed Quick Setup submit; `quick_setup_detail` carries a failed Settings CSV's error lines. |
 | `?rule_based_error=…` | Assignments page | Slot-scoped error feedback after a failed rule-based generate. |
 | `?edit_id=<id>` | All four roster Setup pages | Server-rendered inline-Edit state — that row's cells render as inputs / pickers. On Reviewers and Observers the Save / Cancel pair renders in an expander bar beneath the row rather than in a card. Observers has carried this param all along; it was scoped to three pages here by omission, not by contract. |
 | `?add=1` | All four roster Setup pages | Server-rendered Add-new-row state — a blank input row prepends the table. |

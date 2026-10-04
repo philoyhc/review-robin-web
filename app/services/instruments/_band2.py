@@ -460,7 +460,9 @@ def _validate_response_field_shape(rf: dict[str, Any]) -> str | None:
         # operator couldn't achieve with a fixed value. Equal is
         # accepted (min=0, max=1, step=1 → values 0, 1 — useful for
         # Boolean-like numeric fields). Tiny epsilon guards against
-        # float-precision drift.
+        # float-precision drift. Not when Min equals Max: that field is
+        # one fixed value, and a blank Integer Step saves as 1, so a
+        # refusal here would fail the card's next Save (A6).
         if (
             min_ is not None
             and max_ is not None

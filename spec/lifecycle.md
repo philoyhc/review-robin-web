@@ -727,14 +727,15 @@ without retrying. Per-event preconditions:
 | Scheduled activation | `session.status == "validated"` | `not_validated` |
 | Auto-send invites | `session.status in {"validated", "ready"}` (Prepared) **and** invitations already created (Prepare creates them; before 19Q Item 2 rung 3 the operator ran Create invites) | `not_prepared` / `invitations_not_created` |
 | Auto-send reminders | `session.status == "ready"` (subsumes Prepared) **and** invitations exist **and** within accepting-responses window | `not_ready` / `no_invitations` / `outside_response_window` |
-| Auto-archive | `session.status == "draft"` | `not_draft` |
-| Auto-delete after archive | `session.status == "archived"` | `not_archived` |
 
 Release-from and Release-until are not fired events. The release
 window is evaluated at read time by
 `session_lifecycle.is_response_release_window_open` and is open only
 on an `expired` session, so there is no fire-time guard and no skip
-reason.
+reason. Auto-archive and auto-delete-after-archive have no trigger at
+all (§8, above), so neither has a guard or a skip event either. The
+`not_draft` and `not_archived` codes exist only as the manual Validate
+and Unarchive transitions' refusals.
 
 The "End" anchor (`deadline`) is the trivial case: it's
 conditional on activation (`status == "ready"`) because there's

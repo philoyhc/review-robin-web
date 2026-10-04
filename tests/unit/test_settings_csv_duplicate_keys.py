@@ -172,3 +172,81 @@ def test_one_field_key_in_two_instruments_is_not_a_repeat(
 
     assert result.ok, result.errors
     assert result.counts["response_fields"] == 2
+
+
+def test_a_value_longer_than_its_column_is_a_row_error(db: Session) -> None:
+    """D32: a data-shape name or ``field_key`` over 255 characters
+    passed phase 1 and failed phase 2 on Postgres as a ``DataError`` (a
+    500; SQLite stores it). Every string the import writes is now
+    checked against its column's declared length in phase 1."""
+    rows = _exported(db)
+    long_name, long_key = "n" * 256, "k" * 256
+    rows = [
+        row._replace(value=long_name)
+        if row.field == "data_shapes[0].name"
+        else row._replace(value=long_key)
+        if row.field.endswith(".response_fields[1].field_key")
+        else row._replace(value="s" * 33)
+        if row.field.endswith("].short_label")
+        else row
+        for row in rows
+    ]
+    destination = _session(db, code="too-long")
+
+    result = apply_session_config(db, destination, rows)
+
+    assert not result.ok
+    messages = {e.field: e.message for e in result.errors}
+    assert messages["data_shapes[0].name"] == "256 characters; at most 255 fit"
+    assert messages["instruments[1].response_fields[1].field_key"] == (
+        "256 characters; at most 255 fit"
+    )
+    assert messages["instruments[1].short_label"] == (
+        "33 characters; at most 32 fit"
+    )
+    assert _nothing_written(db, destination.id)
+
+    # At the limit is fine.
+    rows = [
+        row._replace(value="n" * 255) if row.field == "data_shapes[0].name"
+        else row
+        for row in _exported_again(db)
+    ]
+    result = apply_session_config(db, _session(db, code="at-limit"), rows)
+    assert result.ok, result.errors
+
+
+def _exported_again(db: Session) -> list[Row]:
+    source = db.scalars(
+        select(ReviewSession).where(ReviewSession.code == "dup-src")
+    ).one()
+    return serialize_session_config(db, source)
+
+
+def test_only_values_phase_2_writes_are_length_checked(db: Session) -> None:
+    """The D32 check reads "the column it lands in" literally: a long
+    fill-blanks ``session.*`` value is an error only where the
+    destination is blank, and a data shape phase 2 skips (unknown axis)
+    or a ``self_review_handling`` it coerces is not checked."""
+    rows = _exported(db)
+    rows += [
+        Row("session.code", "c" * 65, "string"),
+        Row("session.description", "d" * 2001, "string"),
+        Row("data_shapes[1].name", "n" * 300, "string"),
+        Row("data_shapes[1].axis", "nowhere", "enum"),
+    ]
+    rows = [
+        row._replace(value="x" * 40)
+        if row.field == "data_shapes[0].self_review_handling"
+        else row
+        for row in rows
+    ]
+    destination = _session(db, code="fill-blanks")
+
+    result = apply_session_config(db, destination, rows)
+
+    # ``code`` is set on the destination, so the long one is ignored;
+    # ``description`` is blank there, so it would land and is refused.
+    assert [(e.field, e.message) for e in result.errors] == [
+        ("session.description", "2001 characters; at most 2000 fit")
+    ]
