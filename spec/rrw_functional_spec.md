@@ -2586,7 +2586,7 @@ reader, so a spec missing from it is a spec nobody is sent to.
 | Participant model (reviewee / observer contracts) | `spec/participant_model.md` |
 | Rehydrate (rebuild a session from extracts) | `spec/rehydrate.md` |
 | Role landing pages + audience visibility | `spec/role_landing_and_visibility.md` |
-| Role-navigator chip strip | `spec/role_navigator.md` |
+| Role-navigator chip strip | `spec/reviewer-surface.md` "Role-navigator chip strip" |
 | Round-trip coverage (export → import) | `spec/roundtrip_coverage.md` |
 | Validate page | `spec/validate_page.md` |
 | Visibility policy (audience × window grid) | `spec/visibility_policy.md` |

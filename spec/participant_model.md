@@ -62,7 +62,7 @@ The Setup-Observers page is documented in `spec/setup_pages.md` (Observers secti
 
 ## 4. Participant-facing surfaces at `/me`
 
-Three surfaces are participant-role-specific. All three render the reviewer-surface chrome (`body.ui-v2 reviewer` + `reviewer/_top_bar.html`) and carry the role-navigator chip strip below the page header (see §6 + `spec/role_navigator.md`).
+Three surfaces are participant-role-specific. All three render the reviewer-surface chrome (`body.ui-v2 reviewer` + `reviewer/_top_bar.html`) and carry the role-navigator chip strip below the page header (see §6).
 
 | Surface | URL | Gate | Status |
 |---|---|---|---|
@@ -139,7 +139,7 @@ If no role is reachable, the session name renders as plain text.
 
 Every participant-facing surface (reviewer surface, reviewer summary, reviewee results, observer collation) renders a chip strip below the page header showing each role the user holds on this session. The chip matching the current page is highlighted (no link); the others are muted links to their surfaces. Lets a multi-role user swap surfaces without bouncing through `/me`.
 
-Full contract in `spec/role_navigator.md`. Key seam: every surface route calls `build_role_chips(db, user=user, review_session=session, active_role=...)` from `app/web/routes_reviewer/_shared.py` and passes the result as the `role_chips` template context value.
+Full contract in `spec/reviewer-surface.md` "Role-navigator chip strip". Key seam: every surface route calls `build_role_chips(db, user=user, review_session=session, active_role=...)` from `app/web/routes_reviewer/_shared.py` and passes the result as the `role_chips` template context value.
 
 **The chip strip carries the same gating as `/me`**: the `reviewee` chip is omitted without a currently-resolving grant, exactly as the role is absent from the dashboard's `roles`, and the `observer` chip greys on an archived session, exactly as its dashboard link does. The two surfaces answer the question separately — the dashboard for a list of sessions, the chip strip for the one in hand — so the rule is stated in both places rather than inherited.
 
@@ -191,7 +191,6 @@ The participant-model upgrade has a small remaining tail. See `guide/archive/par
 - `spec/audience_and_identity_model.md` — audience taxonomy (operator / reviewer / reviewee / observer / sysadmin); auth posture.
 - `spec/setup_pages.md` — Observers page contract.
 - `spec/reviewer-surface.md` — `/me` dashboard + reviewer-surface chrome; the role-pill + role-navigator integration points live here.
-- `spec/role_navigator.md` — the chip-strip partial used by all four `/me` surfaces.
 - `spec/lifecycle.md` — schedule columns including `responses_release_at` / `responses_release_until`.
 - `spec/csv_contracts.md` — Observer CSV import contract (§3.2b).
 - `spec/settings_inventory.md` — every persisted `sessions` field including the two feature toggles + the release-window columns.

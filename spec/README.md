@@ -55,7 +55,6 @@ detailed contracts.
 | File | Covers |
 |---|---|
 | `reviewer-surface.md` | Reviewer-facing app — multi-instrument-aware response surface (`/me/sessions/{id}/{page_n}`), dashboard (`/me`) with cross-role union and 8-column table (no per-page sub-rows), role-navigator chip strip (shared across four surfaces), reviewer summary, reviewee results surface (`/me/sessions/{id}/results`, live), observer collation surface (`/me/sessions/{id}/collation`, live), and invitation landing (`/me/invite/{token}`). |
-| `role_navigator.md` | The chip-strip partial used on every participant-facing `/me` surface (reviewer / summary / results / collation) — `build_role_chips` helper contract, `_role_chips.html` partial, CSS classes (`.rs-role-nav` / `.rs-role-nav-active` / `.rs-role-nav-muted`), per-role reachability rules. |
 | `sort_by_reviewee.md` | Reviewer-surface sort UX — operator default sort via Display Fields, plus the reviewer-side clickable column headers, whose sort persists per viewer in a cookie. |
 
 ## Visual / UI vocabulary
