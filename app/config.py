@@ -80,21 +80,21 @@ class Settings(BaseSettings):
     # set. Generate with ``cryptography.fernet.Fernet.generate_key()``.
     smtp_encryption_key: str | None = None
 
-    # Segment 18G Part 1 — minimum lead time (hours) the operator must
-    # leave between "now" and the ``scheduled_activate_at`` they set at
-    # save. Covers operational fan-out headroom for the
-    # 1,200-reviewer pilot case + operator coordination. Per-deployment
-    # tunable so a workshop-style flow can lower it. Per
-    # ``spec/lifecycle.md`` §8.2.1 + the Part 1 plan section.
+    # Minimum lead time (hours) the operator must leave between "now"
+    # and the ``scheduled_activate_at`` they set at save, and between
+    # "now" and each resolved auto-send invite / reminder fire moment.
+    # Covers operational fan-out headroom for a large reviewer roster
+    # + operator coordination. Per-deployment tunable so a
+    # workshop-style flow can lower it. Per ``spec/settings_inventory.md``
+    # §2.
     scheduled_operational_lead_hours: int = 1
 
-    # Segment 18G Part 2 — minimum gap (hours) between an auto-send
-    # invitation's resolved fire moment and ``scheduled_activate_at``
-    # (Start). Enforced per-entry at save: every ``invite_offsets``
-    # entry must satisfy ``|offset| ≥ this floor`` so reviewers get
-    # at least this much notice between the invite landing and the
-    # session opening. Per ``spec/lifecycle.md`` §8.2.1 + the Part 2
-    # plan section.
+    # Minimum ``|offset|`` (hours) of each auto-send entry. Enforced
+    # per-entry at save: every ``invite_offsets`` and
+    # ``reminder_offsets`` entry must satisfy ``|offset| ≥ this
+    # floor``, so an invite lands at least this long before Start and
+    # a reminder at least this long before End. Per
+    # ``spec/settings_inventory.md`` §2.
     reviewer_notice_min_hours: int = 1
 
     # When True, ``audit.write_event`` raises on a detail-shape violation;
