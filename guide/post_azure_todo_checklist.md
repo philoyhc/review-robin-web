@@ -469,7 +469,7 @@ there, not a reopening.
 ## 7. Give scheduled sends a trigger that does not wait for a page view
 
 **Status:** open, **incomplete work awaiting Azure** (author's ruling,
-2026-10-01, on `guide/findings_2026-10-01_corpus.md` B19).
+2026-10-01, on `guide/archive/findings_2026-10-01_corpus.md` B19).
 
 **What is wrong.** Scheduled activation, invitations and reminders fire
 only when someone opens a session's Session Home:
@@ -506,7 +506,7 @@ with `not_prepared`. `build_auto_send_invites_caption` in
 signal" records it as a known defect until then.
 
 **Give invites and reminders a retry with it** (author's ruling,
-2026-10-02, on `guide/findings_2026-10-01_corpus.md` B20). Scheduled
+2026-10-02, on `guide/archive/findings_2026-10-01_corpus.md` B20). Scheduled
 activation retries and marks `failed_persistent` when it keeps failing;
 scheduled invites and reminders have no retry. They can already fail
 before any transport exists, at a render or an outbox or audit write.
@@ -515,7 +515,7 @@ catches that: it rolls back, logs, writes `session.scheduled_event_failed`
 and lets the page render, retrying on the next visit with no cap and no
 terminal state. A reminder already queued in a pass that then fails
 keeps its dedupe stamp, which commits with its outbox row, so the next
-visit does not queue it again (`guide/findings_2026-10-01_corpus.md`
+visit does not queue it again (`guide/archive/findings_2026-10-01_corpus.md`
 B31, fixed 2026-10-03). Give the clock trigger the same retry and terminal state
 as activation for both, covering those queue-stage failures as well as
 transport ones.
@@ -528,7 +528,7 @@ links in the outbox rows open on the deployed host.
 ## 8. Stamp outbox rows `queued` until a transport has sent them
 
 **Status:** open, **incomplete work awaiting Azure** (author's ruling,
-2026-10-02, on `guide/findings_2026-10-01_corpus.md` H20).
+2026-10-02, on `guide/archive/findings_2026-10-01_corpus.md` H20).
 
 **What is wrong.** Nothing sends email yet: no caller reaches the
 transport in `app/services/email_send.py`. The send path still writes
@@ -554,7 +554,7 @@ only after the transport confirms, and `failed` when it does not.
 ## 9. Send the responses-received confirmation
 
 **Status:** open, **incomplete work awaiting Azure** (author's ruling,
-2026-10-02, on `guide/findings_2026-10-01_corpus.md` G4).
+2026-10-02, on `guide/archive/findings_2026-10-01_corpus.md` G4).
 
 **What is there.** A reviewer's successful submit queues one
 `responses_received` outbox row when the session's "Send this
@@ -578,7 +578,7 @@ receives the confirmation, and one with it unticked receives nothing.
 ## 10. Settle which Graph permission the Graph backend uses
 
 **Status:** open, **awaiting Azure** (author's ruling, 2026-10-02, on
-`guide/findings_2026-10-01_corpus.md` F23).
+`guide/archive/findings_2026-10-01_corpus.md` F23).
 
 **What is wrong.** The two descriptions of the unbuilt Graph backend
 disagree. The `GraphEmailTransport` stub's docstring in

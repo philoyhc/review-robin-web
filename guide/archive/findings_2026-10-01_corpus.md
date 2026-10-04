@@ -1,6 +1,6 @@
 # Findings — corpus sweep (2026-10-01)
 
-**Found by:** `guide/sweep_2026-10-01_corpus.md` (`guide/post_assessment_1oct.md`
+**Found by:** `guide/archive/sweep_2026-10-01_corpus.md` (`guide/post_assessment_1oct.md`
 E3) · **Read at:** `68f28224` · **Open:** every row below that is not struck.
 
 Every spec, `docs/` file and root document was read against the code it

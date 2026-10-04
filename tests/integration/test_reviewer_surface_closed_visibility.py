@@ -1,7 +1,7 @@
 """What a reviewer can read back once their session closes.
 
 The instrument's ``peer_reviewer`` visibility policy decides (author's
-ruling, 2026-10-01, on ``guide/findings_2026-10-01_corpus.md`` G10;
+ruling, 2026-10-01, on ``guide/archive/findings_2026-10-01_corpus.md`` G10;
 ``visibility_policies.reviewer_sees_own_responses``):
 
 - ``expired`` and the release window open: the reviewer's own values

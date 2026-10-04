@@ -331,7 +331,7 @@ def reviewer_sees_own_responses(
 ) -> bool:
     """Whether a reviewer may read back their **own** saved answers on
     one instrument once it no longer accepts responses (author's ruling,
-    2026-10-01, on ``guide/findings_2026-10-01_corpus.md`` G10).
+    2026-10-01, on ``guide/archive/findings_2026-10-01_corpus.md`` G10).
 
     The instrument's ``peer_reviewer`` policy decides
     (``spec/visibility_policy.md`` §2.2):

@@ -2,7 +2,7 @@
 
 **Swept:** 2026-10-03 at `17986214` · **Scope:** `spec/` + `docs/` + root
 practice docs (68 files) · **Previous sweep:**
-`guide/sweep_2026-10-01_corpus.md` · **Trigger:** asked for by the author;
+`guide/archive/sweep_2026-10-01_corpus.md` · **Trigger:** asked for by the author;
 not due by the cadence (2 of 56 days, 68 of 500 merges).
 
 <!-- sweep-scope: corpus -->

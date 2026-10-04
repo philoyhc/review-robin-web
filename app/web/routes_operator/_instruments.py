@@ -1110,7 +1110,7 @@ def instruments_delete(
 # Accepting is session-wide: Activate opens every instrument, and the
 # deadline, Close session or Revert closes them all. The bulk toggles retired in
 # 18R Item 3, and per-instrument Open / Close on 2026-10-01 (author's
-# ruling on guide/findings_2026-10-01_corpus.md A6).
+# ruling on guide/archive/findings_2026-10-01_corpus.md A6).
 
 
 @router.post(

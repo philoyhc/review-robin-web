@@ -131,7 +131,7 @@ and replace `spec/README.md`'s fixed alignment date with something that
 cannot silently rot.**
 
 - **The sweep is section by section**, using the same shape as
-  `guide/sweep_2026-09-05_spec-docs.md`: each §N read, each claim about
+  `guide/archive/sweep_2026-09-05_spec-docs.md`: each §N read, each claim about
   behaviour checked against the code path that implements it, findings
   recorded with `path:line` evidence before any fix.
 - **The alignment line changes form.** A date maintained by hand is a
@@ -200,7 +200,7 @@ $ grep -rln "rrw_functional_spec" --include="*.md" . | grep -v archive # 10 file
   `spec/permissions.md`, `spec/email_template_editor.md`,
   `docs/status.md`, `docs/practice-audit-2026-09-04.md`,
   `rrw_sdd_in_practice.md`, `guide/todo_master.md`,
-  `guide/sweep_2026-09-05_spec-docs.md`, `guide/sweep_template.md`,
+  `guide/archive/sweep_2026-09-05_spec-docs.md`, `guide/sweep_template.md`,
   `guide/archive/codebase_assessment_10sep.md`. Only `spec/README.md`'s
   reference makes a claim about its currency.
 - **Known drift so far: 1** (§9.7). The sweep's job is to find out

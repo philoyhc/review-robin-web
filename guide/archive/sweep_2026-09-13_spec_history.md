@@ -17,7 +17,7 @@ established it on one file and then had to be reversed to obey it.
 **This does not reset the corpus cadence.** It reads every live `spec/`
 file and **no** `docs/` file and no root document, so it is not the
 whole-folder sweep the 8-weeks / 500-merges clock measures. The clock
-still runs from `guide/sweep_2026-09-05_spec-docs.md`. Whether a
+still runs from `guide/archive/sweep_2026-09-05_spec-docs.md`. Whether a
 `spec/`-complete sweep should count was Open question 2 in the plan,
 **answered at the 19M close (2026-09-13): no — it stays `partial`**
 (`guide/archive/segment_19M_spec_history_sweep.md`).

@@ -708,7 +708,7 @@ dev-slot-verified.
 
 ## Item 7 — Sweep follow-through (the 2026-09-05 drift findings)
 
-**Opened:** 2026-09-05 · **Source:** `guide/sweep_2026-09-05_spec-docs.md` §2
+**Opened:** 2026-09-05 · **Source:** `guide/archive/sweep_2026-09-05_spec-docs.md` §2
 
 ### Opportunity
 
@@ -786,7 +786,7 @@ would be perverse.
 
 | What | Count | Command |
 |---|---|---|
-| Findings to action | 8 | `guide/sweep_2026-09-05_spec-docs.md` §2 |
+| Findings to action | 8 | `guide/archive/sweep_2026-09-05_spec-docs.md` §2 |
 | Live `spec/` + `docs/` files touched | 10 | the findings' targets, deduplicated |
 | Code files touched | 1 (docstring only) | finding 2.1 |
 | Stale `app/services/*.py` references | 5 across 5 files | `grep -rln '<mod>.py' spec/ docs/ --exclude-dir=archive` |
@@ -813,7 +813,7 @@ would be perverse.
 
 ### Definition of done
 
-- All eight findings closed in `guide/sweep_2026-09-05_spec-docs.md`'s
+- All eight findings closed in `guide/archive/sweep_2026-09-05_spec-docs.md`'s
   ledger — actioned, or declined with a reason recorded there so the next
   sweep carries the decision rather than the finding.
 - No `app/services/*.py` path in live `spec/` or `docs/` names a module

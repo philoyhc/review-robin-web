@@ -835,7 +835,7 @@ instruments.
 
 #### Rehydrate is incomplete and not exposed (findings D16–D18)
 
-> Ruled by the author, 2026-10-01, on `guide/findings_2026-10-01_corpus.md`.
+> Ruled by the author, 2026-10-01, on `guide/archive/findings_2026-10-01_corpus.md`.
 
 `rehydrate_enabled` ships false, so the lobby button does not render and
 the four routes 404 (`spec/rehydrate.md`, header). Open before it can be
