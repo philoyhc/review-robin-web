@@ -40,7 +40,7 @@ flowchart LR
     App -.->|"secrets (planned)"| KV
     App -->|"app data + audit log"| PG
     App -.->|"logs (planned)"| MON
-    App -->|"diagnostics / artifacts"| ST
+    App -.->|"blobs (planned)"| ST
     GH -.->|"jobs · OIDC (planned)"| RUN
     RUN -.->|"deploy"| App
     RUN -.->|"migrate first (Alembic)"| PG

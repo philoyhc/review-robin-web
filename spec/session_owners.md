@@ -11,8 +11,8 @@ functions:
   (the stager, §3), saved with **Create session**.
 - **Session Home** (`/operator/sessions/{id}`) — its own card,
   `#owners-card`, edits the set of an existing session. **Each Add
-  owner and Remove saves at once** (author's ruling, 2026-09-23, which
-  retired the card's staged Save / Cancel).
+  owner and Remove saves at once**; the card has no staged Save /
+  Cancel.
 
 They look alike and save differently; §6 states the difference row by
 row. `spec/permissions.md` §4.2 owns the gates, status codes and
@@ -25,9 +25,8 @@ audit events; this spec owns the two cards' shape and staging.
 Template: `app/web/templates/operator/session_new.html`, `#session-owners`
 — second card in the page's right-hand `.bottom-left` column, below Tags;
 the left column holds User interface settings over Quick Setup, so the
-page approximates Session Home's placements (author's ruling,
-2026-09-23; `spec/ui_elements.md` §10; `spec/operator_ui_concept.md`
-"Create new session").
+page approximates Session Home's placements (`spec/ui_elements.md`
+§10; `spec/operator_ui_concept.md` "Create new session").
 
 - **Table**: the creator's row first (Email / Name / Role "owner" /
   Added "—"), no Remove — a session always keeps its first owner. Rows
@@ -72,8 +71,7 @@ the page's card list; this spec owns its contents.
   display/edit swap — the card renders one way whatever the details
   card's state (`spec/session_home.md`'s Session details card is the
   surface that swaps; this one doesn't).
-- **Lock / Unlock, as on Quick Setup** (author's ruling, 2026-09-23,
-  against accidental edits). The card renders **locked** by default:
+- **Lock / Unlock, as on Quick Setup**, against accidental edits. The card renders **locked** by default:
   the body (`.lockable-body.locked`) greys, and the picker, Add owner
   and every Remove are `disabled`. **Unlock** (`.btn.secondary`, right
   of Add owner) posts `owners/lock` with `action=unlock`, which sets
@@ -110,8 +108,8 @@ the page's card list; this spec owns its contents.
 ## 3. The stager (Create's partial)
 
 `app/web/templates/operator/partials/_owners_stager_js.html`, included
-by **Create only** — Session Home's card staged with it until the
-2026-09-23 ruling (§2). A card opts in with:
+by **Create only** — Session Home's card saves each edit at once
+(§2). A card opts in with:
 
 | Attribute | Meaning |
 |---|---|
@@ -123,12 +121,10 @@ by **Create only** — Session Home's card staged with it until the
 | `data-owners-add` | the Add-owner button |
 | `data-owners-remove` | a row's Remove (absent on a fixed row — Create's creator) |
 
-Session Home's staged card added a last-owner guard, a confirm on
-removing yourself, a form-`reset` restore and a `change` event per
-edit. Create reaches none of them — its creator row is fixed and it has
-no reset or Save to gate — so they were retired with that card's
-staging (author's ruling, 2026-09-23: staging made sense only while the
-card sat inside the lockable Session details form).
+The stager carries no last-owner guard, no confirm on removing
+yourself, no form-`reset` restore and no per-edit `change` event:
+Create needs none of them, since its creator row is fixed and it has no
+reset or Save to gate. Session Home's guards are in §6.
 
 Rows are built with `createElement` + `textContent`, never `innerHTML`
 — the email is operator-typed. **The staging buttons ship `hidden`**
