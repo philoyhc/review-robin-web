@@ -1,4 +1,8 @@
-# Blob storage — candidate uses (stub)
+# Blob storage — candidate uses
+
+> Moved from `spec/` on 2026-10-04: it weighs infrastructure that is
+> not built, so it is planning, not a contract. The build plan is
+> `guide/segment_18Q_blob.md`.
 
 > **Status: stub / not built.** Review Robin Web has **no application
 > blob storage** today, by deliberate choice — every current need is met

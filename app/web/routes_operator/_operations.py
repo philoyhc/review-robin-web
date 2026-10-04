@@ -691,7 +691,7 @@ def invitation_reviewer_detail_legacy(
 
     **308, not 303**: the move is permanent and the method is
     preserved, which is what `/preview` → `/preview-surface/1` already
-    does (`spec/preview_hub.md`). The two paths cannot collide — one
+    does (`spec/operations_pages.md` "Page identity"). The two paths cannot collide — one
     ends in the literal `detail`, the other has the literal `reviewers`
     one segment earlier — so declaration order does not matter here.
     """

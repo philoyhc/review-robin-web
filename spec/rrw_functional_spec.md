@@ -2591,7 +2591,6 @@ reader, so a spec missing from it is a spec nobody is sent to.
 | Round-trip coverage (export → import) | `spec/roundtrip_coverage.md` |
 | Validate page | `spec/validate_page.md` |
 | Visibility policy (audience × window grid) | `spec/visibility_policy.md` |
-| Blob storage (planned) | `spec/blob_storage.md` |
 
 For ship-state — what URL works today, what audit event fires
 today, what is queued for an upcoming segment — read

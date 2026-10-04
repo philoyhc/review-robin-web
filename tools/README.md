@@ -138,7 +138,7 @@ declaration against what a person actually read. It removes the accidental case
 and leaves the deliberate one to authorship.
 
 **Staleness is a reading prompt, never a finding.** A spec untouched for months
-may be perfectly correct, and `spec/blob_storage.md` is a deliberate stub.
+may be perfectly correct.
 
 ---
 
