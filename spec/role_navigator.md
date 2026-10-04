@@ -67,7 +67,7 @@ When the user has no roles on the session (an empty list returned), the template
 
 **Why one role disappears and the other greys.** A greyed chip is still
 a statement about the viewer: it names a role they hold. For a reviewee
-that statement is the disclosure Segment 19F exists to close — `/me`
+that statement is a disclosure the grant gate exists to prevent — `/me`
 drops the role rather than disabling its link, and the chip strip
 matches. For an observer it is not: being appointed an observer says
 nothing about the observer, so their chip stays visible and only loses
@@ -107,7 +107,7 @@ Labels are the role names capitalised (`Reviewer` / `Reviewee` / `Observer`).
 
 The strip wrapper is `<div class="rs-role-nav">`.
 
-**CSS** lives in `app/web/templates/base.html` alongside the `.pill-role-*` palette:
+**CSS** lives in `app/web/templates/base.html` alongside the `.pill-role-*` palette. Every selector below is scoped under `body.ui-v2`, the class the participant pages set on `<body>`:
 
 - `.rs-role-nav` — `display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0 0 var(--space-4) 0;`. Sits below the page header, before the description card.
 - `.rs-role-nav .rs-role-nav-muted` — `background: var(--surface-muted); color: var(--text-subtle); text-decoration: none;`. Overrides the `.pill-role-*` colour palette so the chip looks "not selected".
@@ -127,10 +127,9 @@ If a future participant surface (e.g. another `/me/sessions/{id}/<something>` pa
 Adding a fourth role would touch:
 - The `_ROLE_PRIORITY` tuple in `_shared.py`.
 - The per-role branch in `build_role_chips` that emits the target + reachability entry.
-- The per-role `if`/`elif` branch in `_role_chips.html` (currently three branches, one per role).
 - A matching `.pill-role-<role>` palette entry in `base.html`.
 
-The strip itself doesn't need template structural changes.
+The partial needs no change: it branches on chip state (active / enabled / neither), not on role, and derives the class and label from `chip.role`.
 
 ---
 

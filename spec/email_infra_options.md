@@ -55,7 +55,7 @@ Not in scope:
   Option B's application-permission implementation, not the
   delegated one. The stub's docstring still describes a delegated
   send; that waits on the tenant's answer,
-  `guide/post_azure_todo_checklist.md` item 10, findings F23.)
+  `guide/post_azure_todo_checklist.md` item 10.)
 - Logic Apps as an indirection layer. Adds operational complexity
   without enough payoff for this app's scope.
 
@@ -155,8 +155,8 @@ operator settings and tomorrow's per-deployment defaults:
 - **Per-operator overrides.** The existing `users.smtp_*` columns
   + `/operator/settings` page. Used when send-as-me semantics
   apply.
-- **Per-session overrides.** Reply-to, CC / BCC live on the
-  email-template editor, keyed by template.
+- **Per-session overrides.** CC / BCC live on the email-template
+  editor, keyed by template. There is no reply-to override.
 
 The `transport_for` factory and the future send dispatcher
 reconcile these layers when picking the backend + identity for a
@@ -202,9 +202,8 @@ state, and its vocabulary is the closed `EMAIL_OUTBOX_STATUSES` pinned by
 member is a schema change with a test behind it, to say what two existing
 columns already say.
 
-**Segment 11C Part 2 (truncated)** landed the audit-log columns
-the production send path will write at send time, as inert
-schema scaffolding. They are on `email_outbox` today. Six of them —
+The audit-log columns the production send path will write at send
+time are on `email_outbox` as inert schema scaffolding. Six of them —
 `error_message`, `from_address`, `backend`, `backend_message_id`,
 `delivered_at`, `payload_hash` — are written by nothing yet and are
 populated by **Segment 14B Part A** when the dispatch helper goes live.
@@ -213,8 +212,8 @@ populated by **Segment 14B Part A** when the dispatch helper goes live.
 to skip a reviewer already reminded at that offset
 (`app/services/scheduled_events/_reminders.py`). The stamp is written
 with the row, in the same commit, through `send_reminder`'s
-`outbox_correlation_id`; stamping it afterwards let a failed pass roll
-it back and re-queue the reminder (findings B31):
+`outbox_correlation_id`, so a later rollback cannot lose the stamp
+and re-queue the reminder:
 
 - `error_message` (Text, nullable) — captured on failure so the
   Outbox / Invitations diagnostic surfaces can render the
@@ -338,7 +337,8 @@ Today (per-operator on `users` table, populated via
 
 - `smtp_host`, `smtp_port`, `smtp_username`,
   `smtp_password_encrypted`, `smtp_encryption`,
-  `smtp_from_display_name`.
+  `smtp_from_display_name`, and `smtp_transport` (always `smtp`, the
+  only transport `transport_for` reaches).
 
 Future per-deployment defaults (env vars / App Service settings):
 none required today; operator-level credentials are sufficient.
@@ -354,8 +354,7 @@ none required today; operator-level credentials are sufficient.
 
 **Implementation work to add.** None for the basic path.
 **Segment 14B Part A** wires the existing transport into the
-Invitations send path against the audit-log columns
-**Segment 11C Part 2** scaffolds.
+Invitations send path against the scaffolded audit-log columns.
 
 **Considerations.**
 
@@ -600,7 +599,7 @@ to all. ✅ = shipped, ◻ = pending.
    columns (`from_address` / `backend` / `backend_message_id` /
    `delivered_at` / `payload_hash` / `correlation_id`) and the
    widened status / kind value-sets are in place as schema
-   scaffolding (**Segment 11C Part 2**). Only `correlation_id` is
+   scaffolding. Only `correlation_id` is
    written today, by scheduled reminders; **Segment 14B Part A** is
    the first call site that writes the rest.
 4. ◻ **A `correlation_id` strategy** for idempotent sends
@@ -644,13 +643,10 @@ A reasonable sequence:
 1. ✅ **Sender abstraction + SMTP backend.**
 2. ✅ **Operator credential storage** — per-operator SMTP
    credentials on `users`, encrypted at rest.
-3. ✅ **Outbox audit-log column scaffolding** — Segment 11C
-   Part 2. Inert apart from `correlation_id` (scheduled reminders);
-   populated at send time by Step 4. Landed the
-   columns (`error_message` + future-target additions) and the
-   widened status / kind value-sets so the wiring in Step 4
-   doesn't have to ship Alembic churn alongside its logic
-   changes.
+3. ✅ **Outbox audit-log column scaffolding** — the columns
+   (`error_message` + future-target additions) and the widened
+   status / kind value-sets. Inert apart from `correlation_id`
+   (scheduled reminders); populated at send time by Step 4.
 4. ◻ **Invitations send activation (SMTP)** — Segment
    14B Part A. First call site for the existing
    `transport_for` factory; first writer of Step 3's columns.

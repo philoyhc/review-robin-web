@@ -42,9 +42,10 @@ until the session is archived, and the email-template editor is not
 gated at all. Reviewers are not notified of edits (author's ruling,
 2026-10-02, F15).
 
-Note: While Session is the top level structure, there should be a
-way to put arbitrarily assign them to Groups. Sessions can be
-duplicated (without the response data).
+Session is the top-level structure. Operators group sessions with
+free-form tags on the lobby (`app/services/session_tags.py`), and can
+duplicate a session without its responses, assignments, invitations or
+audit history (`app/services/session_clone.py`).
 
 #### Instrument
 
@@ -69,7 +70,7 @@ Closed status and a notify-on-edit step were struck, author's ruling,
 - **`spec/visual_style_rrw.md`** — Review-Robin instantiation
   (accent assignments, lifecycle colors, chrome, banner family).
 - **`spec/ui_elements.md`** — element catalogue mapping
-  primitives to CSS classes + the "Inline error / warning
-  banner behaviour" sub-section (Cancel button, auto-scroll,
+  primitives to CSS classes + the "5a. Banner behaviour
+  conventions" sub-section (Cancel button, auto-scroll,
   Cancel-return anchor).
 - **`spec/operator_button_audit.md`** — per-page button audit.
