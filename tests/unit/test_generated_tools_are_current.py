@@ -1,8 +1,7 @@
-"""The generated theme pages match the sources they are generated from.
+"""The generated theme page matches the sources it is generated from.
 
-Segment 19K Item 7. `tools/theme_preview.html` and
-`tools/theme_customizer.html` are generated from `app/web/templates/
-base.html` plus their own `.gen.py`, and both are committed. Nothing
+Segment 19K Item 7. `tools/theme_customizer.html` is generated from
+`app/web/templates/base.html` plus its own `.gen.py`, and is committed. Nothing
 checked that the committed file matched what the generator produces, so
 a palette change that reached `base.html` and the app could leave the
 tools describing a palette that no longer ships — silently, since a
@@ -34,7 +33,6 @@ REPO = Path(__file__).resolve().parents[2]
 
 #: Each generated page and the script that writes it.
 GENERATED = {
-    "tools/theme_preview.html": "tools/theme_preview.gen.py",
     "tools/theme_customizer.html": "tools/theme_customizer.gen.py",
 }
 
@@ -79,12 +77,10 @@ def test_every_generator_in_tools_is_covered() -> None:
 
     The failure mode this file exists for is a generated artefact nobody
     re-runs; a generator absent from `GENERATED` reproduces it exactly.
-    `theme_variants.gen.py` is the deliberate exception — its `VARIANTS`
-    list is empty, so it writes no file (see `tools/README.md`).
     """
     generators = {
         f"tools/{p.name}" for p in (REPO / "tools").glob("*.gen.py")
-    } - {"tools/theme_variants.gen.py"}
+    }
 
     assert generators == set(GENERATED.values()), (
         "generators not covered by this check: "

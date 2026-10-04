@@ -160,11 +160,9 @@ commit.
 | `tests/unit/test_spec_coverage.py` | deferred | app | pairs with spec_registry; imports the app, so it cannot collect before one exists |
 | `app/web/templates/base.html` | deferred | theme | BUILT, not copied: the source's head through </style> (no-flash theme script, both :root blocks, every component class), a body.ui-v2 with the theme toggle and its script, a content block; rename the title, favicon and storage key |
 | `tools/_harness_common.py` | deferred | theme | the stylesheet lift, token parse and contrast pairs; ACCEPTED_BELOW_AA is the inherited palette's list |
-| `tools/theme_preview.gen.py` | deferred | theme | regenerate tools/theme_preview.html after export and commit it |
 | `tools/theme_customizer.gen.py` | deferred | theme | regenerate tools/theme_customizer.html after export and commit it |
-| `tools/theme_variants.gen.py` | deferred | theme | border-contrast report; runs as is |
 | `tests/unit/_base_css.py` | deferred | theme | parsing helpers the contrast audit imports |
-| `tests/unit/test_generated_tools_are_current.py` | deferred | theme | fails until the two pages are regenerated and committed |
+| `tests/unit/test_generated_tools_are_current.py` | deferred | theme | fails until the page is regenerated and committed |
 | `tests/unit/test_contrast_audit.py` | deferred | theme | 13 of its 14 pass on the inherited stylesheet; test_the_muted_token_absorbed_the_retired_one asserts this project's template counts |
 | `spec/color_tokens.md` | deferred | theme | the inherited palette's catalogue; it cites specs, an archived plan and a test that stay in the source, so the path gate goes red again on export |
 | `tools/close_check.py` | verbatim | — | close check entry point |
@@ -467,12 +465,11 @@ first things a new project reaches for:
   from the page. It will not overwrite a `base.html` that exists; if you
   already wrote one, export the group into a scratch directory and merge
   its head and body by hand. Rename the title, the favicon and the
-  storage key (`rrw-theme`, in both scripts). Then regenerate the two
-  pages and commit them — `python3 tools/theme_preview.gen.py` and
-  `python3 tools/theme_customizer.gen.py` — because
-  `tests/unit/test_generated_tools_are_current.py` compares the committed
-  page to a fresh run. Of the group's seventeen tests (fourteen in the
-  contrast audit, three on the generated pages), sixteen pass as
+  storage key (`rrw-theme`, in both scripts). Then regenerate the
+  customizer page and commit it — `python3 tools/theme_customizer.gen.py`
+  — because `tests/unit/test_generated_tools_are_current.py` compares the
+  committed page to a fresh run. Of the group's sixteen tests (fourteen
+  in the contrast audit, two on the generated page), fifteen pass as
   exported; the one that does not,
   `test_the_muted_token_absorbed_the_retired_one`, counts a token's uses
   across this project's templates and asserts this project's numbers —
@@ -489,8 +486,8 @@ first things a new project reaches for:
   `{ primitives, semantic: { light, dark } }`: port `primitives` into the
   primitives block of `base.html`'s `:root`, `semantic.light` into the
   semantic block that follows it, and `semantic.dark` into
-  `:root[data-theme="dark"]`, one token per line, 1:1. Regenerate both
-  pages, run `pytest tests/unit/test_contrast_audit.py`: every
+  `:root[data-theme="dark"]`, one token per line, 1:1. Regenerate the
+  customizer page, run `pytest tests/unit/test_contrast_audit.py`: every
   foreground/background pair the stylesheet forms must clear AA (4.5:1),
   and a pair that does not is fixed, or recorded in one of two places.
   `ACCEPTED_BELOW_AA` in `tools/_harness_common.py` is for a transient
@@ -518,9 +515,9 @@ first things a new project reaches for:
 - `spec/` and `app/` — the product, not the practice. `spec_registry.py`
   is the one exception, because it is the gate's mechanism.
 - `tools/code_metrics.py` — needs a merge history to measure.
-- The two generated theme pages, `tools/theme_preview.html` and
-  `tools/theme_customizer.html` — regenerated in the new repository from
-  its own `base.html`, never copied (the `theme` group above).
+- The generated theme page, `tools/theme_customizer.html` — regenerated
+  in the new repository from its own `base.html`, never copied (the
+  `theme` group above).
 - The `docs/` operational documents — deployment, security posture,
   runbook — each describes an environment the new project has not
   chosen yet.
