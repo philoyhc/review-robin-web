@@ -214,7 +214,9 @@ since Session Home is then a 404 for you.
 Besides Session Home's Add owner, `owners/add` is one of the two routes
 a non-owner sys-admin may reach (`require_sys_admin_or_session_operator`),
 **self-only** — `self_only` refuses any other target for that caller.
-`tests/integration/test_operator_lobby_access_gate.py` pins it. No page
+`tests/integration/test_operator_lobby_access_gate.py` pins the
+self-add; `tests/integration/test_session_owners.py` pins the
+`self_only` refusal. No page
 posts there for that purpose: Diagnostics **Manage** adopts through
 `POST /operator/sys-admin/sessions/{id}/adopt`, which calls `add_owner`
 directly. Neither per-action route carries a lifecycle check

@@ -18,8 +18,15 @@ Relationships, and Observers pages additionally render a **preview
 table** of the session's current rows. Three of those four share
 the **column-visibility pattern** described below — Observers
 carries a single tag and no chips — and that pattern is a shared
-primitive, used by six operator tables in all. This spec is its
+primitive other operator tables use too. This spec is its
 canonical description, alongside the per-page idiosyncrasies.
+
+**Relationships page gate.** Every Relationships Setup route
+(`app/web/routes_operator/_setup_relationships.py`) is gated by
+`require_relationships_enabled_session`, which answers 404 unless
+`session.relationships_enabled` is on — the **Relationships tab and
+page** toggle in the same **User interface settings** card. The
+permission check runs first.
 
 **Observers page gate.** The Observers Setup page routes
 (`app/web/routes_operator/_setup_observers.py`) are gated by
@@ -29,8 +36,7 @@ card on the Create Session form or Session Home's **Session details**
 card. When
 `session.observers_enabled` is `True` the page offers the same CRUD
 operations as Reviewees — per-row edit, add, bulk status flips,
-delete, CSV import. (Its **layout** matched Reviewers' too until
-19P.1 moved that page; the operations are what this names.)
+delete, CSV import.
 
 **Assignments is not a Setup page.** It sits on the Operations row
 and is not a per-entity Setup primitive: pair-level context lives on
@@ -53,7 +59,7 @@ Every Setup Page renders, top-to-bottom. **The four roster pages
 interpose one more card**, and their real order is in § *The roster
 card and the Unlock panel*: guidance, then the **roster card** carrying
 the index and the Unlock panel, then the preview table. Items 4 and 6
-below describe what that panel holds and what it replaced.
+below describe what that panel holds.
 
 0. **Page guidance** (`partials/_page_guidance.html`).
    A `<details class="card page-guidance">` — a **half-width
@@ -81,9 +87,8 @@ below describe what that panel holds and what it replaced.
 
    Width comes from the column the page puts it in. **The one
    exception is the macro's only argument**, `full_width` (default
-   `false`), which **all four roster pages** pass — Reviewers since
-   19P.1, Observers 19P.2, Reviewees and Relationships 19P.3: each left
-   `.card-columns` and so has no column to take width from. A card spanning the page and its prose being laid out
+   `false`), which **all four roster pages** pass: none sits in
+   `.card-columns`, so none has a column to take width from. A card spanning the page and its prose being laid out
    for that span are separate things — at full width one measure runs
    past 150 characters, so the argument gives the body `column-count:
    2`. Nothing
@@ -109,7 +114,7 @@ below describe what that panel holds and what it replaced.
 
    | Page | Placement |
    |---|---|
-   | The four roster pages | **Not in the container.** The guidance card leads the page at **full width**, above everything else — Reviewers since 19P.1, Observers 19P.2, Reviewees and Relationships 19P.3. On the three that have a tag-label editor, `.card-columns` renders **only** as that editor's fallback home, in the two states the Unlock panel cannot render in; see § *The roster card and the Unlock panel*. The rest of the time it is absent rather than empty, and it never holds the guidance. On Observers, which has no label slots, it is absent in every state. The lock card sits above it, as elsewhere. |
+   | The four roster pages | **Not in the container.** The guidance card leads the page at **full width**, above everything else. On the three that have a tag-label editor, `.card-columns` renders **only** as that editor's fallback home, in the two states the Unlock panel cannot render in; see § *The roster card and the Unlock panel*. The rest of the time it is absent rather than empty, and it never holds the guidance. On Observers, which has no label slots, it is absent in every state. The lock card sits above it, as elsewhere. |
    | Email Template | `.card-columns` — composer left; guidance then `Merge tags` right |
    | Instruments | `.card-columns` — guidance left, `Session deadline` right; the `Expand all` / `Collapse all` toggles moved into the deadline card to free the slot |
 
@@ -178,12 +183,12 @@ below describe what that panel holds and what it replaced.
 
    | Page | The fact its card must carry |
    |---|---|
-   | Reviewers | The email is mandatory and should be the institutional MS365 account they sign in with, not contact detail; upload **replaces** the roster and clears assignments; `inactive` is the non-destructive alternative to delete; and an empty roster blocks `draft → validated` (`reviewers.empty`, error severity); and an upload or a delete also destroys **every relationship involving the rows it removes** (19O.5) |
-   | Reviewees | An email is **optional** when you are only collecting data about someone — and **required, tied to their institutional MS365 account**, the moment they must see responses or summaries, since that is what a sign-in is matched against (the gap surfaces only as `reviewees.unreachable_for_results` on Validate); an empty roster blocks `draft → validated` (`reviewees.empty`, error severity); and an upload or a delete also destroys **every relationship involving the rows it removes** (19O.5) |
-   | Relationships | The page is **optional** — a session works without any — and earns its keep only for context *not already derivable from reviewer and reviewee tags*; its three tags are a real assignment-rule namespace (`pair_context.tagN` → `Relationship.tag_N`, `spec/assignments.md` "Predicate vocabulary"), so they can affect who reviews, or does not review, whom — **but only once populated**, since `views._instruments.new_model_usable_tags` offers a namespace + slot in the Band 1 dropdowns only when some row fills it; and **this roster depends on the other two** — every row names one reviewer and one reviewee, so replacing or emptying either of those rosters deletes the rows that referenced them, irreversibly, which is why it is set last and re-set after any change to them (19O.5) |
+   | Reviewers | The email is mandatory and should be the institutional MS365 account they sign in with, not contact detail; upload **replaces** the roster and clears assignments; `inactive` is the non-destructive alternative to delete; and an empty roster blocks `draft → validated` (`reviewers.empty`, error severity); and an upload or a delete also destroys **every relationship involving the rows it removes** |
+   | Reviewees | An email is **optional** when you are only collecting data about someone — and **required, tied to their institutional MS365 account**, the moment they must see responses or summaries, since that is what a sign-in is matched against (the gap surfaces only as `reviewees.unreachable_for_results` on Validate); an empty roster blocks `draft → validated` (`reviewees.empty`, error severity); and an upload or a delete also destroys **every relationship involving the rows it removes** |
+   | Relationships | The page is **optional** — a session works without any — and earns its keep only for context *not already derivable from reviewer and reviewee tags*; its three tags are a real assignment-rule namespace (`pair_context.tagN` → `Relationship.tag_N`, `spec/assignments.md` "Predicate vocabulary"), so they can affect who reviews, or does not review, whom — **but only once populated**, since `views._instruments.new_model_usable_tags` offers a namespace + slot in the Band 1 dropdowns only when some row fills it; and **this roster depends on the other two** — every row names one reviewer and one reviewee, so replacing or emptying either of those rosters deletes the rows that referenced them, irreversibly, which is why it is set last and re-set after any change to them |
    | Observers | The page is **optional** — a session works without any; the cohort rule grants sight rather than narrowing it, so an observer with no rule sees **nothing** (see "Cohort match rule editor" below); and what they see of each response is a **per-instrument** Band 3 policy, not a setting on this page |
    | Instruments | The instrument carries the assignment rule, and pairs materialise at Prepare rather than as the rule is edited; a session **must keep at least one** (`routes_operator/_instruments.py` refuses the last delete) |
-   | Email Template | Sending is not switched on (Segment 14B), and no part of reviewer access depends on it |
+   | Email Template | Sending is not switched on, and no part of reviewer access depends on it |
 
    **The three "must have at least one" sentences do not describe the same
    mechanism, and the cards say so.** Instruments is a **hard guard** — the
@@ -234,9 +239,7 @@ below describe what that panel holds and what it replaced.
    status strip, so the yellow card immediately follows the status
    info card — the same status-info-then-yellow-lock pattern the
    Instruments page uses. On all four roster pages the card below it
-   is the **full-width guidance card**; moving the guidance out of a
-   column changed its width, not its place in the order, so this
-   card's neighbour and ordering are unchanged by 19P. **Not
+   is the **full-width guidance card**. **Not
    Assignments**: that page carries no yellow `.card.lock` at all —
    the Workflow card's stepper already states the lifecycle, per
    `spec/operator_ui_concept.md` P4.
@@ -279,23 +282,18 @@ below describe what that panel holds and what it replaced.
    strip, and the selection-driven controls render in the expander.
    Both are specified in § *Roster controls and their route contracts*.
 
-6. **Nothing below the preview table.** The `.bottom-grid` that held
-   the Upload + Danger Zone pair is absent from every roster page:
-   both cards are in the Unlock panel. The gate is unchanged — the
-   panel takes the same `is_editable`-and-not-editing condition the
-   grid took (Observers' predicate differs; see its section) — and the
-   two cards' route contracts below are untouched by the move. CSV
+6. **Nothing below the preview table.** The Upload and Danger Zone
+   cards are in the Unlock panel, behind its `is_editable`-and-not-editing
+   condition (Observers' predicate differs; see its section). CSV
    upload stays the bulk-create path; the row expander covers
    single-row authoring.
 
 ## The roster card and the Unlock panel
 
-**All four roster pages have this shape**, and since 19P.3 none of them
-differs in kind — Reviewers arrived at 19P.1, Observers at 19P.2,
-Reviewees and Relationships at 19P.3. It is stated once here because
-four near-identical copies is how the eight pointer bugs 19P.1
-cataloged were made; where a page genuinely differs, its own section
-says so and this one names the axis.
+**All four roster pages have this shape**, and none of them differs in
+kind. It is stated once here rather than per page, because
+near-identical copies drift; where a page genuinely differs, its own
+section says so and this one names the axis.
 
 Top-to-bottom, every roster page renders: chrome, the status strip, the
 **lock card** when locked, the **full-width guidance card**, the
@@ -313,11 +311,9 @@ not, so an operator on a locked session still reads the roster size and
 which columns arrived.
 
 **The Unlock panel** (`#roster-unlock-panel`) holds, in two columns,
-the cards the page used to spread across `.card-columns` and the
-`.bottom-grid` below the table. Each card's own contract is unchanged
-by the move — the label editor is the same shared partial, and the two
-destructive cards answer the same routes under the same gates,
-specified in § *The Danger Zone's `delete-all`* and § *The Upload
+the tag-label editor, `Upload` and `Danger Zone` cards. The label
+editor is the same shared partial used elsewhere, and the two
+destructive cards' routes and gates are specified in § *The Danger Zone's `delete-all`* and § *The Upload
 card's replace*.
 
 - **Suppressed, not disabled, when the page's own gate says the session
@@ -349,8 +345,8 @@ card's replace*.
   reviewers". `_delete_all` calls `invalidate_if_validated(...)` before
   it counts anything, so an ungated Delete-all knocks a `validated`
   session back to `draft` while deleting nothing at all.
-- **It keeps the `danger-zone` class** and its amber framing inside the
-  panel, as it had outside one.
+- **It carries the `danger-zone` class** and its amber framing inside
+  the panel.
 
 **Where the four pages differ, inside this section's subject.** The
 **panel** differs on three axes, all of them Observers':
@@ -358,7 +354,7 @@ card's replace*.
 | Axis | Reviewers / Reviewees / Relationships | Observers |
 |---|---|---|
 | Suppression predicate | `is_editable` | `not is_archived` — every mutating observers route takes `_require_not_archived`, so on `ready` and `expired` both tenants are live and hiding them would withhold controls the routes accept |
-| Column contents | tag-label editor over the `Danger Zone` left, `Upload` right | `Upload` left, `Danger Zone` right — the order its `.bottom-grid` already had, kept because with no label editor the columns cannot correspond |
+| Column contents | tag-label editor over the `Danger Zone` left, `Upload` right | `Upload` left, `Danger Zone` right — with no label editor the columns cannot correspond |
 | The `Lock` control | beneath the `Upload` card, which its right column always holds | **follows the card, not the column**: its right column holds the `Danger Zone`, which renders only on a roster with rows, so on an **empty** roster `Lock` moves to the left column beneath `Upload`. The template marks whichever stack holds a card and the toggle reads the marker; it never names a column. Not an edge case — it is first use, and the state `delete-all` redirects into |
 
 **Observers differs elsewhere on the page too**, and those are not
@@ -419,18 +415,13 @@ The panel is opened by an inline handler, so each control renders a
 `#roster-card` alone to close, so both land on the card rather than at
 the top of the document. `?unlocked=1` is a real server-rendered state
 (it is what the redirects above use), so this links to behavior that
-already exists. It restores what these pages could do before the move
-and no more.
+already exists.
 
 Both confirm-gated buttons are enabled only by `base.html`'s
 confirm-pairing script, so with JS off `Delete all …` (always gated)
 and a **replace** import (gated whenever the roster has rows) are both
-unreachable — exactly as they were before the move, since `Upload`
-shipped `disabled` on a non-empty roster then too. What the fallback
-restores is the **empty-roster import**, plus the ability to read every
-card the panel holds. The pairing script itself was rewritten at 19P.1
-(2b step 1, delegated capture-phase), which changed how the gate is
-wired and not whether it needs JS.
+unreachable. What the fallback reaches is the **empty-roster import**,
+plus the ability to read every card the panel holds.
 
 ### The roster index
 
@@ -468,22 +459,19 @@ other three never can.
 **The preview-count line** renders at the **top-left of the
 preview-table card**, above the table, whenever the cap or a filter
 has trimmed the list (`.table-showing-hint`). It belongs with the rows
-it counts, reading left-to-right with the page — in the
-operator-actions strip it sat roughly 950px from them. An untrimmed
+it counts, reading left-to-right with the page. An untrimmed
 list renders no line: "Showing 6 of 6" is noise.
 
-It appears on all **seven** pages that preview rows — the four roster
+It appears on every page that previews rows — the four roster
 pages, Assignments, Invitations and Responses — through **one** view
 helper (`app.web.views.preview_count_line`) and **one** partial
 (`operator/partials/_preview_count_line.html`), never a per-page
 variant.
 
 **Every preview table sits in `.table-scroll`** (`spec/ui_elements.md`
-§10). The four roster pages went without until 19O Item 8, on a rule
-that said they "measure inside their card" — true at 1400px, and false
-below it: Reviewers and Reviewees push the document sideways from
-900px, Relationships from 1100. The wrapper is not a per-page decision
-any more, on these or anywhere else.
+§10). The wrapper is not a per-page decision, on these or anywhere
+else: a roster table wider than its card scrolls inside it rather than
+pushing the document sideways.
 
 ### The row pager
 
@@ -511,8 +499,7 @@ that was valid before someone deleted forty rows is not an error page.
 **The pager is suppressed whenever a search or status filter is
 active.** The operator's own partition of the roster wins, and a
 second partition stacked on it is two mental models for one table. A
-filtered view therefore keeps the **500 cap** it has always had, and
-keeps truncating for real — which is why the count line still has a
+filtered view therefore keeps the **500 cap**, and truncates for real — which is why the count line still has a
 withheld branch.
 
 **The pager carries no selection.** Selection is page-local: the
@@ -521,15 +508,14 @@ across a page boundary is how an operator deletes something they
 cannot see.
 
 **Editing a row off the current page lands the operator on that row's
-page**, rather than prepending the row to whatever page they were on
-(which is what the cap-era code did, having nowhere else to put it).
+page**, rather than prepending the row to whatever page they were on.
 A filtered view, and a row the filter itself excludes, keep the
 prepend.
 
 **The wording follows from that.** Where the pager renders, the
 operator can reach every row and the sentence says nothing — the
-ranges already state the position. So the count line stopped being the
-table's caption and became **the filter's**:
+ranges already state the position. So the count line is **the
+filter's** caption, not the table's:
 
 | State | Line |
 |---|---|
@@ -541,27 +527,25 @@ A count of exactly one takes the singular (`Showing 1 reviewer.`): the
 sentence now puts the noun against the count rather than against the
 pool, and a search matching one person is the commonest case there is.
 
-The roster denominator went with the change — `Showing 3 of 1,240
-reviewers.` became `Showing 3 reviewers.` — and so did the word
-`matching`, which existed to tell the roster and the matching set
-apart and has nothing left to disambiguate once `of M` can only mean
-the second. **A filter that happens to match every row is still a
+The line carries no roster denominator (`Showing 3 reviewers.`, not
+`Showing 3 of 1,240 reviewers.`) and no word `matching`: `of M` can
+only mean the matching set. **A filter that happens to match every row is still a
 filtered view** and still reports (`Showing 1,240 reviewers.`): the
 sentence and the pager read the same flag, so they cannot disagree
 about which mode the page is in.
 
-**All seven pages page**, so no page carries an unfiltered
+**All of those pages carry the pager**, so no page carries an unfiltered
 "showing first N of M" notice.
 
-**A filter matching nothing renders no count line, on any of the
-seven.** Each page gates its whole preview card on the row list and
+**A filter matching nothing renders no count line, on any of
+them.** Each page gates its whole preview card on the row list and
 falls through to a "No … match the current filter." message
 (`session_reviewers.html`'s `{% if reviewers or add_mode %}` …
-`{% elif total_row_count > 0 %}`, and the same shape on the other
-six). The line lives inside that gate, so there is no table for it
+`{% elif total_row_count > 0 %}`, and the same shape on the
+others). The line lives inside that gate, so there is no table for it
 to caption. **Relationships has a third branch below those two** — an
 empty roster that cannot yet be filled, § *The table toolbar*; the
-no-match branch itself is the same on all seven. This is the template's doing, not the helper's:
+no-match branch itself is the same on all of them. This is the template's doing, not the helper's:
 `preview_count_line(shown=0, pool=0, …, is_filtered=True)` returns
 `Showing 0 reviewers.` if it is ever called.
 
@@ -635,8 +619,7 @@ The pattern:
   neither can appear without the other. **Reviewers does not
   have this chip**, though it renders the same `profile-col` cells:
   there, the column's visibility is a server-side decision only. The
-  asymmetry is deliberate and survives the shared extraction
-  unchanged.
+  asymmetry is deliberate.
 - Operator choice persists per browser via `localStorage` under a
   per-table key, which the primitive reads from the table's
   `data-rrw-col-toggles` attribute:
@@ -648,8 +631,7 @@ The pattern:
   - Operations Responses: `rrw-response-tag-visibility`.
 
   **The keys are fixed.** Renaming one silently resets every
-  operator's saved columns on that page, so the extraction changed
-  none of the four that predated it, and
+  operator's saved columns on that page, so
   `tests/unit/test_column_visibility_primitive.py` pins all six.
   Full inventory in `spec/settings_inventory.md`.
 - Stored choice wins over the data-driven default. Stored "hide"
@@ -720,29 +702,20 @@ applies (the column data is still present in the DOM).
 
 ## Roster controls and their route contracts
 
-**The `Operator actions` card renders on no roster page.** Reviewers
-retired it at 19P.1, Observers at 19P.2, Reviewees and Relationships at
-19P.3. Its three parts went to three homes, and the split is the point
-of the move — each part now sits with what it acts on rather than a
-grid away:
+**The roster controls sit with what they act on**, on three surfaces —
+there is no `Operator actions` card:
 
-| Was, in the card | Is now |
+| Controls | Surface |
 |---|---|
 | Search + filter strip | the right pane of the preview table's **two-pane toolbar** (`.table-card-toolbar.is-split`) |
-| Action row (`filter-actions`) | the **row expander**, injected beneath the selection |
-| Status row (`filter-confirm`) — selected-count + delete confirm | the **row expander**, with the buttons it gates |
+| Edit / Inactivate / Activate / Delete, the selected count and the delete confirm | the **row expander**, injected beneath the selection |
+| `Upload` + `Danger Zone` | the **Unlock panel** — § *The roster card and the Unlock panel* |
 
-The `Upload` + `Danger Zone` pair that sat below the table in a
-`.bottom-grid` moved too, into the Unlock panel — § *The roster card
-and the Unlock panel*.
-
-**The route contracts in the four sub-sections below are unchanged by
-any of it, and always were page-independent** — `confirm` /
-`confirm_replace` / `acknowledge_response_loss`, the failure modes, the
-three-state wording. They govern every roster page regardless of which
-control surface reaches them, which is why they are stated here once
-rather than copied into four page sections. The card is gone; what it
-posted is not.
+**The route contracts in the sub-sections below are page-independent**
+— `confirm` / `confirm_replace` / `acknowledge_response_loss`, the
+failure modes, the three-state wording. They govern every roster page
+regardless of which control surface reaches them, which is why they are
+stated here once rather than copied into four page sections.
 
 ### The table toolbar
 
@@ -765,11 +738,12 @@ so there is no "Search by" side-picker.
 
 The strip greys out (`.is-locked`) and stops accepting clicks while a
 row is being edited or added, and `Add new` and `Search` render
-disabled in that state — the same lock the retired card's strip took.
+disabled in that state.
 
-`Add` is labeled **`Add new`** on all four pages. The one-row
-constraint that shortened it went with `Delete`, which is in the
-expander.
+`Add` is labeled **`Add new`** on all four pages. It is a toolbar link,
+not an expander control, so it is live whatever the selection; it
+renders only while the page's own gate allows edits (`is_editable`;
+Observers `not is_archived`).
 
 **Relationships has one more gate than the other three, and it is not a
 lifecycle gate.** A `Relationship` names one `Reviewer` and one
@@ -791,8 +765,7 @@ whether a relationship can be made:
   *and nothing possible yet* (naming the missing roster and linking to
   its page), and nothing yet (the ordinary "Upload a CSV or add a row to
   get started"). The second branch is the state a `delete-all` on either
-  roster leaves behind, and before 19O.5 rung 4 the page rendered the
-  third one there.
+  roster leaves behind.
 
 Both read every row, active or not: an inactive reviewer is still a
 reviewer a relationship can name, and `create_relationship` checks
@@ -805,11 +778,9 @@ beneath the selected row, not a card beside it. It carries the selected
 count and the controls — `Edit`, `Inactivate`, `Activate`, `Delete` and
 the delete confirm — rendered client-side from the current selection.
 
-**The status pair is not a pure relocation.** The retired card rendered
-`Inactivate` and `Activate` **both, always**; the expander renders only
-what is actionable for the selection — `Inactivate` when every selected
-row is active, `Activate` when every one is inactive, both when the
-selection is mixed. Net-new at 19P.1 and deliberate.
+**The status pair renders only what is actionable** for the
+selection — `Inactivate` when every selected row is active, `Activate`
+when every one is inactive, both when the selection is mixed.
 
 It renders the selected count as **bare text rather than a pill** — a
 sibling of the confirm label, not inside it: the expander's own
@@ -832,9 +803,8 @@ than below a divider in a card. There is no divider and no editor card:
 the row is the editor.
 
 **The preview-count line does not belong to either surface.** It sits
-at the top-left of the preview-table card, with the rows it counts
-rather than ~950px to their right, where the operator-actions strip put
-it. See § *Preview tables*.
+at the top-left of the preview-table card, with the rows it counts.
+See § *Preview tables*.
 
 ### Deleting the selected rows
 
@@ -843,8 +813,7 @@ it. See § *Preview tables*.
 page, taking the same `<entity>_ids` list and the same `filter_status`
 / `filter_q` round-trip.
 
-**Two gates, both re-checked server-side.** The strip's checkbox is a
-convenience; these decide:
+**Two gates, both checked server-side:**
 
 1. `confirm` must be exactly `"true"`, or **400** — the same refusal
    the Danger Zone's `delete-all` uses. The expander's checkbox is a
@@ -872,13 +841,12 @@ row. A surviving row with `reviewer_id IS NULL` **and** `sent_at` set is
 exactly that: sent, recipient since removed — `spec/email_infra_options.md`
 "Audit log" owns the column-level detail. **Observers
 and Relationships cascade to nothing** — no table references them — so
-their gate never fires and their strip never offers the
+their gate never fires and their expander never offers the
 acknowledgement. An Observers delete loses no response. A
 Relationships delete can: a pair it moves to another pair-context
-group gives up the group answer copy it carried, and the author ruled
-2026-10-03 that this asks for no acknowledgement, as a tag edit asks
-for none (`spec/assignments.md` "Group-scoped fan-out"; findings
-B34).
+group gives up the group answer copy it carried, and this asks for no
+acknowledgement, as a tag edit asks for none (`spec/assignments.md`
+"Group-scoped fan-out").
 
 **The confirmation names what goes**, on the pattern of the
 Instruments page's *"Yes, delete Instrument_1 and its associated
@@ -893,17 +861,15 @@ answered:
 | assignments only | "Yes, delete these and their associated assignments" |
 | neither | "Yes, delete these" |
 
-**A fourth clause since 19O.5, and it is scoped differently from the
-three above.** A reviewer or reviewee delete also destroys every
-relationship referencing it, through an `ondelete="CASCADE"` foreign
-key with no ORM collection on either parent — so nothing in Python
-observes it and the app said nothing about it. Where the selection
+**A fourth clause, scoped differently from the three above.** A
+reviewer or reviewee delete also destroys every relationship
+referencing it, through an `ondelete="CASCADE"` foreign key with no ORM
+collection on either parent — so nothing in Python observes it. Where the selection
 carries any, the label gains *"and the relationships involving them"*.
 
 **It reads the selection; the three rows above read the session.**
 `delete_discards_assignments` is a session-wide flag, so those clauses
-fire for a selection carrying none — a pre-existing imprecision, left
-as it is. The relationship clause cannot afford it: each `<tr>` carries
+fire for a selection carrying none — a known imprecision. The relationship clause cannot afford it: each `<tr>` carries
 `data-relationships` and the expander's script sums the ticked rows, so
 a selection touching no pair stays silent. This is the same principle
 § *Deleting the selected rows* already states about the count — *"the
@@ -942,7 +908,7 @@ rows it would have landed on are the ones it deleted. Services: `delete_selected
 `relationship.*`, one event per call carrying `deleted`,
 `cascaded_assignments` and `cascaded_responses` — plus
 **`cascaded_relationships`** on the two that can reach one, Reviewers
-and Reviewees (19O.5). It is **omitted rather than zero** on Observers
+and Reviewees. It is **omitted rather than zero** on Observers
 and Relationships: nothing references either, so a key reading 0 would
 describe a cascade that cannot exist, exactly as their confirmations
 never mention assignments. The same field rides
@@ -974,7 +940,7 @@ they read: `Showing 500 of 600 reviewers, 100 more not shown.` above
 the table — a filtered view carries no pager and so still truncates,
 and the line says the window is not the match — against
 `500 of 500 selected` in the row expander, meaning every rendered row
-is picked. Both now sit inside the preview-table card — the count line
+is picked. Both sit inside the preview-table card — the count line
 in the toolbar's left pane, the selected count in the expander beneath
 the rows — and the selected count still states its own denominator,
 because a bare `500 selected` a table's height below `Showing 500 of
@@ -993,16 +959,16 @@ strip says "these" — and the same single tick: `confirm` plus, where
 the roster's rows carry responses, a hidden
 `acknowledge_response_loss`.
 
-**The hidden field is load-bearing.** The route has always required
-the acknowledgement, so a template that does not send it makes
+**The hidden field is load-bearing.** The route requires the
+acknowledgement, so a template that does not send it makes
 `delete-all` return **400 with no path forward from the page** on any
 session carrying a response — and the Danger Zone must be able to
 delete a roster that has responses.
 
 **Observers' `delete-all` has no response-loss gate at all.** Nothing
 references an observer, so the delete destroys no assignment and no
-response — requiring an acknowledgement asked the operator to accept a
-loss that cannot occur. Relationships never had the gate. The
+response — requiring an acknowledgement would ask the operator to
+accept a loss that cannot occur. Relationships has no gate either. The
 requirement stands only where the cascade does, on Reviewers and
 Reviewees.
 
@@ -1010,13 +976,6 @@ The card itself is hidden whenever the session is not editable, and so
 is the Upload card — both are tenants of the Unlock panel, which is
 suppressed as a whole. Observers' predicate is not `is_editable` at
 all; see its § *Lifecycle gate*. `spec/lifecycle.md` §5.
-
-The list is **capped at 200 rows** (lifted to **500** when a
-search or status filter is applied) — the cap is applied after
-sort, so the visible window matches the operator's chosen order.
-The preview-count line renders when the cap or filter trims the
-list; see "Preview tables (shared toggle pattern)" for its four
-branches.
 
 ### The Upload card's replace
 
@@ -1049,10 +1008,10 @@ relationship clause supplies it only when there is not:
 > `3 relationships` involving them.
 
 Without that conditional the sentence reads *"replace … and the 3
-relationships"*, promising a roster that comes back. Found by a cold
-read at 19O.5 rung 2, in the state it is most often seen: relationships
-are normally uploaded before assignments are generated, so the
-assignment clause that would have supplied the verb is usually absent.
+relationships"*, promising a roster that comes back. That is the
+commonest state: relationships are normally uploaded before assignments
+are generated, so the assignment clause that would supply the verb is
+usually absent.
 
 The assignment clause appears when the roster's rows carry
 assignments, the response clause when the session carries responses;
@@ -1062,7 +1021,7 @@ included: the answers are the reviewers' whichever roster is being
 replaced.
 
 **The response clause and its hidden field are load-bearing.** As
-with `delete-all`, the route has always required the acknowledgement,
+with `delete-all`, the route requires the acknowledgement,
 so an upload form that omits it makes the replace return **400 with no
 path forward from the page** on any session carrying a response — and
 that state is reached by the documented workflow, since editing a
@@ -1073,7 +1032,7 @@ where the Upload card reappears.
 `delete-all` has none: nothing references an observer, so replacing
 that roster destroys no assignment and no response. It keeps its
 `confirm_replace` tick, which guards the observer roster itself.
-Relationships' import never had the gate.
+Relationships' import has none either.
 
 **A parse-blocked upload re-renders the page from a context the
 import handler builds itself**, key by key, rather than from the one
@@ -1144,14 +1103,14 @@ case-insensitively:
 
 **Two more surfaces follow these rules by a different mechanism.**
 The Session Lobby and the Archived page filter *client-side* — they
-hide rows already rendered rather than re-querying — and 19O Item 7
-entry 15 brought their matching onto the per-column rules above:
-substring on the two identity columns, whole value on tags. Their
+hide rows already rendered rather than re-querying — and match on the
+per-column rules above: substring on the two identity columns, whole
+value on tags. Their
 contract is in `spec/sessions_overview.md`; two things differ and are
 worth knowing here.
 
-- **No `"Name (handle)"` label.** That form works on these seven
-  because the server exact-matches the parenthesized handle when the
+- **No `"Name (handle)"` label.** That form works on the roster and
+  operations surfaces because the server exact-matches the parenthesized handle when the
   input equals a label it offered. A client-side per-column filter
   cannot do that, so the label would be a suggestion matching nothing.
   Names and codes are offered as themselves.
@@ -1178,24 +1137,27 @@ matching `*_search_options`).
 ## Per-row Edit / Add / bulk actions
 
 **Selection.** The leftmost checkbox column is the sole selection
-mechanism — rows carry no per-row action buttons. Button state:
+mechanism — rows carry no per-row action buttons. The row expander
+renders only while at least one row is selected; with none, there is
+no Edit, Inactivate / Activate or Delete on the page. Button state in
+the expander:
 
-| Selection | Edit | Inactivate / Activate | Add | Delete |
-|---|---|---|---|---|
-| 0 rows | disabled | disabled | enabled | disabled |
-| 1 row | enabled | enabled | disabled | gated |
-| ≥2 rows | disabled | enabled | disabled | gated |
+| Selection | Edit | Inactivate / Activate | Delete |
+|---|---|---|---|
+| 1 row | enabled | whichever is actionable | gated |
+| ≥2 rows | disabled | whichever is actionable | gated |
 
-**gated** = enabled only once the confirmation checkbox on the status
-row is ticked, which the selection itself enables. It is the one
-button on this row that a selection alone does not light up.
+**gated** = enabled only once the expander's confirmation checkbox is
+ticked, which the selection itself enables. It is the one button in
+the expander that a selection alone does not light up. `Add new` is a
+toolbar link, unaffected by the selection (§ *The table toolbar*).
 
 **Edit** (`?edit_id=<id>`) and **Add** (`?add=1`) are
 server-rendered states — no client-side DOM surgery. The target
 row's cells render as `<input>` / `<select>`; Add prepends a
 blank row at the top of the table. The Save / Cancel pair renders in
-an expander bar beneath the edited row, and the toolbar takes the lock
-the retired card's strip took: the filter form greys out and stops
+an expander bar beneath the edited row, and the toolbar locks: the
+filter form greys out and stops
 accepting clicks (`.is-locked`), and `Add new` and `Search` render
 disabled.
 Editing a row's **status** to `inactive` /
@@ -1210,12 +1172,11 @@ the **active search / status filter** (so the operator lands
 back on the same filtered view, not the unfiltered list). CSV
 bulk upload stays as the bulk-create path.
 
-**Every roster page carries three more** — Reviewers since 19P.1,
-Observers 19P.2, Reviewees and Relationships 19P.3. The redirect also preserves the **pager offset** (`offset=`),
-lands on a **fragment**, and on a create carries **`focus=<id>`**, so a row action taken mid-table comes back to
-that row rather than to the top of the document — measured at 821px of
-jump before the anchor, and answering with page 1 after an action on
-page 2, because no caller passed the offset. The fragment is the first
+**Every roster page carries three more.** The redirect also preserves
+the **pager offset** (`offset=`), lands on a **fragment**, and on a
+create carries **`focus=<id>`**, so a row action taken mid-table comes
+back to that row and its page rather than to the top of page 1. The
+fragment is the first
 acted-on row (`#reviewer-row-<id>`), or the table card
 (`#reviewers-table-card`) where the action leaves no row to land on —
 a delete. (Each page names its own row: `#reviewer-row-<id>`,
@@ -1243,18 +1204,16 @@ every roster, at both entry points:
 
 1. **Within the roster** — the mailbox is already on another row
    of the same roster (`reviewers` / `reviewees` by
-   `email_or_identifier` / `observers`). Long-standing.
+   `email_or_identifier` / `observers`).
 2. **Across the rosters** — the mailbox is held in *another*
    roster under a **different name**
    (`csv_imports.cross_table_identity_conflict`). Same email +
-   same name stays legal, and is the self-review case. **The Add
-   and Edit forms did not consult this until 19Q Item 7**, so
-   they wrote the row the CSV importer refused; the rule had one
-   home and only the import path could reach it.
+   same name stays legal, and is the self-review case. The Add
+   and Edit forms consult it exactly as the CSV importer does.
 
 Either raises the roster's `*OperationError`, and the form
 re-renders at **400** in place with the message — the same shape
-the within-roster duplicate has always had.
+as the within-roster duplicate.
 
 An **edit** keys on the *resulting* pair rather than on what
 changed, so renaming a row into disagreement with its mailbox's
@@ -1266,8 +1225,7 @@ reported on Validate, the fix is a rename either way, and a guard
 that ignored untouched identities would let a row be edited
 around its own unresolved conflict indefinitely.
 
-Rows already in the session when these guards landed are not
-rewritten. The three `*.cross_roster_identity` Validate rules
+Conflicting rows already in a session are not rewritten. The three `*.cross_roster_identity` Validate rules
 report them (`spec/validate_page.md` §3.2).
 
 **Relationships pickers.** The Relationships Edit / Add rows
@@ -1289,12 +1247,11 @@ Audit events: `reviewer.created` / `.updated` /
 
 ## Reviewers page (`session_reviewers.html`)
 
-### Body shape (19P.1)
+### Body shape
 
 The shared shape, with nothing page-specific in it: see § *The roster
-card and the Unlock panel*. This page is the one the other three were
-measured against, so the shared section reads as its description with
-Observers' three differences named beside it.
+card and the Unlock panel*, which reads as this page's description with
+Observers' differences named beside it.
 
 Its panel holds the tag-label editor over the `Danger Zone` on the
 left, `Upload Reviewers` on the right, and `Lock` beneath the upload
@@ -1322,7 +1279,7 @@ The `Show columns:` chip row sits in the preview-table card, above
 the rows; see "Preview tables (shared toggle pattern)" above for
 which chips render and for the persistence rules.
 
-#### The toolbar and the row expander (19P.1)
+#### The toolbar and the row expander
 
 Both are the shared surfaces — § *Roster controls and their route
 contracts*. This page has nothing of its own in either beyond its
@@ -1331,7 +1288,7 @@ edited row is reached as `#reviewer-row-<id>`.
 
 ## Reviewees page (`session_reviewees.html`)
 
-### Body shape (19P.3)
+### Body shape
 
 The shared shape — § *The roster card and the Unlock panel* — on the
 same terms as Reviewers, with none of Observers' three differences: the
@@ -1341,12 +1298,6 @@ the suppression predicate is `is_editable`.
 
 CSV header copy lists `RevieweeName`, `RevieweeEmail` required;
 `ProfileLink`, `RevieweeTag1..3`, `Status` optional.
-
-*This section said "same shape as Reviewers" until 19P.1, then stated
-the pre-move shape outright because Reviewers no longer had it. Both
-readings are now obsolete: the shape is genuinely shared again, so it
-is stated once and this section carries the page's own facts. A pointer
-is only a bug when it points at a different shape.*
 
 ### Preview table
 
@@ -1377,7 +1328,7 @@ row per `(reviewer, reviewee)` pair within a session, carrying three
 `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3`
 predicate field names, plus a per-row `active` / `inactive` status.
 
-### Body shape (19P.3)
+### Body shape
 
 The shared shape — § *The roster card and the Unlock panel* — on the
 same terms as Reviewers and Reviewees: tag-label editor over the
@@ -1439,7 +1390,7 @@ page is **gate-hidden by default** — it is only reachable (and
 only rendered in the Setup chrome navigation) when
 `session.observers_enabled == True`.
 
-### Body layout (19P.2)
+### Body layout
 
 The shared shape — § *The roster card and the Unlock panel* — and this
 page is the one that supplies all three of that section's difference
@@ -1453,13 +1404,12 @@ axes. Restated here only as far as its own reasons go:
 - **`Upload Observers` is on the left and the `Danger Zone` on the
   right** — the mirror of the other three, deliberately. They put
   `Upload` right because their left column carries a tag-label editor;
-  this page has no label slots, so the columns cannot correspond, and
-  the order kept is the one the `.bottom-grid` already had.
+  this page has no label slots, so the columns cannot correspond.
 - **`Lock` follows the card, not the column** — the empty-roster case
   described in that section's table.
 - **`.card-columns` is absent in every state**, not just most: with no
-  label editor there is no fallback tenant, and the cohort editor moved
-  into the row expander at 19P.2 rung 5.
+  label editor there is no fallback tenant, and the cohort editor lives
+  in the row expander.
 
 **And elsewhere on the page, which the shared section's table
 deliberately does not cover.** Counted here so a reader has one place
@@ -1505,23 +1455,20 @@ resolver call would invent a label the table never shows.
 ### Lifecycle gate
 
 **Observers is the stated exception to the four-roster rule** (see
-`spec/lifecycle.md` §5). Its roster stays editable to `archived`: all
-**eight** mutating routes take `_require_not_archived` — `create`,
+`spec/lifecycle.md` §5). Its roster stays editable to `archived`:
+every mutating route takes `_require_not_archived` — `create`,
 `update`, the two bulk status actions, `bulk-delete`, `delete-all`,
 `import` and `cohort-rule` — so every one of them accepts on `ready`
-and `expired`. Seven were relaxed at 19P.2; `cohort-rule` already read
-that gate.
+and `expired`.
 
 The reason is what an observer *is*. They never appear in assignments,
 never produce responses, and no readiness rule references them — so
 freezing their roster at Activate protects nothing, while refining who
 sees what mid-session is a legitimate flow.
 
-`import` and `delete-all` were relaxed with the rest rather than
-separately: the template gates both with one condition, so
-`delete-all` could not become reachable on `ready` without `Upload`
-rendering beside it, and a rendered control the server refuses is the
-silent failure the relaxation exists to remove.
+`import` and `delete-all` take the same gate as the rest: the template
+gates both with one condition, and a rendered control the server
+refuses is a silent failure.
 
 
 ### Preview table
@@ -1553,12 +1500,10 @@ rather than turning the copy into a lie.
 The Observers page is the only Setup page with a per-observer
 rule-builder surface (no equivalent on Reviewers / Reviewees).
 
-**It lives in the row expander** (19P.2 rung 5), the left pane of the
-two-column panel the page injects beneath the selected rows — not in a
-card above the table. The editor is selection-driven, so a card a grid
-away from the rows it acts on was the defect, not the layout; its own
-empty state said *"Select observers in the table below…"* while
-rendering above them. The right pane carries the selected count, the
+**It lives in the row expander**, the left pane of the two-column
+panel the page injects beneath the selected rows — not in a card above
+the table, because the editor is selection-driven and belongs beside
+the rows it acts on. The right pane carries the selected count, the
 delete confirm and the row actions.
 
 It is **server-rendered once into an inert `<template>` and cloned** on
@@ -1606,12 +1551,11 @@ into the dropdowns. When the selection's saved rules differ,
 the editor opens at the default state with the message *"The
 selected observers currently have different cohort rules.
 Saving replaces them all with the rule above."* — after the rule
-cells, and so after `Save`, which is now inline in the last of them.
+cells, and so after `Save`, which is inline in the last of them.
 Saving always overwrites every selected observer with whatever the
 editor currently holds.
 
-**An unsaved rule edit is guarded, not silently discarded** (19P.2 rung
-5a). The panel is rebuilt wholesale on every selection change, so an
+**An unsaved rule edit is guarded, not silently discarded.** The panel is rebuilt wholesale on every selection change, so an
 edit typed but not saved is lost by anything that touches the
 selection — and nothing auto-saves, the only write being the explicit
 POST. Four in-page paths ask *"Discard unsaved changes?"* and restore
@@ -1647,18 +1591,20 @@ affected observer (`refs={"observer_id": id}` +
 
 **Gate.** The builder renders wherever the expander does — not
 `archived`, and not while a row is being edited or added, there being
-no selection surface to clone into. The two-tier arrangement this
-section used to describe, where the editor outlived the Operator
-actions card above it, is gone: 19P.2 rung 2 relaxed every mutating
-route to `_require_not_archived`, so the whole expander takes the one
-gate and the operator can mutate the roster mid-session too.
+no selection surface to clone into. Every mutating route takes
+`_require_not_archived`, so the whole expander takes the one gate and
+the operator can mutate the roster mid-session too.
 
 ### CSV import
 
 Route: `POST /operator/sessions/{id}/observers/import`. Parsed by
 `csv_imports.parse_observer_csv` / `csv_imports.save_observers` in
 `app/services/csv_imports.py`. CSV schema: `ObserverEmail`
-required; `ObserverName`, `ObserverTag1` optional. Emits
+required; `ObserverName`, `ObserverTag1`, `Status` and `CohortRule`
+optional (`spec/csv_contracts.md` §3.2b). A non-blank `CohortRule` cell
+is compact JSON validated through `CohortRuleSet`, so an imported rule
+is held to the editor's shape; a bad cell is a per-row error that
+blocks the import. Emits
 `observers.imported` audit event on success.
 
 Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
@@ -1694,20 +1640,18 @@ Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
   for the Instruments page's `display_source_presence`, which unions
   them; keep those in sync with any new optional column added to the
   model + CSV importer.
-- **Lifecycle gating on the four roster pages is one predicate,
+- **Lifecycle gating on the roster pages is one predicate,
   `is_editable` — `draft` or `validated` — and nothing may use a
-  narrower one.** The Upload + Danger Zone cards, the friendly-label
+  narrower one.** Observers is the exception, on `not is_archived`
+  (§ *Lifecycle gate*). The Upload + Danger Zone cards, the friendly-label
   editor and the whole selection surface render behind
   `{% if is_editable %}`; the `card lock` at the top of the body
   renders behind `{% if not is_editable %}`. Because both halves read
   the same flag, the explanation and the controls cannot disagree.
 
-  **19P.1 moved three of those controls on Reviewers without changing
-  the predicate.** The Unlock panel takes the same `is_editable` (plus
-  "not mid-edit"), so the three cards inside it are gated exactly as
-  they were in their old homes — the panel is *suppressed*, not
-  rendered disabled, precisely so a locked page still carries no
-  `Save labels`. The one addition is the label editor's second
+  **The Unlock panel takes the same predicate**, `is_editable` (plus
+  "not mid-edit"), and is *suppressed*, not rendered disabled, so a
+  locked page carries no `Save labels`. The one addition is the label editor's second
   position, which renders on the complement so a locked page can still
   show the labels without offering the control.
 
