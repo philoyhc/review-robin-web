@@ -43,7 +43,7 @@ author, marked *re-checked*) also ran it.
 
 **Medium**
 
-- **A16 / Ac1** — **2026-10-05: all or nothing, the fixer's choice with no ruling asked; fix queued.** **The Instrument card's Save is not atomic.** Band 1,
+- ~~**A16 / Ac1**~~ — **2026-10-05: all or nothing, the fixer's choice with no ruling asked. Done in #2834.** **The Instrument card's Save is not atomic.** Band 1,
   Link 3, self-review, column widths, sort, identity and visibility commit
   in service calls before the Band 2 snapshot is validated
   (`routes_operator/_instruments.py` `/save`), so a 422 for a bad
@@ -210,7 +210,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **A13** low trim reviewer-surface.md:1532-1533; sort_by_reviewee.md:280,208; participant_model.md:70-71,73
 - **A14** low trim plan slice ids participant_model.md:70,73,100,130,161,182-183; reviewer-surface.md:1352,1449,1454
 - **A15** low spec sort_by_reviewee.md:338,371 "four rosters" vs three (observers unsorted)
-- **A16** low author instruments.md:1104-1106,1395-1396 bad row 422 edits intact vs non-atomic save (=Ac1)
+- ~~**A16**~~ low author instruments.md:1104-1106,1395-1396 bad row 422 edits intact vs non-atomic save (=Ac1) — **Done in #2834.**
 - ~~**A17**~~ low spec visibility_policy.md:128-139 §4.1 legacy rows only handled for Replicate (=Ac2) — **Done in #2833.**
 
 **B — assignments, workflow, lifecycle, Validate**
