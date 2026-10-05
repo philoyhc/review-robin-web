@@ -569,8 +569,8 @@ Stated plainly so the card copy and the PR description stay honest:
   rehydrated.** A String field with no maximum stores any length and the
   responses extract writes it out, but the `csv` module refuses a cell
   that long, so the set is refused ([§3.3](#33-pre-flight-validation-mandatory)).
-  Raising the parser's limit or capping answers is the author's call
-  (findings Dc9).
+  Raising the parser's limit or capping answers is declined while
+  Rehydrate stays disabled (findings Dc9).
 - **Group-scoped instruments / self-reviews** reconstruct correctly as
   long as the rule sets + `group_kind` in `settings.csv` regenerate the
   same graph. Where they do not, the affected responses are dropped and

@@ -122,7 +122,7 @@ author, marked *re-checked*) also ran it.
   fall-back comes back an hour early (`_session_home.py`
   `_apply_session_config_form`); the lobby compares the box's text since
   #2832 (`sessions.datetime_box_unedited`). Code.
-- **Dc9** — A free-text answer with no maximum can be longer than the
+- ~~**Dc9**~~ — **Declined 2026-10-05 (author): Rehydrate is incomplete and not reachable (rehydrate_enabled is false), so a limit on it is moot.** A free-text answer with no maximum can be longer than the
   `csv` module's 131,072-character field limit: the responses extract
   writes it, and Rehydrate refuses the set (`spec/rehydrate.md` §9,
   since #2835). Author: raise the parser's limit or cap answers.
