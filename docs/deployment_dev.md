@@ -320,7 +320,7 @@ Admin page is the normal path):
 
 1. **Wiping the row usually fails.** `DELETE FROM users` does not
    cascade: `session_operators.user_id`,
-   `review_sessions.created_by_user_id` and
+   `sessions.created_by_user_id` and
    `audit_events.actor_user_id` reference `users.id` with no
    `ON DELETE`, so Postgres refuses the delete for any user who has
    owned or created a session or has an audit row. Use the `UPDATE`

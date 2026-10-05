@@ -103,7 +103,8 @@ retired [`archive/azure_provision.md`](archive/azure_provision.md).
 - **Deploy.** **GitHub Actions over OIDC federation** — no publish
   profiles or long-lived cloud credentials in GitHub. The pipeline is
   build → migrate → deploy; Alembic migrations run against Postgres
-  *before* the App Service swap, so the app never ships against a stale
+  *before* the package is deployed (straight to the `Production` slot;
+  there is no slot swap), so the app never ships against a stale
   schema.
 - **Observability.** The app writes structured JSON logs to stdout, one
   object per line (`app/logging_config.py`), which App Service's log

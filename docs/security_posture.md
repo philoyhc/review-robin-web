@@ -209,7 +209,9 @@ reviewer `save`/`submit` build the assignment index from
 written. Operator child-id routes 404 on cross-session ids via the
 `_require_*_in_session` helpers.
 
-**Result: no gaps found.**
+**Result:** no route trusts a client-supplied identity. The audit did
+miss one gap — the gates' 404/403 split leaked which session ids exist —
+since closed ("Session-id enumeration — found and closed" below).
 
 ## §5.7 Destructive-action audit
 
@@ -223,6 +225,8 @@ service writes an `audit_events` row).
 | Delete session (`/delete`, `/bulk-delete`, `/bulk-delete-archived`) | `confirm=true`, **plus `_require_not_ready`** on `/delete` (any state but `ready`); `/bulk-delete` skips sessions that are `ready` or `archived` (it accepts `draft`, `validated` and `expired`), and `/bulk-delete-archived` deletes only archived ones | `require_session_operator` / per-id check | ✓ |
 | Close / reopen session (`/activate`, `/revert`, `/workflow/activate`) | `acknowledge_warnings=true` on `/activate` when the readiness report has warnings (`/workflow/activate` sends those to the Validate page instead); `confirm=true` on `/revert` from `ready` or `expired` | `require_session_operator` | ✓ |
 | Replace reviewers / reviewees roster | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
+| Delete all reviewers / reviewees (`delete-all`) | `confirm=true` + response-loss ack | `require_session_operator` | ✓ |
+| Delete all observers (`delete-all`) | `confirm=true` only — nothing references an observer, so no response can be lost | `require_session_operator` (via `require_observers_enabled_session`) | ✓ |
 | Replace assignments (generate) | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
 | Replace relationships (`delete-all`) | `confirm=true` | `require_session_operator` | ✓ |
 | Replace settings (`/import-config`, Quick Setup Settings) — rebuilds every instrument, deleting assignments and responses | `confirm_replace` + response-loss ack (findings C3) | `require_session_operator` | ✓ |
@@ -378,11 +382,22 @@ another origin reaches the app with no auth cookie, fails Easy Auth's
 gate, and never hits a route handler. Top-level cross-origin GET
 navigation still sends the cookie (the `Lax` exception), but every
 route that changes state on the caller's say-so is a POST, so the GET
-exception isn't exploitable. The one GET that writes is Session Home:
-it runs `observe_scheduled_events` first, which fires the session's
-past-due scheduled activation, invites and reminders. It takes no input
-and does only what the session's own schedule already called for, so a
-forged navigation gains nothing.
+exception isn't exploitable. The GETs that write record or follow
+through on what is already set, never a caller's choice:
+
+- **Session Home** runs `observe_scheduled_events` first, which fires
+  the session's past-due scheduled activation, invites and reminders.
+- **Every extract download** (`/sessions/{id}/export/*` and the saved
+  data-shape `download.csv`) writes and commits its own audit row.
+- **`/me/invite/{token}`** records the invitation open
+  (`invitations.record_open`) once the signed-in email matches the
+  invited reviewer.
+- **The first authenticated request** from a new principal creates its
+  `users` row (`get_or_create_user`).
+
+None takes input that changes what is written, and a cross-origin page
+cannot read the response, so a forged navigation gains at most an audit
+row of a download its author never sees.
 
 **Verification.** The `SameSite=Lax` default has been App Service's
 behaviour since 2020 (Chrome 80). Confirm on the dev slot when
@@ -441,8 +456,9 @@ hardening ladder — they need the Azure portal or a later segment.
 Tracked in `guide/deferred_consolidated.md`. The infrastructure rows
 describe the dev slot (`docs/deployment_dev.md`). The NUS environment
 already has private endpoints for the Web App, Postgres and Key Vault,
-VNet integration, and Application Insights; its secrets are not yet in
-Key Vault (`docs/nus_azure_status.md`).
+VNet integration, and an Application Insights resource; nothing sends
+the app's logs to it yet, and its secrets are not yet in Key Vault
+(`docs/nus_azure_status.md`).
 
 | Item | Status |
 |---|---|

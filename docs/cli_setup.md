@@ -139,10 +139,12 @@ practice:
   forces the right one. Otherwise a `Contributor` role assignment
   on a resource group can silently target the wrong tenant's
   copy of you.
-- **`gh` scope for environment secrets.** `gh` defaults don't
-  include `admin:repo_hook` or environment-secret write. If
-  setting the `NUS_*` secrets (runbook §6.2) fails with 403, run
-  `gh auth refresh -s workflow,admin:repo_hook`.
+- **`gh` scope for the `NUS_*` secrets.** The deploy workflows
+  declare no `environment:`, so the `NUS_*` values (runbook §6.2)
+  are **repository** secrets and a repository variable — set them
+  with `gh secret set` / `gh variable set` without `--env`. If that
+  fails with 403, the token is short a scope: `gh auth status`
+  lists the ones it holds and `gh auth refresh -s <scope>` adds one.
 
 ---
 
