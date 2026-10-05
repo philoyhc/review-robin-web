@@ -215,6 +215,32 @@ def test_per_reviewee_round_trip_reserializes_identically(
     assert _data_rows(list(serialize_responses(db, dst))) == src_rows
 
 
+def test_a_short_row_is_dropped_with_a_reason_not_lost(db: Session) -> None:
+    """A non-blank row with fewer cells than the header used to be
+    skipped by the parse: neither loaded nor in ``dropped``, so the
+    operator's dropped-rows file never mentioned it (findings D18)."""
+    src, s_inst, s_field = _build(db, "short-src")
+    rvr = _reviewer(db, src, "r@e.edu")
+    a = _assignment(db, src, rvr, _reviewee(db, src, "a@e.edu", "A"), s_inst)
+    _response(db, a, s_field, "3")
+    rows = list(serialize_responses(db, src))
+    data = _data_rows(rows)
+    short = tuple(data[0][:5])
+    rows.append(short)
+
+    dst, d_inst, _ = _build(db, "short-dst")
+    d_rvr = _reviewer(db, dst, "r@e.edu")
+    _assignment(db, dst, d_rvr, _reviewee(db, dst, "a@e.edu", "A"), d_inst)
+
+    parsed = parse_responses_csv(_csv_bytes(rows))
+    result = load_responses(db, review_session=dst, rows=parsed)
+
+    assert result.responses == 1
+    assert len(result.dropped) == 1
+    assert result.dropped[0].raw == short
+    assert result.dropped[0].reason == "row has 5 of 21 columns"
+
+
 def test_a_pair_the_rules_did_not_generate_is_dropped_not_backfilled(
     db: Session,
 ) -> None:

@@ -414,7 +414,9 @@ generation did not produce an assignment for it. A row is also dropped
 when it answers a governed field whose branch the parent field's
 imported answer closes ("its branch is closed by the parent field's
 answer") — reported once per row even when a group row fanned out.
-Nothing is created to make a row fit.
+A non-blank row with fewer cells than the 21-column header is dropped
+as `row has N of 21 columns`; a blank row is not a row. Nothing is
+created to make a row fit.
 
 `ResponseLoadResult.dropped` carries each dropped row with its reason, and
 `serialize_dropped_responses` renders the set as a CSV: the responses

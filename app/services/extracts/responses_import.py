@@ -101,6 +101,10 @@ class _ParsedResponseRow:
     # The source row, kept verbatim so a dropped row can be written back
     # out byte-identical to what the operator uploaded.
     raw: tuple[str, ...] = ()
+    # Set when the row could not be read at all (too few cells), so the
+    # load drops it with this reason rather than the parse losing it
+    # (findings D18).
+    malformed_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -128,8 +132,10 @@ def parse_responses_csv(content: bytes) -> list[_ParsedResponseRow]:
     The file is a single field-dictionary preamble, a blank row, the
     21-column header, then the data table (``serialize_responses``). We
     stream the reader, skip everything up to and including the header,
-    then read the data rows. Blank rows and short rows are skipped;
-    a missing header is a hard error.
+    then read the data rows. Blank rows are skipped; a non-blank row
+    with fewer cells than the header is kept with ``malformed_reason``
+    set, so the load reports it as dropped instead of the file losing
+    it silently. A missing header is a hard error.
     """
     text = content.decode("utf-8-sig")
     reader = csv.reader(io.StringIO(text))
@@ -142,22 +148,28 @@ def parse_responses_csv(content: bytes) -> list[_ParsedResponseRow]:
             continue
         if not raw or all(not cell for cell in raw):
             continue
+        malformed_reason = None
+        cells = raw
         if len(raw) < len(HEADER):
-            continue
+            malformed_reason = (
+                f"row has {len(raw)} of {len(HEADER)} columns"
+            )
+            cells = raw + [""] * (len(HEADER) - len(raw))
         parsed.append(
             _ParsedResponseRow(
-                reviewer_email=raw[_C_REVIEWER_EMAIL],
-                reviewee_name=raw[_C_REVIEWEE_NAME],
-                reviewee_email=raw[_C_REVIEWEE_EMAIL],
-                instrument_name=raw[_C_INSTRUMENT_NAME],
-                instrument_short_label=raw[_C_INSTRUMENT_SHORT],
-                field_key=raw[_C_FIELD_KEY],
-                value=raw[_C_VALUE],
-                saved_at=raw[_C_SAVED_AT],
-                submitted_at=raw[_C_SUBMITTED_AT],
-                version=raw[_C_VERSION],
-                flavour=raw[_C_FLAVOUR],
+                reviewer_email=cells[_C_REVIEWER_EMAIL],
+                reviewee_name=cells[_C_REVIEWEE_NAME],
+                reviewee_email=cells[_C_REVIEWEE_EMAIL],
+                instrument_name=cells[_C_INSTRUMENT_NAME],
+                instrument_short_label=cells[_C_INSTRUMENT_SHORT],
+                field_key=cells[_C_FIELD_KEY],
+                value=cells[_C_VALUE],
+                saved_at=cells[_C_SAVED_AT],
+                submitted_at=cells[_C_SUBMITTED_AT],
+                version=cells[_C_VERSION],
+                flavour=cells[_C_FLAVOUR],
                 raw=tuple(raw),
+                malformed_reason=malformed_reason,
             )
         )
     if not header_seen:
@@ -298,6 +310,9 @@ def load_responses(
         )
 
     for row in rows:
+        if row.malformed_reason is not None:
+            _drop(row, row.malformed_reason)
+            continue
         reviewer = reviewers.get(normalize_email(row.reviewer_email))
         if reviewer is None:
             _drop(row, f"unknown reviewer {row.reviewer_email!r}")

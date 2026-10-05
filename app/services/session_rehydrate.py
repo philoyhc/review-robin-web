@@ -307,6 +307,9 @@ def analyze_rehydrate_set(
     unknown_instruments: set[str] = set()
     unknown_fields: set[str] = set()
     for row in parsed:
+        if row.malformed_reason is not None:
+            # Unreadable; the load drops and reports it (findings D18).
+            continue
         rvr = normalize_email(row.reviewer_email)
         if rvr and rvr not in reviewer_emails:
             unknown_reviewers.add(rvr)
