@@ -66,6 +66,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.services import instruments as instruments_service
+from app.services import participant_tokens
 from app.web.views._instruments import instrument_heading, numeric_column_ch_width
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
@@ -445,6 +446,7 @@ def build_reviewee_results_context(
             response.value if response.value is not None else ""
         )
 
+    tokenizer = participant_tokens.ParticipantTokenizer(review_session)
     sections: list[ResultsSection] = []
     total_instrument_count = len(instruments)
     for position, instrument in enumerate(instruments, start=1):
@@ -614,15 +616,29 @@ def build_reviewee_results_context(
             identity_width_px = None
             has_custom_widths = False
         else:
-            # Sort rows by reviewer name so the reading order is
-            # stable + alphabetical.
-            ordered_reviewer_ids = sorted(
-                row_order[instrument.id],
-                key=lambda rid: (
-                    (reviewer_by_id[rid].name or "").lower(),
-                    rid,
-                ),
-            )
+            # Raw rows sort by reviewer name so the reading order is
+            # stable + alphabetical. Anonymized rows must not: a
+            # reviewee who knows the roster could read a dashed row's
+            # reviewer off its alphabetical slot (Ac3). They sort by
+            # the reviewer's participant token instead — stable across
+            # renders, but a salted hash, so it carries neither the
+            # name nor the roster's insertion order (``Reviewer.id``,
+            # which an alphabetical import would make a proxy for the
+            # name). Submission order was rejected: it shifts as
+            # reviewers submit and leaves unsubmitted rows unordered.
+            if picked_mode == "anonymized":
+                ordered_reviewer_ids = sorted(
+                    row_order[instrument.id],
+                    key=lambda rid: (tokenizer.token("reviewer", rid), rid),
+                )
+            else:
+                ordered_reviewer_ids = sorted(
+                    row_order[instrument.id],
+                    key=lambda rid: (
+                        (reviewer_by_id[rid].name or "").lower(),
+                        rid,
+                    ),
+                )
             for reviewer_id in ordered_reviewer_ids:
                 reviewer = reviewer_by_id[reviewer_id]
                 values = [

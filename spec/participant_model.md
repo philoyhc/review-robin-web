@@ -74,8 +74,8 @@ Three surfaces are participant-role-specific. All three render the reviewer-surf
 
 `GET /me/sessions/{id}/results` renders the reviewer-surface chrome plus a list of per-instrument sections built by `app/web/views/_reviewee_results.py::build_reviewee_results_context`. Sections appear only for instruments whose `reviewee` visibility policy row resolves to a mode and that have at least one included assignment to this reviewee; the section's mode is one of:
 
-- **`raw`** — one row per reviewer with an included assignment to the reviewee (an excluded pair has no row); Reviewer name + email shown in the identity column.
-- **`anonymized`** — same per-row table; every identification cell (Reviewer name, email, display-field cells) collapsed to a muted em-dash.
+- **`raw`** — one row per reviewer with an included assignment to the reviewee (an excluded pair has no row); Reviewer name + email shown in the identity column. Rows sort by reviewer name (case-insensitive), then reviewer id.
+- **`anonymized`** — same per-row table; every identification cell (Reviewer name, email, display-field cells) collapsed to a muted em-dash. Rows sort by the reviewer's participant token (`app/services/participant_tokens.py`), then reviewer id — never by name, whose alphabetical slot would identify a dashed row, nor by reviewer id, which follows roster import order.
 - **`summarized`** — per-instrument sections collapse to one aggregate row. The identity column header reads "Summary" and the cell carries two counts: "Number of reviewers assigned" and "Number of reviewers with some responses". Response-field cells render per data type:
   - `Integer` / `Decimal`: Average, Median, Min, Max, (based on N responses). At zero responses, all labels render with em-dash placeholders.
   - `List`: per-choice frequency lines e.g. `A: 2 (33.3%)`. Every declared option surfaces including zeros.
