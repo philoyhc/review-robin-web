@@ -220,7 +220,7 @@ Raises **HTTP 409 Conflict** when the session is not `draft` or
 roster import, roster delete-all, relationships CRUD, assignment
 generate, etc.) call this **first**.
 
-Five exceptions to that list, all easy to mis-read:
+Six exceptions to that list, all easy to mis-read:
 
 - **Quick Setup and the settings import do not call this helper.**
   Their handlers in `app/web/routes_operator/_quick_setup.py` test
@@ -228,6 +228,12 @@ Five exceptions to that list, all easy to mis-read:
   return the `lifecycle` reason token, which the route turns into a
   303 carrying `quick_setup_error=…&quick_setup_reason=lifecycle`
   rather than a 409.
+
+- **The lobby expander's Save (`{id}/lobby-edit`) does not call this
+  helper either.** It tests `lifecycle.is_editable` inline — the same
+  predicate, Session Home's — and off it **ignores** Name / Code /
+  Deadline rather than refusing the post, so its always-editable Tags
+  still save (`spec/sessions_overview.md`).
 
 - **Instrument CRUD does not call this helper.** Its route
   sites call `_require_instrument_editable` →

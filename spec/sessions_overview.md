@@ -254,17 +254,21 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   shares its route and service with the Extract data page's Archive
   card, whose section in `spec/extract_data.md` (*`Archive session`
   card*) owns the purge options and their order.
-- **Name / Code / Deadline edit in `draft` only; Tags in any state.**
-  On any other lifecycle state the expander seeds those three boxes
-  with the row's values and renders them `disabled`, leaving Tags
-  live. The gate is enforced on the server too: `{id}/lobby-edit`
-  always applies the tags through `session_tags.set_tags`, but calls
+- **Name / Code / Deadline edit in `draft` or `validated`; Tags in
+  any state.** The gate is `lifecycle.is_editable`, the one Session
+  Home's Details card uses, so the two pages agree. On any other
+  lifecycle state the expander seeds those three boxes with the row's
+  values and renders them `disabled`, leaving Tags live. The gate is
+  enforced on the server too: `{id}/lobby-edit` always applies the
+  tags through `session_tags.set_tags`, but calls
   `sessions.update_session` for name, code and deadline only when
-  `lifecycle.is_draft` holds, and otherwise ignores those fields
-  rather than refusing the post, so a stale form cannot slip past the
-  gate. The draft write starts from the session's stored values
+  `is_editable` holds **and** one of them changed
+  (`sessions.payload_changes_session`), and otherwise ignores those
+  fields rather than refusing the post, so a stale form cannot slip
+  past the gate. A changed field on `validated` demotes the session to
+  `draft`, as on Session Home; a tags-only Save does not. The write starts from the session's stored values
   (`sessions.edit_payload`), so a Save changes those three fields, plus
-  the tags, and nothing else on the session. In `draft` a code another
+  the tags, and nothing else on the session. In `draft` or `validated` a code another
   session holds, a name or code empty or too long for its column, a
   malformed deadline, or a changed deadline that does not fit the
   stored schedule answers **422** before the tags are written, so a
@@ -272,8 +276,10 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   (`scheduled_events.validate_deadline_change`) is the two Session Home
   runs on End: ordering against the stored Start and Release-from, and
   each stored reminder offset re-resolved on the new End. An unchanged
-  deadline skips it. This is narrower than Session Home's details card,
-  whose `/config` accepts `draft` and `validated`.
+  deadline skips it, and a deadline box that still names the stored
+  deadline's minute counts as unchanged
+  (`sessions.keep_stored_if_same_minute`), so re-saving a stored value
+  with seconds is not an edit.
 - **Tags have four write surfaces, two of them off this page.** The
   lobby's two are the row expander's `{id}/lobby-edit` and the toolbar's
   `bulk-tags`; the others are a **Tags box on the Create page**, so a

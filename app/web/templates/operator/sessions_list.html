@@ -500,7 +500,10 @@
           var node = singleTpl.content.firstElementChild.cloneNode(true);
           node.querySelector("td").colSpan = colCount;
           var cells = row.children;
-          var isDraft = row.getAttribute("data-status") === "draft";
+          // `is_editable` — draft or validated, the gate the route and
+          // Session Home's Details card use (findings B2).
+          var rowStatus = row.getAttribute("data-status");
+          var isEditable = rowStatus === "draft" || rowStatus === "validated";
           var fields = {
             name: cells[0].textContent.trim(),
             code: cells[1].textContent.trim(),
@@ -527,8 +530,9 @@
               // permanently unequal to itself, and every sort on a
               // lobby with a selection would prompt.
               input.setAttribute("data-seeded-value", input.value);
-              // Name / Code / Deadline edit in draft only; Tags always.
-              if (key !== "tags" && !isDraft) input.disabled = true;
+              // Name / Code / Deadline edit in draft or validated;
+              // Tags always.
+              if (key !== "tags" && !isEditable) input.disabled = true;
             }
           );
           function fieldValue(key) {

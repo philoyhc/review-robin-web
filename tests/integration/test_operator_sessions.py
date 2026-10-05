@@ -330,11 +330,11 @@ def test_lobby_edit_updates_draft_session_and_tags(
     ]
 
 
-def test_lobby_edit_skips_name_code_when_not_draft(
+def test_lobby_edit_skips_name_code_when_not_editable(
     client: TestClient, db: Session
 ) -> None:
-    """Off draft, the lobby-edit route ignores Name / Code (the boxes
-    render read-only) but still applies the always-editable tags."""
+    """Off `is_editable`, the lobby-edit route ignores Name / Code (the
+    boxes render read-only) but still applies the always-editable tags."""
     client.post(
         "/operator/sessions",
         data={"name": "Locked", "code": "locked-1"},
@@ -423,6 +423,93 @@ def _lobby_save(
         data={"name": name, "code": code, "deadline": deadline, "tags": tags},
         follow_redirects=False,
     )
+
+
+def _validated_session(client: TestClient, db: Session, code: str) -> int:
+    client.post(
+        "/operator/sessions",
+        data={"name": "Checked", "code": code},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == code)
+    ).scalar_one()
+    review_session.status = "validated"
+    db.commit()
+    return review_session.id
+
+
+def test_lobby_edit_applies_name_code_on_validated(
+    client: TestClient, db: Session
+) -> None:
+    """The expander's gate is `is_editable`, Session Home's (findings
+    B2): on `validated` Name / Code apply, and the edit demotes the
+    session to `draft` exactly as the same edit on Session Home does."""
+    session_id = _validated_session(client, db, "val-edit-1")
+
+    response = client.post(
+        f"/operator/sessions/{session_id}/lobby-edit",
+        data={"name": "Renamed", "code": "val-edit-2", "deadline": "", "tags": ""},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    db.expire_all()
+    updated = db.get(ReviewSession, session_id)
+    assert (updated.name, updated.code) == ("Renamed", "val-edit-2")
+    assert updated.status == "draft"
+
+
+def test_lobby_tags_only_save_keeps_validated(
+    client: TestClient, db: Session
+) -> None:
+    """A Save that changes only the tags writes no session edit, so it
+    does not cost the session its validation."""
+    session_id = _validated_session(client, db, "val-tags-1")
+
+    response = client.post(
+        f"/operator/sessions/{session_id}/lobby-edit",
+        data={"name": "Checked", "code": "val-tags-1", "deadline": "", "tags": "t1"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    db.expire_all()
+    assert db.get(ReviewSession, session_id).status == "validated"
+    assert session_tags.tags_for_sessions(db, [session_id])[session_id] == ["t1"]
+
+
+def test_lobby_tags_only_save_keeps_validated_with_a_seconds_deadline(
+    client: TestClient, db: Session
+) -> None:
+    """The expander seeds Deadline at minute precision, so a stored
+    deadline with seconds comes back truncated. That re-submission is
+    not an edit: the session stays `validated` and keeps its deadline."""
+    from datetime import datetime, timezone
+
+    session_id = _validated_session(client, db, "val-secs-1")
+    stored = datetime(2031, 3, 4, 23, 59, 59, tzinfo=timezone.utc)
+    review_session = db.get(ReviewSession, session_id)
+    review_session.deadline = stored
+    review_session.display_timezone = "UTC"
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{session_id}/lobby-edit",
+        data={
+            "name": "Checked",
+            "code": "val-secs-1",
+            "deadline": "2031-03-04T23:59",
+            "tags": "t2",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303, response.text
+    db.expire_all()
+    updated = db.get(ReviewSession, session_id)
+    assert updated.status == "validated"
+    assert updated.deadline.replace(tzinfo=timezone.utc) == stored
 
 
 def test_lobby_edit_keeps_every_field_it_does_not_show(

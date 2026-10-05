@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -205,6 +207,55 @@ def edit_payload(review_session: ReviewSession, **changes: object) -> SessionCre
     fields = {name: getattr(review_session, name) for name in _UPDATED_FIELDS}
     fields.update(changes)
     return SessionCreate(**fields)
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
+def keep_stored_if_same_minute(
+    stored: datetime | None, submitted: datetime | None
+) -> datetime | None:
+    """``stored`` when ``submitted`` names the same minute, else
+    ``submitted``.
+
+    A ``datetime-local`` box carries minutes only, so a stored value
+    with seconds (a Settings CSV can write one) reads back one
+    truncation away from itself. A form that only re-submits the box's
+    seeded value must not count as an edit — on a ``validated`` session
+    that would demote it (findings B2)."""
+    if stored is None or submitted is None:
+        return submitted
+    if _as_utc(stored).replace(second=0, microsecond=0) == _as_utc(
+        submitted
+    ).replace(second=0, microsecond=0):
+        return stored
+    return submitted
+
+
+def payload_changes_session(
+    review_session: ReviewSession, payload: SessionCreate
+) -> bool:
+    """Whether applying ``payload`` would change any field
+    ``update_session`` writes.
+
+    Datetimes compare as instants: one side can be naive UTC (a parsed
+    form value; SQLite's stored value) while the other is aware
+    (Postgres's ``timestamptz``), and a naive and an aware datetime are
+    never ``==``, so a plain comparison would report an unchanged
+    deadline as changed.
+    ``update_session`` demotes a ``validated`` session, so a caller that
+    saves something else alongside (the lobby expander's tags) asks this
+    first rather than demoting on an edit that changed nothing (findings
+    B2)."""
+
+    def _norm(value: object) -> object:
+        return _as_utc(value) if isinstance(value, datetime) else value
+
+    return any(
+        _norm(getattr(review_session, name)) != _norm(getattr(payload, name))
+        for name in _UPDATED_FIELDS
+    )
 
 
 def update_session(
