@@ -411,3 +411,34 @@ def test_a_non_email_reviewee_identifier_confers_no_role(
     body = anon.get("/me").text
     assert 'class="pill pill-role-reviewee"' not in body
     assert f"/me/sessions/{review_session.id}/results" not in body
+    assert (
+        anon.get(f"/me/sessions/{review_session.id}/results").status_code
+        == 404
+    )
+
+
+def test_padded_reviewer_and_observer_emails_still_match(
+    client: TestClient, db: Session
+) -> None:
+    """The /me reviewer and observer arms trim as their gates do
+    (``normalize_email`` strips both sides), so a stored address with
+    surrounding spaces still earns its pill."""
+    review_session = _make_session_and_activate(client, db, code="me-pad2")
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Alice",
+            email="  Alice@Example.edu ",
+        )
+    )
+    db.add(
+        Observer(
+            session_id=review_session.id,
+            email=" alice@example.edu  ",
+            display_name="Alice",
+        )
+    )
+    db.commit()
+    body = client.get("/me").text
+    assert 'class="pill pill-role-reviewer"' in body
+    assert 'class="pill pill-role-observer"' in body

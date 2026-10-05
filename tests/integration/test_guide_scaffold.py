@@ -403,6 +403,38 @@ def test_an_ungranted_reviewee_is_bounced_like_a_stranger(
     assert "for_reviewees" in body.text or "For reviewees" in body.text
 
 
+def test_a_padded_reviewee_identifier_reaches_the_guide(
+    client: TestClient, db: Session, make_client, grant_reviewee_visibility
+) -> None:
+    """`disclosable_roles` trims the stored identifier as the
+    `/results` gate does, so `/guide` agrees with `/me` and `/results`
+    on a padded address."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "S", "code": "guide-pad", "description": ""},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guide-pad")
+    ).scalar_one()
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Dana",
+            email_or_identifier="  Dana@Example.edu ",
+        )
+    )
+    db.commit()
+    grant_reviewee_visibility(review_session)
+    dana = make_client(
+        AuthenticatedUser(
+            principal_id="dana-oid", email="dana@example.edu",
+            name="Dana", provider="aad",
+        )
+    )
+    assert dana.get("/guide", follow_redirects=False).status_code == 200
+
+
 def test_the_chrome_hides_the_guide_link_for_a_no_audience_viewer(
     client: TestClient, db: Session, make_client, bob
 ) -> None:

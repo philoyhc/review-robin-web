@@ -99,7 +99,7 @@ def reviewer_dashboard(
             .join(ReviewSession, ReviewSession.id == Reviewer.session_id)
             .where(
                 Reviewer.status == "active",
-                func.lower(Reviewer.email) == user_email,
+                func.lower(func.trim(Reviewer.email)) == user_email,
             )
         ).all()
     )
@@ -120,7 +120,7 @@ def reviewer_dashboard(
             .join(ReviewSession, ReviewSession.id == Observer.session_id)
             .where(
                 Observer.status == "active",
-                func.lower(Observer.email) == user_email,
+                func.lower(func.trim(Observer.email)) == user_email,
             )
         ).all()
     )

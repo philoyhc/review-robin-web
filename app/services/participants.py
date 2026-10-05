@@ -91,7 +91,7 @@ def disclosable_roles(db: Session, email: str | None) -> frozenset[str]:
 
     if db.execute(
         select(Reviewer.id)
-        .where(func.lower(Reviewer.email) == normalized)
+        .where(func.lower(func.trim(Reviewer.email)) == normalized)
         .where(Reviewer.status == "active")
         .limit(1)
     ).first():
@@ -99,7 +99,7 @@ def disclosable_roles(db: Session, email: str | None) -> frozenset[str]:
 
     if db.execute(
         select(Observer.id)
-        .where(func.lower(Observer.email) == normalized)
+        .where(func.lower(func.trim(Observer.email)) == normalized)
         .where(Observer.status == "active")
         .limit(1)
     ).first():
@@ -115,7 +115,7 @@ def disclosable_roles(db: Session, email: str | None) -> frozenset[str]:
     reviewee_rows = db.execute(
         select(Reviewee, ReviewSession)
         .join(ReviewSession, ReviewSession.id == Reviewee.session_id)
-        .where(func.lower(Reviewee.email_or_identifier) == normalized)
+        .where(func.lower(func.trim(Reviewee.email_or_identifier)) == normalized)
         .where(Reviewee.status == "active")
     ).all()
     if any(
