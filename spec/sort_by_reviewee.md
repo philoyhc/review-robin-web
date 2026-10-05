@@ -335,9 +335,10 @@ Key landmarks in the codebase:
   `<table data-rrw-sortable="...">`, `th.rrw-sortable`,
   `data-sort-key`, `data-sort-value` cells, and
   `<tbody class="rrw-rows">`.
-- **Wrapper rows need a resolver.** The three Setup rosters hand
+- **Wrapper rows need a resolver.** Reviewers and Reviewees hand
   `apply_cookie_sort` rows whose sort keys are their own attributes,
-  so a plain `getattr` suffices. Invitations and Responses do not:
+  so their resolvers are a plain `getattr`; Relationships' resolver
+  also maps `reviewer` / `reviewee` to the linked person's name. Invitations and Responses do not:
   their rows are per-reviewer / per-reviewee **view wrappers**, so
   `_operations.py` passes a resolver that reaches through
   (`row.reviewer.name`, `row.reviewee.tag_1`) and derives the
