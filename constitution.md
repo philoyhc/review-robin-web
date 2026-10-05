@@ -47,9 +47,10 @@ happened, never whether it was right.
 
 ## III. Maker and checker are separate
 
-Whatever writes a change does not check it. A separate, read-only reader
-opens the governing spec and reads the diff cold — reporting what the diff
-does that the spec does not describe, what the commit message claims that
+Whatever writes a change does not check it. A separate reader, read-only
+by its charter, opens the governing spec and reads the diff cold —
+reporting what the diff does that the spec does not describe, what the
+commit message claims that
 the diff does not support, and scope beyond the stated purpose. Reporting
 nothing is a valid result; inventing findings to look thorough is worse
 than no reader. The reader is not capped at a smaller model than the

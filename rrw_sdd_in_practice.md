@@ -51,7 +51,7 @@ It was replaced by a *contract* spec, `spec/rrw_functional_spec.md`, with a per-
 
 ## 4. The three-layer document model
 
-RRW keeps three documentation folders. Each has a README that states its question and indexes its contents, and each has an `archive/` subfolder with a hand-maintained index. The split is by *question answered*, not by audience or format:
+RRW keeps three documentation folders. Each has a README that states its question and indexes its contents, and each has an `archive/` subfolder with a hand-maintained index: its own README in `spec/` and `guide/`, rows in `docs/README.md` for `docs/`. The split is by *question answered*, not by audience or format:
 
 | Folder | Answers | Authority | At `3559c7a7` (2026-09-23) |
 |---|---|---|---|
@@ -160,9 +160,9 @@ One more consequence is operational: **a green `ruff` is not evidence**. Most of
 
 ### 6.4 Separate readers
 
-**Decision.** A change is read by something other than what wrote it. Two readers are checked-in agent definitions under `.claude/agents/`, separate from whichever agent wrote the code. `diff-reviewer` is given no edit tools; `spec-writer` has them and is held to `spec/` by its charter, not by construction:
+**Decision.** A change is read by something other than what wrote it. Two readers are checked-in agent definitions under `.claude/agents/`, separate from whichever agent wrote the code. Neither is confined by construction: both have `Bash`. `diff-reviewer` has no `Write` or `Edit` and is read-only by its charter ("You never edit: report, don't fix"); `spec-writer` has them and is held to `spec/` by its charter:
 
-- **`spec-writer`** updates `spec/` to match what shipped **at a close**, may write only under `spec/`, and must "flag drift … rather than silently rewriting". Outside a close it verifies and reports.
+- **`spec-writer`** updates `spec/` to match what shipped **at a close**, may write only under `spec/`, and outside a close verifies and reports: its charter says "Do not re-align the spec to the code" and "Report it".
 - **`diff-reviewer`** reads a PR diff cold, with no prior context, and checks it against the governing spec. Among other things, it reports claims in the commit message that the diff does not support and scope beyond the stated purpose, and it reports nothing at all if nothing is wrong. Its charter says "inventing findings to look thorough makes you worse than no reviewer". It carries no model pin, deliberately, because a reviewer should not be capped at a smaller model than the author.
 
 A third reader is external: Codex, a different vendor's model, reviews pull requests automatically. Its own summary comment names the triggers as a PR opened for review or a draft marked ready. It commented on 159 pull requests opened since 2026-09-14, against 213 merged in that window. From June to 2026-09-13 the figures were 64 against 658. It reads most slices, not all of them.
