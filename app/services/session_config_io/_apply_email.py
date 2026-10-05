@@ -30,9 +30,14 @@ def _apply_email_kv(
         # unknown slot rather than a write to this one.
         if kind != "responses_received":
             raise _ParseError(f"unknown email override slot {field_path!r}")
-        plan.email_overrides[RESPONSES_RECEIVED_ENABLED_KEY] = _parse_bool(
-            value, default=True
-        )
+        # Stored the way ``set_responses_received_enabled`` stores it:
+        # an explicit ``False`` only. Writing ``True`` made every
+        # imported session report a custom override it never had
+        # (findings D12).
+        if _parse_bool(value, default=True):
+            plan.email_overrides.pop(RESPONSES_RECEIVED_ENABLED_KEY, None)
+        else:
+            plan.email_overrides[RESPONSES_RECEIVED_ENABLED_KEY] = False
         return
     legacy_key = f"{kind}_{slot}"
     if legacy_key not in OVERRIDE_KEYS:
