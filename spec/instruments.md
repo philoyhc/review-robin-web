@@ -671,9 +671,11 @@ reviewee or pair-context tags. The cells additively define the
 **group boundary**: reviewees sharing the same values across
 every picked tag form one group.
 
-The disabled "THE SAME" button inside the builder is a visual
-marker: boundary tags compose additively (every tag matters), and
-group membership is "the reviewees agreeing on all of these".
+The builder's disabled buttons are visual markers: "THE SAME"
+beside the + button, and an "AND" on every boundary cell but the
+last (the last carries the X). They say that boundary tags compose
+additively (every tag matters) and that group membership is "the
+reviewees agreeing on all of these".
 
 The boundary cells encode into `Instrument.group_kind` (a
 `String(32)`) via `encode_group_kind / decode_group_kind` in
