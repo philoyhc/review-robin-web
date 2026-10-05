@@ -2,8 +2,8 @@
 (findings B2, 2026-10-05).
 
 The lobby expander saves tags and, on an editable session, Name / Code /
-Deadline. ``update_session`` demotes a ``validated`` session, so the
-route calls it only when something changed — which has to survive a
+Deadline, and calls ``update_session`` only when one of those changed,
+so a tags-only Save writes no session edit. That has to survive a
 naive-vs-aware deadline (a parsed form value against Postgres's
 ``timestamptz``), a minute-precision box re-submitting a stored
 deadline that has seconds, and a deadline in the repeated hour after a

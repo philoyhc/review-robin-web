@@ -243,25 +243,47 @@ def test_assignments_generate_invalidates_validated(
     _assert_invalidated(db, session, expected_reason="assignments_generated")
 
 
-def test_session_edit_invalidates_validated(
+# --------------------------------------------------------------------------- #
+# D2 carve-outs — actions that do NOT invalidate
+# --------------------------------------------------------------------------- #
+
+
+def test_session_details_edit_does_not_invalidate(
     client: TestClient, db: Session
 ) -> None:
-    session = _validated_session(client, db, code="inv-se")
+    """findings Cc5 (author's ruling, 2026-10-05): no Details field can
+    change the readiness verdict, so a Details save keeps `validated`."""
+    session = _validated_session(client, db, code="noinv-se")
 
     response = client.post(
         f"/operator/sessions/{session.id}/config",
-        data={"name": "Renamed", "code": "inv-se"},
+        data={
+            "name": "Renamed",
+            "code": "noinv-se-2",
+            "description": "New description",
+            "help_contact": "help@x.edu",
+            "deadline": "2031-03-04T23:59",
+            "display_timezone": "Asia/Singapore",
+            "responses_release_at": "2031-03-05T09:00",
+            "responses_release_until": "2031-03-12T09:00",
+            "observers_enabled": "true",
+        },
         follow_redirects=False,
     )
     assert response.status_code == 303
 
-    _assert_invalidated(db, session, expected_reason="session_edited")
-    assert session.name == "Renamed"
-
-
-# --------------------------------------------------------------------------- #
-# D2 carve-outs — actions that do NOT invalidate
-# --------------------------------------------------------------------------- #
+    db.refresh(session)
+    assert (session.name, session.code) == ("Renamed", "noinv-se-2")
+    assert session.display_timezone == "Asia/Singapore"
+    assert session.responses_release_at is not None
+    assert session.observers_enabled is True
+    assert session.status == "validated"
+    assert not db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "session.invalidated",
+            AuditEvent.session_id == session.id,
+        )
+    ).first()
 
 
 def test_delete_data_does_not_invalidate(

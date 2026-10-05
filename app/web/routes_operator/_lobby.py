@@ -295,9 +295,8 @@ def lobby_edit_submit(
     ``validated``) — the gate Session Home's Details card uses, so the
     two pages agree (findings B2); the expander renders those boxes
     read-only otherwise, and this route ignores them server-side so a
-    stale post can't slip past that gate. On ``validated`` a change to
-    any of the three demotes the session to ``draft``, as the same edit
-    on Session Home does; a Save that changes only the tags does not.
+    stale post can't slip past that gate. No change here demotes a
+    ``validated`` session (findings Cc5, ``sessions.update_session``).
     """
     correlation_id = request_correlation_id()
 
