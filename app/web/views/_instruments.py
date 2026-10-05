@@ -493,12 +493,8 @@ def _new_model_band2_state(
     preview row builder needs to compose a reviewer-surface row.
 
     Filters out display fields whose underlying source column has no
-    populated value in the session — same "Fields with data" UX as
-    the Reviewers / Reviewees / Relationships Setup pages (which
-    consume the parallel
-    :func:`app.services.assignments.reviewee_fields_with_data` family
-    over the shared :func:`app.services._queries.slot_has_data`
-    primitive).
+    populated value in the session, through the shared
+    :func:`app.services._queries.slot_has_data` primitive.
 
     ``active_reviewees`` is fetched once per page render and passed
     in by :func:`build_instruments_context` — see Segment 18J Wave 1

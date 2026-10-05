@@ -56,8 +56,8 @@ def slot_has_data(
 
     Shared primitive used by:
 
-    - The Setup pages' "Fields with data" pills
-      (``app.services.assignments.reviewer_fields_with_data`` etc.).
+    - :func:`tag_slot_presence`, which answers the column-visibility
+      chips on the Assignments, Invitations and Responses pages.
     - Band 1's tag-slot dropdowns on the new-model instrument card
       (``app.web.views._instruments.new_model_usable_tags``).
     - Band 2's "Review Instrument" preview pills
@@ -65,8 +65,8 @@ def slot_has_data(
 
     ``active_only=True`` restricts to rows where ``status == "active"``,
     matching the rule engine's view of pair-context tags (only active
-    relationships contribute predicate values). Setup-page callers
-    leave it ``False`` — they show imported data regardless of status.
+    relationships contribute predicate values). Callers asking about
+    reviewer or reviewee columns leave it ``False``.
     """
     model = column.class_
     q = (
