@@ -704,3 +704,39 @@ def test_archived_still_says_why_the_observers_roster_is_frozen(
 
     assert '<div class="card lock">' in body
     assert "The observers cannot be modified because the session is archived" in body
+
+
+_ROW_MODEL = {"reviewers": Reviewer, "reviewees": Reviewee, "relationships": Relationship}
+_EDIT_FORM = {
+    "reviewers": "reviewer-edit-form",
+    "reviewees": "reviewee-edit-form",
+    "relationships": "relationship-edit-form",
+}
+
+
+@pytest.mark.parametrize("page", FROZEN_PAGES)
+@pytest.mark.parametrize("status", FROZEN)
+def test_frozen_pages_open_no_editor_even_by_hand_crafted_url(
+    db: Session, client: TestClient, page: str, status: str
+) -> None:
+    """Observers' rule above, for the three pages that freeze at
+    `is_editable`: `create` / `update` take `_require_editable`, so a
+    typed `?add=1` or `?edit_id=` must not render an editor whose Save
+    answers 409 (findings C3). The editor was suppressed on `ready`
+    alone, so `expired` and `archived` opened it."""
+    s = _session(client, db, code=f"ed-{page[:5]}-{status[:3]}")
+    model = _ROW_MODEL[page]
+    row_id = db.execute(
+        select(model.id).where(model.session_id == s.id)
+    ).scalars().first()
+    s.status = status
+    db.commit()
+    base = f"/operator/sessions/{s.id}/{page}"
+
+    for query in ("?add=1", f"?edit_id={row_id}"):
+        r = client.get(f"{base}{query}")
+        assert r.status_code == 200, (page, status, query, r.status_code)
+        assert f'id="{_EDIT_FORM[page]}"' not in r.text, (
+            f"{page}{query} on {status} renders an editor the routes refuse"
+        )
+

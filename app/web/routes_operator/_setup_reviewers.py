@@ -121,9 +121,11 @@ def _render_reviewers_page(
     # ``archived`` (no revert form: ``/revert`` 409s from there).
     # Observers already passed this for its checkbox exception.
     is_archived = lifecycle.is_archived(review_session)
-    if is_ready:
-        # Edit / Add are setup mutations — not reachable on an
-        # ongoing session. Fall back to the plain list.
+    if not lifecycle.is_editable(review_session):
+        # Edit / Add are setup mutations: the editor renders only where
+        # `create` / `update` accept (`_require_editable`, draft or
+        # validated). Was `is_ready`, which left a live editor on
+        # `expired` / `archived` whose Save answered 409 (findings C3).
         edit_id = None
         add_mode = False
 
