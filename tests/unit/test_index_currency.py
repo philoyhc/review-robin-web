@@ -1,4 +1,4 @@
-"""Five invariants over the repo's hand-maintained indexes — 19S Items 2 and 5.
+"""Invariants over the repo's hand-maintained indexes — 19S Items 2 and 5.
 
 `tests/unit/test_doc_references.py` asks whether a path resolves and
 whether a `§N` names a real section. Nothing asked whether a *count* or
@@ -14,12 +14,20 @@ caught by a person reading (19S Item 1, entry E4):
 * 19O's entry ended *"the segment stays open"* under a heading reading
   ``✅ closed``.
 
+**G1 and G2 retired 2026-10-05** with the ``## Done`` section they read,
+when `guide/todo_master.md` became open work only (the section is
+verbatim in `guide/archive/todo_master_done.md`). G1 asked that every
+archived plan from segment 16 on have a Done entry; the archive index
+already names every archived plan (`tests/unit/test_guide_indexes.py`).
+G2 kept the list sorted by PR number, which mattered only while it grew.
+G3 and G4 remain.
+
 **G5 joined them at 19S Item 5**, over a different hand-maintained
 claim in the same family: a `Blast radius` section that records a count
 without recording *when* it was true, so a later re-run cannot tell a
 stale number from a tree that has legitimately moved.
 
-The five checks below are the subset that is derivable without judging
+The checks below are the subset that is derivable without judging
 prose, and each passed on the tree when it was written — which is
 `docs/unenforced_conventions.md` §2's bar for a check worth writing.
 The residue that is *not* derivable stays conceded at §1.4 / §1.5: no
@@ -46,17 +54,6 @@ TODO_PATH = REPO / "guide" / "todo_master.md"
 STATUS_PATH = REPO / "docs" / "status.md"
 ARCHIVE_DIR = REPO / "guide" / "archive"
 
-#: Segments numbered below this are legacy and out of scope (author's
-#: ruling, 2026-09-22): that era used grouped headings (``### Segment
-#: 11``, ``### Segment 13``) rather than one per segment, and **52 of
-#: its 67** archived plans have no ``### Segment <id>`` heading of their
-#: own — measured with `id_pattern`, the criterion G1 applies. An
-#: earlier version of this comment said 34, a figure no reading of the
-#: corpus supports (cold read, 2026-09-22). Expressed
-#: as one comparison rather than a list of exceptions, so §2's
-#: *no allowlist* bar survives — the same shape the pre-16 filter takes
-#: in this item's plan.
-LEGACY_BEFORE_SEGMENT = 16
 
 #: The first plan whose ``Blast radius`` sections must state **when**
 #: their numbers were taken (19S Item 5; author's ruling 2026-09-22 that
@@ -66,8 +63,7 @@ LEGACY_BEFORE_SEGMENT = 16
 #: one — circular. A segment id is in the filename.
 #:
 #: Sorted as ``(leading number, remainder)`` so ``19R`` < ``19S`` < ``20``:
-#: one comparison rather than a list of the 93 legacy sections, the shape
-#: `LEGACY_BEFORE_SEGMENT` already set.
+#: one comparison rather than a list of the 93 legacy sections.
 #:
 #: **19S, not the next segment, deliberately.** All 7 of 19S's sections
 #: already carry an anchor, so the check covers real sections from its
@@ -113,25 +109,13 @@ _ANCHOR_WINDOW = 2
 #: leading digits, which `_PLAN_NAME` drops before `plan_sort_key` can
 #: object. **0** instances of each today.
 
-#: A ``## Done`` entry heading. The section also carries ``### P0 —``
-#: style audit headings and a few non-segment scopes; only the PR
-#: numbers they declare matter to G2, so the pattern is deliberately
-#: every ``### `` heading rather than only the segment ones.
-_HEADING = re.compile(r"^### .*$", re.M)
-
-#: A PR reference inside a heading. Two digits minimum so a ``#2`` in
-#: prose cannot be read as a PR; the trailing ``(?!\d)`` is what the
-#: five-digit cap is *for*. Without it ``#123456`` matched and captured
-#: ``12345`` — a silent truncation, the exact opposite of what an
-#: earlier version of this comment claimed (cold read, 2026-09-22).
-_PR_REF = re.compile(r"#(\d{2,5})(?!\d)")
 
 #: ``segment_<id>_<slug>.md`` / ``segment_<id>.md``. ``_`` is outside
 #: the id's character class, so ``segment_19P_expander_revamp.md`` gives
 #: ``19P`` and ``segment_12A-2_import.md`` gives ``12A-2``.
 _PLAN_NAME = re.compile(r"^segment_(\d+[A-Za-z0-9-]*)")
 
-#: ``**Plan:** `guide/...`` under ``## Upcoming``. Keyed on the
+#: ``**Plan:** `guide/...`` in `guide/todo_master.md`. Keyed on the
 #: ``**Plan:**`` label rather than on any backticked plan path, because
 #: citing an *archived* plan in body prose is legitimate and common —
 #: `guide/todo_master.md`'s Stubs section names one as a stub's source.
@@ -150,31 +134,6 @@ _TIMELINE_HEADING = "## Project timeline"
 
 
 # --- parsing -------------------------------------------------------
-
-
-def section(text: str, start: str, end: str) -> str:
-    """The slice of `text` between two headings, matched **anchored**.
-
-    Each marker must appear as a whole line. An unanchored
-    ``text.index("## Done")`` also matches ``### Done`` and any
-    backticked mention in prose — and rung 2's own job is to edit the
-    ``## Done`` maintenance note, where the natural sentence quotes
-    ``## Upcoming``. That would have truncated this section to the note
-    and reported all 39 modern plans as missing, loudly but wrongly
-    (cold read, 2026-09-22).
-
-    Raises rather than returning an empty string when a marker is
-    missing: these headings moving should fail here rather than quietly
-    stop checking anything.
-    """
-    opening = re.search(rf"^{re.escape(start)}$", text, re.M)
-    if opening is None:
-        raise ValueError(f"no line reading {start!r}")
-    rest = text[opening.start() :]
-    closing = re.search(rf"^{re.escape(end)}$", rest, re.M)
-    if closing is None:
-        raise ValueError(f"no line reading {end!r} after {start!r}")
-    return rest[: closing.start()]
 
 
 def timeline_bounds(status_text: str) -> tuple[int, int]:
@@ -205,19 +164,6 @@ def timeline_section(status_text: str) -> str:
     return status_text[start:end]
 
 
-def id_pattern(identifier: str) -> re.Pattern[str]:
-    """``### Segment <id>`` matching the id whole, hyphens included.
-
-    ``\\b`` is not enough: a hyphen is a non-word character, so
-    ``^### Segment 12C\\b`` matches ``### Segment 12C-1`` and lets one
-    entry answer for a different segment's plan. That is the same hole
-    that left this module's first G1 mutation inert, and the archive
-    holds a live instance — ``segment_12C_self-review_revamp.md`` has no
-    heading of its own while ``12C-1`` does (cold read, 2026-09-22).
-    """
-    return re.compile(rf"^### Segment {re.escape(identifier)}(?![\w-])", re.M)
-
-
 def segment_id(plan_filename: str) -> str | None:
     """``segment_19P_expander_revamp.md`` → ``19P``; ``None`` if the
     name does not carry a leading numeric id."""
@@ -225,85 +171,12 @@ def segment_id(plan_filename: str) -> str | None:
     return match.group(1) if match else None
 
 
-def segment_number(identifier: str) -> int | None:
-    """``19P`` → ``19``; ``None`` when the id has no leading digits."""
-    match = re.match(r"(\d+)", identifier)
-    return int(match.group(1)) if match else None
-
-
-def lowest_pr(heading: str) -> int | None:
-    """The lowest PR number a heading declares, or ``None``.
-
-    The *heading only* — a heading citing a foreign PR ("superseded by
-    #1234") would order wrongly, and the convention that keeps this
-    honest is that foreign references belong in the body. There are no
-    such headings today; when one appears, this is where it shows up.
-    """
-    numbers = [int(n) for n in _PR_REF.findall(heading)]
-    return min(numbers) if numbers else None
-
-
 def plan_pointers(upcoming_text: str) -> list[str]:
-    """Every ``**Plan:**`` path under ``## Upcoming``."""
+    """Every ``**Plan:**`` path in the text."""
     return _PLAN_POINTER.findall(upcoming_text)
 
 
-# --- the four checks, each a function of the text it reads ---------
-
-
-def missing_done_entries(
-    done_text: str, plan_filenames: list[str]
-) -> list[str]:
-    """**G1** — archived plans from `LEGACY_BEFORE_SEGMENT` on with no
-    ``### Segment <id>`` heading in ``## Done``.
-
-    Asks for **at least one** heading, never exactly one: the mapping is
-    not one-to-one in either direction. Id ``18R`` matches both
-    *Segment 18R* and *Segment 18R Part 2*, and one heading can cover
-    several plans.
-
-    A plan archived **unbuilt** would fail this while being correct.
-    There is no such plan from segment 16 on today, and the escape when
-    one appears belongs in the plan file — a line saying it was retired
-    unbuilt — rather than a list inside this test, which would be the
-    allowlist §2's bar forbids.
-    """
-    missing = []
-    for name in sorted(plan_filenames):
-        identifier = segment_id(name)
-        if identifier is None:
-            continue
-        number = segment_number(identifier)
-        if number is None or number < LEGACY_BEFORE_SEGMENT:
-            continue
-        if not id_pattern(identifier).search(done_text):
-            missing.append(name)
-    return missing
-
-
-def out_of_order_headings(done_text: str) -> list[tuple[str, int, int]]:
-    """**G2** — ``## Done`` headings declaring a PR, out of ascending
-    order by the lowest each declares.
-
-    Non-strict: two headings declaring the same lowest PR are in order.
-    Headings declaring no PR are skipped rather than failed: **35**
-    declare none and no rule can place those, which the section's own
-    maintenance note says. It says *many* predate the convention rather
-    than all, and that is the honest word — some postdate it
-    (``### Sys Admin per-row actions``, ``### Segment 18R Part 2``). An
-    earlier version said 33 and said they all predate it; both were
-    wrong (cold read, 2026-09-22).
-    """
-    out_of_order: list[tuple[str, int, int]] = []
-    highest = 0
-    for heading in _HEADING.findall(done_text):
-        lowest = lowest_pr(heading)
-        if lowest is None:
-            continue
-        if lowest < highest:
-            out_of_order.append((heading[:60], lowest, highest))
-        highest = max(highest, lowest)
-    return out_of_order
+# --- the checks, each a function of the text it reads --------------
 
 
 def stale_as_of(status_text: str) -> tuple[str, str] | None:
@@ -327,7 +200,7 @@ def stale_as_of(status_text: str) -> tuple[str, str] | None:
 
 
 def queued_archived_plans(upcoming_text: str) -> list[str]:
-    """**G4** — ``**Plan:**`` pointers under ``## Upcoming`` that
+    """**G4** — ``**Plan:**`` pointers in `guide/todo_master.md` that
     resolve into ``guide/archive/``.
 
     A **dangling** path is already
@@ -345,16 +218,10 @@ def queued_archived_plans(upcoming_text: str) -> list[str]:
 # --- the live tree -------------------------------------------------
 
 
-def _todo_sections() -> tuple[str, str]:
-    text = TODO_PATH.read_text()
-    return (
-        section(text, "## Done", "## Upcoming"),
-        text[text.index("## Upcoming") :],
-    )
-
-
-def _archived_plan_names() -> list[str]:
-    return [p.name for p in ARCHIVE_DIR.glob("segment_*.md")]
+def _todo_text() -> str:
+    """The whole of `guide/todo_master.md`, which holds open work only
+    since 2026-10-05 — so G4 reads all of it rather than a section."""
+    return TODO_PATH.read_text()
 
 
 def plan_sort_key(identifier: str) -> tuple[int, str]:
@@ -436,7 +303,7 @@ def _plan_files() -> list[Path]:
 def _plan_texts() -> list[tuple[str, str]]:
     """``(filename, text)`` per plan — the I/O boundary, so every check
     below takes text and can be exercised on synthetic input, which is
-    the shape this module's four other checks already have."""
+    the shape this module's other checks already have."""
     return [(p.name, p.read_text()) for p in _plan_files()]
 
 
@@ -453,7 +320,7 @@ def unanchored_sections(
     """**G5** — in-scope ``Blast radius`` sections stating no anchor.
 
     Takes ``(filename, text)`` pairs so the check is a function of text,
-    like its four siblings; the default reads the corpus. Returns
+    like its siblings; the default reads the corpus. Returns
     ``(filename, 1-based heading line)`` per offender.
     """
     offenders: list[tuple[str, int]] = []
@@ -464,29 +331,6 @@ def unanchored_sections(
             if not section_is_anchored(body):
                 offenders.append((name, index + 1))
     return offenders
-
-
-def test_every_modern_archived_plan_has_a_done_entry() -> None:
-    """G1 on the tree. Would have caught 19P and 19Q."""
-    done, _ = _todo_sections()
-    missing = missing_done_entries(done, _archived_plan_names())
-    assert not missing, (
-        "archived plans from segment "
-        f"{LEGACY_BEFORE_SEGMENT} on with no `### Segment <id>` entry in "
-        "`guide/todo_master.md`'s `## Done`:\n  " + "\n  ".join(missing)
-    )
-
-
-def test_done_headings_declaring_a_pr_run_ascending() -> None:
-    """G2 on the tree. Would have caught six segments of newest-first
-    drift."""
-    done, _ = _todo_sections()
-    wrong = out_of_order_headings(done)
-    assert not wrong, (
-        "`## Done` is sorted by first PR number ascending; these "
-        "headings declare a lower PR than one above them:\n  "
-        + "\n  ".join(f"{h} (#{low} after #{high})" for h, low, high in wrong)
-    )
 
 
 def test_status_as_of_matches_its_newest_timeline_row() -> None:
@@ -501,8 +345,7 @@ def test_status_as_of_matches_its_newest_timeline_row() -> None:
 
 def test_no_upcoming_entry_points_at_an_archived_plan() -> None:
     """G4 on the tree."""
-    _, upcoming = _todo_sections()
-    queued = queued_archived_plans(upcoming)
+    queued = queued_archived_plans(_todo_text())
     assert not queued, (
         "`## Upcoming` entries whose `**Plan:**` is already archived:\n  "
         + "\n  ".join(queued)
@@ -512,33 +355,15 @@ def test_no_upcoming_entry_points_at_an_archived_plan() -> None:
 def test_the_checks_see_the_corpus_they_claim_to_cover() -> None:
     """Floors under each check's input, per §1.6.
 
-    `section()` fails loudly if ``## Done`` moves, but a change to the
-    *heading level* or to the ``**Plan:**`` label would leave every
-    check above passing over an empty list. The floors sit **just**
-    below the counts measured on 2026-09-22 — 84 headings, 49 declaring
-    a PR, 39 modern plans, 3 pointers, 71 rows — deliberately close,
-    because generous slack absorbs a recogniser narrowing: at a floor of
-    30, tightening `_PR_REF` to four digits dropped 16 three-digit
-    headings (``#651``–``#789``) out of G2's subject and still left 33,
-    so the floor passed while the check covered less (cold read,
-    2026-09-22). A close floor bites on a format change; a slack one
-    does not, which is `docs/unenforced_conventions.md` §1.6's
+    A change to the ``**Plan:**`` label or to the timeline's row shape
+    would leave the checks above passing over an empty list. The floors
+    sit **just** below the counts measured on 2026-09-22 — 3 pointers,
+    71 rows — deliberately close, because generous slack absorbs a
+    recogniser narrowing: a close floor bites on a format change; a
+    slack one does not, which is `docs/unenforced_conventions.md` §1.6's
     distinction between vacuity and coverage.
     """
-    done, upcoming = _todo_sections()
-    headings = _HEADING.findall(done)
-    declaring = [h for h in headings if lowest_pr(h) is not None]
-    modern = [
-        n
-        for n in _archived_plan_names()
-        if (i := segment_id(n))
-        and (num := segment_number(i)) is not None
-        and num >= LEGACY_BEFORE_SEGMENT
-    ]
-    assert len(headings) >= 80, f"only {len(headings)} `### ` headings in Done"
-    assert len(declaring) >= 45, f"only {len(declaring)} declare a PR"
-    assert len(modern) >= 38, f"only {len(modern)} archived plans are modern"
-    pointers = plan_pointers(upcoming)
+    pointers = plan_pointers(_todo_text())
     # 2, not 3, since 19S closed (2026-09-23): the queue holds 14B and
     # 20. A close floor, as above — it falls with the queue it measures.
     assert len(pointers) >= 2, f"only {len(pointers)} `**Plan:**` pointers"
@@ -549,37 +374,6 @@ def test_the_checks_see_the_corpus_they_claim_to_cover() -> None:
         )
     rows = _TIMELINE_ROW.findall(timeline_section(STATUS_PATH.read_text()))
     assert len(rows) >= 65, f"only {len(rows)} dated timeline rows"
-
-
-def test_the_legacy_filter_is_load_bearing() -> None:
-    """The pre-16 filter excludes real plans, not a hypothetical era.
-
-    Without this, a filter that happened to exclude nothing would look
-    identical to one doing its job — and G1 would be asserting over a
-    corpus of 39 while appearing to cover 106.
-    """
-    done, _ = _todo_sections()
-    names = _archived_plan_names()
-    modern = [
-        n
-        for n in names
-        if (i := segment_id(n))
-        and (num := segment_number(i)) is not None
-        and num >= LEGACY_BEFORE_SEGMENT
-    ]
-    legacy_missing = [
-        n
-        for n in names
-        if n not in modern
-        and (i := segment_id(n))
-        and not id_pattern(i).search(done)
-    ]
-    assert len(modern) < len(names), "the filter excludes nothing"
-    assert legacy_missing, (
-        "no legacy plan lacks a `## Done` heading, so the filter is "
-        "excluding nothing that would otherwise fail — re-check the "
-        "author's 2026-09-22 ruling before trusting G1's scope"
-    )
 
 
 # --- the recognisers, outside their production examples ------------
@@ -594,75 +388,6 @@ def test_segment_id_parses_the_shapes_the_archive_holds() -> None:
     assert segment_id("segment_04A.md") == "04A"
     assert segment_id("segment_09_1A.md") == "09"
     assert segment_id("new_ux_ideas.md") is None
-
-
-def test_segment_number_reads_the_leading_digits() -> None:
-    assert segment_number("19P") == 19
-    assert segment_number("12A-2") == 12
-    assert segment_number("04A") == 4
-    assert segment_number("A") is None
-
-
-def test_g1_accepts_one_id_matching_several_headings() -> None:
-    """Id ``18R`` matches two headings in the live section; at least one
-    is the rule, so neither the plan nor a second heading fails."""
-    done = (
-        "## Done\n"
-        "### Segment 18R — UX refinement — done (#1899)\n"
-        "### Segment 18R Part 2 — UX refinement (Items 3–6) — done\n"
-    )
-    assert missing_done_entries(done, ["segment_18R_testing.md"]) == []
-
-
-def test_g1_does_not_let_a_longer_id_satisfy_a_shorter_one() -> None:
-    """``### Segment 19P`` must not answer for a plan whose id is
-    ``19`` — the word boundary is what stops it."""
-    done = "## Done\n### Segment 19P — the expander revamp\n"
-    assert missing_done_entries(done, ["segment_19_something.md"]) == [
-        "segment_19_something.md"
-    ]
-
-
-def test_g1_does_not_let_a_hyphenated_id_satisfy_its_stem() -> None:
-    """``### Segment 12C-1`` must not answer for plan id ``12C``.
-
-    The live instance: `guide/archive/segment_12C_self-review_revamp.md`
-    has no heading of its own, and ``### Segment 12C-1`` does. Under
-    ``\\b`` it passed — a hyphen is a non-word character — which is the
-    same hole that left this module's first G1 mutation inert. Pre-16,
-    so G1 does not count it, but the hole was in the pattern rather than
-    in the filter (cold read, 2026-09-22).
-    """
-    done = "## Done\n### Segment 12C-1 — Self-review revamp\n"
-    assert missing_done_entries(done, ["segment_12C_x.md"]) == []
-    assert id_pattern("12C").search(done) is None
-    assert id_pattern("12C-1").search(done) is not None
-
-
-def test_g1_ignores_the_legacy_era() -> None:
-    done = "## Done\n(no segment headings at all)\n"
-    assert missing_done_entries(done, ["segment_11A_cleanup.md"]) == []
-    assert missing_done_entries(done, ["segment_19Z_new.md"]) == [
-        "segment_19Z_new.md"
-    ]
-
-
-def test_g2_ties_are_in_order_and_headings_without_a_pr_are_skipped() -> None:
-    done = (
-        "## Done\n"
-        "### Segment A — done (#100)\n"
-        "### Segment B — done (#100, #180)\n"
-        "### P0 — an audit heading with no PR\n"
-        "### Segment C — done (#200 → #210)\n"
-    )
-    assert out_of_order_headings(done) == []
-
-
-def test_lowest_pr_takes_the_minimum_a_heading_declares() -> None:
-    assert lowest_pr("### Segment X — PRs #2515 → #2540") == 2515
-    assert lowest_pr("### Segment Y — #2540, #2515") == 2515
-    assert lowest_pr("### Segment Z — no numbers") is None
-    assert lowest_pr("### Segment W — item #7 of nine") is None
 
 
 def test_g4_keys_on_the_plan_label_not_on_any_archived_path() -> None:
@@ -698,74 +423,12 @@ def test_g4_does_not_read_the_repo_s_prose_about_itself() -> None:
     assert queued_archived_plans(prose) == []
 
 
-def test_section_raises_rather_than_reading_nothing() -> None:
-    """A moved heading fails loudly instead of silently checking an
-    empty string."""
-    try:
-        section("## Upcoming\nonly\n", "## Done", "## Upcoming")
-    except ValueError:
-        return
-    raise AssertionError("section() accepted text with no `## Done`")
-
-
 # --- mutations: each check fails when its property is broken --------
 #
 # docs/unenforced_conventions.md §1.8, second clause. The mutation is
 # applied to a copy of the document's text, never to the tree — a check
 # that has to edit its own subject to be demonstrated is the shape this
 # item's plan rules out.
-
-
-def test_g1_fails_when_a_modern_plan_loses_its_entry() -> None:
-    """The mutation deletes the whole heading line.
-
-    The first draft of this test renamed it to ``### Segment
-    19R-removed`` and **the check stayed green**: ``-`` is a non-word
-    character, so ``^### Segment 19R\\b`` still matched. An inert
-    mutation demonstrates nothing, which is why
-    `docs/unenforced_conventions.md` §1.8 asks for the mutation to
-    *fail* rather than for it to exist.
-    """
-    done, _ = _todo_sections()
-    assert re.search(r"^### Segment 19R ", done, re.M), (
-        "19R's entry moved; re-pick the mutation"
-    )
-    mutated = re.sub(
-        r"^### Segment 19R .*$", "(entry deleted)", done, count=1, flags=re.M
-    )
-    missing = missing_done_entries(mutated, _archived_plan_names())
-    assert "segment_19R_optimization_and_bugfixes.md" in missing
-
-
-def test_g2_fails_when_two_headings_swap() -> None:
-    done = (
-        "## Done\n"
-        "### Segment B — done (#2382)\n"
-        "### Segment A — done (#2230)\n"
-    )
-    wrong = out_of_order_headings(done)
-    assert [(low, high) for _, low, high in wrong] == [(2230, 2382)]
-
-
-def test_g2_compares_against_the_running_maximum_not_the_previous() -> None:
-    """``100, 300, 200`` is out of order; an adjacent-pair check misses
-    it once a later heading climbs again.
-
-    The two-heading case above cannot tell the two implementations
-    apart, and replacing the running maximum with ``highest = lowest``
-    left all tests green (cold read, 2026-09-22). Newest-first drift of
-    the 19I/19O shape is a *run*, not a swap, so this is the shape that
-    matters.
-    """
-    done = (
-        "## Done\n"
-        "### Segment A — done (#100)\n"
-        "### Segment C — done (#300)\n"
-        "### Segment B — done (#200)\n"
-        "### Segment D — done (#250)\n"
-    )
-    wrong = out_of_order_headings(done)
-    assert [(low, high) for _, low, high in wrong] == [(200, 300), (250, 300)]
 
 
 def test_g3_fails_when_a_newer_row_lands_without_the_header() -> None:
@@ -816,9 +479,9 @@ def test_g4_fails_when_a_queued_plan_is_archived() -> None:
     """Repoints the first live ``**Plan:**`` pointer into the archive.
     Derived rather than named: the named pointer (19S's) left the queue
     when 19S closed, and the mutation went with it."""
-    _, upcoming = _todo_sections()
+    upcoming = _todo_text()
     pointers = plan_pointers(upcoming)
-    assert pointers, "no `**Plan:**` pointer under Upcoming to mutate"
+    assert pointers, "no `**Plan:**` pointer in todo_master to mutate"
     victim = pointers[0]
     archived = "guide/archive/" + victim.rsplit("/", 1)[-1]
     mutated = upcoming.replace(f"`{victim}`", f"`{archived}`", 1)
@@ -892,7 +555,7 @@ def test_g5_excludes_the_legacy_corpus_and_that_exclusion_is_load_bearing() -> N
 
     If every legacy section happened to be anchored the cutoff would be
     decorative; 30 of the 93 are not, so it carries weight. Asserted
-    rather than assumed, the way G1's filter is.
+    rather than assumed.
     """
     legacy_unanchored = [
         (name, index + 1)

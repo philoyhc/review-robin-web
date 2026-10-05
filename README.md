@@ -194,7 +194,7 @@ README:
   Shipped segment plans live in
   [`guide/archive/`](guide/archive/);
   [`guide/todo_master.md`](guide/todo_master.md) is the
-  roadmap; and
+  open-work list; and
   [`guide/deferred_consolidated.md`](guide/deferred_consolidated.md)
   is the parking lot for all scoped-but-not-scheduled work —
   product slices paused on pilot feedback (Part A), deferred

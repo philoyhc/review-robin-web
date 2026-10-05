@@ -2593,5 +2593,6 @@ reader, so a spec missing from it is a spec nobody is sent to.
 
 For ship-state — what URL works today, what audit event fires
 today, what is queued for an upcoming segment — read
-`docs/status.md`. For the long-term roadmap and segment-by-
-segment history, read `guide/todo_master.md`.
+`docs/status.md`. For what is still to be built, read
+`guide/todo_master.md`; for segment-by-segment history, the archived
+plans indexed in `guide/archive/README.md`.

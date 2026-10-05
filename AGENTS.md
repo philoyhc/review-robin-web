@@ -178,7 +178,7 @@ reject it.
 - **`spec/participant_model.md`** — reviewee `/results` + observer `/collation` contracts.
 - **`spec/audience_and_identity_model.md`** — audience taxonomy and auth posture.
 - **`spec/lifecycle.md`** — the five-state session machine and its transitions.
-- **`guide/todo_master.md`** — Done / Upcoming roadmap. Read for the sequence.
+- **`guide/todo_master.md`** — open work only: queued segments, stubs, sequencing. A segment's close deletes its entries.
 - **`guide/segment_*.md`** — current and upcoming segment plans; shipped ones in `guide/archive/`.
 - **`guide/codebase_assessment_*.md`** — latest code-vs-spec snapshot.
 - **`guide/deferred_consolidated.md`** — everything scoped but not scheduled.
@@ -222,10 +222,8 @@ reject it.
   `tests/unit/test_doc_conventions.py`
   (the checks derived from `app` constants), `tests/unit/test_guide_indexes.py` (a
   README row per `guide/` document),
-  `tests/unit/test_index_currency.py` (an archived plan from segment 16
-  on has a `### Segment <id>` entry under `guide/todo_master.md`'s
-  `## Done`, the entries that declare a PR number sort ascending by it,
-  `docs/status.md`'s `As of` matches its newest timeline row, no
+  `tests/unit/test_index_currency.py` (`docs/status.md`'s `As of`
+  matches its newest timeline row, no
   queued-work plan pointer names an archived plan, and — from segment
   **19S** on — a `Blast radius` section states the commit or date its
   numbers were taken at), and

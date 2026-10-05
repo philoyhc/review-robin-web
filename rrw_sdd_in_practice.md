@@ -141,9 +141,7 @@ Neither half makes the exit *mechanical*, and the distinction matters. The close
 - **The file tree and the documents' own structure.**
   - `tests/unit/test_doc_references.py` checks that `CLAUDE.md` and `AGENTS.md` are byte-identical, and that every anchored path, every `§N` pointer and every cited pytest node id in live prose resolves.
   - `tests/unit/test_guide_indexes.py` requires a README row for every `guide/` document, live or archived.
-  - `tests/unit/test_index_currency.py` checks five things, each within a stated scope:
-    - every archived plan from Segment 16 on has its entry under `guide/todo_master.md` Done (the earlier era is ruled legacy);
-    - the Done entries that declare a PR number run in PR order;
+  - `tests/unit/test_index_currency.py` checks three things, each within a stated scope (two more, over `guide/todo_master.md`'s Done list, retired with that list on 2026-10-05):
     - `docs/status.md`'s date matches its newest row;
     - no queued-work pointer names an archived plan;
     - from Segment 19S on, a `Blast radius` states when it was taken.

@@ -145,7 +145,7 @@ commit.
 | `guide/sweep_template.md` | verbatim | — | the shape every spec/docs sweep copies |
 | `guide/README.md` | skeleton | — | index with the documented shapes the guide-index gate reads |
 | `guide/archive/README.md` | skeleton | — | index the archive gate reads; one row per file, no patterns |
-| `guide/todo_master.md` | skeleton | — | Done / Upcoming roadmap |
+| `guide/todo_master.md` | skeleton | — | Open work only |
 | `guide/deferred_consolidated.md` | skeleton | — | everything scoped but not scheduled |
 | `spec/README.md` | skeleton | — | index of the surface contracts |
 | `docs/README.md` | skeleton | — | index of the operational docs |

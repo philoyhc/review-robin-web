@@ -77,7 +77,7 @@ struck with a one-line note, not deleted and not explained at length. -->
 - `python3 tools/close_check.py <ID>` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
-- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+- `docs/status.md` row added; its `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
 
 ## Open questions
 

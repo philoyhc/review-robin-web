@@ -46,7 +46,7 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
     ("guide/sweep_template.md", "verbatim", "", "the shape every spec/docs sweep copies"),
     ("guide/README.md", "skeleton", "", "index with the documented shapes the guide-index gate reads"),
     ("guide/archive/README.md", "skeleton", "", "index the archive gate reads; one row per file, no patterns"),
-    ("guide/todo_master.md", "skeleton", "", "Done / Upcoming roadmap"),
+    ("guide/todo_master.md", "skeleton", "", "Open work only"),
     ("guide/deferred_consolidated.md", "skeleton", "", "everything scoped but not scheduled"),
     ("spec/README.md", "skeleton", "", "index of the surface contracts"),
     ("docs/README.md", "skeleton", "", "index of the operational docs"),
@@ -122,7 +122,7 @@ this folder must match a row below, by name or by documented shape.
 
 | Path | What it is |
 |---|---|
-| `todo_master.md` | Done / Upcoming roadmap. |
+| `todo_master.md` | Open work only; a close deletes its entries. |
 | `deferred_consolidated.md` | Everything scoped but not scheduled. |
 | `segment_plan_template.md` | The shape every segment plan copies. |
 | `sweep_template.md` | The shape every spec/docs sweep copies. |
@@ -142,9 +142,8 @@ pattern (`tests/unit/test_guide_indexes.py`).
 """,
     "guide/todo_master.md": """# Roadmap
 
-## Done
-
-- (nothing yet)
+Open work only. A segment's close deletes its entries here; the
+archived plan is the record of what shipped.
 
 ## Upcoming
 
