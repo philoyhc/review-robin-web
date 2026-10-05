@@ -150,7 +150,7 @@ commit.
 | `spec/README.md` | skeleton | — | index of the surface contracts |
 | `docs/README.md` | skeleton | — | index of the operational docs |
 | `docs/unenforced_conventions.md` | skeleton | — | constitution VI's short list; starts empty |
-| `.github/workflows/ci.yml` | verbatim | — | ruff + pytest -n auto on 3.12 |
+| `.github/workflows/ci.yml` | adapt | — | ruff + pytest -n auto on 3.12; the Chromium step waits for tests/browser/ |
 | `.github/workflows/ci-postgres.yml` | adapt | — | DB user / password / name; the alembic round-trip stays |
 | `tests/unit/test_doc_references.py` | verbatim | — | the twins, path-reference, section-reference and node-id gates; read only the tree. The node-id floor and archive check **skip** on a fresh export — both need a corpus a new repo has not got |
 | `tests/unit/test_guide_indexes.py` | verbatim | — | the guide-index gate; reads the skeleton READMEs |
@@ -206,7 +206,9 @@ these are the details that matter.
   cite, only `tests/unit/test_doc_references.py` and
   `tests/unit/test_guide_indexes.py` come with the kit, so the
   inline-scripts, generated-tools, contrast-audit and spec-coverage
-  lines go until you have those gates. Then `cp CLAUDE.md AGENTS.md` —
+  lines go until you have those gates, and so does the `tests/browser/`
+  sentence with its `RRW_REQUIRE_BROWSER` clause, which the `ci.yml`
+  edit below removes. Then `cp CLAUDE.md AGENTS.md` —
   the twins test is in the kit.
 - **`constitution.md`.** The six articles are the practice. Delete the
   dated annotations under III; change "derived from
@@ -223,9 +225,17 @@ these are the details that matter.
   neighbours respect, a hand-rolled thing the codebase has a helper for".
 - **`.claude/agents/spec-writer.md`.** Leave as is until `spec/` has a
   second file; then re-point the paths it cites.
+- **`.github/workflows/ci.yml`.** Delete the *Install Chromium* step and
+  the `RRW_REQUIRE_BROWSER` env on the test step until the project has a
+  `tests/browser/`: the step runs `python -m playwright`, which the step-4
+  `dev` extra does not install, so a kit-built repository's first CI run
+  fails on it. Put both back, with `playwright` in the `dev` extra, when
+  the first browser test lands.
 - **`.github/workflows/ci-postgres.yml`.** Database user, password and
   name; keep the upgrade / downgrade-base / upgrade round-trip, and the
-  `pytest` step that runs the whole suite against that server — it is
+  `pytest` step that runs the whole suite against that server, with its
+  `TEST_DATABASE_URL` env (the suite reads no other URL, so without it
+  the "Postgres" job quietly runs SQLite) — it is
   what makes the SQLite default safe to keep (step 4). An empty tree has
   no chain to round-trip and the job goes red on the first PR, so guard
   the two Alembic steps on `alembic.ini` existing: the job is green until
@@ -297,9 +307,9 @@ winning and local SQLite as the fallback. One engine builder that every
 path calls — the app, `alembic/env.py` and the conftest — so what SQLite
 needs is applied once rather than remembered three times. Then a
 session-scoped `engine` fixture in `tests/conftest.py` — and **the
-suite resolves its own URL, in this order**: `TEST_DATABASE_URL`, then
-`DATABASE_URL`, then an in-memory default of its own. Not the settings
-URL: with `DATABASE_URL` unset that is the application's *file-backed*
+suite resolves its own URL**: `TEST_DATABASE_URL`, else an in-memory
+default of its own — never `DATABASE_URL`, since the Postgres path drops
+the schema it is pointed at (trap 6). Not the settings URL either: with `DATABASE_URL` unset that is the application's *file-backed*
 fallback, so the suite would build and drop schema in the developer's
 own database rather than in memory. Having resolved it, write it back to
 the settings object, so a no-argument engine built anywhere in the app
@@ -365,8 +375,8 @@ the symptom it produces:
    and rebuilds the schema, so each xdist worker would drop it out from
    under the others — refuse `-n` there. And once a Postgres
    `DATABASE_URL` is exported (trap 5 makes that the normal local
-   state), the next bare `pytest` in that shell reaches the drop; refuse
-   a non-local host unless a separate `TEST_DATABASE_URL` named it.
+   state), the next bare `pytest` in that shell would reach the drop;
+   read only `TEST_DATABASE_URL`, so a URL meant for the app never does.
 
 Only 1 and 2 need more than one schema. **3 to 6 apply to any project on
 this stack**, including a single-schema one — including this one, whose
