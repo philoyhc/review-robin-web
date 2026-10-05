@@ -218,7 +218,7 @@ def _as_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
 
 
-def deadline_box_unedited(
+def datetime_box_unedited(
     stored: datetime | None, submitted: str | None, tz_name: str | None
 ) -> bool:
     """Whether a ``datetime-local`` box still holds the value it was

@@ -278,7 +278,7 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   each stored reminder offset re-resolved on the new End. An unchanged
   deadline skips it, and a deadline box whose text is still the stored
   deadline as the box renders it, in the session zone, counts as
-  unchanged (`sessions.deadline_box_unedited`), so re-saving a stored
+  unchanged (`sessions.datetime_box_unedited`), so re-saving a stored
   value with seconds, or one in the repeated hour after a DST fall-back,
   is not an edit.
 - **Tags have four write surfaces, two of them off this page.** The

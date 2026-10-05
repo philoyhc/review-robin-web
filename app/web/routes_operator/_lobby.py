@@ -317,7 +317,7 @@ def lobby_edit_submit(
                 detail=str(exc),
             ) from exc
         timezone_name = sessions.resolve_session_timezone(review_session)
-        if sessions.deadline_box_unedited(
+        if sessions.datetime_box_unedited(
             review_session.deadline, deadline, timezone_name
         ):
             parsed_deadline = review_session.deadline
