@@ -4,7 +4,8 @@ PR for items #3 + #16 moved the ``_invalidate_if_validated`` policy
 from ``routes_operator.py`` into the mutating services themselves.
 These tests pin the invariant at the service layer so a future
 refactor can't silently regress: every setup-mutating service must
-flip a ``validated`` session back to ``draft``, and the two
+flip a ``validated`` session back to ``draft`` (``update_session``
+excepted since findings Cc5), and the two
 visibility-when-closed surfaces must NOT (item #16).
 """
 from __future__ import annotations
@@ -129,10 +130,13 @@ def test_invalidate_if_validated_is_noop_on_draft(
 # -- Mutating services flip validated → draft -------------------------------
 
 
-def test_session_update_invalidates(
+def test_session_update_does_not_invalidate(
     setup: "tuple[User, ReviewSession, Reviewer, Reviewee, Assignment]",
     db: Session,
 ) -> None:
+    """The one setup service that does not: no field ``update_session``
+    writes can change the readiness verdict (findings Cc5, the author's
+    ruling of 2026-10-05; ``spec/lifecycle.md`` §2.3)."""
     op, review_session, *_ = setup
 
     sessions_service.update_session(
@@ -149,7 +153,8 @@ def test_session_update_invalidates(
     )
 
     db.refresh(review_session)
-    assert review_session.status == "draft"
+    assert review_session.name == "Renamed"
+    assert review_session.status == "validated"
 
 
 def test_csv_save_reviewers_invalidates(

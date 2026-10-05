@@ -427,7 +427,9 @@ Cancel / Lock cluster beneath it. Owners is a card of its own (§3a).
 - Editing session metadata (name / code / description / deadline
   / schedule / help contact / timezone) is non-destructive: it
   never deletes assignments or responses, so the form carries no
-  response-loss acknowledgement gate.
+  response-loss acknowledgement gate. It also leaves a `validated`
+  session `validated`: no field on the card can change the readiness
+  check's verdict (`spec/lifecycle.md` §2.3).
 - The Details / Schedule / UI-settings / Tags inputs submit as one form
   via the HTML5 `form="config-save-{id}"` association rather than a
   literal wrapping `<form>`. The Owners card (§3a) is not among

@@ -265,8 +265,8 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   `is_editable` holds **and** one of them changed
   (`sessions.payload_changes_session`), and otherwise ignores those
   fields rather than refusing the post, so a stale form cannot slip
-  past the gate. A changed field on `validated` demotes the session to
-  `draft`, as on Session Home; a tags-only Save does not. The write starts from the session's stored values
+  past the gate. No Save demotes a `validated` session, here or on
+  Session Home (`spec/lifecycle.md` §2.3). The write starts from the session's stored values
   (`sessions.edit_payload`), so a Save changes those three fields, plus
   the tags, and nothing else on the session. In `draft` or `validated` a code another
   session holds, a name or code empty or too long for its column, a

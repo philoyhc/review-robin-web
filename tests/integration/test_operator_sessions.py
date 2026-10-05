@@ -443,8 +443,8 @@ def test_lobby_edit_applies_name_code_on_validated(
     client: TestClient, db: Session
 ) -> None:
     """The expander's gate is `is_editable`, Session Home's (findings
-    B2): on `validated` Name / Code apply, and the edit demotes the
-    session to `draft` exactly as the same edit on Session Home does."""
+    B2): on `validated` Name / Code apply, and the session stays
+    `validated`, as the same edit on Session Home does (findings Cc5)."""
     session_id = _validated_session(client, db, "val-edit-1")
 
     response = client.post(
@@ -457,7 +457,7 @@ def test_lobby_edit_applies_name_code_on_validated(
     db.expire_all()
     updated = db.get(ReviewSession, session_id)
     assert (updated.name, updated.code) == ("Renamed", "val-edit-2")
-    assert updated.status == "draft"
+    assert updated.status == "validated"
 
 
 def test_lobby_tags_only_save_keeps_validated(

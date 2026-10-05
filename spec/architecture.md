@@ -744,7 +744,7 @@ top-level `changes` envelope; one level of nesting only).
 ```
 
 For events triggered by a known cause: `session.invalidated` (a token
-naming the setup mutation, e.g. `"session_edited"` or
+naming the setup mutation, e.g. `"reviewer_created"` or
 `"instrument_added"`, or `"operator_revert"` when the operator reverts
 a validated session; `session.reverted_to_draft` carries no reason),
 cascade close (`reason: "deadline"`; past rows may carry `"manual"`).
@@ -801,7 +801,7 @@ canonical "no payload" marker.
 | `session.created` | `snapshot` | `{"session_id": 17, "session_code": "CS101", "snapshot": {"id": 17, "code": "CS101", "name": "Final Review"}}` |
 | `session.updated` | `changes` | `{"session_id": 17, "session_code": "CS101", "changes": {"name": ["Spring", "Spring v2"]}}` |
 | `session.deleted` | `snapshot` (no top-level identity) | `{"snapshot": {"id": 17, "code": "CS101", "name": "Final Review"}}` |
-| `session.invalidated` | `reason` (no payload) | `{"session_id": 17, "session_code": "CS101", "reason": "session_edited"}` |
+| `session.invalidated` | `reason` (no payload) | `{"session_id": 17, "session_code": "CS101", "reason": "reviewer_created"}` |
 | `instrument.closed` | `reason` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "reason": "deadline", "context": {"deadline": "2026-06-01T00:00:00+00:00"}}` |
 | `assignments.generated` | `counts` + `context` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "counts": {"new": 104, "deleted": 0, "kept": 0, "responses_deleted": 0, "pairs": 104, "instruments": 1}, "context": {"mode": "rule_based"}}` |
 | `responses.saved` | `refs` + `counts` | `{"session_id": 17, "session_code": "CS101", "refs": {"reviewer_id": 42}, "counts": {"assignments_touched": 3, "responses_saved": 5}}` |

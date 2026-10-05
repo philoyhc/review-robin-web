@@ -19,7 +19,6 @@ from app.services import (
     audit,
     date_formatting,
     operator_settings,
-    session_lifecycle as lifecycle,
 )
 from app.services.instruments import ensure_default_instrument
 # Wave 5 PR 5.2 — RuleSet seeding retired; ``app.services.rules.seeds``
@@ -246,10 +245,8 @@ def payload_changes_session(
     (Postgres's ``timestamptz``), and a naive and an aware datetime are
     never ``==``, so a plain comparison would report an unchanged
     deadline as changed.
-    ``update_session`` demotes a ``validated`` session, so a caller that
-    saves something else alongside (the lobby expander's tags) asks this
-    first rather than demoting on an edit that changed nothing (findings
-    B2)."""
+    The lobby expander asks this before calling ``update_session``, so a
+    Save that changes only the tags writes no session edit."""
 
     def _norm(value: object) -> object:
         return _as_utc(value) if isinstance(value, datetime) else value
@@ -268,14 +265,14 @@ def update_session(
     payload: SessionCreate,
     correlation_id: str | None = None,
 ) -> ReviewSession:
-    """Apply payload to ``review_session`` and record changed fields in audit."""
-    lifecycle.invalidate_if_validated(
-        db,
-        review_session=review_session,
-        user=user,
-        reason="session_edited",
-        correlation_id=correlation_id,
-    )
+    """Apply payload to ``review_session`` and record changed fields in audit.
+
+    Does **not** invalidate a ``validated`` session, unlike the other
+    setup services (``spec/lifecycle.md`` §2.3). No field written here
+    can change the readiness check's verdict: name and code are checked
+    only for being present and ``SessionCreate`` requires both, help
+    contact adds an info note only, and nothing else here is read
+    (author's ruling, 2026-10-05, findings Cc5)."""
     diffs: dict[str, list[object]] = {}
     for field_name in _UPDATED_FIELDS:
         old = getattr(review_session, field_name)
