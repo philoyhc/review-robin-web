@@ -578,7 +578,7 @@ are read-mostly so they work in any state.
 | Event type | Emitted by | Detail envelope |
 |---|---|---|
 | `session.validated` | `mark_validated` | `counts={"warnings": N, "info": N}` |
-| `session.invalidated` | `invalidate_session` (called via `invalidate_if_validated` or directly) | `reason=<string>` naming the caller: the mutation for `invalidate_if_validated` (e.g. `reviewer_created`, `assignments_generated`), `operator_revert` from `/revert`, `workflow_run_rollback` from a failed Activate |
+| `session.invalidated` | `invalidate_session` (called via `invalidate_if_validated` or directly) | `reason=<string>` naming the caller: the mutation for `invalidate_if_validated` (e.g. `reviewer_created`, `assignments_generated`), `operator_revert` from `/revert`. A failed Activate writes none: the session stays `validated` |
 | `session.activated` | `activate_session` | `counts={"warnings": N, "info": N, "instruments": N}` + `context={"prev_status": "validated", "override_warnings": bool, "trigger": "operator" \| "scheduled"}` |
 | `session.reverted_to_draft` | `revert_session_to_draft` | `counts={"closed_instruments": N, "responses_at_revert": N}` |
 | `session.expired` | `expire_session` (Workflow-card **Close session**) | `counts={"closed_instruments": N}` |

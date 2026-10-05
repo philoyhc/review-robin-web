@@ -14,8 +14,9 @@ one click) into two deliberate steps:
   (``/validate?activate=1&return_to=...``) is preserved here: when
   the readiness report (recomputed on activation) has non-blocking
   findings, the route 303s to that URL before calling
-  ``activate_session``. Activate failures roll back the
-  ``validated → ready`` promotion via ``invalidate_session``.
+  ``activate_session``. A failed Activate leaves the session
+  ``validated`` (findings B8): every refusal comes before anything is
+  written.
 
 Per ``guide/segment_18F_workflow_optimization.md`` and the revised
 ``spec/workflow_card.md``.
@@ -302,8 +303,12 @@ def workflow_activate(
     Pre-flight requires ``validated``; Prepare must have run first.
     When the readiness report (recomputed here) has non-blocking
     findings, the route 303s to the Validate-page warnings detour
-    instead of activating directly. An Activate failure rolls back
-    the ``validated → draft`` flip via ``invalidate_session``.
+    instead of activating directly. A failed Activate leaves the
+    session ``validated`` (author's ruling, 2026-10-05; findings B8):
+    every refusal — errors at re-validation, or a ``LifecycleError``
+    from ``activate_session``'s own pre-checks — comes before anything
+    is written, so there is nothing to roll back, and the card shows
+    the failure banner over the state the session is still in.
     """
     correlation_id = request_correlation_id()
 
@@ -372,16 +377,11 @@ def workflow_activate(
             correlation_id=correlation_id,
         )
     except (_StepFailed, lifecycle.LifecycleError, ValueError) as exc:
-        # If we got as far as ``validated → ready``, roll the
-        # promotion back so the card resolves to a draft state.
-        if lifecycle.is_validated(review_session):
-            lifecycle.invalidate_session(
-                db,
-                review_session=review_session,
-                user=user,
-                reason="workflow_run_rollback",
-                correlation_id=correlation_id,
-            )
+        # The session stays where it was. This used to call
+        # `invalidate_session` here, under a comment about rolling back
+        # `validated → ready` — but nothing above flips that before it
+        # can raise, so the call only ever demoted a still-`validated`
+        # session to `draft` (findings B8).
         message = str(exc)
         audit.write_event(
             db,

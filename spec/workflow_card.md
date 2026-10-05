@@ -495,10 +495,12 @@ On clean activation, `lifecycle.activate_session(...)` flips
 `validated → ready`, opens every instrument
 (`accepting_responses = True`), and emits `session.activated`.
 
-If Activate raises after `mark_validated`'s promotion (defensive
-— `activate_session` itself is the only mutator), the except
-branch calls `lifecycle.invalidate_session(...)` to roll the
-session back to `draft`.
+If Activate fails — errors at re-validation, or a `LifecycleError`
+from `activate_session`'s own pre-checks — the session **stays
+`validated`**. Every refusal comes before anything is written, so
+there is nothing to roll back; the card renders the failure banner over
+the state the session is still in (4Err when re-validation found
+errors), and Prepare remains the productive next step.
 
 #### Warnings detour
 
@@ -546,12 +548,9 @@ so the workflow-failure signal line adapts.
 
 **Activate failures:**
 
-- **Activate raises.** The except branch calls
-  `lifecycle.invalidate_session(reason="workflow_run_rollback")`
-  if the session was promoted to `validated`; that returns the
-  session to `draft` and emits `session.invalidated`, so the card
-  renders a draft state on the next load. Redirect carries
-  `super_button=activate&super_step=activate`.
+- **Activate raises.** The session stays `validated`; nothing is
+  invalidated and no `session.invalidated` is written. Redirect
+  carries `super_button=activate&super_step=activate`.
 
 Each route emits two audit events bracketing the run:
 
