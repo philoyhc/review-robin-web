@@ -103,11 +103,10 @@ the joke it sounds like.
   `tests/unit/test_doc_references.py` fails on a path reference naming
   nothing (19G.1 rung 2; moved to its own module 2026-09-20). The section-level half is not.
   Since 19S.2 the **index** half is enforced as well:
-  `tests/unit/test_index_currency.py` fails when an archived plan from
-  segment 16 on has no entry under `guide/todo_master.md`'s `## Done`,
-  when those entries stop sorting by declared PR, when `docs/status.md`'s
+  `tests/unit/test_index_currency.py` fails when `docs/status.md`'s
   `As of` drifts from its newest row, or when a queued-work plan pointer
-  names a plan that has been archived. What stays unenforced is the
+  names a plan that has been archived; that every archived plan has an
+  index row is `tests/unit/test_guide_indexes.py`'s. What stays unenforced is the
   judgement this section is about — whether prose pointed at the right
   file still says what that file says.
 

@@ -99,7 +99,7 @@ PATH_REF = re.compile(r"`((?:spec|docs|guide|app|tests|tools)/[A-Za-z0-9_./-]+)`
 PATH_ESCAPE = "<!-- path-ref-ok -->"
 
 #: A whole `##` section is a dated register inside an otherwise-live file
-#: — `docs/status.md`'s timeline, `guide/todo_master.md`'s Done. Placed on
+#: — a timeline, a findings list, a dated sweep table. Placed on
 #: the first non-blank line under the heading, and covers to the next
 #: `##`. Section rather than file, so the live half of those documents
 #: stays checked; section rather than 36 inline markers, so it is not noise.
@@ -463,8 +463,7 @@ def _node_refs() -> list[tuple[str, int, str, str, str, str]]:
     duplicated: a node id is a repo reference like any other, and the
     reason a dated register carries a stale one — ``renamed X`` — is the
     same reason. Two consequences, both named rather than left implicit.
-    A node id inside `docs/status.md`'s timeline or
-    `guide/todo_master.md`'s `## Done` is unchecked. And because section
+    A node id inside a section-escaped dated register is unchecked. And because section
     markers are exempt from the stale-marker check by design, reaching
     for one to cover a single citation buys a **blanket** opt-out from
     the path gate for that whole section, with nothing to notice when it

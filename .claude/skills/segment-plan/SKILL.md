@@ -104,7 +104,7 @@ Every line checkable without asking the author. Good: "`spec/csv_contracts.md` �
 - `python3 tools/close_check.py <id>` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
-- `docs/status.md` row added; plan moved to `guide/archive/` + index row
+- `docs/status.md` row added; its `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
 ```
 
 ## Revising a plan
@@ -128,7 +128,7 @@ Asked to "update the plan" after a build, do the six things above. Do not regene
 2. `python3 tools/close_check.py <id>` exits 0 **and every warning is adjudicated**; if it fails, fix the plan or the spec rather than closing. It reports only — it never edits or moves anything, and it asks whether an edit happened, never whether it was right. That judgement is step 3's. `tools/README.md` has the rules it applies; read the warnings, because the exit code alone does not close the loop.
 3. Run `spec-writer` against the doc-impact files only. Adjudicate its flags; record any that changed a decision in `Status`. This close pass is unconditional; the narrow cases where `spec-writer` *also* runs before a rung's push are in `CLAUDE.md` "Where work runs".
 4. **Compact `Status` into the intended-versus-done account, and collapse every answered open question to its answer.** Open, `Status` was a running log and that is what it was for; closed, it is a record, and a record needs the decisions and the divergences rather than the day-by-day path to them. Keep what the ladder became and why, decisions confirmed at build, scope that moved, and anything a later reader needs to read the diff. Drop superseded entries, intermediate states, and anything the code or the spec now says better. *Nothing about intent is touched — only the log of getting there.*
-5. Add the `docs/status.md` row. For a segment close, or the last item of one, move the file to `guide/archive/` and add its row to `guide/archive/README.md`. An item close leaves the file in `guide/`.
+5. Add the `docs/status.md` row, and **delete what the close finished from `guide/todo_master.md`**: the segment's queue entry, any stub it shipped or absorbed, any sequencing note that named it. That file holds open work only, so nothing moves to a Done list — the archived plan is the record. An item close deletes only the stubs the item finished. For a segment close, or the last item of one, move the file to `guide/archive/` and add its row to `guide/archive/README.md`. An item close leaves the file in `guide/`.
 
 Do not run the whole-folder sweep at close; that is a separate cadence with a separate reader.
 
