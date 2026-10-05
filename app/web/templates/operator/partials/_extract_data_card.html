@@ -5,7 +5,7 @@
    Relationships / Session settings / Zip all (left-right, up-down).
 
    Renamed from "Extract Data" → "Extract Setup" on 2026-05-29
-   (per ``guide/extract_data.md``): the card now scopes to the
+   (per ``guide/archive/extract_data.md``): the card now scopes to the
    porting / archival CSVs (the ones Quick Setup can re-ingest).
    Response data shaping moved to the new **Extract data**
    Operations-strip tab. DOM ids stayed ``extract-data*`` to
@@ -49,7 +49,7 @@
   </p>
   {# Two explicit columns mirroring the Quick Setup slot layout:
      col 1 = Reviewers + Reviewees; col 2 = Relationships +
-     Session settings + Zip all. #}
+     Observers (when enabled) + Session settings + Zip all. #}
   <div class="extract-data-grid">
     <div class="extract-data-col">
       {% for row in extract_data.col_one %}

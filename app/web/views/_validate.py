@@ -232,7 +232,7 @@ def _setup_coverage_rows(
         # 19Q Item 7. Observers became an issue *source* when the two
         # cross-roster rules and `observers.duplicate_email` landed, and
         # an error source with no row badges nothing on the at-a-glance
-        # grid — `spec/validate_page.md` §7 step 5. Gated on the flag
+        # grid — `spec/validate_page.md` §7 step 6. Gated on the flag
         # because a session with observers switched off has no roster to
         # summarise, and a permanently blank row is one the operator
         # learns to skip.

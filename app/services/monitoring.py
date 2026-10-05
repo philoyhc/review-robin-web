@@ -9,9 +9,10 @@ has missing required" into a single bucket.
 
 The reviewee-centric ``per_reviewee_coverage`` (Segment 11C Part 1 PR 3)
 classifies reviewees into Complete / Adequate / At risk / No responses
-buckets based on the fraction of their assigned reviewers who have
-submitted. Thresholds live in ``AT_RISK_THRESHOLDS`` — a single
-constant operators can later tune via a session-level setting.
+buckets based on the fraction of their active assignments that are
+complete, as ``_assignment_complete`` defines it (every required field
+answered and submitted, or any response row when none is required). Thresholds live in ``AT_RISK_THRESHOLDS``,
+a module constant; no setting overrides it.
 """
 from __future__ import annotations
 
@@ -35,7 +36,7 @@ from app.services import responses as responses_service
 
 
 # At-risk classification thresholds for the Responses page. A reviewee
-# whose responding-reviewer fraction is at least ``adequate_fraction``
+# whose complete-assignment fraction is at least ``adequate_fraction``
 # (but not 100%) renders as "adequate"; below that (and > 0) is
 # "at risk"; 0 is "no responses"; 100% is "complete".
 AT_RISK_THRESHOLDS = {

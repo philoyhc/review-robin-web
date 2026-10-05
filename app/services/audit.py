@@ -721,7 +721,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Segment 18D PR E1 — Zip-all bundle export. Split 2026-05-29
     # into setup-only (Session Home card) and responses-only
     # (Extract data Operations tab) when response-data extraction
-    # moved off Session Home (per ``guide/extract_data.md``). The
+    # moved off Session Home (per ``guide/archive/extract_data.md``). The
     # original ``session.bundle_extracted`` event type retires —
     # nothing in the live code paths emits it anymore.
     "session.setup_bundle_extracted": EventSchema(_IDENTITY | {"counts"}),
@@ -761,7 +761,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # selection size (0 when no instruments were selected).
     # ``context.self_review_handling`` records the operator's
     # Self-review handling chip state (``include_self`` /
-    # ``exclude_self`` / ``both``) per ``guide/extract_data.md``
+    # ``exclude_self`` / ``both``) per ``guide/archive/extract_data.md``
     # § *Self-review handling*. PR A wired the slot 2026-05-30.
     "session.reviewer_metadata_extracted": EventSchema(
         _IDENTITY | {"counts", "context"}

@@ -301,8 +301,8 @@ def replicate_instrument(
     ``starts_new_page``, the caches and ``deadline_closed_at``: description,
     the response fields (incl. help text, ``visible`` and branches),
     the display fields (incl. each row's ``visible``), ``group_kind``,
-    ``band1_touched_links``, ``band2_state`` and the two acceptance
-    flags as-is. ``starts_new_page`` is not copied: it marks a break
+    ``band1_touched_links``, ``band2_state`` and
+    ``accepting_responses`` as-is. ``starts_new_page`` is not copied: it marks a break
     before the instrument, a fact about position, and the copy
     continues the source's page like any new instrument. The source's Band 1 rule set is
     **cloned** into a row of the copy's own (author's ruling,
@@ -822,7 +822,7 @@ def has_unconfigured(db: Session, session_id: int) -> bool:
 # key-codes (``r1``-``r3`` reviewee tags, ``p1``-``p3`` pair-context
 # tags). A group-scoped instrument with no boundary tag keeps the
 # sentinel ``"both"`` so the column stays non-null (non-null is the
-# group-scoped flag). See ``spec/group_scoped_instruments.md``.
+# group-scoped flag). See ``spec/archive/group_scoped_instruments.md``.
 
 GROUP_KIND_SENTINEL = "both"
 

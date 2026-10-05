@@ -122,7 +122,7 @@ author, marked *re-checked*) also ran it.
   fall-back comes back an hour early (`_session_home.py`
   `_apply_session_config_form`); the lobby compares the box's text since
   #2832 (`sessions.datetime_box_unedited`). Code.
-- **Dc9** — A free-text answer with no maximum can be longer than the
+- ~~**Dc9**~~ — **Declined 2026-10-05 (author): Rehydrate is incomplete and not reachable (rehydrate_enabled is false), so a limit on it is moot.** A free-text answer with no maximum can be longer than the
   `csv` module's 131,072-character field limit: the responses extract
   writes it, and Rehydrate refuses the set (`spec/rehydrate.md` §9,
   since #2835). Author: raise the parser's limit or cap answers.
@@ -135,7 +135,7 @@ author, marked *re-checked*) also ran it.
   in the workspace on each reviewer-chrome render.
 - **D9 / Dc5** — `data_shape_extract` has no `ORDER BY`, and By instrument
   breaks ties unordered: output order can differ between runs on Postgres.
-- **D6 / Dc6** — Responses on inactive pairs are in `responses.csv` and
+- ~~**D6 / Dc6**~~ — **Ruled 2026-10-05: document as is. Done in #2838.** Responses on inactive pairs are in `responses.csv` and
   absent from By instrument, metadata and Data shaper output; nothing says
   so. Author.
 - **D10 / Dc7** — A Settings row under three cells refuses the whole file
@@ -144,15 +144,15 @@ author, marked *re-checked*) also ran it.
   falls to 0.
 - ~~**H2 / Hc4**~~ — **Done in #2837.** Three `data_shape` foreign keys carry no index, against
   `docs/database.md`'s rule.
-- **I / Ic3** — `close_check` fails 18Q (C2, a retired `docs/` path in its
+- ~~**I / Ic3**~~ — **Done in #2838** (18Q passes; 20 now fails only C3, correctly, until the segment is built). `close_check` fails 18Q (C2, a retired `docs/` path in its
   Doc impact) and 20 (C1, no `Doc impact` heading) as the plans stand.
-- **I / Ic2** — The session-start hook warns about Chromium in a
+- ~~**I / Ic2**~~ — **Done in #2838.** The session-start hook warns about Chromium in a
   kit-built repository with no `tests/browser/`.
 - **Ec3–Ec6** — dead CSS (`.instrument-card-short-label`); fifteen classes
   in markup with no rule, script, test or spec; the two Instruments error
   banners' inline flex where `.banner-actions` exists; a bare
   `<small class="muted">` where `.form-help` is owed.
-- **Stale comments**, no behavior: `results.html` header; the
+- ~~**Stale comments**~~ — **Done in #2838**, with the archived extract-data plan pointers across `app/`. No behavior: `results.html` header; the
   `data-rs-discard` note in `review_surface.html`; `_dashboard.py` on
   pre-open; `instrument.py` citing an archived spec and a dropped table;
   `_instrument_crud.py` "two acceptance flags"; `_quick_setup_card.html`
@@ -172,12 +172,12 @@ id points at its row in §3 or §1.
 
 - **Instruments:** A5 (Band 2 group preview for a pair-context boundary),
   A9 (Integer bounds on stored non-whole rows), ~~A16~~ (Save atomicity), ~~A17~~
-  (legacy visibility rows), Ac3 (anonymized row order).
+  (legacy visibility rows), ~~Ac3~~ (anonymized row order).
 - **Lifecycle and workflow:** ~~B2~~ (lobby gate), ~~B8~~ (Activate failure
   demotes), B12 (Validate commits a derived cache; carve out or stop).
 - **Setup:** C5 (the exact-handle match on Invitations and Responses).
-- **Data:** D1 (bracket index or row position orders instruments), D6
-  (inactive pairs across lenses), D9 (extract row order), D10 (short-row
+- **Data:** D1 (bracket index or row position orders instruments), ~~D6~~
+  (inactive pairs across lenses), ~~D9~~ (extract row order), ~~D10~~ (short-row
   detail), D17 (Rehydrate preview counts), D19 (short-label uniqueness),
   D20 (data-shape refs to unlabeled instruments).
 - **UI:** E1 (chip edge 1px or 2px), E14 (the Instruments page's local
@@ -268,7 +268,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **D3** low spec settings_inventory.md:581 only unknown top-level path ignored vs unknown session.<key> silently dropped (_apply_session.py:20-80)
 - **D4** low spec settings_inventory.md:404 ?rule_based_error param absent from app/
 - **D5** med spec extract_data.md:453 no instruments selected -> every roster entry vs zero-response entities dropped (entity_metadata_extract)
-- **D6** low write extract_data.md silent on include=True filtering across lenses vs responses.csv unfiltered
+- ~~**D6**~~ low write extract_data.md silent on include=True filtering across lenses vs responses.csv unfiltered — **Done in #2838.**
 - **D7** low spec csv_contracts.md:50 header always first vs Responses preamble, by-instrument meta block
 - **D8** low trim csv_contracts.md:100,281,3-9 "Five extracts/importers" tallies; Observers & Settings extracts no §2 entry
 - **D9** med author csv_contracts.md:984-987 every extract row order pinned + tested vs data_shape_extract no order_by; by_instrument ties

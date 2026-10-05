@@ -86,7 +86,7 @@ class DataShape(Base, TimestampMixin):
     column_chip_slots: Mapped[str] = mapped_column(Text, nullable=False)
     # Self-review handling chip — three-state cycle persisted per
     # shape (``include_self`` / ``exclude_self`` / ``both``); see
-    # ``guide/extract_data.md`` § *Self-review handling in
+    # ``guide/archive/extract_data.md`` § *Self-review handling in
     # summarizing extracts*. PR B (#TBD) added the column with a
     # default of ``include_self`` so existing rows + chip-less
     # imports preserve today's behaviour. The file-gen path

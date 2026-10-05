@@ -191,9 +191,10 @@ def reviewer_dashboard(
                     if pill is not None and pill.state == "submitted"
                     else f"/me/sessions/{review_session.id}/1"
                 ),
-                # Same datetime gate the route used previously —
-                # the reviewer surface 403s / redirects until the
-                # session is at least once activated.
+                # Off while the session reads "not opened" (draft,
+                # validated or archived): there the reviewer surface
+                # renders only the ``reviewer/pre_open.html`` holding
+                # page, so the row carries no link to it.
                 "enabled": session_status != "not opened",
             }
         if "reviewee" in roles:

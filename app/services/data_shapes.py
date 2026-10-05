@@ -66,7 +66,7 @@ __all__ = [
 
 VALID_AXES: frozenset[str] = frozenset({"reviewer", "reviewee"})
 # Per-shape Self-review handling chip state — PR B of the chip
-# slice per ``guide/extract_data.md`` § *Self-review handling*.
+# slice per ``guide/archive/extract_data.md`` § *Self-review handling*.
 VALID_SELF_REVIEW_HANDLING: frozenset[str] = frozenset(
     {"include_self", "exclude_self", "both"}
 )

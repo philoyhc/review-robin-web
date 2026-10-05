@@ -90,6 +90,24 @@ had already shipped under other segments; three move out; three stay.
 
 ---
 
+## Doc impact
+
+Written 2026-10-05 against "What remains" above. The plan is reserved,
+so `tools/close_check.py 20` reports these as not yet modified until the
+segment builds.
+
+- `docs/README.md` — a row for the new administrator guide (what remains,
+  1). Its filename is settled at build, and its own bullet lands then.
+- `docs/troubleshooting.md` — the institutional half appended: Easy Auth
+  and tenant, network policy, the NUS deploy workflow (what remains, 2).
+- `docs/known_limitations.md` — currency pass against the deployed host
+  (what remains, 3).
+- `app/web/templates/guide.html` — currency pass: real URLs, the real
+  sign-in flow (what remains, 3).
+- `guide/todo_master.md` — delete the segment's queue entry (at close).
+
+---
+
 ## Superseded plan
 
 The pre-2026-09-05 stub follows, unedited, as the record of what this

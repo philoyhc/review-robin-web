@@ -339,7 +339,7 @@ def export_bundle_zip(
     Filename: ``{code}_setup.zip``. Slimmed from the original
     "session bundle" on 2026-05-29 when response-data download
     moved to the Extract data Operations tab (per
-    ``guide/extract_data.md``)."""
+    ``guide/archive/extract_data.md``)."""
     zip_bytes, counts = build_setup_bundle(db, review_session)
 
     audit.write_event(
@@ -522,7 +522,7 @@ def export_by_instrument_bundle_zip(
     + the cross-reviewer comparison table. Filename:
     ``{code}_by_instrument.zip`` (members named
     ``{code}_by_instrument_{slug}.csv``). Per
-    ``guide/extract_data.md``.
+    ``guide/archive/extract_data.md``.
 
     Query params (driven by the card's chip row):
 
@@ -640,7 +640,7 @@ def export_reviewer_metadata_csv(
     ``?self_review_handling=`` ∈ ``{"include_self", "exclude_self",
     "both"}`` drives the chip's three-state column shape (PR A of
     the Self-review handling chip slice per
-    ``guide/extract_data.md`` § *Self-review handling*). Unknown
+    ``guide/archive/extract_data.md`` § *Self-review handling*). Unknown
     values fall through to ``include_self`` so today's chip-less
     links keep working unchanged.
     """

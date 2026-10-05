@@ -224,6 +224,18 @@ card with nothing to download — By instrument with no instrument
 chip on — rides as off. A shape whose name makes it collide
 with another member gains `_2` before `.csv` in the bundle only.
 
+**Inactive pairs are in `responses.csv` only.** `{code}_responses.csv`
+is the full raw record: every stored answer, whatever its
+assignment's `include` flag, since Rehydrate rebuilds from it, and
+it has no column that marks a pair inactive. The analysis lenses
+read active pairs only — every assignment and response query
+behind By instrument (its rows and the meta block's assignment
+count), both metadata cards (Assigned, Count and the per-field
+blocks) and the Data shaper (assigned counts and the response
+rollup) filters on `Assignment.include IS TRUE`. An answer given
+on a pair later made inactive therefore appears in
+`responses.csv` and is counted in none of the other files.
+
 **Query contract** (`build_responses_bundle`). Each chip is a flag
 that is `0` when off: `?by_instrument=`, `?reviewer_metadata=`,
 `?reviewee_metadata=`, `?data_shapes=`, `?tokens=`. A card's own
