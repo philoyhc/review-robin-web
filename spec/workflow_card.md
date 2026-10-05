@@ -185,6 +185,11 @@ elif is_ready:
 elif is_expired:                                → State 10
 ```
 
+**`archived` matches no branch.** The card still renders on an
+archived session's pages, with no body copy, no buttons (every
+visibility flag is false there) and no per-state status detail; only
+a signal line whose condition holds appears in the right column.
+
 **`W` is an overlay, not a state.** `needs_acknowledge` is
 `report.has_non_blocking_findings`, computed without reference to invitation
 state (`app/web/views/_workflow_card.py`), and the template appends its
@@ -376,8 +381,8 @@ still holds, with 4Err joining State 5 at the cap.
 
 ‡ = `is_response_release_window_open(session)` is True in the `expired` state (i.e. the operator has run Release responses post-close, or a scheduled release has fired). Release and Stop are both gated on `is_expired` — they stay hidden in every pre-expired state regardless of any backdated `responses_release_at`, so the ≤4-button contract holds for every state.
 
-Each state caps at 4 visible buttons; today's worst case is 4
-(state 5). The pruning rules above (drop Send invites
+Each state caps at 4 visible buttons; States 5 and 4Err† reach
+the cap. The pruning rules above (drop Send invites
 once sent, hide Archive
 outside `expired`, hide Release/Stop outside `expired`,
 Release/Stop share a slot when both eligible) are what keep
@@ -621,7 +626,7 @@ States 7's copy names Revert to draft.
   copy.** It reaches the same predicate through
   `monitoring._assigned_active_reviewers`, a separate `select` with
   the same three filters. Two copies of a query agree by luck, not by
-  construction; unifying them is open.
+  construction.
 - **Send reminders** posts to
   `/operator/sessions/{id}/invitations/remind-incomplete` via
   `next-action-send-reminders-form`. Calls
@@ -852,14 +857,14 @@ gate the trigger:
 | set | set | yes | yes | ✓ "Auto-send scheduled at «X». System will dispatch automatically; you can also Send all now." |
 
 In this table **Prepared?** follows the trigger: `validated` or `ready`.
-**Known defect, awaiting Azure** (`guide/post_azure_todo_checklist.md` item 7): the caption builder tests `is_draft` and then
-`is_ready`, so it treats `expired` and `archived` as prepared. With
-invitations it shows those states the ✓ "System will dispatch
-automatically" row; without, the `validated` row's ⚠ "run Prepare
-session before then" copy. The trigger skips both with `not_prepared` (`is_prepared` in
-`app/services/scheduled_events/_invites.py`). The fix belongs in
-`build_auto_send_invites_caption`. Until then, the caption in those two
-states is wrong, not the contract.
+**Known defect** (`guide/post_azure_todo_checklist.md` item 7): the
+caption builder tests `is_draft` and then `is_ready`, so it treats
+`expired` and `archived` as prepared — with invitations it shows those
+states the ✓ "System will dispatch automatically" row, without them the
+`validated` row's ⚠ copy — while the trigger skips both with
+`not_prepared` (`is_prepared` in
+`app/services/scheduled_events/_invites.py`). The caption is wrong in
+those two states, not the contract.
 
 #### Auto-send reminders signal
 

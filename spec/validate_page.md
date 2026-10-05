@@ -54,6 +54,15 @@ inventories the current session against the rule set.
   of the bare issue list. On ineligible states (not `validated`)
   or when there is nothing to acknowledge, the route drops the
   param and 303s to the clean URL.
+- `?return_to=<slug>` — carried with `?activate=1` from the host
+  page whose Activate button sent the operator here; the banner's
+  "Acknowledge and activate" form posts it back so `/activate`
+  303s to that page.
+- `?super_status=` / `super_button=` / `super_step=` /
+  `super_error=` and `?prepare_confirm=` — the Workflow card's own
+  redirect params, passed straight to `build_workflow_card_context`
+  (`spec/workflow_card.md` "Workflow-failure signal" and "Saved-response
+  confirmation detour").
 
 ---
 
@@ -111,9 +120,9 @@ canonical row order:
 One row per `label` emitted by `_setup_coverage_rows`, in the
 order it emits them:
 
-1. **Session name** — the name, or `—`. Carries the
+1. **Session name** — `✓` when set, or `—`. Carries the
    `session`-source issue counts.
-2. **Session code** — the code, or `—`. No counts of its own.
+2. **Session code** — `✓` when set, or `—`. No counts of its own.
 3. **Reviewers** — count, with the `reviewers`-source counts.
 4. **Reviewees** — count, with the `reviewees`-source counts.
 5. **Observers** — count, with the `observers`-source counts.
@@ -133,10 +142,9 @@ warning / info counts are the severity chip strip.
 Every issue `source` that can raise an error has a row here, or
 its findings badge nothing on the grid — see §7 step 6.
 
-Each row's status string is a short prose summary (e.g.
-*"5 reviewers"*, *"2 instruments, 3 + 4 fields"*) — the
-operator scans the grid for the at-a-glance picture, then
-drills into Issues for diagnostics.
+Each row's status is terse — a `✓`, a bare count, or a short
+label — so the operator scans the grid for the at-a-glance
+picture, then drills into Issues for diagnostics.
 
 ### 2.3 Severity filter chip strip
 

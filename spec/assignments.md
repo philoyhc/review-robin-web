@@ -21,8 +21,9 @@ This spec covers:
 - The rule model that drives generation.
 - The Assignments operator page at
   `/operator/sessions/{session_id}/assignments` — the
-  per-instrument status table, the preview table, and the
-  Self-review / Include / Show toggles.
+  per-instrument status table, the preview table, the
+  Self-review and Show toggles, and the bulk Inactivate /
+  Activate of selected rows.
 - The reconcile + regenerate path that preserves saved
   responses across re-runs, and why it may not be simplified
   back to a replace.
@@ -35,9 +36,7 @@ authors a rule, where `group_kind` lives — see
 > lives on its instrument's Band 1: there is no operator-side
 > RuleSet library and no standalone Rule Builder page, and an
 > instrument with no rule at all evaluates against the synthetic
-> Full Matrix. Superseded designs are kept as records at
-> `spec/archive/rule_based_assignment.md` and in the fan-out half
-> of `spec/archive/group_scoped_instruments.md`.
+> Full Matrix.
 
 ## Contents
 
@@ -94,8 +93,9 @@ instrument. Each row carries:
   instruments have none.
 - `include: bool` — whether the reviewer sees this reviewee on
   their per-instrument page. Defaults to True; the
-  Assignments-page **Self review** toggle (and the per-row
-  Include toggle on the preview table) drive it.
+  Assignments-page **Self review** toggle and the preview
+  table's bulk **Inactivate** / **Activate** on selected rows
+  drive it (the table's Include cell is a read-only pill).
 
 ## Rule model
 
@@ -157,9 +157,13 @@ A `MATCH` rule carries a `predicate` of `{field, operator, operand, case_sensiti
 | `reviewer.tagN` | `Reviewer.tag_N` | `tag1 / tag2 / tag3` |
 | `reviewee.tagN` | `Reviewee.tag_N` | `tag1 / tag2 / tag3` |
 | `pair_context.tagN` | `Relationship.tag_N` | `tag1 / tag2 / tag3` |
+| `reviewer.email` | `Reviewer.email` | — |
+| `reviewee.email` | `Reviewee.email_or_identifier` | — |
 
-Only namespace + slot combinations with at least one populated
-roster row appear in the Band 1 dropdowns
+The engine accepts every field above (`ALLOWED_PREDICATE_FIELDS` in
+`app/schemas/rules.py`); Band 1 offers only the tag slots, and of
+those only namespace + slot combinations with at least one populated
+roster row appear in its dropdowns
 (`views._instruments.new_model_usable_tags`).
 
 **Operators** (UI → engine internal):
@@ -181,16 +185,24 @@ both sides before comparison.
 
 ### Combinator semantics
 
-The wrapping `Combinator` enum on a `RuleSet` or `COMPOSITE`:
+The `Combinator` enum (`app/schemas/rules.py`) on a
+`SessionRuleSet` merges its top-level rules:
 
-- `ALL_OF` — every child must match (logical AND).
-- `ANY_OF` — at least one child must match (logical OR).
-- `NONE_OF` — the engine honours it; Band 1 never emits it.
+- `ALL_OF` — a pair must survive every rule (logical AND).
+- `ANY_OF` — a pair is kept when at least one rule keeps it
+  (logical OR).
+- `PIPELINE` — the rules apply in order: a `FILTER` drops the
+  pairs it matches, a `MATCH` or `COMPOSITE` re-adds every
+  candidate it matches, last writer wins. The engine honours it;
+  Band 1 never emits it.
+
+A `COMPOSITE` carries its own `op` (`CompositeOp`: `AND` / `OR` /
+`NOT`) over its children.
 
 Band 1's outer `SessionRuleSet.combinator` is always `ALL_OF` —
 Link 1's Composite ∩ Link 2's Composite. Inside each Composite,
 the Link's per-cell combinator toggle (`AND` / `OR`) maps onto
-the Composite's `op` field.
+the Composite's `op` field; Band 1 never emits `NOT`.
 
 ### RuleSet structure
 
@@ -202,7 +214,7 @@ SessionRuleSet(
     session_id: int,
     name: str,                      # "New-model instrument #{id} Band 1"
     description: str,
-    combinator: str,                # ALL_OF | ANY_OF
+    combinator: str,                # ALL_OF | ANY_OF | PIPELINE
     exclude_self_reviews: bool,     # see Self-review policy below
     seed: int | None,               # deterministic seed for QUOTA's RNG
     rules_json: list[dict],         # the rule list serialisation
@@ -411,8 +423,9 @@ Two attributes still drive whether self-review rows appear as
    defaults True). When a self-review pair is materialised, its
    `Assignment.include` is `True if self_reviews_active else False`.
 
-In other words: self-review rows are always materialised. Whether
-they're "active" is a post-generation toggle. This is the
+In other words: unless `exclude_self_reviews` is set, self-review
+rows are always materialised, and whether they're "active" is a
+post-generation toggle. This is the
 user-facing affordance — the operator can flip self-review
 inclusion at any time without re-running Generate.
 
@@ -543,8 +556,9 @@ instrument_id)` and the derived group key, and renders one card
 per group:
 
 - Identity cell: bold comma-joined boundary-tag values on top,
-  member names below (truncated to first 10 with a `... + N
-  more`).
+  member names below (truncated to the first 10, then `, +N
+  more`). The names render only when the instrument's reviewee
+  Name display field is visible (`show_members`).
 - One set of response fields shared by every member of the
   group.
 
@@ -982,7 +996,7 @@ the rule behind them are in `spec/setup_pages.md`, "Preview tables
 **Where a pager renders, the line says nothing about position**,
 because the ranges already state it. The filtered branches read
 `Showing 2 assignments.` and, when the cap truncates a filtered view,
-`Showing 500 of 900 assignments, 400 more not shown.` A count of one
+`Showing 200 of 900 assignments, 700 more not shown.` A count of one
 takes the singular.
 
 **The page is paged**: `?offset=` cuts a 200-row page out of the whole
@@ -1185,9 +1199,7 @@ changed, or the rosters or relationships moved after Generate.
 **Two surfaces carry it:** a `stale` pill beside the instrument's
 Generated count on this page, and an `instruments.stale_generated`
 warning on Validate naming each affected instrument. There is no
-page-level badge, and no Next Action affordance — the pre-Validate
-Generate resolver that once consumed the session-wide aggregate is not
-wired to any route.
+page-level badge and no Workflow-card affordance.
 
 **The verdict is the engine's own diff**, not a comparison of counts.
 Two properties follow, and both are the contract rather than an
@@ -1279,8 +1291,8 @@ through when `responses_deleted` is 0 (`spec/workflow_card.md`
 "Saved-response confirmation detour"). There is no skip-Generate
 choice, because reconcile does not destroy unchanged data.
 
-The dry-run is not cheap at roster scale: one engine walk is seconds
-per instrument on a 1,000 × 1,000 roster. The clean path pays for one,
+The dry-run is not cheap at roster scale: it is a full engine walk
+per instrument. The clean path pays for one,
 the run. **The confirmation path pays for three**: the dry-run on the
 first POST, a second `reconcile_impact` when the redirected GET
 renders the banner, and the run on the acknowledged POST. That is

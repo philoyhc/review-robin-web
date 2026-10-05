@@ -169,7 +169,7 @@ Audit event: `session.activated` with `counts={"warnings": N,
 
 ### 2.5 `ready`/`expired → draft` — `revert_session_to_draft(...)`
 
-The **Revert to draft** path (legacy internal name: *Pause*). Called by `POST
+The **Revert to draft** path. Called by `POST
 /operator/sessions/{id}/revert`. Flips to `draft` and sets
 `accepting_responses=false` on every instrument in the same
 transaction. **Existing `Response` rows are preserved untouched**
@@ -194,8 +194,9 @@ single session-level event covers them.
 
 ### 2.6 Direct `validated → draft` (operator-initiated)
 
-When the operator clicks "Revert to draft" on a Setup page or on
-the Next Action card while the session is `validated`, the
+When the operator clicks the Workflow card's "Revert to draft"
+while the session is `validated` (a `validated` session is editable,
+so the Setup pages show no lock card and no revert form), the
 `/revert` route dispatches by current status: `validated → draft`
 calls `invalidate_session(reason="operator_revert")`. The
 `ready → draft` branch calls `revert_session_to_draft` instead
@@ -437,9 +438,11 @@ routes take `_require_not_archived`, so the page and its routes agree
 and the surface is suppressed exactly where they refuse. §3.1 lists
 all eight.
 
-The reason is what an observer *is*. They never appear in assignments,
-never produce responses, and no readiness rule references them — so
-freezing their roster at Activate protects nothing, while refining who
+The reason is what an observer *is*. They never appear in assignments
+and never produce responses, and the readiness rules that read them
+(`observers.duplicate_email`, `observers.cross_roster_identity`) check
+only who the observer is, not anything the session's work depends on —
+so freezing their roster at Activate protects nothing, while refining who
 sees what mid-session is a legitimate flow. The lock card still
 renders, on the archived-only condition, so it never contradicts a
 live roster beneath it.
@@ -590,7 +593,10 @@ each page renders its own "session not yet activated" banner if
 the surface needs an active session; most Operations surfaces
 are read-mostly so they work in any state.
 
-## 6. Audit events (full list)
+## 6. Audit events
+
+The events the lifecycle transitions and the scheduled triggers write.
+`EVENT_SCHEMAS` in `app/services/audit.py` registers every event type.
 
 | Event type | Emitted by | Detail envelope |
 |---|---|---|
@@ -745,9 +751,12 @@ implements it but has no callers.
 scheduled event has its own operational preconditions — system
 state that must hold at fire time for the transition to be
 legal. The trigger checks the precondition first; if unmet, it
-emits a `…_skipped` audit event with `reason=<precondition>`,
-clears the relevant column / list entry (one-shot), and returns
-without retrying. Per-event preconditions:
+emits a `…_skipped` audit event with `reason=<precondition>` and
+returns without retrying. The skip is one-shot: scheduled activation
+clears `scheduled_activate_at`; an invite or reminder offset stays in
+its list and is consumed by the skip event itself, since each trigger
+treats an offset index with a `…_fired` or `…_skipped` row for the
+current anchor as done. Per-event preconditions:
 
 | Event | Precondition at fire time | Skip reason |
 |---|---|---|
@@ -824,14 +833,15 @@ translate to HTTP 422 with the per-pair error message:
 | Release-until ≤ Release-from | `Release responses until must be after Release responses from.` |
 | Release-until > Release-from + 365d | `Release responses until must be within 365 days of Release responses from.` |
 
-The forms also pin the same chain client-side via `min` /
-`max` attributes on each `datetime-local` input and a small
-shared partial (`operator/partials/_schedule_ordering_js.html`)
-that live-updates the bounds as the operator types. The
-client check makes invalid choices grey out in the picker;
-the server check is the load-bearing safety net (mobile
-pickers silently round around `min` / `max` in some browsers,
-and direct POSTs bypass the picker entirely).
+The create form (`session_new.html`) also pins the same chain
+client-side via `min` / `max` attributes on each `datetime-local`
+input and a small partial
+(`operator/partials/_schedule_ordering_js.html`) that live-updates
+the bounds as the operator types, so invalid choices grey out in
+the picker. Session Home's Details card sets no bounds on its
+inputs. Either way the server check is the load-bearing safety net
+(mobile pickers silently round around `min` / `max` in some
+browsers, and direct POSTs bypass the picker entirely).
 
 ### 8.3 Implementation notes
 
@@ -847,14 +857,17 @@ and direct POSTs bypass the picker entirely).
   with reasonable lead time, but constrains *how close to the
   fire moment* the operator can schedule (the lead-time floors
   are in `spec/settings_inventory.md` §2).
-- **Past-time editor rule.** The editor **rejects** an anchor
-  or offset on **save** if the resolved fire time is in the
-  past at the moment of saving. The operator can't *set* a
-  past schedule. But a value that *became* past after saving
-  (e.g. the operator set Start for tomorrow, then invalidated
-  through the deadline) **stays put**; the fire-time
-  precondition guard handles it normally (typically firing on
-  the next operator visit if the precondition is also satisfied).
+- **Past-time editor rule.** The values that fire — Start and
+  each invite and reminder offset — are **rejected** on **save**
+  when their resolved fire time is closer than the operational
+  lead-time floor (`spec/settings_inventory.md` §2), so the
+  operator can't *set* a past firing. End, Release-from and
+  Release-until have no floor: End only gates the deadline
+  observer, and Release-from may be backdated to release
+  immediately. A value that *became* past after saving (Start
+  set for tomorrow, and tomorrow has come while the session sat
+  in `draft`) **stays put**; the fire-time precondition guard
+  handles it normally, typically on the next operator visit.
 - **Concurrency safety.** Two concurrent operator GETs racing
   the observer could fire the same trigger twice. Each trigger
   opens with `SELECT … FOR UPDATE` on the session row plus an
