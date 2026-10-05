@@ -593,7 +593,7 @@
           </thead>
           <tbody data-rfhelp-tbody="{{ instrument.id }}">
             {% for field in sorted_response_fields %}
-              <tr class="rfhelp-row" data-rfhelp-for="{{ field.id }}">
+              <tr data-rfhelp-for="{{ field.id }}">
                 <td><code>{{ field.field_key }}</code></td>
                 {# Segment 18R Item 2 PR 1 — help text + show toggle
                    always rendered; inert makes them read-only when
@@ -2593,7 +2593,7 @@
               var hint = responseColClass(card, r);
               html += '<th scope="col" class="' + (hint ? hint + ' ' : '') + 'rrw-sortable" style="position: relative;">'
                 + esc(r.label)
-                + (r.required ? ' <span class="rs-required" title="Required" aria-label="Required">*</span>' : '')
+                + (r.required ? ' <span title="Required" aria-label="Required">*</span>' : '')
                 + surfaceSortStub()
                 + maybeResizeHandle('resp_' + r.key, colIdx === lastIdx)
                 + '</th>';
@@ -2698,7 +2698,7 @@
             responses.forEach(function (r) {
               html += '<th scope="col" style="position: relative;">'
                 + esc(r.label)
-                + (r.required ? ' <span class="rs-required" title="Required" aria-label="Required">*</span>' : '')
+                + (r.required ? ' <span title="Required" aria-label="Required">*</span>' : '')
                 + maybeResizeHandle('resp_' + r.key, colIdx === lastIdx)
                 + '</th>';
               colIdx += 1;

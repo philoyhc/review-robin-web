@@ -675,7 +675,7 @@
       <table id="observers-table">
         <thead>
         <tr>
-          <th class="row-select-cell">
+          <th>
             {% if selectable %}
               <input type="checkbox" id="observers-select-all"
                      aria-label="Select all observers">
@@ -707,7 +707,7 @@
              the way `Edit` does. #}
           <tr class="observer-edit-row session-row-selected row-action-target"
               id="{{ row_editor_anchor }}">
-            <td class="row-select-cell"></td>
+            <td></td>
             <td><input type="text" name="display_name"
                        form="observer-edit-form"
                        value="{{ edit_values.display_name }}"
@@ -732,7 +732,7 @@
           {% if edit_id is not none and observer.id == edit_id %}
             <tr class="observer-edit-row session-row-selected row-action-target"
                 id="observer-row-{{ observer.id }}">
-              <td class="row-select-cell"></td>
+              <td></td>
               <td><input type="text" name="display_name"
                          form="observer-edit-form"
                          value="{{ edit_values.display_name }}"
@@ -768,7 +768,7 @@
                    control that no-ops on every row. #}
                 data-status="{{ observer.status }}"
                 {% if selectable %}data-observer-cohort-rule="{{ cohort_rule_views[observer.id].signature }}"{% endif %}>
-              <td class="row-select-cell">
+              <td>
                 {% if selectable %}
                   <input type="checkbox" class="observer-select"
                          name="observer_ids" value="{{ observer.id }}"

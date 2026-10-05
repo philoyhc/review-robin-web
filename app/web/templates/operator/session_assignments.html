@@ -61,8 +61,7 @@
              ``pill-warning`` (yellow) when not (unchecked /
              indeterminate). #}
           {% set sr_pill_class = 'pill-info' if block.self_review_checkbox_state == 'checked' else 'pill-warning' %}
-          <tr id="status-block-{{ block.instrument_id }}"
-              {% if block.is_stale %}class="status-block-stale"{% endif %}>
+          <tr id="status-block-{{ block.instrument_id }}">
             <td>{{ block.instrument_label }}</td>
             <td>{{ "Group" if block.is_group else "Individual" }}</td>
             <td>
@@ -104,7 +103,6 @@
                 <form method="post"
                       action="{{ block.self_review_toggle_url }}"
                       id="sr-form-{{ block.instrument_id }}"
-                      class="instrument-self-review-form"
                       style="display: inline; margin-left: 8px;">
                   <input type="hidden" name="active" value="true">
                   <input type="checkbox"
@@ -353,7 +351,7 @@
         <thead>
         <tr>
           {% if can_edit %}
-          <th class="row-select-cell">
+          <th>
             <input type="checkbox" id="assignments-select-all"
                    aria-label="Select all assignments">
           </th>
@@ -433,7 +431,7 @@
               data-row-instrument="{{ assignment.instrument_id }}"
               data-status="{{ 'active' if assignment.include else 'inactive' }}">
             {% if can_edit %}
-            <td class="row-select-cell">
+            <td>
               <input type="checkbox" class="assignment-select"
                      name="assignment_ids" value="{{ assignment.id }}"
                      form="assignments-bulk-form"

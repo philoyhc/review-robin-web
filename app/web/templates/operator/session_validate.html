@@ -78,7 +78,7 @@
       {% for row in validate.setup_coverage %}
         <p class="setup-coverage-cell">
           <span class="setup-coverage-label">{{ row.label }}</span>
-          <span class="setup-coverage-status">{{ row.status }}</span>
+          {{ row.status }}
           {% if row.error_count > 0 or row.warning_count > 0 %}
             <a class="setup-coverage-issues" href="#issue-source-{{ row.source }}">
               {% if row.error_count > 0 %}

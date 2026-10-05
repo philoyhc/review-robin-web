@@ -666,7 +666,7 @@
              {% if not edit_mode %}data-rrw-sortable="rrw-sort-relationships-{{ session.id }}"{% endif %}>
         <thead>
         <tr>
-          <th class="row-select-cell">
+          <th>
             {% if selectable %}
               <input type="checkbox" id="relationships-select-all"
                      aria-label="Select all relationships">
@@ -728,7 +728,7 @@
              target `Add new` lands on: the row IS the editor now. #}
           <tr class="relationship-edit-row session-row-selected row-action-target"
               id="{{ row_editor_anchor }}">
-            <td class="row-select-cell"></td>
+            <td></td>
             {# The caret starts here — see the script below the table.
                Not `autofocus`: `Add new` navigates to a URL carrying a
                fragment, and a fragment navigation moves focus to its
@@ -783,7 +783,7 @@
           {% if edit_id is not none and row.id == edit_id %}
             <tr class="relationship-edit-row session-row-selected row-action-target"
                 id="relationship-row-{{ row.id }}">
-              <td class="row-select-cell"></td>
+              <td></td>
               <td>
                 <input type="text" name="reviewer_pick"
                        form="relationship-edit-form"
@@ -837,7 +837,7 @@
                which status action the selection admits. #}
             <tr id="relationship-row-{{ row.id }}" class="row-action-target"
                 data-status="{{ row.status }}">
-              <td class="row-select-cell">
+              <td>
                 {% if selectable %}
                   <input type="checkbox" class="relationship-select"
                          name="relationship_ids" value="{{ row.id }}"

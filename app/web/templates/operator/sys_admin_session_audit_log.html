@@ -152,7 +152,7 @@
           <label style="margin-top: 12px; display: block;">Severity</label>
           <div style="display: flex; flex-wrap: wrap; gap: 12px;">
             {% for value, selected in filter_form.severity_options %}
-              <label class="filter-checkbox" style="margin: 0;">
+              <label style="margin: 0;">
                 <input type="checkbox" name="severity" value="{{ value }}"{% if selected %} checked{% endif %}>
                 <span class="pill pill-{{ value }}">{{ value }}</span>
               </label>

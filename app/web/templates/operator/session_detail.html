@@ -125,7 +125,7 @@
             <label for="mock-invite-offsets">Send invites (offset from Start; optional)</label>
             {# Display mode: each offset as a pill + a small gap + its
                resolved send datetime as a second pill. #}
-            <div data-display-only class="config-offset-rows">
+            <div data-display-only>
               {% if invite_offset_rows %}
                 {% for row in invite_offset_rows %}
                   <div class="config-offset-row">
@@ -144,7 +144,7 @@
           <div>
             <label for="mock-reminder-offsets">Send reminders (offset from End; optional)</label>
             {# Display mode: each offset pill + its resolved send datetime. #}
-            <div data-display-only class="config-offset-rows">
+            <div data-display-only>
               {% if reminder_offset_rows %}
                 {% for row in reminder_offset_rows %}
                   <div class="config-offset-row">
