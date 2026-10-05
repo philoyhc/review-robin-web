@@ -49,7 +49,7 @@ author, marked *re-checked*) also ran it.
   (`routes_operator/_instruments.py` `/save`), so a 422 for a bad
   response-field shape leaves the rest persisted while the card reports
   failure, and the configured pill is not repainted. *Reproduced.* Author.
-- **A17 / Ac2** — **Ruled 2026-10-05: a normalizing migration; fix queued.** **Legacy visibility rows break round trip and Save.**
+- ~~**A17 / Ac2**~~ — **Ruled 2026-10-05: a normalizing migration. Done in #2833** (`14db60023e88`). **Legacy visibility rows break round trip and Save.**
   `instrument_view_policies` rows written by the backfill migration
   `a7e3b1d92c64` that predate the per-cell rule are never normalized: an
   export→import of a reviewer `while_ongoing` NULL row is refused (blocking
@@ -211,7 +211,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **A14** low trim plan slice ids participant_model.md:70,73,100,130,161,182-183; reviewer-surface.md:1352,1449,1454
 - **A15** low spec sort_by_reviewee.md:338,371 "four rosters" vs three (observers unsorted)
 - **A16** low author instruments.md:1104-1106,1395-1396 bad row 422 edits intact vs non-atomic save (=Ac1)
-- **A17** low spec visibility_policy.md:128-139 §4.1 legacy rows only handled for Replicate (=Ac2)
+- ~~**A17**~~ low spec visibility_policy.md:128-139 §4.1 legacy rows only handled for Replicate (=Ac2) — **Done in #2833.**
 
 **B — assignments, workflow, lifecycle, Validate**
 

@@ -146,6 +146,19 @@ its own message: a **half-set** cell (one member of the pair set, the
 other empty), which would otherwise read as "off"; and the
 **reserved-incoherent** `aggregated` + `identified` pair.
 
+**Stored rows obey it too.** Rows written before the rule existed (the
+`a7e3b1d92c64` backfill from the old `visible_when` columns) were
+normalized by migration `14db60023e88` (2026-10-05): a cell with one legal
+value took it (the reviewer's *Session ongoing* `raw`, the reviewee's
+off), an observer *Session ongoing* `raw` / `anonymized` became
+`summarized`, and anything else illegal became off. Only the reviewer's
+*Session ongoing* cell can read wider afterwards, and only as a stored
+value: no access check reads it — the reviewer sees their own answers
+while the session is `ready` regardless — but the reviewer surface's
+transparency table now shows `Raw responses` there, as the editor
+always has. So every stored row passes both writers, and an Instrument
+card's Save or a Settings re-import never meets one it refuses.
+
 ### 3.2 Anchor-null inertness
 
 The `after_release` and `throughout` windows depend on `responses_release_at`. When the anchor is `NULL`, the §8.2.2 anchor-null rule applies — the after-release half is treated as "no scheduled fire". Per the view-time predicate:
