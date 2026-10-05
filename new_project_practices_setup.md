@@ -150,7 +150,7 @@ commit.
 | `spec/README.md` | skeleton | — | index of the surface contracts |
 | `docs/README.md` | skeleton | — | index of the operational docs |
 | `docs/unenforced_conventions.md` | skeleton | — | constitution VI's short list; starts empty |
-| `.github/workflows/ci.yml` | verbatim | — | ruff + pytest -n auto on 3.12 |
+| `.github/workflows/ci.yml` | adapt | — | ruff + pytest -n auto on 3.12; the Chromium step waits for tests/browser/ |
 | `.github/workflows/ci-postgres.yml` | adapt | — | DB user / password / name; the alembic round-trip stays |
 | `tests/unit/test_doc_references.py` | verbatim | — | the twins, path-reference, section-reference and node-id gates; read only the tree. The node-id floor and archive check **skip** on a fresh export — both need a corpus a new repo has not got |
 | `tests/unit/test_guide_indexes.py` | verbatim | — | the guide-index gate; reads the skeleton READMEs |
@@ -206,7 +206,9 @@ these are the details that matter.
   cite, only `tests/unit/test_doc_references.py` and
   `tests/unit/test_guide_indexes.py` come with the kit, so the
   inline-scripts, generated-tools, contrast-audit and spec-coverage
-  lines go until you have those gates. Then `cp CLAUDE.md AGENTS.md` —
+  lines go until you have those gates, and so does the `tests/browser/`
+  sentence with its `RRW_REQUIRE_BROWSER` clause, which the `ci.yml`
+  edit below removes. Then `cp CLAUDE.md AGENTS.md` —
   the twins test is in the kit.
 - **`constitution.md`.** The six articles are the practice. Delete the
   dated annotations under III; change "derived from
@@ -223,6 +225,12 @@ these are the details that matter.
   neighbours respect, a hand-rolled thing the codebase has a helper for".
 - **`.claude/agents/spec-writer.md`.** Leave as is until `spec/` has a
   second file; then re-point the paths it cites.
+- **`.github/workflows/ci.yml`.** Delete the *Install Chromium* step and
+  the `RRW_REQUIRE_BROWSER` env on the test step until the project has a
+  `tests/browser/`: the step runs `python -m playwright`, which the step-4
+  `dev` extra does not install, so a kit-built repository's first CI run
+  fails on it. Put both back, with `playwright` in the `dev` extra, when
+  the first browser test lands.
 - **`.github/workflows/ci-postgres.yml`.** Database user, password and
   name; keep the upgrade / downgrade-base / upgrade round-trip, and the
   `pytest` step that runs the whole suite against that server — it is

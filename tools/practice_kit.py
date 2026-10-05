@@ -51,7 +51,7 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
     ("spec/README.md", "skeleton", "", "index of the surface contracts"),
     ("docs/README.md", "skeleton", "", "index of the operational docs"),
     ("docs/unenforced_conventions.md", "skeleton", "", "constitution VI's short list; starts empty"),
-    (".github/workflows/ci.yml", "verbatim", "", "ruff + pytest -n auto on 3.12"),
+    (".github/workflows/ci.yml", "adapt", "", "ruff + pytest -n auto on 3.12; the Chromium step waits for tests/browser/"),
     (".github/workflows/ci-postgres.yml", "adapt", "", "DB user / password / name; the alembic round-trip stays"),
     ("tests/unit/test_doc_references.py", "verbatim", "", "the twins, path-reference, section-reference and node-id gates; read only the tree. The node-id floor and archive check skip on a fresh export — both need a corpus a new repo has not got"),
     ("tests/unit/test_guide_indexes.py", "verbatim", "", "the guide-index gate; reads the skeleton READMEs"),
