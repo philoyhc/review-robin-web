@@ -159,11 +159,6 @@
     body.ui-v2 .instrument-card-drag-handle:active {
       cursor: grabbing;
     }
-    body.ui-v2 .instrument-card-short-label {
-      margin-left: 6px;
-      font-weight: 500;
-      color: var(--text-subtle);
-    }
     /* Operator-only ``Instrument_{session_seq}`` fallback on the card
        title — rendered when no short_label is set. Styled muted
        + italic so it reads as a placeholder nudging the operator
@@ -394,8 +389,8 @@
 
   {% if rf_save_error %}
     <div class="banner banner-error banner-scroll-target" id="rf-save-error-banner">
-      <p style="margin: 0 0 8px 0;"><strong>Could not save:</strong> {{ rf_save_error }}</p>
-      <div style="display: flex; justify-content: flex-end;">
+      <p style="margin: 0;"><strong>Could not save:</strong> {{ rf_save_error }}</p>
+      <div class="banner-actions">
         {# Cancel returns to the source row (the instrument card the
            bulk-save POST came from), preserving editing mode so the
            operator can fix the row set. The natural fragment-jump
@@ -417,8 +412,8 @@
      Cancel returns to that instrument's card in edit mode. #}
   {% if sort_save_error and sort_save_error_instrument_id %}
     <div class="banner banner-error banner-scroll-target" id="sort-save-error-banner">
-      <p style="margin: 0 0 8px 0;"><strong>Could not save the sort order:</strong> {{ sort_save_error }}</p>
-      <div style="display: flex; justify-content: flex-end;">
+      <p style="margin: 0;"><strong>Could not save the sort order:</strong> {{ sort_save_error }}</p>
+      <div class="banner-actions">
         <a class="btn alert"
            href="/operator/sessions/{{ session.id }}/instruments?editing={{ sort_save_error_instrument_id }}#instrument-{{ sort_save_error_instrument_id }}">Cancel</a>
       </div>
@@ -598,7 +593,7 @@
           </thead>
           <tbody data-rfhelp-tbody="{{ instrument.id }}">
             {% for field in sorted_response_fields %}
-              <tr class="rfhelp-row" data-rfhelp-for="{{ field.id }}">
+              <tr data-rfhelp-for="{{ field.id }}">
                 <td><code>{{ field.field_key }}</code></td>
                 {# Segment 18R Item 2 PR 1 — help text + show toggle
                    always rendered; inert makes them read-only when
@@ -2598,7 +2593,7 @@
               var hint = responseColClass(card, r);
               html += '<th scope="col" class="' + (hint ? hint + ' ' : '') + 'rrw-sortable" style="position: relative;">'
                 + esc(r.label)
-                + (r.required ? ' <span class="rs-required" title="Required" aria-label="Required">*</span>' : '')
+                + (r.required ? ' <span title="Required" aria-label="Required">*</span>' : '')
                 + surfaceSortStub()
                 + maybeResizeHandle('resp_' + r.key, colIdx === lastIdx)
                 + '</th>';
@@ -2703,7 +2698,7 @@
             responses.forEach(function (r) {
               html += '<th scope="col" style="position: relative;">'
                 + esc(r.label)
-                + (r.required ? ' <span class="rs-required" title="Required" aria-label="Required">*</span>' : '')
+                + (r.required ? ' <span title="Required" aria-label="Required">*</span>' : '')
                 + maybeResizeHandle('resp_' + r.key, colIdx === lastIdx)
                 + '</th>';
               colIdx += 1;

@@ -324,6 +324,7 @@ def test_rejected_sort_spec_renders_the_error_banner(
         f'href="/operator/sessions/{review_session.id}/instruments'
         f'?editing={instrument.id}#instrument-{instrument.id}">Cancel</a>'
     ) in body
+    assert '<div class="banner-actions">' in _banner(body, "sort-save-error-banner")
 
     clean = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
@@ -475,3 +476,25 @@ def test_consolidated_save_over_cap_returns_422_json(
     body = response.json()
     assert body["ok"] is False
     assert any("maximum" in e for e in body["errors"])
+
+
+def _banner(body: str, banner_id: str) -> str:
+    """The banner's markup, from its id to its closing ``</div>``."""
+    start = body.index(f'id="{banner_id}"')
+    return body[start : body.index("</div>\n    </div>", start)]
+
+
+def test_instruments_error_banners_use_the_banner_actions_row(
+    db: Session, client: TestClient
+) -> None:
+    """Both Instruments error banners put Cancel in ``.banner-actions``
+    rather than an inline flex row (findings Ec5, 2026-10-05)."""
+    review_session = _make_session(client, db, code="dfsort-banner-row")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+        "?rf_save_error=Boom"
+    ).text
+    banner = _banner(body, "rf-save-error-banner")
+    assert "<strong>Could not save:</strong> Boom" in banner
+    assert '<div class="banner-actions">' in banner
+    assert "display: flex" not in banner

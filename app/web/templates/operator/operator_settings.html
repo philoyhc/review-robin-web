@@ -86,8 +86,7 @@
         </div>
       </div>
 
-      <div class="settings-actions"
-           style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 20px;">
+      <div style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 20px;">
         <a class="btn secondary" href="{{ return_to_url }}">Cancel</a>
         <button class="btn secondary" type="submit" id="settings-save-button" disabled>Save</button>
       </div>
@@ -118,7 +117,7 @@
         <input type="hidden" name="return_to" value="{{ return_to_raw }}">
       {% endif %}
       <label for="display_timezone">Default timezone</label>
-      <p class="muted tz-sample-line" style="margin: 4px 0 10px;">
+      <p class="muted" style="margin: 4px 0 10px;">
         Sample (right now): <strong id="tz-sample">{{ timezone_sample }}</strong>
         in <strong id="tz-sample-zone">{{ gmt_offset_zone_label(current_timezone) }}</strong>
       </p>
@@ -132,8 +131,7 @@
           <option value="{{ tz }}"></option>
         {% endfor %}
       </datalist>
-      <div class="settings-actions"
-           style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 20px;">
+      <div style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 20px;">
         <button class="btn secondary" type="submit">Save timezone</button>
       </div>
     </form>

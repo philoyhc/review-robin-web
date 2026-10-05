@@ -659,7 +659,7 @@
              {% if not edit_mode %}data-rrw-sortable="rrw-sort-reviewees-{{ session.id }}"{% endif %}>
         <thead>
         <tr>
-          <th class="row-select-cell">
+          <th>
             {% if selectable %}
               <input type="checkbox" id="reviewees-select-all"
                      aria-label="Select all reviewees">
@@ -724,7 +724,7 @@
              target `Add new` lands on: the row IS the editor now. #}
           <tr class="reviewee-edit-row session-row-selected row-action-target"
               id="{{ row_editor_anchor }}">
-            <td class="row-select-cell"></td>
+            <td></td>
             {# The caret starts here — see the script below the table.
                Not `autofocus`: `Add new` navigates to a URL carrying a
                fragment, and a fragment navigation moves focus to its
@@ -775,7 +775,7 @@
           {% if edit_id is not none and reviewee.id == edit_id %}
             <tr class="reviewee-edit-row session-row-selected row-action-target"
                 id="reviewee-row-{{ reviewee.id }}">
-              <td class="row-select-cell"></td>
+              <td></td>
               <td><input type="text" name="name" form="reviewee-edit-form"
                          value="{{ edit_values.name }}" maxlength="255"
                          required></td>
@@ -831,7 +831,7 @@
                    confirmation names the SELECTION's loss and a
                    selection touching no pair does not claim one. #}
                 data-relationships="{{ relationships_per_row.get(reviewee.id, 0) }}">
-              <td class="row-select-cell">
+              <td>
                 {% if selectable %}
                   <input type="checkbox" class="reviewee-select"
                          name="reviewee_ids" value="{{ reviewee.id }}"

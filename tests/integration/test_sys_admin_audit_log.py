@@ -312,6 +312,9 @@ def test_audit_log_filter_strip_renders(
     assert 'name="actor"' in body
     assert 'name="from"' in body
     assert 'name="to"' in body
+    # The multiselect's hint is `.form-help`, not a bare
+    # `<small class="muted">` (findings Ec6, 2026-10-05).
+    assert '<p class="form-help">Ctrl/Cmd-click to select multiple.</p>' in body
     # No filter-reset ("Clear") link when no filter is active.
     assert ">Clear</a>" not in body
 
