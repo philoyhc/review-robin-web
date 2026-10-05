@@ -58,13 +58,15 @@ strictly (super-admin ⊇ admin ⊇ operator). The top tier is
   unreachable from inside the app, so this is the hard anchor. A super-admin
   **self-heals** to full admin rights on every sign-in
   (`_reassert_super_admin`).
-- **Admin promote / demote is super-admin-only.** The `promote` / `demote`
-  service functions require the **actor** to be a super-admin
-  (`requires_super_admin` → 403); a plain sys-admin can no longer change who
-  is an admin. Operator admit / revoke stays admin-gated. **No-super-tier
+- **Admin promote / demote is super-admin-only, and so is inviting as an
+  admin.** The `promote` / `demote` service functions, and `invite` when the
+  *Also invite as sys-admin* box is ticked, require the **actor** to be a
+  super-admin (`requires_super_admin`: 403 on Promote / Demote, a banner on
+  Invite, whose box a plain admin never sees); a plain sys-admin can no
+  longer change who is an admin. Operator admit / revoke stays admin-gated. **No-super-tier
   fallback (18S Item 2):** when `SUPER_ADMIN_EMAILS` is empty (no super tier
   configured at all), this guard falls back to the pre-18S rule — any admin may
-  promote/demote admins — so a deploy that never sets the list can't lock its
+  promote/demote or invite admins — so a deploy that never sets the list can't lock its
   own admin management out. The strict rule engages only once a super-admin
   exists. A deployed env that boots with no super-admin logs a startup warning
   (`super_admin.unconfigured`).
@@ -190,7 +192,7 @@ the dependencies above; no route trusts a client-supplied actor id.
 | `/operator/*` (all) | `require_operator` | Router-level dependency — no operator route can skip it. |
 | Operator session-scoped routes | `require_session_operator` | Direct or via `_require_*_in_session` helpers. |
 | `/operator/sessions` bulk routes (tags / archive / bulk-delete) | `require_operator` + per-id check | Each client-supplied `session_id` is re-resolved with `sessions.get_for_user`; non-owned ids are skipped. |
-| `/operator/sys-admin/*` | `require_sys_admin` | Includes user admit/revoke/promote/demote/remove. Segment 18S adds a service-layer actor-super guard on promote/demote (`requires_super_admin`) and a target-super protection on demote/revoke/remove/remove-from-sessions (`protected_super_admin`). |
+| `/operator/sys-admin/*` | `require_sys_admin` | Includes user admit/revoke/promote/demote/remove. Segment 18S adds a service-layer actor-super guard on promote/demote and on invite-as-admin (`requires_super_admin`) and a target-super protection on demote/revoke/remove/remove-from-sessions (`protected_super_admin`). |
 | Export routes (`/export/*.csv`, `bundle.zip`) | `require_session_operator` | |
 | `/export/audit_log.csv` | `require_sys_admin` | Tightened in Segment 16C PR 1. |
 | Reviewer surface + save/submit/clear | `require_reviewer_in_session` | Refusal is a bare 404 (19F). The save / submit / clear **403s** are a separate post-gate check on a caller already confirmed as a reviewer — the session or instrument is no longer accepting. |

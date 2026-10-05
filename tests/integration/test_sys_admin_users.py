@@ -429,7 +429,9 @@ def test_invite_as_sys_admin_flips_both_flags(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    _bootstrap_super_admin(monkeypatch, email="alice@example.edu")
+    body = client.get("/operator/sys-admin/users").text
+    assert 'name="invite_as_sys_admin"' in body
     client.post(
         "/operator/sys-admin/users/invite",
         data={"email": "newadmin@example.edu", "invite_as_sys_admin": "true"},
@@ -1006,6 +1008,79 @@ def test_plain_sys_admin_cannot_demote(
     assert response.status_code == 403
     db.refresh(target)
     assert target.is_sys_admin is True  # unchanged
+
+
+def test_plain_sys_admin_cannot_invite_as_sys_admin(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Inviting with the admin box grants ``is_sys_admin``, so it takes
+    Promote's rule: a plain sys-admin, with a super tier configured, is
+    refused and no row is written. The page hides the box from them."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
+
+    body = client.get("/operator/sys-admin/users").text
+    assert 'name="invite_as_sys_admin"' not in body
+
+    response = client.post(
+        "/operator/sys-admin/users/invite",
+        data={"email": "mallory@example.edu", "invite_as_sys_admin": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert "invite_error=requires_super_admin" in response.headers["location"]
+    assert db.execute(
+        select(User).where(User.email == "mallory@example.edu")
+    ).scalar_one_or_none() is None
+
+    banner = client.get(response.headers["location"]).text
+    assert "Only a super-admin can invite someone as a sys-admin." in banner
+
+
+def test_plain_sys_admin_can_still_invite_an_operator(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Without the admin box, Invite stays admin-gated."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
+
+    response = client.post(
+        "/operator/sys-admin/users/invite",
+        data={"email": "carol@example.edu"},
+        follow_redirects=False,
+    )
+    assert response.headers["location"] == "/operator/sys-admin/users"
+    row = db.execute(
+        select(User).where(User.email == "carol@example.edu")
+    ).scalar_one()
+    assert row.is_sys_admin is False
+
+
+def test_plain_admin_can_invite_as_sys_admin_when_no_super_tier_configured(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The no-super-tier fallback covers Invite as it covers Promote."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    monkeypatch.setattr(settings, "super_admin_emails", [])
+
+    body = client.get("/operator/sys-admin/users").text
+    assert 'name="invite_as_sys_admin"' in body
+
+    client.post(
+        "/operator/sys-admin/users/invite",
+        data={"email": "dave@example.edu", "invite_as_sys_admin": "true"},
+        follow_redirects=False,
+    )
+    row = db.execute(
+        select(User).where(User.email == "dave@example.edu")
+    ).scalar_one()
+    assert row.is_sys_admin is True
 
 
 def test_plain_sys_admin_can_still_admit_and_revoke_operators(

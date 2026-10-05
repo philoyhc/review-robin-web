@@ -150,8 +150,10 @@ Two surfaces:
    appear on, all via the Sys Admin → Accounts Management page
    (per-row checkbox + bulk toolbar). Server-side guards
    (`app/services/users.py`):
-   - **Actor guard** — `promote` / `demote` require the **actor** to be
-     a super-admin (`requires_super_admin` → 403); with no super-admin
+   - **Actor guard** — `promote` / `demote`, and an `invite` that
+     grants the admin flag, require the **actor** to be a super-admin
+     (`requires_super_admin`: 403 on Promote / Demote, a banner on
+     Invite); with no super-admin
      configured, any admin may (`spec/permissions.md` §4.1,
      "No-super-tier fallback"). Operator admit / revoke stays
      admin-gated.

@@ -30,7 +30,7 @@ membership:
 | Role | Stored as | Granted by | Revoked by |
 |---|---|---|---|
 | **Operator** | `users.is_operator` | env bootstrap on first sign-in (`OPERATOR_EMAILS`), or an admin's *Admit* | an admin's *Revoke* (refused while the user still owns any session) |
-| **Admin** (`sys_admin`) | `users.is_sys_admin` | env bootstrap (`SYS_ADMIN_EMAILS`), or a **super-admin's** *Promote* | a super-admin's *Demote* (refused for the last admin) |
+| **Admin** (`sys_admin`) | `users.is_sys_admin` | env bootstrap (`SYS_ADMIN_EMAILS`), or a **super-admin's** *Promote* or *Invite* with *Also invite as sys-admin* | a super-admin's *Demote* (refused for the last admin) |
 | **Super-admin** | *derived*, never stored — email ∈ `SUPER_ADMIN_EMAILS` (`app/auth/roles.py::is_super_admin`, case-insensitive) | deployer config only | deployer config only; no in-app path may demote, revoke or remove one |
 | **Session owner** | a `session_operators` row (`role="owner"`) | session create (the creator, plus any co-owners named on Create's Owners card), clone (the cloner), an owner's *Add owner*, or a sys-admin's audited self-add | an owner's *Remove owner* (refused for the last owner) |
 
@@ -167,12 +167,12 @@ status.
 | Demote | **super-admin** | `self_action`, `requires_super_admin`, `protected_super_admin`, `last_admin` (target is the only admin) | `sys_admin.role_demoted` |
 | Remove from all sessions | admin | `self_action`, `protected_super_admin`, `sole_owner` (target is the only owner of some session) | `workspace.user_detached_from_all_sessions` |
 | Delete user | admin | `self_action`, `protected_super_admin`, `last_admin`, `owns_sessions` | `workspace.user_removed` |
-| Invite (pre-seed a `users` row before first sign-in) | admin | `invalid_email`, `duplicate` (case-insensitive) | `workspace.user_invited` |
+| Invite (pre-seed a `users` row before first sign-in) | admin; **super-admin** to tick *Also invite as sys-admin*, which the page shows only to an actor who could Promote | `invalid_email`, `duplicate` (case-insensitive), `requires_super_admin` (admin box only) | `workspace.user_invited` |
 
 **No-super-tier fallback.** `requires_super_admin` engages only
 once a super-admin actually exists in the effective set; with
 `SUPER_ADMIN_EMAILS` empty (and no fake-auth fold-in) any admin
-may promote / demote. This keeps a deployment
+may promote / demote, and invite as an admin. This keeps a deployment
 that never configures the top tier from locking itself out of admin
 management.
 
@@ -221,8 +221,9 @@ the operation-level mappings.
 | Unknown session / child id, disabled feature tab, unknown invite token | **404** | the gate or route |
 | Missing email claim | **401** | `get_or_create_user` |
 | `self_action` | **400** | `_sys_admin._handle_toggle` |
-| `requires_super_admin` | **403** | same |
+| `requires_super_admin` on Promote / Demote | **403** | same |
 | `last_admin`, `owns_sessions`, `still_owner`, `sole_owner`, `protected_super_admin` | **409** | same |
+| every Invite error (`invalid_email`, `duplicate`, `requires_super_admin`) | **303** back to the page with `?invite_error=<code>`, which renders a banner | `_sys_admin.invite_user` |
 | `last_owner` on remove-owner | **409** (the card disables that Remove, so only a direct POST or a concurrent remove reaches it) | `_session_home.session_owners_remove` |
 | every other owner error on `owners/add` / `owners/{user_id}/remove` (`not_in_workspace`, `already_owner`, `not_owner`, `self_only`) | **303** back to `#owners-card` with `?owners_error=<code>` | same |
 | `not_in_workspace` on Create's Owners card — checked before the session exists, so nothing is created | **422** | `_quick_setup.create_session` |

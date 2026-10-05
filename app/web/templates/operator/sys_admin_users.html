@@ -20,6 +20,8 @@
           to change their roles.
         {% elif invite_error == "invalid_email" %}
           That doesn't look like a valid email address.
+        {% elif invite_error == "requires_super_admin" %}
+          Only a super-admin can invite someone as a sys-admin.
         {% else %}
           Couldn't add that user. Try again.
         {% endif %}
@@ -54,12 +56,16 @@
                  placeholder="alice@example.edu">
         </label>
       </p>
+      {# Granting the admin flag follows the Promote rule
+         (``can_manage_admins``), so a plain admin never sees it. #}
+      {% if can_manage_admins %}
       <p>
         <label>
           <input type="checkbox" name="invite_as_sys_admin" value="true">
           Also invite as sys-admin
         </label>
       </p>
+      {% endif %}
       <div class="btn-pair">
         <button class="btn secondary" type="submit"
                 data-invite-submit

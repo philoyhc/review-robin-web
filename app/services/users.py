@@ -142,8 +142,9 @@ def _sys_admin_count(db: Session) -> int:
 
 def _guard_actor_super_admin(actor: User) -> None:
     """Segment 18S Item 1 — admin (``is_sys_admin``) promote / demote is
-    **super-admin-only**. A plain sys-admin can no longer change who is
-    an admin. Operator admit / revoke keeps requiring only admin.
+    **super-admin-only**, and so is inviting a new user as an admin. A
+    plain sys-admin can no longer change who is an admin. Operator
+    admit / revoke keeps requiring only admin.
 
     Item 2 — no-super-tier fallback. When **no** super-admin tier is
     configured (``SUPER_ADMIN_EMAILS`` empty, and no fake-auth fold-in),
@@ -157,7 +158,7 @@ def _guard_actor_super_admin(actor: User) -> None:
         raise UserOperationError(
             code="requires_super_admin",
             message=(
-                "Only a super-admin can promote or demote admins. "
+                "Only a super-admin can grant, promote or demote admins. "
                 "Ask a super-admin to change admin roles."
             ),
         )
@@ -469,7 +470,8 @@ def invite(
     sign-in. Email match is case-insensitive against existing
     rows; raises ``UserOperationError(code="duplicate")`` when a
     row already exists. Sys-admin invitees implicitly get
-    ``is_operator=True``."""
+    ``is_operator=True``, and inviting one grants the admin flag, so
+    it takes the same super-admin guard as ``promote``."""
     email_normalised = email.strip()
     if not email_normalised or "@" not in email_normalised:
         raise UserOperationError(
@@ -491,6 +493,7 @@ def invite(
         )
 
     if is_sys_admin:
+        _guard_actor_super_admin(actor)
         is_operator = True
     user = User(
         email=email_normalised,
