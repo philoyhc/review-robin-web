@@ -3946,6 +3946,29 @@
         text-decoration: none;
       }
       body.ui-v2 .back-link:hover { text-decoration: underline; }
+      /* `.chrome-link` outside the chrome: a link-styled anchor or
+         button in a card (the Owners cards' per-row Remove, the audit
+         log's `Older events`). Without this the class had a rule only
+         inside `.chrome-user`, so a <button> rendered browser-default
+         (findings E7). */
+      /* No `text-decoration` at rest: an anchor keeps the resting
+         underline every in-content link has (spec/visual_style_rrw.md
+         "Links"), and a button has none to lose. Disabled matches
+         `.btn-reset`, the other link-styled button. */
+      body.ui-v2 .chrome-link {
+        background: none;
+        border: 0;
+        padding: 0;
+        color: var(--text-link);
+        font: inherit;
+        cursor: pointer;
+      }
+      body.ui-v2 .chrome-link:hover { text-decoration: underline; }
+      body.ui-v2 .chrome-link:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        text-decoration: none;
+      }
       /* Inline link in the chrome user menu (e.g. About). Sits
          between the identity line and the sign-out button. */
       body.ui-v2 .chrome-user .chrome-link {
