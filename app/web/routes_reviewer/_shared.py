@@ -14,7 +14,7 @@ from collections.abc import Sequence
 
 from fastapi import HTTPException, status
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import and_, not_, select
+from sqlalchemy import and_, func, not_, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -104,14 +104,23 @@ def reviewer_review_count_for_user(db: Session, user: User) -> int:
     Drives the conditional "My Reviews" link in the reviewer chrome
     (suppressed when the user has only a single review — the dashboard
     isn't useful as a navigation hub in that case).
+
+    One ``COUNT`` scoped to the user's email in SQL (findings Ac4):
+    this renders on every reviewer-chrome page, and it used to load
+    every active reviewer in the workspace to fold their emails in
+    Python. ``lower(trim(email))`` is that fold — ``normalize_email``
+    strips and lower-cases — on every ASCII identity, which is every
+    identity this deployment has (``app/services/email_identity.py``
+    on why the SQL fold stops there).
     """
     target = normalize_email(user.email)
     if not target:
         return 0
-    rows = db.execute(
-        select(Reviewer).where(Reviewer.status == "active")
-    ).scalars()
-    return sum(1 for r in rows if normalize_email(r.email) == target)
+    return db.execute(
+        select(func.count(Reviewer.id))
+        .where(Reviewer.status == "active")
+        .where(func.lower(func.trim(Reviewer.email)) == target)
+    ).scalar_one()
 
 
 # Ordered priority for the role-navigator chips on every
