@@ -147,7 +147,8 @@ dropped.
   list before anything is written: blanks skipped, case folded,
   duplicates collapsed, every address a workspace operator or raises
   `not_in_workspace` naming it. Create's, over the whole staged list.
-- **`set_owners(db, targets) -> (added, removed)`** — replaces the
+- **`set_owners(db, *, review_session, actor, targets,
+  correlation_id=None) -> (added, removed)`** — replaces the
   whole owner set with `targets`; adds before it removes so the count
   never passes through zero; refuses an empty `targets`
   (`last_owner`); de-duplicates its own input. Create's only caller.
