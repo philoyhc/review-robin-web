@@ -2,7 +2,7 @@
 
 > **Superseded (2026-10-02); retired to `docs/archive/` 2026-10-03.** This pre-provisioning shopping list has been
 > overtaken by the NUS environment that was actually provisioned. For what
-> exists now, read [`nus_azure_status_v7.md`](../nus_azure_status_v7.md); for
+> exists now, read [`nus_azure_status.md`](../nus_azure_status.md); for
 > the topology, [`architecture.md`](../architecture.md); for the deploy steps,
 > [`deployment_nus.md`](../deployment_nus.md). Kept as the record of the
 > estimate; do not plan from it.
