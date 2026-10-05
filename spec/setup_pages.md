@@ -1635,11 +1635,6 @@ Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
   `slot_has_data` calls, so three indexed `LIMIT 1`s — and re-keyed
   to the page's own chip slot names by `views.chip_slots`. The route
   passes one `col_data` map; **no template computes the flag**.
-  `reviewer_fields_with_data` /
-  `reviewee_fields_with_data` in `app/services/assignments/` survive
-  for the Instruments page's `display_source_presence`, which unions
-  them; keep those in sync with any new optional column added to the
-  model + CSV importer.
 - **Lifecycle gating on the roster pages is one predicate,
   `is_editable` — `draft` or `validated` — and nothing may use a
   narrower one.** Observers is the exception, on `not is_archived`
