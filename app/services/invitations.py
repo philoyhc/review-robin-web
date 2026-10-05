@@ -655,7 +655,7 @@ def most_recent_invitation_url(
     return match.group(0) if match else None
 
 
-def _url_matches_current_token(url: str, invitation: Invitation) -> bool:
+def url_matches_current_token(url: str, invitation: Invitation) -> bool:
     """Whether ``url``'s token is the one ``invitation`` holds now. A
     regenerate rotates ``token_hash`` without sending, so the last
     outbox body can carry a token that no longer resolves."""
@@ -722,7 +722,7 @@ def send_reminder(
     never loses the stamp to a later rollback (findings B31).
     """
     existing_url = most_recent_invitation_url(db, invitation_id=invitation.id)
-    if existing_url is not None and not _url_matches_current_token(
+    if existing_url is not None and not url_matches_current_token(
         existing_url, invitation
     ):
         # The token was regenerated after that email went out, so its

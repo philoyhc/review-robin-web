@@ -625,6 +625,15 @@ def invitation_reviewer_detail(
         if invitation is not None
         else None
     )
+    # The URL comes from the last invitation email, and a regenerate
+    # rotates the token without sending one, so that link can be dead.
+    # Shown only while it still resolves; otherwise the card says the
+    # new link has not gone out (findings Cc4).
+    invite_url_superseded = invite_url is not None and (
+        not invitations.url_matches_current_token(invite_url, invitation)
+    )
+    if invite_url_superseded:
+        invite_url = None
     # 19P.6 rung 2b — the Invitation card's delivery slot (Item 6 open
     # question 5). `invitation.sent_at` says a send was attempted on the
     # current token; this says what became of it. Different facts from
@@ -669,6 +678,7 @@ def invitation_reviewer_detail(
             "invitation": invitation,
             "row": row,
             "invite_url": invite_url,
+            "invite_url_superseded": invite_url_superseded,
             "delivery_status": delivery_status,
             "email_tabs": views.EMAIL_PREVIEW_TABS,
             "active_email_tab": active_email_tab,

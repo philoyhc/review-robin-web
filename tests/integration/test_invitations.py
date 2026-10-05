@@ -1280,10 +1280,11 @@ def test_detail_page_after_regenerate_reports_the_current_token(
     """Regenerate resets the invitation; the card follows the invitation.
 
     `regenerate_token` clears `sent_at` but leaves `last_reminder_at`
-    and every outbox row alone (`invitations.py:221-224`), so the three
-    slots disagree by design: no send date for the current token, the
-    old reminder date, and the previous URL still recoverable from the
-    outbox.
+    and every outbox row alone (`invitations.py:221-224`), so the slots
+    disagree by design: no send date for the current token and the old
+    reminder date. The previous URL is still recoverable from the outbox
+    but no longer shown, since its token is dead
+    (`test_detail_page_hides_a_regenerated_link`, findings Cc4).
 
     Pinned rather than smoothed over. The divergence is older than this
     card — the chrome strip already reads `NOT SENT` here while the
@@ -1325,6 +1326,39 @@ def test_detail_page_after_regenerate_reports_the_current_token(
     # `test_regenerate_clears_a_stale_delivery_pill` is the one that
     # discriminates.
     assert _DELIVERY("sent") not in facts
+
+
+def test_detail_page_hides_a_regenerated_link(
+    client: TestClient, db: Session
+) -> None:
+    """findings Cc4: after Regenerate the last email's link no longer
+    resolves, so the card says the new link has not been sent rather
+    than showing the dead one; the next send shows the live link."""
+    session = _ready_session(client, db, code="drill-regen-url")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    page = (
+        f"/operator/sessions/{session.id}"
+        f"/invitations/reviewers/{invitation.reviewer_id}"
+    )
+    base = f"/operator/sessions/{session.id}/invitations/{invitation.id}"
+    client.post(f"{base}/send")
+    sent_body = client.get(page).text
+    old_url = re.search(r"\S*/me/invite/[\w-]+", sent_body).group(0)
+
+    client.post(f"{base}/regenerate")
+    body = client.get(page).text
+    assert old_url not in body
+    assert "/me/invite/" not in body
+    assert "The invitation link was regenerated." in body
+    assert "No invitation URL has been issued yet." not in body
+
+    client.post(f"{base}/send")
+    body = client.get(page).text
+    assert "/me/invite/" in body
+    assert old_url not in body
+    assert "The invitation link was regenerated." not in body
 
 
 def test_detail_page_reports_a_failed_delivery(
