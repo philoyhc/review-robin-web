@@ -153,7 +153,8 @@ class Instrument(Base, TimestampMixin):
     keeps the sentinel ``"both"`` so the column stays non-null.
     Encoded / decoded by ``app.services.instruments`` —
     ``encode_group_kind`` / ``decode_group_kind`` /
-    ``set_group_boundary``. See ``spec/group_scoped_instruments.md``."""
+    ``set_group_boundary``. See ``spec/instruments.md`` "Link 3 — Unit
+    of review"."""
     rule_set_id: Mapped[int | None] = mapped_column(
         ForeignKey("session_rule_sets.id", ondelete="SET NULL"),
         index=True,
@@ -212,17 +213,13 @@ class Instrument(Base, TimestampMixin):
     band2_state: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True
     )
-    """Operator's Band 2 + Response Fields choices on the new-model
-    instrument card. Shape:
+    """Operator's Band 2 choices on the instrument card. Shape:
     ``{"selected_display_keys": ["reviewee.name", ...],
-      "response_fields": [{name, data_type, min, max, step,
-      list_options, selected}, ...]}``.
-
-    Pure UX surface — the response_fields don't (yet) wire into
-    ``instrument_response_fields`` / ``response_type_definitions``,
-    so the reviewer surface still doesn't render input controls
-    for new-model instruments. That integration is a separate
-    slice. See ``guide/instrument_builder_project.md``."""
+      "sample_reviewee_name": str,
+      "sample_group_member_ids": [int, ...]}``, every key optional.
+    Response fields are not stored here: ``set_band2_state``
+    (``app/services/instruments/_band2.py``) writes them to
+    ``instrument_response_fields`` rows. NULL = nothing selected."""
 
     cached_group_pair_count: Mapped[int | None] = mapped_column(
         Integer, nullable=True

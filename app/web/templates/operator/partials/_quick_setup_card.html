@@ -5,14 +5,14 @@
    single ``/quick-setup/submit-all`` endpoint. The bottom of the
    card carries one Submit button (next to Lock / Unlock); the per-
    slot Submit buttons are gone. The bottom Submit is gated client-
-   side on file presence — disabled until at least one ``<input
-   type="file">`` inside the form has a file selected.
+   side — disabled until at least one ``<input type="file">`` has a
+   file selected and, where it renders, the replacement-confirmation
+   checkbox is ticked.
 
    The submit-all endpoint dispatches per slot whose file is
-   attached: Reviewers / Reviewees go through the per-entity CSV
-   pipeline. The per-slot routes (``/quick-setup/{kind}``) stay
-   alive as backend-only entry points — no UI references after
-   this PR.
+   attached, each through the pipeline its per-slot route uses. The
+   per-slot routes (``/quick-setup/{kind}``) stay alive as
+   backend-only entry points; nothing in the UI posts to them.
 
    15D PR 7a retired the legacy "Assignments (manual CSV or
    RuleSet pick)" slot. Generation moved off Quick Setup
@@ -21,10 +21,9 @@
    carrying Relationships in the same file-upload mode as the
    roster slots.
 
-   The card-level replacement-confirmation checkbox at the top of
-   the body still mirrors into the form's hidden ``confirm_replace``
-   input on submit; the route's server-side gate is the source of
-   truth.
+   The card-level replacement-confirmation checkbox, just above the
+   footer, mirrors into the form's hidden ``confirm_replace`` input
+   on submit; the route's server-side gate is the source of truth.
 
    Status awareness collapses on a single signal — ``is_locked`` —
    so the body picks up ``.locked`` greying when locked (which now
@@ -33,10 +32,12 @@
    ``POST /operator/sessions/{id}/quick-setup/lock`` (a per-session
    ``HttpOnly`` cookie carries the operator's last choice).
 
-   On ``ready`` the toggle still renders and unlocks visually; the
-   service layer's ``_require_editable`` is the hard gate, and the
-   rejection surfaces inside the offending slot as a ``banner-error``
-   (see ``views._quick_setup_error_message``).
+   Outside ``draft``, or once the session holds responses, the card
+   is locked for good and the toggle does not render
+   (``views._quick_setup``). The service layer's ``_require_editable``
+   is still the hard gate; a rejected submit comes back as a
+   full-width ``banner-error`` above the slots, tied to its slot by
+   id (``_quick_setup_error_message``).
 #}
 {% macro quick_setup_slot(slot, form_id, locked) -%}
 <section class="quick-setup-slot"
@@ -62,8 +63,9 @@
              {% if locked %}disabled aria-disabled="true"{% endif %}>
     </div>
   {% else %}
-    {# Inert slot (Settings, until Segment 12A PR 6 wires it). Same
-       shape as the live slot but the file input is disabled. #}
+    {# Inert slot (``is_wired=False``) — every slot is wired today,
+       so this branch is never taken. Same shape as the live slot
+       but the file input is disabled. #}
     <div class="quick-setup-slot-controls">
       <input type="file"
              accept=".csv"

@@ -51,9 +51,10 @@ class Settings(BaseSettings):
     # not part of the fail-fast in ``validate_critical_settings``).
     super_admin_emails: Annotated[list[str], NoDecode] = []
 
-    # Optional contact line surfaced on the Request-access landing
-    # page (16A PR 1). When set, the page renders a ``mailto:`` link;
-    # when unset, falls back to generic copy.
+    # Optional contact address on ``/about``'s "getting access" note,
+    # the signed-in-but-no-access landing since 18R Item 6 retired
+    # ``/request-access``. When set, the note renders a ``mailto:``
+    # link; when unset, it falls back to generic copy.
     operator_contact_email: str | None = None
 
     @field_validator(
@@ -98,12 +99,6 @@ class Settings(BaseSettings):
     # itself is in §2).
     reviewer_notice_min_hours: int = 1
 
-    # When True, ``audit.write_event`` raises on a detail-shape violation;
-    # when False (production default), it logs a warning and writes the
-    # row anyway. Auditing is observability — dropping events because of
-    # a shape bug would hide the very mutations we're auditing. Tests flip
-    # this on via ``tests/conftest.py`` so drift surfaces in CI before
-    # deploy. See ``spec/architecture.md`` "Audit-event detail schema".
     # Segment 19N — Rehydrate is gated off by default. The pipeline
     # works for unproblematic cases, but not every detail is settled:
     # a responses row the regenerated rules cannot place is currently
@@ -115,6 +110,12 @@ class Settings(BaseSettings):
     # it is this one flag.
     rehydrate_enabled: bool = False
 
+    # When True, ``audit.write_event`` raises on a detail-shape violation;
+    # when False (production default), it issues a ``warnings.warn`` and
+    # writes the row anyway. Auditing is observability — dropping events because of
+    # a shape bug would hide the very mutations we're auditing. Tests flip
+    # this on via ``tests/conftest.py`` so drift surfaces in CI before
+    # deploy. See ``spec/architecture.md`` "Audit-event detail schema".
     audit_strict_mode: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

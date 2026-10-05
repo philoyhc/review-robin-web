@@ -4,10 +4,12 @@
    role-chip strip / session-description card stay identical;
    the body is one section per instrument the operator has
    opened up to the reviewee audience (per
-   ``app/services/visibility_policies.py::resolve_mode``). This
-   slice ships the ``"raw"`` mode — one row per reviewer who
-   responded, with the Reviewer (not the Reviewee) as the
-   identity column. Other modes ship in follow-on slices. #}
+   ``app/services/visibility_policies.py::resolve_mode``), in that
+   section's mode: ``"raw"`` — one row per reviewer who responded,
+   with the Reviewer (not the Reviewee) as the identity column;
+   ``"anonymized"`` — the same rows with every identification cell
+   dashed; ``"summarized"`` — one aggregated row. An Acknowledge
+   card closes the page. #}
 {% extends "base.html" %}
 
 {% block title %}{{ session.name }} — Results — Review Robin Web{% endblock %}

@@ -45,7 +45,8 @@ class QuickSetupSlot:
 
     key: str
     """Stable slot identifier — ``reviewers`` / ``reviewees`` /
-    ``settings`` (PR 7c re-adds ``relationships``). Used as the
+    ``relationships`` / ``observers`` (only while
+    ``observers_enabled``) / ``settings``. Used as the
     DOM-id suffix (``#quick-setup-{key}``) so URL fragments scroll
     directly to a slot, and as the ``data-wire-target`` value so
     11J's wiring can locate the slot without a CSS-selector
@@ -55,8 +56,9 @@ class QuickSetupSlot:
     """Human-readable slot label, used in the H3 heading."""
 
     count: int
-    """Current population — count of reviewers / reviewees.
-    ``0`` for the configuration-import slot."""
+    """Current population — count of the slot's rows (reviewers,
+    reviewees, relationships or observers). ``0`` for the
+    Session settings slot."""
 
     mode: str
     """``"file_upload"`` for every slot post-15D PR 7a."""
@@ -76,8 +78,8 @@ class QuickSetupSlot:
     error_message: str | None = None
     """Populated when the operator's last submit for this slot was
     rejected (parse / validation failure, or a lifecycle rejection
-    on ``ready``). Rendered as a ``banner-error`` inside the slot.
-    The cancel link in the banner returns the operator to the slot
+    on ``ready``). Rendered as a full-width ``banner-error`` above
+    the slots, tied to this slot by id. The cancel link in the banner returns the operator to the slot
     fragment with a clean URL."""
 
     cancel_url: str | None = None
@@ -106,8 +108,8 @@ class QuickSetupContext:
       default on every fresh page load; the cookie-driven
       ``is_unlocked`` flips it off. The operator must explicitly
       Unlock before any submit.
-    - **Unavailable** (``validated`` / ``ready`` / ``closed``, or
-      any state with persisted responses): ``show_lock_toggle=False``
+    - **Unavailable** (any state but ``draft``, or any session with
+      persisted responses): ``show_lock_toggle=False``
       and ``is_locked=True`` permanently. The body greys; the
       operator can't unlock. Defense-in-depth route gates
       (``_require_editable`` + ``_require_response_loss_ack``)
@@ -136,9 +138,9 @@ class QuickSetupContext:
     title: str = "Quick Setup"
     show_lock_toggle: bool = True
     show_confirm_replace: bool = True
-    """Gate the card-level "This will replace any existing reviewers,
-    reviewees, assignments or settings, according to what is uploaded."
-    checkbox at the top of the body. Suppressed on the new-session
+    """Gate the card-level "Yes, replace existing reviewers, reviewees
+    or settings, according to what is uploaded." checkbox just above
+    the footer. Suppressed on the new-session
     Quick Setup variant — there's nothing to replace yet."""
 
     external_form_id: str | None = None
@@ -168,15 +170,15 @@ def build_quick_setup_context(
 
     ``error_kind`` + ``error_reason`` come from the
     ``?quick_setup_error=...&quick_setup_reason=...`` redirect flag set
-    by the slot's POST handler on rejection. The pair drives the
-    inline ``banner-error`` rendered inside the offending slot. Other
-    slots are unaffected.
+    by the slot's POST handler on rejection. The pair drives that
+    slot's ``banner-error``, rendered full-width above the slots.
+    Other slots are unaffected.
     """
 
     sid = review_session.id
     # Card is functional only on ``draft`` AND when no reviewer
-    # responses exist yet. Outside that window — ``validated`` /
-    # ``ready`` / ``closed``, or any state with persisted responses
+    # responses exist yet. Outside that window — any state but
+    # ``draft``, or any session with persisted responses
     # from a prior activation cycle — the card stays permanently
     # locked (body greyed, Lock / Unlock toggle hidden, submits
     # rejected at the service layer via ``_require_editable`` +
@@ -323,8 +325,8 @@ def build_quick_setup_context(
     # Default-locked on every fresh page load when the card is
     # available; the cookie-driven ``is_unlocked`` flips it off
     # until the operator locks again or the cookie is cleared.
-    # When the card isn't available (validated / ready / closed
-    # / or any state with persisted responses), force-lock and
+    # When the card isn't available (any state but draft, or any
+    # session with persisted responses), force-lock and
     # hide the toggle entirely so the operator can't visually
     # unlock something the route layer would reject anyway.
     is_locked = True if not is_available else not is_unlocked

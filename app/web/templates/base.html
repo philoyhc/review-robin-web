@@ -1754,13 +1754,12 @@
         .bottom-grid { grid-template-columns: 1fr; row-gap: 20px; }
       }
       /* ──────────────────────────────────────────────────────────
-         v2 — pilot of spec/ui_elements.md canonical primitives.
-         Activated by `body.ui-v2`. Only affects pages that opt in
-         by overriding the body_class block to "ui-v2". The first
-         page on it is operator/session_reviewers1.html. Once the
-         pilot proves out, these rules will be promoted to default
-         and the wrapper retired. See spec/ui_elements.md Part 3
-         for the rollout plan (PRs A → G).
+         v2 — spec/ui_elements.md canonical primitives, scoped to
+         `body.ui-v2`. Every page template sets its body_class block
+         to "ui-v2" ("ui-v2 reviewer" on reviewer pages), so these
+         rules are the treatment everywhere; error.html alone does
+         not extend this file. Reference implementation:
+         operator/session_reviewers.html (spec/ui_elements.md).
          ────────────────────────────────────────────────────────── */
       body.ui-v2 {
         color: var(--text-body);
@@ -2426,9 +2425,10 @@
       }
       /* Extract Setup card — 2 explicit column containers, each
          stacking its rows vertically. Col 1 = Reviewers /
-         Reviewees; col 2 = Relationships / Session settings /
-         Zip all (per ``guide/extract_data.md``). Collapses to 1
-         column on narrow viewports. */
+         Reviewees; col 2 = Relationships / Observers (when
+         enabled) / Session settings / Zip all
+         (``views/_extract_data.py``). Collapses to 1 column on
+         narrow viewports. */
       body.ui-v2 .extract-data-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -5349,7 +5349,7 @@
        **Delegated on `document`, deliberately.** Four of the five
        table-relevant script blocks in this file bind to their elements
        at load and would not survive a re-rendered table
-       (`guide/inplace_pagination_assessment.md` measured that); this is
+       (`guide/archive/inplace_pagination_assessment.md` measured that); this is
        written like the fifth, so it keeps working whatever replaces the
        markup beneath it, and it is one listener for both of a page's
        clusters rather than one per menu.

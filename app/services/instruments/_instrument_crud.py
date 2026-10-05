@@ -301,8 +301,8 @@ def replicate_instrument(
     ``starts_new_page``, the caches and ``deadline_closed_at``: description,
     the response fields (incl. help text, ``visible`` and branches),
     the display fields (incl. each row's ``visible``), ``group_kind``,
-    ``band1_touched_links``, ``band2_state`` and the two acceptance
-    flags as-is. ``starts_new_page`` is not copied: it marks a break
+    ``band1_touched_links``, ``band2_state`` and
+    ``accepting_responses`` as-is. ``starts_new_page`` is not copied: it marks a break
     before the instrument, a fact about position, and the copy
     continues the source's page like any new instrument. The source's Band 1 rule set is
     **cloned** into a row of the copy's own (author's ruling,
