@@ -202,7 +202,7 @@ The campaign had a lesson of its own. Git reads trailers only from a message's l
 ### 6.5 Periodic sweeps and snapshots, not continuous synchronization
 
 **Decision.** Keep spec and code in agreement through scheduled sweeps and dated snapshots rather than a per-PR sync requirement.
-- **Snapshots.** Twenty dated codebase assessments have been written in the Claude Code lineage, and four whole-repository assessments in a separate Codex lineage. Each audits the functional areas against the code — "a route registered, a service function called, a test covering it — not against the spec's own claims". The current pair is `guide/codebase_assessment_30sep.md` and `guide/codex_assessment_30sep.md`.
+- **Snapshots.** Twenty-one dated codebase assessments have been written in the Claude Code lineage, and four whole-repository assessments in a separate Codex lineage. Each audits the functional areas against the code — "a route registered, a service function called, a test covering it — not against the spec's own claims". The current ones are `guide/codebase_assessment_05oct.md` and, in the Codex lineage, `guide/codex_assessment_30sep.md`.
 - **Sweeps.** A whole-folder drift sweep is due every eight weeks or 500 merges, whichever comes first. `tools/close_check.py --stale` answers whether one is due.
 - **Registers.** What an assessment surfaces but nobody owns goes into a register, each entry carrying the trigger that would promote it. Segment 19S Item 1 opened eight entries and disposed of all of them within a day.
 
