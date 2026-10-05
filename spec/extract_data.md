@@ -463,9 +463,14 @@ data type:
 
 | Scenario | Rows shipped |
 |---|---|
-| No instruments selected | Every roster entry — base columns only. Totals scan every session instrument so the operator still gets a meaningful overview. |
-| One or more instruments selected, `All {entity}` ON | Every roster entry. Totals scoped to the selected instruments; per-(instrument, field) blocks ship for those. |
-| One or more instruments selected, `All {entity}` OFF | Only entries with at least one non-empty response on any field of the selected instruments. |
+| `All {entity}` ON | Every roster entry. |
+| `All {entity}` OFF | Only entries with at least one non-empty response on any field of the in-scope instruments. |
+
+The in-scope instruments are the selected ones, or every session
+instrument when none is selected. With none selected only the base
+columns ship, their totals scanning every instrument; with a
+selection the totals are scoped to it and the per-(instrument,
+field) blocks follow.
 
 Sort order: active rows first, then by name / email — same
 as the Reviewers / Reviewees CSVs.
@@ -1060,9 +1065,7 @@ Same rule on per-individual rows (with `reviewer` /
 `reviewee` substituted for the tag combo) and on the
 single summary row (with the whole roster substituted).
 
-### Out of scope (still — even after the wiring slice)
-
-The wiring slice doesn't cover:
+### Out of scope
 
 - **Cancel chip-state revert.** `Cancel` on a saved sub-card
   re-renders the preview row from persisted headers but does
@@ -1070,8 +1073,8 @@ The wiring slice doesn't cover:
   rows. Chip visual state stays at whatever the operator last
   toggled.
 - **Column-chip drag-to-reorder + sort-icon click** inside
-  the preview row. The chips currently render in
-  chip-selection order; reorder is a follow-up.
+  the preview row. The chips render in chip-selection
+  order.
 - **Per-operator privacy.** All operators on a session see
   every saved shape — no per-operator scoping.
 

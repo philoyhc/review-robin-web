@@ -1,15 +1,11 @@
 # CSV contracts — spec
 
 **The column shapes and parsing rules that govern every CSV the
-operator extracts or uploads.** Multiple extract paths and five
-import paths share a small library of primitives and a strict
-round-trip guarantee. **Five roster-shaped pairs** exist — Reviewers,
-Reviewees, Relationships, Observers, Settings — and the byte-stability
-contract in §4 is stated for **four** of them; see there for which, and
-why Observers is not among them.
-Observers has both a wired importer and an extract; its tile is
-conditionally shown on the Extract Setup card when
-`observers_enabled`.
+operator extracts or uploads.** The extracts and importers share a
+small library of primitives and a strict round-trip guarantee.
+Reviewers, Reviewees, Relationships, Observers and Settings each have an
+extract and an importer; the byte-stability contract in §4 covers every
+pair but Observers (see there for why).
 
 When the code drifts from this spec, fix the code. Each extract
 file pins its `HEADER` tuple as a module constant; each importer
@@ -47,7 +43,7 @@ The envelope is the same shape on both sides — Python `csv.reader`
 | Delimiter | Comma. |
 | Quoting | Python `csv.QUOTE_MINIMAL` — values containing comma, quote, or newline are double-quoted. |
 | Line endings | `\r\n` on write (Python `csv` default); `\r\n` or `\n` accepted on read. |
-| Header row | Always present, always first. |
+| Header row | Always present. First in every file except three that lead with a block above it: the Responses extract and the reviewer's own summary (a preamble, §2.4, §2.8) and each By-instrument file (a meta block, unless the operator turns it off; §6). |
 | Empty trailing newline | Tolerated on read; emitted on write per Python defaults. |
 | Filename convention | `{session_code}_{kind}.csv` via `extracts.filename(session, kind)`. E.g. `CS101_reviewers.csv`. |
 | Size caps (import) | The four roster importers — Reviewers, Reviewees, Relationships, Observers — refuse a file over **1 MiB** (`MAX_BYTES`, "File too large (max 1024 KiB)") over **5,000 data rows** (`MAX_ROWS`, "Too many rows (max 5000)"), or with any cell — header or data — past the `csv` module's **131,072-character** field limit ("A cell is longer than 131,072 characters", which a file under `MAX_BYTES` can carry), each as a single blocking issue with no rows parsed. The Settings import is not capped. |
@@ -98,7 +94,7 @@ ReviewerTag1               → reviewer.tag_1, no suffix (see below)
 
 ---
 
-## 2. Five extracts (export contracts)
+## 2. Extracts (export contracts)
 
 Each extract module declares a `HEADER: tuple[str, ...]` module
 constant. The serialiser yields the header first, then one tuple
@@ -113,6 +109,9 @@ evaluated as a formula. The general fix, a guard on write that the
 importer strips, would change this contract for every cell, so it is
 deferred with the settings CSV's own guard
 (`guide/deferred_consolidated.md`).
+
+The Observers and Settings extracts are specified beside their
+importers (§3.2b, §3.3).
 
 ### 2.1 Reviewers — `extracts/reviewers_extract.py`
 
@@ -280,7 +279,7 @@ reviewer + reviewee row count, header excluded).
 
 ---
 
-## 3. Five importers (input contracts)
+## 3. Importers (input contracts)
 
 ### 3.1 Reviewers + Reviewees — `csv_imports.py`
 
@@ -446,7 +445,11 @@ order and carries the name in its own `.name` row. Ordinals are
 1-based except `data_shapes[N]`, which counts from 0. The one keyed
 bracket is `instruments[N].view_policies[<audience>]`. The export
 writes the third column, `data_type`, in lowercase (`string`, `datetime`, `boolean`,
-`integer`, `decimal`, `json`, `enum`). See `serialize_session_config` for the
+`integer`, `decimal`, `json`, `enum`). The import also accepts
+`csv_list`, which the export never writes, matches the column
+case-insensitively and allows it blank; any other value is an error on
+its row. Beyond that check the column is not read — each `field` path
+parses its value as its own type. See `serialize_session_config` for the
 sections (session-level → email templates → instruments
 → session RuleSets → data shapes → session tags) and their
 canonical ordering. **Friendly labels are not a Settings
@@ -464,8 +467,11 @@ the round-trip notes below.
    validated (`validate_session_config`), so the report names every
    short row beside every other error. Quick Setup reports it
    before the replacement gates, as it does any malformed file, and
-   Rehydrate fails its settings step with it. Three keys phase 2
-   writes as unique are errors when repeated: a `session_rule_sets` name (§4 item 7), a
+   Rehydrate fails its settings step with it. A blank or absent
+   required value is an error naming its path: a `session_rule_sets`
+   `name`, an instrument's `name`, a display field's `source_type`,
+   and a response field's `field_key`, `label` and `response_type`.
+   Three keys phase 2 writes as unique are errors when repeated: a `session_rule_sets` name (§4 item 7), a
    `data_shapes` name among the shapes phase 2 writes (those with a
    name and a known axis), and a response field's `field_key` within
    its instrument. Each is an `ApplyError` naming the first
@@ -707,17 +713,17 @@ builder's Save does.
 
 ## 4. Round-trip stability contract
 
-**Four** of the five roster-shaped pairs — Reviewers, Reviewees,
-Relationships, Settings — are **byte-stable** on round-trip:
+The Reviewers, Reviewees, Relationships and Settings pairs are
+**byte-stable** on round-trip:
 `serialize(session) → write to file → read file → apply to
 session → serialize` yields a byte-identical CSV.
 
-**Observers is the fifth pair and is not claimed here.** It has a wired
+**Observers is not claimed here.** It has a wired
 importer and an extract, and `Status` and `CohortRule` both read back — but
 whether the pair is *byte*-stable has not been established, so it is
 outside this contract rather than inside it by assumption. Stating the gap
-is the point: a guarantee that quietly covers four while the header counts
-five is how a round-trip regression goes unnoticed.
+is the point: a guarantee that quietly omits one pair is how a round-trip
+regression goes unnoticed.
 
 Concrete guarantees the importers + serialisers maintain:
 
