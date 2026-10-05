@@ -13,7 +13,7 @@ provisioned but not yet serving**: a P0V3 App Service, private
 Postgres and Key Vault behind private endpoints, an Application
 Gateway in front, and Log Analytics with Application Insights. It
 waits on a runner VM and a production hostname
-(`docs/nus_azure_status_v7.md`). At cutover the F1, public-database
+(`docs/nus_azure_status.md`). At cutover the F1, public-database
 and Application Insights entries stop applying; secrets stay plain
 App Settings until Key Vault references are wired.
 
@@ -90,37 +90,12 @@ App Settings until Key Vault references are wired.
   reviewer response surface (Segment 14A PR 5) — not a full WCAG
   audit. Nothing since has audited the app as a whole, so the
   entries below are what has been measured, not a clean bill.
-- **Text contrast: fixed 2026-09-12 (19K.7).** This entry used to
-  say `--text-muted` failed WCAG AA. That was true when it was
-  written and the token was real; 19C Item 6 renamed the palette
-  and it became `--text-dim`, which nothing updated here — so the
-  name went stale while the fault stayed live, at **2.31:1**
-  against the darkest light surface, roughly half the 4.5:1 AA
-  asks. Every token in the Text cluster now clears AA against
-  every background it is paired with, in both themes.
-  `--text-dim` is retired into `--text-subtle` (which moved to
-  `#616874`); `--text-link` moved in dark (4.22 → 5.53); the
-  decorative uses that kept the old value — dividers, a resize
-  grip — moved to `--decor-muted` and are outside the text floor
-  by rule, WCAG 1.4.3 governing text. Details in
+- **Text contrast clears AA normal (4.5:1) in both themes**, but for
+  the three pairs below. `tests/unit/test_contrast_audit.py` sweeps
+  all 70 foreground/background pairs the palette forms, in both
+  themes, and fails on any new pair under AA. Details in
   `spec/color_tokens.md`, "The AA floor on text".
-- **Contrast: the palette clears AA normal in both themes** as of
-  2026-09-12 (19K.10). `tests/unit/test_contrast_audit.py` sweeps all
-  73 foreground/background pairs the palette forms, in both themes,
-  and every one meets 4.5:1 except the three accepted below. The last
-  four were a single root cause — white on `--blue-glow` in dark, the
-  reserved "you can act on this" shade — and closed together by
-  inverting the foreground rather than moving the fill: dark
-  `--btn-primary-fg`, `--selected-fg` and `--text-on-accent` took
-  `--ink`, giving **5.33** at rest and **6.98** for the hover that had
-  been the worst pair in the palette at 2.54.
-
-  That follows the pattern the palette already used: `--btn-alert-fg`
-  is `--white` in light and `--ink` in dark, because the dark alert
-  fill is bright. The accent family had been the
-  outlier. Details in `spec/color_tokens.md`, "The AA floor on text".
-
-- **Three further pairs are under AA and accepted** (author,
+- **Three pairs are under AA and accepted** (author,
   2026-09-12, reviewing the panel). Each is a button label dipping
   **only while the pointer is on it**, where the control is
   comfortably legible at rest — not worth chasing:
@@ -136,12 +111,11 @@ App Settings until Key Vault references are wired.
   suite fails if that pair stops clearing AA. Darken a button's
   resting fill and the hover exemption dies with it. They stay
   visible in the customizer's Contrast panel, marked with a dashed
-  edge rather than red — a panel that stops showing what it has
-  excused is how an excuse outlives its reason.
+  edge rather than red.
 - **What the sweep cannot see.** A pair is found only where one
   rule sets both halves, the token names match (`--x-fg` /
   `--x-bg`), the background is a `--surface-*`, or the foreground
-  is one of the two the `ON_FILL` map names. Text inheriting
+  is the one the `ON_FILL` map names. Text inheriting
   a background from a distant ancestor is invisible to all three
   and no static reading of the stylesheet will find it.
 - **Not yet measured at all:** keyboard-only navigation end to
