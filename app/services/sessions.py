@@ -219,7 +219,7 @@ def _as_utc(value: datetime) -> datetime:
 
 
 def deadline_box_unedited(
-    stored: datetime | None, submitted: str, tz_name: str | None
+    stored: datetime | None, submitted: str | None, tz_name: str | None
 ) -> bool:
     """Whether a ``datetime-local`` box still holds the value it was
     seeded with for ``stored``.

@@ -117,6 +117,11 @@ author, marked *re-checked*) also ran it.
 - **Cc5** — A Session Home Details Save that changes nothing still demotes
   a `validated` session to `draft`; the lobby expander checks for a change
   since #2832. Author.
+- **Cc6** — The Session Home config card re-parses an untouched deadline
+  box on every Save, so a deadline in the repeated hour after a DST
+  fall-back comes back an hour early (`_session_home.py`
+  `_apply_session_config_form`); the lobby compares the box's text since
+  #2832 (`sessions.deadline_box_unedited`). Code.
 
 **Low**
 
