@@ -107,10 +107,15 @@ def _unreadable_issue(source: str, exc: csv.Error) -> ValidationIssue:
     which a file under ``MAX_BYTES`` can still carry; refused here
     rather than as a 500 (findings D11).
     """
+    message = f"CSV could not be read: {exc}"
+    if "field larger than field limit" in str(exc):
+        message = (
+            f"A cell is longer than {csv.field_size_limit():,} characters"
+        )
     return ValidationIssue(
         severity=Severity.error,
         source=source,
-        message=f"CSV could not be read: {exc}",
+        message=message,
     )
 
 

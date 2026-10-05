@@ -102,7 +102,9 @@ def test_a_cell_over_the_csv_parser_limit_is_reported_not_raised() -> None:
         result = parse_reviewer_csv(content)
         assert result.rows == []
         assert result.is_blocked
-        assert "field larger than field limit" in result.issues[0].message
+        assert result.issues[0].message == (
+            "A cell is longer than 131,072 characters"
+        )
 
 
 def test_relationship_tag_over_its_column(db: Session) -> None:
