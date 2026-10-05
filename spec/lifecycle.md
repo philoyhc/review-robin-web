@@ -107,10 +107,11 @@ is in any other status.
 
 ### 2.3 `validated → draft` — `invalidate_if_validated(...)`
 
-The **automatic** form, called from every setup-mutating service.
-No-op for any status other than `validated`. The key invariant:
-**any setup mutation invalidates a prior validated state**, so
-the readiness check stays meaningful.
+The **automatic** form, called from every service that mutates what
+the readiness check reads. No-op for any status other than
+`validated`. The key invariant: **any setup mutation that could change
+the check's verdict invalidates a prior validated state**, so the
+readiness check stays meaningful.
 
 **The rule:** every service that mutates what the readiness check
 reads — rosters (per-row, bulk and CSV import),
@@ -130,8 +131,10 @@ Session Home's Details card and the lobby expander's Save, leaves a
 Cc5): no field it writes can change the check's verdict. Name and code
 are checked only for being present and the form requires both, help
 contact adds an info note only, and the rest (description, deadline,
-Start, offsets, the release window, timezone, the two Setup-tab
-toggles) are not read. Tags and owners are not checked either.
+Start, offsets, the release window, the two Setup-tab toggles) are not
+read. The other writes on those two forms do not invalidate either:
+the timezone (`sessions.set_session_display_timezone`) and the tags
+(`session_tags.set_tags`) are not checked, nor are owners.
 
 The invariant lives at the **mutation site**, not the route, so a
 route that forgets to wrap its service call cannot silently break

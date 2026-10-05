@@ -229,8 +229,8 @@ def datetime_box_unedited(
     CSV can write one) parses one truncation away from itself, and in
     the repeated hour after a DST fall-back the wall-clock text names
     two instants and the parse picks the first. A form that only
-    re-submits the seeded value must not count as an edit — on a
-    ``validated`` session that would demote it (findings B2)."""
+    re-submits the seeded value must not count as an edit, or the
+    stored value moves (findings B2, Cc6)."""
     return submitted == date_formatting.format_datetime_local(stored, tz_name)
 
 

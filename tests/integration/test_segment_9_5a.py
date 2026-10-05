@@ -263,6 +263,10 @@ def test_session_details_edit_does_not_invalidate(
             "description": "New description",
             "help_contact": "help@x.edu",
             "deadline": "2031-03-04T23:59",
+            "display_timezone": "Asia/Singapore",
+            "responses_release_at": "2031-03-05T09:00",
+            "responses_release_until": "2031-03-12T09:00",
+            "observers_enabled": "true",
         },
         follow_redirects=False,
     )
@@ -270,6 +274,9 @@ def test_session_details_edit_does_not_invalidate(
 
     db.refresh(session)
     assert (session.name, session.code) == ("Renamed", "noinv-se-2")
+    assert session.display_timezone == "Asia/Singapore"
+    assert session.responses_release_at is not None
+    assert session.observers_enabled is True
     assert session.status == "validated"
     assert not db.execute(
         select(AuditEvent).where(
