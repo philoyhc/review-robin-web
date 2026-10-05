@@ -929,7 +929,7 @@ shape; there's no inline / ephemeral download URL.
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/operator/sessions/{id}/extract-data/shapes` | Create a new shape from the current chip state. JSON body: `name`, `axis`, `instrument_id`, `response_field_id`, `column_chip_slots`, `self_review_handling`, `include_empty_rows`. Returns **201** with the saved row's columns (`id` included) plus its preview `column_headers` / `column_aggregates`. Validation errors (empty name, name conflict, empty column chips) return 422 with an inline error. |
+| `POST` | `/operator/sessions/{id}/extract-data/shapes` | Create a new shape from the current chip state. JSON body: `name`, `axis`, `instrument_id`, `response_field_id`, `column_chip_slots`, `self_review_handling`, `include_empty_rows`. Returns **201** with the saved row's columns (`id` included) plus its preview `column_headers` / `column_aggregates`. Validation errors (empty name, a name longer than 255 characters, name conflict, empty column chips) return 422 with an inline error. |
 | `PATCH` | `/operator/sessions/{id}/extract-data/shapes/{shape_id}` | Update an existing shape. Same body as POST; returns 200 with the same response. Renaming onto another shape's name ⇒ 422; a shape id from another session ⇒ 404. |
 | `DELETE` | `/operator/sessions/{id}/extract-data/shapes/{shape_id}` | Delete a shape. Idempotent — re-delete returns 204. |
 | `GET` | `/operator/sessions/{id}/extract-data/shapes/{shape_id}/download.csv` | Stream the shape's CSV. Backs the `Download` button on each saved sub-card. |
@@ -967,7 +967,7 @@ Four event types are registered in `EVENT_SCHEMAS`:
 * **Column chips required.** `Save` stays
   `disabled` until at least one `data-shaper-col-chip`
   on the active shape is `aria-pressed="true"`.
-* **Name required and unique per session.** The name
+* **Name required, at most 255 characters, and unique per session.** The name
   input rejects whitespace-only submissions; server-side
   `UNIQUE (session_id, name)` constraint backs the
   client-side check.

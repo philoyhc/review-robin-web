@@ -50,7 +50,8 @@ The envelope is the same shape on both sides — Python `csv.reader`
 | Header row | Always present, always first. |
 | Empty trailing newline | Tolerated on read; emitted on write per Python defaults. |
 | Filename convention | `{session_code}_{kind}.csv` via `extracts.filename(session, kind)`. E.g. `CS101_reviewers.csv`. |
-| Size caps (import) | The four roster importers — Reviewers, Reviewees, Relationships, Observers — refuse a file over **1 MiB** (`MAX_BYTES`, "File too large (max 1024 KiB)") or over **5,000 data rows** (`MAX_ROWS`, "Too many rows (max 5000)"), each as a single blocking issue with no rows parsed. The Settings import is not capped. |
+| Size caps (import) | The four roster importers — Reviewers, Reviewees, Relationships, Observers — refuse a file over **1 MiB** (`MAX_BYTES`, "File too large (max 1024 KiB)") over **5,000 data rows** (`MAX_ROWS`, "Too many rows (max 5000)"), or with any cell — header or data — past the `csv` module's **131,072-character** field limit ("A cell is longer than 131,072 characters", which a file under `MAX_BYTES` can carry), each as a single blocking issue with no rows parsed. The Settings import is not capped. |
+| Cell lengths (import) | Every string a roster importer writes is checked against its model column's declared `String(n)` — names, tags and friendly labels 255, emails 320, `ProfileLink` 2000 — and an over-long cell is a blocking issue on its row naming the column and both lengths (`cell_length_issues`); a cell past the parser's own field limit refuses the whole file instead (*Size caps*). A friendly label on a tag header (§1a) is checked against `session_field_labels.label` and refuses the file. The limits are read from the models, so they cannot drift from the schema; without the check SQLite stored the value and Postgres refused it at flush, a 500. The Settings import checks its own strings the same way (§3.3), and a Data shaper shape name is held to its 255 in the service. |
 
 The header row is the **contract** — every importer matches by
 header name (case-sensitive), not by position. An extra column
@@ -303,6 +304,7 @@ the upload card; Quick Setup's slot 303s back to Session Home with
 | Required cell present | Empty `ReviewerName` / `ReviewerEmail` / `RevieweeName` / `RevieweeEmail` → per-row error. |
 | Email format | `_parse_email` rejects malformed strings on the email columns. Reviewees skip this check when the cell isn't an email (non-email identifier). |
 | Within-file duplicates | Same `ReviewerEmail` / `RevieweeEmail` twice → per-row error on the second occurrence. |
+| Cell length | A cell longer than its column (§1, *Cell lengths*) → per-row error naming the column, one per over-long cell. A row refused here, or by any check, does not reserve its email, so a later row with the same email is not reported as its duplicate. |
 | Cross-roster identity | `check_cross_table_identity` rejects a row whose email is already held in **another roster under a different name**. Same email + same name is allowed and common — one person is often both reviewer and reviewee, which is the self-review case. Three-way: each roster is compared against the other two, observers included. |
 
 **Optional columns:** any of `ReviewerTag1..3`, `RevieweeTag1..3`,
@@ -351,10 +353,12 @@ carry a `.<label>` friendly-label suffix (§1a);
 | FK resolution | `ReviewerEmail` not in session's reviewers → per-row error. Same for `RevieweeEmail`. |
 | Within-file duplicates | Same `(ReviewerEmail, RevieweeEmail)` pair twice → the second occurrence is rejected **when the first one parsed**. Detection is on the *resolved* pair, so two spellings of one address collide, and the error names the row the survivor is on. A first occurrence that fails a later check reserves nothing, so a valid second occurrence is kept instead of being reported as a duplicate of a row that never parsed. |
 | Status value | `Status` must be `active` or `inactive`, **case-insensitively and ignoring surrounding whitespace** (`  ACTIVE  ` is accepted); empty or absent defaults to `active`. |
+| Cell length | A `PairContextTag1..3` cell longer than 255 → per-row error naming the column (§1, *Cell lengths*); checked before the pair is reserved. |
 
-**A row yields at most one issue.** The checks run in the order of the
-table above and each one `continue`s, so a row with both cells blank
-reports `ReviewerEmail` only, and a row naming an unknown reviewer *and*
+**A row yields at most one issue, except for length.** The checks run
+in the order of the table above and each one `continue`s; the last,
+cell length, reports every over-long tag cell on the row. So a row
+with both cells blank reports `ReviewerEmail` only, and a row naming an unknown reviewer *and*
 an unknown reviewee reports the reviewer only. Clearing a file with
 several problems per row can therefore take more than one upload.
 
@@ -401,6 +405,7 @@ both round-trip.
 | Required cell present | Empty `ObserverEmail` → per-row error. |
 | Email format | `_parse_email` rejects malformed strings. |
 | Within-file duplicates | Same `ObserverEmail` twice → second occurrence rejected. |
+| Cell length | `ObserverEmail`, `ObserverName` or `ObserverTag1` longer than its column → per-row error naming the column (§1, *Cell lengths*). |
 | Cross-roster identity | As §3.1 — `check_cross_table_identity` with `kind="observers"`, against the reviewer and reviewee rosters. A row with no `ObserverName` is skipped: `Observer.display_name` is nullable and its column optional, and a missing name is not a different one. One person may be an observer and a reviewer; the check blocks only two names on one mailbox. |
 | `Status` value | Blank/absent → `active`; `active` / `inactive` only, else per-row error. |
 | `CohortRule` shape | Non-blank cell must be valid JSON **and** pass `CohortRuleSet.model_validate` → per-row error otherwise. Blank cell → `cohort_rule = NULL`. |
@@ -772,10 +777,11 @@ shares. Public surface:
 | Helper | Role |
 |---|---|
 | `decode_csv(content, source, *, max_bytes=MAX_BYTES) -> tuple[str \| None, ValidationIssue \| None]` | UTF-8 decode + BOM strip. Single function so every importer gets identical encoding behaviour. Returns a structured issue rather than raising on the two operator-facing failures — file too large, not valid UTF-8 — so a caller renders them like any other validation problem; `source` names the import for the message and the log line. `max_bytes` is overridable so a caller with a different ceiling need not fork the helper. |
-| `_read_dict_rows(text, source) -> tuple[rows \| None, fieldnames, field_labels, ValidationIssue \| None]` | `csv.DictReader` wrapper (blank lines skipped). Normalizes the header first — a labelable tag column's `.label` suffix (§1a) is stripped to its canonical name, and the captured `(source_type, source_field) → label` map comes back as `field_labels` — so rows key by the bare column name. A file with no header row, or more than `MAX_ROWS` data rows, returns `rows=None` and one blocking issue. |
+| `_read_dict_rows(text, source) -> tuple[rows \| None, fieldnames, field_labels, ValidationIssue \| None]` | `csv.DictReader` wrapper (blank lines skipped). Normalizes the header first — a labelable tag column's `.label` suffix (§1a) is stripped to its canonical name, and the captured `(source_type, source_field) → label` map comes back as `field_labels` — so rows key by the bare column name. A file with no header row, more than `MAX_ROWS` data rows, a header friendly label longer than `session_field_labels.label` (255; the issue names the column, e.g. `ReviewerTag1`), or a file the `csv` module refuses to parse (chiefly a cell past its 131,072-character field limit, which a file under `MAX_BYTES` can carry) returns `rows=None` and one blocking issue. |
 | `_missing_columns_issues(fieldnames, required, source)` | Returns one `ValidationIssue` per missing required column. Called at parse time, before per-row iteration. |
 | `_cell(row, key)` | Stripped string read; returns `""` when key absent. |
 | `_none_if_blank(row, key)` | `None` when cell is empty / whitespace-only, else the stripped string. The canonical "optional cell" reader. |
+| `cell_length_issues(row, model, headers, *, source, row_number)` | One blocking issue per cell longer than the `model` column it lands in; `headers` maps each row attribute to its CSV column. Used by all four roster parsers (§1, *Cell lengths*). |
 | `_parse_email(value, *, strict, source, row_number, field)` | Email validation with row-context error message. Used by the reviewer, reviewee and observer parsers on their `*Email` columns. **`strict` decides the non-email case**: reviewers and observers pass `strict=True`, so a cell that is not an address is rejected; reviewees pass `strict=False`, which accepts a cell with **no `@`** as an opaque identifier but still requires `EMAIL_RE` of anything containing one, so `foo@` is caught rather than imported. **Not** used by the Relationships importer, which performs no format validation at all: a malformed `ReviewerEmail` there fails FK resolution and is reported as *"Unknown reviewer"* rather than as a bad address. |
 | `check_cross_table_identity(db, *, session_id, rows, kind)` | Cross-roster guard for a parsed CSV — rejects a row whose email another roster already holds under a different name. `kind` is `"reviewers"` / `"reviewees"` / `"observers"`; anything else raises, rather than returning `[]` and reporting success for an import it never checked. |
 | `cross_table_identity_conflict(db, *, session_id, kind, identifier, name)` | The single-row form, for the create / edit services, so the rule has one home and every write path reaches it. Returns the `(roster label, name)` of a holder that disagrees, or `None`. **Any** disagreement is a conflict: a mailbox that already holds two names is not satisfied by matching one of them. |

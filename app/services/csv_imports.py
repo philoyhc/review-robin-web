@@ -10,7 +10,14 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
+from app.db.models import (
+    Observer,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+    SessionFieldLabel,
+    User,
+)
 from app.schemas.imports import (
     ObserverImportRow,
     RelationshipImportRow,
@@ -93,6 +100,25 @@ def decode_csv(
     return text, None
 
 
+def _unreadable_issue(source: str, exc: csv.Error) -> ValidationIssue:
+    """A blocking issue for a file the ``csv`` module refuses to parse.
+
+    Chiefly a cell over the parser's 131,072-character field limit,
+    which a file under ``MAX_BYTES`` can still carry; refused here
+    rather than as a 500 (findings D11).
+    """
+    message = f"CSV could not be read: {exc}"
+    if "field larger than field limit" in str(exc):
+        message = (
+            f"A cell is longer than {csv.field_size_limit():,} characters"
+        )
+    return ValidationIssue(
+        severity=Severity.error,
+        source=source,
+        message=message,
+    )
+
+
 def _read_dict_rows(
     text: str,
     source: str,
@@ -114,7 +140,10 @@ def _read_dict_rows(
     row maps by the bare column name.
     """
     reader = csv.DictReader(io.StringIO(text))
-    raw_fieldnames = reader.fieldnames
+    try:
+        raw_fieldnames = reader.fieldnames
+    except csv.Error as exc:
+        return None, [], {}, _unreadable_issue(source, exc)
     if raw_fieldnames is None:
         return (
             None,
@@ -127,8 +156,31 @@ def _read_dict_rows(
             ),
         )
     canonical, captured = field_label_csv.normalize_headers(list(raw_fieldnames))
+    label_limit = SessionFieldLabel.__table__.columns["label"].type.length
+    for slot, label in captured.items():
+        if len(label) > label_limit:
+            column = field_label_csv.column_for_slot(slot)
+            # The friendly label rides into `session_field_labels.label`;
+            # refused here, not as a Postgres 500 (findings D11).
+            return (
+                None,
+                canonical,
+                captured,
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    field=column,
+                    message=(
+                        f"The label on the {column} header is "
+                        f"{len(label)} characters; at most {label_limit} fit"
+                    ),
+                ),
+            )
     reader.fieldnames = canonical
-    rows = list(reader)
+    try:
+        rows = list(reader)
+    except csv.Error as exc:
+        return None, canonical, captured, _unreadable_issue(source, exc)
     if len(rows) > MAX_ROWS:
         return (
             None,
@@ -160,6 +212,42 @@ def _missing_columns_issues(
     ]
 
 
+def cell_length_issues(
+    row: object,
+    model: type,
+    headers: dict[str, str],
+    *,
+    source: str,
+    row_number: int,
+) -> list[ValidationIssue]:
+    """One blocking issue per cell longer than the column it lands in.
+
+    ``headers`` maps each row attribute to the CSV column it came from.
+    The limit is read from ``model``'s declared ``String(n)``, so it
+    cannot drift from the schema. SQLite stores an over-long value and
+    Postgres refuses it at flush, a 500 rather than a report (findings
+    D11); the Settings import already checks the same way."""
+    issues: list[ValidationIssue] = []
+    for attr, header in headers.items():
+        value = getattr(row, attr)
+        column = model.__table__.columns.get(attr)
+        limit = getattr(column.type, "length", None) if column is not None else None
+        if isinstance(value, str) and limit is not None and len(value) > limit:
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    row_number=row_number,
+                    field=header,
+                    message=(
+                        f"{header} is {len(value)} characters; "
+                        f"at most {limit} fit"
+                    ),
+                )
+            )
+    return issues
+
+
 def _cell(row: dict[str, str], key: str) -> str:
     value = row.get(key)
     return value.strip() if value else ""
@@ -168,6 +256,15 @@ def _cell(row: dict[str, str], key: str) -> str:
 def _none_if_blank(row: dict[str, str], key: str) -> str | None:
     value = _cell(row, key)
     return value or None
+
+
+def _profile_link_header(row: dict[str, str]) -> str:
+    """The column ``_profile_link`` read: ``ProfileLink``, or the legacy
+    ``PhotoLink`` a file without one still carries, so an issue names a
+    column the operator's file has."""
+    return "ProfileLink" if _none_if_blank(row, "ProfileLink") else (
+        "PhotoLink" if _none_if_blank(row, "PhotoLink") else "ProfileLink"
+    )
 
 
 def _profile_link(row: dict[str, str]) -> str | None:
@@ -334,22 +431,41 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
                 )
             )
             continue
-        seen_emails[normalize_email(email)] = (index, name)
         status = _parse_status(raw, source=source, row_number=index)
         if isinstance(status, ValidationIssue):
             issues.append(status)
             continue
-        parsed.append(
-            ReviewerImportRow(
-                name=name,
-                email=email,
-                profile_link=_profile_link(raw),
-                tag_1=_none_if_blank(raw, "ReviewerTag1"),
-                tag_2=_none_if_blank(raw, "ReviewerTag2"),
-                tag_3=_none_if_blank(raw, "ReviewerTag3"),
-                status=status,
-            )
+        row = ReviewerImportRow(
+            name=name,
+            email=email,
+            profile_link=_profile_link(raw),
+            tag_1=_none_if_blank(raw, "ReviewerTag1"),
+            tag_2=_none_if_blank(raw, "ReviewerTag2"),
+            tag_3=_none_if_blank(raw, "ReviewerTag3"),
+            status=status,
         )
+        length_issues = cell_length_issues(
+            row,
+            Reviewer,
+            {
+                "name": "ReviewerName",
+                "email": "ReviewerEmail",
+                "profile_link": _profile_link_header(raw),
+                "tag_1": "ReviewerTag1",
+                "tag_2": "ReviewerTag2",
+                "tag_3": "ReviewerTag3",
+            },
+            source=source,
+            row_number=index,
+        )
+        if length_issues:
+            issues.extend(length_issues)
+            continue
+        # Reserved only on a row that parsed, so a later row is never
+        # told it duplicates one the caller cannot see (as
+        # `parse_relationship_csv` does).
+        seen_emails[normalize_email(email)] = (index, name)
+        parsed.append(row)
 
     return ParseResult(rows=parsed, issues=issues, field_labels=captured_labels)
 
@@ -437,22 +553,38 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
                 )
             )
             continue
-        seen_identifiers[normalize_email(identifier)] = (index, name)
         status = _parse_status(raw, source=source, row_number=index)
         if isinstance(status, ValidationIssue):
             issues.append(status)
             continue
-        parsed.append(
-            RevieweeImportRow(
-                name=name,
-                email_or_identifier=identifier,
-                profile_link=_profile_link(raw),
-                tag_1=_none_if_blank(raw, "RevieweeTag1"),
-                tag_2=_none_if_blank(raw, "RevieweeTag2"),
-                tag_3=_none_if_blank(raw, "RevieweeTag3"),
-                status=status,
-            )
+        row = RevieweeImportRow(
+            name=name,
+            email_or_identifier=identifier,
+            profile_link=_profile_link(raw),
+            tag_1=_none_if_blank(raw, "RevieweeTag1"),
+            tag_2=_none_if_blank(raw, "RevieweeTag2"),
+            tag_3=_none_if_blank(raw, "RevieweeTag3"),
+            status=status,
         )
+        length_issues = cell_length_issues(
+            row,
+            Reviewee,
+            {
+                "name": "RevieweeName",
+                "email_or_identifier": "RevieweeEmail",
+                "profile_link": _profile_link_header(raw),
+                "tag_1": "RevieweeTag1",
+                "tag_2": "RevieweeTag2",
+                "tag_3": "RevieweeTag3",
+            },
+            source=source,
+            row_number=index,
+        )
+        if length_issues:
+            issues.extend(length_issues)
+            continue
+        seen_identifiers[normalize_email(identifier)] = (index, name)
+        parsed.append(row)
 
     return ParseResult(rows=parsed, issues=issues, field_labels=captured_labels)
 
@@ -540,7 +672,6 @@ def parse_observer_csv(content: bytes) -> ParseResult:
                 )
             )
             continue
-        seen_emails[normalize_email(email)] = index
 
         status = _parse_status(raw, source=source, row_number=index)
         if isinstance(status, ValidationIssue):
@@ -581,15 +712,29 @@ def parse_observer_csv(content: bytes) -> ParseResult:
                 continue
             cohort_rule = ruleset.model_dump(mode="json")
 
-        parsed.append(
-            ObserverImportRow(
-                email=email,
-                display_name=_none_if_blank(raw, "ObserverName"),
-                tag_1=_none_if_blank(raw, "ObserverTag1"),
-                status=status,
-                cohort_rule=cohort_rule,
-            )
+        row = ObserverImportRow(
+            email=email,
+            display_name=_none_if_blank(raw, "ObserverName"),
+            tag_1=_none_if_blank(raw, "ObserverTag1"),
+            status=status,
+            cohort_rule=cohort_rule,
         )
+        length_issues = cell_length_issues(
+            row,
+            Observer,
+            {
+                "email": "ObserverEmail",
+                "display_name": "ObserverName",
+                "tag_1": "ObserverTag1",
+            },
+            source=source,
+            row_number=index,
+        )
+        if length_issues:
+            issues.extend(length_issues)
+            continue
+        seen_emails[normalize_email(email)] = index
+        parsed.append(row)
 
     return ParseResult(rows=parsed, issues=issues)
 

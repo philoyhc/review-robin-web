@@ -39,6 +39,7 @@ from app.services.csv_imports import (
     _missing_columns_issues,
     _none_if_blank,
     _read_dict_rows,
+    cell_length_issues,
     decode_csv,
 )
 from app.services.email_identity import normalize_email
@@ -205,18 +206,30 @@ def parse_relationship_csv(
         # row that never parsed. **No import lost a pair either way** —
         # every error is blocking and all three callers refuse the whole
         # file — so the defect was the misleading message, not data.
-        seen_pairs[(reviewer.id, reviewee.id)] = index
-
-        parsed.append(
-            RelationshipImportRow(
-                reviewer_id=reviewer.id,
-                reviewee_id=reviewee.id,
-                tag_1=_none_if_blank(raw, "PairContextTag1"),
-                tag_2=_none_if_blank(raw, "PairContextTag2"),
-                tag_3=_none_if_blank(raw, "PairContextTag3"),
-                status=status_raw,
-            )
+        row = RelationshipImportRow(
+            reviewer_id=reviewer.id,
+            reviewee_id=reviewee.id,
+            tag_1=_none_if_blank(raw, "PairContextTag1"),
+            tag_2=_none_if_blank(raw, "PairContextTag2"),
+            tag_3=_none_if_blank(raw, "PairContextTag3"),
+            status=status_raw,
         )
+        length_issues = cell_length_issues(
+            row,
+            Relationship,
+            {
+                "tag_1": "PairContextTag1",
+                "tag_2": "PairContextTag2",
+                "tag_3": "PairContextTag3",
+            },
+            source=source,
+            row_number=index,
+        )
+        if length_issues:
+            issues.extend(length_issues)
+            continue
+        seen_pairs[(reviewer.id, reviewee.id)] = index
+        parsed.append(row)
 
     return ParseResult(rows=parsed, issues=issues, field_labels=captured_labels)
 

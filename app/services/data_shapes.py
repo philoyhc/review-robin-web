@@ -155,6 +155,13 @@ def _validate(
     """
     if not name or not name.strip():
         raise DataShapeValidationError("Shape name is required.")
+    name_limit = DataShape.__table__.columns["name"].type.length
+    if len(name) > name_limit:
+        # Refused here rather than as a Postgres 500 at flush
+        # (findings D11).
+        raise DataShapeValidationError(
+            f"Shape name is {len(name)} characters; at most {name_limit} fit."
+        )
     if axis not in VALID_AXES:
         raise DataShapeValidationError(
             f"Axis must be one of {sorted(VALID_AXES)}, got {axis!r}."

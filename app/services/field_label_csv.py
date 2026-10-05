@@ -49,6 +49,12 @@ _COLUMN_FOR_SLOT: dict[tuple[str, str], str] = {
 }
 
 
+def column_for_slot(slot: tuple[str, str]) -> str:
+    """The canonical CSV column for a labelable slot, e.g.
+    ``("pair_context", "1")`` → ``PairContextTag1``."""
+    return _COLUMN_FOR_SLOT[slot]
+
+
 def split_header(cell: str) -> tuple[str, str | None]:
     """Split one raw header cell into ``(canonical_column, label)``.
 
