@@ -24,6 +24,7 @@ from app.db.models import (
 from app.logging_config import get_logger
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit
+from app.services import unit_of_work
 
 log = get_logger(__name__)
 
@@ -310,7 +311,7 @@ def invalidate_session(
         reason=reason,
         correlation_id=correlation_id,
     )
-    db.commit()
+    unit_of_work.commit(db)
     db.refresh(review_session)
     return review_session
 

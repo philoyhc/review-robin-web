@@ -34,6 +34,7 @@ from app.db.models import (
     User,
 )
 from app.services import audit
+from app.services import unit_of_work
 from app.services import session_lifecycle as lifecycle
 from app.services.instruments import _instrument_label
 
@@ -527,7 +528,9 @@ def upsert_many(
     empty when the row was a no-op.
 
     Commits the transaction at the end (matches the rest of the
-    services package's commit-at-the-edge convention)."""
+    services package's commit-at-the-edge convention) — a flush only
+    inside ``unit_of_work.single_commit``, so the Instrument card's Save
+    can roll the whole save back on a later refusal (findings A16)."""
 
     def _mode_or_none(value: object) -> str | None:
         if value is None:
@@ -548,7 +551,7 @@ def upsert_many(
             correlation_id=correlation_id,
         )
         result.append((str(row["audience"]), changes))
-    db.commit()
+    unit_of_work.commit(db)
     return result
 
 

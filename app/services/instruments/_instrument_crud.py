@@ -40,6 +40,7 @@ from app.db.models import (
 )
 from app.services import session_lifecycle as lifecycle
 from app.services import audit
+from app.services import unit_of_work
 from app.services.instruments._band1 import _band1_rule_set_name
 from app.services.instruments._field_refs import repoint_sort, repoint_widths
 from app.services.instruments._response_fields import DEFAULT_RESPONSE_FIELDS
@@ -673,7 +674,7 @@ def update_instrument_description(
         payload=audit.changes({"description": [old_value, new_value]}),
         refs={"instrument_id": instrument.id},
     )
-    db.commit()
+    unit_of_work.commit(db)
     return instrument
 
 
@@ -726,7 +727,7 @@ def update_short_label(
         payload=audit.changes({"short_label": [old_value, new_value]}),
         refs={"instrument_id": instrument.id},
     )
-    db.commit()
+    unit_of_work.commit(db)
     return instrument
 
 
