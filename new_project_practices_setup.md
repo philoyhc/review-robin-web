@@ -233,7 +233,9 @@ these are the details that matter.
   the first browser test lands.
 - **`.github/workflows/ci-postgres.yml`.** Database user, password and
   name; keep the upgrade / downgrade-base / upgrade round-trip, and the
-  `pytest` step that runs the whole suite against that server — it is
+  `pytest` step that runs the whole suite against that server, with its
+  `TEST_DATABASE_URL` env (the suite reads no other URL, so without it
+  the "Postgres" job quietly runs SQLite) — it is
   what makes the SQLite default safe to keep (step 4). An empty tree has
   no chain to round-trip and the job goes red on the first PR, so guard
   the two Alembic steps on `alembic.ini` existing: the job is green until
@@ -305,9 +307,9 @@ winning and local SQLite as the fallback. One engine builder that every
 path calls — the app, `alembic/env.py` and the conftest — so what SQLite
 needs is applied once rather than remembered three times. Then a
 session-scoped `engine` fixture in `tests/conftest.py` — and **the
-suite resolves its own URL, in this order**: `TEST_DATABASE_URL`, then
-`DATABASE_URL`, then an in-memory default of its own. Not the settings
-URL: with `DATABASE_URL` unset that is the application's *file-backed*
+suite resolves its own URL**: `TEST_DATABASE_URL`, else an in-memory
+default of its own — never `DATABASE_URL`, since the Postgres path drops
+the schema it is pointed at (trap 6). Not the settings URL either: with `DATABASE_URL` unset that is the application's *file-backed*
 fallback, so the suite would build and drop schema in the developer's
 own database rather than in memory. Having resolved it, write it back to
 the settings object, so a no-argument engine built anywhere in the app
@@ -373,8 +375,8 @@ the symptom it produces:
    and rebuilds the schema, so each xdist worker would drop it out from
    under the others — refuse `-n` there. And once a Postgres
    `DATABASE_URL` is exported (trap 5 makes that the normal local
-   state), the next bare `pytest` in that shell reaches the drop; refuse
-   a non-local host unless a separate `TEST_DATABASE_URL` named it.
+   state), the next bare `pytest` in that shell would reach the drop;
+   read only `TEST_DATABASE_URL`, so a URL meant for the app never does.
 
 Only 1 and 2 need more than one schema. **3 to 6 apply to any project on
 this stack**, including a single-schema one — including this one, whose

@@ -96,9 +96,10 @@ default `pytest` run does not replay the migration chain. The Alembic
 migration chain (`alembic upgrade head` **and** the full `downgrade base +
 upgrade head` round-trip) is instead exercised on every PR by the
 `ci-postgres` job against `postgres:16`, so model/migration drift surfaces
-in CI. The same fixture honours `TEST_DATABASE_URL` / `DATABASE_URL`, so the
-suite can be pointed at a real Postgres locally (see `docs/local_setup.md`
-§9 "Postgres parity").
+in CI. The same fixture honours `TEST_DATABASE_URL` — and only that, never
+`DATABASE_URL`, because on Postgres it **drops and rebuilds the `public`
+schema** — so the suite can be pointed at a scratch Postgres locally (see
+`docs/local_setup.md` §9 "Postgres parity").
 
 Each test gets a per-test transactional session that rolls back on
 teardown, so tests do not pollute each other.
@@ -115,8 +116,8 @@ teardown, so tests do not pollute each other.
 - **Postgres-against-Docker CI** — `ci-postgres.yml` applies and
   round-trips migrations *and* runs the full pytest suite against a
   `postgres:16` service container on every PR. The `engine` fixture
-  in `tests/conftest.py` honours `TEST_DATABASE_URL` / `DATABASE_URL`
-  so the same test bodies cover both dialects.
+  in `tests/conftest.py` honours `TEST_DATABASE_URL` (the job sets it
+  from its `DATABASE_URL`) so the same test bodies cover both dialects.
 
 ## Adding a new model
 

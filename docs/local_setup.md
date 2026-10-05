@@ -314,8 +314,15 @@ you can reproduce a dialect-only issue (the `BOOLEAN DEFAULT 1` /
 ```bash
 docker run -d --name rrw-pg -e POSTGRES_PASSWORD=pw -p 5432:5432 postgres:16
 export TEST_DATABASE_URL="postgresql+psycopg://postgres:pw@localhost:5432/postgres"
-pytest -n auto        # the engine fixture honours TEST_DATABASE_URL; unset to return to SQLite
+pytest                # single-process: each xdist worker would drop the schema under the others
 ```
+
+**The suite drops the schema it is pointed at.** On Postgres the engine
+fixture runs `DROP SCHEMA public CASCADE` before migrating, so point
+`TEST_DATABASE_URL` only at a scratch database like the container above,
+and run it without `-n` (each worker would drop the schema under the
+others). Unset it to return to SQLite. The fixture reads that variable
+alone, so an exported `DATABASE_URL` never selects the test database.
 
 **One-click boot (optional).** Dropping a `.devcontainer/devcontainer.json`
 makes a Codespace boot fully provisioned. A minimal one:

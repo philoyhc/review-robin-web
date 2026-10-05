@@ -34,9 +34,13 @@ DEFAULT_TEST_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
 
 def _test_database_url() -> str:
-    return os.environ.get("TEST_DATABASE_URL") or os.environ.get(
-        "DATABASE_URL", DEFAULT_TEST_DATABASE_URL
-    )
+    """``TEST_DATABASE_URL``, else in-memory SQLite — never ``DATABASE_URL``.
+
+    The Postgres path below runs ``DROP SCHEMA public CASCADE``, so a
+    fallback to ``DATABASE_URL`` let a bare ``pytest`` in a shell that had
+    exported the app's database wipe it (findings H12). Only a URL named
+    for the tests reaches the drop."""
+    return os.environ.get("TEST_DATABASE_URL") or DEFAULT_TEST_DATABASE_URL
 
 
 @pytest.fixture(scope="session")
@@ -49,7 +53,7 @@ def engine() -> Iterator[Engine]:
     skips. The migration chain is still exercised on every PR by the
     ``ci-postgres`` job, so SQLite tests can take the fast path.
 
-    When ``TEST_DATABASE_URL`` (or ``DATABASE_URL``) points at Postgres,
+    When ``TEST_DATABASE_URL`` points at Postgres,
     runs the suite against that DB with the full Alembic migration
     applied so CI exercises both dialect divergence and the migration
     round-trip the SQLite path now skips.
