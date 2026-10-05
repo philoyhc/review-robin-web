@@ -7,7 +7,7 @@ have served their purpose: the segment shipped, or the plan was
 superseded by a later one. They are kept for historical
 reference — *what we intended and why* — but they are **not the
 source of truth for current behaviour**. For how the system
-works today, see `docs/status.md`; for what's planned next, see
+works today, see `spec/`; for what's planned next, see
 `guide/todo_master.md` and the active `guide/segment_*.md`.
 
 > **Maintenance rule.** This README is a manual index — there is

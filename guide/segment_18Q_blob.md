@@ -335,7 +335,7 @@ Concretely:
   `docs/security_posture.md`, `guide/deferred_consolidated.md` §1,
   `.github/workflows/` (+`ci-azurite.yml`).
 - **Update per consumer:** `spec/rehydrate.md` §3.3 (C1),
-  `docs/backup_restore.md` (C5), `docs/status.md` (each shipped slice),
+  `docs/backup_restore.md` (C5), ~~the status file (each shipped slice)~~ (retired 2026-10-05),
   `guide/blob_storage_candidates.md` (flip uses from "candidate" to "shipped").
 
 ---

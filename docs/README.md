@@ -3,15 +3,15 @@
 **Reference material about the running system.**
 
 Answers the question: *how does X work today?* Subsystem
-deep-dives plus a periodic implementation-status snapshot.
-Authoritative for "what does the code currently do" — read
-`status.md` first when picking up after a gap; its pre-2026-09-12
-timeline lives in `status_history.md`.
+deep-dives: deployment, operations, security, the database, and the
+limits a pilot should know. What the product does is `spec/`; what is
+still to be built is `guide/todo_master.md`; what shipped and when is
+the archived segment plans (`guide/archive/README.md`).
 
 | File | Covers |
 |---|---|
-| `status.md` | Current implementation state + segment history from 2026-09-12. Updated at the end of each segment. |
-| `status_history.md` | Timeline rows dated 2026-09-11 and earlier, moved out of `status.md` on 2026-09-19 when it reached 1,260 lines. Verbatim and unabridged — the split is the compaction, so nothing was summarised away. Most rows name an archived plan under `guide/archive/` that carries the real detail. |
+| `archive/status.md` | **Retired 2026-10-05.** Was the implementation-status file: an "As of" narrative, the project timeline from 2026-09-12, a Segments shipped table, and "Capabilities today" / "What's deliberately not yet there" / "Architectural notes". By then it was 457 KB, and nearly all of it restated an archived plan or a spec. Its two facts stated nowhere else moved first (to `local_setup.md` and `spec/operator_ui_concept.md`). Kept as a dated record; **do not update it**. |
+| `archive/status_history.md` | **Retired 2026-10-05 with `archive/status.md`.** The timeline rows dated 2026-09-11 and earlier, split out of the status file on 2026-09-19. Verbatim. |
 | `archive/quickstart.md` | **Retired 2026-09-06 — superseded by the in-app Guide at `/guide`.** Was the operator manual: an end-to-end walkthrough for a colleague running their first review. Segment 19E rung 2 moved the material into `app/web/templates/guide.html` and made that canonical, so the documentation lives where the app is. Kept as the record of what the Guide was built from; **do not edit it** — corrections go to the template. |
 | `architecture.md` | Cloud / deployment topology (App Service + Postgres + Key Vault + Monitor + Storage behind Easy Auth), a rendered diagram, and the provisioned-resource cost table. The infra companion to `spec/architecture.md` (which covers the app's domain layering). |
 | `database.md` | SQLAlchemy + Alembic conventions, dialect parity, where Postgres lives. |

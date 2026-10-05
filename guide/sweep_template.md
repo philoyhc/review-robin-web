@@ -171,9 +171,9 @@ for f in list(pathlib.Path("spec").rglob("*.md")) + list(pathlib.Path("docs").rg
 PY
 ```
 
-Judgement required on `docs/status.md`: it is a dated timeline, so a
-reference to a since-retired file is history, not drift. Elsewhere a dead
-path is a finding.
+Judgement required inside a dated register section (one opening with
+`<!-- path-ref-ok: section -->`): a reference to a since-retired file
+there is history, not drift. Elsewhere a dead path is a finding.
 
 **5. Read the diff since the last sweep** for the areas the four
 mechanical passes did not reach.

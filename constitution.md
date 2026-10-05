@@ -17,7 +17,8 @@ list, not left standing as a wish.
 
 Inside a segment the plan (`guide/segment_*.md`) carries the intent and
 leads the code; the spec (`spec/`) is settled when the segment closes, to
-match what shipped; `docs/status.md` records that it did. A spec edited
+match what shipped; the archived plan, indexed in `guide/archive/README.md`,
+records that it did. A spec edited
 slice by slice describes a moving target; a spec written at the close is
 right until the next segment opens it.
 

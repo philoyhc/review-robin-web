@@ -5,8 +5,8 @@
 > user- and concept-level terms — not **how** it is built.
 >
 > Implementation details (URLs, code modules, data types, frameworks)
-> live in the per-page / per-subsystem specs alongside this file,
-> and in `docs/status.md` for ship-state. Cross-references are
+> live in the per-page / per-subsystem specs alongside this file.
+> Cross-references are
 > noted in [§19 Reading guide](#19-reading-guide).
 >
 > **Currency.** The functional contract is stable; ship-state may
@@ -2591,8 +2591,6 @@ reader, so a spec missing from it is a spec nobody is sent to.
 | Validate page | `spec/validate_page.md` |
 | Visibility policy (audience × window grid) | `spec/visibility_policy.md` |
 
-For ship-state — what URL works today, what audit event fires
-today, what is queued for an upcoming segment — read
-`docs/status.md`. For what is still to be built, read
-`guide/todo_master.md`; for segment-by-segment history, the archived
-plans indexed in `guide/archive/README.md`.
+For what is still to be built, read `guide/todo_master.md`; for
+segment-by-segment history, the archived plans indexed in
+`guide/archive/README.md`.

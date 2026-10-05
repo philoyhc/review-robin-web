@@ -83,13 +83,14 @@ One bullet per file the segment commits to changing: a backticked repo-relative 
 
 - `spec/csv_contracts.md` — add the `<Slot>.<label>` header grammar for the three roster files (Item 1).
 - `spec/settings_inventory.md` — remove `field_labels.*` from the Settings CSV inventory (Item 1).
-- `docs/status.md` — row for each item as it lands.
+- `guide/todo_master.md` — delete the queue entry and the stubs the segment absorbed (at close).
 ```
 
 - Name the spec at **planning time**, even though the edit lands last. Committing to the spec is the point.
 - A dropped bullet is not deleted: append `<!-- doc-impact-waived: <reason> -->` on the same line. An empty reason fails the check.
 - A `spec/` or `docs/` path counts **anywhere** in the bullet, since bullets legitimately commit to several specs after the dash. A root-level document (`constitution.md`, `CLAUDE.md`), a bare filename used as folder shorthand, or a path under `app/`, `tests/`, `tools/`, `alembic/`, `.github/` or `.claude/` counts **only in the leading position**, before the dash, because a bare name is ambiguous where a prefixed path is not.
 - A bullet that *cites* a path rather than committing to it — naming the target of a pointer it edits — marks it `<!-- cites: spec/x.md -->`, comma-separated for several. Do **not** drop the backticks to hide it: bending the prose to satisfy a checker is how the checker starts lying.
+- A committed path **retired before the close** — the file archived or deleted by other work — is struck with its path removed and the retirement dated, `~~the status file (each slice)~~ (retired 2026-10-05)`. A waiver does not serve: C2 checks that every committed path exists, waived or not, and a path that no longer exists is not a commitment anyone can honour.
 - If the build reveals a spec the plan did not name, add the bullet and note it in `## Status`. Undeclared spec impact is what this section exists to prevent.
 - Never write the spec's content into the plan. Name the section and what it will say; the words go in the spec on the way out.
 
@@ -104,7 +105,7 @@ Every line checkable without asking the author. Good: "`spec/csv_contracts.md` �
 - `python3 tools/close_check.py <id>` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
-- `docs/status.md` row added; its `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
 ```
 
 ## Revising a plan
@@ -128,7 +129,7 @@ Asked to "update the plan" after a build, do the six things above. Do not regene
 2. `python3 tools/close_check.py <id>` exits 0 **and every warning is adjudicated**; if it fails, fix the plan or the spec rather than closing. It reports only — it never edits or moves anything, and it asks whether an edit happened, never whether it was right. That judgement is step 3's. `tools/README.md` has the rules it applies; read the warnings, because the exit code alone does not close the loop.
 3. Run `spec-writer` against the doc-impact files only. Adjudicate its flags; record any that changed a decision in `Status`. This close pass is unconditional; the narrow cases where `spec-writer` *also* runs before a rung's push are in `CLAUDE.md` "Where work runs".
 4. **Compact `Status` into the intended-versus-done account, and collapse every answered open question to its answer.** Open, `Status` was a running log and that is what it was for; closed, it is a record, and a record needs the decisions and the divergences rather than the day-by-day path to them. Keep what the ladder became and why, decisions confirmed at build, scope that moved, and anything a later reader needs to read the diff. Drop superseded entries, intermediate states, and anything the code or the spec now says better. *Nothing about intent is touched — only the log of getting there.*
-5. Add the `docs/status.md` row, and **delete what the close finished from `guide/todo_master.md`**: the segment's queue entry, any stub it shipped or absorbed, any sequencing note that named it. That file holds open work only, so nothing moves to a Done list — the archived plan is the record. An item close deletes only the stubs the item finished. For a segment close, or the last item of one, move the file to `guide/archive/` and add its row to `guide/archive/README.md`. An item close leaves the file in `guide/`.
+5. **Delete what the close finished from `guide/todo_master.md`**: the segment's queue entry, any stub it shipped or absorbed, any sequencing note that named it. That file holds open work only, so nothing moves to a Done list — the archived plan is the record. An item close deletes only the stubs the item finished. For a segment close, or the last item of one, move the file to `guide/archive/` and add its row to `guide/archive/README.md`. An item close leaves the file in `guide/`.
 
 Do not run the whole-folder sweep at close; that is a separate cadence with a separate reader.
 

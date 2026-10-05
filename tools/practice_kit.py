@@ -50,7 +50,6 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
     ("guide/deferred_consolidated.md", "skeleton", "", "everything scoped but not scheduled"),
     ("spec/README.md", "skeleton", "", "index of the surface contracts"),
     ("docs/README.md", "skeleton", "", "index of the operational docs"),
-    ("docs/status.md", "skeleton", "", "implementation state; first row is this setup"),
     ("docs/unenforced_conventions.md", "skeleton", "", "constitution VI's short list; starts empty"),
     (".github/workflows/ci.yml", "verbatim", "", "ruff + pytest -n auto on 3.12"),
     (".github/workflows/ci-postgres.yml", "adapt", "", "DB user / password / name; the alembic round-trip stays"),
@@ -168,22 +167,11 @@ the index `spec-writer` and `app/web/spec_registry.py` point at.
 """,
     "docs/README.md": """# docs/
 
-**Operational documents**: state, setup, deployment, security posture.
+**Operational documents**: setup, deployment, security posture.
 
 | Path | What it is |
 |---|---|
-| `status.md` | Implementation state and segment history. Authoritative. |
 | `unenforced_conventions.md` | Conventions deliberately left to prose (constitution VI). |
-""",
-    "docs/status.md": """# Status
-
-**As of:** <date>. **Segment 01 — repository setup** is open.
-
-## Segment history
-
-| Date | Segment | What shipped |
-|---|---|---|
-| <date> | Practice kit | The practice inherited from `review-robin-web` via its `tools/practice_kit.py`, adapted per `new_project_practices_setup.md`. |
 """,
     "docs/unenforced_conventions.md": """# Unenforced conventions
 
