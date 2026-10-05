@@ -47,7 +47,7 @@ shorthand:
 | **Nav (page-internal)** | Page-internal view switcher (e.g. Email Template tabs). Reuses the chrome's `.nav-tab` styling for visual consistency: active uses `<span class="nav-tab active" aria-current="page">`, siblings use `<a class="nav-tab">`, "coming soon" uses `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `.tab-strip`. (See `spec/ui_elements.md` §6.) |
 | **Inline text-button (`.btn-reset`)** | Single-line link-styled button used to revert a single field inside an editor without cancelling and exiting. (See `spec/ui_elements.md` §6.) |
 | **Return-to (`.back-link`)** | Top-of-body inline link to "wherever you came from" (`return_to_url` round-trip). Required on chrome-detour pages (Operator Settings, About) and on the Sys Admin child pages. (See `spec/ui_elements.md` §6.) |
-| **Chrome utility link** | Top-right chrome anchors — Sign-out (`signout`), Settings / Admin / Guide / About (`chrome-link`). Defined in `spec/visual_style_rrw.md`, not in `.btn` family. |
+| **Chrome utility link** | Top-right chrome anchors — Sign-out (`signout`), Settings / Admin / Guide / About (`chrome-link`). Defined in `spec/ui_elements.md` §1, not in `.btn` family. |
 | **Chrome nav** | The two-row session top-nav tabs (`.nav-tab`). Lives in `spec/visual_style_rrw.md` "Operator session chrome", not in the `.btn` family. |
 | **Disabled** | Visual variant of any role — opacity 0.5, `cursor: not-allowed`, `aria-disabled="true"`; applied once, not again inside an already-faded locked strip. |
 | **Inline link** | `<a>` rendered without a `.btn` class; reads as a hyperlink, not a button. |
@@ -73,7 +73,6 @@ Rendered inside `.session-nav-card` on every session-scoped page.
 | 6 | Setup tab row | Email Template | `<a>` | `nav-tab` | Chrome nav | |
 | 7 | Operations tab row | Validate | `<a>` | `nav-tab` | Chrome nav | |
 | 8 | Operations tab row | Assignments | `<a>` | `nav-tab` | Chrome nav | Operations row, never Setup |
-| 9 | Operations tab row | Previews | — | — | **Retired** | Removed with the Previews hub; number retained because audit identifiers are stable |
 | 10 | Operations tab row | Invitations | `<a>` | `nav-tab` | Chrome nav | |
 | 11 | Operations tab row | Responses | `<a>` | `nav-tab` | Chrome nav | |
 | 12 | Setup tab row | Observers | `<a>` | `nav-tab` | Chrome nav | Renders only when `observers_enabled`. **Numbered 12 rather than slotted after Relationships** — numbers here are stable identifiers other documents cite, so a new tab takes the next free one and the row order is not the render order |
@@ -121,6 +120,21 @@ ways out of an empty lobby.
 | 183 | Row expander (bulk) | Unarchive | `<button type="submit">` | `btn` | Primary | Posts `/operator/sessions/bulk-unarchive`; the page's one forward action, hence Primary |
 | 184 | Row expander (bulk) | Download | `<button type="button">` | `btn secondary` | Secondary | **Ships `disabled` unconditionally** — a placeholder for an export that does not exist. A permanently inert control with no explanation beside it |
 | 185 | Row expander (bulk) | Delete | `<button type="submit">` | `btn destructive` | Destructive | Posts `/operator/sessions/bulk-delete-archived`; gated behind the "Yes, delete" checkbox, same shape as #195 |
+
+---
+
+## Section 2b — Rehydrate (`/operator/sessions/rehydrate`)
+
+Source: `app/web/templates/operator/session_rehydrate.html`. The page
+404s unless `rehydrate_enabled` is on (`spec/rehydrate.md`).
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 252 | Upload, validate, rehydrate | Validate | `<button type="submit">` | `btn secondary` | Secondary | Submits `#rehydrate-validate-form` (the file upload) via `form=` to `rehydrate/validate` |
+| 253 | Upload, validate, rehydrate | Rehydrate (validated) | `<button type="submit">` | `btn` | Primary | Only when the last Validate run passed; submits the stash token in `#rehydrate-commit-form` to `rehydrate/commit` |
+| 254 | Upload, validate, rehydrate | Rehydrate (not validated) | `<button type="button">` | `btn disabled` | Primary (Disabled) | Before a Validate run, or after one that failed |
+| 255 | Rehydrate finished — with responses dropped | Download dropped responses | `<a>` | `btn secondary` | Secondary | Only on a commit that dropped responses; GETs `rehydrate/dropped.csv` with the outcome token |
+| 256 | Rehydrate finished — with responses dropped | Go to {session name} | `<a>` | `btn` | Primary | Links to the new session's Home |
 
 ---
 
@@ -265,8 +279,8 @@ Source: `app/web/templates/operator/session_reviewers.html`.
 > describe behavior *within* an editable session. `Clear` and `Search`
 > render in every state.
 >
-> **Observers is the exception, for the whole page.** All eight of its
-> mutating routes take `_require_not_archived`, so its row actions, its
+> **Observers is the exception, for the whole page.** Every one of its
+> mutating routes takes `_require_not_archived`, so its row actions, its
 > import and its `delete-all` are live through `ready` and `expired` and
 > its Unlock panel is suppressed only on `archived`. See
 > `spec/lifecycle.md` §5 for why an observer's roster is allowed the
@@ -354,8 +368,8 @@ Source: `app/web/templates/operator/session_observers.html`.
 Numbered 8.5 so the three other roster sections keep their numbers and
 the cross-references to them stay true.
 
-> **Lifecycle.** This page does **not** read `is_editable`. All eight
-> mutating routes take `_require_not_archived`, so **every mutating
+> **Lifecycle.** This page does **not** read `is_editable`. Every
+> mutating route takes `_require_not_archived`, so **every mutating
 > control below** — rows 165, 167–180 — renders through `ready` and
 > `expired` and is absent only on `archived`. That is the exception the
 > gate note above §6 describes; `spec/lifecycle.md` §5 carries the
@@ -379,7 +393,7 @@ the cross-references to them stay true.
 | 168 | Row expander | Inactivate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/observers/bulk-inactivate`. **Offered by status, not arity** — it renders only when the selection holds an active row, so a selection admitting neither pair shows neither button rather than two disabled ones. |
 | 169 | Row expander | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/observers/bulk-reactivate`; the mirror of row 168, offered when the selection holds an inactive row. |
 | 170 | Row expander | Delete | `<button type="submit">` | `btn destructive` | Destructive | Deletes the checkbox-selected rows via `/observers/bulk-delete`. Ships `disabled`: nothing syncs an injected confirm pair until its first tick, so a live-by-default Delete would be a destructive control with its gate open. Two-stage gate — a selection enables the `Yes, delete these` checkbox in the same panel, which enables this button (`data-delete-btn="observers-bulk-delete"`). |
-| 171 | Row expander (cohort pane) | `+` | `<button type="button">` | `btn secondary cohort-combinator-btn` | Secondary | Adds a rule cell. Sized by a class, not an inline `style` — see §6's no-inline-styled-buttons rule, which this page's four builder buttons were the last violation of. |
+| 171 | Row expander (cohort pane) | `+` | `<button type="button">` | `btn secondary cohort-combinator-btn` | Secondary | Adds a rule cell. Sized by a class, not an inline `style` (`spec/ui_elements.md` §6's no-inline-styled-buttons rule). |
 | 172 | Row expander (cohort pane) | `AND` / `OR` | `<button type="button">` | `btn secondary cohort-combinator-btn` | Secondary | Toggles the combinator; the label *is* the current value, written back to a hidden input. |
 | 173 | Row expander (cohort pane) | operator cycle | `<button type="button">` | `btn secondary cohort-cell-btn` | Secondary | Cycles the six operators (`IS THE SAME AS` / `IS DIFFERENT FROM` / `IS` / `IS NOT` / `CONTAINS` / `DOES NOT CONTAIN`); the label is the current value. One per rule cell. |
 | 174 | Row expander (cohort pane) | `X` | `<button type="button">` | `btn destructive cohort-cell-btn` | Destructive | Removes a rule cell; `disabled` on the first. Removing the **last** cell destroys the `Save` riding in its row, which is rebuilt — anything bound to `Save` is bound where `Save` is built. |
@@ -405,12 +419,12 @@ per instrument card.
 | 235 | Session status card | Collapse all instruments | `<button type="button">` | `btn secondary` | Secondary | Closes every per-instrument card's `<details>` |
 | 236 | Save-error banner (an instrument being edited) | Cancel | `<a>` | `btn alert` | Outline-amber | The mandatory Cancel on the `.banner.banner-error` a rejected bulk save renders (`spec/ui_elements.md` §5a). Returns to `?editing=<id>#instrument-<id>`, so the card stays unlocked |
 | 237 | Save-error banner (no instrument being edited) | Cancel | `<a>` | `btn alert` | Outline-amber | The same banner's Cancel when no `editing` id is carried; returns to the bare page |
+| 257 | Sort-save error banner | Cancel | `<a>` | `btn alert` | Outline-amber | The Cancel on `#sort-save-error-banner`, which renders when the no-JS `/fields/save` fallback rejects a sort spec. Returns to `?editing=<id>#instrument-<id>` for the instrument named by `sort_save_error_instrument_id` |
 
 ### 9b — Per-instrument card (one set per instrument)
 
 | # | Card / sub-section | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 50 | Section A right card | Open this Instrument / Close this instrument | — | — | **Retired** | Removed: accepting is session-wide, so there is no per-instrument toggle (`spec/lifecycle.md`); number retained because audit identifiers are stable |
 | 52 | Bottom action row (unlocked) | Save | `<button type="submit" form="dfsave-{iid}">` | `btn secondary` | Secondary | Bulk-save covers Band 1 form fields + Band 3 row state. Starts `disabled`; activates on first dirty event. Preserves `?editing=<id>` on redirect. |
 | 53 | Bottom action row (unlocked) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Confirms then reloads to discard unsaved client-side state. Mirrors Save's dirty-aware enabled state. |
 | 54 | Bottom action row | Replicate | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/{iid}/replicate` — clones the card immediately after it; disabled only when the session is not editable |
@@ -456,6 +470,9 @@ carrying the state.
 | 244 | Response-field row | + | `<button type="button">` | `btn secondary rf-glyph` | Secondary | Adds a response field below this one — inside a branch, a field to that branch. The branch's condition row carries one too, which adds a field at the top of the branch and is `disabled` while the branch's responses lock it |
 | 245 | Response-field row | ↰ | `<button type="button">` | `btn secondary rf-glyph` | Secondary | On a row outside any branch, joins the field above; `disabled` on the first row, on a field with a branch and on a field with saved responses. A level-1 row carries a second ↰, before its ↳, that joins the branch inside its own branch ending directly above; `disabled` on a field with a branch, in a locked branch, or when no such branch exists |
 | 246 | Response-field row (inside a branch) | ↳ | `<button type="button">` | `btn secondary rf-glyph` | Secondary | The same control as #245's join on a row a branch governs: moves the field out of its branch, or, on the branch's only field, detaches it and ends the branch. `disabled` on a field with a branch and in a branch whose responses lock it |
+| 265 | Display-field row | ▲ / ▼ | `<button type="button">` | `btn secondary btn-short` | Secondary | Moves the row up or down. Absent on a locked field; ▲ is `disabled` on the first row and below a locked one, ▼ on the last row |
+| 266 | Response-field row | ▲ / ▼ | `<button type="button">` | `btn secondary` | Secondary | Moves the field up or down — inside a branch, within that branch. `disabled` at either end of its run |
+| 267 | Response-field row | X | `<button type="button">` | `btn destructive` | Destructive | Removes the row client-side; the bulk Save (#52) writes it. `disabled` on a field with saved responses, a field with a branch, and a field in a branch whose responses lock it; a card's last row is never removed. A branch's condition row has no X — the branch goes with its last field |
 
 ---
 
@@ -530,28 +547,14 @@ and `POST /previews/random` does not exist — a POST is not a bookmark.
 There is no `session_previews.html` or `_preview_picker.html`.
 
 The affordances a reader may be looking for here are on the drill-in:
-**Open reviewer surface** (§13 row 87b, which replaces row 75a's
-`Open full preview`) and the email preview tab strip, whose rows keep
-their numbers below. `Apply` / `← Previous` / `Next →` / `Random`
-retired with the picker and have no successor.
+**Open reviewer surface** (§13 row 87b) and the email preview tab
+strip (§12b). There is no previewing-as picker: no `Apply`,
+`← Previous`, `Next →` or `Random`.
 
-### 12a — Previewing-as picker — **retired**
+### 12b — Email preview tabs (partial, on the drill-in)
 
-Rows kept because other documents cite these numbers; none of these
-buttons renders anywhere today.
-
-| # | Card | Label | Element | CSS class | Canonical | Notes |
-|---|---|---|---|---|---|---|
-| 72 | Previewing as | Apply | `<button type="submit">` | `btn secondary` | Secondary | Filters to a specific reviewer |
-| 73 | Previewing as (nav row) | ← Previous | `<a>` | `btn secondary` (`disabled` when none) | Secondary (Disabled at end of list) | |
-| 74 | Previewing as (nav row) | Next → | `<a>` | `btn secondary` (`disabled` when none) | Secondary (Disabled at end of list) | |
-| 75 | Previewing as (nav row) | Random | `<button type="submit">` | `btn secondary` | Secondary | Posts `/previews/random` |
-| 75a | Previewing as | Open full preview | `<a>` | `btn secondary` | Secondary (Disabled when the session has no reviewers) | Retired with the hub. Row 87b is the same button to the same destination from the Invitations drill-in, and is the one that survives |
-
-### 12b — Email preview tabs (partial) — **moved to the drill-in**
-
-`_email_preview_region.html` survived the hub. It renders on
-`session_invitations_reviewer_detail.html`, for a named reviewer rather than a picked one; the rows are unchanged.
+`_email_preview_region.html` renders on
+`session_invitations_reviewer_detail.html`, for a named reviewer.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
@@ -572,7 +575,7 @@ Source: `app/web/templates/operator/session_invitations.html`.
 | 86 | Invitations table (per row) | Send | `<button type="submit">` | `btn secondary` | Secondary (Disabled when session not ready) | One per row; visible while the invitation is `pending` |
 | 87 | Invitations table (per row) | Send reminder | `<button type="submit">` | `btn secondary` | Secondary (Disabled when row is complete or session not ready) | One per row; visible once the invitation is past `pending` |
 | 87a | Invitations table (per row) | Regenerate | `<button type="submit">` | `btn secondary` | Secondary (Disabled when session not ready) | One per row, whenever an `Invitation` row exists |
-| 87b | **Per-reviewer drill-in** → Review Progress card | Open reviewer surface | `<a>` | `btn secondary` | Secondary | Source is `session_invitations_reviewer_detail.html`, not this section's page — the drill-in is filed here because it belongs to the Invitations tab and has no section of its own. In a `.card-action-row` at the card's foot, the shape the Previews hub's button used for the same destination (§12a row 75a, retired with the hub); `target="_blank"` + `rel="noopener"`. Renders only when the reviewer has a table row with at least one assignment |
+| 87b | **Per-reviewer drill-in** → Review Progress card | Open reviewer surface | `<a>` | `btn secondary` | Secondary | Source is `session_invitations_reviewer_detail.html`, not this section's page — the drill-in is filed here because it belongs to the Invitations tab and has no section of its own. In a `.card-action-row` at the card's foot; `target="_blank"` + `rel="noopener"`. Renders only when the reviewer has a table row with at least one assignment |
 
 **The page body carries no bulk-action bar.** Send invites and Send
 reminders belong to the Workflow card's stepper (§5a), and the outbox
@@ -643,9 +646,19 @@ Source: `app/web/templates/operator/operator_settings.html`.
 **There is no Rule Builder page and no Rule Based Assignment card.**
 Band 1 of the per-instrument card on the Instruments page is the sole
 rule-authoring surface — see [`spec/assignments.md`](assignments.md)
-and [`spec/instruments.md`](instruments.md) § Band 1 for the canonical
-button shapes there (`+` to add a rule cell, `X` to remove, the
-operator-cycle button, and the AND / OR combinator toggle).
+and `spec/instruments.md` "Link 1 / Link 2 — filter rule list" and
+"Link 3 — Unit of review" for what each control does. Every control
+here acts client-side; the card's bulk Save (#52) writes the rule.
+
+| # | Card / sub-section | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 258 | Link 1 / Link 2 builder | + | `<button type="button">` | `btn secondary cohort-combinator-btn` | Secondary | Adds a rule cell |
+| 259 | Link 1 / Link 2 builder | AND / OR | `<button type="button">` | `btn secondary cohort-combinator-btn` | Secondary | Labeled with the Link's current combinator; toggles it |
+| 260 | Link 1 / Link 2 rule cell | Operator (`IS`, `IS NOT`, …) | `<button type="button">` | `btn secondary cohort-cell-btn` | Secondary | Labeled with the cell's current operator; cycles through the Link's operators |
+| 261 | Link 1 / Link 2 rule cell | X | `<button type="button">` | `btn destructive cohort-cell-btn` | Destructive | Removes the cell; `disabled` on the first cell |
+| 262 | Link 3 builder | + | `<button type="button">` | `btn secondary cohort-combinator-btn` | Secondary | Adds a boundary-tag cell |
+| 263 | Link 3 builder | THE SAME | `<button type="button">` | `btn secondary cohort-combinator-btn` | Secondary (Disabled) | Always `disabled`: a marker that group members agree on every picked tag, not an action |
+| 264 | Link 3 boundary cell | X | `<button type="button">` | `btn destructive cohort-cell-btn` | Destructive | Removes the cell; `disabled` on the first cell |
 
 ---
 
@@ -866,8 +879,9 @@ aria-disabled="true">`.
 Wrapper is `<div class="tab-strip tab-strip-page">`. The
 `.tab-strip-page` modifier (in `base.html`) gives the row a grey tint
 (`--surface-muted`), a thin `--border-default` border, and rounded
-corners, so the active tab's white background reads against the strip
-just as the chrome's Setup row does. Hover and disabled treatments
+corners, so the active tab's `--nav-tab-active-bg` reads against the
+gray strip. The chrome's Setup row is tinted differently
+(`--nav-strip-setup-bg`, a pale blue). Hover and disabled treatments
 fall out of the existing `.nav-tab` rules. `spec/ui_elements.md` §6
 "Nav button" documents the convention.
 

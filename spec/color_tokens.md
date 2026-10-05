@@ -241,8 +241,9 @@ same rule for the same reason. White on `--blue-glow` reaches only
 `--blue-deep` gives 6.70 for the label but drops the fill to **2.76**
 against `--surface-page`, under the **3:1** WCAG 1.4.11 asks of a
 control boundary, trading a text failure for a boundary one. That route
-has one usable value and moves `--blue-glow`, which nine dark tokens
-resolve to; the inversion moves three mappings and no primitive.
+has one usable value and moves `--blue-glow`, the primitive every dark
+reserved-blue token resolves to; the inversion moves mappings, not a
+primitive.
 `--btn-primary-border` stays on `--blue-glow`, being a boundary at 3:1,
 by the line that keeps `--decor-muted` outside the text floor.
 
