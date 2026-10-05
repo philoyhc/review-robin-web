@@ -142,7 +142,7 @@ author, marked *re-checked*) also ran it.
   with no row detail.
 - **Ec2** — `var(--space-5)` in `base.html` names no token; the padding
   falls to 0.
-- **H2 / Hc4** — Three `data_shape` foreign keys carry no index, against
+- ~~**H2 / Hc4**~~ — **Done in #2837.** Three `data_shape` foreign keys carry no index, against
   `docs/database.md`'s rule.
 - **I / Ic3** — `close_check` fails 18Q (C2, a retired `docs/` path in its
   Doc impact) and 20 (C1, no `Doc impact` heading) as the plans stand.
@@ -354,7 +354,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 **H — docs/**
 
 - **H1** med doc security_posture.md:379 "one GET that writes is Session Home" vs extract GETs audit+commit (_extracts.py:84-105 …:746, _extract_data.py:345), /me/invite/{token} record_open (_invite.py:71-75), first-sign-in users row (deps.py:167-176)
-- **H2** low doc/code database.md:134-136 every FK index=True vs data_shape.py:69-76,112-115
+- ~~**H2**~~ low doc/code database.md:134-136 every FK index=True vs data_shape.py:69-76,112-115 — **Done in #2837.**
 - **H3** low doc deployment_dev.md:323 review_sessions.created_by_user_id vs table sessions
 - **H4** low doc known_limitations.md:16-18 App Insights "stop applying" at cutover vs not wired (architecture.md:108-112, deployment_nus.md:129-130); same security_posture.md:441-443
 - **H5** low author security_posture.md:441-442, known_limitations.md:12-14 Postgres "private endpoint" vs nus_azure_status.md:31 "provisioned privately" (Azure-only)

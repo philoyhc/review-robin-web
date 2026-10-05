@@ -69,10 +69,12 @@ class DataShape(Base, TimestampMixin):
     instrument_id: Mapped[int | None] = mapped_column(
         ForeignKey("instruments.id", ondelete="CASCADE"),
         nullable=True,
+        index=True,
     )
     response_field_id: Mapped[int | None] = mapped_column(
         ForeignKey("instrument_response_fields.id", ondelete="CASCADE"),
         nullable=True,
+        index=True,
     )
     # JSON list of column-chip slot strings (e.g.
     # ``["reviewer:name", "reviewer:email",
@@ -112,4 +114,5 @@ class DataShape(Base, TimestampMixin):
     created_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
+        index=True,
     )
