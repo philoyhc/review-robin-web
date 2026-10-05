@@ -179,6 +179,26 @@ def _row_count(content: bytes) -> int:
     return max(0, len(rows) - 1)  # minus the header
 
 
+def _unreadable_files(resolved: dict[str, bytes]) -> list[str]:
+    """One message per file the ``csv`` module refuses to parse.
+
+    The readers below and the commit path's parsers all hand their file
+    to ``csv``, which raises on a cell past its field limit; checking
+    the whole set first reports it as a refusal naming the file rather
+    than a 500 from whichever reader meets it first (findings Dc8).
+    """
+    from app.services.csv_imports import csv_error_message
+
+    messages: list[str] = []
+    for kind, content in resolved.items():
+        try:
+            for _ in csv.reader(io.StringIO(_decode(content))):
+                pass
+        except csv.Error as exc:
+            messages.append(f"{kind}.csv: {csv_error_message(exc)}.")
+    return messages
+
+
 def _examples(items: set[str], n: int = 3) -> str:
     sample = sorted(items)[:n]
     more = "" if len(items) <= n else f", … (+{len(items) - n} more)"
@@ -262,6 +282,10 @@ def analyze_rehydrate_set(
             errors.append(
                 f"Missing {kind}.csv — rehydrate needs the full extract set."
             )
+    if errors:
+        return RehydrateReport(ok=False, errors=errors, warnings=warnings)
+
+    errors.extend(_unreadable_files(resolved))
     if errors:
         return RehydrateReport(ok=False, errors=errors, warnings=warnings)
 
@@ -534,6 +558,9 @@ def rehydrate_session(
     resolved = _resolve_files(files)
     if "settings" not in resolved:
         raise RehydrateError("settings.csv is required to rehydrate.")
+    unreadable = _unreadable_files(resolved)
+    if unreadable:
+        raise RehydrateError(" ".join(unreadable))
     settings = _parse_settings(resolved["settings"])
     if settings is None:
         raise RehydrateError("settings.csv header/format not recognised.")

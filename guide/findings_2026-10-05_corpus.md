@@ -104,24 +104,28 @@ author, marked *re-checked*) also ran it.
 
 **Found while fixing** (2026-10-05, after the read)
 
-- **Dc8** — Rehydrate (`app/services/session_rehydrate.py`
+- ~~**Dc8**~~ — **Done in #2835.** Rehydrate (`app/services/session_rehydrate.py`
   `_emails_from_csv`, `_row_count`, `_parse_settings`) and Quick Setup's
   settings reader (`routes_operator/_quick_setup.py`) let `csv.Error` from
   a cell past the 131,072-character field limit escape as a 500; the
   roster parsers refuse it since #2830. Code.
-- **Cc3** — The single-row roster create / edit forms and the friendly-label
+- ~~**Cc3**~~ — **Done in #2835.** The single-row roster create / edit forms and the friendly-label
   editor have no length check against their `String(n)` columns; the CSV
   paths have one since #2830. The Postgres 500 is inferred. Code.
-- **Cc4** — After Regenerate, the Invitations drill-in still shows the
+- ~~**Cc4**~~ — **Done in #2835.** After Regenerate, the Invitations drill-in still shows the
   link from the last invitation sent, which no longer works. Code.
-- **Cc5** — A Session Home Details Save that changes nothing still demotes
+- **Cc5** — **Ruled 2026-10-05: a change that does not affect validation demotes neither on Session Home nor in the lobby; fix queued.** A Session Home Details Save that changes nothing still demotes
   a `validated` session to `draft`; the lobby expander checks for a change
   since #2832. Author.
-- **Cc6** — The Session Home config card re-parses an untouched deadline
+- ~~**Cc6**~~ — **Done in #2835**, for Start and the release window too. The Session Home config card re-parses an untouched deadline
   box on every Save, so a deadline in the repeated hour after a DST
   fall-back comes back an hour early (`_session_home.py`
   `_apply_session_config_form`); the lobby compares the box's text since
-  #2832 (`sessions.deadline_box_unedited`). Code.
+  #2832 (`sessions.datetime_box_unedited`). Code.
+- **Dc9** — A free-text answer with no maximum can be longer than the
+  `csv` module's 131,072-character field limit: the responses extract
+  writes it, and Rehydrate refuses the set (`spec/rehydrate.md` §9,
+  since #2835). Author: raise the parser's limit or cap answers.
 
 **Low**
 

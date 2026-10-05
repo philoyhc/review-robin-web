@@ -1,4 +1,4 @@
-"""``sessions.payload_changes_session`` / ``deadline_box_unedited``
+"""``sessions.payload_changes_session`` / ``datetime_box_unedited``
 (findings B2, 2026-10-05).
 
 The lobby expander saves tags and, on an editable session, Name / Code /
@@ -42,23 +42,23 @@ def test_a_renamed_session_is_changed() -> None:
 
 
 def test_the_seeded_box_with_seconds_stored_is_unedited() -> None:
-    assert sessions.deadline_box_unedited(AWARE, "2031-03-04T23:59", "UTC")
+    assert sessions.datetime_box_unedited(AWARE, "2031-03-04T23:59", "UTC")
 
 
 def test_another_minute_is_an_edit() -> None:
-    assert not sessions.deadline_box_unedited(AWARE, "2031-03-04T23:58", "UTC")
+    assert not sessions.datetime_box_unedited(AWARE, "2031-03-04T23:58", "UTC")
 
 
 def test_clearing_or_setting_a_deadline_is_an_edit() -> None:
-    assert not sessions.deadline_box_unedited(AWARE, "", "UTC")
-    assert not sessions.deadline_box_unedited(None, "2031-03-04T23:59", "UTC")
-    assert sessions.deadline_box_unedited(None, "", "UTC")
+    assert not sessions.datetime_box_unedited(AWARE, "", "UTC")
+    assert not sessions.datetime_box_unedited(None, "2031-03-04T23:59", "UTC")
+    assert sessions.datetime_box_unedited(None, "", "UTC")
 
 
 def test_the_second_pass_of_a_repeated_dst_hour_is_unedited() -> None:
     # 06:30 UTC on 2026-11-01 is 01:30 EST, the second 01:30 in New York;
     # parsing "01:30" back would land on 05:30 UTC, the first (Codex, #2832).
     stored = datetime(2026, 11, 1, 6, 30, tzinfo=timezone.utc)
-    assert sessions.deadline_box_unedited(
+    assert sessions.datetime_box_unedited(
         stored, "2026-11-01T01:30", "America/New_York"
     )

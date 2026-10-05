@@ -239,6 +239,32 @@ def test_malformed_responses_header_blocks(db: Session) -> None:
     assert any("header" in e.lower() for e in report.errors)
 
 
+def test_a_cell_past_the_csv_field_limit_blocks_rather_than_raising(
+    db: Session,
+) -> None:
+    """findings Dc8: a cell past the csv module's 131,072-character
+    limit is a refusal naming the file, on the analyzer and on the
+    commit path, not a 500 from whichever reader meets it first."""
+    import pytest
+
+    from app.services.session_rehydrate import (
+        RehydrateError,
+        rehydrate_session,
+    )
+
+    user, rs = _seed(db)
+    for kind in ("reviewers", "settings", "responses"):
+        files = _file_set(db, rs)
+        files[f"{rs.code}_{kind}.csv"] += b'"' + b"x" * 200_000 + b'"\r\n'
+        report = analyze_rehydrate_set(db, files=files, user=user)
+        assert not report.ok
+        assert report.errors == [
+            f"{kind}.csv: A cell is longer than 131,072 characters."
+        ]
+        with pytest.raises(RehydrateError, match=f"{kind}.csv"):
+            rehydrate_session(db, files=files, user=user)
+
+
 def test_derive_name_suffixes_on_collision(db: Session) -> None:
     user, rs = _seed(db)
     # An existing "Spring_REHYD" the operator owns forces the _1 suffix.

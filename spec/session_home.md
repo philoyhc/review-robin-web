@@ -363,7 +363,12 @@ plain `<label>` above its value:
   shows as a pill next to its **resolved send datetime**
   (`views.build_offset_display_rows`). Resolved fire-moments read
   inline beside their offset; there is no separate
-  Schedule-timeline card.
+  Schedule-timeline card. Each box is seeded with its stored value in
+  the session's zone and read back as wall-clock in the submitted zone,
+  except that while the zone is unchanged a box still holding its seeded
+  text keeps the stored instant (`sessions.datetime_box_unedited`): in
+  the repeated hour after a DST fall-back the text names two instants,
+  and re-reading it would move the value an hour early on every Save.
 
 Below the field block, a `.bottom-grid` of two **sub-cards**, each its
 own `.bottom-left` column (`spec/ui_elements.md` §10) — **User

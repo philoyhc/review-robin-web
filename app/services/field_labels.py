@@ -192,6 +192,17 @@ def resolve_pair(
     )
 
 
+def label_length_error(label: str) -> str | None:
+    """Why ``label`` cannot be stored, when it is longer than
+    ``session_field_labels.label`` (findings Cc3); ``None`` otherwise.
+    The CSV header path checks the same limit (``csv_imports``)."""
+    limit = SessionFieldLabel.__table__.columns["label"].type.length
+    normalised = (label or "").strip()
+    if limit is not None and len(normalised) > limit:
+        return f"A label is {len(normalised)} characters; at most {limit} fit."
+    return None
+
+
 def upsert(
     db: Session,
     session: ReviewSession,
@@ -221,6 +232,9 @@ def upsert(
             "label cannot be empty or whitespace — call "
             "field_labels.clear() to remove an override"
         )
+    too_long = label_length_error(normalised)
+    if too_long is not None:
+        raise ValueError(too_long)
 
     existing = db.execute(
         select(SessionFieldLabel).where(

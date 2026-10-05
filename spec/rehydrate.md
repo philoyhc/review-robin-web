@@ -148,6 +148,11 @@ what the commit actually does. The report carries:
   `responses.csv` carrying its 21-column header, `reviewers.csv` /
   `reviewees.csv` carrying their email column, and `relationships.csv` /
   `observers.csv` present when `settings.csv` enables them.
+- **Readability** — every resolved file parses as CSV. A cell past the
+  `csv` module's 131,072-character field limit refuses the set with
+  `<kind>.csv: A cell is longer than 131,072 characters.`, and the commit
+  path refuses it the same way rather than answering 500. So a free-text
+  answer that long cannot be rehydrated (§9).
 - **Cross-file integrity** — every reviewer/reviewee email in
   `responses.csv` resolves in the roster CSVs, and every instrument
   short-label + field-key in `responses.csv` resolves in `settings.csv`.
@@ -560,6 +565,12 @@ Stated plainly so the card copy and the PR description stay honest:
   `_by_instrument`, can't be rehydrated from its files as named**: they
   are skipped as By-instrument CSVs and reported missing until renamed
   (Ignored files, [§4](#4-required-file-set)).
+- **A free-text answer longer than 131,072 characters can't be
+  rehydrated.** A String field with no maximum stores any length and the
+  responses extract writes it out, but the `csv` module refuses a cell
+  that long, so the set is refused ([§3.3](#33-pre-flight-validation-mandatory)).
+  Raising the parser's limit or capping answers is the author's call
+  (findings Dc9).
 - **Group-scoped instruments / self-reviews** reconstruct correctly as
   long as the rule sets + `group_kind` in `settings.csv` regenerate the
   same graph. Where they do not, the affected responses are dropped and
