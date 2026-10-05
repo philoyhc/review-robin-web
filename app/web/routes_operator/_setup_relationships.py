@@ -567,7 +567,9 @@ def _render_relationships_page(
     # ``archived`` (no revert form: ``/revert`` 409s from there).
     # Observers already passed this for its checkbox exception.
     is_archived = lifecycle.is_archived(review_session)
-    if is_ready:
+    if not lifecycle.is_editable(review_session):
+        # The editor renders only where `create` / `update` accept
+        # (`_require_editable`). Was `is_ready` (findings C3).
         edit_id = None
         add_mode = False
 

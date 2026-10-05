@@ -257,7 +257,11 @@ Import (`session_config_io/_apply_email.py`) parses each row against
 `<kind>_<slot>` that is not in `OVERRIDE_KEYS`, is a **parse error**
 (phase 1, no writes). A blank cell means *key absent* — the same
 fall-through the resolver applies — and the apply phase **replaces the
-JSON column wholesale** from the parsed dict.
+JSON column wholesale** from the parsed dict. The
+`responses_received.enabled` row is stored the way the toggle stores
+it: `false` writes `responses_received_enabled: false`, and `true` (the
+export's default) writes nothing, so a session with no overrides
+imports with none.
 
 **Clone** copies the JSON verbatim onto the new session
 (`session_clone`).
@@ -311,6 +315,10 @@ types are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
   not fail the submit.
 - `tests/integration/test_email_dates_session_zone.py` — the same
   zone rule on mapped rows, through the session's creator.
+- `tests/integration/test_settings_csv_email_enabled.py` — the
+  Settings import stores the toggle as the setter does: a session with
+  no overrides imports with none, and `false` imports as the explicit
+  opt-out.
 
 ---
 

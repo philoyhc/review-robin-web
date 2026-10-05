@@ -619,8 +619,13 @@ boundary.
   check runs, rather than refusing the whole apply. Any other illegal
   cell is still refused.
 - **`instruments[n].order` is informational.** Apply ignores the `order`
-  cell — **1-based CSV row position is authoritative**. To reorder
-  instruments, reorder their row blocks in the file.
+  cell — **the `[n]` number is authoritative**, not the rows' place in
+  the file. Each instrument is stored at its 0-based rank among the
+  file's numbers (`[1]`, `[2]` → 0, 1; `[0]`, `[3]` → 0, 1), as the app
+  numbers its own. The export writes the block's 0-based position
+  rather than the stored value, which a session imported before
+  2026-10-05 holds 1-based, so the cell always round-trips. To reorder
+  instruments, renumber their blocks.
 - **`instruments[n].display_fields[m].label` is a dead column.** The
   export does not emit it, a `label` row from an older bundle is
   tolerated and silently dropped on import, and the model column is
@@ -752,8 +757,9 @@ Concrete guarantees the importers + serialisers maintain:
    numbered, because an ordinal rots the moment a case is added or dropped.
 
 The round-trip is asserted by `tests/unit/test_apply_session_config.py`,
-`tests/unit/test_session_config_io.py` and
-`tests/unit/test_data_shapes_settings_roundtrip.py`, with per-entity
+`tests/unit/test_session_config_io.py`,
+`tests/unit/test_data_shapes_settings_roundtrip.py` and
+`tests/integration/test_settings_csv_instrument_order.py`, with per-entity
 round-trip tests in `tests/integration/test_extracts_*.py`.
 
 ---

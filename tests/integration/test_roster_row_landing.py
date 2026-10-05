@@ -380,6 +380,9 @@ def test_the_fallback_survives_an_empty_filtered_view(
     assert "match the current filter" in body or "No " in body, (
         "the fixture did not reach the empty-filtered branch"
     )
+    assert '<p class="muted table-showing-hint">' not in body, (
+        "a count line beside the no-match message (findings C1)"
+    )
     assert f'hash.indexOf("#{noun}-row-")' in body, (
         "the fallback is trapped inside the rows branch"
     )

@@ -61,7 +61,7 @@ responses. See `spec/rehydrate.md`.
 |---|:--:|:--:|---|
 | `name`, `short_label`, `description`, `sort_display_fields`, `group_kind`, `rule_set_id` (by name), `column_widths`, `starts_new_page`, `band2_state` | ✅ | ✅ | Full config round-trip both paths. `sort_display_fields` and `column_widths` name fields by id, so both paths re-point them at the copy's fields: the clone through its id maps, the Settings CSV by field position (`spec/csv_contracts.md` §3.3) |
 | `accepting_responses` | ✅ | ❌ | Settings-CSV restores the runtime open/closed flag; clone resets it (fresh draft) |
-| `order` | ⚠️ | ✅ | Settings-CSV serializes + parses it but **apply ignores it** — 1-based CSV position wins. Value round-trips only because export order matches position |
+| `order` | ⚠️ | ✅ | Settings-CSV serializes + parses it but **apply ignores it**: the `instruments[n]` number decides, stored as its 0-based rank. The cell round-trips because the export writes the 0-based position, not the stored value |
 | **`band1_touched_links`** | ✅ | ✅ | `instruments[n].band1_touched_links` in the Settings CSV; clone copies the column |
 | `session_seq` (the stable `Instrument_{N}` number) | ⚠️ | ✅ | Not in the Settings CSV. Import rebuilds the instruments and the column default numbers them 1…n in file order, so a gap (1, 3) or a post-drag sequence (1, 3, 2) comes back renumbered. Clone copies the value verbatim |
 | `deadline_closed_at`, `cached_group_pair_count/_stamp` | — | — | Runtime / cache |
@@ -183,9 +183,11 @@ wrong tool):
 Places where a value *looks* carried but isn't faithfully restored:
 
 - **`instruments[n].order`** — serialized + parsed, but apply ignores it;
-  CSV row position is authoritative *by design* (`spec/csv_contracts.md`
-  §3.3). Reordering the CSV reorders the instruments; the `order` cell is
-  informational.
+  the `[n]` number is authoritative *by design* (`spec/csv_contracts.md`
+  §3.3). Renumbering the blocks reorders the instruments; moving rows
+  without renumbering does not, and the `order` cell is informational.
+  Both sides use the 0-based position, so the cell is byte-stable even
+  for a session whose stored orders are not 0..n-1.
 - **`display_fields.label`** — a dead column: not serialized, import
   tolerates + drops it, always restored empty (`spec/csv_contracts.md`
   §3.3).

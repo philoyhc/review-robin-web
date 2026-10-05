@@ -655,6 +655,17 @@ def most_recent_invitation_url(
     return match.group(0) if match else None
 
 
+def _url_matches_current_token(url: str, invitation: Invitation) -> bool:
+    """Whether ``url``'s token is the one ``invitation`` holds now. A
+    regenerate rotates ``token_hash`` without sending, so the last
+    outbox body can carry a token that no longer resolves."""
+    raw = url.rsplit("/", 1)[-1]
+    return (
+        invitation.token_hash is not None
+        and hash_token(raw) == invitation.token_hash
+    )
+
+
 def most_recent_invitation_status(
     db: Session, *, invitation_id: int
 ) -> str | None:
@@ -698,8 +709,9 @@ def send_reminder(
 
     Falls back to ``send_invitation`` (rotates the token, writes a fresh
     ``kind='invitation'`` outbox row) when no invitation outbox row exists
-    for this invitation yet — so a single click always results in a
-    deliverable message.
+    for this invitation yet, or when the last one's link no longer
+    matches the current token because it was regenerated since — so a
+    single click always results in a deliverable message.
 
     ``user`` is ``None`` for the 18G Part 3 scheduled-reminder trigger
     (matches ``send_invitation``'s scheduled-trigger convention); the
@@ -710,6 +722,12 @@ def send_reminder(
     never loses the stamp to a later rollback (findings B31).
     """
     existing_url = most_recent_invitation_url(db, invitation_id=invitation.id)
+    if existing_url is not None and not _url_matches_current_token(
+        existing_url, invitation
+    ):
+        # The token was regenerated after that email went out, so its
+        # link is dead; send a fresh invitation instead (findings Gc1).
+        existing_url = None
     if existing_url is None:
         result = send_invitation(
             db,

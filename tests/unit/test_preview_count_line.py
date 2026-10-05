@@ -94,12 +94,15 @@ def test_the_filter_branch_never_claims_rows_are_withheld() -> None:
     assert "first" not in line
 
 
-def test_a_filter_matching_nothing_still_speaks() -> None:
+def test_a_filter_matching_nothing_leaves_it_to_the_no_match_message() -> None:
+    """Every page renders "No … match the current filter." for this
+    state, with no table to caption, so ``Showing 0`` beside it said
+    the same thing twice (findings C1)."""
     assert (
         preview_count_line(
             shown=0, pool=0, noun="observers", is_filtered=True
         )
-        == "Showing 0 observers."
+        is None
     )
 
 
@@ -268,13 +271,6 @@ def test_a_count_of_one_takes_the_singular(plural: str, singular: str) -> None:
     assert (
         preview_count_line(shown=1, pool=1, noun=plural, is_filtered=True)
         == f"Showing 1 {singular}."
-    )
-
-
-def test_zero_takes_the_plural() -> None:
-    assert (
-        preview_count_line(shown=0, pool=0, noun="reviewers", is_filtered=True)
-        == "Showing 0 reviewers."
     )
 
 
