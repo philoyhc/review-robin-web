@@ -56,10 +56,10 @@ RRW keeps three documentation folders. Each has a README that states its questio
 | Folder | Answers | Authority | At `3559c7a7` (2026-09-23) |
 |---|---|---|---|
 | `spec/` | *What is X supposed to look like and behave like?* | The contract. "When the code drifts from a spec, the spec is the canonical source — fix the code (or update the spec deliberately as part of a feature change, never silently)." | 40 live files, 24,362 lines; 5 archived |
-| `docs/` | *How does X work today?* | Ship-state. `docs/status.md` is "authoritative for what does the code currently do". | 18 files |
+| `docs/` | *How does X work today?* | Reference on the running system. Until 2026-10-05 the status file (now `docs/archive/status.md`) claimed to be "authoritative for what does the code currently do". | 18 files |
 | `guide/` | *What are we building next, and how?* | The plan. A segment plan is "the day-to-day source of truth for its own slices" while it is live. | 3 live segment plans; 107 archived, in a 173-row index |
 
-Read those three authority statements together and they contradict each other: the spec is canonical, ship-state is authoritative, and the plan is the source of truth. The contradiction is resolved by *phase*, and stating that resolution is the most useful thing this document does (Section 6.1). In one line: **the plan leads while a segment is open, the spec is settled when it closes, and `docs/status.md` records that it did.**
+Read those three authority statements together and they contradicted each other: the spec is canonical, ship-state is authoritative, and the plan is the source of truth. The contradiction is resolved by *phase*, and stating that resolution is the most useful thing this document does (Section 6.1). In one line: **the plan leads while a segment is open, the spec is settled when it closes, and the archived plan records that it did.**
 
 Three features of the model carry more weight than they look:
 
@@ -113,7 +113,7 @@ The cleanest single case is the semantic-token migration (#2047 → #2062, 2026-
 
 **Trade-off.** There is a window of spec drift inside every open segment, by design. During it, `spec/` describes the last settled state and `guide/` describes the intended next one, so a reader who consults only `spec/` mid-segment will be wrong about what is being built. Segments are short and the plan names its doc impact up front, so the window is narrow, but it is real.
 
-**The rule is asymmetric at its exit.** A missing plan is *self-revealing*: an agent asked to build slice 3 with no plan has nothing to build from, and the gap surfaces before code lands. A missing spec edit is *silent*: the code works, the tests pass, `docs/status.md` records the ship, and nothing looks for the spec. When the audit took stock on 2026-09-04, two Tier-1 specs had been missing since 2026-05-11 without anything noticing.
+**The rule is asymmetric at its exit.** A missing plan is *self-revealing*: an agent asked to build slice 3 with no plan has nothing to build from, and the gap surfaces before code lands. A missing spec edit is *silent*: the code works, the tests pass, the plan records the ship, and nothing looks for the spec. When the audit took stock on 2026-09-04, two Tier-1 specs had been missing since 2026-05-11 without anything noticing.
 
 The exit has since been made *checkable*, in two halves:
 - **Declared impact is verified.** `tools/close_check.py <id>` reads a plan's `Doc impact` manifest and confirms that each committed path was edited inside the plan's window. It is run by whoever closes the segment, before archiving. Measured over the archived plans on 2026-09-05, when it landed: 85 of 101 live committed paths (84%) had been edited in window, and 11 of 32 plans had dropped at least one commitment. Every item of Segment 19S passed it at its close.
@@ -141,8 +141,7 @@ Neither half makes the exit *mechanical*, and the distinction matters. The close
 - **The file tree and the documents' own structure.**
   - `tests/unit/test_doc_references.py` checks that `CLAUDE.md` and `AGENTS.md` are byte-identical, and that every anchored path, every `§N` pointer and every cited pytest node id in live prose resolves.
   - `tests/unit/test_guide_indexes.py` requires a README row for every `guide/` document, live or archived.
-  - `tests/unit/test_index_currency.py` checks three things, each within a stated scope (two more, over `guide/todo_master.md`'s Done list, retired with that list on 2026-10-05):
-    - `docs/status.md`'s date matches its newest row;
+  - `tests/unit/test_index_currency.py` checks two things, each within a stated scope (three more retired on 2026-10-05 with the lists they read: two over `guide/todo_master.md`'s Done list, one over the status file's date):
     - no queued-work pointer names an archived plan;
     - from Segment 19S on, a `Blast radius` states when it was taken.
 - **The stylesheet.** `tests/unit/test_generated_tools_are_current.py` and `tests/unit/test_contrast_audit.py` both read `base.html`'s inline stylesheet.
@@ -281,7 +280,7 @@ Where the practice is measurably behind:
 
 ## 9. Where the practice sits now
 
-Read against the four shapes in Section 2, RRW is **spec-anchored with a phase rule**: plans lead in, specs settle out, ship-state is recorded, and disputes are settled in `spec/`. It is **mechanized at the seams** where the repository states something a check can be derived from, it offers new gates an evidence bar of proof by mutation, adopted item by item, and it has shown it will retire a convention rather than mechanize it badly. It has **separate readers** on a cadence measured into shape: one cold read per item, and an external model reading most PRs. And it has a **human verifier** where nothing else can look, held deliberately rather than as a stopgap.
+Read against the four shapes in Section 2, RRW is **spec-anchored with a phase rule**: plans lead in, specs settle out, the archived plan records the close, and disputes are settled in `spec/`. It is **mechanized at the seams** where the repository states something a check can be derived from, it offers new gates an evidence bar of proof by mutation, adopted item by item, and it has shown it will retire a convention rather than mechanize it badly. It has **separate readers** on a cadence measured into shape: one cold read per item, and an external model reading most PRs. And it has a **human verifier** where nothing else can look, held deliberately rather than as a stopgap.
 
 The practice audit's verdict was that RRW is "ahead on the thing that is hardest to retrofit and behind on the thing that is cheapest to fix". It was ahead because a spec set, a layered document model and a habit of writing reasoning down were there from the first commit and cannot be bolted on later. It was behind because the specific gates, the reviewer and the merge policy were each a file, and each was written in an afternoon once the evidence pointed at it.
 
@@ -291,7 +290,7 @@ The three weeks since then bear the asymmetry out. The gates multiplied and the 
 
 ## 10. The thesis in one paragraph
 
-RRW practices a form of spec-driven development in which **plans carry intent into a segment, specs settle it on the way out, and ship-state records that they did**. That phase rule makes the spec reliably right at segment boundaries and the plan reliably right inside them, rather than pretending either is right always. Where a convention can be derived from something the repository states, the convention is a failing test, and an item that adds one can adopt the bar of showing it fails when the rule is broken. Where it cannot, a separate reader checks the diff against the spec. Where nothing can read — layout, selection, the browser — a person looks, and the practice says so instead of claiming otherwise. It runs no autonomous loop, because its definition of done is not machine-checkable for the defects that actually occur. It writes its reasoning down at every step, so that a codebase no one fully wrote is still one someone can fully explain. It was doing this before the term went mainstream, it measured itself against the term when the term arrived, and it kept the parts that held.
+RRW practices a form of spec-driven development in which **plans carry intent into a segment, specs settle it on the way out, and the archived plan records that they did**. That phase rule makes the spec reliably right at segment boundaries and the plan reliably right inside them, rather than pretending either is right always. Where a convention can be derived from something the repository states, the convention is a failing test, and an item that adds one can adopt the bar of showing it fails when the rule is broken. Where it cannot, a separate reader checks the diff against the spec. Where nothing can read — layout, selection, the browser — a person looks, and the practice says so instead of claiming otherwise. It runs no autonomous loop, because its definition of done is not machine-checkable for the defects that actually occur. It writes its reasoning down at every step, so that a codebase no one fully wrote is still one someone can fully explain. It was doing this before the term went mainstream, it measured itself against the term when the term arrived, and it kept the parts that held.
 
 ---
 

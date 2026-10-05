@@ -20,9 +20,12 @@ verbatim in `guide/archive/todo_master_done.md`). G1 asked that every
 archived plan from segment 16 on have a Done entry; the archive index
 already names every archived plan (`tests/unit/test_guide_indexes.py`).
 G2 kept the list sorted by PR number, which mattered only while it grew.
-G3 and G4 remain.
+**G3 retired the same day** with `docs/status.md` itself, archived to
+`docs/archive/status.md`: it held that file's ``As of`` line to its
+newest timeline row, and a file nobody updates has no header to drift.
+G4 remains.
 
-**G5 joined them at 19S Item 5**, over a different hand-maintained
+**G5 joined G1–G4 at 19S Item 5**, over a different hand-maintained
 claim in the same family: a `Blast radius` section that records a count
 without recording *when* it was true, so a later re-run cannot tell a
 stale number from a tree that has legitimately moved.
@@ -51,7 +54,6 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 TODO_PATH = REPO / "guide" / "todo_master.md"
-STATUS_PATH = REPO / "docs" / "status.md"
 ARCHIVE_DIR = REPO / "guide" / "archive"
 
 
@@ -128,40 +130,8 @@ _PLAN_NAME = re.compile(r"^segment_(\d+[A-Za-z0-9-]*)")
 #: (cold read, 2026-09-22).
 _PLAN_POINTER = re.compile(r"\*\*Plan:\*\*\s+`([^`]+)`")
 
-_AS_OF = re.compile(r"\*\*As of:\*\*\s*(\d{4}-\d\d-\d\d)")
-_TIMELINE_ROW = re.compile(r"^\|\s*(\d{4}-\d\d-\d\d)\s*\|", re.M)
-_TIMELINE_HEADING = "## Project timeline"
-
 
 # --- parsing -------------------------------------------------------
-
-
-def timeline_bounds(status_text: str) -> tuple[int, int]:
-    """``(start, end)`` offsets of the ``## Project timeline`` body.
-
-    Ends at the next ``## `` heading — `docs/status.md` carries four
-    more after it, so the table is not the tail of the file.
-    """
-    opening = re.search(rf"^{re.escape(_TIMELINE_HEADING)}$", status_text, re.M)
-    if opening is None:
-        raise AssertionError(
-            f"docs/status.md carries no {_TIMELINE_HEADING!r} heading"
-        )
-    rest = status_text[opening.end() :]
-    following = re.search(r"^## ", rest, re.M)
-    end = opening.end() + (following.start() if following else len(rest))
-    return opening.end(), end
-
-
-def timeline_section(status_text: str) -> str:
-    """The ``## Project timeline`` table, not the whole document.
-
-    `_TIMELINE_ROW` read file-wide before: every dated row happens to
-    sit in that one table today, but G3 would then have maxed over a
-    dated row in any table added later (cold read, 2026-09-22).
-    """
-    start, end = timeline_bounds(status_text)
-    return status_text[start:end]
 
 
 def segment_id(plan_filename: str) -> str | None:
@@ -177,26 +147,6 @@ def plan_pointers(upcoming_text: str) -> list[str]:
 
 
 # --- the checks, each a function of the text it reads --------------
-
-
-def stale_as_of(status_text: str) -> tuple[str, str] | None:
-    """**G3** — ``(as_of, newest_row)`` when ``**As of:**`` does not
-    equal the newest date in the project timeline, else ``None``.
-
-    Takes the **maximum** row date rather than the first, so a row
-    inserted out of order cannot hide a stale header. A future-dated row
-    therefore fails, which is correct: the header is a claim about what
-    the document covers.
-    """
-    as_of_match = _AS_OF.search(status_text)
-    if as_of_match is None:
-        raise AssertionError("docs/status.md carries no `**As of:**` date")
-    rows = _TIMELINE_ROW.findall(timeline_section(status_text))
-    if not rows:
-        raise AssertionError("docs/status.md carries no dated timeline rows")
-    newest = max(rows)
-    as_of = as_of_match.group(1)
-    return None if as_of == newest else (as_of, newest)
 
 
 def queued_archived_plans(upcoming_text: str) -> list[str]:
@@ -333,16 +283,6 @@ def unanchored_sections(
     return offenders
 
 
-def test_status_as_of_matches_its_newest_timeline_row() -> None:
-    """G3 on the tree. Would have caught the summary line two items
-    behind."""
-    stale = stale_as_of(STATUS_PATH.read_text())
-    assert stale is None, (
-        f"docs/status.md says `**As of:** {stale[0]}` but its newest "
-        f"timeline row is {stale[1]}"
-    )
-
-
 def test_no_upcoming_entry_points_at_an_archived_plan() -> None:
     """G4 on the tree."""
     queued = queued_archived_plans(_todo_text())
@@ -353,12 +293,11 @@ def test_no_upcoming_entry_points_at_an_archived_plan() -> None:
 
 
 def test_the_checks_see_the_corpus_they_claim_to_cover() -> None:
-    """Floors under each check's input, per §1.6.
+    """The floor under G4's input, per §1.6.
 
-    A change to the ``**Plan:**`` label or to the timeline's row shape
-    would leave the checks above passing over an empty list. The floors
-    sit **just** below the counts measured on 2026-09-22 — 3 pointers,
-    71 rows — deliberately close, because generous slack absorbs a
+    A change to the ``**Plan:**`` label would leave the check above
+    passing over an empty list. The floor sits **just** below the count
+    measured on 2026-09-22 — 3 pointers — deliberately close, because generous slack absorbs a
     recogniser narrowing: a close floor bites on a format change; a
     slack one does not, which is `docs/unenforced_conventions.md` §1.6's
     distinction between vacuity and coverage.
@@ -372,8 +311,6 @@ def test_the_checks_see_the_corpus_they_claim_to_cover() -> None:
             f"`**Plan:**` captured {path!r}, which is not a plan path — "
             "the recogniser is matching prose, not a pointer"
         )
-    rows = _TIMELINE_ROW.findall(timeline_section(STATUS_PATH.read_text()))
-    assert len(rows) >= 65, f"only {len(rows)} dated timeline rows"
 
 
 # --- the recognisers, outside their production examples ------------
@@ -429,50 +366,6 @@ def test_g4_does_not_read_the_repo_s_prose_about_itself() -> None:
 # applied to a copy of the document's text, never to the tree — a check
 # that has to edit its own subject to be demonstrated is the shape this
 # item's plan rules out.
-
-
-def test_g3_fails_when_a_newer_row_lands_without_the_header() -> None:
-    """The mutation appends at the **end** of the table.
-
-    The first draft inserted it directly after ``|---|---|``, i.e. as
-    the *first* row — where `max(rows)` and ``rows[0]`` are
-    indistinguishable, so the ordering semantics the docstring sells
-    went undemonstrated. Replacing `max` with ``rows[0]`` left all
-    tests green (cold read, 2026-09-22).
-
-    The **second** draft then appended after the last *line* of the
-    section, which is a ``---`` rule occurring 18 times in the file, so
-    ``str.replace(..., 1)`` hit the first one and the row landed outside
-    the table — invisible again. It splices by **offset** after the last
-    dated row now. Rows are newest-first, so the newest date ends up
-    last, where only `max` finds it.
-    """
-    text = STATUS_PATH.read_text()
-    assert stale_as_of(text) is None, "the tree is already stale; fix that"
-    start, end = timeline_bounds(text)
-    rows = list(_TIMELINE_ROW.finditer(text[start:end]))
-    insert_at = start + rows[-1].end()
-    mutated = (
-        text[:insert_at]
-        + "\n| 2099-01-01 | a newer row, appended last. |"
-        + text[insert_at:]
-    )
-    stale = stale_as_of(mutated)
-    assert stale is not None and stale[1] == "2099-01-01"
-
-
-def test_g3_finds_the_newest_row_wherever_it_sits() -> None:
-    """`max`, not first-or-last: a row out of order cannot hide a
-    stale header. This is the property the live mutation above could not
-    show on its own."""
-    synthetic = (
-        "**As of:** 2026-01-01\n\n## Project timeline\n\n"
-        "| Date | Milestone |\n|---|---|\n"
-        "| 2026-01-01 | first. |\n"
-        "| 2026-06-01 | newest, in the middle. |\n"
-        "| 2026-01-01 | last. |\n"
-    )
-    assert stale_as_of(synthetic) == ("2026-01-01", "2026-06-01")
 
 
 def test_g4_fails_when_a_queued_plan_is_archived() -> None:

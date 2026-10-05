@@ -351,9 +351,9 @@ render time.
 
 ### Practical implications today
 
-For URL-by-URL ship-state and the
-authoritative "what works today" list, read **`docs/status.md`**
-("Capabilities today" + "What's deliberately not yet there").
+For what works today, read the per-surface specs indexed in
+`spec/README.md`; for what is deliberately not built, read
+`guide/deferred_consolidated.md` and `docs/known_limitations.md`.
 
 - Session creation auto-seeds one instrument (system handle
   `Default`) with two response fields (`rating` integer 1–5
@@ -383,8 +383,8 @@ authoritative "what works today" list, read **`docs/status.md`**
   (`create_instrument`, `replicate_instrument`, `delete_instrument`,
   FK cascades; the action row's `+Instrument`, Replicate and Delete).
 
-What is deliberately deferred is listed in `docs/status.md` ("What's
-deliberately not yet there"). A response field's type and bounds can
+What is deliberately deferred is listed in
+`guide/deferred_consolidated.md`. A response field's type and bounds can
 change until it has saved responses, then lock (`spec/instruments.md`
 "Response fields").
 

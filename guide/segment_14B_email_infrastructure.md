@@ -386,7 +386,7 @@ When parts ship:
   `spec/email_infra_options.md` it lights up (the ◻ → ✅ flip in
   the spec's "Summary: what the app needs *before* any backend
   ships" checklist).
-- `docs/status.md` timeline entries per Part landed.
+- ~~Status-file timeline entries per Part landed~~ — the status file retired 2026-10-05; this plan, archived at close, and its PRs are the record.
 - `guide/todo_master.md` upcoming list updated.
 - `spec/email_infra_options.md` "Migration path" section steps
   (currently 1 → 6) crossed off as Parts ship; new entries

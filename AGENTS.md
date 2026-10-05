@@ -164,7 +164,6 @@ reject it.
 
 ## Where to look
 
-- **`docs/status.md`** — implementation state + segment history from 2026-09-12. Authoritative. Older timeline rows are verbatim in `docs/status_history.md`.
 - **`spec/README.md`** / **`docs/README.md`** / **`guide/README.md`** — the full, current index of each folder. Start here when the entry below isn't specific enough.
 - **`spec/architecture.md`** — domain entities, layering, the per-package module map.
 - **`spec/operator_ui_concept.md`** — operator chrome, setup nav, cross-page conventions.
@@ -222,8 +221,7 @@ reject it.
   `tests/unit/test_doc_conventions.py`
   (the checks derived from `app` constants), `tests/unit/test_guide_indexes.py` (a
   README row per `guide/` document),
-  `tests/unit/test_index_currency.py` (`docs/status.md`'s `As of`
-  matches its newest timeline row, no
+  `tests/unit/test_index_currency.py` (no
   queued-work plan pointer names an archived plan, and — from segment
   **19S** on — a `Blast radius` section states the commit or date its
   numbers were taken at), and
@@ -268,8 +266,8 @@ reject it.
 
   - **Prose-only slices take no read.** A slice is prose-only when its
     diff touches nothing under `app/`, `tests/` or `alembic/` — plan
-    opens, rung closes, `Status` compaction, `docs/status.md` rows,
-    README rows, registers, spec sweeps. Push, CI, merge. The
+    opens, rung closes, `Status` compaction, `guide/todo_master.md`
+    edits, README rows, registers, spec sweeps. Push, CI, merge. The
     doc-convention tests cover the pointers and `spec-writer` at the
     close covers the spec prose.
   - **Code slices inside an item ladder are read once per item.** Mark

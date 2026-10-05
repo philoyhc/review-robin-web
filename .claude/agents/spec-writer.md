@@ -16,7 +16,7 @@ decides your behaviour:
   contract.** *"When the code drifts from a spec, the spec is the canonical source — fix
   the code (or update the spec deliberately as part of a feature change, never
   silently)."* THIS IS YOURS.
-- **`docs/` — "How does X work today?"** Authority: ship-state. Read for context.
+- **`docs/` — "How does X work today?"** Authority: the running system's operation (deployment, security, database). Read for context.
 - **`guide/` — "What are we building next, and how?"** Authority: the plan. Read for
   context.
 
@@ -57,7 +57,7 @@ If you cannot tell which mode you are in, you are in Mode B. Ask.
   its own confidence level. Verification decides what you write, not what you write down.
 - **History.** When something landed, its PR or segment number, its SHA, what it used to
   be called, which proposal lost, what a previous draft got wrong. That belongs in
-  `docs/status.md`, the segment plans and the sweep records. A spec says what *is*.
+  the segment plans, their PRs and the sweep records. A spec says what *is*.
   - **But a constraint keeps its reason, and a reason established historically is not
     history.** Not *"19L.1 shipped a fill and every pill went invisible"* but *"**No
     fill.** A row fill resolves to the same primitives that back `.pill-count`, so it

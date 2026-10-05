@@ -1,5 +1,8 @@
 # Implementation status — history
 
+> **Retired 2026-10-05 with `docs/archive/status.md`** (formerly
+> `docs/status.md`), which it was split out of. Verbatim; do not update.
+
 <!-- retired-term-ok: file -->
 
 **Timeline rows dated 2026-09-11 and earlier**, moved out of

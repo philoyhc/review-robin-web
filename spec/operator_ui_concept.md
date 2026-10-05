@@ -226,7 +226,7 @@ The app has no page of its own at the root or the bare operator prefix — both 
 
 ## Per-page contracts
 
-A short contract per page: URL + template + role + key affordances. For per-route detail with form schemas and audit events, see `docs/status.md` (operator URL table). For deep-dive layout / behaviour specs, see the linked per-page docs.
+A short contract per page: URL + template + role + key affordances. For each route family's gate, see `spec/permissions.md` §3; the routes themselves are the routing modules under `app/web/`. For deep-dive layout / behaviour specs, see the linked per-page docs.
 
 ### `/operator/sessions` — Sessions list
 
@@ -517,4 +517,3 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 - **`spec/reviewer-surface.md`** — reviewer-facing surface contracts (separate audience).
 - **`spec/ui_elements.md`** — implementation catalogue mapping the canonical primitives to CSS classes and templates.
 - **`spec/instruments.md`** — locked spec for the Instruments page.
-- **`docs/status.md`** — current implementation state and per-route detail.

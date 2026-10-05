@@ -231,7 +231,7 @@ A no-op save (operator clicked Save with no changes) emits nothing.
 ## Cross-references
 
 - `guide/archive/participant_model_upgrade.md` §3.3 — design rationale + the audience-scope table.
-- `guide/archive/participant_model_upgrade.md` Appendix A — the S / P / W implementation-phase identifier glossary, for reading the slice ids that `docs/status.md` and the segment records use (S13, cited above, is one of them).
+- `guide/archive/participant_model_upgrade.md` Appendix A — the S / P / W implementation-phase identifier glossary, for reading the slice ids that the archived status log (`docs/archive/status.md`) and the segment records use (S13, cited above, is one of them).
 - `spec/participant_model.md` — cross-cutting participant-model contract; release-window columns.
 - `spec/instruments.md` — the per-instrument card layout; Band 2's visibility card sits here.
 - `spec/lifecycle.md` — schedule columns (`responses_release_at` / `responses_release_until`), §8.2.2 anchor-null, §8.2.7 save-time ordering.

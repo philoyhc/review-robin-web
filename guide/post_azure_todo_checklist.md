@@ -99,7 +99,7 @@ through them and decide each one's fate.
 | `docs/backup_restore.md` | 83 | Opens *"Scoped to the current single Azure **dev** slot"* — and backup policy is the one of these that an institutional host may dictate rather than leave to us. |
 | `docs/deployment_nus.md` | 452 | **A migration runbook whose migration is over.** Does it become the operations reference, or retire to `docs/archive/` with the operational half lifted out first? Easy to forget precisely because it is the document being worked from. |
 | ~~`docs/azure_github_setup.md`~~ <!-- path-ref-ok --> | 177 | **Retired 2026-10-03** to `docs/archive/azure_github_setup.md`, superseded by `docs/deployment_nus.md` (findings 2026-10-03 H-retire). |
-| `docs/cli_setup.md` | 641 | Companion to the above, and **the largest of the Azure documents** (third-largest in `docs/`, after `status.md` and the practice audit) — workstation CLI setup attached to the plan that was never executed. Its fate follows its parent's. |
+| `docs/cli_setup.md` | 641 | Companion to the above, and **the largest of the Azure documents** (third-largest in `docs/` when measured, after the status file and the practice audit, both since archived) — workstation CLI setup attached to the plan that was never executed. Its fate follows its parent's. |
 | `docs/architecture.md` | 124 | Infra topology and the provisioned-resource cost table. Both change at cutover. |
 | `azure_ask.md` (root) | 244 | The governance ask. Once IT has answered it, it stops being an ask and becomes a record — and it is **not indexed in `docs/README.md`** except inside another row's prose. |
 
@@ -545,7 +545,7 @@ backend it uses depends on what the NUS tenant allows
 reports success, then stamp `sent` (or `failed`, with
 `error_message`). Re-check every reader of `sent` — the invitation
 pills, the Workflow card captions, the Responses page — against the
-new timing. `README.md` and `docs/status.md` describe today's
+new timing. `README.md` and `docs/known_limitations.md` describe today's
 behavior until then.
 
 **Done when** a row reads `queued` until its message leaves, `sent`

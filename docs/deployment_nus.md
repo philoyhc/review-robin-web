@@ -418,7 +418,7 @@ Only after NUS is verified and serving as primary:
 - [ ] **Remove/rotate stale GitHub secrets** if you created NUS-specific new
   ones rather than updating in place.
 - [ ] **Docs:** mark `docs/deployment_dev.md` as superseded (or repoint it at
-  NUS), and update `docs/status.md` / `docs/architecture.md` topology notes.
+  NUS), and update the `docs/architecture.md` topology notes.
 
 ---
 

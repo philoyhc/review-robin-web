@@ -149,7 +149,6 @@ commit.
 | `guide/deferred_consolidated.md` | skeleton | — | everything scoped but not scheduled |
 | `spec/README.md` | skeleton | — | index of the surface contracts |
 | `docs/README.md` | skeleton | — | index of the operational docs |
-| `docs/status.md` | skeleton | — | implementation state; first row is this setup |
 | `docs/unenforced_conventions.md` | skeleton | — | constitution VI's short list; starts empty |
 | `.github/workflows/ci.yml` | verbatim | — | ruff + pytest -n auto on 3.12 |
 | `.github/workflows/ci-postgres.yml` | adapt | — | DB user / password / name; the alembic round-trip stays |
@@ -395,7 +394,7 @@ python3 tools/practice_kit.py --list
 
 Green once step 3 is complete is the expected result; the one gate that
 reads prose will have gone red during step 3 and told you what to fix.
-If it did not, mutation-test it: add a backticked path to `docs/status.md`
+If it did not, mutation-test it: add a backticked path to `docs/README.md`
 that does not exist, run `pytest tests/unit/test_doc_references.py`,
 watch it fail naming the file and line, and remove it. A gate that cannot
 go red has not been installed.
@@ -414,7 +413,6 @@ what did.
 
 ## 6. Record, and the first commit
 
-- Fill the `<date>` placeholders in `docs/status.md`.
 - The first commit's first command was `date -u +%FT%TZ` (step 0 was the
   moment to run it; if you did not, run it now and say so). Carry the
   value as the `Instruction-Received:` trailer, per `CLAUDE.md` "Where
@@ -510,7 +508,7 @@ first things a new project reaches for:
 ## Deliberately not copied
 
 - `rrw_sdd_in_practice.md`, `docs/archive/practice-audit-2026-09-04.md`, the
-  assessments, sweeps and `docs/status_history.md` — this project's
+  assessments, sweeps and `docs/archive/status.md` — this project's
   record, read for rationale, never transplanted.
 - `spec/` and `app/` — the product, not the practice. `spec_registry.py`
   is the one exception, because it is the gate's mechanism.

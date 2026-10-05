@@ -102,7 +102,7 @@ Every mutating service writes an `audit_events` row with a typed `event_type` + 
 
 Email is **recorded, not sent**. The invitation and reminder paths write each outbox row `queued` and flip it to `sent` with no transport call, and a reviewer's submit queues the responses-received confirmation and leaves it `queued`; stamping `queued` until a transport really sends is work awaiting Azure (`guide/post_azure_todo_checklist.md` item 8). Six of the audit-log columns the dispatch helper will write to (`error_message`, `from_address`, `backend`, `backend_message_id`, `delivered_at`, `payload_hash`) sit inert on the row; `correlation_id` is already stamped and read back by scheduled reminders. The transport interface (`EmailTransport` Protocol + `SmtpEmailTransport` + typed-stub `GraphEmailTransport`) is shipped but not yet wired up to the dispatch helper.
 
-For the latest snapshot of what's shipped vs. pending, see [`docs/status.md`](docs/status.md).
+For what is still to be built, see [`guide/todo_master.md`](guide/todo_master.md); for what shipped and when, the archived segment plans indexed in [`guide/archive/README.md`](guide/archive/README.md).
 
 ## Local development
 
@@ -185,7 +185,7 @@ README:
   display, the settings inventory, and more).
 - **[`docs/`](docs/)** — reference material about the running
   system ([`docs/README.md`](docs/README.md)). Includes
-  `status.md`, `security_posture.md`, `database.md`,
+  `security_posture.md`, `database.md`,
   `local_setup.md`, `deployment_dev.md`, plus the operations
   set (`operations_runbook.md`, `troubleshooting.md`,
   `backup_restore.md`, `known_limitations.md`).

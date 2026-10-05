@@ -42,7 +42,7 @@ RETIRED_TERMS = ("Primary Outline", "Alert Outline", "Danger Outline")
 # entry 15 renamed it; the control filters rows already rendered and
 # never was a search. Entry 16's first pass checked the literal string
 # and passed over `spec/rehydrate.md`'s "the search card's" and
-# `docs/status.md`'s "search-card" — a gate that reproduced, in its own
+# the status file's "search-card" (now `docs/archive/status.md`) — a gate that reproduced, in its own
 # first hour, the miss it was written to prevent (Codex, #2507).
 #
 # The term is the *card*, not the word: seven operator tables carry a
@@ -63,9 +63,9 @@ TERM_ESCAPE = "<!-- retired-term-ok -->"
 # A whole document that is a historical record rather than a live contract
 # opts out with this marker anywhere in the file: a dated audit or
 # assessment snapshot, which quotes the old vocabulary by the paragraph,
-# or a verbatim-history file like `docs/status_history.md`, whose rows are
-# kept unrewritten on purpose and will gain more as `docs/status.md`
-# compacts. The marker goes on its own line between blank lines — a line
+# or a verbatim-history file. No file `LIVE_DOCS` reads carries it since
+# 2026-10-05, when its last user (the status history) was archived; it is
+# kept for the next dated record that lands outside an archive. The marker goes on its own line between blank lines — a line
 # opening `<!--` starts a CommonMark HTML block that runs to the line
 # carrying `-->`, so mid-paragraph it swallows the rest of the paragraph.
 FILE_ESCAPE = "<!-- retired-term-ok: file -->"
