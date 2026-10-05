@@ -257,7 +257,9 @@ below describe what that panel holds.
    Gated by `is_editable`: in every locked state its inputs render
    `disabled` and the Save / Cancel pair is suppressed, and
    `POST …/field-labels` answers 409. The lifecycle-gate card above
-   carries the way out for that state.
+   carries the way out for that state. A label longer than
+   `session_field_labels.label` (255) answers 422, and every slot is
+   checked before any is written, so the save lands whole or not at all.
 
    **On the roster pages it lives in the Unlock panel**, with
    `.card-columns` as its fallback home in the two states the panel
@@ -1168,8 +1170,8 @@ A value longer than its column is refused like any other invalid
 input — the row re-renders with `<Field> is N characters; at most L fit.`
 and nothing is written — with the limits the CSV import uses, read from
 the models (`csv_imports.over_long_field_message`; `spec/csv_contracts.md`
-§1, *Cell lengths*). The friendly-label editor checks every slot against
-`session_field_labels.label` before writing any, and answers 422.
+§1, *Cell lengths*). A tag column is named by its slot (`Tag 1`) in the
+message, not by its friendly label.
 Editing a row's **status** to `inactive` /
 `active` is the inactivate / reactivate path — there is no
 separate per-row toggle. **Inactivate** / **Activate** flip the

@@ -488,9 +488,14 @@ def test_config_save_keeps_datetimes_in_the_repeated_dst_hour(
     session = _create_session(client, db, code="tz-dst-keep")
     deadline = datetime(2026, 11, 1, 6, 30, tzinfo=timezone.utc)
     release_at = datetime(2026, 11, 1, 6, 45, tzinfo=timezone.utc)
+    # Five minutes after Release-from, in the same repeated hour: Until
+    # is checked against the instant that is kept, not a re-parse of it
+    # an hour early (the cold read of #2835).
+    release_until = datetime(2026, 11, 1, 6, 50, tzinfo=timezone.utc)
     session.display_timezone = "America/New_York"
     session.deadline = deadline
     session.responses_release_at = release_at
+    session.responses_release_until = release_until
     db.commit()
 
     response = _set_session_timezone(
@@ -499,6 +504,7 @@ def test_config_save_keeps_datetimes_in_the_repeated_dst_hour(
         "America/New_York",
         deadline="2026-11-01T01:30",
         responses_release_at="2026-11-01T01:45",
+        responses_release_until="2026-11-01T01:50",
     )
 
     assert response.status_code == 303, response.text
@@ -507,4 +513,8 @@ def test_config_save_keeps_datetimes_in_the_repeated_dst_hour(
     assert updated.deadline.replace(tzinfo=timezone.utc) == deadline
     assert (
         updated.responses_release_at.replace(tzinfo=timezone.utc) == release_at
+    )
+    assert (
+        updated.responses_release_until.replace(tzinfo=timezone.utc)
+        == release_until
     )

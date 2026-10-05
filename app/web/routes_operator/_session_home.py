@@ -332,34 +332,59 @@ def _apply_session_config_form(
 
     # Each datetime box was seeded with its stored value rendered in the
     # session's current zone. While that zone is unchanged, a box still
-    # holding that text keeps the stored instant rather than re-parsing
-    # it: in the repeated hour after a DST fall-back the parse picks the
-    # first instant, so every Save would move the value an hour early
-    # (findings Cc6). A changed zone re-reads every box as wall-clock in
-    # the new zone, as before.
+    # holding that text is read as its stored instant rather than as
+    # wall-clock: in the repeated hour after a DST fall-back the text
+    # names two instants and the parse picks the first, so every Save
+    # would move the value an hour early (findings Cc6). It is re-read
+    # from its UTC rendering, so each parser below validates the instant
+    # that will be stored, then the stored value itself is kept (seconds
+    # included). A changed zone re-reads every box in the new zone.
     seeded_zone = sessions.resolve_session_timezone(review_session)
+    unedited: set[str] = set()
 
-    def _unless_unedited(parsed, stored, raw):
+    def _read_as(
+        field: str, raw: str | None, stored: datetime | None
+    ) -> tuple[str | None, str]:
         if timezone_name == seeded_zone and sessions.datetime_box_unedited(
             stored, raw, seeded_zone
         ):
-            return stored
-        return parsed
+            unedited.add(field)
+            return date_formatting.format_datetime_local(stored, "UTC"), "UTC"
+        return raw, timezone_name
 
-    parsed_deadline = _unless_unedited(
-        parse_session_deadline(deadline, timezone_name),
-        review_session.deadline,
-        deadline,
+    def _kept(field: str, parsed: datetime | None) -> datetime | None:
+        return getattr(review_session, field) if field in unedited else parsed
+
+    deadline_raw, deadline_zone = _read_as(
+        "deadline", deadline, review_session.deadline
+    )
+    start_raw, start_zone = _read_as(
+        "scheduled_activate_at",
+        scheduled_activate_at,
+        review_session.scheduled_activate_at,
+    )
+    release_at_raw, release_at_zone = _read_as(
+        "responses_release_at",
+        responses_release_at,
+        review_session.responses_release_at,
+    )
+    release_until_raw, release_until_zone = _read_as(
+        "responses_release_until",
+        responses_release_until,
+        review_session.responses_release_until,
+    )
+
+    parsed_deadline = _kept(
+        "deadline", parse_session_deadline(deadline_raw, deadline_zone)
     )
 
     # 18G Part 1: optional Start anchor for scheduled activation.
     try:
-        parsed_scheduled_activate_at = _unless_unedited(
+        parsed_scheduled_activate_at = _kept(
+            "scheduled_activate_at",
             scheduled_events.parse_and_validate_scheduled_activate_at(
-                scheduled_activate_at, timezone_name=timezone_name
+                start_raw, timezone_name=start_zone
             ),
-            review_session.scheduled_activate_at,
-            scheduled_activate_at,
         )
     except scheduled_events.ScheduledActivateError as exc:
         raise HTTPException(
@@ -401,21 +426,19 @@ def _apply_session_config_form(
     # datetime. Until is validated against the (possibly freshly-
     # edited) anchor.
     try:
-        parsed_responses_release_at = _unless_unedited(
+        parsed_responses_release_at = _kept(
+            "responses_release_at",
             scheduled_events.parse_and_validate_responses_release_at(
-                responses_release_at, timezone_name=timezone_name
+                release_at_raw, timezone_name=release_at_zone
             ),
-            review_session.responses_release_at,
-            responses_release_at,
         )
-        parsed_responses_release_until = _unless_unedited(
+        parsed_responses_release_until = _kept(
+            "responses_release_until",
             scheduled_events.parse_and_validate_responses_release_until(
-                responses_release_until,
-                timezone_name=timezone_name,
+                release_until_raw,
+                timezone_name=release_until_zone,
                 responses_release_at=parsed_responses_release_at,
             ),
-            review_session.responses_release_until,
-            responses_release_until,
         )
     except scheduled_events.ScheduledActivateError as exc:
         raise HTTPException(

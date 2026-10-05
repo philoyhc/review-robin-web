@@ -60,7 +60,8 @@ class ReviewerOperationError(ValueError):
         self.message = message
 
 
-# How the Add / Edit row names each column in a ``too_long`` message.
+# Each column's name in a ``too_long`` message. A tag is named by its
+# slot, not by the session's friendly label for it.
 _FIELD_LABELS = {
     "name": "Name",
     "email": "Email",

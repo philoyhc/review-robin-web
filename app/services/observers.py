@@ -71,7 +71,8 @@ class ObserverOperationError(ValueError):
         self.message = message
 
 
-# How the Add / Edit row names each column in a ``too_long`` message.
+# Each column's name in a ``too_long`` message. A tag is named by its
+# slot, not by the session's friendly label for it.
 _FIELD_LABELS = {"email": "Email", "display_name": "Name", "tag_1": "Tag 1"}
 
 
