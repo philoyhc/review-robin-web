@@ -31,84 +31,11 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
-from app.services._queries import session_scoped, slot_has_data
+from app.services._queries import session_scoped
 from app.services.email_identity import normalize_email
 
 
 PAIR_PREVIEW_LIMIT = 200
-
-
-def reviewer_fields_with_data(db: Session, session_id: int) -> list[str]:
-    """CSV column names of reviewer fields that hold at least one value."""
-    labels: list[str] = []
-    has_any = (
-        db.execute(
-            session_scoped(Reviewer.id, session_id).limit(1)
-        ).first()
-        is not None
-    )
-    if has_any:
-        labels.extend(["ReviewerName", "ReviewerEmail"])
-    for slot in (1, 2, 3):
-        if slot_has_data(
-            db, session_id=session_id, column=getattr(Reviewer, f"tag_{slot}")
-        ):
-            labels.append(f"ReviewerTag{slot}")
-    return labels
-
-
-def reviewee_fields_with_data(db: Session, session_id: int) -> list[str]:
-    """CSV column names of reviewee fields that hold at least one value."""
-    labels: list[str] = []
-    has_any = (
-        db.execute(
-            session_scoped(Reviewee.id, session_id).limit(1)
-        ).first()
-        is not None
-    )
-    if has_any:
-        labels.extend(["RevieweeName", "RevieweeEmail"])
-    if slot_has_data(
-        db, session_id=session_id, column=Reviewee.profile_link
-    ):
-        labels.append("ProfileLink")
-    for slot in (1, 2, 3):
-        if slot_has_data(
-            db, session_id=session_id, column=getattr(Reviewee, f"tag_{slot}")
-        ):
-            labels.append(f"RevieweeTag{slot}")
-    return labels
-
-
-def assignment_fields_with_data(db: Session, session_id: int) -> list[str]:
-    """CSV column names of assignment fields that hold at least one value.
-
-    Pair-context columns (``PairContextN``) reflect the post-15D
-    state — values come from the ``relationships`` table now,
-    not the retired ``Assignment.context`` JSON column. The
-    ``AssignmentContextN`` family retired entirely in 15D PR 6b
-    (operator-typed via the manual CSV only; manual CSV no longer
-    writes context after the column drop).
-    """
-
-    labels: list[str] = []
-    has_any = (
-        db.execute(
-            session_scoped(Assignment.id, session_id).limit(1)
-        ).first()
-        is not None
-    )
-    if not has_any:
-        return labels
-    labels.extend(["ReviewerEmail", "RevieweeEmail", "IncludeAssignment"])
-    for slot in (1, 2, 3):
-        if slot_has_data(
-            db,
-            session_id=session_id,
-            column=getattr(Relationship, f"tag_{slot}"),
-        ):
-            labels.append(f"PairContext{slot}")
-    return labels
 
 
 def get_or_create_default_instrument(

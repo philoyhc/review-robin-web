@@ -31,7 +31,6 @@ from __future__ import annotations
 from ._coverage import (
     PAIR_PREVIEW_LIMIT,
     _apply_pair_search,  # noqa: F401
-    assignment_fields_with_data,
     count_pairs,
     existing_count,
     existing_count_per_instrument,
@@ -40,8 +39,6 @@ from ._coverage import (
     list_pairs,
     list_reviewees,
     list_reviewers,
-    reviewee_fields_with_data,
-    reviewer_fields_with_data,
 )
 from ._generate import (
     ReconcileImpact,
@@ -79,7 +76,6 @@ __all__ = [
     "PAIR_PREVIEW_LIMIT",
     "AssignmentPair",
     "ReconcileImpact",
-    "assignment_fields_with_data",
     "bulk_set_assignment_include",
     "classify_self_review",
     "classify_self_review_pairs",
@@ -99,8 +95,6 @@ __all__ = [
     "staleness_by_instrument",
     "recompute_self_review_classification",
     "replace_assignments",
-    "reviewee_fields_with_data",
-    "reviewer_fields_with_data",
     "self_review_breakdown_per_instrument",
     "set_instrument_self_reviews_active",
     "verify_self_review_classification",
