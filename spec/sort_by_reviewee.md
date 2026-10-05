@@ -205,7 +205,7 @@ Shape:
 - Up to 3 entries; service-enforced (DB doesn't enforce a length cap).
 - `dir ∈ {"asc", "desc"}` — service validates.
 - `display_field_id` references `instrument_display_fields(id)` — service drops an id that is not this instrument's (see "Cascade behaviour") or that names the reviewee email (see "Scope") — or is the `-1` Group sentinel, which is kept (see "Group-scoped instruments").
-- Empty list `[]` or NULL → fall back to **implicit insertion order** (today's behaviour, zero change for existing sessions).
+- Empty list `[]` or NULL → fall back to **implicit insertion order**.
 
 JSON over three explicit FK columns: simpler schema, easier to extend to 4+ slots later if it ever matters, and the FK-orphan risk is small (handled by render-time defense + auto-compact on next save). See "Cascade behaviour" below.
 
@@ -277,7 +277,7 @@ A group-scoped instrument (`Instrument.group_kind` set; `spec/instruments.md`) r
 
 ---
 
-## Out of scope for the initial slice
+## Out of scope
 
 - Sort by **Response Fields** on the operator side. Excluded by design (see "Scope" above).
 - **Multi-column sort beyond 3.** Diminishing returns; the catalog can re-open the cap if a real session needs it.
@@ -335,7 +335,7 @@ Key landmarks in the codebase:
   `<table data-rrw-sortable="...">`, `th.rrw-sortable`,
   `data-sort-key`, `data-sort-value` cells, and
   `<tbody class="rrw-rows">`.
-- **Wrapper rows need a resolver.** The four rosters hand
+- **Wrapper rows need a resolver.** The three Setup rosters hand
   `apply_cookie_sort` rows whose sort keys are their own attributes,
   so a plain `getattr` suffices. Invitations and Responses do not:
   their rows are per-reviewer / per-reviewee **view wrappers**, so
@@ -368,7 +368,7 @@ Key landmarks in the codebase:
   - `tests/integration/test_reviewer_surface_sort.py` +
     `tests/integration/test_reviewer_surface_sort_cookies.py` — the
     reviewer surface and its cookie.
-  - `tests/integration/test_setup_tables_sort.py` — the four roster
+  - `tests/integration/test_setup_tables_sort.py` — the three roster
     tables.
   - `tests/integration/test_assignments_sort.py` — Operations
     Assignments (the `ORDER BY` path).

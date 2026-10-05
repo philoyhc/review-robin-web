@@ -349,8 +349,9 @@ status pills.
 
 The route threads a `page_statuses: list[PageStatus]` into context
 (`PageStatus = {position: int, label: str, state: Literal[…]}`),
-populated for every instrument regardless of how many there are. The
-template iterates and renders one pill per entry.
+one entry per instrument on which the reviewer has an included
+assignment, however many there are. The template iterates and renders
+one pill per entry.
 
 ### Session-wide status pill
 
@@ -922,9 +923,11 @@ GET requests behave differently depending on which gate fails:
 ### Lazy deadline-close
 
 Deadline expiration is observed lazily, not via a scheduled job.
-Every reviewer GET / POST and every operator instruments-page GET
-runs `lifecycle.observe_deadline(...)` before reading state. The
-first observer past the deadline:
+The reviewer surface GET (`/me/sessions/{id}/{page_n}`), its save,
+submit, clear and recall POSTs, and the operator Instruments page GET
+run `lifecycle.observe_deadline(...)` before reading state; the summary,
+its CSV, `/me`, results and collation do not. The first observer past
+the deadline:
 
 - Flips `Instrument.accepting_responses` to `false` on every
   instrument in the session.
@@ -1147,7 +1150,7 @@ per role the user holds:
 |---|---|---|
 | `reviewer` | `/me/sessions/{id}/summary` (when submitted) or `/me/sessions/{id}/1` | `session_status != "not opened"` |
 | `reviewee` | `/me/sessions/{id}/results` | `True` whenever the role is present — the role is itself conditional on a currently-resolving grant, so reaching this row means there is something to link to |
-| `observer` | `/me/sessions/{id}/collation` | `True` in every lifecycle state **except `archived`**: archive closes every non-operator grant, so the page is empty by construction there and the row renders unlinked. Per-instrument render gated on Band 3 + the session window inside `build_observer_collation_context` (W17) |
+| `observer` | `/me/sessions/{id}/collation` | `True` in every lifecycle state **except `archived`**: archive closes every non-operator grant, so the page is empty by construction there and the row renders unlinked. Per-instrument render gated on Band 3 + the session window inside `build_observer_collation_context` |
 
 The session-name link uses the first reachable role in priority
 order (Reviewer → Reviewee → Observer). Unreachable roles render
@@ -1348,8 +1351,8 @@ window does.
 
 **What renders** — reviewer-surface chrome (`reviewer/collation.html`)
 plus the per-instrument 3-row collation table (reviewer-side
-aggregates / reviewee-side aggregates / conditional CSV download).
-W17; see `guide/archive/observers.md` and the cohort-consumer routes in
+aggregates / reviewee-side aggregates / conditional CSV download);
+see the cohort-consumer routes in
 `app/web/routes_reviewer/_collation.py`.
 
 Route: `app/web/routes_reviewer/_collation.py`. Also registered
@@ -1446,12 +1449,12 @@ selector scoped under `body.ui-v2`:
 - `.rs-role-nav .rs-role-nav-active` — `font-weight: 600;`, keeping the
   role's own palette to read as selected.
 
-**W17 (observer)** still applies the `responses_release_at` +
+**The observer collation** applies the `responses_release_at` +
 `responses_release_until` gates inside the per-instrument render only —
 instrument cards fall through to the empty state when the window is
 closed, with no route-level refusal.
 
-**W16 (reviewee) does not work that way.** The window question is asked
+**The reviewee results page does not work that way.** The window question is asked
 at the *route*: with no instrument granting anything, `/results` answers
 404 rather than rendering an empty page that names the session to its
 subject. Inside an open page the per-instrument resolver still decides
@@ -1529,8 +1532,7 @@ optional:
   status pill** label (`#{N} {short_label}` — a space, not a colon;
   see "Per-page status"). The missing-required and invalid-value
   cards reuse the pill label to name each gap's instrument. Capped
-  at 32 characters at the schema layer; no rationale for that number
-  is recorded.
+  at 32 characters at the schema layer.
 - **`Instrument.description`** (`String(2000) | None`, nullable) — the
   longer per-instrument blurb. Lands as the subtitle next to the H2
   title above each table.

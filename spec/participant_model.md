@@ -64,13 +64,13 @@ The Setup-Observers page is documented in `spec/setup_pages.md` (Observers secti
 
 Three surfaces are participant-role-specific. All three render the reviewer-surface chrome (`body.ui-v2 reviewer` + `reviewer/_top_bar.html`) and carry the role-navigator chip strip below the page header (see §6).
 
-| Surface | URL | Gate | Status |
+| Surface | URL | Gate | Renders |
 |---|---|---|---|
-| Reviewer surface | `/me/sessions/{id}/{page_n}` + `/me/sessions/{id}/summary` | `require_reviewer_in_session` | Live; full response-collection. See `spec/reviewer-surface.md`. |
-| Reviewee results | `/me/sessions/{id}/results` | `require_reviewee_with_current_grant` | **Live.** Renders per-instrument sections in raw / anonymized / summarized mode (W16), plus the Acknowledge card at the foot (W19). `POST /me/sessions/{id}/results/acknowledge` stamps `reviewees.results_acknowledged_at` (idempotent). See §4.1 below. |
-| Observer collation | `/me/sessions/{id}/collation` | `require_observer_in_session` | **Live.** Renders per-instrument 3-row tables: Row 1 distinct-reviewer headcount + shared aggregate over the in-cohort assignment pool, Row 2 distinct-reviewee headcount + same aggregate, Row 3 conditional `Download CSV` button. Both rows draw from the same in-cohort pool computed by `materialize_cohort_assignments(observer, instrument_id)` via the per-row predicate `assignment_matches_cohort`; the per-side headcount badge is the only legitimate row-to-row difference. Identification mode follows the per-instrument Band 3 observer policy (Raw / Anonymized rows / Anonymized summaries). Per-instrument CSV download at `.../collation/instruments/{instrument_id}.csv`. See `guide/archive/observers.md`. |
+| Reviewer surface | `/me/sessions/{id}/{page_n}` + `/me/sessions/{id}/summary` | `require_reviewer_in_session` | Full response collection. See `spec/reviewer-surface.md`. |
+| Reviewee results | `/me/sessions/{id}/results` | `require_reviewee_with_current_grant` | Per-instrument sections in raw / anonymized / summarized mode, plus the Acknowledge card at the foot. `POST /me/sessions/{id}/results/acknowledge` stamps `reviewees.results_acknowledged_at` (idempotent). See §4.1 below. |
+| Observer collation | `/me/sessions/{id}/collation` | `require_observer_in_session` | Per-instrument 3-row tables: Row 1 distinct-reviewer headcount + shared aggregate over the in-cohort assignment pool, Row 2 distinct-reviewee headcount + same aggregate, Row 3 conditional `Download CSV` button. Both rows draw from the same in-cohort pool computed by `materialize_cohort_assignments(observer, instrument_id)` via the per-row predicate `assignment_matches_cohort`; the per-side headcount badge is the only legitimate row-to-row difference. Identification mode follows the per-instrument Band 3 observer policy (Raw / Anonymized rows / Anonymized summaries). Per-instrument CSV download at `.../collation/instruments/{instrument_id}.csv`. |
 
-### 4.1 Reviewee results surface (W16 + W19, live)
+### 4.1 Reviewee results surface
 
 `GET /me/sessions/{id}/results` renders the reviewer-surface chrome plus a list of per-instrument sections built by `app/web/views/_reviewee_results.py::build_reviewee_results_context`. Sections appear only for instruments whose `reviewee` visibility policy row resolves to a mode and that have at least one included assignment to this reviewee; the section's mode is one of:
 
@@ -97,7 +97,7 @@ The **Acknowledge card** (`section.card.rs-acknowledge-card`) always renders at 
   **No pre-release scaffolding.** A policy authored on `after_release` whose window has not opened must render nothing — not the section with the reviewer rows visible and only the values hidden. Rows without values still name the people lined up to review the reviewee, before anything has been granted to them, which is exactly the disclosure the 404 exists to refuse. A preview of what a reviewee *will* see belongs on an operator surface.
 - Observer collation: reachable for any active observer, on any session but an **archived** one — `build_observer_collation_context` short-circuits there and returns no sections, which is why the `/me` link is unlinked in that state. The per-instrument CSV short-circuits too and answers 404, as it does for any instrument the observer cannot see. The per-instrument visibility-policy resolver inside `build_observer_collation_context` applies the window gate at view time — instruments only render when the active window (while_ongoing / after_release) has a policy-permitted mode for the observer audience. The route itself does not 403 based on the release window.
 
-The release-window columns (`sessions.responses_release_at` + `sessions.responses_release_until`) are operator-authorable via W14 + S12 and consumed at view time by W16 (reviewee `/results`) and W17 (observer `/collation`).
+The release-window columns (`sessions.responses_release_at` + `sessions.responses_release_until`) are operator-authored on the schedule fields (§7) and consumed at view time by the reviewee `/results` and observer `/collation` surfaces.
 
 ---
 
@@ -127,7 +127,7 @@ Reachability per role for the link:
 |---|---|
 | reviewer | `session_status_for_reviewer != "not opened"` (per §4). Surfaces with `pill.state == "submitted"` link to `/me/sessions/{id}/summary` instead of `/me/sessions/{id}/1`. |
 | reviewee | Whenever the role is present at all — the role is itself conditional on a currently-resolving grant (above), so reaching this row means there is something to link to. |
-| observer | Per-instrument render gated on the Band 3 observer policy + the active session window (W17). The lobby link is reachable for any active observer **except on an archived session**: archive closes every non-operator grant, so the page behind the link is empty by construction. The row stays and reads "not opened" with an `archived` companion pill; it simply loses its link, matching the reviewer row beside it. **The observer's gate is independent of the status string**: it tests `lifecycle.is_archived` directly, in both `_dashboard.py` and `_shared.py`, where the reviewer's tests `session_status != "not opened"`. The two agree on an archived session but for different reasons, and the companion pill is not a fourth status value in either case. |
+| observer | Per-instrument render gated on the Band 3 observer policy + the active session window. The lobby link is reachable for any active observer **except on an archived session**: archive closes every non-operator grant, so the page behind the link is empty by construction. The row stays and reads "not opened" with an `archived` companion pill; it simply loses its link, matching the reviewer row beside it. **The observer's gate is independent of the status string**: it tests `lifecycle.is_archived` directly, in both `_dashboard.py` and `_shared.py`, where the reviewer's tests `session_status != "not opened"`. The two agree on an archived session but for different reasons, and the companion pill is not a fourth status value in either case. |
 
 If no role is reachable, the session name renders as plain text.
 
@@ -156,9 +156,9 @@ The Create New Session form and Session Home's Session details card author two e
 
 Both fields ride through `SessionCreate` end-to-end (`create_session` writes; `update_session` diffs them alongside the existing scheduled fields). The §8.2.2 anchor-null rule applies — `responses_release_until` is inert (treated as "no scheduled close") whenever `responses_release_at` is `NULL`. The check happens at view time, not save time; saving an until without an anchor is allowed and harmless. `responses_release_until` is an **absolute datetime, never a duration offset** (`release_until_offset`), so the form input and the operator's Stop-release button (`POST /operator/sessions/{id}/workflow/stop-release`) write the same column rather than two representations of one close time.
 
-The four schedule datetimes (Start / End / Release-from / Release-until) carry a strict ordering chain enforced at save time by `scheduled_events.validate_schedule_ordering` plus the per-field parsers (see `spec/lifecycle.md` §8.2.7). Each `datetime-local` input also carries `min` / `max` attributes the browser picker honours; a small shared partial live-updates the bounds as the operator types.
+The four schedule datetimes (Start / End / Release-from / Release-until) carry a strict ordering chain enforced at save time by `scheduled_events.validate_schedule_ordering` plus the per-field parsers (see `spec/lifecycle.md` §8.2.7). On the Create New Session form, `app/web/templates/operator/partials/_schedule_ordering_js.html` also sets each `datetime-local` input's `min` / `max` from its neighbors as the operator types, so the browser picker honors the chain; Session Home's card sets no bounds.
 
-**Consumer status.** W16's `build_reviewee_results_context` and W17's `build_observer_collation_context` both consume `responses_release_at` / `responses_release_until` inside the per-instrument window gate (via `session_lifecycle.is_response_release_window_open`). The reviewee route also gates reachability on a current grant (above), so its sections render only with values; the observer route does not gate on the window, and its instrument cards simply don't surface values until the relevant window opens.
+**Consumers.** `build_reviewee_results_context` and `build_observer_collation_context` both consume `responses_release_at` / `responses_release_until` inside the per-instrument window gate (via `session_lifecycle.is_response_release_window_open`). The reviewee route also gates reachability on a current grant (above), so its sections render only with values; the observer route does not gate on the window, and its instrument cards simply don't surface values until the relevant window opens.
 
 ---
 
@@ -179,8 +179,8 @@ The participant-model upgrade has a small remaining tail. See `guide/archive/par
 
 | Item | What's missing |
 |---|---|
-| W21 — Magic-link landings for reviewees / observers | Blocked on the `invitations`-extensibility design call (the table is reviewer-keyed today). |
-| W20 — Reviewee / observer email notifications | Blocked on Segment 14B email infrastructure. |
+| Magic-link landings for reviewees / observers | Blocked on the `invitations`-extensibility design call (the table is reviewer-keyed today). |
+| Reviewee / observer email notifications | Blocked on email infrastructure. |
 
 ---
 
