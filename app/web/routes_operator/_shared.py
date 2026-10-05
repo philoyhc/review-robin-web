@@ -1076,6 +1076,18 @@ def _save_field_labels(
                 "draft to rename labels."
             ),
         )
+    # Every slot is checked before any is written, so an over-long label
+    # refuses the save whole rather than landing the slots before it, or
+    # reaching Postgres as a 500 (findings Cc3).
+    for form_param, _ in slots:
+        too_long = field_labels_service.label_length_error(
+            submitted.get(form_param) or ""
+        )
+        if too_long is not None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=too_long,
+            )
     for form_param, source_field in slots:
         value = (submitted.get(form_param) or "").strip()
         if value:

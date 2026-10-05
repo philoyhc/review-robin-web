@@ -1164,6 +1164,12 @@ an expander bar beneath the edited row, and the toolbar locks: the
 filter form greys out and stops
 accepting clicks (`.is-locked`), and `Add new` and `Search` render
 disabled.
+A value longer than its column is refused like any other invalid
+input — the row re-renders with `<Field> is N characters; at most L fit.`
+and nothing is written — with the limits the CSV import uses, read from
+the models (`csv_imports.over_long_field_message`; `spec/csv_contracts.md`
+§1, *Cell lengths*). The friendly-label editor checks every slot against
+`session_field_labels.label` before writing any, and answers 422.
 Editing a row's **status** to `inactive` /
 `active` is the inactivate / reactivate path — there is no
 separate per-row toggle. **Inactivate** / **Activate** flip the

@@ -56,6 +56,7 @@ class ObserverOperationError(ValueError):
     - ``duplicate_email`` — another observer in the same session
       already uses this email (case-insensitive).
     - ``invalid_status`` — status not in ``{"active", "inactive"}``.
+    - ``too_long`` — a value is longer than its column.
     - ``invalid_cohort_rule`` — cohort-rule payload failed schema
       validation (``CohortRuleSet.model_validate`` rejected it).
     - ``empty_selection`` — bulk operation reached the service
@@ -68,6 +69,16 @@ class ObserverOperationError(ValueError):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+# How the Add / Edit row names each column in a ``too_long`` message.
+_FIELD_LABELS = {"email": "Email", "display_name": "Name", "tag_1": "Tag 1"}
+
+
+def _refuse_over_long(values: dict[str, object]) -> None:
+    message = csv_imports.over_long_field_message(Observer, values, _FIELD_LABELS)
+    if message is not None:
+        raise ObserverOperationError("too_long", message)
 
 
 def _normalised_email(email: str) -> str:
@@ -130,6 +141,13 @@ def create_observer(
     clean_status = _normalised_status(status)
     clean_display_name = _normalised_optional(display_name)
     clean_tag_1 = _normalised_optional(tag_1)
+    _refuse_over_long(
+        {
+            "email": clean_email,
+            "display_name": clean_display_name,
+            "tag_1": clean_tag_1,
+        }
+    )
 
     if _email_taken(db, session_id=review_session.id, email=clean_email):
         raise ObserverOperationError(
@@ -221,6 +239,7 @@ def update_observer(
         proposed["display_name"] = _normalised_optional(display_name)  # type: ignore[arg-type]
     if tag_1 is not _UNSET:
         proposed["tag_1"] = _normalised_optional(tag_1)  # type: ignore[arg-type]
+    _refuse_over_long(proposed)
 
     # not-identity: a dirty check — did the operator edit this field?
     # A case-only edit is a real edit, so this compares raw values

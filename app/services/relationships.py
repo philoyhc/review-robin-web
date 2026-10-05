@@ -41,6 +41,7 @@ from app.services.csv_imports import (
     _read_dict_rows,
     cell_length_issues,
     decode_csv,
+    over_long_field_message,
 )
 from app.services.email_identity import normalize_email
 from app.services.roster_bulk import (
@@ -454,6 +455,7 @@ class RelationshipOperationError(ValueError):
     - ``duplicate_pair`` — the ``(reviewer, reviewee)`` pair already
       has a relationship row (the UNIQUE constraint).
     - ``invalid_status`` — status not in ``{"active", "inactive"}``.
+    - ``too_long`` — a value is longer than its column.
     """
 
     def __init__(self, code: str, message: str) -> None:
@@ -463,6 +465,15 @@ class RelationshipOperationError(ValueError):
 
 
 _UNSET: object = object()
+
+# How the Add / Edit row names each column in a ``too_long`` message.
+_FIELD_LABELS = {"tag_1": "Tag 1", "tag_2": "Tag 2", "tag_3": "Tag 3"}
+
+
+def _refuse_over_long(values: dict[str, object]) -> None:
+    message = over_long_field_message(Relationship, values, _FIELD_LABELS)
+    if message is not None:
+        raise RelationshipOperationError("too_long", message)
 
 
 def _normalised_rel_status(status: str) -> str:
@@ -551,6 +562,9 @@ def create_relationship(
     clean_tag_1 = _normalised_rel_tag(tag_1)
     clean_tag_2 = _normalised_rel_tag(tag_2)
     clean_tag_3 = _normalised_rel_tag(tag_3)
+    _refuse_over_long(
+        {"tag_1": clean_tag_1, "tag_2": clean_tag_2, "tag_3": clean_tag_3}
+    )
 
     if _pair_taken(
         db,
@@ -659,6 +673,7 @@ def update_relationship(
         proposed["tag_2"] = _normalised_rel_tag(tag_2)  # type: ignore[arg-type]
     if tag_3 is not _UNSET:
         proposed["tag_3"] = _normalised_rel_tag(tag_3)  # type: ignore[arg-type]
+    _refuse_over_long(proposed)
 
     final_reviewer = proposed.get("reviewer_id", relationship.reviewer_id)
     final_reviewee = proposed.get("reviewee_id", relationship.reviewee_id)

@@ -251,6 +251,28 @@ def cell_length_issues(
     return issues
 
 
+def over_long_field_message(
+    model: type, values: dict[str, object], labels: dict[str, str]
+) -> str | None:
+    """The first value longer than its ``model`` column, as an
+    operator-facing sentence, or ``None``.
+
+    The single-row editors' counterpart of :func:`cell_length_issues`:
+    the Add / Edit forms write the same columns the CSVs do, and
+    Postgres refuses an over-long value at flush (findings Cc3).
+    ``labels`` names each attribute as the form does; an attribute it
+    omits is named as itself."""
+    for attr, value in values.items():
+        column = model.__table__.columns.get(attr)
+        limit = getattr(column.type, "length", None) if column is not None else None
+        if isinstance(value, str) and limit is not None and len(value) > limit:
+            return (
+                f"{labels.get(attr, attr)} is {len(value)} characters; "
+                f"at most {limit} fit."
+            )
+    return None
+
+
 def _cell(row: dict[str, str], key: str) -> str:
     value = row.get(key)
     return value.strip() if value else ""

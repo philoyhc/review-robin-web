@@ -49,6 +49,7 @@ class ReviewerOperationError(ValueError):
     - ``duplicate_email`` — another reviewer in the same session
       already uses this email (case-insensitive).
     - ``invalid_status`` — status not in ``{"active", "inactive"}``.
+    - ``too_long`` — a value is longer than its column.
     - ``not_in_session`` — bulk operation referenced ids that don't
       belong to the target session.
     """
@@ -57,6 +58,23 @@ class ReviewerOperationError(ValueError):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+# How the Add / Edit row names each column in a ``too_long`` message.
+_FIELD_LABELS = {
+    "name": "Name",
+    "email": "Email",
+    "profile_link": "Profile link",
+    "tag_1": "Tag 1",
+    "tag_2": "Tag 2",
+    "tag_3": "Tag 3",
+}
+
+
+def _refuse_over_long(values: dict[str, object]) -> None:
+    message = csv_imports.over_long_field_message(Reviewer, values, _FIELD_LABELS)
+    if message is not None:
+        raise ReviewerOperationError("too_long", message)
 
 
 def _normalised_name(name: str) -> str:
@@ -134,6 +152,16 @@ def create_reviewer(
     clean_tag_1 = _normalised_tag(tag_1)
     clean_tag_2 = _normalised_tag(tag_2)
     clean_tag_3 = _normalised_tag(tag_3)
+    _refuse_over_long(
+        {
+            "name": clean_name,
+            "email": clean_email,
+            "profile_link": clean_profile_link,
+            "tag_1": clean_tag_1,
+            "tag_2": clean_tag_2,
+            "tag_3": clean_tag_3,
+        }
+    )
 
     if _email_taken(db, session_id=review_session.id, email=clean_email):
         raise ReviewerOperationError(
@@ -239,6 +267,7 @@ def update_reviewer(
         proposed["tag_2"] = _normalised_tag(tag_2)  # type: ignore[arg-type]
     if tag_3 is not _UNSET:
         proposed["tag_3"] = _normalised_tag(tag_3)  # type: ignore[arg-type]
+    _refuse_over_long(proposed)
 
     # not-identity: a dirty check — did the operator edit this field?
     # A case-only edit is a real edit, so this compares raw values

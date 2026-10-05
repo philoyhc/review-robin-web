@@ -49,6 +49,7 @@ class RevieweeOperationError(ValueError):
     - ``duplicate_identifier`` — another reviewee in the same
       session already uses this email-or-identifier.
     - ``invalid_status`` — status not in ``{"active", "inactive"}``.
+    - ``too_long`` — a value is longer than its column.
     - ``not_in_session`` — bulk operation referenced ids that don't
       belong to the target session.
     """
@@ -57,6 +58,23 @@ class RevieweeOperationError(ValueError):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+# How the Add / Edit row names each column in a ``too_long`` message.
+_FIELD_LABELS = {
+    "name": "Name",
+    "email_or_identifier": "Email or identifier",
+    "profile_link": "Profile link",
+    "tag_1": "Tag 1",
+    "tag_2": "Tag 2",
+    "tag_3": "Tag 3",
+}
+
+
+def _refuse_over_long(values: dict[str, object]) -> None:
+    message = csv_imports.over_long_field_message(Reviewee, values, _FIELD_LABELS)
+    if message is not None:
+        raise RevieweeOperationError("too_long", message)
 
 
 def _normalised_name(name: str) -> str:
@@ -139,6 +157,16 @@ def create_reviewee(
     clean_tag_1 = _normalised_optional(tag_1)
     clean_tag_2 = _normalised_optional(tag_2)
     clean_tag_3 = _normalised_optional(tag_3)
+    _refuse_over_long(
+        {
+            "name": clean_name,
+            "email_or_identifier": clean_identifier,
+            "profile_link": clean_profile_link,
+            "tag_1": clean_tag_1,
+            "tag_2": clean_tag_2,
+            "tag_3": clean_tag_3,
+        }
+    )
 
     if _identifier_taken(
         db, session_id=review_session.id, identifier=clean_identifier
@@ -261,6 +289,7 @@ def update_reviewee(
         proposed["tag_2"] = _normalised_optional(tag_2)  # type: ignore[arg-type]
     if tag_3 is not _UNSET:
         proposed["tag_3"] = _normalised_optional(tag_3)  # type: ignore[arg-type]
+    _refuse_over_long(proposed)
 
     # not-identity: a dirty check — did the operator edit this
     # field? A case-only edit is a real edit, so this compares raw
