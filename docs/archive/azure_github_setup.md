@@ -4,7 +4,7 @@
 > different shape from this draft (one PRD environment, private endpoints,
 > an Application Gateway and a self-hosted runner). Its runbook is
 > [`deployment_nus.md`](../deployment_nus.md) and its verified state is
-> [`nus_azure_status_v7.md`](../nus_azure_status_v7.md). Kept as the record of
+> [`nus_azure_status.md`](../nus_azure_status.md). Kept as the record of
 > the two-environment draft; do not execute from it.
 
 > **This is the forward-looking two-environment scale-up target, not the

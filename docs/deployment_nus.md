@@ -19,8 +19,8 @@ test on localhost exactly as today**. After NUS is verified and serving,
 > **The verified NUS state is in `docs/nus_azure_status.md`** (2026-10-01):
 > what is provisioned, the network design (private Web App, Postgres and Key
 > Vault behind an Application Gateway) and the two external blockers. Where
-> this runbook and v7 disagree, v7 is current; the §1 checklist and §13 below
-> mark what v7 has settled.
+> this runbook and the status doc disagree, the status doc is current; the
+> §1 checklist and §13 below mark what it has settled.
 
 ---
 
@@ -73,22 +73,22 @@ Still to confirm / decide before the first deploy:
   **confirm the real provisioned names** before filling `NUS_WEBAPP_NAME`
   and `NUS_DATABASE_URL` (§6.2).
 - [x] **DB name** — the application database is **`reviewrobin`**
-  (provisioned, per v7).
+  (provisioned, per the status doc).
 - [ ] **App user** — the least-privilege PostgreSQL application role is still
-  to be created (v7, "Remaining project-side work" step 5). This runbook calls
+  to be created (status doc, "Remaining project-side work" step 5). This runbook calls
   it `rrw_app`.
 - [ ] **Ownership** — do you have Contributor on `rg-nrrw-prd-compute-01`, or
   does NUS IT run the portal steps? (The `admazclhc` admin account suggests
   IT-managed; confirm what you can do yourself.)
 - [x] **Entra tenant** — Easy Auth v2 is enabled and NUS tenant admin consent
-  for `openid`, `profile` and `email` is complete (v7).
+  for `openid`, `profile` and `email` is complete (status doc).
 - [x] **Networking** — **private endpoint / VNet.** The Web App, Postgres and
   Key Vault are private; public ingress is through an Application Gateway.
   So every job in `deploy_nus.yml` needs the self-hosted runner (§5), whose
-  VM is blocked on regional capacity (v7, "External blocker 1").
+  VM is blocked on regional capacity (status doc, "External blocker 1").
 - [ ] **Custom domain** — a production hostname is required (the default
   `*.azurewebsites.net` name is a backend identity only) and awaits the NUS
-  naming decision (v7, "External blocker 2").
+  naming decision (status doc, "External blocker 2").
 - [ ] **Whitelist** — `SYS_ADMIN_EMAILS` / `OPERATOR_EMAILS` = NUS emails.
 - [ ] **Data carry-over** — clean start on NUS, or migrate from personal
   Postgres (§8)?
@@ -108,9 +108,9 @@ Still to confirm / decide before the first deploy:
 
 ## 3. Azure side — the NUS environment
 
-NUS IT has provisioned it. The inventory and the network design are v7's
+NUS IT has provisioned it. The inventory and the network design are the status doc's
 "Completed / verified" and are not repeated here; the project's remaining
-Azure work is v7's "Application Gateway work remaining" and "Remaining
+Azure work is the status doc's "Application Gateway work remaining" and "Remaining
 project-side work after blockers clear". This runbook adds the detail for
 four of those items:
 
@@ -120,7 +120,7 @@ four of those items:
   ```
   Turn **Always On** on, and **App Service logs → Application logging
   (Filesystem)** so Log stream is populated.
-- [ ] **Application role `rrw_app`** in the `reviewrobin` database (v7 step
+- [ ] **Application role `rrw_app`** in the `reviewrobin` database (status doc step
   5); record its password for `NUS_DATABASE_URL` (§6.2), then run §8.
 - [ ] **Key Vault references** — put `DATABASE_URL` / `SMTP_ENCRYPTION_KEY`
   in the provisioned Key Vault and wire the App Settings to them through
@@ -135,7 +135,7 @@ four of those items:
 
 Sign-in must move to the **NUS Entra tenant** so students/operators log in
 with NUS MS365 accounts. Easy Auth v2 is already enabled and admin consent
-is complete (v7); the redirect URI waits on the production hostname (v7
+is complete (status doc); the redirect URI waits on the production hostname (status doc
 step 14).
 
 - [ ] **App registration** in the NUS Entra tenant for the web app:
@@ -160,14 +160,14 @@ step 14).
 
 ## 5. Azure side — pipeline reachability: every job runs in-VNet ⚠️
 
-The Web App, Postgres and Key Vault are private (v7), so a GitHub-hosted
+The Web App, Postgres and Key Vault are private (status doc), so a GitHub-hosted
 runner reaches none of them: not the database the `migrate` job writes,
 and not the Web App the `deploy` job pushes to. Every job in
 `deploy_nus.yml` therefore moves to the private self-hosted runner in the
-VNet's runner subnet (v7, "Remaining project-side work" step 8), which
+VNet's runner subnet (status doc, "Remaining project-side work" step 8), which
 also does the Key Vault and Postgres administration. Today every job is
 still `runs-on: ubuntu-latest`, and the runner VM is blocked on regional
-capacity (v7, "External blocker 1"), so the workflow cannot deploy NUS
+capacity (status doc, "External blocker 1"), so the workflow cannot deploy NUS
 yet.
 
 Keep the invariant: **schema is migrated before the new code serves** (no
@@ -186,9 +186,9 @@ The `deploy` job authenticates with `azure/login@v2` via **OIDC federated
 credentials** (no publish profile). Recreate this in NUS:
 
 - [x] Create an **app registration / service principal** (or a user-assigned
-  managed identity) **in the NUS tenant** — exists (v7).
+  managed identity) **in the NUS tenant** — exists (status doc).
 - [x] Assign it **Contributor** (or **Website Contributor**) on `<nus-rg>` /
-  `<nus-webapp>` — Website Contributor on the Web App (v7).
+  `<nus-webapp>` — Website Contributor on the Web App (status doc).
 - [ ] Add a **federated credential** on it for this repo:
   - subject `repo:philoyhc/review-robin-web:ref:refs/heads/main`
   - audience `api://AzureADTokenExchange`
@@ -438,12 +438,12 @@ subscription with Contributor:
 
 ## 13. Open questions to resolve with NUS
 
-Settled by v7: the networking posture (private endpoints and VNet, with an
+Settled by the status doc: the networking posture (private endpoints and VNet, with an
 Application Gateway in front), admin consent in the NUS tenant, and the
 provisioned database. Still open:
 
 - Production hostname under `nus.edu.sg` — awaiting the NUS naming decision
-  (v7, "External blocker 2").
-- A deployable runner VM SKU — awaiting Microsoft Support (v7, "External
+  (status doc, "External blocker 2").
+- A deployable runner VM SKU — awaiting Microsoft Support (status doc, "External
   blocker 1").
 - Data carry-over required, or clean start on NUS?
