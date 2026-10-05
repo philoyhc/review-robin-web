@@ -92,8 +92,13 @@ def apply_session_config(
     *,
     user: User | None = None,
     correlation_id: str | None = None,
+    row_errors: Sequence[ApplyError] = (),
 ) -> ApplyResult:
     """Parse + apply a Settings CSV against ``review_session``.
+
+    ``row_errors`` are the rows ``split_rows`` could not read; any one
+    refuses the file, reported with phase 1's errors and nothing
+    applied (findings D10).
 
     Phase 1 — parse + validate every row. Collect every error
     before reporting; one bad row doesn't mask the next.
@@ -107,8 +112,8 @@ def apply_session_config(
     on validation failure (apply is not attempted)."""
 
     plan, errors = _validate(review_session, rows)
-    if errors:
-        return ApplyResult(counts={}, errors=errors)
+    if row_errors or errors:
+        return ApplyResult(counts={}, errors=list(row_errors) + errors)
 
     counts = _apply_plan(
         db,

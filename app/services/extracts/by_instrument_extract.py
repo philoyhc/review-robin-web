@@ -18,6 +18,11 @@ Group-scoped instruments collapse the same way the unified
 Responses CSV does — one data row per ``(reviewer × group)``
 with the composed group identity in ``RevieweeName``.
 
+Data rows sort by ``RevieweeName``, ``ReviewerName``,
+``RevieweeEmail``, ``ReviewerEmail``, then assignment id — a full key,
+so the order is the same on every run (findings D9;
+``serialize_by_instrument`` gives the whole file's order).
+
 Distinct from the unified Responses CSV (long format, 21
 columns × responses) — different lens, different analyst use
 case.

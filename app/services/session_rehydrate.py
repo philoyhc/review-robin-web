@@ -552,7 +552,6 @@ def rehydrate_session(
     from app.services.extracts.responses_import import load_responses
     from app.services.session_config_io import (
         apply_session_config,
-        validate_session_config,
     )
 
     today = today or _dt.date.today()
@@ -596,16 +595,14 @@ def rehydrate_session(
         apply_rows = _rewrite_identity_rows(
             settings_rows, name=new_name, code=new_code
         )
-        if row_errors:
-            # A short row refuses the file; validate the rest so the
-            # message names every error, as the import does (D10).
-            settings_errors = validate_session_config(
-                review_session, apply_rows, row_errors=row_errors
-            )
-        else:
-            settings_errors = apply_session_config(
-                db, review_session, apply_rows, user=user, correlation_id=correlation_id
-            ).errors
+        settings_errors = apply_session_config(
+            db,
+            review_session,
+            apply_rows,
+            user=user,
+            correlation_id=correlation_id,
+            row_errors=row_errors,
+        ).errors
         if settings_errors:
             raise RehydrateError(
                 "settings.csv failed to apply: "

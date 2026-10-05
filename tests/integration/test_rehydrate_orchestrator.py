@@ -157,7 +157,12 @@ def test_short_settings_rows_are_named_with_the_other_settings_errors(
     rs, user = _seed(db)
     files = _file_set(db, rs)
     key = f"{rs.code}_settings.csv"
-    data_rows = files[key].decode("utf-8").count("\n") - 1
+    # Numbered as ApplyError numbers them: non-blank rows below the
+    # header, read as CSV so a quoted multi-line cell counts once.
+    data_rows = sum(
+        1 for row in csv.reader(io.StringIO(files[key].decode("utf-8")))
+        if row
+    ) - 1
     files[key] += (
         b"session.description\n"
         b"instruments[9].short_label,X,string\n"
