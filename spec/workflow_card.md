@@ -875,7 +875,8 @@ the trigger:
   fire only after the session has opened.
 - **Invitations created** — reminders piggyback on existing
   `Invitation` rows (each reminder reuses the previously-issued
-  invitation URL), so the trigger requires invitations to be
+  invitation URL, or sends a fresh invitation when a Regenerate has
+  rotated it), so the trigger requires invitations to be
   **created**, not necessarily sent. The skip reason is
   `no_invitations`.
 

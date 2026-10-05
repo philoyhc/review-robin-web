@@ -16,6 +16,8 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+from app.services.invitations import hash_token
+
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -207,6 +209,127 @@ def test_send_reminder_falls_back_to_fresh_send_when_never_sent(
     assert invitation.token_hash != pre_hash  # rotated
     assert invitation.status == "sent"
     assert invitation.last_reminder_at is not None
+
+
+def test_send_reminder_after_regenerate_sends_a_live_link(
+    client: TestClient, db: Session
+) -> None:
+    """A regenerate rotates the token without sending, so the last
+    invitation email's link is dead. The reminder must not reuse it:
+    it falls back to a fresh invitation whose link resolves (Gc1)."""
+    session = _ready_session(
+        client, db, "rem-regen", reviewers=["rae@example.edu"]
+    )
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    first_url = _extract_url(
+        db.execute(
+            select(EmailOutbox).where(
+                EmailOutbox.invitation_id == invitation.id,
+                EmailOutbox.kind == "invitation",
+            )
+        ).scalar_one().body
+    )
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/regenerate",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    latest = db.execute(
+        select(EmailOutbox)
+        .where(EmailOutbox.invitation_id == invitation.id)
+        .order_by(EmailOutbox.id.desc())
+        .limit(1)
+    ).scalar_one()
+    assert latest.kind == "invitation"
+    assert _extract_url(latest.body) != first_url
+    db.refresh(invitation)
+    assert invitation.token_hash == hash_token(_extract_token(latest.body))
+    assert invitation.status == "sent"
+    assert invitation.last_reminder_at is not None
+
+
+def _sent_session_with_two(client: TestClient, db: Session, code: str):
+    session = _ready_session(
+        client, db, code, reviewers=["rae@example.edu", "sam@example.edu"]
+    )
+    rows = db.execute(
+        select(Invitation)
+        .where(Invitation.session_id == session.id)
+        .order_by(Invitation.id)
+    ).scalars().all()
+    for inv in rows:
+        client.post(f"/operator/sessions/{session.id}/invitations/{inv.id}/send")
+    return session, rows
+
+
+def _latest_outbox(db: Session, invitation_id: int) -> EmailOutbox:
+    return db.execute(
+        select(EmailOutbox)
+        .where(EmailOutbox.invitation_id == invitation_id)
+        .order_by(EmailOutbox.id.desc())
+        .limit(1)
+    ).scalar_one()
+
+
+def test_bulk_reminder_after_one_regenerate_sends_that_one_a_live_link(
+    client: TestClient, db: Session
+) -> None:
+    """The path the UI reaches: one row regenerated (its per-row button
+    turns back to Send), then the bulk Send reminders. The regenerated
+    row gets a fresh invitation; the other keeps its link (Gc1)."""
+    session, (regen, kept) = _sent_session_with_two(client, db, "rem-bulk-regen")
+    kept_url = _extract_url(_latest_outbox(db, kept.id).body)
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{regen.id}/regenerate"
+    )
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    fresh = _latest_outbox(db, regen.id)
+    db.refresh(regen)
+    assert fresh.kind == "invitation"
+    assert regen.token_hash == hash_token(_extract_token(fresh.body))
+    reminder = _latest_outbox(db, kept.id)
+    assert reminder.kind == "reminder"
+    assert _extract_url(reminder.body) == kept_url
+
+
+def test_reminders_after_regenerate_all_send_live_links(
+    client: TestClient, db: Session
+) -> None:
+    session, rows = _sent_session_with_two(client, db, "rem-regen-all")
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/regenerate-all",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        follow_redirects=False,
+    )
+
+    for inv in rows:
+        latest = _latest_outbox(db, inv.id)
+        db.refresh(inv)
+        assert latest.kind == "invitation"
+        assert inv.token_hash == hash_token(_extract_token(latest.body))
 
 
 def test_remind_incomplete_targets_only_incomplete(

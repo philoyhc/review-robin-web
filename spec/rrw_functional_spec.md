@@ -846,7 +846,9 @@ Two entry paths exist:
   URL. The invitation row stores only its hash. An invitation send
   mints a fresh token and puts it in the email body, which the
   `email_outbox` row keeps, so a sys admin can re-read the link that
-  was sent; a reminder reuses that link. The link stays usable until
+  was sent; a reminder reuses that link while it is still current,
+  and sends a fresh invitation once a Regenerate has rotated it. The
+  link stays usable until
   the next invitation send or a Regenerate rotates the token;
   a token minted at create time or by Regenerate is never written
   anywhere in the clear. It is a pointer, not a credential:
@@ -1904,8 +1906,9 @@ creates one **invitation** row carrying:
   as a SHA-256 **hash**. Each invitation send mints a fresh token;
   that email body, raw token included, is kept on its `email_outbox`
   row (visible to sys admins). A reminder reuses the most recent
-  invitation link, minting a token only when there is none to reuse
-  and it falls back to an invitation send. The link is reusable until
+  invitation link while it is current; when there is none, or a
+  Regenerate has rotated it since, it falls back to an invitation
+  send, which mints a token. The link is reusable until
   the next invitation send or a
   Regenerate (per invitation or bulk) rotates the token, after which
   the outbox copy is stale. A token minted at create time or by

@@ -503,12 +503,14 @@ reminder** button (`POST /operator/sessions/{id}/invitations/{iid}/remind`)
 targets one reviewer.
 
 Reminders **reuse the URL from the most recent invitation outbox row**
-verbatim — the token is **not** rotated, so the reviewer's previously
-delivered link keeps working. When no prior invitation outbox row
-exists for an invitation (operator never sent the original), the
-reminder action falls back to `send_invitation` (mints a fresh token,
-writes a `kind='invitation'` row); the operator's intent always lands
-as a deliverable message in one click. `Invitation.last_reminder_at`
+verbatim while that link is still current — the token is **not**
+rotated, so the reviewer's previously delivered link keeps working.
+When no prior invitation outbox row exists for an invitation (operator
+never sent the original), or that row's link no longer matches
+`token_hash` because a Regenerate rotated it since, the reminder
+action falls back to `send_invitation` (mints a fresh token, writes a
+`kind='invitation'` row); the operator's intent always lands as a
+deliverable message in one click. `Invitation.last_reminder_at`
 stamps every successful reminder. There is no throttle. Bulk reminders
 emit a single `reminders.sent` audit event: a `set_changes` envelope
 whose `updated` list carries one `{invitation_id, reviewer_id}` entry
