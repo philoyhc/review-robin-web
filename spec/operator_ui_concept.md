@@ -207,7 +207,8 @@ Below the chrome, a **status row** renders the at-a-glance session status, ident
 
 Every operator page (session-scoped or not) renders the same outer chrome before the session top nav and page body:
 
-- **App identity (top left).** "Review Robin Web App (version {num})" rendered small as plain text (`.chrome-app-identity`, a `<span>`, not a link); `/about` is reached from the user card's link row.
+- **App identity (top left).** "Review Robin Web App (version {num})" rendered small as plain text (`.chrome-app-identity`, a `<span>`, not a link); `/about` is reached from the user card's link row. `{num}` is the `APP_VERSION` setting (`spec/settings_inventory.md`).
+- **Favicon.** An inline-SVG data URI in `base.html`'s `<link rel="icon">`, drawing the bird emoji (🐦). A real graphic asset would go under `app/web/static/`, served by the `/static` mount in `app/main.py`, with `href` pointed at its `/static/...` URL.
 - **User card (top right).** "Signed in as {user name}" plus a Sign-out control (`/.auth/logout`). A sys-admin's name carries a tier suffix — ` (super admin)` or ` (sys admin)`, the former winning when both apply — matching the three-tier model in `spec/audience_and_identity_model.md` §4.
 - **Breadcrumb trail** (below the app identity) reflecting the page's position in the surface hierarchy. Each segment except the current page is a link to that ancestor; the current page renders as a plain non-link label.
   - Operator root: `Sessions` → `/operator/sessions`.

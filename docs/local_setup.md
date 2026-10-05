@@ -175,7 +175,15 @@ The suite builds its schema straight from the ORM metadata
 The Alembic migration chain is still round-tripped on every PR by the
 `ci-postgres` job (and locally if you point the suite at Postgres — see
 [§9 Running in a GitHub Codespace](#9-running-in-a-github-codespace) §
-Postgres parity). Other useful runs:
+Postgres parity). Integration tests on the `db` fixture run inside a
+per-test savepoint (`tests/integration/conftest.py`), so a service that
+commits still leaves nothing behind for the next test; the
+`committed_engine` / `committed_client` fixtures there skip that on
+purpose, for the few tests that need real commits. The `make_client`
+fixture returns a test client signed in as a given user. The identity it
+sets is a global dependency override, so the most recent call decides who
+*every* client is: a test that switches users calls it again before each
+user's requests rather than holding one client per user. Other useful runs:
 
 ```bash
 pytest tests/integration/test_X.py            # one file
