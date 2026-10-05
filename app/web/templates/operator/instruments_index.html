@@ -389,8 +389,8 @@
 
   {% if rf_save_error %}
     <div class="banner banner-error banner-scroll-target" id="rf-save-error-banner">
-      <p style="margin: 0 0 8px 0;"><strong>Could not save:</strong> {{ rf_save_error }}</p>
-      <div style="display: flex; justify-content: flex-end;">
+      <p style="margin: 0;"><strong>Could not save:</strong> {{ rf_save_error }}</p>
+      <div class="banner-actions">
         {# Cancel returns to the source row (the instrument card the
            bulk-save POST came from), preserving editing mode so the
            operator can fix the row set. The natural fragment-jump
@@ -412,8 +412,8 @@
      Cancel returns to that instrument's card in edit mode. #}
   {% if sort_save_error and sort_save_error_instrument_id %}
     <div class="banner banner-error banner-scroll-target" id="sort-save-error-banner">
-      <p style="margin: 0 0 8px 0;"><strong>Could not save the sort order:</strong> {{ sort_save_error }}</p>
-      <div style="display: flex; justify-content: flex-end;">
+      <p style="margin: 0;"><strong>Could not save the sort order:</strong> {{ sort_save_error }}</p>
+      <div class="banner-actions">
         <a class="btn alert"
            href="/operator/sessions/{{ session.id }}/instruments?editing={{ sort_save_error_instrument_id }}#instrument-{{ sort_save_error_instrument_id }}">Cancel</a>
       </div>
