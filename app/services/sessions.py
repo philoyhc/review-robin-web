@@ -15,7 +15,12 @@ from app.db.models import (
 )
 from app.logging_config import get_logger
 from app.schemas.sessions import SessionCreate
-from app.services import audit, operator_settings, session_lifecycle as lifecycle
+from app.services import (
+    audit,
+    date_formatting,
+    operator_settings,
+    session_lifecycle as lifecycle,
+)
 from app.services.instruments import ensure_default_instrument
 # Wave 5 PR 5.2 — RuleSet seeding retired; ``app.services.rules.seeds``
 # module deleted entirely. New sessions land with no rows in
@@ -213,24 +218,21 @@ def _as_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
 
 
-def keep_stored_if_same_minute(
-    stored: datetime | None, submitted: datetime | None
-) -> datetime | None:
-    """``stored`` when ``submitted`` names the same minute, else
-    ``submitted``.
+def deadline_box_unedited(
+    stored: datetime | None, submitted: str, tz_name: str | None
+) -> bool:
+    """Whether a ``datetime-local`` box still holds the value it was
+    seeded with for ``stored``.
 
-    A ``datetime-local`` box carries minutes only, so a stored value
-    with seconds (a Settings CSV can write one) reads back one
-    truncation away from itself. A form that only re-submits the box's
-    seeded value must not count as an edit — on a ``validated`` session
-    that would demote it (findings B2)."""
-    if stored is None or submitted is None:
-        return submitted
-    if _as_utc(stored).replace(second=0, microsecond=0) == _as_utc(
-        submitted
-    ).replace(second=0, microsecond=0):
-        return stored
-    return submitted
+    Compared as the box's own text (``format_datetime_local`` in the
+    session zone), not by parsing ``submitted`` back to an instant: the
+    box carries minutes only, so a stored value with seconds (a Settings
+    CSV can write one) parses one truncation away from itself, and in
+    the repeated hour after a DST fall-back the wall-clock text names
+    two instants and the parse picks the first. A form that only
+    re-submits the seeded value must not count as an edit — on a
+    ``validated`` session that would demote it (findings B2)."""
+    return submitted == date_formatting.format_datetime_local(stored, tz_name)
 
 
 def payload_changes_session(

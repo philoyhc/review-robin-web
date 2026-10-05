@@ -316,12 +316,13 @@ def lobby_edit_submit(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(exc),
             ) from exc
-        parsed_deadline = sessions.keep_stored_if_same_minute(
-            review_session.deadline,
-            parse_session_deadline(
-                deadline, sessions.resolve_session_timezone(review_session)
-            ),
-        )
+        timezone_name = sessions.resolve_session_timezone(review_session)
+        if sessions.deadline_box_unedited(
+            review_session.deadline, deadline, timezone_name
+        ):
+            parsed_deadline = review_session.deadline
+        else:
+            parsed_deadline = parse_session_deadline(deadline, timezone_name)
         try:
             scheduled_events.validate_deadline_change(
                 review_session, parsed_deadline

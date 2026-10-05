@@ -512,6 +512,39 @@ def test_lobby_tags_only_save_keeps_validated_with_a_seconds_deadline(
     assert updated.deadline.replace(tzinfo=timezone.utc) == stored
 
 
+def test_lobby_tags_only_save_keeps_a_deadline_in_the_repeated_dst_hour(
+    client: TestClient, db: Session
+) -> None:
+    """06:30 UTC on 2026-11-01 renders as 01:30 in New York, the second
+    01:30 that morning; parsing that text back lands on the first (05:30
+    UTC). The seeded box re-submitted is still not an edit (Codex, #2832)."""
+    from datetime import datetime, timezone
+
+    session_id = _validated_session(client, db, "val-dst-1")
+    stored = datetime(2026, 11, 1, 6, 30, tzinfo=timezone.utc)
+    review_session = db.get(ReviewSession, session_id)
+    review_session.deadline = stored
+    review_session.display_timezone = "America/New_York"
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{session_id}/lobby-edit",
+        data={
+            "name": "Checked",
+            "code": "val-dst-1",
+            "deadline": "2026-11-01T01:30",
+            "tags": "t3",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303, response.text
+    db.expire_all()
+    updated = db.get(ReviewSession, session_id)
+    assert updated.status == "validated"
+    assert updated.deadline.replace(tzinfo=timezone.utc) == stored
+
+
 def test_lobby_edit_keeps_every_field_it_does_not_show(
     client: TestClient, db: Session
 ) -> None:

@@ -276,10 +276,11 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   (`scheduled_events.validate_deadline_change`) is the two Session Home
   runs on End: ordering against the stored Start and Release-from, and
   each stored reminder offset re-resolved on the new End. An unchanged
-  deadline skips it, and a deadline box that still names the stored
-  deadline's minute counts as unchanged
-  (`sessions.keep_stored_if_same_minute`), so re-saving a stored value
-  with seconds is not an edit.
+  deadline skips it, and a deadline box whose text is still the stored
+  deadline as the box renders it, in the session zone, counts as
+  unchanged (`sessions.deadline_box_unedited`), so re-saving a stored
+  value with seconds, or one in the repeated hour after a DST fall-back,
+  is not an edit.
 - **Tags have four write surfaces, two of them off this page.** The
   lobby's two are the row expander's `{id}/lobby-edit` and the toolbar's
   `bulk-tags`; the others are a **Tags box on the Create page**, so a
