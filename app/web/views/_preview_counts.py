@@ -81,11 +81,19 @@ def preview_count_line(
     suppresses the pager, deliberately, so the two affordances cannot
     disagree about which mode the page is in. It is **not** derived
     from ``shown < pool`` here: a filter that happens to match every
-    row is still a filtered view, and reports as one.
+    row is still a filtered view, and reports as one. A filter that
+    matches nothing returns ``None``: the page's no-match message owns
+    that state.
     """
     if not is_filtered:
         # Every table that renders this is paged, so the operator can
         # reach every row and the ranges already say where they are.
+        return None
+    if shown == 0:
+        # A filter matching nothing renders no rows, and the page's
+        # "No … match" message says so; a `Showing 0` beside it is the
+        # same fact twice (findings C1). (Add mode renders neither; see
+        # spec/setup_pages.md "Preview tables".)
         return None
 
     withheld = max(pool - shown, 0)

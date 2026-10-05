@@ -1146,6 +1146,9 @@ def test_a_filter_matching_nothing_keeps_the_control_that_clears_it(
     assert 'name="q"' in body, "no way to change the filter"
     assert ">Clear</a>" in body, "no way to clear the filter"
     assert 'id="observers-table"' not in body, "a table with no rows"
+    assert '<p class="muted table-showing-hint">' not in body, (
+        "a count line beside the no-match message (findings C1)"
+    )
 
 
 def test_an_empty_roster_still_offers_add_new(

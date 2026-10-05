@@ -424,6 +424,9 @@ def test_filter_no_match_shows_empty_state_with_table_count_preserved(
         f"/operator/sessions/{review_session.id}/reviewers?q=nomatchpls"
     ).text
     assert "No reviewers match the current filter." in body
+    # The no-match message owns this state; no `Showing 0` beside it
+    # (findings C1).
+    assert '<p class="muted table-showing-hint">' not in body
     # The Danger Zone still renders since the total > 0.
     assert "Delete all reviewers" in body
 

@@ -1028,9 +1028,8 @@ two adjacent pages can show the same row or neither.
 rule, not a quirk of this page (`spec/setup_pages.md`, "Preview
 tables"). The line sits inside the preview card's `pair_sample`
 gate, so there is no table for it to caption, and `No assignments
-match the search.` owns that state alone. (Were the helper called in
-that state it would return `Showing 0 assignments.`; the gate means
-it is not.)
+match the search.` owns that state alone. (The helper returns `None`
+for a filter matching nothing anyway.)
 
 ### Preview table
 

@@ -538,16 +538,20 @@ about which mode the page is in.
 "showing first N of M" notice.
 
 **A filter matching nothing renders no count line, on any of
-them.** Each page gates its whole preview card on the row list and
-falls through to a "No … match the current filter." message
-(`session_reviewers.html`'s `{% if reviewers or add_mode %}` …
-`{% elif total_row_count > 0 %}`, and the same shape on the
-others). The line lives inside that gate, so there is no table for it
-to caption. **Relationships has a third branch below those two** — an
-empty roster that cannot yet be filled, § *The table toolbar*; the
-no-match branch itself is the same on all of them. This is the template's doing, not the helper's:
-`preview_count_line(shown=0, pool=0, …, is_filtered=True)` returns
-`Showing 0 reviewers.` if it is ever called.
+them.** The roster toolbar that carries the line sits inside the table
+card (`session_reviewers.html`'s `{% if reviewers or add_mode or
+total_row_count > 0 or is_editable %}`, and the same shape on the
+others), so it renders on a no-match view too; the rows themselves are
+replaced by a "No … match the current filter." message (`{% if not
+(reviewers or add_mode) %}` … `{% if total_row_count > 0 %}`). The
+helper is what keeps the two from saying the same thing twice:
+`preview_count_line(shown=0, …, is_filtered=True)` returns `None`.
+**Add mode is the one state with neither**: the message is suppressed
+while the blank Add row renders, so a filter that matches nothing then
+shows the Add row alone under the (locked) filter. **Relationships has
+a third branch below those two** — an empty roster that cannot yet be
+filled, § *The table toolbar*; the no-match branch itself is the same
+on all of them.
 
 In every branch **M is the pool the numerator was drawn from** —
 always the matching set, since the unfiltered branches say nothing;
