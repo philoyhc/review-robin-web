@@ -140,7 +140,7 @@ author, marked *re-checked*) also ran it.
   so. Author.
 - **D10 / Dc7** — A Settings row under three cells refuses the whole file
   with no row detail.
-- **Ec2** — `var(--space-5)` in `base.html` names no token; the padding
+- ~~**Ec2**~~ — **Done in #2839** (`--space-6`; `tests/unit/test_css_tokens_resolve.py` now checks every `var()` resolves). `var(--space-5)` in `base.html` names no token; the padding
   falls to 0.
 - ~~**H2 / Hc4**~~ — **Done in #2837.** Three `data_shape` foreign keys carry no index, against
   `docs/database.md`'s rule.
@@ -148,7 +148,7 @@ author, marked *re-checked*) also ran it.
   Doc impact) and 20 (C1, no `Doc impact` heading) as the plans stand.
 - ~~**I / Ic2**~~ — **Done in #2838.** The session-start hook warns about Chromium in a
   kit-built repository with no `tests/browser/`.
-- **Ec3–Ec6** — dead CSS (`.instrument-card-short-label`); fifteen classes
+- ~~**Ec3–Ec6**~~ — **Done in #2839** (Ec4 removed sixteen, the count at the fix). Dead CSS (`.instrument-card-short-label`); fifteen classes
   in markup with no rule, script, test or spec; the two Instruments error
   banners' inline flex where `.banner-actions` exists; a bare
   `<small class="muted">` where `.form-help` is owed.
