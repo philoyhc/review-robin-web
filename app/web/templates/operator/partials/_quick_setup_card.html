@@ -63,9 +63,10 @@
              {% if locked %}disabled aria-disabled="true"{% endif %}>
     </div>
   {% else %}
-    {# Inert slot (``is_wired=False``) — every slot is wired today,
-       so this branch is never taken. Same shape as the live slot
-       but the file input is disabled. #}
+    {# Inert slot (``is_wired=False``) — no route renders one today;
+       only the no-argument preview shape of
+       ``build_new_session_quick_setup_context`` does. Same shape as
+       the live slot but the file input is disabled. #}
     <div class="quick-setup-slot-controls">
       <input type="file"
              accept=".csv"

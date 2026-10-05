@@ -67,7 +67,7 @@
              (Include self → Exclude self → Both → ...). Cycles
              via the cycling-pill JS at the bottom of the page;
              drives ``?self_review_handling=`` on the Download
-             URL. Per ``guide/extract_data.md`` § *Self-review
+             URL. Per ``guide/archive/extract_data.md`` § *Self-review
              handling in summarizing extracts* PR A. #}
           <span class="pill pill-count tag-chip is-selected"
                 data-self-review-handling-chip="reviewer-metadata"
@@ -333,7 +333,7 @@
          the cycling-pill JS at the bottom of the page; drives
          the active sub-card's persisted state through
          ``persistShape`` + the Download URL filename suffix.
-         Wired in PR C of ``guide/extract_data.md`` § *Self-
+         Wired in PR C of ``guide/archive/extract_data.md`` § *Self-
          review handling*. The chip joins the chips-lock-when-
          no-edit-mode CSS via its own
          ``data-shaper-self-review-chip`` selector (base.html
@@ -1104,7 +1104,7 @@
         }
         if (!allOn) params.set("all", "0");
         // Self-review handling chip — three-state cycle drives
-        // ``?self_review_handling=`` per ``guide/extract_data.md``
+        // ``?self_review_handling=`` per ``guide/archive/extract_data.md``
         // § *Self-review handling*.
         var srhChip = document.querySelector(
           '[data-self-review-handling-chip="' + card + '"]'
@@ -1183,7 +1183,7 @@
 
       // ----------------------------------------------------- //
       // Self-review handling chips (PR A of the chip slice per
-      // ``guide/extract_data.md`` § *Self-review handling*).
+      // ``guide/archive/extract_data.md`` § *Self-review handling*).
       // Three-state cycle (Include self → Exclude self → Both →
       // …); each click drives the chip's
       // ``data-self-review-handling-state`` attribute + the
@@ -1401,7 +1401,7 @@
       // Self-review handling chip on the Data shaper scope row.
       // Three-state cycle (Include self → Exclude self → Both
       // → …) wired in PR C of the chip slice
-      // (``guide/extract_data.md`` § *Self-review handling*).
+      // (``guide/archive/extract_data.md`` § *Self-review handling*).
       // The chip's state lives on
       // ``data-shaper-self-review-state``; the persisted column
       // lives on the active sub-card's
@@ -1629,7 +1629,7 @@
         });
       }
 
-      // Identification-chip coupling per ``guide/extract_data.md``:
+      // Identification-chip coupling per ``guide/archive/extract_data.md``:
       // Name + Email together identify a row uniquely (Name on
       // its own isn't unique — people share names). So:
       //

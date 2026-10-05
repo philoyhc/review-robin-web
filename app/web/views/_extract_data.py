@@ -112,7 +112,7 @@ def build_extract_data_context(
     # when their count is 0 — there's nothing to download.
     # Settings stays always-live: session metadata always exists
     # even on a freshly-created draft. The Zip-all bundle contains
-    # only the setup CSVs (per ``guide/extract_data.md``); response
+    # only the setup CSVs (per ``guide/archive/extract_data.md``); response
     # data downloads live on the Extract data Operations-strip tab.
     col_one = [
         _entity_row(

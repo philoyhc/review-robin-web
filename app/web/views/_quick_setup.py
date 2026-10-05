@@ -45,8 +45,9 @@ class QuickSetupSlot:
 
     key: str
     """Stable slot identifier — ``reviewers`` / ``reviewees`` /
-    ``relationships`` / ``observers`` (only while
-    ``observers_enabled``) / ``settings``. Used as the
+    ``relationships`` / ``observers`` / ``settings`` (Session Home
+    shows ``observers`` only while ``observers_enabled``; the new-session
+    variant always does). Used as the
     DOM-id suffix (``#quick-setup-{key}``) so URL fragments scroll
     directly to a slot, and as the ``data-wire-target`` value so
     11J's wiring can locate the slot without a CSS-selector
@@ -139,7 +140,7 @@ class QuickSetupContext:
     show_lock_toggle: bool = True
     show_confirm_replace: bool = True
     """Gate the card-level "Yes, replace existing reviewers, reviewees
-    or settings, according to what is uploaded." checkbox just above
+    or settings, according to what is uploaded. …" checkbox just above
     the footer. Suppressed on the new-session
     Quick Setup variant — there's nothing to replace yet."""
 

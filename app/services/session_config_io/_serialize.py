@@ -728,7 +728,7 @@ def _data_shape_rows(
             )
         )
         # Self-review handling chip state — PR B of the chip
-        # slice per ``guide/extract_data.md`` § *Self-review
+        # slice per ``guide/archive/extract_data.md`` § *Self-review
         # handling*. Round-trips through the Settings CSV so
         # shapes survive export → fresh-session import with
         # their chip state intact.

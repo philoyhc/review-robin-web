@@ -84,7 +84,7 @@ _NUMERIC = ("Integer", "Decimal")
 
 
 # Self-review handling chip — three-state machine documented in
-# ``guide/extract_data.md`` § *Self-review handling in summarizing
+# ``guide/archive/extract_data.md`` § *Self-review handling in summarizing
 # extracts*. The aggregate-fold rule reads the canonical
 # ``Assignment.is_self_review`` column landed by the consolidation
 # slice (``guide/archive/self_review_consolidate.md``).
@@ -348,7 +348,7 @@ def _field_columns(
 
 # Identity columns only — ``Assigned`` and ``Count`` are part
 # of the per-state data block now (PR A of the Self-review
-# handling chip slice, per Q1 of ``guide/extract_data.md`` §
+# handling chip slice, per Q1 of ``guide/archive/extract_data.md`` §
 # *Self-review handling*). The per-state block carries
 # ``Assigned_self``/``Count_self`` or ``Assigned_noself``/
 # ``Count_noself`` so the denominators stay honest under
@@ -517,7 +517,7 @@ def build_reviewer_metadata(
     "both"}`` per the Self-review handling chip. Drives the
     column-name suffix (``_self`` / ``_noself``) and, on
     ``exclude_self`` / ``both``, the ``WHERE NOT is_self_review``
-    filter on the per-state pool. See ``guide/extract_data.md``
+    filter on the per-state pool. See ``guide/archive/extract_data.md``
     § *Self-review handling in summarizing extracts*.
     """
     if self_review_handling not in SELF_REVIEW_HANDLING_STATES:

@@ -10,8 +10,8 @@ has missing required" into a single bucket.
 The reviewee-centric ``per_reviewee_coverage`` (Segment 11C Part 1 PR 3)
 classifies reviewees into Complete / Adequate / At risk / No responses
 buckets based on the fraction of their active assignments that are
-complete — every required field answered and submitted
-(``_assignment_complete``). Thresholds live in ``AT_RISK_THRESHOLDS``,
+complete, as ``_assignment_complete`` defines it (every required field
+answered and submitted, or any response row when none is required). Thresholds live in ``AT_RISK_THRESHOLDS``,
 a module constant; no setting overrides it.
 """
 from __future__ import annotations

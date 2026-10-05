@@ -8,7 +8,7 @@ Two complementary archives:
   porting / archival shape Quick Setup can re-ingest. Renamed
   from "session bundle" on 2026-05-29 when the response data
   moved off the Session Home card to its own Operations-strip
-  tab (per ``guide/extract_data.md``).
+  tab (per ``guide/archive/extract_data.md``).
 - **Responses bundle** (``build_responses_bundle``) — the
   unified Responses CSV, which Rehydrate reads, plus the files
   each lens card on the Extract data tab downloads, as that card

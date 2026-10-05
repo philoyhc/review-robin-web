@@ -176,7 +176,8 @@ The file has two parts:
    preamble from the table. A session with no instruments emits
    no preamble and no gap.
 2. **Data table** — the 21-column long format below, one row per
-   answer.
+   answer, inactive pairs' answers included (the analysis lenses read
+   active pairs only; `spec/extract_data.md`).
 
 | Block | Columns |
 |---|---|

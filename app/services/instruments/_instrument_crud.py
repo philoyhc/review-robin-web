@@ -822,7 +822,7 @@ def has_unconfigured(db: Session, session_id: int) -> bool:
 # key-codes (``r1``-``r3`` reviewee tags, ``p1``-``p3`` pair-context
 # tags). A group-scoped instrument with no boundary tag keeps the
 # sentinel ``"both"`` so the column stays non-null (non-null is the
-# group-scoped flag). See ``spec/group_scoped_instruments.md``.
+# group-scoped flag). See ``spec/archive/group_scoped_instruments.md``.
 
 GROUP_KIND_SENTINEL = "both"
 

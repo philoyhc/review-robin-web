@@ -1,7 +1,7 @@
 """By-instrument wide-format extract — one CSV per instrument.
 
 Backs the Extract data tab's **By instrument** lens (per
-``guide/extract_data.md``). Each CSV is a single rubric's
+``guide/archive/extract_data.md``). Each CSV is a single rubric's
 worth of responses, shaped wide for cross-reviewer comparison:
 
 - A **meta header block** (key / value rows) carrying the

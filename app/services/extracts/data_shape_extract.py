@@ -661,7 +661,7 @@ def build_shape_rows(
         return ("sum",)
 
     # Self-review handling chip — PR B of the chip slice per
-    # ``guide/extract_data.md`` § *Self-review handling*. Each
+    # ``guide/archive/extract_data.md`` § *Self-review handling*. Each
     # state is one pass through the assignment + response pool
     # with an optional ``WHERE NOT is_self_review`` filter; the
     # ``both`` state runs both passes and emits the aggregate-

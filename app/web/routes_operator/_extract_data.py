@@ -56,7 +56,7 @@ class DataShapePayload(BaseModel):
     response_field_id: int | None = None
     column_chip_slots: list[str] = Field(default_factory=list)
     # Self-review handling chip state — PR B of the chip slice
-    # per ``guide/extract_data.md`` § *Self-review handling*.
+    # per ``guide/archive/extract_data.md`` § *Self-review handling*.
     # Stored per-shape so each shape's chip survives page
     # navigation, re-download, and Settings CSV round-trip.
     # Validated downstream in ``app/services/data_shapes.py``.
