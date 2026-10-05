@@ -13,6 +13,11 @@ Row scheme depends on the column-chip selection on the shape:
 * **Single summary row** — when no identification chip is
   selected. One row across the whole roster.
 
+Row order is pinned (``spec/csv_contracts.md`` "Deterministic row
+order"): per-individual rows run active first, then by name, then
+email / identifier, then id; per-tag-combo rows sort by the combo's
+tag values in chip order.
+
 Scope chips on the saved shape narrow what "in-scope
 responses" mean for the aggregate columns:
 
@@ -160,9 +165,9 @@ def _resolve_scope(
 ) -> _Scope:
     instruments = list(
         db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id
-            )
+            select(Instrument)
+            .where(Instrument.session_id == review_session.id)
+            .order_by(Instrument.order, Instrument.id)
         ).scalars()
     )
     if shape.instrument_id is not None:
@@ -638,11 +643,22 @@ def build_shape_rows(
     per_individual = has_name or has_email
     per_tag_combo = bool(selected_tag_slots) and not per_individual
 
-    EntityCls = Reviewer if axis == "reviewer" else Reviewee
+    if axis == "reviewer":
+        EntityCls, entity_email = Reviewer, Reviewer.email
+    else:
+        EntityCls, entity_email = Reviewee, Reviewee.email_or_identifier
+    # Row order (findings D9): active rows first, then name, then
+    # email / identifier, then id — the metadata cards' order with
+    # the id tie-break the roster (no unique email) needs.
     entities = list(
         db.execute(
-            select(EntityCls).where(
-                EntityCls.session_id == review_session.id
+            select(EntityCls)
+            .where(EntityCls.session_id == review_session.id)
+            .order_by(
+                (EntityCls.status != "active").asc(),
+                EntityCls.name,
+                entity_email,
+                EntityCls.id,
             )
         ).scalars()
     )
@@ -742,25 +758,14 @@ def build_shape_rows(
             id_cells = _entity_tuple_individual(axis, entity, slots)
             rows.append(id_cells + _aggregate_block(key))
     elif per_tag_combo:
-        # One row per distinct tag-combo. Use the first entity
-        # carrying that combo as the source for the
-        # identification cells.
-        seen_combos: set[tuple] = set()
-        for entity in entities:
-            key = _row_key_for_entity(entity)
-            if key in seen_combos:
-                continue
-            seen_combos.add(key)
+        # One row per distinct tag-combo, sorted by the combo's
+        # values in chip order (a blank tag sorts first). The
+        # identification cells are the combo itself, so any member
+        # of it supplies them.
+        for key in sorted({_row_key_for_entity(e) for e in entities}):
             if drop_empty and _row_is_empty(key):
                 continue
-            tag_cells: list[str] = []
-            for slot in slots:
-                if slot.startswith(f"{axis}:tag-"):
-                    n = slot.rsplit("-", 1)[-1]
-                    tag_cells.append(
-                        getattr(entity, f"tag_{n}", None) or ""
-                    )
-            rows.append(tuple(tag_cells) + _aggregate_block(key))
+            rows.append(key[1:] + _aggregate_block(key))
     else:
         # Single summary row aggregating across the whole
         # roster. The ``(sum,)`` key is shared across all
@@ -858,6 +863,8 @@ def _build_state_accumulators(
             )
             .join(Assignment, Response.assignment_id == Assignment.id)
             .where(*response_filter)
+            # The group dedupe below keeps the first row it sees.
+            .order_by(Assignment.id, Response.id)
         ):
             owner = entity_by_id.get(owner_id)
             if owner is None or not value:
