@@ -91,6 +91,20 @@ def test_a_row_refused_for_length_does_not_reserve_its_email() -> None:
     assert [r.name for r in result.rows] == ["Al"]
 
 
+def test_a_cell_over_the_csv_parser_limit_is_reported_not_raised() -> None:
+    # 131,072 characters is the `csv` module's default field limit; a
+    # file under MAX_BYTES can still carry a cell past it (Codex, #2830).
+    huge = "x" * 200_000
+    for content in (
+        f"ReviewerEmail,ReviewerName\na@x.edu,{huge}\n".encode(),
+        f"ReviewerEmail,{huge}\na@x.edu,Al\n".encode(),
+    ):
+        result = parse_reviewer_csv(content)
+        assert result.rows == []
+        assert result.is_blocked
+        assert "field larger than field limit" in result.issues[0].message
+
+
 def test_relationship_tag_over_its_column(db: Session) -> None:
     op = User(email="op-len@x.edu", display_name="Op")
     db.add(op)

@@ -100,6 +100,20 @@ def decode_csv(
     return text, None
 
 
+def _unreadable_issue(source: str, exc: csv.Error) -> ValidationIssue:
+    """A blocking issue for a file the ``csv`` module refuses to parse.
+
+    Chiefly a cell over the parser's 131,072-character field limit,
+    which a file under ``MAX_BYTES`` can still carry; refused here
+    rather than as a 500 (findings D11).
+    """
+    return ValidationIssue(
+        severity=Severity.error,
+        source=source,
+        message=f"CSV could not be read: {exc}",
+    )
+
+
 def _read_dict_rows(
     text: str,
     source: str,
@@ -121,7 +135,10 @@ def _read_dict_rows(
     row maps by the bare column name.
     """
     reader = csv.DictReader(io.StringIO(text))
-    raw_fieldnames = reader.fieldnames
+    try:
+        raw_fieldnames = reader.fieldnames
+    except csv.Error as exc:
+        return None, [], {}, _unreadable_issue(source, exc)
     if raw_fieldnames is None:
         return (
             None,
@@ -155,7 +172,10 @@ def _read_dict_rows(
                 ),
             )
     reader.fieldnames = canonical
-    rows = list(reader)
+    try:
+        rows = list(reader)
+    except csv.Error as exc:
+        return None, canonical, captured, _unreadable_issue(source, exc)
     if len(rows) > MAX_ROWS:
         return (
             None,
