@@ -457,8 +457,15 @@ the round-trip notes below.
 
 1. **Phase 1 — Parse + validate every row.** Collect every error
    into `ApplyResult.errors`. One bad row doesn't mask the next.
-   No DB writes. Three keys phase 2 writes as unique are errors
-   when repeated: a `session_rule_sets` name (§4 item 7), a
+   No DB writes. An error's row number counts the non-blank rows
+   below the header. A row with fewer than three cells refuses the
+   file, but as an error on its row like the others
+   (`session_config_io.split_rows`): the rest of the file is still
+   validated (`validate_session_config`), so the report names every
+   short row beside every other error. Quick Setup reports it
+   before the replacement gates, as it does any malformed file, and
+   Rehydrate fails its settings step with it. Three keys phase 2
+   writes as unique are errors when repeated: a `session_rule_sets` name (§4 item 7), a
    `data_shapes` name among the shapes phase 2 writes (those with a
    name and a known axis), and a response field's `field_key` within
    its instrument. Each is an `ApplyError` naming the first
@@ -937,8 +944,8 @@ while creating the session.
 | Extract Setup — Settings tile | Out | `serialize_session_config` (via `_session_config_csv`) | same |
 | Extract Setup — Zip all tile | Out | `build_setup_bundle` — a zip of the Reviewers, Reviewees, Relationships and Settings CSVs, plus `{code}_observers.csv` when `observers_enabled` (`GET /export/bundle.zip`, filename `{code}_setup.zip`) | same |
 | Extract data tab — Zip all button | Out | `build_responses_bundle` — always the unified Responses CSV; plus, for each intro chip that is on, the files that card's own button downloads under the same names and as the card is configured: the By-instrument CSVs (`?by_instrument=0` omits), the Reviewer and Reviewee metadata CSVs (`?reviewer_metadata=0` / `?reviewee_metadata=0`), every saved Data shape's CSV (`?data_shapes=0`) and, when `observers_enabled`, `{code}_participant_tokens.csv` (`?tokens=0`); each card's own query rides as `?{flag}.{param}` (`spec/extract_data.md`, Extract all data card) (`GET /export/responses_bundle.zip`, filename `{code}_responses.zip`) | `spec/extract_data.md` |
-| Extract data tab — Data shaper Zip all button | Out | `build_data_shapes_bundle` — every saved Data shape's CSV, each named and built as its own Download (`GET /export/data_shapes_bundle.zip`, filename `{code}_data_shapes.zip`; 404 with no saved shape) | `spec/extract_data.md` |
-| Extract data tab — By-instrument Zip all button | Out | `build_by_instrument_bundle` — a zip of one wide-format CSV per instrument (`GET /export/by_instrument_bundle.zip`, filename `{code}_by_instrument.zip`; members named `{code}_by_instrument_{slug}.csv` where `{slug}` comes from the instrument's short label or the `Instrument_{session_seq}` fallback). Each member starts with a key/value meta block (instrument identity + per-response-field type/constraint rows + assignment count + pool / unit-of-review / self-review configuration) + blank row + wide data table (one row per assignment, columns = identity + tags + one per response field + SelfReview/SavedAt/SubmittedAt). | `spec/extract_data.md` |
+| Extract data tab — Data shaper Zip all button | Out | `build_data_shapes_bundle` — every saved Data shape's CSV, each named and built as its own Download (`GET /export/data_shapes_bundle.zip`, filename `{code}_data_shapes.zip`; 404 with no saved shape). Row order: per-individual rows active first, then name, email / identifier, id; per-tag-combo rows by their tag values in chip order | `spec/extract_data.md` |
+| Extract data tab — By-instrument Zip all button | Out | `build_by_instrument_bundle` — a zip of one wide-format CSV per instrument (`GET /export/by_instrument_bundle.zip`, filename `{code}_by_instrument.zip`; members named `{code}_by_instrument_{slug}.csv` where `{slug}` comes from the instrument's short label or the `Instrument_{session_seq}` fallback). Each member starts with a key/value meta block (instrument identity + per-response-field type/constraint rows + assignment count + pool / unit-of-review / self-review configuration) + blank row + wide data table (one row per assignment, columns = identity + tags + one per response field + SelfReview/SavedAt/SubmittedAt), rows sorted by `RevieweeName`, `ReviewerName`, `RevieweeEmail`, `ReviewerEmail`, then assignment id. | `spec/extract_data.md` |
 | `GET /export/responses.csv` | Out | `serialize_responses` — no tile links it; the same file rides in the Extract data tab's Zip all | §2.4 |
 | Sys Admin per-session audit-log page — Download CSV | Out | `serialize_audit_events` (`GET /export/audit_log.csv`) | §2.5 |
 | Reviewer summary — "Download my responses (CSV)" | Out | `serialize_reviewer_session_summary` (`GET /me/sessions/{id}/summary.csv`) | `spec/reviewer-surface.md` "Per-session summary" |

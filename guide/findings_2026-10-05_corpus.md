@@ -129,16 +129,16 @@ author, marked *re-checked*) also ran it.
 
 **Low**
 
-- **Ac3** low-med — Anonymized reviewee results order rows by reviewer
+- ~~**Ac3**~~ low-med — **Ruled 2026-10-05: non-identifying order. Done in #2840** (participant token, then reviewer id). Anonymized reviewee results order rows by reviewer
   name, so the position of a dashed row can identify its reviewer. Author.
-- **Ac4** — `reviewer_review_count_for_user` loads every active reviewer
+- ~~**Ac4**~~ — **Done in #2840** (one scoped COUNT). `reviewer_review_count_for_user` loads every active reviewer
   in the workspace on each reviewer-chrome render.
-- **D9 / Dc5** — `data_shape_extract` has no `ORDER BY`, and By instrument
+- ~~**D9 / Dc5**~~ — **Ruled 2026-10-05: fix order in code. Done in #2840.** `data_shape_extract` has no `ORDER BY`, and By instrument
   breaks ties unordered: output order can differ between runs on Postgres.
 - ~~**D6 / Dc6**~~ — **Ruled 2026-10-05: document as is. Done in #2838.** Responses on inactive pairs are in `responses.csv` and
   absent from By instrument, metadata and Data shaper output; nothing says
   so. Author.
-- **D10 / Dc7** — A Settings row under three cells refuses the whole file
+- ~~**D10 / Dc7**~~ — **Ruled 2026-10-05: report row detail. Done in #2840.** A Settings row under three cells refuses the whole file
   with no row detail.
 - ~~**Ec2**~~ — **Done in #2839** (`--space-6`; `tests/unit/test_css_tokens_resolve.py` now checks every `var()` resolves). `var(--space-5)` in `base.html` names no token; the padding
   falls to 0.

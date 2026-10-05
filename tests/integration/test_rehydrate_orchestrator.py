@@ -148,6 +148,43 @@ def test_rollback_leaves_no_partial_session(
     assert reviewer_sessions == {rs.id}
 
 
+def test_short_settings_rows_are_named_with_the_other_settings_errors(
+    db: Session,
+) -> None:
+    """Findings D10: a settings row under three cells fails the rehydrate
+    with every short row named by its row number, beside the file's other
+    errors, rather than as a bare "malformed row"; nothing survives."""
+    rs, user = _seed(db)
+    files = _file_set(db, rs)
+    key = f"{rs.code}_settings.csv"
+    # Numbered as ApplyError numbers them: non-blank rows below the
+    # header, read as CSV so a quoted multi-line cell counts once.
+    data_rows = sum(
+        1 for row in csv.reader(io.StringIO(files[key].decode("utf-8")))
+        if row
+    ) - 1
+    files[key] += (
+        b"session.description\n"
+        b"instruments[9].short_label,X,string\n"
+        b"session.timezone,UTC\n"
+    )
+
+    with pytest.raises(session_rehydrate.RehydrateError) as exc_info:
+        session_rehydrate.rehydrate_session(db, files=files, user=user)
+
+    message = str(exc_info.value)
+    assert message.startswith("settings.csv failed to apply: ")
+    assert f"row {data_rows + 1}, session.description: the row has 1 cell" in message
+    assert f"row {data_rows + 3}, session.timezone: the row has 2 cells" in message
+    assert "instruments[9].name: name is required" in message
+    assert (
+        db.execute(
+            select(ReviewSession).where(ReviewSession.code == "spring-rehyd")
+        ).scalar_one_or_none()
+        is None
+    )
+
+
 def test_orchestrator_lands_draft_with_note(db: Session) -> None:
     rs, user = _seed(db)
     files = _file_set(db, rs)

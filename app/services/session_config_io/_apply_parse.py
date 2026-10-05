@@ -6,6 +6,8 @@
 """
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
+
 from ._apply_data_shape import _apply_data_shape_kv
 from ._apply_email import _apply_email_kv
 from ._apply_instrument import _apply_instrument_kv
@@ -60,6 +62,42 @@ class ApplyError:
 
     field: str
     message: str
+
+
+def split_rows(
+    raw_rows: Iterable[Sequence[str]],
+) -> tuple[list[Row], list[ApplyError]]:
+    """Turn a Settings CSV's data rows (the header already read) into
+    ``Row`` records, numbered as ``ApplyError`` numbers them: 1-based
+    over the non-blank rows.
+
+    A row with fewer than three cells is not a ``Row``: it becomes an
+    ``ApplyError`` naming its row number, and its slot keeps a blank
+    placeholder (which ``_parse_rows`` skips) so every later row keeps
+    its number. The caller refuses the file when any come back, but
+    reports them alongside the rest of the file's errors rather than
+    alone (findings D10)."""
+    rows: list[Row] = []
+    errors: list[ApplyError] = []
+    for raw in raw_rows:
+        if not raw:
+            continue
+        if len(raw) < 3:
+            cells = "cell" if len(raw) == 1 else "cells"
+            errors.append(
+                ApplyError(
+                    row_number=len(rows) + 1,
+                    field=raw[0].strip(),
+                    message=(
+                        f"the row has {len(raw)} {cells}; a Settings row "
+                        "needs three (field, value, data_type)"
+                    ),
+                )
+            )
+            rows.append(Row(field="", value="", data_type=""))
+            continue
+        rows.append(Row(field=raw[0], value=raw[1], data_type=raw[2]))
+    return rows, errors
 
 
 def _parse_rows(rows: list[Row]) -> tuple[_ParsedConfig, list[ApplyError]]:

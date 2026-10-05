@@ -539,6 +539,7 @@ def build_reviewer_metadata(
                 (Reviewer.status != "active").asc(),
                 Reviewer.name,
                 Reviewer.email,
+                Reviewer.id,
             )
         ).scalars()
     )
@@ -717,6 +718,7 @@ def build_reviewee_metadata(
                 (Reviewee.status != "active").asc(),
                 Reviewee.name,
                 Reviewee.email_or_identifier,
+                Reviewee.id,
             )
         ).scalars()
     )

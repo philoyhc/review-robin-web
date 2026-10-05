@@ -18,6 +18,11 @@ Group-scoped instruments collapse the same way the unified
 Responses CSV does — one data row per ``(reviewer × group)``
 with the composed group identity in ``RevieweeName``.
 
+Data rows sort by ``RevieweeName``, ``ReviewerName``,
+``RevieweeEmail``, ``ReviewerEmail``, then assignment id — a full key,
+so the order is the same on every run (findings D9;
+``serialize_by_instrument`` gives the whole file's order).
+
 Distinct from the unified Responses CSV (long format, 21
 columns × responses) — different lens, different analyst use
 case.
@@ -123,7 +128,9 @@ def serialize_by_instrument(
        blank separator row.**
     2. One blank row (skipped with the meta block).
     3. Data table header.
-    4. Data rows, one per (reviewer, reviewee_or_group) pair.
+    4. Data rows, one per (reviewer, reviewee_or_group) pair,
+       sorted by ``RevieweeName``, ``ReviewerName``,
+       ``RevieweeEmail``, ``ReviewerEmail``, then assignment id.
        Assignments with no responses are skipped when
        ``include_empty_assignments`` is False.
 
@@ -428,6 +435,9 @@ def _data_rows(
                 Assignment.instrument_id == instrument.id,
                 Assignment.include.is_(True),
             )
+            # Pins which member assignment represents a group row
+            # (the dedupe below keeps the first).
+            .order_by(Assignment.id)
         ).scalars()
     )
     if not assignments:
@@ -447,7 +457,7 @@ def _data_rows(
     )
 
     field_ids = [f.id for f in fields]
-    rows: list[tuple[tuple[str, str], tuple[str, ...]]] = []
+    rows: list[tuple[tuple[str, str, str, str, int], tuple[str, ...]]] = []
     seen_group_rows: set[tuple[int, tuple[str, ...]]] = set()
     for assignment in assignments:
         assignment_responses = responses_by_assignment.get(
@@ -471,7 +481,10 @@ def _data_rows(
             session_zone=session_zone,
             tokenizer=tokenizer,
         )
-        sort_key = (row[5], row[0])  # composed reviewee name, then reviewer
+        # Composed reviewee name, then reviewer name, then the two
+        # emails, then the assignment id — a full key, so rosters
+        # sharing a name still export in one order (findings D9).
+        sort_key = (row[5], row[0], row[6], row[1], assignment.id)
         rows.append((sort_key, row))
 
     rows.sort(key=lambda pair: pair[0])

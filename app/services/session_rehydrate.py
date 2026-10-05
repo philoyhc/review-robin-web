@@ -430,8 +430,10 @@ def unpack_file_set(blob: bytes) -> dict[str, bytes]:
 def _describe_apply_error(error: ApplyError) -> str:
     """One ``ApplyError`` as the operator reads it: the CSV row (when the
     error has one), the field, and the reason."""
-    where = f"row {error.row_number}, " if error.row_number else ""
-    return f"{where}{error.field}: {error.message}"
+    where = [f"row {error.row_number}"] if error.row_number else []
+    if error.field:
+        where.append(error.field)
+    return f"{', '.join(where)}: {error.message}" if where else error.message
 
 
 class RehydrateError(Exception):
@@ -440,10 +442,13 @@ class RehydrateError(Exception):
     half-rehydrated session survives (``spec/rehydrate.md`` §7)."""
 
 
-def _settings_rows(content: bytes) -> list[Any]:
+def _settings_rows(content: bytes) -> tuple[list[Any], list[ApplyError]]:
     """Parse the 3-column ``field,value,data_type`` settings CSV into
-    ``session_config_io.Row`` records for :func:`apply_session_config`."""
-    from app.services.session_config_io import HEADER, Row
+    ``session_config_io.Row`` records for :func:`apply_session_config`,
+    plus an ``ApplyError`` per short row (``split_rows``). A short row
+    fails the settings step with the file's other errors rather than
+    alone (findings D10)."""
+    from app.services.session_config_io import HEADER, split_rows
 
     reader = csv.reader(io.StringIO(_decode(content)))
     rows_iter = iter(reader)
@@ -453,14 +458,7 @@ def _settings_rows(content: bytes) -> list[Any]:
         raise RehydrateError("settings.csv is empty.") from exc
     if [c.strip() for c in header] != list(HEADER):
         raise RehydrateError("settings.csv header not recognised.")
-    out: list[Any] = []
-    for raw in rows_iter:
-        if not raw:
-            continue
-        if len(raw) < 3:
-            raise RehydrateError("settings.csv has a malformed row.")
-        out.append(Row(field=raw[0], value=raw[1], data_type=raw[2]))
-    return out
+    return split_rows(rows_iter)
 
 
 def _rewrite_identity_rows(rows: list[Any], *, name: str, code: str) -> list[Any]:
@@ -552,7 +550,9 @@ def rehydrate_session(
     from app.services import audit, csv_imports, relationships, sessions
     from app.services.assignments import replace_assignments
     from app.services.extracts.responses_import import load_responses
-    from app.services.session_config_io import apply_session_config
+    from app.services.session_config_io import (
+        apply_session_config,
+    )
 
     today = today or _dt.date.today()
     resolved = _resolve_files(files)
@@ -569,7 +569,7 @@ def rehydrate_session(
         db, user=user, original_name=settings.name
     )
     new_code = derive_unique_code(db, original_code=settings.code)
-    settings_rows = _settings_rows(resolved["settings"])
+    settings_rows, row_errors = _settings_rows(resolved["settings"])
     description = _compose_description(
         settings,
         original_description=_original_description(settings_rows),
@@ -595,13 +595,18 @@ def rehydrate_session(
         apply_rows = _rewrite_identity_rows(
             settings_rows, name=new_name, code=new_code
         )
-        apply_result = apply_session_config(
-            db, review_session, apply_rows, user=user, correlation_id=correlation_id
-        )
-        if not apply_result.ok:
+        settings_errors = apply_session_config(
+            db,
+            review_session,
+            apply_rows,
+            user=user,
+            correlation_id=correlation_id,
+            row_errors=row_errors,
+        ).errors
+        if settings_errors:
             raise RehydrateError(
                 "settings.csv failed to apply: "
-                + "; ".join(_describe_apply_error(e) for e in apply_result.errors)
+                + "; ".join(_describe_apply_error(e) for e in settings_errors)
             )
 
         # 2. Rosters.

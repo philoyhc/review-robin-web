@@ -19,6 +19,7 @@ stays here; private re-exports the unit tests reach for
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
@@ -59,6 +60,31 @@ class ApplyResult:
         return not self.errors
 
 
+def _validate(
+    review_session: ReviewSession, rows: list[Row]
+) -> tuple[_ParsedConfig, list[ApplyError]]:
+    """Phase 1: the typed plan and every error the rows hold."""
+    plan, errors = _parse_rows(rows)
+    errors += session_fallback_length_errors(plan, review_session)
+    return plan, errors
+
+
+def validate_session_config(
+    review_session: ReviewSession,
+    rows: list[Row],
+    *,
+    row_errors: Sequence[ApplyError] = (),
+) -> list[ApplyError]:
+    """Phase 1 alone, for a file that is refused whatever it holds.
+
+    ``row_errors`` are the rows ``split_rows`` could not read (a short
+    row); they lead the report, and the rest of the file is still
+    validated so one submit names every error (findings D10). Writes
+    nothing."""
+    _plan, errors = _validate(review_session, rows)
+    return list(row_errors) + errors
+
+
 def apply_session_config(
     db: Session,
     review_session: ReviewSession,
@@ -66,8 +92,13 @@ def apply_session_config(
     *,
     user: User | None = None,
     correlation_id: str | None = None,
+    row_errors: Sequence[ApplyError] = (),
 ) -> ApplyResult:
     """Parse + apply a Settings CSV against ``review_session``.
+
+    ``row_errors`` are the rows ``split_rows`` could not read; any one
+    refuses the file, reported with phase 1's errors and nothing
+    applied (findings D10).
 
     Phase 1 — parse + validate every row. Collect every error
     before reporting; one bad row doesn't mask the next.
@@ -80,10 +111,9 @@ def apply_session_config(
     Returns ``ApplyResult`` with ``counts`` on success, ``errors``
     on validation failure (apply is not attempted)."""
 
-    plan, errors = _parse_rows(rows)
-    errors += session_fallback_length_errors(plan, review_session)
-    if errors:
-        return ApplyResult(counts={}, errors=errors)
+    plan, errors = _validate(review_session, rows)
+    if row_errors or errors:
+        return ApplyResult(counts={}, errors=list(row_errors) + errors)
 
     counts = _apply_plan(
         db,

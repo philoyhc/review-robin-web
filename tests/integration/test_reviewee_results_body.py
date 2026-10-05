@@ -36,6 +36,8 @@ from app.db.models import (
     InstrumentResponseField,
     InstrumentViewPolicy,
     Response,
+    Reviewee,
+    Reviewer,
     ReviewSession,
     User,
 )
@@ -696,6 +698,112 @@ def test_results_body_anonymized_dashes_identification_keeps_values(
     # At least one em-dash placeholder rendered inside an
     # ``rs-reviewee`` cell — the Reviewer column cell.
     assert '<span class="muted">—</span>' in body
+
+
+_ROW_ORDER_REVIEWERS = ("Anna", "Ben", "Cara", "Dev", "Eli", "Fay")
+
+
+@pytest.mark.parametrize("mode", ["anonymized", "raw"])
+def test_results_row_order_does_not_follow_reviewer_names_when_anonymized(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+    monkeypatch: pytest.MonkeyPatch,
+    mode: str,
+) -> None:
+    """Findings Ac3 (author's ruling, 2026-10-05): a dashed row's
+    position must not identify its reviewer. Anonymized rows sort by
+    the reviewer's participant token — stable, and opaque to the
+    name and to roster insertion order — while Raw rows keep the
+    alphabetical reviewer-name order.
+
+    Six reviewers imported in alphabetical order make both the name
+    order and the ``Reviewer.id`` order the same sequence, so a sort
+    on either would surface as the alphabetical permutation."""
+    from app.services.participant_tokens import ParticipantTokenizer
+    from app.web.views._reviewee_results import (
+        build_reviewee_results_context,
+    )
+
+    monkeypatch.setenv("PARTICIPANT_TOKEN_SALT", "ac3-row-order")
+    operator = make_client(alice)
+    code = f"vp-order-{mode}"
+    operator.post(
+        "/operator/sessions",
+        data={"name": "Row Order", "code": code},
+        follow_redirects=False,
+    )
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == code)
+    ).scalar_one()
+    reviewer_csv = "ReviewerName,ReviewerEmail\n" + "".join(
+        f"{name},{name.lower()}@example.edu\n"
+        for name in _ROW_ORDER_REVIEWERS
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewers/import",
+        files={"file": ("r.csv", reviewer_csv.encode(), "text/csv")},
+        follow_redirects=False,
+    )
+    operator.post(
+        f"/operator/sessions/{review_session.id}/reviewees/import",
+        files={
+            "file": (
+                "e.csv",
+                b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    generate_via_page_button(operator, review_session.id)
+    validate_session(review_session)
+    operator.get(f"/operator/sessions/{review_session.id}/assignments")
+    operator.post(
+        f"/operator/sessions/{review_session.id}/activate",
+        data={"acknowledge_warnings": "true"},
+        follow_redirects=False,
+    )
+    db.refresh(review_session)
+    # Pin the token salt's session half so the permutation is fixed.
+    review_session.created_at = datetime(2026, 10, 5, 9, 0, tzinfo=timezone.utc)
+    db.commit()
+    _seed_submitted_responses(db, review_session)
+    if mode == "anonymized":
+        _enable_reviewee_after_release_anonymized(
+            db, review_session, operator=_operator_user(db), open_window=True
+        )
+    else:
+        _enable_reviewee_after_release_raw(
+            db, review_session, operator=_operator_user(db), open_window=True
+        )
+    reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalar_one()
+
+    context = build_reviewee_results_context(
+        db, review_session=review_session, reviewee=reviewee
+    )
+    (section,) = context.sections
+    assert section.mode == mode
+    rendered = [row.reviewer_name for row in section.rows]
+    alphabetical = list(_ROW_ORDER_REVIEWERS)
+    if mode == "raw":
+        assert rendered == alphabetical
+        return
+
+    tokenizer = ParticipantTokenizer(review_session)
+    reviewers = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalars().all()
+    by_token = [
+        r.name
+        for r in sorted(reviewers, key=lambda r: (tokenizer.token("reviewer", r.id), r.id))
+    ]
+    # Premise: the pinned salt yields a non-alphabetical permutation.
+    assert by_token != alphabetical
+    assert rendered == by_token
 
 
 def test_results_404_when_anonymized_window_closed_explicitly(

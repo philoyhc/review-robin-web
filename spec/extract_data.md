@@ -328,8 +328,9 @@ greys the `Zip all` button (`aria-disabled="true"` +
    columns, one column per response field (label or
    field key), `SelfReview`, `SavedAt`, `SubmittedAt`.
 4. **Data rows** — one row per (reviewer, reviewee /
-   group) pair, sorted by composed reviewee name then
-   reviewer. Group-scoped instruments collapse to one row
+   group) pair, sorted by composed reviewee name, then
+   reviewer name, then reviewee and reviewer email, then
+   assignment id. Group-scoped instruments collapse to one row
    per (reviewer × group), the fields still one column each. Rows with no non-empty response cells
    drop out when `all_rows=0`. **A governed field whose branch is
    closed exports blank**, as a skipped one does — the save rule
@@ -845,6 +846,11 @@ file-gen pipeline. Symmetric across axes — swap
 | Only some subset of tag chips selected — no `Name` / `Email` | **One row per distinct tag-combination** — the rows are aggregates of the individuals sharing the selected tag values. With three tag chips on, the row key is the (Tag 1, Tag 2, Tag 3) tuple; with one, it's that one tag's value. |
 | Nothing selected (neither identification nor tag chips) | **A single summary row** across every reviewer / reviewee on the session — the aggregate columns are computed across the whole roster. |
 | `Name` / `Email` **and** tag chips selected | `Name` / `Email` wins for row identity — **one row per individual**. The tag chips emit additional identification columns on each row but don't roll up. |
+
+**Row order.** Per-individual rows run active first, then by name,
+then email / identifier, then id — the metadata cards' order.
+Per-tag-combo rows sort by their tag values in chip order, a blank
+tag first.
 
 The instrument and response-field scope chips on the scope
 row narrow what "in-scope responses" means for the
