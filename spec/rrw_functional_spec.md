@@ -8,14 +8,6 @@
 > live in the per-page / per-subsystem specs alongside this file.
 > Cross-references are
 > noted in [§19 Reading guide](#19-reading-guide).
->
-> **Currency.** The functional contract is stable; ship-state may
-> move ahead of it. Whether this document has been read end to end
-> against the code is recorded in its sweep record
-> (`guide/archive/sweep_2026-09-10_rrw_functional_spec.md`), not by a date
-> kept here — a date in this header moves only when someone
-> remembers to move it, so it reads as currency the document may
-> not have.
 
 ---
 
@@ -146,15 +138,10 @@ The system does not:
   of this lives in RRW. The export is the deliverable.
 - **Host non-tabular review forms.** Free-form questionnaire
   builders or non-grid layouts are out of scope. The unit of review
-  is a row × column grid. **Basic branching between two response
-  fields of the same instrument is not out of scope** ([§9.6](#96-configure-instruments),
-  [§10.3](#103-review-surface)): a governed field's cell answers only
-  while its parent's condition holds, within the same grid, and can be
-  **required** — required, and missing when empty, only while its
-  branch is open. A governed field may itself be a parent, one level
-  down (§5.7); a third level, more than one branch per parent, and a
-  String parent remain out of scope (`guide/archive/advanced_instruments.md`
-  Items 1 and 6).
+  is a row × column grid. Branching between response fields of one
+  instrument, two levels deep, is in scope ([§5.7](#57-response-field));
+  a third level, more than one branch per parent, and a String parent
+  are not.
 - **Run cross-session analytics.** The lobby lists sessions; it
   does not aggregate metrics across them.
 - **Manage participants as cross-session accounts.** Reviewers and
@@ -187,25 +174,31 @@ Workspace governance is a **strict three-tier hierarchy** with
 **nested capabilities** (super-admin ⊇ admin ⊇ operator) and a
 **config-anchored top tier**:
 
-| Tier | Stored as | Added / revoked by |
+| Tier | Held as | Added / revoked by |
 |---|---|---|
-| **Operator** | `users.is_operator` | Admins (and super-admins by nesting) |
-| **Admin** | `users.is_sys_admin` | Super-admins only |
-| **Super-admin** | *derived*: email ∈ `SUPER_ADMIN_EMAILS` (deployer config) | Azure App Settings only — never in-app |
+| **Operator** | an operator flag on the user | Admins (and super-admins by nesting) |
+| **Admin** | an admin flag on the user | Super-admins only |
+| **Super-admin** | *derived*: the email is on the deployment's super-admin list | The deployer's configuration only — never in-app |
 
-Super-admin is **derived, never stored** — no DB column, no
-migration; it can't drift from config or be flipped in-app. A
-super-admin self-heals to `is_sys_admin = is_operator = True` on
-every sign-in, so every admin/operator gate passes with no
-special-casing.
+Super-admin is **derived, never stored**, so it can't drift from the
+configuration or be flipped in-app. A super-admin is given the admin
+and operator flags on every sign-in, so every admin and operator gate
+passes with no special case. **With no super-admin configured** the top
+tier is absent and any admin may grant, promote and demote admins
+rather than nobody; a deployed instance logs a warning at startup in
+that state.
 
-An **admin** (`is_sys_admin`) can, on top of operator capability:
+An **admin** can, on top of operator capability:
 
-- **Manage the workspace allowlist** — admit / revoke operator
-  status and delete users entirely (Accounts Management page). A
-  **super-admin** actor is additionally required to promote /
-  demote the admin (`is_sys_admin`) flag, and destructive actions
-  refuse when the target is a super-admin.
+- **Manage the workspace allowlist** on the Accounts Management page —
+  **invite** a user by email before their first sign-in (as an
+  operator, or as an admin), admit / revoke operator status, and
+  delete users entirely. A **super-admin** actor is additionally
+  required to promote / demote the admin flag or to invite an admin;
+  destructive actions refuse when the target is a super-admin.
+  Revoking operator status or deleting a user refuses while they still
+  own a session (remove them from all sessions first), and demoting or
+  deleting the last admin refuses.
 - **Bulk-remove a user from all sessions** they appear on
   (departure cleanup).
 - **View cross-session diagnostics** — a Sessions Diagnostics
@@ -248,12 +241,8 @@ operator can:
   credentials and default display timezone.
 
 Operators do **not** see other operators' sessions in their lobby
-unless they have been added as a co-owner. Admins reach
-non-owned sessions through the Sessions Diagnostics surface: they can
-*read* diagnostics (Outbox, Audit log), but **editing requires
-ownership** — the Diagnostics **"Manage"** action
-self-adds them as an owner (audited) and opens the session, after which
-they act through the normal operator path.
+unless they have been added as a co-owner. Admins reach non-owned
+sessions through Sessions Diagnostics ([§4.1](#41-system-administrator-three-tier-model)).
 
 ### 4.3 Reviewer
 
@@ -297,11 +286,11 @@ A reviewee can:
   them* in the operator-chosen form (Raw / Anonymized /
   Summarized) and only inside the open response-release window.
 - **Acknowledge** they have seen their results (a one-shot,
-  idempotent gesture stamping `results_acknowledged_at`).
+  idempotent gesture that records when they did).
 
-Access is gated by `require_reviewee_with_current_grant`: the
-roster check — an active reviewee row whose `email_or_identifier`
-parses as a real email matching the signed-in user,
+Access takes two checks: the roster check — an active reviewee row
+whose email or identifier parses as a real email matching the
+signed-in user,
 case-insensitively — **plus a currently-resolving visibility
 grant**, meaning at least one instrument granting this reviewee a
 mode inside the open response-release window. The roster check alone
@@ -316,7 +305,7 @@ construction — there is no inbox to authenticate against.
 A session-scoped participant who views **collated** results across
 the session (as opposed to a reviewee, who sees only their own).
 The observer roster is opt-in per session
-(`observers_enabled`). An observer can:
+(the Observers toggle, [§5.17](#517-feature-toggles)). An observer can:
 
 - **Sign in** and reach their `/me` dashboard.
 - **Open the collation surface** (`/me/sessions/{id}/collation`) —
@@ -421,7 +410,7 @@ status pill and the H2 title), friendly description (≤2000
 characters, reviewer-facing — appears as subtitle below the H2),
 unit of review (per-reviewee vs group-scoped), the instrument's
 **assignment rule** (Band 1 — which reviewer × reviewee pairs are
-eligible), page-break flag (`starts_new_page` — where the reviewer surface
+eligible), page-break flag (where the reviewer surface
 breaks to a new page), ordered list of response fields, ordered
 list of display fields, and per-audience **visibility policies**
 (see [§5.16](#516-visibility-policy)).
@@ -442,12 +431,12 @@ and ships with one Rating + one Comments response field.
 ### 5.6 Observer
 
 A person who views collated session results. Observers live in a
-per-session `observers` roster, opt-in via the `observers_enabled`
-feature toggle.
+per-session roster, opt-in via the Observers feature toggle
+([§5.17](#517-feature-toggles)).
 
 **User-supplied fields:** email (required identity — always
 email-shaped), optional display name, a single free-form tag, a
-per-observer **cohort match rule** (JSON, authored on the
+per-observer **cohort match rule** (authored on the
 Observers Setup page — selects which reviewers / reviewees the
 observer's collation aggregates over), status.
 
@@ -461,8 +450,8 @@ A column on an instrument — one question the reviewer answers
 per reviewee row.
 
 **User-supplied fields:** friendly label, **data type** (`String`
-/ `Integer` / `Decimal` / `List`), inline bounds (`min` / `max` /
-`step` for numeric; `list_options` for List; length min/max for
+/ `Integer` / `Decimal` / `List`), inline bounds (min / max /
+step for numeric; the options for List; length min/max for
 String), required flag, help text (+ its visibility flag),
 visibility flag, order within the instrument. A field may head a
 **branch**: an Integer, Decimal or List field carries one condition,
@@ -494,15 +483,12 @@ branch inside it included.
 **System-derived fields:** the field key (machine id, derived from
 the label); the input control that renders in each cell (text
 input, textarea, number input, or select) — driven directly by
-the field's own `data_type`.
+the field's own data type.
 
-There is **no shared type catalogue**: each response field carries
-its own inline `data_type` + bounds rather than referencing a
-shared type row. A small set of pre-filled **List presets**
-(Boolean / Agreement / Grades, in `instruments/_field_presets.py`)
-is baked into the
-Band 3 type picker for convenience; the preset's identity is not
-stored — only the resulting `data_type` + `list_options`.
+Each response field carries its own data type and bounds. The Band 3
+type picker offers pre-filled **List presets** (Boolean / Agreement /
+Grades) for convenience; picking one fills in the type and options,
+and the field does not remember which preset it came from.
 
 ### 5.8 Display Field
 
@@ -522,15 +508,14 @@ Display fields draw from **nine sources**:
 For each display field on each instrument, the operator chooses
 which source feeds it, an include/exclude flag and an order. Its
 header is the session-wide friendly label for that source
-([§8.5](#85-friendly-labels)); there is no per-instrument label
-override. The operator-side default
+([§8.5](#85-friendly-labels)), the same on every instrument. The
+operator-side default
 sort is set from badges on the Band 2 preview's column headers
 (`spec/sort_by_reviewee.md`).
 
 The reviewee's name and email are always present (cannot be
-turned off — they are the two locked rows); the other **seven**
-are opt-in. The canonical list is `_DEFAULT_DISPLAY_LABELS` in
-`app/services/instruments/_display_fields.py`.
+turned off — they are the two locked rows); the other seven
+are opt-in.
 
 ### 5.9 Assignment
 
@@ -559,7 +544,7 @@ review:
 
 Assignments are produced by the assignment-generation step from
 the instrument's pinned rule against the roster. A pair with an
-inactive side is still materialized, with `include=False`, so its
+inactive side is still materialized but excluded, so its
 responses survive a deactivate → Prepare → reactivate round trip;
 only pairs whose two sides are active are assigned work. They are
 not user-edited row by row; the operator changes them by changing
@@ -570,18 +555,17 @@ the rule or the rosters and regenerating.
 A reviewer's answer to one response field for one assignment.
 
 **Fields:** assignment id, response field id, value (typed
-according to the field's `data_type`), saved-at, submitted-at.
+according to the field's data type), saved-at, submitted-at.
 
 A response row is created the first time a reviewer enters a
 value into that cell; clearing the value back to empty deletes
-the row. Submission stamps every populated cell's `submitted_at`
+the row. Submission stamps every populated cell's submitted-at
 in one atomic action.
 
 For group-scoped instruments, one logical group answer fans out
 to one response row per group member, all carrying the same
-value. Reads collapse the fan-out back to one row per
-`(instrument, group_key)` for monitoring, extracts, and the
-reviewer surface.
+value. Reads collapse the fan-out back to one row per instrument
+per group for monitoring, extracts, and the reviewer surface.
 
 ### 5.11 Rule and RuleSet
 
@@ -596,13 +580,12 @@ and the cross-side `IS THE SAME AS` / `IS DIFFERENT FROM`).
 Every RuleSet is **per-session**: a rule belongs to one
 instrument in one session and nowhere else.
 
-Each instrument owns its rule via **`Instrument.rule_set_id`**,
-authored inline in the instrument card's **Instrument assignment
-rule** (Band 1). When every Link is left in its "all"/"individual"
-state the instrument keeps `rule_set_id = NULL` and the engine
-substitutes a **synthetic Full Matrix** (everyone reviews
-everyone) at evaluate time; the moment a Link carries a filter, a
-`SessionRuleSet` row is materialised lazily. The operator changes
+Each instrument owns its rule, authored inline in the instrument
+card's **Instrument assignment rule** (Band 1). When every Link is
+left in its "all"/"individual" state the instrument stores no rule
+and the engine substitutes a **synthetic Full Matrix** (everyone
+reviews everyone) at evaluate time; the moment a Link carries a
+filter, a stored rule is created. The operator changes
 a rule by editing Band 1; sharing a rule across instruments is via
 Replicate-the-instrument, not a library.
 
@@ -627,8 +610,8 @@ An immutable record of one mutation or noteworthy read.
 **Fields:** event type (enumerated), severity (info / warning /
 error), summary text, actor id (operator id, system, or null),
 session id, created-at (UTC), correlation id (request-scoped),
-structured detail (a JSON envelope — one of `changes`,
-`snapshot`, `counts`, or `set_changes`).
+structured detail (a JSON envelope — a before/after diff, an entity
+snapshot, a counts roll-up, or a set mutation).
 
 Every mutating service writes one or more audit events. Event
 types follow a `subject.verb` convention (e.g.,
@@ -654,9 +637,8 @@ crash mid-dispatch leaves the queue recoverable.
 
 A per-instrument, per-audience grant controlling **who** may see
 an instrument's responses, **in what form**, and **during which
-window**. Stored one row per `(instrument, audience)` on
-`instrument_view_policies`; resolved at view time (no
-materialisation onto assignments).
+window**. One grant per instrument per audience, resolved at view
+time (nothing is copied onto assignments).
 
 - **Audiences** (3): peer reviewer (a reviewer viewing their own
   work), reviewee, observer. The operator is not a configurable
@@ -665,9 +647,11 @@ materialisation onto assignments).
   attributed), **Anonymized** (each response, attribution
   stripped), **Summarized** (per-data-type aggregate stats, no
   individual rows).
-- **Window**: `while_ongoing` (session lifetime),
-  `after_release` (the operator's Release-responses window),
-  `throughout` (either), stored as a per-window mode pair.
+- **Window** (2): **session ongoing** — while the session is
+  Activated (`ready`), whether or not its deadline has passed — and
+  **responses released** — while it is Closed (`expired`) and inside
+  the operator's Release-responses window. A grant carries one mode
+  per window; a grant with a mode in both is visible in either.
 
 Not every mode is valid in every cell (`spec/visibility_policy.md`
 §3.1). The reviewer's own view has a fixed **Raw** baseline while the
@@ -681,12 +665,15 @@ operator opts each one in in the instrument card's visibility editor
 
 ### 5.17 Feature toggles
 
-Two per-session boolean toggles (`sessions.relationships_enabled`
-/ `sessions.observers_enabled`, both default `False`) gate the
-optional **Relationships** and **Observers** Setup tabs and their
-participant surfaces. Set on the Session details config card. Once
-the corresponding roster has any rows the toggle locks on (can't
-be flipped back off) to avoid orphaning data behind a hidden tab.
+Two per-session toggles, **Relationships** and **Observers** (both
+off by default), show the optional Relationships and Observers Setup
+tabs; the Observers toggle also shows the Extract data page's
+Observers and Token keys cards. They gate no participant surface: an
+observer reaches the collation surface through an active roster row
+alone ([§10.10](#1010-observer-collation-surface)). Both are set on
+the Session details config card. Once the corresponding roster has
+any rows the toggle locks on (can't be flipped back off) to avoid
+orphaning data behind a hidden tab.
 
 ### 5.18 Session tags
 
@@ -714,8 +701,8 @@ treats the session in lobby and extract surfaces.
 | State | Display label | Meaning |
 |---|---|---|
 | `draft` | Draft | Setup is open. Operator may edit any aspect. Reviewer surface is read-only (pre-open). |
-| `validated` | Validated | Setup has been validated and passed all blocking checks. Setup is still open. Any setup mutation auto-invalidates back to `draft`. |
-| `ready` | Activated | Reviewer surface is open and accepting responses. Setup is locked. Operator may pause back to `draft`. |
+| `validated` | Validated | Setup has been validated and passed all blocking checks. Setup is still open. Any setup change the readiness check reads auto-invalidates back to `draft`. |
+| `ready` | Activated | Reviewer surface is open and accepting responses. Setup is locked. Operator may revert to `draft`. |
 | `expired` | Closed | The operator closed the session with the Workflow-card **Close session** button. Every instrument is closed; all responses (drafts + submitted) are preserved. Operator can Revert to draft to reopen for editing. |
 | `archived` | Archived | Session is filed out of the active lobby; no data deleted unless the operator chose to purge on the way in. The service accepts **any non-archived** state; which state each control offers it from is in §6.1. Unarchive returns it to `draft`. |
 
@@ -723,10 +710,13 @@ treats the session in lobby and extract surfaces.
 
 - **`draft → validated`**: Operator runs Prepare session; its
   validation step passes with no blocking errors.
-- **`validated → draft`** (auto-invalidate): Any setup mutation
-  (roster import, instrument edit, rule change, assignment
-  regenerate) automatically flips the session back to `draft`.
-  This is silent and invariant; the operator does not opt in.
+- **`validated → draft`** (auto-invalidate): Any setup change the
+  readiness check reads (roster import, instrument edit, rule change,
+  assignment regenerate) automatically flips the session back to
+  `draft`. This is silent and invariant; the operator does not opt
+  in. The session's own Details, tags and owners, and the
+  Assignments page's include toggles, leave it `validated`
+  (`spec/lifecycle.md` §2.3).
 - **`validated → ready`** (activate): Operator clicks the Workflow
   card's **Activate session**, or a scheduled activation fires.
   Activation is from `validated` only. If warnings exist, the operator
@@ -734,10 +724,7 @@ treats the session in lobby and extract surfaces.
   transition is refused.
 - **`ready → draft`** (revert): Operator clicks **Revert to draft**.
   The operator must tick a confirmation checkbox; the reviewer surface
-  closes; responses are preserved. The **Workflow card button** for this
-  is labelled *Revert to draft*, and no operator copy calls the
-  transition anything else; *Pause* survives only as a legacy internal
-  name (the `next-action-pause-form` id).
+  closes; responses are preserved.
 - **`ready → expired`** (Close session): Operator clicks the
   Workflow card's **Close session** button. Every instrument is
   closed and all responses are preserved. From `expired` the
@@ -751,8 +738,8 @@ treats the session in lobby and extract surfaces.
   rosters and the audit log first ([§16.5](#165-operator-triggered-purge-and-archive)).
   Unarchive returns the session to `draft`.
 - **Release-responses window**: open only while the session is
-  `expired`, from `responses_release_at` until
-  `responses_release_until` ([§8.3](#83-schedule-fields)). In
+  `expired`, from its Release-from moment until its Release-until
+  moment ([§8.3](#83-schedule-fields)). In
   `expired` the Workflow card offers **Release responses** to open
   it now and **Stop releasing responses** to end it.
 
@@ -772,12 +759,10 @@ Reviewers, Reviewees and Relationships pages and Instruments render a
 prominent yellow **lock card** explaining why setup is locked and
 offering the way out that state has: `ready` and `expired` carry an
 inline Revert form, `archived` links the lobby's Unarchive and offers
-no control, because `/revert` answers 409 from there. **Observers**
+no control, because Revert is refused from there. **Observers**
 locks only in `archived`: its roster stays editable through `ready`
 and `expired` ([§9.5](#95-populate-rosters)). All four roster
-pages render one partial,
-`operator/partials/_roster_lock_card.html`; `spec/lifecycle.md`
-§5 is the contract.
+pages share one lock card; `spec/lifecycle.md` §5 is the contract.
 
 Not *every* setup page: the **Email Template** page renders no
 lock card and carries no editable gate at all (deliberate —
@@ -789,22 +774,22 @@ While locked, upload affordances and destructive-action cards are
 hidden, the row-selection surface is absent rather than inert, and
 form controls inside builders — including the friendly-label
 editor — are disabled. Every one of those answers the same
-`is_editable` predicate as the card, so the explanation and the
+editability test as the card, so the explanation and the
 controls cannot disagree.
 
 The Session details config card on Session Home is also
-lifecycle-gated — its edit swap (`?editing=1`) is only reachable
-in `draft` / `validated`; on an active session the Lock toggle
-renders inert with a "revert to draft to edit" tooltip, and a
-direct POST to `/config` is rejected server-side.
+lifecycle-gated — its edit mode is only reachable in `draft` /
+`validated`; on an active session the Lock toggle renders inert with
+a "revert to draft to edit" tooltip, and a direct save is refused
+server-side.
 
 ### 6.3 Lazy deadline closure
 
 When the deadline passes, the system **lazily closes** each
 instrument on the first request that observes the past-deadline
-state. Closure flips each instrument's `accepting_responses` to
-false and emits one `instrument.closed reason=deadline` audit
-event per instrument. After closure the reviewer surface remains
+state. Closure turns off each instrument's accepting-responses flag
+and emits one `instrument.closed` audit event (reason: deadline) per
+instrument. After closure the reviewer surface remains
 viewable (read-only) for the configured visibility window.
 
 ---
@@ -845,7 +830,7 @@ Two entry paths exist:
   token is per-reviewer, per-session, redeemed to a durable session
   URL. The invitation row stores only its hash. An invitation send
   mints a fresh token and puts it in the email body, which the
-  `email_outbox` row keeps, so a sys admin can re-read the link that
+  outbox row keeps, so a sys admin can re-read the link that
   was sent; a reminder reuses that link while it is still current,
   and sends a fresh invitation once a Regenerate has rotated it. The
   link stays usable until
@@ -854,7 +839,7 @@ Two entry paths exist:
   anywhere in the clear. It is a pointer, not a credential:
   redemption requires sign-in and a matching email (§11.1).
   Redemption matches token → reviewer, checks the signed-in user's
-  email matches the invited reviewer's email, stamps `opened_at`
+  email matches the invited reviewer's email, stamps opened-at
   on first visit (idempotent), emits `invitation.opened`, and
   forwards to the session. **On mismatch this path — and only this
   path — renders the friendly account-mismatch page**, with a
@@ -870,15 +855,15 @@ model, [§4.1](#41-system-administrator-three-tier-model)):
 
 - **Not allowlisted** — authenticated but cannot reach operator
   routes; a request for one is redirected (303) to `/me`.
-- **Operator** (`is_operator`) — can create sessions and is
+- **Operator** — can create sessions and is
   automatically the owner of sessions they create; can be added
   as co-owner to other operators' sessions.
-- **Admin** (`is_sys_admin`) — operator capability plus workspace
+- **Admin** — operator capability plus workspace
   governance (Accounts Management, Sessions Diagnostics, audit-log
   viewer).
-- **Super-admin** — derived from `SUPER_ADMIN_EMAILS` deployer
-  config; the only actor who can promote / demote the admin flag,
-  and protected from demotion / deletion in-app.
+- **Super-admin** — derived from the deployer's configuration;
+  the only actor who can promote / demote the admin flag (while one
+  is configured), and protected from demotion / deletion in-app.
 
 The allowlist is managed on the Accounts Management page;
 promotion, demotion, and removal are audit-logged.
@@ -908,27 +893,26 @@ sole owner, without the admin owning those sessions
 ## 8. Per-session metadata and settings
 
 A session carries metadata that the operator edits on the Create
-New Session form and, thereafter, in-place on the **Session
-details** config card on Session Home (`?editing=1` display ↔ edit
-swap; there is no standalone Edit page), plus
+New Session form and, thereafter, in place on the **Session
+details** config card on Session Home ([§9.4](#94-session-details-config-card)), plus
 per-session preferences accessible from setup pages or operator
 settings.
 
 ### 8.1 Identity fields
 
 - **Name** — free-form display label.
-- **Code** — short stable identifier, unique across the workspace
-  (a database constraint on `sessions.code`), not per operator. Create,
-  Session Home's Save and, on a `draft` or `validated` session, the
-  lobby's row-expander Save refuse a code another session holds with a 422
-  before writing anything (`sessions.ensure_code_available`, a
-  pre-check: two simultaneous saves of one code can still meet at the
-  constraint). Used as
+- **Code** — short stable identifier, unique across the workspace,
+  not per operator. Create, Session Home's Save and, on a `draft` or
+  `validated` session, the lobby's row-expander Save refuse a code
+  another session holds before writing anything; two simultaneous
+  saves of one code are still refused, by the store's own uniqueness
+  rule. Used as
   the filename prefix for every CSV extract (`{code}_kind.csv`)
   and as the operator's primary short-form reference.
-- **Description** — optional long-form description; appears in
-  reviewer-facing pre-open and post-close UI and in the session
-  detail card.
+- **Description** — optional long-form description; appears at the
+  top of the reviewer's review surface (whether open or read-only),
+  of the reviewee results and observer collation surfaces, and in
+  the Session details card. The pre-open page does not show it.
 - **Help contact** — free-form contact string surfaced to the
   reviewer.
 
@@ -952,16 +936,16 @@ The session optionally carries scheduled-event anchors and
 offsets (the activation / invite / reminder consumers are wired;
 archive / retention are deferred):
 
-- **Scheduled activation timestamp** (`scheduled_activate_at`) —
+- **Scheduled activation timestamp** (Start) —
   moment at which a `validated` session auto-promotes to `ready`.
-- **Invite offsets** — JSON list of ISO 8601 durations (e.g.,
+- **Invite offsets** — a list of ISO 8601 durations (e.g.,
   `-P1D`, `-PT2H`) anchored on the scheduled activation. Each
   offset triggers one auto-send of invitations.
-- **Reminder offsets** — JSON list of ISO 8601 durations anchored
+- **Reminder offsets** — a list of ISO 8601 durations anchored
   on the deadline. Each triggers one auto-send of reminders.
-- **Release-responses window** (`responses_release_at` /
-  `responses_release_until`) — the absolute datetime window during
-  which reviewee/observer `after_release` visibility policies open.
+- **Release-responses window** (Release-from / Release-until) — the
+  absolute datetime window during which reviewee and observer
+  "responses released" visibility grants open.
 - **Archive offset** — duration anchored on the deadline at
   which the session auto-archives (schema present; consumer
   deferred pending pilot demand).
@@ -969,9 +953,9 @@ archive / retention are deferred):
   (schema present; consumer deferred).
 
 Every scheduled anchor obeys a save-time ordering chain
-(`scheduled_activate_at ≤ deadline ≤ responses_release_at <
-responses_release_until`) and an anchor-null inertness rule (an
-offset whose anchor is NULL never fires). Triggers fire via the
+(Start ≤ deadline ≤ Release-from < Release-until) and an
+unset-anchor rule (an offset whose anchor is unset never fires).
+Triggers fire via the
 lazy-observer pattern (on the next operator GET past the
 scheduled time), not a background worker. The Session details
 config card shows each offset's resolved fire moment inline.
@@ -991,8 +975,8 @@ per-field reset-to-default:
   `$session_name`, `$deadline`, `$help_contact`,
   `$submitted_at`.
 
-The responses-received template alone has an enable/disable switch
-(`responses_received_enabled`), which governs whether the
+The responses-received template alone has an enable/disable switch,
+which governs whether the
 auto-send-on-submit email fires; the invitation and reminder
 templates have none.
 
@@ -1027,6 +1011,18 @@ are inactive in bulk. Per-pair include overrides apply
 post-flip. The flag has no editor; it is set by the Settings CSV
 import or Duplicate.
 
+Separately, each instrument's rule can **exclude self-reviews
+outright**: the **Self reviews** checkbox under Link 3 of the
+instrument's Band 1 ([§9.6](#96-configure-instruments)), off by
+default and shown only once every Link is set. Its wording follows
+the unit of review — on a group-scoped instrument it excludes every
+group the reviewer belongs to. It takes effect at the next Generate:
+excluded pairs are not generated at all, so an instrument that has
+already generated loses those rows and their responses, behind the
+Prepare confirmation ([§14](#14-reconciling-regeneration)). The
+Assignments page then reports the instrument's self-reviews as
+*Excluded by rule* (`spec/instruments.md` § *Self-review exclusion*).
+
 ### 8.7 Per-operator settings
 
 Distinct from per-session settings, each operator owns:
@@ -1039,23 +1035,14 @@ Distinct from per-session settings, each operator owns:
 - **Default display timezone** — falls in when a new session is
   created.
 
-There is no personal library of reusable response types or
-RuleSets here — both are per-session, authored on the instrument
-card. The operator's settings page also supports clear/reset of
+The operator's settings page also supports clear/reset of
 the SMTP section.
 
 ### 8.8 User-interface feature toggles
 
-Two per-session booleans, set on the config card's **User
-interface settings** sub-card, opt the session into the optional
-Setup tabs (see [§5.17](#517-feature-toggles)):
-
-- **`relationships_enabled`** — the Relationships Setup tab + page.
-- **`observers_enabled`** — the Observers Setup tab + page, the
-  Extract-data Observers/Token-keys cards, and the observer
-  collation surface.
-
-Each locks on once its roster has rows.
+The **Relationships** and **Observers** toggles
+([§5.17](#517-feature-toggles)) sit on the config card's **User
+interface settings** sub-card.
 
 A full catalogue of every persisted setting lives in
 `spec/settings_inventory.md`.
@@ -1072,8 +1059,9 @@ created-at, deadline, timezone (compact GMT-offset per row),
 status, and tag chips per session.
 
 Each row carries a checkbox; ticking opens an **inline row
-expander** for single-row actions (rename, tag edit, deadline
-adjust, duplicate, purge and archive, delete). Multiple
+expander** for single-row actions (rename and deadline adjust while
+the session is `draft` or `validated`, read-only otherwise; tag edit
+in any state; duplicate, purge and archive, delete). Multiple
 tickings open the bulk-action variant of the expander.
 
 The lobby supports:
@@ -1115,7 +1103,7 @@ help contact, and session tags.
 
 The form **gates submit on Name + Code** being non-empty, and also
 carries the User-interface settings toggles
-(`relationships_enabled` / `observers_enabled`), the schedule
+([§5.17](#517-feature-toggles)), the schedule
 fields, and an **Owners** card: the creator plus any workspace
 operators the creator stages there, saved by **Create session**
 (the card has no save of its own). An address that is not a
@@ -1126,7 +1114,7 @@ replace-confirmation tick: files staged in its slots submit with
 row exists (`spec/quick_setup_card_spec.md` "New-session variant").
 On submit, the session is created as `draft`, the operator is set
 as the first owner alongside any staged co-owners, and the operator lands on **Session
-Home** — where the Session details config card (`?editing=1`) is
+Home** — where the Session details config card is
 the surface for filling in any remaining fields. The Sessions-lobby
 Clone action lands on Session Home the same way.
 
@@ -1134,9 +1122,8 @@ Clone action lands on Session Home the same way.
 
 The Session Home page (`/operator/sessions/{id}`) is the
 operator's primary working surface for a session. Session config
-is both **displayed and edited** here — there is no separate Edit
-page, and `/edit` 308-redirects to
-`…?editing=1#session-config`. Top → bottom:
+is both **displayed and edited** here ([§9.4](#94-session-details-config-card)).
+Top → bottom:
 
 - **Workflow card** (full width) — the lifecycle-driven card
   explaining the current state and offering the single
@@ -1144,20 +1131,18 @@ page, and `/edit` 308-redirects to
   "Workflow", blue-framed, height grows to fit); the
   contents differ across the lifecycle states (see
   [§9.8](#98-validation-and-activation)).
-- **Session details card** (full width, below Workflow) — a
-  display ↔ edit swap (`?editing=1`) carrying every config field
-  (name, code, description, help contact, timezone, and the
-  Start / End / Release-from / Release-until schedule + invite /
-  reminder offsets, each showing its resolved fire moment inline),
-  plus **User interface settings** and **Tags** sub-cards. Save
-  POSTs to `/config` and redirects back to Home in display mode.
-- **Quick Setup card** (bottom-left of a `.bottom-grid`) — a
+- **Session details card** (full width, below Workflow) — every
+  config field, displayed and edited in place
+  ([§9.4](#94-session-details-config-card)).
+- **Quick Setup card** (bottom left) — a
   bulk-import surface with one CSV upload affordance per roster /
   settings slot (Reviewers / Reviewees / Relationships / Settings,
-  plus a conditional Observers slot when `observers_enabled`) and a
-  "Submit all" action that chains the imports in dependency order.
-  Defaults to locked (Lock/Unlock toggle).
-- **Danger Zone card** (bottom-right of the `.bottom-grid`) —
+  plus an Observers slot when the Observers toggle is on) and one
+  **Submit** button that runs the staged imports in dependency order.
+  It is available only while the session is `draft` and holds no
+  responses: then it loads locked, and **Unlock** enables it;
+  otherwise it stays locked with no Unlock.
+- **Danger Zone card** (bottom right) —
   **Delete Data** (wipes every reviewer response, preserves setup)
   and **Delete Session** (removes the session entirely). Both are
   confirm-gated, live in every state but `ready`, and
@@ -1172,17 +1157,15 @@ Home: they live on the Operations-strip **Extract data** tab (see
 
 ### 9.4 Session details config card
 
-The Session details card on Session Home (`#session-config`) is
-the only surface for session config.
-`GET /operator/sessions/{id}/edit` 308-redirects to
-`…?editing=1#session-config`.
+The Session details card on Session Home is the only surface for
+session config; there is no separate Edit page, and an old Edit link
+redirects to the card in edit mode.
 
-- **Display ↔ edit swap.** The card carries
-  `data-config-mode="display|edit"`; each field holds one slot —
-  a read-only value in display mode, its `<input>` in edit mode.
-  The canonical edit state is the `?editing=1` URL param, gated on
-  the session being editable (`draft` / `validated`) so a stale
-  link on an active session degrades to display mode.
+- **Display ↔ edit swap.** Each field holds one slot — a read-only
+  value in display mode, its input in edit mode. Edit mode lives in
+  the page address, and is reachable only while the session is
+  editable (`draft` / `validated`), so a stale link on an active
+  session degrades to display mode.
 - **Fields.** Name / Code, Description, Help contact, Timezone,
   and the four schedule datetimes (Start / End / Release-from /
   Release-until) plus the Send-invites and Send-reminders offset
@@ -1190,34 +1173,33 @@ the only surface for session config.
   send datetime.
 - **Owners is a card of its own**, not one of this card's sub-cards
   — see §9.3 and `spec/session_owners.md`.
-- **User interface settings sub-card** — the
-  `relationships_enabled` / `observers_enabled` checkboxes, each
+- **User interface settings sub-card** — the Relationships and
+  Observers checkboxes ([§5.17](#517-feature-toggles)), each
   lock-on-data.
 - **Tags sub-card** — the session's tags as pills, like the
   sessions lobby's, in display mode; one text box in edit mode, saved with the card's
   **Save** (emptying the box clears them). Tags are stored lower
   case.
-- **Save** POSTs to `/operator/sessions/{id}/config` and redirects
-  back to Home in display mode. Editing metadata is
+- **Save** returns to Home in display mode. Editing metadata is
   non-destructive (never touches assignments or responses), so
-  there is no response-loss acknowledgement gate.
+  there is no response-loss acknowledgement gate, and it leaves a
+  `validated` session `validated`.
 
 ### 9.5 Populate rosters
 
 Up to four Setup pages share an identical chrome shape: Reviewers,
-Reviewees, **Relationships** (gated on `relationships_enabled`),
-and **Observers** (gated on `observers_enabled`).
+Reviewees, **Relationships** and **Observers** (each shown by its
+toggle, [§5.17](#517-feature-toggles)).
 
 Each page offers the following. **Observers is the exception on some
 of these points**, flagged inline; `spec/setup_pages.md`
 § *Observers page* § *Body layout* lists them in one place.
 
 - **Friendly-label editor card** — inline editors for the
-  display labels of this entity's **tag slots only**:
-  `field_labels.upsert` refuses an identity or photo slot, whose
-  built-in default always renders (see
-  [§8.5](#85-friendly-labels)). The editor answers the same
-  `is_editable` gate as the rest of the page. **Not on Observers**,
+  display labels of this entity's **tag slots only**: an identity
+  or photo slot is refused, and its built-in default always renders
+  (see [§8.5](#85-friendly-labels)). The editor answers the same
+  editability gate as the rest of the page. **Not on Observers**,
   which has one fixed tag slot and no editor.
 - **Preview table** — every row in the roster (paginated by
   search + filter), with sortable headers (**not on Observers**,
@@ -1255,14 +1237,14 @@ change rather than a layout one:** its roster stays editable through
 appear in assignments and produce no responses, so freezing their
 roster at Activate protects nothing, while refining who sees what
 mid-session is a legitimate flow. It is the only roster page whose
-mutating surface outlives `is_editable`; `spec/lifecycle.md` §5 states
+mutating surface outlives the editable states; `spec/lifecycle.md` §5 states
 the exception and governs any second one. Its expander also carries a
 surface no other roster page has — the per-observer **cohort match
 rule** builder, which decides what that observer sees.
 
 The Reviewers page collects: name, email, tag 1 / 2 / 3, photo
 link, status.
-The Reviewees page collects: name, email_or_identifier, tag 1 /
+The Reviewees page collects: name, email or identifier, tag 1 /
 2 / 3, photo link, status.
 The Relationships page collects: reviewer email, reviewee email,
 pair-context tag 1 / 2 / 3, status.
@@ -1273,15 +1255,19 @@ editor (single-tag observers don't need one).
 CSV import is **wipe-and-replace**: on each upload the whole
 existing roster is dropped and the new file's rows take its
 place. Validation errors block the import wholesale — partial
-loads do not happen.
+loads do not happen. Replacing a non-empty roster takes a
+replace confirmation; on Reviewers and Reviewees, whose rows carry
+assignments, it also takes a response-loss acknowledgement when the
+session holds responses, since the dropped rows take their
+responses with them ([§14](#14-reconciling-regeneration)).
 
 ### 9.6 Configure instruments
 
 The Instruments page (`/operator/sessions/{id}/instruments`)
 is a consolidated per-instrument editor.
 
-**The session status card** sits at the top in a `.card-columns`
-pair beside the guidance card, **half-width**. It carries a one-line
+**The session status card** sits at the top beside the guidance
+card, **half-width**. It carries a one-line
 pill row (session deadline, `N accepting`, `M not accepting`) and
 the **Expand all / Collapse all instruments** buttons, which act on
 the page rather than on any instrument.
@@ -1293,10 +1279,10 @@ policy. `spec/instruments.md` owns that contract and states it in
 full.
 
 Below the status card, one **per-instrument card** per instrument,
-each a collapsible `<details>` with a locked/unlocked edit state (at
+each collapsible, with a locked/unlocked edit state (at
 most one instrument unlocked at a time). Its stripes:
 
-- **Identity** (in the card `<summary>`) — the reviewer-facing
+- **Identity** (in the card's always-visible header) — the reviewer-facing
   short label (editable inline when unlocked), Set-up / Not-set-up
   and Locked / Unlocked pills, and drag handle for reorder.
 - **Instrument assignment rule** (Band 1) — three "Links" of equal
@@ -1305,10 +1291,13 @@ most one instrument unlocked at a time). Its stripes:
   Link cycles a `Not set → All → Filter/Group` pill. A **"Not set"
   safety gate** requires the operator to deliberately touch every
   Link before the instrument reads as configured, so the implicit
-  Full Matrix default can't ship silently. (The card's heading is
-  **Instrument assignment rule**; "Band 1" is the shorthand this
-  spec and the code use for it. There is no separate Rule Builder
-  page — the rule is authored here or nowhere.)
+  Full Matrix default can't ship silently. When Link 3 is Group, it
+  picks the **boundary tags** — reviewee and pair-context tags whose
+  shared values define a group ([§10.4](#104-group-scoped-review-surface)).
+  Below Link 3, once every Link is set, sits the **Self reviews**
+  exclusion checkbox ([§8.6](#86-self-review-behaviour)). (The card's
+  heading is **Instrument assignment rule**; "Band 1" is this spec's
+  shorthand for it. It is the only place a rule is authored.)
 - **Band 2 — Preview** — a live preview of one sample reviewee row
   (display fields, then response fields), with
   drag-resizable column widths and the instrument description
@@ -1325,24 +1314,19 @@ most one instrument unlocked at a time). Its stripes:
   (Reviewee Name / Email always shown; the populated tag sources
   opt-in). The right is the response-field table, one row per field:
   an Active checkbox (per-field surface visibility), Name, **Type**
-  (`String / Integer / Decimal / List` + a Quick-fill List presets
-  `<optgroup>`), inline bounds (`min` / `max` / `step` or
-  `list_options`), Required toggle, help-text toggle, ▲ ▼ for order,
-  and a fork control that turns an Integer, Decimal or List field into
-  a **branch**: a condition ("if the above compares to a value") that
-  governs one or more fields directly beneath it, answerable by the
-  reviewer only while the condition holds (`spec/instruments.md` §
-  "Branching between response fields"). Type + bounds lock once the
+  (String / Integer / Decimal / List, plus a Quick-fill group of List
+  presets), inline bounds (min / max / step, or the list options),
+  Required toggle, help-text toggle, ▲ ▼ for order, and a fork control
+  that turns an Integer, Decimal or List field into the parent of a
+  **branch** over the fields directly beneath it
+  ([§5.7](#57-response-field)). Type + bounds lock once the
   field has saved responses. Both tables
   show in the preview at once and persist with the card's Save
   (`spec/instruments.md`).
 - **Action row** — Save / Cancel (edit only) / Replicate / Delete
   (confirm-gated; blocked when only one instrument) / **+Instrument**
   / **+Page break** / Lock-Unlock. One bulk Save commits identity,
-  Band 1, Band 3, visibility policies, and column widths together
-  through the consolidated `/save` endpoint.
-
-Each Band 3 row carries its own inline `data_type` + bounds.
+  Band 1, Band 3, visibility policies, and column widths together.
 
 ### 9.7 Configure assignments
 
@@ -1353,12 +1337,12 @@ on the Operations row of the chrome. It carries:
   showing type (Individual / Group), generated pair count (with a
   `stale` pill when the current rule + roster would produce a
   different set), group count, self-review count + per-instrument
-  self-review toggle (locked while `ready`), included count, and a
-  per-instrument "Show in preview table" filter checkbox. (There
-  is no Rule column — the rule lives on Band 1.)
+  self-review toggle (locked outside `draft` / `validated`), included
+  count, and a per-instrument "Show in preview table" filter
+  checkbox.
 - **Assignments preview table** — every materialised pair,
   with reviewer identity + tag columns, reviewee identity +
-  tag columns, pair-context tag columns, Include checkbox,
+  tag columns, pair-context tag columns, an Include yes / no pill,
   Instrument column, sortable headers, column-visibility
   toggles. Its card opens with the same **two-pane toolbar**
   the roster pages carry: chips, pager and preview-count line
@@ -1372,10 +1356,11 @@ on the Operations row of the chrome. It carries:
   ticked pair is the same way and both where it is mixed.
   **Self-review assignments are flipped
   active/inactive** per instrument from the status card's Self
-  review column — there is no session-wide toggle on this
-  page; the session's self-reviews-active flag seeds the
-  `include` value at generation time and this surface overrides
-  it after (see [§8.6](#86-self-review-behaviour)).
+  review column; the session's self-reviews-active flag seeds the
+  include value at generation time and this column overrides
+  it after (see [§8.6](#86-self-review-behaviour)). An instrument
+  whose rule excludes self-reviews has none to flip, and the column
+  reads *Excluded by rule*.
 
 Assignments are not edited row by row. The operator changes
 which pairs exist by changing the rule (in the **Instrument
@@ -1383,8 +1368,8 @@ assignment rule** card / Band 1 on the Instruments page — the
 only place a rule is authored) or the
 rosters and **regenerating** via the Workflow card's Prepare
 action. Generation runs a per-instrument rule pass over the
-session's reviewer × reviewee matrix; an instrument with
-`rule_set_id = NULL` uses the synthetic Full Matrix. See
+session's reviewer × reviewee matrix; an instrument with no
+stored rule uses the synthetic Full Matrix. See
 [§14](#14-reconciling-regeneration) for what regeneration
 preserves.
 
@@ -1423,12 +1408,6 @@ shape:
 - The card holds **at most four buttons** in any state
   (`spec/operator_ui_concept.md`).
 
-There is no button running Generate → Validate → Activate in one
-click, and no separate *Create invites* step: Prepare covers
-generation, validation and invitations, and Activate is its own
-action. The **card button** for `ready → draft` is labelled **Revert
-to draft**.
-
 The **Validate page** (`/operator/sessions/{id}/validate`) is the
 read-only deep-dive: setup-coverage grid (per section, per
 issue), severity-filter chips, grouped issue list with per-issue
@@ -1436,10 +1415,10 @@ issue), severity-filter chips, grouped issue list with per-issue
 the offending row.
 
 **Activation** flips `validated → ready` in one transaction:
-every instrument's `accepting_responses` is set true, the
-activation audit event fires, and (if a scheduled-activation
-moment is set) `context.trigger="scheduled"` is recorded on the
-event. Once active, the reviewer surface opens.
+every instrument starts accepting responses and the activation
+audit event fires, recording a scheduled activation as scheduled
+([§15](#15-audit-and-logging)). Once active, the reviewer surface
+opens.
 
 ### 9.9 Manage invitations
 
@@ -1485,8 +1464,8 @@ reviewee-centric Operations-row tab.
   chips, pager and count line left; the filter strip (search +
   status filter, Clear / **`Search`**) right.
 - **Responses table** — one row per reviewee, with name +
-  email, coverage status (complete / adequate / at-risk /
-  none), reviewers-completed count over total assigned, last-
+  email, coverage status (complete / adequate / at risk /
+  no responses), reviewers-completed count over total assigned, last-
   response timestamp.
 
 A per-row drill-in opens a per-reviewee detail view showing
@@ -1507,13 +1486,13 @@ Previews page; its old URL permanently redirects to Invitations
 
 ### 9.12 Extract data
 
-Extraction now splits across two surfaces:
+Extraction splits across two surfaces:
 
 **Extract Setup card** (the round-trip / porting CSVs) — on the
 **Extract data** Operations tab, not on Session Home.
 It offers per-entity download tiles — Reviewers, Reviewees,
-Relationships (always shown, whatever `relationships_enabled` says),
-Settings, and a conditional Observers tile (`observers_enabled`) —
+Relationships (always shown, whatever the Relationships toggle says),
+Settings, and an Observers tile when the Observers toggle is on —
 plus a Zip-all footer bundling the setup CSVs as
 `{code}_setup.zip`. Each tile greys its Download button when its roster is empty; Settings is
 always clickable. Filenames follow `{session_code}_{kind}.csv`.
@@ -1538,8 +1517,8 @@ dimension the operator asks for. Cards:
 - **Data shaper** — a generalised builder: pick axis (reviewer /
   reviewee), instrument / response-field scope, identification and
   aggregate columns via chips, see a live preview row, save the
-  shape under a name (`data_shapes` table), and download its CSV.
-- **Token keys** (conditional, `observers_enabled`) — the
+  shape under a name, and download its CSV.
+- **Token keys** (when the Observers toggle is on) — the
   operator-side deanonymization key (Role / Name / Email / Token)
   mapping each participant to the per-session opaque token used in
   Anonymized observer downloads.
@@ -1552,10 +1531,9 @@ dimension the operator asks for. Cards:
 
 Every download emits an audit event. The **audit-events CSV**
 lives behind the admin gate, not here. **Rehydrate** — rebuilding a
-session from a complete extract set — is built but gated off
-(`rehydrate_enabled` ships false, so its routes answer 404 and the
-lobby shows no button); it is deferred and not exposed to operators
-(`spec/rehydrate.md`).
+session from a complete extract set — is built but switched off by
+deployment setting, so it is not exposed to operators: its pages are
+not found and the lobby shows no button (`spec/rehydrate.md`).
 
 Full export contracts: see [§12](#12-data-export).
 
@@ -1584,12 +1562,20 @@ the chrome's plain **Admin** link, shown to sys admins beside
 Settings, Guide and About. It carries:
 
 - **Accounts Management** — workspace allowlist with per-row
-  promote / demote / delete actions and a bulk toolbar.
+  promote / demote / delete actions, a bulk toolbar, and an **Invite
+  by email** card that pre-seeds a user before their first sign-in,
+  as an operator or as an admin; the refusals are
+  [§4.1](#41-system-administrator-three-tier-model)'s.
 - **Sessions Diagnostics** — cross-workspace listing of every
   session with summary state. Its **"Manage"** row action self-adds
   the sys-admin as an owner (audited) and opens the session — the
   explicit elevation door, since editing a non-owned session requires
-  ownership.
+  ownership. Below it, a read-only **Visibility grid audit** lists
+  every stored visibility cell in the workspace that carries a mode
+  its audience and window do not allow — one the instrument card's
+  editor and the Settings import both refuse — and marks those a
+  participant can reach now. Clearing one is the owning operator's
+  job, in that instrument's visibility editor.
 - **Per-session Outbox viewer** — the session's email outbox
   ([§11.3](#113-the-outbox)).
 - **Per-session Audit Log viewer** — filter strip + pretty-
@@ -1606,10 +1592,10 @@ from all sessions** is the one bulk exception.
 ### 9.15 Guide, About and theme
 
 The operator chrome and the participant top bar carry **Guide** and
-**About** links, each passing `?return_to=` so the page can link back
-to where the viewer came from, and a **Light / Dark** theme toggle.
+**About** links, each carrying where the viewer came from so the
+page can link back, and a **Light / Dark** theme toggle.
 The standalone error page has no chrome. Neither link renders on its
-own page or on `/auth/me/debug`, and the Guide link is also omitted
+own page or on the account-debug page, and the Guide link is also omitted
 for a viewer the Guide has nothing for.
 
 - **`/guide`** is the in-app documentation: one page of sections
@@ -1623,8 +1609,8 @@ for a viewer the Guide has nothing for.
 - **`/about`** is identity and access: what the software is, who is
   signed in, and whom to contact for operator access. Any signed-in
   user can open it.
-- **Theme** is a per-browser display preference (`rrw-theme` in
-  local storage), applied before first paint. It is never stored on
+- **Theme** is a per-browser display preference kept in the
+  browser's local storage, applied before first paint. It is never stored on
   the server and does not follow the operating system's setting;
   `spec/settings_inventory.md` lists it.
 
@@ -1665,7 +1651,7 @@ session without bouncing through `/me`.
 ### 10.2 Pre-open and post-close behaviour
 
 If the session is in `draft` or `validated` — not yet accepting
-responses, or reverted to draft (*paused*) — the reviewer sees a
+responses, or reverted to draft — the reviewer sees a
 **pre-open landing card** explaining the session is not open, naming
 the deadline, and offering a return link to the dashboard. In
 `archived` the same card says the review has closed, with no
@@ -1693,7 +1679,7 @@ The review surface (`/me/sessions/{id}/{page}`) is a
 group, for group-scoped instruments) and one column per
 display field plus one column per response field.
 
-**Pages.** The operator's page breaks (`starts_new_page`) divide the
+**Pages.** The operator's page breaks divide the
 session's instruments into numbered pages, each holding one or more
 instruments; a session without breaks is one page. Each page is its
 own server-rendered URL, and a multi-page session carries **Prev /
@@ -1714,34 +1700,30 @@ unlocked, in Band 2 ([§9.6](#96-configure-instruments),
 `spec/visibility_policy.md`).
 
 **Cell rendering** is driven by each response field's own
-`data_type` + inline bounds:
+data type and inline bounds:
 
-- `String` fields render as `<input type="text">` (`max_length`
-  ≤ 100) or `<textarea>` (`max_length` > 100, initial height
+- **String** fields render as a one-line text box (length cap
+  ≤ 100) or a multi-line text area (cap > 100, initial height
   derived from the length cap and column width).
-- `Integer` / `Decimal` fields render as `<input type="number">`
-  with `min` / `max` / `step` from the field's bounds.
-- `List` fields render as `<select>` with an empty leading
-  option plus the field's `list_options`.
+- **Integer** / **Decimal** fields render as a number box
+  with min / max / step from the field's bounds.
+- **List** fields render as a drop-down with an empty leading
+  option plus the field's list options.
 
-Display columns render as plain text (or as an anchor for
+Display columns render as plain text (or as a link for
 photo / profile-link sources).
 
-**Branching** — a response field configured (Band 3) as **governed** by
-another renders muted and disabled until its parent's answer satisfies
-the parent's condition and every branch above it is open (a **Require**
-branch never closes; see §5.7);
-it stays that way live as the reviewer edits the parent, and the server enforces the same rule on Save (deleting a
-governed answer whose branch is closed) regardless of what the page
-shows (`spec/reviewer-surface.md` § "Branching between response
-fields"). A governed field marked **required** is required, and blocks
-Submit when empty, only while its branch is open — closed, it demands
-nothing and carries no value. Under Require, the fields are answerable
-whatever the parent's answer (unless a Show branch above them is
-closed) and required only while the condition holds.
+**Branching** — a governed response field renders muted and
+disabled while its branch is closed, and is required only while §5.7
+says so; it follows the parent live as the reviewer edits it, and the
+server applies the same rule on Save, deleting a governed answer whose
+branch is closed, whatever the page shows
+(`spec/reviewer-surface.md` § "Branching between response fields").
 
-**Sortability** — every column header on the review surface is
-clickable to sort the rows by that column alone; Shift-click adds
+**Sortability** — every Reviewee, display-field and response-field
+column header is clickable to sort the rows by that column alone (a
+group-scoped instrument's **Group** column and the trailing status
+column are not sortable); Shift-click adds
 a secondary priority, up to three. There is no Reset link:
 clearing the sort returns to the operator-configured default
 (`spec/sort_by_reviewee.md`). The reviewer's choices persist in a
@@ -1761,15 +1743,18 @@ thereafter (see [§9.7](#97-configure-assignments)).
 For an instrument the operator has set to **group-scoped**, the
 surface presents **one row per group** instead of one row per
 reviewee. Groups are computed by partitioning the reviewer's
-rule-eligible universe by the operator-marked boundary tags
-on the Display Fields table.
+rule-eligible universe by the **boundary tags** picked in Link 3 of
+the instrument's assignment rule ([§9.6](#96-configure-instruments))
+— reviewee and pair-context tags; reviewees sharing every boundary
+value form one group.
 
-The group row's identity column is a **composed display**
-showing the boundary tag values on one line and (optionally)
-the first ten member names on the second, with a "+N more"
-overflow indicator. Reviewer writes to a group cell **fan
-out** to one response row per group member; reads aggregate
-back to one row per `(instrument, group_key)`.
+The group row's identity column is a **composed display**: on one
+line, the values of the instrument's visible reviewee-tag display
+fields (or, with none visible, the group's boundary values); on the
+next, when the reviewee-name display field is visible, the first ten
+member names, with a "+N more" overflow indicator. Reviewer writes to
+a group cell **fan out** to one response row per group member; reads
+aggregate back to one row per instrument per group.
 
 Missing-required and validation errors surface once per group,
 not once per member.
@@ -1804,7 +1789,7 @@ every page. On click:
    (`#N Label: Reviewee X — field Y`, the instrument named as its
    status pill names it). No partial submit happens.
 4. If validation passes, every populated cell receives a
-   `submitted_at` timestamp in one atomic transaction; per-
+   submitted-at timestamp in one atomic transaction; per-
    page status pills flip to `submitted` and each row's trailing
    status column shows a complete (✓) icon where its required
    fields are filled — an icon only, with no per-row
@@ -1841,12 +1826,12 @@ this reviewer's rows).
 ### 10.9 Reviewee results surface
 
 An email-identified reviewee reaches
-`/me/sessions/{id}/results` (gated by
-`require_reviewee_with_current_grant` — the roster check plus a
-currently-resolving visibility grant; without one the
-route answers 404). The body is per-instrument
-sections — one section per instrument whose `reviewee` visibility
-policy resolves to a mode and that has an included assignment to this
+`/me/sessions/{id}/results` through the two checks of
+[§4.4](#44-reviewee) — the roster check plus a currently-resolving
+visibility grant; without one the page answers 404. The body is
+per-instrument sections — one section per instrument whose reviewee
+visibility policy resolves to a mode and that has an included
+assignment to this
 reviewee — rendering the responses collected *about this
 reviewee* in the policy's mode:
 
@@ -1861,17 +1846,18 @@ reviewee* in the policy's mode:
   length).
 
 A reviewee grant is after-release only: outside the open
-response-release window no section renders, and a stored
-`while_ongoing` reviewee mode opens nothing. An **Acknowledge
-card** at the foot lets the reviewee confirm they've seen their
-results — a one-shot, idempotent gesture stamping
-`results_acknowledged_at` and emitting
+response-release window no section renders, and nothing opens while
+the session is ongoing. An **Acknowledge card** at the foot lets the
+reviewee confirm they've seen their results — a one-shot, idempotent
+gesture that records when, and emits
 `reviewee.results_acknowledged`.
 
 ### 10.10 Observer collation surface
 
-An observer reaches `/me/sessions/{id}/collation` (gated by
-`require_observer_in_session`). The body is a per-instrument
+An observer reaches `/me/sessions/{id}/collation` through an
+active observer row matching their email, case-insensitively; unlike
+the reviewee surface, the page needs no current grant to load. The
+body is a per-instrument
 3-row collation table scoped to the observer's **cohort**: a
 distinct-reviewer headcount + shared aggregate, a
 distinct-reviewee headcount + the same aggregate, and a
@@ -1879,20 +1865,20 @@ conditional per-instrument **Download CSV** button. Identification
 mode follows the per-instrument observer visibility policy (Raw /
 Anonymized rows / Anonymized summaries); Anonymized downloads
 substitute per-session opaque tokens for names (reversible via the
-operator's Extract-data Token keys card). Per-instrument rendering
-is gated on the active window the same way the reviewee surface is.
+operator's Extract-data Token keys card). Each instrument renders
+only while its observer policy resolves a mode for the current
+window: its session-ongoing mode (Summarized, or nothing) while the
+session is `ready`, and its responses-released mode while it is
+`expired` and inside the release window; nothing once archived.
 
 ---
 
 ## 11. Invitations and email
 
 The invitation and email subsystem is a central functional
-contract of RRW. It is described here **in full** because the
-operator-facing surface and the on-disk artefacts of the
-subsystem (templates, tokens, outbox, schedules) are wired —
-even though the last-mile dispatch leg (the actual transport
-that hands a rendered message to an outbound mail server) is
-not yet shipped.
+contract of RRW, described here in full. One leg — handing a
+rendered message to a mail server — is not part of the send path;
+[§11.6](#116-dispatch) states what a send does instead.
 
 ### 11.1 What an invitation is
 
@@ -1904,7 +1890,7 @@ creates one **invitation** row carrying:
 - A unique **token** — generated at create time, embedded in the
   email body as a sign-in URL, and stored on the invitation row only
   as a SHA-256 **hash**. Each invitation send mints a fresh token;
-  that email body, raw token included, is kept on its `email_outbox`
+  that email body, raw token included, is kept on its outbox
   row (visible to sys admins). A reminder reuses the most recent
   invitation link while it is current; when there is none, or a
   Regenerate has rotated it since, it falls back to an invitation
@@ -1923,7 +1909,7 @@ creates one **invitation** row carrying:
 - Created-at, sent-at, opened-at and last-reminder-at timestamps.
 
 When the reviewer clicks the link, the system hashes the URL
-token, matches it to the invitation row, stamps `opened_at`
+token, matches it to the invitation row, stamps opened-at
 the first time (idempotent on subsequent visits), emits
 `invitation.opened`, and forwards the reviewer to the
 session's review surface.
@@ -1989,15 +1975,17 @@ the eligible reviewers:
   invitations created, sending every invitation not yet sent whose
   reviewer is still eligible.
 - **Auto-send reminders** fires at each reminder-offset moment
-  for sessions that are `ready`, are within the response
-  window, and have outstanding invited-but-incomplete
-  reviewers.
+  for sessions that are `ready`, before their deadline, with
+  invitations created, sending to every reviewer who has an
+  invitation and has not submitted. A reviewer whose invitation was
+  never sent, or whose link a Regenerate has since rotated, is sent
+  a fresh invitation in place of the reminder ([§11.1](#111-what-an-invitation-is)).
 
 Per-offset audit events (`session.scheduled_invites_fired`,
 `session.scheduled_reminders_fired`, plus per-skip events with
-reasons) record every firing. Per-reviewer dedupe via the
-outbox's correlation_id prevents duplicate reminders to the
-same reviewer for the same offset.
+reasons) record every firing. A per-reviewer, per-offset key on
+the outbox row prevents duplicate reminders to the same reviewer for
+the same offset.
 
 The Session details config card previews every resolved fire
 moment inline next to its offset; the Workflow card's right-hand
@@ -2006,9 +1994,8 @@ same information as auto-send captions.
 
 ### 11.5 Backend options
 
-The dispatch leg of the subsystem is **pluggable**. The
-system defines an abstract `EmailTransport` seam; one concrete
-backend is selected per deployment.
+The dispatch leg of the subsystem is **pluggable**: one transport
+seam, with one concrete backend selected per deployment.
 
 Four options exist in the design space, in increasing order of
 infrastructure ambition:
@@ -2039,54 +2026,18 @@ A full discussion of each option's deliverability,
 infrastructure, and cost trade-offs lives in
 `spec/email_infra_options.md`.
 
-### 11.6 What is wired today, what is not
+### 11.6 Dispatch
 
-The following invitation-and-email surface is **wired**:
-
-- Per-session invitation, reminder, and responses-received
-  templates with merge-tag substitution, reset-to-default
-  per-field, and per-template cc/bcc.
-- Invitation rows with per-reviewer tokens (hashed on the row; a
-  sent token in its email body, which the outbox keeps — §11.1).
-- The opened-at idempotent stamping on token redemption,
-  with the `invitation.opened` audit event.
-- The outbox ledger — every send attempt writes a row
-  before dispatch, with full envelope and merged body.
-- Auto-send scheduling — invite offsets, reminder offsets,
-  the lazy observer that fires per offset, the per-offset
-  audit events on fire and skip, the manual-activate modal
-  that warns the operator about pending auto-sends.
-- The resolved fire-moment preview inline on the Session
-  details config card, showing every scheduled send.
-- The Invitations page with per-reviewer status and
-  per-row Send / Send-reminder / Regenerate buttons, and the
-  Workflow card's auto-send captions.
-- The chrome strip's four-state Invitations pill
-  (`Not created` / `Not sent` / `Partially sent` / `All
-  sent`).
-- The operator settings page for the SMTP credentials
-  (`smtp` is the only legal transport today).
-- A concrete `SmtpEmailTransport` over `smtplib` (STARTTLS /
-  implicit TLS), plus a typed `GraphEmailTransport` stub, behind
-  the `EmailTransport` seam and the `transport_for(settings)`
-  factory.
-
-What is **not yet wired**: the send routes do **not** invoke the
-transport. When the operator (or an auto-send offset) issues an
-invitation or reminder, the system renders the message, writes the
-outbox row, and flips its status straight to `sent` as a
-**dev-mode preview** — no message is actually handed to a mail
-server. A reviewer's submit queues the responses-received
-confirmation the same way but leaves it `queued`. The
-`SmtpEmailTransport` exists and is unit-tested but has
-no caller on the live send path. The functional contract (templates,
-tokens, outbox, scheduling, transport class) is complete; only the
-last mile (invoking the transport from the send path) is pending.
-
-**The functional spec describes RRW's intended invitation and
-email behaviour in full** because the templates, tokens,
-outbox, and scheduling are all live; the gap is a
-deployment-level concern, not a functional one.
+No send hands a message to a mail server. An invitation or reminder
+send — manual or scheduled — renders the message, writes its outbox
+row and marks it `sent` at once, as a **dev-mode preview**; the
+reviewer's invitation stamps follow as if it had gone. A reviewer's
+submit queues the responses-received confirmation the same way but
+leaves it `queued`. An SMTP transport (STARTTLS or implicit TLS) and
+a Microsoft Graph stub exist behind the transport seam
+([§11.5](#115-backend-options)), and SMTP is the only transport an
+operator can configure ([§9.13](#913-operator-settings)), but the send
+path does not call either.
 
 ---
 
@@ -2123,9 +2074,9 @@ exception, called out on the file's surface).
 - **Relationships.csv** — `ReviewerEmail, RevieweeEmail,
   PairContextTag1, PairContextTag2, PairContextTag3, Status`.
   Active rows first, by reviewer email, then by reviewee
-  identifier. Not gated on `relationships_enabled`.
+  identifier. Not gated on the Relationships toggle.
 - **Observers.csv** — `ObserverEmail, ObserverName, ObserverTag1,
-  Status, CohortRule`. Conditional on `observers_enabled`.
+  Status, CohortRule`. Conditional on the Observers toggle.
 - **Settings.csv** — three-column `field, value, data_type`
   format spanning session-level fields, email templates,
   instruments, session RuleSets, data shapes, and session tags.
@@ -2147,10 +2098,8 @@ InstrumentFlavour`. A per-instrument preamble at the top of
 the file lists each instrument's field dictionary.
 
 `RevieweeEmail` deliberately mirrors the roster CSV header even
-though the underlying column is `Reviewee.email_or_identifier`.
-The canonical tuple is `HEADER` in
-`app/services/extracts/responses_extract.py` — the column name and
-its position are both part of the contract
+though the value is the reviewee's email or other identifier. The
+column names and their positions are both part of the contract
 [§12.5](#125-round-trip-stability) promises, and both break a
 downstream consumer if they move.
 
@@ -2162,7 +2111,7 @@ buffering the full dataset in memory.
 
 `{code}_audit_log.csv` —
 `EventType, Severity, Summary, ActorEmail, CorrelationId,
-CreatedAt (UTC), DetailJson`. Reached from the sys-admin
+CreatedAt, DetailJson`, with `CreatedAt` in UTC. Reached from the sys-admin
 audit-log viewer; not surfaced on the operator-facing Extract
 Data card.
 
@@ -2254,7 +2203,7 @@ and rebuild from scratch. Instead it **reconciles**:
 
 1. Compute the new set of `(reviewer, reviewee, instrument)`
    pairs the active rules generate against the rosters. A pair with
-   an inactive side stays in the set, with `include=False`.
+   an inactive side stays in the set, excluded.
 2. Insert pairs that are in the new set but not the old.
 3. Drop pairs that are in the old set but not the new — and
    cascade-delete their response rows.
@@ -2264,13 +2213,17 @@ and rebuild from scratch. Instead it **reconciles**:
 This means a small rule edit or a single reviewer renaming
 does not destroy mid-cycle reviewer work.
 
-One loss happens outside regeneration. On a group-scoped
+Outside regeneration, responses also go with what they hang on:
+deleting an instrument, uploading over or deleting reviewer or
+reviewee rows, or a Settings import, which rebuilds the instruments.
+Each is confirm-gated, and the roster and Settings paths also ask for
+a response-loss acknowledgement when the session holds responses.
+One loss outside regeneration asks for neither. On a group-scoped
 instrument, a reviewee boundary-tag edit or any relationship change
 (create, import, delete, tag edit, re-point, status switch) that
 moves a pair to another group deletes the old group's answer copy on
-that row at once, with no response-loss acknowledgement; the row
-takes its new group's answer when one exists
-(`spec/assignments.md` "Group-scoped fan-out").
+that row at once; the row takes its new group's answer when one
+exists (`spec/assignments.md` "Group-scoped fan-out").
 
 **Prepare session**, which runs the regeneration, dry-runs the
 reconcile first on a session that has responses; if it would delete
@@ -2316,7 +2269,7 @@ Coverage:
   `responses_received.queued` when a submit queues the
   confirmation. There is no per-attempt email event: the outbox
   row is the record of each send ([§11.3](#113-the-outbox)).
-- **Workspace admin** — operator admit / revoke, `is_sys_admin`
+- **Workspace admin** — user invite, operator admit / revoke, admin
   promote / demote, user delete, `session.owner_added` /
   `session.owner_removed`.
 - **Participant model** — `observer.created` /
@@ -2335,7 +2288,7 @@ Coverage:
   `session.scheduled_reminders_fired` / `_skipped`.
 
 Admins read a session's audit log via the per-session audit-log
-viewer in the admin surface (gated on `is_sys_admin`, not on
+viewer in the admin surface (gated on the admin flag, not on
 session ownership). The audit-events CSV is reachable from the
 same surface.
 
@@ -2493,9 +2446,9 @@ A full security-posture catalogue lives in
   instrument)`. Materialised by rule generation; not edited
   row by row.
 - **Audit event** — An immutable record of one mutation.
-- **Boundary tag** — A display field marked "Group by" on a
-  group-scoped instrument. Members of a group share the same
-  value for every boundary tag.
+- **Boundary tag** — A reviewee or pair-context tag picked in Link 3
+  of a group-scoped instrument's assignment rule. Members of a group
+  share the same value for every boundary tag.
 - **D6 source** — One of the **nine** possible display-field
   sources (reviewee name, reviewee email, photo link, three
   reviewee tags, three pair-context tags). Two are locked on,
@@ -2524,9 +2477,8 @@ A full security-posture catalogue lives in
 - **Response** — A reviewer's value for one response field of
   one assignment.
 - **Response field** — A column on an instrument that
-  collects reviewer input. Carries its own `data_type` +
-  validation bounds inline (no shared type row); quick-fill
-  list presets live in `instruments/_field_presets.py`.
+  collects reviewer input. Carries its own data type and
+  validation bounds.
 - **Reviewee** — A person being reviewed.
 - **Reviewer** — A person giving feedback.
 - **RuleSet** — A bundle of rules selecting which
