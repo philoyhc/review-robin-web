@@ -13,7 +13,7 @@ provisioned but not yet serving**: a P0V3 App Service, private
 Postgres and Key Vault behind private endpoints, an Application
 Gateway in front, and Log Analytics with Application Insights. It
 waits on a runner VM and a production hostname
-(`docs/nus_azure_status_v7.md`). At cutover the F1, public-database
+(`docs/nus_azure_status.md`). At cutover the F1, public-database
 and Application Insights entries stop applying; secrets stay plain
 App Settings until Key Vault references are wired.
 

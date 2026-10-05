@@ -4,7 +4,7 @@
 > the dev-slot shape asked for below. RRW was provisioned into the NUS
 > Azure landing zone as a private-networked environment behind an
 > Application Gateway, with private endpoints, Key Vault and Application
-> Insights; `docs/nus_azure_status_v7.md` records that state and what
+> Insights; `docs/nus_azure_status.md` records that state and what
 > still blocks cutover. This document is kept as the record of the ask,
 > not as current requirements. Its fate is queued in
 > `guide/post_azure_todo_checklist.md`.

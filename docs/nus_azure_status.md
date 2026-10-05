@@ -1,6 +1,6 @@
-# NUS Azure deployment status — v7
+# NUS Azure deployment status
 
-**Status date:** 1 October 2026
+**Status date:** 1 October 2026 (handoff revision 7)
 
 This is the current infrastructure/deployment handoff for moving Review Robin Web into the NUS Azure landing zone. It records verified Azure state, the current responsibility split, and the remaining external blockers.
 

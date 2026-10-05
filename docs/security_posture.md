@@ -440,7 +440,7 @@ Tracked in `guide/deferred_consolidated.md`. The infrastructure rows
 describe the dev slot (`docs/deployment_dev.md`). The NUS environment
 already has private endpoints for the Web App, Postgres and Key Vault,
 VNet integration, and Application Insights; its secrets are not yet in
-Key Vault (`docs/nus_azure_status_v7.md`).
+Key Vault (`docs/nus_azure_status.md`).
 
 | Item | Status |
 |---|---|

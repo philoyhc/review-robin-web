@@ -55,7 +55,7 @@ frontend; the gateway forwards to the Web App's **private endpoint**. The
 Web App, PostgreSQL and Key Vault are private-only inside the NUS VNet,
 and a self-hosted GitHub runner VM is planned in its own subnet so that
 deploys and migrations can reach them. The verified state, addresses and
-open blockers are in [`nus_azure_status_v7.md`](nus_azure_status_v7.md).
+open blockers are in [`nus_azure_status.md`](nus_azure_status.md).
 **Easy Auth** delegates sign-in to Entra ID and hands the app
 a verified identity — the application holds no passwords and runs no login
 code. Everything the app persists lives in one PostgreSQL database inside a
@@ -134,7 +134,7 @@ Not part of RRW's shape, so not in the topology or the estimate:
 
 - [`azure_ask.md`](../azure_ask.md) — the governance ask (sponsorship,
   data policy, cost cap) for hosting on institutional Azure.
-- [`nus_azure_status_v7.md`](nus_azure_status_v7.md) — the verified NUS
+- [`nus_azure_status.md`](nus_azure_status.md) — the verified NUS
   state and its blockers, and [`deployment_nus.md`](deployment_nus.md),
   the runbook that deploys to it.
 - [`security_posture.md`](security_posture.md) — authorization model,

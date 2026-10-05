@@ -561,7 +561,7 @@ suite against a `postgres:16` service container).
 - **NUS environment**: provisioned but not yet serving — private App
   Service, Postgres and Key Vault behind an Application Gateway, waiting
   on a runner VM and a production hostname
-  (`docs/nus_azure_status_v7.md`). The App Service, Postgres and deploy
+  (`docs/nus_azure_status.md`). The App Service, Postgres and deploy
   bullets above describe the personal dev slot that still serves.
 
 ### Authentication & permissions

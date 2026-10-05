@@ -16,7 +16,7 @@ test on localhost exactly as today**. After NUS is verified and serving,
 > `docs/cli_setup.md` (workstation CLIs), `guide/deferred_consolidated.md`
 > (hardening deferred until a real deployment forces it).
 >
-> **The verified NUS state is in `docs/nus_azure_status_v7.md`** (2026-10-01):
+> **The verified NUS state is in `docs/nus_azure_status.md`** (2026-10-01):
 > what is provisioned, the network design (private Web App, Postgres and Key
 > Vault behind an Application Gateway) and the two external blockers. Where
 > this runbook and v7 disagree, v7 is current; the §1 checklist and §13 below

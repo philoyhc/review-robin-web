@@ -6,7 +6,7 @@ is no production environment yet (see `docs/known_limitations.md`).
 
 The NUS environment is provisioned but not yet serving. Its deploy
 path, App Settings and cutover steps are in `docs/deployment_nus.md`
-and its verified state in `docs/nus_azure_status_v7.md`; nothing below
+and its verified state in `docs/nus_azure_status.md`; nothing below
 applies to it until cutover.
 
 For the resource names, CI/CD pipeline, and first-time bootstrap,
