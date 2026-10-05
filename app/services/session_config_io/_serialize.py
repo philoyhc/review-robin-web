@@ -331,7 +331,11 @@ def _instrument_rows(
             _str(instrument.description),
             "string",
         ),
-        Row(f"{prefix}.order", _int(instrument.order), "integer"),
+        # The 0-based block position, not the stored ``order``: the
+        # import writes ``n - 1`` from the position, so emitting the
+        # stored value (which can have gaps) broke byte-stability
+        # (findings D2).
+        Row(f"{prefix}.order", _int(n - 1), "integer"),
         Row(
             f"{prefix}.accepting_responses",
             _bool(instrument.accepting_responses),

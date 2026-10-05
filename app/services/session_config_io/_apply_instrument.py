@@ -377,7 +377,7 @@ def _apply_instruments(
         ).scalars()
     }
 
-    for n in sorted(plan.instruments.keys()):
+    for position, n in enumerate(sorted(plan.instruments.keys())):
         spec = plan.instruments[n]
         assert spec.name is not None  # cross-row check enforced
         if spec.rule_set_name:
@@ -395,7 +395,11 @@ def _apply_instruments(
             name=spec.name,
             short_label=spec.short_label,
             description=spec.description,
-            order=n,  # 1-based CSV position wins over ``order`` cell
+            # The ``instruments[n]`` number decides the order, not the
+            # ``order`` cell; stored as the 0-based rank among the file's
+            # numbers, like an app-created instrument's, so ``[0]`` or a
+            # skipped number cannot store -1 or a gap (findings D2).
+            order=position,
             accepting_responses=spec.accepting_responses,
             group_kind=spec.group_kind,
             rule_set_id=resolved_rule_set_id,
