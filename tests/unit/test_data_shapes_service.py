@@ -115,6 +115,22 @@ def test_create_rejects_empty_name(db: Session) -> None:
         )
 
 
+def test_create_rejects_a_name_longer_than_its_column(db: Session) -> None:
+    """``data_shapes.name`` is ``String(255)``; Postgres would refuse a
+    longer one at flush, a 500 (findings D11)."""
+    review_session = _session(db, code="long-name")
+    actor = _user(db, email="long-name-actor@x.edu")
+    with pytest.raises(
+        data_shapes.DataShapeValidationError, match="at most 255"
+    ):
+        data_shapes.create_shape(
+            db,
+            review_session=review_session,
+            actor=actor,
+            **_make_args(name="x" * 256),
+        )
+
+
 def test_create_rejects_invalid_axis(db: Session) -> None:
     review_session = _session(db, code="bad-axis")
     actor = _user(db, email="bad-axis-actor@x.edu")
