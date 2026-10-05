@@ -23,7 +23,7 @@ Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
 (independent slots; marked `@coupled` for deliberate coupling; dark `:root`
 remaps semantics onto the one primitive palette) are in `guide/archive/semantic_tokens.md`.
 
-**80 primitives · 103 semantic tokens · 14 non-colour scale tokens.**
+**80 primitives · 104 semantic tokens · 14 non-colour scale tokens.**
 
 ---
 
@@ -460,6 +460,7 @@ inheriting `--text-body`.
 | `--selected-fg` | `--white` | `--ink` | `#ffffff` | `#111827` |
 | `--focus-ring-strong` | `--blue-deep` | `--blue-soft` | `#1d4ed8` | `#93c5fd` |
 | `--row-pending-marker` | `--amber` | `--amber-deep-dk` | `#f59e0b` | `#b45309` |
+| `--row-pending-bg` | `--amber-pale` | `--amber-abyss` | `#fef3c7` | `#3a2c0a` |
 | `--chip-active-border` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
 | `--chip-active-fg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
 | `--chip-active-bg` | `--blue-wash` | `--blue-abyss-soft` | `#eff6ff` | `#12283f` |
