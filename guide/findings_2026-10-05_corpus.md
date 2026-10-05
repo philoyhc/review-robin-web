@@ -114,7 +114,7 @@ author, marked *re-checked*) also ran it.
   paths have one since #2830. The Postgres 500 is inferred. Code.
 - ~~**Cc4**~~ — **Done in #2835.** After Regenerate, the Invitations drill-in still shows the
   link from the last invitation sent, which no longer works. Code.
-- **Cc5** — **Ruled 2026-10-05: a change that does not affect validation demotes neither on Session Home nor in the lobby; fix queued.** A Session Home Details Save that changes nothing still demotes
+- ~~**Cc5**~~ — **Ruled 2026-10-05: a change that does not affect validation demotes neither on Session Home nor in the lobby, and no Details field can. Done in #2836.** A Session Home Details Save that changes nothing still demotes
   a `validated` session to `draft`; the lobby expander checks for a change
   since #2832. Author.
 - ~~**Cc6**~~ — **Done in #2835**, for Start and the release window too. The Session Home config card re-parses an untouched deadline
