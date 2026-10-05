@@ -11,7 +11,6 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
-    event,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -127,22 +126,3 @@ class InstrumentResponseField(Base):
     @property
     def data_type(self) -> str:
         return self._inline_data_type or ""
-
-    @property
-    def response_type_id(self) -> int | None:
-        """Segment 18J Wave 2 PR iii-b4 — phantom read-side shim
-        for the retired FK column. Always returns None so legacy
-        callers reading ``field.response_type_id`` see a stable
-        value instead of an AttributeError. The companion ``init``
-        listener below pops the kwarg on construction. Retires
-        once all callers stop touching the name."""
-        return None
-
-
-@event.listens_for(InstrumentResponseField, "init")
-def _drop_retired_response_type_id_kwarg(target, args, kwargs) -> None:
-    """Segment 18J Wave 2 PR iii-b4 — phantom write-side shim.
-    Silently drops the retired ``response_type_id`` kwarg so
-    legacy ORM constructors keep working until they migrate to
-    the inline-shape kwargs."""
-    kwargs.pop("response_type_id", None)

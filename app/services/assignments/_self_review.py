@@ -10,10 +10,10 @@ adapter, so the rule lives in exactly one place.
 """
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from typing import NamedTuple
 
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -85,57 +85,6 @@ Seven slots, traced 19S Item 3: the group key needs ``id``,
     reviewer_email: str
     reviewee: Reviewee
     is_self_review: bool
-
-
-def count_self_review_candidates(
-    reviewers: Iterable[Reviewer],
-    reviewees: Iterable[Reviewee],
-) -> int:
-    """Total self-review pairs across the full reviewer x reviewee matrix.
-
-    Independent of whether the operator chose to exclude self-reviews —
-    this is the population from which exclusion is drawn.
-
-    Pair-level — operates on the unsaved reviewer × reviewee
-    population, before any ``Assignment`` row exists. The whole-
-    group rule from ``spec/assignments.md`` § *Self-review policy*
-    only applies once assignments are materialised (since groups
-    are keyed off ``Assignment.instrument_id`` / ``group_kind``);
-    a pair count over the unsaved matrix is the right semantics
-    here.
-    """
-    reviewers_list = list(reviewers)
-    reviewees_list = list(reviewees)
-    return sum(
-        1
-        for r in reviewers_list
-        for ree in reviewees_list
-        if is_self_review(r, ree)
-    )
-
-
-def count_self_reviews_in_assignments(
-    db: Session, session_id: int
-) -> int:
-    """Count saved Assignment rows that are self-reviews per the
-    canonical whole-group rule (``spec/assignments.md`` § *Self-
-    review policy*).
-
-    Reads ``Assignment.is_self_review`` directly — the column is
-    the source of truth (PR 3 of
-    ``guide/self_review_consolidate.md``). Pre-consolidation this
-    summed over a pair-level ``is_self_review(reviewer, reviewee)``
-    check, silently missing the non-``(R, R)`` member rows of
-    self-review groups on group-scoped instruments.
-    """
-    return (
-        db.execute(
-            select(func.count(Assignment.id)).where(
-                Assignment.session_id == session_id,
-                Assignment.is_self_review.is_(True),
-            )
-        ).scalar_one()
-    )
 
 
 def classify_self_review(

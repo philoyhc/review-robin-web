@@ -111,20 +111,6 @@ def assignment_fields_with_data(db: Session, session_id: int) -> list[str]:
     return labels
 
 
-def display_source_presence(db: Session, session_id: int) -> dict[str, bool]:
-    """Composed view: which display-source CSV column names are populated.
-
-    Reuses the three per-table helpers so we don't run a parallel set of
-    queries dedicated to the instruments page.
-    """
-    fields = (
-        set(reviewer_fields_with_data(db, session_id))
-        | set(reviewee_fields_with_data(db, session_id))
-        | set(assignment_fields_with_data(db, session_id))
-    )
-    return {key: True for key in fields}
-
-
 def get_or_create_default_instrument(
     db: Session, review_session: ReviewSession
 ) -> Instrument:
@@ -196,39 +182,6 @@ def existing_count_per_instrument(
         .group_by(Assignment.instrument_id)
     ).all()
     return {instrument_id: count for instrument_id, count in rows}
-
-
-def latest_generated_event_per_instrument(
-    db: Session, session_id: int
-) -> dict[int, Any]:
-    """Latest ``assignments.generated`` ``AuditEvent`` keyed by
-    ``refs.instrument_id`` for the given session.
-
-    Reads only events with an integer ``refs.instrument_id`` slot —
-    pre-Slice-1 aggregated events (no instrument scope) are skipped.
-    Drives the "last generated …" timestamp on the per-instrument
-    status blocks introduced in Slice 3a.
-    """
-    from app.db.models import AuditEvent
-
-    events = db.execute(
-        select(AuditEvent)
-        .where(
-            AuditEvent.session_id == session_id,
-            AuditEvent.event_type == "assignments.generated",
-        )
-        .order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
-    ).scalars()
-    latest: dict[int, AuditEvent] = {}
-    for event in events:
-        detail = event.detail or {}
-        refs = detail.get("refs") or {}
-        instrument_id = refs.get("instrument_id")
-        if not isinstance(instrument_id, int):
-            continue
-        # First seen wins — events are pre-sorted desc by created_at.
-        latest.setdefault(instrument_id, event)
-    return latest
 
 
 def list_reviewers(db: Session, session_id: int) -> list[Reviewer]:

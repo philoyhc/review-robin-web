@@ -156,28 +156,6 @@ def generate_full_matrix(
     return pairs, excluded
 
 
-def coverage_stats(
-    reviewers: list[Reviewer],
-    reviewees: list[Reviewee],
-    pairs: list[tuple[Reviewer, Reviewee]],
-) -> dict[str, Any]:
-    reviewer_ids_with_pair = {r.id for r, _ in pairs}
-    reviewee_ids_with_pair = {e.id for _, e in pairs}
-    return {
-        "total": len(pairs),
-        "reviewers_total": len(reviewers),
-        "reviewees_total": len(reviewees),
-        "reviewers_covered": len(reviewer_ids_with_pair),
-        "reviewees_covered": len(reviewee_ids_with_pair),
-        "reviewers_uncovered": [
-            r for r in reviewers if r.id not in reviewer_ids_with_pair
-        ],
-        "reviewees_uncovered": [
-            r for r in reviewees if r.id not in reviewee_ids_with_pair
-        ],
-    }
-
-
 def _session_rule_set_to_schema(row: SessionRuleSet) -> Any:
     """Build a ``RuleSetSchema`` from a ``SessionRuleSet`` row.
 
