@@ -100,22 +100,25 @@ def decode_csv(
     return text, None
 
 
-def _unreadable_issue(source: str, exc: csv.Error) -> ValidationIssue:
-    """A blocking issue for a file the ``csv`` module refuses to parse.
+def csv_error_message(exc: csv.Error) -> str:
+    """The operator-facing text for a file the ``csv`` module refuses.
 
     Chiefly a cell over the parser's 131,072-character field limit,
-    which a file under ``MAX_BYTES`` can still carry; refused here
-    rather than as a 500 (findings D11).
+    which a file under ``MAX_BYTES`` can still carry; every upload path
+    that reads a CSV reports it with this rather than answering 500
+    (findings D11, Dc8).
     """
-    message = f"CSV could not be read: {exc}"
     if "field larger than field limit" in str(exc):
-        message = (
-            f"A cell is longer than {csv.field_size_limit():,} characters"
-        )
+        return f"A cell is longer than {csv.field_size_limit():,} characters"
+    return f"CSV could not be read: {exc}"
+
+
+def _unreadable_issue(source: str, exc: csv.Error) -> ValidationIssue:
+    """A blocking issue for a file the ``csv`` module refuses to parse."""
     return ValidationIssue(
         severity=Severity.error,
         source=source,
-        message=message,
+        message=csv_error_message(exc),
     )
 
 

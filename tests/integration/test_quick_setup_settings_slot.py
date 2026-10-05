@@ -218,6 +218,25 @@ def test_submit_all_settings_parse_error_surfaces_in_settings_slot(
 # --------------------------------------------------------------------------- #
 
 
+def test_submit_all_settings_with_a_cell_past_the_csv_limit_is_a_parse_error(
+    client: TestClient, db: Session
+) -> None:
+    """findings Dc8: a cell past the csv module's field limit is a
+    malformed file like any other, not a 500."""
+    review_session = _make_session(client, db, code="qsc-huge")
+    payload = _settings_csv([("session.name", "x" * 200_000, "string")])
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        data={"confirm_replace": "true"},
+        files={"settings_file": ("c.csv", payload, "text/csv")},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    location = response.headers["location"]
+    assert "quick_setup_error=settings" in location
+    assert "quick_setup_reason=parse" in location
+
+
 def test_submit_all_settings_with_a_repeated_shape_name_is_a_parse_error(
     client: TestClient, db: Session
 ) -> None:

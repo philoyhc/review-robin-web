@@ -1146,7 +1146,7 @@ def _read_settings_csv(
 
     Returns ``(rows, error_token)`` — ``error_token`` is ``None``
     on success, a token like ``"decode"`` / ``"header"`` /
-    ``"shape"`` on failure. The route maps every error token to
+    ``"shape"`` / ``"unreadable"`` on failure. The route maps every error token to
     ``quick_setup_reason=parse``; the granularity is here only
     for future log surfacing."""
 
@@ -1160,24 +1160,31 @@ def _read_settings_csv(
 
     reader = _csv.reader(_io.StringIO(text))
     iterator = iter(reader)
+    # A cell past the csv module's field limit raises from either read;
+    # it is a malformed file like the others, not a 500 (findings Dc8).
     try:
         header = next(iterator)
     except StopIteration:
         return [], "header"
+    except _csv.Error:
+        return [], "unreadable"
     if [c.strip() for c in header] != list(session_config_io.HEADER):
         return [], "header"
 
     rows: list[session_config_io.Row] = []
-    for raw in iterator:
-        if not raw:
-            continue
-        if len(raw) < 3:
-            return [], "shape"
-        rows.append(
-            session_config_io.Row(
-                field=raw[0],
-                value=raw[1],
-                data_type=raw[2],
+    try:
+        for raw in iterator:
+            if not raw:
+                continue
+            if len(raw) < 3:
+                return [], "shape"
+            rows.append(
+                session_config_io.Row(
+                    field=raw[0],
+                    value=raw[1],
+                    data_type=raw[2],
+                )
             )
-        )
+    except _csv.Error:
+        return [], "unreadable"
     return rows, None
