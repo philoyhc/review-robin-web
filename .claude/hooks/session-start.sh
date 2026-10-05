@@ -83,8 +83,11 @@ fi
 
 # tests/browser/ skips without a Chromium build Playwright can find
 # (guide/archive/browser_test.md). The web image preinstalls one under
-# PLAYWRIGHT_BROWSERS_PATH; warn if that ever stops being true.
-if ! ls -d "${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"/chromium_headless_shell-* >/dev/null 2>&1; then
+# PLAYWRIGHT_BROWSERS_PATH; warn if that ever stops being true. Only when
+# tests/browser/ exists: a repository built from tools/practice_kit.py has
+# none until its first browser test, and nothing there would skip.
+if [ -d tests/browser ] \
+  && ! ls -d "${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"/chromium_headless_shell-* >/dev/null 2>&1; then
   echo "session-start: WARNING: no Chromium for Playwright — tests/browser/ will skip"
 fi
 
