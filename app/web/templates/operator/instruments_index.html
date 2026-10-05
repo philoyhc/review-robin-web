@@ -412,6 +412,19 @@
     </div>
   {% endif %}
 
+  {# The no-JS ``/fields/save`` fallback 303s here when the sort spec
+     is rejected; the JSON ``/save`` answers 422 to the card instead.
+     Cancel returns to that instrument's card in edit mode. #}
+  {% if sort_save_error and sort_save_error_instrument_id %}
+    <div class="banner banner-error banner-scroll-target" id="sort-save-error-banner">
+      <p style="margin: 0 0 8px 0;"><strong>Could not save the sort order:</strong> {{ sort_save_error }}</p>
+      <div style="display: flex; justify-content: flex-end;">
+        <a class="btn alert"
+           href="/operator/sessions/{{ session.id }}/instruments?editing={{ sort_save_error_instrument_id }}#instrument-{{ sort_save_error_instrument_id }}">Cancel</a>
+      </div>
+    </div>
+  {% endif %}
+
   {# Lightened cycling palette (Tailwind *-50 tones) — hints of color
      for instrument identification while keeping table grid lines
      legible on the tinted background. #}

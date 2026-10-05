@@ -297,6 +297,41 @@ def test_bulk_save_over_cap_redirects_with_banner(
     assert "maximum is 3" in msg or "maximum" in msg
 
 
+def test_rejected_sort_spec_renders_the_error_banner(
+    db: Session, client: TestClient
+) -> None:
+    """The redirect target shows the rejection: a page reached with the
+    flash params renders the banner, with a Cancel back to the card in
+    edit mode; the same page without them renders none."""
+    review_session = _make_session(client, db, code="dfsort-banner")
+    _populate_rosters(client, review_session.id)
+    instrument = _instrument(db, review_session)
+    f1, _ = _seed_display_fields_via_get(client, review_session) or _lookup_two_display_fields(db, instrument)
+    form = _bulk_save_form(instrument)
+    form["sort_display_field_id"] = [str(f1.id)]
+    form["sort_dir"] = []
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/instruments"
+        f"/{instrument.id}/fields/save",
+        data=form,
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    body = client.get(response.headers["location"]).text
+    assert 'id="sort-save-error-banner"' in body
+    assert "Could not save the sort order:</strong> Sort spec arrays misaligned." in body
+    assert (
+        f'href="/operator/sessions/{review_session.id}/instruments'
+        f'?editing={instrument.id}#instrument-{instrument.id}">Cancel</a>'
+    ) in body
+
+    clean = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+        f"?editing={instrument.id}"
+    ).text
+    assert 'id="sort-save-error-banner"' not in clean
+
+
 def test_bulk_save_unknown_dir_redirects_with_banner(
     db: Session, client: TestClient
 ) -> None:

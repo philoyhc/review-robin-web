@@ -1395,7 +1395,11 @@ Bottom row of the card, right-aligned, in this order:
   see "Response fields" above). On a 422 the summary banner
   renders with edits intact and no pill moves.
   The `/fields/save` 303-redirect form action stays as the
-  no-JS fallback.
+  no-JS fallback. A sort spec it rejects (misaligned arrays, a
+  non-integer id, or a `SortSpecError`) redirects back with
+  `sort_save_error` + `sort_save_error_instrument_id`, and the page
+  renders a "Could not save the sort order" banner whose Cancel
+  returns to that card in edit mode (`spec/ui_elements.md` §5a).
 - **Cancel** — only in edit mode. Reloads the same edit-mode
   URL to discard unsaved edits. Same dirty-aware enable
   contract as Save.
