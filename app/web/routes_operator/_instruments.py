@@ -28,7 +28,7 @@ from app.services import (
     instruments as instruments_service,
 )
 from app.services import session_lifecycle as lifecycle
-from app.services import visibility_policies
+from app.services import unit_of_work, visibility_policies
 from app.web import views
 from app.web.deps import (
     get_or_create_user,
@@ -513,194 +513,203 @@ async def instrument_bulk_save_fields(
     # description) + Band 1's Link 1 / Link 2 / Link 3 controls. Branch
     # off the table-driven bulk-save logic for them and call the Band 1
     # service helpers instead.
-    try:
-        band1 = instruments_service.parse_band1_form(form)
-    except instruments_service.Band1ParseError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
-    link3_mode, link3_pairs, link3_touched = (
-        instruments_service.parse_link3_form(form)
-    )
-    # Read before the Link 3 write: the self-review flag clears on an
-    # individual → group move (19O Item 2 follow-up).
-    previous_group_kind = instrument.group_kind
-    instruments_service.set_band1_assignment_rules(
-        db, instrument=instrument, actor=user, **band1
-    )
-    instruments_service.set_unit_of_review(
-        db,
-        instrument=instrument,
-        mode=link3_mode,
-        boundary_pairs=link3_pairs,
-        actor=user,
-        touched=link3_touched,
-    )
-    instruments_service.set_exclude_self_reviews(
-        db,
-        instrument=instrument,
-        value=instruments_service.resolve_exclude_self_reviews(
-            instrument=instrument,
-            form_value=instruments_service.parse_exclude_self_reviews_form(
-                form
-            ),
-            previous_group_kind=previous_group_kind,
-        ),
-        actor=user,
-    )
-    # Column-widths race fix: the drag-resize handler POSTs to
-    # /column-widths asynchronously. A fast Save click can win
-    # the race and navigate the page before the async fetch
-    # reaches the server. The JS mirrors the current widths
-    # into ``column_widths_snapshot`` on every drag, so the
-    # form payload always carries the latest set and the form
-    # Save can persist them in the same transaction.
-    snapshot = form.get("column_widths_snapshot")
-    if isinstance(snapshot, str) and snapshot.strip():
-        import json as _json
-
+    with unit_of_work.single_commit(db):
         try:
-            widths_payload = _json.loads(snapshot)
-        except (TypeError, ValueError):
-            widths_payload = None
-        if isinstance(widths_payload, dict):
-            instruments_service.set_column_widths(
-                db,
-                instrument=instrument,
-                widths=widths_payload,
-                actor=user,
-            )
-    # Sort spec (Gap 3, 18J Wave 1) — the new-model card's
-    # Band 2 preview header carries clickable sort badges that
-    # populate the same ``sort_display_field_id`` /
-    # ``sort_dir`` parallel arrays the legacy editor table
-    # uses. Reuse the same service-layer call + error path as
-    # the standard branch below; any rejection (length / dup /
-    # dir) redirects back to the index with an inline banner. An
-    # id that is not this instrument's is dropped, not rejected.
-    sort_ids_raw = [str(v) for v in form.getlist("sort_display_field_id")]
-    sort_dirs_raw = [str(v) for v in form.getlist("sort_dir")]
-    if len(sort_ids_raw) != len(sort_dirs_raw):
-        return RedirectResponse(
-            url=(
-                f"/operator/sessions/{review_session.id}/instruments"
-                f"?editing={instrument.id}"
-                f"&sort_save_error_instrument_id={instrument.id}"
-                f"&sort_save_error=Sort+spec+arrays+misaligned."
-                f"#instrument-{instrument.id}"
-            ),
-            status_code=status.HTTP_303_SEE_OTHER,
+            band1 = instruments_service.parse_band1_form(form)
+        except instruments_service.Band1ParseError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+        link3_mode, link3_pairs, link3_touched = (
+            instruments_service.parse_link3_form(form)
         )
-    sort_pairs: list[tuple[int, str]] = []
-    for raw_id, raw_dir in zip(sort_ids_raw, sort_dirs_raw):
-        try:
-            sort_pairs.append((int(raw_id), raw_dir))
-        except ValueError:
+        # Read before the Link 3 write: the self-review flag clears on an
+        # individual → group move (19O Item 2 follow-up).
+        previous_group_kind = instrument.group_kind
+        instruments_service.set_band1_assignment_rules(
+            db, instrument=instrument, actor=user, **band1
+        )
+        instruments_service.set_unit_of_review(
+            db,
+            instrument=instrument,
+            mode=link3_mode,
+            boundary_pairs=link3_pairs,
+            actor=user,
+            touched=link3_touched,
+        )
+        instruments_service.set_exclude_self_reviews(
+            db,
+            instrument=instrument,
+            value=instruments_service.resolve_exclude_self_reviews(
+                instrument=instrument,
+                form_value=instruments_service.parse_exclude_self_reviews_form(
+                    form
+                ),
+                previous_group_kind=previous_group_kind,
+            ),
+            actor=user,
+        )
+        # Column-widths race fix: the drag-resize handler POSTs to
+        # /column-widths asynchronously. A fast Save click can win
+        # the race and navigate the page before the async fetch
+        # reaches the server. The JS mirrors the current widths
+        # into ``column_widths_snapshot`` on every drag, so the
+        # form payload always carries the latest set and the form
+        # Save can persist them in the same transaction.
+        snapshot = form.get("column_widths_snapshot")
+        if isinstance(snapshot, str) and snapshot.strip():
+            import json as _json
+
+            try:
+                widths_payload = _json.loads(snapshot)
+            except (TypeError, ValueError):
+                widths_payload = None
+            if isinstance(widths_payload, dict):
+                instruments_service.set_column_widths(
+                    db,
+                    instrument=instrument,
+                    widths=widths_payload,
+                    actor=user,
+                )
+        # Sort spec (Gap 3, 18J Wave 1) — the new-model card's
+        # Band 2 preview header carries clickable sort badges that
+        # populate the same ``sort_display_field_id`` /
+        # ``sort_dir`` parallel arrays the legacy editor table
+        # uses. Reuse the same service-layer call + error path as
+        # the standard branch below; any rejection (length / dup /
+        # dir) redirects back to the index with an inline banner. An
+        # id that is not this instrument's is dropped, not rejected.
+        sort_ids_raw = [str(v) for v in form.getlist("sort_display_field_id")]
+        sort_dirs_raw = [str(v) for v in form.getlist("sort_dir")]
+        if len(sort_ids_raw) != len(sort_dirs_raw):
+            db.rollback()
             return RedirectResponse(
                 url=(
                     f"/operator/sessions/{review_session.id}/instruments"
                     f"?editing={instrument.id}"
                     f"&sort_save_error_instrument_id={instrument.id}"
-                    f"&sort_save_error=Sort+spec+ids+must+be+integers."
+                    f"&sort_save_error=Sort+spec+arrays+misaligned."
                     f"#instrument-{instrument.id}"
                 ),
                 status_code=status.HTTP_303_SEE_OTHER,
             )
-    try:
-        instruments_service.set_sort_display_fields(
-            db,
-            instrument=instrument,
-            fields=sort_pairs,
-            actor=user,
-            correlation_id=request_correlation_id(),
-        )
-    except instruments_service.SortSpecError as exc:
-        from urllib.parse import quote
-
-        return RedirectResponse(
-            url=(
-                f"/operator/sessions/{review_session.id}/instruments"
-                f"?editing={instrument.id}"
-                f"&sort_save_error_instrument_id={instrument.id}"
-                f"&sort_save_error={quote(exc.message, safe=' ')}"
-                f"#instrument-{instrument.id}"
-            ),
-            status_code=status.HTTP_303_SEE_OTHER,
-        )
-    # Identity edits (description / short_label) come through the
-    # same bulk-save form on the new-model card; reuse the same
-    # block at the bottom of the standard handler.
-    if "description" in form:
-        submitted_desc = form.get("description")
-        cleaned = (
-            submitted_desc.strip()
-            if isinstance(submitted_desc, str)
-            else None
-        ) or None
-        if cleaned != instrument.description:
-            instruments_service.update_instrument_description(
-                db, instrument=instrument, description=cleaned, actor=user
-            )
-    if "short_label" in form:
-        submitted_label = form.get("short_label")
+        sort_pairs: list[tuple[int, str]] = []
+        for raw_id, raw_dir in zip(sort_ids_raw, sort_dirs_raw):
+            try:
+                sort_pairs.append((int(raw_id), raw_dir))
+            except ValueError:
+                db.rollback()
+                return RedirectResponse(
+                    url=(
+                        f"/operator/sessions/{review_session.id}/instruments"
+                        f"?editing={instrument.id}"
+                        f"&sort_save_error_instrument_id={instrument.id}"
+                        f"&sort_save_error=Sort+spec+ids+must+be+integers."
+                        f"#instrument-{instrument.id}"
+                    ),
+                    status_code=status.HTTP_303_SEE_OTHER,
+                )
         try:
-            instruments_service.update_short_label(
+            instruments_service.set_sort_display_fields(
                 db,
                 instrument=instrument,
-                short_label=(
-                    submitted_label
-                    if isinstance(submitted_label, str)
-                    else None
-                ),
+                fields=sort_pairs,
                 actor=user,
-            )
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(exc),
-            ) from exc
-    # Visibility-policy editor hitches a ride on this form (the
-    # standalone "Save visibility" button retired — the Band 3
-    # chips' hidden inputs carry ``form="dfsave-<id>"`` so they
-    # land here alongside the rest of the card's state).
-    vp_rows: list[dict[str, object]] = []
-    for audience in visibility_policies.AUDIENCES:
-        wo_raw = form.get(f"{audience}_while_ongoing_mode")
-        ar_raw = form.get(f"{audience}_after_release_mode")
-        if wo_raw is None and ar_raw is None:
-            continue
-        vp_rows.append(
-            {
-                "audience": audience,
-                "while_ongoing_mode": (
-                    (str(wo_raw).strip() or None)
-                    if wo_raw is not None
-                    else None
-                ),
-                "after_release_mode": (
-                    (str(ar_raw).strip() or None)
-                    if ar_raw is not None
-                    else None
-                ),
-            }
-        )
-    if vp_rows:
-        try:
-            visibility_policies.upsert_many(
-                db,
-                review_session=review_session,
-                instrument=instrument,
-                rows=vp_rows,
-                user=user,
                 correlation_id=request_correlation_id(),
             )
-        except visibility_policies.VisibilityPolicyError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=exc.message,
-            ) from exc
-    db.commit()
+        except instruments_service.SortSpecError as exc:
+            from urllib.parse import quote
+
+            db.rollback()
+            return RedirectResponse(
+                url=(
+                    f"/operator/sessions/{review_session.id}/instruments"
+                    f"?editing={instrument.id}"
+                    f"&sort_save_error_instrument_id={instrument.id}"
+                    f"&sort_save_error={quote(exc.message, safe=' ')}"
+                    f"#instrument-{instrument.id}"
+                ),
+                status_code=status.HTTP_303_SEE_OTHER,
+            )
+        # Identity edits (description / short_label) come through the
+        # same bulk-save form on the new-model card; reuse the same
+        # block at the bottom of the standard handler.
+        if "description" in form:
+            submitted_desc = form.get("description")
+            cleaned = (
+                submitted_desc.strip()
+                if isinstance(submitted_desc, str)
+                else None
+            ) or None
+            if cleaned != instrument.description:
+                instruments_service.update_instrument_description(
+                    db,
+                    instrument=instrument,
+                    description=cleaned,
+                    actor=user,
+                )
+        if "short_label" in form:
+            submitted_label = form.get("short_label")
+            try:
+                instruments_service.update_short_label(
+                    db,
+                    instrument=instrument,
+                    short_label=(
+                        submitted_label
+                        if isinstance(submitted_label, str)
+                        else None
+                    ),
+                    actor=user,
+                )
+            except ValueError as exc:
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(exc),
+                ) from exc
+        # Visibility-policy editor hitches a ride on this form (the
+        # standalone "Save visibility" button retired — the Band 3
+        # chips' hidden inputs carry ``form="dfsave-<id>"`` so they
+        # land here alongside the rest of the card's state).
+        vp_rows: list[dict[str, object]] = []
+        for audience in visibility_policies.AUDIENCES:
+            wo_raw = form.get(f"{audience}_while_ongoing_mode")
+            ar_raw = form.get(f"{audience}_after_release_mode")
+            if wo_raw is None and ar_raw is None:
+                continue
+            vp_rows.append(
+                {
+                    "audience": audience,
+                    "while_ongoing_mode": (
+                        (str(wo_raw).strip() or None)
+                        if wo_raw is not None
+                        else None
+                    ),
+                    "after_release_mode": (
+                        (str(ar_raw).strip() or None)
+                        if ar_raw is not None
+                        else None
+                    ),
+                }
+            )
+        if vp_rows:
+            try:
+                visibility_policies.upsert_many(
+                    db,
+                    review_session=review_session,
+                    instrument=instrument,
+                    rows=vp_rows,
+                    user=user,
+                    correlation_id=request_correlation_id(),
+                )
+            except visibility_policies.VisibilityPolicyError as exc:
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=exc.message,
+                ) from exc
+        db.commit()
     # Wave 4 PR 2 — preserve ``?editing=<id>`` so Save doesn't
     # re-lock the new-model card. Lock/Unlock owns the gating;
     # Save owns persistence. ``?saved=<id>`` triggers the flash
@@ -735,8 +744,11 @@ async def instrument_consolidated_save(
     JSON instead of a 303. ``/fields/save`` stays as the no-JS ``<form>``
     fallback until PR 6 retires it; Band 2 response-field state and the
     identity / display-order staging fold in here in PRs 4-5. Apply
-    semantics (including the internal commits in ``set_sort_display_fields``
-    / visibility ``upsert_many``) are unchanged from ``/fields/save``.
+    semantics match ``/fields/save``: the steps run inside
+    ``unit_of_work.single_commit``, where a service's own commit only
+    flushes; the one ``db.commit()`` comes after the last step, and any
+    refusal rolls the whole request back, so a 422 leaves nothing
+    persisted (findings A16).
     """
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
@@ -744,238 +756,250 @@ async def instrument_consolidated_save(
     form = await request.form()
 
     def _fail(message: str) -> JSONResponse:
+        # Every step below runs inside ``unit_of_work.single_commit``, so
+        # no service commits on its own — not the sort, identity or
+        # visibility writers, not a Band 2 pill's ``update_display_field``,
+        # not the ``validated → draft`` flip — and a refusal anywhere
+        # discards every write this request flushed: the card's Save is
+        # all or nothing (findings A16).
+        db.rollback()
         return JSONResponse(
             {"ok": False, "errors": [message]},
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
 
-    # Band 1 (Link 1 / Link 2) + Link 3 unit-of-review.
-    try:
-        band1 = instruments_service.parse_band1_form(form)
-    except instruments_service.Band1ParseError as exc:
-        return _fail(str(exc))
-    link3_mode, link3_pairs, link3_touched = (
-        instruments_service.parse_link3_form(form)
-    )
-    # Read before the Link 3 write: the self-review flag clears on an
-    # individual → group move (19O Item 2 follow-up).
-    previous_group_kind = instrument.group_kind
-    instruments_service.set_band1_assignment_rules(
-        db, instrument=instrument, actor=user, **band1
-    )
-    instruments_service.set_unit_of_review(
-        db,
-        instrument=instrument,
-        mode=link3_mode,
-        boundary_pairs=link3_pairs,
-        actor=user,
-        touched=link3_touched,
-    )
-    instruments_service.set_exclude_self_reviews(
-        db,
-        instrument=instrument,
-        value=instruments_service.resolve_exclude_self_reviews(
-            instrument=instrument,
-            form_value=instruments_service.parse_exclude_self_reviews_form(
-                form
-            ),
-            previous_group_kind=previous_group_kind,
-        ),
-        actor=user,
-    )
-
-    # Column widths (mirrored into the form snapshot on every drag).
-    snapshot = form.get("column_widths_snapshot")
-    if isinstance(snapshot, str) and snapshot.strip():
-        import json as _json
-
+    with unit_of_work.single_commit(db):
+        # Band 1 (Link 1 / Link 2) + Link 3 unit-of-review.
         try:
-            widths_payload = _json.loads(snapshot)
-        except (TypeError, ValueError):
-            widths_payload = None
-        if isinstance(widths_payload, dict):
-            instruments_service.set_column_widths(
-                db, instrument=instrument, widths=widths_payload, actor=user
-            )
-
-    # Sort spec (parallel ``sort_display_field_id`` / ``sort_dir`` arrays).
-    sort_ids_raw = [str(v) for v in form.getlist("sort_display_field_id")]
-    sort_dirs_raw = [str(v) for v in form.getlist("sort_dir")]
-    if len(sort_ids_raw) != len(sort_dirs_raw):
-        return _fail("Sort spec arrays misaligned.")
-    sort_pairs: list[tuple[int, str]] = []
-    for raw_id, raw_dir in zip(sort_ids_raw, sort_dirs_raw):
-        try:
-            sort_pairs.append((int(raw_id), raw_dir))
-        except ValueError:
-            return _fail("Sort spec ids must be integers.")
-    try:
-        instruments_service.set_sort_display_fields(
+            band1 = instruments_service.parse_band1_form(form)
+        except instruments_service.Band1ParseError as exc:
+            return _fail(str(exc))
+        link3_mode, link3_pairs, link3_touched = (
+            instruments_service.parse_link3_form(form)
+        )
+        # Read before the Link 3 write: the self-review flag clears on an
+        # individual → group move (19O Item 2 follow-up).
+        previous_group_kind = instrument.group_kind
+        instruments_service.set_band1_assignment_rules(
+            db, instrument=instrument, actor=user, **band1
+        )
+        instruments_service.set_unit_of_review(
             db,
             instrument=instrument,
-            fields=sort_pairs,
+            mode=link3_mode,
+            boundary_pairs=link3_pairs,
             actor=user,
-            correlation_id=request_correlation_id(),
+            touched=link3_touched,
         )
-    except instruments_service.SortSpecError as exc:
-        return _fail(exc.message)
+        instruments_service.set_exclude_self_reviews(
+            db,
+            instrument=instrument,
+            value=instruments_service.resolve_exclude_self_reviews(
+                instrument=instrument,
+                form_value=instruments_service.parse_exclude_self_reviews_form(
+                    form
+                ),
+                previous_group_kind=previous_group_kind,
+            ),
+            actor=user,
+        )
 
-    # Identity (description / short_label) — present only if the card
-    # still rides them on the form (defensive; new-model cards edit
-    # them inline via /identity).
-    if "description" in form:
-        submitted_desc = form.get("description")
-        cleaned = (
-            submitted_desc.strip()
-            if isinstance(submitted_desc, str)
-            else None
-        ) or None
-        if cleaned != instrument.description:
-            instruments_service.update_instrument_description(
-                db, instrument=instrument, description=cleaned, actor=user
-            )
-    if "short_label" in form:
-        submitted_label = form.get("short_label")
+        # Column widths (mirrored into the form snapshot on every drag).
+        snapshot = form.get("column_widths_snapshot")
+        if isinstance(snapshot, str) and snapshot.strip():
+            import json as _json
+
+            try:
+                widths_payload = _json.loads(snapshot)
+            except (TypeError, ValueError):
+                widths_payload = None
+            if isinstance(widths_payload, dict):
+                instruments_service.set_column_widths(
+                    db, instrument=instrument, widths=widths_payload, actor=user
+                )
+
+        # Sort spec (parallel ``sort_display_field_id`` / ``sort_dir`` arrays).
+        sort_ids_raw = [str(v) for v in form.getlist("sort_display_field_id")]
+        sort_dirs_raw = [str(v) for v in form.getlist("sort_dir")]
+        if len(sort_ids_raw) != len(sort_dirs_raw):
+            return _fail("Sort spec arrays misaligned.")
+        sort_pairs: list[tuple[int, str]] = []
+        for raw_id, raw_dir in zip(sort_ids_raw, sort_dirs_raw):
+            try:
+                sort_pairs.append((int(raw_id), raw_dir))
+            except ValueError:
+                return _fail("Sort spec ids must be integers.")
         try:
-            instruments_service.update_short_label(
+            instruments_service.set_sort_display_fields(
                 db,
                 instrument=instrument,
-                short_label=(
-                    submitted_label
-                    if isinstance(submitted_label, str)
-                    else None
-                ),
+                fields=sort_pairs,
                 actor=user,
-            )
-        except ValueError as exc:
-            return _fail(str(exc))
-
-    # Band 3 visibility policies (chips ride ``form="dfsave-<id>"``).
-    vp_rows: list[dict[str, object]] = []
-    for audience in visibility_policies.AUDIENCES:
-        wo_raw = form.get(f"{audience}_while_ongoing_mode")
-        ar_raw = form.get(f"{audience}_after_release_mode")
-        if wo_raw is None and ar_raw is None:
-            continue
-        vp_rows.append(
-            {
-                "audience": audience,
-                "while_ongoing_mode": (
-                    (str(wo_raw).strip() or None)
-                    if wo_raw is not None
-                    else None
-                ),
-                "after_release_mode": (
-                    (str(ar_raw).strip() or None)
-                    if ar_raw is not None
-                    else None
-                ),
-            }
-        )
-    if vp_rows:
-        try:
-            visibility_policies.upsert_many(
-                db,
-                review_session=review_session,
-                instrument=instrument,
-                rows=vp_rows,
-                user=user,
                 correlation_id=request_correlation_id(),
             )
-        except visibility_policies.VisibilityPolicyError as exc:
+        except instruments_service.SortSpecError as exc:
             return _fail(exc.message)
 
-    # Band 2 state (field pills + response-field rows) — staged into the
-    # hidden ``band2_state_snapshot`` form field by the client and
-    # committed here (Segment 18R Item 2 PR 5b, replacing the immediate
-    # /band2-state POST). Absent / empty snapshot means no Band 2 edits
-    # to apply, so the existing state is left untouched. Reproduces the
-    # four typed-error guards of the /band2-state route as summary-banner
-    # errors (the un-pin acknowledgement is confirmed client-side and
-    # rides ``acknowledged_drop`` in the snapshot, so that 409 is
-    # defence-in-depth here).
-    band2_snapshot = form.get("band2_state_snapshot")
-    if isinstance(band2_snapshot, str) and band2_snapshot.strip():
-        import json as _json
-
-        try:
-            band2_state = _json.loads(band2_snapshot)
-        except (TypeError, ValueError):
-            band2_state = None
-        if isinstance(band2_state, dict):
-            acknowledged_drop = bool(band2_state.get("acknowledged_drop", False))
-            try:
-                instruments_service.set_band2_state(
+        # Identity (description / short_label) — present only if the card
+        # still rides them on the form (defensive; new-model cards edit
+        # them inline via /identity).
+        if "description" in form:
+            submitted_desc = form.get("description")
+            cleaned = (
+                submitted_desc.strip()
+                if isinstance(submitted_desc, str)
+                else None
+            ) or None
+            if cleaned != instrument.description:
+                instruments_service.update_instrument_description(
                     db,
                     instrument=instrument,
-                    state=band2_state,
+                    description=cleaned,
                     actor=user,
-                    acknowledged_drop=acknowledged_drop,
                 )
-            except instruments_service.ResponsesPresentError as exc:
-                return _fail(
-                    "A response field with "
-                    f"{exc.cascaded_response_count} saved response(s) can't "
-                    "be removed — clear its responses first."
-                )
-            except (
-                instruments_service.ResponseFieldDropAcknowledgementRequired
-            ) as exc:
-                return _fail(
-                    f"'{exc.field_label}' has {exc.cascaded_response_count} "
-                    "saved response(s) — hiding it needs confirmation; "
-                    "try again."
-                )
-            except instruments_service.ResponseFieldShapeChangeError as exc:
-                changed = (
-                    ", ".join(exc.changed_attrs)
-                    if exc.changed_attrs
-                    else "type / bounds"
-                )
-                return _fail(
-                    f"'{exc.field_label}' has saved responses — its shape "
-                    f"({changed}) can't change."
-                )
-            except instruments_service.InvalidResponseFieldShapeError as exc:
-                return JSONResponse(
-                    {
-                        "ok": False,
-                        "errors": [
-                            f"{label}: {msg}" for label, msg in exc.errors
-                        ],
-                    },
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                )
-
-    # Display-field reorder — staged into the hidden
-    # ``display_field_order_snapshot`` form field by the client (drag
-    # reorder of the Band 2 display pills) and committed here (Segment
-    # 18R Item 2 PR 6, replacing the immediate /display-fields/order
-    # POST). Absent / empty snapshot means no reorder to apply.
-    order_snapshot = form.get("display_field_order_snapshot")
-    if isinstance(order_snapshot, str) and order_snapshot.strip():
-        import json as _json
-
-        try:
-            ordered_ids_raw = _json.loads(order_snapshot)
-        except (TypeError, ValueError):
-            ordered_ids_raw = None
-        if isinstance(ordered_ids_raw, list):
+        if "short_label" in form:
+            submitted_label = form.get("short_label")
             try:
-                ordered_ids = [int(v) for v in ordered_ids_raw]
-            except (TypeError, ValueError):
-                return _fail("Display-field order must be a list of integers.")
-            try:
-                instruments_service.reorder_display_fields(
+                instruments_service.update_short_label(
                     db,
                     instrument=instrument,
-                    ordered_ids=ordered_ids,
+                    short_label=(
+                        submitted_label
+                        if isinstance(submitted_label, str)
+                        else None
+                    ),
                     actor=user,
                 )
             except ValueError as exc:
                 return _fail(str(exc))
 
-    db.commit()
+        # Band 3 visibility policies (chips ride ``form="dfsave-<id>"``).
+        vp_rows: list[dict[str, object]] = []
+        for audience in visibility_policies.AUDIENCES:
+            wo_raw = form.get(f"{audience}_while_ongoing_mode")
+            ar_raw = form.get(f"{audience}_after_release_mode")
+            if wo_raw is None and ar_raw is None:
+                continue
+            vp_rows.append(
+                {
+                    "audience": audience,
+                    "while_ongoing_mode": (
+                        (str(wo_raw).strip() or None)
+                        if wo_raw is not None
+                        else None
+                    ),
+                    "after_release_mode": (
+                        (str(ar_raw).strip() or None)
+                        if ar_raw is not None
+                        else None
+                    ),
+                }
+            )
+        if vp_rows:
+            try:
+                visibility_policies.upsert_many(
+                    db,
+                    review_session=review_session,
+                    instrument=instrument,
+                    rows=vp_rows,
+                    user=user,
+                    correlation_id=request_correlation_id(),
+                )
+            except visibility_policies.VisibilityPolicyError as exc:
+                return _fail(exc.message)
+
+        # Band 2 state (field pills + response-field rows) — staged into the
+        # hidden ``band2_state_snapshot`` form field by the client and
+        # committed here (Segment 18R Item 2 PR 5b, replacing the immediate
+        # /band2-state POST). Absent / empty snapshot means no Band 2 edits
+        # to apply, so the existing state is left untouched. Reproduces the
+        # four typed-error guards of the /band2-state route as summary-banner
+        # errors (the un-pin acknowledgement is confirmed client-side and
+        # rides ``acknowledged_drop`` in the snapshot, so that 409 is
+        # defence-in-depth here).
+        band2_snapshot = form.get("band2_state_snapshot")
+        if isinstance(band2_snapshot, str) and band2_snapshot.strip():
+            import json as _json
+
+            try:
+                band2_state = _json.loads(band2_snapshot)
+            except (TypeError, ValueError):
+                band2_state = None
+            if isinstance(band2_state, dict):
+                acknowledged_drop = bool(band2_state.get("acknowledged_drop", False))
+                try:
+                    instruments_service.set_band2_state(
+                        db,
+                        instrument=instrument,
+                        state=band2_state,
+                        actor=user,
+                        acknowledged_drop=acknowledged_drop,
+                    )
+                except instruments_service.ResponsesPresentError as exc:
+                    return _fail(
+                        "A response field with "
+                        f"{exc.cascaded_response_count} saved response(s) can't "
+                        "be removed — clear its responses first."
+                    )
+                except (
+                    instruments_service.ResponseFieldDropAcknowledgementRequired
+                ) as exc:
+                    return _fail(
+                        f"'{exc.field_label}' has {exc.cascaded_response_count} "
+                        "saved response(s) — hiding it needs confirmation; "
+                        "try again."
+                    )
+                except instruments_service.ResponseFieldShapeChangeError as exc:
+                    changed = (
+                        ", ".join(exc.changed_attrs)
+                        if exc.changed_attrs
+                        else "type / bounds"
+                    )
+                    return _fail(
+                        f"'{exc.field_label}' has saved responses — its shape "
+                        f"({changed}) can't change."
+                    )
+                except instruments_service.InvalidResponseFieldShapeError as exc:
+                    db.rollback()
+                    return JSONResponse(
+                        {
+                            "ok": False,
+                            "errors": [
+                                f"{label}: {msg}" for label, msg in exc.errors
+                            ],
+                        },
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    )
+
+        # Display-field reorder — staged into the hidden
+        # ``display_field_order_snapshot`` form field by the client (drag
+        # reorder of the Band 2 display pills) and committed here (Segment
+        # 18R Item 2 PR 6, replacing the immediate /display-fields/order
+        # POST). Absent / empty snapshot means no reorder to apply.
+        order_snapshot = form.get("display_field_order_snapshot")
+        if isinstance(order_snapshot, str) and order_snapshot.strip():
+            import json as _json
+
+            try:
+                ordered_ids_raw = _json.loads(order_snapshot)
+            except (TypeError, ValueError):
+                ordered_ids_raw = None
+            if isinstance(ordered_ids_raw, list):
+                try:
+                    ordered_ids = [int(v) for v in ordered_ids_raw]
+                except (TypeError, ValueError):
+                    return _fail("Display-field order must be a list of integers.")
+                try:
+                    instruments_service.reorder_display_fields(
+                        db,
+                        instrument=instrument,
+                        ordered_ids=ordered_ids,
+                        actor=user,
+                    )
+                except ValueError as exc:
+                    return _fail(str(exc))
+
+        db.commit()
     # Segment 19H Item 1 — the card's ``Set up`` / ``Not set up`` pill
     # and the page's aggregate Instruments pill are both server-rendered
     # from state this save can flip, and the reload-free Save (18R Item

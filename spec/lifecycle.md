@@ -70,7 +70,12 @@ in URLs, logs, audit events, and CSS classes.
 
 Each transition is one service function in
 `app/services/session_lifecycle.py`. All transitions emit a
-single audit event and commit atomically.
+single audit event and commit atomically. One qualification:
+`invalidate_session` commits through `unit_of_work.commit`, so
+inside a route's `unit_of_work.single_commit` (the Instrument card's
+Save) the `validated → draft` flip lands with that route's one commit,
+or is rolled back with it when the Save is refused
+(`spec/instruments.md`, *Action row*).
 
 ### 2.1 `draft → validated` — `mark_validated(...)`
 

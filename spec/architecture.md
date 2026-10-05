@@ -109,6 +109,11 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    `visibility_policies.py`, `observers.py` / `observer_cohort.py`,
    `participant_tokens.py`, `audit.py`, the `extracts/` package, the
    `scheduled_events/` package, and `session_config_io/`.
+   Some services commit their own work and some leave the commit to
+   their route. `unit_of_work.py` lets a route that calls several
+   committing ones make them all or nothing: inside `single_commit(db)`,
+   a service's `unit_of_work.commit(db)` only flushes, and the route
+   commits once (the Instrument card's Save).
 
 3. **Models** (`app/db/models/`) are SQLAlchemy 2.x declarative
    classes using `Mapped[]` / `mapped_column`. **No

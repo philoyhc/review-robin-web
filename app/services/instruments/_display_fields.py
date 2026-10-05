@@ -34,6 +34,7 @@ from app.db.models import (
     User,
 )
 from app.services import audit
+from app.services import unit_of_work
 from app.services import session_lifecycle as lifecycle
 
 from ._state import _instrument_label
@@ -354,7 +355,7 @@ def update_display_field(
             "source_field": field.source_field,
         },
     )
-    db.commit()
+    unit_of_work.commit(db)
     return field, changes
 
 
@@ -892,7 +893,7 @@ def set_sort_display_fields(
         refs={"instrument_id": instrument.id},
         correlation_id=correlation_id,
     )
-    db.commit()
+    unit_of_work.commit(db)
     return normalised, old_value
 
 

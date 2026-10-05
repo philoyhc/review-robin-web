@@ -1103,7 +1103,9 @@ constraint line ("1-5, steps of 1").
 
 A row that doesn't satisfy its type's contract fails the bulk
 save with a 422 and an inline banner pinning the per-row error.
-The page re-renders with the operator's edits intact.
+The page re-renders with the operator's edits intact, and nothing
+else on the card was saved either — the Save is all or nothing
+(*Action row*, **Save**, below).
 
 The client mirror, `newModelRfValidateShape`, gates a row's auto-commit
 with the same messages in the same order — non-finite bounds, then the
@@ -1393,7 +1395,14 @@ Bottom row of the card, right-aligned, in this order:
   it sent so a new field's next Save updates it instead of
   recreating it under a fresh id (and losing its column width;
   see "Response fields" above). On a 422 the summary banner
-  renders with edits intact and no pill moves.
+  renders with edits intact and no pill moves. **The Save is all or
+  nothing:** the steps run inside `unit_of_work.single_commit`, so no
+  service commits on its own — not the sort, identity or visibility
+  writers, not a Band 2 pill's `update_display_field`, not the
+  `validated → draft` flip — the one commit follows the last step, and
+  any refusal rolls the whole request back. A 422 leaves nothing of the
+  card persisted, and a `validated` session stays `validated`. The
+  `/fields/save` fallback does the same.
   The `/fields/save` 303-redirect form action stays as the
   no-JS fallback. A sort spec it rejects (misaligned arrays, a
   non-integer id, or a `SortSpecError`) redirects back with

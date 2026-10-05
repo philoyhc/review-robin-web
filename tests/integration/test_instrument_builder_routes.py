@@ -7328,6 +7328,170 @@ def test_19h1_failed_save_carries_no_setup_state(
     assert "instruments_configured" not in body
 
 
+def test_a_refused_save_persists_nothing(
+    client: TestClient, db: Session
+) -> None:
+    """Findings A16 — the card's Save is all or nothing. A valid short
+    label and visibility cell ride the same request as an invalid
+    display-field order; the 422 used to arrive after
+    ``update_short_label`` and ``upsert_many`` had each committed, so
+    half the edit landed while the card reported failure."""
+    from app.db.models import InstrumentViewPolicy
+
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="a16-atomic"
+    )
+    before_label = new_model.short_label
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/save",
+        data={
+            "short_label": "Changed label",
+            "observer_while_ongoing_mode": "summarized",
+            "observer_after_release_mode": "raw",
+            "display_field_order_snapshot": json.dumps(["not-an-id"]),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+    assert response.json()["errors"] == [
+        "Display-field order must be a list of integers."
+    ], "the 422 came from an earlier step, not the one under test"
+
+    db.expire_all()
+    assert db.get(type(new_model), new_model.id).short_label == before_label
+    assert db.execute(
+        select(InstrumentViewPolicy).where(
+            InstrumentViewPolicy.instrument_id == new_model.id,
+            InstrumentViewPolicy.audience == "observer",
+        )
+    ).scalar_one_or_none() is None
+
+
+def test_a_refused_save_keeps_band2_pill_flips_too(
+    client: TestClient, db: Session
+) -> None:
+    """A16, the Band 2 path: hiding a display pill runs
+    ``update_display_field``, which used to commit on its own before the
+    response-field shape check refused the request."""
+    from app.db.models import InstrumentDisplayField
+
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="a16-band2"
+    )
+    from app.services.instruments import is_locked_display_source
+
+    fields = db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == new_model.id
+        )
+    ).scalars().all()
+    visible_before = {f.id: f.visible for f in fields}
+    assert any(
+        f.visible
+        for f in fields
+        if not is_locked_display_source(f.source_type, f.source_field)
+    ), "fixture has no hideable visible pill"
+    snapshot = json.dumps(
+        {
+            "selected_display_keys": [],
+            "response_fields": [
+                {
+                    "name": "Bad",
+                    "data_type": "integer",
+                    "selected": True,
+                    "min": "5",
+                    "max": "1",
+                    "step": "1",
+                },
+            ],
+        }
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/save",
+        data={"short_label": "Changed", "band2_state_snapshot": snapshot},
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+    assert response.json()["errors"][0].startswith("Bad: "), (
+        "the 422 came from an earlier step, not the shape check"
+    )
+
+    db.expire_all()
+    assert db.get(type(new_model), new_model.id).short_label != "Changed"
+    visible_after = {
+        f.id: f.visible
+        for f in db.execute(
+            select(InstrumentDisplayField).where(
+                InstrumentDisplayField.instrument_id == new_model.id
+            )
+        ).scalars()
+    }
+    assert visible_after == visible_before
+
+
+def test_a_refused_save_does_not_demote_a_validated_session(
+    client: TestClient, db: Session
+) -> None:
+    """A16, the lifecycle path: the first changing step's
+    ``invalidate_session`` used to commit ``validated → draft`` and
+    everything flushed before it, then the 422 arrived."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="a16-validated"
+    )
+    review_session.status = "validated"
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/save",
+        data={
+            "short_label": "Changed",
+            "display_field_order_snapshot": json.dumps(["not-an-id"]),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+    assert response.json()["errors"] == [
+        "Display-field order must be a list of integers."
+    ]
+
+    db.expire_all()
+    assert db.get(ReviewSession, review_session.id).status == "validated"
+    assert db.get(type(new_model), new_model.id).short_label != "Changed"
+
+
+def test_a_refused_no_js_save_persists_nothing(
+    client: TestClient, db: Session
+) -> None:
+    """A16 on the ``/fields/save`` fallback: the short label is written
+    before the visibility check refuses an illegal cell (a reviewee may
+    not see responses while ongoing), so the 422 must roll it back."""
+    review_session, new_model = _new_model_with_tags(
+        client, db, code="a16-no-js"
+    )
+    review_session.status = "validated"
+    db.commit()
+    before_label = new_model.short_label
+
+    response = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "short_label": "Changed",
+            "reviewee_while_ongoing_mode": "raw",
+            "reviewee_after_release_mode": "",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+
+    db.expire_all()
+    assert db.get(type(new_model), new_model.id).short_label == before_label
+    assert db.get(ReviewSession, review_session.id).status == "validated"
+
+
 def test_19h1_setup_pill_repaint_wiring_ships(
     client: TestClient, db: Session
 ) -> None:
