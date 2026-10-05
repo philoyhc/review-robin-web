@@ -4107,10 +4107,13 @@
         padding-left: 0;
         list-style-position: inside;
       }
+      /* The `<li>` indent is `--space-6` (24px): with the bullet inside,
+         that puts the item text near the ~40px a default `<ul>` gives every
+         other list in the app. The scale has no `--space-5`. */
       body.ui-v2 .rs-missing-card .rs-missing-list li {
         break-inside: avoid;
         margin-bottom: var(--space-1);
-        padding-left: var(--space-5);
+        padding-left: var(--space-6);
       }
       @media (max-width: 800px) {
         body.ui-v2 .rs-missing-card .rs-missing-list {
