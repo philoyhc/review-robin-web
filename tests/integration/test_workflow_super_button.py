@@ -420,6 +420,51 @@ def test_activate_redirects_to_session_home_without_return_to(
     )
 
 
+def test_activate_with_errors_at_revalidation_stays_validated(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    """State 4Err: the session is ``validated`` but a fresh validation
+    finds errors. Activate refuses — and leaves the session where it
+    was. It used to call ``invalidate_session`` on the way out and drop
+    it to ``draft`` (findings B8; author's ruling 2026-10-05)."""
+    from app.schemas.validation import Severity, ValidationIssue
+    from app.web.routes_operator import _workflow
+
+    review_session = _seed_pair_plus_pinned(client, db, code="act-4err")
+    client.post(
+        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    db.refresh(review_session)
+    assert lifecycle.is_validated(review_session)
+
+    monkeypatch.setattr(
+        _workflow.validation,
+        "validate_session_setup",
+        lambda db, session: [
+            ValidationIssue(
+                severity=Severity.error, source="instruments", message="broken"
+            )
+        ],
+    )
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/workflow/activate",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert "super_status=failed" in response.headers["location"]
+    db.expire_all()
+    review_session = db.get(ReviewSession, review_session.id)
+    assert lifecycle.is_validated(review_session)
+    assert not db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type == "session.invalidated",
+        )
+    ).first()
+
+
 # --------------------------------------------------------------------------- #
 # Failure: Prepare's Validate step finds errors.
 # --------------------------------------------------------------------------- #

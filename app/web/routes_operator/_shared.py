@@ -335,9 +335,9 @@ def parse_session_deadline(
     config-card write (``_session_home._apply_session_config_form``) —
     so the parse + error contract lives in one place (audit R8). The
     two routes' *gate* semantics deliberately differ (the lobby
-    expander silently ignores name/code/deadline off-draft; the config
-    card hard-requires an editable session), so only the parse is
-    shared, not the gate.
+    expander silently ignores name/code/deadline when the session is
+    not editable; the config card hard-requires an editable session),
+    so only the parse is shared, not the gate.
     """
     if not deadline:
         return None

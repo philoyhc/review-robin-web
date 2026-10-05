@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -13,7 +15,12 @@ from app.db.models import (
 )
 from app.logging_config import get_logger
 from app.schemas.sessions import SessionCreate
-from app.services import audit, operator_settings, session_lifecycle as lifecycle
+from app.services import (
+    audit,
+    date_formatting,
+    operator_settings,
+    session_lifecycle as lifecycle,
+)
 from app.services.instruments import ensure_default_instrument
 # Wave 5 PR 5.2 — RuleSet seeding retired; ``app.services.rules.seeds``
 # module deleted entirely. New sessions land with no rows in
@@ -205,6 +212,52 @@ def edit_payload(review_session: ReviewSession, **changes: object) -> SessionCre
     fields = {name: getattr(review_session, name) for name in _UPDATED_FIELDS}
     fields.update(changes)
     return SessionCreate(**fields)
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
+def deadline_box_unedited(
+    stored: datetime | None, submitted: str | None, tz_name: str | None
+) -> bool:
+    """Whether a ``datetime-local`` box still holds the value it was
+    seeded with for ``stored``.
+
+    Compared as the box's own text (``format_datetime_local`` in the
+    session zone), not by parsing ``submitted`` back to an instant: the
+    box carries minutes only, so a stored value with seconds (a Settings
+    CSV can write one) parses one truncation away from itself, and in
+    the repeated hour after a DST fall-back the wall-clock text names
+    two instants and the parse picks the first. A form that only
+    re-submits the seeded value must not count as an edit — on a
+    ``validated`` session that would demote it (findings B2)."""
+    return submitted == date_formatting.format_datetime_local(stored, tz_name)
+
+
+def payload_changes_session(
+    review_session: ReviewSession, payload: SessionCreate
+) -> bool:
+    """Whether applying ``payload`` would change any field
+    ``update_session`` writes.
+
+    Datetimes compare as instants: one side can be naive UTC (a parsed
+    form value; SQLite's stored value) while the other is aware
+    (Postgres's ``timestamptz``), and a naive and an aware datetime are
+    never ``==``, so a plain comparison would report an unchanged
+    deadline as changed.
+    ``update_session`` demotes a ``validated`` session, so a caller that
+    saves something else alongside (the lobby expander's tags) asks this
+    first rather than demoting on an edit that changed nothing (findings
+    B2)."""
+
+    def _norm(value: object) -> object:
+        return _as_utc(value) if isinstance(value, datetime) else value
+
+    return any(
+        _norm(getattr(review_session, name)) != _norm(getattr(payload, name))
+        for name in _UPDATED_FIELDS
+    )
 
 
 def update_session(

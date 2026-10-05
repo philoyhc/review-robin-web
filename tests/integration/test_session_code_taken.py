@@ -120,11 +120,11 @@ def test_lobby_edit_keeps_its_own_code(client: TestClient, db: Session) -> None:
     assert db.get(ReviewSession, session.id).name == "Mine renamed"
 
 
-def test_lobby_edit_off_draft_ignores_a_taken_code(
+def test_lobby_edit_when_not_editable_ignores_a_taken_code(
     client: TestClient, db: Session
 ) -> None:
-    """Off draft the lobby ignores Name / Code, so a taken code there is
-    not refused: the tags still apply and the code is untouched."""
+    """Off `is_editable` the lobby ignores Name / Code, so a taken code
+    there is not refused: the tags still apply and the code is untouched."""
     _create(client, db, "Holder", "lobby-held-2")
     other = _create(client, db, "Other", "lobby-ready")
     other.status = "ready"

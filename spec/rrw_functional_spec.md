@@ -919,8 +919,8 @@ settings.
 - **Name** — free-form display label.
 - **Code** — short stable identifier, unique across the workspace
   (a database constraint on `sessions.code`), not per operator. Create,
-  Session Home's Save and, on a `draft` session, the lobby's
-  row-expander Save refuse a code another session holds with a 422
+  Session Home's Save and, on a `draft` or `validated` session, the
+  lobby's row-expander Save refuse a code another session holds with a 422
   before writing anything (`sessions.ensure_code_available`, a
   pre-check: two simultaneous saves of one code can still meet at the
   constraint). Used as

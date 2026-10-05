@@ -291,10 +291,13 @@ def lobby_edit_submit(
     """Single-session expander Save on the sessions lobby.
 
     Tags are editable in any lifecycle state. Name / Code / Deadline
-    are applied only while the session is in ``draft`` — matching the
-    Session Details edit affordance's draft-only gating; the expander
-    renders those boxes read-only otherwise, and this route ignores
-    them server-side so a stale post can't slip past that gate.
+    are applied only while the session ``is_editable`` (``draft`` or
+    ``validated``) — the gate Session Home's Details card uses, so the
+    two pages agree (findings B2); the expander renders those boxes
+    read-only otherwise, and this route ignores them server-side so a
+    stale post can't slip past that gate. On ``validated`` a change to
+    any of the three demotes the session to ``draft``, as the same edit
+    on Session Home does; a Save that changes only the tags does not.
     """
     correlation_id = request_correlation_id()
 
@@ -303,7 +306,7 @@ def lobby_edit_submit(
     # whole save rather than landing the tags alone (a taken code would
     # otherwise reach the unique constraint as a 500).
     payload = None
-    if lifecycle.is_draft(review_session):
+    if lifecycle.is_editable(review_session):
         try:
             sessions.ensure_code_available(
                 db, code, exclude_session_id=review_session.id
@@ -313,9 +316,13 @@ def lobby_edit_submit(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(exc),
             ) from exc
-        parsed_deadline = parse_session_deadline(
-            deadline, sessions.resolve_session_timezone(review_session)
-        )
+        timezone_name = sessions.resolve_session_timezone(review_session)
+        if sessions.deadline_box_unedited(
+            review_session.deadline, deadline, timezone_name
+        ):
+            parsed_deadline = review_session.deadline
+        else:
+            parsed_deadline = parse_session_deadline(deadline, timezone_name)
         try:
             scheduled_events.validate_deadline_change(
                 review_session, parsed_deadline
@@ -349,7 +356,9 @@ def lobby_edit_submit(
         correlation_id=correlation_id,
     )
 
-    if payload is not None:
+    if payload is not None and sessions.payload_changes_session(
+        review_session, payload
+    ):
         sessions.update_session(
             db,
             review_session=review_session,

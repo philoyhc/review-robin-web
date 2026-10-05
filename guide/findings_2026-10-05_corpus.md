@@ -31,7 +31,7 @@ author, marked *re-checked*) also ran it.
 
 **High**
 
-- **F1 / Fc1** — **An admin can create an admin by inviting a fresh
+- ~~**F1 / Fc1**~~ — **Done in #2828.** Correction found at the fix: the test that pinned invite-as-admin ran with no super-admin configured, when any admin may grant, not as a super-admin. **An admin can create an admin by inviting a fresh
   email.** `users.invite(is_sys_admin=True)` has no super-admin guard
   (`app/services/users.py` `invite`; route `_sys_admin.py` `invite_user`;
   the checkbox shows to every admin), while `promote` refuses with
@@ -43,64 +43,85 @@ author, marked *re-checked*) also ran it.
 
 **Medium**
 
-- **A16 / Ac1** — **The Instrument card's Save is not atomic.** Band 1,
+- **A16 / Ac1** — **2026-10-05: all or nothing, the fixer's choice with no ruling asked; fix queued.** **The Instrument card's Save is not atomic.** Band 1,
   Link 3, self-review, column widths, sort, identity and visibility commit
   in service calls before the Band 2 snapshot is validated
   (`routes_operator/_instruments.py` `/save`), so a 422 for a bad
   response-field shape leaves the rest persisted while the card reports
   failure, and the configured pill is not repainted. *Reproduced.* Author.
-- **A17 / Ac2** — **Legacy visibility rows break round trip and Save.**
+- **A17 / Ac2** — **Ruled 2026-10-05: a normalizing migration; fix queued.** **Legacy visibility rows break round trip and Save.**
   `instrument_view_policies` rows written by the backfill migration
   `a7e3b1d92c64` that predate the per-cell rule are never normalized: an
   export→import of a reviewer `while_ongoing` NULL row is refused (blocking
   Quick Setup re-import and Rehydrate), and an observer `while_ongoing =
   raw` row makes every Save of that card 422. Only Replicate tolerates
   them. *Reproduced.* Author: a normalizing migration, or tolerance.
-- **G / Gc1** — **A reminder after a token regenerate mails a dead link.**
+- ~~**G / Gc1**~~ — **Done in #2829.** **A reminder after a token regenerate mails a dead link.**
   `send_reminder` reuses `most_recent_invitation_url`, the URL in the last
   invitation outbox body, after `regenerate_token` / `regenerate_all_tokens`
   rotated the hash; the bulk and scheduled reminder paths both reach it, and
   only the per-row button hides for `pending`. *Re-checked.* Code. Related
   to the `regenerate_token` stub in `guide/todo_master.md`.
-- **B8 / Bc2** — **A failed Activate demotes `validated` → `draft`,**
+- ~~**B8 / Bc2**~~ — **Ruled 2026-10-05: stay `validated`. Done in #2832.** **A failed Activate demotes `validated` → `draft`,**
   including pressing Activate in State 4Err with errors at re-validation;
   the comment in `_workflow.py` describing it is inverted. The spec never
   says so. Author.
-- **B2 / Bc1** — **The lobby expander's Name / Code / Deadline gate is
+- ~~**B2 / Bc1**~~ — **Ruled 2026-10-05: match Session Home. Done in #2832.** **The lobby expander's Name / Code / Deadline gate is
   `is_draft`; Session Home's is `draft` or `validated`.** Unlisted as an
   exception to `spec/lifecycle.md`'s single-predicate rule. Author.
-- **C1 / Cc1** — `Showing 0 <noun>.` renders beside the no-match message on
+- ~~**C1 / Cc1**~~ — **Done in #2829.** `Showing 0 <noun>.` renders beside the no-match message on
   all four roster pages. *Reproduced.* Code.
-- **C3 / Cc2** — On `expired` / `archived`, Reviewers, Reviewees and
+- ~~**C3 / Cc2**~~ — **Done in #2829.** On `expired` / `archived`, Reviewers, Reviewees and
   Relationships render a live editor row from a typed `?add=1` or
   `?edit_id=` whose Save answers 409 (they gate on `is_ready`; Observers is
   right). *Reproduced.* Code.
-- **D2 / Dc1** — **The Settings CSV round trip is not byte-stable:**
+- ~~**D2 / Dc1**~~ — **Done in #2829.** **The Settings CSV round trip is not byte-stable:**
   `instruments[n].order` is exported 0-based and re-imported as `n` from 1.
   *Reproduced.* Code.
-- **D12 / Dc2** — A Settings import writes `responses_received_enabled:
+- ~~**D12 / Dc2**~~ — **Done in #2829.** A Settings import writes `responses_received_enabled:
   true` into `email_template_overrides` for a session with none, so
   Validate then reports custom overrides. *Reproduced.* Code.
-- **D18 / Dc3** — `parse_responses_csv` silently drops a non-blank row
+- ~~**D18 / Dc3**~~ — **Done in #2829.** `parse_responses_csv` silently drops a non-blank row
   shorter than 21 cells: neither loaded nor dropped. *Reproduced.* Code.
-- **D11 / Dc4** — Roster, relationship and observer CSVs, roster
+- ~~**D11 / Dc4**~~ — **Done in #2830**, with a cell past the `csv` module's field limit refused too (see Dc8). Roster, relationship and observer CSVs, roster
   label headers and data-shape names have no length check against their
   `String(255)` / `String(2000)` columns (the Settings import does);
   Postgres would answer 500. *Reproduced on SQLite; the 500 is inferred.*
   Code.
-- **E7 / Ec8** — `.chrome-link` has a rule only inside `.chrome-user`, so
+- ~~**E7 / Ec8**~~ — **Done in #2830.** `.chrome-link` has a rule only inside `.chrome-user`, so
   the Owners card's Remove buttons render as browser-default buttons and
   the audit log's `Older events →` is an unstyled link; the button audit
   calls the reuse deliberate. Code.
-- **Ec1** — Pending Band 3 rows use a raw `rgba(254, 243, 199, 0.5)` fill
+- ~~**Ec1**~~ — **Done in #2830** (`--row-pending-bg`). Pending Band 3 rows use a raw `rgba(254, 243, 199, 0.5)` fill
   (`base.html`) with no token and no dark override; about 3:1 for body text
   in dark by arithmetic, and invisible to the contrast audit. Code.
-- **I2 / Ic1** — The practice kit ships `ci.yml` verbatim, Playwright and
+- ~~**I2 / Ic1**~~ — **Ruled 2026-10-05: drop the Chromium step until `tests/browser/` exists. Done in #2831.** The practice kit ships `ci.yml` verbatim, Playwright and
   Chromium step included, but its `dev` extra omits `playwright`: a
   kit-built repository's first CI run fails. Code (the kit).
-- **H12 / Hc1** — `tests/conftest.py` falls back to `DATABASE_URL` and
+- ~~**H12 / Hc1**~~ — **Ruled 2026-10-05: require `TEST_DATABASE_URL`. Done in #2831.** `tests/conftest.py` falls back to `DATABASE_URL` and
   runs `DROP SCHEMA public CASCADE` on any non-SQLite target; the docs
   that describe the fallback carry no warning. Author.
+
+**Found while fixing** (2026-10-05, after the read)
+
+- **Dc8** — Rehydrate (`app/services/session_rehydrate.py`
+  `_emails_from_csv`, `_row_count`, `_parse_settings`) and Quick Setup's
+  settings reader (`routes_operator/_quick_setup.py`) let `csv.Error` from
+  a cell past the 131,072-character field limit escape as a 500; the
+  roster parsers refuse it since #2830. Code.
+- **Cc3** — The single-row roster create / edit forms and the friendly-label
+  editor have no length check against their `String(n)` columns; the CSV
+  paths have one since #2830. The Postgres 500 is inferred. Code.
+- **Cc4** — After Regenerate, the Invitations drill-in still shows the
+  link from the last invitation sent, which no longer works. Code.
+- **Cc5** — A Session Home Details Save that changes nothing still demotes
+  a `validated` session to `draft`; the lobby expander checks for a change
+  since #2832. Author.
+- **Cc6** — The Session Home config card re-parses an untouched deadline
+  box on every Save, so a deadline in the repeated hour after a DST
+  fall-back comes back an hour early (`_session_home.py`
+  `_apply_session_config_form`); the lobby compares the box's text since
+  #2832 (`sessions.deadline_box_unedited`). Code.
 
 **Low**
 
@@ -146,9 +167,9 @@ Each is a choice between changing the code and changing the contract. The
 id points at its row in §3 or §1.
 
 - **Instruments:** A5 (Band 2 group preview for a pair-context boundary),
-  A9 (Integer bounds on stored non-whole rows), A16 (Save atomicity), A17
+  A9 (Integer bounds on stored non-whole rows), ~~A16~~ (Save atomicity), ~~A17~~
   (legacy visibility rows), Ac3 (anonymized row order).
-- **Lifecycle and workflow:** B2 (lobby gate), B8 (Activate failure
+- **Lifecycle and workflow:** ~~B2~~ (lobby gate), ~~B8~~ (Activate failure
   demotes), B12 (Validate commits a derived cache; carve out or stop).
 - **Setup:** C5 (the exact-handle match on Invitations and Responses).
 - **Data:** D1 (bracket index or row position orders instruments), D6
@@ -157,15 +178,15 @@ id points at its row in §3 or §1.
   D20 (data-shape refs to unlabeled instruments).
 - **UI:** E1 (chip edge 1px or 2px), E14 (the Instruments page's local
   stylesheet), E16 (the reorder toast's shadow).
-- **Roles and operations:** F1 (confirm the invite rule), F12 (the
+- **Roles and operations:** ~~F1~~ (confirm the invite rule), F12 (the
   "counters cannot move" note), F13 (14B's plan inside
   `spec/email_infra_options.md`).
 - **Functional spec:** G5 (Duplicate drops visibility policies, deadline
   and schedule), G22 (Settings import skips the schedule ordering chain),
   G26 (audit log "immutable" against Delete session and Purge).
 - **Docs and root:** H5 (Postgres private endpoint, Azure-only), H11
-  (`deployment_nus.md` §6.3 against `deploy_nus.yml`), H12 (the test
-  fixture's schema drop), I2 (the kit's CI), I8 (`azure_ask.md` unindexed).
+  (`deployment_nus.md` §6.3 against `deploy_nus.yml`), ~~H12~~ (the test
+  fixture's schema drop), ~~I2~~ (the kit's CI), I8 (`azure_ask.md` unindexed).
 
 ## 3. Findings by file
 
@@ -195,13 +216,13 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 **B — assignments, workflow, lifecycle, Validate**
 
 - **B1** med spec lifecycle.md:417-420 observers "no readiness rule references them" vs observers.duplicate_email, cross_roster_identity (validation.py:1114-1156)
-- **B2** med author lifecycle.md:424-426 lobby expander narrower predicate (is_draft) unlisted exception
+- ~~**B2**~~ med author lifecycle.md:424-426 lobby expander narrower predicate (is_draft) unlisted exception — **Done in #2832.**
 - **B3** low spec lifecycle.md:178-181 revert on Setup page while validated: none; only Workflow card; "Next Action card" old name
 - **B4** low spec lifecycle.md:725-727 skipped trigger clears column: only activation; invites/reminders mark consumed via audit
 - **B5** low spec lifecycle.md:804-811 _schedule_ordering_js partial only in session_new.html; Session Home own script, no min/max
 - **B6** low spec lifecycle.md:827-829 past fire time rejected: Release-from, End have no floor; garbled example
 - **B7** low trim lifecycle.md:155 "legacy internal name Pause"; :570 "Audit events (full list)" overclaims
-- **B8** med author workflow_card.md:498-501,549-554,359-367 Activate failure path vs _workflow.py:346-416 (no mark_validated; demotes on any failure incl. 4Err pre-flight)
+- ~~**B8**~~ med author workflow_card.md:498-501,549-554,359-367 Activate failure path vs _workflow.py:346-416 (no mark_validated; demotes on any failure incl. 4Err pre-flight) — **Done in #2832.**
 - **B9** low trim workflow_card.md:379-380 "today's worst case is 4"
 - **B10** low trim workflow_card.md:621-625, 856-863 open-work/ship-state notes
 - **B11** low write workflow_card.md:171-186 archived state: card renders empty body
@@ -218,9 +239,9 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **C — Setup, Session Home and the lobby**
 
-- **C1** med code setup_pages.md:540-550 no count line on no-match vs "Showing 0 …"
+- ~~**C1**~~ med code setup_pages.md:540-550 no count line on no-match vs "Showing 0 …" — **Done in #2829.**
 - **C2** med spec setup_pages.md:540-548 quoted template gate shape stale (real: session_reviewers.html:690, :822)
-- **C3** med code setup_pages.md:1653-1672 page offers only what routes accept vs is_ready-only gating
+- ~~**C3**~~ med code setup_pages.md:1653-1672 page offers only what routes accept vs is_ready-only gating — **Done in #2829.**
 - **C4** low spec setup_pages.md:1633-1637 tag_slot_presence/chip_slots vs *_column_state + tag_slot_counts (views/_setup.py:340-450); drop "LIMIT 1"
 - **C5** low author setup_pages.md:1074-1085,1112-1115 exact-handle match only for offered labels vs ops filters any "(…)" tail (_filters.py:182,235); "@" requirement unstated (:316,:526)
 - **C6** med spec sessions_overview.md:29-31 audience "authenticated users… reviewers land on /r/" vs require_operator; /me routes
@@ -239,7 +260,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 **D — data in and out**
 
 - **D1** med author csv_contracts.md:621-623; roundtrip_coverage.md:64,185-187 row position authoritative vs bracket index (_apply_instrument.py:380,398; reproduced)
-- **D2** med code csv_contracts.md:690-695 byte-stable vs order drift (=Dc1)
+- ~~**D2**~~ med code csv_contracts.md:690-695 byte-stable vs order drift (=Dc1) — **Done in #2829.**
 - **D3** low spec settings_inventory.md:581 only unknown top-level path ignored vs unknown session.<key> silently dropped (_apply_session.py:20-80)
 - **D4** low spec settings_inventory.md:404 ?rule_based_error param absent from app/
 - **D5** med spec extract_data.md:453 no instruments selected -> every roster entry vs zero-response entities dropped (entity_metadata_extract)
@@ -248,14 +269,14 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **D8** low trim csv_contracts.md:100,281,3-9 "Five extracts/importers" tallies; Observers & Settings extracts no §2 entry
 - **D9** med author csv_contracts.md:984-987 every extract row order pinned + tested vs data_shape_extract no order_by; by_instrument ties
 - **D10** low author csv_contracts.md:452-454,973-975 collect every error vs short row rejects file (_quick_setup.py:1180-1199)
-- **D11** low write no per-cell length limits documented for roster/relationship/observer CSV (=Dc4)
-- **D12** med code email_template_editor.md:155-158,259-260 no-overrides indistinguishable vs import writes enabled flag (=Dc2)
+- ~~**D11**~~ low write no per-cell length limits documented for roster/relationship/observer CSV (=Dc4) — **Done in #2830.**
+- ~~**D12**~~ med code email_template_editor.md:155-158,259-260 no-overrides indistinguishable vs import writes enabled flag (=Dc2) — **Done in #2829.**
 - **D13** low spec email_template_editor.md:242-243 cites "✅ All" not in roundtrip_coverage
 - **D14** low spec roundtrip_coverage.md:8 "proposed rehydrate" vs built, gated; link ../spec/
 - **D15** low spec roundtrip_coverage.md:138; rehydrate.md:534-536 regenerate resets include=True vs recomputes (_generate.py:566-578)
 - **D16** low spec rehydrate.md:141-143 pure analyze_rehydrate_set(files) vs (db, *, files, user) reads DB
 - **D17** low author rehydrate.md:129-131 preview assignments-to-generate absent; "instruments" = distinct short labels (session_rehydrate.py:354-367)
-- **D18** med code rehydrate.md:408,423-425 two outcomes per row vs short rows vanish (=Dc3)
+- ~~**D18**~~ med code rehydrate.md:408,423-425 two outcomes per row vs short rows vanish (=Dc3) — **Done in #2829.**
 - **D19** med author rehydrate.md:394 InstrumentShortLabel unique per session vs no constraint; last duplicate wins (responses_import.py:229-231)
 - **D20** low author roundtrip_coverage.md:113; settings_inventory.md:509-510,582 data-shape refs portable vs empty ref for unlabeled instrument widens scope on re-import
 - **D21** low trim settings_inventory.md:361,581,576,582; rehydrate.md:252-253,367-373,537-544; extract_data.md:1045-1047; email_template_editor.md:62
@@ -270,7 +291,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **E4** med write operator_button_audit.md no rows for session_rehydrate.html (5 controls)
 - **E5** low-med write operator_button_audit.md:406-407 sort-save-error-banner Cancel no row
 - **E6** low-med write operator_button_audit.md:428-458,641-648 Band 3 X, ▲▼, Band 1 +/AND-OR/op-cycle/X no rows; §16 points to non-existent "instruments.md § Band 1"
-- **E7** med code operator_button_audit.md:136,243,781; session_owners.md:193 chrome-link "reuse" — renders unstyled (=Ec8)
+- ~~**E7**~~ med code operator_button_audit.md:136,243,781; session_owners.md:193 chrome-link "reuse" — renders unstyled (=Ec8) — **Done in #2830.**
 - **E8** low spec ui_elements.md:458; operator_button_audit.md:866-870 .tab-strip-page "chrome grey like Setup row" vs Setup row blue-pale
 - **E9** low spec operator_button_audit.md:50 chrome link "defined in visual_style_rrw" vs ui_elements §1
 - **E10** low trim operator_button_audit.md:538-549,76,413 retired rows kept "because cited" — none cited
@@ -283,7 +304,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **F — architecture, roles and operations**
 
-- **F1** med author permissions.md:33,166-167,170; architecture.md:859-861; audience_and_identity_model.md:117,141 — super-admin alone adds admins vs invite path (= Fc1)
+- ~~**F1**~~ med author permissions.md:33,166-167,170; architecture.md:859-861; audience_and_identity_model.md:117,141 — super-admin alone adds admins vs invite path (= Fc1) — **Done in #2828.**
 - **F2** low spec architecture.md:24 "scheduled archive/delete partially deferred" vs nothing scheduled; retention_* inert (review_session.py:129-130)
 - **F3** low spec architecture.md:231-232 require_json_object list omits _instruments.py:1133,1178
 - **F4** low spec architecture.md:842-849 session_operators row confers access vs router gate is_operator or is_sys_admin (deps.py:188)
@@ -339,14 +360,14 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **H9** low trim local_setup.md:72 "(auth, database…)" no auth doc
 - **H10** low trim known_limitations.md:94 "all 70 pairs" tally (test floor >=70)
 - **H11** low author deployment_nus.md:225-234 vs :236-241/§6.4 edit personal workflow vs separate deploy_nus.yml
-- **H12** low author database.md:99-101, local_setup.md:316-317 TEST_DATABASE_URL/DATABASE_URL no warning schema drop
+- ~~**H12**~~ low author database.md:99-101, local_setup.md:316-317 TEST_DATABASE_URL/DATABASE_URL no warning schema drop — **Done in #2831.**
 - **H13** low (dated records) guide/archive/sweep_2026-10-03_corpus.md, codex_assessment_30sep.md, codebase_assessment_30sep.md/.json cite nus_azure_status_v7.md
 - **H14** low doc cli_setup.md:142-145 "environment secrets" vs repo secrets; gh auth refresh -s admin:repo_hook (unverified)
 
 **I — root and process documents**
 
 - **I1** med doc rrw_sdd_in_practice.md:165 quotes spec-writer charter "flag drift … rather than silently rewriting" — not in spec-writer.md (now "Do not re-align", :40)
-- **I2** med author new_project_practices_setup.md:153, :279-281 ci.yml verbatim + dev extras omit playwright
+- ~~**I2**~~ med author new_project_practices_setup.md:153, :279-281 ci.yml verbatim + dev extras omit playwright — **Done in #2831.**
 - **I3** low doc new_project_practices_setup.md:237-241 "around 130 dangling … five places" vs 88 measured, constitution.md:42 sixth source, CONTRIBUTING 2 refs
 - **I4** low doc new_project_practices_setup.md:204-209 omits test_index_currency.py (CLAUDE.md:224) from lines-to-drop
 - **I5** low doc rrw_design_rationale.md:185,225 "migrations round-tripped on both dialects" vs Postgres only (azure_ask.md is a record)
