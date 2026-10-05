@@ -115,7 +115,7 @@ Two things the table implies and the code relies on:
 | session-scoped operator routes `/operator/sessions/{session_id}/…` | `require_session_operator` | per route, directly or via the two feature-toggle wrappers. **Every** such route carries one. Checking it means following `Depends()` **transitively**: a decorator scan alone reports false positives, because several routes in `_instruments.py` are gated two levels deep through `Depends(_require_instrument_in_session)` and never name `require_session_operator` in their own signature. *A check that flags a correctly-gated route is worse than none, because the next reader believes it.* |
 | the two **relaxed** session routes: `POST …/owners/add`, `POST …/clone` | `require_sys_admin_or_session_operator` | a non-owner sys-admin may reach them; `owners/add` additionally enforces **self-only** for a non-owner in its handler (`self_only` error otherwise); `clone` makes the cloner owner of the copy, leaving the original untouched |
 | lobby bulk routes (tags / archive / bulk-delete) | `require_operator` + per-id re-resolution | each client-supplied `session_id` is re-resolved with `sessions.get_for_user`; non-owned ids are skipped, never acted on |
-| `/operator/sys-admin/*` (root redirect, Sessions Diagnostics, per-session Outbox + Audit log children, Accounts Management, adopt, and the seven user actions) | `require_sys_admin` | per route. Sessions Diagnostics also carries the **Visibility grid audit** card — a read-only report of every stored Band 3 cell whose mode its `(audience, window)` pair does not allow. It is workspace-wide by construction: one query across every session's instruments, which is why it sits here and on no per-session operator surface. It writes nothing; clearing an offending cell is the owning operator's action on that instrument's visibility editor (its "Who can see what you wrote" card, unlocked), which refuses to author the value in the first place |
+| `/operator/sys-admin/*` (root redirect, Sessions Diagnostics, per-session Outbox + Audit log children, Accounts Management, adopt, and the per-user actions) | `require_sys_admin` | per route. Sessions Diagnostics also carries the **Visibility grid audit** card — a read-only report of every stored Band 3 cell whose mode its `(audience, window)` pair does not allow. It is workspace-wide by construction: one query across every session's instruments, which is why it sits here and on no per-session operator surface. It writes nothing; clearing an offending cell is the owning operator's action on that instrument's visibility editor (its "Who can see what you wrote" card, unlocked), which refuses to author the value in the first place |
 | `GET …/export/audit_log.csv` | `require_sys_admin` | the one session-scoped export that is *not* owner-reachable: there is no operator-facing entry point to it |
 | reviewer surface, save / submit / recall / clear, post-submit summary + `summary.csv` | `require_reviewer_in_session` | per route |
 | `/me/sessions/{id}/results` (+ acknowledge) | `require_reviewee_with_current_grant` | per route — composes the roster gate with `visibility_policies.reviewee_has_current_grant`; both the GET and the acknowledge POST share it |
@@ -200,8 +200,8 @@ The creator is inserted as the inaugural owner inside
 new session (`session_clone`). Self-removal is allowed when another
 owner remains, and redirects to the sessions lobby. `owners/add` and
 `owners/{user_id}/remove` carry no lifecycle check; Session Home's
-Owners card posts to them directly, each action saving at once (author's
-ruling, 2026-09-23; `spec/session_owners.md` §2 and §7). Neither reads
+Owners card posts to them directly, each action saving at once
+(`spec/session_owners.md` §2 and §7). Neither reads
 the card's Lock / Unlock cookie, which is a guard against accidental
 edits and not a permission.
 
@@ -216,7 +216,7 @@ the operation-level mappings.
 |---|---|---|
 | Not on the operator allowlist | **303 → `/me`** | `OperatorAllowlistDenied` handler, `app/main.py` |
 | Not a sys-admin | **403** `sys_admin required` | `require_sys_admin` |
-| Not a session member; not an active participant | **404**, bare | the four session-scoped gates |
+| Not a session member; not an active participant | **404**, bare | every session-scoped gate |
 | Sys-admin, not an owner of an **existing** session | **403** naming the adopt door | `require_session_operator` only |
 | Unknown session / child id, disabled feature tab, unknown invite token | **404** | the gate or route |
 | Missing email claim | **401** | `get_or_create_user` |
@@ -264,8 +264,9 @@ everyone.
 ## 6. Audit
 
 Every operation in §4 writes exactly one canonical audit event,
-except Owners card Lock / Unlock and a Remove from all sessions that
-finds the user on no session, which write none (envelope contract:
+except Owners card Lock / Unlock, an adopt by a sys-admin who already
+owns the session, and a Remove from all sessions that finds the user on
+no session, which write none (envelope contract:
 `spec/architecture.md` "Audit-event detail schema"; every `event_type`
 above is registered in `EVENT_SCHEMAS`). Reads never audit; denied
 requests log a warning but write no event. `docs/security_posture.md` §5.7 is the
@@ -283,9 +284,9 @@ a case when a gate changes.
 |---|---|
 | allowlist bootstrap, case-insensitive match, once-only seeding, super-admin self-heal, fake-auth toggles, revoked-operator redirect | `tests/integration/test_operator_allowlist_gate.py` |
 | participant-only user bounced from lobby + per-session route; workspace operator non-owner 404 + lobby exclusion; sys-admin reaches another owner's session only via adopt | `tests/integration/test_operator_lobby_access_gate.py` |
-| session ids are not enumerable: for each of the four session-scoped gates, an existing session the caller holds no role on is byte-identical to an id that does not exist | `tests/integration/test_session_enumeration_gate.py` |
+| session ids are not enumerable: for each session-scoped gate, an existing session the caller holds no role on is byte-identical to an id that does not exist | `tests/integration/test_session_enumeration_gate.py` |
 | owner add / remove invariants, last-owner 409, self-remove, sys-admin self-add via the relaxed gate | `tests/integration/test_session_owners.py` |
-| the seven Accounts Management actions and every guard code | `tests/integration/test_sys_admin_users.py` |
+| every Accounts Management action and guard code | `tests/integration/test_sys_admin_users.py` |
 | super-admin resolver (config membership, fake fold-in) | `tests/unit/test_roles_super_admin.py` |
 | audit-log CSV is sys-admin-only | `tests/integration/test_outbox_sys_admin_relax.py` |
 | reviewer gate 404s (other session, inactive row) and foreign `assignment_id` dropped | `tests/integration/test_reviewer_response_flow.py` |

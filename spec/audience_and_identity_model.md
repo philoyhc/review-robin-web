@@ -329,11 +329,15 @@ app and uses it regularly.
 
 ## Auth posture
 
-Both audiences authenticate. Unauthenticated access is not
-supported for either:
+Every audience authenticates — operator, reviewer, reviewee,
+observer and system administrator. Unauthenticated access is not
+supported for any of them:
 
-- **Operators** sign in via institutional SSO (MS365 in current
+- **Operators** — and the admin tiers, which are operators with an
+  elevated role — sign in via institutional SSO (MS365 in current
   deployments). No operator content is reachable without auth.
+- **Reviewees** and **observers** sign in the same way and are
+  matched to their roster row by case-insensitive email.
 - **Reviewers** sign in via institutional SSO by default; magic
   links are an enhancement supporting cases where SSO is unavailable
   (e.g., external reviewers from outside the institution). The
