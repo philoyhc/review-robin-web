@@ -44,8 +44,9 @@ from __future__ import annotations
 from app.services.session_config_io._apply import (
     ApplyResult,
     apply_session_config,
+    validate_session_config,
 )
-from app.services.session_config_io._apply_parse import ApplyError
+from app.services.session_config_io._apply_parse import ApplyError, split_rows
 
 # ``_ParseError`` / ``_parse_group_kind`` are re-exported for the
 # unit test that exercises the group-kind cell parser directly.
@@ -63,4 +64,6 @@ __all__ = [
     "Row",
     "apply_session_config",
     "serialize_session_config",
+    "split_rows",
+    "validate_session_config",
 ]

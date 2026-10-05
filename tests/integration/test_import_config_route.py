@@ -153,6 +153,52 @@ def test_import_config_validation_errors_reach_the_slot(
     assert details[-1] == "…and 2 more."
 
 
+def test_import_config_short_rows_are_reported_by_row_with_other_errors(
+    client: TestClient, db: Session
+) -> None:
+    """Findings D10 (author's ruling, 2026-10-05): a row under three
+    cells still refuses the file, but every short row is named by its
+    row number, alongside the file's other errors — not a bare refusal
+    with no detail. Blank lines don't count; later rows keep the numbers
+    ``ApplyError`` gives them. The report comes before the replacement
+    gates, as for every malformed file, and nothing is written."""
+    from urllib.parse import parse_qs, urlsplit
+
+    review_session = _make_session(client, db, code="ic-short")
+    url = f"/operator/sessions/{review_session.id}/import-config"
+    payload = (
+        b"field,value,data_type\n"
+        b"session.name,Renamed\n"  # row 1: two cells
+        b"\n"  # blank: not a row
+        b"instruments[1].short_label,X,string\n"  # row 2: name missing
+        b"session.description\n"  # row 3: one cell
+        b"instruments[1].field_key,k,bogus\n"  # row 4: bad data_type
+    )
+
+    for data in ({"confirm_replace": "true"}, {}):
+        response = client.post(
+            url,
+            data=data,
+            files={"file": ("config.csv", payload, "text/csv")},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+        query = parse_qs(urlsplit(response.headers["location"]).query)
+        assert query["quick_setup_reason"] == ["parse"]
+        details = query["quick_setup_detail"]
+        assert details[:2] == [
+            "Row 1, session.name: the row has 2 cells; a Settings row "
+            "needs three (field, value, data_type)",
+            "Row 3, session.description: the row has 1 cell; a Settings "
+            "row needs three (field, value, data_type)",
+        ]
+        assert any(line.startswith("Row 4, ") for line in details), details
+        assert "instruments[1].name: name is required" in details
+
+    db.expire_all()
+    assert db.get(ReviewSession, review_session.id).name == "Imp"
+
+
 def test_import_config_bad_header_rejected(
     client: TestClient, db: Session
 ) -> None:

@@ -1095,9 +1095,16 @@ async def _run_quick_setup_settings(
     if not content:
         return _SettingsFailure("parse")
 
-    rows, parse_error = _read_settings_csv(content)
+    rows, row_errors, parse_error = _read_settings_csv(content)
     if parse_error is not None:
         return _SettingsFailure("parse")
+    if row_errors:
+        # A short row refuses the file, reported with every other
+        # error the file holds (findings D10).
+        errors = session_config_io.validate_session_config(
+            review_session, rows, row_errors=row_errors
+        )
+        return _SettingsFailure("parse", views.settings_error_details(errors))
 
     # Lifecycle, then parse, then the replacement gates: the order the
     # roster slots use, so a malformed file reports ``parse`` whether or
@@ -1140,15 +1147,20 @@ async def _run_quick_setup_settings(
 
 def _read_settings_csv(
     content: bytes,
-) -> tuple[list[session_config_io.Row], str | None]:
+) -> tuple[
+    list[session_config_io.Row], list[session_config_io.ApplyError], str | None
+]:
     """Parse the 3-column ``field,value,data_type`` CSV bytes
     into a list of ``Row`` records.
 
-    Returns ``(rows, error_token)`` — ``error_token`` is ``None``
-    on success, a token like ``"decode"`` / ``"header"`` /
-    ``"shape"`` / ``"unreadable"`` on failure. The route maps every error token to
-    ``quick_setup_reason=parse``; the granularity is here only
-    for future log surfacing."""
+    Returns ``(rows, row_errors, error_token)``. ``error_token`` is
+    ``None`` unless the file cannot be read at all — ``"decode"`` /
+    ``"header"`` / ``"unreadable"`` — which the route maps to
+    ``quick_setup_reason=parse`` with no detail; the granularity is
+    here only for future log surfacing. A short row is not that: it
+    comes back in ``row_errors`` (``session_config_io.split_rows``),
+    reported by row number with the file's other errors (findings
+    D10)."""
 
     import csv as _csv
     import io as _io
@@ -1156,7 +1168,7 @@ def _read_settings_csv(
     try:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError:
-        return [], "decode"
+        return [], [], "decode"
 
     reader = _csv.reader(_io.StringIO(text))
     iterator = iter(reader)
@@ -1165,26 +1177,14 @@ def _read_settings_csv(
     try:
         header = next(iterator)
     except StopIteration:
-        return [], "header"
+        return [], [], "header"
     except _csv.Error:
-        return [], "unreadable"
+        return [], [], "unreadable"
     if [c.strip() for c in header] != list(session_config_io.HEADER):
-        return [], "header"
+        return [], [], "header"
 
-    rows: list[session_config_io.Row] = []
     try:
-        for raw in iterator:
-            if not raw:
-                continue
-            if len(raw) < 3:
-                return [], "shape"
-            rows.append(
-                session_config_io.Row(
-                    field=raw[0],
-                    value=raw[1],
-                    data_type=raw[2],
-                )
-            )
+        rows, row_errors = session_config_io.split_rows(iterator)
     except _csv.Error:
-        return [], "unreadable"
-    return rows, None
+        return [], [], "unreadable"
+    return rows, row_errors, None

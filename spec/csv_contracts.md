@@ -457,8 +457,15 @@ the round-trip notes below.
 
 1. **Phase 1 — Parse + validate every row.** Collect every error
    into `ApplyResult.errors`. One bad row doesn't mask the next.
-   No DB writes. Three keys phase 2 writes as unique are errors
-   when repeated: a `session_rule_sets` name (§4 item 7), a
+   No DB writes. An error's row number counts the non-blank rows
+   below the header. A row with fewer than three cells refuses the
+   file, but as an error on its row like the others
+   (`session_config_io.split_rows`): the rest of the file is still
+   validated (`validate_session_config`), so the report names every
+   short row beside every other error. Quick Setup reports it
+   before the replacement gates, as it does any malformed file, and
+   Rehydrate fails its settings step with it. Three keys phase 2
+   writes as unique are errors when repeated: a `session_rule_sets` name (§4 item 7), a
    `data_shapes` name among the shapes phase 2 writes (those with a
    name and a known axis), and a response field's `field_key` within
    its instrument. Each is an `ApplyError` naming the first
