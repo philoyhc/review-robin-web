@@ -126,7 +126,7 @@ author, marked *re-checked*) also ran it.
   `csv` module's 131,072-character field limit: the responses extract
   writes it, and Rehydrate refuses the set (`spec/rehydrate.md` §9,
   since #2835). Author: raise the parser's limit or cap answers.
-- **Dc10** — A Settings-CSV apply onto a session whose `instruments`
+- ~~**Dc10**~~ — **Done in #2861.** A Settings-CSV apply onto a session whose `instruments`
   relationship is already loaded resolves data shapes against the
   deleted rows: `_wipe_instruments_and_dependents` deletes with
   `db.delete()` and `_apply_instruments` adds new `Instrument` rows
