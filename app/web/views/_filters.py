@@ -140,15 +140,12 @@ _FILTER_LABEL_TAIL_RE = re.compile(r"\(([^()]+)\)\s*$")
 def _extract_filter_label_tail(value: str) -> str | None:
     """Return the last parens-enclosed segment of a typeahead label.
 
-    Manage Invitations and Manage Responses use a `<datalist>`
-    typeahead whose options have the form ``"Name (email)"`` or
-    ``"Name (identifier)"``. When the operator picks from the
-    typeahead, the form submits the whole label string, which would
-    miss a substring match against just the name or email. Extracting
-    the parenthetical lets the filter do an exact email/identifier
-    match in the picked-from-typeahead case while still falling back to
-    substring search when the operator types free text. ``None`` when
-    no parens-enclosed tail is present."""
+    The roster and operations pages offer ``"Name (handle)"`` labels in
+    a `<datalist>`; a pick submits the whole label, which would miss a
+    substring match against just the name or handle. Only ever called
+    through :func:`_picked_label_handle`, once the value is known to be
+    an offered label. ``None`` when no parens-enclosed tail is
+    present."""
     match = _FILTER_LABEL_TAIL_RE.search(value)
     if match is None:
         return None
@@ -170,8 +167,10 @@ def filter_invitations_rows(
     keeps ``Team A`` from dragging in ``Team A2``; substring on names
     is what makes a partial name useful.
 
-    When the value looks like a ``"Name (email)"`` typeahead pick, the
-    bracketed email is used for an exact match instead. Empty
+    When the value is exactly one of the ``"Name (email)"`` labels the
+    page offered, the bracketed email is used for an exact match
+    instead — the roster pages' rule (``_picked_label_handle``), so a
+    tag value like ``Group (B)`` is not misread as a pick (C5). Empty
     ``search`` is a no-op."""
     out = list(rows)
     valid_status = {key for key, _ in INVITATIONS_STATUS_OPTIONS}
@@ -179,8 +178,8 @@ def filter_invitations_rows(
         out = [r for r in out if r.summary_state == status]
     needle = search.strip()
     if needle:
-        tail = _extract_filter_label_tail(needle)
-        if tail is not None and "@" in tail:
+        tail = _picked_label_handle(needle, invitations_search_options(rows))
+        if tail is not None:
             # not-identity: a picker selection narrowing rows the operator is
             # already authorized to see. Folding here changes what is
             # displayed, not who may see it, so the display fold stays.
@@ -217,9 +216,9 @@ def filter_responses_rows(
     ``search`` uses the roster pages' per-column rule
     (``_matches_row``) exactly as Invitations does: the reviewee's
     **name and ``email_or_identifier`` match by substring**, their
-    **``tag_1..3`` match whole value**. When the value looks like a
-    ``"Name (identifier)"`` typeahead pick, the bracketed identifier
-    is used for an exact match instead."""
+    **``tag_1..3`` match whole value**. When the value is exactly one
+    of the ``"Name (identifier)"`` labels the page offered, the
+    bracketed identifier is used for an exact match instead (C5)."""
     out = list(rows)
     status_to_state = {
         "complete": "complete",
@@ -232,7 +231,7 @@ def filter_responses_rows(
         out = [r for r in out if r.coverage_state == target_state]
     needle = search.strip()
     if needle:
-        tail = _extract_filter_label_tail(needle)
+        tail = _picked_label_handle(needle, responses_search_options(rows))
         if tail is not None:
             # not-identity: a picker selection narrowing rows the operator is
             # already authorized to see. Folding here changes what is

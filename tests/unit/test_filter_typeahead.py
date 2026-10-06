@@ -138,8 +138,8 @@ def test_filter_responses_label_format_works_with_non_email_identifier() -> None
 
 def test_filter_invitations_label_without_at_sign_falls_back_to_substring() -> None:
     """A reviewer name with parens like ``"Alice (Smith)"`` must not be
-    misread as a typeahead pick — the bracketed segment has no ``@``,
-    so the helper falls back to substring search."""
+    misread as a typeahead pick — it is not one of the offered labels
+    (C5), so the helper falls back to substring search."""
     rows = [
         _inv_row(name="Alice (Smith)", email="alice@x.edu"),
         _inv_row(name="Bob", email="bob@x.edu"),
@@ -151,3 +151,36 @@ def test_filter_invitations_label_without_at_sign_falls_back_to_substring() -> N
 
     assert len(out) == 1
     assert out[0].reviewer.email == "alice@x.edu"
+
+
+def test_a_parenthesized_tag_is_not_a_typeahead_pick() -> None:
+    """C5: only a value equal to an offered ``"Name (handle)"`` label is a
+    pick. A tag value like ``Group (B)`` used to be read as an exact
+    match on the handle ``B`` and return nothing; it now matches the tag
+    whole-value, as on the roster pages."""
+    inv = [
+        _inv_row(name="Alice", email="alice@x.edu"),
+        _inv_row(name="Bob", email="bob@x.edu"),
+    ]
+    inv[0].reviewer.tag_1 = "Group (B)"
+    out = views.filter_invitations_rows(inv, status="all", search="Group (B)")
+    assert [r.reviewer.email for r in out] == ["alice@x.edu"]
+
+    resp = [
+        _resp_row(name="Carol", identifier="carol@x.edu"),
+        _resp_row(name="Dan", identifier="B"),
+    ]
+    resp[0].reviewee.tag_1 = "Group (B)"
+    out = views.filter_responses_rows(resp, status="all", search="Group (B)")
+    assert [r.reviewee.name for r in out] == ["Carol"]
+
+
+def test_an_offered_label_without_an_at_sign_is_a_pick() -> None:
+    """C5: the trigger is "equals an offered label", not the handle's
+    shape, so a reviewee identifier with no ``@`` still exact-matches."""
+    resp = [
+        _resp_row(name="Ana", identifier="S1"),
+        _resp_row(name="Ana", identifier="S12"),
+    ]
+    out = views.filter_responses_rows(resp, status="all", search="Ana (S1)")
+    assert [r.reviewee.email_or_identifier for r in out] == ["S1"]

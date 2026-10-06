@@ -229,7 +229,11 @@ The strip is:
 - **The `<datalist>` offers `Name (email)` labels only.** Tag values
   are matchable but never suggested — a tag identifies too many rows
   to partition a list by. Matching a tag and suggesting one are
-  separate questions, and the answer differs.
+  separate questions, and the answer differs. A search equal to one of
+  those labels exact-matches its email instead, by the rosters' rule
+  (`spec/setup_pages.md` "Picking a person from the typeahead"): the
+  trigger is "equals an offered label", so a tag like `Group (B)` still
+  matches as a tag.
 - **Clear / Search** — `Search` submits the form; `Clear` (visible
   only when a filter is active) is a link back to the unparameterised
   page. **These are the only things in the actions row** — the count
@@ -481,8 +485,9 @@ Same shape as the Invitations toolbar and the same two panes: Status
 `<select>` + Search `<input>` + Clear / `Search` in the right pane,
 chips + pager + count line in the left, and the same matching rule —
 reviewee name and email-or-identifier by substring, `tag_1..3` by
-whole value, with the `<datalist>` offering `Name (email)` labels
-only. The count line's noun is **`reviewees`** — one row per reviewee,
+whole value, with the `<datalist>` offering `Name (email-or-identifier)`
+labels only and a search equal to one of them exact-matching that
+handle. The count line's noun is **`reviewees`** — one row per reviewee,
 from `monitoring.per_reviewee_coverage`. This page **pages** on the
 same terms as Invitations: 200 rows to a page unfiltered, a filtered
 view uncapped and without a pager, so only the filter branch of the
