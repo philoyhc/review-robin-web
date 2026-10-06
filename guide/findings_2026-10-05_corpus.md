@@ -384,12 +384,12 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **I — root and process documents**
 
-- **I1** med doc rrw_sdd_in_practice.md:165 quotes spec-writer charter "flag drift … rather than silently rewriting" — not in spec-writer.md (now "Do not re-align", :40)
+- ~~**I1**~~ med doc rrw_sdd_in_practice.md:165 quotes spec-writer charter "flag drift … rather than silently rewriting" — not in spec-writer.md (now "Do not re-align", :40) — **Done in #2849.**
 - ~~**I2**~~ med author new_project_practices_setup.md:153, :279-281 ci.yml verbatim + dev extras omit playwright — **Done in #2831.**
-- **I3** low doc new_project_practices_setup.md:237-241 "around 130 dangling … five places" vs 88 measured, constitution.md:42 sixth source, CONTRIBUTING 2 refs
-- **I4** low doc new_project_practices_setup.md:204-209 omits test_index_currency.py (CLAUDE.md:224) from lines-to-drop
-- **I5** low doc rrw_design_rationale.md:185,225 "migrations round-tripped on both dialects" vs Postgres only (azure_ask.md is a record)
-- **I6** low doc rrw_sdd_in_practice.md:163, constitution.md:50 diff-reviewer "no edit tools"/"read-only" vs Bash in tools (charter, not construction)
-- **I7** low doc CLAUDE.md:213-214 hook rebuilds also when pip --version fails (session-start.sh:56-60)
+- ~~**I3**~~ low doc new_project_practices_setup.md:237-241 "around 130 dangling … five places" vs 88 measured, constitution.md:42 sixth source, CONTRIBUTING 2 refs — **Done in #2849.**
+- ~~**I4**~~ low doc new_project_practices_setup.md:204-209 omits test_index_currency.py (CLAUDE.md:224) from lines-to-drop — **Done in #2849.**
+- ~~**I5**~~ low doc rrw_design_rationale.md:185,225 "migrations round-tripped on both dialects" vs Postgres only (azure_ask.md is a record) — **Done in #2849.**
+- ~~**I6**~~ low doc rrw_sdd_in_practice.md:163, constitution.md:50 diff-reviewer "no edit tools"/"read-only" vs Bash in tools (charter, not construction) — **Done in #2849.**
+- ~~**I7**~~ low doc CLAUDE.md:213-214 hook rebuilds also when pip --version fails (session-start.sh:56-60) — **Done in #2849.**
 - **I8** low author README.md:204-220 omits azure_ask.md
-- **I9** low doc rrw_sdd_in_practice.md:54-55 each folder archive/ has its own index vs docs/archive has none (rows in docs/README.md)
+- ~~**I9**~~ low doc rrw_sdd_in_practice.md:54-55 each folder archive/ has its own index vs docs/archive has none (rows in docs/README.md) — **Done in #2849.**
