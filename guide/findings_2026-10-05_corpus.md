@@ -126,6 +126,13 @@ author, marked *re-checked*) also ran it.
   `csv` module's 131,072-character field limit: the responses extract
   writes it, and Rehydrate refuses the set (`spec/rehydrate.md` §9,
   since #2835). Author: raise the parser's limit or cap answers.
+- **Ec9** — The Link 3 builder's boundary cells disagree between a card
+  as rendered and one just edited: the template gives every saved cell
+  an X (the first disabled), while `newModelRefreshUnitButtons`, called
+  only from add and remove, turns every cell but the last into a
+  disabled AND (`operator/instruments_index.html`). A saved two-tag unit
+  therefore shows X X on load and AND X after any edit. Run the refresh
+  on load, or render the AND server-side. Code.
 
 **Low**
 
@@ -290,20 +297,20 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 **E — UI and visual style**
 
 - **E1** med author ui_elements.md:625,644-647 chip edge 1px vs base.html:2627-2631 2px; test_chip_edge "two_pixel_edge"
-- **E2** med spec ui_elements.md:37-40 general wins vs visual_style_rrw.md:70-83 app wins; ui_elements implements rrw
-- **E3** low trim color_tokens.md:244 "nine dark tokens → --blue-glow" vs 8
-- **E4** med write operator_button_audit.md no rows for session_rehydrate.html (5 controls)
-- **E5** low-med write operator_button_audit.md:406-407 sort-save-error-banner Cancel no row
-- **E6** low-med write operator_button_audit.md:428-458,641-648 Band 3 X, ▲▼, Band 1 +/AND-OR/op-cycle/X no rows; §16 points to non-existent "instruments.md § Band 1"
+- ~~**E2**~~ med spec ui_elements.md:37-40 general wins vs visual_style_rrw.md:70-83 app wins; ui_elements implements rrw — **Done in #2845.**
+- ~~**E3**~~ low trim color_tokens.md:244 "nine dark tokens → --blue-glow" vs 8 — **Done in #2845.**
+- ~~**E4**~~ med write operator_button_audit.md no rows for session_rehydrate.html (5 controls) — **Done in #2845.**
+- ~~**E5**~~ low-med write operator_button_audit.md:406-407 sort-save-error-banner Cancel no row — **Done in #2845.**
+- ~~**E6**~~ low-med write operator_button_audit.md:428-458,641-648 Band 3 X, ▲▼, Band 1 +/AND-OR/op-cycle/X no rows; §16 points to non-existent "instruments.md § Band 1" — **Done in #2845.**
 - ~~**E7**~~ med code operator_button_audit.md:136,243,781; session_owners.md:193 chrome-link "reuse" — renders unstyled (=Ec8) — **Done in #2830.**
-- **E8** low spec ui_elements.md:458; operator_button_audit.md:866-870 .tab-strip-page "chrome grey like Setup row" vs Setup row blue-pale
-- **E9** low spec operator_button_audit.md:50 chrome link "defined in visual_style_rrw" vs ui_elements §1
-- **E10** low trim operator_button_audit.md:538-549,76,413 retired rows kept "because cited" — none cited
-- **E11** low spec operator_ui_concept.md:75-80,113-117 URLs lack /operator prefix
-- **E12** low trim tallies: ui_elements.md:570,694,274,704,949-952; operator_ui_concept.md:454-455; operator_button_audit.md:268,357
-- **E13** low trim history: ui_elements.md:203-204,271-274; visual_style_general.md:25,117; operator_button_audit.md:382
+- ~~**E8**~~ low spec ui_elements.md:458; operator_button_audit.md:866-870 .tab-strip-page "chrome grey like Setup row" vs Setup row blue-pale — **Done in #2845.**
+- ~~**E9**~~ low spec operator_button_audit.md:50 chrome link "defined in visual_style_rrw" vs ui_elements §1 — **Done in #2845.**
+- ~~**E10**~~ low trim operator_button_audit.md:538-549,76,413 retired rows kept "because cited" — none cited — **Done in #2845.**
+- ~~**E11**~~ low spec operator_ui_concept.md:75-80,113-117 URLs lack /operator prefix — **Done in #2845.**
+- ~~**E12**~~ low trim tallies: ui_elements.md:570,694,274,704,949-952; operator_ui_concept.md:454-455; operator_button_audit.md:268,357 — **Done in #2845.**
+- ~~**E13**~~ low trim history: ui_elements.md:203-204,271-274; visual_style_general.md:25,117; operator_button_audit.md:382 — **Done in #2845.**
 - **E14** low-med author instruments_index.html:8-266 258-line local <style> primitives uncatalogued (save-error-banner, sort-btn/sort-badge, instrument-card-*, page-break-card*, reorder-toast)
-- **E15** low write uncatalogued base.html primitives (.roster-card/.unlock-*, .row-expander-*/.exp-*, .roster-readouts, .tag-mode-chip/.pill-tag-clear, .quick-setup-*, .setup-coverage-*, .severity-filter-*, .email-preview-*; email-preview-body <pre> not .code-block)
+- ~~**E15**~~ low write uncatalogued base.html primitives (.roster-card/.unlock-*, .row-expander-*/.exp-*, .roster-readouts, .tag-mode-chip/.pill-tag-clear, .quick-setup-*, .setup-coverage-*, .severity-filter-*, .email-preview-*; email-preview-body <pre> not .code-block) — **Done in #2845.**
 - **E16** low author visual_style_general.md:145,215; ui_elements.md:925 no drop shadows vs .instrument-reorder-toast box-shadow (instruments_index.html:257)
 
 **F — architecture, roles and operations**
