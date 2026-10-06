@@ -9732,3 +9732,72 @@ def test_added_response_fields_get_a_default_label(
                  "newModelRfSyncDefaults", "newModelRfNameKey",
                  "newModelRfMaybeCommit"):
         assert "fetch(" not in _rf_fn(body, name), name
+
+
+def test_link3_saved_multi_tag_unit_renders_and_markers(
+    client: TestClient, db: Session
+) -> None:
+    """Ec9: a saved two-tag unit renders what the add / remove refresh
+    leaves — a disabled AND on every cell but the last, the X on the
+    last — so a card looks the same before and after an edit."""
+    review_session = _make_session(client, db, code="nm-l3-and")
+    _seed_tag_data(db, review_session.id)
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    new_model.group_kind = "r1,r2"
+    db.commit()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    card = _card_slice(body, new_model.id)
+    actions = re.findall(
+        r"<button[^>]*data-new-model-cell-action[^>]*>(\w+)</button>",
+        card,
+        flags=re.S,
+    )
+    assert actions == ["AND", "X"]
+    and_btn, x_btn = re.findall(
+        r"<button[^>]*data-new-model-cell-action[^>]*>", card, flags=re.S
+    )
+    assert "disabled" in and_btn and "btn secondary" in and_btn
+    assert "disabled" not in x_btn and 'title="Remove cell"' in x_btn
+
+
+def test_link3_single_cell_x_is_disabled(
+    client: TestClient, db: Session
+) -> None:
+    """The lone boundary cell keeps a disabled X, as before."""
+    review_session = _make_session(client, db, code="nm-l3-one")
+    source = _instrument(db, review_session.id)
+    client.post(
+        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        data={"after": str(source.id)},
+        follow_redirects=False,
+    )
+    new_model = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .where(Instrument.id != source.id)
+    ).scalar_one()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    card = _card_slice(body, new_model.id)
+    buttons = re.findall(
+        r"<button[^>]*data-new-model-cell-action[^>]*>\w+</button>",
+        card,
+        flags=re.S,
+    )
+    assert len(buttons) == 1
+    assert ">X</button>" in buttons[0] and "disabled" in buttons[0]

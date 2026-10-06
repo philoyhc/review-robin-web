@@ -7,6 +7,7 @@ it repeats (``guide/archive/browser_test.md`` rung 3).
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 import httpx
@@ -132,3 +133,51 @@ def test_visibility_is_edited_in_the_card_and_survives_lock_and_reload(
     expect(_chip(card, "observer", "while_ongoing")).to_have_attribute(
         "data-new-model-vp-current-slug", "summarized"
     )
+
+
+def test_link3_cells_keep_their_markers_through_add_and_remove(
+    page: Page, api: httpx.Client, new_session: Callable[[], int]
+) -> None:
+    """Ec9: adding a boundary cell turns the earlier one into a disabled
+    AND and puts the X on the new last cell, keeping the cell-button
+    class the template renders; removing it restores a lone, disabled X.
+    """
+    session_id = new_session()
+    # Link 3 offers only populated reviewee / pair-context tags.
+    response = api.post(
+        f"/operator/sessions/{session_id}/reviewees/import",
+        files={
+            "file": (
+                "reviewees.csv",
+                b"RevieweeName,RevieweeEmail,RevieweeTag1\n"
+                b"Carol,carol@example.edu,Blue\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code in (200, 303), response.text
+    card = open_unlocked(page, session_id)
+    mode = card.locator("[data-new-model-unit-mode]").first
+    for _ in range(3):
+        if mode.get_attribute("data-new-model-unit-mode") == "group":
+            break
+        mode.click()
+    expect(mode).to_have_attribute("data-new-model-unit-mode", "group")
+    actions = card.locator("[data-new-model-cell-action]")
+    expect(actions).to_have_count(1)
+    expect(actions.first).to_be_disabled()
+
+    card.locator("[data-new-model-unit-add]").first.click()
+    expect(actions).to_have_count(2)
+    expect(actions.nth(0)).to_have_text("AND")
+    expect(actions.nth(0)).to_be_disabled()
+    expect(actions.nth(1)).to_have_text("X")
+    expect(actions.nth(1)).to_be_enabled()
+    for i in range(2):
+        expect(actions.nth(i)).to_have_class(re.compile(r"\bcohort-cell-btn\b"))
+
+    actions.nth(1).click()
+    expect(actions).to_have_count(1)
+    expect(actions.first).to_have_text("X")
+    expect(actions.first).to_be_disabled()
