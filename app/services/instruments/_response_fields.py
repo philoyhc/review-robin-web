@@ -101,7 +101,6 @@ def _inline_kwargs_from_default_spec(
     }
 
 
-
 def _integer_bound(value: Any) -> int | float:
     """An Integer field's bound as the ``validation`` block stores it:
     a whole value as an int, a non-whole one kept as entered (A9). The
@@ -111,6 +110,7 @@ def _integer_bound(value: Any) -> int | float:
     (which reads ``_inline_*``) does not enforce."""
     number = float(value)
     return int(number) if number.is_integer() else number
+
 
 def _validation_block_from_default_spec(
     spec: dict[str, Any],

@@ -321,3 +321,8 @@ def test_integer_bound_error_reads_the_bound_as_entered() -> None:
         data_type="Integer", _inline_min=1.0, _inline_max=5.0, _inline_step=1.0
     )
     assert validate_value(whole, "0") == "Must be at least 1."
+    # No scientific notation, matching the constraint line.
+    tiny = SimpleNamespace(
+        data_type="Integer", _inline_min=0.00001, _inline_max=None, _inline_step=None
+    )
+    assert validate_value(tiny, "0") == "Must be at least 0.00001."

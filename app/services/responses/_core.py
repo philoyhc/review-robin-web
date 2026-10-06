@@ -4,6 +4,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.orm import Session
@@ -88,8 +89,12 @@ _STEP_TOLERANCE = 1e-6
 def _format_number(v: float, *, integer: bool) -> str:
     if integer:
         # A non-whole bound kept by the whole-bounds exemption reads as
-        # entered, not truncated (A9).
-        return str(int(v)) if v == int(v) else f"{v:g}"
+        # entered (A9): ``repr`` is the shortest round-trip, and
+        # ``Decimal`` keeps it out of scientific notation, as the
+        # reviewer surface's constraint line prints it.
+        if v == int(v):
+            return str(int(v))
+        return format(Decimal(repr(v)), "f")
     if v == int(v):
         return f"{v:.1f}"
     return f"{v:g}"
