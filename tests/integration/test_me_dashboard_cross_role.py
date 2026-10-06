@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.auth.identity import AuthenticatedUser
 from app.db.models import (
     Observer,
     Reviewee,
@@ -357,3 +358,87 @@ def test_the_grant_and_the_close_are_both_required(
     review_session.status = "draft"
     db.commit()
     assert 'class="pill pill-role-reviewee"' not in client.get("/me").text
+
+
+# ── The reviewee match is the /results gate's ────────────────────────
+
+
+def test_a_padded_reviewee_identifier_still_matches(
+    client: TestClient, db: Session, grant_reviewee_visibility
+) -> None:
+    """The match strips as well as folds, as the /results gate does,
+    so the pill and the page it links to agree."""
+    review_session = _make_session_and_activate(client, db, code="me-pad")
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Alice",
+            email_or_identifier="  Alice@Example.edu ",
+        )
+    )
+    db.commit()
+    grant_reviewee_visibility(review_session)
+    body = client.get("/me").text
+    assert 'class="pill pill-role-reviewee"' in body
+    assert client.get(f"/me/sessions/{review_session.id}/results").status_code == 200
+
+
+def test_a_non_email_reviewee_identifier_confers_no_role(
+    client: TestClient, db: Session, make_client, grant_reviewee_visibility
+) -> None:
+    """A reviewee carried under a non-email identifier holds no
+    reviewee role on /me, even for a principal whose identity equals
+    that identifier: the /results gate would 404 it, so a pill would
+    link nowhere."""
+    review_session = _make_session_and_activate(client, db, code="me-anon")
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Anon",
+            email_or_identifier="ANON-0042",
+        )
+    )
+    db.commit()
+    grant_reviewee_visibility(review_session)
+    anon = make_client(
+        AuthenticatedUser(
+            principal_id="anon-oid",
+            email="anon-0042",
+            name="Anon",
+            provider="aad",
+        )
+    )
+    body = anon.get("/me").text
+    assert 'class="pill pill-role-reviewee"' not in body
+    assert f"/me/sessions/{review_session.id}/results" not in body
+    assert (
+        anon.get(f"/me/sessions/{review_session.id}/results").status_code
+        == 404
+    )
+
+
+def test_padded_reviewer_and_observer_emails_still_match(
+    client: TestClient, db: Session
+) -> None:
+    """The /me reviewer and observer arms trim as their gates do
+    (``normalize_email`` strips both sides), so a stored address with
+    surrounding spaces still earns its pill."""
+    review_session = _make_session_and_activate(client, db, code="me-pad2")
+    db.add(
+        Reviewer(
+            session_id=review_session.id,
+            name="Alice",
+            email="  Alice@Example.edu ",
+        )
+    )
+    db.add(
+        Observer(
+            session_id=review_session.id,
+            email=" alice@example.edu  ",
+            display_name="Alice",
+        )
+    )
+    db.commit()
+    body = client.get("/me").text
+    assert 'class="pill pill-role-reviewer"' in body
+    assert 'class="pill pill-role-observer"' in body

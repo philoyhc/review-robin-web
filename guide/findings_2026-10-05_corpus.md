@@ -199,21 +199,21 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **A — instruments and the reviewer surface**
 
-- **A1** low spec participant_model.md:159 min/max live-update partial on all four schedule inputs vs Create only
-- **A2** low spec instruments.md:982 _inline_list_options vs _inline_list_csv
-- **A3** low spec instruments.md:226-228 form wraps body vs empty form + form= attrs
-- **A4** low spec instruments.md:939 "... + N more" vs ", +N more"
+- ~~**A1**~~ low spec participant_model.md:159 min/max live-update partial on all four schedule inputs vs Create only — **Done in #2841.**
+- ~~**A2**~~ low spec instruments.md:982 _inline_list_options vs _inline_list_csv — **Done in #2841.**
+- ~~**A3**~~ low spec instruments.md:226-228 form wraps body vs empty form + form= attrs — **Done in #2841.**
+- ~~**A4**~~ low spec instruments.md:939 "... + N more" vs ", +N more" — **Done in #2841.**
 - **A5** low author instruments.md:937-939 group preview rule-surviving subset vs reviewee-side boundary only (views/_instruments.py:555-588)
-- **A6** low write instruments.md:1030-1032 route inventory omits edit/fields/display-fields/preview-sample
-- **A7** low spec reviewer-surface.md:350-353 page_statuses every instrument vs only those with included assignments
-- **A8** low spec reviewer-surface.md:924-926 every GET/POST runs observe_deadline vs surface/save/submit/clear/recall + operator Instruments GET only
+- ~~**A6**~~ low write instruments.md:1030-1032 route inventory omits edit/fields/display-fields/preview-sample — **Done in #2841.**
+- ~~**A7**~~ low spec reviewer-surface.md:350-353 page_statuses every instrument vs only those with included assignments — **Done in #2841.**
+- ~~**A8**~~ low spec reviewer-surface.md:924-926 every GET/POST runs observe_deadline vs surface/save/submit/clear/recall + operator Instruments GET only — **Done in #2841.**
 - **A9** low author reviewer-surface.md:463-467 bounds as entered vs int() truncation on stored legacy rows (views/_instruments.py:166-225)
-- **A10** low code participant_model.md:108; reviewer-surface.md:1073-1075 /me reviewee role needs email-identified vs _dashboard.py:96-105 no check, no strip
-- **A11** low trim instruments.md:128-130,144-145 provenance + restated
-- **A12** low trim instruments.md:162-168,410-414 rollout/migration history
-- **A13** low trim reviewer-surface.md:1532-1533; sort_by_reviewee.md:280,208; participant_model.md:70-71,73
-- **A14** low trim plan slice ids participant_model.md:70,73,100,130,161,182-183; reviewer-surface.md:1352,1449,1454
-- **A15** low spec sort_by_reviewee.md:338,371 "four rosters" vs three (observers unsorted)
+- ~~**A10**~~ low code participant_model.md:108; reviewer-surface.md:1073-1075 /me reviewee role needs email-identified vs _dashboard.py:96-105 no check, no strip — **Done in #2841.**
+- ~~**A11**~~ low trim instruments.md:128-130,144-145 provenance + restated — **Done in #2841.**
+- ~~**A12**~~ low trim instruments.md:162-168,410-414 rollout/migration history — **Done in #2841.**
+- ~~**A13**~~ low trim reviewer-surface.md:1532-1533; sort_by_reviewee.md:280,208; participant_model.md:70-71,73 — **Done in #2841.**
+- ~~**A14**~~ low trim plan slice ids participant_model.md:70,73,100,130,161,182-183; reviewer-surface.md:1352,1449,1454 — **Done in #2841.**
+- ~~**A15**~~ low spec sort_by_reviewee.md:338,371 "four rosters" vs three (observers unsorted) — **Done in #2841.**
 - ~~**A16**~~ low author instruments.md:1104-1106,1395-1396 bad row 422 edits intact vs non-atomic save (=Ac1) — **Done in #2834.**
 - ~~**A17**~~ low spec visibility_policy.md:128-139 §4.1 legacy rows only handled for Replicate (=Ac2) — **Done in #2833.**
 

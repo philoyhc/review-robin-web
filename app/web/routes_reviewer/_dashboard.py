@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import date_formatting
+from app.services import participants
 from app.services.email_identity import normalize_email
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
@@ -98,7 +99,7 @@ def reviewer_dashboard(
             .join(ReviewSession, ReviewSession.id == Reviewer.session_id)
             .where(
                 Reviewer.status == "active",
-                func.lower(Reviewer.email) == user_email,
+                func.lower(func.trim(Reviewer.email)) == user_email,
             )
         ).all()
     )
@@ -108,7 +109,8 @@ def reviewer_dashboard(
             .join(ReviewSession, ReviewSession.id == Reviewee.session_id)
             .where(
                 Reviewee.status == "active",
-                func.lower(Reviewee.email_or_identifier) == user_email,
+                func.lower(func.trim(Reviewee.email_or_identifier))
+                == user_email,
             )
         ).all()
     )
@@ -118,7 +120,7 @@ def reviewer_dashboard(
             .join(ReviewSession, ReviewSession.id == Observer.session_id)
             .where(
                 Observer.status == "active",
-                func.lower(Observer.email) == user_email,
+                func.lower(func.trim(Observer.email)) == user_email,
             )
         ).all()
     )
@@ -135,7 +137,11 @@ def reviewer_dashboard(
     for reviewer, s in reviewer_rows:
         reviewer_by_session[s.id] = reviewer
         _add(s, "reviewer")
-    for _reviewee, s in reviewee_rows:
+    for reviewee, s in reviewee_rows:
+        # The /results gate's own predicate: a reviewee carried under a
+        # non-email identifier holds no role here, whatever it equals.
+        if not participants.is_email_identified(reviewee):
+            continue
         # 19F PR 2 — the reviewee role contributes a row only while a
         # grant actually resolves for them. A reviewee with nothing
         # currently granted is treated exactly as someone holding no

@@ -125,9 +125,9 @@ One-line pill row, left-aligned:
 > *Session deadline (auto-close): `<deadline>` · `N accepting` ·
 > `M not accepting`*
 
-There is no instrument count and no showing-when-closed count; the
-first was in this spec and never shipped, the second follows from
-the per-instrument visibility policy having no operator control.
+There is no instrument count and no showing-when-closed count: what
+shows once an instrument closes is its visibility policy's call
+(below), not a page-level state.
 
 Below it, left-aligned under the pill row:
 
@@ -141,8 +141,7 @@ instrument either.** Accepting is session-wide: Activate opens every
 instrument, and the deadline, Close session or Revert closes them
 all (`spec/lifecycle.md`). What shows once an instrument closes is
 governed by the per-instrument **visibility policy**
-(`spec/visibility_policy.md`). The one-line status row therefore reports an accepting count and no
-"showing when closed" count.
+(`spec/visibility_policy.md`).
 
 ## Instrument data model
 
@@ -162,10 +161,7 @@ boolean carries the operator-controlled page-break layout:
   The DB `server_default` is `false` and the Mapped
   column declares `default=False`, so a new instrument
   continues the current page and ORM creates match the
-  DB. The column's rollout migration backfills `true`
-  on instruments that predate it, so a session authored
-  before it keeps one instrument per page (rationale in
-  `guide/archive/segment_18M_instrument_layout.md`).
+  DB.
 
   Mutated only by the three service helpers in
   `app.services.instruments`:
@@ -223,9 +219,9 @@ Order of stripes (each separated by a horizontal rule):
 └────────────────────────────────────────────────────────────────┘
 ```
 
-The whole card body is wrapped in a `<form id="dfsave-{id}">`
-that the Save button submits; every editable input on Bands 1+3
-binds to that form via `form="dfsave-{id}"`. The identity fields
+The card carries an empty `<form id="dfsave-{id}">` that the
+Save button submits; every editable input on Bands 1+3 sits
+outside it and binds to it via `form="dfsave-{id}"`. The identity fields
 ride the same form: the card-title `short_label` input, Band 2's
 `description` textarea, and each field's `help_text` textarea all
 carry `form="dfsave-{id}"`, so one bulk Save commits identity,
@@ -407,11 +403,9 @@ position, which drag-and-drop moves).
   take the same number** — nothing constrains duplicates, and no
   unique index exists on `(session_id, session_seq)`. Latent today:
   every creation path flushes immediately.
-- **Backfilled** by revision `b7d4f2a9c153`, ranking each
-  session's rows by `id` ascending. **Audit summaries written before
-  that migration embed the old `Instrument_{id}` labels** and name
-  numbers that may now match a different card — a cutover boundary of
-  the same kind `spec/architecture.md` records for 2026-05-07.
+- **Older audit summaries embed `Instrument_{id}` labels** rather
+  than the ordinal, so the number they name may match a different
+  card.
 
 #### Card background colour
 
@@ -677,10 +671,11 @@ reviewee or pair-context tags. The cells additively define the
 **group boundary**: reviewees sharing the same values across
 every picked tag form one group.
 
-The "AND" / "THE SAME" disabled buttons inside the builder are
-visual markers: they communicate that boundary tags compose
-additively (every tag matters) and that group membership is
-"the reviewees agreeing on all of these".
+The builder's disabled buttons are visual markers: "THE SAME"
+beside the + button, and an "AND" on every boundary cell but the
+last (the last carries the X). They say that boundary tags compose
+additively (every tag matters) and that group membership is "the
+reviewees agreeing on all of these".
 
 The boundary cells encode into `Instrument.group_kind` (a
 `String(32)`) via `encode_group_kind / decode_group_kind` in
@@ -936,7 +931,7 @@ when Name is selected, up to `GROUP_MEMBER_NAME_LIMIT` (10) member
 names below. The reviewer surface composes its line the same way
 (`spec/reviewer-surface.md` "Group-scoped instruments"). Reviewees in the rule-surviving subset that share
 the sample's boundary key form the group; if more than 10
-qualify, the trailing `... + N more` collapses the overflow.
+qualify, a trailing `, +N more` collapses the overflow.
 
 ### Response fields
 
@@ -979,7 +974,7 @@ join, `td.rf-slot`, keep six leading columns on every row — see
 | **⑂** / **↰** / **↳** | `branch_parent_id` / `branch_op` / `branch_value` / `branch_mode` | Fork, join and detach — see ["Branching between response fields"](#branching-between-response-fields) below. |
 | Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Empty until typed — see "A field's default label" below. |
 | Type (`<select>`) | `_inline_data_type` | `String / Integer / Decimal / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. Disabled when the row has saved responses; the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
-| Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_options` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
+| Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_csv` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
 | **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. Stages Band 2 state directly, so Save alone persists a toggle. Grayed out on a row a Require branch governs, where the condition decides (see ["Branching between response fields"](#branching-between-response-fields)). |
 | **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field in Band 2's intro columns, above the reviewer-surface preview table. The help-text *text* is a plain `help_text` textarea on that card (shown when the instrument card is unlocked, `data-lock-only` read view when locked), bound to the `dfsave-{id}` form, so it commits with the bulk Save. Stages Band 2 state directly, like R. |
 | **▲ / ▼** | — | Full-size `btn secondary` buttons (not `btn-short` — that size is the display-field table's, see "Display-field table" above) that swap this row's `<tbody>` group with its neighbor. They move a **group**, not a row; a governed row moves its unit (itself, its condition row and any branch inside it) past the neighboring unit within its branch instead — see ["Branching between response fields"](#branching-between-response-fields). |
@@ -1027,9 +1022,14 @@ POSTs to the consolidated
 request carries identity, Band 1, the Band 2/Band 3 state
 snapshots, and column widths together (its JSON response is detailed
 under "Save" in "Action row" below). The page drives no other save
-endpoint except `/fields/save`, its no-JS fallback; the per-concern
-routes `/band2-state`, `/column-widths`, `/display-fields/order` and
-`/identity` remain available to fixture and programmatic callers only.
+endpoint except `/fields/save`, its no-JS fallback, and reads the
+Band 2 preview row from `POST .../preview-sample`, which persists
+nothing. The per-concern routes `/band2-state`, `/column-widths`,
+`/display-fields/order`, `/identity` and `/edit` (description), and
+the per-field routes `/fields`, `/fields/add-row`,
+`/fields/{fid}/edit`, `/fields/{fid}/delete`, `/fields/{fid}/move`
+and `/display-fields`, remain available to fixture and programmatic
+callers only.
 
 `InstrumentResponseField.visible` — read live off each row's Active
 checkbox — is what the reviewer surface form, the reviewer summary
