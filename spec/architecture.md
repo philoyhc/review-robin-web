@@ -21,7 +21,9 @@ Review Robin Web is organized around explicit domain entities:
 - invitations
 - audit events
 - extracts (CSV / ZIP data exports)
-- retention actions (scheduled archive / delete — partially deferred)
+- retention actions (operator-triggered archive, purge and delete;
+  nothing is scheduled, and the per-session retention columns are
+  stored but inert)
 
 **Participant-model context.** The domain has **four participant
 roles** — operator, reviewer, reviewee, observer. The three
@@ -68,11 +70,10 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    What may **not** live in a handler is a rule with a domain
    consequence — a floor, a quota, a cascade, a precondition beyond
    the gates in `deps.py` — or a computation over several rows that
-   a service or a view would otherwise own. Worked example:
-   `instruments_delete` held both. Its "cannot delete the last
-   instrument" floor is now `instruments.LastInstrumentError`, so
-   every caller gets it rather than the one route that happened to
-   check; its next-sibling landing choice is now
+   a service or a view would otherwise own. Worked example: deleting
+   an instrument. Its "cannot delete the last instrument" floor is
+   `instruments.LastInstrumentError`, so every caller gets it rather
+   than only the route; its next-sibling landing choice is
    `views.instrument_delete_landing_id`, per the fourth seam below.
    Operator routes live in the `app/web/routes_operator/` package
    (split by feature area — `_lobby.py`, `_session_home.py`,
@@ -202,10 +203,8 @@ the method), not 301.
 relationship/membership without destroying the far side
 (`owners/{uid}/remove`, `users/{id}/remove-from-all-sessions`).
 Creation is `{collection}/add` for a single-kind collection
-(`owners/add`). `instruments/add-new-model` keeps its verb-first,
-kind-naming shape from when instruments had several creation kinds;
-`instruments/add-group`, the other, is retired, so it is now a single
-legacy name rather than a pattern (consistency-audit R7).
+(`owners/add`). `instruments/add-new-model` is the one legacy
+exception: a verb-first, kind-naming URL, not a pattern to copy.
 
 **Whole-set saves end in `/save`, verb last**:
 `instruments/{id}/fields/save` (the Band 1 + Link 3 + visibility
@@ -216,12 +215,12 @@ whole-form save) follows this shape, distinct from the per-item
 inline with the validation message in the form banner (`edit_error` →
 `_render_*_page`). A failed **lifecycle action** (Prepare / Activate)
 bounces to the Session Home `super_*` flash (`_redirect_url`) — both the
-Workflow-card and Validate-page activate buttons use it (R2). The
+Workflow-card and Validate-page activate buttons use it. The
 setup-page **bulk / delete-all** handlers keep a plain
 `HTTPException(400)` (the shared error page): their only failures
 (`not_in_session` / `invalid_status` / missing-`confirm`) are
 unreachable through the UI, so a page-level inline banner for them is
-deferred (consistency-audit R3; `guide/deferred_consolidated.md` Part C).
+deferred (`guide/deferred_consolidated.md` Part C).
 
 **Documented exception — the Extract-data "Data shaper" sub-API**
 (`routes_operator/_extract_data.py`). This one surface is a deliberate
@@ -232,14 +231,13 @@ Form-and-redirect house style. It is driven entirely by client-side
 `fetch`, so a redirect would be meaningless. This is the blessed
 pattern for AJAX endpoints — new client-scripted endpoints should
 **converge on it** (a Pydantic request model + a JSON response) rather
-than inventing a third contract (consistency-audit R1 / R4). The
-instrument-card AJAX endpoints (`_instruments_band2.py`,
-`_instruments_pagination.py`) do not follow it. R4 shipped and
-resolved that deliberately the other way: both now call
-`require_json_object` (`_shared.py`), which factors out the
-hand-rolled parse but **keeps** the 400-plus-tailored-message
-contract their client JS expects rather than converting them to a
-Pydantic 422. The convergence rule above governs *new* endpoints.
+than inventing a third contract. The instrument-card AJAX endpoints
+(`_instruments_band2.py`, `_instruments_pagination.py`, and the
+display-field-order and identity endpoints in `_instruments.py`) are
+the deliberate exception: they call `require_json_object`
+(`_shared.py`), which keeps the 400-plus-tailored-message contract
+their client JS expects rather than a Pydantic 422. The convergence
+rule above governs *new* endpoints.
 
 **Spec registration.** A new routing module must be registered in
 `app/web/spec_registry.py`, in exactly one of three ways: mapped in
@@ -848,11 +846,12 @@ is. Every write from that date onward is canonical.
 
 - **Operator lobby gate** — `GET /operator/*` is gated by
   `require_operator` / `require_session_operator` in
-  `app/web/deps.py`. A user's membership in **any participant
-  roster** (reviewer, reviewee, or observer) never confers
-  operator access; only `users.is_operator`, a `session_operators`
-  row, or an elevated role does. This invariant is pinned by a
-  regression test in
+  `app/web/deps.py`. The router-level gate passes only
+  `users.is_operator` or `users.is_sys_admin`; a `session_operators`
+  row then scopes which sessions an operator reaches but does not by
+  itself admit anyone. Membership in **any participant roster**
+  (reviewer, reviewee, or observer) never confers operator access.
+  This invariant is pinned by a regression test in
   `tests/integration/test_operator_lobby_access_gate.py`.
 
 - **Three-tier role model.** The admin surface is a

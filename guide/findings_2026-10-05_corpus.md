@@ -316,16 +316,16 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 **F — architecture, roles and operations**
 
 - ~~**F1**~~ med author permissions.md:33,166-167,170; architecture.md:859-861; audience_and_identity_model.md:117,141 — super-admin alone adds admins vs invite path (= Fc1) — **Done in #2828.**
-- **F2** low spec architecture.md:24 "scheduled archive/delete partially deferred" vs nothing scheduled; retention_* inert (review_session.py:129-130)
-- **F3** low spec architecture.md:231-232 require_json_object list omits _instruments.py:1133,1178
-- **F4** low spec architecture.md:842-849 session_operators row confers access vs router gate is_operator or is_sys_admin (deps.py:188)
-- **F5** low trim architecture.md:72-76,201-203,214,219,230-237 provenance (R1..R7 labels, add-group retired history)
-- **F6** low spec spec/README.md:26 architecture row omits route conventions, static assets, spec registration, write-path, invariants (fold)
-- **F7** low spec spec/README.md:25 windows throughout/always vs not stored/not authorable (visibility_policy.md:97,103-104)
-- **F8** low spec permissions.md:265-269 every op writes one event vs adopt on already-owner writes none (_sys_admin.py:272-285)
-- **F9** low trim permissions.md:204 "author's ruling, 2026-09-23"
-- **F10** low spec audience_and_identity_model.md:328-331 "Both audiences" vs four + admin
-- **F11** low trim permissions.md:118,285,287 tallies ("seven", "four")
+- ~~**F2**~~ low spec architecture.md:24 "scheduled archive/delete partially deferred" vs nothing scheduled; retention_* inert (review_session.py:129-130) — **Done in #2846.**
+- ~~**F3**~~ low spec architecture.md:231-232 require_json_object list omits _instruments.py:1133,1178 — **Done in #2846.**
+- ~~**F4**~~ low spec architecture.md:842-849 session_operators row confers access vs router gate is_operator or is_sys_admin (deps.py:188) — **Done in #2846.**
+- ~~**F5**~~ low trim architecture.md:72-76,201-203,214,219,230-237 provenance (R1..R7 labels, add-group retired history) — **Done in #2846.**
+- ~~**F6**~~ low spec spec/README.md:26 architecture row omits route conventions, static assets, spec registration, write-path, invariants (fold) — **Done in #2846.**
+- ~~**F7**~~ low spec spec/README.md:25 windows throughout/always vs not stored/not authorable (visibility_policy.md:97,103-104) — **Done in #2846.**
+- ~~**F8**~~ low spec permissions.md:265-269 every op writes one event vs adopt on already-owner writes none (_sys_admin.py:272-285) — **Done in #2846.**
+- ~~**F9**~~ low trim permissions.md:204 "author's ruling, 2026-09-23" — **Done in #2846.**
+- ~~**F10**~~ low spec audience_and_identity_model.md:328-331 "Both audiences" vs four + admin — **Done in #2846.**
+- ~~**F11**~~ low trim permissions.md:118,285,287 tallies ("seven", "four") — **Done in #2846.**
 - **F12** low-med author operations_pages.md:167-171 (pinned test_page_guidance.py:544) "four of eight counters cannot move" vs send stamps sent_at/last_reminder_at today (invitations.py:384-390,765-768)
 - **F13** low author email_infra_options.md:588-675 ✅/◻ ticks + migration path = plan; move to segment_14B?
 
