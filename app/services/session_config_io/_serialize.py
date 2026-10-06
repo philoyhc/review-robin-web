@@ -268,10 +268,13 @@ def _email_override_rows(review_session: ReviewSession) -> list[Row]:
 # --------------------------------------------------------------------------- #
 
 
-def _instrument_blocks(
+def _instruments_in_block_order(
     db: Session, review_session: ReviewSession
-) -> list[Row]:
-    instruments = (
+) -> list[Instrument]:
+    """The session's instruments in ``instruments[n]`` order, ``(order,
+    id)``. One query for both the blocks and the data-shape number
+    references (D20), so the two numberings cannot drift apart."""
+    return list(
         db.execute(
             select(Instrument)
             .where(Instrument.session_id == review_session.id)
@@ -280,6 +283,12 @@ def _instrument_blocks(
         .scalars()
         .all()
     )
+
+
+def _instrument_blocks(
+    db: Session, review_session: ReviewSession
+) -> list[Row]:
+    instruments = _instruments_in_block_order(db, review_session)
     rule_set_name_by_id = _rule_set_name_lookup(db, review_session)
     # An instrument with no ``rule_set_id`` exports an empty
     # rule_set_name cell.
@@ -687,21 +696,40 @@ def _data_shape_rows(
         else {}
     )
 
+    # D20 — each instrument's ``instruments[n]`` number in this export
+    # (``_instrument_blocks`` numbers them 1-based in ``(order, id)``),
+    # the fallback reference for an instrument with no short label.
+    number_by_instrument_id = {
+        instrument.id: n
+        for n, instrument in enumerate(
+            _instruments_in_block_order(db, review_session), start=1
+        )
+    }
+
     rows: list[Row] = []
     for i, shape in enumerate(shapes):
         prefix = f"data_shapes[{i}]"
         rows.append(Row(f"{prefix}.name", _str(shape.name), "string"))
         rows.append(Row(f"{prefix}.axis", _str(shape.axis), "string"))
         instr_label = ""
+        instr_number: int | None = None
         if shape.instrument_id is not None:
             instr = instr_by_id.get(shape.instrument_id)
             if instr is not None:
                 instr_label = (instr.short_label or "").strip()
+                instr_number = number_by_instrument_id.get(instr.id)
         rows.append(
             Row(
                 f"{prefix}.instrument_short_label",
                 _str(instr_label or None),
                 "string",
+            )
+        )
+        rows.append(
+            Row(
+                f"{prefix}.instrument",
+                _int(instr_number),
+                "integer",
             )
         )
         field_key = ""

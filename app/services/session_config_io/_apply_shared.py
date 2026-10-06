@@ -122,6 +122,11 @@ class _DataShapeSpec:
     name: str | None = None
     axis: str | None = None
     instrument_short_label: str | None = None
+    # D20 — the ``instruments[n]`` number of the shape's instrument in
+    # the same bundle: the fallback reference when the instrument has
+    # no short label (which would otherwise export an empty, i.e.
+    # unscoped, reference).
+    instrument_number: int | None = None
     response_field_key: str | None = None
     column_chip_slots: list[str] = _dataclass_field(default_factory=list)
     # PR B of the Self-review handling chip slice. Default to
