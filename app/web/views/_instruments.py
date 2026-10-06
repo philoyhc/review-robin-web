@@ -182,10 +182,8 @@ def placeholder_for_field(field: InstrumentResponseField) -> str:
         step = validation.get("step")
         if min_ is None or max_ is None or step is None:
             return ""
-        if data_type == "Integer":
-            return (
-                f"{int(min_)} to {int(max_)}, steps of {int(step)}"
-            )
+        # Integer bounds print as entered too (A9): a non-whole bound
+        # kept by the whole-bounds exemption reads 0.5, not 0.
         lo, hi, by = (_format_band2_bound(v) for v in (min_, max_, step))
         return f"{lo} to {hi}, steps of {by}"
     return ""
@@ -222,8 +220,6 @@ def constraint_summary_for_field(field: InstrumentResponseField) -> str:
         step = validation.get("step")
         if min_ is None or max_ is None or step is None:
             return ""
-        if data_type == "Integer":
-            return f"{int(min_)}-{int(max_)}, steps of {int(step)}"
         lo, hi, by = (_format_band2_bound(v) for v in (min_, max_, step))
         return f"{lo}-{hi}, steps of {by}"
     # List rows are omitted from the constraint summary — the

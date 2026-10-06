@@ -164,6 +164,13 @@ def _field(*, data_type: str, validation: dict | None) -> SimpleNamespace:
             {"min": 0, "max": 100, "step": 1},
             "0 to 100, steps of 1",
         ),
+        # A9: a non-whole bound the whole-bounds exemption kept prints
+        # as entered, not truncated; a whole float drops its ``.0``.
+        (
+            "Integer",
+            {"min": 0.5, "max": 10.0, "step": 1.0},
+            "0.5 to 10, steps of 1",
+        ),
         # Decimal — `{min} to {max}, steps of {step}`, as entered: no
         # trailing `.0`, and no rounding (19T Item 6 entry 2).
         (
@@ -205,6 +212,7 @@ def test_placeholder_for_field_table(
         # Integer / Decimal use dash notation (vs ``placeholder``'s ``to``).
         ("Integer", {"min": 1, "max": 5, "step": 1}, "1-5, steps of 1"),
         ("Integer", {"min": 0, "max": 100, "step": 1}, "0-100, steps of 1"),
+        ("Integer", {"min": 0.5, "max": 10.0, "step": 1.0}, "0.5-10, steps of 1"),
         (
             "Decimal",
             {"min": 1.0, "max": 5.0, "step": 0.5},

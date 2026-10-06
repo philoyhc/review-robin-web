@@ -223,7 +223,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**A6**~~ low write instruments.md:1030-1032 route inventory omits edit/fields/display-fields/preview-sample — **Done in #2841.**
 - ~~**A7**~~ low spec reviewer-surface.md:350-353 page_statuses every instrument vs only those with included assignments — **Done in #2841.**
 - ~~**A8**~~ low spec reviewer-surface.md:924-926 every GET/POST runs observe_deadline vs surface/save/submit/clear/recall + operator Instruments GET only — **Done in #2841.**
-- **A9** low author reviewer-surface.md:463-467 bounds as entered vs int() truncation on stored legacy rows (views/_instruments.py:166-225) — **Ruled 2026-10-06: Integer bounds print as entered.**
+- ~~**A9**~~ low author reviewer-surface.md:463-467 bounds as entered vs int() truncation on stored legacy rows (views/_instruments.py:166-225) — **Done in #2854** (ruled 2026-10-06: Integer bounds print as entered).
 - ~~**A10**~~ low code participant_model.md:108; reviewer-surface.md:1073-1075 /me reviewee role needs email-identified vs _dashboard.py:96-105 no check, no strip — **Done in #2841.**
 - ~~**A11**~~ low trim instruments.md:128-130,144-145 provenance + restated — **Done in #2841.**
 - ~~**A12**~~ low trim instruments.md:162-168,410-414 rollout/migration history — **Done in #2841.**
