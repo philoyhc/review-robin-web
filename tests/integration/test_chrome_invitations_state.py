@@ -73,6 +73,14 @@ def _validated(client: TestClient, db: Session, session_id: int) -> None:
     assert response.status_code == 303, response.text
 
 
+# Fc3: the three send states say on hover that a send is recorded, not
+# delivered, while email sending is off.
+_SENT_TITLE = (
+    "Sent here means recorded: no email is delivered until email sending "
+    "is switched on."
+)
+
+
 def test_invitations_pill_not_created_when_no_invitation_rows(
     client: TestClient, db: Session
 ) -> None:
@@ -151,7 +159,7 @@ def test_invitations_pill_not_sent_after_prepare_before_send(
 
     body = client.get(f"/operator/sessions/{session.id}").text
     assert (
-        '<span class="pill pill-warning">Not sent</span>' in body
+        f'<span class="pill pill-warning" title="{_SENT_TITLE}">Not sent</span>' in body
     ), "expected the chrome-strip Invitations pill to read 'Not sent'"
 
 
@@ -190,7 +198,7 @@ def test_invitations_pill_partially_sent_when_some_reviewers_sent(
 
     body = client.get(f"/operator/sessions/{session.id}").text
     assert (
-        '<span class="pill pill-warning">Partially sent</span>' in body
+        f'<span class="pill pill-warning" title="{_SENT_TITLE}">Partially sent</span>' in body
     ), "expected the chrome-strip Invitations pill to read 'Partially sent'"
 
 
@@ -208,5 +216,5 @@ def test_invitations_pill_all_sent_when_every_reviewer_sent(
 
     body = client.get(f"/operator/sessions/{session.id}").text
     assert (
-        '<span class="pill pill-info">All sent</span>' in body
+        f'<span class="pill pill-info" title="{_SENT_TITLE}">All sent</span>' in body
     ), "expected the chrome-strip Invitations pill to read 'All sent'"

@@ -1352,6 +1352,10 @@ def test_detail_page_hides_a_regenerated_link(
     assert old_url not in body
     assert "/me/invite/" not in body
     assert "The invitation link was regenerated." in body
+    # Nothing is delivered while sending is off, so the notice does not
+    # say the earlier link was "sent" to anyone (findings Fc3).
+    assert "the earlier link no longer works" in body
+    assert "sent before" not in body
     assert "No invitation URL has been issued yet." not in body
 
     client.post(f"{base}/send")

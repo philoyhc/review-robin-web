@@ -163,7 +163,7 @@
     {% elif invite_url_superseded %}
       {# The last invitation email's link was regenerated away: its token
          no longer resolves, and the new one has not been sent. #}
-      <p class="muted">The invitation link was regenerated. The new link has not been sent yet, and the one sent before no longer works.</p>
+      <p class="muted">The invitation link was regenerated. The new link has not been sent yet, and the earlier link no longer works.</p>
     {% elif invitation %}
       <p class="muted">No invitation URL has been issued yet.</p>
     {% elif row %}

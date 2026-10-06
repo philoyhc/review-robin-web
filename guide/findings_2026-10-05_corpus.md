@@ -151,7 +151,7 @@ author, marked *re-checked*) also ran it.
   Instruments page still defines `window.newModelToggleAudience`, which
   nothing calls since the audience-chip markup went (d2cbe8d9). Code.
   Found by the E14 cold read (#2857).
-- **Fc3** — Two more surfaces read as delivered while sending is off.
+- ~~**Fc3**~~ — **Done in #2865: the notice reworded, the pills kept with a `title` on 14B's list (author, 2026-10-06).** Two more surfaces read as delivered while sending is off.
   The reviewer drill-in's regenerate notice says *"the one sent before
   no longer works"* (`operator/session_invitations_reviewer_detail.html`,
   quoted in `spec/operations_pages.md`), and the Setup chrome's
