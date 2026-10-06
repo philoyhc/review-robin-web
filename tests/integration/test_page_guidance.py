@@ -522,12 +522,12 @@ def test_the_assignments_page_says_where_pairs_come_from(
     assert body.count(CARD) == 0  # not a guidance card
 
 
-def test_the_invitations_page_says_why_the_counters_are_still(
+def test_the_invitations_page_says_sends_are_not_delivered(
     client: TestClient, db: Session
 ) -> None:
-    """Four of the eight counters never move until Segment 14B ships
-    email delivery. Without the note the page reads as broken rather
-    than as not-yet-switched-on.
+    """Send records an invitation or reminder today, and its counters
+    move, but no email is delivered until Segment 14B ships (findings
+    F12). Without the note the page claims a send nobody received.
 
     **This assertion is expected to fail when 14B lands** — that is the
     point. The note becomes false the moment sending is switched on, and
@@ -541,10 +541,10 @@ def test_the_invitations_page_says_why_the_counters_are_still(
     flat = " ".join(body.split())
 
     assert (
-        "Note: Invitation and reminder columns are inactive until email "
-        "sending is switched on." in flat
+        "Note: Send records an invitation or reminder here, but no email "
+        "is delivered until email sending is switched on." in flat
     )
-    assert flat.index("inactive until email") < flat.index("Eligible reviewers")
+    assert flat.index("no email is delivered") < flat.index("Eligible reviewers")
     assert body.count(CARD) == 0  # not a guidance card
 
 

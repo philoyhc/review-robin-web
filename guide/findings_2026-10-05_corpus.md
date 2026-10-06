@@ -143,6 +143,12 @@ author, marked *re-checked*) also ran it.
   Instruments page still defines `window.newModelToggleAudience`, which
   nothing calls since the audience-chip markup went (d2cbe8d9). Code.
   Found by the E14 cold read (#2857).
+- **Fc2** — The reviewer drill-in on Manage Invitations labels its send
+  time "Email sent:" (`operator/session_invitations_reviewer_detail.html`),
+  which reads as delivered while sending is off — the claim F12's note
+  corrects on the page above it. Reword with the 14B copy (Segment 14B
+  "Copy to retire"), or add it to that list. Copy. Found by the F12 cold
+  read (#2858).
 - ~~**Ec9**~~ — **Done in #2850.** The Link 3 builder's boundary cells disagree between a card
   as rendered and one just edited: the template gives every saved cell
   an X (the first disabled), while `newModelRefreshUnitButtons`, called
@@ -352,7 +358,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**F9**~~ low trim permissions.md:204 "author's ruling, 2026-09-23" — **Done in #2846.**
 - ~~**F10**~~ low spec audience_and_identity_model.md:328-331 "Both audiences" vs four + admin — **Done in #2846.**
 - ~~**F11**~~ low trim permissions.md:118,285,287 tallies ("seven", "four") — **Done in #2846.**
-- **F12** low-med author operations_pages.md:167-171 (pinned test_page_guidance.py:544) "four of eight counters cannot move" vs send stamps sent_at/last_reminder_at today (invitations.py:384-390,765-768) — **Ruled 2026-10-06: reword the note: recorded, not delivered.**
+- ~~**F12**~~ low-med author operations_pages.md:167-171 (pinned test_page_guidance.py:544) "four of eight counters cannot move" vs send stamps sent_at/last_reminder_at today (invitations.py:384-390,765-768) — **Done in #2858** (ruled 2026-10-06: reword the note: recorded, not delivered).
 - ~~**F13**~~ low author email_infra_options.md:588-675 ✅/◻ ticks + migration path = plan; move to segment_14B? — **Done in #2852** (ruled 2026-10-06: the spec's checklist retired; the 14B plan's `## Status` already holds it).
 
 **G — the functional spec**

@@ -32,22 +32,25 @@ work starts.
 
 ## Status
 
-> **Copy to retire when this ships.** Three in-app surfaces currently
+> **Copy to retire when this ships.** Four in-app surfaces currently
 > tell the operator that sending is off, and each becomes false the
 > moment it is on:
 >
 > - `session_invitations.html` — the note above the counters,
->   *"Invitation and reminder columns are inactive until email sending
->   is switched on."*
+>   *"Send records an invitation or reminder here, but no email is
+>   delivered until email sending is switched on."*
 > - `session_setupinvite.html` — the page-guidance card's *"Sending is
 >   not switched on yet, so what you save here is stored, not
 >   delivered."*
-> - `guide.html` — the "Give reviewers access" card's opening, *"The app
->   does not send invitation emails yet."*
+> - `guide.html` — the "Give reviewers access" card's opening, *"As the
+>   email function is not implemented yet, you can notify the reviewers
+>   by sharing the app's address."*
+> - `guide.html` — the "Watch progress" card's *"No email is delivered
+>   until email sending is switched on."*
 >
-> The first two are pinned by assertions in
-> `tests/integration/test_page_guidance.py`, so they fail loudly rather
-> than going stale quietly; the Guide's is not. Added 2026-09-06 with
+> The first is pinned by an assertion in
+> `tests/integration/test_page_guidance.py`, so it fails loudly rather
+> than going stale quietly; the other three are not. Added 2026-09-06 with
 > Segment 19E — a note in the plan that will be open when the work
 > starts beats a comment in a template nobody greps for.
 

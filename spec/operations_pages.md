@@ -54,8 +54,8 @@ surface itself is `spec/reviewer-surface.md`'s.
 **Documented in the Guide.** `/guide`'s **Watch progress** section
 (`guide.html`, section key `watch_progress`) covers both pages: the
 reviewer's-eye view and its eight lifecycle counters, the note that
-invitation and reminder columns stay inactive until email sending is
-switched on, and the reviewee-centric view with its
+Send records invitations and reminders but delivers no email until
+sending is switched on, and the reviewee-centric view with its
 `Number of reviewees · With responses · Without responses` counters —
 framed around the question the reviewer view cannot answer, which
 reviewee is under-served.
@@ -161,12 +161,13 @@ nudging individual reviewers throughout the session.
 
 Opens with a `.muted` note on its own row, **above** the counters:
 
-> Note: Invitation and reminder columns are inactive until email
-> sending is switched on.
+> Note: Send records an invitation or reminder here, but no email is
+> delivered until email sending is switched on.
 
-Four of the eight counters cannot move until email delivery is
-switched on, and without the note a page of stuck counters reads as
-broken rather than as not-yet-switched-on. **Retire the note when
+Send works today: it records the invitation (the row's Email status
+turns `sent`) or the reminder, and the sent and reminded counters count
+it. No email leaves until delivery is switched on, and without the note
+the page claims a send nobody received. **Retire the note when
 delivery ships**; `tests/integration/test_page_guidance.py` asserts it,
 so the assertion fails when the claim stops being true.
 
@@ -200,8 +201,9 @@ pending 0` is a correct reading, not a bug.
 it is a nonzero-is-attention pill, so a count the operator cannot act
 on is worse than no count. `Invitations created` was left counting
 every row because pruning stale invitations is deliberately deferred
-(`guide/deferred_consolidated.md`) — a *sent* invitation is live in a
-reviewer's inbox, and nothing yet distinguishes one safe to delete.
+(`guide/deferred_consolidated.md`) — once delivery is on, a *sent*
+invitation is live in a reviewer's inbox, and nothing yet distinguishes
+one safe to delete.
 
 ### The table toolbar
 
