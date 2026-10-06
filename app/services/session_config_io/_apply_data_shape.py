@@ -84,8 +84,9 @@ def _apply_data_shapes(
     Resolves portable references
     (``instrument_short_label`` / ``response_field_key``)
     against the imported session's just-applied instruments
-    + response fields. The short label wins; when it is blank or
-    resolves nothing, ``instrument`` — the shape's
+    + response fields. The short label wins when it names exactly one
+    instrument; when it is blank, names none, or names several,
+    ``instrument`` — the shape's
     ``instruments[n]`` number in the same bundle — picks the
     instrument the apply built from that block (D20), so a shape on
     an unlabelled instrument keeps its scope. Shapes whose references
@@ -95,7 +96,7 @@ def _apply_data_shapes(
 
     Returns the number of shapes written.
     """
-    from app.db.models import DataShape, InstrumentResponseField
+    from app.db.models import DataShape, Instrument, InstrumentResponseField
 
     # Wipe existing shapes — replace semantics align with the
     # rest of the apply step (instruments / RuleSets / field
@@ -108,11 +109,17 @@ def _apply_data_shapes(
         )
     )
 
-    instr_by_short = {
-        (i.short_label or "").strip(): i
-        for i in review_session.instruments
-        if (i.short_label or "").strip()
-    }
+    # A label two instruments share names neither: the number, from
+    # the same bundle, settles it (D20).
+    instr_by_short: dict[str, Instrument] = {}
+    ambiguous_labels: set[str] = set()
+    for i in review_session.instruments:
+        short = (i.short_label or "").strip()
+        if not short:
+            continue
+        if short in instr_by_short:
+            ambiguous_labels.add(short)
+        instr_by_short[short] = i
     # The apply stores each instrument at its 0-based rank among the
     # bundle's ``instruments[n]`` numbers, so a number maps to the
     # instrument at that rank.
@@ -129,9 +136,10 @@ def _apply_data_shapes(
             continue
         if spec.axis not in ("reviewer", "reviewee"):
             continue
+        label = (spec.instrument_short_label or "").strip()
         instr = (
-            instr_by_short.get(spec.instrument_short_label.strip())
-            if spec.instrument_short_label
+            instr_by_short.get(label)
+            if label and label not in ambiguous_labels
             else None
         )
         if instr is None and spec.instrument_number is not None:

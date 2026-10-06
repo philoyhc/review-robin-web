@@ -111,7 +111,7 @@ is silently ignored on apply rather than failing the import.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `name`, `axis`, instrument/response-field refs (portable), `column_chip_slots`, `self_review_handling`, `include_empty_rows` | ✅ | ✅ | Clone copies data shapes (scope chips re-pointed at the clone's instrument + response field); settings-CSV round-trips them via portable refs — the instrument by `short_label`, else by its `instruments[n]` number, so an unlabelled instrument's shape keeps its scope (`spec/settings_inventory.md` §10) |
+| `name`, `axis`, instrument/response-field refs (portable), `column_chip_slots`, `self_review_handling`, `include_empty_rows` | ✅ | ✅ | Clone copies data shapes (scope chips re-pointed at the clone's instrument + response field); settings-CSV round-trips them via portable refs — the instrument by `short_label`, else by its `instruments[n]` number, so an unlabeled instrument's shape keeps its scope (`spec/settings_inventory.md` §10) |
 
 ### Session tags (`session_tags`)
 

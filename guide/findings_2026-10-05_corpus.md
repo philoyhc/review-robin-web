@@ -126,6 +126,16 @@ author, marked *re-checked*) also ran it.
   `csv` module's 131,072-character field limit: the responses extract
   writes it, and Rehydrate refuses the set (`spec/rehydrate.md` §9,
   since #2835). Author: raise the parser's limit or cap answers.
+- **Dc10** — A Settings-CSV apply onto a session whose `instruments`
+  relationship is already loaded resolves data shapes against the
+  deleted rows: `_wipe_instruments_and_dependents` deletes with
+  `db.delete()` and `_apply_instruments` adds new `Instrument` rows
+  without touching the collection, so `_apply_data_shapes` reads stale
+  instruments, and the insert fails with an FK `IntegrityError` once
+  ids are not reused (SQLite's reuse hides it). Present on main before
+  D20; no current route loads the relationship first. Expire
+  `review_session.instruments` after the rebuild, or query `Instrument`
+  directly. Code. Found by the D20 cold read (#2856).
 - ~~**Ec9**~~ — **Done in #2850.** The Link 3 builder's boundary cells disagree between a card
   as rendered and one just edited: the template gives every saved cell
   an X (the first disabled), while `newModelRefreshUnitButtons`, called

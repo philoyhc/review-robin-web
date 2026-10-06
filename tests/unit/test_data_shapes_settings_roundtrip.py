@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -235,9 +236,9 @@ def test_a_shape_on_an_unlabelled_instrument_keeps_its_scope(
     ).scalar_one()
 
 
-def test_an_older_bundle_without_the_number_still_imports() -> None:
-    """D20: the ``instrument`` row is optional; a non-number is a parse
-    error naming the row."""
+def test_the_instrument_row_parses_blank_or_a_number() -> None:
+    """D20: the ``instrument`` row is optional and blank means none; a
+    non-number is a parse error naming the row."""
     from app.services.session_config_io._apply_data_shape import (
         _apply_data_shape_kv,
     )
@@ -253,12 +254,131 @@ def test_an_older_bundle_without_the_number_still_imports() -> None:
     assert plan.data_shapes[0].instrument_number is None
     _apply_data_shape_kv(plan, "data_shapes[0].instrument", "3", "integer")
     assert plan.data_shapes[0].instrument_number == 3
-    try:
+    with pytest.raises(_ParseError, match=r"data_shapes\[0\]\.instrument"):
         _apply_data_shape_kv(plan, "data_shapes[0].instrument", "x", "integer")
-    except _ParseError as exc:
-        assert "data_shapes[0].instrument" in str(exc)
-    else:
-        raise AssertionError("a non-number must not parse")
+
+
+def _shape_rows(rows: list, *, drop: set[str] | None = None, **edits: str) -> list:
+    """The bundle with ``data_shapes[0].<key>`` cells replaced by
+    ``edits`` and the keys in ``drop`` removed — a hand-edited or older
+    bundle."""
+    out = []
+    for row in rows:
+        key = row.field.removeprefix("data_shapes[0].")
+        if row.field.startswith("data_shapes[0].") and key in (drop or set()):
+            continue
+        if row.field.startswith("data_shapes[0].") and key in edits:
+            row = session_config_io.Row(row.field, edits[key], row.data_type)
+        out.append(row)
+    return out
+
+
+def _two_instrument_bundle(
+    db: Session, code: str, *, labels: tuple[str, str], on: int = 1
+):
+    """Session with two instruments (``order`` 0 and 1) carrying
+    ``labels``, ``score`` only on the one at ``order == on``, and one
+    shape on that one."""
+    review_session = _session(db, code=code)
+    first = _instrument(db, review_session, short_label=labels[0])
+    second = _instrument(db, review_session, short_label=labels[1])
+    first.order, second.order = 0, 1
+    target = (first, second)[on]
+    field = _field(db, target, field_key="score")
+    db.add(
+        DataShape(
+            session_id=review_session.id,
+            name="Scoped",
+            axis="reviewee",
+            instrument_id=target.id,
+            response_field_id=field.id,
+            column_chip_slots=json.dumps(["reviewee:name"]),
+        )
+    )
+    db.flush()
+    return session_config_io.serialize_session_config(db, review_session)
+
+
+def _imported_shape(db: Session, code: str, rows: list):
+    target = _session(db, code=code)
+    result = session_config_io.apply_session_config(
+        db, target, list(rows), user=None
+    )
+    assert result.ok, result.errors
+    db.expire_all()
+    shape = db.execute(
+        select(DataShape).where(DataShape.session_id == target.id)
+    ).scalar_one()
+    by_order = {
+        i.order: i
+        for i in db.execute(
+            select(Instrument).where(Instrument.session_id == target.id)
+        ).scalars()
+    }
+    return shape, by_order
+
+
+def test_a_shared_short_label_is_settled_by_the_number(db: Session) -> None:
+    """D20: two instruments share the label ``X``; the label names
+    neither, so the number puts the shape — and its field — on the
+    right one."""
+    # On the first: a last-label-wins lookup would pick the second.
+    rows = _two_instrument_bundle(db, "d20-dup", labels=("X", "X"), on=0)
+    shape, by_order = _imported_shape(db, "d20-dup-dst", rows)
+    assert shape.instrument_id == by_order[0].id
+    assert shape.response_field_id is not None
+
+
+def test_a_unique_label_wins_over_the_number(db: Session) -> None:
+    """D20: the short label is the portable reference; the number is
+    only the fallback, so a label that names one instrument wins even
+    when a hand edit points the number elsewhere."""
+    rows = _shape_rows(
+        _two_instrument_bundle(db, "d20-pref", labels=("A", "B")), instrument="1"
+    )
+    shape, by_order = _imported_shape(db, "d20-pref-dst", rows)
+    assert shape.instrument_id == by_order[1].id
+
+
+def test_a_number_naming_no_block_leaves_the_shape_unscoped(db: Session) -> None:
+    rows = _shape_rows(
+        _two_instrument_bundle(db, "d20-miss", labels=("", "")), instrument="9"
+    )
+    shape, _ = _imported_shape(db, "d20-miss-dst", rows)
+    assert shape.instrument_id is None
+    assert shape.response_field_id is None
+
+
+def test_hand_edited_block_numbers_with_gaps_still_resolve(db: Session) -> None:
+    """D20: the number is matched against the bundle's own block
+    numbers, so renumbering ``[1]``, ``[2]`` to ``[0]``, ``[3]`` (and the
+    shape's reference with them) keeps the shape on its instrument."""
+    rows = _two_instrument_bundle(db, "d20-gap", labels=("", ""))
+    renumbered = [
+        session_config_io.Row(
+            r.field.replace("instruments[1].", "instruments[0].").replace(
+                "instruments[2].", "instruments[3]."
+            ),
+            "3" if r.field == "data_shapes[0].instrument" else r.value,
+            r.data_type,
+        )
+        for r in rows
+    ]
+    shape, by_order = _imported_shape(db, "d20-gap-dst", renumbered)
+    assert shape.instrument_id == by_order[1].id
+    assert shape.response_field_id is not None
+
+
+def test_an_older_bundle_without_the_row_resolves_by_label(db: Session) -> None:
+    """D20: a bundle exported before the row existed still imports, by
+    label alone."""
+    rows = _shape_rows(
+        _two_instrument_bundle(db, "d20-old", labels=("A", "B")), drop={"instrument"}
+    )
+    assert not any(r.field == "data_shapes[0].instrument" for r in rows)
+    shape, by_order = _imported_shape(db, "d20-old-dst", rows)
+    assert shape.instrument_id == by_order[1].id
+    assert shape.response_field_id is not None
 
 
 def test_roundtrip_applies_shapes_with_portable_references(
