@@ -136,6 +136,14 @@ author, marked *re-checked*) also ran it.
   D20; no current route loads the relationship first. Expire
   `review_session.instruments` after the rebuild, or query `Instrument`
   directly. Code. Found by the D20 cold read (#2856).
+- **Ec11** — `error.html`'s card does not take the card shape
+  `spec/visual_style_general.md` sets (2px `border-default` border, 8px
+  radius, 16–24px padding): it draws a 1px `#e5e7eb` (`border-subtle`)
+  border, a 10px radius and 48px × 40px padding. The page keeps its own
+  stylesheet outside `base.html` (`spec/ui_elements.md`), which nothing
+  says exempts it from that rule; with the shadow gone (Ec10) the faint
+  border is all that separates the card. Author: conform or record the
+  exception. Code or prose. Found by the Ec10 cold read (#2862).
 - ~~**Ec10**~~ — **Done in #2862.** `error.html` (a standalone page with its own `<style>`)
   still gives its card `box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06)`
   against the "no drop shadows" rule (`spec/visual_style_general.md`),

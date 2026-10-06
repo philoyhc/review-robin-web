@@ -72,10 +72,15 @@ def test_the_error_page_draws_no_drop_shadow() -> None:
     """``error.html`` carries its own stylesheet, outside ``base.html``,
     so the "no drop shadows" rule (``spec/visual_style_general.md``) is
     checked here too (findings Ec10): the card stands out by its
-    border."""
+    border. Read from the page's own ``<style>`` block, so the check
+    is about this stylesheet and fails if the page stops rendering."""
     resp = TestClient(app).get("/no/such/page")
 
-    assert "box-shadow" not in resp.text
+    assert resp.status_code == 404
+    assert "Error 404" in resp.text
+    style = resp.text.split("<style>", 1)[1].split("</style>", 1)[0]
+    assert ".error-card" in style
+    assert "box-shadow" not in style
 
 
 def test_http_exception_shows_route_detail() -> None:

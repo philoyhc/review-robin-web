@@ -5995,12 +5995,6 @@
             : btn;
           if (target && !target.disabled) { target.focus(); }
         };
-        window.newModelCycleButton = window.newModelCycleButton || function (btn) {
-          var cycle = (btn.getAttribute('data-new-model-cycle') || '').split('|');
-          if (cycle.length < 2) return;
-          var idx = cycle.indexOf(btn.textContent.trim());
-          btn.textContent = cycle[(idx + 1) % cycle.length];
-        };
       </script>
 
       <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-default);">
