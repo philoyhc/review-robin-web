@@ -393,13 +393,15 @@ for a reviewer who had no invitation at all):
 
 - **Invite** — `created` / `not created`, from the existence of the
   `Invitation` row.
-- **Email sent** — the send timestamp or an em-dash, from
+- **Send recorded** — the send timestamp or an em-dash, from
   `Invitation.sent_at`. Beside it, where the latest invitation outbox
   row carries a delivery state other than `sent`, that state renders as
   its own pill. The two are **gated independently**: the date on
   `sent_at`, the state on `Invitation.status` being past `pending`, so
   a rotated token reports nothing about the previous token's delivery
-  and a send with no delivery date still reports its state. The value
+  and a send with no delivery date still reports its state. It reads
+  *Send recorded*, not *Email sent*, while sending is off (findings
+  Fc2); Segment 14B restores the label. The value
   set is the model's `EMAIL_OUTBOX_STATUSES` and is **rendered, not
   enumerated**, so widening it needs no change here.
 - **Last reminder** — the timestamp or an em-dash, from

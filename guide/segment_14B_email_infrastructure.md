@@ -32,27 +32,16 @@ work starts.
 
 ## Status
 
-> **Copy to retire when this ships.** Four in-app surfaces currently
-> tell the operator that sending is off, and each becomes false the
-> moment it is on:
->
-> - `session_invitations.html` — the note above the counters,
->   *"Send records an invitation or reminder here, but no email is
->   delivered until email sending is switched on."*
-> - `session_setupinvite.html` — the page-guidance card's *"Sending is
->   not switched on yet, so what you save here is stored, not
->   delivered."*
-> - `guide.html` — the "Give reviewers access" card's opening, *"As the
->   email function is not implemented yet, you can notify the reviewers
->   by sharing the app's address."*
-> - `guide.html` — the "Watch progress" card's *"No email is delivered
->   until email sending is switched on."*
->
-> The first is pinned by an assertion in
-> `tests/integration/test_page_guidance.py`, so it fails loudly rather
-> than going stale quietly; the other three are not. Added 2026-09-06 with
-> Segment 19E — a note in the plan that will be open when the work
-> starts beats a comment in a template nobody greps for.
+> **Copy to retire when this ships** — each says sending is off:
+> `session_invitations.html` (the note above the counters),
+> `session_setupinvite.html` (the guidance card), `guide.html` (Give
+> reviewers access; Watch progress; Prepare / launch) and
+> `partials/next_action_card.html` (State 6). **Copy to restore**: the
+> reviewer drill-in's *"Send recorded:"* goes back to *"Email sent:"*
+> (findings Fc2), before any asynchronous dispatch, or an undated send
+> reads *"Send recorded: — [failed]"*. Only State 6 fails on release
+> (its test traps `transport_for`); the rest are unpinned or pinned to
+> their text. A note here beats a comment in a template (19E).
 
 **Planning.** Hard prerequisites:
 
