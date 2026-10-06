@@ -615,10 +615,9 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
             else:
                 seen_keys[rf.field_key] = m
             # Band 2 refuses a fractional bound on an Integer field
-            # (``_band2._integer_bounds_error``). The import must too:
-            # its ``validation`` block casts bounds with ``int``, so
-            # 1.5 would be stored as 1 for the reviewer while the
-            # field's own Min still read 1.5.
+            # (``_band2._integer_bounds_error``), and the import must
+            # too: a fractional Step describes values a reviewer, who
+            # enters whole numbers only, can never give.
             if rf.data_type == "Integer":
                 for key in ("min", "max", "step"):
                     value = getattr(rf, key)

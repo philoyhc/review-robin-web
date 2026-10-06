@@ -164,6 +164,13 @@ def _field(*, data_type: str, validation: dict | None) -> SimpleNamespace:
             {"min": 0, "max": 100, "step": 1},
             "0 to 100, steps of 1",
         ),
+        # A9: a non-whole bound the whole-bounds exemption kept prints
+        # as entered, not truncated; a whole float drops its ``.0``.
+        (
+            "Integer",
+            {"min": 0.5, "max": 10.0, "step": 1.0},
+            "0.5 to 10, steps of 1",
+        ),
         # Decimal — `{min} to {max}, steps of {step}`, as entered: no
         # trailing `.0`, and no rounding (19T Item 6 entry 2).
         (
@@ -205,6 +212,7 @@ def test_placeholder_for_field_table(
         # Integer / Decimal use dash notation (vs ``placeholder``'s ``to``).
         ("Integer", {"min": 1, "max": 5, "step": 1}, "1-5, steps of 1"),
         ("Integer", {"min": 0, "max": 100, "step": 1}, "0-100, steps of 1"),
+        ("Integer", {"min": 0.5, "max": 10.0, "step": 1.0}, "0.5-10, steps of 1"),
         (
             "Decimal",
             {"min": 1.0, "max": 5.0, "step": 0.5},
@@ -277,3 +285,44 @@ def test_textarea_rows_for_never_returns_below_floor_or_above_cap() -> None:
         for col_px in (None, 1, 50, 200, 500, 1000, 5000):
             rows = textarea_rows_for(max_chars, col_px)
             assert 2 <= rows <= 8, (max_chars, col_px, rows)
+
+
+def test_integer_bounds_round_trip_the_validation_block() -> None:
+    """A9: the block the save path builds keeps a non-whole Integer bound
+    the whole-bounds exemption allowed, so the helpers print it as
+    entered — the shape the app actually stores, not a hand-built one."""
+    from app.services.instruments._response_fields import (
+        validation_block_from_inline,
+    )
+
+    block = validation_block_from_inline("Integer", 0.5, 10.0, 1.0, None)
+    assert block == {"min": 0.5, "max": 10, "step": 1}
+    field = SimpleNamespace(data_type="Integer", validation=block)
+    assert placeholder_for_field(field) == "0.5 to 10, steps of 1"
+    assert constraint_summary_for_field(field) == "0.5-10, steps of 1"
+    # Whole bounds still store as ints.
+    assert validation_block_from_inline("Integer", 1.0, 5.0, 1.0, None) == {
+        "min": 1,
+        "max": 5,
+        "step": 1,
+    }
+
+
+def test_integer_bound_error_reads_the_bound_as_entered() -> None:
+    """A9: the server's message for a kept non-whole Min names it, not
+    its truncation."""
+    from app.services.responses._core import validate_value
+
+    field = SimpleNamespace(
+        data_type="Integer", _inline_min=0.5, _inline_max=10.0, _inline_step=None
+    )
+    assert validate_value(field, "0") == "Must be at least 0.5."
+    whole = SimpleNamespace(
+        data_type="Integer", _inline_min=1.0, _inline_max=5.0, _inline_step=1.0
+    )
+    assert validate_value(whole, "0") == "Must be at least 1."
+    # No scientific notation, matching the constraint line.
+    tiny = SimpleNamespace(
+        data_type="Integer", _inline_min=0.00001, _inline_max=None, _inline_step=None
+    )
+    assert validate_value(tiny, "0") == "Must be at least 0.00001."
