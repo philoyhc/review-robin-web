@@ -32,7 +32,7 @@ work starts.
 
 ## Status
 
-> **Copy to retire when this ships.** Five in-app surfaces currently
+> **Copy to retire when this ships.** Six in-app surfaces currently
 > tell the operator that sending is off, and each becomes false the
 > moment it is on:
 >
@@ -47,15 +47,24 @@ work starts.
 >   by sharing the app's address."*
 > - `guide.html` — the "Watch progress" card's *"No email is delivered
 >   until email sending is switched on."*
-> - `session_invitations_reviewer_detail.html` — the drill-in's
->   *"Send recorded:"* slot, which goes back to *"Email sent:"*
->   (findings Fc2).
+> - `guide.html` — the Prepare / launch paragraph's *"but no mail leaves
+>   the app yet"*.
+> - `partials/next_action_card.html` — State 6's *"Invitations are marked
+>   sent, but no mail leaves the app yet — nobody has actually been
+>   told."*
 >
-> The first is pinned by an assertion in
-> `tests/integration/test_page_guidance.py` and the last by the
-> drill-in tests in `tests/integration/test_invitations.py`, so they
-> fail loudly rather than going stale quietly; the other three are
-> not. Added 2026-09-06 with
+> One more is not false once sending is on, only vaguer, so it is copy
+> to **restore**: the reviewer drill-in's *"Send recorded:"* slot
+> (`session_invitations_reviewer_detail.html`) goes back to *"Email
+> sent:"* (findings Fc2). Restore it before an asynchronous dispatch
+> lands, or a send with no date yet reads *"Send recorded: — [failed]"*.
+>
+> Only the next-action card is guarded against sending going live: its
+> test fails the moment the Send handler constructs a transport
+> (`tests/integration/test_invitations.py`, the State 6 copy test). The
+> Invitations note and the drill-in label are pinned by assertions on
+> their text, which catch an edit but not a release; the rest are not
+> pinned at all. Added 2026-09-06 with
 > Segment 19E — a note in the plan that will be open when the work
 > starts beats a comment in a template nobody greps for.
 

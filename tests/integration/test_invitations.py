@@ -1428,8 +1428,10 @@ def test_detail_page_shows_no_delivery_pill_on_an_ordinary_send(
             f"/invitations/reviewers/{invitation.reviewer_id}"
         ).text
     )
-    # Asserted as whole pill markup, not as the word, so the check
-    # cannot be satisfied or broken by the label's own wording.
+    # Asserted as whole pill markup, not as the word: when Segment 14B
+    # restores the label "Email sent:", "sent" is a substring of it
+    # again, and a bare `not in` would fail on the label and prove
+    # nothing about the pill.
     assert _DELIVERY("sent") not in facts, (
         "an ordinary send shows its timestamp, not a redundant pill"
     )

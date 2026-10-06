@@ -151,6 +151,14 @@ author, marked *re-checked*) also ran it.
   Instruments page still defines `window.newModelToggleAudience`, which
   nothing calls since the audience-chip markup went (d2cbe8d9). Code.
   Found by the E14 cold read (#2857).
+- **Fc3** — Two more surfaces read as delivered while sending is off.
+  The reviewer drill-in's regenerate notice says *"the one sent before
+  no longer works"* (`operator/session_invitations_reviewer_detail.html`,
+  quoted in `spec/operations_pages.md`), and the Setup chrome's
+  *Not sent / Partially sent / All sent* invitation pills
+  (`operator/partials/session_setup_status_row.html`) render away from
+  the Invitations note that explains them. Reword, or add them to
+  Segment 14B's copy list. Copy. Found by the Fc2 cold read (#2863).
 - ~~**Fc2**~~ — **Done in #2863.** The reviewer drill-in on Manage Invitations labels its send
   time "Email sent:" (`operator/session_invitations_reviewer_detail.html`),
   which reads as delivered while sending is off — the claim F12's note

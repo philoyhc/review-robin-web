@@ -53,8 +53,8 @@
 
        **They are not always the same fact, and the difference shows
        after Regenerate.** `Last reminder` is one fact — the table reads
-       `Invitation.last_reminder_at` too (`monitoring.py:149`). `Email
-       sent` is not: the table's is the outbox row's `sent_at`
+       `Invitation.last_reminder_at` too (`monitoring.py:149`). `Send
+       recorded` is not: the table's is the outbox row's `sent_at`
        (`views/_invitations.py:113-119`), this card's is the
        invitation's. `regenerate_token` clears `Invitation.sent_at` and
        leaves both the outbox rows and `last_reminder_at` alone
