@@ -263,7 +263,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**C2**~~ med spec setup_pages.md:540-548 quoted template gate shape stale (real: session_reviewers.html:690, :822) — **Done in #2843.**
 - ~~**C3**~~ med code setup_pages.md:1653-1672 page offers only what routes accept vs is_ready-only gating — **Done in #2829.**
 - ~~**C4**~~ low spec setup_pages.md:1633-1637 tag_slot_presence/chip_slots vs *_column_state + tag_slot_counts (views/_setup.py:340-450); drop "LIMIT 1" — **Done in #2843.**
-- **C5** low author setup_pages.md:1074-1085,1112-1115 exact-handle match only for offered labels vs ops filters any "(…)" tail (_filters.py:182,235); "@" requirement unstated (:316,:526) — **Ruled 2026-10-06: the ops filters exact-match only an offered label.**
+- ~~**C5**~~ low author setup_pages.md:1074-1085,1112-1115 exact-handle match only for offered labels vs ops filters any "(…)" tail (_filters.py:182,235); "@" requirement unstated (:316,:526) — **Done in #2855** (ruled 2026-10-06: the ops filters exact-match only an offered label).
 - ~~**C6**~~ med spec sessions_overview.md:29-31 audience "authenticated users… reviewers land on /r/" vs require_operator; /me routes — **Done in #2843.**
 - ~~**C7**~~ low spec sessions_overview.md:186-190,163-166,44,60-61 Rehydrate listed live vs off by default (contradicts :477-480) — **Done in #2843.**
 - ~~**C8**~~ low spec session_home.md:214-215 Extract Setup card placement — **Done in #2843.**
