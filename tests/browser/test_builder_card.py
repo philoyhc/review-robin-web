@@ -177,6 +177,17 @@ def test_link3_cells_keep_their_markers_through_add_and_remove(
     for i in range(2):
         expect(actions.nth(i)).to_have_class(re.compile(r"\bcohort-cell-btn\b"))
 
+    # The next add clones the first cell, now an AND: the refresh must
+    # still hand the new last cell a working X.
+    card.locator("[data-new-model-unit-add]").first.click()
+    expect(actions).to_have_count(3)
+    expect(actions.nth(1)).to_have_text("AND")
+    expect(actions.nth(1)).to_be_disabled()
+    expect(actions.nth(2)).to_have_text("X")
+    actions.nth(2).click()
+    expect(actions).to_have_count(2)
+    expect(actions.nth(1)).to_have_text("X")
+
     actions.nth(1).click()
     expect(actions).to_have_count(1)
     expect(actions.first).to_have_text("X")

@@ -4,11 +4,14 @@ Item 10.
 Two writers create ``instrument_view_policies`` rows.
 ``visibility_policies.upsert_policy`` has always validated the
 ``(audience, window)`` cell against ``_PER_CELL_VALID_MODES``; the
-Settings-CSV import did not until Item 9 (PR #2188). That guard is
-**prospective** — a row an import wrote before it is still stored, and
-``resolve_mode`` honours it like any other. The cell that matters is
-``("reviewee", "while_ongoing")``, whose only legal mode is ``None``: a
-reviewee reading responses while the review is still running.
+Settings-CSV import did not until Item 9 (PR #2188). Migration
+``14db60023e88`` normalized the rows an import wrote before that guard,
+so a row found now means something has written one since. The cell that
+matters is ``("observer", "while_ongoing")``, whose legal modes are
+``None`` and ``summarized``: a ``raw`` or ``anonymized`` row there is
+honoured by the observer readers, which pass the real ongoing window.
+The reviewee readers pass that window as closed, so an illegal
+``("reviewee", "while_ongoing")`` row is reported but grants nothing.
 
 This module answers *"is any such row in the database now?"*. It reads;
 it never writes. Clearing an offending cell is a judgment about a live
