@@ -2679,6 +2679,44 @@ def test_pair_context_only_preview_honours_links_1_and_2(
         "Eve",
         "Fay",
     ]
+    # What the browser draws: the client partition intersects the
+    # roster with this attribute, not with ``sample-names``.
+    needle = 'data-new-model-band2-sample-member-ids="'
+    idx = flat.find(needle)
+    assert idx != -1
+    end = flat.find('"', idx + len(needle))
+    assert sorted(
+        int(i) for i in flat[idx + len(needle) : end].split(",")
+    ) == survivors
+
+
+def test_pair_context_preview_live_empty_boundary_clears_member_ids(
+    client: TestClient, db: Session
+) -> None:
+    """A5: the posted Link 3 boundary wins over the saved one. A
+    Refresh posting no boundary over a saved ``p1`` stores no member
+    set, so the preview is unconstrained again."""
+    review_session, new_model = _group_band2_session(
+        client, db, code="a5-live-empty"
+    )
+    new_model.group_kind = "p1"
+    db.commit()
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+            "link3_boundary": [],
+        },
+    )
+    assert resp.json()["sample_group_member_ids"] == []
+    db.refresh(new_model)
+    assert new_model.band2_state.get("sample_group_member_ids") is None
 
 
 def test_gap_10_preview_route_json_response_returns_member_ids(

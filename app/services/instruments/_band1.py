@@ -843,8 +843,10 @@ def find_sample_in_scope_reviewee(
       whose surviving pairs share the sample's reviewee-side
       boundary key; for a pair-context-only boundary, the sample
       reviewer's surviving reviewees (A5 — the preview does not
-      partition on pair-context tags); ``None`` in per-reviewee mode,
-      where the render path keeps its unconstrained partition.
+      partition on pair-context tags); ``None`` when there is no
+      boundary (the posted ``link3_boundary``, else the saved
+      ``group_kind``), and the render path keeps its unconstrained
+      partition.
 
     Returns ``None`` when the rules narrow the candidate pair space
     down to zero. Samples are drawn from active reviewees only, so the
@@ -1037,8 +1039,8 @@ def find_sample_in_scope_reviewee(
     # Gap 10: compute rule-surviving group member IDs for the
     # sample's reviewee-side boundary key. A pair-context-only
     # boundary takes the sample reviewer's survivors instead (A5);
-    # per-reviewee mode returns None and render keeps its
-    # unconstrained partition. Iterates the pairs the engine already
+    # no boundary returns None and render keeps its unconstrained
+    # partition. Iterates the pairs the engine already
     # produced; no second engine call.
     #
     # ``link3_boundary`` is the live Band 1 boundary list (canonical
