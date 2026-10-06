@@ -133,6 +133,13 @@ author, marked *re-checked*) also ran it.
   disabled AND (`operator/instruments_index.html`). A saved two-tag unit
   therefore shows X X on load and AND X after any edit. Run the refresh
   on load, or render the AND server-side. Code.
+- **Gc2** — The Sessions Diagnostics visibility-grid audit
+  (`operator/sys_admin_sessions.html`) still says a row written by an
+  import before the guard "is still stored, and the resolver honours
+  it", naming a session-ongoing reviewee grant. Migration
+  `14db60023e88` (#2833) rewrote every such cell to off, so the warning
+  describes rows that can no longer exist; the copy also carries a
+  segment number. Code (template copy).
 
 **Low**
 
@@ -331,31 +338,31 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **G — the functional spec**
 
-- **G1** med spec :684-686,1051-1053 observers_enabled gates collation vs ungated (deps.py:482-535; participant_model §2)
-- **G2** med spec :1759-1763,2493-2495 boundary tags "Group by" on Display Fields vs Link 3 builder group_kind; first identity line is visible tag display values
-- **G3** med spec :2264-2270,1271-1274,2467-2472 "one loss outside regeneration" vs roster re-upload, Quick Setup replace, settings replace cascades
-- **G4** med spec :927-929 description on pre-open/post-close vs overview card, results, collation (pre_open.html has none)
+- ~~**G1**~~ med spec :684-686,1051-1053 observers_enabled gates collation vs ungated (deps.py:482-535; participant_model §2) — **Done in #2847.**
+- ~~**G2**~~ med spec :1759-1763,2493-2495 boundary tags "Group by" on Display Fields vs Link 3 builder group_kind; first identity line is visible tag display values — **Done in #2847.**
+- ~~**G3**~~ med spec :2264-2270,1271-1274,2467-2472 "one loss outside regeneration" vs roster re-upload, Quick Setup replace, settings replace cascades — **Done in #2847.**
+- ~~**G4**~~ med spec :927-929 description on pre-open/post-close vs overview card, results, collation (pre_open.html has none) — **Done in #2847.**
 - **G5** med author :1089-1095 clone = setup + rosters vs drops visibility policies, deadline, schedule anchors/offsets (session_clone.py:103-114)
-- **G6** low spec :1353-1354 self-review toggle locked "while ready" vs all but draft/validated
-- **G7** low spec :1359-1360 Include checkbox vs pill
-- **G8** low spec :1741-1746 every header sortable vs Group header not
-- **G9** low spec :2161-2162 CreatedAt (UTC) vs CreatedAt
-- **G10** low spec :1152-1157 "Submit all", defaults locked; omits availability gate (draft, no responses)
-- **G11** low spec :1486-1488 coverage "none" vs "no responses"
-- **G12** low spec :1880-1881 observer gated on window like reviewee vs no window gate; while_ongoing Summarized for observers
-- **G13** low write :194-208,877-879,1584-1585 empty SUPER_ADMIN_EMAILS lets any admin manage admins
-- **G14** low write :202-208,1584-1585 Accounts Management omits Invite by email (incl. as admin) and revoke-refused-while-owning
-- **G15** low write :1587-1590 Sessions Diagnostics visibility-grid audit unmentioned
-- **G16** low write :1025-1026,1371-1376 Link 3 "Self reviews" exclude-at-rule control missing
-- **G17** low trim :499-505,524-526,1040-1041,1308-1309,1355-1356,1424-1428 features described by denial (old G17 partly fixed)
-- **G18** low trim :718,739-740,1666 "Pause" history + identifier (old G3 partly fixed)
-- **G19** low trim same rule stated twice (217-223/252-256; 1134-1137/1173-1176/908-912; 736-740/1419-1428; branching ×4)
-- **G20** low trim :12-18,2039-2086 Currency note, §11.6 "wired today" inventory
-- **G21** low spec :4-10 etc identifiers in tech-neutral spec (require_reviewee_with_current_grant, _DEFAULT_DISPLAY_LABELS, …)
+- ~~**G6**~~ low spec :1353-1354 self-review toggle locked "while ready" vs all but draft/validated — **Done in #2847.**
+- ~~**G7**~~ low spec :1359-1360 Include checkbox vs pill — **Done in #2847.**
+- ~~**G8**~~ low spec :1741-1746 every header sortable vs Group header not — **Done in #2847.**
+- ~~**G9**~~ low spec :2161-2162 CreatedAt (UTC) vs CreatedAt — **Done in #2847.**
+- ~~**G10**~~ low spec :1152-1157 "Submit all", defaults locked; omits availability gate (draft, no responses) — **Done in #2847.**
+- ~~**G11**~~ low spec :1486-1488 coverage "none" vs "no responses" — **Done in #2847.**
+- ~~**G12**~~ low spec :1880-1881 observer gated on window like reviewee vs no window gate; while_ongoing Summarized for observers — **Done in #2847.**
+- ~~**G13**~~ low write :194-208,877-879,1584-1585 empty SUPER_ADMIN_EMAILS lets any admin manage admins — **Done in #2847.**
+- ~~**G14**~~ low write :202-208,1584-1585 Accounts Management omits Invite by email (incl. as admin) and revoke-refused-while-owning — **Done in #2847.**
+- ~~**G15**~~ low write :1587-1590 Sessions Diagnostics visibility-grid audit unmentioned — **Done in #2847.**
+- ~~**G16**~~ low write :1025-1026,1371-1376 Link 3 "Self reviews" exclude-at-rule control missing — **Done in #2847.**
+- ~~**G17**~~ low trim :499-505,524-526,1040-1041,1308-1309,1355-1356,1424-1428 features described by denial (old G17 partly fixed) — **Done in #2847.**
+- ~~**G18**~~ low trim :718,739-740,1666 "Pause" history + identifier (old G3 partly fixed) — **Done in #2847.**
+- ~~**G19**~~ low trim same rule stated twice (217-223/252-256; 1134-1137/1173-1176/908-912; 736-740/1419-1428; branching ×4) — **Done in #2847.**
+- ~~**G20**~~ low trim :12-18,2039-2086 Currency note, §11.6 "wired today" inventory — **Done in #2847.**
+- ~~**G21**~~ low spec :4-10 etc identifiers in tech-neutral spec (require_reviewee_with_current_grant, _DEFAULT_DISPLAY_LABELS, …) — **Done in #2847.**
 - **G22** low author :969-972 every anchor obeys ordering chain vs settings CSV import skips checks (_apply_session.py:44-58,117-150)
-- **G23** low spec :1988-1991 reminders "invited-but-incomplete" vs every incomplete with a row; never-sent falls back to invitation
-- **G24** low spec :1072-1075 expander rename/deadline ungated vs draft only (tags any state)
-- **G25** low spec :668-669 while_ongoing "(session lifetime)" vs status=ready
+- ~~**G23**~~ low spec :1988-1991 reminders "invited-but-incomplete" vs every incomplete with a row; never-sent falls back to invitation — **Done in #2847.**
+- ~~**G24**~~ low spec :1072-1075 expander rename/deadline ungated vs draft only (tags any state) — **Done in #2847.**
+- ~~**G25**~~ low spec :668-669 while_ongoing "(session lifetime)" vs status=ready — **Done in #2847.**
 - **G26** low author :121-123,621-622 vs :2377-2381,2393-2399 audit append-only/immutable vs delete session & purge delete audit rows
 
 **H — docs/**
