@@ -174,7 +174,9 @@ def _apply_plan(
     # The wipe deletes instruments and the rebuild adds new ones by
     # ``session_id``, neither through ``review_session.instruments``.
     # A caller that loaded that relationship first would otherwise
-    # hand the steps below the deleted rows (findings Dc10).
+    # hand the data-shape step (its one reader here) and anything after
+    # the apply the deleted rows (findings Dc10). Flushed first, so the
+    # expire cannot drop a pending change to the collection.
     db.flush()
     db.expire(review_session, ["instruments"])
     # 19O Item 2 follow-up — the rule sets landed above and the
