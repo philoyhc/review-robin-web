@@ -246,9 +246,8 @@ async def instrument_preview_sample(
     # persist the rule-surviving group-member ID set (Gap 10) so
     # the next render's Grouped-mode preview filters its member
     # list against the engine's actual survivors rather than the
-    # full active-reviewee roster. None when there's no
-    # reviewee-side boundary — render falls back to its existing
-    # unconstrained partition.
+    # full active-reviewee roster. None in per-reviewee mode —
+    # render falls back to its existing unconstrained partition.
     # set_band2_state preserves the existing selected_display_keys
     # + response_fields when not in the payload.
     state_update: dict[str, Any] = {
@@ -275,10 +274,8 @@ async def instrument_preview_sample(
             # Gap 10 — the rule-surviving group-member IDs so the
             # client-side preview rebuild can intersect its
             # boundary partition against the engine's actual
-            # survivors. Empty list when there's no reviewee-side
-            # boundary (per-reviewee mode, or grouped-by-pair-
-            # context-only); render falls back to the
-            # unconstrained partition for those cases.
+            # survivors. Empty list in per-reviewee mode; render
+            # falls back to the unconstrained partition there.
             "sample_group_member_ids": (
                 sample_group_member_ids
                 if sample_group_member_ids is not None

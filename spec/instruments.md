@@ -933,7 +933,12 @@ when Name is selected, up to `GROUP_MEMBER_NAME_LIMIT` (10) member
 names below. The reviewer surface composes its line the same way
 (`spec/reviewer-surface.md` "Group-scoped instruments"). Reviewees in the rule-surviving subset that share
 the sample's boundary key form the group; if more than 10
-qualify, a trailing `, +N more` collapses the overflow.
+qualify, a trailing `, +N more` collapses the overflow. A
+pair-context tag lives on a reviewer's relationships, so the preview
+does not partition on one: a mixed boundary partitions on its reviewee
+tags only, and a pair-context-only boundary lists the sample reviewer's
+rule-surviving reviewees as the group. The rule-surviving subset is the
+one the last Refresh computed.
 
 ### Response fields
 

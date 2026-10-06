@@ -2624,6 +2624,63 @@ def test_gap_10_render_filters_group_members_by_persisted_ids(
     assert names == ["Dan"]
 
 
+def test_pair_context_only_preview_honours_links_1_and_2(
+    client: TestClient, db: Session
+) -> None:
+    """A5 (ruled 2026-10-06): a pair-context-only boundary cannot be
+    partitioned in the preview, but the fallback still honours the
+    rules — the member list is the sample reviewer's survivors, so a
+    reviewee Link 2 excludes is not listed."""
+    review_session, new_model = _group_band2_session(
+        client, db, code="a5-pair-only"
+    )
+    new_model.group_kind = "p1"
+    db.commit()
+    by_name = {
+        r.name: r.id
+        for r in db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    }
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "filter",
+            "link2_combinator": "AND",
+            "link2_rules": [
+                {
+                    "field": "reviewee.tag2",
+                    "op": "IS NOT",
+                    "operand_value": "exclude",
+                    "operand_tag": "",
+                }
+            ],
+        },
+    )
+    survivors = sorted(by_name[n] for n in ("Dan", "Eve", "Fay"))
+    assert resp.json()["sample_group_member_ids"] == survivors
+    db.refresh(new_model)
+    assert new_model.band2_state["sample_group_member_ids"] == survivors
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(_band2_card(body, new_model.id).split())
+    needle = 'data-new-model-band2-sample-names="'
+    idx = flat.find(needle)
+    assert idx != -1
+    end = flat.find('"', idx + len(needle))
+    assert sorted(flat[idx + len(needle) : end].split("|")) == [
+        "Dan",
+        "Eve",
+        "Fay",
+    ]
+
+
 def test_gap_10_preview_route_json_response_returns_member_ids(
     client: TestClient, db: Session
 ) -> None:
