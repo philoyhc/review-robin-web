@@ -156,6 +156,11 @@ author, marked *re-checked*) also ran it.
   disabled AND (`operator/instruments_index.html`). A saved two-tag unit
   therefore shows X X on load and AND X after any edit. Run the refresh
   on load, or render the AND server-side. Code.
+- **Gc3** — `spec/rehydrate.md` ("Rehydrate therefore carries no
+  view-policy code of its own") names "config-only clone" among the
+  consumers of the settings round-trip. Clone copies in the database
+  and never goes through the CSV; since G5 it copies the grid through
+  `copy_view_policies`. Prose. Found by the G5 cold read (#2859).
 - ~~**Gc2**~~ — **Done in #2850.** The Sessions Diagnostics visibility-grid audit
   (`operator/sys_admin_sessions.html`) still says a row written by an
   import before the guard "is still stored, and the resolver honours
@@ -367,7 +372,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**G2**~~ med spec :1759-1763,2493-2495 boundary tags "Group by" on Display Fields vs Link 3 builder group_kind; first identity line is visible tag display values — **Done in #2847.**
 - ~~**G3**~~ med spec :2264-2270,1271-1274,2467-2472 "one loss outside regeneration" vs roster re-upload, Quick Setup replace, settings replace cascades — **Done in #2847.**
 - ~~**G4**~~ med spec :927-929 description on pre-open/post-close vs overview card, results, collation (pre_open.html has none) — **Done in #2847.**
-- **G5** med author :1089-1095 clone = setup + rosters vs drops visibility policies, deadline, schedule anchors/offsets (session_clone.py:103-114) — **Ruled 2026-10-06: Duplicate copies the visibility grid; the spec says the schedule resets.**
+- ~~**G5**~~ med author :1089-1095 clone = setup + rosters vs drops visibility policies, deadline, schedule anchors/offsets (session_clone.py:103-114) — **Done in #2859** (ruled 2026-10-06: Duplicate copies the visibility grid; the spec says the schedule resets).
 - ~~**G6**~~ low spec :1353-1354 self-review toggle locked "while ready" vs all but draft/validated — **Done in #2847.**
 - ~~**G7**~~ low spec :1359-1360 Include checkbox vs pill — **Done in #2847.**
 - ~~**G8**~~ low spec :1741-1746 every header sortable vs Group header not — **Done in #2847.**

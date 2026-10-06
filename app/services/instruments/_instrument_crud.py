@@ -315,7 +315,7 @@ def replicate_instrument(
     name trimmed so the whole fits the 255-char column; the short label
     is ``Copy of`` + the source's, trimmed to its 32-char column. The
     visibility policies are copied through ``upsert_policy`` (author's
-    ruling, 2026-10-03, A1; see :func:`_copy_view_policies`).
+    ruling, 2026-10-03, A1; see :func:`copy_view_policies`).
 
     **No ``Assignment`` rows are created**, here or in
     :func:`create_instrument`. Both cloned them until Segment 19N.1, so
@@ -424,7 +424,7 @@ def replicate_instrument(
     instrument.column_widths = repoint_widths(
         source.column_widths, display_ids=display_ids, field_ids=field_ids
     )
-    _copy_view_policies(db, review_session, source, instrument, actor)
+    copy_view_policies(db, review_session, source, instrument, actor)
     db.flush()
 
     # A duplicated instrument gets **no assignment rows** either
@@ -454,16 +454,20 @@ def replicate_instrument(
     return instrument
 
 
-def _copy_view_policies(
+def copy_view_policies(
     db: Session,
     review_session: ReviewSession,
     source: Instrument,
     replica: Instrument,
     actor: User,
+    *,
+    correlation_id: str | None = None,
 ) -> None:
     """The source's visibility policies, written onto the replica
     (author's ruling, 2026-10-03, A1): the copy shows its responses to
-    the same audiences, in the same modes.
+    the same audiences, in the same modes. Duplicate session uses it for
+    each copied instrument too (findings G5, 2026-10-06), with the
+    clone as ``review_session``.
 
     Through ``visibility_policies.upsert_policy``, the visibility
     editor's writer, so each copied row is checked against the per-cell rule
@@ -510,6 +514,7 @@ def _copy_view_policies(
             while_ongoing_mode=modes["while_ongoing"],
             after_release_mode=modes["after_release"],
             user=actor,
+            correlation_id=correlation_id,
         )
 
 

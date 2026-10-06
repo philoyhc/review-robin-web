@@ -1557,8 +1557,8 @@ key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
   per-cell rule and emits its own `instrument.view_policy_set`
   (`spec/visibility_policy.md` §5); a stored cell the rule rejects (a
   row imported before the rule) falls back to off, or to the cell's one
-  permitted mode. Session clone still does not copy them
-  (`spec/roundtrip_coverage.md`).
+  permitted mode. Duplicate session copies each instrument's grid the
+  same way (findings G5; `spec/roundtrip_coverage.md`).
 
 **Not cloned: assignment rows.** The duplicate starts with no pairs and
 gets them from the next Generate, exactly as `+Instrument` does. A

@@ -138,8 +138,8 @@ the cell it lands in, so a hand-edited or hand-built bundle would
 otherwise persist a `reviewee` `while_ongoing` grant no editor can
 author — a disclosure the resolver would then honor like any other row.
 Rehydrate applies its settings bundle through the same call and inherits
-the check. (Clone copies no view-policy rows at all —
-`spec/roundtrip_coverage.md`.)
+the check, and so do Replicate and Duplicate session, which copy the
+grid through it (`spec/roundtrip_coverage.md`).
 
 Two shapes that are not modes are refused by the same pass, each with
 its own message: a **half-set** cell (one member of the pair set, the
@@ -211,7 +211,7 @@ instrument_view_policies
 
 ### 4.1 Default state
 
-Default on instrument create: no rows. Resolver treats a missing row as "off in both windows" — instrument is invisible to that audience. The operator opts each audience in deliberately on the instrument's visibility editor. **`peer_reviewer` while ongoing is the one cell a missing row does not turn off:** it is `raw` by rule (§2.2), so with no row the reviewer still reads back their own answers while the session is `ready` (`reviewer_sees_own_responses`), and the editor and the transparency card show Raw there (`_BAND3_VISIBILITY_DEFAULTS`, `app/web/views/_instruments.py`). **Replicate is the exception to "no rows":** the copy starts with its source's rows, written through the same `upsert_policy` writer, so each is checked against the per-cell rule and audited as in §5; a stored cell the rule rejects is not carried across (`spec/instruments.md` "Replicate semantics").
+Default on instrument create: no rows. Resolver treats a missing row as "off in both windows" — instrument is invisible to that audience. The operator opts each audience in deliberately on the instrument's visibility editor. **`peer_reviewer` while ongoing is the one cell a missing row does not turn off:** it is `raw` by rule (§2.2), so with no row the reviewer still reads back their own answers while the session is `ready` (`reviewer_sees_own_responses`), and the editor and the transparency card show Raw there (`_BAND3_VISIBILITY_DEFAULTS`, `app/web/views/_instruments.py`). **Replicate and Duplicate session are the exceptions to "no rows":** each copied instrument starts with its source's rows, written through the same `upsert_policy` writer, so each is checked against the per-cell rule and audited as in §5; a stored cell the rule rejects is not carried across (`spec/instruments.md` "Replicate semantics"; Duplicate since findings G5).
 
 ---
 
