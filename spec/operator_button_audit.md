@@ -658,7 +658,8 @@ here acts client-side; the card's bulk Save (#52) writes the rule.
 | 261 | Link 1 / Link 2 rule cell | X | `<button type="button">` | `btn destructive cohort-cell-btn` | Destructive | Removes the cell; `disabled` on the first cell |
 | 262 | Link 3 builder | + | `<button type="button">` | `btn secondary cohort-combinator-btn` | Secondary | Adds a boundary-tag cell |
 | 263 | Link 3 builder | THE SAME | `<button type="button">` | `btn secondary cohort-combinator-btn` | Secondary (Disabled) | Always `disabled`: a marker that group members agree on every picked tag, not an action |
-| 264 | Link 3 boundary cell | X | `<button type="button">` | `btn destructive cohort-cell-btn` | Destructive | Removes the cell; `disabled` on the first cell |
+| 264 | Link 3 boundary cell | X | `<button type="button">` | `btn destructive cohort-cell-btn` | Destructive | Removes the cell; `disabled` on the first cell (as rendered). Once a cell is added or removed, only the last cell keeps its X, as `btn destructive`, `disabled` when it is the only cell |
+| 268 | Link 3 boundary cell | AND | `<button type="button">` | `btn secondary` | Secondary (Disabled) | Once a cell is added or removed, every cell but the last shows this in place of its X: a marker, not an action. A card as rendered shows none (register Ec9) |
 
 ---
 
