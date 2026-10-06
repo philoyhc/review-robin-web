@@ -2719,6 +2719,49 @@ def test_pair_context_preview_live_empty_boundary_clears_member_ids(
     assert new_model.band2_state.get("sample_group_member_ids") is None
 
 
+def test_boundary_change_drops_stale_sample_member_ids(
+    client: TestClient, db: Session
+) -> None:
+    """Codex on #2853: the member set a Refresh stored belongs to the
+    boundary it ran under. Saving a different Link 3 boundary drops
+    it, so the client partition does not keep narrowing the preview
+    with survivors of the old boundary until the next Refresh."""
+    from app.services import instruments as instruments_service
+
+    review_session, new_model = _group_band2_session(
+        client, db, code="a5-stale"
+    )
+    new_model.group_kind = "p1"
+    db.commit()
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+        },
+    )
+    db.refresh(new_model)
+    assert new_model.band2_state["sample_group_member_ids"]
+    sample_name = new_model.band2_state["sample_reviewee_name"]
+
+    instruments_service.set_unit_of_review(
+        db,
+        instrument=new_model,
+        mode="grouped",
+        boundary_pairs=[],
+        actor=review_session.created_by_user,
+    )
+    db.refresh(new_model)
+    assert "sample_group_member_ids" not in new_model.band2_state
+    # The rest of the Refresh state stays.
+    assert new_model.band2_state["sample_reviewee_name"] == sample_name
+
+
 def test_gap_10_preview_route_json_response_returns_member_ids(
     client: TestClient, db: Session
 ) -> None:

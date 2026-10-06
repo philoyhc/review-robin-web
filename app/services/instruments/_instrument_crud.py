@@ -875,6 +875,19 @@ def group_boundary_pairs(instrument: Instrument) -> set[tuple[str, str]]:
     return set(decode_group_kind(instrument.group_kind))
 
 
+def _drop_sample_group_members(instrument: Instrument) -> None:
+    """Forget the Band 2 preview's rule-surviving member set (Gap 10,
+    A5) when the group boundary changes. The set was computed for the
+    old boundary, and the client partition intersects with any set it
+    finds, so a stale one would keep the preview narrowed until the
+    next Refresh."""
+    state = instrument.band2_state
+    if isinstance(state, dict) and "sample_group_member_ids" in state:
+        instrument.band2_state = {
+            k: v for k, v in state.items() if k != "sample_group_member_ids"
+        }
+
+
 def set_group_boundary(
     db: Session,
     *,
@@ -909,6 +922,7 @@ def set_group_boundary(
     )
     old_value = instrument.group_kind
     instrument.group_kind = new_value
+    _drop_sample_group_members(instrument)
     db.flush()
     # A boundary change re-keys every (reviewer, reviewee) pair on
     # this instrument into different groups, which can flip
@@ -986,6 +1000,7 @@ def set_unit_of_review(
     )
     old_value = instrument.group_kind
     instrument.group_kind = new_value
+    _drop_sample_group_members(instrument)
     db.flush()
     # Same rationale as ``set_group_boundary``: a unit-of-review
     # change re-keys group membership and can flip is_self_review
