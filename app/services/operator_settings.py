@@ -3,10 +3,11 @@
 Segment 11E PR 4 ships the operator-level Settings page at
 ``/operator/settings`` that populates the seven ``users.smtp_*``
 columns. The ``EmailSettings`` dataclass returned by
-``get_email_settings`` is the single shape every send-side caller
-consumes — Segment 11C PR F's Manage Invitations send handler
-calls ``transport_for(settings)`` (Segment 11E PR 5's transport
-factory) to pick the right backend.
+``get_email_settings`` is the single shape a send-side caller will
+consume: ``transport_for(settings)`` (Segment 11E PR 5's transport
+factory) picks the backend from it. Nothing calls it yet; the Manage
+Invitations send handler records the send without delivering it
+(Segment 14B Part A is the first caller).
 
 Segment 18B PR 2 adds the per-operator default display timezone,
 stored as the ``display_timezone`` key inside the general

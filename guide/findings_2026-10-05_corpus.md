@@ -143,6 +143,12 @@ author, marked *re-checked*) also ran it.
   Instruments page still defines `window.newModelToggleAudience`, which
   nothing calls since the audience-chip markup went (d2cbe8d9). Code.
   Found by the E14 cold read (#2857).
+- **Fc2** — The reviewer drill-in on Manage Invitations labels its send
+  time "Email sent:" (`operator/session_invitations_reviewer_detail.html`),
+  which reads as delivered while sending is off — the claim F12's note
+  corrects on the page above it. Reword with the 14B copy (Segment 14B
+  "Copy to retire"), or add it to that list. Copy. Found by the F12 cold
+  read (#2858).
 - ~~**Ec9**~~ — **Done in #2850.** The Link 3 builder's boundary cells disagree between a card
   as rendered and one just edited: the template gives every saved cell
   an X (the first disabled), while `newModelRefreshUnitButtons`, called

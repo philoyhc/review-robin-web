@@ -164,11 +164,10 @@ Opens with a `.muted` note on its own row, **above** the counters:
 > Note: Send records an invitation or reminder here, but no email is
 > delivered until email sending is switched on.
 
-Send works today: it records the invitation or reminder, and the
-counters and row status move to sent. No email leaves until delivery is
-switched on, and without the note the page claims a send nobody
-received (reworded 2026-10-06, findings F12; it said the columns were
-inactive, which they are not). **Retire the note when
+Send works today: it records the invitation (the row's Email status
+turns `sent`) or the reminder, and the sent and reminded counters count
+it. No email leaves until delivery is switched on, and without the note
+the page claims a send nobody received. **Retire the note when
 delivery ships**; `tests/integration/test_page_guidance.py` asserts it,
 so the assertion fails when the claim stops being true.
 
@@ -202,8 +201,9 @@ pending 0` is a correct reading, not a bug.
 it is a nonzero-is-attention pill, so a count the operator cannot act
 on is worse than no count. `Invitations created` was left counting
 every row because pruning stale invitations is deliberately deferred
-(`guide/deferred_consolidated.md`) — a *sent* invitation is live in a
-reviewer's inbox, and nothing yet distinguishes one safe to delete.
+(`guide/deferred_consolidated.md`) — once delivery is on, a *sent*
+invitation is live in a reviewer's inbox, and nothing yet distinguishes
+one safe to delete.
 
 ### The table toolbar
 

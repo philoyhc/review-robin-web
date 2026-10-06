@@ -522,7 +522,7 @@ def test_the_assignments_page_says_where_pairs_come_from(
     assert body.count(CARD) == 0  # not a guidance card
 
 
-def test_the_invitations_page_says_why_the_counters_are_still(
+def test_the_invitations_page_says_sends_are_not_delivered(
     client: TestClient, db: Session
 ) -> None:
     """Send records an invitation or reminder today, and its counters
