@@ -59,7 +59,7 @@
        invitation's. `regenerate_token` clears `Invitation.sent_at` and
        leaves both the outbox rows and `last_reminder_at` alone
        (`invitations.py:221-224`), so a regenerated invitation reads
-       "Email sent: —" here and a date on the table.
+       "Send recorded: —" here and a date on the table.
 
        That divergence is **older than this card**: the chrome strip
        already says `NOT SENT` after a regenerate
@@ -79,7 +79,11 @@
         {% endif %}
       </p>
       <p>
-        Email sent:
+        {# "Send recorded", not "Email sent": until email sending is
+           switched on a send is recorded and nothing is delivered
+           (findings F12, Fc2). Segment 14B's "Copy to retire" list
+           carries the label back to "Email sent" when it ships. #}
+        Send recorded:
         {% if invitation and invitation.sent_at %}
           <span class="pill pill-count">{{ invitation.sent_at | format_datetime }}</span>
           {# 19P.6 rung 2b — delivery state beside the send time (Item 6

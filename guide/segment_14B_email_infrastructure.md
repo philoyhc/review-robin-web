@@ -32,7 +32,7 @@ work starts.
 
 ## Status
 
-> **Copy to retire when this ships.** Four in-app surfaces currently
+> **Copy to retire when this ships.** Five in-app surfaces currently
 > tell the operator that sending is off, and each becomes false the
 > moment it is on:
 >
@@ -47,10 +47,15 @@ work starts.
 >   by sharing the app's address."*
 > - `guide.html` — the "Watch progress" card's *"No email is delivered
 >   until email sending is switched on."*
+> - `session_invitations_reviewer_detail.html` — the drill-in's
+>   *"Send recorded:"* slot, which goes back to *"Email sent:"*
+>   (findings Fc2).
 >
 > The first is pinned by an assertion in
-> `tests/integration/test_page_guidance.py`, so it fails loudly rather
-> than going stale quietly; the other three are not. Added 2026-09-06 with
+> `tests/integration/test_page_guidance.py` and the last by the
+> drill-in tests in `tests/integration/test_invitations.py`, so they
+> fail loudly rather than going stale quietly; the other three are
+> not. Added 2026-09-06 with
 > Segment 19E — a note in the plan that will be open when the work
 > starts beats a comment in a template nobody greps for.
 

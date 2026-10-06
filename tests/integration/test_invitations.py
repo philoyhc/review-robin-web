@@ -940,7 +940,7 @@ def test_detail_page_keeps_the_invite_url_for_a_reviewer_off_the_table(
     facts = _invitation_facts(body)
     assert _CREATED in facts
     assert facts.count(_NO_DATE) == 1, (
-        "Email sent carries the send timestamp even off the table; "
+        "Send recorded carries the send timestamp even off the table; "
         "only Last reminder is empty"
     )
 
@@ -989,7 +989,7 @@ def test_detail_page_does_not_claim_an_invitation_that_was_never_created(
     # correction, 2026-09-17 — the em-dashes are right, they mean "no
     # date attached", and hiding the line was the over-correction.
     assert "Invite:" in facts
-    assert "Email sent:" in facts
+    assert "Send recorded:" in facts
     assert "Last reminder:" in facts
     assert facts.count(_NO_DATE) == 2
     # And the card no longer reports an outbox-derived email status
@@ -1088,7 +1088,7 @@ def test_invitation_reviewer_detail_renders(
     # of the email that carried it.
     assert "No invitation URL has been issued yet." in body
 
-    # After send: the Email sent slot takes a timestamp, Last reminder
+    # After send: the Send recorded slot takes a timestamp, Last reminder
     # stays empty, and the URL surfaces.
     client.post(
         f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
@@ -1100,7 +1100,7 @@ def test_invitation_reviewer_detail_renders(
     facts = _invitation_facts(body)
     assert _CREATED in facts
     assert facts.count(_NO_DATE) == 1, (
-        "Email sent should carry a timestamp; only Last reminder is empty"
+        "Send recorded should carry a timestamp; only Last reminder is empty"
     )
     assert "/me/invite/" in body
 
@@ -1199,7 +1199,7 @@ def test_detail_page_dates_line_reports_a_sent_reminder(
     # Both slots filled: neither em-dash survives a sent invitation
     # followed by a sent reminder.
     assert _NO_DATE not in facts
-    assert "Email sent:" in facts
+    assert "Send recorded:" in facts
     assert "Last reminder:" in facts
 
 
@@ -1318,7 +1318,7 @@ def test_detail_page_after_regenerate_reports_the_current_token(
     ).text
     facts = _invitation_facts(body)
     assert _CREATED in facts
-    # Exactly one em-dash: Email sent is empty for the new token, Last
+    # Exactly one em-dash: Send recorded is empty for the new token, Last
     # reminder still carries the old stamp.
     assert facts.count(_NO_DATE) == 1
     # No delivery pill — but note this test cannot prove the gate: its
@@ -1402,7 +1402,7 @@ def test_detail_page_reports_a_failed_delivery(
     assert _CREATED in facts
     assert _DELIVERY("failed") in facts
     # One em-dash only, and it is Last reminder's: the send attempt
-    # happened, so Email sent keeps its timestamp and gains the state
+    # happened, so Send recorded keeps its timestamp and gains the state
     # beside it rather than being replaced by it.
     assert facts.count(_NO_DATE) == 1
 
@@ -1428,13 +1428,12 @@ def test_detail_page_shows_no_delivery_pill_on_an_ordinary_send(
             f"/invitations/reviewers/{invitation.reviewer_id}"
         ).text
     )
-    # Asserted as whole pill markup, not as the word: "sent" is a
-    # substring of the label "Email sent:", so a bare `not in` here
-    # would fail on the label and prove nothing about the pill.
+    # Asserted as whole pill markup, not as the word, so the check
+    # cannot be satisfied or broken by the label's own wording.
     assert _DELIVERY("sent") not in facts, (
         "an ordinary send shows its timestamp, not a redundant pill"
     )
-    assert "Email sent:" in facts, "premise: the label is there to be confused with"
+    assert "Send recorded:" in facts, "premise: the slot is there"
 
 
 def test_table_and_card_agree_on_a_failed_delivery(
