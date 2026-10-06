@@ -101,12 +101,12 @@
     <p>
       Every instrument's visibility grid is checked against the modes each
       <strong>audience × window</strong> cell is allowed to carry. The
-      instrument card's visibility editor has always refused an illegal cell, and since Segment 19C Item 9
-      the Settings-CSV import refuses one too — but a row written by an
-      import <em>before</em> that guard is still stored, and the resolver
-      honours it. The one that matters is a <strong>reviewee</strong> grant on
-      <strong>Session ongoing</strong>: a reviewee reading responses while the
-      review is still running.
+      instrument card's visibility editor and the Settings-CSV import both
+      refuse an illegal cell, and cells stored before those guards were
+      normalized, so this list is normally empty: it is a check that nothing
+      has written one since. The cell that would matter most is a
+      <strong>reviewee</strong> grant on <strong>Session ongoing</strong>:
+      a reviewee reading responses while the review is still running.
     </p>
     <p class="muted">
       Read-only. Clearing an offending cell is the owning operator's call, in

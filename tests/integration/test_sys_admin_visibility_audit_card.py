@@ -108,6 +108,10 @@ def test_card_renders_on_sessions_diagnostics(
     # Read-only is stated, not implied — the card must never look like a
     # place to clear a cell.
     assert "Read-only." in body
+    # Gc2: migration 14db60023e88 normalized the pre-guard cells, so the
+    # card no longer claims such a row is still stored and honoured.
+    assert "the resolver honours it" not in body
+    assert "this list is normally empty" in body
 
 
 def test_no_findings_says_so_in_words(
