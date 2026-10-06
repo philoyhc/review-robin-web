@@ -113,6 +113,8 @@ The system must:
 12. Maintain an **append-only audit log** of every mutation, every
     state transition, every email send attempt, and every
     administrative action, exportable as CSV for compliance review.
+    Rows are never edited; a session's rows go only with the session,
+    by Delete session or by Purge and archive (§16.4, §16.5).
 13. Honour a **single canonical timezone per session** for every
     display surface (operator and reviewer) and every per-session
     CSV extract, with the sys-admin audit-log viewer as the
@@ -607,7 +609,10 @@ the reviewer first redeems the link.
 
 ### 5.13 Audit event
 
-An immutable record of one mutation or noteworthy read.
+An immutable record of one mutation or noteworthy read: never
+edited after it is written, and removed only with its session, by
+Delete session (§16.4) or when Purge and archive is ticked to take the
+audit log (§16.5).
 
 **Fields:** event type (enumerated), severity (info / warning /
 error), summary text, actor id (operator id, system, or null),
@@ -2447,7 +2452,7 @@ A full security-posture catalogue lives in
 - **Assignment** — A row linking `(reviewer, reviewee,
   instrument)`. Materialised by rule generation; not edited
   row by row.
-- **Audit event** — An immutable record of one mutation.
+- **Audit event** — An immutable record of one mutation, removed only with its session (§16.4, §16.5).
 - **Boundary tag** — A reviewee or pair-context tag picked in Link 3
   of a group-scoped instrument's assignment rule. Members of a group
   share the same value for every boundary tag.

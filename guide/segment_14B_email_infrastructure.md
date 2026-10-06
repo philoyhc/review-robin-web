@@ -358,6 +358,28 @@ spec: pick one provider (likely SendGrid given Azure
 marketplace integration) rather than supporting "any third
 party".
 
+## Prerequisites and sequence
+
+Moved from `spec/email_infra_options.md` on 2026-10-06 (findings F13):
+a checklist is plan content. ✅ = shipped, ◻ = pending.
+
+**Common to every backend:**
+
+- ✅ The `EmailTransport` Protocol with `EmailMessage` / `SendResult`, and the `transport_for(settings)` factory.
+- ✅ Per-operator SMTP credentials on `users`, encrypted at rest (`SMTP_ENCRYPTION_KEY`); secrets via App Service settings and Key Vault references.
+- ✅ Outbox column scaffolding: `cc_emails` / `bcc_emails`, `error_message`, `from_address` / `backend` / `backend_message_id` / `delivered_at` / `payload_hash` / `correlation_id`, and the widened status / kind sets. Only `correlation_id` is written today, by scheduled reminders; Part A writes the rest.
+- ◻ `correlation_id` strategy + idempotent retry — Part B.
+- ◻ Bulk-send queue + background worker — Part C.
+- ◻ Per-deployment from-identity defaults — Part D.
+- ◻ Generalized Outbox diagnostic surface — Part E.
+
+**Sequence:** Part A (SMTP send activation) → B → C → D → E. The
+non-SMTP backends are independent and follow deployment demand: G
+(ACS, the first, since it needs no IT cooperation), F (Graph, with the
+IT conversation in parallel), H (third-party, as a fallback).
+
+---
+
 ## What's *not* in this segment
 
 - **Reading inbound bounce / delivery webhooks.** Provider-side
@@ -382,17 +404,11 @@ party".
 
 When parts ship:
 
-- Each Part's PR description names which spec items in
-  `spec/email_infra_options.md` it lights up (the ◻ → ✅ flip in
-  the spec's "Summary: what the app needs *before* any backend
-  ships" checklist).
+- Each Part's PR flips its ◻ → ✅ in "Prerequisites and sequence"
+  above, which moved here from the spec on 2026-10-06 (F13). <!-- cites: spec/email_infra_options.md -->
 - ~~Status-file timeline entries per Part landed~~ — the status file retired 2026-10-05; this plan, archived at close, and its PRs are the record.
 - `guide/todo_master.md` upcoming list updated.
-- `spec/email_infra_options.md` "Migration path" section steps
-  (currently 1 → 6) crossed off as Parts ship; new entries
-  added if a Part introduces a new architectural primitive
-  (queue / worker pattern in Part C, the generalised diagnostic
-  surface in Part E).
+- `spec/email_infra_options.md` — no checklist to tick; a Part that adds an architectural primitive (the queue / worker in Part C, the diagnostic surface in Part E) adds it to the spec's backend-independent sections.
 
 ---
 

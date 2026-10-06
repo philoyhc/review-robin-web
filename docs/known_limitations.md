@@ -9,9 +9,9 @@ bugs — they trace to the Segment 14A plan and
 
 The entries below describe the **personal Azure dev slot**, which is
 still the only environment serving the app. The **NUS environment is
-provisioned but not yet serving**: a P0V3 App Service, private
-Postgres and Key Vault behind private endpoints, an Application
-Gateway in front, and Log Analytics with Application Insights. It
+provisioned but not yet serving**: a P0V3 App Service and Key Vault
+behind private endpoints, a privately provisioned Postgres (no public
+access), an Application Gateway in front, and Log Analytics with Application Insights. It
 waits on a runner VM and a production hostname
 (`docs/nus_azure_status.md`). At cutover the F1 and public-database
 entries stop applying; secrets stay plain App Settings until Key Vault

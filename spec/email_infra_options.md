@@ -585,92 +585,15 @@ Per-deployment (env vars / App Service settings):
 
 ---
 
-## Summary: what the app needs *before* any backend ships
+## What the app needs before a backend ships
 
-The infrastructure that supports any of the four backends, common
-to all. ✅ = shipped, ◻ = pending.
+One `EmailTransport` Protocol, one implementation per backend,
+chosen by configuration; one backend per deployment. Invitation,
+reminder and notification logic call only `EmailTransport.send()`,
+so adding a backend is one class plus its configuration, and
+switching backends is a configuration change.
 
-1. ✅ **The `EmailTransport` Protocol** with a structured
-   `EmailMessage` value type and a `SendResult` return type.
-2. ✅ **A factory or DI registration** that selects the active
-   implementation from configuration (`transport_for(settings)`).
-3. ✅ **The audit log table extensions** described above —
-   `cc_emails` / `bcc_emails`, `error_message` + the future-target
-   columns (`from_address` / `backend` / `backend_message_id` /
-   `delivered_at` / `payload_hash` / `correlation_id`) and the
-   widened status / kind value-sets are in place as schema
-   scaffolding. Only `correlation_id` is
-   written today, by scheduled reminders; **Segment 14B Part A** is
-   the first call site that writes the rest.
-4. ◻ **A `correlation_id` strategy** for idempotent sends
-   across invitation, reminder, and other kinds — Segment 14B
-   Part B.
-5. ◻ **A bulk-send queue / worker pattern** for operator-
-   triggered batch operations — Segment 14B Part C.
-6. ◻ **Per-deployment from-identity configuration** as a
-   complement to the per-operator settings already in place —
-   Segment 14B Part D.
-7. ✅ **Secrets management** via App Service settings, with Key
-   Vault references for credentials and tokens
-   (`SMTP_ENCRYPTION_KEY` env var; per-operator passwords
-   encrypted at rest).
-8. ◻ **An operator-visible diagnostic surface** — the existing
-   Outbox concept, generalised to read from the audit log
-   regardless of backend — Segment 14B Part E.
-
-With these in place, adding any one of Options B–D is a scoped
-piece of work: implement one `EmailTransport` class, add its
-configuration, deploy. Switching between backends is a
-configuration change. Supporting multiple deployments on
-different backends works out of the box.
-
-What the app does *not* need before any backend ships:
-
-- Backend-specific code paths in the invitation, reminder, or
-  notification logic. Those call only `EmailTransport.send()`.
-- A way to talk to multiple backends simultaneously. One backend
-  per deployment is the design.
-
-## Migration path
-
-The `EmailTransport` Protocol + `SmtpEmailTransport` concrete
-implementation are in place. Adding any other backend is a
-parallel implementation; switching deployments to use it is a
-configuration change.
-
-A reasonable sequence:
-
-1. ✅ **Sender abstraction + SMTP backend.**
-2. ✅ **Operator credential storage** — per-operator SMTP
-   credentials on `users`, encrypted at rest.
-3. ✅ **Outbox audit-log column scaffolding** — the columns
-   (`error_message` + future-target additions) and the widened
-   status / kind value-sets. Inert apart from `correlation_id`
-   (scheduled reminders); populated at send time by Step 4.
-4. ◻ **Invitations send activation (SMTP)** — Segment
-   14B Part A. First call site for the existing
-   `transport_for` factory; first writer of Step 3's columns.
-   Per-row Send + bulk Send + Send-test-to-me + dispatch helper
-   + chrome pill + audit events, and sending the responses-received
-   rows a submit already queues.
-5. ◻ **`correlation_id` strategy + idempotent retry** — Segment
-   14B Part B.
-6. ◻ **Bulk-send queue + background worker** — Segment 14B
-   Part C.
-7. ◻ **Per-deployment from-identity defaults** — Segment 14B
-   Part D.
-8. ◻ **Generalised Outbox diagnostic surface** — Segment 14B
-   Part E.
-9. ◻ **Add Option C (ACS)** as the first non-SMTP backend (no
-   IT cooperation needed, can be done unilaterally) — Segment
-   14B Part G. Use it for early production deployments and
-   testing.
-10. ◻ **Add Option B (Graph)** when an institutional deployment
-    is ready to pursue it — Segment 14B Part F. The IT
-    conversation runs in parallel with the code work.
-11. ◻ **Add Option D (third-party)** if a specific deployment
-    requires it or as a fallback for institutions where
-    neither ACS nor Graph fits — Segment 14B Part H.
-
-Steps 9–11 are independent; do them in whatever order
-deployments demand.
+What is in place and what is pending, and the order the remaining
+work lands in, is plan content: it lives in
+`guide/segment_14B_email_infrastructure.md` "Prerequisites and
+sequence", which each Part's PR updates as it ships.
