@@ -136,7 +136,7 @@ def test_filter_responses_label_format_works_with_non_email_identifier() -> None
     assert out[0].reviewee.email_or_identifier == "STU-001"
 
 
-def test_filter_invitations_label_without_at_sign_falls_back_to_substring() -> None:
+def test_filter_invitations_parenthesized_name_is_not_a_pick() -> None:
     """A reviewer name with parens like ``"Alice (Smith)"`` must not be
     misread as a typeahead pick — it is not one of the offered labels
     (C5), so the helper falls back to substring search."""
@@ -184,3 +184,22 @@ def test_an_offered_label_without_an_at_sign_is_a_pick() -> None:
     ]
     out = views.filter_responses_rows(resp, status="all", search="Ana (S1)")
     assert [r.reviewee.email_or_identifier for r in out] == ["S1"]
+
+
+def test_an_unoffered_label_is_not_a_pick() -> None:
+    """C5: a value shaped like a label but naming nobody the page
+    offered (``Zed`` has no row) is free text, not a pick of the
+    handle in its brackets — on Invitations and on the Reviewers page
+    alike, which no longer check the handle for an ``@``."""
+    inv = [_inv_row(name="Alice", email="alice@x.edu")]
+    out = views.filter_invitations_rows(
+        inv, status="all", search="Zed (alice@x.edu)"
+    )
+    assert out == []
+    reviewers = [Reviewer(name="Alice", email="alice@x.edu", status="active")]
+    assert (
+        views.filter_reviewers_rows(
+            reviewers, status="all", search="Zed (alice@x.edu)"
+        )
+        == []
+    )

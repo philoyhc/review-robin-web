@@ -313,7 +313,7 @@ def filter_reviewers_rows(
     needle = search.strip()
     if needle:
         tail = _picked_label_handle(needle, _reviewer_labels(rows))
-        if tail is not None and "@" in tail:
+        if tail is not None:
             # not-identity: a picker selection narrowing rows the operator is
             # already authorized to see. Folding here changes what is
             # displayed, not who may see it, so the display fold stays.
@@ -523,7 +523,7 @@ def filter_observers_rows(
     needle = search.strip()
     if needle:
         tail = _picked_label_handle(needle, _observer_labels(rows))
-        if tail is not None and "@" in tail:
+        if tail is not None:
             # not-identity: a picker selection narrowing rows the operator is
             # already authorized to see. Folding here changes what is
             # displayed, not who may see it, so the display fold stays.
