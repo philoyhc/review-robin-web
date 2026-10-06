@@ -483,6 +483,9 @@ the round-trip notes below.
    than the column it lands in (a data-shape name or `field_key` over
    255 characters, a `short_label` over 32), read from each column's
    declared length; a session tag over 64 is refused by the tag rules.
+   A schedule out of order (Start ≤ End ≤ Release-from <
+   Release-until) is an error naming the field, on the values the
+   session would hold after the apply (`spec/lifecycle.md` §8.2.7).
    Only values phase 2 writes are checked: a *fill-blanks* `session.*`
    key (below) only where the destination is blank, and a data shape
    only when it is written, as for the duplicate-name rule.
@@ -581,15 +584,19 @@ through `set_tags`.
 ruled 2026-10-06): Start ≤ End ≤ Release-from < Release-until, on the
 values the session would hold after the apply, refused in the parse
 phase with the details card's messages (`spec/lifecycle.md` §8.2.7).
-A pair the file supplies neither side of is not checked. Every
-consumer also guards itself, for a session saved before the check:
+A pair the file supplies neither side of is not checked. **One
+legitimate session fails it:** one closed before its End and then
+released, since **Release responses** stamps Release-from at the moment
+of release. Its export is refused on import until Release-from is
+cleared or moved to End or later in the file (author's ruling,
+2026-10-06). An out-of-order schedule can therefore still be stored,
+and every consumer guards itself rather than trusting the chain:
 `is_response_release_window_open` returns `False` unless the session
-`is_expired` **whatever the anchors say**, a `responses_release_until` before its anchor leaves the
-window permanently shut rather than early-open, scheduled activation
-fires only from `validated` and otherwise takes a one-shot audited
-skip, and past-deadline reminders are skipped with an audit event. The
-route's check is an interactive-path courtesy, not a correctness
-boundary.
+`is_expired` **whatever the anchors say**, a `responses_release_until`
+before its anchor leaves the window permanently shut rather than
+early-open, scheduled activation fires only from `validated` and
+otherwise takes a one-shot audited skip, and past-deadline reminders
+are skipped with an audit event.
 
 **Round-trip notes:**
 

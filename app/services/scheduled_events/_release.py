@@ -114,8 +114,9 @@ def parse_and_validate_responses_release_until(
 #
 # Note ``responses_release_until > responses_release_at`` (strict) is
 # already enforced inside ``parse_and_validate_responses_release_until``
-# along with the 365-day magnitude check, so the details card leaves
-# ``responses_release_until`` unset here; this helper checks it only
+# along with the 365-day magnitude check, so the Create route and the
+# details card leave ``responses_release_until`` unset here; this
+# helper checks it only
 # when a caller passes it — the Settings CSV import, which has no
 # per-field parser (findings G22).
 

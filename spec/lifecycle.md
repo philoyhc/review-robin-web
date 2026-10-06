@@ -843,7 +843,11 @@ key, so the destination's own End stands where it has one. A pair the
 file supplies neither side of is not checked, so an import is never
 refused over a schedule it leaves alone. The lead-time floor and the
 365-day cap are not checked there: a restore may carry moments that
-have since passed.
+have since passed. A session closed before its End and then released
+holds Release-from before End (**Release responses** stamps the moment
+of release), so its own export is refused until Release-from is
+cleared or moved in the file (author's ruling, 2026-10-06;
+`spec/csv_contracts.md`).
 
 The create form (`session_new.html`) also pins the same chain
 client-side via `min` / `max` attributes on each `datetime-local`

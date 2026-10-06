@@ -1511,6 +1511,51 @@ def test_the_chain_reads_the_imported_end_where_the_destination_has_none(
     assert [e.field for e in result.errors] == ["session.deadline"]
 
 
+def test_the_chain_reads_the_destinations_own_end_over_the_files(
+    db: Session,
+) -> None:
+    """End is a fallback key: where the destination has one (an End
+    typed on Create), the file's End is not written and the chain is
+    checked against the destination's. Here the file's own End would
+    pass and the destination's fails."""
+    dst = _session(
+        db,
+        code="chain-own-end",
+        deadline=dt.datetime(2026, 5, 15, 12, 0, tzinfo=dt.timezone.utc),
+    )
+    result = apply_session_config(
+        db,
+        dst,
+        [
+            Row("session.scheduled_activate_at", _iso(6, 1), "datetime"),
+            Row("session.deadline", _iso(6, 15), "datetime"),
+        ],
+    )
+    assert [e.field for e in result.errors] == ["session.scheduled_activate_at"]
+
+
+def test_an_early_closed_then_released_sessions_export_is_refused(
+    db: Session,
+) -> None:
+    """Release responses stamps Release-from at the moment of release,
+    so a session closed before its End and then released holds
+    Release-from < End. Its export is refused on import until the file
+    is edited (author's ruling, 2026-10-06)."""
+    src = _session(
+        db,
+        code="chain-early-src",
+        deadline=dt.datetime(2026, 6, 15, 12, 0, tzinfo=dt.timezone.utc),
+    )
+    src.display_timezone = "UTC"
+    src.responses_release_at = dt.datetime(2026, 6, 10, 12, 0, tzinfo=dt.timezone.utc)
+    db.flush()
+    rows = serialize_session_config(db, src)
+
+    dst = _session(db, code="chain-early-dst")
+    result = apply_session_config(db, dst, rows)
+    assert [e.field for e in result.errors] == ["session.responses_release_at"]
+
+
 def test_a_pair_the_import_does_not_touch_is_not_checked(db: Session) -> None:
     """An import is never refused over a schedule it does not change:
     the destination's own out-of-order Release-from stays its business."""
