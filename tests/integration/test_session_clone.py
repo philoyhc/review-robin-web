@@ -502,3 +502,58 @@ def test_a_clone_drops_a_width_naming_another_instruments_field(
         )
     ).scalar_one()
     assert copy.column_widths == {"identity": 180}
+
+
+def test_a_clone_copies_each_instruments_visibility_grid(db: Session) -> None:
+    """G5 (ruled 2026-10-06): Duplicate copies the visibility grid, as
+    Replicate does, in both modes — a clone no longer reverts to the
+    default visibility. The schedule still resets on purpose."""
+    from app.services import visibility_policies as vp
+
+    source, op = _source_session(db, "clone-vis")
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == source.id)
+    ).scalars().first()
+    vp.upsert_policy(
+        db,
+        review_session=source,
+        instrument=instrument,
+        audience="reviewee",
+        while_ongoing_mode=None,
+        after_release_mode="anonymized",
+        user=op,
+    )
+    vp.upsert_policy(
+        db,
+        review_session=source,
+        instrument=instrument,
+        audience="observer",
+        while_ongoing_mode="summarized",
+        after_release_mode="raw",
+        user=op,
+    )
+    db.commit()
+
+    def grid(session_id: int) -> dict[str, tuple[str | None, str | None]]:
+        copied = db.execute(
+            select(Instrument).where(Instrument.session_id == session_id)
+        ).scalars().first()
+        out = {}
+        for audience, policy in vp.list_for_instrument(db, copied.id).items():
+            out[audience] = tuple(
+                vp.decode_mode(
+                    getattr(policy, f"{w}_granularity"),
+                    getattr(policy, f"{w}_identification"),
+                )
+                if getattr(policy, f"{w}_granularity") is not None
+                else None
+                for w in ("while_ongoing", "after_release")
+            )
+        return out
+
+    expected = grid(source.id)
+    assert expected["reviewee"] == (None, "anonymized")
+    assert expected["observer"] == ("summarized", "raw")
+    for mode in ("all", "config"):
+        clone = session_clone.clone_session(db, source=source, user=op, mode=mode)
+        assert grid(clone.id) == expected, mode

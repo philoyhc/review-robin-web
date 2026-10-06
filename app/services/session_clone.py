@@ -42,6 +42,7 @@ from app.db.models import (
 )
 from app.services import audit
 from app.services.instruments._field_refs import repoint_sort, repoint_widths
+from app.services.instruments._instrument_crud import copy_view_policies
 
 CLONE_MODES: tuple[str, ...] = ("all", "config")
 
@@ -103,8 +104,8 @@ def clone_session(
 
     The clone is named ``"Copy of {name}"`` with a derived unique code;
     the operator renames it afterwards. Tags, retention config, feature
-    toggles, and (Segment 18P PR D1) saved Data shapes are copied in both
-    modes.
+    toggles, (Segment 18P PR D1) saved Data shapes, and each instrument's
+    visibility grid (findings G5) are copied in both modes.
 
     **Schedule resets by design.** The deadline and the 18G scheduling
     anchors (``scheduled_activate_at`` / ``responses_release_at`` /
@@ -247,6 +248,10 @@ def clone_session(
             display_ids=display_field_map,
             field_ids=instrument_field_map,
         )
+        # The visibility grid, as Replicate copies it (findings G5,
+        # 2026-10-06): through the editor's writer, so each cell is
+        # checked against the per-cell rule on the way in.
+        copy_view_policies(db, clone, instrument, new_instrument, user)
 
     # Field-label overrides + tags.
     for label in source.field_labels:

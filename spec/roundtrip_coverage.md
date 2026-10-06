@@ -87,7 +87,7 @@ responses. See `spec/rehydrate.md`.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `audience`, `while_ongoing_granularity/_identification`, `after_release_granularity/_identification` (a retired `observer_tag` row in an older bundle is accepted and dropped, and a retired reviewer `summarized` released cell is read as off) | ✅ | ❌ | Settings-CSV carries the visibility grid (`instruments[n].view_policies[<audience>].*`, recreated in the instrument rebuild). Clone does **not** copy it — a clone reverts to default visibility. **The import validates each `(audience, window)` cell** against the same table the editor uses and rejects the whole apply on an illegal one (`spec/visibility_policy.md` §3.1). A round-trip is unaffected: every stored cell is legal — the editor writes only legal ones, and migration `14db60023e88` normalized the rows older backfills left (`spec/visibility_policy.md` §3.1) — and an off cell exports as two empty strings that parse back to `None` |
+| `audience`, `while_ongoing_granularity/_identification`, `after_release_granularity/_identification` (a retired `observer_tag` row in an older bundle is accepted and dropped, and a retired reviewer `summarized` released cell is read as off) | ✅ | ✅ | Settings-CSV carries the visibility grid (`instruments[n].view_policies[<audience>].*`, recreated in the instrument rebuild). Clone copies it through the visibility editor's writer, as Replicate does, so each cell is checked against the per-cell rule (findings G5, 2026-10-06). **The import validates each `(audience, window)` cell** against the same table the editor uses and rejects the whole apply on an illegal one (`spec/visibility_policy.md` §3.1). A round-trip is unaffected: every stored cell is legal — the editor writes only legal ones, and migration `14db60023e88` normalized the rows older backfills left (`spec/visibility_policy.md` §3.1) — and an off cell exports as two empty strings that parse back to `None` |
 
 ### Rule sets (`session_rule_sets`)
 
@@ -150,10 +150,7 @@ is silently ignored on apply rather than failing the import.
 The settings an operator can set that survive **no** export/import path
 (and, where relevant, aren't reproducible by regeneration):
 
-1. **Instrument visibility policies under clone** (`instrument_view_policies`)
-   — the Settings CSV carries them; `session_clone` does not, so a clone
-   reverts to default visibility. Affects `/results` + `/collation`.
-2. **Assignment row status does not round-trip** (`Assignment.include`,
+1. **Assignment row status does not round-trip** (`Assignment.include`,
    the Assignments page's bulk Activate / Inactivate) — no export, no
    clone, and regenerating resets it to `True`. **This is the one place
    the author's contract is knowingly unmet**: *"individual rows can be
@@ -161,16 +158,16 @@ The settings an operator can set that survive **no** export/import path
    export import round trip."* Inactivation is the whole manual surface,
    and it is the part that does not survive a round trip.
    **Carrying it is deferred future work.**
-3. **Session-operator role grants** — co-operators aren't carried by any
+2. **Session-operator role grants** — co-operators aren't carried by any
    config path; only the acting operator's own owner row is created.
 
 Covered by **one** path but lost by another (footguns when you pick the
 wrong tool):
 
-4. **Scheduling anchors** stay clone-reset **by design** — a clone is a
+3. **Scheduling anchors** stay clone-reset **by design** — a clone is a
    fresh cycle the operator re-schedules. The Settings CSV round-trips
    them, so use it, not clone, for backup / restore.
-5. **`assignment_mode`** travels by neither mechanism. The Settings CSV
+4. **`assignment_mode`** travels by neither mechanism. The Settings CSV
    drops it as machine-derived, and a clone starts NULL rather than
    copying it: a clone carries no `Assignment` rows, and NULL is how
    this codebase says *never Generated* — the state the delete-all path
@@ -206,10 +203,7 @@ Places where a value *looks* carried but isn't faithfully restored:
 
 Ordered by user-visible impact:
 
-1. **Clone's visibility-policy gap** (gap 1) — the CSV path carries it,
-   so a clone is the wrong tool for a session whose Band 3 grid matters
-   until clone copies it.
-2. **Manual assignment overrides** (gap 2) — only worth an importer if
+1. **Manual assignment overrides** (gap 1) — only worth an importer if
    field use shows operators rely on hand-toggling pairs; otherwise
    document that assignments always regenerate from rules.
 

@@ -1087,9 +1087,12 @@ The lobby supports:
   every roster: reviewers, reviewees, relationships and observers,
   with their cohort rules) and **Duplicate settings only** (metadata,
   email templates, instruments, rules, friendly labels, tags and saved
-  data shapes; no rosters). Neither copies responses, assignments,
-  invitations or audit history: the clone is a fresh `draft` owned
-  by the operator who cloned it.
+  data shapes; no rosters). Both copy each instrument's visibility
+  grid. Neither copies responses, assignments, invitations or audit
+  history, and neither carries the deadline or the schedule (its
+  anchors and offsets), which reset on purpose: the clone is a fresh
+  `draft`, owned by the operator who cloned it, for a new cycle the
+  operator schedules.
 
 The **archived-sessions child page** (`/operator/sessions/archived`)
 lists sessions in `archived` state with the lobby's table, sort, search
