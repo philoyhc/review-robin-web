@@ -216,7 +216,7 @@ the operation-level mappings.
 |---|---|---|
 | Not on the operator allowlist | **303 → `/me`** | `OperatorAllowlistDenied` handler, `app/main.py` |
 | Not a sys-admin | **403** `sys_admin required` | `require_sys_admin` |
-| Not a session member; not an active participant | **404**, bare | every session-scoped gate |
+| Not a session member; not an active participant | **404**, bare | `require_session_operator`, `require_reviewer_in_session`, `require_reviewee_in_session`, `require_observer_in_session` |
 | Sys-admin, not an owner of an **existing** session | **403** naming the adopt door | `require_session_operator` only |
 | Unknown session / child id, disabled feature tab, unknown invite token | **404** | the gate or route |
 | Missing email claim | **401** | `get_or_create_user` |
@@ -284,7 +284,7 @@ a case when a gate changes.
 |---|---|
 | allowlist bootstrap, case-insensitive match, once-only seeding, super-admin self-heal, fake-auth toggles, revoked-operator redirect | `tests/integration/test_operator_allowlist_gate.py` |
 | participant-only user bounced from lobby + per-session route; workspace operator non-owner 404 + lobby exclusion; sys-admin reaches another owner's session only via adopt | `tests/integration/test_operator_lobby_access_gate.py` |
-| session ids are not enumerable: for each session-scoped gate, an existing session the caller holds no role on is byte-identical to an id that does not exist | `tests/integration/test_session_enumeration_gate.py` |
+| session ids are not enumerable: for each of `require_session_operator`, `require_reviewer_in_session`, `require_reviewee_in_session`, `require_observer_in_session`, an existing session the caller holds no role on is byte-identical to an id that does not exist | `tests/integration/test_session_enumeration_gate.py` |
 | owner add / remove invariants, last-owner 409, self-remove, sys-admin self-add via the relaxed gate | `tests/integration/test_session_owners.py` |
 | every Accounts Management action and guard code | `tests/integration/test_sys_admin_users.py` |
 | super-admin resolver (config membership, fake fold-in) | `tests/unit/test_roles_super_admin.py` |
