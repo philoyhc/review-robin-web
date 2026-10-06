@@ -205,9 +205,9 @@ these are the details that matter.
   keep their shape but name this project's tests — of the tests they
   cite, only `tests/unit/test_doc_references.py` and
   `tests/unit/test_guide_indexes.py` come with the kit, so the
-  inline-scripts, generated-tools, contrast-audit and spec-coverage
-  lines go until you have those gates, and so does the `tests/browser/`
-  sentence with its `RRW_REQUIRE_BROWSER` clause, which the `ci.yml`
+  inline-scripts, doc-conventions, index-currency, generated-tools,
+  contrast-audit and spec-coverage lines go until you have those gates,
+  and so does the `tests/browser/` sentence with its `RRW_REQUIRE_BROWSER` clause, which the `ci.yml`
   edit below removes. Then `cp CLAUDE.md AGENTS.md` —
   the twins test is in the kit.
 - **`constitution.md`.** The six articles are the practice. Delete the
@@ -246,15 +246,17 @@ these are the details that matter.
 - **`tests/unit/test_doc_references.py`** is verbatim and is the first
   gate that will go red, on purpose: it resolves every backticked repo
   path in live prose, and the kit ships prose that points at files that
-  stayed in the source. Expect around 130 dangling pointers on a first
-  export, from five places: every `CLAUDE.md` section you have not
-  rewritten yet, `CONTRIBUTING.md`'s pointer to the practice audit,
-  `spec/README.md`'s pointer to the route registry, this document's
-  "Deliberately not copied" section, and — much the largest group — this
-  document's own kit table and step 7 prose, whose `deferred` rows name
-  the `app/` and theme files no new tree holds before step 7. Fix the
-  ones that should point at something of yours; mark the deliberate ones
-  with the test's inline escape, the `path-ref-ok` HTML comment, on the
+  stayed in the source. Expect dozens of dangling pointers on a first
+  export, from six places. The two large groups are every `CLAUDE.md`
+  section you have not rewritten yet, and this document's own kit table
+  and step 7 prose, whose `deferred` rows name the `app/` and theme files
+  no new tree holds before step 7. The rest are `CONTRIBUTING.md`'s
+  pointers to the practice audit and to `app/db/`, `constitution.md`'s
+  pointer to the spec-coverage test, `spec/README.md`'s pointer to the
+  route registry, and this document's "Deliberately not copied" section.
+  `pytest tests/unit/test_doc_references.py -k path_reference` lists
+  them. Fix the ones that should point at something of yours; mark the
+  deliberate ones with the test's inline escape, the `path-ref-ok` HTML comment, on the
   line (the test's docstring shows it). Around forty markers is normal
   and most of them land in this document. Leave them accurate rather
   than tidy: the same test fails a marker whose path has come to exist,

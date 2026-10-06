@@ -182,7 +182,7 @@ One honesty caveat belongs here. At the pilot stage, the safety of "inside the i
 
 ### 6.8 A boring, inspectable technical shape
 
-**Decision.** Build a server-rendered FastAPI + Jinja + SQLAlchemy monolith with a strict three-layer split (thin routes, business logic in services, models in between), no frontend framework and no JS build step, Postgres in production and SQLite in tests, and migrations round-tripped on both dialects in CI.
+**Decision.** Build a server-rendered FastAPI + Jinja + SQLAlchemy monolith with a strict three-layer split (thin routes, business logic in services, models in between), no frontend framework and no JS build step, Postgres in production and SQLite in tests, and the migration chain round-tripped on Postgres in CI.
 
 **Why.** The same instinct that kept Review Robin inspectable inside a workbook keeps RRW inspectable inside a small, conventional codebase. A server-rendered monolith with plain forms is easy to reason about, easy to hand over, and cheap to maintain by one person with AI assistance. Avoiding a JS framework is a scope-discipline decision: the reviewer surface uses targeted progressive enhancement, not a single-page application. Keeping complexity *located* where it can be read — thin routes, explicit services, a validated audit envelope — is the codebase-level expression of "keep the control surface visible."
 
@@ -222,5 +222,5 @@ RRW exists to solve one structurally hard, widely recurring problem — **routin
 | Cycles are discrete, not tied to a standing roster | Session as the unit of organisation; duplicate-and-tag to reuse a population |
 | Judgments must be defended later | Typed audit envelope on every mutation; lifecycle locks; scoped permissions; reconciling (non-destructive) regeneration |
 | Must be sanctioned to run in the institution | Microsoft 365 / Entra identity; in-tenant Azure hosting under a workable data policy (pilot safety rests on sandbox + policy; app-level hardening on the roadmap) |
-| Must stay maintainable by a citizen developer | Server-rendered monolith, thin routes / explicit services, no JS framework, migrations tested on both dialects |
+| Must stay maintainable by a citizen developer | Server-rendered monolith, thin routes / explicit services, no JS framework, migrations round-tripped on Postgres in CI |
 | Analysis is better served elsewhere | Deliberate scope stop at clean, portable data — hand off to Excel / Power BI / Python / R |

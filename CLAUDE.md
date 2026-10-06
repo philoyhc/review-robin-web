@@ -211,8 +211,9 @@ reject it.
   the floor `pyproject.toml` pins), builds `.venv/` from it, and exports
   `.venv/bin` on PATH for the session, so `pytest` and `ruff` are the
   project's own. It reuses a cached `.venv/` and rebuilds only when that
-  one is missing or too old. It no-ops unless `CLAUDE_CODE_REMOTE=true`,
-  so a local checkout keeps whatever environment its owner made.
+  one is missing, too old, or has no working `pip`. It no-ops unless
+  `CLAUDE_CODE_REMOTE=true`, so a local checkout keeps whatever
+  environment its owner made.
 - **A green `ruff` is not evidence.** Much of what gates a merge reads
   no Python and only `pytest` runs it: `tests/unit/test_doc_references.py`
   (the twins, every anchored backticked repo path in live prose —
