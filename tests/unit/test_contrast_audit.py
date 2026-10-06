@@ -387,11 +387,12 @@ def test_the_muted_token_absorbed_the_retired_one() -> None:
 
     # The counts as the collapse left them: 30 + 16, 5 + 3, 0 + 1. Floors
     # rather than equalities so that new muted text is not a failure, but
-    # deleting a label instead of repointing it is. Instruments is one
-    # lower than the collapse left it: `.instrument-card-short-label`
-    # styled no markup and was deleted as dead (findings Ec3, 2026-10-05).
-    assert counts["base.html"] >= 46, counts["base.html"]
-    assert counts["instruments_index.html"] >= 7, counts["instruments_index.html"]
+    # deleting a label instead of repointing it is. Instruments' uses were
+    # one lower than the collapse left them (`.instrument-card-short-label`
+    # styled no markup and was deleted as dead, findings Ec3), and its seven
+    # moved into base.html with the rest of that page's stylesheet
+    # (findings E14, 2026-10-06), so base carries 46 + 7.
+    assert counts["base.html"] >= 53, counts["base.html"]
     assert counts["session_observers.html"] >= 1, counts["session_observers.html"]
 
 

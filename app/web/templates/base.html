@@ -2633,11 +2633,11 @@
       /* Tag-filter chips — clickable; the selected ones flip to a
          filled accent so the active filter set reads at a glance.
 
-         Every chip carries the reserved accent shade as a 1px edge
-         (19J.7 rung 3; the figure read "2px" here and in
-         ``spec/ui_elements.md`` from 19J.7 until 19L.1, against a rule
-         that has always been ``inset 0 0 0 1px``). Until then the pill vocabulary said "clickable"
-         with nothing but ``cursor: pointer`` — invisible until the
+         Every chip carries the reserved accent shade as a 2px edge:
+         ``.pill``'s 1px border, colored here, plus a 1px inset shadow
+         inside it (19J.7 rung 3; ``spec/ui_elements.md``, settled
+         2026-10-06, findings E1). Before it the pill vocabulary said
+         "clickable" with nothing but ``cursor: pointer`` — invisible until the
          pointer is already on the chip, absent on touch, and absent
          from every screencap in the Guide.
 
@@ -2648,8 +2648,8 @@
          says not set, the edge says you can fix it, and both are true.
          So the edge is additive over whatever fill the modifier gives.
 
-         2px comes from an inset shadow rather than ``border-width`` so
-         the box never changes size, and ``.pill``'s 1px transparent
+         The second pixel comes from an inset shadow rather than a wider
+         ``border-width`` so the box never changes size, and ``.pill``'s 1px transparent
          border (below) keeps a bordered chip exactly as tall as the
          status label beside it in the same table cell. */
       body.ui-v2 .tag-chip,
@@ -4395,6 +4395,265 @@
         justify-content: flex-end;
         gap: 8px;
         margin-top: 12px;
+      }
+
+      /* ------------------------------------------------------------------
+         Instruments page (operator/instruments_index.html). Moved here
+         from the page's own <style> block (findings E14, 2026-10-06):
+         base.html owns the app's CSS. Every selector is scoped to markup
+         only that page renders. The reorder toast carries no drop shadow
+         (E16; spec/visual_style_general.md).
+         ------------------------------------------------------------------ */
+      /* Segment 18R Item 2 PR 1 — client lock-state scaffold.
+         Every instrument card carries data-instrument-locked
+         ("true" | "false"), seeded server-side from is_editing and
+         flipped client-side by newModelSetLock(). All edit controls
+         are always rendered; this layer swaps the Lock / Unlock /
+         Save / Cancel cluster on the lock state and gives the
+         editable regions a read-only look while locked. The `inert`
+         attribute on the band wrappers (in Bands 2 and 3, the pieces
+         holding controls, so a table's scroller stays scrollable) is
+         what actually blocks interaction (set server-side from
+         is_editing, toggled by newModelSetLock); the opacity here is
+         only the visual cue.
+         PR 1 is scaffold-only — persistence endpoints are untouched;
+         the Lock / Unlock anchors keep their ?editing hrefs as the
+         no-JS fallback. */
+      [data-instrument-card][data-instrument-locked="true"] [data-unlock-only] { display: none !important; }
+      [data-instrument-card][data-instrument-locked="false"] [data-lock-only] { display: none !important; }
+      [data-instrument-card][data-instrument-locked="true"] [data-lock-region] { opacity: 0.75; }
+      /* The locked "Who can see what you wrote" card sits outside Band 2's
+         lock regions so its table can scroll; it fades with the intro card
+         above it (19T Item 12A). */
+      [data-instrument-card][data-instrument-locked="true"] [data-new-model-band2-vp-preview-card] { opacity: 0.75; }
+      /* 19T Item 16 entry 6 — locked, an intro card with neither a heading
+         nor a subtitle is not drawn, as the reviewer surface draws none;
+         unlocked it holds the description box. */
+      [data-instrument-card][data-instrument-locked="true"] .rs-intro-name[data-intro-empty] { display: none; }
+      /* The Band 2 preview help-card ✎/✓ edit affordances are built by
+         JS (renderHelpCard, keyed by data-help-card-key) so they can't
+         carry a Jinja data-unlock-only marker. `inert` on the lock
+         region disables them but leaves them visible; hide them off the
+         lock state directly, matching the other edit affordances. */
+      /* Segment 18R Item 2 PR 3 — consolidated Save summary banner.
+         Rendered per card (hidden until a fetch-Save comes back with
+         validation errors); lists the blocking issues at the top of the
+         still-unlocked card. */
+      .save-error-banner {
+        margin: 0 0 12px 0;
+        padding: 10px 14px;
+        border: 1px solid var(--status-error-soft-border);
+        border-left-width: 4px;
+        border-radius: 6px;
+        background: var(--status-error-soft-bg);
+        color: var(--status-error-soft-fg);
+        font-size: 0.9rem;
+      }
+      .save-error-banner ul { margin: 6px 0 0 0; padding-left: 20px; }
+      .save-error-banner strong { font-weight: 600; }
+      /* Segment 18R Item 2 PR 5c — a response field with saved responses
+         has its shape (type + bounds) frozen; the data-type select + the
+         bound inputs already carry `disabled`, but base.html only styles
+         disabled *buttons* (so the X reads correctly greyed while these
+         looked live). Give the disabled shape controls a matching
+         inactive treatment so the freeze is obvious at a glance; the
+         "Clear responses first" title stays as the explanation. */
+      [data-new-model-rf-data-type]:disabled,
+      [data-new-model-rf-bound]:disabled {
+        background: var(--surface-muted);
+        color: var(--text-subtle);
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+      /* Match the reviewer surface's compact .rrw-sort-btn dimensions
+         so the Band 2 preview header doesn't bloat the row height. */
+      body.ui-v2 .sort-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 4px;
+        padding: 0 4px;
+        min-width: 18px;
+        height: 18px;
+        line-height: 1;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        cursor: pointer;
+        color: var(--text-subtle);
+        font: inherit;
+        font-size: 0.85em;
+      }
+      body.ui-v2 .sort-btn:hover {
+        border-color: var(--border-default);
+        background: var(--surface-muted);
+      }
+      body.ui-v2 .sort-badge {
+        display: inline;
+        font-variant-numeric: tabular-nums;
+      }
+      body.ui-v2 .sort-badge.sort-badge-empty {
+        color: var(--text-subtle);
+      }
+      /* Band 2 preview table — the reviewer surface's cell padding
+         (``.rs-instrument-group``: half the row gap, the standard side
+         padding) and its inputs' own size, so the preview's columns
+         measure as the surface's (19T Item 16). */
+      body.ui-v2 [data-new-model-band2-preview] th,
+      body.ui-v2 [data-new-model-band2-preview] td {
+        padding: var(--space-2) var(--space-4);
+        /* Top-align so multi-row textareas (long-text response
+           fields) anchor at the top of the row rather than
+           centering vertically inside it — matches the reviewer
+           surface contract in base.html. */
+        vertical-align: top;
+      }
+      /* Band 3 Visibility — Reviewees + Observers audience chips
+         in their unselected state are styled to match the
+         greyed-out What / When cycle chips in the same row (filled
+         accent-blue background, white text, opacity 0.4). Cycle
+         chips in those rows always have ``is-selected`` so the
+         ``:not(.is-selected)`` selector doesn't bite them. The
+         audience chip itself stays clickable — the opacity is
+         cosmetic, not ``pointer-events: none``. */
+      body.ui-v2 [data-new-model-audience="reviewees"] .tag-chip:not(.is-selected),
+      body.ui-v2 [data-new-model-audience="observers"] .tag-chip:not(.is-selected) {
+        background: var(--selected-bg);
+        color: var(--text-on-accent);
+        opacity: 0.4;
+      }
+      /* Segment 18M PR 0 — collapsible instrument cards. The
+         <summary> is the click target; the chevron rotates via
+         the [open] selector with no JS. */
+      body.ui-v2 details.instrument-card-collapsible > summary.instrument-card-summary {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        list-style: none;
+      }
+      body.ui-v2 details.instrument-card-collapsible > summary.instrument-card-summary::-webkit-details-marker {
+        display: none;
+      }
+      body.ui-v2 .instrument-card-toggle-icon {
+        display: inline-block;
+        font-size: 1.5rem;
+        padding: 4px 10px;
+        line-height: 1;
+        color: var(--text-body);
+        transition: transform 0.15s ease-out;
+      }
+      body.ui-v2 .instrument-card-drag-handle {
+        display: inline-block;
+        font-size: 1.5rem;
+        padding: 4px 10px;
+        margin-right: 6px;
+        line-height: 1;
+        letter-spacing: -2px;
+        color: var(--text-body);
+        cursor: grab;
+        user-select: none;
+      }
+      body.ui-v2 .instrument-card-drag-handle:active {
+        cursor: grabbing;
+      }
+      /* Operator-only ``Instrument_{session_seq}`` fallback on the card
+         title — rendered when no short_label is set. Styled muted
+         + italic so it reads as a placeholder nudging the operator
+         to set a proper short label rather than as a chosen name. */
+      body.ui-v2 .card-title-fallback {
+        color: var(--text-subtle);
+        font-style: italic;
+        font-weight: 500;
+      }
+      body.ui-v2 .instrument-card-summary .pill {
+        position: relative;
+        top: -1px;
+      }
+      body.ui-v2 details.instrument-card-collapsible[open] > summary.instrument-card-summary .instrument-card-toggle-icon {
+        transform: rotate(180deg);
+      }
+      /* Segment 18M PR 2a — page-break card. Thin horizontal line
+         with the words 'Page break' floating in the middle and a
+         small × on the right (delete inline). Sits between
+         instrument cards in the loop. */
+      body.ui-v2 .page-break-card {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin: 16px 0;
+        padding: 0 16px;
+      }
+      body.ui-v2 .page-break-card::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        height: 1px;
+        background: var(--border-default);
+        z-index: 0;
+      }
+      body.ui-v2 .page-break-card > * {
+        position: relative;
+        z-index: 1;
+        background: var(--surface-page);
+        padding: 4px 8px;
+      }
+      body.ui-v2 .page-break-card-label {
+        font-size: 0.875rem;
+        color: var(--text-subtle);
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+      body.ui-v2 .page-break-card-delete {
+        cursor: pointer;
+        border: 1px solid var(--border-default);
+        border-radius: 4px;
+        background: var(--surface-page);
+        color: var(--text-subtle);
+        font-size: 1.1rem;
+        line-height: 1;
+        padding: 2px 8px;
+        transition: color 0.15s, border-color 0.15s;
+      }
+      body.ui-v2 .page-break-card-delete:hover:not(:disabled) {
+        color: var(--text-body);
+        border-color: var(--text-subtle);
+      }
+      body.ui-v2 .page-break-card-delete:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+      /* Segment 18M PR 2b — drag-and-drop visual state.
+         .instrument-card-dragging fades the source card so the
+         operator sees which card they're moving; .drop-indicator
+         is a 2px-thick blue line inserted between cards to mark
+         where the drop will land. */
+      body.ui-v2 .card.instrument-card-dragging {
+        opacity: 0.4;
+      }
+      body.ui-v2 .instrument-reorder-toast {
+        position: fixed;
+        top: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 480px;
+        background: var(--toast-error-bg);
+        color: var(--text-on-accent);
+        padding: 14px 22px;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+        z-index: 1000;
+      }
+      body.ui-v2 .instrument-reorder-toast.is-visible {
+        opacity: 1;
       }
     </style>
     <script>
