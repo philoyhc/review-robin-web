@@ -136,6 +136,13 @@ author, marked *re-checked*) also ran it.
   D20; no current route loads the relationship first. Expire
   `review_session.instruments` after the rebuild, or query `Instrument`
   directly. Code. Found by the D20 cold read (#2856).
+- **Ec10** — `error.html` (a standalone page with its own `<style>`)
+  still gives its card `box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06)`
+  against the "no drop shadows" rule (`spec/visual_style_general.md`),
+  the rule E16 applied to the reorder toast. Separately, the
+  Instruments page still defines `window.newModelToggleAudience`, which
+  nothing calls since the audience-chip markup went (d2cbe8d9). Code.
+  Found by the E14 cold read (#2857).
 - ~~**Ec9**~~ — **Done in #2850.** The Link 3 builder's boundary cells disagree between a card
   as rendered and one just edited: the template gives every saved cell
   an X (the first disabled), while `newModelRefreshUnitButtons`, called
@@ -328,9 +335,9 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**E11**~~ low spec operator_ui_concept.md:75-80,113-117 URLs lack /operator prefix — **Done in #2845.**
 - ~~**E12**~~ low trim tallies: ui_elements.md:570,694,274,704,949-952; operator_ui_concept.md:454-455; operator_button_audit.md:268,357 — **Done in #2845.**
 - ~~**E13**~~ low trim history: ui_elements.md:203-204,271-274; visual_style_general.md:25,117; operator_button_audit.md:382 — **Done in #2845.**
-- **E14** low-med author instruments_index.html:8-266 258-line local <style> primitives uncatalogued (save-error-banner, sort-btn/sort-badge, instrument-card-*, page-break-card*, reorder-toast) — **Ruled 2026-10-06: move the block into `base.html` and catalogue it.**
+- ~~**E14**~~ low-med author instruments_index.html:8-266 258-line local <style> primitives uncatalogued (save-error-banner, sort-btn/sort-badge, instrument-card-*, page-break-card*, reorder-toast) — **Done in #2857** (ruled 2026-10-06: move the block into `base.html` and catalogue it).
 - ~~**E15**~~ low write uncatalogued base.html primitives (.roster-card/.unlock-*, .row-expander-*/.exp-*, .roster-readouts, .tag-mode-chip/.pill-tag-clear, .quick-setup-*, .setup-coverage-*, .severity-filter-*, .email-preview-*; email-preview-body <pre> not .code-block) — **Done in #2845.**
-- **E16** low author visual_style_general.md:145,215; ui_elements.md:925 no drop shadows vs .instrument-reorder-toast box-shadow (instruments_index.html:257) — **Ruled 2026-10-06: drop the shadow, with E14.**
+- ~~**E16**~~ low author visual_style_general.md:145,215; ui_elements.md:925 no drop shadows vs .instrument-reorder-toast box-shadow (instruments_index.html:257) — **Done in #2857** (ruled 2026-10-06: drop the shadow, with E14).
 
 **F — architecture, roles and operations**
 

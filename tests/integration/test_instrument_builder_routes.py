@@ -6086,9 +6086,9 @@ def test_pr3_consolidated_save_wiring_ships(
     body = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    # Per-card error-banner placeholder + its CSS.
+    # Per-card error-banner placeholder; its CSS is base.html's (E14).
     assert f'data-save-error-banner="{new_model.id}"' in body
-    assert ".save-error-banner" in body
+    assert 'class="save-error-banner"' in body
     # Success / error handlers.
     assert "window.newModelOnSaveSuccess" in body
     assert "window.newModelShowSaveErrors" in body
