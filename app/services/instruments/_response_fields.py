@@ -101,6 +101,17 @@ def _inline_kwargs_from_default_spec(
     }
 
 
+
+def _integer_bound(value: Any) -> int | float:
+    """An Integer field's bound as the ``validation`` block stores it:
+    a whole value as an int, a non-whole one kept as entered (A9). The
+    whole-bounds rule refuses a fractional bound on new input, but a
+    field with responses keeps the one it had, and the reviewer surface
+    reads this block, so truncating it would show a bound the save path
+    (which reads ``_inline_*``) does not enforce."""
+    number = float(value)
+    return int(number) if number.is_integer() else number
+
 def _validation_block_from_default_spec(
     spec: dict[str, Any],
 ) -> dict[str, Any] | None:
@@ -119,7 +130,7 @@ def _validation_block_from_default_spec(
             block["max_length"] = int(spec["max"])
         return block or None
     if data_type in ("Integer", "Decimal"):
-        cast = int if data_type == "Integer" else float
+        cast = _integer_bound if data_type == "Integer" else float
         block = {}
         if spec.get("min") is not None:
             block["min"] = cast(spec["min"])
@@ -167,7 +178,7 @@ def validation_block_from_inline(
             block["max_length"] = int(max_)
         return block or None
     if data_type in ("Integer", "Decimal"):
-        cast = int if data_type == "Integer" else float
+        cast = _integer_bound if data_type == "Integer" else float
         block = {}
         if min_ is not None:
             block["min"] = cast(min_)

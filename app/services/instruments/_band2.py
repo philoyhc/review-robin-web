@@ -402,9 +402,9 @@ def _integer_bounds_error(
     stored: InstrumentResponseField | None,
 ) -> str | None:
     """19T Item 6 entry 2 — refuse a fractional Min, Max or Step on an
-    Integer field. Its ``validation`` block casts bounds with ``int``,
-    so a Step of 0.5 would land as 0, and the reviewer could enter
-    whole numbers only. One exemption: a stored field with responses
+    Integer field: the reviewer can enter whole numbers only, so a Step
+    of 0.5 or a Min of 0.5 describes values nobody can give. One
+    exemption: a stored field with responses
     whose type and bounds are unchanged. Its bounds are locked, so
     refusing it would block every Save of the card with nothing the
     operator could do about it."""

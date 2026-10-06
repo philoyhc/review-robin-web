@@ -285,3 +285,39 @@ def test_textarea_rows_for_never_returns_below_floor_or_above_cap() -> None:
         for col_px in (None, 1, 50, 200, 500, 1000, 5000):
             rows = textarea_rows_for(max_chars, col_px)
             assert 2 <= rows <= 8, (max_chars, col_px, rows)
+
+
+def test_integer_bounds_round_trip_the_validation_block() -> None:
+    """A9: the block the save path builds keeps a non-whole Integer bound
+    the whole-bounds exemption allowed, so the helpers print it as
+    entered — the shape the app actually stores, not a hand-built one."""
+    from app.services.instruments._response_fields import (
+        validation_block_from_inline,
+    )
+
+    block = validation_block_from_inline("Integer", 0.5, 10.0, 1.0, None)
+    assert block == {"min": 0.5, "max": 10, "step": 1}
+    field = SimpleNamespace(data_type="Integer", validation=block)
+    assert placeholder_for_field(field) == "0.5 to 10, steps of 1"
+    assert constraint_summary_for_field(field) == "0.5-10, steps of 1"
+    # Whole bounds still store as ints.
+    assert validation_block_from_inline("Integer", 1.0, 5.0, 1.0, None) == {
+        "min": 1,
+        "max": 5,
+        "step": 1,
+    }
+
+
+def test_integer_bound_error_reads_the_bound_as_entered() -> None:
+    """A9: the server's message for a kept non-whole Min names it, not
+    its truncation."""
+    from app.services.responses._core import validate_value
+
+    field = SimpleNamespace(
+        data_type="Integer", _inline_min=0.5, _inline_max=10.0, _inline_step=None
+    )
+    assert validate_value(field, "0") == "Must be at least 0.5."
+    whole = SimpleNamespace(
+        data_type="Integer", _inline_min=1.0, _inline_max=5.0, _inline_step=1.0
+    )
+    assert validate_value(whole, "0") == "Must be at least 1."

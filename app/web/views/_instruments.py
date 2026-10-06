@@ -182,8 +182,8 @@ def placeholder_for_field(field: InstrumentResponseField) -> str:
         step = validation.get("step")
         if min_ is None or max_ is None or step is None:
             return ""
-        # Integer bounds print as entered too (A9): a non-whole bound
-        # kept by the whole-bounds exemption reads 0.5, not 0.
+        # Integer bounds print as entered too (A9): the validation block
+        # keeps a non-whole bound the whole-bounds exemption allowed.
         lo, hi, by = (_format_band2_bound(v) for v in (min_, max_, step))
         return f"{lo} to {hi}, steps of {by}"
     return ""

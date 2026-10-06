@@ -87,7 +87,9 @@ _STEP_TOLERANCE = 1e-6
 
 def _format_number(v: float, *, integer: bool) -> str:
     if integer:
-        return str(int(v))
+        # A non-whole bound kept by the whole-bounds exemption reads as
+        # entered, not truncated (A9).
+        return str(int(v)) if v == int(v) else f"{v:g}"
     if v == int(v):
         return f"{v:.1f}"
     return f"{v:g}"
