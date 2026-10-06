@@ -75,8 +75,11 @@ rows plus `session.relationships_enabled` / `session.observers_enabled`) and
 restored by `_apply` within its instrument wipe-and-rebuild pass.
 
 Rehydrate therefore carries **no view-policy code of its own**: it
-inherits both from the ordinary settings round-trip, which every other
-consumer (config-only clone, backup / restore) shares. If the settings
+inherits both from the ordinary settings round-trip, which the Settings
+CSV import on Create and Session Home shares, as does backup / restore.
+Duplicate session is not one of them: it copies in the database and
+never goes through the CSV, and copies the grid through
+`copy_view_policies` (findings G5). If the settings
 carrier ever stopped emitting them, rehydrate would silently rebuild
 sessions at default visibility — which is why this is a prerequisite of
 the feature rather than a part of it.
