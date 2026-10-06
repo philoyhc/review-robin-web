@@ -4,8 +4,9 @@
 re-imported — and what silently doesn't.** This is the authoritative
 coverage matrix for the three round-trip mechanisms. It exists because
 "export the settings and re-import them" is load-bearing for backup /
-restore, porting a session between environments, cloning, and the proposed
-[rehydrate](../spec/rehydrate.md) feature — and several hand-set settings
+restore, porting a session between environments, cloning, and the
+[rehydrate](rehydrate.md) feature (built, behind the `rehydrate_enabled`
+flag) — and several hand-set settings
 do **not** come back.
 
 Companion to `spec/settings_inventory.md` (the full index of every
@@ -135,7 +136,7 @@ is silently ignored on apply rather than failing the import.
 
 | Setting | Any path | Notes |
 |---|:--:|---|
-| **Manual per-pair include overrides** (`Assignment.include`, set via the Assignments page's bulk Activate / Inactivate) | ❌ | **Gap — no path, and not reproducible.** Not exported: the coverage CSV emits column labels only, no row data, and there is no assignments importer at all. Clone doesn't copy assignments, and **regenerating from the rule set resets `include=True`**, discarding the override. Matches the `spec/rehydrate.md` caveat |
+| **Manual per-pair include overrides** (`Assignment.include`, set via the Assignments page's bulk Activate / Inactivate) | ❌ | **Gap — no path, and not reproducible.** Not exported: the coverage CSV emits column labels only, no row data, and there is no assignments importer at all. Clone doesn't copy assignments, and **regenerating from the rule set recomputes `include`** — `self_reviews_active` for a self-review pair, `False` when either side is inactive, otherwise `True` — discarding the override. Matches the `spec/rehydrate.md` caveat |
 | `is_self_review`, `created_by_mode` | — | Engine-derived, not operator overrides |
 
 ### Permissions (`session_operators`)

@@ -265,27 +265,27 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 - **D1** med author csv_contracts.md:621-623; roundtrip_coverage.md:64,185-187 row position authoritative vs bracket index (_apply_instrument.py:380,398; reproduced)
 - ~~**D2**~~ med code csv_contracts.md:690-695 byte-stable vs order drift (=Dc1) — **Done in #2829.**
-- **D3** low spec settings_inventory.md:581 only unknown top-level path ignored vs unknown session.<key> silently dropped (_apply_session.py:20-80)
-- **D4** low spec settings_inventory.md:404 ?rule_based_error param absent from app/
-- **D5** med spec extract_data.md:453 no instruments selected -> every roster entry vs zero-response entities dropped (entity_metadata_extract)
+- ~~**D3**~~ low spec settings_inventory.md:581 only unknown top-level path ignored vs unknown session.<key> silently dropped (_apply_session.py:20-80) — **Done in #2844.**
+- ~~**D4**~~ low spec settings_inventory.md:404 ?rule_based_error param absent from app/ — **Done in #2844.**
+- ~~**D5**~~ med spec extract_data.md:453 no instruments selected -> every roster entry vs zero-response entities dropped (entity_metadata_extract) — **Done in #2844.**
 - ~~**D6**~~ low write extract_data.md silent on include=True filtering across lenses vs responses.csv unfiltered — **Done in #2838.**
-- **D7** low spec csv_contracts.md:50 header always first vs Responses preamble, by-instrument meta block
-- **D8** low trim csv_contracts.md:100,281,3-9 "Five extracts/importers" tallies; Observers & Settings extracts no §2 entry
-- **D9** med author csv_contracts.md:984-987 every extract row order pinned + tested vs data_shape_extract no order_by; by_instrument ties
-- **D10** low author csv_contracts.md:452-454,973-975 collect every error vs short row rejects file (_quick_setup.py:1180-1199)
+- ~~**D7**~~ low spec csv_contracts.md:50 header always first vs Responses preamble, by-instrument meta block — **Done in #2844.**
+- ~~**D8**~~ low trim csv_contracts.md:100,281,3-9 "Five extracts/importers" tallies; Observers & Settings extracts no §2 entry — **Done in #2844.**
+- ~~**D9**~~ med author csv_contracts.md:984-987 every extract row order pinned + tested vs data_shape_extract no order_by; by_instrument ties — **Done in #2840.**
+- ~~**D10**~~ low author csv_contracts.md:452-454,973-975 collect every error vs short row rejects file (_quick_setup.py:1180-1199) — **Done in #2840.**
 - ~~**D11**~~ low write no per-cell length limits documented for roster/relationship/observer CSV (=Dc4) — **Done in #2830.**
 - ~~**D12**~~ med code email_template_editor.md:155-158,259-260 no-overrides indistinguishable vs import writes enabled flag (=Dc2) — **Done in #2829.**
-- **D13** low spec email_template_editor.md:242-243 cites "✅ All" not in roundtrip_coverage
-- **D14** low spec roundtrip_coverage.md:8 "proposed rehydrate" vs built, gated; link ../spec/
-- **D15** low spec roundtrip_coverage.md:138; rehydrate.md:534-536 regenerate resets include=True vs recomputes (_generate.py:566-578)
-- **D16** low spec rehydrate.md:141-143 pure analyze_rehydrate_set(files) vs (db, *, files, user) reads DB
+- ~~**D13**~~ low spec email_template_editor.md:242-243 cites "✅ All" not in roundtrip_coverage — **Done in #2844.**
+- ~~**D14**~~ low spec roundtrip_coverage.md:8 "proposed rehydrate" vs built, gated; link ../spec/ — **Done in #2844.**
+- ~~**D15**~~ low spec roundtrip_coverage.md:138; rehydrate.md:534-536 regenerate resets include=True vs recomputes (_generate.py:566-578) — **Done in #2844.**
+- ~~**D16**~~ low spec rehydrate.md:141-143 pure analyze_rehydrate_set(files) vs (db, *, files, user) reads DB — **Done in #2844.**
 - **D17** low author rehydrate.md:129-131 preview assignments-to-generate absent; "instruments" = distinct short labels (session_rehydrate.py:354-367)
 - ~~**D18**~~ med code rehydrate.md:408,423-425 two outcomes per row vs short rows vanish (=Dc3) — **Done in #2829.**
 - **D19** med author rehydrate.md:394 InstrumentShortLabel unique per session vs no constraint; last duplicate wins (responses_import.py:229-231)
 - **D20** low author roundtrip_coverage.md:113; settings_inventory.md:509-510,582 data-shape refs portable vs empty ref for unlabeled instrument widens scope on re-import
-- **D21** low trim settings_inventory.md:361,581,576,582; rehydrate.md:252-253,367-373,537-544; extract_data.md:1045-1047; email_template_editor.md:62
-- **D22** low write csv_contracts.md §3.3 required Settings fields and csv_list data_type undocumented
-- **D23** low spec email_template_editor.md:223-225 cc_bcc_for raw vs stripped
+- ~~**D21**~~ low trim settings_inventory.md:361,581,576,582; rehydrate.md:252-253,367-373,537-544; extract_data.md:1045-1047; email_template_editor.md:62 — **Done in #2844.**
+- ~~**D22**~~ low write csv_contracts.md §3.3 required Settings fields and csv_list data_type undocumented — **Done in #2844.**
+- ~~**D23**~~ low spec email_template_editor.md:223-225 cc_bcc_for raw vs stripped — **Done in #2844.**
 
 **E — UI and visual style**
 

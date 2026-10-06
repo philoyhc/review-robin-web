@@ -138,10 +138,11 @@ back to the lobby; no session context yet — this page creates one). Layout:
 rehydrate.** The Rehydrate button is inert until a Validate run on the
 current upload returns no blocking errors.
 
-**One shared analyzer.** Both buttons route through a single pure function,
-`analyze_rehydrate_set(files) -> RehydrateReport`
+**One shared analyzer.** Both buttons route through a single function,
+`analyze_rehydrate_set(db, *, files, user) -> RehydrateReport`
 (`app/services/session_rehydrate.py`), so a green preview cannot diverge from
-what the commit actually does. The report carries:
+what the commit actually does. It writes nothing; it reads the database only
+to derive the preview's unique name and code. The report carries:
 
 - **Completeness** — the four required files present
   ([§4](#4-required-file-set)), `settings.csv`'s header exact,
@@ -254,8 +255,9 @@ with no real file present to win. **Accepted limitation:** a session
 whose code (in any case) contains `_by_instrument_`, or ends in
 `_by_instrument` — the `{code}_` prefix supplies the final underscore —
 has every file skipped, so rehydrate reports its files missing; renaming
-them (keeping the suffix) clears it. A clear error on that rare code was preferred to name rules
-that misread a By-instrument file on an ordinary renamed upload.
+them (keeping the suffix) clears it. A clear error on that rare code
+beats a looser name rule that would misread a By-instrument file on an
+ordinary renamed upload.
 
 ## 5. Naming and description
 
@@ -369,13 +371,12 @@ whole-number message.
    dedup + email-lowercasing rules as normal import; `reviewees` keep
    their `email_or_identifier` (non-email handles allowed).
 
-   **The cross-roster identity check does not run here**, and never
-   has — this step calls the `save_*` functions directly, while the
-   check sits on the import routes. Deferred rather than closed: the
-   rehydrated session can hold a conflicting pair, but only one its
-   source already held, and the `*.cross_roster_identity` Validate
-   rules report it there. Tracked in
-   `guide/deferred_consolidated.md`.
+   **The cross-roster identity check does not run here**: this step
+   calls the `save_*` functions directly, while the check sits on the
+   import routes. The rehydrated session can hold a conflicting pair,
+   but only one its source already held, and the
+   `*.cross_roster_identity` Validate rules report it there
+   (`guide/deferred_consolidated.md`).
 2. **Relationships** (if enabled) via `relationships.save_relationships`,
    resolving emails against the just-imported rosters.
 3. **Assignments** — regenerate from the imported rule sets via
@@ -536,19 +537,18 @@ Stated plainly so the card copy and the PR description stay honest:
 - **Manual per-pair assignment overrides don't round-trip**
   (`spec/roundtrip_coverage.md`). A pair the operator hand-toggled via the
   Assignments page's bulk Activate / Inactivate (the `Assignment.include`
-  flag) is captured by no export and is reset to `include=True` when
-  assignments regenerate. Rehydrate creates no assignment for such a
+  flag) is captured by no export, and regenerating assignments recomputes
+  `include` from the session and roster state, discarding the override. Rehydrate creates no assignment for such a
   pair, so a response belonging to one is **dropped and reported**
   ([§6.4](#64-load-responses)) rather than silently given a fabricated
   home; an *empty-but-included* manual assignment won't reappear either.
-- **The gate is a judgement, not an open defect.** The data-loss case
-  that prompted it is closed: every response a legitimate assignment can
-  carry is loaded, every other row is dropped with a reason, counted in
-  the audit event, and handed to the operator as a CSV
-  ([§6.4](#64-load-responses), [§6.6](#66-report-what-could-not-be-placed)).
-  `rehydrate_enabled` stays **false** regardless — the reason for it was
-  that the pipeline has never run on real data and not every detail is
-  settled, which no single fix retires. Opening it is a deliberate act.
+- **The gate is a judgement, not an open defect.** Every response a
+  legitimate assignment can carry is loaded; every other row is dropped
+  with a reason, counted in the audit event, and handed to the operator
+  as a CSV ([§6.4](#64-load-responses),
+  [§6.6](#66-report-what-could-not-be-placed)). `rehydrate_enabled`
+  stays **false** because the pipeline has not run on real data and not
+  every detail is settled; opening it is a deliberate act.
 - **Observer cohort rules round-trip, so rehydrate must keep them** —
   not a gap. The observers CSV carries a `CohortRule` column (compact
   JSON) alongside `ObserverEmail` / `ObserverName` / `ObserverTag1` /

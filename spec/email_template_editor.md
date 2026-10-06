@@ -59,7 +59,7 @@ Its body states three things this page's controls do not: that a
 session has three emails and each tab edits one of them for this
 session only; that a blank field falls back to the default shown as
 the placeholder; and — the one an operator most needs — that
-**sending is not switched on yet** (Segment 14B), so a saved
+**sending is not switched on yet**, so a saved
 template is stored rather than delivered and no part of reviewer
 access depends on it. It links to the Guide's "Give reviewers
 access" section (`/guide#guide-give_access`) rather than repeating
@@ -220,9 +220,10 @@ never an error — so a typo in an override cannot fail a send.
   contact trimmed, so an unset or blank one renders empty; operator
   intent wins.
 
-**Cc / Bcc.** `cc_bcc_for(session, kind)` returns the raw operator
-strings (or `None` when blank); the send path copies them onto the
-outbox row's `cc_emails` / `bcc_emails` unparsed.
+**Cc / Bcc.** `cc_bcc_for(session, kind)` returns the operator's
+strings with surrounding whitespace stripped (or `None` when blank);
+the send path copies them onto the outbox row's `cc_emails` /
+`bcc_emails` without splitting or validating the addresses.
 
 ---
 
@@ -240,7 +241,8 @@ outbox row's `cc_emails` / `bcc_emails` unparsed.
 ## 8. Round-trip and clone
 
 **Settings CSV** (`spec/csv_contracts.md`; coverage row
-`spec/roundtrip_coverage.md` §"Coverage matrix — configuration" — "✅ All"). Field paths use a
+`spec/roundtrip_coverage.md` § *Session metadata*, the
+`email_template_overrides` row). Field paths use a
 **three-segment dotted grammar that differs from the JSON keys**:
 
 ```
