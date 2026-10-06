@@ -862,9 +862,12 @@ browsers, and direct POSTs bypass the picker entirely).
   when their resolved fire time is closer than the operational
   lead-time floor (`spec/settings_inventory.md` §2), so the
   operator can't *set* a past firing. End, Release-from and
-  Release-until have no floor: End only gates the deadline
-  observer, and Release-from may be backdated to release
-  immediately. A value that *became* past after saving (Start
+  Release-until have no floor of their own: End gates the
+  deadline observer, and Release-from may be backdated to release
+  immediately. End still meets the floor indirectly while reminder
+  offsets are set, because each reminder fires at `deadline +
+  offset` and is checked against the new End, so a past or
+  near-future End is refused through them. A value that *became* past after saving (Start
   set for tomorrow, and tomorrow has come while the session sat
   in `draft`) **stays put**; the fire-time precondition guard
   handles it normally, typically on the next operator visit.
