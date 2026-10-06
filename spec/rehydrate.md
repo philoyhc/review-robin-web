@@ -51,7 +51,7 @@ Grounded in what the extract actually captures and what importers exist:
 
 | Session facet | Extract source | Import path today | Rehydrate approach |
 |---|---|---|---|
-| Session metadata, instruments (+ display/response fields), rule sets, email overrides, data shapes | `settings.csv` | ✅ `session_config_io.apply_session_config` | Apply as-is |
+| Session metadata, instruments (+ display/response fields), rule sets, email overrides, data shapes | `settings.csv` | ✅ `session_config_io.apply_session_config` | Apply as-is. A schedule out of order fails the commit, not the pre-flight: the extract of a session closed before its End and then released (`spec/lifecycle.md` §8.2.7) |
 | Reviewers / Reviewees / Observers (+ reviewer/reviewee tag friendly labels) | `reviewers.csv` / `reviewees.csv` / `observers.csv` | ✅ `csv_imports.save_*` | Import as-is; tag friendly labels ride the roster header |
 | Relationships (reviewer↔reviewee pairs + status + pair tags + pair-context friendly labels) | `relationships.csv` | ✅ `relationships.save_relationships` | Import as-is; pair-context friendly labels ride the header |
 | **Assignments** | derived (rule-generated) | ⚠️ no importer — regenerated from rules | Regenerate from imported rule sets. Never created to fit a response: a `responses.csv` row naming a pair the rules did not produce is dropped and reported |

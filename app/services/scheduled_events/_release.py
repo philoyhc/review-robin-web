@@ -114,8 +114,11 @@ def parse_and_validate_responses_release_until(
 #
 # Note ``responses_release_until > responses_release_at`` (strict) is
 # already enforced inside ``parse_and_validate_responses_release_until``
-# along with the 365-day magnitude check; this helper handles the two
-# remaining pairs (``End ≥ Start``, ``Release-from ≥ End``).
+# along with the 365-day magnitude check, so the Create route and the
+# details card leave ``responses_release_until`` unset here; this
+# helper checks it only
+# when a caller passes it — the Settings CSV import, which has no
+# per-field parser (findings G22).
 
 
 def validate_schedule_ordering(
@@ -123,6 +126,7 @@ def validate_schedule_ordering(
     scheduled_activate_at: datetime | None,
     deadline: datetime | None,
     responses_release_at: datetime | None,
+    responses_release_until: datetime | None = None,
 ) -> None:
     """Cross-field ordering check across the operator-set schedule
     datetimes. No return value — raises
@@ -150,4 +154,13 @@ def validate_schedule_ordering(
             "Release responses from must be on or after End — "
             "reviewees can only view results after the review "
             "window closes."
+        )
+    if (
+        responses_release_at is not None
+        and responses_release_until is not None
+        and _ensure_aware_utc(responses_release_until)
+        <= _ensure_aware_utc(responses_release_at)
+    ):
+        raise ScheduledActivateError(
+            "Release responses until must be after Release responses from."
         )
