@@ -960,7 +960,8 @@ archive / retention are deferred):
   (schema present; consumer deferred).
 
 Every scheduled anchor obeys a save-time ordering chain
-(Start ≤ deadline ≤ Release-from < Release-until) and an
+(Start ≤ deadline ≤ Release-from < Release-until), which the
+Settings CSV import enforces too, and an
 unset-anchor rule (an offset whose anchor is unset never fires).
 Triggers fire via the
 lazy-observer pattern (on the next operator GET past the

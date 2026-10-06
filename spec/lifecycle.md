@@ -833,6 +833,18 @@ translate to HTTP 422 with the per-pair error message:
 | Release-until ≤ Release-from | `Release responses until must be after Release responses from.` |
 | Release-until > Release-from + 365d | `Release responses until must be within 365 days of Release responses from.` |
 
+The **Settings CSV import** enforces the chain too (findings G22,
+ruled 2026-10-06), in its parse phase, so a violating file is refused
+whole and nothing is applied. It checks the three pairs through
+`validate_schedule_ordering` (which takes `responses_release_until`
+for this caller, since the import has no per-field parser), on the
+values the session would hold after the apply — End is a fallback
+key, so the destination's own End stands where it has one. A pair the
+file supplies neither side of is not checked, so an import is never
+refused over a schedule it leaves alone. The lead-time floor and the
+365-day cap are not checked there: a restore may carry moments that
+have since passed.
+
 The create form (`session_new.html`) also pins the same chain
 client-side via `min` / `max` attributes on each `datetime-local`
 input and a small partial

@@ -389,7 +389,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**G19**~~ low trim same rule stated twice (217-223/252-256; 1134-1137/1173-1176/908-912; 736-740/1419-1428; branching ×4) — **Done in #2847.**
 - ~~**G20**~~ low trim :12-18,2039-2086 Currency note, §11.6 "wired today" inventory — **Done in #2847.**
 - ~~**G21**~~ low spec :4-10 etc identifiers in tech-neutral spec (require_reviewee_with_current_grant, _DEFAULT_DISPLAY_LABELS, …) — **Done in #2847.**
-- **G22** low author :969-972 every anchor obeys ordering chain vs settings CSV import skips checks (_apply_session.py:44-58,117-150) — **Ruled 2026-10-06: the import enforces the ordering chain.**
+- ~~**G22**~~ — **Done in #2860.** low author :969-972 every anchor obeys ordering chain vs settings CSV import skips checks (_apply_session.py:44-58,117-150) — **Ruled 2026-10-06: the import enforces the ordering chain.**
 - ~~**G23**~~ low spec :1988-1991 reminders "invited-but-incomplete" vs every incomplete with a row; never-sent falls back to invitation — **Done in #2847.**
 - ~~**G24**~~ low spec :1072-1075 expander rename/deadline ungated vs draft only (tags any state) — **Done in #2847.**
 - ~~**G25**~~ low spec :668-669 while_ongoing "(session lifetime)" vs status=ready — **Done in #2847.**

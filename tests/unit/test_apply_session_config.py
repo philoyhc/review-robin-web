@@ -622,8 +622,11 @@ def _populated_round_trip_session(
     # tz-aware UTC on Postgres; SQLite drops the tzinfo on write).
     # Setting the source aware means both sides round through the
     # serialize / parse pipeline in the same shape.
+    # Start precedes the bare destination's kept End (15 May) as well
+    # as this session's own, so the import's ordering check (G22)
+    # passes on either.
     review_session.scheduled_activate_at = dt.datetime(
-        2026, 6, 1, 9, 0, tzinfo=dt.timezone.utc
+        2026, 5, 1, 9, 0, tzinfo=dt.timezone.utc
     )
     review_session.responses_release_at = dt.datetime(
         2026, 6, 30, 23, 59, tzinfo=dt.timezone.utc
@@ -1428,3 +1431,93 @@ def test_round_trip_preserves_group_scoped_instrument(db: Session) -> None:
         select(Instrument).where(Instrument.session_id == dest.id)
     ).scalar_one()
     assert instrument.group_kind == "r1,p2"
+
+
+# --------------------------------------------------------------------------- #
+# Schedule ordering chain (findings G22)
+# --------------------------------------------------------------------------- #
+
+
+def _iso(month: int, day: int) -> str:
+    return dt.datetime(2026, month, day, 12, 0, tzinfo=dt.timezone.utc).isoformat()
+
+
+@pytest.mark.parametrize(
+    ("rows", "field", "message"),
+    [
+        (
+            [
+                Row("session.scheduled_activate_at", _iso(6, 1), "datetime"),
+            ],
+            "session.scheduled_activate_at",
+            "End must be on or after Start.",
+        ),
+        (
+            [Row("session.responses_release_at", _iso(5, 10), "datetime")],
+            "session.responses_release_at",
+            "Release responses from must be on or after End",
+        ),
+        (
+            [
+                Row("session.responses_release_at", _iso(5, 20), "datetime"),
+                Row("session.responses_release_until", _iso(5, 20), "datetime"),
+            ],
+            "session.responses_release_until",
+            "Release responses until must be after Release responses from.",
+        ),
+    ],
+)
+def test_an_import_that_breaks_the_schedule_chain_is_refused(
+    db: Session, rows: list[Row], field: str, message: str
+) -> None:
+    """G22 (ruled 2026-10-06): Start ≤ End ≤ Release-from <
+    Release-until, checked on the values the session would hold — here
+    the destination keeps its own End (15 May) — and nothing applied."""
+    dst = _bare_session(db, code=f"chain-{field[8:16]}")
+    result = apply_session_config(db, dst, rows)
+    assert not result.ok
+    assert [(e.field, e.message.startswith(message)) for e in result.errors] == [
+        (field, True)
+    ]
+    db.refresh(dst)
+    assert dst.scheduled_activate_at is None
+    assert dst.responses_release_at is None
+    assert dst.responses_release_until is None
+
+
+def test_the_chain_reads_the_imported_end_where_the_destination_has_none(
+    db: Session,
+) -> None:
+    """End is a fallback key: on a destination without one the file's
+    End lands, and the chain is checked against it."""
+    dst = _session(db, code="chain-no-end")
+    ok_rows = [
+        Row("session.scheduled_activate_at", _iso(6, 1), "datetime"),
+        Row("session.deadline", _iso(6, 15), "datetime"),
+        Row("session.responses_release_at", _iso(6, 15), "datetime"),
+        Row("session.responses_release_until", _iso(7, 1), "datetime"),
+    ]
+    assert apply_session_config(db, dst, ok_rows).errors == []
+
+    bad = _session(db, code="chain-no-end-bad")
+    result = apply_session_config(
+        db,
+        bad,
+        [
+            Row("session.scheduled_activate_at", _iso(6, 20), "datetime"),
+            Row("session.deadline", _iso(6, 15), "datetime"),
+        ],
+    )
+    assert [e.field for e in result.errors] == ["session.deadline"]
+
+
+def test_a_pair_the_import_does_not_touch_is_not_checked(db: Session) -> None:
+    """An import is never refused over a schedule it does not change:
+    the destination's own out-of-order Release-from stays its business."""
+    dst = _bare_session(db, code="chain-untouched")
+    dst.responses_release_at = dt.datetime(2026, 5, 1, tzinfo=dt.timezone.utc)
+    db.flush()
+    result = apply_session_config(
+        db, dst, [Row("session.help_contact", "x@example.edu", "string")]
+    )
+    assert result.errors == []

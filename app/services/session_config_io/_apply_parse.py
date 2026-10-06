@@ -257,6 +257,71 @@ def session_fallback_length_errors(
     return errors
 
 
+#: The schedule chain, earliest first, as pairs the import checks:
+#: Start ≤ End ≤ Release-from < Release-until.
+_SCHEDULE_PAIRS = (
+    ("scheduled_activate_at", "deadline"),
+    ("deadline", "responses_release_at"),
+    ("responses_release_at", "responses_release_until"),
+)
+
+
+def session_schedule_order_errors(
+    plan: _ParsedConfig, review_session: ReviewSession
+) -> list[ApplyError]:
+    """Refuse an import that would leave the schedule out of order
+    (findings G22, ruled 2026-10-06): Start ≤ End ≤ Release-from <
+    Release-until, the chain the details card enforces on a save.
+
+    Checked on the values the session would hold after the apply: the
+    anchors are force-applied when the file carries them, End only
+    where the destination has none (``SESSION_FALLBACK_KEYS``). A pair
+    the file touches neither side of is left alone, so an import is
+    never refused over a schedule it does not change. Each pair goes
+    through ``validate_schedule_ordering``, so the rule and its
+    messages are the card's; the error names the pair's member the file
+    supplies, the later one when it supplies both."""
+    from app.services.scheduled_events import (
+        ScheduledActivateError,
+        validate_schedule_ordering,
+    )
+
+    overrides = plan.session_overrides
+    anchors = dict.fromkeys(key for pair in _SCHEDULE_PAIRS for key in pair)
+    supplied: set[str] = set()
+    effective: dict[str, object] = {}
+    for key in anchors:
+        existing = getattr(review_session, key, None)
+        if key in overrides and (
+            key not in SESSION_FALLBACK_KEYS or existing is None
+        ):
+            effective[key] = overrides[key]
+            supplied.add(key)
+        else:
+            effective[key] = existing
+    errors: list[ApplyError] = []
+    for earlier, later in _SCHEDULE_PAIRS:
+        if earlier not in supplied and later not in supplied:
+            continue
+        try:
+            validate_schedule_ordering(
+                **{
+                    **anchors,
+                    earlier: effective[earlier],
+                    later: effective[later],
+                }
+            )
+        except ScheduledActivateError as exc:
+            errors.append(
+                ApplyError(
+                    row_number=0,
+                    field=f"session.{later if later in supplied else earlier}",
+                    message=str(exc),
+                )
+            )
+    return errors
+
+
 @dataclass
 class _PlannedField:
     """A parsed response field in the shape the branching rules read

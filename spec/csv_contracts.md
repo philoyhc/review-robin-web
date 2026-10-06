@@ -577,12 +577,12 @@ with capitals are not migrated**: they stay until something rewrites them, and s
 Home's details card is one such thing, since its Tags field writes
 through `set_tags`.
 
-**The force-apply path re-runs no cross-field ordering check, and that
-is safe rather than overlooked.** `POST /operator/sessions` validates
-End ≥ Start and Release-from ≥ End before creating; the CSV then
-force-applies the same datetimes unchecked, and no Validate rule
-covers ordering — so a hand-edited bundle can write a set the
-interactive form would reject. Every consumer guards itself:
+**The import enforces the schedule ordering chain** (findings G22,
+ruled 2026-10-06): Start ≤ End ≤ Release-from < Release-until, on the
+values the session would hold after the apply, refused in the parse
+phase with the details card's messages (`spec/lifecycle.md` §8.2.7).
+A pair the file supplies neither side of is not checked. Every
+consumer also guards itself, for a session saved before the check:
 `is_response_release_window_open` returns `False` unless the session
 `is_expired` **whatever the anchors say**, a `responses_release_until` before its anchor leaves the
 window permanently shut rather than early-open, scheduled activation

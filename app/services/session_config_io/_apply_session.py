@@ -58,7 +58,9 @@ def _apply_session_kv(
     # ``scheduled_events`` enforce save-time constraints (lead
     # time, format) the operator gets on a direct edit. A round-
     # tripped value already passed those when it was originally
-    # set, so this path just persists the raw value back.
+    # set, so this path just persists the raw value back. The
+    # cross-field ordering chain is the exception: the parse phase
+    # checks it (``session_schedule_order_errors``, findings G22).
     if key in {"invite_offsets", "reminder_offsets"}:
         # Comma-separated offset strings on the editor form; the
         # column stores ``list[str] | None``. Empty cell → None
