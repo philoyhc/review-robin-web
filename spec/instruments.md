@@ -672,10 +672,12 @@ reviewee or pair-context tags. The cells additively define the
 every picked tag form one group.
 
 The builder's disabled buttons are visual markers: "THE SAME"
-beside the + button, and an "AND" on every boundary cell but the
-last (the last carries the X). They say that boundary tags compose
-additively (every tag matters) and that group membership is "the
-reviewees agreeing on all of these".
+beside the + button, and, once a cell is added or removed, an "AND"
+on every boundary cell but the last (the last carries the X). They
+say that boundary tags compose additively (every tag matters) and
+that group membership is "the reviewees agreeing on all of these".
+A card as rendered shows an X on every saved cell instead, the first
+disabled, until the operator adds or removes one.
 
 The boundary cells encode into `Instrument.group_kind` (a
 `String(32)`) via `encode_group_kind / decode_group_kind` in

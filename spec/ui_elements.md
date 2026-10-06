@@ -22,7 +22,7 @@ outside this catalogue and the contrast audit.
 
 Cross-references:
 
-- **`spec/visual_style_general.md`** — authoritative design system (palette,
+- **`spec/visual_style_general.md`** — the portable design system (palette,
   type scale, spacing, component shapes). It names colour **roles**
   (`accent-blue`, `text-primary` and the rest) rather than the app's
   own token identifiers, deliberately, because it is portable; this
@@ -34,10 +34,12 @@ Cross-references:
   layout contracts that consume these primitives.
 - **`spec/reviewer-surface.md`** — reviewer-surface page contracts.
 
-When this doc and `visual_style_general.md` disagree on a
-visual treatment, `visual_style_general.md` wins; this doc is
-the implementation catalogue mapping those treatments to CSS
-classes.
+When `visual_style_general.md` and Review Robin disagree on a
+visual treatment, **the app wins**: `spec/visual_style_rrw.md`
+"Other overrides of `visual_style_general.md`" records each
+override, and the general spec stays the portable default. This doc
+is the implementation catalogue mapping the Review Robin treatments
+to CSS classes.
 
 ---
 
@@ -200,8 +202,7 @@ classes.
 > 16px below it, not 20px. Borders still never touch.
 > **Two cards stacked in one cell of a `.bottom-grid` need
 > `.bottom-left`** (§10), the flex column whose `gap` spaces them. In a
-> plain `<div>` cell the zeroed margin leaves them flush, which is how
-> the Create page's Tags card first rendered. Check a new
+> plain `<div>` cell the zeroed margin leaves them flush. Check a new
 > card by measuring its gap to the card above in a browser, not by
 > reading the CSS — `docs/unenforced_conventions.md` §1.12 says why no
 > test does it.
@@ -268,10 +269,9 @@ classes.
 > the pill before it. Wrapped in a single `<span>`, the only space beside
 > the pill is the pill primitive's own margin, as on every
 > pill-in-a-sentence in the app. The `gap` is for the checkbox, not for
-> the words. **The better fix is the class's, not each caller's**: drop
-> `gap` in favor of a margin on the checkbox, and the wrappers stop
-> being load-bearing. It is not made, because it changes a primitive
-> four pages render.
+> the words. Moving that space onto the checkbox as a margin, in place
+> of `gap`, would make the wrappers unnecessary, at the cost of changing
+> a shared primitive.
 
 > **`.card.placeholder` (canonical placeholder treatment)** — `.card`'s
 > shape with a `--surface-muted` fill, `--text-subtle` H2 and body, and
@@ -455,7 +455,7 @@ support is a separate spec (`visual_style_general.md`).
 | `.btn-icon` | **Icon button** | Borderless single-glyph affordance in `--text-subtle`; the row pager's steps are its one caller. **Neither of Band 3's tables uses this role for their ▲ ▼** — both are outlined `btn secondary`, short (`btn-short`, §10) on the display-field table and full-size on the response-field table. **As an anchor** (the row pager's steps): the live cell is `<a class="btn-icon …">` and the unavailable one a `<span class="btn-icon … is-inactive" aria-disabled="true">` — a `<span>` rather than an href-less `<a>`, following `.nav-tab disabled`, because an anchor without an href is focusable-but-inert in some browsers and not others. Inactive is `opacity: 0.4` + `cursor: not-allowed` and takes **no** accent fill, the reserved shade being for things that act. An anchor `.btn-icon` also needs `text-decoration: none` on its own rule — the page's `a` rule underlines it otherwise, and an underlined `»` reads as a typo. **A specialising rule must name `.btn-icon` in its own selector.** `body.ui-v2 .btn-icon` is (0,2,1) and sits late in `base.html`, so `body.ui-v2 .table-pager-step` ties it and loses on source order — silently, if its declarations happen to match what `.btn-icon` already sets. Write `body.ui-v2 .btn-icon.table-pager-step`, which is (0,3,1) and wins. `tests/integration/test_cascade_ties.py` resolves the cascade in Python — rendered class sets against parsed rules — and fails when a canonical class's declaration is dead because an equal-specificity rule sets the same property later. A variant that comes *later* and wins (`.table-pager-cluster-bottom` over `.table-pager-cluster`) is the idiom and is not reported; a specialisation that comes *earlier* and loses is. The check covers simple class selectors on one element only: combinator rules, `@media` blocks, inline `style=` and shorthand-versus-longhand are outside it, each able to make it silent but none able to make it report a tie that is not there. |
 | `.btn-reset` | **Inline text-button** (revert-this-field) | Single-line link-styled button used to revert a single text field inside an editor without cancelling and exiting the whole editor. Reference example: per-field `Reset {{ field }} to default` on the Email Template page (`session_setupinvite.html`). Reads as a small inline link (`--text-link`, underline on hover); posts a form. The pattern can apply to any editor with per-field overrides — adopt this class instead of inline-styled buttons. |
 | `.back-link` | **Return-to-where-you-came-from** | Top-of-body inline link rendered as `<a class="back-link" href="{{ return_to_url }}">← Back to {{ return_to_label }}</a>`. The canonical "navigate back" affordance for chrome-detour pages and session-level child pages. Used by Operator Settings (`/operator/settings`), About (`/about`), and any page that should return the operator to wherever they came from regardless of the page's working state. Pages that need a "Cancel uncommitted edits" affordance render an inline Cancel button alongside the working-state Save (the back-link still navigates regardless). The `?return_to=<path>` query-param round-trip surfaces as `return_to_url` / `return_to_label` view-shape variables. |
-| `.nav-tab` (chrome class, reused for page-internal) | **Nav button** (page-internal view switcher) | Page-internal tab-like navigation between sibling views inside a single operator page — *not* the chrome. Reference examples: Email Template's `Invitation` / `Reminder` / `Responses received` row (`session_setupinvite.html`); the email-tab strip on the Manage Invitations per-reviewer drill-in (`partials/_email_preview_region.html`). Reuses the chrome's `.nav-tab` styling so the visual vocabulary stays consistent: active view renders `<span class="nav-tab active" aria-current="page">` (non-anchor, current location), sibling views render `<a class="nav-tab">` anchors, "coming soon" reserved tabs render `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `<div class="tab-strip tab-strip-page">` — the `.tab-strip-page` modifier gives the row the chrome's grey tint, a thin border, and rounded corners so the active-tab white background reads against the row tint just like the chrome's Setup row. |
+| `.nav-tab` (chrome class, reused for page-internal) | **Nav button** (page-internal view switcher) | Page-internal tab-like navigation between sibling views inside a single operator page — *not* the chrome. Reference examples: Email Template's `Invitation` / `Reminder` / `Responses received` row (`session_setupinvite.html`); the email-tab strip on the Manage Invitations per-reviewer drill-in (`partials/_email_preview_region.html`). Reuses the chrome's `.nav-tab` styling so the visual vocabulary stays consistent: active view renders `<span class="nav-tab active" aria-current="page">` (non-anchor, current location), sibling views render `<a class="nav-tab">` anchors, "coming soon" reserved tabs render `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `<div class="tab-strip tab-strip-page">` — the `.tab-strip-page` modifier gives the row a gray `--surface-muted` tint (not the chrome Setup row's pale-blue `--nav-strip-setup-bg`), a thin border, and rounded corners so the active tab's `--nav-tab-active-bg` reads against the row tint. |
 
 **Hover** (per `visual_style_general.md` P6): filled controls lighten,
 outline controls gain a subtle tint in their own family. One direction
@@ -566,8 +566,7 @@ everywhere, so "you can click this" reads the same way on every control.
 > `--text-body`, with `margin: var(--space-3) 0 var(--space-1) 0`: 12px
 > above to separate one field from the last, 4px below to bind the label
 > to its own input. A nested label that sits inside a flex row with its
-> own gap **must reset that top margin** or the two stack; three rules in
-> `base.html` do so and say why.
+> own gap **must reset that top margin** or the two stack.
 
 > **Helper text** — `.form-help` (`--fs-small` in `--text-subtle`), below
 > the input. Use it rather than a `<p class="muted">` or a bare
@@ -627,7 +626,8 @@ shade** (`--blue-strong` / `--blue-glow` — see
 `spec/color_tokens.md` "Deliberate couplings"). That covers
 `.tag-chip` — which is every lobby tag filter, every column toggle and
 every *clickable* Instruments Band 2 pill — plus the lobby's Clear
-and AND/OR chips. Static pills carry no edge: the display-field table's
+(`.pill-tag-clear`, also on the Archived page) and AND/OR
+(`.tag-mode-chip`) chips, which keep a `--surface-muted` fill. Static pills carry no edge: the display-field table's
 field-label pill (`spec/instruments.md` "Display-field table") and the
 Visibility card's locked mode cells (`spec/instruments.md` "Visibility
 card") are the static, no-click-handler pattern. The locked Name / Email
@@ -691,7 +691,14 @@ One row per primitive. Colours and spacing come from tokens throughout.
 | `.page-grid` | Equal-height two-column grid (`1fr 1fr`, `align-items: stretch`, 20px gap), collapsing to one column at 800px or narrower. Its callers pair fields more often than cards: field pairs inside Session Home's details card, on the Create page and in Operator Settings' SMTP form, the audit log's two-column filter strip, and the Rehydrate page's cards. It has no placement classes: children fill the grid in source order. `.bottom-grid` is preferred for a new pairing of cards (see below). |
 | `.card-columns` | Two independent column stacks: a `1fr 1fr` grid at `align-items: start` with a 20px gap, whose children are *columns* that each stack their own cards, so a card growing in one column moves only what sits below it there. Children take `min-width: 0`, so a wide table or a long unbroken string cannot push a column past its half. It does not collapse at narrow widths. Callers: the Instruments page's guidance and Session status pair, Email Template, and the tag-label editor's fallback home on Reviewers, Reviewees and Relationships. |
 | `.bottom-grid` + `.bottom-left` | Two-column grid at `align-items: start`, so each side keeps its natural height instead of stretching to match the taller column. `.bottom-left` is the flex column for stacking several cards on one side. At 800px or narrower it collapses to one column with a 20px `row-gap`, since `.bottom-grid .card` zeroes the cards' own margins. |
-| `.card-action-row` | A right-flushed row for a card's own action, `--space-3` above it, as the card's **last child**. Three callers: the Owners card on the Create page and on Session Home, and the Invitations reviewer drill-in's Review Progress card — a primitive with more than one caller is a primitive. |
+| `.card-action-row` | A right-flushed row for a card's own action, `--space-3` above it, as the card's **last child**. Used by the Owners card on the Create page and on Session Home, and the Invitations reviewer drill-in's Review Progress card. |
+| `.roster-card` (+ `.roster-readouts`, `.roster-readout*`, `.roster-card-actions`) | The roster pages' roster card: a flex column at a 16px gap. `.roster-readouts` is one wrapping row of label + values readouts, not a one-row table; each readout wraps as a unit so a label never parts from its values. `.roster-card-actions` sits flush right. `spec/setup_pages.md` "The roster card and the Unlock panel" owns the contract. |
+| `.unlock-panel` (+ `.unlock-stack`, `.unlock-right`, `.unlock-col-actions`) | Two equal `minmax(0, 1fr)` columns at a 20px gap, top-aligned, one column at 800px or narrower. `.unlock-stack` stacks a column's cards at the same 20px, and cards inside take no margin of their own. **`.unlock-panel[hidden]` restates `display: none`**, because the grid's `display` beats the attribute's UA rule. |
+| `.row-expander-body` (+ `.row-expander-actions`, `.row-expander-pane*`, `.row-expander-label`, `.row-expander-count`) | The interior of the injected row-action panel: a wrapping flex row whose `.row-expander-actions` take `margin-left: auto`, so the buttons sit flush right. The `.is-split` modifier makes it a two-column top-aligned grid (Observers; see the expander rules below). |
+| `.session-expander-*` + `.exp-*` | The lobby expander's field and button rows. `.exp-field-name` / `-code` / `-deadline` / `-tags` share the row 3 / 2 / 2 / 3, and the bulk expander's `.exp-field-bulk-tags` takes half of it flush right. `.exp-allow-delete` is the confirm, `.exp-purge-opts` (+ `.exp-purge-title`) the purge checkboxes, grayed to 0.5 opacity by `.is-disabled`, and `.exp-sep` the divider between them. `spec/sessions_overview.md` owns the contract. |
+| `.quick-setup-*` | The Quick Setup card's layout: `.quick-setup-top-grid` is two columns, one at 800px or narrower; `.quick-setup-slot`s are separated by a top rule; `.quick-setup-body.locked` grays the body to 0.55 opacity with a `not-allowed` cursor (`.lockable-body.locked` is the same graying for Session Home's Owners card); `.quick-setup-card-footer` holds Lock / Unlock outside that body, flush right. `spec/quick_setup_card_spec.md` owns the contract. |
+| `.card.setup-coverage` (+ `.setup-coverage-*`) | Validate's setup-coverage card: the H2 and its subtitle on one line, over a grid of four columns, two at 900px or narrower and one at 500px. |
+| `.card.severity-filter-card` + `.severity-filter-row` | Validate's severity filter: a tighter-padded card holding one wrapping row of `.severity-chip`s (§9). |
 | `.btn-pair` (inline pair) | Two buttons side by side at their natural widths. |
 | `.fill-col` (flex column whose last child grows) | |
 | `.subcard-row` (+ `.stepped`, `.subcard-arrow`) | Equal-width tile row inside a card. Detailed below. |
@@ -701,7 +708,7 @@ One row per primitive. Colours and spacing come from tokens throughout.
 | `row-group-start` (`tr.row-group-start > td { border-top: 2px solid var(--border-default); }`) | A heavier rule above a **table row** that starts a new group, where the table already separates every row with 1px. First user: the Observers row of an instrument's visibility editor (`spec/instruments.md` § *Visibility card*) |
 | `table-compact` (`body.ui-v2 table.table-compact th, td { padding: var(--space-1) var(--space-2); }`) | A table whose rows sit closer together than the default cell padding gives. First user: Band 3's display-field table (`spec/instruments.md` § *Display-field table*) |
 | `rf-table` | Band 3's response-field table (`spec/instruments.md` § *Response fields*). One `<tbody>` per field, ruled underneath (`border-bottom: 1px solid var(--border-default)` on the `<tbody>`) and not inside it (`border-bottom: 0` on each `<td>`), so a branch's parent, condition row and governed fields share one `<tbody>` as one ruled group (`td.rf-branch-bar` draws the branch's bar, 4px at 0.35 opacity, and `.rf-glyph` gives +, ⑂ and ↰ / ↳ one width; `td.rf-active-cell` centers the Active checkbox in its column, `td.rf-slot` is an empty column of that width, two after ↰ / ↳, into which a branch's rows shift one column per level (a level-1 row fills both, its ↰ in the first and its ↳ in the second), `tr.rf-inner-top` / `tr.rf-inner-end` rule a branch inside a branch above its parent and below its last field from the parent's checkbox column (`td:nth-child(n+2)`) rightward, and the condition row's `td.rf-condition-lead` / `td.rf-condition-op` (on a List parent `tr.rf-condition-list`, the operator shrunk and its box beside it) put "If the above" right-aligned before the name column and the operator in it). The table keeps `min-width: 66rem` and scrolls in its `.table-scroll` on a narrow card, locked or not: a locked card makes the table inert, never its `.table-scroll`. The name and type columns take fixed shares (20% / 15%); the bounds column takes the rest. An empty name box (`td.rf-name input`) shows its default label muted, as its placeholder (`color: var(--text-subtle)`, `opacity: 1`, so the color alone mutes it whatever opacity a browser gives placeholders by default) |
-| `.btn-short` | A shorter `.btn` for a compact table row — same role and outline, 19px tall inside a 32px row. First user: the display-field table's ▲ ▼ (`spec/instruments.md` § *Display-field table*); the response-field table's ▲ ▼ stay full-size |
+| `.btn-short` | A shorter `.btn` for a compact table row — same role and outline, 19px tall inside a 32px row. Used by the display-field table's ▲ ▼ (`spec/instruments.md` § *Display-field table*); the response-field table's ▲ ▼ stay full-size |
 | `.chip-group` | One labelled group of chips inside a `.col-chip-row`, so a row carrying several groups wraps **between** them rather than stranding a label from its chips |
 | `.col-chip-row.is-grouped` | The modifier a chip row takes **when its chips are in `.chip-group` boxes**: it swaps the parent's `gap` for a wider `column-gap` between the groups. A `gap` applies on both axes, so a wrapped second line arrived indented against the line above it; a column-gap is between-items-on-a-line by definition and cannot. A **modifier and not a change to `.col-chip-row`**, because the four roster rows put their label and chips directly in the row — widening the gap there would space a label from its own chips. Assignments is the only caller (its three groups sit in the half-width left pane, where they do not fit on one line) |
 | `.col-chip-row` (+ `[data-col-toggles-for]`, `[data-col-toggle]`, `[data-rrw-col-toggles]`) | The column-visibility chips above a table. A chip is `role="button" tabindex="0"` and toggles `col-hidden-{slot}` on the table it names; each page maps its own slots to its own column classes, so the slot vocabulary is not fixed here. The storage key lives on the **table** (`[data-rrw-col-toggles]`) and a page may carry several chip rows against one table, grouping its slots. **Both behaviours are delegated on `document`**: a chip rendered after load works with no registration, because the handler resolves its row, table and storage key from the event target with `closest`. **A re-rendered table card must call two hooks** — `window._rrwHydrateColToggles()` to restore the operator's saved columns, and `_rrwHydrateFromCookies()` to repaint the sort badges (and to re-sort the rows when the stored spec holds a `response:N` key, which the server cannot apply) — because delegation keeps a chip *clickable* while the server re-renders it all-visible, and neither state is in the markup |
@@ -947,10 +954,7 @@ edge past a 600px capture, and `box-sizing: border-box` keeps the padding
 inside `max-width` so a narrow column cannot overflow.
 
 The captures arrive at **two scales** — a narrow 1× family at ~830px and
-a wide 2× family spanning a range around ~1680px. The split is a rule
-about display width, not about the mix: neither the tally nor the range
-is written down here or in the test file; measure them if you need them.
-Left to fill the prose column they would read at two
+a wide 2× family around ~1680px. Left to fill the prose column they would read at two
 different apparent scales, so each family gets a **fixed display width**:
 the base rule pins the wide family at **1200px**, `.guide-figure-narrow`
 pins the narrow one at **600px**. Both are author's numbers, set from
@@ -998,6 +1002,13 @@ below, which is what ui-v2's global `h3` rule assumes. Scoped by the
 > **`<pre>` blocks (outbox preview)** — render as `.code-block`, the
 > same content-surface family as cards. A raw `<pre>` is not a
 > content surface and must not be used as one.
+
+> **Email preview (Invitations drill-in)** — `.email-preview-card`
+> stacks `.email-preview-tabs` (a `.tab-strip-page`), the envelope
+> lines (`.email-preview-header`), an `<hr class="email-preview-divider">`
+> and `<pre class="email-preview-body">`. That `<pre>` is not a
+> `.code-block`: it is monospace and `pre-wrap` with no fill of its own,
+> because the card is already its surface.
 
 > **Inline `onclick` attributes** — the Instruments page's row controls
 > bind their handlers inline, and those attributes are load-bearing rather

@@ -72,12 +72,12 @@ The six surfaces where the operator does the work needed to make the session run
 
 | Page | Template | URL |
 |---|---|---|
-| Reviewers | `session_reviewers.html` | `/sessions/{id}/reviewers` |
-| Reviewees | `session_reviewees.html` | `/sessions/{id}/reviewees` |
-| Relationships | `session_relationships.html` | `/sessions/{id}/relationships` |
-| Observers | `session_observers.html` | `/sessions/{id}/observers` |
-| Instruments | `instruments_index.html` | `/sessions/{id}/instruments` |
-| Email Template | `session_setupinvite.html` | `/sessions/{id}/setup-invite` |
+| Reviewers | `session_reviewers.html` | `/operator/sessions/{id}/reviewers` |
+| Reviewees | `session_reviewees.html` | `/operator/sessions/{id}/reviewees` |
+| Relationships | `session_relationships.html` | `/operator/sessions/{id}/relationships` |
+| Observers | `session_observers.html` | `/operator/sessions/{id}/observers` |
+| Instruments | `instruments_index.html` | `/operator/sessions/{id}/instruments` |
+| Email Template | `session_setupinvite.html` | `/operator/sessions/{id}/setup-invite` |
 
 **Relationships and Observers page gate.** Each of the two tabs is
 only visible in the Setup chrome, and its routes only resolve (rather
@@ -110,11 +110,11 @@ Surfaces for running a session and intervening when needed — validating setup,
 
 | Page | Template | URL |
 |---|---|---|
-| Assignments | `session_assignments.html` | `/sessions/{id}/assignments` |
-| Validate | `session_validate.html` | `/sessions/{id}/validate` |
-| Invitations | `session_invitations.html` | `/sessions/{id}/invitations` |
-| Responses | `session_responses.html` | `/sessions/{id}/responses` |
-| Extract data | `session_extract_data.html` | `/sessions/{id}/extract-data` |
+| Assignments | `session_assignments.html` | `/operator/sessions/{id}/assignments` |
+| Validate | `session_validate.html` | `/operator/sessions/{id}/validate` |
+| Invitations | `session_invitations.html` | `/operator/sessions/{id}/invitations` |
+| Responses | `session_responses.html` | `/operator/sessions/{id}/responses` |
+| Extract data | `session_extract_data.html` | `/operator/sessions/{id}/extract-data` |
 
 **Assignments is an Operations page, not a Setup one**: pair-level context is configured on the Relationships Setup page above, and this page is where the reviewer × reviewee × instrument materialization is **generated**. Body shape (top-to-bottom): chrome → **Per-instrument status** card (first under chrome — sticky across draft + ready states) → the Assignments preview table card, which opens with the **two-pane toolbar** the other six table pages carry — its three `Show reviewers:` / `Show reviewees:` / `Show relationships:` chip groups, the pager cluster and the preview-count line in the left pane, the `Status:` / `Search by:` / search filter strip in the right. **The preview card carries no `<h2>`** — a preview-table card does not take one, and this page's single `<h2>` is `Per-instrument status` on the card above (`spec/assignments.md` § *Assignments operator page*). **Nothing sits between the two cards**: the search strip is the toolbar's right pane, and `Inactivate` / `Activate` and the selected count are in the row expander, beside the rows they act on. The status card carries per-instrument columns for Type (Individual / Group), Generated, Groups, Self review, Included, plus a Show checkbox that client-side-filters the preview table and an Edit link to the matching Instruments card; the Self review checkbox flips include flags for that instrument's self-review rows in bulk. **Generation is driven from the Workflow card's stepper** — there is no standalone Generate card here, and no manual-CSV upload affordance; the manual-import route survives as a dev-diagnostic surface only.
 
@@ -124,7 +124,7 @@ The ordering is deliberate: pre-flight (Assignments, Validate), then monitoring 
 
 **Naming:** "Invitations" + "Responses" rather than "Reviewers" + "Reviewees" — those nouns are claimed by the Setup tabs (configuring the rosters); the Operations tabs are about working with them mid-session. Distinct nouns for distinct activities.
 
-**There is no Monitoring page.** Reviewer-centric sending, monitoring and reminders are one surface — Invitations — and `/sessions/{id}/monitoring` is a redirect to `/invitations`, kept for stale bookmarks.
+**There is no Monitoring page.** Reviewer-centric sending, monitoring and reminders are one surface — Invitations — and `/operator/sessions/{id}/monitoring` is a redirect to `/invitations`, kept for stale bookmarks.
 
 **The email outbox is not a chrome tab and not a session-scoped page.** It is a dev-diagnostic surface for inspecting a rendered email body / token URL while debugging a send, so it sits behind the Sys Admin doorway at `/operator/sys-admin/sessions/{id}/outbox` (`sys_admin_session_outbox.html`), reached from the Sessions Diagnostics table — see §6. Day-to-day operator work does not need it.
 
@@ -451,7 +451,7 @@ narrows; it never admits everything.** `visible_audiences()` unions the
 viewer's operator flag — taken from `require_operator`'s own predicate,
 `is_operator or is_sys_admin`, rather than restated — with whatever roles are
 disclosable to them, via `participants.disclosable_roles`. So an operator
-sees the nine operator sections and not the three role-addressed ones; a
+sees the operator sections and not the role-addressed ones; a
 reviewer sees `For reviewers`; someone who is both sees both sets.
 
 **A viewer who resolves no audiences is redirected to `/about`** — never
