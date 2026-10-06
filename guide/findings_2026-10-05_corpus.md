@@ -352,7 +352,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**F9**~~ low trim permissions.md:204 "author's ruling, 2026-09-23" — **Done in #2846.**
 - ~~**F10**~~ low spec audience_and_identity_model.md:328-331 "Both audiences" vs four + admin — **Done in #2846.**
 - ~~**F11**~~ low trim permissions.md:118,285,287 tallies ("seven", "four") — **Done in #2846.**
-- **F12** low-med author operations_pages.md:167-171 (pinned test_page_guidance.py:544) "four of eight counters cannot move" vs send stamps sent_at/last_reminder_at today (invitations.py:384-390,765-768) — **Ruled 2026-10-06: reword the note: recorded, not delivered.**
+- ~~**F12**~~ low-med author operations_pages.md:167-171 (pinned test_page_guidance.py:544) "four of eight counters cannot move" vs send stamps sent_at/last_reminder_at today (invitations.py:384-390,765-768) — **Done in #2858** (ruled 2026-10-06: reword the note: recorded, not delivered).
 - ~~**F13**~~ low author email_infra_options.md:588-675 ✅/◻ ticks + migration path = plan; move to segment_14B? — **Done in #2852** (ruled 2026-10-06: the spec's checklist retired; the 14B plan's `## Status` already holds it).
 
 **G — the functional spec**

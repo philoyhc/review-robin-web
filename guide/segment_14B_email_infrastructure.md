@@ -37,8 +37,8 @@ work starts.
 > moment it is on:
 >
 > - `session_invitations.html` — the note above the counters,
->   *"Invitation and reminder columns are inactive until email sending
->   is switched on."*
+>   *"Send records an invitation or reminder here, but no email is
+>   delivered until email sending is switched on."*
 > - `session_setupinvite.html` — the page-guidance card's *"Sending is
 >   not switched on yet, so what you save here is stored, not
 >   delivered."*
