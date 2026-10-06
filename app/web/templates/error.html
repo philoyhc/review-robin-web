@@ -23,7 +23,9 @@
       color-scheme: light;
       --e-bg: #f5f5f7;
       --e-card: #ffffff;
-      --e-border: #e5e7eb;
+      /* The card edge is base.html's --border-default, the same primitive
+         (--slate-dim) in both themes (spec/color_tokens.md, findings Ec11). */
+      --e-border: #6f7b8e;
       --e-text: #111827;
       --e-muted: #6b7280;
       --e-link: #2563eb;
@@ -32,7 +34,7 @@
       color-scheme: dark;
       --e-bg: #0f141b;
       --e-card: #1a212e;
-      --e-border: #2b3547;
+      --e-border: #6f7b8e;
       --e-text: #e6eaf2;
       --e-muted: #a9b4c6;
       --e-link: #4b8bf5;
@@ -49,9 +51,9 @@
     }
     .error-card {
       background: var(--e-card);
-      border: 1px solid var(--e-border);
-      border-radius: 10px;
-      padding: 48px 40px;
+      border: 2px solid var(--e-border);
+      border-radius: 8px;
+      padding: 24px;
       max-width: 440px;
       margin: 24px;
       text-align: center;

@@ -136,7 +136,7 @@ author, marked *re-checked*) also ran it.
   D20; no current route loads the relationship first. Expire
   `review_session.instruments` after the rebuild, or query `Instrument`
   directly. Code. Found by the D20 cold read (#2856).
-- **Ec11** — `error.html`'s card does not take the card shape
+- ~~**Ec11**~~ — **Done in #2865: conformed (author, 2026-10-06).** `error.html`'s card does not take the card shape
   `spec/visual_style_general.md` sets (2px `border-default` border, 8px
   radius, 16–24px padding): it draws a 1px `#e5e7eb` (`border-subtle`)
   border, a 10px radius and 48px × 40px padding. The page keeps its own

@@ -13,7 +13,9 @@ block does not override them. **The one exception is `error.html`**: it
 does not extend `base.html`, because it must render when the request
 context that `base.html` needs is broken (`app/web/error_handlers.py`),
 so it carries its own small light / dark palette in raw hex and sits
-outside this catalogue and the contrast audit.
+outside this catalogue and the contrast audit. Its card still takes the
+card shape (`spec/visual_style_general.md`): a 2px edge in
+`--border-default`'s value, an 8px radius, no shadow.
 
 > **Reference implementation.** `app/web/templates/operator/session_reviewers.html`
 > + the `body.ui-v2`-scoped block in `app/web/templates/base.html`

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
+from pathlib import Path
 from collections.abc import Iterator
 
 import pytest
@@ -87,6 +88,33 @@ def test_the_error_page_draws_no_drop_shadow() -> None:
     assert all(
         value.strip() == "none" or "inset" in value for value in shadows
     ), shadows
+
+
+def test_the_error_card_takes_the_card_shape() -> None:
+    """The card shape ``spec/visual_style_general.md`` sets for every card
+    — a 2px ``border-default`` edge and an 8px radius — holds on the
+    standalone error page too (findings Ec11), with ``border-default``'s
+    one value in both themes."""
+    resp = TestClient(app).get("/no/such/page")
+
+    style = resp.text.split("<style>", 1)[1].split("</style>", 1)[0]
+    card = re.search(r"\.error-card\s*\{([^}]*)\}", style).group(1)
+    assert re.search(r"border:\s*2px solid var\(--e-border\)", card)
+    assert re.search(r"border-radius:\s*8px", card)
+    padding = re.search(r"padding:\s*(\d+)px\s*;", card)
+    assert padding and 16 <= int(padding.group(1)) <= 24, card
+    # The edge is base.html's --border-default, which points at
+    # --slate-dim in both themes: read it there rather than copy the hex,
+    # so a repointed token fails here instead of drifting.
+    base = (
+        Path(__file__).resolve().parents[2] / "app/web/templates/base.html"
+    ).read_text()
+    assert re.findall(r"--border-default:\s*([^;]+);", base) == [
+        "var(--slate-dim)",
+        "var(--slate-dim)",
+    ]
+    (slate_dim,) = re.findall(r"--slate-dim:\s*([^;]+);", base)
+    assert re.findall(r"--e-border:\s*([^;]+);", style) == [slate_dim, slate_dim]
 
 
 def test_http_exception_shows_route_detail() -> None:
