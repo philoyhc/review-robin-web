@@ -157,7 +157,7 @@ above the row.
 
 **Contents by lifecycle state:** see **`spec/workflow_card.md`**.
 That spec is the canonical source for the ten-state cascade
-(States 1 / 2 / 4 / 4Err / 5 / 6 / 7 / 8 / 9 / 10, State 3 retired, plus the
+(States 1 / 2 / 4 / 4Err / 5 / 6 / 7 / 8 / 9 / 10, plus the
 `W` overlay that rides on 4 / 5 / 6 when validation has
 non-blocking findings),
 the single-row button layout (≤ 4 visible buttons per state,
@@ -212,8 +212,9 @@ Notes specific to Session Home:
 **The Extract Setup card does not render on Session Home.** It lives
 on the **Extract data** Operations-strip tab
 (`session_extract_data.html`, via the `_extract_data_card.html`
-partial), in that page's right-hand wrap-up column alongside the
-Archive-session and (observers-gated) Token-keys cards. Its contract
+partial), alone in the right-hand column of that page's wrap-up grid;
+the left column stacks the (observers-gated) Token-keys card above
+the Archive-session card. Its contract
 is specified here, because the round-trip it forms with Quick Setup
 is a Home concern; the surface it renders on is not Home.
 
@@ -229,10 +230,10 @@ placement:
 | Reviewees | col 1, bottom | always |
 | Relationships | col 2, top | always |
 | Observers | col 2, second | `observers_enabled` |
-| Settings  | col 2, third | always |
+| Session settings | col 2, third | always |
 | Zip all | col 2, bottom | always |
 
-The Observers tile is gated on `review_session.observers_enabled` — when the toggle is off the right column collapses to Relationships → Settings → Zip all. The tile greys out its Download button when observer count is 0. The `GET /operator/sessions/{id}/export/observers.csv` route emits a `session.observers_extracted` audit event. The Zip-all bundle (`build_setup_bundle`) includes `{code}_observers.csv` as a member only when `observers_enabled`.
+The Observers tile is gated on `review_session.observers_enabled` — when the toggle is off the right column collapses to Relationships → Session settings → Zip all. The tile greys out its Download button when observer count is 0. The `GET /operator/sessions/{id}/export/observers.csv` route emits a `session.observers_extracted` audit event. The Zip-all bundle (`build_setup_bundle`) includes `{code}_observers.csv` as a member only when `observers_enabled`.
 
 **This card is setup-side only.** Its Zip-all bundle carries the four
 setup CSVs and nothing else, exported as `{code}_setup.zip`. The
@@ -458,13 +459,13 @@ The Quick Setup card sits in the bottom-left of Home's
 `.bottom-grid`, paired with the Owners card on the right, which sits
 level with it above the Danger Zone. It
 renders four wired slots — Reviewers, Reviewees, Relationships,
-Settings — plus a conditional Observers slot when
+Session settings — plus a conditional Observers slot when
 `observers_enabled`. The functional spec is
 `spec/quick_setup_card_spec.md`.
 
 Layout: a 2-column grid — Reviewers
-+ Reviewees stack in the left column; Relationships + Settings
-stack in the right column. A Lock / Unlock button sits in a footer
++ Reviewees stack in the left column; Relationships, Observers (when
+rendered) and Session settings stack in the right column. A Lock / Unlock button sits in a footer
 at the bottom-right and renders only while the card is available —
 `draft` with no persisted responses (`spec/quick_setup_card_spec.md`
 "Visibility"); there the card defaults to locked so the operator

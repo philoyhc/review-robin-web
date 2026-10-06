@@ -26,9 +26,9 @@ The card is **available** only in `draft` with no persisted responses (`is_avail
 
 ### Slots
 
-The card contains four always-present live slots (Reviewers, Reviewees, Relationships, Settings) and one conditional slot (Observers, rendered on Home only when `observers_enabled`; the new-session variant always renders it). All five share a "file upload" shape — no rule selectors or other slot-specific input modes. **The card must not gain an Assignments slot.** Assignments are a materialized derivative — the Workflow card's **Prepare session** generates one row per eligible `(reviewer, reviewee, instrument)` triple from each instrument's rule (`spec/assignments.md`) — not a dataset an operator uploads.
+The card contains four always-present live slots (Reviewers, Reviewees, Relationships, Session settings) and one conditional slot (Observers, rendered on Home only when `observers_enabled`; the new-session variant always renders it). All five share a "file upload" shape — no rule selectors or other slot-specific input modes. **The card must not gain an Assignments slot.** Assignments are a materialized derivative — the Workflow card's **Prepare session** generates one row per eligible `(reviewer, reviewee, instrument)` triple from each instrument's rule (`spec/assignments.md`) — not a dataset an operator uploads.
 
-**Layout.** A two-column grid hosts the slots. Reviewers + Reviewees stack in the left column; Relationships, Observers (when rendered) and Settings stack in the right column, in that order. There is no horizontal divider between the slot groups.
+**Layout.** A two-column grid hosts the slots. Reviewers + Reviewees stack in the left column; Relationships, Observers (when rendered) and Session settings stack in the right column, in that order. There is no horizontal divider between the slot groups.
 
 **No count indicators.** Each slot's heading is its label and the inline action "Upload a CSV"; it does not show how many rows the session holds. The per-entity Setup pages carry the counts.
 
@@ -42,13 +42,13 @@ The card contains four always-present live slots (Reviewers, Reviewees, Relation
 - File upload accepting a Relationships CSV (`ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`, `Status`).
 - The CSV's `tag_N` slots flow through to the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names; `status` defaults to `active` when omitted.
 
-**Slot 4 — Settings** (right column, bottom).
+**Slot 4 — Session settings** (right column, bottom).
 - File upload accepting a session-settings CSV: the three-column `field,value,data_type` form `serialize_session_config` writes (`spec/csv_contracts.md` §3.3; `app/services/session_config_io/`).
 - Applies through `apply_session_config(...)`. The two-phase parse + apply contract validates every row first, then wipes and replaces; round-trip stable on the export's own output.
 
 There is **no** per-slot Submit button. The card carries a single bottom Submit (see "Submission semantics" below) that runs every slot whose input is present.
 
-**The per-slot routes still exist and no UI calls them** — zero references in any template. Four of them take the `POST …/quick-setup/{kind}` shape (`reviewers`, `reviewees`, `relationships`, `observers`); the Settings slot's is `POST …/import-config`, which predates the card and never moved under the `quick-setup` prefix. They stay as backend entry points, exercised by tests; the card reaches the same per-slot pipeline through `submit-all`.
+**The per-slot routes exist and no UI calls them** — no template references them. Four of them take the `POST …/quick-setup/{kind}` shape (`reviewers`, `reviewees`, `relationships`, `observers`); the Settings slot's is `POST …/import-config`, outside the `quick-setup` prefix. They stay as backend entry points, exercised by tests; the card reaches the same per-slot pipeline through `submit-all`.
 
 ### CSV format
 
@@ -60,7 +60,7 @@ Each CSV's expected schema (column names, required vs. optional fields, encoding
 
 **Submit-enable gate.** The Submit button starts `disabled` and enables only when **both** (1) at least one `<input type="file">` on any slot has a file selected AND (2) the card-level confirm-replace checkbox is ticked. Inline JS toggles the `disabled` attribute on both the file inputs' `change` event and the checkbox's `change` event. The checkbox renders only on the existing-session variant; on the new-session variant the create-session button drives submission and this gate doesn't apply.
 
-**Replace semantics.** Each slot replaces the entire corresponding dataset for the session; what a replacement takes with it is `spec/setup_pages.md` § *What a delete takes with it*, which governs every reviewer-delete surface alike. Merge semantics are not supported; per-record edits remain on the per-entity Setup pages. Replacing reviewers or reviewees automatically clears existing assignments and relationships (cascade inside the replacement transaction).
+**Replace semantics.** Each slot replaces the entire corresponding dataset for the session; what a replacement takes with it is `spec/setup_pages.md` § *Deleting the selected rows* ("What a delete takes with it"), which governs every reviewer-delete surface alike. Merge semantics are not supported; per-record edits remain on the per-entity Setup pages. Replacing reviewers or reviewees automatically clears existing assignments and relationships (cascade inside the replacement transaction).
 
 **Replacement confirmation.** A single card-level checkbox sits below the slot grid, inside the `.quick-setup-body` wrapper and just above the footer's Submit:
 

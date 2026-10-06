@@ -116,7 +116,7 @@ below describe what that panel holds.
    |---|---|
    | The four roster pages | **Not in the container.** The guidance card leads the page at **full width**, above everything else. On the three that have a tag-label editor, `.card-columns` renders **only** as that editor's fallback home, in the two states the Unlock panel cannot render in; see § *The roster card and the Unlock panel*. The rest of the time it is absent rather than empty, and it never holds the guidance. On Observers, which has no label slots, it is absent in every state. The lock card sits above it, as elsewhere. |
    | Email Template | `.card-columns` — composer left; guidance then `Merge tags` right |
-   | Instruments | `.card-columns` — guidance left, `Session deadline` right; the `Expand all` / `Collapse all` toggles moved into the deadline card to free the slot |
+   | Instruments | `.card-columns` — guidance left, `Session deadline` right; the `Expand all` / `Collapse all` toggles sit in the deadline card |
 
    The summary wording is
    fixed in the macro rather than passed per page, because it is a
@@ -185,7 +185,7 @@ below describe what that panel holds.
    |---|---|
    | Reviewers | The email is mandatory and should be the institutional MS365 account they sign in with, not contact detail; upload **replaces** the roster and clears assignments; `inactive` is the non-destructive alternative to delete; and an empty roster blocks `draft → validated` (`reviewers.empty`, error severity); and an upload or a delete also destroys **every relationship involving the rows it removes** |
    | Reviewees | An email is **optional** when you are only collecting data about someone — and **required, tied to their institutional MS365 account**, the moment they must see responses or summaries, since that is what a sign-in is matched against (the gap surfaces only as `reviewees.unreachable_for_results` on Validate); an empty roster blocks `draft → validated` (`reviewees.empty`, error severity); and an upload or a delete also destroys **every relationship involving the rows it removes** |
-   | Relationships | The page is **optional** — a session works without any — and earns its keep only for context *not already derivable from reviewer and reviewee tags*; its three tags are a real assignment-rule namespace (`pair_context.tagN` → `Relationship.tag_N`, `spec/assignments.md` "Predicate vocabulary"), so they can affect who reviews, or does not review, whom — **but only once populated**, since `views._instruments.new_model_usable_tags` offers a namespace + slot in the Band 1 dropdowns only when some row fills it; and **this roster depends on the other two** — every row names one reviewer and one reviewee, so replacing or emptying either of those rosters deletes the rows that referenced them, irreversibly, which is why it is set last and re-set after any change to them |
+   | Relationships | The page is **optional** — a session works without any — and earns its keep only for context *not already derivable from reviewer and reviewee tags*; its three tags are a real assignment-rule namespace (`pair_context.tagN` → `Relationship.tag_N`, `spec/assignments.md` "Predicate vocabulary"), so they can affect who reviews, or does not review, whom — **but only once populated**, since `views._instruments.new_model_usable_tags` offers a namespace + slot in the Band 1 dropdowns only when some `active` row fills it; and **this roster depends on the other two** — every row names one reviewer and one reviewee, so replacing or emptying either of those rosters deletes the rows that referenced them, irreversibly, which is why it is set last and re-set after any change to them |
    | Observers | The page is **optional** — a session works without any; the cohort rule grants sight rather than narrowing it, so an observer with no rule sees **nothing** (see "Cohort match rule editor" below); and what they see of each response is a **per-instrument** Band 3 policy, not a setting on this page |
    | Instruments | The instrument carries the assignment rule, and pairs materialise at Prepare rather than as the rule is edited; a session **must keep at least one** (`routes_operator/_instruments.py` refuses the last delete) |
    | Email Template | Sending is not switched on, and no part of reviewer access depends on it |
@@ -267,7 +267,9 @@ below describe what that panel holds.
 
 5. **Preview table card** — all four roster pages. Always renders when
    the entity is non-empty (or when Add mode is active), regardless of
-   lifecycle state. A **leftmost checkbox column** drives the **row
+   lifecycle state, and on an empty roster too while the page is
+   editable (Observers: while not archived), with the empty-roster
+   message where the rows would be. A **leftmost checkbox column** drives the **row
    expander** injected beneath the selection (a header select-all
    checkbox toggles every visible row). Tag column headers render the
    resolved friendly label via
@@ -526,7 +528,7 @@ filter's** caption, not the table's:
 | No filter | *(nothing renders — the pager speaks)* |
 
 A count of exactly one takes the singular (`Showing 1 reviewer.`): the
-sentence now puts the noun against the count rather than against the
+sentence puts the noun against the count rather than against the
 pool, and a search matching one person is the commonest case there is.
 
 The line carries no roster denominator (`Showing 3 reviewers.`, not
@@ -543,9 +545,12 @@ about which mode the page is in.
 them.** The roster toolbar that carries the line sits inside the table
 card (`session_reviewers.html`'s `{% if reviewers or add_mode or
 total_row_count > 0 or is_editable %}`, and the same shape on the
-others), so it renders on a no-match view too; the rows themselves are
+other rosters), so it renders on a no-match view too; the rows themselves are
 replaced by a "No … match the current filter." message (`{% if not
-(reviewers or add_mode) %}` … `{% if total_row_count > 0 %}`). The
+(reviewers or add_mode) %}` … `{% if total_row_count > 0 %}`).
+Invitations and Responses render the card in every state but put the
+count line inside `{% if rows %}`, with the message in its `{% elif
+total_row_count > 0 %}`. On the rosters the
 helper is what keeps the two from saying the same thing twice:
 `preview_count_line(shown=0, …, is_filtered=True)` returns `None`.
 **Add mode is the one state with neither**: the message is suppressed
@@ -618,7 +623,7 @@ The pattern:
   **`edit_mode` overrides the gate** on the three roster pages: an
   operator adding or editing a row sees every tag column and can type
   into an empty one, which is the only way a tag ever stops being
-  empty. The Profile column has always worked this way.
+  empty. The Profile column works the same way.
 - The Reviewees row also carries a chip for the **profile-link
   column** (`data-col-toggle="profile"`, cells `class="profile-col"`).
   Chip and column are gated on the same `col_data["profile"]`, so
@@ -669,7 +674,9 @@ All three preview tables — Reviewers, Reviewees, Relationships
 
 - Carries a `<table data-rrw-sortable="rrw-sort-{surface}-{session_id}">`
   marker. Surface tokens: `reviewers` / `reviewees` /
-  `relationships`.
+  `relationships`. The marker is dropped while a row is being edited
+  or added (`edit_mode`), so the table does not sort under an open
+  row editor.
 - Wraps its data rows in `<tbody class="rrw-rows">`.
 - Renders every sortable header with `class="rrw-sortable"` +
   `data-sort-key="..."` + a child `<button class="rrw-sort-btn">`
@@ -1642,11 +1649,15 @@ Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
   don't collide. A page that
   re-implements the toggle instead of opting in fails
   `tests/unit/test_column_visibility_primitive.py`.
-- **Which columns hold data** is answered by
-  `app/services/_queries.py::tag_slot_presence` — three
-  `slot_has_data` calls, so three indexed `LIMIT 1`s — and re-keyed
-  to the page's own chip slot names by `views.chip_slots`. The route
-  passes one `col_data` map; **no template computes the flag**.
+- **Which columns hold data** is answered over the whole roster, not
+  the rendered rows. On the Setup rosters it comes from
+  `views.<roster>_column_state` (`app/web/views/_setup.py`), which
+  counts each slot with `app/services/_queries.py::tag_slot_counts`
+  and derives `col_data["tag-n"]` as that count being non-zero — one
+  set of queries for both the `Populated columns` chips and the
+  visibility flags. Invitations and Responses ask `tag_slot_presence`
+  and re-key it with `views.chip_slots`. The route passes one
+  `col_data` map; **no template computes the flag**.
 - **Lifecycle gating on the roster pages is one predicate,
   `is_editable` — `draft` or `validated` — and nothing may use a
   narrower one.** Observers is the exception, on `not is_archived`

@@ -26,9 +26,9 @@ archived-sessions child page.
   `Sessions Lobby` (page H1).
 - **Body class.** `ui-v2` (no reviewer modifier — this is an
   operator-only surface).
-- **Audience.** Authenticated users only. Reviewers never see this
-  page (they land on `/r/...` URLs scoped to their assigned
-  sessions).
+- **Audience.** Operators and sys-admins only: the operator router's
+  `require_operator` gate redirects any other signed-in user to `/me`,
+  where participants reach their sessions on `/me/...` URLs.
 - **Breadcrumb.** `operator_root()` → `[Sessions]` (single non-link
   crumb; this is the top of the operator chrome).
 
@@ -42,7 +42,7 @@ A single-column page:
 │ ┌─ Sessions ─────────┐ ┌─ Filter ─────────────────┐ │
 │ │ counts + tag chips │ │ [filter box + typeahead] │ │
 │ │                    │ │ [Clear] [Add new         │ │
-│ │                    │ │  session] [Rehydrate]    │ │
+│ │                    │ │  session] [Rehydrate*]   │ │
 │ │                    │ │ [Go to Archive]          │ │
 │ └────────────────────┘ └──────────────────────────┘ │
 │                                                     │
@@ -53,12 +53,15 @@ A single-column page:
 └─────────────────────────────────────────────────────┘
 ```
 
+\* `Rehydrate` renders only when `rehydrate_enabled` is on, and it
+ships off (§ *Sort / filter / search*).
+
 The two half-width cards render in **every** state; the table is
 replaced by the first-run card when there are no live sessions.
 **Below 800px they stack, `Filter` under `Sessions`** — the app's
 established two-column collapse point, shared with `.page-grid` and
 `.bottom-grid`. Side by side on a narrow page the Filter card is the
-one that suffers: its four buttons wrap into a ragged block and the
+one that suffers: its buttons wrap into a ragged block and the
 input shrinks to a stub. `Sessions` stays first because it is the
 page's summary and the actions read as what you do about it.
 
@@ -161,8 +164,8 @@ card again, which is intended: they are back at the start. No
 "has-ever-had" state is tracked.
 
 **One create affordance in this state, and it is the Filter card's.**
-`Add new session` stays active in the empty lobby on purpose — with
-`Rehydrate` it is one of the two ways *out* of one — so the first-run
+`Add new session` stays active in the empty lobby on purpose — it is
+the way *out* of one (with `Rehydrate`, when that is enabled) — so the first-run
 card must not carry a second button to the same place. A difference in
 weight is not enough to stop two names for one action confusing a
 first-time operator.
@@ -188,6 +191,9 @@ is which Filter controls are live:
 | Live sessions (± archived) | counts + tag filter | **active** | active |
 | Nothing at all | counts, all `0` | **inert** | active |
 | Only archived sessions | counts, `N archived` | **inert** | active |
+
+`Rehydrate` is in that column only where `rehydrate_enabled` is on; it
+ships off, and then the button is absent in all three states.
 
 The last two rows are the same shape by design — there is nothing live
 to search in either — and they differ in what the counts say and in
@@ -321,7 +327,7 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   that `email_outbox` references — invitations under either, reviewers
   under `rosters` — so each clears those foreign keys before the delete
   and keeps the outbox rows, which are the email audit log.
-  `spec/setup_pages.md` § *What a delete takes with it* owns that
+  `spec/setup_pages.md` § *Deleting the selected rows* ("What a delete takes with it") owns that
   contract; `spec/email_infra_options.md` § *Audit log* owns the
   column-level detail.
 - **The archived-sessions page has one panel, not two.** Its
@@ -350,11 +356,10 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   erases every pill the row carries, and a lobby row carries four to
   six of them (Created by, Created, Deadline, Timezone, one per tag)
   plus a Validated status pill. No replacement fill escapes the
-  problem: the six pale pill fills occupy relative luminance
-  0.810–0.914 against a 1.000 card, leaving no clearance above the band
-  and only a too-dark clearance below. The rails carry the whole signal
-  instead, at roughly 5.2 against the card in light and 4.9 in dark,
-  where no fill in this palette reaches 2.6.
+  problem: the pale pill fills sit just below the card's own luminance,
+  so a fill either matches them or is too dark to read through. The
+  rails carry the whole signal instead, with a contrast against the card
+  no fill in this palette can reach.
 
   **The panel closes the bracket.** The injected expander row carries
   `session-expander-bracketed`, which gives its single `colspan` cell

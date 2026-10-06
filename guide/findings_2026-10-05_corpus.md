@@ -244,22 +244,22 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 **C — Setup, Session Home and the lobby**
 
 - ~~**C1**~~ med code setup_pages.md:540-550 no count line on no-match vs "Showing 0 …" — **Done in #2829.**
-- **C2** med spec setup_pages.md:540-548 quoted template gate shape stale (real: session_reviewers.html:690, :822)
+- ~~**C2**~~ med spec setup_pages.md:540-548 quoted template gate shape stale (real: session_reviewers.html:690, :822) — **Done in #2843.**
 - ~~**C3**~~ med code setup_pages.md:1653-1672 page offers only what routes accept vs is_ready-only gating — **Done in #2829.**
-- **C4** low spec setup_pages.md:1633-1637 tag_slot_presence/chip_slots vs *_column_state + tag_slot_counts (views/_setup.py:340-450); drop "LIMIT 1"
+- ~~**C4**~~ low spec setup_pages.md:1633-1637 tag_slot_presence/chip_slots vs *_column_state + tag_slot_counts (views/_setup.py:340-450); drop "LIMIT 1" — **Done in #2843.**
 - **C5** low author setup_pages.md:1074-1085,1112-1115 exact-handle match only for offered labels vs ops filters any "(…)" tail (_filters.py:182,235); "@" requirement unstated (:316,:526)
-- **C6** med spec sessions_overview.md:29-31 audience "authenticated users… reviewers land on /r/" vs require_operator; /me routes
-- **C7** low spec sessions_overview.md:186-190,163-166,44,60-61 Rehydrate listed live vs off by default (contradicts :477-480)
-- **C8** low spec session_home.md:214-215 Extract Setup card placement
-- **C9** low spec setup_pages.md:266-267 preview card also on empty editable roster
-- **C10** low spec setup_pages.md:664 data-rrw-sortable dropped in edit/add mode
-- **C11** low spec setup_pages.md:188 pair-context slot offered only for active rows (views/_instruments.py:859-860)
-- **C12** low spec quick_setup_card_spec.md:29-50,114; session_home.md:453 "Settings" vs shipped "Session settings"
-- **C13** low spec session_owners.md:150 set_owners signature
-- **C14** low spec quick_setup_card_spec.md:63, sessions_overview.md:317 cite "§ What a delete takes with it" — not a heading
-- **C15** low spec spec/README.md:42 setup_pages row omits Instruments, Email Template
-- **C16** low trim history: setup_pages.md:119,527,615; quick_setup_card_spec.md:51; session_home.md:160
-- **C17** low trim sessions_overview.md:341-350 contrast/luminance figures
+- ~~**C6**~~ med spec sessions_overview.md:29-31 audience "authenticated users… reviewers land on /r/" vs require_operator; /me routes — **Done in #2843.**
+- ~~**C7**~~ low spec sessions_overview.md:186-190,163-166,44,60-61 Rehydrate listed live vs off by default (contradicts :477-480) — **Done in #2843.**
+- ~~**C8**~~ low spec session_home.md:214-215 Extract Setup card placement — **Done in #2843.**
+- ~~**C9**~~ low spec setup_pages.md:266-267 preview card also on empty editable roster — **Done in #2843.**
+- ~~**C10**~~ low spec setup_pages.md:664 data-rrw-sortable dropped in edit/add mode — **Done in #2843.**
+- ~~**C11**~~ low spec setup_pages.md:188 pair-context slot offered only for active rows (views/_instruments.py:859-860) — **Done in #2843.**
+- ~~**C12**~~ low spec quick_setup_card_spec.md:29-50,114; session_home.md:453 "Settings" vs shipped "Session settings" — **Done in #2843.**
+- ~~**C13**~~ low spec session_owners.md:150 set_owners signature — **Done in #2843.**
+- ~~**C14**~~ low spec quick_setup_card_spec.md:63, sessions_overview.md:317 cite "§ What a delete takes with it" — not a heading — **Done in #2843.**
+- ~~**C15**~~ low spec spec/README.md:42 setup_pages row omits Instruments, Email Template — **Done in #2843.**
+- ~~**C16**~~ low trim history: setup_pages.md:119,527,615; quick_setup_card_spec.md:51; session_home.md:160 — **Done in #2843.**
+- ~~**C17**~~ low trim sessions_overview.md:341-350 contrast/luminance figures — **Done in #2843.**
 
 **D — data in and out**
 
