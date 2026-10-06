@@ -13,9 +13,10 @@ provisioned but not yet serving**: a P0V3 App Service, private
 Postgres and Key Vault behind private endpoints, an Application
 Gateway in front, and Log Analytics with Application Insights. It
 waits on a runner VM and a production hostname
-(`docs/nus_azure_status.md`). At cutover the F1, public-database
-and Application Insights entries stop applying; secrets stay plain
-App Settings until Key Vault references are wired.
+(`docs/nus_azure_status.md`). At cutover the F1 and public-database
+entries stop applying; secrets stay plain App Settings until Key Vault
+references are wired, and the app's logs reach Application Insights
+only once diagnostics are pointed at it (`docs/deployment_nus.md` §3).
 
 - **Single environment.** One Azure **dev** slot. There is no
   staging slot and no production environment; no manual-approval
@@ -92,7 +93,7 @@ App Settings until Key Vault references are wired.
   entries below are what has been measured, not a clean bill.
 - **Text contrast clears AA normal (4.5:1) in both themes**, but for
   the three pairs below. `tests/unit/test_contrast_audit.py` sweeps
-  all 70 foreground/background pairs the palette forms, in both
+  every foreground/background pair the palette forms, in both
   themes, and fails on any new pair under AA. Details in
   `spec/color_tokens.md`, "The AA floor on text".
 - **Three pairs are under AA and accepted** (author,

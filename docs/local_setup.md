@@ -69,7 +69,7 @@ review-robin-web/
     db/                     Database/model tests with in-memory SQLite
 
   guide/                    Workplan and segment-level planning docs
-  docs/                     Project documentation (auth, database, ...)
+  docs/                     Project documentation (database, deployment, ...)
 
   .env.example              Template for local environment variables
   .env                      Your local env vars (NOT committed)
