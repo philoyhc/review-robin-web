@@ -147,12 +147,13 @@ def test_export_serialises_all_three_shape_variants(
     _seed_three_shapes(db, review_session)
     rows = session_config_io.serialize_session_config(db, review_session)
     shape_rows = [r for r in rows if r.field.startswith("data_shapes[")]
-    # 7 rows per shape × 3 shapes = 21. The 7 keys are name +
-    # axis + instrument_short_label + response_field_key +
-    # column_chip_slots + self_review_handling (PR B of the
-    # Self-review handling chip slice) + include_empty_rows
-    # (PR 6 of the chip-controlled-drop slice).
-    assert len(shape_rows) == 21
+    # 8 rows per shape × 3 shapes = 24. The 8 keys are name +
+    # axis + instrument_short_label + instrument (D20, the block
+    # number) + response_field_key + column_chip_slots +
+    # self_review_handling (PR B of the Self-review handling chip
+    # slice) + include_empty_rows (PR 6 of the chip-controlled-drop
+    # slice).
+    assert len(shape_rows) == 24
     by_field = {r.field: r.value for r in shape_rows}
     # Shapes sorted by name → 0: Per field, 1: Per instrument,
     # 2: Whole roster.
@@ -176,6 +177,88 @@ def test_export_serialises_all_three_shape_variants(
     # "Whole roster" carries neither.
     assert by_field["data_shapes[2].instrument_short_label"] == ""
     assert by_field["data_shapes[2].response_field_key"] == ""
+    # D20 — the instrument's block number rides beside the label.
+    assert by_field["data_shapes[0].instrument"] == "1"
+    assert by_field["data_shapes[1].instrument"] == "1"
+    assert by_field["data_shapes[2].instrument"] == ""
+
+
+def test_a_shape_on_an_unlabelled_instrument_keeps_its_scope(
+    db: Session,
+) -> None:
+    """D20 (ruled 2026-10-06): an instrument with no short label
+    exports an empty label reference, which alone re-imports as
+    unscoped. The block number carries the scope instead: the shape
+    comes back on the instrument built from that block, with its
+    field."""
+    session_a = _session(db, code="d20-src")
+    _instrument(db, session_a, short_label="First")
+    unlabelled = _instrument(db, session_a, short_label="")
+    unlabelled.order = 1
+    field = _field(db, unlabelled, field_key="score")
+    db.add(
+        DataShape(
+            session_id=session_a.id,
+            name="Second's score",
+            axis="reviewee",
+            instrument_id=unlabelled.id,
+            response_field_id=field.id,
+            column_chip_slots=json.dumps(["reviewee:name"]),
+        )
+    )
+    db.flush()
+    rows = session_config_io.serialize_session_config(db, session_a)
+    by_field = {r.field: r.value for r in rows}
+    assert by_field["data_shapes[0].instrument_short_label"] == ""
+    assert by_field["data_shapes[0].instrument"] == "2"
+
+    session_b = _session(db, code="d20-dst")
+    result = session_config_io.apply_session_config(
+        db, session_b, list(rows), user=None
+    )
+    assert result.ok, result.errors
+    db.expire_all()
+    shape = db.execute(
+        select(DataShape).where(DataShape.session_id == session_b.id)
+    ).scalar_one()
+    second = db.execute(
+        select(Instrument).where(
+            Instrument.session_id == session_b.id, Instrument.order == 1
+        )
+    ).scalar_one()
+    assert shape.instrument_id == second.id
+    assert shape.response_field_id == db.execute(
+        select(InstrumentResponseField.id).where(
+            InstrumentResponseField.instrument_id == second.id,
+            InstrumentResponseField.field_key == "score",
+        )
+    ).scalar_one()
+
+
+def test_an_older_bundle_without_the_number_still_imports() -> None:
+    """D20: the ``instrument`` row is optional; a non-number is a parse
+    error naming the row."""
+    from app.services.session_config_io._apply_data_shape import (
+        _apply_data_shape_kv,
+    )
+    from app.services.session_config_io._apply_shared import (
+        _ParseError,
+        _ParsedConfig,
+    )
+
+    plan = _ParsedConfig()
+    _apply_data_shape_kv(plan, "data_shapes[0].name", "S", "string")
+    assert plan.data_shapes[0].instrument_number is None
+    _apply_data_shape_kv(plan, "data_shapes[0].instrument", "", "integer")
+    assert plan.data_shapes[0].instrument_number is None
+    _apply_data_shape_kv(plan, "data_shapes[0].instrument", "3", "integer")
+    assert plan.data_shapes[0].instrument_number == 3
+    try:
+        _apply_data_shape_kv(plan, "data_shapes[0].instrument", "x", "integer")
+    except _ParseError as exc:
+        assert "data_shapes[0].instrument" in str(exc)
+    else:
+        raise AssertionError("a non-number must not parse")
 
 
 def test_roundtrip_applies_shapes_with_portable_references(

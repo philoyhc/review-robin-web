@@ -687,21 +687,45 @@ def _data_shape_rows(
         else {}
     )
 
+    # D20 — each instrument's ``instruments[n]`` number in this export
+    # (``_instrument_blocks`` numbers them 1-based in ``(order, id)``),
+    # the fallback reference for an instrument with no short label.
+    number_by_instrument_id = {
+        instrument_id: n
+        for n, instrument_id in enumerate(
+            db.execute(
+                select(Instrument.id)
+                .where(Instrument.session_id == review_session.id)
+                .order_by(Instrument.order, Instrument.id)
+            ).scalars(),
+            start=1,
+        )
+    }
+
     rows: list[Row] = []
     for i, shape in enumerate(shapes):
         prefix = f"data_shapes[{i}]"
         rows.append(Row(f"{prefix}.name", _str(shape.name), "string"))
         rows.append(Row(f"{prefix}.axis", _str(shape.axis), "string"))
         instr_label = ""
+        instr_number: int | None = None
         if shape.instrument_id is not None:
             instr = instr_by_id.get(shape.instrument_id)
             if instr is not None:
                 instr_label = (instr.short_label or "").strip()
+                instr_number = number_by_instrument_id.get(instr.id)
         rows.append(
             Row(
                 f"{prefix}.instrument_short_label",
                 _str(instr_label or None),
                 "string",
+            )
+        )
+        rows.append(
+            Row(
+                f"{prefix}.instrument",
+                "" if instr_number is None else str(instr_number),
+                "integer",
             )
         )
         field_key = ""

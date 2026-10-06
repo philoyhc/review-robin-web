@@ -26,7 +26,7 @@ def _apply_data_shape_kv(
     """Route one ``data_shapes[N].<key>`` row into the
     ``_DataShapeSpec`` for index N. Recognised keys:
     ``name`` / ``axis`` / ``instrument_short_label`` /
-    ``response_field_key`` / ``column_chip_slots``. Unknown
+    ``instrument`` / ``response_field_key`` / ``column_chip_slots``. Unknown
     keys raise ``_ParseError`` so a typo'd hand-edit surfaces."""
     match = _RX_DATA_SHAPE.match(field_path)
     if match is None:
@@ -42,6 +42,15 @@ def _apply_data_shape_kv(
         spec.axis = value or None
     elif key == "instrument_short_label":
         spec.instrument_short_label = value or None
+    elif key == "instrument":
+        if value.strip():
+            try:
+                spec.instrument_number = int(value)
+            except ValueError:
+                raise _ParseError(
+                    f"data_shapes[{idx}].instrument must be an "
+                    f"instruments[n] number, got {value!r}"
+                ) from None
     elif key == "response_field_key":
         spec.response_field_key = value or None
     elif key == "column_chip_slots":
@@ -75,9 +84,14 @@ def _apply_data_shapes(
     Resolves portable references
     (``instrument_short_label`` / ``response_field_key``)
     against the imported session's just-applied instruments
-    + response fields. Shapes whose references don't resolve
-    silently get those fields zeroed (the shape persists with
-    a widened scope rather than failing the whole import).
+    + response fields. The short label wins; when it is blank or
+    resolves nothing, ``instrument`` — the shape's
+    ``instruments[n]`` number in the same bundle — picks the
+    instrument the apply built from that block (D20), so a shape on
+    an unlabelled instrument keeps its scope. Shapes whose references
+    still don't resolve silently get those fields zeroed (the shape
+    persists with a widened scope rather than failing the whole
+    import).
 
     Returns the number of shapes written.
     """
@@ -99,13 +113,15 @@ def _apply_data_shapes(
         for i in review_session.instruments
         if (i.short_label or "").strip()
     }
-    field_lookup: dict[tuple[str, str], InstrumentResponseField] = {}
-    for instrument in review_session.instruments:
-        short = (instrument.short_label or "").strip()
-        if not short:
-            continue
-        for f in instrument.response_fields:
-            field_lookup[(short, f.field_key)] = f
+    # The apply stores each instrument at its 0-based rank among the
+    # bundle's ``instruments[n]`` numbers, so a number maps to the
+    # instrument at that rank.
+    by_order = {i.order: i for i in review_session.instruments}
+    instr_by_number = {
+        n: by_order[rank]
+        for rank, n in enumerate(sorted(plan.instruments))
+        if rank in by_order
+    }
 
     written = 0
     for spec in plan.data_shapes.values():
@@ -118,16 +134,18 @@ def _apply_data_shapes(
             if spec.instrument_short_label
             else None
         )
-        field = (
-            field_lookup.get(
-                (spec.instrument_short_label.strip(), spec.response_field_key)
+        if instr is None and spec.instrument_number is not None:
+            instr = instr_by_number.get(spec.instrument_number)
+        field: InstrumentResponseField | None = None
+        if instr is not None and spec.response_field_key:
+            field = next(
+                (
+                    f
+                    for f in instr.response_fields
+                    if f.field_key == spec.response_field_key
+                ),
+                None,
             )
-            if (
-                spec.instrument_short_label
-                and spec.response_field_key
-            )
-            else None
-        )
         # ``self_review_handling`` defaults to ``include_self`` on
         # the ``_DataShapeSpec`` dataclass — pre-PR-B Settings
         # CSVs (which don't carry the row) import cleanly with

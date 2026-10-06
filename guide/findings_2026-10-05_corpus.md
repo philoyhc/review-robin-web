@@ -298,7 +298,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**D17**~~ low author rehydrate.md:129-131 preview assignments-to-generate absent; "instruments" = distinct short labels (session_rehydrate.py:354-367) — **Declined 2026-10-06 (author): Rehydrate is incomplete and not reachable, as Dc9.**
 - ~~**D18**~~ med code rehydrate.md:408,423-425 two outcomes per row vs short rows vanish (=Dc3) — **Done in #2829.**
 - ~~**D19**~~ med author rehydrate.md:394 InstrumentShortLabel unique per session vs no constraint; last duplicate wins (responses_import.py:229-231) — **Declined 2026-10-06 (author): Rehydrate is incomplete and not reachable, as Dc9.**
-- **D20** low author roundtrip_coverage.md:113; settings_inventory.md:509-510,582 data-shape refs portable vs empty ref for unlabeled instrument widens scope on re-import — **Ruled 2026-10-06: a `data_shapes[i].instrument` row carries the `[n]` number as the fallback ref.**
+- ~~**D20**~~ low author roundtrip_coverage.md:113; settings_inventory.md:509-510,582 data-shape refs portable vs empty ref for unlabeled instrument widens scope on re-import — **Done in #2856** (ruled 2026-10-06: a `data_shapes[i].instrument` row carries the `[n]` number as the fallback ref).
 - ~~**D21**~~ low trim settings_inventory.md:361,581,576,582; rehydrate.md:252-253,367-373,537-544; extract_data.md:1045-1047; email_template_editor.md:62 — **Done in #2844.**
 - ~~**D22**~~ low write csv_contracts.md §3.3 required Settings fields and csv_list data_type undocumented — **Done in #2844.**
 - ~~**D23**~~ low spec email_template_editor.md:223-225 cc_bcc_for raw vs stripped — **Done in #2844.**
