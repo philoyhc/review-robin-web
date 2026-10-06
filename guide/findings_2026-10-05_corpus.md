@@ -219,7 +219,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**A2**~~ low spec instruments.md:982 _inline_list_options vs _inline_list_csv — **Done in #2841.**
 - ~~**A3**~~ low spec instruments.md:226-228 form wraps body vs empty form + form= attrs — **Done in #2841.**
 - ~~**A4**~~ low spec instruments.md:939 "... + N more" vs ", +N more" — **Done in #2841.**
-- **A5** low author instruments.md:937-939 group preview rule-surviving subset vs reviewee-side boundary only (views/_instruments.py:555-588) — **Ruled 2026-10-06: spec states the pair-context fallback; the fallback also applies Links 1–2.**
+- ~~**A5**~~ low author instruments.md:937-939 group preview rule-surviving subset vs reviewee-side boundary only (views/_instruments.py:555-588) — **Done in #2853** (ruled 2026-10-06: the spec states the pair-context fallback, and the fallback applies Links 1–2).
 - ~~**A6**~~ low write instruments.md:1030-1032 route inventory omits edit/fields/display-fields/preview-sample — **Done in #2841.**
 - ~~**A7**~~ low spec reviewer-surface.md:350-353 page_statuses every instrument vs only those with included assignments — **Done in #2841.**
 - ~~**A8**~~ low spec reviewer-surface.md:924-926 every GET/POST runs observe_deadline vs surface/save/submit/clear/recall + operator Instruments GET only — **Done in #2841.**

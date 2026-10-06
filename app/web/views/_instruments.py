@@ -547,7 +547,8 @@ def _new_model_band2_state(
     # Pair-context boundary tags need a specific reviewer's
     # relationships to compute, so they're skipped for the preview
     # — the partition falls back to all reviewees when the only
-    # boundary is pair-context-side.
+    # boundary is pair-context-side, narrowed to the rule survivors
+    # the last Refresh persisted (A5).
     boundary_pairs = instruments_service.decode_group_kind(
         instrument.group_kind
     )
@@ -585,6 +586,16 @@ def _new_model_band2_state(
             group_members = [r for r in group_members if r.id in allowed]
     else:
         group_members = active_reviewees
+        persisted_member_ids = (instrument.band2_state or {}).get(
+            "sample_group_member_ids"
+        )
+        if (
+            boundary_pairs
+            and isinstance(persisted_member_ids, list)
+            and persisted_member_ids
+        ):
+            allowed = {int(i) for i in persisted_member_ids if isinstance(i, int)}
+            group_members = [r for r in group_members if r.id in allowed]
     all_names = [r.name for r in group_members]
     sample_names = all_names[:GROUP_MEMBER_NAME_LIMIT]
     sample_extra_count = max(0, len(all_names) - len(sample_names))
@@ -775,9 +786,10 @@ def _new_model_band2_state(
         # honours Links 1+2 too — without it the JS preview lists
         # every reviewee with the matching boundary tag value,
         # even ones the rule engine actually excluded. Empty list
-        # = "no constraint" (legacy band2_state from before the
-        # field shipped, or a session whose only boundary is
-        # pair-context-side).
+        # = "no constraint" (no Refresh yet, legacy band2_state from
+        # before the field shipped, or a Refresh with no boundary).
+        # A pair-context-only boundary carries the sample reviewer's
+        # survivors here (A5).
         "sample_group_member_ids": list(
             (instrument.band2_state or {}).get(
                 "sample_group_member_ids"

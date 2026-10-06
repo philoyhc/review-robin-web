@@ -2624,6 +2624,144 @@ def test_gap_10_render_filters_group_members_by_persisted_ids(
     assert names == ["Dan"]
 
 
+def test_pair_context_only_preview_honours_links_1_and_2(
+    client: TestClient, db: Session
+) -> None:
+    """A5 (ruled 2026-10-06): a pair-context-only boundary cannot be
+    partitioned in the preview, but the fallback still honours the
+    rules — the member list is the sample reviewer's survivors, so a
+    reviewee Link 2 excludes is not listed."""
+    review_session, new_model = _group_band2_session(
+        client, db, code="a5-pair-only"
+    )
+    new_model.group_kind = "p1"
+    db.commit()
+    by_name = {
+        r.name: r.id
+        for r in db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    }
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "filter",
+            "link2_combinator": "AND",
+            "link2_rules": [
+                {
+                    "field": "reviewee.tag2",
+                    "op": "IS NOT",
+                    "operand_value": "exclude",
+                    "operand_tag": "",
+                }
+            ],
+        },
+    )
+    survivors = sorted(by_name[n] for n in ("Dan", "Eve", "Fay"))
+    assert resp.json()["sample_group_member_ids"] == survivors
+    db.refresh(new_model)
+    assert new_model.band2_state["sample_group_member_ids"] == survivors
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(_band2_card(body, new_model.id).split())
+    needle = 'data-new-model-band2-sample-names="'
+    idx = flat.find(needle)
+    assert idx != -1
+    end = flat.find('"', idx + len(needle))
+    assert sorted(flat[idx + len(needle) : end].split("|")) == [
+        "Dan",
+        "Eve",
+        "Fay",
+    ]
+    # What the browser draws: the client partition intersects the
+    # roster with this attribute, not with ``sample-names``.
+    needle = 'data-new-model-band2-sample-member-ids="'
+    idx = flat.find(needle)
+    assert idx != -1
+    end = flat.find('"', idx + len(needle))
+    assert sorted(
+        int(i) for i in flat[idx + len(needle) : end].split(",")
+    ) == survivors
+
+
+def test_pair_context_preview_live_empty_boundary_clears_member_ids(
+    client: TestClient, db: Session
+) -> None:
+    """A5: the posted Link 3 boundary wins over the saved one. A
+    Refresh posting no boundary over a saved ``p1`` stores no member
+    set, so the preview is unconstrained again."""
+    review_session, new_model = _group_band2_session(
+        client, db, code="a5-live-empty"
+    )
+    new_model.group_kind = "p1"
+    db.commit()
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+            "link3_boundary": [],
+        },
+    )
+    assert resp.json()["sample_group_member_ids"] == []
+    db.refresh(new_model)
+    assert new_model.band2_state.get("sample_group_member_ids") is None
+
+
+def test_boundary_change_drops_stale_sample_member_ids(
+    client: TestClient, db: Session
+) -> None:
+    """Codex on #2853: the member set a Refresh stored belongs to the
+    boundary it ran under. Saving a different Link 3 boundary drops
+    it, so the client partition does not keep narrowing the preview
+    with survivors of the old boundary until the next Refresh."""
+    from app.services import instruments as instruments_service
+
+    review_session, new_model = _group_band2_session(
+        client, db, code="a5-stale"
+    )
+    new_model.group_kind = "p1"
+    db.commit()
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "all",
+            "link2_combinator": "AND",
+            "link2_rules": [],
+        },
+    )
+    db.refresh(new_model)
+    assert new_model.band2_state["sample_group_member_ids"]
+    sample_name = new_model.band2_state["sample_reviewee_name"]
+
+    instruments_service.set_unit_of_review(
+        db,
+        instrument=new_model,
+        mode="grouped",
+        boundary_pairs=[],
+        actor=review_session.created_by_user,
+    )
+    db.refresh(new_model)
+    assert "sample_group_member_ids" not in new_model.band2_state
+    # The rest of the Refresh state stays.
+    assert new_model.band2_state["sample_reviewee_name"] == sample_name
+
+
 def test_gap_10_preview_route_json_response_returns_member_ids(
     client: TestClient, db: Session
 ) -> None:
