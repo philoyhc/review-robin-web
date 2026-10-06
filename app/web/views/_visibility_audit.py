@@ -63,11 +63,26 @@ _AUDIENCE_PILL_SLUGS: dict[str, str] = {
     "observer": "observer",
 }
 
-# A finding on one of these is reachable by somebody right now; on any
-# other status the grant is closed by the lifecycle whatever the row
-# says. Both still list — a draft session becomes a ready one — but the
-# live ones sort first, because the reader is deciding what to do today.
-_LIVE_STATUSES: frozenset[str] = frozenset({"ready", "expired"})
+
+def _cell_reachable(
+    audience: str, window: str, review_session: ReviewSession
+) -> bool:
+    """Whether a reader honours this cell right now: the window the
+    participant readers pass as open, for this session's lifecycle.
+    Every finding still lists — a draft session becomes a ready one —
+    but the reachable ones sort first, because the reader is deciding
+    what to do today.
+
+    The reviewee readers pass the ongoing window as closed, so a
+    reviewee ``while_ongoing`` cell is never reachable, whatever it
+    stores (Gc2). The other ongoing cells open while ``ready``; every
+    ``after_release`` cell opens inside the response-release window.
+    """
+    if lifecycle.is_archived(review_session):
+        return False
+    if window == "while_ongoing":
+        return audience != "reviewee" and lifecycle.is_ready(review_session)
+    return lifecycle.is_response_release_window_open(review_session)
 
 
 @dataclass(frozen=True)
@@ -176,9 +191,8 @@ def build_visibility_audit_rows(db: Session) -> list[VisibilityAuditRow]:
                     window_label=window_label,
                     stored=stored,
                     reason=reason,
-                    live=(
-                        review_session.status in _LIVE_STATUSES
-                        and not lifecycle.is_archived(review_session)
+                    live=_cell_reachable(
+                        policy.audience, window, review_session
                     ),
                 )
             )
