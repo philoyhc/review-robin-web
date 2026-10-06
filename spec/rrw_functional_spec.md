@@ -513,9 +513,11 @@ operator-side default
 sort is set from badges on the Band 2 preview's column headers
 (`spec/sort_by_reviewee.md`).
 
-The reviewee's name and email are always present (cannot be
-turned off — they are the two locked rows); the other seven
-are opt-in.
+On an individual instrument the reviewee's name and email are
+always present (cannot be turned off — they are the two locked
+rows). A group-scoped instrument has no locked rows: unticking the
+name's Include there drops the member names from the group's
+identity line. The other seven are opt-in.
 
 ### 5.9 Assignment
 
