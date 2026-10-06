@@ -192,7 +192,7 @@ credentials** (no publish profile). Recreate this in NUS:
 - [ ] Add a **federated credential** on it for this repo:
   - subject `repo:philoyhc/review-robin-web:ref:refs/heads/main`
   - audience `api://AzureADTokenExchange`
-  - **If you add a GitHub `environment:`** (recommended, §6.3), add a
+  - **If you add a GitHub `environment:`** (recommended, §9 step 9), add a
     *second* federated credential with subject
     `repo:philoyhc/review-robin-web:environment:<env-name>` — otherwise
     `azure/login` fails with `AADSTS700213` (see `docs/deployment_dev.md`).
@@ -220,25 +220,15 @@ these repository **secrets**:
 Keeping them NUS-scoped means the personal deploy's own secrets are
 untouched, so both pipelines can run side by side during cutover.
 
-### 6.3 Update the deploy workflow
+### 6.3 The deploy workflow
 
-Edit `.github/workflows/main_app-review-robin-web-dev.yml` (consider renaming
-the file to `deploy_nus.yml` and updating the `name:`):
-
-- [ ] `app-name:` → `<nus-webapp>` (in the `deploy` job).
-- [ ] Update the workflow `name:` + header comment off the `-dev` app.
-- [ ] Set every job's `runs-on:` to the self-hosted runner's label (§5).
-- [ ] **(Recommended)** add a GitHub **`environment: nus`** with **required
-  reviewers** to gate production deploys — and add the matching federated
-  credential (§6.1). This is the "manual approval before production" gate
-  sketched in `docs/deployment_dev.md` → "Production deployment (planned)".
-
-> **Parallel-safe cutover — this plan takes this path.** Rather than editing
-> the live workflow in place, it adds a **second, manual workflow**
-> `deploy_nus.yml` (§6.4) that targets NUS via the NUS-scoped secrets and runs
-> only on `workflow_dispatch`. Deploy + verify NUS by hand first; only once
-> green do you flip `main`'s `on: push` deploy to NUS and retire the personal
-> one (§9, §11). The personal deploy is never disturbed while you validate.
+This plan does not edit the live personal workflow
+(`.github/workflows/main_app-review-robin-web-dev.yml`). NUS deploys
+through a **second, manual workflow**, `deploy_nus.yml` (§6.4), which
+targets NUS via the NUS-scoped secrets and runs only on
+`workflow_dispatch`. Deploy and verify NUS by hand first; only once green
+do you flip `main`'s `on: push` deploy to NUS and retire the personal one
+(§9, §11). The personal deploy is never disturbed while you validate.
 
 ### 6.4 The temporary test workflow — `.github/workflows/deploy_nus.yml`
 
@@ -382,7 +372,11 @@ than start clean:
 7. **Verify NUS** (§10) end-to-end, including a real smoke-test session.
 8. **Custom domain / DNS** if used (§1).
 9. **Flip the trigger:** make the NUS workflow the `on: push` deploy; disable
-   the personal one. `main` now ships to NUS.
+   the personal one. `main` now ships to NUS. **(Recommended)** at the same
+   time, put the deploy job behind a GitHub **`environment: nus`** with
+   **required reviewers** — the "manual approval before production" gate
+   sketched in `docs/deployment_dev.md` → "Production deployment
+   (planned)" — and add the matching federated credential (§6.1).
 10. **Retire personal Azure** (§11).
 
 ---

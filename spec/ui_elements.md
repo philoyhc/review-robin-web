@@ -621,9 +621,10 @@ visible without a pointer.** `cursor: pointer` is the whole distinction
 only while the cursor is already on the element; it says nothing on touch
 and nothing in a screencap.
 
-**Every interactive chip carries a 1px edge in the reserved accent
+**Every interactive chip carries a 2px edge in the reserved accent
 shade** (`--blue-strong` / `--blue-glow` — see
-`spec/color_tokens.md` "Deliberate couplings"). That covers
+`spec/color_tokens.md` "Deliberate couplings"), drawn as the 1px
+border plus a 1px inset shadow. That covers
 `.tag-chip` — which is every lobby tag filter, every column toggle and
 every *clickable* Instruments Band 2 pill — plus the lobby's Clear
 (`.pill-tag-clear`, also on the Archived page) and AND/OR
@@ -642,8 +643,9 @@ Three rules make that work:
   blanket `background: transparent` reads as the tidier rule and trades
   one signal away for the other.
 - **Every `.pill` reserves the space.** The base rule carries
-  `border: 1px solid transparent` and the edge comes from an inset
-  shadow rather than a wider `border-width`, so a chip is exactly as tall
+  `border: 1px solid transparent`; an interactive chip colors that
+  border and adds a 1px inset shadow inside it rather than a wider
+  `border-width`, so a chip is exactly as tall
   as the status label beside it and adding an edge reflows nothing.
 - **`.tag-chip.is-disabled` cancels the edge.** It sets
   `cursor: default` and is the one inert chip in the vocabulary; a chip

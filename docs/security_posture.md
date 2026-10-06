@@ -462,8 +462,10 @@ The following are out of scope for the Segment 14A in-app
 hardening ladder — they need the Azure portal or a later segment.
 Tracked in `guide/deferred_consolidated.md`. The infrastructure rows
 describe the dev slot (`docs/deployment_dev.md`). The NUS environment
-already has private endpoints for the Web App, Postgres and Key Vault,
-VNet integration, and an Application Insights resource; nothing sends
+already has private endpoints for the Web App and Key Vault, a
+privately provisioned Postgres (no public access; how it is reached
+privately is not yet recorded), VNet integration, and an Application
+Insights resource; nothing sends
 the app's logs to it yet, and its secrets are not yet in Key Vault
 (`docs/nus_azure_status.md`).
 

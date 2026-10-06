@@ -184,27 +184,29 @@ author, marked *re-checked*) also ran it.
 Each is a choice between changing the code and changing the contract. The
 id points at its row in §3 or §1.
 
-- **Instruments:** A5 (Band 2 group preview for a pair-context boundary),
-  A9 (Integer bounds on stored non-whole rows), ~~A16~~ (Save atomicity), ~~A17~~
+- **Instruments:** ~~A5~~ (Band 2 group preview for a pair-context boundary),
+  ~~A9~~ (Integer bounds on stored non-whole rows), ~~A16~~ (Save atomicity), ~~A17~~
   (legacy visibility rows), ~~Ac3~~ (anonymized row order).
 - **Lifecycle and workflow:** ~~B2~~ (lobby gate), ~~B8~~ (Activate failure
-  demotes), B12 (Validate commits a derived cache; carve out or stop).
-- **Setup:** C5 (the exact-handle match on Invitations and Responses).
-- **Data:** D1 (bracket index or row position orders instruments), ~~D6~~
+  demotes), ~~B12~~ (Validate commits a derived cache; carve out or stop).
+- **Setup:** ~~C5~~ (the exact-handle match on Invitations and Responses).
+- **Data:** ~~D1~~ (bracket index or row position orders instruments), ~~D6~~
   (inactive pairs across lenses), ~~D9~~ (extract row order), ~~D10~~ (short-row
-  detail), D17 (Rehydrate preview counts), D19 (short-label uniqueness),
-  D20 (data-shape refs to unlabeled instruments).
-- **UI:** E1 (chip edge 1px or 2px), E14 (the Instruments page's local
-  stylesheet), E16 (the reorder toast's shadow).
-- **Roles and operations:** ~~F1~~ (confirm the invite rule), F12 (the
-  "counters cannot move" note), F13 (14B's plan inside
+  detail), ~~D17~~ (Rehydrate preview counts), ~~D19~~ (short-label uniqueness),
+  ~~D20~~ (data-shape refs to unlabeled instruments).
+- **UI:** ~~E1~~ (chip edge 1px or 2px), ~~E14~~ (the Instruments page's local
+  stylesheet), ~~E16~~ (the reorder toast's shadow).
+- **Roles and operations:** ~~F1~~ (confirm the invite rule), ~~F12~~ (the
+  "counters cannot move" note), ~~F13~~ (14B's plan inside
   `spec/email_infra_options.md`).
-- **Functional spec:** G5 (Duplicate drops visibility policies, deadline
-  and schedule), G22 (Settings import skips the schedule ordering chain),
-  G26 (audit log "immutable" against Delete session and Purge).
-- **Docs and root:** H5 (Postgres private endpoint, Azure-only), H11
+- **Functional spec:** ~~G5~~ (Duplicate drops visibility policies, deadline
+  and schedule), ~~G22~~ (Settings import skips the schedule ordering chain),
+  ~~G26~~ (audit log "immutable" against Delete session and Purge).
+- **Docs and root:** ~~H5~~ (Postgres private endpoint, Azure-only), ~~H11~~
   (`deployment_nus.md` §6.3 against `deploy_nus.yml`), ~~H12~~ (the test
-  fixture's schema drop), ~~I2~~ (the kit's CI), I8 (`azure_ask.md` unindexed).
+  fixture's schema drop), ~~I2~~ (the kit's CI), ~~I8~~ (`azure_ask.md` unindexed).
+
+All ruled 2026-10-06. The rows marked *Ruled* in §3 are code changes, landing one PR each.
 
 ## 3. Findings by file
 
@@ -217,11 +219,11 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**A2**~~ low spec instruments.md:982 _inline_list_options vs _inline_list_csv — **Done in #2841.**
 - ~~**A3**~~ low spec instruments.md:226-228 form wraps body vs empty form + form= attrs — **Done in #2841.**
 - ~~**A4**~~ low spec instruments.md:939 "... + N more" vs ", +N more" — **Done in #2841.**
-- **A5** low author instruments.md:937-939 group preview rule-surviving subset vs reviewee-side boundary only (views/_instruments.py:555-588)
+- **A5** low author instruments.md:937-939 group preview rule-surviving subset vs reviewee-side boundary only (views/_instruments.py:555-588) — **Ruled 2026-10-06: spec states the pair-context fallback; the fallback also applies Links 1–2.**
 - ~~**A6**~~ low write instruments.md:1030-1032 route inventory omits edit/fields/display-fields/preview-sample — **Done in #2841.**
 - ~~**A7**~~ low spec reviewer-surface.md:350-353 page_statuses every instrument vs only those with included assignments — **Done in #2841.**
 - ~~**A8**~~ low spec reviewer-surface.md:924-926 every GET/POST runs observe_deadline vs surface/save/submit/clear/recall + operator Instruments GET only — **Done in #2841.**
-- **A9** low author reviewer-surface.md:463-467 bounds as entered vs int() truncation on stored legacy rows (views/_instruments.py:166-225)
+- **A9** low author reviewer-surface.md:463-467 bounds as entered vs int() truncation on stored legacy rows (views/_instruments.py:166-225) — **Ruled 2026-10-06: Integer bounds print as entered.**
 - ~~**A10**~~ low code participant_model.md:108; reviewer-surface.md:1073-1075 /me reviewee role needs email-identified vs _dashboard.py:96-105 no check, no strip — **Done in #2841.**
 - ~~**A11**~~ low trim instruments.md:128-130,144-145 provenance + restated — **Done in #2841.**
 - ~~**A12**~~ low trim instruments.md:162-168,410-414 rollout/migration history — **Done in #2841.**
@@ -244,7 +246,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**B9**~~ low trim workflow_card.md:379-380 "today's worst case is 4" — **Done in #2842.**
 - ~~**B10**~~ low trim workflow_card.md:621-625, 856-863 open-work/ship-state notes — **Done in #2842.**
 - ~~**B11**~~ low write workflow_card.md:171-186 archived state: card renders empty body — **Done in #2842.**
-- **B12** med author validate_page.md:42-44,393-394,514-516 "never writes" vs persist_reconcile_warm commits cache (_operations.py:192)
+- ~~**B12**~~ med author validate_page.md:42-44,393-394,514-516 "never writes" vs persist_reconcile_warm commits cache (_operations.py:192) — **Done in #2852** (ruled 2026-10-06: spec carve-out for the derived reconcile cache).
 - ~~**B13**~~ low spec validate_page.md:114-116,136-139 status strings vs ✓/— and bare numbers (_validate.py:186-239) — **Done in #2842.**
 - ~~**B14**~~ low write validate_page.md:46-56 query params omit return_to, super_*, prepare_confirm — **Done in #2842.**
 - ~~**B15**~~ med spec assignments.md:184-188,205 combinator NONE_OF vs ALL_OF/ANY_OF/PIPELINE (rules.py:36-41) — **Done in #2842.**
@@ -261,7 +263,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**C2**~~ med spec setup_pages.md:540-548 quoted template gate shape stale (real: session_reviewers.html:690, :822) — **Done in #2843.**
 - ~~**C3**~~ med code setup_pages.md:1653-1672 page offers only what routes accept vs is_ready-only gating — **Done in #2829.**
 - ~~**C4**~~ low spec setup_pages.md:1633-1637 tag_slot_presence/chip_slots vs *_column_state + tag_slot_counts (views/_setup.py:340-450); drop "LIMIT 1" — **Done in #2843.**
-- **C5** low author setup_pages.md:1074-1085,1112-1115 exact-handle match only for offered labels vs ops filters any "(…)" tail (_filters.py:182,235); "@" requirement unstated (:316,:526)
+- **C5** low author setup_pages.md:1074-1085,1112-1115 exact-handle match only for offered labels vs ops filters any "(…)" tail (_filters.py:182,235); "@" requirement unstated (:316,:526) — **Ruled 2026-10-06: the ops filters exact-match only an offered label.**
 - ~~**C6**~~ med spec sessions_overview.md:29-31 audience "authenticated users… reviewers land on /r/" vs require_operator; /me routes — **Done in #2843.**
 - ~~**C7**~~ low spec sessions_overview.md:186-190,163-166,44,60-61 Rehydrate listed live vs off by default (contradicts :477-480) — **Done in #2843.**
 - ~~**C8**~~ low spec session_home.md:214-215 Extract Setup card placement — **Done in #2843.**
@@ -277,7 +279,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **D — data in and out**
 
-- **D1** med author csv_contracts.md:621-623; roundtrip_coverage.md:64,185-187 row position authoritative vs bracket index (_apply_instrument.py:380,398; reproduced)
+- ~~**D1**~~ med author csv_contracts.md:621-623; roundtrip_coverage.md:64,185-187 row position authoritative vs bracket index (_apply_instrument.py:380,398; reproduced) — **Settled in #2829**: the spec and code both make the `[n]` number authoritative.
 - ~~**D2**~~ med code csv_contracts.md:690-695 byte-stable vs order drift (=Dc1) — **Done in #2829.**
 - ~~**D3**~~ low spec settings_inventory.md:581 only unknown top-level path ignored vs unknown session.<key> silently dropped (_apply_session.py:20-80) — **Done in #2844.**
 - ~~**D4**~~ low spec settings_inventory.md:404 ?rule_based_error param absent from app/ — **Done in #2844.**
@@ -293,17 +295,17 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**D14**~~ low spec roundtrip_coverage.md:8 "proposed rehydrate" vs built, gated; link ../spec/ — **Done in #2844.**
 - ~~**D15**~~ low spec roundtrip_coverage.md:138; rehydrate.md:534-536 regenerate resets include=True vs recomputes (_generate.py:566-578) — **Done in #2844.**
 - ~~**D16**~~ low spec rehydrate.md:141-143 pure analyze_rehydrate_set(files) vs (db, *, files, user) reads DB — **Done in #2844.**
-- **D17** low author rehydrate.md:129-131 preview assignments-to-generate absent; "instruments" = distinct short labels (session_rehydrate.py:354-367)
+- ~~**D17**~~ low author rehydrate.md:129-131 preview assignments-to-generate absent; "instruments" = distinct short labels (session_rehydrate.py:354-367) — **Declined 2026-10-06 (author): Rehydrate is incomplete and not reachable, as Dc9.**
 - ~~**D18**~~ med code rehydrate.md:408,423-425 two outcomes per row vs short rows vanish (=Dc3) — **Done in #2829.**
-- **D19** med author rehydrate.md:394 InstrumentShortLabel unique per session vs no constraint; last duplicate wins (responses_import.py:229-231)
-- **D20** low author roundtrip_coverage.md:113; settings_inventory.md:509-510,582 data-shape refs portable vs empty ref for unlabeled instrument widens scope on re-import
+- ~~**D19**~~ med author rehydrate.md:394 InstrumentShortLabel unique per session vs no constraint; last duplicate wins (responses_import.py:229-231) — **Declined 2026-10-06 (author): Rehydrate is incomplete and not reachable, as Dc9.**
+- **D20** low author roundtrip_coverage.md:113; settings_inventory.md:509-510,582 data-shape refs portable vs empty ref for unlabeled instrument widens scope on re-import — **Ruled 2026-10-06: a `data_shapes[i].instrument` row carries the `[n]` number as the fallback ref.**
 - ~~**D21**~~ low trim settings_inventory.md:361,581,576,582; rehydrate.md:252-253,367-373,537-544; extract_data.md:1045-1047; email_template_editor.md:62 — **Done in #2844.**
 - ~~**D22**~~ low write csv_contracts.md §3.3 required Settings fields and csv_list data_type undocumented — **Done in #2844.**
 - ~~**D23**~~ low spec email_template_editor.md:223-225 cc_bcc_for raw vs stripped — **Done in #2844.**
 
 **E — UI and visual style**
 
-- **E1** med author ui_elements.md:625,644-647 chip edge 1px vs base.html:2627-2631 2px; test_chip_edge "two_pixel_edge"
+- ~~**E1**~~ med author ui_elements.md:625,644-647 chip edge 1px vs base.html:2627-2631 2px; test_chip_edge "two_pixel_edge" — **Done in #2852** (ruled 2026-10-06: the spec says 2px, the border plus an inset shadow).
 - ~~**E2**~~ med spec ui_elements.md:37-40 general wins vs visual_style_rrw.md:70-83 app wins; ui_elements implements rrw — **Done in #2845.**
 - ~~**E3**~~ low trim color_tokens.md:244 "nine dark tokens → --blue-glow" vs 8 — **Done in #2845.**
 - ~~**E4**~~ med write operator_button_audit.md no rows for session_rehydrate.html (5 controls) — **Done in #2845.**
@@ -316,9 +318,9 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**E11**~~ low spec operator_ui_concept.md:75-80,113-117 URLs lack /operator prefix — **Done in #2845.**
 - ~~**E12**~~ low trim tallies: ui_elements.md:570,694,274,704,949-952; operator_ui_concept.md:454-455; operator_button_audit.md:268,357 — **Done in #2845.**
 - ~~**E13**~~ low trim history: ui_elements.md:203-204,271-274; visual_style_general.md:25,117; operator_button_audit.md:382 — **Done in #2845.**
-- **E14** low-med author instruments_index.html:8-266 258-line local <style> primitives uncatalogued (save-error-banner, sort-btn/sort-badge, instrument-card-*, page-break-card*, reorder-toast)
+- **E14** low-med author instruments_index.html:8-266 258-line local <style> primitives uncatalogued (save-error-banner, sort-btn/sort-badge, instrument-card-*, page-break-card*, reorder-toast) — **Ruled 2026-10-06: move the block into `base.html` and catalogue it.**
 - ~~**E15**~~ low write uncatalogued base.html primitives (.roster-card/.unlock-*, .row-expander-*/.exp-*, .roster-readouts, .tag-mode-chip/.pill-tag-clear, .quick-setup-*, .setup-coverage-*, .severity-filter-*, .email-preview-*; email-preview-body <pre> not .code-block) — **Done in #2845.**
-- **E16** low author visual_style_general.md:145,215; ui_elements.md:925 no drop shadows vs .instrument-reorder-toast box-shadow (instruments_index.html:257)
+- **E16** low author visual_style_general.md:145,215; ui_elements.md:925 no drop shadows vs .instrument-reorder-toast box-shadow (instruments_index.html:257) — **Ruled 2026-10-06: drop the shadow, with E14.**
 
 **F — architecture, roles and operations**
 
@@ -333,8 +335,8 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**F9**~~ low trim permissions.md:204 "author's ruling, 2026-09-23" — **Done in #2846.**
 - ~~**F10**~~ low spec audience_and_identity_model.md:328-331 "Both audiences" vs four + admin — **Done in #2846.**
 - ~~**F11**~~ low trim permissions.md:118,285,287 tallies ("seven", "four") — **Done in #2846.**
-- **F12** low-med author operations_pages.md:167-171 (pinned test_page_guidance.py:544) "four of eight counters cannot move" vs send stamps sent_at/last_reminder_at today (invitations.py:384-390,765-768)
-- **F13** low author email_infra_options.md:588-675 ✅/◻ ticks + migration path = plan; move to segment_14B?
+- **F12** low-med author operations_pages.md:167-171 (pinned test_page_guidance.py:544) "four of eight counters cannot move" vs send stamps sent_at/last_reminder_at today (invitations.py:384-390,765-768) — **Ruled 2026-10-06: reword the note: recorded, not delivered.**
+- ~~**F13**~~ low author email_infra_options.md:588-675 ✅/◻ ticks + migration path = plan; move to segment_14B? — **Done in #2852** (ruled 2026-10-06: the spec's checklist retired; the 14B plan's `## Status` already holds it).
 
 **G — the functional spec**
 
@@ -342,7 +344,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**G2**~~ med spec :1759-1763,2493-2495 boundary tags "Group by" on Display Fields vs Link 3 builder group_kind; first identity line is visible tag display values — **Done in #2847.**
 - ~~**G3**~~ med spec :2264-2270,1271-1274,2467-2472 "one loss outside regeneration" vs roster re-upload, Quick Setup replace, settings replace cascades — **Done in #2847.**
 - ~~**G4**~~ med spec :927-929 description on pre-open/post-close vs overview card, results, collation (pre_open.html has none) — **Done in #2847.**
-- **G5** med author :1089-1095 clone = setup + rosters vs drops visibility policies, deadline, schedule anchors/offsets (session_clone.py:103-114)
+- **G5** med author :1089-1095 clone = setup + rosters vs drops visibility policies, deadline, schedule anchors/offsets (session_clone.py:103-114) — **Ruled 2026-10-06: Duplicate copies the visibility grid; the spec says the schedule resets.**
 - ~~**G6**~~ low spec :1353-1354 self-review toggle locked "while ready" vs all but draft/validated — **Done in #2847.**
 - ~~**G7**~~ low spec :1359-1360 Include checkbox vs pill — **Done in #2847.**
 - ~~**G8**~~ low spec :1741-1746 every header sortable vs Group header not — **Done in #2847.**
@@ -359,11 +361,11 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**G19**~~ low trim same rule stated twice (217-223/252-256; 1134-1137/1173-1176/908-912; 736-740/1419-1428; branching ×4) — **Done in #2847.**
 - ~~**G20**~~ low trim :12-18,2039-2086 Currency note, §11.6 "wired today" inventory — **Done in #2847.**
 - ~~**G21**~~ low spec :4-10 etc identifiers in tech-neutral spec (require_reviewee_with_current_grant, _DEFAULT_DISPLAY_LABELS, …) — **Done in #2847.**
-- **G22** low author :969-972 every anchor obeys ordering chain vs settings CSV import skips checks (_apply_session.py:44-58,117-150)
+- **G22** low author :969-972 every anchor obeys ordering chain vs settings CSV import skips checks (_apply_session.py:44-58,117-150) — **Ruled 2026-10-06: the import enforces the ordering chain.**
 - ~~**G23**~~ low spec :1988-1991 reminders "invited-but-incomplete" vs every incomplete with a row; never-sent falls back to invitation — **Done in #2847.**
 - ~~**G24**~~ low spec :1072-1075 expander rename/deadline ungated vs draft only (tags any state) — **Done in #2847.**
 - ~~**G25**~~ low spec :668-669 while_ongoing "(session lifetime)" vs status=ready — **Done in #2847.**
-- **G26** low author :121-123,621-622 vs :2377-2381,2393-2399 audit append-only/immutable vs delete session & purge delete audit rows
+- ~~**G26**~~ low author :121-123,621-622 vs :2377-2381,2393-2399 audit append-only/immutable vs delete session & purge delete audit rows — **Done in #2852** (ruled 2026-10-06: the spec qualifies it — never edited, deleted only by Delete session or a Purge that takes the audit log).
 
 **H — docs/**
 
@@ -371,13 +373,13 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**H2**~~ low doc/code database.md:134-136 every FK index=True vs data_shape.py:69-76,112-115 — **Done in #2837.**
 - ~~**H3**~~ low doc deployment_dev.md:323 review_sessions.created_by_user_id vs table sessions — **Done in #2848.**
 - ~~**H4**~~ low doc known_limitations.md:16-18 App Insights "stop applying" at cutover vs not wired (architecture.md:108-112, deployment_nus.md:129-130); same security_posture.md:441-443 — **Done in #2848.**
-- **H5** low author security_posture.md:441-442, known_limitations.md:12-14 Postgres "private endpoint" vs nus_azure_status.md:31 "provisioned privately" (Azure-only)
+- ~~**H5**~~ low author security_posture.md:441-442, known_limitations.md:12-14 Postgres "private endpoint" vs nus_azure_status.md:31 "provisioned privately" (Azure-only) — **Done in #2852** (ruled 2026-10-06: both docs say privately provisioned, no public access, until the mechanism is confirmed).
 - ~~**H6**~~ low doc architecture.md:106 "before the App Service swap" vs no swap (main_app…yml:118-122, deploy_nus.yml) — **Done in #2848.**
 - ~~**H7**~~ low doc security_posture.md:210,237 "Result: no gaps found" (2026-05-18) vs gap closed 2026-09-07 at :239-291 — **Done in #2848.**
 - ~~**H8**~~ low doc security_posture.md:218-229 destructive table omits roster delete-all (reviewers/reviewees ack; observers confirm only) — **Done in #2848.**
 - ~~**H9**~~ low trim local_setup.md:72 "(auth, database…)" no auth doc — **Done in #2848.**
 - ~~**H10**~~ low trim known_limitations.md:94 "all 70 pairs" tally (test floor >=70) — **Done in #2848.**
-- **H11** low author deployment_nus.md:225-234 vs :236-241/§6.4 edit personal workflow vs separate deploy_nus.yml
+- ~~**H11**~~ low author deployment_nus.md:225-234 vs :236-241/§6.4 edit personal workflow vs separate deploy_nus.yml — **Done in #2852** (ruled 2026-10-06: §6.3 points at `deploy_nus.yml`; the approval gate moved to §9 step 9).
 - ~~**H12**~~ low author database.md:99-101, local_setup.md:316-317 TEST_DATABASE_URL/DATABASE_URL no warning schema drop — **Done in #2831.**
 - ~~**H13**~~ low (dated records) guide/archive/sweep_2026-10-03_corpus.md, codex_assessment_30sep.md, codebase_assessment_30sep.md/.json cite nus_azure_status_v7.md — **Left as is: dated records are history.**
 - ~~**H14**~~ low doc cli_setup.md:142-145 "environment secrets" vs repo secrets; gh auth refresh -s admin:repo_hook (unverified) — **Done in #2848** (repository secrets, not environment ones; the specific `gh` scope advice is dropped, since the repo cannot confirm it).
@@ -391,5 +393,5 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**I5**~~ low doc rrw_design_rationale.md:185,225 "migrations round-tripped on both dialects" vs Postgres only (azure_ask.md is a record) — **Done in #2849.**
 - ~~**I6**~~ low doc rrw_sdd_in_practice.md:163, constitution.md:50 diff-reviewer "no edit tools"/"read-only" vs Bash in tools (charter, not construction) — **Done in #2849.**
 - ~~**I7**~~ low doc CLAUDE.md:213-214 hook rebuilds also when pip --version fails (session-start.sh:56-60) — **Done in #2849.**
-- **I8** low author README.md:204-220 omits azure_ask.md
+- ~~**I8**~~ low author README.md:204-220 omits azure_ask.md — **Done in #2852** (ruled 2026-10-06: a README line; retirement stays queued).
 - ~~**I9**~~ low doc rrw_sdd_in_practice.md:54-55 each folder archive/ has its own index vs docs/archive has none (rows in docs/README.md) — **Done in #2849.**

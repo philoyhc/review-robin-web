@@ -56,7 +56,9 @@ work starts.
 - ✅ `EmailTransport` Protocol + `SmtpEmailTransport` +
   `transport_for(settings)` factory — Segment 11E PR 5.
 - ✅ Operator credential storage + `/operator/settings` page —
-  Segment 11E PRs 4 / 6.
+  Segment 11E PRs 4 / 6. Passwords encrypted at rest
+  (`SMTP_ENCRYPTION_KEY`); secrets via App Service settings and Key
+  Vault references.
 - ✅ Editor-side template authoring (invitation / reminder /
   responses-received subject + body + cc + bcc + the per-session
   `responses_received_enabled` toggle) — Segment 11E.
@@ -382,17 +384,12 @@ party".
 
 When parts ship:
 
-- Each Part's PR description names which spec items in
-  `spec/email_infra_options.md` it lights up (the ◻ → ✅ flip in
-  the spec's "Summary: what the app needs *before* any backend
-  ships" checklist).
+- Each Part's PR records its delivery in `## Status` above, which
+  holds the prerequisites and the Part order; the spec's duplicate
+  checklist retired 2026-10-06 (F13). <!-- cites: spec/email_infra_options.md -->
 - ~~Status-file timeline entries per Part landed~~ — the status file retired 2026-10-05; this plan, archived at close, and its PRs are the record.
 - `guide/todo_master.md` upcoming list updated.
-- `spec/email_infra_options.md` "Migration path" section steps
-  (currently 1 → 6) crossed off as Parts ship; new entries
-  added if a Part introduces a new architectural primitive
-  (queue / worker pattern in Part C, the generalised diagnostic
-  surface in Part E).
+- `spec/email_infra_options.md` — no checklist to tick; a Part that adds an architectural primitive (the queue / worker in Part C, the diagnostic surface in Part E) adds it to the spec's backend-independent sections.
 
 ---
 

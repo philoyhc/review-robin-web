@@ -28,7 +28,7 @@ they're cheap.
 | CLI | What it drives | Notes |
 |---|---|---|
 | **`az`** (Azure CLI) | App Service config (runbook §3, §7), RBAC and the OIDC deploy identity (§6.1), Key Vault put/get, the Application Gateway listener and probe, diagnostics settings. The workhorse. | Pin to `>= 2.60` so `az login --scope` and the current `webapp identity assign` shape work. |
-| **`gh`** (GitHub CLI) | Setting the `NUS_*` repository secrets and the `NUS_WEBAPP_NAME` variable (runbook §6.2), the optional `nus` environment with required reviewers (§6.3), dispatching and tailing workflow runs, filing PRs. | Alternative to clicking around the GitHub Settings UI; more auditable. |
+| **`gh`** (GitHub CLI) | Setting the `NUS_*` repository secrets and the `NUS_WEBAPP_NAME` variable (runbook §6.2), the optional `nus` environment with required reviewers (§9 step 9), dispatching and tailing workflow runs, filing PRs. | Alternative to clicking around the GitHub Settings UI; more auditable. |
 | **`psql`** (Postgres client) | Connecting as the server admin to create the `rrw_app` role and run the grants (runbook §3, §8), plus ad-hoc troubleshooting. For NUS it runs on the self-hosted runner; on a workstation it reaches only the dev slot (B.9). | Version 16+ to match the Flexible Server. |
 | **`git`** | Repo operations, branch push, tag-based release triggers if you go that route. | |
 
@@ -380,7 +380,7 @@ login`), and the delete succeeds. If push fails with 403, run
 
 ### B.4 GitHub — workflow-scope credential
 
-Runbook §6.2 needs write access to repo secrets (and §6.3's optional
+Runbook §6.2 needs write access to repo secrets (and §9's optional
 environment).
 Confirm the scope up front:
 

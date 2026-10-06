@@ -41,7 +41,12 @@ Cross-references:
 
 The page is reachable in every lifecycle state. It's read-only
 (no mutating routes), so it doesn't carry a lock card; it just
-inventories the current session against the rule set.
+inventories the current session against the rule set. Its GET writes
+nothing an operator sees or the audit log records. The one thing it
+commits is a derived cache: the reconcile verdict its readiness run
+warmed (`persist_reconcile_warm`, `app/services/assignments/_generate.py`),
+so the next load reads it rather than recomputing. The Assignments
+GET commits the same cache the same way.
 
 **Query params:**
 
@@ -398,7 +403,8 @@ when filtered count is 0 AND no filter is active.
 
 ### 5.3 Lifecycle integration
 
-The Validate page is read-only — it doesn't write any state. The
+The Validate page is read-only: apart from the derived reconcile
+cache (§1), it doesn't write any state. The
 two lifecycle gates that consume its output are:
 
 | Gate | Service | Behaviour |
@@ -519,6 +525,7 @@ references would otherwise dangle).
    acknowledgment ceremony noisy and trains the operator to
    click through.
 
-6. **Read-only surface.** The Validate page never writes. Every
+6. **Read-only surface.** The Validate page writes no operator
+   state; its only commit is the derived reconcile cache (§1). Every
    mutation lives on a Setup page reached via the Fix deep-link;
    the page itself is purely diagnostic.

@@ -217,4 +217,7 @@ from that document's §6 — decision, rationale, trade-off, and stop),
 (the procedure an agent runs to carry this practice into a *new*
 repository on the same stack: `tools/practice_kit.py` exports the
 practice's files, the document says how each is adapted and verified),
+[`azure_ask.md`](azure_ask.md) (the original institutional-Azure ask,
+answered differently and kept as a record; its retirement is queued in
+`guide/post_azure_todo_checklist.md`),
 `README.md` (this file).
