@@ -387,6 +387,11 @@ through on what is already set, never a caller's choice:
 
 - **Session Home** runs `observe_scheduled_events` first, which fires
   the session's past-due scheduled activation, invites and reminders.
+- **The Instruments page and the reviewer surface** run
+  `lifecycle.observe_deadline` first, which closes the session's
+  instruments and writes the close's audit events once the deadline
+  has passed. The Instruments GET also seeds and prunes the
+  display-field rows its rosters imply (`build_instruments_context`).
 - **Every extract download** (`/sessions/{id}/export/*` and the saved
   data-shape `download.csv`) writes and commits its own audit row.
 - **`/me/invite/{token}`** records the invitation open
@@ -396,8 +401,10 @@ through on what is already set, never a caller's choice:
   `users` row (`get_or_create_user`).
 
 None takes input that changes what is written, and a cross-origin page
-cannot read the response, so a forged navigation gains at most an audit
-row of a download its author never sees.
+cannot read the response, so a forged navigation gains at most what the
+next legitimate visit would have written anyway: a due transition fired
+early, derived rows brought up to date, or an audit row of a download
+its author never sees.
 
 **Verification.** The `SameSite=Lax` default has been App Service's
 behaviour since 2020 (Chrome 80). Confirm on the dev slot when
