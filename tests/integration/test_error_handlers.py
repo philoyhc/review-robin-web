@@ -68,6 +68,16 @@ def test_unknown_path_renders_html_404() -> None:
     assert "Error 404" in resp.text
 
 
+def test_the_error_page_draws_no_drop_shadow() -> None:
+    """``error.html`` carries its own stylesheet, outside ``base.html``,
+    so the "no drop shadows" rule (``spec/visual_style_general.md``) is
+    checked here too (findings Ec10): the card stands out by its
+    border."""
+    resp = TestClient(app).get("/no/such/page")
+
+    assert "box-shadow" not in resp.text
+
+
 def test_http_exception_shows_route_detail() -> None:
     resp = TestClient(app).get("/__test/err/forbidden")
 

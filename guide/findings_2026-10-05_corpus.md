@@ -136,7 +136,7 @@ author, marked *re-checked*) also ran it.
   D20; no current route loads the relationship first. Expire
   `review_session.instruments` after the rebuild, or query `Instrument`
   directly. Code. Found by the D20 cold read (#2856).
-- **Ec10** — `error.html` (a standalone page with its own `<style>`)
+- ~~**Ec10**~~ — **Done in #2862.** `error.html` (a standalone page with its own `<style>`)
   still gives its card `box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06)`
   against the "no drop shadows" rule (`spec/visual_style_general.md`),
   the rule E16 applied to the reorder toast. Separately, the

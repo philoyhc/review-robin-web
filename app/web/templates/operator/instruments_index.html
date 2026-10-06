@@ -5995,19 +5995,6 @@
             : btn;
           if (target && !target.disabled) { target.focus(); }
         };
-        window.newModelToggleAudience = window.newModelToggleAudience || function (btn) {
-          var selected = btn.getAttribute('data-new-model-chip-selected') !== 'true';
-          btn.setAttribute('data-new-model-chip-selected', selected ? 'true' : 'false');
-          btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
-          // ``pill-count`` is always on (the off-state still reads
-          // as a pill-style chip); only ``is-selected`` toggles.
-          btn.classList.toggle('is-selected', selected);
-          var row = btn.closest('[data-new-model-audience]');
-          row.querySelectorAll('[data-new-model-audience-other-cell]').forEach(function (cell) {
-            cell.style.opacity = selected ? '1' : '0.4';
-            cell.style.pointerEvents = selected ? 'auto' : 'none';
-          });
-        };
         window.newModelCycleButton = window.newModelCycleButton || function (btn) {
           var cycle = (btn.getAttribute('data-new-model-cycle') || '').split('|');
           if (cycle.length < 2) return;
