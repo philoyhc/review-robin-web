@@ -365,7 +365,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**G23**~~ low spec :1988-1991 reminders "invited-but-incomplete" vs every incomplete with a row; never-sent falls back to invitation — **Done in #2847.**
 - ~~**G24**~~ low spec :1072-1075 expander rename/deadline ungated vs draft only (tags any state) — **Done in #2847.**
 - ~~**G25**~~ low spec :668-669 while_ongoing "(session lifetime)" vs status=ready — **Done in #2847.**
-- ~~**G26**~~ low author :121-123,621-622 vs :2377-2381,2393-2399 audit append-only/immutable vs delete session & purge delete audit rows — **Done in #2852** (ruled 2026-10-06: the spec qualifies it — never edited, removed only with the session).
+- ~~**G26**~~ low author :121-123,621-622 vs :2377-2381,2393-2399 audit append-only/immutable vs delete session & purge delete audit rows — **Done in #2852** (ruled 2026-10-06: the spec qualifies it — never edited, deleted only by Delete session or a Purge that takes the audit log).
 
 **H — docs/**
 
