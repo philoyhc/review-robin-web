@@ -416,7 +416,7 @@ Below them, a **five-state** URL region:
 | State | Copy |
 |---|---|
 | A URL was issued and its token is current | `Invitation URL (last issued):` + the URL |
-| A URL was issued, then the token regenerated | `The invitation link was regenerated. The new link has not been sent yet, and the one sent before no longer works.` |
+| A URL was issued, then the token regenerated | `The invitation link was regenerated. The new link has not been sent yet, and the earlier link no longer works.` |
 | Invitation exists, never sent | `No invitation URL has been issued yet.` |
 | No invitation, reviewer eligible | Points at **Prepare session** on the Workflow card, and says an open session must revert to draft first |
 | No invitation, reviewer **not** eligible | Says **Prepare session** will skip them, and names the two remedies |

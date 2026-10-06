@@ -93,14 +93,18 @@
     {# Four states distinguish "no Invitation rows yet" from
        "rows exist but no outbox emails sent yet". See
        ``app.web.views.session_status_pills``. #}
+    {# "Sent" counts recorded sends; until email sending is switched on
+       none is delivered, so the three send states say so on hover
+       (findings Fc3). Segment 14B's copy list retires the title. #}
+    {% set sent_title = "Sent here means recorded: no email is delivered until email sending is switched on." %}
     {% if status_pills.invitations_state == "not_created" %}
       <span class="pill pill-empty">Not created</span>
     {% elif status_pills.invitations_state == "not_sent" %}
-      <span class="pill pill-warning">Not sent</span>
+      <span class="pill pill-warning" title="{{ sent_title }}">Not sent</span>
     {% elif status_pills.invitations_state == "partial_sent" %}
-      <span class="pill pill-warning">Partially sent</span>
+      <span class="pill pill-warning" title="{{ sent_title }}">Partially sent</span>
     {% else %}
-      <span class="pill pill-info">All sent</span>
+      <span class="pill pill-info" title="{{ sent_title }}">All sent</span>
     {% endif %}
     &middot;
     Responses:

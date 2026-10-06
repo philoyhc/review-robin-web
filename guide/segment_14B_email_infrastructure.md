@@ -35,8 +35,9 @@ work starts.
 > **Copy to retire when this ships** — each says sending is off:
 > `session_invitations.html` (the note above the counters),
 > `session_setupinvite.html` (the guidance card), `guide.html` (Give
-> reviewers access; Watch progress; Prepare / launch) and
-> `partials/next_action_card.html` (State 6). **Copy to restore**: the
+> reviewers access; Watch progress; Prepare / launch),
+> `partials/next_action_card.html` (State 6) and the Setup chrome's
+> Invitations pill `title` (Fc3). **Copy to restore**: the
 > reviewer drill-in's *"Send recorded:"* goes back to *"Email sent:"*
 > (findings Fc2), before any asynchronous dispatch, or an undated send
 > reads *"Send recorded: — [failed]"*. Only State 6 fails on release
