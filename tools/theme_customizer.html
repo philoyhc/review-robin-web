@@ -4384,7 +4384,8 @@
          Instruments page (operator/instruments_index.html). Moved here
          from the page's own <style> block (findings E14, 2026-10-06):
          base.html owns the app's CSS. Every selector is scoped to markup
-         only that page renders. The reorder toast carries no drop shadow
+         only that page renders; a Visibility audience-chip rule that
+         matched no markup since d2cbe8d9 was dropped rather than moved. The reorder toast carries no drop shadow
          (E16; spec/visual_style_general.md).
          ------------------------------------------------------------------ */
       /* Segment 18R Item 2 PR 1 — client lock-state scaffold.
@@ -4413,11 +4414,6 @@
          nor a subtitle is not drawn, as the reviewer surface draws none;
          unlocked it holds the description box. */
       [data-instrument-card][data-instrument-locked="true"] .rs-intro-name[data-intro-empty] { display: none; }
-      /* The Band 2 preview help-card ✎/✓ edit affordances are built by
-         JS (renderHelpCard, keyed by data-help-card-key) so they can't
-         carry a Jinja data-unlock-only marker. `inert` on the lock
-         region disables them but leaves them visible; hide them off the
-         lock state directly, matching the other edit affordances. */
       /* Segment 18R Item 2 PR 3 — consolidated Save summary banner.
          Rendered per card (hidden until a fetch-Save comes back with
          validation errors); lists the blocking issues at the top of the
@@ -4436,9 +4432,9 @@
       .save-error-banner strong { font-weight: 600; }
       /* Segment 18R Item 2 PR 5c — a response field with saved responses
          has its shape (type + bounds) frozen; the data-type select + the
-         bound inputs already carry `disabled`, but base.html only styles
-         disabled *buttons* (so the X reads correctly greyed while these
-         looked live). Give the disabled shape controls a matching
+         bound inputs already carry `disabled`, but the disabled styling
+         above covers *buttons* only (so the X reads correctly greyed
+         while these looked live). Give the disabled shape controls a matching
          inactive treatment so the freeze is obvious at a glance; the
          "Clear responses first" title stays as the explanation. */
       [data-new-model-rf-data-type]:disabled,
@@ -4488,22 +4484,8 @@
         /* Top-align so multi-row textareas (long-text response
            fields) anchor at the top of the row rather than
            centering vertically inside it — matches the reviewer
-           surface contract in base.html. */
+           surface's own rows. */
         vertical-align: top;
-      }
-      /* Band 3 Visibility — Reviewees + Observers audience chips
-         in their unselected state are styled to match the
-         greyed-out What / When cycle chips in the same row (filled
-         accent-blue background, white text, opacity 0.4). Cycle
-         chips in those rows always have ``is-selected`` so the
-         ``:not(.is-selected)`` selector doesn't bite them. The
-         audience chip itself stays clickable — the opacity is
-         cosmetic, not ``pointer-events: none``. */
-      body.ui-v2 [data-new-model-audience="reviewees"] .tag-chip:not(.is-selected),
-      body.ui-v2 [data-new-model-audience="observers"] .tag-chip:not(.is-selected) {
-        background: var(--selected-bg);
-        color: var(--text-on-accent);
-        opacity: 0.4;
       }
       /* Segment 18M PR 0 — collapsible instrument cards. The
          <summary> is the click target; the chevron rotates via
@@ -4610,11 +4592,9 @@
         cursor: not-allowed;
         opacity: 0.5;
       }
-      /* Segment 18M PR 2b — drag-and-drop visual state.
+      /* Segment 18M PR 2b — drag-and-drop visual state:
          .instrument-card-dragging fades the source card so the
-         operator sees which card they're moving; .drop-indicator
-         is a 2px-thick blue line inserted between cards to mark
-         where the drop will land. */
+         operator sees which card they're moving. */
       body.ui-v2 .card.instrument-card-dragging {
         opacity: 0.4;
       }
@@ -5156,7 +5136,7 @@
     </section>
     <section class="tc-sec">
       <h2 class="tc-h">Contrast — <strong>every</strong> foreground/background pair the palette forms
-      (73 pairs), live for the ACTIVE theme. A ratio under
+      (72 pairs), live for the ACTIVE theme. A ratio under
       <strong>AA normal, 4.5:1</strong>, is <strong>outlined in red</strong>; the badge says which
       tier it reaches. The trailing grey figure is the ratio <em>as shipped</em> in light, so an
       edit's effect is visible beside its baseline. Pairs are gathered from `base.html` itself —
@@ -5179,7 +5159,7 @@
         <div class="tc-cx" data-fg="--btn-secondary-fg" data-bg="--btn-secondary-bg" title="--btn-secondary-fg on --btn-secondary-bg · shipped 17.74:1 (light) · found by: a rule sets both halves — body.ui-v2 .btn.secondary"><span class="tc-cx-sample" style="background: var(--btn-secondary-bg); color: var(--btn-secondary-fg)">Aa — btn secondary fg → btn secondary bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">17.74</span></div>
       </div>
       </details>
-      <details class="tc-cluster" open><summary>Text & links [P] · 45 <span class="tc-cx-count" data-cluster="Text & links [P]"></span></summary>
+      <details class="tc-cluster" open><summary>Text & links [P] · 44 <span class="tc-cx-count" data-cluster="Text & links [P]"></span></summary>
       <div class="tc-cx-grid">
         <div class="tc-cx" data-fg="--text-subtle" data-bg="--nav-home-bg" title="--text-subtle on --nav-home-bg · shipped 4.53:1 (light) · found by: a rule sets both halves — .session-home-anchor"><span class="tc-cx-sample" style="background: var(--nav-home-bg); color: var(--text-subtle)">Aa — subtle → nav home bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">4.53</span></div>
         <div class="tc-cx" data-fg="--text-link" data-bg="--surface-tint-5" title="--text-link on --surface-tint-5 · shipped 4.70:1 (light) · found by: text token against every surface"><span class="tc-cx-sample" style="background: var(--surface-tint-5); color: var(--text-link)">Aa — link → tint 5</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">4.70</span></div>
@@ -5195,7 +5175,6 @@
         <div class="tc-cx" data-fg="--text-link" data-bg="--surface-card" title="--text-link on --surface-card · shipped 5.17:1 (light) · found by: text token against every surface"><span class="tc-cx-sample" style="background: var(--surface-card); color: var(--text-link)">Aa — link → card</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">5.17</span></div>
         <div class="tc-cx" data-fg="--text-link" data-bg="--surface-page" title="--text-link on --surface-page · shipped 5.17:1 (light) · found by: text token against every surface"><span class="tc-cx-sample" style="background: var(--surface-page); color: var(--text-link)">Aa — link → page</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">5.17</span></div>
         <div class="tc-cx" data-fg="--text-on-accent" data-bg="--btn-primary-bg" title="--text-on-accent on --btn-primary-bg · shipped 5.17:1 (light) · found by: foreground for a named fill (hand-kept, see ON_FILL)"><span class="tc-cx-sample" style="background: var(--btn-primary-bg); color: var(--text-on-accent)">Aa — on accent → btn primary bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">5.17</span></div>
-        <div class="tc-cx" data-fg="--text-on-accent" data-bg="--selected-bg" title="--text-on-accent on --selected-bg · shipped 5.17:1 (light) · found by: a rule sets both halves — body.ui-v2 [data-new-model-audience="reviewees"] .tag-chip"><span class="tc-cx-sample" style="background: var(--selected-bg); color: var(--text-on-accent)">Aa — on accent → selected bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">5.17</span></div>
         <div class="tc-cx" data-fg="--text-subtle" data-bg="--surface-tint-1" title="--text-subtle on --surface-tint-1 · shipped 5.27:1 (light) · found by: text token against every surface"><span class="tc-cx-sample" style="background: var(--surface-tint-1); color: var(--text-subtle)">Aa — subtle → tint 1</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">5.27</span></div>
         <div class="tc-cx" data-fg="--text-subtle" data-bg="--surface-tint-4" title="--text-subtle on --surface-tint-4 · shipped 5.29:1 (light) · found by: text token against every surface"><span class="tc-cx-sample" style="background: var(--surface-tint-4); color: var(--text-subtle)">Aa — subtle → tint 4</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">5.29</span></div>
         <div class="tc-cx" data-fg="--text-subtle" data-bg="--surface-tint-2" title="--text-subtle on --surface-tint-2 · shipped 5.33:1 (light) · found by: text token against every surface"><span class="tc-cx-sample" style="background: var(--surface-tint-2); color: var(--text-subtle)">Aa — subtle → tint 2</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">5.33</span></div>

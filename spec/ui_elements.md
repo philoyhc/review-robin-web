@@ -1016,13 +1016,21 @@ below, which is what ui-v2's global `h3` rule assumes. Scoped by the
 > (findings E14; the page carried them in its own `<style>` block until
 > then), each scoped to markup only that page renders:
 > - `data-instrument-locked` rules hide `[data-unlock-only]` /
->   `[data-lock-only]` controls by card state and dim a locked card's
->   `[data-lock-region]`;
+>   `[data-lock-only]` controls by card state, dim a locked card's
+>   `[data-lock-region]` and its visibility preview card, and hide an
+>   empty intro name (`.rs-intro-name[data-intro-empty]`);
 > - `.save-error-banner`, the card's server-error list above Save;
-> - `.sort-btn` / `.sort-badge`, the display-field sort control and its
->   rank number;
+> - disabled `[data-new-model-rf-data-type]` / `[data-new-model-rf-bound]`,
+>   a response field's frozen shape (it has responses);
+> - `.sort-btn` / `.sort-badge` (and `.sort-badge-empty`), the
+>   display-field sort control and its rank number;
+> - the Band 2 preview's cell padding and top alignment, matched to the
+>   reviewer surface's rows;
 > - `.instrument-card-collapsible` / `-summary` / `-toggle-icon` /
->   `-drag-handle` / `-dragging`, the collapsible, draggable card;
+>   `-drag-handle` / `-dragging`, the collapsible, draggable card (a
+>   summary pill sits 1px lower to align with the title), and
+>   `.card-title-fallback`, the `Instrument_{N}` title of an unlabeled
+>   card;
 > - `.page-break-card` / `-label` / `-delete`, the reviewer page-break
 >   marker between cards;
 > - `.instrument-reorder-toast`, the reorder-failure toast — fixed, on

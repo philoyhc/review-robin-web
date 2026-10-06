@@ -73,14 +73,6 @@ CONTROL_SELECTORS = {
         "body.ui-v2 .tag-chip, body.ui-v2 .pill.pill-tag-clear, "
         "body.ui-v2 .pill.tag-mode-chip"
     ),
-    # The Instruments page's Visibility audience chip — a clickable
-    # control (its rule says so), in base.html since findings E14.
-    (
-        'body.ui-v2 [data-new-model-audience="reviewees"] '
-        ".tag-chip:not(.is-selected), "
-        'body.ui-v2 [data-new-model-audience="observers"] '
-        ".tag-chip:not(.is-selected)"
-    ),
 }
 
 

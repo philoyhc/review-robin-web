@@ -4401,7 +4401,8 @@
          Instruments page (operator/instruments_index.html). Moved here
          from the page's own <style> block (findings E14, 2026-10-06):
          base.html owns the app's CSS. Every selector is scoped to markup
-         only that page renders. The reorder toast carries no drop shadow
+         only that page renders; a Visibility audience-chip rule that
+         matched no markup since d2cbe8d9 was dropped rather than moved. The reorder toast carries no drop shadow
          (E16; spec/visual_style_general.md).
          ------------------------------------------------------------------ */
       /* Segment 18R Item 2 PR 1 — client lock-state scaffold.
@@ -4430,11 +4431,6 @@
          nor a subtitle is not drawn, as the reviewer surface draws none;
          unlocked it holds the description box. */
       [data-instrument-card][data-instrument-locked="true"] .rs-intro-name[data-intro-empty] { display: none; }
-      /* The Band 2 preview help-card ✎/✓ edit affordances are built by
-         JS (renderHelpCard, keyed by data-help-card-key) so they can't
-         carry a Jinja data-unlock-only marker. `inert` on the lock
-         region disables them but leaves them visible; hide them off the
-         lock state directly, matching the other edit affordances. */
       /* Segment 18R Item 2 PR 3 — consolidated Save summary banner.
          Rendered per card (hidden until a fetch-Save comes back with
          validation errors); lists the blocking issues at the top of the
@@ -4453,9 +4449,9 @@
       .save-error-banner strong { font-weight: 600; }
       /* Segment 18R Item 2 PR 5c — a response field with saved responses
          has its shape (type + bounds) frozen; the data-type select + the
-         bound inputs already carry `disabled`, but base.html only styles
-         disabled *buttons* (so the X reads correctly greyed while these
-         looked live). Give the disabled shape controls a matching
+         bound inputs already carry `disabled`, but the disabled styling
+         above covers *buttons* only (so the X reads correctly greyed
+         while these looked live). Give the disabled shape controls a matching
          inactive treatment so the freeze is obvious at a glance; the
          "Clear responses first" title stays as the explanation. */
       [data-new-model-rf-data-type]:disabled,
@@ -4505,22 +4501,8 @@
         /* Top-align so multi-row textareas (long-text response
            fields) anchor at the top of the row rather than
            centering vertically inside it — matches the reviewer
-           surface contract in base.html. */
+           surface's own rows. */
         vertical-align: top;
-      }
-      /* Band 3 Visibility — Reviewees + Observers audience chips
-         in their unselected state are styled to match the
-         greyed-out What / When cycle chips in the same row (filled
-         accent-blue background, white text, opacity 0.4). Cycle
-         chips in those rows always have ``is-selected`` so the
-         ``:not(.is-selected)`` selector doesn't bite them. The
-         audience chip itself stays clickable — the opacity is
-         cosmetic, not ``pointer-events: none``. */
-      body.ui-v2 [data-new-model-audience="reviewees"] .tag-chip:not(.is-selected),
-      body.ui-v2 [data-new-model-audience="observers"] .tag-chip:not(.is-selected) {
-        background: var(--selected-bg);
-        color: var(--text-on-accent);
-        opacity: 0.4;
       }
       /* Segment 18M PR 0 — collapsible instrument cards. The
          <summary> is the click target; the chevron rotates via
@@ -4627,11 +4609,9 @@
         cursor: not-allowed;
         opacity: 0.5;
       }
-      /* Segment 18M PR 2b — drag-and-drop visual state.
+      /* Segment 18M PR 2b — drag-and-drop visual state:
          .instrument-card-dragging fades the source card so the
-         operator sees which card they're moving; .drop-indicator
-         is a 2px-thick blue line inserted between cards to mark
-         where the drop will land. */
+         operator sees which card they're moving. */
       body.ui-v2 .card.instrument-card-dragging {
         opacity: 0.4;
       }
