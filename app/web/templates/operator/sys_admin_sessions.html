@@ -138,8 +138,8 @@
               <span class="pill pill-lifecycle-{{ row.session_status }}">
                 {{ row.session_status | lifecycle_label }}</span>
               {% if row.live %}
-                {# The lifecycle is not closing this grant, so somebody
-                   can reach it now. #}
+                {# A participant reader honours this cell now: its window
+                   is open for this audience and lifecycle state. #}
                 <span class="pill pill-warning">Reachable now</span>
               {% endif %}
             </td>

@@ -232,9 +232,9 @@ def test_the_incoherent_pair_is_reported_with_its_own_reason(
 def test_live_findings_sort_above_closed_ones(
     db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A hit on a `ready` or `expired` session is reachable now; one on a
-    `draft` or `archived` session is closed by the lifecycle whatever the
-    row says. The reader is deciding what to do this morning."""
+    """A hit whose window is open is reachable now; one on a `draft` or
+    `archived` session is closed by the lifecycle whatever the row says.
+    The reader is deciding what to do this morning."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     # Codes chosen so alphabetical order would put the draft first —
     # otherwise the sort could pass on the session code alone.
@@ -243,13 +243,32 @@ def test_live_findings_sort_above_closed_ones(
     live.status = "ready"
     for review_session in (draft, live):
         instrument = _instrument(db, review_session, name="Feedback")
-        _policy(db, instrument, "reviewee", while_ongoing="raw")
+        _policy(db, instrument, "observer", while_ongoing="raw")
     db.commit()
 
     body = client.get("/operator/sys-admin/sessions").text
     card = body[body.index("<h2>Visibility grid audit</h2>") :]
     assert card.index("zzz-live") < card.index("aaa-draft")
     assert "Reachable now" in card
+
+
+def test_a_reviewee_ongoing_cell_is_never_reachable(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Gc2: the reviewee readers pass the ongoing window as closed, so a
+    reviewee `while_ongoing` finding on a `ready` session lists without
+    the warning pill."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    review_session = _make_session(client, db, code="vga-inert")
+    review_session.status = "ready"
+    instrument = _instrument(db, review_session, name="Feedback")
+    _policy(db, instrument, "reviewee", while_ongoing="raw")
+    db.commit()
+
+    body = client.get("/operator/sys-admin/sessions").text
+    card = body[body.index("<h2>Visibility grid audit</h2>") :]
+    assert "vga-inert" in card
+    assert "Reachable now" not in card
 
 
 def test_the_card_writes_nothing(
