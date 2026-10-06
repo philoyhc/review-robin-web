@@ -367,20 +367,20 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **H — docs/**
 
-- **H1** med doc security_posture.md:379 "one GET that writes is Session Home" vs extract GETs audit+commit (_extracts.py:84-105 …:746, _extract_data.py:345), /me/invite/{token} record_open (_invite.py:71-75), first-sign-in users row (deps.py:167-176)
+- ~~**H1**~~ med doc security_posture.md:379 "one GET that writes is Session Home" vs extract GETs audit+commit (_extracts.py:84-105 …:746, _extract_data.py:345), /me/invite/{token} record_open (_invite.py:71-75), first-sign-in users row (deps.py:167-176) — **Done in #2848.**
 - ~~**H2**~~ low doc/code database.md:134-136 every FK index=True vs data_shape.py:69-76,112-115 — **Done in #2837.**
-- **H3** low doc deployment_dev.md:323 review_sessions.created_by_user_id vs table sessions
-- **H4** low doc known_limitations.md:16-18 App Insights "stop applying" at cutover vs not wired (architecture.md:108-112, deployment_nus.md:129-130); same security_posture.md:441-443
+- ~~**H3**~~ low doc deployment_dev.md:323 review_sessions.created_by_user_id vs table sessions — **Done in #2848.**
+- ~~**H4**~~ low doc known_limitations.md:16-18 App Insights "stop applying" at cutover vs not wired (architecture.md:108-112, deployment_nus.md:129-130); same security_posture.md:441-443 — **Done in #2848.**
 - **H5** low author security_posture.md:441-442, known_limitations.md:12-14 Postgres "private endpoint" vs nus_azure_status.md:31 "provisioned privately" (Azure-only)
-- **H6** low doc architecture.md:106 "before the App Service swap" vs no swap (main_app…yml:118-122, deploy_nus.yml)
-- **H7** low doc security_posture.md:210,237 "Result: no gaps found" (2026-05-18) vs gap closed 2026-09-07 at :239-291
-- **H8** low doc security_posture.md:218-229 destructive table omits roster delete-all (reviewers/reviewees ack; observers confirm only)
-- **H9** low trim local_setup.md:72 "(auth, database…)" no auth doc
-- **H10** low trim known_limitations.md:94 "all 70 pairs" tally (test floor >=70)
+- ~~**H6**~~ low doc architecture.md:106 "before the App Service swap" vs no swap (main_app…yml:118-122, deploy_nus.yml) — **Done in #2848.**
+- ~~**H7**~~ low doc security_posture.md:210,237 "Result: no gaps found" (2026-05-18) vs gap closed 2026-09-07 at :239-291 — **Done in #2848.**
+- ~~**H8**~~ low doc security_posture.md:218-229 destructive table omits roster delete-all (reviewers/reviewees ack; observers confirm only) — **Done in #2848.**
+- ~~**H9**~~ low trim local_setup.md:72 "(auth, database…)" no auth doc — **Done in #2848.**
+- ~~**H10**~~ low trim known_limitations.md:94 "all 70 pairs" tally (test floor >=70) — **Done in #2848.**
 - **H11** low author deployment_nus.md:225-234 vs :236-241/§6.4 edit personal workflow vs separate deploy_nus.yml
 - ~~**H12**~~ low author database.md:99-101, local_setup.md:316-317 TEST_DATABASE_URL/DATABASE_URL no warning schema drop — **Done in #2831.**
-- **H13** low (dated records) guide/archive/sweep_2026-10-03_corpus.md, codex_assessment_30sep.md, codebase_assessment_30sep.md/.json cite nus_azure_status_v7.md
-- **H14** low doc cli_setup.md:142-145 "environment secrets" vs repo secrets; gh auth refresh -s admin:repo_hook (unverified)
+- ~~**H13**~~ low (dated records) guide/archive/sweep_2026-10-03_corpus.md, codex_assessment_30sep.md, codebase_assessment_30sep.md/.json cite nus_azure_status_v7.md — **Left as is: dated records are history.**
+- ~~**H14**~~ low doc cli_setup.md:142-145 "environment secrets" vs repo secrets; gh auth refresh -s admin:repo_hook (unverified) — **Done in #2848** (repository secrets, not environment ones; the specific `gh` scope advice is dropped, since the repo cannot confirm it).
 
 **I — root and process documents**
 
