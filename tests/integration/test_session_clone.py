@@ -506,54 +506,87 @@ def test_a_clone_drops_a_width_naming_another_instruments_field(
 
 def test_a_clone_copies_each_instruments_visibility_grid(db: Session) -> None:
     """G5 (ruled 2026-10-06): Duplicate copies the visibility grid, as
-    Replicate does, in both modes — a clone no longer reverts to the
-    default visibility. The schedule still resets on purpose."""
+    Replicate does, in both modes — each instrument's onto its own copy,
+    one ``instrument.view_policy_set`` per row under the request's
+    correlation id. The schedule still resets on purpose."""
     from app.services import visibility_policies as vp
 
     source, op = _source_session(db, "clone-vis")
-    instrument = db.execute(
+    first = db.execute(
         select(Instrument).where(Instrument.session_id == source.id)
-    ).scalars().first()
-    vp.upsert_policy(
-        db,
-        review_session=source,
-        instrument=instrument,
-        audience="reviewee",
-        while_ongoing_mode=None,
-        after_release_mode="anonymized",
-        user=op,
-    )
-    vp.upsert_policy(
-        db,
-        review_session=source,
-        instrument=instrument,
-        audience="observer",
-        while_ongoing_mode="summarized",
-        after_release_mode="raw",
-        user=op,
-    )
+    ).scalar_one()
+    second = Instrument(session_id=source.id, name="Second", order=first.order + 1)
+    db.add(second)
+    db.flush()
+    cells = {
+        first.name: [
+            ("reviewee", None, "anonymized"),
+            ("observer", "summarized", "raw"),
+        ],
+        "Second": [("observer", None, "summarized")],
+    }
+    for instrument in (first, second):
+        for audience, ongoing, after in cells[instrument.name]:
+            vp.upsert_policy(
+                db,
+                review_session=source,
+                instrument=instrument,
+                audience=audience,
+                while_ongoing_mode=ongoing,
+                after_release_mode=after,
+                user=op,
+            )
+    now = dt.datetime(2026, 10, 6, 9, 0, tzinfo=dt.timezone.utc)
+    source.deadline = now + dt.timedelta(days=7)
+    source.responses_release_at = now + dt.timedelta(days=8)
+    source.responses_release_until = now + dt.timedelta(days=20)
+    source.invite_offsets = ["-PT48H"]
+    source.reminder_offsets = ["-PT24H"]
+    source.archive_offset = "PT24H"
     db.commit()
 
-    def grid(session_id: int) -> dict[str, tuple[str | None, str | None]]:
-        copied = db.execute(
+    def grids(session_id: int) -> dict[str, dict[str, tuple[str | None, str | None]]]:
+        out: dict[str, dict[str, tuple[str | None, str | None]]] = {}
+        for instrument in db.execute(
             select(Instrument).where(Instrument.session_id == session_id)
-        ).scalars().first()
-        out = {}
-        for audience, policy in vp.list_for_instrument(db, copied.id).items():
-            out[audience] = tuple(
-                vp.decode_mode(
-                    getattr(policy, f"{w}_granularity"),
-                    getattr(policy, f"{w}_identification"),
+        ).scalars():
+            out[instrument.name] = {
+                audience: tuple(
+                    vp.decode_mode(
+                        getattr(policy, f"{w}_granularity"),
+                        getattr(policy, f"{w}_identification"),
+                    )
+                    if getattr(policy, f"{w}_granularity") is not None
+                    else None
+                    for w in ("while_ongoing", "after_release")
                 )
-                if getattr(policy, f"{w}_granularity") is not None
-                else None
-                for w in ("while_ongoing", "after_release")
-            )
+                for audience, policy in vp.list_for_instrument(
+                    db, instrument.id
+                ).items()
+            }
         return out
 
-    expected = grid(source.id)
-    assert expected["reviewee"] == (None, "anonymized")
-    assert expected["observer"] == ("summarized", "raw")
+    expected = grids(source.id)
+    assert expected == {
+        name: {audience: (ongoing, after) for audience, ongoing, after in rows}
+        for name, rows in cells.items()
+    }
     for mode in ("all", "config"):
-        clone = session_clone.clone_session(db, source=source, user=op, mode=mode)
-        assert grid(clone.id) == expected, mode
+        clone = session_clone.clone_session(
+            db, source=source, user=op, mode=mode, correlation_id=f"cid-{mode}"
+        )
+        assert grids(clone.id) == expected, mode
+        events = db.execute(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "instrument.view_policy_set",
+                AuditEvent.session_id == clone.id,
+            )
+        ).scalars().all()
+        assert len(events) == 3, mode
+        assert {e.correlation_id for e in events} == {f"cid-{mode}"}, mode
+        assert clone.deadline is None
+        assert clone.responses_release_at is None
+        assert clone.responses_release_until is None
+        assert not clone.invite_offsets
+        assert not clone.reminder_offsets
+        assert clone.archive_offset is None

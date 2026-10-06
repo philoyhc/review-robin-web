@@ -156,6 +156,11 @@ author, marked *re-checked*) also ran it.
   disabled AND (`operator/instruments_index.html`). A saved two-tag unit
   therefore shows X X on load and AND X after any edit. Run the refresh
   on load, or render the AND server-side. Code.
+- **Gc3** — `spec/rehydrate.md` ("Rehydrate therefore carries no
+  view-policy code of its own") names "config-only clone" among the
+  consumers of the settings round-trip. Clone copies in the database
+  and never goes through the CSV; since G5 it copies the grid through
+  `copy_view_policies`. Prose. Found by the G5 cold read (#2859).
 - ~~**Gc2**~~ — **Done in #2850.** The Sessions Diagnostics visibility-grid audit
   (`operator/sys_admin_sessions.html`) still says a row written by an
   import before the guard "is still stored, and the resolver honours

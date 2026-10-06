@@ -460,6 +460,8 @@ def copy_view_policies(
     source: Instrument,
     replica: Instrument,
     actor: User,
+    *,
+    correlation_id: str | None = None,
 ) -> None:
     """The source's visibility policies, written onto the replica
     (author's ruling, 2026-10-03, A1): the copy shows its responses to
@@ -512,6 +514,7 @@ def copy_view_policies(
             while_ongoing_mode=modes["while_ongoing"],
             after_release_mode=modes["after_release"],
             user=actor,
+            correlation_id=correlation_id,
         )
 
 

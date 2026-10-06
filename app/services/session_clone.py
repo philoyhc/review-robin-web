@@ -42,7 +42,7 @@ from app.db.models import (
 )
 from app.services import audit
 from app.services.instruments._field_refs import repoint_sort, repoint_widths
-from app.services.instruments._instrument_crud import copy_view_policies
+from app.services.instruments import copy_view_policies
 
 CLONE_MODES: tuple[str, ...] = ("all", "config")
 
@@ -251,7 +251,14 @@ def clone_session(
         # The visibility grid, as Replicate copies it (findings G5,
         # 2026-10-06): through the editor's writer, so each cell is
         # checked against the per-cell rule on the way in.
-        copy_view_policies(db, clone, instrument, new_instrument, user)
+        copy_view_policies(
+            db,
+            clone,
+            instrument,
+            new_instrument,
+            user,
+            correlation_id=correlation_id,
+        )
 
     # Field-label overrides + tags.
     for label in source.field_labels:

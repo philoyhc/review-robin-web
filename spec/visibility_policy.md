@@ -138,8 +138,8 @@ the cell it lands in, so a hand-edited or hand-built bundle would
 otherwise persist a `reviewee` `while_ongoing` grant no editor can
 author — a disclosure the resolver would then honor like any other row.
 Rehydrate applies its settings bundle through the same call and inherits
-the check. (Clone copies no view-policy rows at all —
-`spec/roundtrip_coverage.md`.)
+the check, and so do Replicate and Duplicate session, which copy the
+grid through it (`spec/roundtrip_coverage.md`).
 
 Two shapes that are not modes are refused by the same pass, each with
 its own message: a **half-set** cell (one member of the pair set, the
