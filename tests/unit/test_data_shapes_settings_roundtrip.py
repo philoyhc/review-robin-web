@@ -573,3 +573,46 @@ def test_apply_falls_through_to_default_on_missing_self_review_handling_row(
         select(DataShape).where(DataShape.session_id == session_b.id)
     ).scalars():
         assert shape.self_review_handling == "include_self"
+
+
+def test_a_loaded_instruments_relationship_does_not_mislead_the_apply(
+    db: Session,
+) -> None:
+    """Dc10: the apply deletes the destination's instruments and adds
+    new ones without touching ``review_session.instruments``. When a
+    caller has loaded that relationship first, the data-shape step read
+    the deleted rows and scoped the shape to a gone id. A row in another
+    session after the old one keeps SQLite from reusing that id, which
+    would otherwise hide the fault."""
+    source = _session(db, code="dc10-src")
+    instrument = _instrument(db, source, short_label="Peer")
+    field = _field(db, instrument, field_key="score")
+    db.add(
+        DataShape(
+            session_id=source.id,
+            name="Scoped",
+            axis="reviewee",
+            instrument_id=instrument.id,
+            response_field_id=field.id,
+            column_chip_slots=json.dumps(["reviewee:name"]),
+        )
+    )
+    db.flush()
+    rows = session_config_io.serialize_session_config(db, source)
+
+    target = _session(db, code="dc10-dst")
+    old = _instrument(db, target, short_label="Peer")
+    _instrument(db, _session(db, code="dc10-bump"), short_label="Other")
+    assert [i.id for i in target.instruments] == [old.id]
+
+    result = session_config_io.apply_session_config(db, target, rows, user=None)
+    assert result.ok, result.errors
+    new = db.execute(
+        select(Instrument).where(Instrument.session_id == target.id)
+    ).scalar_one()
+    shape = db.execute(
+        select(DataShape).where(DataShape.session_id == target.id)
+    ).scalar_one()
+    assert new.id != old.id
+    assert shape.instrument_id == new.id
+    assert shape.response_field_id is not None
