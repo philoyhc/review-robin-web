@@ -51,18 +51,20 @@ card on `/operator/sys-admin/sessions`.
 **Why it cannot wait, and why it cannot be done now.** The card exists to
 find `instrument_view_policies` rows written *before* the Settings-CSV
 import learned to refuse an illegal cell (Segment 19C Item 9, PR #2188).
-The guard is prospective: a bad row written before it is still stored,
-and `resolve_mode` honours it like any other. The cell that matters is a
-**reviewee** grant on **Session ongoing** — a reviewee reading responses
-while the review is still running.
+Migration `14db60023e88` (#2833) has since normalized those rows, so
+the card should read empty; reading it on real data confirms the
+migration ran there. The cell that matters is an **observer** grant of
+`Raw` or `Anonymized` on **Session ongoing**: an observer reading
+individual responses while the review is still running. The reviewee
+readers treat that window as closed, so a reviewee row grants nothing.
 
 It has only ever run against fixtures. On a database with almost no rows
 a green card means *"no rows here"*, not *"no bad rows"*, so the check
 written specifically to find pre-existing bad data has so far produced no
 evidence about pre-existing bad data. Only real data settles it.
 
-**Before any reviewee-facing window opens**, because that is the moment
-a bad row stops being a latent defect and becomes a disclosure.
+**Before any participant-facing window opens**, because that is the
+moment a bad row stops being a latent defect and becomes a disclosure.
 
 **Done when.** The card has been read on the deployed workspace with
 real sessions present, and either it lists no findings — recorded with

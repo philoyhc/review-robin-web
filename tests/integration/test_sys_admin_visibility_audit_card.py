@@ -104,10 +104,19 @@ def test_card_renders_on_sessions_diagnostics(
     body = _flat(client.get("/operator/sys-admin/sessions").text)
     assert "<h2>Visibility grid audit</h2>" in body
     # The reason the card exists, in the card: the disclosure it looks for.
-    assert "reading responses while the review is still running" in body
+    assert (
+        "observer reading individual responses while the review is still running"
+        in body
+    )
+    # Gc2: the reviewee readers pass the ongoing window as closed.
+    assert "grants nothing whatever it stores" in body
     # Read-only is stated, not implied — the card must never look like a
     # place to clear a cell.
     assert "Read-only." in body
+    # Gc2: migration 14db60023e88 normalized the pre-guard cells, so the
+    # card no longer claims such a row is still stored and honoured.
+    assert "the resolver honours it" not in body
+    assert "this list is normally empty" in body
 
 
 def test_no_findings_says_so_in_words(
@@ -147,7 +156,8 @@ def test_a_legal_grid_produces_no_findings(
 def test_the_reviewee_mid_flight_grant_is_reported(
     db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The row the whole item exists for."""
+    """Reported although no reader honours it: the reviewee readers
+    pass the ongoing window as closed (Gc2)."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     review_session = _make_session(client, db, code="vga-re")
     instrument = _instrument(db, review_session, name="Feedback")
@@ -169,8 +179,8 @@ def test_the_other_two_audiences_are_checked_by_the_same_path(
     db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The check reads `_PER_CELL_VALID_MODES`, so every cell is covered
-    by construction — the reviewee's is the one with a disclosure behind
-    it, not the only one that can be wrong."""
+    by construction — the observer's ongoing cell is the one a reader
+    honours, not the only one that can be wrong."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     review_session = _make_session(client, db, code="vga-others")
     instrument = _instrument(db, review_session, name="Feedback")

@@ -1124,9 +1124,8 @@
               <div data-new-model-unit-cells
                    style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
                 {% for _selected_key in _link3_cells %}
-                  {% set _is_first = loop.first %}
                   {# Column-flex wrapper so a small "Reviewee tag"
-                     caption stacks above the select + X row.
+                     caption stacks above the select + AND/X row.
                      Mirrors Link 1's ``field_helper`` caption
                      styling. Lives inside ``data-new-model-unit-cell``
                      so ``newModelAddUnitCell``'s
@@ -1149,12 +1148,24 @@
                           <option value="{{ key }}" {% if key == _selected_key %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                       </select>
+                      {# Ec9: render what ``newModelRefreshUnitButtons``
+                         leaves after an add or remove — the last cell
+                         carries the X (disabled when it is the only
+                         one), every earlier cell a disabled AND — so a
+                         saved card and an edited one look the same. #}
+                      {% if loop.last %}
                       <button type="button" class="btn destructive cohort-cell-btn" data-new-model-cell-action
                               data-new-model-unit-remove
                               onclick="newModelRemoveUnitCell(this)"
-                              {% if _is_first %}disabled aria-disabled="true"
+                              {% if loop.length == 1 %}disabled aria-disabled="true"
                               title="Cannot remove the first cell"
                               {% else %}title="Remove cell"{% endif %}>X</button>
+                      {% else %}
+                      <button type="button" class="btn secondary cohort-cell-btn" data-new-model-cell-action
+                              data-new-model-unit-remove
+                              disabled aria-disabled="true"
+                              title="Combinator marker">AND</button>
+                      {% endif %}
                     </div>
                   </div>
                 {% endfor %}
@@ -1580,24 +1591,24 @@
             var isLast = (idx === cells.length - 1);
             if (isLast) {
               b.textContent = 'X';
-              b.className = 'btn destructive';
+              b.className = 'btn destructive cohort-cell-btn';
               b.setAttribute('onclick', 'newModelRemoveUnitCell(this)');
               var onlyOne = cells.length === 1;
               b.disabled = onlyOne;
               if (onlyOne) {
                 b.setAttribute('aria-disabled', 'true');
-                b.setAttribute('title', 'Cannot remove the first cell (placeholder)');
+                b.setAttribute('title', 'Cannot remove the first cell');
               } else {
                 b.removeAttribute('aria-disabled');
-                b.setAttribute('title', 'Remove cell (placeholder)');
+                b.setAttribute('title', 'Remove cell');
               }
             } else {
               b.textContent = 'AND';
-              b.className = 'btn secondary';
+              b.className = 'btn secondary cohort-cell-btn';
               b.removeAttribute('onclick');
               b.disabled = true;
               b.setAttribute('aria-disabled', 'true');
-              b.setAttribute('title', 'Combinator marker (placeholder)');
+              b.setAttribute('title', 'Combinator marker');
             }
           });
         };

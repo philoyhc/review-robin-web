@@ -126,14 +126,14 @@ author, marked *re-checked*) also ran it.
   `csv` module's 131,072-character field limit: the responses extract
   writes it, and Rehydrate refuses the set (`spec/rehydrate.md` §9,
   since #2835). Author: raise the parser's limit or cap answers.
-- **Ec9** — The Link 3 builder's boundary cells disagree between a card
+- ~~**Ec9**~~ — **Done in #2850.** The Link 3 builder's boundary cells disagree between a card
   as rendered and one just edited: the template gives every saved cell
   an X (the first disabled), while `newModelRefreshUnitButtons`, called
   only from add and remove, turns every cell but the last into a
   disabled AND (`operator/instruments_index.html`). A saved two-tag unit
   therefore shows X X on load and AND X after any edit. Run the refresh
   on load, or render the AND server-side. Code.
-- **Gc2** — The Sessions Diagnostics visibility-grid audit
+- ~~**Gc2**~~ — **Done in #2850.** The Sessions Diagnostics visibility-grid audit
   (`operator/sys_admin_sessions.html`) still says a row written by an
   import before the guard "is still stored, and the resolver honours
   it", naming a session-ongoing reviewee grant. Migration
