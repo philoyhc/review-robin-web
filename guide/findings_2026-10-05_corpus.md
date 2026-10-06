@@ -219,27 +219,27 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **B — assignments, workflow, lifecycle, Validate**
 
-- **B1** med spec lifecycle.md:417-420 observers "no readiness rule references them" vs observers.duplicate_email, cross_roster_identity (validation.py:1114-1156)
+- ~~**B1**~~ med spec lifecycle.md:417-420 observers "no readiness rule references them" vs observers.duplicate_email, cross_roster_identity (validation.py:1114-1156) — **Done in #2842.**
 - ~~**B2**~~ med author lifecycle.md:424-426 lobby expander narrower predicate (is_draft) unlisted exception — **Done in #2832.**
-- **B3** low spec lifecycle.md:178-181 revert on Setup page while validated: none; only Workflow card; "Next Action card" old name
-- **B4** low spec lifecycle.md:725-727 skipped trigger clears column: only activation; invites/reminders mark consumed via audit
-- **B5** low spec lifecycle.md:804-811 _schedule_ordering_js partial only in session_new.html; Session Home own script, no min/max
-- **B6** low spec lifecycle.md:827-829 past fire time rejected: Release-from, End have no floor; garbled example
-- **B7** low trim lifecycle.md:155 "legacy internal name Pause"; :570 "Audit events (full list)" overclaims
+- ~~**B3**~~ low spec lifecycle.md:178-181 revert on Setup page while validated: none; only Workflow card; "Next Action card" old name — **Done in #2842.**
+- ~~**B4**~~ low spec lifecycle.md:725-727 skipped trigger clears column: only activation; invites/reminders mark consumed via audit — **Done in #2842.**
+- ~~**B5**~~ low spec lifecycle.md:804-811 _schedule_ordering_js partial only in session_new.html; Session Home own script, no min/max — **Done in #2842.**
+- ~~**B6**~~ low spec lifecycle.md:827-829 past fire time rejected: Release-from, End have no floor; garbled example — **Done in #2842.**
+- ~~**B7**~~ low trim lifecycle.md:155 "legacy internal name Pause"; :570 "Audit events (full list)" overclaims — **Done in #2842.**
 - ~~**B8**~~ med author workflow_card.md:498-501,549-554,359-367 Activate failure path vs _workflow.py:346-416 (no mark_validated; demotes on any failure incl. 4Err pre-flight) — **Done in #2832.**
-- **B9** low trim workflow_card.md:379-380 "today's worst case is 4"
-- **B10** low trim workflow_card.md:621-625, 856-863 open-work/ship-state notes
-- **B11** low write workflow_card.md:171-186 archived state: card renders empty body
+- ~~**B9**~~ low trim workflow_card.md:379-380 "today's worst case is 4" — **Done in #2842.**
+- ~~**B10**~~ low trim workflow_card.md:621-625, 856-863 open-work/ship-state notes — **Done in #2842.**
+- ~~**B11**~~ low write workflow_card.md:171-186 archived state: card renders empty body — **Done in #2842.**
 - **B12** med author validate_page.md:42-44,393-394,514-516 "never writes" vs persist_reconcile_warm commits cache (_operations.py:192)
-- **B13** low spec validate_page.md:114-116,136-139 status strings vs ✓/— and bare numbers (_validate.py:186-239)
-- **B14** low write validate_page.md:46-56 query params omit return_to, super_*, prepare_confirm
-- **B15** med spec assignments.md:184-188,205 combinator NONE_OF vs ALL_OF/ANY_OF/PIPELINE (rules.py:36-41)
-- **B16** low spec assignments.md:155-159 predicate fields also reviewer.email/reviewee.email
-- **B17** low spec assignments.md:95-98,25 per-row Include toggle vs read-only pill
-- **B18** low spec assignments.md:414-415 self-review rows always materialised vs omitted with exclude
-- **B19** low spec assignments.md:985 example 500 vs cap 200
-- **B20** low spec assignments.md:545-547 "... + N more" vs ", +N more", show_members
-- **B21** low trim assignments.md:1190-1191 history; :1283-1285 measurement; :34-40 superseded designs
+- ~~**B13**~~ low spec validate_page.md:114-116,136-139 status strings vs ✓/— and bare numbers (_validate.py:186-239) — **Done in #2842.**
+- ~~**B14**~~ low write validate_page.md:46-56 query params omit return_to, super_*, prepare_confirm — **Done in #2842.**
+- ~~**B15**~~ med spec assignments.md:184-188,205 combinator NONE_OF vs ALL_OF/ANY_OF/PIPELINE (rules.py:36-41) — **Done in #2842.**
+- ~~**B16**~~ low spec assignments.md:155-159 predicate fields also reviewer.email/reviewee.email — **Done in #2842.**
+- ~~**B17**~~ low spec assignments.md:95-98,25 per-row Include toggle vs read-only pill — **Done in #2842.**
+- ~~**B18**~~ low spec assignments.md:414-415 self-review rows always materialised vs omitted with exclude — **Done in #2842.**
+- ~~**B19**~~ low spec assignments.md:985 example 500 vs cap 200 — **Done in #2842.**
+- ~~**B20**~~ low spec assignments.md:545-547 "... + N more" vs ", +N more", show_members — **Done in #2842.**
+- ~~**B21**~~ low trim assignments.md:1190-1191 history; :1283-1285 measurement; :34-40 superseded designs — **Done in #2842.**
 
 **C — Setup, Session Home and the lobby**
 
