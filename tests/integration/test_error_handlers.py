@@ -9,6 +9,7 @@ pages for ``HTTPException`` (404 / 403), unhandled exceptions
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Iterator
 
 import pytest
@@ -66,6 +67,26 @@ def test_unknown_path_renders_html_404() -> None:
     assert "text/html" in resp.headers["content-type"]
     assert "Page not found" in resp.text
     assert "Error 404" in resp.text
+
+
+def test_the_error_page_draws_no_drop_shadow() -> None:
+    """``error.html`` carries its own stylesheet, outside ``base.html``,
+    so the "no drop shadows" rule (``spec/visual_style_general.md``) is
+    checked here too (findings Ec10): the card stands out by its
+    border. Read from the ``.error-card`` rule in the page's own
+    ``<style>`` block, and only an elevation shadow fails: an inset
+    marker or focus ring stays allowed (``spec/ui_elements.md``)."""
+    resp = TestClient(app).get("/no/such/page")
+
+    assert resp.status_code == 404
+    assert "Error 404" in resp.text
+    style = resp.text.split("<style>", 1)[1].split("</style>", 1)[0]
+    card = re.search(r"\.error-card\s*\{([^}]*)\}", style)
+    assert card, "premise: the card rule is there to read"
+    shadows = re.findall(r"box-shadow\s*:\s*([^;]+);", card.group(1))
+    assert all(
+        value.strip() == "none" or "inset" in value for value in shadows
+    ), shadows
 
 
 def test_http_exception_shows_route_detail() -> None:
