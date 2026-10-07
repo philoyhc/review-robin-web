@@ -918,9 +918,11 @@ browsers, and direct POSTs bypass the picker entirely).
   invite and reminder passes decide, send and record **one entry per
   transaction**, re-locking before the next (findings Bc3, ruled
   2026-10-07). A second racer re-reads after the first commits and
-  no-ops. The schedule saves take the same lock before reading what
-  they check (§8.2.6; the Session Home save, the lobby End edit and the
-  Settings import) and hold it until the schedule is written, so a send
+  no-ops. The schedule saves take the same lock first, before reading
+  anything (the Session Home save, the lobby's row expander and the
+  Settings import's checks), and hold it until the schedule is written,
+  so the editability gate, the stored schedule and the sent-entry
+  record (§8.2.6) are read as they stand, a send
   being recorded is committed before a save reads the record, and an
   observer arriving after a save sees the saved lists. Session Home
   writes the display zone, and the lobby its tags, after the schedule

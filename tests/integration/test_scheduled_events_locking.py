@@ -202,3 +202,111 @@ def test_lock_session_keeps_an_unflushed_edit(db: Session) -> None:
     finally:
         db.autoflush = True
 
+
+
+def _commit_lands_at_the_lock(monkeypatch, db: Session, apply) -> None:
+    """Patch ``scheduled_events.lock_session`` so another request's save
+    (``apply``) lands just as the first lock is taken: a caller that
+    locks before reading sees it, one that read first does not."""
+    real = scheduled_events.lock_session
+    fired: list[bool] = []
+
+    def landing(db_, session_):
+        if not fired:
+            fired.append(True)
+            apply(session_)
+        return real(db_, session_)
+
+    monkeypatch.setattr(scheduled_events, "lock_session", landing)
+
+
+def test_the_session_home_save_locks_before_its_editability_gate(
+    client, db: Session, monkeypatch
+) -> None:
+    """An activation landing as the save starts makes the session
+    Activated; the save sees it and is refused rather than writing over
+    a session that is no longer editable."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Gate", "code": "lock-gate"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "lock-gate")
+    ).scalar_one()
+    _commit_lands_at_the_lock(
+        monkeypatch,
+        db,
+        lambda s: _saved_behind_the_orm(db, s, "status", "ready"),
+    )
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/config",
+        data={"name": "Renamed", "code": session.code, "display_timezone": "UTC"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 409
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).name != "Renamed"
+
+
+def test_the_lobby_save_locks_before_its_editability_gate(
+    client, db: Session, monkeypatch
+) -> None:
+    client.post(
+        "/operator/sessions",
+        data={"name": "Lobby", "code": "lock-lobby"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "lock-lobby")
+    ).scalar_one()
+    _commit_lands_at_the_lock(
+        monkeypatch,
+        db,
+        lambda s: _saved_behind_the_orm(db, s, "status", "ready"),
+    )
+
+    client.post(
+        f"/operator/sessions/{session.id}/lobby-edit",
+        data={"name": "Renamed", "code": session.code, "deadline": "", "tags": ""},
+        follow_redirects=False,
+    )
+
+    db.expire_all()
+    # Off ``is_editable`` the expander's Name is ignored.
+    assert db.get(ReviewSession, session.id).name != "Renamed"
+
+
+def test_the_settings_import_checks_under_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    """End moved earlier by a save landing as the import starts: the
+    ordering check reads it and refuses a Start after the new End."""
+    from app.services.session_config_io import Row, apply_session_config
+
+    session = _make_validated_session(db, "lock-import")
+    session.deadline = datetime(2026, 5, 15, 12, 0, tzinfo=timezone.utc)
+    db.commit()
+    _commit_lands_at_the_lock(
+        monkeypatch,
+        db,
+        lambda s: _saved_behind_the_orm(
+            db, s, "deadline", "2026-05-05 12:00:00.000000"
+        ),
+    )
+
+    result = apply_session_config(
+        db,
+        session,
+        [
+            Row(
+                "session.scheduled_activate_at",
+                datetime(2026, 5, 10, 12, 0, tzinfo=timezone.utc).isoformat(),
+                "datetime",
+            )
+        ],
+    )
+
+    assert [e.field for e in result.errors] == ["session.scheduled_activate_at"]

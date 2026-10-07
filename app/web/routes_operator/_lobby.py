@@ -299,6 +299,9 @@ def lobby_edit_submit(
     ``validated`` session (findings Cc5, ``sessions.update_session``).
     """
     correlation_id = request_correlation_id()
+    # The whole save runs under the session lock the scheduled-event
+    # observers take, re-reading the row first (findings Bc3).
+    scheduled_events.lock_session(db, review_session)
 
     # Checked before the tag write, so a taken code, a deadline that
     # does not fit the stored schedule, or a name too long refuses the

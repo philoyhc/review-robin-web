@@ -299,6 +299,12 @@ def _apply_session_config_form(
     assignments or responses, so no response-loss ack gate). Raises
     ``HTTPException(422)`` on any field / ordering validation error.
     """
+    # The whole save runs under the session lock the scheduled-event
+    # observers take, re-reading the row first, so the editability gate,
+    # the stored schedule and the sent-entry record are all read as they
+    # stand and nothing changes them before the schedule is written
+    # (findings Bc3).
+    scheduled_events.lock_session(db, review_session)
     # Editing session metadata (name / code / description / deadline /
     # help contact / timezone / scheduled_activate_at) touches only
     # scalar ``sessions`` columns.
