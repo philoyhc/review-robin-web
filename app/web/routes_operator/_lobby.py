@@ -324,7 +324,7 @@ def lobby_edit_submit(
             parsed_deadline = parse_session_deadline(deadline, timezone_name)
         try:
             scheduled_events.validate_deadline_change(
-                review_session, parsed_deadline
+                db, review_session, parsed_deadline
             )
         except scheduled_events.ScheduledActivateError as exc:
             raise HTTPException(

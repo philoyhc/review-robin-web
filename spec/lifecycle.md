@@ -805,9 +805,23 @@ control, not as derived behaviour.
 **8.2.6 Multiple offsets per event.** Events that fire on a
 sequence (invites, reminders) carry a JSON list; events that
 fire once (archive, auto-delete) carry a single ISO 8601 string.
-Per-list-entry dedup uses the entry's index
-(e.g. `reminder:{session_id}:{reviewer_id}:{offset_index}`) so a
-re-ordered list doesn't re-fire already-sent reminders.
+Per-list-entry dedup is by position on the anchor: the observers'
+`session.scheduled_*_fired` / `_skipped` audit rows record
+`context.offset_index` and the entry (`context.offset`), and a recorded
+position never fires again on that anchor, whatever entry sits there.
+So a Session Home save, a lobby End edit or a Settings import that
+would put a different entry on a position already sent or skipped, on
+the anchor the session will hold, is refused
+(`scheduled_events.fired_offset_errors`; findings Bc1, ruled
+2026-10-07): a sent entry stays at its position, new entries go after
+it, and one kept in place skips the lead-time floor. A list whose
+entries and anchor both stay as stored is not checked, so a save that
+leaves the schedule alone is never refused over it. The record belongs
+to the anchor's value, so moving Start or End frees the list and moving
+it back restores that value's record. The reminder outbox
+key `reminder:{session_id}:{reviewer_id}:{offset_index}` carries no
+anchor: a reviewer gets reminder *n* at most once per session, whatever
+End (findings Bc2).
 
 **8.2.7 Save-time datetime ordering.** Independently of the
 fire-time guard (§8.2.3), the four operator-set anchor
@@ -887,7 +901,9 @@ browsers, and direct POSTs bypass the picker entirely).
   near-future End is refused through them. A value that *became* past after saving (Start
   set for tomorrow, and tomorrow has come while the session sat
   in `draft`) **stays put**; the fire-time precondition guard
-  handles it normally, typically on the next operator visit.
+  handles it normally, typically on the next operator visit. So does
+  an offset already sent at its position on the anchor the save keeps
+  (§8.2.6).
 - **Concurrency safety.** Two concurrent operator GETs racing
   the observer could fire the same trigger twice. Each trigger
   opens with `SELECT … FOR UPDATE` on the session row plus an

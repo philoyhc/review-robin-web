@@ -1566,3 +1566,117 @@ def test_a_pair_the_import_does_not_touch_is_not_checked(db: Session) -> None:
         db, dst, [Row("session.help_contact", "x@example.edu", "string")]
     )
     assert result.errors == []
+
+
+# --------------------------------------------------------------------------- #
+# Fired auto-send entries stay put (findings Bc1)
+# --------------------------------------------------------------------------- #
+
+
+def _fired_invite_session(db: Session, code: str) -> ReviewSession:
+    """A session with Start on 1 June, invites ``[-P3D, -P1D]``, and
+    the first recorded as fired on that Start."""
+    review_session = _bare_session(db, code=code)
+    review_session.scheduled_activate_at = dt.datetime(
+        2026, 6, 1, 12, 0, tzinfo=dt.timezone.utc
+    )
+    review_session.deadline = dt.datetime(
+        2026, 6, 15, 12, 0, tzinfo=dt.timezone.utc
+    )
+    review_session.invite_offsets = ["-P3D", "-P1D"]
+    db.add(
+        AuditEvent(
+            session_id=review_session.id,
+            event_type="session.scheduled_invites_fired",
+            summary="fired",
+            detail={
+                "context": {
+                    "anchor_at": _iso(6, 1),
+                    "offset_index": 0,
+                    "offset": "-P3D",
+                }
+            },
+        )
+    )
+    db.flush()
+    return review_session
+
+
+def test_an_import_that_moves_a_sent_invite_is_refused(db: Session) -> None:
+    """Bc1 (ruled 2026-10-07): the details card's rule, on the values
+    the session would hold; nothing applied."""
+    dst = _fired_invite_session(db, "bc1-import")
+    result = apply_session_config(
+        db, dst, [Row("session.invite_offsets", "-P1D", "string")]
+    )
+    assert [e.field for e in result.errors] == ["session.invite_offsets"]
+    assert "-P3D was already sent" in result.errors[0].message
+    db.refresh(dst)
+    assert dst.invite_offsets == ["-P3D", "-P1D"]
+
+
+def test_an_import_that_keeps_a_sent_invite_or_moves_start_applies(
+    db: Session,
+) -> None:
+    kept = _fired_invite_session(db, "bc1-import-kept")
+    assert apply_session_config(
+        db, kept, [Row("session.invite_offsets", "-P3D, -P2D", "string")]
+    ).errors == []
+    moved = _fired_invite_session(db, "bc1-import-moved")
+    assert apply_session_config(
+        db,
+        moved,
+        [
+            Row("session.scheduled_activate_at", _iso(6, 2), "datetime"),
+            Row("session.invite_offsets", "-P1D", "string"),
+        ],
+    ).errors == []
+
+
+def test_an_import_names_each_list_that_moves_a_sent_entry(
+    db: Session,
+) -> None:
+    """One submit names every error (findings D10): one per list."""
+    dst = _fired_invite_session(db, "bc1-import-both")
+    dst.reminder_offsets = ["-P2D", "-P1D"]
+    db.add(
+        AuditEvent(
+            session_id=dst.id,
+            event_type="session.scheduled_reminders_skipped",
+            summary="skipped",
+            detail={
+                "context": {
+                    "anchor_at": _iso(6, 15),
+                    "offset_index": 0,
+                    "offset": "-P2D",
+                }
+            },
+        )
+    )
+    db.flush()
+    result = apply_session_config(
+        db,
+        dst,
+        [
+            Row("session.invite_offsets", "-P1D", "string"),
+            Row("session.reminder_offsets", "-P1D", "string"),
+        ],
+    )
+    assert [e.field for e in result.errors] == [
+        "session.invite_offsets",
+        "session.reminder_offsets",
+    ]
+
+
+def test_an_import_that_leaves_the_list_as_stored_is_not_refused(
+    db: Session,
+) -> None:
+    """A stored list already in conflict with the record (from before
+    the check) does not block an import that leaves it and its anchor
+    alone."""
+    dst = _fired_invite_session(db, "bc1-import-untouched")
+    dst.invite_offsets = ["-P1D"]
+    db.flush()
+    assert apply_session_config(
+        db, dst, [Row("session.help_contact", "help@example.edu", "string")]
+    ).errors == []

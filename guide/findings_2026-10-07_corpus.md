@@ -107,7 +107,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   (E12); `_filters.py`'s `assignments_picked_handles` docstring (B6);
   `tests/conftest.py`'s pointer to the Rehydrate gate test, which is under
   `tests/integration/` (outside the corpus).
-- **Bc1** (found while fixing B4, #2870; medium, author) **Deleting a
+- ~~**Bc1**~~ — **Done in #2874** (found while fixing B4, #2870; medium, author; ruled 2026-10-07: refuse an edit that shifts a sent offset). **Deleting a
   fired offset can stop a later one from ever firing.** The invite and
   reminder observers record fired offsets by list index
   (`_consumed_invite_offset_indices` and its reminder twin; the outbox
@@ -117,8 +117,30 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   re-ordered list safe; it holds only when nothing has fired. Author:
   key fired state on the offset value, or refuse edits that shift a
   fired index.
-  **Ruled 2026-10-07: refuse an edit that shifts a sent offset.** Code PR
-  to follow.
+  Checked against the entry recorded at each sent position on the anchor the
+  session will hold (Session Home, the lobby's End and the Settings
+  import), so an anchor moved away and back is covered too.
+- **Bc2** (found while fixing Bc1; low, author) **The reminder outbox key
+  carries no anchor.** `_dispatch_scheduled_reminders` keys each send
+  `reminder:{sid}:{rid}:{offset_index}` and skips a reviewer whose key
+  exists, under any End, so after End moves a reviewer already sent
+  reminder *n* never gets the new End's reminder *n* (the `_fired` row
+  records `sent=0`). Author: put the anchor in the key, or keep "at
+  most once per session" as the rule (`spec/lifecycle.md` §8.2.6 now
+  states what the code does).
+- **Bc3** (found while fixing Bc1, Codex on #2874; low, author) **The
+  scheduled-event observer does not hold its lock across a pass.**
+  `lock_session` returns the caller's already-loaded row (no
+  `populate_existing`), so the observer fires from values read before the
+  lock, and each recorded send commits, releasing the lock before the next.
+  So a schedule save racing a Session Home GET at a fire moment can still
+  leave an entry on a just-sent position (Bc1's outcome), and activation's
+  `scheduled_activate_at is None` idempotency check reads a stale value.
+  A lock in the save-time check alone was tried and reverted in #2874: it
+  closed one order only and made every save block foreign-key inserts on
+  the session (Postgres deadlock risk). Author: rework the observer's
+  locking (refresh under the lock, one commit per pass) or accept the race
+  as two concurrent requests on one session at a fire moment.
 - **Carried:** old B27 / G6 (scheduled sends fire only from Session Home;
   `guide/post_azure_todo_checklist.md` §7), re-found as B3 and G4; old D4
   (`responses_import._stage` overwrites a duplicate row), re-found and
@@ -133,7 +155,9 @@ id points at its row in §3 or §1.
 - **Instruments:** A4 (Group preview with no boundary), A7 (does the
   reviewer surface follow the visibility editor), G1 (Name locked on a
   group-scoped instrument).
-- **Lifecycle and Setup:** Bc1 (fired offsets keyed by index), B1 (Quick Setup's availability against the
+- **Lifecycle and Setup:** Bc1 (fired offsets keyed by index), Bc2 (the
+  reminder outbox key carries no anchor), Bc3 (the observer's lock
+  across a pass), B1 (Quick Setup's availability against the
   `is_editable` predicate), B4 (aged Start on a rename), B5 (the P30D
   archive default nothing writes), C5 (unlock cookies across Session Home
   forms).

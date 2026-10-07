@@ -322,6 +322,45 @@ def session_schedule_order_errors(
     return errors
 
 
+def session_fired_offset_errors(
+    plan: _ParsedConfig, review_session: ReviewSession
+) -> list[ApplyError]:
+    """Refuse an import that would put a new auto-send entry on a
+    position already sent or skipped on the anchor the session keeps
+    (findings Bc1, ruled 2026-10-07), the details card's rule
+    (``scheduled_events.fired_offset_errors``). Checked on the values
+    the session would hold after the apply, as
+    ``session_schedule_order_errors`` does; one error per list."""
+    from sqlalchemy.orm import object_session
+
+    from app.services.scheduled_events import fired_offset_errors
+
+    db = object_session(review_session)
+    if db is None or review_session.id is None:
+        return []
+    overrides = plan.session_overrides
+
+    def effective(key: str):
+        existing = getattr(review_session, key, None)
+        if key in overrides and (
+            key not in SESSION_FALLBACK_KEYS or existing is None
+        ):
+            return overrides[key]
+        return existing
+
+    return [
+        ApplyError(row_number=0, field=f"session.{column}", message=message)
+        for column, message in fired_offset_errors(
+            db,
+            review_session,
+            scheduled_activate_at=effective("scheduled_activate_at"),
+            invite_offsets=effective("invite_offsets") or [],
+            deadline=effective("deadline"),
+            reminder_offsets=effective("reminder_offsets") or [],
+        )
+    ]
+
+
 @dataclass
 class _PlannedField:
     """A parsed response field in the shape the branching rules read

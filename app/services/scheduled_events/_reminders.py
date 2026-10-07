@@ -15,12 +15,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db.models import AuditEvent, EmailOutbox, ReviewSession
+from app.db.models import EmailOutbox, ReviewSession
 from app.services import audit
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 
 from ._duration import parse_iso_duration
+from ._fired import fired_offsets
 from ._shared import (
     ScheduledActivateError,
     _OFFSET_MAX_MAGNITUDE,
@@ -69,36 +70,17 @@ def _consumed_reminder_offset_indices(
     """Return the set of ``reminder_offsets`` indices already fired or
     skipped for the current anchor moment.
 
-    Dedup is keyed on
-    ``(session_id, offset_index, context.anchor_at == deadline.isoformat)``.
-    If the operator changes ``deadline``, the consumed set resets —
+    Dedup is keyed on ``(session_id, offset_index, context.anchor_at)``,
+    the anchor matched to ``deadline`` as an instant
+    (``_fired.fired_offsets``). If the operator changes ``deadline``,
+    the consumed set resets —
     every entry becomes eligible to fire again against the new anchor.
     """
-    consumed: set[int] = set()
-    rows = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == session.id,
-            AuditEvent.event_type.in_(
-                (
-                    "session.scheduled_reminders_fired",
-                    "session.scheduled_reminders_skipped",
-                )
-            ),
-        )
-    ).scalars()
-    for row in rows:
-        detail = row.detail or {}
-        if not isinstance(detail, dict):
-            continue
-        ctx = detail.get("context") or {}
-        if not isinstance(ctx, dict):
-            continue
-        if ctx.get("anchor_at") != anchor_iso:
-            continue
-        idx = ctx.get("offset_index")
-        if isinstance(idx, int):
-            consumed.add(idx)
-    return consumed
+    # The same record the save-time check reads, matched as an instant
+    # (findings Bc1), so the two can never disagree on a position.
+    return set(
+        fired_offsets(db, session, "reminder", datetime.fromisoformat(anchor_iso))
+    )
 
 
 def _observe_scheduled_reminders(
@@ -300,7 +282,7 @@ def parse_and_validate_reminder_offsets(
     now: datetime | None = None,
     operational_lead_hours: int | None = None,
     notice_min_hours: int | None = None,
-    aged_exempt: Sequence[str] = (),
+    aged_exempt: Sequence[frozenset[str]] = (),
 ) -> list[str] | None:
     """Parse a comma-separated reminder-offsets string into a clean
     list and enforce the per-entry save-time rules (Segment 18G PR 3B).
@@ -323,13 +305,15 @@ def parse_and_validate_reminder_offsets(
     3. When ``deadline`` is unset: parse-only validation per the
        §8.2.2 anchor-null rule; the entry is inert at fire time.
 
-    ``aged_exempt`` is the stored list, passed when the anchor is left
-    unedited. An entry re-submitted at its stored position skips only
-    the lead-time floor: it aged past it after saving and "stays put"
-    (``spec/lifecycle.md`` §8.3; findings B4). Every other rule still
-    applies to it. Matching is by position, not value, because the
-    observer tracks fired offsets by index: a duplicate, or a stored
-    entry moved to another position, meets the floor like any new one.
+    ``aged_exempt`` is, per position, the entries that may stay there
+    past the lead-time floor (``offsets_lead_exempt``): the stored one
+    while the anchor is unedited, which aged past the floor after saving
+    and "stays put" (findings B4), and the one already sent there on
+    the anchor (findings Bc1; ``spec/lifecycle.md`` §8.2.6, §8.3). Only
+    the lead-time floor is waived; every other rule still applies.
+    Matching is by position, not value, because the observer tracks
+    fired offsets by index: a duplicate, or a stored entry moved to
+    another position, meets the floor like any new one.
 
     Raises :class:`ScheduledActivateError` with a per-entry message on
     the first violation. The route layer converts to HTTP 422.
@@ -372,7 +356,7 @@ def parse_and_validate_reminder_offsets(
             anchor = _ensure_aware_utc(deadline)
             fire_at = anchor + delta
             exempt = (
-                index < len(aged_exempt) and aged_exempt[index] == entry
+                index < len(aged_exempt) and entry in aged_exempt[index]
             )
             if not exempt and fire_at - current < timedelta(hours=op_hours):
                 raise ScheduledActivateError(

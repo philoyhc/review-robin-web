@@ -25,11 +25,13 @@ Layout:
   ``parse_and_validate_invite_offsets``.
 - ``_reminders.py`` — auto-send reminders trigger +
   ``parse_and_validate_reminder_offsets``.
+- ``_fired.py`` — entries already sent on their anchor
+  (``fired_offset_errors``, ``offsets_lead_exempt``; findings Bc1).
 - ``_release.py`` — responses-release window parsers +
   ``validate_schedule_ordering`` (cross-field ordering).
 
 :func:`validate_deadline_change` also lives here, since it calls into
-both ``_release.py`` and ``_reminders.py``.
+``_release.py``, ``_reminders.py`` and ``_fired.py``.
 
 The :func:`observe_scheduled_events` orchestrator lives here in
 ``__init__`` — it dispatches across the three trigger sub-modules
@@ -75,6 +77,12 @@ from ._invites import (
     _resolve_invite_fires,  # noqa: F401
     parse_and_validate_invite_offsets,
 )
+from ._fired import (
+    fired_offset_errors,
+    fired_offsets,
+    offsets_lead_exempt,
+    split_offsets,
+)
 from ._release import (
     _RELEASE_WINDOW_MAX,  # noqa: F401
     parse_and_validate_responses_release_at,
@@ -98,8 +106,11 @@ from ._shared import (
 
 __all__ = [
     "ScheduledActivateError",
+    "fired_offset_errors",
+    "fired_offsets",
     "lock_session",
     "observe_scheduled_events",
+    "offsets_lead_exempt",
     "parse_and_validate_invite_offsets",
     "parse_and_validate_reminder_offsets",
     "parse_and_validate_responses_release_at",
@@ -107,6 +118,7 @@ __all__ = [
     "parse_and_validate_scheduled_activate_at",
     "parse_iso_duration",
     "resolve_offset",
+    "split_offsets",
     "validate_deadline_change",
     "validate_schedule_ordering",
 ]
@@ -118,14 +130,15 @@ SCHEDULED_EVENT_FAILED = "session.scheduled_event_failed"
 
 
 def validate_deadline_change(
-    review_session: ReviewSession, deadline: datetime | None
+    db: Session, review_session: ReviewSession, deadline: datetime | None
 ) -> None:
     """Check a new End against ``review_session``'s stored schedule, for
     a save that edits End alone (the sessions-lobby expander).
 
-    Runs the two checks Session Home's details card runs on End:
-    ordering against the stored Start and Release-from, and each stored
-    reminder offset re-resolved on the new End. A no-op when End is
+    Runs the checks Session Home's details card runs on End: ordering
+    against the stored Start and Release-from, the reminders already
+    sent on the new End (findings Bc1), and each stored reminder offset
+    re-resolved on the new End. A no-op when End is
     unchanged, so a rename is never refused over a schedule that has
     aged since it was saved. Raises :class:`ScheduledActivateError`.
     """
@@ -143,8 +156,25 @@ def validate_deadline_change(
         deadline=deadline,
         responses_release_at=review_session.responses_release_at,
     )
+    # An End moved back to a value whose reminders were sent meets that
+    # value's record (findings Bc1); checked first, so a moved sent entry
+    # is named as such rather than as one short of lead time.
+    errors = fired_offset_errors(
+        db,
+        review_session,
+        scheduled_activate_at=review_session.scheduled_activate_at,
+        invite_offsets=review_session.invite_offsets or [],
+        deadline=deadline,
+        reminder_offsets=review_session.reminder_offsets or [],
+    )
+    if errors:
+        raise ScheduledActivateError(errors[0][1])
     parse_and_validate_reminder_offsets(
-        ", ".join(review_session.reminder_offsets or []), deadline=deadline
+        ", ".join(review_session.reminder_offsets or []),
+        deadline=deadline,
+        aged_exempt=offsets_lead_exempt(
+            db, review_session, "reminder", deadline, anchor_unedited=False
+        ),
     )
 
 

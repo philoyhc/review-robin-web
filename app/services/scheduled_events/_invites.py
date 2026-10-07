@@ -11,16 +11,16 @@ from datetime import datetime, timedelta, timezone
 from collections.abc import Sequence
 from typing import Callable
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db.models import AuditEvent, ReviewSession
+from app.db.models import ReviewSession
 from app.services import audit
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 
 from ._duration import parse_iso_duration
+from ._fired import fired_offsets
 from ._shared import (
     ScheduledActivateError,
     _OFFSET_MAX_MAGNITUDE,
@@ -69,36 +69,16 @@ def _consumed_invite_offset_indices(
     """Return the set of ``invite_offsets`` indices already fired or
     skipped for the current anchor moment.
 
-    Dedup is keyed on ``(session_id, offset_index, context.scheduled_at
-    == anchor.scheduled_activate_at)``. If the operator reschedules
-    Start (new anchor ISO), the consumed set resets — every entry
+    Dedup is keyed on ``(session_id, offset_index, context.anchor_at)``,
+    the anchor matched as an instant (``_fired.fired_offsets``). If the
+    operator reschedules Start, the consumed set resets — every entry
     becomes eligible to fire again against the new anchor.
     """
-    consumed: set[int] = set()
-    rows = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == session.id,
-            AuditEvent.event_type.in_(
-                (
-                    "session.scheduled_invites_fired",
-                    "session.scheduled_invites_skipped",
-                )
-            ),
-        )
-    ).scalars()
-    for row in rows:
-        detail = row.detail or {}
-        if not isinstance(detail, dict):
-            continue
-        ctx = detail.get("context") or {}
-        if not isinstance(ctx, dict):
-            continue
-        if ctx.get("anchor_at") != anchor_iso:
-            continue
-        idx = ctx.get("offset_index")
-        if isinstance(idx, int):
-            consumed.add(idx)
-    return consumed
+    # The same record the save-time check reads, matched as an instant
+    # (findings Bc1), so the two can never disagree on a position.
+    return set(
+        fired_offsets(db, session, "invite", datetime.fromisoformat(anchor_iso))
+    )
 
 
 def _observe_scheduled_invites(
@@ -131,7 +111,8 @@ def _observe_scheduled_invites(
         observable).
 
     Per-entry dedup is keyed on
-    ``(session_id, offset_index, anchor=scheduled_activate_at.isoformat)``.
+    ``(session_id, offset_index, anchor=scheduled_activate_at)``, the
+    anchor matched as an instant.
     Operator changing ``scheduled_activate_at`` resets the dedup set
     — every entry gets a fresh chance against the new anchor.
 
@@ -306,7 +287,7 @@ def parse_and_validate_invite_offsets(
     now: datetime | None = None,
     operational_lead_hours: int | None = None,
     notice_min_hours: int | None = None,
-    aged_exempt: Sequence[str] = (),
+    aged_exempt: Sequence[frozenset[str]] = (),
 ) -> list[str] | None:
     """Parse a comma-separated invite-offsets string into a clean list
     and enforce the per-entry save-time rules.
@@ -326,13 +307,15 @@ def parse_and_validate_invite_offsets(
        runs. The editor renders the field with a "Set Start first"
        caption.
 
-    ``aged_exempt`` is the stored list, passed when the anchor is left
-    unedited. An entry re-submitted at its stored position skips only
-    the lead-time floor: it aged past it after saving and "stays put"
-    (``spec/lifecycle.md`` §8.3; findings B4). Every other rule still
-    applies to it. Matching is by position, not value, because the
-    observer tracks fired offsets by index: a duplicate, or a stored
-    entry moved to another position, meets the floor like any new one.
+    ``aged_exempt`` is, per position, the entries that may stay there
+    past the lead-time floor (``offsets_lead_exempt``): the stored one
+    while the anchor is unedited, which aged past the floor after saving
+    and "stays put" (findings B4), and the one already sent there on
+    the anchor (findings Bc1; ``spec/lifecycle.md`` §8.2.6, §8.3). Only
+    the lead-time floor is waived; every other rule still applies.
+    Matching is by position, not value, because the observer tracks
+    fired offsets by index: a duplicate, or a stored entry moved to
+    another position, meets the floor like any new one.
 
     Raises :class:`ScheduledActivateError` with a per-entry error
     message on the first violation. The route layer converts to
@@ -376,7 +359,7 @@ def parse_and_validate_invite_offsets(
             anchor = _ensure_aware_utc(scheduled_activate_at)
             fire_at = anchor + delta
             exempt = (
-                index < len(aged_exempt) and aged_exempt[index] == entry
+                index < len(aged_exempt) and entry in aged_exempt[index]
             )
             if not exempt and fire_at - current < timedelta(hours=op_hours):
                 raise ScheduledActivateError(
