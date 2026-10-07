@@ -1,12 +1,15 @@
 """Global error handling — Segment 14A PR 2.
 
-Three exception handlers, registered via ``register_error_handlers``
+Four exception handlers, registered via ``register_error_handlers``
 from ``create_app``:
 
 * ``StarletteHTTPException`` — every ``HTTPException`` a route raises
   (404 session-not-found, 403 unauthorized, the invalid-invitation
   404, …) renders the standalone ``error.html`` page instead of
   FastAPI's default JSON.
+* ``SessionStateConflict`` — a service's lifecycle-state gate,
+  decided under the session lock (findings Bc4), renders the same
+  409 page a route's own gate does, so no route needs a ``try``.
 * ``RequestValidationError`` — a malformed query / path parameter
   renders the same page as a 400 rather than a JSON 422 body.
 * ``Exception`` — any *unhandled* error (a reviewer-save or export
@@ -35,6 +38,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
 from app.logging_config import get_logger
+from app.services.session_guard import SessionStateConflict
 
 log = get_logger(__name__)
 
@@ -123,6 +127,14 @@ async def _http_exception_handler(
     return _render_error(request, exc.status_code, detail)
 
 
+async def _session_state_conflict_handler(
+    request: Request, exc: SessionStateConflict
+) -> Response:
+    """A service's state gate refused under the session lock (findings
+    Bc4): the same 409 page the routes' own gates render."""
+    return _render_error(request, status.HTTP_409_CONFLICT, str(exc))
+
+
 async def _validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> Response:
@@ -141,8 +153,11 @@ async def _unhandled_exception_handler(
 
 
 def register_error_handlers(app: FastAPI) -> None:
-    """Wire the three handlers onto ``app``."""
+    """Wire the four handlers onto ``app``."""
     app.add_exception_handler(StarletteHTTPException, _http_exception_handler)
+    app.add_exception_handler(
+        SessionStateConflict, _session_state_conflict_handler
+    )
     app.add_exception_handler(
         RequestValidationError, _validation_exception_handler
     )

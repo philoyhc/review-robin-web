@@ -307,6 +307,12 @@ def _require_selected_response_loss_ack(
 
 
 def _lifecycle_error_response(exc: lifecycle.LifecycleError) -> HTTPException:
+    if isinstance(exc, lifecycle.SessionStateConflict):
+        # A state gate re-read under the lock (findings Bc4) — the 409
+        # every route-level gate answers with, whatever its code.
+        return HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        )
     code_to_status = {
         "not_draft": status.HTTP_409_CONFLICT,
         "not_ready": status.HTTP_409_CONFLICT,
