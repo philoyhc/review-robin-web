@@ -1,9 +1,10 @@
 """The session-row lock, and the lifecycle-state gate decided under it.
 
-Every service that writes a session's setup, roster, instruments,
-schedule or lifecycle starts here, so the state it is gated on is the
-state as committed rather than as loaded with the request (findings
-Bc3, Bc4; ``guide/segment_19U_post_assessment_7oct.md`` Item 1).
+A service that writes a session's setup, roster, instruments, schedule
+or lifecycle starts here, so the state it is gated on is the state as
+committed rather than as loaded with the request (findings Bc3, Bc4;
+``guide/segment_19U_post_assessment_7oct.md`` Item 1 adopts it service
+by service).
 
 Nothing here imports another service: ``session_lifecycle`` and
 ``scheduled_events`` both build on this module, and ``LifecycleError``

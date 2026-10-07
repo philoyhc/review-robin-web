@@ -309,9 +309,10 @@ def invalidate_if_validated(
     happens, not where the request happens — a route that forgets to
     wrap its service call no longer silently breaks the invariant.
 
-    Takes no lock of its own: the services that call it lock and re-read
-    the session first, through ``require_editable`` (findings Bc4), so
-    the status read here is the committed one.
+    Takes no lock of its own (findings Bc4): it is called from inside
+    setup services, many reached from async handlers, so a caller that
+    needs the status decided as committed takes the session lock first
+    (``require_editable``).
     """
     if is_validated(review_session):
         invalidate_session(
@@ -589,6 +590,41 @@ def revert_session_to_draft(
     db.commit()
     db.refresh(review_session)
     return review_session
+
+
+def operator_revert(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    confirm: bool,
+    correlation_id: str | None = None,
+) -> ReviewSession:
+    """Session Home's Revert to draft: ``validated → draft`` by
+    invalidation, ``ready`` / ``expired → draft`` by
+    :func:`revert_session_to_draft`.
+
+    Which of the two applies is decided on the row re-read under the
+    session lock (findings Bc4): a scheduled activation that committed
+    after the request loaded ``validated`` takes the ``ready`` path —
+    its confirm and its instrument close — rather than having ``draft``
+    written over it."""
+    session_guard.lock_session(db, review_session)
+    if is_validated(review_session):
+        return invalidate_session(
+            db,
+            review_session=review_session,
+            user=user,
+            reason="operator_revert",
+            correlation_id=correlation_id,
+        )
+    return revert_session_to_draft(
+        db,
+        review_session=review_session,
+        user=user,
+        confirm=confirm,
+        correlation_id=correlation_id,
+    )
 
 
 def release_responses_now(

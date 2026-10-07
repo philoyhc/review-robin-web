@@ -289,3 +289,81 @@ def test_the_release_routes_answer_an_archive_race_as_their_own_gate(
     assert query["super_step"] == ["precondition"]
     assert query["super_error"] == [message]
     assert _count(db, session, event) == 0
+
+
+@pytest.mark.parametrize(
+    ("start", "lands", "call", "code"),
+    [
+        ("draft", "ready", "mark_validated", "not_draft"),
+        ("ready", "expired", "expire_session", "not_ready"),
+        ("ready", "draft", "revert_session_to_draft", "not_ready"),
+        ("draft", "archived", "archive_session", "already_archived"),
+        ("archived", "draft", "unarchive_session", "not_archived"),
+    ],
+)
+def test_each_transition_decides_under_the_lock(
+    db: Session, monkeypatch, start, lands, call, code
+) -> None:
+    """Another request moved the session as this transition starts: it
+    reads the committed status and refuses, rather than acting on the
+    status it loaded."""
+    session = _make_validated_session(db, f"guard-{call}")
+    session.status = start
+    db.commit()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, lands))
+    kwargs = {"review_session": session, "user": _operator(db, session)}
+    if call == "mark_validated":
+        kwargs["report"] = lifecycle.build_readiness_report([])
+    if call == "revert_session_to_draft":
+        kwargs["confirm"] = True
+
+    with pytest.raises(lifecycle.LifecycleError) as raised:
+        getattr(lifecycle, call)(db, **kwargs)
+
+    assert raised.value.code == code
+
+
+def test_operator_revert_decides_its_path_under_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    """The scheduled activation commits as Revert starts on a session the
+    request loaded as ``validated``: the revert takes the ``ready`` path
+    (which asks for the confirm) instead of writing ``draft`` over it."""
+    session = _make_validated_session(db, "guard-operator-revert")
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    with pytest.raises(lifecycle.LifecycleError) as raised:
+        lifecycle.operator_revert(
+            db,
+            review_session=session,
+            user=_operator(db, session),
+            confirm=False,
+        )
+
+    assert raised.value.code == "needs_confirm"
+    assert _count(db, session, "session.invalidated") == 0
+
+
+def test_a_double_submitted_bulk_unarchive_skips_the_row(
+    client, db: Session, monkeypatch
+) -> None:
+    client.post(
+        "/operator/sessions",
+        data={"name": "Unarchive", "code": "guard-unarchive"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-unarchive")
+    ).scalar_one()
+    session.status = "archived"
+    db.commit()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "draft"))
+
+    response = client.post(
+        "/operator/sessions/bulk-unarchive",
+        data={"session_ids": [str(session.id)]},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert _count(db, session, "session.unarchived") == 0
