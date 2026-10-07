@@ -46,6 +46,7 @@ from app.services import (
     session_tags,
     sessions,
 )
+from app.services import session_guard
 from app.services import session_lifecycle as lifecycle
 from app.web import views
 from app.web.deps import (
@@ -1133,7 +1134,7 @@ def _apply_settings_upload(
     scheduled activation that commits first is refused here rather
     than imported over (findings Bc3)."""
 
-    scheduled_events.lock_session(db, review_session)
+    session_guard.lock_session(db, review_session)
     if not lifecycle.is_editable(review_session):
         return _SettingsFailure("lifecycle")
 

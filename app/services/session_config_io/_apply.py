@@ -75,11 +75,11 @@ def _validate(
     (findings Bc3)."""
     from sqlalchemy.orm import object_session
 
-    from app.services.scheduled_events import lock_session
+    from app.services import session_guard
 
     db = object_session(review_session)
     if db is not None and review_session.id is not None:
-        lock_session(db, review_session)
+        session_guard.lock_session(db, review_session)
     plan, errors = _parse_rows(rows)
     errors += session_fallback_length_errors(plan, review_session)
     errors += session_schedule_order_errors(plan, review_session)
@@ -129,6 +129,7 @@ def apply_session_config(
     Returns ``ApplyResult`` with ``counts`` on success, ``errors``
     on validation failure (apply is not attempted)."""
 
+    lifecycle.require_editable(db, review_session)
     plan, errors = _validate(review_session, rows)
     if row_errors or errors:
         return ApplyResult(counts={}, errors=list(row_errors) + errors)

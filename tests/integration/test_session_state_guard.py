@@ -1218,3 +1218,78 @@ def test_a_band2_save_is_one_commit(client, db: Session, monkeypatch) -> None:
             )
         ).scalars()
     )
+
+
+# --------------------------------------------------------------------------- #
+# Rung 6 — the session saves                                                  #
+# --------------------------------------------------------------------------- #
+
+
+def test_update_session_refuses_a_session_activated_at_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    from app.services import sessions as sessions_service
+
+    session = _make_validated_session(db, "guard-update")
+    payload = sessions_service.edit_payload(
+        session, name="Renamed", code=session.code, deadline=session.deadline
+    )
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        sessions_service.update_session(
+            db,
+            review_session=session,
+            user=_operator(db, session),
+            payload=payload,
+        )
+
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).name != "Renamed"
+
+
+def test_delete_session_refuses_a_session_activated_at_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    from app.services import sessions as sessions_service
+
+    session = _make_validated_session(db, "guard-delete")
+    session_id = session.id
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    with pytest.raises(lifecycle.SessionStateConflict) as raised:
+        sessions_service.delete_session(
+            db, review_session=session, user=_operator(db, session)
+        )
+
+    assert raised.value.code == "session_ready"
+    db.expire_all()
+    assert db.get(ReviewSession, session_id) is not None
+
+
+def test_the_lobby_bulk_delete_skips_a_session_activated_at_the_lock(
+    client, db: Session, monkeypatch
+) -> None:
+    """One row of a bulk Delete activated since the request read it is
+    skipped, as the route's own filter skips a ``ready`` row — not a 409
+    for the whole selection."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Bulk", "code": "guard-bulk"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-bulk")
+    ).scalar_one()
+    session_id = session.id
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    response = client.post(
+        "/operator/sessions/bulk-delete",
+        data={"session_ids": [str(session_id)], "confirm": "true"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    db.expire_all()
+    assert db.get(ReviewSession, session_id) is not None

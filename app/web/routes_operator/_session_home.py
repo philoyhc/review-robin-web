@@ -55,7 +55,6 @@ from app.web.routes_operator._shared import (
     _owners_unlocked,
     _quick_setup_unlocked,
     _redirect_url,
-    _require_editable,
     _require_not_ready,
     _templates,
     parse_session_deadline,
@@ -300,15 +299,12 @@ def _apply_session_config_form(
     ``HTTPException(422)`` on any field / ordering validation error.
     """
     # The whole save runs under the session lock the scheduled-event
-    # observers take, re-reading the row first, so the editability gate,
-    # the stored schedule and the sent-entry record are all read as they
-    # stand and nothing changes them before the schedule is written
-    # (findings Bc3).
-    scheduled_events.lock_session(db, review_session)
-    # Editing session metadata (name / code / description / deadline /
-    # help contact / timezone / scheduled_activate_at) touches only
-    # scalar ``sessions`` columns.
-    _require_editable(review_session)
+    # observers take: the editability gate is decided on the row re-read
+    # under it (findings Bc3, Bc4), so the stored schedule and the
+    # sent-entry record are read as they stand and nothing changes them
+    # before the schedule is written. Editing session metadata touches
+    # only scalar ``sessions`` columns.
+    lifecycle.require_editable(db, review_session)
 
     # A code another session holds is refused before anything is
     # written, rather than reaching the unique constraint as a 500.
