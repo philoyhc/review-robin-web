@@ -120,14 +120,14 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   Checked against the entry recorded at each sent position on the anchor the
   session will hold (Session Home, the lobby's End and the Settings
   import), so an anchor moved away and back is covered too.
-- **Bc2** (found while fixing Bc1; low, author) **The reminder outbox key
+- ~~**Bc2**~~ — **Done in #2876** (found while fixing Bc1; low, author; ruled 2026-10-07: moving End does not resend; the operator sends another by hand). **The reminder outbox key
   carries no anchor.** `_dispatch_scheduled_reminders` keys each send
   `reminder:{sid}:{rid}:{offset_index}` and skips a reviewer whose key
   exists, under any End, so after End moves a reviewer already sent
   reminder *n* never gets the new End's reminder *n* (the `_fired` row
-  records `sent=0`). Author: put the anchor in the key, or keep "at
-  most once per session" as the rule (`spec/lifecycle.md` §8.2.6 now
-  states what the code does).
+  records `sent=0`). The manual **Send reminders** and per-row **Send
+  reminder** carry no such key, so the operator can already send another;
+  `spec/lifecycle.md` §8.2.6 states the rule.
 - **Bc3** (found while fixing Bc1, Codex on #2874; low, author) **The
   scheduled-event observer does not hold its lock across a pass.**
   `lock_session` returns the caller's already-loaded row (no
@@ -138,9 +138,16 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   `scheduled_activate_at is None` idempotency check reads a stale value.
   A lock in the save-time check alone was tried and reverted in #2874: it
   closed one order only and made every save block foreign-key inserts on
-  the session (Postgres deadlock risk). Author: rework the observer's
-  locking (refresh under the lock, one commit per pass) or accept the race
-  as two concurrent requests on one session at a fire moment.
+  the session (Postgres deadlock risk). **Ruled 2026-10-07: rework the
+  observer's locking.** Code PR to follow.
+- **Gc1** (found while fixing G1, Codex on #2875; low, author) **A
+  roster tag value may contain a comma.** A group instrument names a group
+  by its tag values joined with ", ", so two groups can render the same
+  label (`("A", "B")` and `("A, B", "")`), and an older responses file
+  naming a group that way cannot be matched. **Ruled 2026-10-07: no roster
+  tag value (reviewers, reviewees, observers, relationships) may contain a
+  comma, on import or edit; stored values stay as they are, with no
+  warning.** Code PR to follow.
 - **Carried:** old B27 / G6 (scheduled sends fire only from Session Home;
   `guide/post_azure_todo_checklist.md` §7), re-found as B3 and G4; old D4
   (`responses_import._stage` overwrites a duplicate row), re-found and
@@ -173,7 +180,7 @@ id points at its row in §3 or §1.
 - **Docs and root:** H2 (is the bulk-archive checkbox a confirm), I7 (email
   "queued" or "recorded"), I8 (the practices kit's engine builder).
 
-Ruled 2026-10-07: B1, Bc1, G1, G2, H2 (rows say how).
+Ruled 2026-10-07: B1, Bc1, Bc2, Bc3, G1, G2, Gc1, H2 (rows say how).
 
 ## 3. Findings by file
 

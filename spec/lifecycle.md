@@ -820,8 +820,12 @@ leaves the schedule alone is never refused over it. The record belongs
 to the anchor's value, so moving Start or End frees the list and moving
 it back restores that value's record. The reminder outbox
 key `reminder:{session_id}:{reviewer_id}:{offset_index}` carries no
-anchor: a reviewer gets reminder *n* at most once per session, whatever
-End (findings Bc2).
+anchor, deliberately: a reviewer gets scheduled reminder *n* at most once
+per session, so moving End does not resend it (author's ruling,
+2026-10-07, findings Bc2). An operator who wants another sends it by
+hand, with the Workflow card's **Send reminders** or a row's **Send
+reminder** on Manage Invitations; neither carries that key, so neither
+is held back by it (`spec/operations_pages.md`).
 
 **8.2.7 Save-time datetime ordering.** Independently of the
 fire-time guard (§8.2.3), the four operator-set anchor
