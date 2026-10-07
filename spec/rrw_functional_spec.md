@@ -1765,8 +1765,8 @@ value form one group.
 The group row's identity column is a **composed display**: on one
 line, the values of the instrument's visible reviewee-tag display
 fields (or, with none visible, the group's boundary values); on the
-next, when the reviewee-name display field is visible, the first ten
-member names, with a "+N more" overflow indicator. Reviewer writes to
+next, always (the name stays locked on a group instrument), the first
+ten member names, with a "+N more" overflow indicator. Reviewer writes to
 a group cell **fan out** to one response row per group member; reads
 aggregate back to one row per instrument per group.
 

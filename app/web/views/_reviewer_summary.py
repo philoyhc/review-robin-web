@@ -102,15 +102,12 @@ class SummaryGroupIdentity:
     """The composed identity cell for a group-scoped instrument row.
 
     Mirrors the reviewer surface's ``row.group_identity``: boundary-
-    tag values comma-joined (``tag_line``), capped member-name list
-    (``member_names`` + ``extra_count``), and the operator's
-    ``Include`` toggle on the ``RevieweeName`` display field
-    (``show_members``)."""
+    tag values comma-joined (``tag_line``) and the capped member-name
+    list (``member_names`` + ``extra_count``), which always shows."""
 
     tag_line: str
     member_names: list[str]
     extra_count: int
-    show_members: bool
     fallback_label: str
 
 
@@ -236,9 +233,6 @@ def build_reviewer_summary_context(
     display_fields_by_instrument: dict[
         int, list[InstrumentDisplayField]
     ] = {}
-    all_display_fields_by_instrument: dict[
-        int, list[InstrumentDisplayField]
-    ] = {}
     if instrument_ids:
         stmt = (
             select(InstrumentDisplayField)
@@ -251,17 +245,6 @@ def build_reviewer_summary_context(
         )
         for field in db.execute(stmt).scalars():
             display_fields_by_instrument.setdefault(
-                field.instrument_id, []
-            ).append(field)
-        all_stmt = (
-            select(InstrumentDisplayField)
-            .where(InstrumentDisplayField.instrument_id.in_(instrument_ids))
-            .order_by(
-                InstrumentDisplayField.order, InstrumentDisplayField.id
-            )
-        )
-        for field in db.execute(all_stmt).scalars():
-            all_display_fields_by_instrument.setdefault(
                 field.instrument_id, []
             ).append(field)
 
@@ -284,10 +267,7 @@ def build_reviewer_summary_context(
         display-field order. Falls back to the boundary-key
         composition when no ``reviewee.tag_*`` display field is
         visible — keeps the cell from going blank when the
-        operator picked a non-tag boundary or hid every tag.
-        ``show_members`` honours the operator's Include toggle
-        on the RevieweeName display field (same source as the
-        surface)."""
+        operator picked a non-tag boundary or hid every tag."""
         group_members = [
             assignment
             for assignment in assignments
@@ -324,19 +304,10 @@ def build_reviewer_summary_context(
         else:
             tag_line = ", ".join(v for v in group_key if v)
 
-        name_visible = any(
-            df.source_type == "reviewee"
-            and df.source_field == "name"
-            and df.visible
-            for df in all_display_fields_by_instrument.get(
-                instrument_id, []
-            )
-        )
         return SummaryGroupIdentity(
             tag_line=tag_line,
             member_names=shown,
             extra_count=extra,
-            show_members=name_visible,
             fallback_label=(
                 tag_line or ", ".join(shown) or "the group"
             ),

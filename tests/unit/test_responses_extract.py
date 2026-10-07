@@ -830,7 +830,9 @@ def test_group_scoped_instrument_collapses_to_one_row_per_group(
     body = _data(list(serialize_responses(db, review_session)))
     # 3 member Response rows → 2 boundary groups → 2 rows.
     assert len(body) == 2
-    assert [r[5] for r in body] == ["Team A", "Team B"]  # RevieweeName
+    # RevieweeName: member names always follow (findings G1), with no
+    # Name row on the instrument at all.
+    assert [r[5] for r in body] == ["Team A (Carol, Eve)", "Team B (Dan)"]
     for row in body:
         assert row[6] == ""  # RevieweeEmail blank
         assert row[7] == row[8] == row[9] == ""  # tag columns blank
@@ -839,12 +841,13 @@ def test_group_scoped_instrument_collapses_to_one_row_per_group(
         assert row[20] == "group-scoped"  # InstrumentFlavour
 
 
-def test_group_identity_includes_member_names_when_name_field_included(
+def test_group_identity_includes_member_names_whatever_the_name_flag(
     db: Session,
 ) -> None:
-    """When the RevieweeName Display Field is Included on a
-    group-scoped instrument, the export identity appends the full
-    (untruncated) member-name list."""
+    """A group-scoped instrument's export identity appends the full
+    (untruncated) member-name list. Name stays shown on a group
+    instrument (findings G1), so a row stored hidden before that rule
+    held does not drop the names."""
     review_session = _session(db, code="grp-names")
     likert = _likert(db, review_session)
     reviewer = _add_reviewer(
@@ -867,7 +870,7 @@ def test_group_identity_includes_member_names_when_name_field_included(
             label="Name",
             source_type="reviewee",
             source_field="name",
-            visible=True,
+            visible=False,
             order=0,
         )
     )

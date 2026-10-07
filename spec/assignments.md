@@ -557,8 +557,8 @@ per group:
 
 - Identity cell: bold comma-joined boundary-tag values on top,
   member names below (truncated to the first 10, then `, +N
-  more`). The names render only when the instrument's reviewee
-  Name display field is visible (`show_members`).
+  more`). The names always render: Name stays locked on a group
+  instrument (findings G1).
 - One set of response fields shared by every member of the
   group.
 

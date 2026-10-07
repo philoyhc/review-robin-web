@@ -12,6 +12,7 @@ from app.db.models import (
     User,
 )
 from app.services.instruments import (
+    GROUP_KIND_SENTINEL,
     DisplaySourceError,
     add_display_field,
     bulk_save_fields,
@@ -400,3 +401,51 @@ def test_bulk_save_fields_no_op_emits_zero_events(db: Session) -> None:
         )
     ).scalars().all()
     assert events == []
+
+
+def test_bulk_save_keeps_name_shown_on_a_group_instrument(db: Session) -> None:
+    """Findings G1 (ruled 2026-10-07): Name stays locked on a
+    group-scoped instrument, so ``bulk_save_fields`` (no route calls it
+    now) keeps it shown when a row unticks it."""
+    user, instrument = _seed_instrument(db, code="bulk-group-name")
+    instrument.group_kind = GROUP_KIND_SENTINEL
+    db.flush()
+    name = next(
+        f for f in instrument.display_fields
+        if (f.source_type, f.source_field) == ("reviewee", "name")
+    )
+
+    bulk_save_fields(
+        db,
+        instrument=instrument,
+        rows=[
+            {"kind": "display", "id": name.id, "order": 0, "label": "",
+             "visible": False},
+        ],
+        actor=user,
+    )
+    db.refresh(name)
+    assert name.visible is True
+
+
+def test_add_display_field_keeps_a_locked_source_shown(db: Session) -> None:
+    """Findings G1: adding Name back (to an instrument that lost it, an
+    import without the row, say) stores it shown, as every other setter
+    keeps a locked row."""
+    user, instrument = _seed_instrument(db, code="add-locked")
+    for field in list(instrument.display_fields):
+        if (field.source_type, field.source_field) == ("reviewee", "name"):
+            db.delete(field)
+    db.flush()
+    db.refresh(instrument)
+
+    added = add_display_field(
+        db,
+        instrument=instrument,
+        source_type="reviewee",
+        source_field="name",
+        label="",
+        visible=False,
+        actor=user,
+    )
+    assert added.visible is True

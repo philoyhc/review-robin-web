@@ -664,6 +664,10 @@ import leaves as stored, on an unchanged anchor, is not checked.
   tolerated and silently dropped on import, and the model column is
   always restored empty. The column stays in the schema as dead data;
   the import tolerance is what keeps an older bundle importable.
+- **A locked display row imports shown.** The Name and Email rows
+  (`reviewee.name`, `reviewee.email_or_identifier`) are stored
+  `visible` whatever their `visible` cell says, on a group-scoped
+  instrument too (findings G1).
 
 **Response-field branching** adds four
 `instruments[n].response_fields[m]` attributes:

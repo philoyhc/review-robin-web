@@ -382,3 +382,50 @@ def test_group_scoped_row_fans_out_to_members(db: Session) -> None:
     assert result.responses == 3
     # And the rebuilt session re-serializes to the same 2 collapsed rows.
     assert _data_rows(list(serialize_responses(db, dst))) == src_rows
+
+
+def test_group_row_named_by_its_tags_alone_still_matches(db: Session) -> None:
+    """A file exported while a group instrument's Name could be hidden
+    (before findings G1) names each group by its tag values alone; the
+    import still finds the group."""
+    src, s_inst, s_field = _build(db, "grp-old-src", group=True)
+    rvr = _reviewer(db, src, "r@e.edu")
+    # Each group answers differently, so a row sent to the wrong group
+    # shows.
+    value_by_team = {"Team A": "4", "Team B": "2"}
+    for ident, name, tag in (
+        ("carol@e.edu", "Carol", "Team A"),
+        ("eve@e.edu", "Eve", "Team A"),
+        ("dan@e.edu", "Dan", "Team B"),
+    ):
+        a = _assignment(db, src, rvr, _reviewee(db, src, ident, name, tag), s_inst)
+        _response(db, a, s_field, value_by_team[tag])
+    old_names = {"Team A (Carol, Eve)": "Team A", "Team B (Dan)": "Team B"}
+    rows = [
+        [old_names.get(cell, cell) for cell in row]
+        for row in serialize_responses(db, src)
+    ]
+
+    dst, d_inst, _ = _build(db, "grp-old-dst", group=True)
+    d_rvr = _reviewer(db, dst, "r@e.edu")
+    for ident, name, tag in (
+        ("carol@e.edu", "Carol", "Team A"),
+        ("eve@e.edu", "Eve", "Team A"),
+        ("dan@e.edu", "Dan", "Team B"),
+    ):
+        _assignment(db, dst, d_rvr, _reviewee(db, dst, ident, name, tag), d_inst)
+
+    result = load_responses(
+        db, review_session=dst, rows=parse_responses_csv(_csv_bytes(rows))
+    )
+    assert result.dropped == []
+    assert result.responses == 3
+    stored = dict(
+        db.execute(
+            select(Reviewee.name, Response.value)
+            .join(Assignment, Assignment.reviewee_id == Reviewee.id)
+            .join(Response, Response.assignment_id == Assignment.id)
+            .where(Assignment.session_id == dst.id)
+        ).all()
+    )
+    assert stored == {"Carol": "4", "Eve": "4", "Dan": "2"}

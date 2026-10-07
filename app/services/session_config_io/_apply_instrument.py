@@ -21,6 +21,7 @@ from app.db.models import (
     SessionRuleSet,
 )
 from app.services.instruments._band2 import _BAND2_DATA_TYPE_TO_INLINE
+from app.services.instruments._display_fields import is_locked_display_source
 from app.services.instruments._field_refs import (
     sort_from_positions,
     widths_from_positions,
@@ -423,7 +424,13 @@ def _apply_instruments(
                 source_type=df_spec.source_type,
                 source_field=df_spec.source_field or "",
                 order=m,
-                visible=df_spec.visible,
+                # Locked rows (Name, Email) are always shown, whatever
+                # the file says — every in-app setter enforces the
+                # same (findings G1, 2026-10-07).
+                visible=df_spec.visible
+                or is_locked_display_source(
+                    df_spec.source_type, df_spec.source_field or ""
+                ),
             )
             db.add(created_displays[m])
             counts["display_fields"] += 1

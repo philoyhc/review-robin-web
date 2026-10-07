@@ -164,3 +164,35 @@ def test_apply_silently_ignores_field_labels_rows(
         .all()
     )
     assert stored == []
+
+
+def test_apply_keeps_locked_display_rows_shown(db: Session) -> None:
+    """Findings G1 (2026-10-07): a Settings CSV that marks the locked
+    Name and Email rows hidden still imports them shown, on a
+    group-scoped instrument too, where Name stays locked."""
+    from app.services.instruments import GROUP_KIND_SENTINEL
+
+    review_session, _ = _make_session(db, "csv-df-locked")
+    rows = [
+        Row("instruments[1].name", "Survey", "string"),
+        Row("instruments[1].group_kind", GROUP_KIND_SENTINEL, "string"),
+    ]
+    for index, source in ((1, "name"), (2, "email_or_identifier")):
+        prefix = f"instruments[1].display_fields[{index}]"
+        rows += [
+            Row(f"{prefix}.source_type", "reviewee", "enum"),
+            Row(f"{prefix}.source_field", source, "string"),
+            Row(f"{prefix}.visible", "false", "boolean"),
+        ]
+    result = apply_session_config(db, review_session, rows)
+    assert result.errors == []
+    stored = db.execute(
+        select(InstrumentDisplayField.source_field, InstrumentDisplayField.visible)
+        .join(Instrument)
+        .where(
+            Instrument.session_id == review_session.id,
+            Instrument.group_kind == GROUP_KIND_SENTINEL,
+            InstrumentDisplayField.source_type == "reviewee",
+        )
+    ).all()
+    assert sorted(stored) == [("email_or_identifier", True), ("name", True)]

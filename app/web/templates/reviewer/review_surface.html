@@ -394,14 +394,14 @@
                 {% if group.is_group %}
                   {# Group-scoped instrument — one row per
                      boundary-defined group; the identity cell is
-                     composed from the boundary tag values and,
-                     when the Name field is Included, the member
-                     list (Segment 13C). #}
+                     composed from the boundary tag values and the
+                     member list (Segment 13C; Name always shows on a
+                     group instrument, findings G1). #}
                   <td class="rs-group">
                     {% if row.group_identity.tag_line %}
                       <strong>{{ row.group_identity.tag_line }}</strong>
                     {% endif %}
-                    {% if row.group_identity.show_members and row.group_identity.member_names %}
+                    {% if row.group_identity.member_names %}
                       {% if row.group_identity.tag_line %}<br>{% endif %}
                       <span class="muted">{{ row.group_identity.member_names | join(", ") }}{% if row.group_identity.extra_count %}, +{{ row.group_identity.extra_count }} more{% endif %}</span>
                     {% elif not row.group_identity.tag_line %}

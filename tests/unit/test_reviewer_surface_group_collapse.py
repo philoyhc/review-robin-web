@@ -79,7 +79,6 @@ def test_collapse_includes_every_visible_reviewee_tag_in_tag_line() -> None:
     collapsed = _collapse_group_rows(
         rows,
         group_key_by_assignment={10: ("Team A",), 11: ("Team A",)},
-        name_visible=True,
     )
     assert len(collapsed) == 1
     identity = collapsed[0]["group_identity"]
@@ -107,7 +106,6 @@ def test_collapse_skips_pair_context_tags_from_tag_line() -> None:
     collapsed = _collapse_group_rows(
         rows,
         group_key_by_assignment={20: ("Team A",)},
-        name_visible=True,
     )
     assert collapsed[0]["group_identity"]["tag_line"] == "Team A"
 
@@ -129,7 +127,6 @@ def test_collapse_falls_back_to_boundary_key_when_no_tag_display_fields() -> Non
     collapsed = _collapse_group_rows(
         rows,
         group_key_by_assignment={30: ("Team A",)},
-        name_visible=True,
     )
     assert collapsed[0]["group_identity"]["tag_line"] == "Team A"
 
@@ -152,6 +149,5 @@ def test_collapse_drops_empty_tag_values_from_tag_line() -> None:
     collapsed = _collapse_group_rows(
         rows,
         group_key_by_assignment={40: ("Team A",)},
-        name_visible=True,
     )
     assert collapsed[0]["group_identity"]["tag_line"] == "Team A"

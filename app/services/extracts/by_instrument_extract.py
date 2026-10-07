@@ -657,9 +657,8 @@ def _group_index(
 def _compose_group_identity(
     group_key: tuple[str, ...], member_names: set[str]
 ) -> str:
-    """Single-cell group identity for the wide row. Mirrors the
-    unified Responses CSV's group rendering shape (no member-name
-    expansion — this lens is per-instrument, not the unified
-    cross-instrument view)."""
+    """Single-cell group identity for the wide row: the boundary tag
+    values alone. Unlike the unified Responses CSV, which appends the
+    member names, this lens lists no members."""
     tag_part = ", ".join(v for v in group_key if v)
     return tag_part or "(group)"

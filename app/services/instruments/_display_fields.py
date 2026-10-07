@@ -270,7 +270,9 @@ def add_display_field(
         source_type=source_type,
         source_field=source_field,
         order=len(existing),
-        visible=visible,
+        # A locked source (Name, Email) is always shown, as every
+        # other setter keeps it (findings G1).
+        visible=visible or is_locked_display_source(source_type, source_field),
     )
     db.add(new_field)
     db.flush()

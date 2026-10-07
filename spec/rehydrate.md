@@ -446,7 +446,11 @@ to every member assignment of the matching group. The group is matched by
 **reusing the exporter's own identity computation**
 (`responses_extract._group_export_index`) on the reconstructed session —
 so the import identity is byte-identical to what the export composed — then
-the value is written to each member assignment's `Response`. (This is why
+the value is written to each member assignment's `Response`. A row naming
+the group by its tag values alone (`"Team A"`), as a file exported before
+findings G1 may when the instrument's Name was hidden, also matches,
+wherever that label names one group and is not another group's composed
+identity; otherwise it is dropped as unmatched. (This is why
 the responses round-trip needs the assignments regenerated first: the
 member assignments are the fan-out targets.)
 
