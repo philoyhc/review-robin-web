@@ -958,8 +958,9 @@ def delete_all_for_session(
     """Delete every Response row for the session in one transaction.
 
     Preserves reviewers, reviewees, assignments, instruments, invitations.
-    Allowed in any session status (operator-driven wipe of response data
-    only). Emits a single ``responses.deleted_all`` audit event.
+    Refused while the session is ``ready``, decided under the session lock
+    (rulings C7 = G7; findings Bc4). Emits a single
+    ``responses.deleted_all`` audit event.
     """
     lifecycle.require_not_ready(db, review_session)
     assignment_ids = list(

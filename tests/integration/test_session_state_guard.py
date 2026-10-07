@@ -1293,3 +1293,87 @@ def test_the_lobby_bulk_delete_skips_a_session_activated_at_the_lock(
     assert response.status_code == 303
     db.expire_all()
     assert db.get(ReviewSession, session_id) is not None
+
+
+# --------------------------------------------------------------------------- #
+# Acting on the cumulative read                                               #
+# --------------------------------------------------------------------------- #
+
+
+def test_purge_and_archive_decides_under_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    """A scheduled activation committing as Purge and archive starts: the
+    session is not archivable on the re-read row, so nothing is purged."""
+    from app.db.models import Reviewer
+    from app.services import session_purge
+
+    session = _make_validated_session(db, "guard-purge")
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    assert not session_purge.purge_and_archive(
+        db,
+        review_session=session,
+        user=_operator(db, session),
+        purge=["rosters", "responses"],
+    )
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).status == "ready"
+    assert db.execute(
+        select(Reviewer.id).where(Reviewer.session_id == session.id)
+    ).all()
+
+
+def test_a_quick_setup_slot_reports_the_lifecycle_reason(
+    client, db: Session, monkeypatch
+) -> None:
+    """Refused under the lock, a Quick Setup roster slot answers with its
+    own ``lifecycle`` reason, as its gate does, not the bare 409 page."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "QS", "code": "guard-qs"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-qs")
+    ).scalar_one()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/quick-setup/reviewers",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nZed,zed@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert "quick_setup_reason=lifecycle" in response.headers["location"]
+    assert _reviewer_emails(db, session) == []
+
+
+@pytest.mark.parametrize("guarded", ["delete_responses", "apply_settings"])
+def test_the_other_session_writes_refuse_at_the_lock(
+    db: Session, monkeypatch, guarded
+) -> None:
+    from app.services import responses as responses_service
+    from app.services import session_config_io
+
+    session = _make_validated_session(db, f"guard-{guarded}")
+    target = "ready"
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, target))
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        if guarded == "delete_responses":
+            responses_service.delete_all_for_session(
+                db,
+                review_session=session,
+                user=_operator(db, session),
+                correlation_id="t",
+            )
+        else:
+            session_config_io.apply_session_config(db, session, [])

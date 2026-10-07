@@ -509,15 +509,15 @@ async def instrument_bulk_save_fields(
 
     form = await request.form()
 
-    # New-model instruments don't render the Display Fields / Response
-    # Fields tables — the form only carries identity (short_label /
-    # description) + Band 1's Link 1 / Link 2 / Link 3 controls. Branch
-    # off the table-driven bulk-save logic for them and call the Band 1
-    # service helpers instead.
     # Everything after the request body is read runs in the threadpool:
     # the instrument services lock the session row (findings Bc4), and
     # a lock wait on the event loop would stall the worker.
     def _apply():
+        # New-model instruments don't render the Display Fields / Response
+        # Fields tables — the form only carries identity (short_label /
+        # description) + Band 1's Link 1 / Link 2 / Link 3 controls. Branch
+        # off the table-driven bulk-save logic for them and call the Band 1
+        # service helpers instead.
         with unit_of_work.single_commit(db):
             try:
                 band1 = instruments_service.parse_band1_form(form)
