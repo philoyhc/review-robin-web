@@ -367,3 +367,29 @@ def test_a_double_submitted_bulk_unarchive_skips_the_row(
 
     assert response.status_code == 303
     assert _count(db, session, "session.unarchived") == 0
+
+
+def test_the_revert_route_decides_its_path_under_the_lock(
+    client, db: Session, monkeypatch
+) -> None:
+    """Session Home's Revert goes through ``operator_revert``: a session
+    activated as the request starts is answered on the ``ready`` path
+    (the confirm is required) rather than invalidated."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Revert", "code": "guard-revert-route"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-revert-route")
+    ).scalar_one()
+    session.status = "validated"
+    db.commit()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/revert", follow_redirects=False
+    )
+
+    assert response.status_code == 400
+    assert _count(db, session, "session.invalidated") == 0

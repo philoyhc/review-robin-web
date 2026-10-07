@@ -456,7 +456,10 @@ def sessions_archive_selected(
             )
         except lifecycle.LifecycleError:
             # Archived by another request since this one read it (a
-            # double submit): skipped, as an unarchivable session is.
+            # double submit): the row is skipped rather than answering
+            # 500. Any purge ticked has already run by then; deciding
+            # ``can_archive`` under the lock before it is 19U Item 1's
+            # rung 6.
             db.rollback()
     target = (
         "/operator/sessions/archived"
