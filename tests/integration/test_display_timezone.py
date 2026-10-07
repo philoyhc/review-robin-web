@@ -690,3 +690,40 @@ def test_config_refuses_a_duplicate_of_an_aged_offset(
     )
     assert response.status_code == 422
     assert "leave more lead time" in response.text
+
+
+def test_config_refuses_a_duplicate_of_an_aged_reminder_offset(
+    client: TestClient, db: Session
+) -> None:
+    """The reminder parser counts the same way: with End unedited, a
+    second copy of a stored reminder offset that now resolves into the
+    past meets the floor."""
+    from datetime import timedelta, timezone
+
+    from app.services.date_formatting import format_datetime_local
+
+    session = _create_session(client, db, code="tz-aged-dup-rem")
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    deadline = now + timedelta(hours=2)
+    session.display_timezone = "UTC"
+    session.deadline = deadline
+    session.reminder_offsets = ["-P1D"]
+    db.commit()
+
+    def _save(offsets: str):
+        return client.post(
+            f"/operator/sessions/{session.id}/config",
+            data={
+                "name": session.name,
+                "code": session.code,
+                "display_timezone": "UTC",
+                "deadline": format_datetime_local(deadline, "UTC"),
+                "reminder_offsets": offsets,
+            },
+            follow_redirects=False,
+        )
+
+    assert _save("-P1D").status_code == 303
+    response = _save("-P1D, -P1D")
+    assert response.status_code == 422
+    assert "leave more lead time" in response.text
