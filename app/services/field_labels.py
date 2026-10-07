@@ -48,7 +48,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, SessionFieldLabel, User
-from app.services import audit
+from app.services import audit, unit_of_work
 from app.services import session_lifecycle as lifecycle
 
 
@@ -284,7 +284,7 @@ def upsert(
         },
         correlation_id=correlation_id,
     )
-    db.commit()
+    unit_of_work.commit(db)
     return row
 
 
@@ -405,4 +405,4 @@ def clear(
         },
         correlation_id=correlation_id,
     )
-    db.commit()
+    unit_of_work.commit(db)

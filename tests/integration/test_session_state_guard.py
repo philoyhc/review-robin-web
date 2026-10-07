@@ -25,15 +25,16 @@ from app.web.routes_operator._shared import _lifecycle_error_response
 from .test_scheduled_activation import _make_validated_session
 
 
-def _lands_at_the_lock(monkeypatch, db: Session, statement) -> None:
+def _lands_at_the_lock(monkeypatch, db: Session, statement, *, at: int = 1) -> None:
     """Execute ``statement`` (another request's committed write) just as
-    the first lock is taken, behind the ORM's back."""
+    the ``at``-th lock is taken (the first by default), behind the ORM's
+    back."""
     real = session_guard.lock_session
-    fired: list[bool] = []
+    taken: list[bool] = []
 
     def landing(db_, session_):
-        if not fired:
-            fired.append(True)
+        taken.append(True)
+        if len(taken) == at:
             db.execute(statement.execution_options(synchronize_session=False))
         return real(db_, session_)
 
@@ -441,6 +442,45 @@ def test_a_roster_import_refuses_a_session_activated_at_the_lock(
     assert response.status_code == 409
     assert _reviewer_emails(db, session) == before
     assert db.get(ReviewSession, session.id).status == "ready"
+
+
+def test_a_labelled_import_commits_nothing_before_a_later_gate_refuses(
+    db: Session, monkeypatch
+) -> None:
+    """Codex on #2882: the label reconcile re-gates after the roster
+    replace. The import is one commit, so a session archived between
+    the two gates refuses with nothing committed, not after the replace."""
+    from app.services import csv_imports
+
+    user = User(email="op-labels@example.edu", display_name="Op")
+    db.add(user)
+    db.flush()
+    session = ReviewSession(
+        name="Labels", code="guard-labels", created_by_user_id=user.id
+    )
+    db.add(session)
+    db.commit()
+    parsed = csv_imports.parse_reviewer_csv(
+        b"ReviewerName,ReviewerEmail,ReviewerTag1.Tutor\n"
+        b"Alice,alice@example.edu,senior\n"
+    )
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=2)
+    commits: list[bool] = []
+    real_commit = db.commit
+    monkeypatch.setattr(db, "commit", lambda: (commits.append(True), real_commit()))
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        csv_imports.save_reviewers(
+            db,
+            session=session,
+            user=user,
+            rows=parsed.rows,
+            filename="reviewers.csv",
+            correlation_id="t",
+            field_labels_captured=parsed.field_labels,
+        )
+
+    assert commits == []
 
 
 def test_a_row_edit_refuses_a_session_activated_at_the_lock(
