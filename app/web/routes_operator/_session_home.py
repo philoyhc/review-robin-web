@@ -426,14 +426,12 @@ def _apply_session_config_form(
             scheduled_events.parse_and_validate_invite_offsets(
                 invite_offsets,
                 scheduled_activate_at=parsed_scheduled_activate_at,
-                aged_exempt=scheduled_events.lead_exempt_offsets(
-                    review_session.invite_offsets or []
-                    if start_unedited
-                    else (),
-                    scheduled_events.fired_offsets(
-                        db, review_session, "invite",
-                        parsed_scheduled_activate_at,
-                    ),
+                aged_exempt=scheduled_events.offsets_lead_exempt(
+                    db,
+                    review_session,
+                    "invite",
+                    parsed_scheduled_activate_at,
+                    anchor_unedited=start_unedited,
                 ),
             )
         )
@@ -450,13 +448,12 @@ def _apply_session_config_form(
             scheduled_events.parse_and_validate_reminder_offsets(
                 reminder_offsets,
                 deadline=parsed_deadline,
-                aged_exempt=scheduled_events.lead_exempt_offsets(
-                    review_session.reminder_offsets or []
-                    if "deadline" in unedited
-                    else (),
-                    scheduled_events.fired_offsets(
-                        db, review_session, "reminder", parsed_deadline
-                    ),
+                aged_exempt=scheduled_events.offsets_lead_exempt(
+                    db,
+                    review_session,
+                    "reminder",
+                    parsed_deadline,
+                    anchor_unedited="deadline" in unedited,
                 ),
             )
         )

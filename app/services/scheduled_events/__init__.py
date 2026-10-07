@@ -25,6 +25,8 @@ Layout:
   ``parse_and_validate_invite_offsets``.
 - ``_reminders.py`` — auto-send reminders trigger +
   ``parse_and_validate_reminder_offsets``.
+- ``_fired.py`` — entries already sent on their anchor
+  (``fired_offset_errors``, ``offsets_lead_exempt``; findings Bc1).
 - ``_release.py`` — responses-release window parsers +
   ``validate_schedule_ordering`` (cross-field ordering).
 
@@ -41,7 +43,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from typing import Callable, Sequence
+from typing import Callable
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -75,6 +77,12 @@ from ._invites import (
     _resolve_invite_fires,  # noqa: F401
     parse_and_validate_invite_offsets,
 )
+from ._fired import (
+    fired_offset_errors,
+    fired_offsets,
+    offsets_lead_exempt,
+    split_offsets,
+)
 from ._release import (
     _RELEASE_WINDOW_MAX,  # noqa: F401
     parse_and_validate_responses_release_at,
@@ -98,8 +106,11 @@ from ._shared import (
 
 __all__ = [
     "ScheduledActivateError",
+    "fired_offset_errors",
+    "fired_offsets",
     "lock_session",
     "observe_scheduled_events",
+    "offsets_lead_exempt",
     "parse_and_validate_invite_offsets",
     "parse_and_validate_reminder_offsets",
     "parse_and_validate_responses_release_at",
@@ -107,9 +118,6 @@ __all__ = [
     "parse_and_validate_scheduled_activate_at",
     "parse_iso_duration",
     "resolve_offset",
-    "fired_offset_errors",
-    "fired_offsets",
-    "lead_exempt_offsets",
     "split_offsets",
     "validate_deadline_change",
     "validate_schedule_ordering",
@@ -122,14 +130,15 @@ SCHEDULED_EVENT_FAILED = "session.scheduled_event_failed"
 
 
 def validate_deadline_change(
-    review_session: ReviewSession, deadline: datetime | None
+    db: Session, review_session: ReviewSession, deadline: datetime | None
 ) -> None:
     """Check a new End against ``review_session``'s stored schedule, for
     a save that edits End alone (the sessions-lobby expander).
 
-    Runs the two checks Session Home's details card runs on End:
-    ordering against the stored Start and Release-from, and each stored
-    reminder offset re-resolved on the new End. A no-op when End is
+    Runs the checks Session Home's details card runs on End: ordering
+    against the stored Start and Release-from, each stored reminder
+    offset re-resolved on the new End, and the reminders already sent
+    on the new End (findings Bc1). A no-op when End is
     unchanged, so a rename is never refused over a schedule that has
     aged since it was saved. Raises :class:`ScheduledActivateError`.
     """
@@ -148,113 +157,24 @@ def validate_deadline_change(
         responses_release_at=review_session.responses_release_at,
     )
     parse_and_validate_reminder_offsets(
-        ", ".join(review_session.reminder_offsets or []), deadline=deadline
+        ", ".join(review_session.reminder_offsets or []),
+        deadline=deadline,
+        aged_exempt=offsets_lead_exempt(
+            db, review_session, "reminder", deadline, anchor_unedited=False
+        ),
     )
-
-
-_FIRED_EVENT_TYPES = {
-    "invite": (
-        "session.scheduled_invites_fired",
-        "session.scheduled_invites_skipped",
-    ),
-    "reminder": (
-        "session.scheduled_reminders_fired",
-        "session.scheduled_reminders_skipped",
-    ),
-}
-
-
-def split_offsets(raw: str | None) -> list[str]:
-    """The entries of a comma-separated offsets box, as the parsers read
-    them, before any of their rules runs."""
-    return [item.strip() for item in (raw or "").split(",") if item.strip()]
-
-
-def fired_offsets(
-    db: Session,
-    review_session: ReviewSession,
-    kind: str,
-    anchor: datetime | None,
-) -> dict[int, str]:
-    """``{position: entry}`` for the ``kind`` ("invite" / "reminder")
-    entries already sent or skipped on ``anchor``, from the observers'
-    audit rows — the record ``_consumed_*_offset_indices`` read. A
-    position in it never fires again on that anchor, whatever entry
-    sits there."""
-    if anchor is None or review_session.id is None:
-        return {}
-    anchor_iso = _ensure_aware_utc(anchor).isoformat()
-    rows = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == review_session.id,
-            AuditEvent.event_type.in_(_FIRED_EVENT_TYPES[kind]),
-        )
-    ).scalars()
-    fired: dict[int, str] = {}
-    for row in rows:
-        ctx = (row.detail or {}).get("context") if isinstance(
-            row.detail, dict
-        ) else None
-        if not isinstance(ctx, dict) or ctx.get("anchor_at") != anchor_iso:
-            continue
-        index, entry = ctx.get("offset_index"), ctx.get("offset")
-        if isinstance(index, int) and isinstance(entry, str):
-            fired.setdefault(index, entry)
-    return fired
-
-
-def lead_exempt_offsets(
-    stored: Sequence[str], fired: dict[int, str]
-) -> list[str]:
-    """The ``aged_exempt`` list for an offsets parser: per position, the
-    entry that may stay there past the lead-time floor — the stored one
-    (when the anchor is unedited; pass ``()`` otherwise), and above it
-    the one already sent there on this anchor (findings B4, Bc1)."""
-    size = max([len(stored), *(index + 1 for index in fired)])
-    exempt = [stored[i] if i < len(stored) else "" for i in range(size)]
-    for index, entry in fired.items():
-        exempt[index] = entry
-    return exempt
-
-
-def fired_offset_errors(
-    db: Session,
-    review_session: ReviewSession,
-    *,
-    scheduled_activate_at: datetime | None,
-    invite_offsets: Sequence[str],
-    deadline: datetime | None,
-    reminder_offsets: Sequence[str],
-) -> list[tuple[str, str]]:
-    """``(column, message)`` for each list that would put a new entry on
-    a position already sent or skipped on the anchor the save keeps
-    (findings Bc1, ruled 2026-10-07).
-
-    The observers record a sent entry by its position on its anchor, so
-    a different entry there would never be sent: a sent entry stays at
-    its position, and new entries go after it. Checked against the
-    anchor the session will hold, so a Start or End moved back to an
-    earlier value meets that value's record again."""
-    errors: list[tuple[str, str]] = []
-    for column, kind, label, anchor_label, anchor, entries in (
-        ("invite_offsets", "invite", "Auto-send invite", "Start",
-         scheduled_activate_at, invite_offsets),
-        ("reminder_offsets", "reminder", "Auto-send reminder", "End",
-         deadline, reminder_offsets),
-    ):
-        fired = fired_offsets(db, review_session, kind, anchor)
-        for index in sorted(fired):
-            if index < len(entries) and entries[index] != fired[index]:
-                errors.append((
-                    column,
-                    f"{label} {fired[index]} was already sent (or "
-                    f"skipped) at position {index + 1} for this "
-                    f"{anchor_label}, so {entries[index]} there would "
-                    f"never be sent. Keep {fired[index]} at position "
-                    f"{index + 1} and add new entries after it.",
-                ))
-                break
-    return errors
+    # An End moved back to a value whose reminders were sent meets that
+    # value's record (findings Bc1).
+    errors = fired_offset_errors(
+        db,
+        review_session,
+        scheduled_activate_at=review_session.scheduled_activate_at,
+        invite_offsets=review_session.invite_offsets or [],
+        deadline=deadline,
+        reminder_offsets=review_session.reminder_offsets or [],
+    )
+    if errors:
+        raise ScheduledActivateError(errors[0][1])
 
 
 def observe_scheduled_events(
