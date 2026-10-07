@@ -45,7 +45,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
 
 **Medium**
 
-- ~~**B4**~~ — **2026-10-07: the spec's "stays put", the fixer's choice with no ruling asked. Done in #PR** (an unedited Start, and the stored offsets on an unedited anchor, skip only the lead-time floor; every other check still runs). **A Details Save on a draft refuses a rename once the stored Start
+- ~~**B4**~~ — **2026-10-07: the spec's "stays put", the fixer's choice with no ruling asked. Done in #2870** (an unedited Start, and the stored offsets on an unedited anchor, skip only the lead-time floor; every other check still runs). **A Details Save on a draft refuses a rename once the stored Start
   has passed.** `_session_home.py` `/config` re-validates the unedited
   scheduled Start through `parse_and_validate_scheduled_activate_at`
   (and the reminder offsets), so changing only the Name answers 422
@@ -158,7 +158,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **B1** med spec (author if the card should follow `is_editable`) lifecycle.md:560-565 Quick Setup body greyed with toggle visible but inert vs available only on draft with no responses, toggle hidden on validated (views/_quick_setup.py:201,340; _quick_setup_card.html:35-40), while the routes gate on is_editable; the card is narrower than the single predicate §3.1 / §5 say nothing undercuts; :560 also names the retired "Next Action card"
 - **B2** low spec lifecycle.md:521-526 Observers exception "checkboxes only, bulk card follows the common gate", contradicting :423 vs :434; code gates the whole Unlock panel, selection and checkboxes on not archived (session_observers.html:13-18,229,559; setup_pages.md:360 right)
 - **B3** — carried, old B27 / G6: lifecycle.md:864-870 the lazy observer runs on Session Home, Operations and the lobby vs Session Home only (_session_home.py:125). Not counted.
-- ~~**B4**~~ med author lifecycle.md:886-889 aged value stays put vs Details Save re-validates the stored Start (§1) — **Done in #PR.**
+- ~~**B4**~~ med author lifecycle.md:886-889 aged value stays put vs Details Save re-validates the stored Start (§1) — **Done in #2870.**
 - **B5** low author lifecycle.md:698,727 archive_offset default P30D vs nullable, no default, nothing writes it (review_session.py:108); settings_inventory.md:117 "no editor, CSV only"
 - **B6** low spec assignments.md:932-937 reviewer-tail `@` guard "inherited from the roster pages" — C5 dropped it from filter_reviewers_rows / filter_observers_rows (_filters.py:316,526); assignments_picked_handles (:408) keeps it, its docstring (:394-404) stale
 - **B7** low code validate_page.md:518-520 no internal names in a why line vs validation.py:1098-1112, 1171-1188, 1205-1218 (§1)
