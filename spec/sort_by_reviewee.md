@@ -245,7 +245,8 @@ payload=audit.changes({"sort_display_fields": [old_value, normalised]})
 (`[{"display_field_id": …, "dir": "asc|desc"}, …]`), so the audit row
 carries the complete before/after snapshots and stands on its own
 without a join to the previous event. The service skips the emit
-entirely on a no-op save (when `old_value == normalised`).
+entirely on a no-op save: the normalized spec equals the stored one,
+with NULL read as `[]` since both mean no sort.
 
 ---
 
