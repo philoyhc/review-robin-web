@@ -70,9 +70,10 @@ def _consumed_reminder_offset_indices(
     """Return the set of ``reminder_offsets`` indices already fired or
     skipped for the current anchor moment.
 
-    Dedup is keyed on
-    ``(session_id, offset_index, context.anchor_at == deadline.isoformat)``.
-    If the operator changes ``deadline``, the consumed set resets —
+    Dedup is keyed on ``(session_id, offset_index, context.anchor_at)``,
+    the anchor matched to ``deadline`` as an instant
+    (``_fired.fired_offsets``). If the operator changes ``deadline``,
+    the consumed set resets —
     every entry becomes eligible to fire again against the new anchor.
     """
     # The same record the save-time check reads, matched as an instant

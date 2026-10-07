@@ -136,9 +136,9 @@ def validate_deadline_change(
     a save that edits End alone (the sessions-lobby expander).
 
     Runs the checks Session Home's details card runs on End: ordering
-    against the stored Start and Release-from, each stored reminder
-    offset re-resolved on the new End, and the reminders already sent
-    on the new End (findings Bc1). A no-op when End is
+    against the stored Start and Release-from, the reminders already
+    sent on the new End (findings Bc1), and each stored reminder offset
+    re-resolved on the new End. A no-op when End is
     unchanged, so a rename is never refused over a schedule that has
     aged since it was saved. Raises :class:`ScheduledActivateError`.
     """

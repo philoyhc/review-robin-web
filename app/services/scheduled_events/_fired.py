@@ -140,6 +140,10 @@ def fired_offset_errors(
             continue
         fired = fired_offsets(db, review_session, kind, anchor)
         for index in sorted(fired):
+            # A record without its entry (none is written so) still
+            # consumes the position, but there is nothing to name.
+            if not fired[index]:
+                continue
             if index < len(entries) and entries[index] != fired[index]:
                 errors.append((
                     column,

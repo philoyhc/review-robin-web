@@ -243,3 +243,34 @@ def test_the_lobby_cannot_move_end_back_onto_sent_reminders(
     )
     assert back.status_code == 422
     assert "-P3D was already sent" in back.text
+
+
+def test_the_lobby_names_a_moved_sent_reminder_before_its_lead_time(
+    client: TestClient, db: Session
+) -> None:
+    """With End moved back, the entry on the sent position also falls
+    short of the lead-time floor; the refusal still names what went
+    wrong (the sent-entry check runs first, as on Session Home)."""
+    session = _session(client, db, "bc1-lobby-order", kind="reminder")
+    first_end = session.deadline
+    # -P2D on an End three hours later resolves three hours out.
+    other_end = first_end + timedelta(hours=3)
+    moved = _save(
+        client, session, kind="reminder", offsets="-P2D", anchor=other_end
+    )
+    assert moved.status_code == 303, moved.text
+    db.expire_all()
+    # Back on the first End, -P2D resolves about now: short of the floor.
+    back = client.post(
+        f"/operator/sessions/{session.id}/lobby-edit",
+        data={
+            "name": session.name,
+            "code": session.code,
+            "deadline": format_datetime_local(first_end, "UTC"),
+            "tags": "",
+        },
+        follow_redirects=False,
+    )
+    assert back.status_code == 422
+    assert "-P3D was already sent" in back.text
+    assert "lead time" not in back.text

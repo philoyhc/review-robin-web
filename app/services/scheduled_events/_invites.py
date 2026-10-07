@@ -69,9 +69,9 @@ def _consumed_invite_offset_indices(
     """Return the set of ``invite_offsets`` indices already fired or
     skipped for the current anchor moment.
 
-    Dedup is keyed on ``(session_id, offset_index, context.scheduled_at
-    == anchor.scheduled_activate_at)``. If the operator reschedules
-    Start (new anchor ISO), the consumed set resets — every entry
+    Dedup is keyed on ``(session_id, offset_index, context.anchor_at)``,
+    the anchor matched as an instant (``_fired.fired_offsets``). If the
+    operator reschedules Start, the consumed set resets — every entry
     becomes eligible to fire again against the new anchor.
     """
     # The same record the save-time check reads, matched as an instant
@@ -111,7 +111,8 @@ def _observe_scheduled_invites(
         observable).
 
     Per-entry dedup is keyed on
-    ``(session_id, offset_index, anchor=scheduled_activate_at.isoformat)``.
+    ``(session_id, offset_index, anchor=scheduled_activate_at)``, the
+    anchor matched as an instant.
     Operator changing ``scheduled_activate_at`` resets the dedup set
     — every entry gets a fresh chance against the new anchor.
 
