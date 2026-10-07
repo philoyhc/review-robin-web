@@ -1103,7 +1103,7 @@ def invitations_remind_one(
                 "active with at least one included assignment."
             ),
         )
-    invitations.send_reminder(
+    invitations.send_one_reminder(
         db,
         invitation=invitation,
         review_session=review_session,
