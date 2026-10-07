@@ -11,6 +11,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
+from app.services.instruments._instrument_crud import GROUP_KIND_SENTINEL
 from app.services.instruments import (
     DisplaySourceError,
     add_display_field,
@@ -400,3 +401,29 @@ def test_bulk_save_fields_no_op_emits_zero_events(db: Session) -> None:
         )
     ).scalars().all()
     assert events == []
+
+
+def test_bulk_save_keeps_name_shown_on_a_group_instrument(db: Session) -> None:
+    """Findings G1 (ruled 2026-10-07): Name stays locked on a
+    group-scoped instrument, so a Save that unticks it — a forged form,
+    the builder never sends one — still leaves it shown and member
+    names keep rendering."""
+    user, instrument = _seed_instrument(db, code="bulk-group-name")
+    instrument.group_kind = GROUP_KIND_SENTINEL
+    db.flush()
+    name = next(
+        f for f in instrument.display_fields
+        if (f.source_type, f.source_field) == ("reviewee", "name")
+    )
+
+    bulk_save_fields(
+        db,
+        instrument=instrument,
+        rows=[
+            {"kind": "display", "id": name.id, "order": 0, "label": "",
+             "visible": False},
+        ],
+        actor=user,
+    )
+    db.refresh(name)
+    assert name.visible is True
