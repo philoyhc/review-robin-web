@@ -142,6 +142,7 @@ def create_observer(
 ) -> Observer:
     """Insert a new Observer row. Rejects duplicate emails within
     the session. Returns the persisted row."""
+    lifecycle.require_not_archived(db, review_session)
     clean_email = _normalised_email(email)
     clean_status = _normalised_status(status)
     clean_display_name = _normalised_optional(display_name)
@@ -235,6 +236,7 @@ def update_observer(
     least one field actually changed; the changes envelope carries
     ``{field: [old, new]}`` for each changed field only. Returns
     the changes dict (empty if nothing changed)."""
+    lifecycle.require_not_archived(db, observer.session)
     proposed: dict[str, object] = {}
     if email is not _UNSET:
         proposed["email"] = _normalised_email(email)  # type: ignore[arg-type]
@@ -325,6 +327,7 @@ def bulk_inactivate(
 ) -> list[int]:
     """Flip ``status="inactive"`` on every observer in ``observer_ids``
     that isn't already inactive. Returns the ids actually flipped."""
+    lifecycle.require_not_archived(db, review_session)
     return bulk_set_status(
         db,
         review_session=review_session,
@@ -374,6 +377,7 @@ def set_cohort_rule(
     ``_require_not_archived`` gate (archived is the only hard
     stop); the service still trusts its caller on lifecycle.
     """
+    lifecycle.require_not_archived(db, review_session)
     if not observer_ids:
         raise ObserverOperationError(
             "empty_selection",
@@ -452,6 +456,7 @@ def bulk_reactivate(
 ) -> list[int]:
     """Flip ``status="active"`` on every observer in ``observer_ids``
     that isn't already active. Returns the ids actually flipped."""
+    lifecycle.require_not_archived(db, review_session)
     return bulk_set_status(
         db,
         review_session=review_session,
@@ -493,6 +498,7 @@ def delete_selected(
     and of ``delete_all_observers``, whose cascade semantics it
     inherits rather than reinvents. Segment 19I Item 2.
     """
+    lifecycle.require_not_archived(db, review_session)
     return bulk_delete(
         db,
         review_session=review_session,

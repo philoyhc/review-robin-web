@@ -1092,6 +1092,7 @@ def save_reviewers(
     correlation_id: str,
     field_labels_captured: dict[tuple[str, str], str] | None = None,
 ) -> tuple[int, int]:
+    lifecycle.require_editable(db, session)
     result = _save(
         db,
         session=session,
@@ -1129,6 +1130,7 @@ def save_reviewees(
     correlation_id: str,
     field_labels_captured: dict[tuple[str, str], str] | None = None,
 ) -> tuple[int, int]:
+    lifecycle.require_editable(db, session)
     result = _save(
         db,
         session=session,
@@ -1170,6 +1172,7 @@ def save_observers(
     filename: str,
     correlation_id: str,
 ) -> tuple[int, int]:
+    lifecycle.require_not_archived(db, session)
     return _save(
         db,
         session=session,
@@ -1357,6 +1360,7 @@ def delete_all_reviewers(
     user: User,
     correlation_id: str,
 ) -> tuple[int, int]:
+    lifecycle.require_editable(db, review_session)
     return _delete_all(
         db,
         review_session=review_session,
@@ -1375,6 +1379,7 @@ def delete_all_reviewees(
     user: User,
     correlation_id: str,
 ) -> tuple[int, int]:
+    lifecycle.require_editable(db, review_session)
     return _delete_all(
         db,
         review_session=review_session,
@@ -1393,6 +1398,7 @@ def delete_all_observers(
     user: User,
     correlation_id: str,
 ) -> tuple[int, int]:
+    lifecycle.require_not_archived(db, review_session)
     return _delete_all(
         db,
         review_session=review_session,

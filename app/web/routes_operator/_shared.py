@@ -19,6 +19,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 from fastapi import Depends, HTTPException, Request, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
@@ -1021,7 +1022,10 @@ async def _handle_import(
     if existing > 0:
         _require_response_loss_ack(db, review_session, acknowledge_response_loss)
 
-    save_fn(
+    # The service locks the session row (findings Bc4): wait for it off
+    # the event loop.
+    await run_in_threadpool(
+        save_fn,
         db,
         session=review_session,
         user=user,

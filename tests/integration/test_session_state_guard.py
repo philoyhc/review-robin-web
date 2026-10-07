@@ -393,3 +393,99 @@ def test_the_revert_route_decides_its_path_under_the_lock(
 
     assert response.status_code == 400
     assert _count(db, session, "session.invalidated") == 0
+
+
+def _reviewer_emails(db: Session, session: ReviewSession) -> list[str]:
+    from app.db.models import Reviewer
+
+    db.expire_all()
+    return sorted(
+        db.execute(
+            select(Reviewer.email).where(Reviewer.session_id == session.id)
+        ).scalars()
+    )
+
+
+def test_a_roster_import_refuses_a_session_activated_at_the_lock(
+    client, db: Session, monkeypatch
+) -> None:
+    """The route's own gate read ``validated``; the scheduled activation
+    commits as the save starts. The import is refused with the 409, the
+    roster is untouched, and ``ready`` is not written back to ``draft``."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Import", "code": "guard-import"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-import")
+    ).scalar_one()
+    session.status = "validated"
+    db.commit()
+    before = _reviewer_emails(db, session)
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/reviewers/import",
+        data={"confirm_replace": "true", "acknowledge_response_loss": "true"},
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nZed,zed@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 409
+    assert _reviewer_emails(db, session) == before
+    assert db.get(ReviewSession, session.id).status == "ready"
+
+
+def test_a_row_edit_refuses_a_session_activated_at_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    from app.db.models import Reviewer
+    from app.services import reviewers as reviewers_service
+
+    session = _make_validated_session(db, "guard-row")
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == session.id)
+    ).scalars().first()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        reviewers_service.update_reviewer(
+            db, reviewer=reviewer, name="Renamed", user=_operator(db, session)
+        )
+
+    db.expire_all()
+    assert db.get(Reviewer, reviewer.id).name != "Renamed"
+
+
+def test_observers_keep_their_own_gate(db: Session, monkeypatch) -> None:
+    """Observers stay editable on a running session; only an archive
+    that commits first refuses the write."""
+    from app.services import observers as observers_service
+
+    session = _make_validated_session(db, "guard-observers")
+    session.status = "ready"
+    db.commit()
+    observer = observers_service.create_observer(
+        db,
+        review_session=session,
+        email="obs@example.edu",
+        user=_operator(db, session),
+    )
+    assert observer.id is not None
+
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"))
+    with pytest.raises(lifecycle.SessionStateConflict) as raised:
+        observers_service.create_observer(
+            db,
+            review_session=session,
+            email="late@example.edu",
+            user=_operator(db, session),
+        )
+    assert raised.value.code == "archived"
