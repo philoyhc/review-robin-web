@@ -457,11 +457,11 @@ def sessions_archive_selected(
                 correlation_id=correlation_id,
             )
         except lifecycle.LifecycleError:
-            # Archived by another request since this one read it (a
-            # double submit): the row is skipped rather than answering
-            # 500. Any purge ticked has already run by then; deciding
-            # ``can_archive`` under the lock before it is 19U Item 1's
-            # rung 6.
+            # A refusal from the transitions under the lock: the row is
+            # skipped rather than answering 500. A session archived by
+            # another request first (a double submit) no longer reaches
+            # this — purge_and_archive decides ``can_archive`` under the
+            # lock before any purge and returns False.
             db.rollback()
     target = (
         "/operator/sessions/archived"
