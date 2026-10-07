@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from collections import Counter
-from collections.abc import Collection
+from collections.abc import Sequence
 from typing import Callable
 
 from sqlalchemy import select
@@ -301,7 +300,7 @@ def parse_and_validate_reminder_offsets(
     now: datetime | None = None,
     operational_lead_hours: int | None = None,
     notice_min_hours: int | None = None,
-    aged_exempt: Collection[str] = (),
+    aged_exempt: Sequence[str] = (),
 ) -> list[str] | None:
     """Parse a comma-separated reminder-offsets string into a clean
     list and enforce the per-entry save-time rules (Segment 18G PR 3B).
@@ -324,12 +323,13 @@ def parse_and_validate_reminder_offsets(
     3. When ``deadline`` is unset: parse-only validation per the
        §8.2.2 anchor-null rule; the entry is inert at fire time.
 
-    An entry in ``aged_exempt`` — one the caller re-submits as stored,
-    on an anchor left unedited — skips only the lead-time floor: it
-    aged past it after saving and "stays put" (``spec/lifecycle.md``
-    §8.3; findings B4). Every other rule still applies to it. Each
-    stored entry exempts one submitted occurrence, so a duplicate typed
-    now meets the floor like any new entry.
+    ``aged_exempt`` is the stored list, passed when the anchor is left
+    unedited. An entry re-submitted at its stored position skips only
+    the lead-time floor: it aged past it after saving and "stays put"
+    (``spec/lifecycle.md`` §8.3; findings B4). Every other rule still
+    applies to it. Matching is by position, not value, because the
+    observer tracks fired offsets by index: a duplicate, or a stored
+    entry moved to another position, meets the floor like any new one.
 
     Raises :class:`ScheduledActivateError` with a per-entry message on
     the first violation. The route layer converts to HTTP 422.
@@ -352,9 +352,8 @@ def parse_and_validate_reminder_offsets(
     )
     current = now or datetime.now(timezone.utc)
 
-    exempt_left = Counter(aged_exempt)
     cleaned: list[str] = []
-    for entry in entries:
+    for index, entry in enumerate(entries):
         try:
             delta = parse_iso_duration(entry)
         except ValueError as exc:
@@ -372,9 +371,9 @@ def parse_and_validate_reminder_offsets(
         if deadline is not None:
             anchor = _ensure_aware_utc(deadline)
             fire_at = anchor + delta
-            exempt = exempt_left[entry] > 0
-            if exempt:
-                exempt_left[entry] -= 1
+            exempt = (
+                index < len(aged_exempt) and aged_exempt[index] == entry
+            )
             if not exempt and fire_at - current < timedelta(hours=op_hours):
                 raise ScheduledActivateError(
                     f"Auto-send reminder {entry} resolves to before now + "

@@ -727,3 +727,40 @@ def test_config_refuses_a_duplicate_of_an_aged_reminder_offset(
     response = _save("-P1D, -P1D")
     assert response.status_code == 422
     assert "leave more lead time" in response.text
+
+
+def test_config_refuses_reordered_aged_offsets(
+    client: TestClient, db: Session
+) -> None:
+    """Exemption is by position: the observer tracks fired offsets by
+    index, so a stored entry moved to another position is new there and
+    meets the floor (Codex on #2870)."""
+    from datetime import timedelta, timezone
+
+    from app.services.date_formatting import format_datetime_local
+
+    session = _create_session(client, db, code="tz-aged-reorder")
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    start = now - timedelta(days=1)
+    session.display_timezone = "UTC"
+    session.scheduled_activate_at = start
+    session.invite_offsets = ["-P2D", "-P1D"]
+    db.commit()
+
+    def _save(offsets: str):
+        return client.post(
+            f"/operator/sessions/{session.id}/config",
+            data={
+                "name": session.name,
+                "code": session.code,
+                "display_timezone": "UTC",
+                "scheduled_activate_at": format_datetime_local(start, "UTC"),
+                "invite_offsets": offsets,
+            },
+            follow_redirects=False,
+        )
+
+    assert _save("-P2D, -P1D").status_code == 303
+    response = _save("-P1D, -P2D")
+    assert response.status_code == 422
+    assert "leave more lead time" in response.text
