@@ -33,6 +33,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 from ._validated import validate_session
+from ._past_draft_setup import past_draft_setup
 
 
 def _operator_creates_session_with_pair(
@@ -214,9 +215,10 @@ def test_page_break_carves_session_into_separate_pages(
     )
     from app.services import instruments as instruments_service
 
-    instruments_service.create_page_break_after(
-        db, instrument=instruments[0]
-    )
+    with past_draft_setup(db, instruments[0]):
+        instruments_service.create_page_break_after(
+            db, instrument=instruments[0]
+        )
     rae_client = make_client(rae)
 
     # Page 1 has only the first instrument (position 1).
@@ -294,9 +296,10 @@ def test_save_303s_back_to_current_page(
     )
     from app.services import instruments as instruments_service
 
-    instruments_service.create_page_break_after(
-        db, instrument=instruments[0]
-    )
+    with past_draft_setup(db, instruments[0]):
+        instruments_service.create_page_break_after(
+            db, instrument=instruments[0]
+        )
     rae_client = make_client(rae)
     # Page 2 save 303s back to /2.
     response = rae_client.post(
@@ -341,12 +344,14 @@ def test_multi_page_renders_prev_next_nav(
     from app.services import instruments as instruments_service
 
     # Break between #1 and #2 + between #2 and #3 -> 3 pages.
-    instruments_service.create_page_break_after(
-        db, instrument=instruments[0]
-    )
-    instruments_service.create_page_break_after(
-        db, instrument=instruments[1]
-    )
+    with past_draft_setup(db, instruments[0]):
+        instruments_service.create_page_break_after(
+            db, instrument=instruments[0]
+        )
+    with past_draft_setup(db, instruments[1]):
+        instruments_service.create_page_break_after(
+            db, instrument=instruments[1]
+        )
     rae_client = make_client(rae)
     body = rae_client.get(
         f"/me/sessions/{review_session.id}/2"
@@ -393,7 +398,8 @@ def test_a_closed_multi_page_surface_keeps_prev_and_next(
     )
     from app.services import instruments as instruments_service
 
-    instruments_service.create_page_break_after(db, instrument=first)
+    with past_draft_setup(db, first):
+        instruments_service.create_page_break_after(db, instrument=first)
     review_session.deadline = dt.datetime.now(dt.timezone.utc) - dt.timedelta(
         minutes=1
     )
@@ -437,7 +443,8 @@ def test_a_blocked_submit_reopens_the_page_it_came_from(
     )
     from app.services import instruments as instruments_service
 
-    instruments_service.create_page_break_after(db, instrument=first)
+    with past_draft_setup(db, first):
+        instruments_service.create_page_break_after(db, instrument=first)
     db.commit()
 
     rae_client = make_client(rae)

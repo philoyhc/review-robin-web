@@ -600,6 +600,7 @@ def add_response_field(
     help_text_visible: bool,
     actor: User,
 ) -> InstrumentResponseField:
+    lifecycle.require_editable(db, instrument.session)
     _validate_field_key(field_key)
     if not label or not label.strip():
         raise ValueError("Label is required.")
@@ -703,6 +704,7 @@ def add_default_response_field(
     If ``after_field_id`` is given, the new field slots immediately
     after that one and bumps subsequent ``order`` values; otherwise
     appends at the end."""
+    lifecycle.require_editable(db, instrument.session)
     _refuse_if_branched(instrument)
     lifecycle.invalidate_if_validated(
         db,
@@ -845,6 +847,7 @@ def update_response_field(
     actor: User,
 ) -> tuple[InstrumentResponseField, int]:
     """Edit a response field. Returns (field, required_warning_count)."""
+    lifecycle.require_editable(db, field.instrument.session)
     if not label or not label.strip():
         raise ValueError("Label is required.")
 
@@ -906,6 +909,7 @@ def delete_response_field(
     confirm: bool,
     actor: User,
 ) -> None:
+    lifecycle.require_editable(db, field.instrument.session)
     instrument = field.instrument
     _refuse_if_branched(instrument)
     response_count = _response_count_for_field(db, field.id)
@@ -961,6 +965,7 @@ def move_response_field(
     direction: Literal["up", "down"],
     actor: User,
 ) -> None:
+    lifecycle.require_editable(db, field.instrument.session)
     if direction not in ("up", "down"):
         raise ValueError("direction must be 'up' or 'down'")
 

@@ -430,6 +430,7 @@ def upsert_policy(
     ``"summarized"`` or ``None``; the other two cells accept the
     three coherent modes plus ``None``.
     """
+    lifecycle.require_editable(db, review_session)
     _validate_per_window(
         audience=audience,
         while_ongoing_mode=while_ongoing_mode,
@@ -532,6 +533,7 @@ def upsert_many(
     inside ``unit_of_work.single_commit``, so the Instrument card's Save
     can roll the whole save back on a later refusal (findings A16)."""
 
+    lifecycle.require_editable(db, review_session)
     def _mode_or_none(value: object) -> str | None:
         if value is None:
             return None

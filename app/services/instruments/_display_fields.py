@@ -242,6 +242,7 @@ def add_display_field(
     strip-on-write; an empty string is allowed and means "use the inferred
     D6 label at render time."
     """
+    lifecycle.require_editable(db, instrument.session)
     pair = (source_type, source_field)
     if pair not in _VALID_DISPLAY_SOURCES:
         raise DisplaySourceError(
@@ -314,6 +315,7 @@ def update_display_field(
     Locked rows (`RevieweeName`, `RevieweeEmail`) cannot have
     ``visible`` flipped to False. Their label is freely editable.
     """
+    lifecycle.require_editable(db, field.instrument.session)
     if (
         is_locked_display_source(field.source_type, field.source_field)
         and not visible
@@ -369,6 +371,7 @@ def delete_display_field(
 
     Locked rows (`RevieweeName`, `RevieweeEmail`) cannot be deleted.
     """
+    lifecycle.require_editable(db, field.instrument.session)
     if is_locked_display_source(field.source_type, field.source_field):
         raise LockedDisplayFieldError(
             f"Display field {field.source_type}.{field.source_field} "
@@ -420,6 +423,7 @@ def move_display_field(
     can be moved but never *into* the locked region (i.e. a
     non-locked row's ``up`` is rejected if the row above it is
     locked)."""
+    lifecycle.require_editable(db, field.instrument.session)
     if direction not in ("up", "down"):
         raise ValueError("direction must be 'up' or 'down'")
     if is_locked_display_source(field.source_type, field.source_field):
@@ -494,6 +498,7 @@ def reorder_display_fields(
     No-op saves (the requested order matches the current order)
     skip the audit + lifecycle side effects.
     """
+    lifecycle.require_editable(db, instrument.session)
     if len(set(ordered_ids)) != len(ordered_ids):
         raise ValueError("ordered_ids contains duplicates")
     fields = _ordered_display_fields(db, instrument)
@@ -823,6 +828,7 @@ def set_sort_display_fields(
     Emits ``instrument.sort_fields_updated`` with the canonical
     ``changes`` envelope on diff; no emit on no-op save.
     """
+    lifecycle.require_editable(db, instrument.session)
     normalised = _normalise_sort_spec(fields)
     # Query display-field IDs directly rather than relying on the
     # relationship cache — callers may have added display fields

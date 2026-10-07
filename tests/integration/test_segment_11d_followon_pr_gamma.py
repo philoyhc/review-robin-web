@@ -32,6 +32,7 @@ from ._full_matrix import (
 )
 from app.services import instruments as instruments_service
 from ._validated import validate_session
+from ._past_draft_setup import past_draft_setup
 
 
 def _setup_two_instrument_session(
@@ -111,17 +112,19 @@ def _setup_two_instrument_session(
     # Apply heading metadata via the service helper (the operator route
     # writes through it; either path is fine for fixtures).
     if first_short_label is not None:
-        instruments_service.update_short_label(
-            db, instrument=first, short_label=first_short_label, actor=None
-        )
+        with past_draft_setup(db, first):
+            instruments_service.update_short_label(
+                db, instrument=first, short_label=first_short_label, actor=None
+            )
     if first_description is not None:
         instruments_service.update_instrument_description(
             db, instrument=first, description=first_description, actor=None
         )
     if second_short_label is not None:
-        instruments_service.update_short_label(
-            db, instrument=second, short_label=second_short_label, actor=None
-        )
+        with past_draft_setup(db, second):
+            instruments_service.update_short_label(
+                db, instrument=second, short_label=second_short_label, actor=None
+            )
     if second_description is not None:
         instruments_service.update_instrument_description(
             db,
@@ -354,9 +357,10 @@ def test_instrument_heading_single_short_label_only(
             select(Instrument).where(Instrument.session_id == review_session.id)
         ).scalars()
     )
-    instruments_service.update_short_label(
-        db, instrument=instrument, short_label="Self-eval", actor=None
-    )
+    with past_draft_setup(db, instrument):
+        instruments_service.update_short_label(
+            db, instrument=instrument, short_label="Self-eval", actor=None
+        )
     validate_session(review_session)
     operator.get(f"/operator/sessions/{review_session.id}/assignments")
     operator.post(
@@ -399,7 +403,8 @@ def test_save_drops_cross_page_assignment_inputs(
     )
     # Carve the session into two pages — first on page 1, second on
     # page 2.
-    instruments_service.create_page_break_after(db, instrument=first)
+    with past_draft_setup(db, first):
+        instruments_service.create_page_break_after(db, instrument=first)
     # Both assignments exist for the same reviewer/reviewee pair.
     page1_assignment = db.execute(
         select(Assignment)

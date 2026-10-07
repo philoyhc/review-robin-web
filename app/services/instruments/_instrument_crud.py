@@ -183,6 +183,7 @@ def create_instrument(
     with the no-boundary sentinel (``GROUP_KIND_SENTINEL``); the
     operator picks boundary tags later via ``set_group_boundary``.
     """
+    lifecycle.require_editable(db, review_session)
     lifecycle.invalidate_if_validated(
         db, review_session=review_session, user=actor, reason="instrument_added"
     )
@@ -322,6 +323,7 @@ def replicate_instrument(
     a replica joined the matrix immediately; that is hand-creating
     assignment rows, which the contract forbids — only the rule engine
     writes them. The replica's pairs arrive with the next Generate."""
+    lifecycle.require_editable(db, review_session)
     lifecycle.invalidate_if_validated(
         db,
         review_session=review_session,
@@ -604,6 +606,7 @@ def delete_instrument(
     Raises :class:`LastInstrumentError` when this is the session's only
     instrument — checked before anything mutates.
     """
+    lifecycle.require_editable(db, instrument.session)
     review_session = instrument.session
     total = db.execute(
         select(func.count())
@@ -658,6 +661,7 @@ def update_instrument_description(
     description: str | None,
     actor: User,
 ) -> Instrument:
+    lifecycle.require_editable(db, instrument.session)
     lifecycle.invalidate_if_validated(
         db,
         review_session=instrument.session,
@@ -704,6 +708,7 @@ def update_short_label(
     Mirrors the shape of :func:`update_instrument_description` so
     the two read as siblings.
     """
+    lifecycle.require_editable(db, instrument.session)
     cleaned = short_label.strip() if isinstance(short_label, str) else None
     new_value = cleaned or None
     if new_value is not None and len(new_value) > 32:
@@ -978,6 +983,7 @@ def set_unit_of_review(
     for new-model instruments where the operator picks the unit
     inline. No-op saves skip the audit + lifecycle side effects.
     """
+    lifecycle.require_editable(db, instrument.session)
     if mode == "individual":
         new_value: str | None = None
     elif mode == "grouped":
@@ -1057,6 +1063,7 @@ def set_column_widths(
     No-op saves (the merged widths are byte-equal to the stored
     value) skip the audit + lifecycle side effects.
     """
+    lifecycle.require_editable(db, instrument.session)
     valid_display_field_ids = {f.id for f in instrument.display_fields}
     valid_response_field_ids = {f.id for f in instrument.response_fields}
     sanitised: dict[str, int] = {}

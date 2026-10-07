@@ -40,6 +40,7 @@ from app.db.models import (
     User,
 )
 from app.services import audit
+from app.services import session_lifecycle as lifecycle
 from app.services.instruments._instrument_crud import (
     _COLUMN_WIDTH_MAX_PX,
     _COLUMN_WIDTH_MIN_PX,
@@ -143,6 +144,7 @@ def set_band2_state(
     No-op saves (the merged payload matches what's already
     persisted) skip the audit + lifecycle side effects.
     """
+    lifecycle.require_editable(db, instrument.session)
     sanitised: dict[str, Any] = {}
     existing = instrument.band2_state or {}
     # Field-presence semantics: every top-level key in band2_state

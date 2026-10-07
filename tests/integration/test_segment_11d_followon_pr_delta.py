@@ -38,6 +38,7 @@ from ._full_matrix import (
 )
 from app.services import instruments as instruments_service
 from ._validated import validate_session
+from ._past_draft_setup import past_draft_setup
 
 
 def _setup_two_instrument_session(
@@ -104,12 +105,14 @@ def _setup_two_instrument_session(
     generate_via_page_button(
         operator_client, review_session.id, confirm_replace=True
     )
-    instruments_service.update_short_label(
-        db, instrument=first, short_label="Self-eval", actor=None
-    )
-    instruments_service.update_short_label(
-        db, instrument=second, short_label="Peer review", actor=None
-    )
+    with past_draft_setup(db, first):
+        instruments_service.update_short_label(
+            db, instrument=first, short_label="Self-eval", actor=None
+        )
+    with past_draft_setup(db, second):
+        instruments_service.update_short_label(
+            db, instrument=second, short_label="Peer review", actor=None
+        )
     validate_session(review_session)
     operator_client.get(f"/operator/sessions/{review_session.id}/assignments")
     operator_client.post(
@@ -181,7 +184,8 @@ def test_save_still_filters_cross_page_inputs_under_pr_delta(
     review_session, first, second = _setup_two_instrument_session(
         operator, db, code="rae-d-save-filter"
     )
-    instruments_service.create_page_break_after(db, instrument=first)
+    with past_draft_setup(db, first):
+        instruments_service.create_page_break_after(db, instrument=first)
     page1_assignment = db.execute(
         select(Assignment)
         .where(Assignment.session_id == review_session.id)

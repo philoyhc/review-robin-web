@@ -954,3 +954,91 @@ def test_generate_refuses_a_session_activated_at_the_lock(
     assert not db.execute(
         select(Assignment.id).where(Assignment.session_id == session.id)
     ).all()
+
+
+# --------------------------------------------------------------------------- #
+# Rung 5 — instruments                                                        #
+# --------------------------------------------------------------------------- #
+
+
+def test_an_instrument_edit_refuses_a_session_activated_at_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    from app.services import instruments as instruments_service
+
+    session = _make_validated_session(db, "guard-instrument")
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalars().first()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        instruments_service.update_short_label(
+            db,
+            instrument=instrument,
+            short_label="Late",
+            actor=_operator(db, session),
+        )
+
+    db.expire_all()
+    assert db.get(Instrument, instrument.id).short_label != "Late"
+
+
+def test_an_async_instrument_route_answers_409_off_the_event_loop(
+    client, db: Session, monkeypatch
+) -> None:
+    """The identity JSON route reads its body, then runs the guarded
+    write in the threadpool: the conflict still reaches the operator as
+    the 409."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Identity", "code": "guard-identity"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-identity")
+    ).scalar_one()
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalars().first()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/identity",
+        json={"short_label": "Late"},
+    )
+
+    assert response.status_code == 409
+    db.expire_all()
+    assert db.get(Instrument, instrument.id).short_label != "Late"
+
+
+def test_an_identity_save_of_both_fields_is_one_commit(
+    client, db: Session, monkeypatch
+) -> None:
+    """Short label and description each gate and used to commit apart, so
+    a session archived at the description's gate refused after the label
+    had landed. The route is one unit: the 409 lands neither."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Identity", "code": "guard-identity-two"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-identity-two")
+    ).scalar_one()
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalars().first()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=2)
+    commits = _counting_commits(monkeypatch, db)
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/identity",
+        json={"short_label": "Late", "description": "Also late"},
+    )
+
+    assert response.status_code == 409
+    assert commits == []
+    db.expire_all()
+    assert db.get(Instrument, instrument.id).short_label != "Late"

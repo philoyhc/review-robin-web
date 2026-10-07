@@ -48,6 +48,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 from ._validated import validate_session
+from ._past_draft_setup import past_draft_setup
 
 
 @pytest.fixture
@@ -197,15 +198,16 @@ def _enable_reviewee_after_release_raw(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    visibility_policies.upsert_policy(
-        db,
-        review_session=review_session,
-        instrument=instrument,
-        audience="reviewee",
-        while_ongoing_mode=None,
-        after_release_mode="raw",
-        user=operator,
-    )
+    with past_draft_setup(db, review_session):
+        visibility_policies.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            audience="reviewee",
+            while_ongoing_mode=None,
+            after_release_mode="raw",
+            user=operator,
+        )
     if open_window:
         # 19F PR 2a — the after-release window also needs the
         # session closed: released *because the session is over*.
@@ -225,15 +227,16 @@ def _enable_reviewer_after_release_raw(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    visibility_policies.upsert_policy(
-        db,
-        review_session=review_session,
-        instrument=instrument,
-        audience="peer_reviewer",
-        while_ongoing_mode="raw",
-        after_release_mode="raw",
-        user=operator,
-    )
+    with past_draft_setup(db, review_session):
+        visibility_policies.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            audience="peer_reviewer",
+            while_ongoing_mode="raw",
+            after_release_mode="raw",
+            user=operator,
+        )
     db.commit()
 
 
@@ -539,15 +542,16 @@ def test_results_body_omits_instrument_with_policy_off(
     )
 
     # Open Raw on the first instrument; leave second off.
-    visibility_policies.upsert_policy(
-        db,
-        review_session=review_session,
-        instrument=first_instrument,
-        audience="reviewee",
-        while_ongoing_mode=None,
-        after_release_mode="raw",
-        user=_operator_user(db),
-    )
+    with past_draft_setup(db, review_session):
+        visibility_policies.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=first_instrument,
+            audience="reviewee",
+            while_ongoing_mode=None,
+            after_release_mode="raw",
+            user=_operator_user(db),
+        )
     # 19F PR 2a — the after-release window also needs the
     # session closed: released *because the session is over*.
     review_session.status = "expired"
@@ -609,15 +613,16 @@ def _enable_reviewee_after_release_anonymized(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    visibility_policies.upsert_policy(
-        db,
-        review_session=review_session,
-        instrument=instrument,
-        audience="reviewee",
-        while_ongoing_mode=None,
-        after_release_mode="anonymized",
-        user=operator,
-    )
+    with past_draft_setup(db, review_session):
+        visibility_policies.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            audience="reviewee",
+            while_ongoing_mode=None,
+            after_release_mode="anonymized",
+            user=operator,
+        )
     if open_window:
         # 19F PR 2a — the after-release window also needs the
         # session closed: released *because the session is over*.
@@ -645,15 +650,16 @@ def _enable_reviewee_after_release_summarized(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    visibility_policies.upsert_policy(
-        db,
-        review_session=review_session,
-        instrument=instrument,
-        audience="reviewee",
-        while_ongoing_mode=None,
-        after_release_mode="summarized",
-        user=operator,
-    )
+    with past_draft_setup(db, review_session):
+        visibility_policies.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            audience="reviewee",
+            while_ongoing_mode=None,
+            after_release_mode="summarized",
+            user=operator,
+        )
     if open_window:
         # 19F PR 2a — the after-release window also needs the
         # session closed: released *because the session is over*.
@@ -1297,15 +1303,16 @@ def test_results_body_group_scoped_drops_display_field_columns(
         instrument=group_instrument,
         comments_value="Team did well.",
     )
-    visibility_policies.upsert_policy(
-        db,
-        review_session=review_session,
-        instrument=group_instrument,
-        audience="reviewee",
-        while_ongoing_mode=None,
-        after_release_mode="raw",
-        user=_operator_user(db),
-    )
+    with past_draft_setup(db, review_session):
+        visibility_policies.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=group_instrument,
+            audience="reviewee",
+            while_ongoing_mode=None,
+            after_release_mode="raw",
+            user=_operator_user(db),
+        )
     # 19F PR 2a — the after-release window also needs the
     # session closed: released *because the session is over*.
     review_session.status = "expired"
@@ -1451,15 +1458,16 @@ def test_results_body_excludes_responses_about_other_reviewees(
         )
     db.commit()
 
-    visibility_policies.upsert_policy(
-        db,
-        review_session=review_session,
-        instrument=instrument,
-        audience="reviewee",
-        while_ongoing_mode=None,
-        after_release_mode="raw",
-        user=_operator_user(db),
-    )
+    with past_draft_setup(db, review_session):
+        visibility_policies.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            audience="reviewee",
+            while_ongoing_mode=None,
+            after_release_mode="raw",
+            user=_operator_user(db),
+        )
     # 19F PR 2a — the after-release window also needs the
     # session closed: released *because the session is over*.
     review_session.status = "expired"
@@ -1601,15 +1609,16 @@ def test_results_body_excludes_responses_about_other_groups(
         )
     db.commit()
 
-    visibility_policies.upsert_policy(
-        db,
-        review_session=review_session,
-        instrument=group_instrument,
-        audience="reviewee",
-        while_ongoing_mode=None,
-        after_release_mode="raw",
-        user=_operator_user(db),
-    )
+    with past_draft_setup(db, review_session):
+        visibility_policies.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=group_instrument,
+            audience="reviewee",
+            while_ongoing_mode=None,
+            after_release_mode="raw",
+            user=_operator_user(db),
+        )
     # 19F PR 2a — the after-release window also needs the
     # session closed: released *because the session is over*.
     review_session.status = "expired"
@@ -1811,15 +1820,16 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
         )
     db.commit()
 
-    visibility_policies.upsert_policy(
-        db,
-        review_session=review_session,
-        instrument=group_instrument,
-        audience="reviewee",
-        while_ongoing_mode=None,
-        after_release_mode="raw",
-        user=_operator_user(db),
-    )
+    with past_draft_setup(db, review_session):
+        visibility_policies.upsert_policy(
+            db,
+            review_session=review_session,
+            instrument=group_instrument,
+            audience="reviewee",
+            while_ongoing_mode=None,
+            after_release_mode="raw",
+            user=_operator_user(db),
+        )
     # 19F PR 2a — the after-release window also needs the
     # session closed: released *because the session is over*.
     review_session.status = "expired"
