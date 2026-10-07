@@ -20,7 +20,8 @@ and apply the invariants:
 - ``remove_from_all_sessions`` refuses if the target is the
   sole owner of any session (``sole_owner``).
 - ``remove_user`` (hard delete) refuses if the target owns any
-  session (``owns_sessions``).
+  session (``owns_sessions``), or created one or acted in the audit
+  log (``has_history``) — removal is for accounts with no activity.
 - Other invariants (Promote-when-already-admin, etc.) are
   no-ops at the column level; the calling route forms hide the
   irrelevant button per row.
@@ -128,8 +129,8 @@ def list_workspace_users(db: Session) -> list[WorkspaceUserRow]:
 def _users_with_history(db: Session) -> set[int]:
     """Ids of users who created a session or acted in the audit log.
 
-    Deleting such a row would either take the sessions they created
-    with it or rewrite who did what in an append-only log, so
+    Those rows are referenced by the sessions they created and the
+    audit rows they acted in, which keep their attribution, so
     ``remove_user`` refuses them (findings H1, 2026-10-07).
     """
     creators = db.execute(select(ReviewSession.created_by_user_id).distinct())
@@ -436,8 +437,7 @@ def remove_user(
     - ``last_admin`` — refuses to remove the only remaining
       sys-admin in the workspace.
     - ``owns_sessions`` — refuses when the user owns one or
-      more sessions (``session_operator_count > 0``). The
-      operator transfers or deletes those sessions first.
+      more sessions (``session_operator_count > 0``).
     - ``has_history`` — refuses when the user created a session
       or acted in the audit log. Removal is for accounts with no
       activity (a mistyped invite, a sign-in that did nothing);
@@ -472,7 +472,9 @@ def remove_user(
             message=(
                 f"Refusing to remove {target.email} while they own "
                 f"{owned} session{'s' if owned != 1 else ''}. "
-                "Transfer or delete those sessions first."
+                "To take their access away, remove them from all "
+                "sessions and revoke them; removal is only for "
+                "accounts with no activity."
             ),
         )
     if _has_history(db, target.id):
@@ -480,9 +482,9 @@ def remove_user(
             code="has_history",
             message=(
                 f"Refusing to remove {target.email}: they have created "
-                "sessions or have activity in the audit log. Revoke "
-                "their operator access instead; removal is for accounts "
-                "with no activity."
+                "sessions or have activity in the audit log, which "
+                "keeps their name. Removal is only for accounts with no "
+                "activity; to take an operator's access away, revoke it."
             ),
         )
 
