@@ -216,7 +216,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **F — architecture, roles and operations**
 
-- ~~**F1**~~ med spec operations_pages.md:292 reviewer name links "when an Invitation row exists" vs :373-381 every row, reviewer-keyed; code links unconditionally (session_invitations.html:218-221) — **Done in #PR.**
+- ~~**F1**~~ med spec operations_pages.md:292 reviewer name links "when an Invitation row exists" vs :373-381 every row, reviewer-keyed; code links unconditionally (session_invitations.html:218-221) — **Done in #2871.**
 - **F2** low trim operations_pages.md:402-404 "(findings Fc2); Segment 14B restores the label" (keep the constraint); :200-206 narrates "was aligned … was left counting"
 - **F3** low author architecture.md:205-206 creation is `{collection}/add` vs reviewers/create, observers/create, page-break/create and bare collection POSTs (_setup_reviewers.py:370)
 - **F4** low author architecture.md:687-690, 759-761 counts non-negative, refs keys end `_id` vs audit.py:313-319 (§1)
@@ -255,7 +255,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **I — root and process documents**
 
-- ~~**I1**~~ med doc rrw_sdd_in_practice.md:46 quotes a functional-spec header ("the functional contract is stable; ship-state may move ahead of it", "points at the sweep record") removed in 19M; spec/README.md:20 gives currency to the sweep records. Also "now 2,416 lines" (2,562) — **Done in #PR.**
+- ~~**I1**~~ med doc rrw_sdd_in_practice.md:46 quotes a functional-spec header ("the functional contract is stable; ship-state may move ahead of it", "points at the sweep record") removed in 19M; spec/README.md:20 gives currency to the sweep records. Also "now 2,416 lines" (2,562) — **Done in #2871.**
 - **I2** low doc rrw_sdd_in_practice.md:205 21 Claude and 4 Codex assessments vs the appendix :308 "19 + 3"
 - **I3** low trim rrw_sdd_in_practice.md undated figures moved: CLAUDE.md "297" lines (:235; 301), tests 4,800 (:306; 5,445 collected), churn 1.1x (:269; 1.2x), duplication 6.3% (:270, :311; 5.8%), spec files 40 (:58; 35), spec lines 24,362 (25,603), docs 18 (14). Re-take with a date, or drop
 - **I4** low doc rrw_sdd_in_practice.md:107 (+ :244, :302) "last 200 merges" plan 76% / spec 31% do not reproduce (77 / 26 at 3559c7a7; 89 / 70 at HEAD); the window is undefined
