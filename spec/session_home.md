@@ -471,7 +471,7 @@ Layout: a 2-column grid — Reviewers
 + Reviewees stack in the left column; Relationships, Observers (when
 rendered) and Session settings stack in the right column. A Lock / Unlock button sits in a footer
 at the bottom-right and renders only while the card is available —
-`draft` with no persisted responses (`spec/quick_setup_card_spec.md`
+setup editable (`draft` or `validated`) with no persisted responses (`spec/quick_setup_card_spec.md`
 "Visibility"); there the card defaults to locked so the operator
 must explicitly Unlock before any setup change. Lock state lives in a per-session `HttpOnly`
 cookie (`qsu_{session_id}=1` when unlocked, path `/` so the

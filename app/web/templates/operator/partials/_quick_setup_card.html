@@ -32,7 +32,8 @@
    ``POST /operator/sessions/{id}/quick-setup/lock`` (a per-session
    ``HttpOnly`` cookie carries the operator's last choice).
 
-   Outside ``draft``, or once the session holds responses, the card
+   Once setup isn't editable (Activated or later), or once the
+   session holds responses, the card
    is locked for good and the toggle does not render
    (``views._quick_setup``). The service layer's ``_require_editable``
    is still the hard gate; a rejected submit comes back as a
@@ -53,8 +54,8 @@
     <div class="quick-setup-slot-controls">
       {# ``locked`` disables the input outright — not just the CSS
          greying — so an unavailable / locked card can't have a file
-         staged. ``is_locked`` is force-``True`` whenever the session
-         isn't in draft (see ``views._quick_setup``). #}
+         staged. ``is_locked`` is force-``True`` whenever the card
+         is unavailable (see ``views._quick_setup``). #}
       <input type="file"
              name="{{ slot.key }}_file"
              accept=".csv"

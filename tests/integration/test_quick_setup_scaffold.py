@@ -153,7 +153,7 @@ def test_quick_setup_disables_when_session_is_activated(
 ) -> None:
     """An Activated session marks Quick Setup unavailable
     (``is_disabled=True``). Description copy is the single static
-    line covering both gates (draft-only + no-responses)."""
+    line covering both gates (setup editable + no responses)."""
 
     operator = make_client(alice)
     review_session = _seed_pair(
@@ -185,6 +185,7 @@ def test_quick_setup_available_on_validated(
     )
     validate_session(review_session)
     db.flush()
+    assert review_session.status == "validated"
 
     context = views.build_quick_setup_context(db, review_session)
 

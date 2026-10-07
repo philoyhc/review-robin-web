@@ -113,7 +113,7 @@ The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Relat
 |---|---|---|
 | `draft` | None | **Available.** Fully interactive. Lock / Unlock toggle visible; unlocking reveals the slot controls. |
 | `draft` | Any | **Unavailable.** Body greyed via `.quick-setup-body.locked`; Lock / Unlock toggle hidden entirely. Operator routes to per-entity Setup pages (which have the response-loss-acknowledgment flow) for any further changes. |
-| `validated` | None | **Available.** Same as `draft` with none; an import demotes the session to `draft`, as any setup edit does. |
+| `validated` | None | **Available.** Same as `draft` with none; an import demotes the session to `draft`, as every roster and settings import does. |
 | `validated` | Any | **Unavailable.** Same treatment as `draft` with responses. |
 | `ready` | (any) | **Unavailable.** Same treatment. |
 | `expired` | (any) | Same as `ready`. |

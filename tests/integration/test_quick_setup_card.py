@@ -383,6 +383,41 @@ def test_reviewers_submit_on_ready_routes_to_lifecycle_banner(
     assert "paused" not in body
 
 
+def test_reviewers_submit_on_validated_applies_and_demotes(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Findings B1 (ruled 2026-10-07): the card is live on a validated
+    session, so a submit there imports and demotes the session to
+    ``draft`` like any roster import, rather than bouncing."""
+    from app.db.models import AuditEvent
+
+    operator = make_client(alice)
+    review_session = _seed_pair(operator, db, code="qs-validated-submit")
+    validate_session(review_session)
+    db.flush()
+    assert review_session.status == "validated"
+
+    response = operator.post(
+        f"/operator/sessions/{review_session.id}/quick-setup/reviewers",
+        files={"file": ("r2.csv", SECOND_REVIEWER_CSV, "text/csv")},
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert "quick_setup_error" not in response.headers["location"]
+    db.refresh(review_session)
+    assert review_session.status == "draft"
+    invalidated = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type == "session.invalidated",
+        )
+    ).scalars().all()
+    assert invalidated
+
+
 # --------------------------------------------------------------------------- #
 # Assignments slot — Segment 11J PR B
 # --------------------------------------------------------------------------- #
