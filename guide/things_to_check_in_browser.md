@@ -261,6 +261,7 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **The card is live and loads locked.** Prepare a session so it is
   Validated, with no responses. On Session Home, Quick Setup shows
   **Unlock**; Unlock enables the slots and lets a file be staged.
-- [ ] **A submit lands and demotes.** Stage a Reviewers CSV and Submit:
+- [ ] **A submit lands and demotes.** Stage a Reviewers CSV, tick the
+  replace confirmation, and Submit:
   the roster changes, the session reads Draft, and the Workflow card
   asks to Prepare again.

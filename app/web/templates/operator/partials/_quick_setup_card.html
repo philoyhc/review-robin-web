@@ -35,8 +35,9 @@
    Once setup isn't editable (Activated or later), or once the
    session holds responses, the card
    is locked for good and the toggle does not render
-   (``views._quick_setup``). The routes' own ``is_editable`` check
-   is still the hard gate; a rejected submit comes back as a
+   (``views._quick_setup``). Each slot's inline ``is_editable``
+   check, and ``_require_response_loss_ack`` on a session with
+   responses, are still the hard gates; a rejected submit comes back as a
    full-width ``banner-error`` above the slots, tied to its slot by
    id (``_quick_setup_error_message``).
 #}
