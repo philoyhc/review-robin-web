@@ -195,12 +195,14 @@ An **admin** can, on top of operator capability:
 - **Manage the workspace allowlist** on the Accounts Management page —
   **invite** a user by email before their first sign-in (as an
   operator, or as an admin), admit / revoke operator status, and
-  delete users entirely. A **super-admin** actor is additionally
+  delete accounts that have no activity. A **super-admin** actor is additionally
   required to promote / demote the admin flag or to invite an admin;
   destructive actions refuse when the target is a super-admin.
   Revoking operator status or deleting a user refuses while they still
-  own a session (remove them from all sessions first), and demoting or
-  deleting the last admin refuses.
+  own a session (remove them from all sessions first); deleting also
+  refuses anyone who created a session or acted in the audit log, whose
+  attribution stays, so Revoke is how an operator's access is taken
+  away. Demoting or deleting the last admin refuses.
 - **Bulk-remove a user from all sessions** they appear on
   (departure cleanup).
 - **View cross-session diagnostics** — a Sessions Diagnostics

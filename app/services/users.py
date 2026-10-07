@@ -20,7 +20,8 @@ and apply the invariants:
 - ``remove_from_all_sessions`` refuses if the target is the
   sole owner of any session (``sole_owner``).
 - ``remove_user`` (hard delete) refuses if the target owns any
-  session (``owns_sessions``).
+  session (``owns_sessions``), or created one or acted in the audit
+  log (``has_history``) — removal is for accounts with no activity.
 - Other invariants (Promote-when-already-admin, etc.) are
   no-ops at the column level; the calling route forms hide the
   irrelevant button per row.
@@ -41,7 +42,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth.roles import effective_super_admin_emails, is_super_admin
-from app.db.models import SessionOperator, User
+from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
 from app.services import audit
 from app.services.email_identity import normalize_email
 
@@ -57,6 +58,7 @@ class WorkspaceUserRow:
     created_at: datetime
     session_operator_count: int
     sole_owner_count: int
+    has_history: bool
 
 
 class UserOperationError(ValueError):
@@ -81,7 +83,8 @@ def list_workspace_users(db: Session) -> list[WorkspaceUserRow]:
     ``sole_owner_count`` is the number of those sessions that
     list exactly one operator (i.e. the user is the only owner) —
     drives the "Remove from all sessions" + "Delete user" gates
-    on the operator UI.
+    on the operator UI. ``has_history`` mirrors ``remove_user``'s
+    ``has_history`` guard so the Delete button can disable itself.
     """
     # One sweep over session_operators is enough to compute both
     # per-user totals and per-session operator counts (which then
@@ -105,6 +108,7 @@ def list_workspace_users(db: Session) -> list[WorkspaceUserRow]:
     users = (
         db.execute(select(User).order_by(User.id.desc())).scalars().all()
     )
+    with_history = _users_with_history(db)
     return [
         WorkspaceUserRow(
             id=user.id,
@@ -116,9 +120,40 @@ def list_workspace_users(db: Session) -> list[WorkspaceUserRow]:
             created_at=user.created_at,
             session_operator_count=user_total.get(user.id, 0),
             sole_owner_count=user_sole.get(user.id, 0),
+            has_history=user.id in with_history,
         )
         for user in users
     ]
+
+
+def _users_with_history(db: Session) -> set[int]:
+    """Ids of users who created a session or acted in the audit log.
+
+    Those rows are referenced by the sessions they created and the
+    audit rows they acted in, which keep their attribution, so
+    ``remove_user`` refuses them (findings H1, 2026-10-07).
+    """
+    creators = db.execute(select(ReviewSession.created_by_user_id).distinct())
+    actors = db.execute(
+        select(AuditEvent.actor_user_id)
+        .where(AuditEvent.actor_user_id.is_not(None))
+        .distinct()
+    )
+    return {row[0] for row in creators} | {row[0] for row in actors}
+
+
+def _has_history(db: Session, user_id: int) -> bool:
+    created = db.execute(
+        select(ReviewSession.id)
+        .where(ReviewSession.created_by_user_id == user_id)
+        .limit(1)
+    ).first()
+    if created is not None:
+        return True
+    acted = db.execute(
+        select(AuditEvent.id).where(AuditEvent.actor_user_id == user_id).limit(1)
+    ).first()
+    return acted is not None
 
 
 def _guard_self(actor: User, target: User) -> None:
@@ -402,8 +437,13 @@ def remove_user(
     - ``last_admin`` — refuses to remove the only remaining
       sys-admin in the workspace.
     - ``owns_sessions`` — refuses when the user owns one or
-      more sessions (``session_operator_count > 0``). The
-      operator transfers or deletes those sessions first.
+      more sessions (``session_operator_count > 0``).
+    - ``has_history`` — refuses when the user created a session
+      or acted in the audit log. Removal is for accounts with no
+      activity (a mistyped invite, a sign-in that did nothing);
+      access is taken away with Revoke, which keeps the row and
+      so the attribution. Deleting the row does not keep anyone
+      out: their next sign-in recreates it.
 
     On success the row is hard-deleted and a
     ``workspace.user_removed`` snapshot audit event records the
@@ -432,7 +472,19 @@ def remove_user(
             message=(
                 f"Refusing to remove {target.email} while they own "
                 f"{owned} session{'s' if owned != 1 else ''}. "
-                "Transfer or delete those sessions first."
+                "To take their access away, remove them from all "
+                "sessions and revoke them; removal is only for "
+                "accounts with no activity."
+            ),
+        )
+    if _has_history(db, target.id):
+        raise UserOperationError(
+            code="has_history",
+            message=(
+                f"Refusing to remove {target.email}: they have created "
+                "sessions or have activity in the audit log, which "
+                "keeps their name. Removal is only for accounts with no "
+                "activity; to take an operator's access away, revoke it."
             ),
         )
 

@@ -247,3 +247,11 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **A Settings import lands on its slot.** Import a Settings CSV
   through Quick Setup. The page returns to Session Home at the Settings
   slot, with no `?config_imported=ok` in the address bar.
+
+## Delete user only for accounts with no activity (#2867)
+
+- [ ] **Delete stays disabled for a user with history.** On Sys Admin →
+  Accounts, select an operator who created a session (or a participant
+  who has submitted). Delete stays greyed; Revoke is still offered.
+- [ ] **Delete works for an account with no activity.** Invite a fresh
+  email, select it, and Delete: the row goes.

@@ -99,12 +99,21 @@ class User(Base, TimestampMixin):
 
         return is_super_admin(self.email)
 
+    # ``passive_deletes="all"`` on both: the ORM never deletes a
+    # session or nulls an audit actor when a user row goes. The
+    # foreign keys have no ``ON DELETE``, so the database refuses
+    # instead — the backstop under ``remove_user``'s ``has_history``
+    # guard (findings H1, 2026-10-07; this cascade once took every
+    # session the user had created with it).
     review_sessions: Mapped[list[ReviewSession]] = relationship(
         back_populates="created_by_user",
-        cascade="all, delete-orphan",
+        passive_deletes="all",
     )
     session_operators: Mapped[list[SessionOperator]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    audit_events: Mapped[list[AuditEvent]] = relationship(back_populates="actor")
+    audit_events: Mapped[list[AuditEvent]] = relationship(
+        back_populates="actor",
+        passive_deletes="all",
+    )

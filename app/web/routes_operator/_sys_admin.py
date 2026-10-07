@@ -336,6 +336,7 @@ def _handle_toggle(
         if exc.code in {
             "last_admin",
             "owns_sessions",
+            "has_history",
             "still_owner",
             "sole_owner",
             "protected_super_admin",

@@ -166,7 +166,7 @@ status.
 | Promote | **super-admin** (`requires_super_admin`) | `self_action`, `requires_super_admin` | `sys_admin.role_promoted` |
 | Demote | **super-admin** | `self_action`, `requires_super_admin`, `protected_super_admin`, `last_admin` (target is the only admin) | `sys_admin.role_demoted` |
 | Remove from all sessions | admin | `self_action`, `protected_super_admin`, `sole_owner` (target is the only owner of some session) | `workspace.user_detached_from_all_sessions` |
-| Delete user | admin | `self_action`, `protected_super_admin`, `last_admin`, `owns_sessions` | `workspace.user_removed` |
+| Delete user | admin | `self_action`, `protected_super_admin`, `last_admin`, `owns_sessions`, `has_history` (target created a session or acted in the audit log; an operator's access is taken away by Revoke) | `workspace.user_removed` |
 | Invite (pre-seed a `users` row before first sign-in) | admin; **super-admin** to tick *Also invite as sys-admin*, which the page shows only to an actor who could Promote | `invalid_email`, `duplicate` (case-insensitive), `requires_super_admin` (admin box only) | `workspace.user_invited` |
 
 **No-super-tier fallback.** `requires_super_admin` engages only
@@ -222,7 +222,7 @@ the operation-level mappings.
 | Missing email claim | **401** | `get_or_create_user` |
 | `self_action` | **400** | `_sys_admin._handle_toggle` |
 | `requires_super_admin` on Promote / Demote | **403** | same |
-| `last_admin`, `owns_sessions`, `still_owner`, `sole_owner`, `protected_super_admin` | **409** | same |
+| `last_admin`, `owns_sessions`, `has_history`, `still_owner`, `sole_owner`, `protected_super_admin` | **409** | same |
 | every Invite error (`invalid_email`, `duplicate`, `requires_super_admin`) | **303** back to the page with `?invite_error=<code>`, which renders a banner | `_sys_admin.invite_user` |
 | `last_owner` on remove-owner | **409** (the card disables that Remove, so only a direct POST or a concurrent remove reaches it) | `_session_home.session_owners_remove` |
 | every other owner error on `owners/add` / `owners/{user_id}/remove` (`not_in_workspace`, `already_owner`, `not_owner`, `self_only`) | **303** back to `#owners-card` with `?owners_error=<code>` | same |

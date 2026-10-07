@@ -162,8 +162,13 @@ Two surfaces:
      super-admin (`protected_super_admin` → 409), sitting *above* the
      count-based `last_admin` floor — it protects a specific identity,
      not just a count.
-   - Plus the `owns_sessions` / `still_owner` / `sole_owner`
-     / `last_admin` guards.
+   - Plus the `owns_sessions` / `has_history` / `still_owner` /
+     `sole_owner` / `last_admin` guards. `has_history` keeps Delete
+     to accounts with no activity: the sessions a user created and
+     the audit rows they acted in keep their attribution, and
+     deleting a row would not keep anyone out, since the next
+     sign-in recreates it. Revoke is how an operator's access is
+     taken away.
    The Accounts page mirrors these in the UI (three-tier badges;
    Promote/Demote shown only to a super-admin actor; destructive controls
    disabled on super-admin rows) — the server guards are the real
