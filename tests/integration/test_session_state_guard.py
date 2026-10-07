@@ -27,23 +27,16 @@ from .test_scheduled_activation import _make_validated_session
 def _lands_at_the_lock(monkeypatch, db: Session, statement) -> None:
     """Execute ``statement`` (another request's committed write) just as
     the first lock is taken, behind the ORM's back."""
+    real = session_guard.lock_session
     fired: list[bool] = []
 
-    def landing_for(real):
-        def landing(db_, session_):
-            if not fired:
-                fired.append(True)
-                db.execute(
-                    statement.execution_options(synchronize_session=False)
-                )
-            return real(db_, session_)
+    def landing(db_, session_):
+        if not fired:
+            fired.append(True)
+            db.execute(statement.execution_options(synchronize_session=False))
+        return real(db_, session_)
 
-        return landing
-
-    for name in ("lock_session", "try_lock_session"):
-        monkeypatch.setattr(
-            session_guard, name, landing_for(getattr(session_guard, name))
-        )
+    monkeypatch.setattr(session_guard, "lock_session", landing)
 
 
 def _status_becomes(session: ReviewSession, status: str):
@@ -248,10 +241,11 @@ def test_release_refuses_a_session_archived_at_the_lock(
     db.commit()
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"))
 
-    with pytest.raises(lifecycle.SessionStateConflict):
+    with pytest.raises(lifecycle.SessionStateConflict) as raised:
         lifecycle.release_responses_now(
             db, review_session=session, user=_operator(db, session)
         )
+    assert str(raised.value) == "Archived sessions can't have responses released."
     assert _count(db, session, "session.responses_released") == 0
 
 
@@ -270,77 +264,50 @@ def test_stop_release_refuses_a_session_archived_at_the_lock(
     assert str(raised.value) == "Archived sessions can't have releases stopped."
 
 
-def test_a_held_lock_skips_the_deadline_close(
-    db: Session, monkeypatch
+
+@pytest.mark.parametrize(
+    ("path", "button", "message", "event"),
+    [
+        (
+            "release-responses",
+            "release_responses",
+            "Archived sessions can't have responses released.",
+            "session.responses_released",
+        ),
+        (
+            "stop-release",
+            "stop_release",
+            "Archived sessions can't have releases stopped.",
+            "session.responses_release_stopped",
+        ),
+    ],
+)
+def test_the_release_routes_answer_an_archive_race_as_their_own_gate(
+    client, db: Session, monkeypatch, path, button, message, event
 ) -> None:
-    """Another request holds the row: the close is left for the next
-    request rather than waited for. Acceptance reads the deadline
-    itself, so nothing is accepted late."""
-    session = _make_validated_session(db, "guard-skip")
-    session.status = "ready"
-    session.deadline = datetime.now(timezone.utc) - timedelta(hours=1)
-    db.commit()
-    _open_instruments(db, session)
-    monkeypatch.setattr(session_guard, "try_lock_session", lambda db_, s: None)
+    from urllib.parse import parse_qs, urlsplit
 
-    assert lifecycle.observe_deadline(db, session) == 0
-    assert _count(db, session, "instrument.closed") == 0
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == session.id)
-    ).scalars().first()
-    assert not lifecycle.session_accepts_responses(session, instrument)
-
-
-def test_the_release_route_answers_an_archive_race_as_its_own_gate(
-    client, db: Session, monkeypatch
-) -> None:
     client.post(
         "/operator/sessions",
-        data={"name": "Release", "code": "guard-release-route"},
+        data={"name": "Release", "code": f"guard-{button}"},
         follow_redirects=False,
     )
     session = db.execute(
-        select(ReviewSession).where(ReviewSession.code == "guard-release-route")
+        select(ReviewSession).where(ReviewSession.code == f"guard-{button}")
     ).scalar_one()
     session.status = "expired"
     db.commit()
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"))
 
     response = client.post(
-        f"/operator/sessions/{session.id}/workflow/release-responses",
+        f"/operator/sessions/{session.id}/workflow/{path}",
         follow_redirects=False,
     )
 
     assert response.status_code == 303
-    assert "super_status=failed" in response.headers["location"]
-    assert _count(db, session, "session.responses_released") == 0
-
-
-def test_the_live_reopen_does_not_skip_a_held_lock(
-    db: Session, monkeypatch
-) -> None:
-    """The reopen feeds the reviewer write gate, so it waits for the lock
-    rather than skipping: a closed instrument on a live session is
-    reopened even when the skipping lock would have given up."""
-    session = _make_validated_session(db, "guard-reopen-wait")
-    session.status = "ready"
-    session.deadline = datetime.now(timezone.utc) + timedelta(days=1)
-    db.commit()
-    db.execute(
-        update(Instrument)
-        .where(Instrument.session_id == session.id)
-        .values(accepting_responses=False)
-    )
-    db.commit()
-    monkeypatch.setattr(session_guard, "try_lock_session", lambda db_, s: None)
-
-    lifecycle.observe_deadline(db, session)
-
-    db.expire_all()
-    assert all(
-        db.execute(
-            select(Instrument.accepting_responses).where(
-                Instrument.session_id == session.id
-            )
-        ).scalars()
-    )
+    query = parse_qs(urlsplit(response.headers["location"]).query)
+    assert query["super_status"] == ["failed"]
+    assert query["super_button"] == [button]
+    assert query["super_step"] == ["precondition"]
+    assert query["super_error"] == [message]
+    assert _count(db, session, event) == 0

@@ -7,6 +7,7 @@ context comes from :func:`_surface_context` in ``_context``.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -200,7 +201,11 @@ async def reviewer_save(
     batch save through.
     """
     reviewer, review_session = reviewer_session
-    _require_session_accepting(db, review_session, reviewer)
+    # Off the event loop: the gate's deadline observer may wait on the
+    # session row lock (findings Bc4).
+    await run_in_threadpool(
+        _require_session_accepting, db, review_session, reviewer
+    )
     form = await request.form()
     upserts = responses_service.parse_form_payload(
         {k: v for k, v in form.items() if isinstance(v, str)}
@@ -274,7 +279,11 @@ async def reviewer_submit(
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     reviewer, review_session = reviewer_session
-    _require_session_accepting(db, review_session, reviewer)
+    # Off the event loop: the gate's deadline observer may wait on the
+    # session row lock (findings Bc4).
+    await run_in_threadpool(
+        _require_session_accepting, db, review_session, reviewer
+    )
     form = await request.form()
     string_form = {k: v for k, v in form.items() if isinstance(v, str)}
     upserts = responses_service.parse_form_payload(string_form)
@@ -404,7 +413,11 @@ async def reviewer_clear(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     reviewer, review_session = reviewer_session
-    _require_session_accepting(db, review_session, reviewer)
+    # Off the event loop: the gate's deadline observer may wait on the
+    # session row lock (findings Bc4).
+    await run_in_threadpool(
+        _require_session_accepting, db, review_session, reviewer
+    )
     form = await request.form()
     if form.get("confirm") != "true":
         raise HTTPException(

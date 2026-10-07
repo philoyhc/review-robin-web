@@ -905,6 +905,8 @@ def _reopen_while_live(
                     Instrument.session_id == review_session.id,
                     Instrument.accepting_responses.is_(False),
                 )
+                # Re-read: rows loaded before the lock may be stale.
+                .execution_options(populate_existing=True)
             ).scalars()
         )
 
@@ -913,10 +915,7 @@ def _reopen_while_live(
     # Something to heal: lock and decide again, so a Close session that
     # committed since this request loaded the row is not undone
     # (findings Bc4). Unlocked until then: this runs on every reviewer
-    # request and almost always has nothing to do. Unlike the deadline
-    # close below, this waits for a held lock rather than skipping:
-    # the reviewer write gate reads ``accepting_responses``, so a skipped
-    # heal would refuse a write made before the deadline.
+    # request and almost always has nothing to do.
     session_guard.lock_session(db, review_session)
     if not is_ready(review_session):
         return
@@ -983,6 +982,8 @@ def observe_deadline(
                     Instrument.accepting_responses.is_(True),
                     Instrument.deadline_closed_at.is_(None),
                 )
+                # Re-read: rows loaded before the lock may be stale.
+                .execution_options(populate_existing=True)
             ).scalars()
         )
 
@@ -991,12 +992,10 @@ def observe_deadline(
     # Lock and decide again before closing, so two requests tripping the
     # same deadline close each instrument (and audit it) once, and an End
     # cleared or moved later since this request loaded the row closes
-    # nothing (findings Bc4). Skipped when another request holds the row:
-    # acceptance reads the deadline itself (``session_accepts_responses``),
-    # so the close is bookkeeping the next request does, and the async
-    # reviewer writes that reach it need not wait on the event loop.
-    if session_guard.try_lock_session(db, review_session) is None:
-        return 0
+    # nothing (findings Bc4). Every caller runs off the event loop (the
+    # async reviewer writes reach this through the threadpool), so the
+    # wait for a held lock stalls only this request.
+    session_guard.lock_session(db, review_session)
     if review_session.deadline is None or current < _aware(
         review_session.deadline
     ):

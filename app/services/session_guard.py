@@ -68,26 +68,6 @@ def lock_session(db: Session, session: ReviewSession) -> ReviewSession:
     ).scalar_one()
 
 
-def try_lock_session(
-    db: Session, session: ReviewSession
-) -> ReviewSession | None:
-    """:func:`lock_session`, but ``None`` instead of waiting when another
-    transaction holds the row (``SKIP LOCKED``).
-
-    For work that is only bookkeeping and that the next request will do
-    anyway — ``observe_deadline``'s deadline close, which the async
-    reviewer writes reach — so a held lock does not stall the event loop
-    that serves them (findings Bc4). Not for anything a gate then reads.
-    SQLite ignores the clause and always returns the row."""
-    db.flush()
-    return db.execute(
-        select(ReviewSession)
-        .where(ReviewSession.id == session.id)
-        .with_for_update(key_share=True, skip_locked=True)
-        .execution_options(populate_existing=True)
-    ).scalar_one_or_none()
-
-
 def require_state(
     db: Session,
     session: ReviewSession,
