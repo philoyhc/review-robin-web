@@ -518,3 +518,75 @@ def test_config_save_keeps_datetimes_in_the_repeated_dst_hour(
         updated.responses_release_until.replace(tzinfo=timezone.utc)
         == release_until
     )
+
+
+def test_config_rename_keeps_a_schedule_that_has_aged(
+    client: TestClient, db: Session
+) -> None:
+    """findings B4: a draft whose Start has passed, with invite and
+    reminder offsets that now resolve into the past, still takes a
+    rename. The unedited boxes are kept as stored rather than re-checked
+    against the save-time floor; an aged value "stays put"."""
+    from datetime import timedelta, timezone
+
+    from app.services.date_formatting import format_datetime_local
+
+    session = _create_session(client, db, code="tz-aged")
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    start = now - timedelta(days=1)
+    deadline = now + timedelta(hours=2)
+    session.display_timezone = "UTC"
+    session.scheduled_activate_at = start
+    session.deadline = deadline
+    session.invite_offsets = ["-P1D"]
+    session.reminder_offsets = ["-P1D"]
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/config",
+        data={
+            "name": "Renamed",
+            "code": session.code,
+            "display_timezone": "UTC",
+            "scheduled_activate_at": format_datetime_local(start, "UTC"),
+            "deadline": format_datetime_local(deadline, "UTC"),
+            "invite_offsets": "-P1D",
+            "reminder_offsets": "-P1D",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303, response.text
+    db.expire_all()
+    updated = db.get(ReviewSession, session.id)
+    assert updated.name == "Renamed"
+    assert updated.scheduled_activate_at.replace(tzinfo=timezone.utc) == start
+    assert updated.invite_offsets == ["-P1D"]
+    assert updated.reminder_offsets == ["-P1D"]
+
+
+def test_config_still_refuses_an_edited_start_in_the_past(
+    client: TestClient, db: Session
+) -> None:
+    """The B4 exemption covers only a box left as stored: typing a new
+    Start in the past is still refused by the lead-time floor."""
+    from datetime import timedelta, timezone
+
+    from app.services.date_formatting import format_datetime_local
+
+    session = _create_session(client, db, code="tz-aged-edit")
+    session.display_timezone = "UTC"
+    db.commit()
+    past = datetime.now(timezone.utc) - timedelta(days=1)
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/config",
+        data={
+            "name": session.name,
+            "code": session.code,
+            "display_timezone": "UTC",
+            "scheduled_activate_at": format_datetime_local(past, "UTC"),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 422

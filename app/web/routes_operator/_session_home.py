@@ -378,49 +378,68 @@ def _apply_session_config_form(
         "deadline", parse_session_deadline(deadline_raw, deadline_zone)
     )
 
+    # A value that aged past its save-time floor while the session sat
+    # in draft "stays put" (``spec/lifecycle.md``): an unedited Start,
+    # and offsets left as stored on an unedited anchor, are kept as
+    # stored rather than re-checked against now, so a rename is never
+    # refused over them (findings B4). The fire-time guard handles them.
+    start_unedited = "scheduled_activate_at" in unedited
+
     # 18G Part 1: optional Start anchor for scheduled activation.
-    try:
-        parsed_scheduled_activate_at = _kept(
-            "scheduled_activate_at",
-            scheduled_events.parse_and_validate_scheduled_activate_at(
-                start_raw, timezone_name=start_zone
-            ),
-        )
-    except scheduled_events.ScheduledActivateError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
-        ) from exc
+    if start_unedited:
+        parsed_scheduled_activate_at = review_session.scheduled_activate_at
+    else:
+        try:
+            parsed_scheduled_activate_at = (
+                scheduled_events.parse_and_validate_scheduled_activate_at(
+                    start_raw, timezone_name=start_zone
+                )
+            )
+        except scheduled_events.ScheduledActivateError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
 
     # 18G Part 2: optional auto-send invite offsets, validated against
     # the (possibly freshly-edited) Start.
-    try:
-        parsed_invite_offsets = (
-            scheduled_events.parse_and_validate_invite_offsets(
-                invite_offsets,
-                scheduled_activate_at=parsed_scheduled_activate_at,
+    if start_unedited and scheduled_events.offsets_unchanged(
+        invite_offsets, review_session.invite_offsets
+    ):
+        parsed_invite_offsets = review_session.invite_offsets
+    else:
+        try:
+            parsed_invite_offsets = (
+                scheduled_events.parse_and_validate_invite_offsets(
+                    invite_offsets,
+                    scheduled_activate_at=parsed_scheduled_activate_at,
+                )
             )
-        )
-    except scheduled_events.ScheduledActivateError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
-        ) from exc
+        except scheduled_events.ScheduledActivateError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
 
     # 18G Part 3: optional auto-send reminder offsets, validated
     # against the (possibly freshly-edited) deadline.
-    try:
-        parsed_reminder_offsets = (
-            scheduled_events.parse_and_validate_reminder_offsets(
-                reminder_offsets,
-                deadline=parsed_deadline,
+    if "deadline" in unedited and scheduled_events.offsets_unchanged(
+        reminder_offsets, review_session.reminder_offsets
+    ):
+        parsed_reminder_offsets = review_session.reminder_offsets
+    else:
+        try:
+            parsed_reminder_offsets = (
+                scheduled_events.parse_and_validate_reminder_offsets(
+                    reminder_offsets,
+                    deadline=parsed_deadline,
+                )
             )
-        )
-    except scheduled_events.ScheduledActivateError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
-        ) from exc
+        except scheduled_events.ScheduledActivateError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
 
     # Participant-model W14 + S12: Release-responses anchor + close
     # datetime. Until is validated against the (possibly freshly-
