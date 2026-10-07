@@ -335,6 +335,7 @@ def send_invitation(
     correlation_id: str | None = None,
     trigger: str = "operator",
     outbox_correlation_id: str | None = None,
+    commit: bool = True,
 ) -> SendResult:
     """Mint a fresh token, write an outbox row, flip invitation to ``sent``.
 
@@ -408,7 +409,8 @@ def send_invitation(
         context={"trigger": trigger},
         correlation_id=correlation_id,
     )
-    db.commit()
+    if commit:
+        db.commit()
     return SendResult(outbox_id=outbox.id, raw_token=raw_token)
 
 
@@ -704,6 +706,7 @@ def send_reminder(
     build_invite_url: Callable[[str], str],
     correlation_id: str | None = None,
     outbox_correlation_id: str | None = None,
+    commit: bool = True,
 ) -> ReminderResult:
     """Send a reminder reusing the previously-issued invitation URL.
 
@@ -720,6 +723,10 @@ def send_reminder(
     ``outbox_correlation_id`` is stamped on the outbox row before the
     commit, so a caller that dedups on it (the scheduled-reminder pass)
     never loses the stamp to a later rollback (findings B31).
+
+    ``commit=False`` leaves the rows flushed for the caller's own
+    commit: the scheduled-reminder pass sends and records an entry in
+    one transaction, under the session lock (findings Bc3).
     """
     existing_url = most_recent_invitation_url(db, invitation_id=invitation.id)
     if existing_url is not None and not url_matches_current_token(
@@ -738,10 +745,12 @@ def send_reminder(
             build_invite_url=build_invite_url,
             correlation_id=correlation_id,
             outbox_correlation_id=outbox_correlation_id,
+            commit=commit,
         )
         invitation.last_reminder_at = datetime.now(timezone.utc)
         db.flush()
-        db.commit()
+        if commit:
+            db.commit()
         return ReminderResult(
             outbox_id=result.outbox_id, fell_back_to_invitation=True
         )
@@ -773,7 +782,8 @@ def send_reminder(
     outbox.sent_at = now
     invitation.last_reminder_at = now
     db.flush()
-    db.commit()
+    if commit:
+        db.commit()
     return ReminderResult(outbox_id=outbox.id, fell_back_to_invitation=False)
 
 

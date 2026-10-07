@@ -909,12 +909,22 @@ browsers, and direct POSTs bypass the picker entirely).
   an offset already sent at its position on the anchor the save keeps
   (§8.2.6).
 - **Concurrency safety.** Two concurrent operator GETs racing
-  the observer could fire the same trigger twice. Each trigger
-  opens with `SELECT … FOR UPDATE` on the session row plus an
-  idempotency check (`if session.scheduled_X_at is None: return`),
-  both inside the same transaction as the column clear. The
-  second racer sees `None` after the first racer commits and
-  no-ops.
+  the observer could fire the same trigger twice, and a schedule save
+  racing one could move an entry the observer is sending. Each trigger
+  takes `lock_session` (`SELECT … FOR NO KEY UPDATE` on the session
+  row, re-reading it) and decides from what that reads: activation
+  checks its column (`if session.scheduled_activate_at is None:
+  return`) in the same transaction as the column clear, and the
+  invite and reminder passes decide, send and record **one entry per
+  transaction**, re-locking before the next (findings Bc3, ruled
+  2026-10-07). A second racer re-reads after the first commits and
+  no-ops. The schedule save's sent-entry check (§8.2.6) takes the same
+  lock, so a send being recorded is committed before the save reads
+  the record, and an observer arriving after the save sees the saved
+  lists. `FOR NO KEY UPDATE` does not block other transactions'
+  inserts that reference the session (audit rows, tags). A failure
+  part-way through an entry rolls the entry back whole; the next visit
+  sends it again. Postgres only: SQLite has one writer.
 - **Retry policy.** If a precondition passes but the underlying
   transition raises (transient DB error, etc.), the trigger
   emits `session.scheduled_X_retry` (audit only — no schedule

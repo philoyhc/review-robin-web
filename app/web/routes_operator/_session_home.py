@@ -503,13 +503,6 @@ def _apply_session_config_form(
             detail=str(exc),
         ) from exc
 
-    sessions.set_session_display_timezone(
-        db,
-        review_session=review_session,
-        user=user,
-        timezone_name=timezone_name,
-        correlation_id=correlation_id,
-    )
     payload = SessionCreate(
         name=name,
         code=code,
@@ -529,6 +522,16 @@ def _apply_session_config_form(
         review_session=review_session,
         user=user,
         payload=payload,
+        correlation_id=correlation_id,
+    )
+    # After the schedule write, not before: the zone write commits, and
+    # committing first would release the session lock the sent-entry
+    # check took before the lists it checked are written (findings Bc3).
+    sessions.set_session_display_timezone(
+        db,
+        review_session=review_session,
+        user=user,
+        timezone_name=timezone_name,
         correlation_id=correlation_id,
     )
 

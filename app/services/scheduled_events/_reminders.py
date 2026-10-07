@@ -124,10 +124,11 @@ def _observe_scheduled_reminders(
     is session-wide, and the only thing that clears it on a ``ready``
     session is the deadline, which this window already excludes.
 
-    Concurrency is the same SELECT … FOR UPDATE pattern as Parts
-    1/2: the session row is locked once before iterating; each
-    entry's audit-driven consumption check inside that transaction
-    prevents a second racer from re-firing the same entry.
+    Concurrency: each entry is decided and recorded in one
+    transaction under ``lock_session``, which re-reads the session row
+    (findings Bc3). A second racer re-reads the record after the first
+    commits and skips the entry; a schedule save waits for the entry to
+    be recorded, and an entry decided after a save sees the saved lists.
     """
     if not session.reminder_offsets:
         return
@@ -145,15 +146,64 @@ def _observe_scheduled_reminders(
     if not due:
         return
 
-    locked = lock_session(db, session)
-    if locked.deadline is None or not locked.reminder_offsets:
-        return
+    # One entry per transaction, decided under the session lock and
+    # re-read each time (findings Bc3), as the invite pass does. Fire
+    # in chronological order so the audit log reads top-to-bottom.
+    handled: set[int] = set()
+    while True:
+        locked = lock_session(db, session)
+        if locked.deadline is None or not locked.reminder_offsets:
+            db.commit()
+            return
+        anchor_iso = _ensure_aware_utc(locked.deadline).isoformat()
+        consumed = _consumed_reminder_offset_indices(db, locked, anchor_iso)
+        pending = sorted(
+            (fire_at, idx, raw)
+            for idx, raw, fire_at in _resolve_reminder_fires(locked)
+            if fire_at is not None
+            and fire_at <= now
+            and idx not in consumed
+            and idx not in handled
+        )
+        if not pending:
+            db.commit()
+            return
+        fire_at, offset_index, offset_str = pending[0]
+        handled.add(offset_index)
+        _fire_reminder_entry(
+            db,
+            locked,
+            offset_index=offset_index,
+            offset_str=offset_str,
+            anchor_iso=anchor_iso,
+            scheduled_iso=fire_at.isoformat(),
+            now=now,
+            correlation_id=correlation_id,
+            build_invite_url=build_invite_url,
+        )
+        db.commit()
 
-    anchor_iso = _ensure_aware_utc(locked.deadline).isoformat()
-    consumed = _consumed_reminder_offset_indices(db, locked, anchor_iso)
 
-    # Precondition resolves once per pass — applies uniformly to every
-    # entry firing in this observer call.
+def _fire_reminder_entry(
+    db: Session,
+    locked: ReviewSession,
+    *,
+    offset_index: int,
+    offset_str: str,
+    anchor_iso: str,
+    scheduled_iso: str,
+    now: datetime,
+    correlation_id: str | None,
+    build_invite_url: Callable[[str], str],
+) -> None:
+    """Skip or send one due entry and record it, without committing:
+    the caller commits the entry as one transaction."""
+    context = {
+        "anchor_at": anchor_iso,
+        "offset_index": offset_index,
+        "offset": offset_str,
+        "scheduled_at": scheduled_iso,
+    }
     if not lifecycle.is_ready(locked):
         skip_reason: str | None = "not_ready"
     elif not invitations_service.has_invitations(db, locked.id):
@@ -162,65 +212,42 @@ def _observe_scheduled_reminders(
         skip_reason = "outside_response_window"
     else:
         skip_reason = None
-
-    # Fire in chronological order so the audit log reads top-to-bottom.
-    due_sorted = sorted(due, key=lambda row: row[2])  # by fire_at
-    for offset_index, offset_str, fire_at in due_sorted:
-        if offset_index in consumed:
-            continue
-        scheduled_iso = fire_at.isoformat()
-        if skip_reason is not None:
-            audit.write_event(
-                db,
-                event_type="session.scheduled_reminders_skipped",
-                summary=(
-                    f"Scheduled reminders for {locked.code} skipped "
-                    f"({offset_str}): {skip_reason}"
-                ),
-                actor_user_id=None,
-                session=locked,
-                reason=skip_reason,
-                context={
-                    "anchor_at": anchor_iso,
-                    "offset_index": offset_index,
-                    "offset": offset_str,
-                    "scheduled_at": scheduled_iso,
-                },
-                correlation_id=correlation_id,
-            )
-            consumed.add(offset_index)
-            db.commit()
-            continue
-
-        sent = _dispatch_scheduled_reminders(
-            db,
-            locked,
-            offset_index=offset_index,
-            build_invite_url=build_invite_url,
-            correlation_id=correlation_id,
-        )
-
+    if skip_reason is not None:
         audit.write_event(
             db,
-            event_type="session.scheduled_reminders_fired",
+            event_type="session.scheduled_reminders_skipped",
             summary=(
-                f"Scheduled reminders for {locked.code} fired "
-                f"({offset_str}); dispatched {sent}"
+                f"Scheduled reminders for {locked.code} skipped "
+                f"({offset_str}): {skip_reason}"
             ),
             actor_user_id=None,
             session=locked,
-            payload=audit.counts(sent=sent),
-            context={
-                "anchor_at": anchor_iso,
-                "offset_index": offset_index,
-                "offset": offset_str,
-                "scheduled_at": scheduled_iso,
-                "actual_fired_at": now.isoformat(),
-            },
+            reason=skip_reason,
+            context=context,
             correlation_id=correlation_id,
         )
-        consumed.add(offset_index)
-        db.commit()
+        return
+
+    sent = _dispatch_scheduled_reminders(
+        db,
+        locked,
+        offset_index=offset_index,
+        build_invite_url=build_invite_url,
+        correlation_id=correlation_id,
+    )
+    audit.write_event(
+        db,
+        event_type="session.scheduled_reminders_fired",
+        summary=(
+            f"Scheduled reminders for {locked.code} fired "
+            f"({offset_str}); dispatched {sent}"
+        ),
+        actor_user_id=None,
+        session=locked,
+        payload=audit.counts(sent=sent),
+        context={**context, "actual_fired_at": now.isoformat()},
+        correlation_id=correlation_id,
+    )
 
 
 def _dispatch_scheduled_reminders(
@@ -257,10 +284,10 @@ def _dispatch_scheduled_reminders(
         ).scalar_one_or_none()
         if existing is not None:
             continue
-        # The dedupe stamp rides on the outbox row and commits with it
-        # (findings B31). Stamping it after ``send_reminder`` returned
-        # left it flushed but uncommitted, so a later reviewer's failure
-        # rolled it back and the next pass queued this reminder again.
+        # The dedupe stamp rides on the outbox row (findings B31), which
+        # the caller commits with the entry's audit row as one
+        # transaction (findings Bc3): a failure part-way rolls the whole
+        # entry back, and the next pass sends it afresh.
         invitations_service.send_reminder(
             db,
             invitation=row.invitation,
@@ -270,6 +297,7 @@ def _dispatch_scheduled_reminders(
             build_invite_url=build_invite_url,
             correlation_id=correlation_id,
             outbox_correlation_id=cid,
+            commit=False,
         )
         sent += 1
     return sent
