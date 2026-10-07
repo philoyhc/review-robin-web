@@ -252,10 +252,15 @@ def parse_and_validate_scheduled_activate_at(
     timezone_name: str,
     now: datetime | None = None,
     min_lead_hours: int | None = None,
+    aged_exempt: bool = False,
 ) -> datetime | None:
     """Parse a ``datetime-local`` form value into a UTC-aware datetime
     and enforce the operational lead-time floor (Part 1 minimum
     lead time, defaulted to ``settings.scheduled_operational_lead_hours``).
+
+    ``aged_exempt`` skips the floor for a value the caller re-submits
+    unedited: a Start that aged past it after saving "stays put"
+    (``spec/lifecycle.md`` §8.3; findings B4). Parsing still runs.
 
     Returns ``None`` when ``raw`` is empty (operator cleared the
     field). Raises :class:`ScheduledActivateError` on a malformed
@@ -286,7 +291,7 @@ def parse_and_validate_scheduled_activate_at(
         else settings.scheduled_operational_lead_hours
     )
     current = now or datetime.now(timezone.utc)
-    if parsed_aware - current < timedelta(hours=hours):
+    if not aged_exempt and parsed_aware - current < timedelta(hours=hours):
         raise ScheduledActivateError(
             f"Scheduled activation must be at least {hours} hour(s) "
             f"in the future"

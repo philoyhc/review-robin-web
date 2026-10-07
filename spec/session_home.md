@@ -370,6 +370,10 @@ plain `<label>` above its value:
   text keeps the stored instant (`sessions.datetime_box_unedited`): in
   the repeated hour after a DST fall-back the text names two instants,
   and re-reading it would move the value an hour early on every Save.
+  A kept Start, and the stored offsets on a kept Start or End, skip
+  only the lead-time floor: a schedule that aged past it after saving
+  stays put (`spec/lifecycle.md` §8.3), so a rename is never refused
+  over it. Every other check still runs.
 
 Below the field block, a `.bottom-grid` of two **sub-cards**, each its
 own `.bottom-left` column (`spec/ui_elements.md` §10) — **User

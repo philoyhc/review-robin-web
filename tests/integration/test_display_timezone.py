@@ -518,3 +518,287 @@ def test_config_save_keeps_datetimes_in_the_repeated_dst_hour(
         updated.responses_release_until.replace(tzinfo=timezone.utc)
         == release_until
     )
+
+
+def test_config_rename_keeps_a_schedule_that_has_aged(
+    client: TestClient, db: Session
+) -> None:
+    """findings B4: a draft whose Start has passed, with invite and
+    reminder offsets that now resolve into the past, still takes a
+    rename. The unedited boxes are kept as stored rather than re-checked
+    against the save-time floor; an aged value "stays put"."""
+    from datetime import timedelta, timezone
+
+    from app.services.date_formatting import format_datetime_local
+
+    session = _create_session(client, db, code="tz-aged")
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    start = now - timedelta(days=1)
+    deadline = now + timedelta(hours=2)
+    session.display_timezone = "UTC"
+    session.scheduled_activate_at = start
+    session.deadline = deadline
+    session.invite_offsets = ["-P1D"]
+    session.reminder_offsets = ["-P1D"]
+    db.commit()
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/config",
+        data={
+            "name": "Renamed",
+            "code": session.code,
+            "display_timezone": "UTC",
+            "scheduled_activate_at": format_datetime_local(start, "UTC"),
+            "deadline": format_datetime_local(deadline, "UTC"),
+            "invite_offsets": "-P1D",
+            "reminder_offsets": "-P1D",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303, response.text
+    db.expire_all()
+    updated = db.get(ReviewSession, session.id)
+    assert updated.name == "Renamed"
+    assert updated.scheduled_activate_at.replace(tzinfo=timezone.utc) == start
+    assert updated.invite_offsets == ["-P1D"]
+    assert updated.reminder_offsets == ["-P1D"]
+
+
+def test_config_still_refuses_an_edited_start_in_the_past(
+    client: TestClient, db: Session
+) -> None:
+    """The B4 exemption covers only a box left as stored: typing a new
+    Start in the past is still refused by the lead-time floor."""
+    from datetime import timedelta, timezone
+
+    from app.services.date_formatting import format_datetime_local
+
+    session = _create_session(client, db, code="tz-aged-edit")
+    session.display_timezone = "UTC"
+    db.commit()
+    past = datetime.now(timezone.utc) - timedelta(days=1)
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/config",
+        data={
+            "name": session.name,
+            "code": session.code,
+            "display_timezone": "UTC",
+            "scheduled_activate_at": format_datetime_local(past, "UTC"),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+
+
+def _post_aged_schedule(
+    client: TestClient, db: Session, code: str, *, stored: str, submitted: str
+):
+    """A draft whose Start passed a day ago, invite offsets ``stored``,
+    re-saved with the Start box untouched and ``submitted`` offsets."""
+    from datetime import timedelta, timezone
+
+    from app.services.date_formatting import format_datetime_local
+
+    session = _create_session(client, db, code=code)
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    start = now - timedelta(days=1)
+    session.display_timezone = "UTC"
+    session.scheduled_activate_at = start
+    session.invite_offsets = [stored]
+    db.commit()
+    return client.post(
+        f"/operator/sessions/{session.id}/config",
+        data={
+            "name": session.name,
+            "code": session.code,
+            "display_timezone": "UTC",
+            "scheduled_activate_at": format_datetime_local(start, "UTC"),
+            "invite_offsets": submitted,
+        },
+        follow_redirects=False,
+    )
+
+
+def test_config_refuses_a_new_offset_on_an_aged_start(
+    client: TestClient, db: Session
+) -> None:
+    """The B4 exemption is per stored entry: an offset typed now on an
+    aged Start resolves into the past and meets the floor."""
+    response = _post_aged_schedule(
+        client, db, "tz-aged-new-offset", stored="-P1D", submitted="-P2D"
+    )
+    assert response.status_code == 422
+    assert "leave more lead time" in response.text
+
+
+def test_config_still_checks_a_stored_offset_beyond_the_floor(
+    client: TestClient, db: Session
+) -> None:
+    """Only the lead-time floor is waived for a stored entry: one that
+    breaks another rule (a positive invite offset, which a Settings
+    import can write) is still refused on the next Save."""
+    response = _post_aged_schedule(
+        client, db, "tz-aged-bad-sign", stored="P1D", submitted="P1D"
+    )
+    assert response.status_code == 422
+    assert "fires at or after Start" in response.text
+
+
+def test_config_rechecks_stored_offsets_when_start_moves(
+    client: TestClient, db: Session
+) -> None:
+    """The exemption holds only while the anchor is unedited: moving
+    Start re-checks every stored invite offset against the floor."""
+    from datetime import timedelta, timezone
+
+    from app.services.date_formatting import format_datetime_local
+
+    session = _create_session(client, db, code="tz-aged-moved")
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    session.display_timezone = "UTC"
+    session.scheduled_activate_at = now - timedelta(days=1)
+    session.invite_offsets = ["-P1D"]
+    db.commit()
+    # Start moves to six hours out, so the stored -P1D resolves into
+    # the past and must be refused.
+    new_start = now + timedelta(hours=6)
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/config",
+        data={
+            "name": session.name,
+            "code": session.code,
+            "display_timezone": "UTC",
+            "scheduled_activate_at": format_datetime_local(new_start, "UTC"),
+            "invite_offsets": "-P1D",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 422
+    assert "leave more lead time" in response.text
+
+
+def test_config_refuses_a_duplicate_of_an_aged_offset(
+    client: TestClient, db: Session
+) -> None:
+    """Exemption is by stored position: a second copy of an aged offset
+    sits at an index that held nothing and meets the floor (Codex on
+    #2870)."""
+    response = _post_aged_schedule(
+        client, db, "tz-aged-dup", stored="-P1D", submitted="-P1D, -P1D"
+    )
+    assert response.status_code == 422
+    assert "leave more lead time" in response.text
+
+
+def test_config_refuses_a_duplicate_of_an_aged_reminder_offset(
+    client: TestClient, db: Session
+) -> None:
+    """The reminder parser matches by position too: with End unedited,
+    a second copy of a stored reminder offset that now resolves into
+    the past meets the floor."""
+    from datetime import timedelta, timezone
+
+    from app.services.date_formatting import format_datetime_local
+
+    session = _create_session(client, db, code="tz-aged-dup-rem")
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    deadline = now + timedelta(hours=2)
+    session.display_timezone = "UTC"
+    session.deadline = deadline
+    session.reminder_offsets = ["-P1D"]
+    db.commit()
+
+    def _save(offsets: str):
+        return client.post(
+            f"/operator/sessions/{session.id}/config",
+            data={
+                "name": session.name,
+                "code": session.code,
+                "display_timezone": "UTC",
+                "deadline": format_datetime_local(deadline, "UTC"),
+                "reminder_offsets": offsets,
+            },
+            follow_redirects=False,
+        )
+
+    assert _save("-P1D").status_code == 303
+    response = _save("-P1D, -P1D")
+    assert response.status_code == 422
+    assert "leave more lead time" in response.text
+
+
+def test_config_refuses_reordered_aged_offsets(
+    client: TestClient, db: Session
+) -> None:
+    """Exemption is by position: the observer tracks fired offsets by
+    index, so a stored entry moved to another position is new there and
+    meets the floor (Codex on #2870)."""
+    from datetime import timedelta, timezone
+
+    from app.services.date_formatting import format_datetime_local
+
+    session = _create_session(client, db, code="tz-aged-reorder")
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    start = now - timedelta(days=1)
+    session.display_timezone = "UTC"
+    session.scheduled_activate_at = start
+    session.invite_offsets = ["-P2D", "-P1D"]
+    db.commit()
+
+    def _save(offsets: str):
+        return client.post(
+            f"/operator/sessions/{session.id}/config",
+            data={
+                "name": session.name,
+                "code": session.code,
+                "display_timezone": "UTC",
+                "scheduled_activate_at": format_datetime_local(start, "UTC"),
+                "invite_offsets": offsets,
+            },
+            follow_redirects=False,
+        )
+
+    assert _save("-P2D, -P1D").status_code == 303
+    response = _save("-P1D, -P2D")
+    assert response.status_code == 422
+    assert "leave more lead time" in response.text
+
+
+def test_config_refuses_reordered_aged_reminder_offsets(
+    client: TestClient, db: Session
+) -> None:
+    """The reminder parser's positional match: with End unedited,
+    swapping two stored reminder offsets that now resolve into the past
+    is refused."""
+    from datetime import timedelta, timezone
+
+    from app.services.date_formatting import format_datetime_local
+
+    session = _create_session(client, db, code="tz-aged-reorder-rem")
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    deadline = now + timedelta(hours=2)
+    session.display_timezone = "UTC"
+    session.deadline = deadline
+    session.reminder_offsets = ["-P2D", "-P1D"]
+    db.commit()
+
+    def _save(offsets: str):
+        return client.post(
+            f"/operator/sessions/{session.id}/config",
+            data={
+                "name": session.name,
+                "code": session.code,
+                "display_timezone": "UTC",
+                "deadline": format_datetime_local(deadline, "UTC"),
+                "reminder_offsets": offsets,
+            },
+            follow_redirects=False,
+        )
+
+    assert _save("-P2D, -P1D").status_code == 303
+    response = _save("-P1D, -P2D")
+    assert response.status_code == 422
+    assert "leave more lead time" in response.text

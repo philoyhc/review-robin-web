@@ -45,7 +45,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
 
 **Medium**
 
-- **B4** **A Details Save on a draft refuses a rename once the stored Start
+- ~~**B4**~~ — **2026-10-07: the spec's "stays put", the fixer's choice with no ruling asked. Done in #2870** (an unedited Start, and the stored offsets on an unedited anchor, skip only the lead-time floor; every other check still runs). **A Details Save on a draft refuses a rename once the stored Start
   has passed.** `_session_home.py` `/config` re-validates the unedited
   scheduled Start through `parse_and_validate_scheduled_activate_at`
   (and the reminder offsets), so changing only the Name answers 422
@@ -107,6 +107,16 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   (E12); `_filters.py`'s `assignments_picked_handles` docstring (B6);
   `tests/conftest.py`'s pointer to the Rehydrate gate test, which is under
   `tests/integration/` (outside the corpus).
+- **Bc1** (found while fixing B4, #2870; medium, author) **Deleting a
+  fired offset can stop a later one from ever firing.** The invite and
+  reminder observers record fired offsets by list index
+  (`_consumed_invite_offset_indices` and its reminder twin; the outbox
+  key `reminder:{sid}:{rid}:{offset_index}`). Delete a fired `-P3D` from
+  `[-P3D, -PT12H]` and `-PT12H` moves to index 0, which reads as already
+  fired. `spec/lifecycle.md` §8.2.6 says index-keyed dedup makes a
+  re-ordered list safe; it holds only when nothing has fired. Author:
+  key fired state on the offset value, or refuse edits that shift a
+  fired index.
 - **Carried:** old B27 / G6 (scheduled sends fire only from Session Home;
   `guide/post_azure_todo_checklist.md` §7), re-found as B3 and G4; old D4
   (`responses_import._stage` overwrites a duplicate row), re-found and
@@ -121,7 +131,7 @@ id points at its row in §3 or §1.
 - **Instruments:** A4 (Group preview with no boundary), A7 (does the
   reviewer surface follow the visibility editor), G1 (Name locked on a
   group-scoped instrument).
-- **Lifecycle and Setup:** B1 (Quick Setup's availability against the
+- **Lifecycle and Setup:** Bc1 (fired offsets keyed by index), B1 (Quick Setup's availability against the
   `is_editable` predicate), B4 (aged Start on a rename), B5 (the P30D
   archive default nothing writes), C5 (unlock cookies across Session Home
   forms).
@@ -158,7 +168,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **B1** med spec (author if the card should follow `is_editable`) lifecycle.md:560-565 Quick Setup body greyed with toggle visible but inert vs available only on draft with no responses, toggle hidden on validated (views/_quick_setup.py:201,340; _quick_setup_card.html:35-40), while the routes gate on is_editable; the card is narrower than the single predicate §3.1 / §5 say nothing undercuts; :560 also names the retired "Next Action card"
 - **B2** low spec lifecycle.md:521-526 Observers exception "checkboxes only, bulk card follows the common gate", contradicting :423 vs :434; code gates the whole Unlock panel, selection and checkboxes on not archived (session_observers.html:13-18,229,559; setup_pages.md:360 right)
 - **B3** — carried, old B27 / G6: lifecycle.md:864-870 the lazy observer runs on Session Home, Operations and the lobby vs Session Home only (_session_home.py:125). Not counted.
-- **B4** med author lifecycle.md:886-889 aged value stays put vs Details Save re-validates the stored Start (§1)
+- ~~**B4**~~ med author lifecycle.md:886-889 aged value stays put vs Details Save re-validates the stored Start (§1) — **Done in #2870.**
 - **B5** low author lifecycle.md:698,727 archive_offset default P30D vs nullable, no default, nothing writes it (review_session.py:108); settings_inventory.md:117 "no editor, CSV only"
 - **B6** low spec assignments.md:932-937 reviewer-tail `@` guard "inherited from the roster pages" — C5 dropped it from filter_reviewers_rows / filter_observers_rows (_filters.py:316,526); assignments_picked_handles (:408) keeps it, its docstring (:394-404) stale
 - **B7** low code validate_page.md:518-520 no internal names in a why line vs validation.py:1098-1112, 1171-1188, 1205-1218 (§1)

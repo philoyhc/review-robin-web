@@ -378,12 +378,20 @@ def _apply_session_config_form(
         "deadline", parse_session_deadline(deadline_raw, deadline_zone)
     )
 
+    # A value that aged past its save-time floor after saving "stays
+    # put" (``spec/lifecycle.md`` §8.3): an unedited Start, and the
+    # stored offsets on an unedited anchor, skip only the lead-time
+    # floor, so a rename is never refused over them (findings B4).
+    start_unedited = "scheduled_activate_at" in unedited
+
     # 18G Part 1: optional Start anchor for scheduled activation.
     try:
         parsed_scheduled_activate_at = _kept(
             "scheduled_activate_at",
             scheduled_events.parse_and_validate_scheduled_activate_at(
-                start_raw, timezone_name=start_zone
+                start_raw,
+                timezone_name=start_zone,
+                aged_exempt=start_unedited,
             ),
         )
     except scheduled_events.ScheduledActivateError as exc:
@@ -399,6 +407,11 @@ def _apply_session_config_form(
             scheduled_events.parse_and_validate_invite_offsets(
                 invite_offsets,
                 scheduled_activate_at=parsed_scheduled_activate_at,
+                aged_exempt=(
+                    review_session.invite_offsets or []
+                    if start_unedited
+                    else ()
+                ),
             )
         )
     except scheduled_events.ScheduledActivateError as exc:
@@ -414,6 +427,11 @@ def _apply_session_config_form(
             scheduled_events.parse_and_validate_reminder_offsets(
                 reminder_offsets,
                 deadline=parsed_deadline,
+                aged_exempt=(
+                    review_session.reminder_offsets or []
+                    if "deadline" in unedited
+                    else ()
+                ),
             )
         )
     except scheduled_events.ScheduledActivateError as exc:
