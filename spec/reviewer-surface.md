@@ -807,7 +807,7 @@ reviewer-surface specifics:
 
 The collapsed row carries the same dict shape plus a
 `group_identity` block (`tag_line` / `member_names` /
-`extra_count` / `show_members`) and a `group_label`; the
+`extra_count`) and a `group_label`; the
 instrument group dict carries `is_group: bool`, which the
 template branches on.
 

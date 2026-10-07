@@ -2252,6 +2252,18 @@ def test_group_instrument_surface_renders_one_row_per_group(
         .where(Instrument.group_kind.is_not(None))
     ).scalar_one()
     group.group_kind = "r1"
+    # A Name row stored hidden, as one could be before findings G1:
+    # the members still render on a group instrument.
+    from app.db.models import InstrumentDisplayField
+
+    for display_field in db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == group.id,
+            InstrumentDisplayField.source_type == "reviewee",
+            InstrumentDisplayField.source_field == "name",
+        )
+    ).scalars():
+        display_field.visible = False
     db.commit()
 
     pin_full_matrix_on_all_instruments(db, review_session.id)
@@ -2277,8 +2289,8 @@ def test_group_instrument_surface_renders_one_row_per_group(
     # reviewee — so two rating inputs, not three.
     assert table.count("[rating]") == 2
     assert "Team A" in table and "Team B" in table
-    # Team A's member-name list renders (RevieweeName Included).
-    assert "Carol" in table and "Eve" in table
+    # Team A's member-name list renders (always, on a group instrument).
+    assert "Carol, Eve" in table
     # The numeric Rating column is pinned to a ch-width keyed to its
     # header + RTD digit span, so it doesn't sprawl across the
     # fixed-layout group table.

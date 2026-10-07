@@ -276,6 +276,17 @@ def load_responses(
         (instrument_id, ident): group_key
         for (instrument_id, group_key), ident in identity.items()
     }
+    # A file exported while a group instrument's Name could be hidden
+    # (before findings G1) names the group by its tag values alone; accept
+    # that form too, wherever it picks out one group.
+    tag_only: dict[tuple[int, str], tuple[str, ...] | None] = {}
+    for instrument_id, group_key in identity:
+        label = ", ".join(v for v in group_key if v) or "(group)"
+        slot = (instrument_id, label)
+        tag_only[slot] = None if slot in tag_only else group_key
+    for slot, group_key in tag_only.items():
+        if group_key is not None:
+            identity_to_key.setdefault(slot, group_key)
     members_by: dict[tuple[int, int, tuple[str, ...]], list[Assignment]] = {}
     for a in assignments:
         group_key = key_by_assignment.get(a.id)

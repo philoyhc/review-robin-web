@@ -426,3 +426,26 @@ def test_bulk_save_keeps_name_shown_on_a_group_instrument(db: Session) -> None:
     )
     db.refresh(name)
     assert name.visible is True
+
+
+def test_add_display_field_keeps_a_locked_source_shown(db: Session) -> None:
+    """Findings G1: adding Name back (to an instrument that lost it, an
+    import without the row, say) stores it shown, as every other setter
+    keeps a locked row."""
+    user, instrument = _seed_instrument(db, code="add-locked")
+    for field in list(instrument.display_fields):
+        if (field.source_type, field.source_field) == ("reviewee", "name"):
+            db.delete(field)
+    db.flush()
+    db.refresh(instrument)
+
+    added = add_display_field(
+        db,
+        instrument=instrument,
+        source_type="reviewee",
+        source_field="name",
+        label="",
+        visible=False,
+        actor=user,
+    )
+    assert added.visible is True
