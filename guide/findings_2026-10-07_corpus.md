@@ -140,6 +140,14 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   closed one order only and made every save block foreign-key inserts on
   the session (Postgres deadlock risk). **Ruled 2026-10-07: rework the
   observer's locking.** Code PR to follow.
+- **Gc1** (found while fixing G1, Codex on #2875; low, author) **A
+  roster tag value may contain a comma.** A group instrument names a group
+  by its tag values joined with ", ", so two groups can render the same
+  label (`("A", "B")` and `("A, B", "")`), and an older responses file
+  naming a group that way cannot be matched. **Ruled 2026-10-07: no roster
+  tag value (reviewers, reviewees, observers, relationships) may contain a
+  comma, on import or edit; stored values stay as they are, with no
+  warning.** Code PR to follow.
 - **Carried:** old B27 / G6 (scheduled sends fire only from Session Home;
   `guide/post_azure_todo_checklist.md` §7), re-found as B3 and G4; old D4
   (`responses_import._stage` overwrites a duplicate row), re-found and
@@ -172,7 +180,7 @@ id points at its row in §3 or §1.
 - **Docs and root:** H2 (is the bulk-archive checkbox a confirm), I7 (email
   "queued" or "recorded"), I8 (the practices kit's engine builder).
 
-Ruled 2026-10-07: B1, Bc1, Bc2, Bc3, G1, G2, H2 (rows say how).
+Ruled 2026-10-07: B1, Bc1, Bc2, Bc3, G1, G2, Gc1, H2 (rows say how).
 
 ## 3. Findings by file
 
