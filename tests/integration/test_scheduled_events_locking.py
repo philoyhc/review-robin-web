@@ -345,5 +345,5 @@ def test_the_settings_import_route_gates_editability_under_the_lock(
         follow_redirects=False,
     )
 
-    assert "quick_setup_error" in response.headers["location"]
+    assert "quick_setup_reason=lifecycle" in response.headers["location"]
     assert _count(db, session, "session.settings_imported") == 0
