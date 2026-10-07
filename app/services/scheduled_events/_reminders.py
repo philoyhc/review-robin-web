@@ -262,10 +262,11 @@ def _dispatch_scheduled_reminders(
 
     Per-reviewer dedup: skip any reviewer whose
     ``EmailOutbox.correlation_id == "reminder:{sid}:{rid}:{offset_index}"``
-    already exists — handles the partial-failure case where an
-    earlier observer pass dispatched to some reviewers, failed
-    mid-loop without committing the ``_fired`` audit row, and now
-    re-runs against the same entry.
+    already exists. Sends no longer commit one by one (findings Bc3:
+    the caller commits the entry whole), so a failure part-way leaves
+    nothing behind; the key still holds a reviewer to one reminder per
+    position per session when the same position fires again on a moved
+    End (findings Bc2).
 
     Returns the count actually dispatched (zero is a valid outcome —
     e.g. every incomplete reviewer was already reminded; the

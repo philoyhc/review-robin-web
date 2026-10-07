@@ -151,6 +151,10 @@ def validate_deadline_change(
         and _ensure_aware_utc(stored) == _ensure_aware_utc(deadline)
     ):
         return
+    # Read the stored schedule under the session lock, as the sent-entry
+    # check below does, so what is checked is what the save writes
+    # (findings Bc3).
+    lock_session(db, review_session)
     validate_schedule_ordering(
         scheduled_activate_at=review_session.scheduled_activate_at,
         deadline=deadline,

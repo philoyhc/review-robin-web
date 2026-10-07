@@ -912,19 +912,24 @@ browsers, and direct POSTs bypass the picker entirely).
   the observer could fire the same trigger twice, and a schedule save
   racing one could move an entry the observer is sending. Each trigger
   takes `lock_session` (`SELECT … FOR NO KEY UPDATE` on the session
-  row, re-reading it) and decides from what that reads: activation
-  checks its column (`if session.scheduled_activate_at is None:
-  return`) in the same transaction as the column clear, and the
+  row, flushing first and then re-reading it) and decides from what
+  that reads: activation checks its column is set and due in the same
+  transaction as the column clear, and the
   invite and reminder passes decide, send and record **one entry per
   transaction**, re-locking before the next (findings Bc3, ruled
   2026-10-07). A second racer re-reads after the first commits and
-  no-ops. The schedule save's sent-entry check (§8.2.6) takes the same
-  lock, so a send being recorded is committed before the save reads
-  the record, and an observer arriving after the save sees the saved
-  lists. `FOR NO KEY UPDATE` does not block other transactions'
+  no-ops. The schedule saves take the same lock before reading what
+  they check (§8.2.6; the Session Home save, the lobby End edit and the
+  Settings import) and hold it until the schedule is written, so a send
+  being recorded is committed before a save reads the record, and an
+  observer arriving after a save sees the saved lists. Session Home
+  writes the display zone, and the lobby its tags, after the schedule
+  for that reason, since each of those writes commits. `FOR NO KEY UPDATE` does not block other transactions'
   inserts that reference the session (audit rows, tags). A failure
   part-way through an entry rolls the entry back whole; the next visit
-  sends it again. Postgres only: SQLite has one writer.
+  sends it again (safe while sends only write outbox rows; a transport
+  that delivers inside the transaction would need its own guard).
+  Postgres only: SQLite has one writer.
 - **Retry policy.** If a precondition passes but the underlying
   transition raises (transient DB error, etc.), the trigger
   emits `session.scheduled_X_retry` (audit only — no schedule
@@ -938,8 +943,8 @@ browsers, and direct POSTs bypass the picker entirely).
   terminal state are work in progress awaiting Azure
   (`guide/post_azure_todo_checklist.md` item 7). Until then
   `observe_scheduled_events` runs each trigger guarded: one that
-  raises has its uncommitted work rolled back (anything it already
-  committed, such as sent invitations, stays) and is logged,
+  raises has its uncommitted work rolled back (the entry it was on,
+  sends and all; entries it already recorded stay) and is logged,
   `session.scheduled_event_failed` records it (`context.trigger`,
   `reason`; not repeated while that trigger's latest one says the
   same, checked under the session-row lock), the page still renders,

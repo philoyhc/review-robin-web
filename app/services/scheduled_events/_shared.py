@@ -64,6 +64,10 @@ def lock_session(db: Session, session: ReviewSession) -> ReviewSession:
     e.g. ``if locked.scheduled_activate_at is None: return`` — so
     that a second racer sees the first racer's commit and bails.
     """
+    # Flush first: ``populate_existing`` overwrites the object with the
+    # row, and the app's sessions do not autoflush, so an unflushed edit
+    # would otherwise be silently dropped.
+    db.flush()
     return db.execute(
         select(ReviewSession)
         .where(ReviewSession.id == session.id)

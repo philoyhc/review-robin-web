@@ -347,14 +347,6 @@ def lobby_edit_submit(
                 ),
             ) from exc
 
-    session_tags.set_tags(
-        db,
-        review_session=review_session,
-        user=user,
-        tags=tags.split(","),
-        correlation_id=correlation_id,
-    )
-
     if payload is not None and sessions.payload_changes_session(
         review_session, payload
     ):
@@ -365,6 +357,17 @@ def lobby_edit_submit(
             payload=payload,
             correlation_id=correlation_id,
         )
+
+    # After the schedule write, not before: the tag write commits, which
+    # would release the session lock the End check took before the End
+    # it checked is written (findings Bc3).
+    session_tags.set_tags(
+        db,
+        review_session=review_session,
+        user=user,
+        tags=tags.split(","),
+        correlation_id=correlation_id,
+    )
 
     return RedirectResponse(
         url="/operator/sessions",

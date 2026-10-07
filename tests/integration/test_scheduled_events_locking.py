@@ -169,3 +169,36 @@ def test_the_save_check_takes_the_same_lock(db: Session, monkeypatch) -> None:
         reminder_offsets=[],
     )
     assert locked == [session.id]
+
+
+def test_activation_rechecks_that_it_is_due_under_the_lock(db: Session) -> None:
+    """A Start moved later by a save after the page loaded does not
+    fire early: due-ness is decided on the row under the lock."""
+    session = _make_validated_session(db, "lock-activation-later")
+    session.scheduled_activate_at = datetime(2099, 1, 1, 9, 0, tzinfo=timezone.utc)
+    db.commit()
+    _saved_behind_the_orm(
+        db, session, "scheduled_activate_at", "2099-01-05 09:00:00.000000"
+    )
+
+    scheduled_events.observe_scheduled_events(
+        db, session, now=datetime(2099, 1, 1, 10, 0, tzinfo=timezone.utc)
+    )
+
+    db.refresh(session)
+    assert session.status == lifecycle.SessionStatus.validated.value
+    assert session.scheduled_activate_at is not None
+
+
+def test_lock_session_keeps_an_unflushed_edit(db: Session) -> None:
+    """The app's sessions do not autoflush; re-reading under the lock
+    must not discard an edit made before it."""
+    session = _ready_session_with_invitations(db, "lock-unflushed")
+    db.autoflush = False
+    try:
+        session.help_contact = "pending@x.edu"
+        lock_session(db, session)
+        assert session.help_contact == "pending@x.edu"
+    finally:
+        db.autoflush = True
+

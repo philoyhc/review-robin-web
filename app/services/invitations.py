@@ -356,7 +356,9 @@ def send_invitation(
     ``outbox_correlation_id`` is the outbox row's own idempotency key
     (``EmailOutbox.correlation_id``), written with the row so it
     commits with it; ``correlation_id`` is the request's, for the
-    audit event.
+    audit event. ``commit=False`` leaves everything flushed for the
+    caller's commit: the scheduled-invite pass sends and records an
+    entry in one transaction (findings Bc3).
     """
     raw_token, token_hash = _new_token()
     invitation.token_hash = token_hash
@@ -720,9 +722,10 @@ def send_reminder(
     (matches ``send_invitation``'s scheduled-trigger convention); the
     fallback ``send_invitation`` call below tolerates that.
 
-    ``outbox_correlation_id`` is stamped on the outbox row before the
-    commit, so a caller that dedups on it (the scheduled-reminder pass)
-    never loses the stamp to a later rollback (findings B31).
+    ``outbox_correlation_id`` is stamped on the outbox row itself
+    (findings B31), so it commits or rolls back with the row; a caller
+    that dedups on it (the scheduled-reminder pass) never keeps a sent
+    row without its stamp.
 
     ``commit=False`` leaves the rows flushed for the caller's own
     commit: the scheduled-reminder pass sends and records an entry in

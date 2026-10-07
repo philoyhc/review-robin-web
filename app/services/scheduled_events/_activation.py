@@ -63,7 +63,13 @@ def _observe_scheduled_activation(
         return
 
     locked = lock_session(db, session)
-    if locked.scheduled_activate_at is None:
+    # Decided again on the row as it stands under the lock: a save that
+    # cleared or moved Start after this page loaded wins (findings Bc3).
+    if (
+        locked.scheduled_activate_at is None
+        or _ensure_aware_utc(locked.scheduled_activate_at) > now
+    ):
+        db.commit()
         return
 
     scheduled_at_iso = _ensure_aware_utc(
