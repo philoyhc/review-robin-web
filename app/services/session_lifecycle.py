@@ -618,7 +618,7 @@ def release_responses_now(
     button on an expired session, which is why the anchor and the
     state agreed before the predicate enforced it.
     """
-    session_guard.lock_session(db, review_session)
+    require_not_archived(db, review_session)
     now = datetime.now(timezone.utc)
     cleared_until = review_session.responses_release_until is not None
     review_session.responses_release_at = now
@@ -666,7 +666,7 @@ def stop_responses_release(
     Emits ``session.responses_release_stopped`` with the new
     close-stamp.
     """
-    session_guard.lock_session(db, review_session)
+    require_not_archived(db, review_session)
     now = datetime.now(timezone.utc)
     review_session.responses_release_until = now
     db.flush()
@@ -901,8 +901,11 @@ def _reopen_while_live(
     # Something to heal: lock and decide again, so a Close session that
     # committed since this request loaded the row is not undone
     # (findings Bc4). Unlocked until then — this runs on every reviewer
-    # GET, and almost always has nothing to do.
-    session_guard.lock_session(db, review_session)
+    # GET, and almost always has nothing to do — and skipped rather than
+    # waited for when another request holds the row: the next request
+    # heals it, and an async reviewer handler must not block the loop.
+    if session_guard.try_lock_session(db, review_session) is None:
+        return
     if not is_ready(review_session):
         return
     closed = _closed()
@@ -973,9 +976,18 @@ def observe_deadline(
 
     if not _open():
         return 0
-    # Lock and re-read before closing, so two requests tripping the same
-    # deadline close each instrument (and audit it) once (findings Bc4).
-    session_guard.lock_session(db, review_session)
+    # Lock and decide again before closing, so two requests tripping the
+    # same deadline close each instrument (and audit it) once, and an End
+    # cleared or moved later since this request loaded the row closes
+    # nothing (findings Bc4). Skipped when another request holds the row:
+    # acceptance reads the deadline itself, so the close is bookkeeping
+    # the next request does.
+    if session_guard.try_lock_session(db, review_session) is None:
+        return 0
+    if review_session.deadline is None or current < _aware(
+        review_session.deadline
+    ):
+        return 0
     instruments = _open()
     if not instruments:
         return 0

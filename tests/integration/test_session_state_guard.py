@@ -27,16 +27,23 @@ from .test_scheduled_activation import _make_validated_session
 def _lands_at_the_lock(monkeypatch, db: Session, statement) -> None:
     """Execute ``statement`` (another request's committed write) just as
     the first lock is taken, behind the ORM's back."""
-    real = session_guard.lock_session
     fired: list[bool] = []
 
-    def landing(db_, session_):
-        if not fired:
-            fired.append(True)
-            db.execute(statement.execution_options(synchronize_session=False))
-        return real(db_, session_)
+    def landing_for(real):
+        def landing(db_, session_):
+            if not fired:
+                fired.append(True)
+                db.execute(
+                    statement.execution_options(synchronize_session=False)
+                )
+            return real(db_, session_)
 
-    monkeypatch.setattr(session_guard, "lock_session", landing)
+        return landing
+
+    for name in ("lock_session", "try_lock_session"):
+        monkeypatch.setattr(
+            session_guard, name, landing_for(getattr(session_guard, name))
+        )
 
 
 def _status_becomes(session: ReviewSession, status: str):
@@ -209,3 +216,40 @@ def test_the_live_reopen_rereads_the_status(
     ).scalars().all()
     assert accepting and not any(accepting)
     assert _count(db, session, "instrument.opened") == 0
+
+
+def test_the_deadline_close_rereads_the_end_under_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    """End cleared by a save that commits as the GET starts: nothing is
+    closed, and the re-read row (no deadline) is not dereferenced."""
+    session = _make_validated_session(db, "guard-end-cleared")
+    session.status = "ready"
+    session.deadline = datetime.now(timezone.utc) - timedelta(hours=1)
+    db.commit()
+    _open_instruments(db, session)
+    _lands_at_the_lock(
+        monkeypatch,
+        db,
+        update(ReviewSession)
+        .where(ReviewSession.id == session.id)
+        .values(deadline=None),
+    )
+
+    assert lifecycle.observe_deadline(db, session) == 0
+    assert _count(db, session, "instrument.closed") == 0
+
+
+def test_release_refuses_a_session_archived_at_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    session = _make_validated_session(db, "guard-release")
+    session.status = "expired"
+    db.commit()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"))
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        lifecycle.release_responses_now(
+            db, review_session=session, user=_operator(db, session)
+        )
+    assert _count(db, session, "session.responses_released") == 0

@@ -38,8 +38,8 @@ def lock_session(db: Session, session: ReviewSession) -> ReviewSession:
     """``SELECT … FOR NO KEY UPDATE`` the session row + return it,
     refreshed from the database.
 
-    Taken first by the scheduled-event triggers, by every lifecycle
-    transition, and through :func:`require_state` by every save gated on
+    Taken first by the scheduled-event triggers, by the lifecycle
+    transitions, and through :func:`require_state` by the saves gated on
     the session's state, so each decides from what the others last
     committed (findings Bc3, Bc4). The Postgres path takes a row-level
     lock; SQLite silently no-ops it (single-writer DB), which is
@@ -66,6 +66,25 @@ def lock_session(db: Session, session: ReviewSession) -> ReviewSession:
         .with_for_update(key_share=True)
         .execution_options(populate_existing=True)
     ).scalar_one()
+
+
+def try_lock_session(
+    db: Session, session: ReviewSession
+) -> ReviewSession | None:
+    """:func:`lock_session`, but ``None`` instead of waiting when another
+    transaction holds the row (``SKIP LOCKED``).
+
+    For work that is only bookkeeping and that the next request will do
+    anyway — ``observe_deadline`` on a reviewer's GET — so a held lock
+    never stalls the event loop that serves it (findings Bc4). SQLite
+    ignores the clause and always returns the row."""
+    db.flush()
+    return db.execute(
+        select(ReviewSession)
+        .where(ReviewSession.id == session.id)
+        .with_for_update(key_share=True, skip_locked=True)
+        .execution_options(populate_existing=True)
+    ).scalar_one_or_none()
 
 
 def require_state(
