@@ -474,6 +474,16 @@ def _apply_session_config_form(
             deadline=parsed_deadline,
             responses_release_at=parsed_responses_release_at,
         )
+        # An entry already fired on the anchor it keeps stays at its
+        # position (findings Bc1).
+        scheduled_events.validate_fired_offsets_kept(
+            db,
+            review_session,
+            scheduled_activate_at=parsed_scheduled_activate_at,
+            invite_offsets=parsed_invite_offsets,
+            deadline=parsed_deadline,
+            reminder_offsets=parsed_reminder_offsets,
+        )
     except scheduled_events.ScheduledActivateError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

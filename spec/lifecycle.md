@@ -805,9 +805,16 @@ control, not as derived behaviour.
 **8.2.6 Multiple offsets per event.** Events that fire on a
 sequence (invites, reminders) carry a JSON list; events that
 fire once (archive, auto-delete) carry a single ISO 8601 string.
-Per-list-entry dedup uses the entry's index
-(e.g. `reminder:{session_id}:{reviewer_id}:{offset_index}`) so a
-re-ordered list doesn't re-fire already-sent reminders.
+Per-list-entry dedup uses the entry's index on its anchor
+(`context.offset_index` on the `session.scheduled_*_fired` /
+`_skipped` audit rows, and the outbox key
+`reminder:{session_id}:{reviewer_id}:{offset_index}`), so an entry
+fired or skipped on the anchor it keeps stays at its position,
+unchanged: a save or a Settings import that changes, removes or moves
+it, which would leave a later entry on a position that reads as sent,
+is refused (`scheduled_events.validate_fired_offsets_kept`; findings
+Bc1, ruled 2026-10-07). New entries go after it. A changed anchor resets
+the record, so the list is free again.
 
 **8.2.7 Save-time datetime ordering.** Independently of the
 fire-time guard (§8.2.3), the four operator-set anchor

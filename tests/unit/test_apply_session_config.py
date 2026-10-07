@@ -1566,3 +1566,68 @@ def test_a_pair_the_import_does_not_touch_is_not_checked(db: Session) -> None:
         db, dst, [Row("session.help_contact", "x@example.edu", "string")]
     )
     assert result.errors == []
+
+
+# --------------------------------------------------------------------------- #
+# Fired auto-send entries stay put (findings Bc1)
+# --------------------------------------------------------------------------- #
+
+
+def _fired_invite_session(db: Session, code: str) -> ReviewSession:
+    """A session with Start on 1 June, invites ``[-P3D, -P1D]``, and
+    the first recorded as fired on that Start."""
+    review_session = _bare_session(db, code=code)
+    review_session.scheduled_activate_at = dt.datetime(
+        2026, 6, 1, 12, 0, tzinfo=dt.timezone.utc
+    )
+    review_session.deadline = dt.datetime(
+        2026, 6, 15, 12, 0, tzinfo=dt.timezone.utc
+    )
+    review_session.invite_offsets = ["-P3D", "-P1D"]
+    db.add(
+        AuditEvent(
+            session_id=review_session.id,
+            event_type="session.scheduled_invites_fired",
+            summary="fired",
+            detail={
+                "context": {
+                    "anchor_at": _iso(6, 1),
+                    "offset_index": 0,
+                    "offset": "-P3D",
+                }
+            },
+        )
+    )
+    db.flush()
+    return review_session
+
+
+def test_an_import_that_moves_a_fired_invite_is_refused(db: Session) -> None:
+    """Bc1 (ruled 2026-10-07): the details card's rule, on the values
+    the session would hold; nothing applied."""
+    dst = _fired_invite_session(db, "bc1-import")
+    result = apply_session_config(
+        db, dst, [Row("session.invite_offsets", "-P1D", "string")]
+    )
+    assert [e.field for e in result.errors] == ["session.invite_offsets"]
+    assert "-P3D has already fired" in result.errors[0].message
+    db.refresh(dst)
+    assert dst.invite_offsets == ["-P3D", "-P1D"]
+
+
+def test_an_import_that_keeps_a_fired_invite_or_moves_start_applies(
+    db: Session,
+) -> None:
+    kept = _fired_invite_session(db, "bc1-import-kept")
+    assert apply_session_config(
+        db, kept, [Row("session.invite_offsets", "-P3D, -P2D", "string")]
+    ).errors == []
+    moved = _fired_invite_session(db, "bc1-import-moved")
+    assert apply_session_config(
+        db,
+        moved,
+        [
+            Row("session.scheduled_activate_at", _iso(6, 2), "datetime"),
+            Row("session.invite_offsets", "-P1D", "string"),
+        ],
+    ).errors == []

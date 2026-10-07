@@ -108,6 +108,7 @@ __all__ = [
     "parse_iso_duration",
     "resolve_offset",
     "validate_deadline_change",
+    "validate_fired_offsets_kept",
     "validate_schedule_ordering",
 ]
 
@@ -146,6 +147,80 @@ def validate_deadline_change(
     parse_and_validate_reminder_offsets(
         ", ".join(review_session.reminder_offsets or []), deadline=deadline
     )
+
+
+def validate_fired_offsets_kept(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    scheduled_activate_at: datetime | None,
+    invite_offsets: list[str] | None,
+    deadline: datetime | None,
+    reminder_offsets: list[str] | None,
+) -> None:
+    """Refuse an offsets edit that would move an entry already fired
+    (or skipped) on the anchor it keeps (findings Bc1, ruled
+    2026-10-07).
+
+    The observers record a fired entry by its list position on its
+    anchor (``_consumed_invite_offset_indices`` and its reminder twin),
+    so an edit that changes, removes or shifts that entry leaves a
+    different entry sitting on a position that reads as already sent,
+    and it never fires. A fired entry therefore stays where it is,
+    unchanged; new entries go after it. A changed anchor resets the
+    record, so nothing is checked for that list. Raises
+    :class:`ScheduledActivateError`.
+    """
+    _check_fired_offsets_kept(
+        "Auto-send invite",
+        "Start",
+        stored=review_session.invite_offsets or [],
+        new=invite_offsets or [],
+        stored_anchor=review_session.scheduled_activate_at,
+        new_anchor=scheduled_activate_at,
+        consumed_fn=lambda anchor_iso: _consumed_invite_offset_indices(
+            db, review_session, anchor_iso
+        ),
+    )
+    _check_fired_offsets_kept(
+        "Auto-send reminder",
+        "End",
+        stored=review_session.reminder_offsets or [],
+        new=reminder_offsets or [],
+        stored_anchor=review_session.deadline,
+        new_anchor=deadline,
+        consumed_fn=lambda anchor_iso: _consumed_reminder_offset_indices(
+            db, review_session, anchor_iso
+        ),
+    )
+
+
+def _check_fired_offsets_kept(
+    label: str,
+    anchor_label: str,
+    *,
+    stored: list[str],
+    new: list[str],
+    stored_anchor: datetime | None,
+    new_anchor: datetime | None,
+    consumed_fn: Callable[[str], set[int]],
+) -> None:
+    if stored_anchor is None or new_anchor is None:
+        return
+    anchor = _ensure_aware_utc(stored_anchor)
+    if anchor != _ensure_aware_utc(new_anchor):
+        return
+    for index in sorted(consumed_fn(anchor.isoformat())):
+        if index >= len(stored):
+            continue
+        kept = new[index] if index < len(new) else None
+        if kept != stored[index]:
+            raise ScheduledActivateError(
+                f"{label} {stored[index]} has already fired for this "
+                f"{anchor_label}, so it can't be changed, removed or "
+                f"moved; keep it at position {index + 1} and add new "
+                f"entries after it."
+            )
 
 
 def observe_scheduled_events(

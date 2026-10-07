@@ -322,6 +322,61 @@ def session_schedule_order_errors(
     return errors
 
 
+def session_fired_offset_errors(
+    plan: _ParsedConfig, review_session: ReviewSession
+) -> list[ApplyError]:
+    """Refuse an import that would move an auto-send entry already
+    fired on the anchor it keeps (findings Bc1, ruled 2026-10-07), the
+    rule the details card enforces on a save
+    (``scheduled_events.validate_fired_offsets_kept``).
+
+    Checked on the values the session would hold after the apply, as
+    ``session_schedule_order_errors`` does. A session with no database
+    row yet has fired nothing."""
+    from sqlalchemy.orm import object_session
+
+    from app.services.scheduled_events import (
+        ScheduledActivateError,
+        validate_fired_offsets_kept,
+    )
+
+    db = object_session(review_session)
+    if db is None or review_session.id is None:
+        return []
+    overrides = plan.session_overrides
+
+    def effective(key: str) -> object:
+        existing = getattr(review_session, key, None)
+        if key in overrides and (
+            key not in SESSION_FALLBACK_KEYS or existing is None
+        ):
+            return overrides[key]
+        return existing
+
+    try:
+        validate_fired_offsets_kept(
+            db,
+            review_session,
+            scheduled_activate_at=effective("scheduled_activate_at"),
+            invite_offsets=effective("invite_offsets"),
+            deadline=effective("deadline"),
+            reminder_offsets=effective("reminder_offsets"),
+        )
+    except ScheduledActivateError as exc:
+        return [
+            ApplyError(
+                row_number=0,
+                field=(
+                    "session.invite_offsets"
+                    if str(exc).startswith("Auto-send invite")
+                    else "session.reminder_offsets"
+                ),
+                message=str(exc),
+            )
+        ]
+    return []
+
+
 @dataclass
 class _PlannedField:
     """A parsed response field in the shape the branching rules read
