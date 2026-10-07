@@ -128,7 +128,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   records `sent=0`). The manual **Send reminders** and per-row **Send
   reminder** carry no such key, so the operator can already send another;
   `spec/lifecycle.md` §8.2.6 states the rule.
-- ~~**Bc3**~~ — **Done in #PENDING** (found while fixing Bc1, Codex on #2874; low, author) **The
+- ~~**Bc3**~~ — **Done in #2877** (found while fixing Bc1, Codex on #2874; low, author) **The
   scheduled-event observer does not hold its lock across a pass.**
   `lock_session` returns the caller's already-loaded row (no
   `populate_existing`), so the observer fires from values read before the
