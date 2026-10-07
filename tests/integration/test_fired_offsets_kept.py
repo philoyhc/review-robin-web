@@ -274,3 +274,17 @@ def test_the_lobby_names_a_moved_sent_reminder_before_its_lead_time(
     assert back.status_code == 422
     assert "-P3D was already sent" in back.text
     assert "lead time" not in back.text
+
+
+def test_an_untouched_past_entry_on_a_sent_position_still_saves(
+    client: TestClient, db: Session
+) -> None:
+    """A stored list that predates the check holds -P4D where -P3D was
+    sent, and -P4D is past. A rename leaves it alone, so neither the
+    sent-entry check nor the lead-time floor refuses it (Codex on
+    #2874)."""
+    session = _session(client, db, "bc1-untouched-past", kind="invite")
+    session.invite_offsets = ["-P4D", "-P1D"]
+    db.commit()
+    response = _save(client, session, kind="invite", offsets="-P4D, -P1D")
+    assert response.status_code == 303, response.text

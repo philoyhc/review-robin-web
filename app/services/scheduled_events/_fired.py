@@ -98,19 +98,28 @@ def offsets_lead_exempt(
     anchor: datetime | None,
     *,
     anchor_unedited: bool,
-) -> list[str]:
+) -> list[frozenset[str]]:
     """The ``aged_exempt`` list for an offsets parser: per position, the
-    entry that may stay there past the lead-time floor — the stored one
-    while the anchor is unedited (findings B4), and above it the one
-    already sent there on ``anchor`` (findings Bc1)."""
+    entries that may stay there past the lead-time floor — the stored
+    one while the anchor is unedited (findings B4), and the one already
+    sent there on ``anchor`` (findings Bc1). Both, where they differ: a
+    stored list that predates the sent-entry check keeps saving as it
+    stands, and restoring the sent entry is allowed too."""
     column = "invite_offsets" if kind == "invite" else "reminder_offsets"
     stored = (getattr(review_session, column) or []) if anchor_unedited else []
     fired = fired_offsets(db, review_session, kind, anchor)
     size = max([len(stored), *(index + 1 for index in fired)])
-    exempt = [stored[i] if i < len(stored) else "" for i in range(size)]
-    for index, entry in fired.items():
-        exempt[index] = entry
-    return exempt
+    return [
+        frozenset(
+            entry
+            for entry in (
+                stored[i] if i < len(stored) else "",
+                fired.get(i, ""),
+            )
+            if entry
+        )
+        for i in range(size)
+    ]
 
 
 def fired_offset_errors(

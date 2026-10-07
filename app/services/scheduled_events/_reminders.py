@@ -282,7 +282,7 @@ def parse_and_validate_reminder_offsets(
     now: datetime | None = None,
     operational_lead_hours: int | None = None,
     notice_min_hours: int | None = None,
-    aged_exempt: Sequence[str] = (),
+    aged_exempt: Sequence[frozenset[str]] = (),
 ) -> list[str] | None:
     """Parse a comma-separated reminder-offsets string into a clean
     list and enforce the per-entry save-time rules (Segment 18G PR 3B).
@@ -305,7 +305,7 @@ def parse_and_validate_reminder_offsets(
     3. When ``deadline`` is unset: parse-only validation per the
        §8.2.2 anchor-null rule; the entry is inert at fire time.
 
-    ``aged_exempt`` is, per position, the entry that may stay there
+    ``aged_exempt`` is, per position, the entries that may stay there
     past the lead-time floor (``offsets_lead_exempt``): the stored one
     while the anchor is unedited, which aged past the floor after saving
     and "stays put" (findings B4), and the one already sent there on
@@ -356,7 +356,7 @@ def parse_and_validate_reminder_offsets(
             anchor = _ensure_aware_utc(deadline)
             fire_at = anchor + delta
             exempt = (
-                index < len(aged_exempt) and aged_exempt[index] == entry
+                index < len(aged_exempt) and entry in aged_exempt[index]
             )
             if not exempt and fire_at - current < timedelta(hours=op_hours):
                 raise ScheduledActivateError(
