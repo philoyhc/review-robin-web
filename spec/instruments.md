@@ -870,8 +870,9 @@ a ticked, disabled checkbox, no move buttons, and a tooltip naming the
 pinned slot — "Always shown — pinned first" (Name) / "Always shown — pinned second" (Email). **On a
 group-scoped instrument**, a field a group row can't show — Email
 included — renders unticked and disabled, tooltip "Not shown on group
-rows"; Name is always selectable in group mode and stays ticked (see
-"Group-flavor preview" below). Every other row's tooltip is "Show this
+rows"; Name stays locked and ticked in group mode, so member names
+always show (author's ruling, 2026-10-07; see "Group-flavor preview"
+below). Every other row's tooltip is "Show this
 column". These disabled checkboxes are the locked-field affordance
 (`spec/ui_elements.md` "Label or control").
 
@@ -928,9 +929,9 @@ change.
 
 When Link 3 is `group`, the preview row's identity cell
 composes **group identity**: the sample's values for the selected
-`reviewee.tag_*` display fields, bold and comma-joined, on top, then,
-when Name is selected, up to `GROUP_MEMBER_NAME_LIMIT` (10) member
-names below. The reviewer surface composes its line the same way
+`reviewee.tag_*` display fields, bold and comma-joined, on top, then
+up to `GROUP_MEMBER_NAME_LIMIT` (10) member names below (Name is
+locked in group mode). The reviewer surface composes its line the same way
 (`spec/reviewer-surface.md` "Group-scoped instruments"). Reviewees in the rule-surviving subset that share
 the sample's boundary key form the group; if more than 10
 qualify, a trailing `, +N more` collapses the overflow. A

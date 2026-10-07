@@ -233,6 +233,8 @@ service writes an `audit_events` row).
 | Delete instrument / field | `confirm=true` | `require_session_operator` (via helper) | ✓ |
 | Reviewer clear (`/clear`) | `confirm=true` | `require_reviewer_in_session` | ✓ |
 | Revoke / regenerate invitation links | operator UI action | `require_session_operator` | ✓ |
+| Purge and archive (`/bulk-archive`, the lobby expander and the Extract data Archive card) | each ticked **Archive after purging** box (responses / rosters / audit log) is the confirmation for that deletion; none ticked is a plain archive that deletes nothing (author's ruling, 2026-10-07) | per-id `sessions.get_for_user`; an activated session is skipped | ✓ |
+| Remove a user from all sessions / Delete a user (Sys Admin → Accounts) | a single selected row and its own button, no confirm token; the guards refuse anything with data behind it (`sole_owner`, `owns_sessions`, `has_history`, `last_admin`, `protected_super_admin`) | `require_sys_admin` | ✓ |
 
 **The lifecycle gate is a third gate, not a restatement of the other two** (19C Item 3; now `_require_not_ready`, defined in `app/web/routes_operator/_shared.py` and called by the two routes in `_session_home.py`, which widened it from `_require_editable` on 2026-10-02 so a finished or archived session can be deleted). Permission says *who*, the confirm token says *they meant it*, and this says *the session is in a state where destroying data is coherent*: both routes refuse while the session is `ready`, so an operator has to pause it first. A live review is the one moment when deleting its responses is most likely to be a mistake and least likely to be recoverable. See `spec/session_home.md` §3.
 
@@ -240,7 +242,9 @@ User-facing warnings are rendered by the operator templates that
 own each confirm checkbox; they are not exercised by the test
 suite and are verified on the dev slot.
 
-**Result: no gaps found.**
+**Result: no gaps found.** Re-checked 2026-10-07, when the corpus sweep
+found purge-and-archive and the two Sys Admin removes missing from the
+table (findings H2); they are listed above.
 
 ## Session-id enumeration — found and closed (2026-09-07)
 
