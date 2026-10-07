@@ -709,7 +709,7 @@ def test_remove_user_refuses_creator_of_a_session_someone_else_owns(
         f"/operator/sys-admin/users/{bob.id}/delete", follow_redirects=False
     )
     assert response.status_code == 409
-    assert "Revoke" in response.text
+    assert "revoke it" in response.text
     db.expire_all()
     assert db.get(ReviewSession, session_id) is not None
     assert db.get(User, bob.id) is not None
