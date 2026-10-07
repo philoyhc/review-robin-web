@@ -40,8 +40,10 @@ from app.services.csv_imports import (
     _none_if_blank,
     _read_dict_rows,
     cell_length_issues,
+    comma_tag_message,
     decode_csv,
     over_long_field_message,
+    tag_comma_issues,
 )
 from app.services.email_identity import normalize_email
 from app.services.roster_bulk import (
@@ -218,6 +220,16 @@ def parse_relationship_csv(
         length_issues = cell_length_issues(
             row,
             Relationship,
+            {
+                "tag_1": "PairContextTag1",
+                "tag_2": "PairContextTag2",
+                "tag_3": "PairContextTag3",
+            },
+            source=source,
+            row_number=index,
+        )
+        length_issues += tag_comma_issues(
+            row,
             {
                 "tag_1": "PairContextTag1",
                 "tag_2": "PairContextTag2",
@@ -475,6 +487,9 @@ def _refuse_over_long(values: dict[str, object]) -> None:
     message = over_long_field_message(Relationship, values, _FIELD_LABELS)
     if message is not None:
         raise RelationshipOperationError("too_long", message)
+    message = comma_tag_message(values, _FIELD_LABELS)
+    if message is not None:
+        raise RelationshipOperationError("comma_in_tag", message)
 
 
 def _normalised_rel_status(status: str) -> str:

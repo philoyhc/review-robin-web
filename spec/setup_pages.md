@@ -1178,7 +1178,10 @@ input — the row re-renders with `<Field> is N characters; at most L fit.`
 and nothing is written — with the limits the CSV import uses, read from
 the models (`csv_imports.over_long_field_message`; `spec/csv_contracts.md`
 §1, *Cell lengths*). A tag column is named by its slot (`Tag 1`) in the
-message, not by its friendly label.
+message, not by its friendly label. A tag holding a comma is refused the
+same way, with `<Tag N> may not contain a comma.`
+(`csv_imports.comma_tag_message`; `spec/csv_contracts.md` §1, *Tag
+commas*).
 Editing a row's **status** to `inactive` /
 `active` is the inactivate / reactivate path — there is no
 separate per-row toggle. **Inactivate** / **Activate** flip the

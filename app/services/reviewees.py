@@ -76,6 +76,9 @@ def _refuse_over_long(values: dict[str, object]) -> None:
     message = csv_imports.over_long_field_message(Reviewee, values, _FIELD_LABELS)
     if message is not None:
         raise RevieweeOperationError("too_long", message)
+    message = csv_imports.comma_tag_message(values, _FIELD_LABELS)
+    if message is not None:
+        raise RevieweeOperationError("comma_in_tag", message)
 
 
 def _normalised_name(name: str) -> str:
