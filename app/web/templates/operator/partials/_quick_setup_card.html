@@ -35,7 +35,7 @@
    Once setup isn't editable (Activated or later), or once the
    session holds responses, the card
    is locked for good and the toggle does not render
-   (``views._quick_setup``). The service layer's ``_require_editable``
+   (``views._quick_setup``). The routes' own ``is_editable`` check
    is still the hard gate; a rejected submit comes back as a
    full-width ``banner-error`` above the slots, tied to its slot by
    id (``_quick_setup_error_message``).

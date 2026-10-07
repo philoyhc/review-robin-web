@@ -184,8 +184,8 @@ def build_quick_setup_context(
     # ``expired``, ``archived``, or any session with persisted responses
     # from a prior activation cycle — the card stays permanently
     # locked (body greyed, Lock / Unlock toggle hidden, submits
-    # rejected at the service layer via ``_require_editable`` +
-    # ``_require_response_loss_ack``). The single description copy
+    # rejected by the routes' own ``is_editable`` check). The single
+    # description copy
     # names both conditions.
     #
     # 19R.1 rung 2 — this asked the question through

@@ -192,6 +192,9 @@ def test_quick_setup_available_on_validated(
     assert context.is_disabled is False
     assert context.show_lock_toggle is True
     assert context.is_locked is True
+    body = operator.get(f"/operator/sessions/{review_session.id}").text
+    assert 'id="quick-setup-lock-toggle"' in body
+    assert ">Unlock</button>" in body
 
 
 def test_quick_setup_unavailable_when_archived(
@@ -370,8 +373,9 @@ def test_quick_setup_lock_toggle_hidden_when_session_activated(
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Quick Setup is available only on ``draft`` AND when no
-    persisted responses exist. On any other state — here ``ready`` —
+    """Quick Setup is available only while setup is editable (draft or
+    validated) AND no persisted responses exist. Past that — here
+    ``ready`` —
     the card is permanently locked and the Lock / Unlock toggle is
     hidden entirely, so the operator can't even cosmetically unlock
     something the route layer would reject."""

@@ -399,16 +399,29 @@ def test_reviewers_submit_on_validated_applies_and_demotes(
     db.flush()
     assert review_session.status == "validated"
 
+    # The card's one Submit.
     response = operator.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/reviewers",
-        files={"file": ("r2.csv", SECOND_REVIEWER_CSV, "text/csv")},
+        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        files={
+            "reviewers_file": ("r2.csv", SECOND_REVIEWER_CSV, "text/csv")
+        },
         data={"confirm_replace": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert "quick_setup_error" not in response.headers["location"]
-    db.refresh(review_session)
+    db.expire_all()
     assert review_session.status == "draft"
+    from app.db.models import Reviewer
+
+    names = sorted(
+        db.execute(
+            select(Reviewer.name).where(
+                Reviewer.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    assert names == ["Beth", "Carlos"]
     invalidated = db.execute(
         select(AuditEvent).where(
             AuditEvent.session_id == review_session.id,

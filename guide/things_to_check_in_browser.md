@@ -255,3 +255,12 @@ section (git history keeps it), so this file lists only what is owed.
   who has submitted). Delete stays greyed; Revoke is still offered.
 - [ ] **Delete works for an account with no activity.** Invite a fresh
   email, select it, and Delete: the row goes.
+
+## Quick Setup on a validated session (#2873)
+
+- [ ] **The card is live and loads locked.** Prepare a session so it is
+  Validated, with no responses. On Session Home, Quick Setup shows
+  **Unlock**; Unlock enables the slots and lets a file be staged.
+- [ ] **A submit lands and demotes.** Stage a Reviewers CSV and Submit:
+  the roster changes, the session reads Draft, and the Workflow card
+  asks to Prepare again.
