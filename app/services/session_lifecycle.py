@@ -308,8 +308,11 @@ def invalidate_if_validated(
     the ``validated → draft`` invariant is enforced where the mutation
     happens, not where the request happens — a route that forgets to
     wrap its service call no longer silently breaks the invariant.
+
+    Takes no lock of its own: the services that call it lock and re-read
+    the session first, through ``require_editable`` (findings Bc4), so
+    the status read here is the committed one.
     """
-    session_guard.lock_session(db, review_session)
     if is_validated(review_session):
         invalidate_session(
             db,
@@ -334,7 +337,6 @@ def invalidate_session(
     the session is in any other status (e.g. ``ready``) — those routes
     should reject earlier via the editable-state gate.
     """
-    session_guard.lock_session(db, review_session)
     if is_draft(review_session):
         return review_session
     if not is_validated(review_session):
@@ -898,17 +900,16 @@ def _reopen_while_live(
     if not is_ready(review_session):
         return
 
-    def _closed() -> list[Instrument]:
-        return list(
-            db.execute(
-                select(Instrument).where(
-                    Instrument.session_id == review_session.id,
-                    Instrument.accepting_responses.is_(False),
-                )
-                # Re-read: rows loaded before the lock may be stale.
-                .execution_options(populate_existing=True)
-            ).scalars()
+    def _closed(*, fresh: bool = False) -> list[Instrument]:
+        query = select(Instrument).where(
+            Instrument.session_id == review_session.id,
+            Instrument.accepting_responses.is_(False),
         )
+        if fresh:
+            # After the lock (which flushed first): re-read rows loaded
+            # earlier, which may be stale.
+            query = query.execution_options(populate_existing=True)
+        return list(db.execute(query).scalars())
 
     if not _closed():
         return
@@ -919,7 +920,7 @@ def _reopen_while_live(
     session_guard.lock_session(db, review_session)
     if not is_ready(review_session):
         return
-    closed = _closed()
+    closed = _closed(fresh=True)
     for instrument in closed:
         instrument.accepting_responses = True
         instrument.deadline_closed_at = None
@@ -974,33 +975,32 @@ def observe_deadline(
         _reopen_while_live(db, review_session, correlation_id=correlation_id)
         return 0
 
-    def _open() -> list[Instrument]:
-        return list(
-            db.execute(
-                select(Instrument).where(
-                    Instrument.session_id == review_session.id,
-                    Instrument.accepting_responses.is_(True),
-                    Instrument.deadline_closed_at.is_(None),
-                )
-                # Re-read: rows loaded before the lock may be stale.
-                .execution_options(populate_existing=True)
-            ).scalars()
+    def _open(*, fresh: bool = False) -> list[Instrument]:
+        query = select(Instrument).where(
+            Instrument.session_id == review_session.id,
+            Instrument.accepting_responses.is_(True),
+            Instrument.deadline_closed_at.is_(None),
         )
+        if fresh:
+            # After the lock (which flushed first): re-read rows loaded
+            # earlier, which may be stale.
+            query = query.execution_options(populate_existing=True)
+        return list(db.execute(query).scalars())
 
     if not _open():
         return 0
     # Lock and decide again before closing, so two requests tripping the
     # same deadline close each instrument (and audit it) once, and an End
     # cleared or moved later since this request loaded the row closes
-    # nothing (findings Bc4). Every caller runs off the event loop (the
-    # async reviewer writes reach this through the threadpool), so the
-    # wait for a held lock stalls only this request.
+    # nothing (findings Bc4). The async reviewer writes reach this through
+    # the threadpool (their gate and their error re-render), so the wait
+    # for a held lock stalls only this request.
     session_guard.lock_session(db, review_session)
     if review_session.deadline is None or current < _aware(
         review_session.deadline
     ):
         return 0
-    instruments = _open()
+    instruments = _open(fresh=True)
     if not instruments:
         return 0
 

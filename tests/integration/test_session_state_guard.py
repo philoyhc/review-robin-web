@@ -11,6 +11,7 @@ blocks.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from sqlalchemy import select, update
@@ -82,26 +83,6 @@ def test_manual_activate_after_the_scheduled_one_refuses(
 
     assert raised.value.code == "not_validated"
     assert _count(db, session, "session.activated") == 0
-
-
-def test_invalidate_reads_the_committed_status(
-    db: Session, monkeypatch
-) -> None:
-    """A setup save's ``validated → draft`` flip, on a session activated
-    since the request loaded it, leaves ``ready`` alone."""
-    session = _make_validated_session(db, "guard-invalidate")
-    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
-
-    lifecycle.invalidate_if_validated(
-        db,
-        review_session=session,
-        user=_operator(db, session),
-        reason="test",
-    )
-
-    db.expire_all()
-    assert db.get(ReviewSession, session.id).status == "ready"
-    assert _count(db, session, "session.invalidated") == 0
 
 
 def test_require_editable_refuses_on_the_committed_status(
@@ -264,7 +245,6 @@ def test_stop_release_refuses_a_session_archived_at_the_lock(
     assert str(raised.value) == "Archived sessions can't have releases stopped."
 
 
-
 @pytest.mark.parametrize(
     ("path", "button", "message", "event"),
     [
@@ -285,8 +265,6 @@ def test_stop_release_refuses_a_session_archived_at_the_lock(
 def test_the_release_routes_answer_an_archive_race_as_their_own_gate(
     client, db: Session, monkeypatch, path, button, message, event
 ) -> None:
-    from urllib.parse import parse_qs, urlsplit
-
     client.post(
         "/operator/sessions",
         data={"name": "Release", "code": f"guard-{button}"},

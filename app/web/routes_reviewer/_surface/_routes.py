@@ -233,7 +233,10 @@ async def reviewer_save(
         bad_values = {
             (e.assignment_id, e.field_key): e.value for e in result.errors
         }
-        context = _surface_context(
+        # Off the event loop, like the gate: the context runs the deadline
+        # observer, which may wait on the session row lock (findings Bc4).
+        context = await run_in_threadpool(
+            _surface_context,
             db=db,
             user=user,
             reviewer=reviewer,
@@ -299,7 +302,10 @@ async def reviewer_submit(
         bad_values = {
             (e.assignment_id, e.field_key): e.value for e in result.errors
         }
-        context = _surface_context(
+        # Off the event loop, like the gate: the context runs the deadline
+        # observer, which may wait on the session row lock (findings Bc4).
+        context = await run_in_threadpool(
+            _surface_context,
             db=db,
             user=user,
             reviewer=reviewer,
