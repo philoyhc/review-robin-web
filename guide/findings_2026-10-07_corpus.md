@@ -107,7 +107,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   (E12); `_filters.py`'s `assignments_picked_handles` docstring (B6);
   `tests/conftest.py`'s pointer to the Rehydrate gate test, which is under
   `tests/integration/` (outside the corpus).
-- ~~**Bc1**~~ — **Done in #PR** (found while fixing B4, #2870; medium, author; ruled 2026-10-07: refuse an edit that shifts a sent offset). **Deleting a
+- ~~**Bc1**~~ — **Done in #2874** (found while fixing B4, #2870; medium, author; ruled 2026-10-07: refuse an edit that shifts a sent offset). **Deleting a
   fired offset can stop a later one from ever firing.** The invite and
   reminder observers record fired offsets by list index
   (`_consumed_invite_offset_indices` and its reminder twin; the outbox
