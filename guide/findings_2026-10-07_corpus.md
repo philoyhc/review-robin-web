@@ -107,7 +107,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   (E12); `_filters.py`'s `assignments_picked_handles` docstring (B6);
   `tests/conftest.py`'s pointer to the Rehydrate gate test, which is under
   `tests/integration/` (outside the corpus).
-- ~~**Bc1**~~ **Done in #PR.** (found while fixing B4, #2870; medium, author) **Deleting a
+- ~~**Bc1**~~ — **Done in #PR** (found while fixing B4, #2870; medium, author; ruled 2026-10-07: refuse an edit that shifts a sent offset). **Deleting a
   fired offset can stop a later one from ever firing.** The invite and
   reminder observers record fired offsets by list index
   (`_consumed_invite_offset_indices` and its reminder twin; the outbox
@@ -117,8 +117,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   re-ordered list safe; it holds only when nothing has fired. Author:
   key fired state on the offset value, or refuse edits that shift a
   fired index.
-  **Ruled 2026-10-07: refuse an edit that shifts a sent offset.** Checked
-  against the entry recorded at each sent position on the anchor the
+  Checked against the entry recorded at each sent position on the anchor the
   session will hold (Session Home, the lobby's End and the Settings
   import), so an anchor moved away and back is covered too.
 - **Bc2** (found while fixing Bc1; low, author) **The reminder outbox key

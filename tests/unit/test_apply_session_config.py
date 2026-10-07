@@ -1666,3 +1666,17 @@ def test_an_import_names_each_list_that_moves_a_sent_entry(
         "session.invite_offsets",
         "session.reminder_offsets",
     ]
+
+
+def test_an_import_that_leaves_the_list_as_stored_is_not_refused(
+    db: Session,
+) -> None:
+    """A stored list already in conflict with the record (from before
+    the check) does not block an import that leaves it and its anchor
+    alone."""
+    dst = _fired_invite_session(db, "bc1-import-untouched")
+    dst.invite_offsets = ["-P1D"]
+    db.flush()
+    assert apply_session_config(
+        db, dst, [Row("session.help_contact", "help@example.edu", "string")]
+    ).errors == []

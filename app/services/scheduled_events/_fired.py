@@ -84,8 +84,10 @@ def fired_offsets(
         if not _same_instant(recorded, anchor):
             continue
         index, entry = ctx.get("offset_index"), ctx.get("offset")
-        if isinstance(index, int) and isinstance(entry, str):
-            fired.setdefault(index, entry)
+        if isinstance(index, int):
+            # The observers dedupe on the position alone; a row without
+            # its entry still consumes it.
+            fired.setdefault(index, entry if isinstance(entry, str) else "")
     return fired
 
 

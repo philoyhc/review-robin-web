@@ -279,9 +279,10 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   malformed deadline, or a changed deadline that does not fit the
   stored schedule answers **422** before the tags are written, so a
   refused Save changes nothing. The deadline check
-  (`scheduled_events.validate_deadline_change`) is the two Session Home
-  runs on End: ordering against the stored Start and Release-from, and
-  each stored reminder offset re-resolved on the new End. An unchanged
+  (`scheduled_events.validate_deadline_change`) is the three Session
+  Home runs on End: ordering against the stored Start and Release-from,
+  the reminders already sent on the new End (`spec/lifecycle.md`
+  §8.2.6), and each stored reminder offset re-resolved on the new End. An unchanged
   deadline skips it, and a deadline box whose text is still the stored
   deadline as the box renders it, in the session zone, counts as
   unchanged (`sessions.datetime_box_unedited`), so re-saving a stored

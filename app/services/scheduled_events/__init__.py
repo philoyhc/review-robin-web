@@ -31,7 +31,7 @@ Layout:
   ``validate_schedule_ordering`` (cross-field ordering).
 
 :func:`validate_deadline_change` also lives here, since it calls into
-both ``_release.py`` and ``_reminders.py``.
+``_release.py``, ``_reminders.py`` and ``_fired.py``.
 
 The :func:`observe_scheduled_events` orchestrator lives here in
 ``__init__`` — it dispatches across the three trigger sub-modules
@@ -156,15 +156,9 @@ def validate_deadline_change(
         deadline=deadline,
         responses_release_at=review_session.responses_release_at,
     )
-    parse_and_validate_reminder_offsets(
-        ", ".join(review_session.reminder_offsets or []),
-        deadline=deadline,
-        aged_exempt=offsets_lead_exempt(
-            db, review_session, "reminder", deadline, anchor_unedited=False
-        ),
-    )
     # An End moved back to a value whose reminders were sent meets that
-    # value's record (findings Bc1).
+    # value's record (findings Bc1); checked first, so a moved sent entry
+    # is named as such rather than as one short of lead time.
     errors = fired_offset_errors(
         db,
         review_session,
@@ -175,6 +169,13 @@ def validate_deadline_change(
     )
     if errors:
         raise ScheduledActivateError(errors[0][1])
+    parse_and_validate_reminder_offsets(
+        ", ".join(review_session.reminder_offsets or []),
+        deadline=deadline,
+        aged_exempt=offsets_lead_exempt(
+            db, review_session, "reminder", deadline, anchor_unedited=False
+        ),
+    )
 
 
 def observe_scheduled_events(
