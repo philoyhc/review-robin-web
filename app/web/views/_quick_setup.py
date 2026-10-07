@@ -177,9 +177,11 @@ def build_quick_setup_context(
     """
 
     sid = review_session.id
-    # Card is functional only on ``draft`` AND when no reviewer
-    # responses exist yet. Outside that window — any state but
-    # ``draft``, or any session with persisted responses
+    # Card is functional while setup is editable (``draft`` or
+    # ``validated`` — the single ``lifecycle.is_editable`` predicate the
+    # routes gate on; author's ruling, 2026-10-07, findings B1) AND no
+    # reviewer responses exist yet. Outside that window — ``ready``,
+    # ``expired``, ``archived``, or any session with persisted responses
     # from a prior activation cycle — the card stays permanently
     # locked (body greyed, Lock / Unlock toggle hidden, submits
     # rejected at the service layer via ``_require_editable`` +
@@ -198,7 +200,7 @@ def build_quick_setup_context(
     # positive count but never reach zero, so ``> 0`` and "a row
     # exists" are the same question.
     has_responses = lifecycle.session_has_responses(db, review_session)
-    is_available = lifecycle.is_draft(review_session) and not has_responses
+    is_available = lifecycle.is_editable(review_session) and not has_responses
     is_disabled = not is_available
 
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
@@ -319,15 +321,15 @@ def build_quick_setup_context(
     else:
         description = (
             f"Bulk-populate {slot_phrase} from files in one place. "
-            "Available only when session is in draft mode and does "
-            "not have any responses."
+            "Available only while setup is editable (draft or "
+            "validated) and the session has no responses."
         )
 
     # Default-locked on every fresh page load when the card is
     # available; the cookie-driven ``is_unlocked`` flips it off
     # until the operator locks again or the cookie is cleared.
-    # When the card isn't available (any state but draft, or any
-    # session with persisted responses), force-lock and
+    # When the card isn't available (``ready`` / ``expired`` /
+    # ``archived``, or any session with persisted responses), force-lock and
     # hide the toggle entirely so the operator can't visually
     # unlock something the route layer would reject anyway.
     is_locked = True if not is_available else not is_unlocked

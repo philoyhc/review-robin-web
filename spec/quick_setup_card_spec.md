@@ -22,7 +22,7 @@ Position in the Home body, top to bottom:
 
 The card is always rendered on Home, in every state. Visibility does not depend on whether setup data exists — the card is a stable, learnable location for bulk setup regardless of session population.
 
-The card is **available** only in `draft` with no persisted responses (`is_available` in `app/web/views/_quick_setup.py`). There the Lock / Unlock toggle renders, and the card still defaults to locked. In every other state — `draft` with responses, `validated`, `ready`, `expired` — the body is greyed (`.quick-setup-body.locked`) and the **toggle is hidden** (`show_lock_toggle = is_available`), so the operator cannot unlock it; the lifecycle table below gives each state. Per `spec/session_home.md` ("Disabled treatment on Home is plain greying-out, not yellow lock cards"), Home does not stack a yellow lock card on top of the body greying. The card shows no current-state indicators (see **Slots**).
+The card is **available** while setup is editable — `draft` or `validated`, the single `lifecycle.is_editable` predicate its routes gate on (author's ruling, 2026-10-07) — and the session has no persisted responses (`is_available` in `app/web/views/_quick_setup.py`). There the Lock / Unlock toggle renders, and the card still defaults to locked. Otherwise — any session with responses, `ready`, `expired`, `archived` — the body is greyed (`.quick-setup-body.locked`) and the **toggle is hidden** (`show_lock_toggle = is_available`), so the operator cannot unlock it; the lifecycle table below gives each state. Per `spec/session_home.md` ("Disabled treatment on Home is plain greying-out, not yellow lock cards"), Home does not stack a yellow lock card on top of the body greying. The card shows no current-state indicators (see **Slots**).
 
 ### Slots
 
@@ -113,11 +113,13 @@ The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Relat
 |---|---|---|
 | `draft` | None | **Available.** Fully interactive. Lock / Unlock toggle visible; unlocking reveals the slot controls. |
 | `draft` | Any | **Unavailable.** Body greyed via `.quick-setup-body.locked`; Lock / Unlock toggle hidden entirely. Operator routes to per-entity Setup pages (which have the response-loss-acknowledgment flow) for any further changes. |
-| `validated` | (any) | **Unavailable.** Same body-greying + no-toggle treatment as `draft`-with-responses. The validated state is meant to be a final-check state; bulk re-uploads route through per-entity Setup pages instead. |
+| `validated` | None | **Available.** Same as `draft` with none; an import demotes the session to `draft`, as any setup edit does. |
+| `validated` | Any | **Unavailable.** Same treatment as `draft` with responses. |
 | `ready` | (any) | **Unavailable.** Same treatment. |
 | `expired` | (any) | Same as `ready`. |
+| `archived` | (any) | Same as `ready`. |
 
-The description copy explains the rule from the operator's vantage point. It has two variants: the default ("Available only when session is in draft mode and does not have any responses.") and a responses-specific one shown when the session holds responses — typically a session activated then reverted to draft, which keeps its responses and so lands `draft`-but-locked. The responses variant names the reason ("Quick Setup is locked because this session already holds reviewer responses from a prior activation.") and points the operator at the per-entity Setup pages. Both gates otherwise show up as the same visual signal (greyed body with disabled controls, no toggle). Defense-in-depth gates stay in place in the slot helpers — each checks `lifecycle.is_editable` inline and refuses with the `lifecycle` reason, and the Reviewers, Reviewees and Settings slots call `_require_response_loss_ack` — but never fire from this surface because the submit forms aren't reachable when the body's locked.
+The description copy explains the rule from the operator's vantage point. It has two variants: the default ("Available only while setup is editable (draft or validated) and the session has no responses.") and a responses-specific one shown when the session holds responses — typically a session activated then reverted to draft, which keeps its responses and so lands `draft`-but-locked. The responses variant names the reason ("Quick Setup is locked because this session already holds reviewer responses from a prior activation.") and points the operator at the per-entity Setup pages. Both gates otherwise show up as the same visual signal (greyed body with disabled controls, no toggle). Defense-in-depth gates stay in place in the slot helpers — each checks `lifecycle.is_editable` inline and refuses with the `lifecycle` reason, and the Reviewers, Reviewees and Settings slots call `_require_response_loss_ack` — but never fire from this surface because the submit forms aren't reachable when the body's locked.
 
 ### New-session variant (`/operator/sessions/new`)
 

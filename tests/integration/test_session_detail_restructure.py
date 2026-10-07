@@ -772,8 +772,8 @@ def test_quick_setup_card_greys_in_ready(
     # Description copy is the single static line naming the
     # availability rule.
     assert (
-        "Available only when session is in draft mode and does not "
-        "have any responses." in body
+        "Available only while setup is editable (draft or validated) "
+        "and the session has no responses." in body
     )
     # Slot anchors still rendered (the body's still in the DOM, just
     # greyed) but the Lock / Unlock toggle is suppressed entirely.

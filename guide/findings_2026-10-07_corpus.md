@@ -169,7 +169,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **B — assignments, workflow, lifecycle, Validate**
 
-- **B1** med spec (author if the card should follow `is_editable`) lifecycle.md:560-565 Quick Setup body greyed with toggle visible but inert vs available only on draft with no responses, toggle hidden on validated (views/_quick_setup.py:201,340; _quick_setup_card.html:35-40), while the routes gate on is_editable; the card is narrower than the single predicate §3.1 / §5 say nothing undercuts; :560 also names the retired "Next Action card" — **Ruled 2026-10-07: the card follows `is_editable`.** Code PR to follow.
+- ~~**B1**~~ med spec (author if the card should follow `is_editable`) lifecycle.md:560-565 Quick Setup body greyed with toggle visible but inert vs available only on draft with no responses, toggle hidden on validated (views/_quick_setup.py:201,340; _quick_setup_card.html:35-40), while the routes gate on is_editable; the card is narrower than the single predicate §3.1 / §5 say nothing undercuts; :560 also names the retired "Next Action card" — **Done in #PR** (ruled 2026-10-07: the card follows `is_editable` while no responses exist).
 - **B2** low spec lifecycle.md:521-526 Observers exception "checkboxes only, bulk card follows the common gate", contradicting :423 vs :434; code gates the whole Unlock panel, selection and checkboxes on not archived (session_observers.html:13-18,229,559; setup_pages.md:360 right)
 - **B3** — carried, old B27 / G6: lifecycle.md:864-870 the lazy observer runs on Session Home, Operations and the lobby vs Session Home only (_session_home.py:125). Not counted.
 - ~~**B4**~~ med author lifecycle.md:886-889 aged value stays put vs Details Save re-validates the stored Start (§1) — **Done in #2870.**
@@ -180,7 +180,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **C — Setup, Session Home and the lobby**
 
-- **C1** low write quick_setup_card_spec.md:25 unavailable list omits archived, table :112-118 has no archived row; session_home.md:486-488 lists the same four (code greys archived, views/_quick_setup.py:196; session_home.md:517 right)
+- ~~**C1**~~ low write quick_setup_card_spec.md:25 unavailable list omits archived, table :112-118 has no archived row; session_home.md:486-488 lists the same four (code greys archived, views/_quick_setup.py:196; session_home.md:517 right) — **Done in #PR** (the archived row, with B1).
 - **C2** low spec session_home.md:540 "the five Setup pages" — six
 - **C3** low spec session_home.md:149-150,568-575 the pause form is ready → draft only vs shared for expired (next_action_card.html:215-220; revert_session_to_draft accepts both)
 - **C4** low code sessions_overview.md:277-281 over-long name is a form error vs 500 on Session Home /config and Create (§1)
