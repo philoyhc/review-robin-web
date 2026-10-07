@@ -25,10 +25,13 @@ from app.web.routes_operator._shared import _lifecycle_error_response
 from .test_scheduled_activation import _make_validated_session
 
 
-def _lands_at_the_lock(monkeypatch, db: Session, statement, *, at: int = 1) -> None:
+def _lands_at_the_lock(
+    monkeypatch, db: Session, statement, *, at: int = 1, commit: bool = False
+) -> None:
     """Execute ``statement`` (another request's committed write) just as
     the ``at``-th lock is taken (the first by default), behind the ORM's
-    back."""
+    back. ``commit`` commits it, for a service that rolls back on refusal
+    and would otherwise take the stand-in's write with it."""
     real = session_guard.lock_session
     taken: list[bool] = []
 
@@ -36,6 +39,8 @@ def _lands_at_the_lock(monkeypatch, db: Session, statement, *, at: int = 1) -> N
         taken.append(True)
         if len(taken) == at:
             db.execute(statement.execution_options(synchronize_session=False))
+            if commit:
+                db.commit()
         return real(db_, session_)
 
     monkeypatch.setattr(session_guard, "lock_session", landing)
@@ -424,7 +429,9 @@ def test_a_roster_import_refuses_a_session_activated_at_the_lock(
     session.status = "validated"
     db.commit()
     before = _reviewer_emails(db, session)
-    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+    _lands_at_the_lock(
+        monkeypatch, db, _status_becomes(session, "ready"), commit=True
+    )
 
     response = client.post(
         f"/operator/sessions/{session.id}/reviewers/import",
@@ -444,14 +451,38 @@ def test_a_roster_import_refuses_a_session_activated_at_the_lock(
     assert db.get(ReviewSession, session.id).status == "ready"
 
 
+_LABELLED_IMPORTS = {
+    "reviewers": (
+        "parse_reviewer_csv",
+        "save_reviewers",
+        b"ReviewerName,ReviewerEmail,ReviewerTag1.Tutor\n"
+        b"Alice,alice@example.edu,senior\n",
+    ),
+    "reviewees": (
+        "parse_reviewee_csv",
+        "save_reviewees",
+        b"RevieweeName,RevieweeEmail,RevieweeTag1.Cohort\n"
+        b"Carol,carol@example.edu,2026\n",
+    ),
+}
+
+
+@pytest.mark.parametrize("roster", sorted(_LABELLED_IMPORTS))
+# Lock 1 is the save's gate, 2 the label reconcile's, 3 the tag_1
+# upsert's, 4 the tag_2 clear's.
+@pytest.mark.parametrize("at", [2, 4])
 def test_a_labelled_import_commits_nothing_before_a_later_gate_refuses(
-    db: Session, monkeypatch
+    db: Session, monkeypatch, roster: str, at: int
 ) -> None:
     """Codex on #2882: the label reconcile re-gates after the roster
-    replace. The import is one commit, so a session archived between
-    the two gates refuses with nothing committed, not after the replace."""
+    replace. The import is one commit, so a session archived at any later
+    gate refuses with nothing committed, and the service drops the
+    flushed half-import itself."""
+    from app.db.models import Reviewee, Reviewer
     from app.services import csv_imports
 
+    parse, save, body = _LABELLED_IMPORTS[roster]
+    model = Reviewer if roster == "reviewers" else Reviewee
     user = User(email="op-labels@example.edu", display_name="Op")
     db.add(user)
     db.flush()
@@ -460,27 +491,27 @@ def test_a_labelled_import_commits_nothing_before_a_later_gate_refuses(
     )
     db.add(session)
     db.commit()
-    parsed = csv_imports.parse_reviewer_csv(
-        b"ReviewerName,ReviewerEmail,ReviewerTag1.Tutor\n"
-        b"Alice,alice@example.edu,senior\n"
-    )
-    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=2)
+    parsed = getattr(csv_imports, parse)(body)
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=at)
     commits: list[bool] = []
     real_commit = db.commit
     monkeypatch.setattr(db, "commit", lambda: (commits.append(True), real_commit()))
 
     with pytest.raises(lifecycle.SessionStateConflict):
-        csv_imports.save_reviewers(
+        getattr(csv_imports, save)(
             db,
             session=session,
             user=user,
             rows=parsed.rows,
-            filename="reviewers.csv",
+            filename=f"{roster}.csv",
             correlation_id="t",
             field_labels_captured=parsed.field_labels,
         )
 
     assert commits == []
+    assert db.execute(
+        select(model.id).where(model.session_id == session.id)
+    ).all() == []
 
 
 def test_a_row_edit_refuses_a_session_activated_at_the_lock(

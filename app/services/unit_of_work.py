@@ -1,11 +1,14 @@
 """One commit for a request that calls several committing services.
 
 Services here commit at their own edge (the package convention), which
-is right for a route that calls one of them. A route that applies
-several in sequence and must be all-or-nothing — the Instrument card's
-Save (findings A16) — wraps them in :func:`single_commit`; inside it,
-:func:`commit` only flushes, so a refusal part-way through can roll the
-whole request back. The route makes the one real ``db.commit()`` itself.
+is right for a route that calls one of them. A caller that applies
+several in sequence and must be all-or-nothing wraps them in
+:func:`single_commit`; inside it, :func:`commit` only flushes, so a
+refusal part-way through can roll the whole unit back. The caller makes
+the one real commit itself: the Instrument card's Save route (findings
+A16), and the reviewer / reviewee roster imports in ``csv_imports``,
+which hold the session lock from their gate to that commit (findings
+Bc4).
 """
 
 from __future__ import annotations
