@@ -590,3 +590,55 @@ def test_config_still_refuses_an_edited_start_in_the_past(
         follow_redirects=False,
     )
     assert response.status_code == 422
+
+
+def _post_aged_schedule(
+    client: TestClient, db: Session, code: str, *, stored: str, submitted: str
+):
+    """A draft whose Start passed a day ago, invite offsets ``stored``,
+    re-saved with the Start box untouched and ``submitted`` offsets."""
+    from datetime import timedelta, timezone
+
+    from app.services.date_formatting import format_datetime_local
+
+    session = _create_session(client, db, code=code)
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    start = now - timedelta(days=1)
+    session.display_timezone = "UTC"
+    session.scheduled_activate_at = start
+    session.invite_offsets = [stored]
+    db.commit()
+    return client.post(
+        f"/operator/sessions/{session.id}/config",
+        data={
+            "name": session.name,
+            "code": session.code,
+            "display_timezone": "UTC",
+            "scheduled_activate_at": format_datetime_local(start, "UTC"),
+            "invite_offsets": submitted,
+        },
+        follow_redirects=False,
+    )
+
+
+def test_config_refuses_a_new_offset_on_an_aged_start(
+    client: TestClient, db: Session
+) -> None:
+    """The B4 exemption is per stored entry: an offset typed now on an
+    aged Start resolves into the past and meets the floor."""
+    response = _post_aged_schedule(
+        client, db, "tz-aged-new-offset", stored="-P1D", submitted="-P2D"
+    )
+    assert response.status_code == 422
+
+
+def test_config_still_checks_a_stored_offset_beyond_the_floor(
+    client: TestClient, db: Session
+) -> None:
+    """Only the lead-time floor is waived for a stored entry: one that
+    breaks another rule (a positive invite offset, which a Settings
+    import can write) is still refused on the next Save."""
+    response = _post_aged_schedule(
+        client, db, "tz-aged-bad-sign", stored="P1D", submitted="P1D"
+    )
+    assert response.status_code == 422

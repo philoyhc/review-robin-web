@@ -45,7 +45,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
 
 **Medium**
 
-- ~~**B4**~~ — **Done in #PR** (the spec's "stays put" holds: unedited Start and offsets are kept as stored, as the lobby already did for End). **A Details Save on a draft refuses a rename once the stored Start
+- ~~**B4**~~ — **2026-10-07: the spec's "stays put", the fixer's choice with no ruling asked. Done in #PR** (an unedited Start, and the stored offsets on an unedited anchor, skip only the lead-time floor; every other check still runs). **A Details Save on a draft refuses a rename once the stored Start
   has passed.** `_session_home.py` `/config` re-validates the unedited
   scheduled Start through `parse_and_validate_scheduled_activate_at`
   (and the reminder offsets), so changing only the Name answers 422

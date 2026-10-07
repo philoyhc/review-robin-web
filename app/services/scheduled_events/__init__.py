@@ -106,7 +106,6 @@ __all__ = [
     "parse_and_validate_responses_release_until",
     "parse_and_validate_scheduled_activate_at",
     "parse_iso_duration",
-    "offsets_unchanged",
     "resolve_offset",
     "validate_deadline_change",
     "validate_schedule_ordering",
@@ -116,18 +115,6 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 SCHEDULED_EVENT_FAILED = "session.scheduled_event_failed"
-
-
-def offsets_unchanged(raw: str | None, stored: list[str] | None) -> bool:
-    """Whether an offsets box submits exactly the stored list.
-
-    Splits the way the offset parsers do, so a box Session Home seeded
-    from the stored list and the operator left alone compares equal.
-    The details card uses it to leave an aged schedule alone on a save
-    that did not touch it (findings B4, 2026-10-07).
-    """
-    entries = [item.strip() for item in (raw or "").split(",") if item.strip()]
-    return entries == list(stored or [])
 
 
 def validate_deadline_change(

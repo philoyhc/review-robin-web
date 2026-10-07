@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from collections.abc import Collection
 from typing import Callable
 
 from sqlalchemy import select
@@ -305,6 +306,7 @@ def parse_and_validate_invite_offsets(
     now: datetime | None = None,
     operational_lead_hours: int | None = None,
     notice_min_hours: int | None = None,
+    aged_exempt: Collection[str] = (),
 ) -> list[str] | None:
     """Parse a comma-separated invite-offsets string into a clean list
     and enforce the per-entry save-time rules.
@@ -323,6 +325,11 @@ def parse_and_validate_invite_offsets(
        per §8.2.2 anchor-null, so only the parse-validity check
        runs. The editor renders the field with a "Set Start first"
        caption.
+
+    An entry in ``aged_exempt`` — one the caller re-submits as stored,
+    on an anchor left unedited — skips only the lead-time floor: it
+    aged past it after saving and "stays put" (``spec/lifecycle.md``
+    §8.3; findings B4). Every other rule still applies to it.
 
     Raises :class:`ScheduledActivateError` with a per-entry error
     message on the first violation. The route layer converts to
@@ -365,7 +372,10 @@ def parse_and_validate_invite_offsets(
         if scheduled_activate_at is not None:
             anchor = _ensure_aware_utc(scheduled_activate_at)
             fire_at = anchor + delta
-            if fire_at - current < timedelta(hours=op_hours):
+            if (
+                entry not in aged_exempt
+                and fire_at - current < timedelta(hours=op_hours)
+            ):
                 raise ScheduledActivateError(
                     f"Auto-send invite {entry} resolves to before now + "
                     f"{op_hours} hour(s); leave more lead time."
