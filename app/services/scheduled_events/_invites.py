@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from collections import Counter
 from collections.abc import Collection
 from typing import Callable
 
@@ -329,7 +330,9 @@ def parse_and_validate_invite_offsets(
     An entry in ``aged_exempt`` — one the caller re-submits as stored,
     on an anchor left unedited — skips only the lead-time floor: it
     aged past it after saving and "stays put" (``spec/lifecycle.md``
-    §8.3; findings B4). Every other rule still applies to it.
+    §8.3; findings B4). Every other rule still applies to it. Each
+    stored entry exempts one submitted occurrence, so a duplicate typed
+    now meets the floor like any new entry.
 
     Raises :class:`ScheduledActivateError` with a per-entry error
     message on the first violation. The route layer converts to
@@ -353,6 +356,7 @@ def parse_and_validate_invite_offsets(
     )
     current = now or datetime.now(timezone.utc)
 
+    exempt_left = Counter(aged_exempt)
     cleaned: list[str] = []
     for entry in entries:
         try:
@@ -372,10 +376,10 @@ def parse_and_validate_invite_offsets(
         if scheduled_activate_at is not None:
             anchor = _ensure_aware_utc(scheduled_activate_at)
             fire_at = anchor + delta
-            if (
-                entry not in aged_exempt
-                and fire_at - current < timedelta(hours=op_hours)
-            ):
+            exempt = exempt_left[entry] > 0
+            if exempt:
+                exempt_left[entry] -= 1
+            if not exempt and fire_at - current < timedelta(hours=op_hours):
                 raise ScheduledActivateError(
                     f"Auto-send invite {entry} resolves to before now + "
                     f"{op_hours} hour(s); leave more lead time."

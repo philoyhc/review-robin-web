@@ -678,3 +678,15 @@ def test_config_rechecks_stored_offsets_when_start_moves(
     )
     assert response.status_code == 422
     assert "leave more lead time" in response.text
+
+
+def test_config_refuses_a_duplicate_of_an_aged_offset(
+    client: TestClient, db: Session
+) -> None:
+    """Each stored entry exempts one occurrence: a second copy of an
+    aged offset is a new entry and meets the floor (Codex on #2870)."""
+    response = _post_aged_schedule(
+        client, db, "tz-aged-dup", stored="-P1D", submitted="-P1D, -P1D"
+    )
+    assert response.status_code == 422
+    assert "leave more lead time" in response.text
