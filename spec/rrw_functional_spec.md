@@ -89,8 +89,8 @@ The system must:
    to update or complete their work until they explicitly
    **submit**, after which the system records submission timestamps
    and continues to allow corrections until the session closes.
-7. Let the operator **monitor** invitation engagement and response
-   completion in real time, both per-reviewer and per-reviewee.
+7. Let the operator **monitor** invitation sends and response
+   progress in real time, both per-reviewer and per-reviewee.
 8. **Validate** session setup against a documented readiness
    checklist, surfacing every blocking error and every advisory
    warning, with deep links from each issue to the page that fixes
@@ -520,9 +520,9 @@ sort is set from badges on the Band 2 preview's column headers
 
 On an individual instrument the reviewee's name and email are
 always present (cannot be turned off — they are the two locked
-rows). A group-scoped instrument has no locked rows: unticking the
-name's Include there drops the member names from the group's
-identity line. The other seven are opt-in.
+rows). On a group-scoped instrument the name stays locked too, so
+member names always show below the group's identity line; email does
+not apply to a group row. The other seven are opt-in.
 
 ### 5.9 Assignment
 
@@ -1449,8 +1449,8 @@ a reviewer-centric Operations-row tab.
   search + Clear / **`Search`**.
 - **Invitations table** — one row per reviewer carrying:
   reviewer name + email, email status (sent / queued / not
-  sent), email-sent timestamp, per-reviewer engagement
-  (opened / first-response / submitted), required-fields-
+  sent), email-sent timestamp, per-reviewer progress
+  (not started / in progress / submitted), required-fields-
   filled count, last-reminder timestamp, per-row Send /
   Send-reminder / Regenerate actions (lifecycle-gated).
 

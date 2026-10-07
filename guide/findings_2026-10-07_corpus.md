@@ -117,6 +117,8 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   re-ordered list safe; it holds only when nothing has fired. Author:
   key fired state on the offset value, or refuse edits that shift a
   fired index.
+  **Ruled 2026-10-07: refuse an edit that shifts a sent offset.** Code PR
+  to follow.
 - **Carried:** old B27 / G6 (scheduled sends fire only from Session Home;
   `guide/post_azure_todo_checklist.md` §7), re-found as B3 and G4; old D4
   (`responses_import._stage` overwrites a duplicate row), re-found and
@@ -147,6 +149,8 @@ id points at its row in §3 or §1.
 - **Docs and root:** H2 (is the bulk-archive checkbox a confirm), I7 (email
   "queued" or "recorded"), I8 (the practices kit's engine builder).
 
+Ruled 2026-10-07: B1, Bc1, G1, G2, H2 (rows say how).
+
 ## 3. Findings by file
 
 One row per finding: id, severity, decides, file and lines, what the file
@@ -165,7 +169,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **B — assignments, workflow, lifecycle, Validate**
 
-- **B1** med spec (author if the card should follow `is_editable`) lifecycle.md:560-565 Quick Setup body greyed with toggle visible but inert vs available only on draft with no responses, toggle hidden on validated (views/_quick_setup.py:201,340; _quick_setup_card.html:35-40), while the routes gate on is_editable; the card is narrower than the single predicate §3.1 / §5 say nothing undercuts; :560 also names the retired "Next Action card"
+- **B1** med spec (author if the card should follow `is_editable`) lifecycle.md:560-565 Quick Setup body greyed with toggle visible but inert vs available only on draft with no responses, toggle hidden on validated (views/_quick_setup.py:201,340; _quick_setup_card.html:35-40), while the routes gate on is_editable; the card is narrower than the single predicate §3.1 / §5 say nothing undercuts; :560 also names the retired "Next Action card" — **Ruled 2026-10-07: the card follows `is_editable`.** Code PR to follow.
 - **B2** low spec lifecycle.md:521-526 Observers exception "checkboxes only, bulk card follows the common gate", contradicting :423 vs :434; code gates the whole Unlock panel, selection and checkboxes on not archived (session_observers.html:13-18,229,559; setup_pages.md:360 right)
 - **B3** — carried, old B27 / G6: lifecycle.md:864-870 the lazy observer runs on Session Home, Operations and the lobby vs Session Home only (_session_home.py:125). Not counted.
 - ~~**B4**~~ med author lifecycle.md:886-889 aged value stays put vs Details Save re-validates the stored Start (§1) — **Done in #2870.**
@@ -233,8 +237,8 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **G — the functional spec** (all rrw_functional_spec.md)
 
-- **G1** med author §5.8 :518-522 a group-scoped instrument has no locked rows (unticking Name drops member names); the service allows it and the reviewer surface honors it (_response_fields.py:417-427; _reviewer_summary.py:327-333), but the builder always locks Name (views/_instruments.py:661; instruments_index.html:1939-1943, 4045); instruments.md:871-874 "stays ticked" and :932 "when Name is selected" disagree
-- **G2** med author §9.9 :1450 "engagement (opened / first-response / submitted)", §2.7 "invitation engagement" vs Progress = not started / in progress / submitted (views/_progress.py:30-35); nothing renders opened_at; operations_pages.md:298 right
+- **G1** med author §5.8 :518-522 a group-scoped instrument has no locked rows (unticking Name drops member names); the service allows it and the reviewer surface honors it (_response_fields.py:417-427; _reviewer_summary.py:327-333), but the builder always locks Name (views/_instruments.py:661; instruments_index.html:1939-1943, 4045); instruments.md:871-874 "stays ticked" and :932 "when Name is selected" disagree — **Ruled 2026-10-07: Name stays locked on group instruments.** Spec in #PR; the service still lets it be unticked, fixed in a code PR to follow.
+- ~~**G2**~~ med author §9.9 :1450 "engagement (opened / first-response / submitted)", §2.7 "invitation engagement" vs Progress = not started / in progress / submitted (views/_progress.py:30-35); nothing renders opened_at; operations_pages.md:298 right — **Done in #PR** (ruled 2026-10-07: the spec follows Progress).
 - ~~**G3**~~ med author §2.12 :113-115 every send attempt audited, §5.13 every mutating service vs the per-row reminder (§1); §15 :2280-2282 contradicts §2.12 — **Done in #2869.**
 - **G4** — carried, old B27 / G6: §8.3 :966-969 triggers fire on the next operator GET. Same as B3. Not counted.
 - **G5** low spec §5.12 :606-608 an invitation created "(or auto-send schedule)" vs only Prepare creates (invitations.py:155); §11.4 :1984-1987 says so
@@ -245,7 +249,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 **H — docs/**
 
 - ~~**H1**~~ high code backup_restore.md:85-87, operations_runbook.md:62-67 in-app removal is safe vs remove_user cascade-deleting every session the user created (§1); deployment_dev.md:321-327 and deployment_nus.md:316-318 on raw DELETE need re-reading against it — **Done in #2867**; the raw-DELETE docs hold as written
-- **H2** med author security_posture.md:216-243 §5.7 "no gaps found" omits POST /operator/sessions/bulk-archive (purge_and_archive deletes responses, rosters and the audit log with no confirm parameter, unlike bulk-delete; the UI has only the "Archive after purging" checkboxes) and Sys Admin remove-from-all-sessions and delete user. Is a checkbox a confirm?
+- ~~**H2**~~ med author security_posture.md:216-243 §5.7 "no gaps found" omits POST /operator/sessions/bulk-archive (purge_and_archive deletes responses, rosters and the audit log with no confirm parameter, unlike bulk-delete; the UI has only the "Archive after purging" checkboxes) and Sys Admin remove-from-all-sessions and delete user. Is a checkbox a confirm? — **Done in #PR** (ruled 2026-10-07: the ticked purge box is the confirmation; §5.7 lists purge-and-archive and the Sys Admin removes).
 - **H3** low-med doc known_limitations.md:60-62 targeted reminders missing vs the per-row Send reminder and send_reminders_to_incomplete; what is missing is delivery (its own :51-55)
 - **H4** low trim cli_setup.md:379, :394, :646-647 still prescribe the `admin:repo_hook` scope (old H14 applied in part)
 - **H5** low doc known_limitations.md:69-71 failure "is logged" vs a log line and an audit event, session.scheduled_event_failed
