@@ -289,7 +289,7 @@ excluded nothing is worth saying.
 
 | # | Column | Toggle? | Sort key | Content |
 |---|---|---|---|---|
-| 1 | Reviewer | — | `name` | Name + `<code>` email; name links to per-invitation detail page when an `Invitation` row exists |
+| 1 | Reviewer | — | `name` | Name + `<code>` email; name links to the per-reviewer detail page on every row (Per-row drill-in) |
 | 2 | Tag1 | ✓ | `tag_1` | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"`; header label via `field_label_header(session, "reviewer", "tag_1")` |
 | 3 | Tag2 | ✓ | `tag_2` | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 4 | Tag3 | ✓ | `tag_3` | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
