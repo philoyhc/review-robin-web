@@ -400,6 +400,25 @@ def _apply_session_config_form(
             detail=str(exc),
         ) from exc
 
+    # An entry already sent on the anchor the save keeps stays at its
+    # position (findings Bc1). Checked before the per-entry rules, so a
+    # moved sent entry is named as such rather than as one short of
+    # lead time; and a sent entry kept in place, like an aged stored
+    # one, skips the lead-time floor.
+    fired_errors = scheduled_events.fired_offset_errors(
+        db,
+        review_session,
+        scheduled_activate_at=parsed_scheduled_activate_at,
+        invite_offsets=scheduled_events.split_offsets(invite_offsets),
+        deadline=parsed_deadline,
+        reminder_offsets=scheduled_events.split_offsets(reminder_offsets),
+    )
+    if fired_errors:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=fired_errors[0][1],
+        )
+
     # 18G Part 2: optional auto-send invite offsets, validated against
     # the (possibly freshly-edited) Start.
     try:
@@ -407,10 +426,14 @@ def _apply_session_config_form(
             scheduled_events.parse_and_validate_invite_offsets(
                 invite_offsets,
                 scheduled_activate_at=parsed_scheduled_activate_at,
-                aged_exempt=(
+                aged_exempt=scheduled_events.lead_exempt_offsets(
                     review_session.invite_offsets or []
                     if start_unedited
-                    else ()
+                    else (),
+                    scheduled_events.fired_offsets(
+                        db, review_session, "invite",
+                        parsed_scheduled_activate_at,
+                    ),
                 ),
             )
         )
@@ -427,10 +450,13 @@ def _apply_session_config_form(
             scheduled_events.parse_and_validate_reminder_offsets(
                 reminder_offsets,
                 deadline=parsed_deadline,
-                aged_exempt=(
+                aged_exempt=scheduled_events.lead_exempt_offsets(
                     review_session.reminder_offsets or []
                     if "deadline" in unedited
-                    else ()
+                    else (),
+                    scheduled_events.fired_offsets(
+                        db, review_session, "reminder", parsed_deadline
+                    ),
                 ),
             )
         )
@@ -473,16 +499,6 @@ def _apply_session_config_form(
             scheduled_activate_at=parsed_scheduled_activate_at,
             deadline=parsed_deadline,
             responses_release_at=parsed_responses_release_at,
-        )
-        # An entry already fired on the anchor it keeps stays at its
-        # position (findings Bc1).
-        scheduled_events.validate_fired_offsets_kept(
-            db,
-            review_session,
-            scheduled_activate_at=parsed_scheduled_activate_at,
-            invite_offsets=parsed_invite_offsets,
-            deadline=parsed_deadline,
-            reminder_offsets=parsed_reminder_offsets,
         )
     except scheduled_events.ScheduledActivateError as exc:
         raise HTTPException(
