@@ -27,6 +27,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -1086,12 +1087,47 @@ async def _run_quick_setup_settings(
     replacement tick was sent, and, when responses exist, unless the
     response-loss acknowledgement was too — the same two gates the
     roster slots apply (findings C3). Create-session passes
-    ``replacing=False``: there is nothing to replace."""
+    ``replacing=False``: there is nothing to replace.
 
+    Everything after the upload is read runs in the threadpool: it
+    waits on the session row lock, and waiting on the event loop would
+    stall the worker whose other requests hold that lock until their
+    teardown runs on the same loop (findings Bc3)."""
+
+    content = await file.read()
+    return await run_in_threadpool(
+        _apply_settings_upload,
+        content=content,
+        review_session=review_session,
+        user=user,
+        db=db,
+        replacing=replacing,
+        confirm_replace=confirm_replace,
+        acknowledge_response_loss=acknowledge_response_loss,
+        correlation_id=correlation_id or request_correlation_id(),
+    )
+
+
+def _apply_settings_upload(
+    *,
+    content: bytes,
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+    replacing: bool,
+    confirm_replace: str | None,
+    acknowledge_response_loss: str | None,
+    correlation_id: str,
+) -> _SettingsFailure | None:
+    """``_run_quick_setup_settings`` once the upload is read. The
+    session is locked and re-read before the editability gate, so a
+    scheduled activation that commits first is refused here rather
+    than imported over (findings Bc3)."""
+
+    scheduled_events.lock_session(db, review_session)
     if not lifecycle.is_editable(review_session):
         return _SettingsFailure("lifecycle")
 
-    content = await file.read()
     if not content:
         return _SettingsFailure("parse")
 
@@ -1124,7 +1160,7 @@ async def _run_quick_setup_settings(
         review_session,
         rows,
         user=user,
-        correlation_id=correlation_id or request_correlation_id(),
+        correlation_id=correlation_id,
     )
     if not result.ok:
         return _SettingsFailure(

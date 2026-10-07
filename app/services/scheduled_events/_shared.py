@@ -46,7 +46,9 @@ def lock_session(db: Session, session: ReviewSession) -> ReviewSession:
     refreshed from the database.
 
     Used by triggers to prevent two concurrent operator GETs from
-    racing the same fire, and by the schedule save's sent-entry check
+    racing the same fire, and first thing by every save that writes the
+    schedule — Session Home, the lobby expander, the Settings import —
+    so their gates and checks read what the triggers last committed
     (findings Bc3). The Postgres path takes a row-level lock; SQLite
     silently no-ops it (single-writer DB), which is acceptable for the
     dev loop.

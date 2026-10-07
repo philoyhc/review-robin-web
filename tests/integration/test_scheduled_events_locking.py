@@ -310,3 +310,40 @@ def test_the_settings_import_checks_under_the_lock(
     )
 
     assert [e.field for e in result.errors] == ["session.scheduled_activate_at"]
+
+
+def test_the_settings_import_route_gates_editability_under_the_lock(
+    client, db: Session, monkeypatch
+) -> None:
+    """A scheduled activation committing as the import starts: the
+    route's editability gate reads it and refuses, rather than
+    rebuilding a ready session's instruments."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Import", "code": "lock-import-route"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "lock-import-route")
+    ).scalar_one()
+    _commit_lands_at_the_lock(
+        monkeypatch,
+        db,
+        lambda s: _saved_behind_the_orm(db, s, "status", "ready"),
+    )
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/import-config",
+        data={"confirm_replace": "true"},
+        files={
+            "file": (
+                "settings.csv",
+                b"field,value,data_type\nsession.name,Imported,string\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+    assert "quick_setup_error" in response.headers["location"]
+    assert _count(db, session, "session.settings_imported") == 0

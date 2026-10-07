@@ -920,7 +920,7 @@ browsers, and direct POSTs bypass the picker entirely).
   2026-10-07). A second racer re-reads after the first commits and
   no-ops. The schedule saves take the same lock first, before reading
   anything (the Session Home save, the lobby's row expander and the
-  Settings import's checks), and hold it until the schedule is written,
+  Settings import, each before its editability gate), and hold it until the schedule is written,
   so the editability gate, the stored schedule and the sent-entry
   record (§8.2.6) are read as they stand, a send
   being recorded is committed before a save reads the record, and an
