@@ -104,18 +104,21 @@ class QuickSetupContext:
     ``show_lock_toggle`` (whether the operator can unlock) —
     together capture the card's availability:
 
-    - **Available** (``draft`` AND no persisted responses):
+    - **Available** (setup editable — ``draft`` or ``validated`` —
+      AND no persisted responses):
       ``show_lock_toggle=True``. ``is_locked`` is ``True`` by
       default on every fresh page load; the cookie-driven
       ``is_unlocked`` flips it off. The operator must explicitly
       Unlock before any submit.
-    - **Unavailable** (any state but ``draft``, or any session with
+    - **Unavailable** (``ready`` or later, or any session with
       persisted responses): ``show_lock_toggle=False``
       and ``is_locked=True`` permanently. The body greys; the
-      operator can't unlock. Defense-in-depth route gates
-      (``_require_editable`` + ``_require_response_loss_ack``)
-      stay in place but never fire from this surface because the
-      submit forms aren't reachable when the body's locked.
+      operator can't unlock. Defense-in-depth route gates (each
+      slot's inline ``is_editable`` check, plus
+      ``_require_response_loss_ack`` on the Reviewers, Reviewees and
+      Settings slots) stay in place but never fire from this surface
+      because the submit forms aren't reachable when the body's
+      locked.
 
     ``is_disabled`` mirrors ``not is_available`` for templates
     that want a single boolean to drive label-only signals; it's
@@ -177,13 +180,16 @@ def build_quick_setup_context(
     """
 
     sid = review_session.id
-    # Card is functional only on ``draft`` AND when no reviewer
-    # responses exist yet. Outside that window — any state but
-    # ``draft``, or any session with persisted responses
+    # Card is functional while setup is editable (``draft`` or
+    # ``validated`` — the single ``lifecycle.is_editable`` predicate the
+    # routes gate on; author's ruling, 2026-10-07, findings B1) AND no
+    # reviewer responses exist yet. Outside that window — ``ready``,
+    # ``expired``, ``archived``, or any session with persisted responses
     # from a prior activation cycle — the card stays permanently
-    # locked (body greyed, Lock / Unlock toggle hidden, submits
-    # rejected at the service layer via ``_require_editable`` +
-    # ``_require_response_loss_ack``). The single description copy
+    # locked (body greyed, Lock / Unlock toggle hidden). A submit that
+    # arrives anyway is refused by the slot's inline ``is_editable``
+    # check, or, on a session with responses, by
+    # ``_require_response_loss_ack``. The single description copy
     # names both conditions.
     #
     # 19R.1 rung 2 — this asked the question through
@@ -198,7 +204,7 @@ def build_quick_setup_context(
     # positive count but never reach zero, so ``> 0`` and "a row
     # exists" are the same question.
     has_responses = lifecycle.session_has_responses(db, review_session)
-    is_available = lifecycle.is_draft(review_session) and not has_responses
+    is_available = lifecycle.is_editable(review_session) and not has_responses
     is_disabled = not is_available
 
     reviewer_count = csv_imports.existing_reviewer_count(db, sid)
@@ -319,15 +325,15 @@ def build_quick_setup_context(
     else:
         description = (
             f"Bulk-populate {slot_phrase} from files in one place. "
-            "Available only when session is in draft mode and does "
-            "not have any responses."
+            "Available only while setup is editable (draft or "
+            "validated) and the session has no responses."
         )
 
     # Default-locked on every fresh page load when the card is
     # available; the cookie-driven ``is_unlocked`` flips it off
     # until the operator locks again or the cookie is cleared.
-    # When the card isn't available (any state but draft, or any
-    # session with persisted responses), force-lock and
+    # When the card isn't available (``ready`` / ``expired`` /
+    # ``archived``, or any session with persisted responses), force-lock and
     # hide the toggle entirely so the operator can't visually
     # unlock something the route layer would reject anyway.
     is_locked = True if not is_available else not is_unlocked
@@ -394,8 +400,8 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
     - ``"parse"`` — the upload couldn't be parsed / validated. The
       message points the operator at the per-entity Setup page where
       the per-row error feedback lives.
-    - ``"lifecycle"`` — the submit hit ``_require_editable`` on a
-      ``ready`` session. The message names the next move (Revert to
+    - ``"lifecycle"`` — the submit failed the slot's inline
+      ``is_editable`` check on a ``ready`` session. The message names the next move (Revert to
       draft — the operator-facing name for this transition; *Pause* is
       the legacy internal one, per 19O Item 7 entry 13).
     - ``"needs_confirm"`` — the form was submitted without ticking

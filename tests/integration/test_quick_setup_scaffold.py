@@ -153,7 +153,7 @@ def test_quick_setup_disables_when_session_is_activated(
 ) -> None:
     """An Activated session marks Quick Setup unavailable
     (``is_disabled=True``). Description copy is the single static
-    line covering both gates (draft-only + no-responses)."""
+    line covering both gates (setup editable + no responses)."""
 
     operator = make_client(alice)
     review_session = _seed_pair(
@@ -165,9 +165,52 @@ def test_quick_setup_disables_when_session_is_activated(
 
     assert context.is_disabled is True
     assert (
-        "Available only when session is in draft mode and does not "
-        "have any responses." in context.description
+        "Available only while setup is editable (draft or validated) "
+        "and the session has no responses." in context.description
     )
+
+
+def test_quick_setup_available_on_validated(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Findings B1 (ruled 2026-10-07): the card follows the single
+    ``is_editable`` predicate the routes gate on, so a validated session
+    with no responses offers it, toggle and all; it still defaults to
+    locked."""
+    operator = make_client(alice)
+    review_session = _seed_pair(
+        operator, db, code="qs-validated", reviewer_email="r@example.edu"
+    )
+    validate_session(review_session)
+    db.flush()
+    assert review_session.status == "validated"
+
+    context = views.build_quick_setup_context(db, review_session)
+
+    assert context.is_disabled is False
+    assert context.show_lock_toggle is True
+    assert context.is_locked is True
+    body = operator.get(f"/operator/sessions/{review_session.id}").text
+    assert 'id="quick-setup-lock-toggle"' in body
+    assert ">Unlock</button>" in body
+
+
+def test_quick_setup_unavailable_when_archived(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    operator = make_client(alice)
+    review_session = _make_session(operator, db, code="qs-archived")
+    review_session.status = "archived"
+    db.flush()
+
+    context = views.build_quick_setup_context(db, review_session)
+
+    assert context.is_disabled is True
+    assert context.show_lock_toggle is False
 
 
 def test_quick_setup_unavailable_when_responses_exist_even_on_draft(
@@ -330,8 +373,9 @@ def test_quick_setup_lock_toggle_hidden_when_session_activated(
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Quick Setup is available only on ``draft`` AND when no
-    persisted responses exist. On any other state — here ``ready`` —
+    """Quick Setup is available only while setup is editable (draft or
+    validated) AND no persisted responses exist. Past that — here
+    ``ready`` —
     the card is permanently locked and the Lock / Unlock toggle is
     hidden entirely, so the operator can't even cosmetically unlock
     something the route layer would reject."""

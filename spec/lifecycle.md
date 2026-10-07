@@ -557,12 +557,13 @@ stays editable in every lifecycle state — see
 `spec/visual_style_rrw.md` "Warning surfaces — shared brown
 framing".
 
-**Session Home is the exception.** The Next Action card carries
+**Session Home is the exception.** The Workflow card carries
 its own state-aware copy (per `spec/session_home.md`), so Home
 doesn't stack a yellow lock card on top — disabled treatment on
 Home is plain greying-out. The Quick Setup card on Home follows
-the same convention (body-greyed, Lock/Unlock toggle visible but
-inert at the service layer).
+the same convention: available on the same `is_editable` predicate
+while the session has no responses, and otherwise body-greyed with
+the Lock / Unlock toggle hidden (`spec/quick_setup_card_spec.md`).
 
 **Assignments answers to the same predicate**, and splits the way
 the roster pages do: the selection-driven

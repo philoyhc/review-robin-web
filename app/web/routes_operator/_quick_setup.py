@@ -444,9 +444,9 @@ def quick_setup_lock_toggle(
 
     ``action="unlock"`` sets ``qsu_{id}=1`` (and the next render
     drops ``.locked`` from the body wrapper); ``action="lock"`` clears
-    the cookie. The toggle is visual only — the service layer
-    (``_require_editable``) stays the source of truth for whether a
-    slot's submit can mutate.
+    the cookie. The toggle is visual only — each slot's own inline
+    ``is_editable`` check stays the source of truth for whether its
+    submit can mutate.
     """
 
     redirect = RedirectResponse(

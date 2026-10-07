@@ -471,7 +471,7 @@ Layout: a 2-column grid — Reviewers
 + Reviewees stack in the left column; Relationships, Observers (when
 rendered) and Session settings stack in the right column. A Lock / Unlock button sits in a footer
 at the bottom-right and renders only while the card is available —
-`draft` with no persisted responses (`spec/quick_setup_card_spec.md`
+setup editable (`draft` or `validated`) with no persisted responses (`spec/quick_setup_card_spec.md`
 "Visibility"); there the card defaults to locked so the operator
 must explicitly Unlock before any setup change. Lock state lives in a per-session `HttpOnly`
 cookie (`qsu_{session_id}=1` when unlocked, path `/` so the
@@ -481,14 +481,14 @@ navigation middleware can expire it anywhere; `spec/settings_inventory.md`
 State-conditional copy only — the card frame is constant:
 
 - **Default (no responses):** "Bulk-populate {the slots} from files in
-  one place. Available only when session is in draft mode and does
-  not have any responses." The slot list follows the slots rendered.
+  one place. Available only while setup is editable (draft or
+  validated) and the session has no responses." The slot list follows the slots rendered.
 - **When the session holds responses (any state):** the same opening, then
   "Quick Setup is locked because this session already holds reviewer
   responses from a prior activation. Use the individual Setup pages
   to make changes."
-- Whenever the card is unavailable (`draft` with responses,
-  `validated`, `ready`, `expired`) the body greys and the Lock /
+- Whenever the card is unavailable (any session with responses,
+  `ready`, `expired`, `archived`) the body greys and the Lock /
   Unlock button is hidden.
 
 ## Placeholder cards
@@ -513,9 +513,9 @@ page reuses the same class without further design work.
 
 | State (enum / display) | Workflow card | Quick Setup | Extract Data |
 |---|---|---|---|
-| `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; no buttons rendered | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional; empty-count tiles grey their Download button) |
-| `draft` / Draft, rosters populated (before Prepare, or after a Prepare that failed) | State 2: Prepare session live (Primary; runs Generate + Validate + Invite in sequence) | Live (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
-| `validated` / Validated | States 4 / 4Err / 5 / 6: Activate session live (Primary; under the `W` overlay it detours through `/validate?activate=1`); Prepare session re-runnable (Secondary); Revert to draft live (Secondary); Send invites surfaces once invitations exist (Primary, State 5) | Body-greyed; no Lock / Unlock toggle | Live (4–5 tiles, Observers conditional) |
+| `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; no buttons rendered | Live while no responses exist (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional; empty-count tiles grey their Download button) |
+| `draft` / Draft, rosters populated (before Prepare, or after a Prepare that failed) | State 2: Prepare session live (Primary; runs Generate + Validate + Invite in sequence) | Live while no responses exist (up to five slots, Observers conditional; default-locked) | Live (4–5 tiles, Observers conditional) |
+| `validated` / Validated | States 4 / 4Err / 5 / 6: Activate session live (Primary; under the `W` overlay it detours through `/validate?activate=1`); Prepare session re-runnable (Secondary); Revert to draft live (Secondary); Send invites surfaces once invitations exist (Primary, State 5) | Live while no responses exist (default-locked; an import demotes to `draft`) | Live (4–5 tiles, Observers conditional) |
 | `ready` / Activated | States 7 / 8 / 9: Send invites / Send reminders forward stages (whichever is next renders Primary; State 7 — no invitations — has none, and the copy names Revert to draft); Close session + Release responses live (Secondary); Revert to draft live (Secondary; the `ready → draft` form) | Body-greyed; no Lock / Unlock toggle | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
 | `expired` / Closed | State 10: Release responses (or Stop releasing when the window's open) · Archive session (Alert); Revert to draft live (Secondary, reopens for editing) | Body-greyed; no Lock / Unlock toggle | Live |
 | `archived` / Archived | No buttons rendered (the Workflow card surfaces no actions on archived sessions) | Body-greyed | Live |
