@@ -151,14 +151,16 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   every editability-gated save that does not take `lock_session`.
   Author: lock first in each such save, or have the status write
   compare-and-set against the status it read. Postgres only.
-- **Gc1** (found while fixing G1, Codex on #2875; low, author) **A
+- ~~**Gc1**~~ — **Done in #PENDING** (found while fixing G1, Codex on #2875; low, author) **A
   roster tag value may contain a comma.** A group instrument names a group
   by its tag values joined with ", ", so two groups can render the same
   label (`("A", "B")` and `("A, B", "")`), and an older responses file
   naming a group that way cannot be matched. **Ruled 2026-10-07: no roster
   tag value (reviewers, reviewees, observers, relationships) may contain a
   comma, on import or edit; stored values stay as they are, with no
-  warning.** Code PR to follow.
+  warning.** Every importer and edit refuses a comma in a `tag_*` value
+  (`comma_in_tag`); a row still holding one is refused when next edited
+  until the comma is removed.
 - **Carried:** old B27 / G6 (scheduled sends fire only from Session Home;
   `guide/post_azure_todo_checklist.md` §7), re-found as B3 and G4; old D4
   (`responses_import._stage` overwrites a duplicate row), re-found and
