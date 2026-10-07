@@ -50,6 +50,7 @@ class RevieweeOperationError(ValueError):
       session already uses this email-or-identifier.
     - ``invalid_status`` — status not in ``{"active", "inactive"}``.
     - ``too_long`` — a value is longer than its column.
+    - ``comma_in_tag`` — a tag value contains a comma (findings Gc1).
     - ``not_in_session`` — bulk operation referenced ids that don't
       belong to the target session.
     """
@@ -60,8 +61,8 @@ class RevieweeOperationError(ValueError):
         self.message = message
 
 
-# Each column's name in a ``too_long`` message. A tag is named by its
-# slot, not by the session's friendly label for it.
+# Each column's name in a ``too_long`` or ``comma_in_tag`` message. A
+# tag is named by its slot, not by the session's friendly label for it.
 _FIELD_LABELS = {
     "name": "Name",
     "email_or_identifier": "Email or identifier",

@@ -468,6 +468,7 @@ class RelationshipOperationError(ValueError):
       has a relationship row (the UNIQUE constraint).
     - ``invalid_status`` — status not in ``{"active", "inactive"}``.
     - ``too_long`` — a value is longer than its column.
+    - ``comma_in_tag`` — a tag value contains a comma (findings Gc1).
     """
 
     def __init__(self, code: str, message: str) -> None:
@@ -478,8 +479,8 @@ class RelationshipOperationError(ValueError):
 
 _UNSET: object = object()
 
-# Each column's name in a ``too_long`` message. A tag is named by its
-# slot, not by the session's friendly label for it.
+# Each column's name in a ``too_long`` or ``comma_in_tag`` message. A
+# tag is named by its slot, not by the session's friendly label for it.
 _FIELD_LABELS = {"tag_1": "Tag 1", "tag_2": "Tag 2", "tag_3": "Tag 3"}
 
 

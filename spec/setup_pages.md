@@ -1181,7 +1181,9 @@ the models (`csv_imports.over_long_field_message`; `spec/csv_contracts.md`
 message, not by its friendly label. A tag holding a comma is refused the
 same way, with `<Tag N> may not contain a comma.`
 (`csv_imports.comma_tag_message`; `spec/csv_contracts.md` §1, *Tag
-commas*).
+commas*). The Edit form posts every field, so a row whose stored tag
+already holds one refuses any save, a rename or status change
+included, until that tag is changed.
 Editing a row's **status** to `inactive` /
 `active` is the inactivate / reactivate path — there is no
 separate per-row toggle. **Inactivate** / **Activate** flip the
