@@ -2553,35 +2553,3 @@ def test_reviewer_pre_open_page_says_closed_for_an_archived_session(
     assert "Deadline:" not in body
     assert "opens later" not in body
     assert "hasn't opened yet" not in body
-
-
-def test_per_row_remind_writes_a_reminders_sent_event(
-    client: TestClient, db: Session
-) -> None:
-    """Findings G3 (2026-10-07): the per-row reminder queued its outbox
-    row and stamped ``last_reminder_at`` but wrote no audit row. It now
-    writes the bulk path's ``reminders.sent`` with one entry."""
-    session = _ready_session(client, db, code="remind-audit")
-    invitation = db.execute(
-        select(Invitation).where(Invitation.session_id == session.id)
-    ).scalar_one()
-    client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
-    )
-    response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
-
-    events = db.execute(
-        select(AuditEvent).where(
-            AuditEvent.session_id == session.id,
-            AuditEvent.event_type == "reminders.sent",
-        )
-    ).scalars().all()
-    assert len(events) == 1
-    assert events[0].detail["set_changes"]["updated"] == [
-        {"invitation_id": invitation.id, "reviewer_id": invitation.reviewer_id}
-    ]
-    assert events[0].detail["context"] == {"fell_back": 0}

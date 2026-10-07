@@ -211,6 +211,76 @@ def test_send_reminder_falls_back_to_fresh_send_when_never_sent(
     assert invitation.last_reminder_at is not None
 
 
+def _reminders_sent_events(db: Session, session_id: int) -> list[AuditEvent]:
+    return list(
+        db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == session_id,
+                AuditEvent.event_type == "reminders.sent",
+            )
+        ).scalars()
+    )
+
+
+def test_per_row_reminder_writes_a_reminders_sent_event(
+    client: TestClient, db: Session
+) -> None:
+    """Findings G3 (2026-10-07): the per-row reminder queued its outbox
+    row and stamped ``last_reminder_at`` but wrote no audit row. It now
+    writes the bulk path's ``reminders.sent`` with one entry."""
+    session = _ready_session(
+        client, db, "rem-audit", reviewers=["rae@example.edu"]
+    )
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    events = _reminders_sent_events(db, session.id)
+    assert len(events) == 1
+    assert events[0].detail["set_changes"]["updated"] == [
+        {"invitation_id": invitation.id, "reviewer_id": invitation.reviewer_id}
+    ]
+    assert events[0].detail["context"] == {"fell_back": 0}
+
+
+def test_per_row_reminder_that_falls_back_counts_it(
+    client: TestClient, db: Session
+) -> None:
+    """With no invitation email yet, the reminder falls back to a fresh
+    send: ``invitation.sent`` records the send and ``reminders.sent``
+    the operator's reminder, with ``context.fell_back`` = 1, as the bulk
+    path counts it."""
+    session = _ready_session(
+        client, db, "rem-audit-fallback", reviewers=["rae@example.edu"]
+    )
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    events = _reminders_sent_events(db, session.id)
+    assert len(events) == 1
+    assert events[0].detail["context"] == {"fell_back": 1}
+    assert db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == session.id,
+            AuditEvent.event_type == "invitation.sent",
+        )
+    ).first() is not None
+
+
 def test_send_reminder_after_regenerate_sends_a_live_link(
     client: TestClient, db: Session
 ) -> None:

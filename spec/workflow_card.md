@@ -928,7 +928,7 @@ routes:
 | `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.invalidate_session` | `validated` | `draft` | `session.invalidated` |
 | `POST /operator/sessions/{id}/revert` (when `is_ready` or `is_expired`) | `lifecycle.revert_session_to_draft` | `ready` or `expired` | `draft` | `session.reverted_to_draft` |
 | `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_invitation` (per row of `invitations.list_sendable_invitations` — `pending` **and** still eligible) | `validated` or `ready` | unchanged | per-invitation send events |
-| `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready` | unchanged | per-reminder send events |
+| `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready` | unchanged | one batch `reminders.sent` |
 
 **The per-step `/assignments/generate` and `/activate` routes stay
 alive although the Workflow card POSTs to neither directly.**
