@@ -107,6 +107,16 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   (E12); `_filters.py`'s `assignments_picked_handles` docstring (B6);
   `tests/conftest.py`'s pointer to the Rehydrate gate test, which is under
   `tests/integration/` (outside the corpus).
+- **Bc1** (found while fixing B4, #2870; medium, author) **Deleting a
+  fired offset can stop a later one from ever firing.** The invite and
+  reminder observers record fired offsets by list index
+  (`_consumed_invite_offset_indices` and its reminder twin; the outbox
+  key `reminder:{sid}:{rid}:{offset_index}`). Delete a fired `-P3D` from
+  `[-P3D, -PT12H]` and `-PT12H` moves to index 0, which reads as already
+  fired. `spec/lifecycle.md` §8.2.6 says index-keyed dedup makes a
+  re-ordered list safe; it holds only when nothing has fired. Author:
+  key fired state on the offset value, or refuse edits that shift a
+  fired index.
 - **Carried:** old B27 / G6 (scheduled sends fire only from Session Home;
   `guide/post_azure_todo_checklist.md` §7), re-found as B3 and G4; old D4
   (`responses_import._stage` overwrites a duplicate row), re-found and
@@ -121,7 +131,7 @@ id points at its row in §3 or §1.
 - **Instruments:** A4 (Group preview with no boundary), A7 (does the
   reviewer surface follow the visibility editor), G1 (Name locked on a
   group-scoped instrument).
-- **Lifecycle and Setup:** B1 (Quick Setup's availability against the
+- **Lifecycle and Setup:** Bc1 (fired offsets keyed by index), B1 (Quick Setup's availability against the
   `is_editable` predicate), B4 (aged Start on a rename), B5 (the P30D
   archive default nothing writes), C5 (unlock cookies across Session Home
   forms).
