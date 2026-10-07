@@ -118,7 +118,7 @@
                   {% if row.group_identity.tag_line %}
                     <strong>{{ row.group_identity.tag_line }}</strong>
                   {% endif %}
-                  {% if row.group_identity.show_members and row.group_identity.member_names %}
+                  {% if row.group_identity.member_names %}
                     {% if row.group_identity.tag_line %}<br>{% endif %}
                     <span class="muted">{{ row.group_identity.member_names | join(", ") }}{% if row.group_identity.extra_count %}, +{{ row.group_identity.extra_count }} more{% endif %}</span>
                   {% elif not row.group_identity.tag_line %}

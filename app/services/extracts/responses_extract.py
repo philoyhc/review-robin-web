@@ -36,7 +36,6 @@ from sqlalchemy.orm import Session, joinedload
 from app.db.models import (
     Assignment,
     Instrument,
-    InstrumentDisplayField,
     InstrumentResponseField,
     Response,
     Reviewee,
@@ -110,35 +109,16 @@ HEADER: tuple[str, ...] = (
 )
 
 
-def _name_included_instruments(
-    db: Session, instrument_ids: set[int]
-) -> set[int]:
-    """Group-scoped instruments whose RevieweeName Display Field is
-    Included — their export identity carries the member-name list."""
-    if not instrument_ids:
-        return set()
-    rows = db.execute(
-        select(InstrumentDisplayField.instrument_id).where(
-            InstrumentDisplayField.instrument_id.in_(instrument_ids),
-            InstrumentDisplayField.source_type == "reviewee",
-            InstrumentDisplayField.source_field == "name",
-            InstrumentDisplayField.visible.is_(True),
-        )
-    ).scalars()
-    return set(rows)
-
-
 def _compose_group_identity(
     group_key: tuple[str, ...],
     member_names: list[str],
-    *,
-    with_names: bool,
 ) -> str:
     """The single-cell ``RevieweeName`` value for a collapsed group
-    row: the boundary tag values, plus the full member-name list
-    when the RevieweeName Display Field is Included."""
+    row: the boundary tag values, plus the full member-name list,
+    which always shows (Name stays shown on a group instrument,
+    findings G1)."""
     tag_part = ", ".join(v for v in group_key if v)
-    if with_names and member_names:
+    if member_names:
         members = ", ".join(member_names)
         return f"{tag_part} ({members})" if tag_part else members
     return tag_part or "(group)"
@@ -171,10 +151,6 @@ def _group_export_index(
     )
     if not key_by_assignment:
         return {}, {}
-    with_names = _name_included_instruments(
-        db,
-        {a.instrument_id for a in assignments if a.id in key_by_assignment},
-    )
     members: dict[tuple[int, tuple[str, ...]], set[str]] = {}
     for assignment in assignments:
         group_key = key_by_assignment.get(assignment.id)
@@ -187,7 +163,6 @@ def _group_export_index(
         (instrument_id, group_key): _compose_group_identity(
             group_key,
             sorted(names),
-            with_names=instrument_id in with_names,
         )
         for (instrument_id, group_key), names in members.items()
     }

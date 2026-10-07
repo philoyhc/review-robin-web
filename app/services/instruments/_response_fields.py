@@ -413,10 +413,11 @@ def bulk_save_fields(
         # operator UI suppresses the checkbox + arrows for these rows;
         # this is a server-side defense in case a forged form ever
         # arrives. That holds on a group-scoped instrument too: Name
-        # stays locked there, so member names always show (author's
-        # ruling, 2026-10-07, findings G1; Segment 13C had made it
-        # choosable). Email has no place on a group row whatever its
-        # flag.
+        # stays locked there (author's ruling, 2026-10-07, findings G1;
+        # Segment 13C had made it choosable). No route calls this
+        # helper since Wave 5 PR 5.3 (the builder saves through the
+        # Band helpers, which skip locked rows); it is kept to the same
+        # rule.
         if is_locked_display_source(field.source_type, field.source_field):
             new_visible = True
         per_row_changes: dict[str, list[Any]] = {}

@@ -20,7 +20,6 @@ def _collapse_group_rows(
     per_assignment_rows: list[dict],
     *,
     group_key_by_assignment: dict[int, tuple[str, ...]],
-    name_visible: bool,
 ) -> list[dict]:
     """Collapse a group-scoped instrument's per-assignment rows into
     one row per boundary-defined group (Segment 13C reviewer surface).
@@ -30,7 +29,8 @@ def _collapse_group_rows(
     as the representative — response inputs key off it and the write
     fan-out spreads the answer to the rest. The representative row
     gains a ``group_identity`` block (boundary tag values + member
-    names) and a ``group_label`` for aria text; its per-reviewee
+    names, which always show: Name stays shown on a group instrument,
+    findings G1) and a ``group_label`` for aria text; its per-reviewee
     ``display_cells`` / ``sort_values`` are cleared.
     """
     partitions: dict[tuple[str, ...], list[dict]] = {}
@@ -76,7 +76,6 @@ def _collapse_group_rows(
             "tag_line": tag_line,
             "member_names": shown,
             "extra_count": len(names) - len(shown),
-            "show_members": name_visible,
         }
         representative["group_label"] = (
             tag_line or ", ".join(shown) or "the group"

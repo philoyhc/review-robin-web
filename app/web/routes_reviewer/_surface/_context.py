@@ -433,18 +433,9 @@ def _surface_context(
         group_rows = rows_by_instrument.get(instrument_id)
         if not group_rows:
             continue
-        # The group identity lists member names only when the
-        # operator left the RevieweeName Display Field Included.
-        name_visible = any(
-            df.source_type == "reviewee"
-            and df.source_field == "name"
-            and df.visible
-            for df in all_display_fields_by_instrument.get(instrument_id, [])
-        )
         rows_by_instrument[instrument_id] = _collapse_group_rows(
             group_rows,
             group_key_by_assignment=group_keys,
-            name_visible=name_visible,
         )
 
     instrument_groups = []

@@ -773,8 +773,8 @@ reviewer-surface specifics:
   commas, the values of every visible `reviewee.tag_*` display field
   on the lowest-id member — the tag pills the operator's Band 2
   preview shows — falling back to the boundary tag values when none
-  yields a value. When the `RevieweeName` Display Field is Included,
-  a second line lists the members — the first
+  yields a value. A second line lists the members, always (Name stays
+  shown on a group instrument; findings G1) — the first
   `GROUP_MEMBER_NAME_LIMIT` (10) names, then a `+N more` suffix. No separate display-field
   columns render. When the group is a self-review group, a
   `.pill.pill-info` **Self review** follows on its own line: every
