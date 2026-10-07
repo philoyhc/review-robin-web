@@ -151,7 +151,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   every editability-gated save that does not take `lock_session`.
   Author: lock first in each such save, or have the status write
   compare-and-set against the status it read. Postgres only.
-- ~~**Gc1**~~ — **Done in #PENDING** (found while fixing G1, Codex on #2875; low, author) **A
+- ~~**Gc1**~~ — **Done in #2878** (found while fixing G1, Codex on #2875; low, author) **A
   roster tag value may contain a comma.** A group instrument names a group
   by its tag values joined with ", ", so two groups can render the same
   label (`("A", "B")` and `("A, B", "")`), and an older responses file
