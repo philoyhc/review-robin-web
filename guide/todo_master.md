@@ -26,10 +26,12 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
-- **19U — Session-state guard in the service layer** (findings Bc4,
-  ruled 2026-10-07). Every state-gated save and lifecycle transition
-  decides its gate under the session lock, inside the service.
-  **Plan:** `guide/segment_19U_session_state_guard.md`.
+- **19U — post-assessment, 2026-10-07.** Items close independently;
+  the segment stays open for the author's small patches. **Item 1**:
+  session-state guard in the service layer (findings Bc4, ruled
+  2026-10-07). Every state-gated save and lifecycle transition decides
+  its gate under the session lock, inside the service.
+  **Plan:** `guide/segment_19U_post_assessment_7oct.md`.
 
 ### Queued segments
 

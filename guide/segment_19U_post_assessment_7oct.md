@@ -1,8 +1,18 @@
-# Segment 19U — Session-state guard in the service layer
+# Segment 19U — post-assessment, 2026-10-07
 
-**Opened:** 2026-10-07 · **Theme:** every save that a session's lifecycle state gates decides that gate under the session lock, inside the service · **Related:** `guide/findings_2026-10-07_corpus.md` (Bc3, Bc4), `spec/lifecycle.md`, `spec/architecture.md`
+**Opened:** 2026-10-07 · **Theme:** fixes and small patches, after the 2026-10-07 corpus sweep (`guide/sweep_2026-10-07_corpus.md`), that no other plan owns · **Related:** `guide/findings_2026-10-07_corpus.md`
 
-## Opportunity
+**Items close independently**, each with its own `### Doc impact` and
+`### Status`, as in 19S. So there is **no segment-level `## Doc impact`**,
+and `python3 tools/close_check.py 19U.1` reads Item 1's. The segment stays
+open after Item 1 for the author's further small patches (2026-10-07), and
+closes only when the author says so.
+
+## Item 1 — session-state guard in the service layer
+
+**Theme:** every save that a session's lifecycle state gates decides that gate under the session lock, inside the service. **Related:** `spec/lifecycle.md`, `spec/architecture.md`.
+
+### Opportunity
 
 Findings **Bc4**: a save checks the session's lifecycle state on the row
 loaded with the request, then writes. Nothing stops that state changing
@@ -24,7 +34,7 @@ caller that skips it reopens the race.
 Measured below: 66 gated mutating route handlers, about 80 service entry
 points, 11 lifecycle transitions.
 
-## Decision
+### Decision
 
 **Ruled 2026-10-07 (option a, with manual Activate):** the state gate
 moves into the service layer. Every service function that mutates a
@@ -62,7 +72,7 @@ Codex's point on #2877.
 instrument edits written before the status write would still land on a
 `ready` session.
 
-## Semantics
+### Semantics
 
 - **Re-entrant within a request.** A request that calls several guarded
   services takes the lock once and re-reads each time. `lock_session`
@@ -87,7 +97,7 @@ instrument edits written before the status write would still land on a
   `spec/architecture.md` "Three-layer split", which records that state
   gates are a service rule.
 
-## Judgment calls — decided
+### Judgment calls — decided
 
 - `SessionStateConflict` subclasses `LifecycleError`, so the routes that
   already catch `LifecycleError` keep catching it, and `code` maps
@@ -99,7 +109,7 @@ instrument edits written before the status write would still land on a
   keep their early `lock_session` call, so their validation reads also
   happen under the lock. Both calls are service calls.
 
-## Blast radius (measured)
+### Blast radius (measured)
 
 Taken 2026-10-07 at `9eda6273`.
 
@@ -113,7 +123,7 @@ Taken 2026-10-07 at `9eda6273`.
 | `lock_session(` call sites | 11 | `grep -rn "lock_session(" app/ --include=*.py \| grep -v "def lock_session" \| wc -l` |
 | Test files naming a 409 | 50 | `grep -rln "revert to draft to edit\|409" tests/ \| wc -l` |
 
-## PR ladder
+### PR ladder
 
 1. **PR 1 — this plan, and the Bc4 ruling in the register.** Prose only.
 2. **PR 2 — the primitive and the lifecycle transitions.** Lands
@@ -135,12 +145,12 @@ Taken 2026-10-07 at `9eda6273`.
    `session_config_io` and the two routes switch to `session_guard`.
    This is the last build rung: run `diff-reviewer` on the cumulative
    diff from PR 2's base.
-7. **PR 7 — close.** Spec sweep, register strike, archive.
+7. **PR 7 — item close.** Spec sweep, register strike, `### Status` compacted. The file stays in `guide/`, because the segment stays open.
 
 Code rungs 2–6 are one item ladder, so they take one cumulative read at
 rung 6. A rung that reopens code after that read takes its own read.
 
-## Definition of done
+### Definition of done
 
 - Every mutating function in `app/services/` that a route gates on
   session state calls `session_guard.require_state` before its first read
@@ -155,18 +165,18 @@ rung 6. A rung that reopens code after that read takes its own read.
   "Three-layer split" state the rule.
 - Findings Bc4 struck in `guide/findings_2026-10-07_corpus.md`.
 - `## Doc impact` section present and current
-- `python3 tools/close_check.py 19U` exits 0; any warning adjudicated
+- `python3 tools/close_check.py 19U.1` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
-- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+- Item 1 marked closed in its heading; the file stays in `guide/` while 19U is open
 
-## Open questions
+### Open questions
 
 - Should a Postgres `lock_timeout` bound a stuck lock wait? It is
   deployment configuration rather than code. **The author decides**,
   with the Azure deployment (`guide/post_azure_todo_checklist.md`).
 
-## Out of scope
+### Out of scope
 
 - **Reads before the lock that are not the state gate.** For example,
   an import's identity check against rows another request is writing.
@@ -177,9 +187,9 @@ rung 6. A rung that reopens code after that read takes its own read.
 - **Removing the early route checks.** They stay, so the order in which
   routes refuse does not change in this segment.
 
-## Doc impact
+### Doc impact
 
 - `spec/lifecycle.md` — "Concurrency safety": every state-gated save and every transition is decided under the session lock, in the service (PR 7).
 - `spec/architecture.md` — "Three-layer split": a lifecycle-state gate is a service rule, and `session_guard` is its primitive (PR 7).
 - `guide/findings_2026-10-07_corpus.md` — Bc4 ruled (PR 1), struck at close (PR 7).
-- `guide/todo_master.md` — queue line while open; deleted at close.
+- `guide/todo_master.md` — the segment's in-progress line names Item 1 while it is open (PR 1), and drops it at the item close (PR 7).
