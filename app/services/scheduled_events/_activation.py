@@ -52,10 +52,10 @@ def _observe_scheduled_activation(
       side effect; emits ``session.activated`` with
       ``context.trigger="scheduled"``.
 
-    The concurrency model is :func:`lock_session` +
-    idempotency check (``locked.scheduled_activate_at is None``)
-    in the same transaction as any mutation; a second racer sees
-    the first racer's commit and bails.
+    The concurrency model is :func:`lock_session` + a re-check on the
+    row it re-reads (Start still set and due) in the same transaction as
+    any mutation; a second racer sees the first racer's commit and
+    bails.
     """
     if session.scheduled_activate_at is None:
         return
@@ -63,7 +63,13 @@ def _observe_scheduled_activation(
         return
 
     locked = lock_session(db, session)
-    if locked.scheduled_activate_at is None:
+    # Decided again on the row as it stands under the lock: a save that
+    # cleared or moved Start after this page loaded wins (findings Bc3).
+    if (
+        locked.scheduled_activate_at is None
+        or _ensure_aware_utc(locked.scheduled_activate_at) > now
+    ):
+        db.commit()
         return
 
     scheduled_at_iso = _ensure_aware_utc(

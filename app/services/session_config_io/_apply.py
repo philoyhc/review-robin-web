@@ -69,7 +69,17 @@ class ApplyResult:
 def _validate(
     review_session: ReviewSession, rows: list[Row]
 ) -> tuple[_ParsedConfig, list[ApplyError]]:
-    """Phase 1: the typed plan and every error the rows hold."""
+    """Phase 1: the typed plan and every error the rows hold. Read under
+    the session lock the scheduled-event observers take, so the stored
+    schedule the checks compare against is the one the apply writes over
+    (findings Bc3)."""
+    from sqlalchemy.orm import object_session
+
+    from app.services.scheduled_events import lock_session
+
+    db = object_session(review_session)
+    if db is not None and review_session.id is not None:
+        lock_session(db, review_session)
     plan, errors = _parse_rows(rows)
     errors += session_fallback_length_errors(plan, review_session)
     errors += session_schedule_order_errors(plan, review_session)

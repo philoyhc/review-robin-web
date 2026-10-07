@@ -299,14 +299,19 @@ def _apply_session_config_form(
     assignments or responses, so no response-loss ack gate). Raises
     ``HTTPException(422)`` on any field / ordering validation error.
     """
+    # The whole save runs under the session lock the scheduled-event
+    # observers take, re-reading the row first, so the editability gate,
+    # the stored schedule and the sent-entry record are all read as they
+    # stand and nothing changes them before the schedule is written
+    # (findings Bc3).
+    scheduled_events.lock_session(db, review_session)
     # Editing session metadata (name / code / description / deadline /
     # help contact / timezone / scheduled_activate_at) touches only
     # scalar ``sessions`` columns.
     _require_editable(review_session)
 
     # A code another session holds is refused before anything is
-    # written (the timezone write below commits), rather than reaching
-    # the unique constraint as a 500.
+    # written, rather than reaching the unique constraint as a 500.
     try:
         sessions.ensure_code_available(
             db, code, exclude_session_id=review_session.id
@@ -503,13 +508,6 @@ def _apply_session_config_form(
             detail=str(exc),
         ) from exc
 
-    sessions.set_session_display_timezone(
-        db,
-        review_session=review_session,
-        user=user,
-        timezone_name=timezone_name,
-        correlation_id=correlation_id,
-    )
     payload = SessionCreate(
         name=name,
         code=code,
@@ -529,6 +527,16 @@ def _apply_session_config_form(
         review_session=review_session,
         user=user,
         payload=payload,
+        correlation_id=correlation_id,
+    )
+    # After the schedule write, not before: the zone write commits, and
+    # committing first would release the session lock the sent-entry
+    # check took before the lists it checked are written (findings Bc3).
+    sessions.set_session_display_timezone(
+        db,
+        review_session=review_session,
+        user=user,
+        timezone_name=timezone_name,
         correlation_id=correlation_id,
     )
 

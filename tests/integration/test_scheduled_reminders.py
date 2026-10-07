@@ -486,11 +486,12 @@ def test_partial_failure_does_not_requeue_sent_reminders(
     """Findings B31: a pass that fails partway must not re-queue the
     reminders it already queued.
 
-    ``send_reminder`` commits each outbox row. The dedupe stamp used to
-    be set afterwards and only flushed, so the guard's rollback after a
-    later reviewer's failure dropped it; the next pass found no stamp
-    and queued the first reviewer's reminder again. The stamp now rides
-    on the row and commits with it."""
+    The dedupe stamp used to be set after ``send_reminder`` committed
+    the row, and only flushed, so a later reviewer's failure dropped it
+    and the next pass queued the first reviewer's reminder again. Since
+    findings Bc3 the whole entry is one transaction: the failure rolls
+    back every row the pass queued, and the next pass sends each
+    reviewer one reminder."""
     rs = _ready_session_with_invitations(db, "partial-rem", reviewer_count=2)
     rs.deadline = datetime.now(timezone.utc) + timedelta(hours=4)
     rs.reminder_offsets = ["-PT8H"]

@@ -128,7 +128,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   records `sent=0`). The manual **Send reminders** and per-row **Send
   reminder** carry no such key, so the operator can already send another;
   `spec/lifecycle.md` §8.2.6 states the rule.
-- **Bc3** (found while fixing Bc1, Codex on #2874; low, author) **The
+- ~~**Bc3**~~ — **Done in #2877** (found while fixing Bc1, Codex on #2874; low, author) **The
   scheduled-event observer does not hold its lock across a pass.**
   `lock_session` returns the caller's already-loaded row (no
   `populate_existing`), so the observer fires from values read before the
@@ -139,7 +139,18 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   A lock in the save-time check alone was tried and reverted in #2874: it
   closed one order only and made every save block foreign-key inserts on
   the session (Postgres deadlock risk). **Ruled 2026-10-07: rework the
-  observer's locking.** Code PR to follow.
+  observer's locking.** Each entry is decided, sent and recorded under a
+  re-reading lock, and every schedule save locks before its gate.
+- **Bc4** (found while fixing Bc3; medium, author) **The roster imports
+  gate editability before any lock.** `_run_quick_setup_import` checks
+  `is_editable` on the session loaded with the request, then saves; a
+  scheduled activation committing in between leaves the roster replaced
+  and assignments cascaded on a `ready` session, and
+  `invalidate_if_validated`, reading the stale `validated`, writes
+  `draft` over the committed `ready`. The same shape likely holds for
+  every editability-gated save that does not take `lock_session`.
+  Author: lock first in each such save, or have the status write
+  compare-and-set against the status it read. Postgres only.
 - **Gc1** (found while fixing G1, Codex on #2875; low, author) **A
   roster tag value may contain a comma.** A group instrument names a group
   by its tag values joined with ", ", so two groups can render the same
@@ -164,7 +175,7 @@ id points at its row in §3 or §1.
   group-scoped instrument).
 - **Lifecycle and Setup:** Bc1 (fired offsets keyed by index), Bc2 (the
   reminder outbox key carries no anchor), Bc3 (the observer's lock
-  across a pass), B1 (Quick Setup's availability against the
+  across a pass), Bc4 (roster imports gate before the lock), B1 (Quick Setup's availability against the
   `is_editable` predicate), B4 (aged Start on a rename), B5 (the P30D
   archive default nothing writes), C5 (unlock cookies across Session Home
   forms).

@@ -116,10 +116,11 @@ def _observe_scheduled_invites(
     Operator changing ``scheduled_activate_at`` resets the dedup set
     — every entry gets a fresh chance against the new anchor.
 
-    Concurrency is the same SELECT … FOR UPDATE pattern as Part 1:
-    the session row is locked once before iterating; each entry's
-    audit-driven consumption check inside that transaction prevents
-    a second racer from re-firing the same entry.
+    Concurrency: each entry is decided and recorded in one
+    transaction under ``lock_session``, which re-reads the session row
+    (findings Bc3). A second racer re-reads the record after the first
+    commits and skips the entry; a schedule save waits for the entry to
+    be recorded, and an entry decided after a save sees the saved lists.
     """
     if not session.invite_offsets:
         return
@@ -137,102 +138,113 @@ def _observe_scheduled_invites(
     if not due:
         return
 
-    locked = lock_session(db, session)
-    if locked.scheduled_activate_at is None or not locked.invite_offsets:
-        return
-
-    anchor_iso = _ensure_aware_utc(locked.scheduled_activate_at).isoformat()
-    consumed = _consumed_invite_offset_indices(db, locked, anchor_iso)
-
-    # Preconditions resolve once per pass — both apply uniformly to
-    # every entry firing in this observer call. Order matters:
-    # `not_prepared` is checked first because invitations are
-    # preserved across a revert to draft, so a stale session could
-    # otherwise fire invites from `draft` even though manual Send
-    # would refuse (the operator route `_require_validated_or_ready`
-    # gates the same way).
-    is_prepared = lifecycle.is_validated(locked) or lifecycle.is_ready(locked)
-    has_invitations = invitations_service.has_invitations(db, locked.id)
-
-    # Fire in chronological order so the audit log reads top-to-bottom.
-    due_sorted = sorted(due, key=lambda row: row[2])  # by fire_at
-    for offset_index, offset_str, fire_at in due_sorted:
-        if offset_index in consumed:
-            continue
-        scheduled_iso = fire_at.isoformat()
-        if not is_prepared:
-            audit.write_event(
-                db,
-                event_type="session.scheduled_invites_skipped",
-                summary=(
-                    f"Scheduled invites for {locked.code} skipped "
-                    f"({offset_str}): not_prepared"
-                ),
-                actor_user_id=None,
-                session=locked,
-                reason="not_prepared",
-                context={
-                    "anchor_at": anchor_iso,
-                    "offset_index": offset_index,
-                    "offset": offset_str,
-                    "scheduled_at": scheduled_iso,
-                },
-                correlation_id=correlation_id,
-            )
-            consumed.add(offset_index)
+    # One entry per transaction, decided under the session lock and
+    # re-read each time (findings Bc3): a schedule save that committed
+    # first is seen before anything fires, and a save arriving while an
+    # entry is being sent waits for it to be recorded. Fire in
+    # chronological order so the audit log reads top-to-bottom.
+    handled: set[int] = set()
+    while True:
+        locked = lock_session(db, session)
+        if locked.scheduled_activate_at is None or not locked.invite_offsets:
             db.commit()
-            continue
-        if not has_invitations:
-            audit.write_event(
-                db,
-                event_type="session.scheduled_invites_skipped",
-                summary=(
-                    f"Scheduled invites for {locked.code} skipped "
-                    f"({offset_str}): invitations_not_created"
-                ),
-                actor_user_id=None,
-                session=locked,
-                reason="invitations_not_created",
-                context={
-                    "anchor_at": anchor_iso,
-                    "offset_index": offset_index,
-                    "offset": offset_str,
-                    "scheduled_at": scheduled_iso,
-                },
-                correlation_id=correlation_id,
-            )
-            consumed.add(offset_index)
+            return
+        anchor_iso = _ensure_aware_utc(locked.scheduled_activate_at).isoformat()
+        consumed = _consumed_invite_offset_indices(db, locked, anchor_iso)
+        pending = sorted(
+            (fire_at, idx, raw)
+            for idx, raw, fire_at in _resolve_invite_fires(locked)
+            if fire_at is not None
+            and fire_at <= now
+            and idx not in consumed
+            and idx not in handled
+        )
+        if not pending:
             db.commit()
-            continue
-
-        sent = _dispatch_pending_invitations(
+            return
+        fire_at, offset_index, offset_str = pending[0]
+        handled.add(offset_index)
+        _fire_invite_entry(
             db,
             locked,
-            build_invite_url=build_invite_url,
+            offset_index=offset_index,
+            offset_str=offset_str,
+            anchor_iso=anchor_iso,
+            scheduled_iso=fire_at.isoformat(),
+            now=now,
             correlation_id=correlation_id,
+            build_invite_url=build_invite_url,
         )
+        db.commit()
 
+
+def _fire_invite_entry(
+    db: Session,
+    locked: ReviewSession,
+    *,
+    offset_index: int,
+    offset_str: str,
+    anchor_iso: str,
+    scheduled_iso: str,
+    now: datetime,
+    correlation_id: str | None,
+    build_invite_url: Callable[[str], str],
+) -> None:
+    """Skip or send one due entry and record it, without committing:
+    the caller commits the entry as one transaction.
+
+    Order matters: ``not_prepared`` is checked first because
+    invitations are preserved across a revert to draft, so a stale
+    session could otherwise fire invites from ``draft`` even though
+    manual Send would refuse (the operator route
+    ``_require_validated_or_ready`` gates the same way)."""
+    context = {
+        "anchor_at": anchor_iso,
+        "offset_index": offset_index,
+        "offset": offset_str,
+        "scheduled_at": scheduled_iso,
+    }
+    if not (lifecycle.is_validated(locked) or lifecycle.is_ready(locked)):
+        skip_reason: str | None = "not_prepared"
+    elif not invitations_service.has_invitations(db, locked.id):
+        skip_reason = "invitations_not_created"
+    else:
+        skip_reason = None
+    if skip_reason is not None:
         audit.write_event(
             db,
-            event_type="session.scheduled_invites_fired",
+            event_type="session.scheduled_invites_skipped",
             summary=(
-                f"Scheduled invites for {locked.code} fired "
-                f"({offset_str}); dispatched {sent}"
+                f"Scheduled invites for {locked.code} skipped "
+                f"({offset_str}): {skip_reason}"
             ),
             actor_user_id=None,
             session=locked,
-            payload=audit.counts(sent=sent),
-            context={
-                "anchor_at": anchor_iso,
-                "offset_index": offset_index,
-                "offset": offset_str,
-                "scheduled_at": scheduled_iso,
-                "actual_fired_at": now.isoformat(),
-            },
+            reason=skip_reason,
+            context=context,
             correlation_id=correlation_id,
         )
-        consumed.add(offset_index)
-        db.commit()
+        return
+
+    sent = _dispatch_pending_invitations(
+        db,
+        locked,
+        build_invite_url=build_invite_url,
+        correlation_id=correlation_id,
+    )
+    audit.write_event(
+        db,
+        event_type="session.scheduled_invites_fired",
+        summary=(
+            f"Scheduled invites for {locked.code} fired "
+            f"({offset_str}); dispatched {sent}"
+        ),
+        actor_user_id=None,
+        session=locked,
+        payload=audit.counts(sent=sent),
+        context={**context, "actual_fired_at": now.isoformat()},
+        correlation_id=correlation_id,
+    )
 
 
 def _dispatch_pending_invitations(
@@ -275,6 +287,7 @@ def _dispatch_pending_invitations(
             build_invite_url=build_invite_url,
             correlation_id=correlation_id,
             trigger="scheduled",
+            commit=False,
         )
         sent += 1
     return sent
