@@ -27,7 +27,21 @@ Line numbers are at `ff7f4425`.
 ## 1. Code defects
 
 Confirmed by reading the code; *reproduced* means a reader also ran it.
-None is high.
+
+**High**
+
+- **H1** **Removing a user who created a session they no longer own
+  deletes that session.** `users.remove_user` (`app/services/users.py`)
+  refuses only while the target holds a `session_operators` row, then
+  deletes the user; `User.review_sessions` carries `cascade="all,
+  delete-orphan"`, so every session the user *created* goes with them —
+  responses, rosters and all — even when another operator now owns it.
+  The user's audit rows survive with `actor_user_id` nulled (the
+  relationship sets it). `docs/backup_restore.md` and
+  `docs/operations_runbook.md` present in-app removal as safe.
+  *Reproduced* on SQLite with foreign keys on: Bob creates a session,
+  Carol owns it, removing Bob deletes it. Found by Codex on #2866; the
+  sweep's read had inferred an `IntegrityError` instead. Code, then doc.
 
 **Medium**
 
@@ -47,14 +61,6 @@ None is high.
   invalidates; the card's `/save` always calls it.
   `spec/sort_by_reviewee.md` says a no-op save emits nothing.
   *Reproduced.* Code.
-- **H1** **Removing a user who wrote audit rows or created a session can
-  500 on Postgres.** `users.remove_user` (`app/services/users.py`) guards
-  only session ownership, then deletes; `audit_events.actor_user_id` and
-  `sessions.created_by_user_id` reference `users` with no `ondelete`, so
-  the delete raises `IntegrityError`. `docs/backup_restore.md` and
-  `docs/operations_runbook.md` present in-app removal as working. Inferred
-  from the schema; the tests run on SQLite, which does not enforce it.
-  Code, then doc.
 - **G3** **The per-row Send reminder writes no audit event.**
   `_operations.py`'s per-row route reaches `invitations.send_reminder`,
   which queues the outbox row and stamps `last_reminder_at`; the bulk path
@@ -228,7 +234,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **H — docs/**
 
-- **H1** med code backup_restore.md:85-87, operations_runbook.md:62-67 in-app removal works vs remove_user IntegrityError (§1); deployment_dev.md:321-327 and deployment_nus.md:316-318 are right about raw DELETE
+- **H1** high code backup_restore.md:85-87, operations_runbook.md:62-67 in-app removal is safe vs remove_user cascade-deleting every session the user created (§1); deployment_dev.md:321-327 and deployment_nus.md:316-318 on raw DELETE need re-reading against it
 - **H2** med author security_posture.md:216-243 §5.7 "no gaps found" omits POST /operator/sessions/bulk-archive (purge_and_archive deletes responses, rosters and the audit log with no confirm parameter, unlike bulk-delete; the UI has only the "Archive after purging" checkboxes) and Sys Admin remove-from-all-sessions and delete user. Is a checkbox a confirm?
 - **H3** low-med doc known_limitations.md:60-62 targeted reminders missing vs the per-row Send reminder and send_reminders_to_incomplete; what is missing is delivery (its own :51-55)
 - **H4** low trim cli_setup.md:379, :394, :646-647 still prescribe the `admin:repo_hook` scope (old H14 applied in part)

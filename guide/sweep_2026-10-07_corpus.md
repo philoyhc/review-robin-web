@@ -112,8 +112,6 @@ None. Read but **not verified**:
 
 - Browser-only behavior: layout, the builder's Name lock (G1) and the
   group preview (A4) as drawn.
-- Postgres-only behavior: `remove_user`'s `IntegrityError` (H1) is
-  inferred from the foreign keys.
 - Azure-side state, secrets, `gh` scopes and CI timings.
 - Rehydrate end to end (gated off); D1 was reproduced at the service.
 
@@ -136,7 +134,7 @@ None. Read but **not verified**:
 | In scope | 58 (35 `spec/`, 14 `docs/`, 9 root) |
 | Read | 58 |
 | Findings | 86 (write 6 / update ~75 / consolidate 1 / retire 1), about 15 of them trims, 3 outside the corpus |
-| Code defects | 4 medium, 8 low, and stale copy and comments (register §1) |
+| Code defects | 1 high, 3 medium, 8 low, and stale copy and comments (register §1) |
 | Rulings needed | 22 (register §2) |
 | Carried in / closed / still open | 3 carried / — / 3 carried; old H14 and F13 re-reported as partly fixed |
 
@@ -144,10 +142,13 @@ None. Read but **not verified**:
 findings against 156 two days before, on the same 58 files, after every
 row of that register was worked through. About 15 of the 86 are trims, and
 several of those are provenance the last round of fixes wrote back in:
-finding ids and ruling dates in the specs they changed. No defect is high. Four are medium: a Details Save
-that refuses a rename because the stored Start has passed (B4), an
-Instrument Save that demotes a validated session with nothing changed
-(A2), a user removal that can 500 on Postgres (H1), and a per-row reminder
-that writes no audit row (G3). The functional spec is no longer the
+finding ids and ruling dates in the specs they changed. One defect is high, and the
+sweep's read got it wrong: removing a user deletes every session they
+created, whoever owns it now (H1), which the read had down as a
+Postgres-only 500 until Codex's review of this PR traced the ORM cascade
+and it was reproduced. Three are medium: a Details Save that refuses a
+rename because the stored Start has passed (B4), an Instrument Save that
+demotes a validated session with nothing changed (A2), and a per-row
+reminder that writes no audit row (G3). The functional spec is no longer the
 weakest document by count; `ui_elements.md` is, at nine, nearly all
 detail drifted under the last week's visual fixes.
