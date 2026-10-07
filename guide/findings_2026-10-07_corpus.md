@@ -150,7 +150,12 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   `draft` over the committed `ready`. The same shape likely holds for
   every editability-gated save that does not take `lock_session`.
   Author: lock first in each such save, or have the status write
-  compare-and-set against the status it read. Postgres only.
+  compare-and-set against the status it read. Postgres only. The same
+  gap lets a manual **Activate** that read `validated` activate a second
+  time after the scheduled one. **Ruled 2026-10-07: (a) every state-gated
+  save and every lifecycle transition, manual Activate included, decides
+  its gate under the session lock inside the service** (Codex's ask on
+  #2877). Planned in `guide/segment_19U_session_state_guard.md`.
 - ~~**Gc1**~~ — **Done in #2878** (found while fixing G1, Codex on #2875; low, author) **A
   roster tag value may contain a comma.** A group instrument names a group
   by its tag values joined with ", ", so two groups can render the same
@@ -193,7 +198,7 @@ id points at its row in §3 or §1.
 - **Docs and root:** H2 (is the bulk-archive checkbox a confirm), I7 (email
   "queued" or "recorded"), I8 (the practices kit's engine builder).
 
-Ruled 2026-10-07: B1, Bc1, Bc2, Bc3, G1, G2, Gc1, H2 (rows say how).
+Ruled 2026-10-07: B1, Bc1, Bc2, Bc3, Bc4, G1, G2, Gc1, H2 (rows say how).
 
 ## 3. Findings by file
 
