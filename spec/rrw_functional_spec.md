@@ -1153,8 +1153,8 @@ Top → bottom:
   settings slot (Reviewers / Reviewees / Relationships / Settings,
   plus an Observers slot when the Observers toggle is on) and one
   **Submit** button that runs the staged imports in dependency order.
-  It is available only while the session is `draft` and holds no
-  responses: then it loads locked, and **Unlock** enables it;
+  It is available only while setup is editable (`draft` or
+  `validated`) and the session holds no responses: then it loads locked, and **Unlock** enables it;
   otherwise it stays locked with no Unlock.
 - **Danger Zone card** (bottom right) —
   **Delete Data** (wipes every reviewer response, preserves setup)
