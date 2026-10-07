@@ -155,7 +155,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   time after the scheduled one. **Ruled 2026-10-07: (a) every state-gated
   save and every lifecycle transition, manual Activate included, decides
   its gate under the session lock inside the service** (Codex's ask on
-  #2877). Planned in `guide/segment_19U_session_state_guard.md`.
+  #2877). Planned as Item 1 of `guide/segment_19U_post_assessment_7oct.md`.
 - ~~**Gc1**~~ — **Done in #2878** (found while fixing G1, Codex on #2875; low, author) **A
   roster tag value may contain a comma.** A group instrument names a group
   by its tag values joined with ", ", so two groups can render the same
