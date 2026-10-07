@@ -53,7 +53,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   `spec/lifecycle.md` (aged values) says an aged value stays put; the lobby
   expander already exempts an unchanged End. *Reproduced.* Author: exempt
   an unchanged anchor, as the lobby does, or say the Details card refuses.
-- ~~**A2**~~ — **Done in #PR.** **The first Save of any Instrument card with no sort writes a
+- ~~**A2**~~ — **Done in #2868.** **The first Save of any Instrument card with no sort writes a
   spurious event and can demote a validated session.**
   `_display_fields.py` `set_sort_display_fields` compares the stored value
   with the normalized one, and `NULL != []`, so an empty sort on a NULL
@@ -145,7 +145,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 **A — instruments and the reviewer surface**
 
 - **A1** low spec instruments.md:1611 names an `instrument.band1_rules_updated` event — no such event_type (an invalidation reason only, _band1.py:120,171); Band 1 saves emit session_rule_set.created/.updated + instrument.group_boundary_updated
-- ~~**A2**~~ med code sort_by_reviewee.md:225-229,247-248 no-op save emits nothing vs _display_fields.py:869-872 NULL != [] (§1) — **Done in #PR.**
+- ~~**A2**~~ med code sort_by_reviewee.md:225-229,247-248 no-op save emits nothing vs _display_fields.py:869-872 NULL != [] (§1) — **Done in #2868.**
 - **A3** low spec reviewer-surface.md:962-966 dashboard match func.lower(...) vs func.lower(func.trim(...)) (_dashboard.py:102,112,123)
 - **A4** low author instruments.md:934-942 group preview = rule-surviving subset vs server preview with no boundary tag = all active reviewees (§1)
 - **A5** low spec reviewer-surface.md:1527 short_label in "three places" (also the summary h2 :1246 and the results / collation headings); :72 "the four routes" vs five at :41-47 (Recall)
