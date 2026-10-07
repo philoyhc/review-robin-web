@@ -234,12 +234,17 @@ def sessions_unarchive_selected(
         review_session = sessions.get_for_user(db, user, session_id)
         if review_session is None or review_session.status != "archived":
             continue
-        lifecycle.unarchive_session(
-            db,
-            review_session=review_session,
-            user=user,
-            correlation_id=correlation_id,
-        )
+        try:
+            lifecycle.unarchive_session(
+                db,
+                review_session=review_session,
+                user=user,
+                correlation_id=correlation_id,
+            )
+        except lifecycle.LifecycleError:
+            # Unarchived by another request since this one read it (a
+            # double submit): skipped, as the filter above skips it.
+            db.rollback()
     return RedirectResponse(
         url="/operator/sessions/archived",
         status_code=status.HTTP_303_SEE_OTHER,
@@ -441,13 +446,21 @@ def sessions_archive_selected(
         review_session = sessions.get_for_user(db, user, session_id)
         if review_session is None:
             continue
-        session_purge.purge_and_archive(
-            db,
-            review_session=review_session,
-            user=user,
-            purge=purge,
-            correlation_id=correlation_id,
-        )
+        try:
+            session_purge.purge_and_archive(
+                db,
+                review_session=review_session,
+                user=user,
+                purge=purge,
+                correlation_id=correlation_id,
+            )
+        except lifecycle.LifecycleError:
+            # Archived by another request since this one read it (a
+            # double submit): the row is skipped rather than answering
+            # 500. Any purge ticked has already run by then; deciding
+            # ``can_archive`` under the lock before it is 19U Item 1's
+            # rung 6.
+            db.rollback()
     target = (
         "/operator/sessions/archived"
         if return_to == "archived"

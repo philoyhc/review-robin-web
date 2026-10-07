@@ -717,22 +717,13 @@ def session_revert_to_draft(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     try:
-        if lifecycle.is_validated(review_session):
-            lifecycle.invalidate_session(
-                db,
-                review_session=review_session,
-                user=user,
-                reason="operator_revert",
-                correlation_id=request_correlation_id(),
-            )
-        else:
-            lifecycle.revert_session_to_draft(
-                db,
-                review_session=review_session,
-                user=user,
-                confirm=confirm == "true",
-                correlation_id=request_correlation_id(),
-            )
+        lifecycle.operator_revert(
+            db,
+            review_session=review_session,
+            user=user,
+            confirm=confirm == "true",
+            correlation_id=request_correlation_id(),
+        )
     except lifecycle.LifecycleError as exc:
         raise _lifecycle_error_response(exc) from exc
     target = f"/operator/sessions/{review_session.id}"

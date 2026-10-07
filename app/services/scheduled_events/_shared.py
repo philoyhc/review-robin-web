@@ -10,10 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from app.db.models import ReviewSession
+from app.services.session_guard import lock_session  # noqa: F401 — re-exported; moved for findings Bc4
 
 
 # Per spec/guide/segment_18G_scheduled_events.md Part 0b, the offset
@@ -39,40 +36,3 @@ def _ensure_aware_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value
-
-
-def lock_session(db: Session, session: ReviewSession) -> ReviewSession:
-    """``SELECT … FOR NO KEY UPDATE`` the session row + return it,
-    refreshed from the database.
-
-    Used by triggers to prevent two concurrent operator GETs from
-    racing the same fire, and first thing by every save that writes the
-    schedule — Session Home, the lobby expander, the Settings import —
-    so their gates and checks read what the triggers last committed
-    (findings Bc3). The Postgres path takes a row-level lock; SQLite
-    silently no-ops it (single-writer DB), which is acceptable for the
-    dev loop.
-
-    ``populate_existing`` re-reads the row under the lock: the caller's
-    object is the identity-mapped one, and without it the values would
-    be the ones loaded before the lock, so a racer that committed first
-    would go unseen. ``FOR NO KEY UPDATE`` (``key_share``) still
-    serializes two lockers but, unlike ``FOR UPDATE``, does not block
-    other transactions' foreign-key inserts (audit rows, tags) on the
-    session.
-
-    The caller is expected to follow with an **idempotency check**
-    on the relevant schedule column inside the same transaction —
-    e.g. ``if locked.scheduled_activate_at is None: return`` — so
-    that a second racer sees the first racer's commit and bails.
-    """
-    # Flush first: ``populate_existing`` overwrites the object with the
-    # row, and the app's sessions do not autoflush, so an unflushed edit
-    # would otherwise be silently dropped.
-    db.flush()
-    return db.execute(
-        select(ReviewSession)
-        .where(ReviewSession.id == session.id)
-        .with_for_update(key_share=True)
-        .execution_options(populate_existing=True)
-    ).scalar_one()

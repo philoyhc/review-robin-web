@@ -25,6 +25,11 @@ from app.logging_config import get_logger
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit
 from app.services import unit_of_work
+from app.services import session_guard
+from app.services.session_guard import (  # noqa: F401 — re-exported
+    LifecycleError,
+    SessionStateConflict,
+)
 
 log = get_logger(__name__)
 
@@ -158,6 +163,49 @@ def is_editable(review_session: ReviewSession) -> bool:
     return is_draft(review_session) or is_validated(review_session)
 
 
+def require_editable(db: Session, review_session: ReviewSession) -> ReviewSession:
+    """Lock + re-read the session, refuse unless :func:`is_editable`.
+
+    The setup services' gate (findings Bc4): decided on the committed
+    status, so a save cannot land on a session that went ``ready``
+    after the request loaded it."""
+    return session_guard.require_state(
+        db,
+        review_session,
+        is_editable,
+        code="not_editable",
+        message="Session is {status}; revert to draft to edit",
+    )
+
+
+def require_not_archived(
+    db: Session, review_session: ReviewSession
+) -> ReviewSession:
+    """Lock + re-read, refuse an ``archived`` session — the Observers
+    roster's gate, which stays open while the session runs."""
+    return session_guard.require_state(
+        db,
+        review_session,
+        lambda locked: not is_archived(locked),
+        code="archived",
+        message="Session is archived; observer edits are not allowed.",
+    )
+
+
+def require_not_ready(
+    db: Session, review_session: ReviewSession
+) -> ReviewSession:
+    """Lock + re-read, refuse a ``ready`` session — Session Home's
+    Delete Data and Delete session gate (rulings C7 = G7)."""
+    return session_guard.require_state(
+        db,
+        review_session,
+        lambda locked: not is_ready(locked),
+        code="session_ready",
+        message="Session is {status}; revert to draft first to delete.",
+    )
+
+
 @dataclass
 class ReadinessReport:
     """Activation gate input split by severity."""
@@ -197,14 +245,6 @@ def build_readiness_report(issues: list[ValidationIssue]) -> ReadinessReport:
 # --------------------------------------------------------------------------- #
 
 
-class LifecycleError(Exception):
-    """Raised when an operator action violates lifecycle preconditions."""
-
-    def __init__(self, message: str, *, code: str = "lifecycle_error") -> None:
-        super().__init__(message)
-        self.code = code
-
-
 def mark_validated(
     db: Session,
     *,
@@ -220,6 +260,7 @@ def mark_validated(
     if the report still has blocking errors. D3: warnings are implicitly
     acknowledged at the moment of transition.
     """
+    session_guard.lock_session(db, review_session)
     if is_validated(review_session):
         return review_session
     if not is_draft(review_session):
@@ -267,6 +308,11 @@ def invalidate_if_validated(
     the ``validated → draft`` invariant is enforced where the mutation
     happens, not where the request happens — a route that forgets to
     wrap its service call no longer silently breaks the invariant.
+
+    Takes no lock of its own (findings Bc4): it is called from inside
+    setup services, many reached from async handlers, so a caller that
+    needs the status decided as committed takes the session lock first
+    (``require_editable``).
     """
     if is_validated(review_session):
         invalidate_session(
@@ -345,6 +391,7 @@ def activate_session(
     consumes the schedule" rule. Either way, once the session is
     ``ready`` the schedule has done its job.
     """
+    session_guard.lock_session(db, review_session)
     if not is_validated(review_session):
         raise LifecycleError(
             f"Session is {review_session.status}, can only activate from validated",
@@ -438,6 +485,7 @@ def expire_session(
     operator can Revert to draft (see :func:`revert_session_to_draft`)
     to reopen the session for editing.
     """
+    session_guard.lock_session(db, review_session)
     if not is_ready(review_session):
         raise LifecycleError(
             f"Session is {review_session.status}, can only expire from ready",
@@ -492,6 +540,7 @@ def revert_session_to_draft(
     session" / "revert" never destroys reviewer work — only
     Generate's reconcile drop ever does.
     """
+    session_guard.lock_session(db, review_session)
     if not (is_ready(review_session) or is_expired(review_session)):
         raise LifecycleError(
             f"Session is {review_session.status}, can only revert from ready or expired",
@@ -543,6 +592,41 @@ def revert_session_to_draft(
     return review_session
 
 
+def operator_revert(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    confirm: bool,
+    correlation_id: str | None = None,
+) -> ReviewSession:
+    """Session Home's Revert to draft: ``validated → draft`` by
+    invalidation, ``ready`` / ``expired → draft`` by
+    :func:`revert_session_to_draft`.
+
+    Which of the two applies is decided on the row re-read under the
+    session lock (findings Bc4): a scheduled activation that committed
+    after the request loaded ``validated`` takes the ``ready`` path —
+    its confirm and its instrument close — rather than having ``draft``
+    written over it."""
+    session_guard.lock_session(db, review_session)
+    if is_validated(review_session):
+        return invalidate_session(
+            db,
+            review_session=review_session,
+            user=user,
+            reason="operator_revert",
+            correlation_id=correlation_id,
+        )
+    return revert_session_to_draft(
+        db,
+        review_session=review_session,
+        user=user,
+        confirm=confirm,
+        correlation_id=correlation_id,
+    )
+
+
 def release_responses_now(
     db: Session,
     *,
@@ -572,6 +656,13 @@ def release_responses_now(
     button on an expired session, which is why the anchor and the
     state agreed before the predicate enforced it.
     """
+    session_guard.require_state(
+        db,
+        review_session,
+        lambda locked: not is_archived(locked),
+        code="archived",
+        message="Archived sessions can't have responses released.",
+    )
     now = datetime.now(timezone.utc)
     cleared_until = review_session.responses_release_until is not None
     review_session.responses_release_at = now
@@ -619,6 +710,13 @@ def stop_responses_release(
     Emits ``session.responses_release_stopped`` with the new
     close-stamp.
     """
+    session_guard.require_state(
+        db,
+        review_session,
+        lambda locked: not is_archived(locked),
+        code="archived",
+        message="Archived sessions can't have releases stopped.",
+    )
     now = datetime.now(timezone.utc)
     review_session.responses_release_until = now
     db.flush()
@@ -660,6 +758,7 @@ def archive_session(
     first refuses any session ``can_archive`` rejects; the
     workflow card's "Archive session" route calls it directly.
     """
+    session_guard.lock_session(db, review_session)
     if is_archived(review_session):
         raise LifecycleError(
             f"Session is already {review_session.status}",
@@ -693,6 +792,7 @@ def unarchive_session(
 ) -> ReviewSession:
     """Flip ``archived → draft`` — restore an archived session to the
     active lobby. Raises ``LifecycleError`` if not archived."""
+    session_guard.lock_session(db, review_session)
     if review_session.status != SessionStatus.archived.value:
         raise LifecycleError(
             f"Session is {review_session.status}, can only unarchive from "
@@ -835,16 +935,28 @@ def _reopen_while_live(
     """
     if not is_ready(review_session):
         return
-    closed = list(
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id,
-                Instrument.accepting_responses.is_(False),
-            )
-        ).scalars()
-    )
-    if not closed:
+
+    def _closed(*, fresh: bool = False) -> list[Instrument]:
+        query = select(Instrument).where(
+            Instrument.session_id == review_session.id,
+            Instrument.accepting_responses.is_(False),
+        )
+        if fresh:
+            # After the lock (which flushed first): re-read rows loaded
+            # earlier, which may be stale.
+            query = query.execution_options(populate_existing=True)
+        return list(db.execute(query).scalars())
+
+    if not _closed():
         return
+    # Something to heal: lock and decide again, so a Close session that
+    # committed since this request loaded the row is not undone
+    # (findings Bc4). Unlocked until then: this runs on every reviewer
+    # request and almost always has nothing to do.
+    session_guard.lock_session(db, review_session)
+    if not is_ready(review_session):
+        return
+    closed = _closed(fresh=True)
     for instrument in closed:
         instrument.accepting_responses = True
         instrument.deadline_closed_at = None
@@ -899,15 +1011,32 @@ def observe_deadline(
         _reopen_while_live(db, review_session, correlation_id=correlation_id)
         return 0
 
-    instruments = list(
-        db.execute(
-            select(Instrument).where(
-                Instrument.session_id == review_session.id,
-                Instrument.accepting_responses.is_(True),
-                Instrument.deadline_closed_at.is_(None),
-            )
-        ).scalars()
-    )
+    def _open(*, fresh: bool = False) -> list[Instrument]:
+        query = select(Instrument).where(
+            Instrument.session_id == review_session.id,
+            Instrument.accepting_responses.is_(True),
+            Instrument.deadline_closed_at.is_(None),
+        )
+        if fresh:
+            # After the lock (which flushed first): re-read rows loaded
+            # earlier, which may be stale.
+            query = query.execution_options(populate_existing=True)
+        return list(db.execute(query).scalars())
+
+    if not _open():
+        return 0
+    # Lock and decide again before closing, so two requests tripping the
+    # same deadline close each instrument (and audit it) once, and an End
+    # cleared or moved later since this request loaded the row closes
+    # nothing (findings Bc4). The async reviewer writes reach this through
+    # the threadpool (their gate and their error re-render), so the wait
+    # for a held lock stalls only this request.
+    session_guard.lock_session(db, review_session)
+    if review_session.deadline is None or current < _aware(
+        review_session.deadline
+    ):
+        return 0
+    instruments = _open(fresh=True)
     if not instruments:
         return 0
 

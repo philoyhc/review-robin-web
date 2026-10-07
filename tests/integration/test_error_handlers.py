@@ -1,8 +1,9 @@
 """Segment 14A PR 2 — global error handling.
 
-Exercises the three handlers registered by
+Exercises the four handlers registered by
 ``app.web.error_handlers.register_error_handlers``: friendly HTML
-pages for ``HTTPException`` (404 / 403), unhandled exceptions
+pages for ``HTTPException`` (404 / 403), a service's
+``SessionStateConflict`` (409, findings Bc4), unhandled exceptions
 (500, traceback logged not shown), and request-validation errors
 (400). Plus the invitation-specific 404 copy.
 """
@@ -21,6 +22,7 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser, get_current_user
 from app.db.session import get_db
 from app.main import app
+from app.services.session_guard import SessionStateConflict
 
 _test_router = APIRouter()
 
@@ -36,6 +38,13 @@ def _forbidden() -> dict[str, str]:
 @_test_router.get("/__test/err/not-found-bare")
 def _not_found_bare() -> dict[str, str]:
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+
+@_test_router.get("/__test/err/state-conflict")
+def _state_conflict() -> dict[str, str]:
+    raise SessionStateConflict(
+        "Session is ready; revert to draft to edit", code="not_editable"
+    )
 
 
 @_test_router.get("/__test/err/boom")
@@ -123,6 +132,16 @@ def test_http_exception_shows_route_detail() -> None:
     assert resp.status_code == 403
     assert "Access denied" in resp.text
     assert "You do not have access to this session" in resp.text
+
+
+def test_a_service_state_conflict_renders_the_409_page() -> None:
+    """A service's state gate, decided under the session lock, answers
+    as a route's own gate does: the 409 page, carrying its message."""
+    resp = TestClient(app).get("/__test/err/state-conflict")
+
+    assert resp.status_code == 409
+    assert "text/html" in resp.headers["content-type"]
+    assert "Session is ready; revert to draft to edit" in resp.text
 
 
 def test_bare_http_exception_falls_back_to_default_copy() -> None:
