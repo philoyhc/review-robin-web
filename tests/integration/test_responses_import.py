@@ -390,13 +390,16 @@ def test_group_row_named_by_its_tags_alone_still_matches(db: Session) -> None:
     import still finds the group."""
     src, s_inst, s_field = _build(db, "grp-old-src", group=True)
     rvr = _reviewer(db, src, "r@e.edu")
+    # Each group answers differently, so a row sent to the wrong group
+    # shows.
+    value_by_team = {"Team A": "4", "Team B": "2"}
     for ident, name, tag in (
         ("carol@e.edu", "Carol", "Team A"),
         ("eve@e.edu", "Eve", "Team A"),
         ("dan@e.edu", "Dan", "Team B"),
     ):
         a = _assignment(db, src, rvr, _reviewee(db, src, ident, name, tag), s_inst)
-        _response(db, a, s_field, "4")
+        _response(db, a, s_field, value_by_team[tag])
     old_names = {"Team A (Carol, Eve)": "Team A", "Team B (Dan)": "Team B"}
     rows = [
         [old_names.get(cell, cell) for cell in row]
@@ -417,3 +420,12 @@ def test_group_row_named_by_its_tags_alone_still_matches(db: Session) -> None:
     )
     assert result.dropped == []
     assert result.responses == 3
+    stored = dict(
+        db.execute(
+            select(Reviewee.name, Response.value)
+            .join(Assignment, Assignment.reviewee_id == Reviewee.id)
+            .join(Response, Response.assignment_id == Assignment.id)
+            .where(Assignment.session_id == dst.id)
+        ).all()
+    )
+    assert stored == {"Carol": "4", "Eve": "4", "Dan": "2"}

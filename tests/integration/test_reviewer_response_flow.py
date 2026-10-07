@@ -2256,14 +2256,14 @@ def test_group_instrument_surface_renders_one_row_per_group(
     # the members still render on a group instrument.
     from app.db.models import InstrumentDisplayField
 
-    for display_field in db.execute(
+    name_row = db.execute(
         select(InstrumentDisplayField).where(
             InstrumentDisplayField.instrument_id == group.id,
             InstrumentDisplayField.source_type == "reviewee",
             InstrumentDisplayField.source_field == "name",
         )
-    ).scalars():
-        display_field.visible = False
+    ).scalar_one()
+    name_row.visible = False
     db.commit()
 
     pin_full_matrix_on_all_instruments(db, review_session.id)

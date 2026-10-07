@@ -20,7 +20,9 @@ Two steps:
   assignment of the matching group. The group is matched by reusing the
   exporter's own group-identity computation
   (:func:`responses_extract._group_export_index`), so the import identity
-  and the export identity agree by construction.
+  and the export identity agree by construction; a group named by its
+  tag values alone, as a file exported before findings G1 may, matches
+  too wherever that names one group.
 
 **A response is only loaded if a generated assignment row can carry it.**
 Assignments are always generated, never hand-created, so a row naming a
@@ -278,7 +280,9 @@ def load_responses(
     }
     # A file exported while a group instrument's Name could be hidden
     # (before findings G1) names the group by its tag values alone; accept
-    # that form too, wherever it picks out one group.
+    # that form too, wherever it picks out one group. A label that is
+    # also some group's current composed identity keeps that meaning:
+    # a file cannot say which form it holds, and current files must load.
     tag_only: dict[tuple[int, str], tuple[str, ...] | None] = {}
     for instrument_id, group_key in identity:
         label = ", ".join(v for v in group_key if v) or "(group)"
