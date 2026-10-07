@@ -50,6 +50,7 @@ class ReviewerOperationError(ValueError):
       already uses this email (case-insensitive).
     - ``invalid_status`` — status not in ``{"active", "inactive"}``.
     - ``too_long`` — a value is longer than its column.
+    - ``comma_in_tag`` — a tag value contains a comma (findings Gc1).
     - ``not_in_session`` — bulk operation referenced ids that don't
       belong to the target session.
     """
@@ -60,8 +61,8 @@ class ReviewerOperationError(ValueError):
         self.message = message
 
 
-# Each column's name in a ``too_long`` message. A tag is named by its
-# slot, not by the session's friendly label for it.
+# Each column's name in a ``too_long`` or ``comma_in_tag`` message. A
+# tag is named by its slot, not by the session's friendly label for it.
 _FIELD_LABELS = {
     "name": "Name",
     "email": "Email",
@@ -76,6 +77,9 @@ def _refuse_over_long(values: dict[str, object]) -> None:
     message = csv_imports.over_long_field_message(Reviewer, values, _FIELD_LABELS)
     if message is not None:
         raise ReviewerOperationError("too_long", message)
+    message = csv_imports.comma_tag_message(values, _FIELD_LABELS)
+    if message is not None:
+        raise ReviewerOperationError("comma_in_tag", message)
 
 
 def _normalised_name(name: str) -> str:

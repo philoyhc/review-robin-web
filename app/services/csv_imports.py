@@ -273,6 +273,43 @@ def over_long_field_message(
     return None
 
 
+def tag_comma_issues(
+    row: object,
+    headers: dict[str, str],
+    *,
+    source: str,
+    row_number: int,
+) -> list[ValidationIssue]:
+    """One blocking issue per tag cell holding a comma (findings Gc1,
+    ruled 2026-10-07). A group instrument names a group by its tag
+    values joined with ", ", so a comma inside one would let two groups
+    render the same name. ``headers`` maps each tag attribute to its CSV
+    column."""
+    return [
+        ValidationIssue(
+            severity=Severity.error,
+            source=source,
+            row_number=row_number,
+            field=header,
+            message=f"{header} may not contain a comma",
+        )
+        for attr, header in headers.items()
+        if "," in (getattr(row, attr) or "")
+    ]
+
+
+def comma_tag_message(
+    values: dict[str, object], labels: dict[str, str]
+) -> str | None:
+    """The first tag value holding a comma, as an operator-facing
+    sentence, or ``None``: the single-row editors' counterpart of
+    :func:`tag_comma_issues`. Only ``tag_*`` attributes are checked."""
+    for attr, value in values.items():
+        if attr.startswith("tag_") and isinstance(value, str) and "," in value:
+            return f"{labels.get(attr, attr)} may not contain a comma."
+    return None
+
+
 def _cell(row: dict[str, str], key: str) -> str:
     value = row.get(key)
     return value.strip() if value else ""
@@ -483,6 +520,12 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
             source=source,
             row_number=index,
         )
+        length_issues += tag_comma_issues(
+            row,
+            {"tag_1": "ReviewerTag1", "tag_2": "ReviewerTag2", "tag_3": "ReviewerTag3"},
+            source=source,
+            row_number=index,
+        )
         if length_issues:
             issues.extend(length_issues)
             continue
@@ -602,6 +645,12 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
                 "tag_2": "RevieweeTag2",
                 "tag_3": "RevieweeTag3",
             },
+            source=source,
+            row_number=index,
+        )
+        length_issues += tag_comma_issues(
+            row,
+            {"tag_1": "RevieweeTag1", "tag_2": "RevieweeTag2", "tag_3": "RevieweeTag3"},
             source=source,
             row_number=index,
         )
@@ -752,6 +801,12 @@ def parse_observer_csv(content: bytes) -> ParseResult:
                 "display_name": "ObserverName",
                 "tag_1": "ObserverTag1",
             },
+            source=source,
+            row_number=index,
+        )
+        length_issues += tag_comma_issues(
+            row,
+            {"tag_1": "ObserverTag1"},
             source=source,
             row_number=index,
         )

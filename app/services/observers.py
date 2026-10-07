@@ -57,6 +57,7 @@ class ObserverOperationError(ValueError):
       already uses this email (case-insensitive).
     - ``invalid_status`` — status not in ``{"active", "inactive"}``.
     - ``too_long`` — a value is longer than its column.
+    - ``comma_in_tag`` — a tag value contains a comma (findings Gc1).
     - ``invalid_cohort_rule`` — cohort-rule payload failed schema
       validation (``CohortRuleSet.model_validate`` rejected it).
     - ``empty_selection`` — bulk operation reached the service
@@ -71,8 +72,8 @@ class ObserverOperationError(ValueError):
         self.message = message
 
 
-# Each column's name in a ``too_long`` message. A tag is named by its
-# slot, not by the session's friendly label for it.
+# Each column's name in a ``too_long`` or ``comma_in_tag`` message. A
+# tag is named by its slot, not by the session's friendly label for it.
 _FIELD_LABELS = {"email": "Email", "display_name": "Name", "tag_1": "Tag 1"}
 
 
@@ -80,6 +81,9 @@ def _refuse_over_long(values: dict[str, object]) -> None:
     message = csv_imports.over_long_field_message(Observer, values, _FIELD_LABELS)
     if message is not None:
         raise ObserverOperationError("too_long", message)
+    message = csv_imports.comma_tag_message(values, _FIELD_LABELS)
+    if message is not None:
+        raise ObserverOperationError("comma_in_tag", message)
 
 
 def _normalised_email(email: str) -> str:
