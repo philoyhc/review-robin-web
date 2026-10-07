@@ -618,7 +618,13 @@ def release_responses_now(
     button on an expired session, which is why the anchor and the
     state agreed before the predicate enforced it.
     """
-    require_not_archived(db, review_session)
+    session_guard.require_state(
+        db,
+        review_session,
+        lambda locked: not is_archived(locked),
+        code="archived",
+        message="Archived sessions can't have responses released.",
+    )
     now = datetime.now(timezone.utc)
     cleared_until = review_session.responses_release_until is not None
     review_session.responses_release_at = now
@@ -666,7 +672,13 @@ def stop_responses_release(
     Emits ``session.responses_release_stopped`` with the new
     close-stamp.
     """
-    require_not_archived(db, review_session)
+    session_guard.require_state(
+        db,
+        review_session,
+        lambda locked: not is_archived(locked),
+        code="archived",
+        message="Archived sessions can't have releases stopped.",
+    )
     now = datetime.now(timezone.utc)
     review_session.responses_release_until = now
     db.flush()
@@ -900,12 +912,12 @@ def _reopen_while_live(
         return
     # Something to heal: lock and decide again, so a Close session that
     # committed since this request loaded the row is not undone
-    # (findings Bc4). Unlocked until then — this runs on every reviewer
-    # GET, and almost always has nothing to do — and skipped rather than
-    # waited for when another request holds the row: the next request
-    # heals it, and an async reviewer handler must not block the loop.
-    if session_guard.try_lock_session(db, review_session) is None:
-        return
+    # (findings Bc4). Unlocked until then: this runs on every reviewer
+    # request and almost always has nothing to do. Unlike the deadline
+    # close below, this waits for a held lock rather than skipping:
+    # the reviewer write gate reads ``accepting_responses``, so a skipped
+    # heal would refuse a write made before the deadline.
+    session_guard.lock_session(db, review_session)
     if not is_ready(review_session):
         return
     closed = _closed()
@@ -980,8 +992,9 @@ def observe_deadline(
     # same deadline close each instrument (and audit it) once, and an End
     # cleared or moved later since this request loaded the row closes
     # nothing (findings Bc4). Skipped when another request holds the row:
-    # acceptance reads the deadline itself, so the close is bookkeeping
-    # the next request does.
+    # acceptance reads the deadline itself (``session_accepts_responses``),
+    # so the close is bookkeeping the next request does, and the async
+    # reviewer writes that reach it need not wait on the event loop.
     if session_guard.try_lock_session(db, review_session) is None:
         return 0
     if review_session.deadline is None or current < _aware(

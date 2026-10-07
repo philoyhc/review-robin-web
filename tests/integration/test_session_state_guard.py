@@ -253,3 +253,94 @@ def test_release_refuses_a_session_archived_at_the_lock(
             db, review_session=session, user=_operator(db, session)
         )
     assert _count(db, session, "session.responses_released") == 0
+
+
+def test_stop_release_refuses_a_session_archived_at_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    session = _make_validated_session(db, "guard-stop-release")
+    session.status = "expired"
+    db.commit()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"))
+
+    with pytest.raises(lifecycle.SessionStateConflict) as raised:
+        lifecycle.stop_responses_release(
+            db, review_session=session, user=_operator(db, session)
+        )
+    assert str(raised.value) == "Archived sessions can't have releases stopped."
+
+
+def test_a_held_lock_skips_the_deadline_close(
+    db: Session, monkeypatch
+) -> None:
+    """Another request holds the row: the close is left for the next
+    request rather than waited for. Acceptance reads the deadline
+    itself, so nothing is accepted late."""
+    session = _make_validated_session(db, "guard-skip")
+    session.status = "ready"
+    session.deadline = datetime.now(timezone.utc) - timedelta(hours=1)
+    db.commit()
+    _open_instruments(db, session)
+    monkeypatch.setattr(session_guard, "try_lock_session", lambda db_, s: None)
+
+    assert lifecycle.observe_deadline(db, session) == 0
+    assert _count(db, session, "instrument.closed") == 0
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalars().first()
+    assert not lifecycle.session_accepts_responses(session, instrument)
+
+
+def test_the_release_route_answers_an_archive_race_as_its_own_gate(
+    client, db: Session, monkeypatch
+) -> None:
+    client.post(
+        "/operator/sessions",
+        data={"name": "Release", "code": "guard-release-route"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-release-route")
+    ).scalar_one()
+    session.status = "expired"
+    db.commit()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"))
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/workflow/release-responses",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert "super_status=failed" in response.headers["location"]
+    assert _count(db, session, "session.responses_released") == 0
+
+
+def test_the_live_reopen_does_not_skip_a_held_lock(
+    db: Session, monkeypatch
+) -> None:
+    """The reopen feeds the reviewer write gate, so it waits for the lock
+    rather than skipping: a closed instrument on a live session is
+    reopened even when the skipping lock would have given up."""
+    session = _make_validated_session(db, "guard-reopen-wait")
+    session.status = "ready"
+    session.deadline = datetime.now(timezone.utc) + timedelta(days=1)
+    db.commit()
+    db.execute(
+        update(Instrument)
+        .where(Instrument.session_id == session.id)
+        .values(accepting_responses=False)
+    )
+    db.commit()
+    monkeypatch.setattr(session_guard, "try_lock_session", lambda db_, s: None)
+
+    lifecycle.observe_deadline(db, session)
+
+    db.expire_all()
+    assert all(
+        db.execute(
+            select(Instrument.accepting_responses).where(
+                Instrument.session_id == session.id
+            )
+        ).scalars()
+    )

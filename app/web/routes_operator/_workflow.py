@@ -501,12 +501,26 @@ def workflow_release_responses(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    lifecycle.release_responses_now(
-        db,
-        review_session=review_session,
-        user=user,
-        correlation_id=correlation_id,
-    )
+    try:
+        lifecycle.release_responses_now(
+            db,
+            review_session=review_session,
+            user=user,
+            correlation_id=correlation_id,
+        )
+    except lifecycle.SessionStateConflict:
+        # Archived since the check above (findings Bc4): the same answer.
+        return RedirectResponse(
+            url=_redirect_url(
+                review_session.id,
+                return_to,
+                super_status="failed",
+                super_button="release_responses",
+                super_step="precondition",
+                super_error="Archived sessions can't have responses released.",
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
     return RedirectResponse(
         url=_redirect_url(review_session.id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -538,12 +552,26 @@ def workflow_stop_release(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    lifecycle.stop_responses_release(
-        db,
-        review_session=review_session,
-        user=user,
-        correlation_id=correlation_id,
-    )
+    try:
+        lifecycle.stop_responses_release(
+            db,
+            review_session=review_session,
+            user=user,
+            correlation_id=correlation_id,
+        )
+    except lifecycle.SessionStateConflict:
+        # Archived since the check above (findings Bc4): the same answer.
+        return RedirectResponse(
+            url=_redirect_url(
+                review_session.id,
+                return_to,
+                super_status="failed",
+                super_button="stop_release",
+                super_step="precondition",
+                super_error="Archived sessions can't have releases stopped.",
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
     return RedirectResponse(
         url=_redirect_url(review_session.id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,

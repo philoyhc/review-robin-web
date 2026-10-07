@@ -75,9 +75,10 @@ def try_lock_session(
     transaction holds the row (``SKIP LOCKED``).
 
     For work that is only bookkeeping and that the next request will do
-    anyway — ``observe_deadline`` on a reviewer's GET — so a held lock
-    never stalls the event loop that serves it (findings Bc4). SQLite
-    ignores the clause and always returns the row."""
+    anyway — ``observe_deadline``'s deadline close, which the async
+    reviewer writes reach — so a held lock does not stall the event loop
+    that serves them (findings Bc4). Not for anything a gate then reads.
+    SQLite ignores the clause and always returns the row."""
     db.flush()
     return db.execute(
         select(ReviewSession)
