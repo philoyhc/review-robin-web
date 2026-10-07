@@ -120,7 +120,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   Checked against the entry recorded at each sent position on the anchor the
   session will hold (Session Home, the lobby's End and the Settings
   import), so an anchor moved away and back is covered too.
-- ~~**Bc2**~~ — **Done in #PR** (found while fixing Bc1; low, author; ruled 2026-10-07: moving End does not resend; the operator sends another by hand). **The reminder outbox key
+- ~~**Bc2**~~ — **Done in #2876** (found while fixing Bc1; low, author; ruled 2026-10-07: moving End does not resend; the operator sends another by hand). **The reminder outbox key
   carries no anchor.** `_dispatch_scheduled_reminders` keys each send
   `reminder:{sid}:{rid}:{offset_index}` and skips a reviewer whose key
   exists, under any End, so after End moves a reviewer already sent
