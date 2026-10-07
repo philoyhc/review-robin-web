@@ -172,7 +172,8 @@
               data-is-sys-admin="{{ 'true' if row.is_sys_admin else 'false' }}"
               data-is-super-admin="{{ 'true' if row.is_super_admin else 'false' }}"
               data-session-count="{{ row.session_operator_count }}"
-              data-sole-owner-count="{{ row.sole_owner_count }}">
+              data-sole-owner-count="{{ row.sole_owner_count }}"
+              data-has-history="{{ 'true' if row.has_history else 'false' }}">
             <td class="col-shrink">
               {% if is_self %}
                 <span class="muted" title="You can't act on your own row">(self)</span>
@@ -376,11 +377,13 @@
               );
             }
 
-            // Delete: only when user has zero sessions and is not a
-            // protected super-admin.
+            // Delete: only when user has zero sessions, no history
+            // (created no session, no audit row as actor — the server's
+            // has_history guard) and is not a protected super-admin.
+            var hasHistory = row.getAttribute("data-has-history") === "true";
             setupButton(
               "delete",
-              sessionCount === 0 && !isSuperAdmin
+              sessionCount === 0 && !hasHistory && !isSuperAdmin
                 ? actionUrls["delete"].replace("{id}", userId)
                 : null,
               null

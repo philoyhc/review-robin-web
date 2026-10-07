@@ -670,6 +670,121 @@ def test_remove_user_refuses_when_user_owns_sessions(
     assert target.email == "bob@example.edu"
 
 
+def _seed_session_created_by(db: Session, creator: User, owner: User):
+    """A session ``creator`` made and ``owner`` now owns — the
+    findings-H1 shape: the creator holds no ``session_operators`` row."""
+    from app.db.models import ReviewSession
+
+    review_session = ReviewSession(
+        name="Handed-over session", code="handed-over",
+        created_by_user_id=creator.id,
+    )
+    db.add(review_session)
+    db.flush()
+    db.add(
+        SessionOperator(
+            session_id=review_session.id, user_id=owner.id, role="owner"
+        )
+    )
+    db.commit()
+    return review_session
+
+
+def test_remove_user_refuses_creator_of_a_session_someone_else_owns(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Findings H1 (2026-10-07): the ``review_sessions`` cascade used
+    to delete every session the removed user had created, whoever
+    owned it. Now the delete is refused and the session survives."""
+    from app.db.models import ReviewSession
+
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    bob = _seed_target(db, email="bob@example.edu", is_operator=True)
+    carol = _seed_target(db, email="carol@example.edu", is_operator=True)
+    session_id = _seed_session_created_by(db, bob, carol).id
+
+    response = client.post(
+        f"/operator/sys-admin/users/{bob.id}/delete", follow_redirects=False
+    )
+    assert response.status_code == 409
+    assert "Revoke" in response.text
+    db.expire_all()
+    assert db.get(ReviewSession, session_id) is not None
+    assert db.get(User, bob.id) is not None
+
+
+def test_remove_user_refuses_an_audit_actor(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Deleting an audit actor would null ``actor_user_id`` on rows
+    that are never edited; a participant's saves and submits make
+    them one too."""
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    bob = _seed_target(db, email="bob@example.edu")
+    db.add(
+        AuditEvent(
+            event_type="response.submitted", summary="Submitted",
+            actor_user_id=bob.id, detail={},
+        )
+    )
+    db.commit()
+
+    response = client.post(
+        f"/operator/sys-admin/users/{bob.id}/delete", follow_redirects=False
+    )
+    assert response.status_code == 409
+    db.expire_all()
+    actors = db.execute(
+        select(AuditEvent.actor_user_id).where(
+            AuditEvent.event_type == "response.submitted"
+        )
+    ).scalars().all()
+    assert actors == [bob.id]
+
+
+def test_deleting_a_creator_row_is_refused_by_the_database(
+    db: Session,
+) -> None:
+    """The backstop under ``has_history``: with ``passive_deletes``
+    the ORM neither cascades nor nulls, so a delete that slips past
+    the guard fails on the foreign key instead of taking data."""
+    from sqlalchemy.exc import IntegrityError
+
+    from app.db.models import ReviewSession
+
+    bob = _seed_target(db, email="bob@example.edu", is_operator=True)
+    carol = _seed_target(db, email="carol@example.edu", is_operator=True)
+    session_id = _seed_session_created_by(db, bob, carol).id
+
+    savepoint = db.begin_nested()
+    db.delete(bob)
+    with pytest.raises(IntegrityError):
+        db.flush()
+    savepoint.rollback()
+    db.expire_all()
+    assert db.get(ReviewSession, session_id) is not None
+
+
+def test_workspace_users_page_marks_rows_with_history(
+    db: Session,
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
+    bob = _seed_target(db, email="bob@example.edu", is_operator=True)
+    carol = _seed_target(db, email="carol@example.edu", is_operator=True)
+    _seed_session_created_by(db, bob, carol)
+    body = client.get("/operator/sys-admin/users").text
+    bob_row = body.split(f'data-user-id="{bob.id}"', 1)[1].split(">", 1)[0]
+    carol_row = body.split(f'data-user-id="{carol.id}"', 1)[1].split(">", 1)[0]
+    assert 'data-has-history="true"' in bob_row
+    assert 'data-has-history="false"' in carol_row
+
+
 def test_remove_user_404s_on_missing_target(
     db: Session,
     client: TestClient,
@@ -728,6 +843,7 @@ def test_workspace_users_page_renders_bulk_action_toolbar(
     assert 'data-is-sys-admin="false"' in body
     assert 'data-session-count="0"' in body
     assert 'data-sole-owner-count="0"' in body
+    assert 'data-has-history="false"' in body
 
 
 def test_invite_card_renders_secondary_buttons_disabled_by_default(

@@ -82,9 +82,13 @@ What the application database holds and how it is removed:
 - **`audit_events`** — append-only in normal operation. Rows are
   removed only by the selective purge (which can target the
   audit log) or by a whole-session delete.
-- **`users`** — created on first sign-in; removed in-app via the
-  Sys Admin → Accounts Management page (`remove_user`, Segment 18S),
-  which guards against removing a super-admin or the last admin.
+- **`users`** — created on first sign-in, participants included;
+  removed in-app via the Sys Admin → Accounts Management page
+  (`remove_user`, Segment 18S), which guards against removing a
+  super-admin or the last admin, and refuses any user who created a
+  session or acted in the audit log (`has_history`). Removal is for
+  accounts with no activity; Revoke takes an operator's access away
+  and keeps their attribution.
 
 There is no automatic time-based expiry of any data — nothing is
 purged on a schedule. Retention is entirely operator-driven.

@@ -65,6 +65,8 @@ demotes, and removes accounts (`app/services/users.py`), so revoking
 access is no longer a manual DB `UPDATE`. Guards: promote/demote require a
 super-admin actor; demote/revoke/remove refuse a super-admin *target*
 (`protected_super_admin`) and can't drop below the last-admin floor.
+Remove also refuses anyone who created a session or acted in the audit
+log (`has_history`): to take someone's access away, revoke it.
 
 ## Rotating secrets
 

@@ -30,7 +30,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
 
 **High**
 
-- **H1** **Removing a user who created a session they no longer own
+- ~~**H1**~~ — **Done in #PR** (ruled 2026-10-07: Remove refuses any user with history; Revoke takes access away). **Removing a user who created a session they no longer own
   deletes that session.** `users.remove_user` (`app/services/users.py`)
   refuses only while the target holds a `session_operators` row, then
   deletes the user; `User.review_sessions` carries `cascade="all,
@@ -234,7 +234,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **H — docs/**
 
-- **H1** high code backup_restore.md:85-87, operations_runbook.md:62-67 in-app removal is safe vs remove_user cascade-deleting every session the user created (§1); deployment_dev.md:321-327 and deployment_nus.md:316-318 on raw DELETE need re-reading against it
+- ~~**H1**~~ high code backup_restore.md:85-87, operations_runbook.md:62-67 in-app removal is safe vs remove_user cascade-deleting every session the user created (§1); deployment_dev.md:321-327 and deployment_nus.md:316-318 on raw DELETE need re-reading against it — **Done in #PR**; the raw-DELETE docs hold as written
 - **H2** med author security_posture.md:216-243 §5.7 "no gaps found" omits POST /operator/sessions/bulk-archive (purge_and_archive deletes responses, rosters and the audit log with no confirm parameter, unlike bulk-delete; the UI has only the "Archive after purging" checkboxes) and Sys Admin remove-from-all-sessions and delete user. Is a checkbox a confirm?
 - **H3** low-med doc known_limitations.md:60-62 targeted reminders missing vs the per-row Send reminder and send_reminders_to_incomplete; what is missing is delivery (its own :51-55)
 - **H4** low trim cli_setup.md:379, :394, :646-647 still prescribe the `admin:repo_hook` scope (old H14 applied in part)
