@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession
 
-from ._shared import _ensure_aware_utc
+from ._shared import _ensure_aware_utc, lock_session
 
 _EVENT_TYPES = {
     "invite": (
@@ -135,7 +135,15 @@ def fired_offset_errors(
     entry on a position already sent or skipped, on the anchor the
     session will hold (findings Bc1, ruled 2026-10-07). A list whose
     entries and anchor both stay as stored is not checked, so a save
-    that leaves the schedule alone is never refused over it."""
+    that leaves the schedule alone is never refused over it.
+
+    Takes the session-row lock first, the one an observer holds while it
+    records a send (``lock_session``), so a send landing during the save
+    is either committed before this reads the record or waits for the
+    save to commit (Codex on #2874). Postgres only; SQLite has one
+    writer."""
+    if review_session.id is not None:
+        lock_session(db, review_session)
     proposed = {
         "invite_offsets": (list(invite_offsets), scheduled_activate_at),
         "reminder_offsets": (list(reminder_offsets), deadline),
