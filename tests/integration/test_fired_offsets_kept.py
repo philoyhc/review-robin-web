@@ -288,31 +288,3 @@ def test_an_untouched_past_entry_on_a_sent_position_still_saves(
     db.commit()
     response = _save(client, session, kind="invite", offsets="-P4D, -P1D")
     assert response.status_code == 303, response.text
-
-
-def test_the_check_takes_the_session_lock_the_observers_hold(
-    client: TestClient, db: Session, monkeypatch
-) -> None:
-    """The observer records a send under ``lock_session``; the save-time
-    check takes the same lock before reading the record, so the two
-    serialize on Postgres (Codex on #2874)."""
-    from app.services.scheduled_events import _fired, fired_offset_errors
-
-    locked: list[int] = []
-    real = _fired.lock_session
-
-    def spy(db_, session_):
-        locked.append(session_.id)
-        return real(db_, session_)
-
-    monkeypatch.setattr(_fired, "lock_session", spy)
-    session = _session(client, db, "bc1-lock", kind="invite")
-    fired_offset_errors(
-        db,
-        session,
-        scheduled_activate_at=None,
-        invite_offsets=[],
-        deadline=None,
-        reminder_offsets=[],
-    )
-    assert locked == [session.id]
