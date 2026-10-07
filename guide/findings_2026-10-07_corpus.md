@@ -128,6 +128,19 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   records `sent=0`). Author: put the anchor in the key, or keep "at
   most once per session" as the rule (`spec/lifecycle.md` §8.2.6 now
   states what the code does).
+- **Bc3** (found while fixing Bc1, Codex on #2874; low, author) **The
+  scheduled-event observer does not hold its lock across a pass.**
+  `lock_session` returns the caller's already-loaded row (no
+  `populate_existing`), so the observer fires from values read before the
+  lock, and each recorded send commits, releasing the lock before the next.
+  So a schedule save racing a Session Home GET at a fire moment can still
+  leave an entry on a just-sent position (Bc1's outcome), and activation's
+  `scheduled_activate_at is None` idempotency check reads a stale value.
+  A lock in the save-time check alone was tried and reverted in #2874: it
+  closed one order only and made every save block foreign-key inserts on
+  the session (Postgres deadlock risk). Author: rework the observer's
+  locking (refresh under the lock, one commit per pass) or accept the race
+  as two concurrent requests on one session at a fire moment.
 - **Carried:** old B27 / G6 (scheduled sends fire only from Session Home;
   `guide/post_azure_todo_checklist.md` §7), re-found as B3 and G4; old D4
   (`responses_import._stage` overwrites a duplicate row), re-found and
@@ -143,7 +156,8 @@ id points at its row in §3 or §1.
   reviewer surface follow the visibility editor), G1 (Name locked on a
   group-scoped instrument).
 - **Lifecycle and Setup:** Bc1 (fired offsets keyed by index), Bc2 (the
-  reminder outbox key carries no anchor), B1 (Quick Setup's availability against the
+  reminder outbox key carries no anchor), Bc3 (the observer's lock
+  across a pass), B1 (Quick Setup's availability against the
   `is_editable` predicate), B4 (aged Start on a rename), B5 (the P30D
   archive default nothing writes), C5 (unlock cookies across Session Home
   forms).
