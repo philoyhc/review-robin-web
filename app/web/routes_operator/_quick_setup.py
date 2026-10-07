@@ -784,8 +784,9 @@ async def _run_quick_setup_observers(
 
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
-    # Refused under it (activated since the gate above) reports the
-    # same ``lifecycle`` reason as that gate.
+    # Refused under it (observers stay editable on a running session,
+    # so only an archive landing first refuses) reports the
+    # ``lifecycle`` reason, as the gate above does.
     try:
         await run_in_threadpool(
             csv_imports.save_observers,

@@ -7,9 +7,13 @@ several in sequence and must be all-or-nothing wraps them in
 refusal part-way through can roll the whole unit back. The caller makes
 the one real commit itself — the Instrument card's Save route (findings
 A16) — or opens :func:`atomic`, which commits and rolls back for it:
-the reviewer, reviewee and relationship imports, the label editor and
-Generate (``assignments.replace_assignments``), which hold the session
-lock from their gate to that commit (findings Bc4).
+the reviewer, reviewee and relationship imports, the label editor, the
+instrument identity and Band 2 routes and Generate
+(``assignments.replace_assignments``), which hold the session lock from
+their gate to that commit (findings Bc4). Where a service composes
+others, the last one it calls may commit instead: Purge and archive
+defers its purges and lets ``archive_session`` commit, so the lock is
+held from its gate to that commit.
 """
 
 from __future__ import annotations

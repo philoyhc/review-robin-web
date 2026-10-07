@@ -1317,8 +1317,10 @@ def test_purge_and_archive_decides_under_the_lock(
         user=_operator(db, session),
         purge=["rosters", "responses"],
     )
+    # The refusal rolls the transaction back, the stand-in's write with
+    # it, so assert on what the purge must not have done.
     db.expire_all()
-    assert db.get(ReviewSession, session.id).status == "ready"
+    assert db.get(ReviewSession, session.id).status != "archived"
     assert db.execute(
         select(Reviewer.id).where(Reviewer.session_id == session.id)
     ).all()
@@ -1364,8 +1366,7 @@ def test_the_other_session_writes_refuse_at_the_lock(
     from app.services import session_config_io
 
     session = _make_validated_session(db, f"guard-{guarded}")
-    target = "ready"
-    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, target))
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
     with pytest.raises(lifecycle.SessionStateConflict):
         if guarded == "delete_responses":
@@ -1377,3 +1378,80 @@ def test_the_other_session_writes_refuse_at_the_lock(
             )
         else:
             session_config_io.apply_session_config(db, session, [])
+
+
+def test_purge_and_archive_commits_once(db: Session, monkeypatch) -> None:
+    """The purges are deferred to the archive's commit: an archive that
+    fails leaves every purged row in place."""
+    from app.db.models import Reviewer
+    from app.services import session_purge
+
+    session = _make_validated_session(db, "guard-purge-once")
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("archive failed")
+
+    monkeypatch.setattr(lifecycle, "archive_session", boom)
+    with pytest.raises(RuntimeError):
+        session_purge.purge_and_archive(
+            db,
+            review_session=session,
+            user=_operator(db, session),
+            purge=["rosters"],
+        )
+    db.rollback()
+
+    assert db.execute(
+        select(Reviewer.id).where(Reviewer.session_id == session.id)
+    ).all()
+
+
+@pytest.mark.parametrize(
+    ("slot", "status_at_lock", "csv"),
+    [
+        (
+            "relationships",
+            "ready",
+            b"ReviewerEmail,RevieweeEmail\nalice@example.edu,carol@example.edu\n",
+        ),
+        (
+            "observers",
+            "archived",
+            b"ObserverEmail\nobs@example.edu\n",
+        ),
+    ],
+)
+def test_the_other_quick_setup_slots_report_the_lifecycle_reason(
+    client, db: Session, monkeypatch, slot, status_at_lock, csv
+) -> None:
+    client.post(
+        "/operator/sessions",
+        data={"name": "QS", "code": f"guard-qs-{slot}"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == f"guard-qs-{slot}")
+    ).scalar_one()
+    if slot == "relationships":
+        # The pairs name roster rows, so the rosters land first.
+        for kind, roster in (
+            ("reviewers", b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"),
+            ("reviewees", b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"),
+        ):
+            client.post(
+                f"/operator/sessions/{session.id}/quick-setup/{kind}",
+                files={"file": (f"{kind}.csv", roster, "text/csv")},
+                follow_redirects=False,
+            )
+    _lands_at_the_lock(
+        monkeypatch, db, _status_becomes(session, status_at_lock)
+    )
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/quick-setup/{slot}",
+        files={"file": (f"{slot}.csv", csv, "text/csv")},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert "quick_setup_reason=lifecycle" in response.headers["location"]

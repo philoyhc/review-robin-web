@@ -228,6 +228,9 @@ def purge_and_archive(
     # must not see its rosters and responses purged (findings Bc4).
     session_guard.lock_session(db, review_session)
     if not lifecycle.can_archive(review_session):
+        # Release the lock now: a bulk caller goes on to the next session,
+        # and holding locks on refused ones lets two bulk archives deadlock.
+        db.rollback()
         return False
     with unit_of_work.single_commit(db):
         if "audit_log" in purge:
