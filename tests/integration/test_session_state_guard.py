@@ -545,7 +545,7 @@ def test_a_relationship_import_commits_nothing_before_its_label_gate_refuses(
 ) -> None:
     """Codex on #2882, the relationship import's half: the replace and
     the pair-context label reconcile are one commit, so the reconcile's
-    gate (the import's first lock on this rung) refuses with nothing
+    gate (the import's second lock, after its entry gate) refuses with nothing
     committed and no relationship row left behind."""
     from app.db.models import Relationship, Reviewee, Reviewer
     from app.services import relationships
@@ -564,7 +564,7 @@ def test_a_relationship_import_commits_nothing_before_its_label_gate_refuses(
         reviewees=[reviewee],
     )
     assert not parsed.is_blocked, parsed.issues
-    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"))
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=2)
     commits = _counting_commits(monkeypatch, db)
 
     with pytest.raises(lifecycle.SessionStateConflict):
@@ -638,6 +638,8 @@ def test_a_refused_edit_does_not_demote_a_validated_session(db: Session) -> None
             visible=True,
             actor=user,
         )
+    # The flip did run before the refusal, so the test exercises it.
+    assert session.status == "draft"
     db.rollback()  # the route redirects without committing
 
     assert db.get(ReviewSession, session.id).status == "validated"
@@ -745,3 +747,87 @@ def test_observers_keep_their_own_gate(db: Session, monkeypatch) -> None:
             user=_operator(db, session),
         )
     assert raised.value.code == "archived"
+
+
+# --------------------------------------------------------------------------- #
+# Rung 4 — relationships and assignments                                      #
+# --------------------------------------------------------------------------- #
+
+
+def test_a_relationship_write_refuses_a_session_activated_at_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    from app.db.models import Relationship, Reviewee, Reviewer
+    from app.services import relationships as relationships_service
+
+    session = _make_validated_session(db, "guard-rel")
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == session.id)
+    ).scalars().first()
+    reviewee = db.execute(
+        select(Reviewee).where(Reviewee.session_id == session.id)
+    ).scalars().first()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        relationships_service.create_relationship(
+            db,
+            review_session=session,
+            reviewer_id=reviewer.id,
+            reviewee_id=reviewee.id,
+            user=_operator(db, session),
+        )
+
+    db.expire_all()
+    assert not db.execute(
+        select(Relationship.id).where(Relationship.session_id == session.id)
+    ).all()
+
+
+def test_generate_is_one_commit_from_its_gate(db: Session, monkeypatch) -> None:
+    """Generate's display-field seed (and its drift correction) committed
+    on their own after the main commit, once the gate's lock was gone. The
+    seed is forced to write here; the whole Generate is still one commit."""
+    from app.db.models import Assignment
+    from app.services import assignments
+    import app.services.instruments as instruments_pkg
+
+    session = _make_validated_session(db, "guard-generate-once")
+    monkeypatch.setattr(
+        instruments_pkg, "seed_display_fields_from_assignments", lambda db_, s_: 1
+    )
+    commits = _counting_commits(monkeypatch, db)
+
+    assignments.replace_assignments(
+        db, review_session=session, user=_operator(db, session), correlation_id="t"
+    )
+
+    assert commits == [True]
+    assert db.execute(
+        select(Assignment.id).where(Assignment.session_id == session.id)
+    ).all()
+
+
+def test_generate_refuses_a_session_activated_at_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    """Generate on a session the scheduler activated mid-request would
+    replace the live assignments; it is refused instead."""
+    from app.db.models import Assignment
+    from app.services import assignments
+
+    session = _make_validated_session(db, "guard-generate")
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        assignments.replace_assignments(
+            db,
+            review_session=session,
+            user=_operator(db, session),
+            correlation_id="t",
+        )
+
+    db.expire_all()
+    assert not db.execute(
+        select(Assignment.id).where(Assignment.session_id == session.id)
+    ).all()
