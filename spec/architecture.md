@@ -518,7 +518,8 @@ stamps every successful reminder. There is no throttle. Bulk reminders
 emit a single `reminders.sent` audit event: a `set_changes` envelope
 whose `updated` list carries one `{invitation_id, reviewer_id}` entry
 per reminder sent, plus `context.fell_back`, the number that fell back
-to `send_invitation`.
+to `send_invitation`. The per-row Send reminder emits the same event
+with one entry.
 
 ### Pair-level context
 

@@ -823,31 +823,84 @@ def send_reminders_to_incomplete(
             fell_back += 1
 
     if sent_invitation_ids:
-        audit.write_event(
+        _write_reminders_sent(
             db,
-            event_type="reminders.sent",
-            summary=(
-                f"Sent {len(sent_invitation_ids)} reminder"
-                f"{'' if len(sent_invitation_ids) == 1 else 's'}"
-            ),
-            actor_user_id=user.id,
-            session=review_session,
-            payload=audit.set_changes(
-                updated=[
-                    {"invitation_id": iid, "reviewer_id": rid}
-                    for iid, rid in zip(sent_invitation_ids, sent_reviewer_ids)
-                ]
-            ),
-            context={"fell_back": fell_back},
+            review_session=review_session,
+            user=user,
+            pairs=list(zip(sent_invitation_ids, sent_reviewer_ids)),
+            fell_back=fell_back,
             correlation_id=correlation_id,
         )
-        db.commit()
     return ReminderBatchResult(
         sent_count=len(sent_invitation_ids),
         invitation_ids=sent_invitation_ids,
         reviewer_ids=sent_reviewer_ids,
         fell_back_count=fell_back,
     )
+
+
+def send_one_reminder(
+    db: Session,
+    *,
+    invitation: Invitation,
+    review_session: ReviewSession,
+    reviewer: Reviewer,
+    user: User,
+    build_invite_url: Callable[[str], str],
+    correlation_id: str | None = None,
+) -> ReminderResult:
+    """The per-row Send reminder: :func:`send_reminder` plus the
+    ``reminders.sent`` event the bulk path writes, with one entry.
+
+    ``send_reminder`` itself stays unaudited because the bulk and
+    scheduled paths each write their own batch event around it;
+    without this wrapper the per-row action left no audit row
+    (findings G3, 2026-10-07).
+    """
+    result = send_reminder(
+        db,
+        invitation=invitation,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=user,
+        build_invite_url=build_invite_url,
+        correlation_id=correlation_id,
+    )
+    _write_reminders_sent(
+        db,
+        review_session=review_session,
+        user=user,
+        pairs=[(invitation.id, reviewer.id)],
+        fell_back=1 if result.fell_back_to_invitation else 0,
+        correlation_id=correlation_id,
+    )
+    return result
+
+
+def _write_reminders_sent(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    pairs: list[tuple[int, int]],
+    fell_back: int,
+    correlation_id: str | None,
+) -> None:
+    audit.write_event(
+        db,
+        event_type="reminders.sent",
+        summary=f"Sent {len(pairs)} reminder{'' if len(pairs) == 1 else 's'}",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.set_changes(
+            updated=[
+                {"invitation_id": iid, "reviewer_id": rid} for iid, rid in pairs
+            ]
+        ),
+        context={"fell_back": fell_back},
+        correlation_id=correlation_id,
+    )
+    db.commit()
 
 
 def queue_responses_received(

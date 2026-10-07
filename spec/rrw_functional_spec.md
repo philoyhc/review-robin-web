@@ -111,7 +111,8 @@ The system must:
     done, with manual operator control and per-session retention
     overrides.
 12. Maintain an **append-only audit log** of every mutation, every
-    state transition, every email send attempt, and every
+    state transition, every send of invitations or reminders (the
+    outbox row is the record of each email), and every
     administrative action, exportable as CSV for compliance review.
     Rows are never edited, and are deleted only by Delete session or by
     Purge and archive with the audit log ticked (§16.4, §16.5).

@@ -61,7 +61,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   invalidates; the card's `/save` always calls it.
   `spec/sort_by_reviewee.md` says a no-op save emits nothing.
   *Reproduced.* Code.
-- **G3** **The per-row Send reminder writes no audit event.**
+- ~~**G3**~~ — **Done in #PR** (an event, as the spec reads: the per-row reminder writes `reminders.sent` with one entry; §2.12 now says the outbox row is the record of each email, matching §15). **The per-row Send reminder writes no audit event.**
   `_operations.py`'s per-row route reaches `invitations.send_reminder`,
   which queues the outbox row and stamps `last_reminder_at`; the bulk path
   emits `reminders.sent`, this one nothing. The functional spec says every
@@ -225,7 +225,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 - **G1** med author §5.8 :518-522 a group-scoped instrument has no locked rows (unticking Name drops member names); the service allows it and the reviewer surface honors it (_response_fields.py:417-427; _reviewer_summary.py:327-333), but the builder always locks Name (views/_instruments.py:661; instruments_index.html:1939-1943, 4045); instruments.md:871-874 "stays ticked" and :932 "when Name is selected" disagree
 - **G2** med author §9.9 :1450 "engagement (opened / first-response / submitted)", §2.7 "invitation engagement" vs Progress = not started / in progress / submitted (views/_progress.py:30-35); nothing renders opened_at; operations_pages.md:298 right
-- **G3** med author §2.12 :113-115 every send attempt audited, §5.13 every mutating service vs the per-row reminder (§1); §15 :2280-2282 contradicts §2.12
+- ~~**G3**~~ med author §2.12 :113-115 every send attempt audited, §5.13 every mutating service vs the per-row reminder (§1); §15 :2280-2282 contradicts §2.12 — **Done in #PR.**
 - **G4** — carried, old B27 / G6: §8.3 :966-969 triggers fire on the next operator GET. Same as B3. Not counted.
 - **G5** low spec §5.12 :606-608 an invitation created "(or auto-send schedule)" vs only Prepare creates (invitations.py:155); §11.4 :1984-1987 says so
 - **G6** low trim §12.5 :2135-2137 "seeded entries omitted from the Settings extract" — nothing seeds (_serialize.py:562); "Four of the five roster pairs (… Settings)" loose
