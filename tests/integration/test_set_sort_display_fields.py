@@ -395,6 +395,36 @@ def test_set_sort_no_emit_on_noop_save(
     assert len(events) == 1
 
 
+def test_empty_sort_on_a_never_sorted_instrument_is_a_noop(
+    db: Session, client: TestClient
+) -> None:
+    """Findings A2 (2026-10-07): NULL and ``[]`` both mean "no sort",
+    so the card's first Save, which always sends an empty spec for an
+    unsorted instrument, emits nothing and leaves a validated session
+    validated."""
+    review_session = _make_session(client, db, code="ssdf-null-noop")
+    _populate_rosters(client, review_session.id)
+    instrument = _instrument(db, review_session.id)
+    _seed_two_display_fields(db, instrument)
+    instrument.sort_display_fields = None
+    review_session.status = "validated"
+    db.flush()
+
+    instruments.set_sort_display_fields(
+        db, instrument=instrument, fields=[], actor=_actor(db)
+    )
+    db.expire_all()
+    assert review_session.status == "validated"
+    assert instrument.sort_display_fields is None
+    events = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "instrument.sort_fields_updated",
+            AuditEvent.session_id == review_session.id,
+        )
+    ).scalars().all()
+    assert events == []
+
+
 def test_set_sort_invalidates_validated_session(
     db: Session, client: TestClient
 ) -> None:

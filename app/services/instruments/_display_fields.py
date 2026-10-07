@@ -867,7 +867,11 @@ def set_sort_display_fields(
     normalised = kept
 
     old_value = instrument.sort_display_fields
-    if old_value == normalised:
+    # NULL and ``[]`` both mean "no sort" (``views/_sort.py``), so an
+    # empty spec on a never-sorted instrument is a no-op too — the
+    # card's Save always calls this, and comparing ``None == []`` made
+    # its first Save demote a validated session (findings A2).
+    if (old_value or []) == normalised:
         # No-op save — skip lifecycle invalidation + audit emit.
         return normalised, old_value
 
