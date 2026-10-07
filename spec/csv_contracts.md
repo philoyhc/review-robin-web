@@ -598,11 +598,11 @@ early-open, scheduled activation fires only from `validated` and
 otherwise takes a one-shot audited skip, and past-deadline reminders
 are skipped with an audit event.
 
-**The import keeps fired auto-send entries in place** (findings Bc1,
-ruled 2026-10-07): on the values the session would hold, an
-`invite_offsets` or `reminder_offsets` entry already fired on an
-unchanged anchor must stay at its position, unchanged, the details
-card's rule (`spec/lifecycle.md` §8.2.6). Refused in the parse phase.
+**The import keeps sent auto-send entries in place** (findings Bc1,
+ruled 2026-10-07): on the values the session would hold, a new
+`invite_offsets` or `reminder_offsets` entry on a position already sent
+or skipped on the anchor is refused in the parse phase, one error per
+list, the details card's rule (`spec/lifecycle.md` §8.2.6).
 
 **Round-trip notes:**
 

@@ -1602,7 +1602,7 @@ def _fired_invite_session(db: Session, code: str) -> ReviewSession:
     return review_session
 
 
-def test_an_import_that_moves_a_fired_invite_is_refused(db: Session) -> None:
+def test_an_import_that_moves_a_sent_invite_is_refused(db: Session) -> None:
     """Bc1 (ruled 2026-10-07): the details card's rule, on the values
     the session would hold; nothing applied."""
     dst = _fired_invite_session(db, "bc1-import")
@@ -1610,12 +1610,12 @@ def test_an_import_that_moves_a_fired_invite_is_refused(db: Session) -> None:
         db, dst, [Row("session.invite_offsets", "-P1D", "string")]
     )
     assert [e.field for e in result.errors] == ["session.invite_offsets"]
-    assert "-P3D has already fired" in result.errors[0].message
+    assert "-P3D was already sent" in result.errors[0].message
     db.refresh(dst)
     assert dst.invite_offsets == ["-P3D", "-P1D"]
 
 
-def test_an_import_that_keeps_a_fired_invite_or_moves_start_applies(
+def test_an_import_that_keeps_a_sent_invite_or_moves_start_applies(
     db: Session,
 ) -> None:
     kept = _fired_invite_session(db, "bc1-import-kept")
@@ -1631,3 +1631,38 @@ def test_an_import_that_keeps_a_fired_invite_or_moves_start_applies(
             Row("session.invite_offsets", "-P1D", "string"),
         ],
     ).errors == []
+
+
+def test_an_import_names_each_list_that_moves_a_sent_entry(
+    db: Session,
+) -> None:
+    """One submit names every error (findings D10): one per list."""
+    dst = _fired_invite_session(db, "bc1-import-both")
+    dst.reminder_offsets = ["-P2D", "-P1D"]
+    db.add(
+        AuditEvent(
+            session_id=dst.id,
+            event_type="session.scheduled_reminders_skipped",
+            summary="skipped",
+            detail={
+                "context": {
+                    "anchor_at": _iso(6, 15),
+                    "offset_index": 0,
+                    "offset": "-P2D",
+                }
+            },
+        )
+    )
+    db.flush()
+    result = apply_session_config(
+        db,
+        dst,
+        [
+            Row("session.invite_offsets", "-P1D", "string"),
+            Row("session.reminder_offsets", "-P1D", "string"),
+        ],
+    )
+    assert [e.field for e in result.errors] == [
+        "session.invite_offsets",
+        "session.reminder_offsets",
+    ]

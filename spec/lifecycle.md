@@ -805,16 +805,20 @@ control, not as derived behaviour.
 **8.2.6 Multiple offsets per event.** Events that fire on a
 sequence (invites, reminders) carry a JSON list; events that
 fire once (archive, auto-delete) carry a single ISO 8601 string.
-Per-list-entry dedup uses the entry's index on its anchor
-(`context.offset_index` on the `session.scheduled_*_fired` /
-`_skipped` audit rows, and the outbox key
-`reminder:{session_id}:{reviewer_id}:{offset_index}`), so an entry
-fired or skipped on the anchor it keeps stays at its position,
-unchanged: a save or a Settings import that changes, removes or moves
-it, which would leave a later entry on a position that reads as sent,
-is refused (`scheduled_events.validate_fired_offsets_kept`; findings
-Bc1, ruled 2026-10-07). New entries go after it. A changed anchor resets
-the record, so the list is free again.
+Per-list-entry dedup is by position on the anchor: the observers'
+`session.scheduled_*_fired` / `_skipped` audit rows record
+`context.offset_index` and the entry (`context.offset`), and a recorded
+position never fires again on that anchor, whatever entry sits there.
+So a Session Home save or a Settings import that would put a different
+entry on a position already sent or skipped, on the anchor the session
+will hold, is refused (`scheduled_events.fired_offset_errors`; findings
+Bc1, ruled 2026-10-07): a sent entry stays at its position, new entries
+go after it, and one kept in place skips the lead-time floor. The record
+belongs to the anchor's value, so moving Start or End frees the list
+and moving it back restores that value's record. The reminder outbox
+key `reminder:{session_id}:{reviewer_id}:{offset_index}` carries no
+anchor: a reviewer gets reminder *n* at most once per session, whatever
+End (findings Bc2).
 
 **8.2.7 Save-time datetime ordering.** Independently of the
 fire-time guard (§8.2.3), the four operator-set anchor
