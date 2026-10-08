@@ -1917,3 +1917,90 @@ def test_an_invitation_send_route_refuses_a_state_committed_at_the_lock(
     assert not db.execute(
         select(EmailOutbox.id).where(EmailOutbox.session_id == session.id)
     ).all()
+
+
+# --- Findings Bc8: the Instruments page's repair runs only while editable ---
+
+
+def _instrument_missing_its_name_row(db: Session, code: str, status: str):
+    from app.db.models import InstrumentDisplayField
+
+    session = _make_validated_session(db, code)
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalars().first()
+    from app.services import instruments as instruments_service
+
+    instruments_service.ensure_locked_display_fields(db, instrument=instrument)
+    db.flush()
+    for row in db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == instrument.id,
+            InstrumentDisplayField.source_type == "reviewee",
+            InstrumentDisplayField.source_field == "name",
+        )
+    ).scalars():
+        db.delete(row)
+    session.status = status
+    db.commit()
+    # A request starts from a fresh session; drop the stale collection.
+    db.expire_all()
+    return session, instrument
+
+
+def _has_name_row(db: Session, instrument: Instrument) -> bool:
+    from app.db.models import InstrumentDisplayField
+
+    return bool(
+        db.execute(
+            select(InstrumentDisplayField.id).where(
+                InstrumentDisplayField.instrument_id == instrument.id,
+                InstrumentDisplayField.source_type == "reviewee",
+                InstrumentDisplayField.source_field == "name",
+            )
+        ).all()
+    )
+
+
+@pytest.mark.parametrize("status", ["draft", "validated"])
+def test_the_instruments_repair_runs_while_editable(
+    db: Session, status: str
+) -> None:
+    """The control: an editable session gets its missing locked row back."""
+    from app.services import instruments as instruments_service
+
+    session, instrument = _instrument_missing_its_name_row(
+        db, f"bc8-editable-{status}", status
+    )
+    assert instruments_service.repair_display_fields(db, session) is True
+    assert _has_name_row(db, instrument)
+
+
+@pytest.mark.parametrize("status", ["ready", "expired", "archived"])
+def test_the_instruments_repair_leaves_a_locked_session_alone(
+    db: Session, status: str
+) -> None:
+    """Rendering the Instruments page writes nothing to a session past
+    setup (findings Bc8, ruled 2026-10-08)."""
+    from app.services import instruments as instruments_service
+
+    session, instrument = _instrument_missing_its_name_row(
+        db, f"bc8-locked-{status}", status
+    )
+    assert instruments_service.repair_display_fields(db, session) is False
+    assert not _has_name_row(db, instrument)
+
+
+def test_the_instruments_repair_refuses_a_state_committed_at_its_lock(
+    db: Session, monkeypatch
+) -> None:
+    """A scheduled activation commits as the render starts its repair:
+    the re-read under the lock sees ``ready`` and writes nothing."""
+    from app.services import instruments as instruments_service
+
+    session, instrument = _instrument_missing_its_name_row(
+        db, "bc8-raced", "validated"
+    )
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+    assert instruments_service.repair_display_fields(db, session) is False
+    assert not _has_name_row(db, instrument)
