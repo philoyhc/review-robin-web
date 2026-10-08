@@ -622,10 +622,12 @@ States 7's copy names Revert to draft.
 
 - **Send invites** posts to
   `/operator/sessions/{id}/invitations/send-all` via
-  `next-action-send-invites-form`. Iterates
+  `next-action-send-invites-form`, which calls
+  `invitations.send_all_invitations`. Under the session lock it lists
   `invitations.list_sendable_invitations` — every `pending`
-  invitation whose reviewer is **still** assigned and active — and
-  dispatches via `invitations.send_invitation`. A reviewer
+  invitation whose reviewer is **still** assigned and active — sends
+  each via `invitations.send_invitation`, and commits once (findings
+  Bc5). A reviewer
   inactivated or dropped from every included assignment after being
   invited keeps their row and is skipped, not deleted.
 
@@ -661,9 +663,10 @@ Each form carries a hidden `return_to=<slug>` field; the route's
 the special `"home"` slug to resolve the 303 target. Direct form
 posts elsewhere (e.g. tests hitting the route without the form's
 hidden field) fall back to `/operator/sessions/{id}/invitations`.
-The underlying routes gate on their own: `send-all` accepts POSTs
-from `validated` or `ready` whatever the form's visibility, and
-`remind-incomplete` accepts `ready` only (`_require_ready`, 409).
+The underlying routes gate whatever the form's visibility: `send-all`
+accepts `validated` or `ready`, and `remind-incomplete` accepts `ready`
+only (409 otherwise), each decided again under the session lock by the
+invitation service (`spec/lifecycle.md` §3.1).
 
 - **Revert to draft** posts to `/operator/sessions/{id}/revert`, which
   calls `lifecycle.operator_revert`. It locks and re-reads the session and
@@ -864,8 +867,9 @@ gate the trigger:
 
 - **Prepared** — `session.status` is `validated` or `ready`. The
   trigger refuses to dispatch from `draft` because manual Send
-  also refuses (via the operator route's
-  `_require_validated_or_ready` gate). The skip reason is
+  also refuses (`_require_validated_or_ready` on the route, and
+  `require_validated_or_ready` under the lock in the service). The
+  skip reason is
   `not_prepared`.
 - **Invitations created** — at least one `Invitation` row exists
   for the session. The skip reason is `invitations_not_created`.
@@ -950,7 +954,7 @@ routes:
 | `POST /operator/sessions/{id}/activate` | `lifecycle.activate_session` | `validated` | `ready` | `session.activated` |
 | `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.operator_revert` → `invalidate_session` | `validated` | `draft` | `session.invalidated` |
 | `POST /operator/sessions/{id}/revert` (when `is_ready` or `is_expired`) | `lifecycle.operator_revert` → `revert_session_to_draft` | `ready` or `expired` | `draft` | `session.reverted_to_draft` |
-| `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_invitation` (per row of `invitations.list_sendable_invitations` — `pending` **and** still eligible) | `validated` or `ready` | unchanged | per-invitation send events |
+| `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_all_invitations` (`send_invitation` per row of `list_sendable_invitations` — `pending` **and** still eligible — in one commit) | `validated` or `ready` | unchanged | per-invitation send events |
 | `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready` | unchanged | one batch `reminders.sent` |
 
 **The per-step `/assignments/generate` and `/activate` routes stay

@@ -217,8 +217,8 @@ def require_validated_or_ready(
         lambda locked: is_validated(locked) or is_ready(locked),
         code="not_prepared",
         message=(
-            "Session is {status}; invitations can only be issued once the "
-            "session has been prepared (validated or ready)."
+            "Invitations can only be issued once the session has been "
+            "prepared (validated or ready)."
         ),
     )
 
@@ -231,10 +231,7 @@ def require_ready(db: Session, review_session: ReviewSession) -> ReviewSession:
         review_session,
         is_ready,
         code="not_ready",
-        message=(
-            "Session is {status}; this action is available only once the "
-            "session is Activated."
-        ),
+        message="This action is available only once the session is Activated.",
     )
 
 

@@ -942,8 +942,11 @@ def send_one_reminder(
 
     Refuses unless the session is ``ready``, decided under the session
     lock; the reminder and its event land in one commit (findings Bc5).
+    The invitation is re-read after the gate, so a Regenerate committed
+    since the request loaded it sends the fresh link, not the dead one.
     """
     lifecycle.require_ready(db, review_session)
+    db.refresh(invitation)
     result = send_reminder(
         db,
         invitation=invitation,

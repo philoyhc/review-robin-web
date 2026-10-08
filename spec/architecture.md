@@ -488,7 +488,8 @@ State machine: `pending` → `sent` → `opened`. Generate is idempotent
 Regenerate all require the session to be `validated` or `ready`
 (`_require_validated_or_ready`, 409 otherwise) so the emailed link
 never points at a draft session; per-row Send / Regenerate and every
-reminder require `ready` (`_require_ready`).
+reminder require `ready` (`_require_ready`). The invitation services
+decide both again under the session lock (`spec/lifecycle.md` §3.1).
 
 `/me/invite/{token}` requires Easy Auth sign-in (magic links are not
 built; `spec/audience_and_identity_model.md` "Auth posture"). The route

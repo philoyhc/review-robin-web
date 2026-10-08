@@ -992,7 +992,10 @@ browsers, and direct POSTs bypass the picker entirely).
   state-gated save opens with `require_editable` / `require_not_archived`
   / `require_not_ready` (§3.1), so a roster, relationship, assignment,
   instrument, visibility or session save cannot land on a session that
-  went `ready` after the request loaded it. The gate is
+  went `ready` after the request loaded it; each operator invitation
+  action opens with `require_validated_or_ready` / `require_ready`, so a
+  send, regenerate or reminder cannot land on one reverted or closed
+  since (findings Bc5). The gate is
   `session_guard.require_state`; the route-level `_require_*` checks stay
   as early refusals and the service check can only refuse more.
   - **Re-entrant.** Several guarded calls in one request re-lock and
@@ -1001,7 +1004,9 @@ browsers, and direct POSTs bypass the picker entirely).
     a save that must keep the state it gated on through its edit commits
     once (`unit_of_work.atomic`; the callers are listed in that module's
     docstring), and the automatic `validated → draft` flip (§2.3) rides
-    that commit.
+    that commit. The invitation batches and the scheduled passes do the
+    same without `atomic`: each row is written with `commit=False` and
+    the batch commits once, the request rolling back on a raise.
   - **Async handlers** await their body, then run the guarded part
     through `run_in_threadpool`, so a lock wait never blocks the event
     loop.
