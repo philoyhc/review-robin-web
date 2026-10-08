@@ -584,6 +584,66 @@ def test_a_relationship_import_commits_nothing_before_its_label_gate_refuses(
     ).all() == []
 
 
+def test_a_refused_import_leaves_a_validated_session_validated(
+    db: Session, monkeypatch
+) -> None:
+    """The flip goes with the edit: a validated session whose import is
+    refused at a later gate stays validated, with no ``session.invalidated``
+    row, rather than being demoted for an edit that never landed."""
+    from app.services import csv_imports
+
+    user, session = _labels_session(db)
+    session.status = "validated"
+    db.commit()
+    parsed = csv_imports.parse_reviewer_csv(_LABELLED_IMPORTS["reviewers"][2])
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=2)
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        csv_imports.save_reviewers(
+            db,
+            session=session,
+            user=user,
+            rows=parsed.rows,
+            filename="reviewers.csv",
+            correlation_id="t",
+            field_labels_captured=parsed.field_labels,
+        )
+
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).status == "validated"
+    assert _count(db, session, "session.invalidated") == 0
+
+
+def test_a_refused_edit_does_not_demote_a_validated_session(db: Session) -> None:
+    """The flip goes with the edit outside any single commit too: adding a
+    display field the instrument already has refuses after the flip, and
+    with nothing committed the session stays validated (before, the flip
+    had committed on its own)."""
+    from app.services import instruments
+    from app.services.instruments import DisplaySourceError
+
+    user, session = _labels_session(db)
+    instrument = instruments.create_instrument(db, review_session=session, actor=user)
+    existing = instrument.display_fields[0]
+    session.status = "validated"
+    db.commit()
+
+    with pytest.raises(DisplaySourceError):
+        instruments.add_display_field(
+            db,
+            instrument=instrument,
+            source_type=existing.source_type,
+            source_field=existing.source_field,
+            label="Again",
+            visible=True,
+            actor=user,
+        )
+    db.rollback()  # the route redirects without committing
+
+    assert db.get(ReviewSession, session.id).status == "validated"
+    assert _count(db, session, "session.invalidated") == 0
+
+
 def test_the_validated_to_draft_flip_lands_with_the_edit(
     db: Session, monkeypatch
 ) -> None:

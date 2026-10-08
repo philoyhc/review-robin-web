@@ -120,7 +120,7 @@ Taken 2026-10-07 at `9eda6273`.
 
 ### Doc impact
 
-- `spec/lifecycle.md` — "Concurrency safety": every state-gated save and every transition is decided under the session lock, in the service (PR 7).
+- `spec/lifecycle.md` — "Concurrency safety": every state-gated save and every transition is decided under the session lock, in the service; §2's qualification, §2.3, §7.3 and the `session.invalidated` audit row: the automatic `validated → draft` flip lands in the caller's commit, and only the operator's Revert commits it alone (PR 7).
 - `spec/architecture.md` — "Three-layer split": a lifecycle-state gate is a service rule, and `session_guard` is its primitive (PR 7).
 - `guide/findings_2026-10-07_corpus.md` — Bc4 ruled (PR 1), struck at close (PR 7).
 - `guide/todo_master.md` — the segment's in-progress line names Item 1 while it is open (PR 1), and drops it at the item close (PR 7).

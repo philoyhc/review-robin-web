@@ -316,8 +316,9 @@ def invalidate_if_validated(
     caller's own commit, so the lock that caller took holds from its
     gate through the edit — a commit here would release it, and another
     request could archive or re-validate the session before the edit
-    lands (Codex on #2882). A caller that fails after this rolls the
-    flip back with its edit.
+    lands (Codex on #2882). If the caller fails after this and nothing
+    commits the transaction, the flip goes with the edit; a caller that
+    catches the failure and commits anyway commits the flip too.
     """
     if is_validated(review_session):
         _flip_to_draft(
@@ -359,7 +360,9 @@ def invalidate_session(
     reason: str,
     correlation_id: str | None = None,
 ) -> ReviewSession:
-    """Flip ``validated → draft`` after a setup-mutating action.
+    """Flip ``validated → draft`` and commit it: the operator's explicit
+    Revert (``operator_revert``). A setup edit flips through
+    :func:`invalidate_if_validated`, which leaves the commit to the edit.
 
     No-op if the session is already ``draft``. Raises ``LifecycleError`` if
     the session is in any other status (e.g. ``ready``) — those routes
