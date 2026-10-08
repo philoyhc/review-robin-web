@@ -346,3 +346,93 @@ was clean, each new pin mutation-checked.
 - `spec/participant_model.md` — the field's name in the two toggle rows.
 - `spec/visual_style_rrw.md` — the field's name.
 - `spec/setup_pages.md` — the field's name.
+
+## Item 4 — Session Home Save keeps the card and the seat (closed 2026-10-08)
+
+### Opportunity
+
+The author (2026-10-08): Save on the details card also locked it, though
+the card has its own Lock; and Save's reload jumped the page, because
+the redirect's `#session-config` scrolled the card's top edge into view
+from the Save button at its foot.
+
+### Decision
+
+**Ruled 2026-10-08 by the author ("way 2 plus the save delink").** Save
+returns to `?editing=1` with no fragment; only Lock locks. The reload
+stays, made quiet: the card's form stores `scrollY` on submit and an
+inline script restores it (the Instruments page's pattern), and Session
+Home opts into `@view-transition` so the reload cross-fades.
+
+**Rejected:** saving without a reload (`fetch` and swap the page body):
+no repaint at all, but the card's dirty tracking, the tag typeahead and
+the Danger Zone confirms bind at load and would need rewiring, and a
+422 would need an inline home; Way 2 first, that if the reload still
+shows.
+
+### Judgment calls — decided
+
+- `@view-transition` takes no selector, so no CSS declares it: Session
+  Home's `rrwSaveFade` adds the rule from script on Save's way out and
+  back, and only for `prefers-reduced-motion: no-preference`.
+- The restore defers to a *shown* `.banner-scroll-target` only, as
+  `base.html`'s banner scroll does: Quick Setup's error banners render
+  `hidden` on every load.
+- An in-place Lock or Unlock rewrites `?editing` with
+  `history.replaceState`, so a reload after Lock stays locked.
+- The `/edit` 308 keeps its `#session-config`: it is a stale-bookmark
+  entry, not a save.
+
+### Blast radius (measured)
+
+Taken 2026-10-08 at `26adcc5d`.
+
+| What | Count | Command |
+|---|---|---|
+| Routes | 1 (`session_config_submit`) | `grep -n 'id}#session-config"' app/web/routes_operator/_session_home.py` |
+| Tests pinning Save's redirect | 2 | `grep -rln 'id}#session-config"' tests/ --include=*.py` |
+| Specs naming Save's return | 3 | `grep -rln -i 'returns to Home in display mode\|back to Home in \*\*display\*\* mode\|shared .\/config. POST' spec/` |
+
+### Status — closed 2026-10-08
+
+**Shipped as planned, in one PR.** Driven in Chromium: Save comes back
+unlocked at the same `scrollY`, restored before the first frame paints;
+Lock locks in place and a reload stays locked. Found at build: the
+restore first deferred to *any* `.banner-scroll-target`, and a hidden
+Quick Setup banner cancelled it on every load; and a static
+`@view-transition` on Session Home made every Home → Home reload fade,
+which held the Owners card's browser tests' clicks (`<html> intercepts
+pointer events`) — hence the script-added rule, Save only. The author's
+browser check is owed.
+
+### PR ladder
+
+1. **One PR**: plan, route, template, tests (one in `tests/browser/`),
+   specs, close.
+
+### Definition of done
+
+- Save redirects to `?editing=1` with no fragment; the scroll is
+  restored and Lock drops the param
+  (`tests/browser/test_session_home_save.py`,
+  `tests/integration/test_session_home_save_seat.py`).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19U.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- Item 4 marked closed in its heading; the file stays in `guide/` while 19U is open
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- The Instruments page's own scroll restore, which defers to any
+  `.banner-scroll-target`, shown or not: no hidden one renders there today.
+
+### Doc impact
+
+- `spec/session_home.md` — "Edit affordance behavior": Save returns unlocked, no fragment; the scroll restore, the view transition, Lock's `replaceState`.
+- `spec/rrw_functional_spec.md` — §8.8: Save returns unlocked at the operator's scroll; Lock locks.
+- `spec/operator_button_audit.md` — §5b row 156: Save's return.

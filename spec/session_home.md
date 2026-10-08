@@ -450,8 +450,19 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   them — it saves through its own route.
   **Save POSTs to `/operator/sessions/{id}/config`** (shared
   persistence helper `_apply_session_config_form`) and redirects
-  back to Home in **display** mode (`#session-config`) — the
-  operator saves in place instead of hopping to a child page. The
+  back to Home **still unlocked** (`?editing=1`, no fragment): Save
+  only saves, and **Lock** is what locks the card. The operator saves
+  in place instead of hopping to a child page, and keeps their seat:
+  the card's form stores the scroll position on submit and an inline
+  script restores it on the reload (deferring to a shown
+  `.banner-scroll-target`). Save's reload alone also cross-fades
+  rather than repainting from blank: a cross-document view
+  transition whose `@view-transition` rule no stylesheet declares —
+  `rrwSaveFade` adds it from script on the way out and on the way
+  back, unless the reader prefers reduced motion — so every other
+  navigation stays a plain load. A browser without either reloads at
+  the top as before. An in-place Lock also drops `?editing` from the
+  address (`history.replaceState`), so a reload stays locked. The
   tag write runs **after** the config apply, so a save the card
   rejects writes no tags either, and every audit event one save
   produces shares one correlation id (the `audit_events`

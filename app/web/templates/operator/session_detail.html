@@ -3,6 +3,39 @@
 {% block title %}{{ session.name }} — Review Robin Web{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
 
+{% block extra_head %}
+  {# 19U Item 4 — Save reloads Session Home (POST, 303, GET), and a
+     same-document reload paints from blank. A cross-document view
+     transition cross-fades the old view into the new one instead, so the
+     reload reads as an update. Both documents must opt in with
+     ``@view-transition``, which takes no selector — so neither declares
+     it in CSS: ``rrwSaveFade`` adds the rule from script, on the page
+     being left when the card's form submits (below) and on the page
+     coming back when the card's scroll key is waiting (here, read at
+     parse time, before the restore at the foot removes it). Only Save's
+     reload fades; every other navigation — Owners, Quick Setup, the
+     Workflow card, the rest of the app — stays a plain load, so nothing
+     else meets a fade in progress. Skipped for readers who prefer reduced
+     motion; browsers without view transitions reload as before. #}
+  <script>
+    window.rrwSaveFade = function () {
+      if (!window.matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+      var rule = document.createElement('style');
+      rule.textContent = '@view-transition { navigation: auto; }';
+      document.head.appendChild(rule);
+    };
+    (function () {
+      var fromSave = false;
+      try {
+        fromSave = sessionStorage.getItem(
+          'sessionHomeScrollY:' + window.location.pathname
+        ) !== null;
+      } catch (e) {}
+      if (fromSave) window.rrwSaveFade();
+    })();
+  </script>
+{% endblock %}
+
 {% block content %}
   <div class="session-nav-card">
     {% with current_page = "Home" %}
@@ -318,6 +351,14 @@
       }
       function setMode(card, mode) {
         card.setAttribute('data-config-mode', mode);
+        // Save lands on ``?editing=1`` (19U Item 4), so an in-place Lock
+        // drops the param too, or a reload would reopen the card.
+        try {
+          var url = new URL(window.location.href);
+          if (mode === 'edit') url.searchParams.set('editing', '1');
+          else url.searchParams.delete('editing');
+          history.replaceState(history.state, '', url);
+        } catch (e) { /* no URL API: the swap still works */ }
         if (mode === 'display') {
           card.removeAttribute('data-config-dirty');
           var form = formOf(card);
@@ -619,4 +660,46 @@
     })();
   </script>
   {% include "operator/partials/_tag_typeahead.html" %}
+  <script>
+    // 19U Item 4 — Save reloads Session Home, which would land at the
+    // top of the page: from the Save button at the card's foot, a jump.
+    // Remember the scroll position when the card's form submits and put
+    // it back on the reload, as the Instruments page does for its cards.
+    // The redirect carries no ``#session-config`` for the same reason.
+    // Here, at the end of the content, so the page is its full height
+    // when the first restore runs; again on the next frame and on load,
+    // in case layout settles late. Without JS the reload lands at the
+    // top, as any form post here does.
+    (function () {
+      var KEY = 'sessionHomeScrollY:' + window.location.pathname;
+      var form = document.getElementById('config-save-{{ session.id }}');
+      if (form) {
+        form.addEventListener('submit', function () {
+          try {
+            sessionStorage.setItem(KEY, String(window.scrollY));
+            window.rrwSaveFade();
+          } catch (e) {}
+        });
+      }
+      var saved = null;
+      try {
+        saved = sessionStorage.getItem(KEY);
+        sessionStorage.removeItem(KEY);
+      } catch (e) { return; }
+      var y = saved === null ? NaN : parseInt(saved, 10);
+      if (isNaN(y)) return;
+      function apply() {
+        // A banner that wants attention wins: base.html scrolls to the
+        // first ``.banner-scroll-target``. Only when it is shown, though —
+        // Quick Setup's error banners render ``hidden`` on every load, and
+        // scrolling to one of those does nothing.
+        var banner = document.querySelector('.banner-scroll-target');
+        if (banner && banner.getClientRects().length) return;
+        window.scrollTo(0, y);
+      }
+      apply();
+      requestAnimationFrame(apply);
+      window.addEventListener('load', apply, { once: true });
+    })();
+  </script>
 {% endblock %}

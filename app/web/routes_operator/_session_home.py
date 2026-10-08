@@ -563,9 +563,11 @@ def session_config_submit(
 ) -> RedirectResponse:
     """18R Item 4 Slice 3 — Save from the Session Home config card.
 
-    Same persistence path as the Edit page POST (shared helper), but
-    redirects back to Session Home in **display** mode (no ``?editing``)
-    — the operator saves in place instead of hopping to a child page.
+    Same persistence path as the Edit page POST (shared helper), and
+    redirects back to Session Home **still unlocked** (``?editing=1``):
+    Save only saves, and the card's Lock is what locks it (19U Item 4,
+    author's ruling 2026-10-08). The operator saves in place instead of
+    hopping to a child page.
     """
     # One correlation id for the whole save, so the config events and the
     # tag events it produces group as one request (``request_correlation_id``
@@ -607,7 +609,10 @@ def session_config_submit(
             correlation_id=correlation_id,
         )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}#session-config",
+        # No ``#session-config``: the page's own script restores the
+        # operator's scroll position, and a fragment would scroll the
+        # card's top edge into view first (19U Item 4).
+        url=f"/operator/sessions/{review_session.id}?editing=1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

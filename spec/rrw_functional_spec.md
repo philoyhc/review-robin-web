@@ -1194,7 +1194,8 @@ redirects to the card in edit mode.
 - **Optional setup tabs and pages** — the Relationships and Observers
   selector chips ([§5.17](#517-feature-toggles)), each lock-on-data,
   under Tags; inert while the card is locked.
-- **Save** returns to Home in display mode. Editing metadata is
+- **Save** returns to Home with the card still unlocked, at the
+  operator's scroll position; **Lock** locks it. Editing metadata is
   non-destructive (never touches assignments or responses), so
   there is no response-loss acknowledgement gate, and it leaves a
   `validated` session `validated`.

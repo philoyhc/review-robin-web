@@ -204,7 +204,7 @@ by `?editing=1`; there is no Edit page to hop to.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 156 | Session details footer | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits `form="config-save-{id}"` to the shared `/config` POST |
+| 156 | Session details footer | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits `form="config-save-{id}"` to the shared `/config` POST, which returns to Home still unlocked (`?editing=1`); only Lock locks |
 | 157 | Session details footer | Cancel | `<a>` | `btn secondary` | Secondary | Returns to `#session-config` unedited |
 | 158 | Session details footer | Lock / Unlock | `<a>` | `btn secondary` | Secondary | Two-state toggle; adds or drops `?editing=1`. Rendered `aria-disabled` with an explanatory `title` once the session is past `validated` — the lock-card recovery path, not a hidden control |
 

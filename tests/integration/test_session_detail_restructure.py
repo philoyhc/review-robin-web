@@ -1145,7 +1145,9 @@ def test_config_card_save_persists_and_redirects_home(
     client: TestClient, db: Session
 ) -> None:
     """Saving the config card POSTs to /config, persists the change, and
-    redirects back to Session Home in display mode (#session-config)."""
+    redirects back to Session Home with the card still unlocked
+    (``?editing=1``) and no ``#session-config`` (19U Item 4: Save only
+    saves, Lock locks, and the page restores its own scroll)."""
     review_session = _make_session(client, db, code="cfg-save")
     response = client.post(
         f"/operator/sessions/{review_session.id}/config",
@@ -1160,7 +1162,7 @@ def test_config_card_save_persists_and_redirects_home(
     )
     assert response.status_code == 303, response.text
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}#session-config"
+        f"/operator/sessions/{review_session.id}?editing=1"
     )
     db.refresh(review_session)
     assert review_session.name == "Renamed Session"
