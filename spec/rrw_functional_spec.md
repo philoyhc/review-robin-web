@@ -606,9 +606,10 @@ row; a sent invitation's is in its email body, which the outbox keeps
 — §11.1),
 created-at, sent-at, opened-at, status.
 
-An invitation is created when the operator (or auto-send
-schedule) issues invitations for the session; it is opened when
-the reviewer first redeems the link.
+An invitation is created when the operator runs Prepare session
+([§9.8](#98-validation-and-activation)); sending, manual or
+scheduled, never creates one. It is opened when the reviewer first
+redeems the link.
 
 ### 5.13 Audit event
 
@@ -1070,9 +1071,9 @@ created-at, deadline, timezone (compact GMT-offset per row),
 status, and tag chips per session.
 
 Each row carries a checkbox; ticking opens an **inline row
-expander** for single-row actions (rename and deadline adjust while
-the session is `draft` or `validated`, read-only otherwise; tag edit
-in any state; duplicate, purge and archive, delete). Multiple
+expander** for single-row actions (Name, Code and Deadline edits
+while the session is `draft` or `validated`, read-only otherwise;
+Tags in any state; duplicate, purge and archive, delete). Multiple
 tickings open the bulk-action variant of the expander.
 
 The lobby supports:
@@ -1130,7 +1131,8 @@ On submit, the session is created as `draft`, the operator is set
 as the first owner alongside any staged co-owners, and the operator lands on **Session
 Home** — where the Session details config card is
 the surface for filling in any remaining fields. The Sessions-lobby
-Clone action lands on Session Home the same way.
+`Duplicate` and `Duplicate settings only` actions land on Session
+Home the same way.
 
 ### 9.3 Session Home
 
@@ -1449,8 +1451,8 @@ a reviewer-centric Operations-row tab.
   Right pane: the filter strip — Status dropdown + free-text
   search + Clear / **`Search`**.
 - **Invitations table** — one row per reviewer carrying:
-  reviewer name + email, email status (sent / queued / not
-  sent), email-sent timestamp, per-reviewer progress
+  reviewer name + email, email status (the latest invitation
+  outbox row's status, or `not sent` with no row), email-sent timestamp, per-reviewer progress
   (not started / in progress / submitted), required-fields-
   filled count, last-reminder timestamp, per-row Send /
   Send-reminder / Regenerate actions (lifecycle-gated).
@@ -2132,13 +2134,12 @@ Data card.
 
 ### 12.5 Round-trip stability
 
-Four of the five roster pairs (Reviewers, Reviewees, Relationships,
-Settings) are designed for **byte-stable round trip** — an
+Four of the five CSV import / export pairs (Reviewers, Reviewees,
+Relationships and Settings) are designed for **byte-stable round trip** — an
 export-then-import cycle does not perturb the session's
 config. Deterministic row order, deterministic field order,
-empty-string handling for missing optional cells,
-vocabulary normalisation, and seeded entries omitted from
-the Settings extract together guarantee this. Observers
+empty-string handling for missing optional cells and
+vocabulary normalization together guarantee this. Observers
 round-trips too — it has a wired importer and extract, and
 `Status` and `CohortRule` read back — but is not claimed
 byte-stable (`spec/csv_contracts.md` "Round-trip stability
@@ -2464,12 +2465,11 @@ A full security-posture catalogue lives in
 - **Boundary tag** — A reviewee or pair-context tag picked in Link 3
   of a group-scoped instrument's assignment rule. Members of a group
   share the same value for every boundary tag.
-- **D6 source** — One of the **nine** possible display-field
-  sources (reviewee name, reviewee email, photo link, three
-  reviewee tags, three pair-context tags). Two are locked on,
-  seven opt-in; see [§5.8](#58-display-field).
 - **Display field** — A read-only context column on an
-  instrument; one of nine D6 sources.
+  instrument, drawn from one of **nine** sources (reviewee name,
+  reviewee email, photo / profile link, three reviewee tags, three
+  pair-context tags). Two are locked on, seven opt-in; see
+  [§5.8](#58-display-field).
 - **Display label** — The user-facing string for a lifecycle
   state. `ready` displays as "Activated"; `validated`
   displays as "Validated"; etc. The label vocabulary
