@@ -364,9 +364,9 @@ def invalidate_session(
     Revert (``operator_revert``). A setup edit flips through
     :func:`invalidate_if_validated`, which leaves the commit to the edit.
 
-    No-op if the session is already ``draft``. Raises ``LifecycleError`` if
-    the session is in any other status (e.g. ``ready``) — those routes
-    should reject earlier via the editable-state gate.
+    No-op if the session is already ``draft``. Raises ``LifecycleError``
+    from any status but ``validated``; ``operator_revert`` sends those to
+    ``revert_session_to_draft`` instead, so it never reaches the raise.
     """
     if is_draft(review_session):
         return review_session

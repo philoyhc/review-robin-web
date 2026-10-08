@@ -7,7 +7,8 @@ several in sequence and must be all-or-nothing wraps them in
 refusal part-way through can roll the whole unit back. The caller makes
 the one real commit itself — the Instrument card's Save route (findings
 A16) — or opens :func:`atomic`, which commits and rolls back for it:
-the reviewer, reviewee and relationship imports, which hold the session
+the reviewer, reviewee and relationship imports, the label editor and
+Generate (``assignments.replace_assignments``), which hold the session
 lock from their gate to that commit (findings Bc4).
 """
 

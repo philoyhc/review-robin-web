@@ -31,6 +31,7 @@ from app.db.models import (
 )
 from app.schemas.assignments import AssignmentMode
 from app.services import audit, session_lifecycle as lifecycle
+from app.services import unit_of_work
 
 from . import _reconcile_cache
 from ._coverage import (
@@ -73,6 +74,7 @@ def bulk_set_assignment_include(
     a manual include would otherwise put an inactive person back into a
     live review. Those rows are skipped and counted. Inactivate is not
     restricted."""
+    lifecycle.require_editable(db, review_session)
     if not assignment_ids:
         return 0
     rows = list(
@@ -1156,114 +1158,117 @@ def replace_assignments(
     left at ``None`` that cannot happen: the default instrument is
     created first.
     """
-    get_or_create_default_instrument(db, review_session)
-    inputs = _load_reconcile_inputs(db, review_session, instrument_id)
+    # One unit from the gate to the last write (findings Bc4): the
+    # drift correction and the display-field seed below used to land in
+    # commits of their own, after the gate's lock was released.
+    with unit_of_work.atomic(db):
+        lifecycle.require_editable(db, review_session)
+        get_or_create_default_instrument(db, review_session)
+        inputs = _load_reconcile_inputs(db, review_session, instrument_id)
 
-    if not inputs.targets:
-        return 0, 0
+        if not inputs.targets:
+            return 0, 0
 
-    lifecycle.invalidate_if_validated(
-        db,
-        review_session=review_session,
-        user=user,
-        reason="assignments_generated",
-        correlation_id=correlation_id,
-    )
-
-    total_replaced = 0
-    total_new = 0
-    fresh_state: dict[int, InstrumentReconcileState] = {}
-    for instrument in inputs.targets:
-        replaced_here, new_here, state_here = _materialise_one_instrument(
+        lifecycle.invalidate_if_validated(
             db,
             review_session=review_session,
             user=user,
-            instrument=instrument,
-            session_rule_set=inputs.rule_set_for(instrument),
-            reviewers=inputs.reviewers,
-            reviewees=inputs.reviewees,
-            pair_context_lookup=inputs.pair_context_lookup,
-            mode=mode,
-            override_exclude_self_reviews=override_exclude_self_reviews,
+            reason="assignments_generated",
             correlation_id=correlation_id,
         )
-        total_replaced += replaced_here
-        total_new += new_here
-        fresh_state[instrument.id] = state_here
 
-    review_session.assignment_mode = mode.value
-    db.flush()
-
-    # Stamp the fresh verdict into the reconcile cache (19R Item 2).
-    #
-    # This is the write-through, and it is why the cache can be trusted
-    # at all: the verdict is a *diff against the materialised rows*, so
-    # a Generate changes the answer while every engine input holds
-    # still. Without this, a cached ``stale=True`` would outlive the
-    # regenerate that made it fresh.
-    #
-    # **After the flush**, because the stamp carries the row summary
-    # and the rows were just rewritten — a stamp taken before the
-    # flush would describe the row set this run replaced.
-    rows_by_instrument = _reconcile_cache.materialized_rows_by_instrument(
-        db, review_session.id
-    )
-    for instrument in inputs.targets:
-        _store_state(
-            instrument,
-            _stamp_for(
-                instrument,
+        total_replaced = 0
+        total_new = 0
+        fresh_state: dict[int, InstrumentReconcileState] = {}
+        for instrument in inputs.targets:
+            replaced_here, new_here, state_here = _materialise_one_instrument(
+                db,
                 review_session=review_session,
-                inputs=inputs,
-                rows_by_instrument=rows_by_instrument,
+                user=user,
+                instrument=instrument,
+                session_rule_set=inputs.rule_set_for(instrument),
+                reviewers=inputs.reviewers,
+                reviewees=inputs.reviewees,
+                pair_context_lookup=inputs.pair_context_lookup,
+                mode=mode,
                 override_exclude_self_reviews=override_exclude_self_reviews,
-            ),
-            fresh_state[instrument.id],
-        )
-    db.flush()
-    db.commit()
-
-    # Continuous-gate invariant (PR 4 of
-    # ``guide/self_review_consolidate.md``). The per-instrument
-    # ``_materialise_one_instrument`` already calls
-    # ``recompute_self_review_classification`` after its bulk
-    # insert / delete, so post-regenerate the column should match
-    # the canonical rule on every row. Drift means a non-regenerate
-    # write path is missing a recompute hook, or there's a non-
-    # determinism bug in :func:`classify_self_review`.
-    drift = verify_self_review_classification(
-        db, session_id=review_session.id
-    )
-    if drift:
-        if _is_test_env():
-            raise AssertionError(
-                "Self-review classification drift detected post-"
-                f"regenerate on session {review_session.id}: "
-                f"{len(drift)} row(s) differ between "
-                "Assignment.is_self_review and "
-                "classify_self_review. First few: "
-                f"{drift[:5]}. See guide/self_review_consolidate.md."
+                correlation_id=correlation_id,
             )
-        # Production: log + auto-correct. The recompute writes the
-        # canonical value; the audit-event side already covered the
-        # underlying mutation, so the correction is silent.
-        _logger.warning(
-            "self_review_drift_post_regenerate",
-            extra={
-                "session_id": review_session.id,
-                "drift_count": len(drift),
-                "first_few": drift[:5],
-            },
+            total_replaced += replaced_here
+            total_new += new_here
+            fresh_state[instrument.id] = state_here
+
+        review_session.assignment_mode = mode.value
+        db.flush()
+
+        # Stamp the fresh verdict into the reconcile cache (19R Item 2).
+        #
+        # This is the write-through, and it is why the cache can be trusted
+        # at all: the verdict is a *diff against the materialised rows*, so
+        # a Generate changes the answer while every engine input holds
+        # still. Without this, a cached ``stale=True`` would outlive the
+        # regenerate that made it fresh.
+        #
+        # **After the flush**, because the stamp carries the row summary
+        # and the rows were just rewritten — a stamp taken before the
+        # flush would describe the row set this run replaced.
+        rows_by_instrument = _reconcile_cache.materialized_rows_by_instrument(
+            db, review_session.id
         )
-        recompute_self_review_classification(
+        for instrument in inputs.targets:
+            _store_state(
+                instrument,
+                _stamp_for(
+                    instrument,
+                    review_session=review_session,
+                    inputs=inputs,
+                    rows_by_instrument=rows_by_instrument,
+                    override_exclude_self_reviews=override_exclude_self_reviews,
+                ),
+                fresh_state[instrument.id],
+            )
+        db.flush()
+
+        # Continuous-gate invariant (PR 4 of
+        # ``guide/self_review_consolidate.md``). The per-instrument
+        # ``_materialise_one_instrument`` already calls
+        # ``recompute_self_review_classification`` after its bulk
+        # insert / delete, so post-regenerate the column should match
+        # the canonical rule on every row. Drift means a non-regenerate
+        # write path is missing a recompute hook, or there's a non-
+        # determinism bug in :func:`classify_self_review`.
+        drift = verify_self_review_classification(
             db, session_id=review_session.id
         )
-        db.commit()
+        if drift:
+            if _is_test_env():
+                raise AssertionError(
+                    "Self-review classification drift detected post-"
+                    f"regenerate on session {review_session.id}: "
+                    f"{len(drift)} row(s) differ between "
+                    "Assignment.is_self_review and "
+                    "classify_self_review. First few: "
+                    f"{drift[:5]}. See guide/self_review_consolidate.md."
+                )
+            # Production: log + auto-correct. The recompute writes the
+            # canonical value; the audit-event side already covered the
+            # underlying mutation, so the correction is silent.
+            _logger.warning(
+                "self_review_drift_post_regenerate",
+                extra={
+                    "session_id": review_session.id,
+                    "drift_count": len(drift),
+                    "first_few": drift[:5],
+                },
+            )
+            recompute_self_review_classification(
+                db, session_id=review_session.id
+            )
+            db.flush()
 
-    # Lazy-seed pair_context display fields for any populated slots
-    # — see guide/unfinished_business item #14.
-    from app.services.instruments import seed_display_fields_from_assignments
+        # Lazy-seed pair_context display fields for any populated slots
+        # — see guide/unfinished_business item #14.
+        from app.services.instruments import seed_display_fields_from_assignments
 
-    if seed_display_fields_from_assignments(db, review_session):
-        db.commit()
-    return total_replaced, total_new
+        seed_display_fields_from_assignments(db, review_session)
+        return total_replaced, total_new

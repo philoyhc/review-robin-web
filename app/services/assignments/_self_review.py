@@ -24,6 +24,7 @@ from app.db.models import (
     User,
 )
 from app.services import audit
+from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import normalize_email
 from app.services.roster_status import is_active, status_is_active
 
@@ -516,6 +517,7 @@ def set_instrument_self_reviews_active(
     # consolidation (PR 1/2 of ``guide/self_review_consolidate.md``).
     # Rows with an inactive side stay excluded: the toggle is about
     # self-review, not roster status (findings B2).
+    lifecycle.require_editable(db, review_session)
     rows = db.execute(
         _active_self_review_rows().where(
             Assignment.session_id == review_session.id,

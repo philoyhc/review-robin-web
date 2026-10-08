@@ -305,6 +305,7 @@ def save_relationships(
     # the label reconcile's gate can't refuse after a committed replace
     # (findings Bc4; Codex on #2882).
     with unit_of_work.atomic(db):
+        lifecycle.require_editable(db, session)
         lifecycle.invalidate_if_validated(
             db,
             review_session=session,
@@ -408,6 +409,7 @@ def delete_all_relationships(
     in shape: invalidates a validated session before the wipe,
     emits ``relationships.deleted_all``, commits."""
 
+    lifecycle.require_editable(db, review_session)
     lifecycle.invalidate_if_validated(
         db,
         review_session=review_session,
@@ -563,6 +565,7 @@ def create_relationship(
     the session and rejects a duplicate ``(reviewer, reviewee)``
     pair against the UNIQUE constraint. Emits ``relationship.created``
     (snapshot envelope); returns the persisted row."""
+    lifecycle.require_editable(db, review_session)
     _require_session_member(
         db,
         session_id=review_session.id,
@@ -664,6 +667,7 @@ def update_relationship(
     the ``(reviewer, reviewee)`` UNIQUE constraint. Emits
     ``relationship.updated`` only when at least one field changed;
     returns the changes dict."""
+    lifecycle.require_editable(db, relationship.session)
     session_id = relationship.session_id
     proposed: dict[str, object] = {}
     if reviewer_id is not _UNSET:
@@ -774,6 +778,7 @@ def bulk_inactivate(
     """Flip ``status="inactive"`` on every relationship in
     ``relationship_ids`` not already inactive. Returns the flipped
     ids."""
+    lifecycle.require_editable(db, review_session)
     return bulk_set_status(
         db,
         review_session=review_session,
@@ -800,6 +805,7 @@ def bulk_reactivate(
     """Flip ``status="active"`` on every relationship in
     ``relationship_ids`` not already active. Returns the flipped
     ids."""
+    lifecycle.require_editable(db, review_session)
     return bulk_set_status(
         db,
         review_session=review_session,
@@ -846,6 +852,7 @@ def delete_selected(
     and of ``delete_all_relationships``, whose cascade semantics it
     inherits rather than reinvents. Segment 19I Item 2.
     """
+    lifecycle.require_editable(db, review_session)
     return bulk_delete(
         db,
         review_session=review_session,

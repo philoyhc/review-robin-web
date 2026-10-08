@@ -93,3 +93,30 @@ def test_a_failed_prepare_persists_its_audit_event(
         "committing"
     )
     assert failed[0].detail["context"]["step"] == "validate"
+
+
+def test_a_prepare_failing_at_generate_keeps_its_started_event(
+    committed_client: TestClient, committed_engine: Engine, monkeypatch
+) -> None:
+    """Generate is one unit that rolls itself back on failure (19U Item 1),
+    so a Prepare that fails there must have committed its
+    `workflow_run_started` first, or the run would be audited as a
+    failure with no start."""
+    import app.services.assignments._generate as generate
+
+    session_id = _session_id(committed_client, committed_engine, "fail-gen")
+
+    def _boom(*_args, **_kwargs):
+        raise ValueError("generate failed")
+
+    monkeypatch.setattr(generate, "_load_reconcile_inputs", _boom)
+
+    response = committed_client.post(
+        f"/operator/sessions/{session_id}/workflow/prepare",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    assert "super_step=generate" in response.headers["location"]
+
+    assert _events(committed_engine, session_id, "session.workflow_run_started")
+    assert _events(committed_engine, session_id, "session.workflow_run_failed")
