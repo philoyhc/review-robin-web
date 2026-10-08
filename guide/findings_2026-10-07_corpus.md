@@ -337,11 +337,11 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 **I — root and process documents**
 
 - ~~**I1**~~ med doc rrw_sdd_in_practice.md:46 quotes a functional-spec header ("the functional contract is stable; ship-state may move ahead of it", "points at the sweep record") removed in 19M; spec/README.md:20 gives currency to the sweep records. Also "now 2,416 lines" (2,562) — **Done in #2871.**
-- **I2** low doc rrw_sdd_in_practice.md:205 21 Claude and 4 Codex assessments vs the appendix :308 "19 + 3"
-- **I3** low trim rrw_sdd_in_practice.md undated figures moved: CLAUDE.md "297" lines (:235; 301), tests 4,800 (:306; 5,445 collected), churn 1.1x (:269; 1.2x), duplication 6.3% (:270, :311; 5.8%), spec files 40 (:58; 35), spec lines 24,362 (25,603), docs 18 (14). Re-take with a date, or drop
-- **I4** low doc rrw_sdd_in_practice.md:107 (+ :244, :302) "last 200 merges" plan 76% / spec 31% do not reproduce (77 / 26 at 3559c7a7; 89 / 70 at HEAD); the window is undefined
-- **I5** low doc README.md:42, :81 "any non-archived session can be archived" vs can_archive refuses ready (session_lifecycle.py:80-86); the Workflow card offers it on expired only
-- **I6** low doc README.md:41 "per-row rename" vs the expander edits Name, Code, Deadline and Tags
+- ~~**I2**~~ low doc rrw_sdd_in_practice.md:205 21 Claude and 4 Codex assessments vs the appendix :308 "19 + 3" — **Done in #2905**.
+- ~~**I3**~~ low trim rrw_sdd_in_practice.md undated figures moved: CLAUDE.md "297" lines (:235; 301), tests 4,800 (:306; 5,445 collected), churn 1.1x (:269; 1.2x), duplication 6.3% (:270, :311; 5.8%), spec files 40 (:58; 35), spec lines 24,362 (25,603), docs 18 (14). Re-take with a date, or drop — **Done in #2905** (no edit: the header anchors the figures at `3559c7a7`, where they reproduce).
+- ~~**I4**~~ low doc rrw_sdd_in_practice.md:107 (+ :244, :302) "last 200 merges" plan 76% / spec 31% do not reproduce (77 / 26 at 3559c7a7; 89 / 70 at HEAD); the window is undefined — **Done in #2905** (the window is now defined; the figures reproduce at `3559c7a7`).
+- ~~**I5**~~ low doc README.md:42, :81 "any non-archived session can be archived" vs can_archive refuses ready (session_lifecycle.py:80-86); the Workflow card offers it on expired only — **Done in #2905**.
+- ~~**I6**~~ low doc README.md:41 "per-row rename" vs the expander edits Name, Code, Deadline and Tags — **Done in #2905**.
 - **I7** low author rrw_design_rationale.md:195 email "queued but not yet wired" vs "recorded, not sent" elsewhere (README.md:103); invitations flip to sent, responses-received stays queued
 - **I8** low author new_project_practices_setup.md:307-326 one shared engine builder with URL write-back vs this repo's three (conftest.py:60-62, session.py:30, env.py:25), none writing back
 - ~~**I9**~~ low code tools/practice_kit.py:285 "three" over seven (§1) — **Done in #2896.**
@@ -350,5 +350,5 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 **Outside the corpus** (found by the I read; low, no area id)
 
 - ~~tests/conftest.py:17 cites the Rehydrate gate test under `tests/unit/`; it is in `tests/integration/`.~~ — **Done in #2896.**
-- guide/README.md's `codex_assessment_*` row places `DATED_DOC` in test_doc_conventions.py; it is in test_doc_references.py:77.
-- guide/post_azure_todo_checklist.md:106 gives azure_ask.md 244 lines; it has 258.
+- ~~guide/README.md's `codex_assessment_*` row places `DATED_DOC` in test_doc_conventions.py; it is in test_doc_references.py:77.~~ — **Done in #2905.**
+- ~~guide/post_azure_todo_checklist.md:106 gives azure_ask.md 244 lines; it has 258.~~ — **Done in #2905.**
