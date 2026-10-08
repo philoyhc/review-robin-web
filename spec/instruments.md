@@ -1032,8 +1032,11 @@ request carries identity, Band 1, the Band 2/Band 3 state
 snapshots, and column widths together (its JSON response is detailed
 under "Save" in "Action row" below). The page drives no other save
 endpoint except `/fields/save`, its no-JS fallback, and reads the
-Band 2 preview row from `POST .../preview-sample`, which persists
-nothing. The per-concern routes `/band2-state`, `/column-widths`,
+Band 2 preview row from `POST .../preview-sample`, which saves only
+the sample it picks (`sample_reviewee_name` and
+`sample_group_member_ids` in the instrument's Band 2 state, through
+`set_band2_state`); the Band 1 form state it ran against stays
+unsaved. The per-concern routes `/band2-state`, `/column-widths`,
 `/display-fields/order`, `/identity` and `/edit` (description), and
 the per-field routes `/fields`, `/fields/add-row`,
 `/fields/{fid}/edit`, `/fields/{fid}/delete`, `/fields/{fid}/move`

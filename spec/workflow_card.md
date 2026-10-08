@@ -556,6 +556,12 @@ so the workflow-failure signal line adapts.
   `super_button=prepare&super_step=invite`. Recoverable by
   clicking Prepare again — the step is idempotent and picks up
   where it stopped.
+- **Any other exception.** An error outside the caught set (an
+  `IntegrityError`, an `OperationalError`) still answers 500, but the
+  route first rolls back what the failed step flushed and writes the
+  run's `session.workflow_run_failed`, with
+  `error_message="Unexpected error (<exception class>)."`, so the
+  committed start always has its failure.
 
 **Activate failures:**
 
@@ -567,7 +573,9 @@ Each route emits two audit events bracketing the run:
 
 - `session.workflow_run_started` — once per click, with
   `context.button` carrying `"prepare_session"` or
-  `"activate_session"`. Prepare commits it before its first step.
+  `"activate_session"`. Prepare commits it before its first step;
+  Activate commits it on the warnings detour, where the run pauses
+  for the acknowledgement rather than failing.
 - `session.workflow_run_failed` — emitted in the except branch
   with `context.button`, `context.step`, and
   `context.error_message`. Successful runs are documented by the

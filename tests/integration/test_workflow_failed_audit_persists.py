@@ -120,3 +120,80 @@ def test_a_prepare_failing_at_generate_keeps_its_started_event(
 
     assert _events(committed_engine, session_id, "session.workflow_run_started")
     assert _events(committed_engine, session_id, "session.workflow_run_failed")
+
+
+def test_a_prepare_failing_unexpectedly_records_its_failure(
+    committed_client: TestClient, committed_engine: Engine, monkeypatch
+) -> None:
+    """An exception the route does not expect still answers 500, but the
+    committed `workflow_run_started` gets its `workflow_run_failed`, and
+    nothing the failed step flushed lands with it (findings Bc7)."""
+    import pytest
+    from sqlalchemy.exc import IntegrityError
+
+    import app.services.assignments._generate as generate
+
+    session_id = _session_id(committed_client, committed_engine, "fail-odd")
+
+    def _boom(*_args, **_kwargs):
+        raise IntegrityError("INSERT", {}, Exception("duplicate"))
+
+    monkeypatch.setattr(generate, "_load_reconcile_inputs", _boom)
+
+    with pytest.raises(IntegrityError):
+        committed_client.post(
+            f"/operator/sessions/{session_id}/workflow/prepare",
+            follow_redirects=False,
+        )
+
+    assert _events(committed_engine, session_id, "session.workflow_run_started")
+    failed = _events(committed_engine, session_id, "session.workflow_run_failed")
+    assert len(failed) == 1
+    assert failed[0].detail["context"]["step"] == "generate"
+    assert failed[0].detail["context"]["error_message"] == (
+        "Unexpected error (IntegrityError)."
+    )
+    with Session(bind=committed_engine) as verify:
+        assert verify.get(ReviewSession, session_id).status == "draft"
+
+
+def test_activate_commits_its_started_event_before_the_warnings_detour(
+    committed_client: TestClient, committed_engine: Engine, monkeypatch
+) -> None:
+    """The warnings detour pauses the run rather than failing it, but the
+    click's `workflow_run_started` must still survive the request
+    (findings Bc6)."""
+    from types import SimpleNamespace
+
+    import app.web.routes_operator._workflow as workflow
+
+    session_id = _session_id(committed_client, committed_engine, "act-detour")
+    with Session(bind=committed_engine) as setup:
+        setup.get(ReviewSession, session_id).status = "validated"
+        setup.commit()
+
+    monkeypatch.setattr(workflow.validation, "validate_session_setup", lambda *_: [])
+    monkeypatch.setattr(
+        workflow.lifecycle,
+        "build_readiness_report",
+        lambda _issues: SimpleNamespace(
+            can_activate=True, has_non_blocking_findings=True, errors=[]
+        ),
+    )
+
+    response = committed_client.post(
+        f"/operator/sessions/{session_id}/workflow/activate",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    assert "/validate" in response.headers["location"], (
+        "Activate did not take the warnings detour: "
+        f"{response.headers['location']}"
+    )
+
+    started = _events(committed_engine, session_id, "session.workflow_run_started")
+    assert len(started) == 1
+    assert started[0].detail["context"]["button"] == "activate_session"
+    assert not _events(committed_engine, session_id, "session.workflow_run_failed")
+    with Session(bind=committed_engine) as verify:
+        assert verify.get(ReviewSession, session_id).status == "validated"
