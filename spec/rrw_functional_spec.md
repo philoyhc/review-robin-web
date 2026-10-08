@@ -1131,8 +1131,8 @@ On submit, the session is created as `draft`, the operator is set
 as the first owner alongside any staged co-owners, and the operator lands on **Session
 Home** — where the Session details config card is
 the surface for filling in any remaining fields. The Sessions-lobby
-Duplicate and Duplicate settings only actions land on Session Home
-the same way.
+`Duplicate` and `Duplicate settings only` actions land on Session
+Home the same way.
 
 ### 9.3 Session Home
 
@@ -1451,9 +1451,8 @@ a reviewer-centric Operations-row tab.
   Right pane: the filter strip — Status dropdown + free-text
   search + Clear / **`Search`**.
 - **Invitations table** — one row per reviewer carrying:
-  reviewer name + email, email status (the latest outbox
-  row's status, `sent` or `queued` while sending is off, or `not
-  sent` with no row), email-sent timestamp, per-reviewer progress
+  reviewer name + email, email status (the latest invitation
+  outbox row's status, or `not sent` with no row), email-sent timestamp, per-reviewer progress
   (not started / in progress / submitted), required-fields-
   filled count, last-reminder timestamp, per-row Send /
   Send-reminder / Regenerate actions (lifecycle-gated).
@@ -2140,7 +2139,7 @@ Relationships and Settings) are designed for **byte-stable round trip** — an
 export-then-import cycle does not perturb the session's
 config. Deterministic row order, deterministic field order,
 empty-string handling for missing optional cells and
-vocabulary normalisation together guarantee this. Observers
+vocabulary normalization together guarantee this. Observers
 round-trips too — it has a wired importer and extract, and
 `Status` and `CohortRule` read back — but is not claimed
 byte-stable (`spec/csv_contracts.md` "Round-trip stability
