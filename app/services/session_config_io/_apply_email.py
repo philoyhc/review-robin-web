@@ -44,9 +44,11 @@ def _apply_email_kv(
         raise _ParseError(
             f"unknown email override slot {field_path!r}"
         )
-    if value:
+    if value.strip():
         plan.email_overrides[legacy_key] = value
-    # Empty cell ⇒ key absent ⇒ "use default" (matches resolver).
+    # A blank or whitespace-only cell ⇒ key absent ⇒ "use default", as
+    # saving the field blank in the editor does (findings D4): stored, it
+    # would show the editor an override the resolver ignores.
     del data_type  # unused; cell is always string here
 
 

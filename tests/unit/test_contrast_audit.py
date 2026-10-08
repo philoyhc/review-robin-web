@@ -587,3 +587,20 @@ def test_the_unresolved_branch_clears_every_contrast_state() -> None:
         f"{sorted(painted - cleared_names)} can be added by the paint step "
         "but is never removed, so a row that stops resolving keeps it."
     )
+
+
+def test_the_customizer_paints_success_pill_text_with_its_fg_token() -> None:
+    """``body.ui-v2 .pill.pill-success`` takes ``--status-success-fg``; the
+    customizer's facet named ``-accent``, so editing it there changed a
+    token the pill does not use (findings 2026-10-07 E7)."""
+    gen = (
+        Path(__file__).resolve().parents[2] / "tools/theme_customizer.gen.py"
+    ).read_text(encoding="utf-8")
+    assert '_pill("success", "Success pill")' in gen
+    assert '"--status-success-accent")]),' not in gen
+    # …and ``_pill`` paints with the token the pill's own rule uses.
+    block = re.search(
+        r"body\.ui-v2 \.pill\.pill-success \{([^}]*)\}", css()
+    )
+    assert block is not None and "var(--status-success-fg)" in block.group(1)
+    assert '("text", "fg", f"--status-{name}-fg")' in gen

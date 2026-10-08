@@ -425,8 +425,9 @@ page). The theme customizer's facet is therefore named **`Help card`**,
 not `Instrument help card` — a facet named after one caller would
 misdescribe what editing it changes.
 
-**`--card-help-border` is darker than `--card-help-bg`** — `--gray` over
-`--gray-mist` in light, `--slate-deep` over `--ink-muted` in dark. It
+**`--card-help-border` is two palette steps off `--card-help-bg`** —
+darker in light (`--gray` over `--gray-mist`), lighter in dark
+(`--slate-deep` over `--ink-muted`). It
 sits **between a soft edge and an outline**: **2.54:1** against the page
 in light and **1.95:1** in dark (2.05:1 and 1.48:1 against its own
 fill). Short of the 3:1 WCAG 1.4.11 asks of a UI-component boundary, so

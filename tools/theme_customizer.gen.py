@@ -148,10 +148,9 @@ TARGETS = [
     (".danger-zone", "Danger zone card",
      [("background", "bg", "--card-warning-bg"), ("text", "fg", "--text-body"),
       ("border", "border", "--card-warning-border")]),
-    # Border facet included even though it is invisible by design (it resolves
-    # to the fill's primitive): Part C is how you find out *which* token paints
-    # an edge, and leaving it out is how this row went stale when 19C Item 8
-    # moved the fill off --border-default.
+    # Border facet included: the help card's edge is its own token, two palette
+    # steps off the fill, and Part C is how you find out *which* token paints
+    # an edge.
     # Named "Help card", not "Instrument help card": since 19E rung 6a the
     # --card-help-* tokens also paint the page-guidance disclosure on every
     # Setup page, so a facet named after one caller would misdescribe what
@@ -170,9 +169,10 @@ TARGETS = [
       ("border", "border", "--border-default")]),
     _pill("error", "Error pill"),
     _pill("warning", "Warning pill"),
-    # info / success text are remapped under body.ui-v2 (not the -fg token)
+    # info text is remapped under body.ui-v2 (not the -fg token); success
+    # uses its -fg token, as the ui-v2 rule does (findings E7)
     (".pill-info", "Info pill", [("infill", "bg", "--status-info-bg"), ("text", "fg", "--text-body")]),
-    (".pill-success", "Success pill", [("infill", "bg", "--status-success-bg"), ("text", "fg", "--status-success-accent")]),
+    _pill("success", "Success pill"),
     _pill("super", "Super pill"),
     (".warning-banner", "Warning banner",
      [("background", "bg", "--status-warning-bg"), ("text", "fg", "--status-warning-fg"),

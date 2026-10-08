@@ -241,8 +241,9 @@
         --card-warning-fg: var(--amber-deep);
         /* Help cards — the Instruments page's slabs (`.rs-help-card`)
            and the Setup pages' guidance disclosure (`.page-guidance`).
-           Border is one step darker than the fill: a soft edge, ~1.5:1
-           against the page in both themes, which gives the card a shape
+           Border is two palette steps off the fill (darker in light,
+           lighter in dark): a soft edge against the page in both themes, which
+           gives the card a shape
            without outlining it. It used to resolve to the fill's own
            primitive so the edge vanished — right while the slab sat
            *inside* another card (19C Item 8), wrong once 19E rung 6b
@@ -452,11 +453,11 @@
          text on the slab would have hit 3.96:1 light / 3.41:1 dark, both
          under AA).
 
-         `--card-help-border` resolves to the same primitive as the fill,
-         so the slab has no visible edge — the point of this variant,
-         which `.card`'s 2px `--border-default` otherwise gives it. They
-         map independently rather than one pointing at the other, so
-         either can be repointed alone. (19C Item 8.)
+         `--card-help-border` is two palette steps off the fill — a soft
+         edge, where `.card`'s 2px `--border-default` would outline the
+         slab (see the token's own comment). They map independently
+         rather than one pointing at the other, so either can be
+         repointed alone.
 
          Selector co-targets `.card` to outweigh the later
          `body.ui-v2 .card` background rule (equal class specificity but
@@ -1087,8 +1088,8 @@
          for the first one, which is the reason it exists.
 
          Not a drop shadow, which is the other common answer: the app's
-         eight `box-shadow` uses are all solid offset markers and focus
-         rings, so a blurred one would be the first soft shadow in the
+         `box-shadow` uses are all solid: offset markers, chip edges,
+         selection rings and focus rings, so a blurred one would be the first soft shadow in the
          codebase and would read as a different design language.
 
          `fit-content` makes the mat hug its picture instead of running
@@ -1438,8 +1439,8 @@
          cell before it.
 
          No drop shadow on the panel, following the rest of the
-         sheet — every `box-shadow` in here is a solid offset marker
-         or a focus ring. An opaque `--surface-card` and a border do
+         sheet — every `box-shadow` in here is solid (offset markers,
+         chip edges, selection rings and focus rings). An opaque `--surface-card` and a border do
          the separating. */
       body.ui-v2 .table-pager-cluster {
         display: inline-flex;
@@ -1970,9 +1971,9 @@
         transform: rotate(180deg);
       }
       /* 19P.1 rung 2a — two columns, but only where the card is full
-         width. TWO pages opt in now: Reviewers here, and Observers
-         since 19P.2 rung 5 retired its `.card-columns`. The macro's
-         other five placements sit in one column of such a pair, where
+         width. The four roster pages opt in (Reviewers, Reviewees,
+         Observers and Relationships). The macro's other placements sit
+         in one column of such a pair, where
          splitting a ~60-character measure again would give two
          ~30-character ribbons. So the page opts in
          (`guidance(full_width=true)`) rather than the rule applying
@@ -2034,13 +2035,6 @@
       body.ui-v2 .card.danger-zone h2 {
         color: var(--card-warning-fg);
       }
-      /* Disabled card — plain greying for cards whose body is
-         intentionally inert in the current state. Used on Session
-         Home where the contextual primary action card carries any
-         explanatory messaging, so a yellow lock card here would
-         duplicate that signal — see spec/session_home.md
-         "Disabled treatment on Home is plain greying-out, not
-         yellow lock cards". */
       /* Placeholder card — single canonical treatment for cards
          whose underlying feature is not yet implemented (today:
          Quick Setup and Extract Data on Session Home). Both
@@ -3060,7 +3054,7 @@
          so the grid below silently defeated the attribute: the panel
          rendered open on load and the toggle only changed the button's
          label. Restored the way `base.html` already does it for
-         `.btn[hidden]` (`:713`). The suite has no layout engine, so the
+         `.btn[hidden]`. The suite has no layout engine, so the
          markup assertion that `hidden` is present passed throughout. */
       body.ui-v2 .unlock-panel[hidden] { display: none; }
       body.ui-v2 .unlock-panel {
@@ -3073,7 +3067,7 @@
         gap: 20px;
         align-items: start;
       }
-      /* The base `.card` carries `margin-bottom: 20px` (`:543`), which
+      /* The base `.card` carries `margin-bottom: 20px`, which
          `body.ui-v2 .card` deliberately does not override — so inside a
          gapped container it COMPOUNDS, and the two stacked cards sat 36px
          apart against the page's 20px. Zeroed here exactly as

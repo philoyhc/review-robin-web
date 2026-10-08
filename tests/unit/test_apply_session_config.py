@@ -1680,3 +1680,25 @@ def test_an_import_that_leaves_the_list_as_stored_is_not_refused(
     assert apply_session_config(
         db, dst, [Row("session.help_contact", "help@example.edu", "string")]
     ).errors == []
+
+
+def test_a_whitespace_only_email_override_cell_resets(db: Session) -> None:
+    """A cell of only spaces resets the field, as saving it blank or
+    whitespace-only in the editor does; stored, it would show the editor
+    an override the resolver ignores (findings 2026-10-07 D4)."""
+    review_session = _bare_session(db, code="emails-d4")
+    review_session.email_template_overrides = {"invitation_subject": "old"}
+    db.flush()
+    apply_session_config(
+        db,
+        review_session,
+        [
+            Row("email_overrides.invitation.subject", "   ", "string"),
+            Row("email_overrides.invitation.body", "\t \n", "string"),
+            Row("email_overrides.reminder.subject", " Kept ", "string"),
+        ],
+    )
+    db.refresh(review_session)
+    assert review_session.email_template_overrides == {
+        "reminder_subject": " Kept "
+    }

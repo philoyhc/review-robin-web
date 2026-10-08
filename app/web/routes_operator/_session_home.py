@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -59,6 +60,7 @@ from app.web.routes_operator._shared import (
     _require_not_ready,
     _templates,
     parse_session_deadline,
+    session_payload_error,
 )
 
 
@@ -505,20 +507,23 @@ def _apply_session_config_form(
             detail=str(exc),
         ) from exc
 
-    payload = SessionCreate(
-        name=name,
-        code=code,
-        description=description or None,
-        deadline=parsed_deadline,
-        help_contact=help_contact or None,
-        scheduled_activate_at=parsed_scheduled_activate_at,
-        invite_offsets=parsed_invite_offsets,
-        reminder_offsets=parsed_reminder_offsets,
-        relationships_enabled=relationships_enabled,
-        observers_enabled=observers_enabled,
-        responses_release_at=parsed_responses_release_at,
-        responses_release_until=parsed_responses_release_until,
-    )
+    try:
+        payload = SessionCreate(
+            name=name,
+            code=code,
+            description=description or None,
+            deadline=parsed_deadline,
+            help_contact=help_contact or None,
+            scheduled_activate_at=parsed_scheduled_activate_at,
+            invite_offsets=parsed_invite_offsets,
+            reminder_offsets=parsed_reminder_offsets,
+            relationships_enabled=relationships_enabled,
+            observers_enabled=observers_enabled,
+            responses_release_at=parsed_responses_release_at,
+            responses_release_until=parsed_responses_release_until,
+        )
+    except ValidationError as exc:
+        raise session_payload_error(exc) from exc
     # One commit for the schedule, the details and the zone: each write
     # gates, and the session lock the sent-entry check took must hold
     # until the lists it checked are written, so a refusal at the zone's

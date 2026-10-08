@@ -70,12 +70,12 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
 
 **Low**
 
-- **C4** Over-long Name or Code on Session Home's Details Save, or on
+- ~~**C4**~~ — **Done in #2896** (a 422, shared with the lobby). Over-long Name or Code on Session Home's Details Save, or on
   `POST /operator/sessions`, raises an unhandled `ValidationError` (500):
   `_session_home.py` and `_quick_setup.py` build `SessionCreate` outside a
-  `try`, where the lobby catches it. The timezone write commits first.
+  `try`, where the lobby catches it.
   `maxlength` hides it in a browser. *Reproduced.* Code.
-- **D4** A whitespace-only email override cell in a Settings import is
+- ~~**D4**~~ — **Done in #2896.** A whitespace-only email override cell in a Settings import is
   stored as an override (`_apply_email.py` tests `if value:`);
   `spec/email_template_editor.md` says whitespace resets. The editor then
   shows it overridden. *Reproduced.* Code.
@@ -85,7 +85,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   `/owners` only, so a Details Save relocks the card.
   `spec/quick_setup_card_spec.md` says the unlock survives Session Home
   submissions. Author, then write.
-- **B7** Three Validate `why` lines name internals the spec forbids:
+- ~~**B7**~~ — **Done in #2896** (and a registry test keeps internals out of every why line). Three Validate `why` lines name internals the spec forbids:
   `include`, `rule_set_id` with a spec path, and `/me/sessions/{id}/results`
   (`validation.py`). Code (copy).
 - **F4** The audit validator checks `counts` and `refs` only as
@@ -94,13 +94,13 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
 - **A4** A Group instrument with no boundary tag previews every active
   reviewee as group members on the server (`views/_instruments.py`) where
   the client intersects. Not run in a browser. Author.
-- **E7** `theme_customizer.gen.py` maps `.pill-success` text to
+- ~~**E7**~~ — **Done in #2896.** `theme_customizer.gen.py` maps `.pill-success` text to
   `--status-success-accent`; the pill uses `--status-success-fg`. A stale
   comment beside it names `--card-help-border`'s old primitive. Code
   (tooling).
-- **I9** `tools/practice_kit.py` reports "all three harness lines present"
+- ~~**I9**~~ — **Done in #2896.** `tools/practice_kit.py` reports "all three harness lines present"
   over a list of seven. Code (copy).
-- **Stale copy and comments.** No behavior: the audit-log page's "per-row
+- ~~**Stale copy and comments**~~ — **Done in #2896** (B6's docstring only; its spec half stays a row). No behavior: the audit-log page's "per-row
   pretty-print lands in 16C PR 3" (E11); `base.html`'s help-card contrast,
   border primitive, `.page-guidance-wide` opt-in count, two line refs and a
   box-shadow tally (E15); the unattached comment above `.card.placeholder`
@@ -252,7 +252,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**B4**~~ med author lifecycle.md:886-889 aged value stays put vs Details Save re-validates the stored Start (§1) — **Done in #2870.**
 - **B5** low author lifecycle.md:698,727 archive_offset default P30D vs nullable, no default, nothing writes it (review_session.py:108); settings_inventory.md:117 "no editor, CSV only"
 - **B6** low spec assignments.md:932-937 reviewer-tail `@` guard "inherited from the roster pages" — C5 dropped it from filter_reviewers_rows / filter_observers_rows (_filters.py:316,526); assignments_picked_handles (:408) keeps it, its docstring (:394-404) stale
-- **B7** low code validate_page.md:518-520 no internal names in a why line vs validation.py:1098-1112, 1171-1188, 1205-1218 (§1)
+- ~~**B7**~~ low code validate_page.md:518-520 no internal names in a why line vs validation.py:1098-1112, 1171-1188, 1205-1218 (§1) — **Done in #2896.**
 - **B8** low trim lifecycle.md:130-131 "(author's ruling, 2026-10-05, findings Cc5)", :836-837 "(findings G22, ruled 2026-10-06)", :849 "(author's ruling, 2026-10-06)"; self-staling "no callers": lifecycle.md:746-748, workflow_card.md:219, :933-938. Keep lifecycle.md:621-622 (data compatibility)
 
 **C — Setup, Session Home and the lobby**
@@ -260,7 +260,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**C1**~~ low write quick_setup_card_spec.md:25 unavailable list omits archived, table :112-118 has no archived row; session_home.md:486-488 lists the same four (code greys archived, views/_quick_setup.py:196; session_home.md:517 right) — **Done in #2873** (the archived row, with B1).
 - **C2** low spec session_home.md:540 "the five Setup pages" — six
 - **C3** low spec session_home.md:149-150,568-575 the pause form is ready → draft only vs shared for expired (next_action_card.html:215-220; revert_session_to_draft accepts both)
-- **C4** low code sessions_overview.md:277-281 over-long name is a form error vs 500 on Session Home /config and Create (§1)
+- ~~**C4**~~ low code sessions_overview.md:277-281 over-long name is a form error vs 500 on Session Home /config and Create (§1) — **Done in #2896.**
 - **C5** low author quick_setup_card_spec.md:81 unlock survives Session Home submissions vs cleared by /config, /revert, /workflow/*, /delete-data (main.py:41-42) (§1); session_owners.md:80-83 accurate
 - **C6** low trim sessions_overview.md Rehydrate off-by-default stated at :56-57, :195-196, :489-494; Go to Archive unconditional at :173-180, :200-203
 - **C7** low trim setup_pages.md:217-220 narrating parenthetical; sessions_overview.md:341-344 "undecided … new_ux_ideas.md" hedge
@@ -270,7 +270,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **D1** — carried, old D4, reproduced: rehydrate.md:417 every row loaded or dropped vs `_stage` overwrites a duplicate (assignment, field) — "rows 2, loaded 1, dropped 0", also when two instruments share a short label (responses_import.py:293-306). Not counted.
 - **D2** low author rehydrate.md:460-466 Scale: streaming, batched inserts, a higher bound vs a full list and one flush (responses_import.py:129-175, 272-425); the MAX_ROWS / MAX_BYTES non-reuse holds
 - **D3** low write csv_contracts.md:992-1000 roster re-upload deletes every pair naming a removed row vs every roster row deleted and re-added, so every relationship, assignment and response goes, even on an identical file (csv_imports.py:1189-1206)
-- **D4** low code email_template_editor.md:100,260-261 whitespace resets vs stored as an override (_apply_email.py:49-52) (§1)
+- ~~**D4**~~ low code email_template_editor.md:100,260-261 whitespace resets vs stored as an override (_apply_email.py:49-52) (§1) — **Done in #2896.**
 - **D5** low author csv_contracts.md:126,141,317 Status `active` / `inactive` only, else an error, vs lowercased first (csv_imports.py `_parse_status`); only Relationships (:355) says case-insensitive
 - **D6** low spec rehydrate.md:374-375 import lowercases emails vs stored as typed, only comparison keys normalized (csv_imports.py:1143-1166)
 - **D7** low trim csv_contracts.md:957 names `_session_config_csv` — none; the code is export_settings_csv (_extracts.py:84) and build_setup_bundle (zip_bundle.py:90)
@@ -285,15 +285,15 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **E4** low spec ui_elements.md:455 toggle note names `col-chip` (no such class; `.tag-chip` in `.col-chip-row`) and audience chips, deleted in E14 (the Visibility card is now a static pill-count and mode-cycle chips)
 - **E5** low trim ui_elements.md:1017-1018 "since 2026-10-06 (findings E14…)", :1039 "E16;"; visual_style_rrw.md:225-226 "(findings Fc3); Segment 14B retires it". Keep the reasons
 - **E6** low spec color_tokens.md:22 "tools/ harness LABELS" — none; theme_customizer.gen.py TARGETS (:110)
-- **E7** low code ui_elements.md:614 success pill text `--status-success-fg` vs the customizer's `--status-success-accent` (theme_customizer.gen.py:173-175) (§1)
+- ~~**E7**~~ low code ui_elements.md:614 success pill text `--status-success-fg` vs the customizer's `--status-success-accent` (theme_customizer.gen.py:173-175) (§1) — **Done in #2896.**
 - **E8** low spec ui_elements.md:178-179 H2 top margin zeroed when the card's first child vs zero everywhere (base.html:1776-1781)
 - **E9** low write `.rrw-sort-btn`, `th.rrw-sortable`, `.rrw-sort-badge` (base.html:4306-4351, eight tables) in neither ui_elements.md nor operator_button_audit.md (§11 has the cloned `.sort-btn`)
 - **E10** low author sys_admin_session_audit_log.html:7-81 local `<style>` (audit-log table, columns, detail) uncatalogued, against base.html owning the CSS (as the E14 ruling)
-- **E11** low code sys_admin_session_audit_log.html:98-100 "lands in 16C PR 3" — it ships (§1)
-- **E12** low author ui_elements.md:278-288 `.card.placeholder` (base.html:2056-2068): no markup uses it; the comment at base.html:2034-2040 is unattached
+- ~~**E11**~~ low code sys_admin_session_audit_log.html:98-100 "lands in 16C PR 3" — it ships (§1) — **Done in #2896.**
+- **E12** low author ui_elements.md:278-288 `.card.placeholder` (base.html:2056-2068): no markup uses it (the unattached comment above it went in #2896)
 - **E13** low author ui_elements.md:626 every interactive chip has a 2px edge vs the dashboard's role pills and `rs-role-nav-muted` (reviewer/dashboard.html:53-67, reviewer/_role_chips.html:26) with none
 - **E14** low spec operator_ui_concept.md:386 quotes the outbox intro incompletely (the partial adds reminder, responses-received and raw-URL sentences); the partial's header says sys_admin_sessions.html only, but sys_admin_session_outbox.html renders it
-- **E15** low code base.html comments: :242-252 help-card border "~1.5:1" (now 2.54 / 1.95), :455-459 border primitive, :1971 "TWO pages opt in" (all four rosters), :3024, :3037 line refs, :1087 "eight box-shadow uses" (§1)
+- ~~**E15**~~ low code base.html comments: :242-252 help-card border "~1.5:1" (now 2.54 / 1.95), :455-459 border primitive, :1971 "TWO pages opt in" (all four rosters), :3024, :3037 line refs, :1087 "eight box-shadow uses" (§1) — **Done in #2896.**
 
 **F — architecture, roles and operations**
 
@@ -344,11 +344,11 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **I6** low doc README.md:41 "per-row rename" vs the expander edits Name, Code, Deadline and Tags
 - **I7** low author rrw_design_rationale.md:195 email "queued but not yet wired" vs "recorded, not sent" elsewhere (README.md:103); invitations flip to sent, responses-received stays queued
 - **I8** low author new_project_practices_setup.md:307-326 one shared engine builder with URL write-back vs this repo's three (conftest.py:60-62, session.py:30, env.py:25), none writing back
-- **I9** low code tools/practice_kit.py:285 "three" over seven (§1)
+- ~~**I9**~~ low code tools/practice_kit.py:285 "three" over seven (§1) — **Done in #2896.**
 - **I10** low author azure_ask.md:228-229 migrations round-tripped on SQLite and Postgres, wrong at its date (2026-07-09). A dated record; old I5 left it so
 
 **Outside the corpus** (found by the I read; low, no area id)
 
-- tests/conftest.py:17 cites the Rehydrate gate test under `tests/unit/`; it is in `tests/integration/`.
+- ~~tests/conftest.py:17 cites the Rehydrate gate test under `tests/unit/`; it is in `tests/integration/`.~~ — **Done in #2896.**
 - guide/README.md's `codex_assessment_*` row places `DATED_DOC` in test_doc_conventions.py; it is in test_doc_references.py:77.
 - guide/post_azure_todo_checklist.md:106 gives azure_ask.md 244 lines; it has 258.

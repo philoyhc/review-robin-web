@@ -257,7 +257,8 @@ override is set, and the `enabled` row as lowercase `true` unless stored
 Import (`session_config_io/_apply_email.py`) parses each row against
 `^email_overrides\.(\w+)\.(\w+)$`; a path that does not match, or a
 `<kind>_<slot>` that is not in `OVERRIDE_KEYS`, is a **parse error**
-(phase 1, no writes). A blank cell means *key absent* — the same
+(phase 1, no writes). A blank or whitespace-only cell means *key
+absent* — the same
 fall-through the resolver applies — and the apply phase **replaces the
 JSON column wholesale** from the parsed dict. The
 `responses_received.enabled` row is stored the way the toggle stores

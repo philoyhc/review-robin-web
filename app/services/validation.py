@@ -1099,13 +1099,14 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         source="reviewees",
         severity=Severity.warning,
         why=(
-            "The /me/sessions/{id}/results surface gates on the "
-            "reviewee's identifier being a deliverable email — "
-            "without one, the reviewee can't authenticate and so "
-            "won't see the responses written about them. Non-blocking "
-            "in case the operator is intentionally using anonymous "
-            "identifiers (analysis-only sessions); the warning just "
-            "names the implication."
+            "A reviewee sees the responses written about them when "
+            "they sign in with the email their identifier holds. "
+            "With no email there, nothing they sign in as matches "
+            "them, so they can never reach those responses. "
+            "Non-blocking in case "
+            "the identifiers are meant to be anonymous (an "
+            "analysis-only session); the warning just names the "
+            "implication."
         ),
         fix_url=_reviewees_url,
         fix_page_label="Reviewees Setup",
@@ -1172,15 +1173,11 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         source="instruments",
         severity=Severity.warning,
         why=(
-            "Retired in Wave 5 PR 5.3 and inert by design — this "
-            "rule raises no findings, so no operator reads this "
-            "copy. A NULL ``rule_set_id`` is never \"not set up\": "
-            "every instrument defaults to the synthetic Full "
-            "Matrix on untouched Band 1. "
-            "``instruments.no_visible_response_fields`` covers the "
-            "readiness gap. The key stays registered so audit "
-            "history remains addressable "
-            "(``spec/validate_page.md``)."
+            "Retired: this check raises no findings. An instrument "
+            "with no assignment rules set is never \"not set up\" — "
+            "it uses Full Matrix by default — and the check for "
+            "visible response fields covers whether it is ready. "
+            "It stays listed so past audit entries still name it."
         ),
         fix_url=_instruments_url,
         fix_page_label="Instruments Setup",
@@ -1206,13 +1203,13 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         source="assignments",
         severity=Severity.warning,
         why=(
-            "Reviewers see assignments only for rows where the "
-            "``include`` flag is True. When every row across every "
-            "instrument is deactivated — or no rows have been "
-            "generated yet — reviewers land on an empty surface "
-            "and have nothing to do. Re-Generate or re-include rows "
-            "before activating, or proceed knowing reviewers will "
-            "see no work."
+            "Reviewers see only active assignments. When every "
+            "assignment across every instrument is inactive on the "
+            "Assignments page — or none has been generated yet — "
+            "reviewers land on an empty page and have nothing to do. "
+            "Prepare again, or select assignments there and use "
+            "Activate, before activating the session; or proceed "
+            "knowing reviewers will see no work."
         ),
         fix_url=_assignments_url,
         fix_page_label="Assignments",
