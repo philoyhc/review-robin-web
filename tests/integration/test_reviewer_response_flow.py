@@ -2509,6 +2509,9 @@ def test_surface_visibility_policy_card_reflects_persisted_policy(
     # summaries" (operators see "summarized" as the encoded mode;
     # the reviewer-surface wording is gentler).
     assert "Anonymized summaries" in body
+    # Each mode is a display-only pill, as on Band 2's preview of this
+    # card (findings 2026-10-07 A7).
+    assert '<span class="pill pill-count">Anonymized summaries</span>' in flat
 
 
 def test_an_excluded_group_member_keeps_the_groups_answers(

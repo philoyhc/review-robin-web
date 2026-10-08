@@ -810,7 +810,7 @@ the visibility editor — the same locked / unlocked swap as the
 description box above it. **Locked**, it renders the
 reviewer's own two-row table (`data-lock-only`), each mode as a
 display-only pill (`pill pill-count`, carrying
-`data-new-model-vp-preview-cell`) rather than plain text — see
+`data-new-model-vp-preview-cell`), as the reviewer's card shows it — see
 "Reviewer-surface transparency card" in `spec/visibility_policy.md` §6.
 **Unlocked**, it is
 the editor (`data-unlock-only`, `data-new-model-vp-editor`
