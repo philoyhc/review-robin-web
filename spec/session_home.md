@@ -460,9 +460,11 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   transition whose `@view-transition` rule no stylesheet declares —
   `rrwSaveFade` adds it from script on the way out and on the way
   back, unless the reader prefers reduced motion — so every other
-  navigation stays a plain load. A browser without either reloads at
-  the top as before. An in-place Lock also drops `?editing` from the
-  address (`history.replaceState`), so a reload stays locked. The
+  navigation stays a plain load. A browser without view transitions
+  skips the fade and keeps the scroll; without JS the reload lands at
+  the top. An in-place Lock or Unlock rewrites `?editing` in the
+  address (`history.replaceState`), so a reload keeps the card's
+  mode. The
   tag write runs **after** the config apply, so a save the card
   rejects writes no tags either, and every audit event one save
   produces shares one correlation id (the `audit_events`

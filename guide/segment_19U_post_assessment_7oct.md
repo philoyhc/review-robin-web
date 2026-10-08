@@ -434,5 +434,5 @@ browser check is owed.
 ### Doc impact
 
 - `spec/session_home.md` — "Edit affordance behavior": Save returns unlocked, no fragment; the scroll restore, the view transition, Lock's `replaceState`.
-- `spec/rrw_functional_spec.md` — §8.8: Save returns unlocked at the operator's scroll; Lock locks.
+- `spec/rrw_functional_spec.md` — §9.4: Save returns unlocked at the operator's scroll; Lock locks.
 - `spec/operator_button_audit.md` — §5b row 156: Save's return.
