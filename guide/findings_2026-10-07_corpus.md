@@ -298,18 +298,18 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 **F — architecture, roles and operations**
 
 - ~~**F1**~~ med spec operations_pages.md:292 reviewer name links "when an Invitation row exists" vs :373-381 every row, reviewer-keyed; code links unconditionally (session_invitations.html:218-221) — **Done in #2871.**
-- **F2** low trim operations_pages.md:402-404 "(findings Fc2); Segment 14B restores the label" (keep the constraint); :200-206 narrates "was aligned … was left counting"
+- ~~**F2**~~ low trim operations_pages.md:402-404 "(findings Fc2); Segment 14B restores the label" (keep the constraint); :200-206 narrates "was aligned … was left counting" — **Done in #2902.**
 - **F3** low author architecture.md:205-206 creation is `{collection}/add` vs reviewers/create, observers/create, page-break/create and bare collection POSTs (_setup_reviewers.py:370)
 - **F4** low author architecture.md:687-690, 759-761 counts non-negative, refs keys end `_id` vs audit.py:313-319 (§1)
-- **F5** low spec audience_and_identity_model.md:167-169 Promote / Demote shown only to a super-admin vs can_manage_admins, also any admin while none is configured (_sys_admin.py:233-236); permissions.md:170-177 right
-- **F6** low spec audience_and_identity_model.md:147-151 per-row checkbox and bulk toolbar vs single selection (sys_admin_users.html:102-109, 390-395)
-- **F7** low spec permissions.md:117 re-resolve list omits bulk-unarchive and bulk-delete-archived (_lobby.py:223-270)
-- **F8** low spec permissions.md:193 not_in_workspace = "lacks both flags"; also when no users row matches (_session_home.py:759-764)
-- **F9** low write permissions.md:82,222 401 only for no email claim vs also no headers with fake auth off (identity.py:113-117)
-- **F10** low spec permissions.md:305 points at operator_ui_concept.md "Sys Admin"; the heading is "6. System Admin / System Setup Pages"
-- **F11** low spec architecture.md:370 "optional list_options string" vs column list_csv (instrument_field.py:112-113); list_options is a Band 2 payload key
-- **F12** low spec architecture.md:471 "Generate is idempotent (operator-paced…)" — no Generate control; generate_invitations is a Prepare step (_workflow.py:248)
-- **F13** low spec email_infra_options.md:74-83 EmailMessage cc / bcc bare `list[str]` vs default_factory (email_send.py:62-63)
+- ~~**F5**~~ low spec audience_and_identity_model.md:167-169 Promote / Demote shown only to a super-admin vs can_manage_admins, also any admin while none is configured (_sys_admin.py:233-236); permissions.md:170-177 right — **Done in #2902.**
+- ~~**F6**~~ low spec audience_and_identity_model.md:147-151 per-row checkbox and bulk toolbar vs single selection (sys_admin_users.html:102-109, 390-395) — **Done in #2902.**
+- ~~**F7**~~ low spec permissions.md:117 re-resolve list omits bulk-unarchive and bulk-delete-archived (_lobby.py:223-270) — **Done in #2902.**
+- ~~**F8**~~ low spec permissions.md:193 not_in_workspace = "lacks both flags"; also when no users row matches (_session_home.py:759-764) — **Done in #2902.**
+- ~~**F9**~~ low write permissions.md:82,222 401 only for no email claim vs also no headers with fake auth off (identity.py:113-117) — **Done in #2902.**
+- ~~**F10**~~ low spec permissions.md:305 points at operator_ui_concept.md "Sys Admin"; the heading is "6. System Admin / System Setup Pages" — **Done in #2902.**
+- ~~**F11**~~ low spec architecture.md:370 "optional list_options string" vs column list_csv (instrument_field.py:112-113); list_options is a Band 2 payload key — **Done in #2902.**
+- ~~**F12**~~ low spec architecture.md:471 "Generate is idempotent (operator-paced…)" — no Generate control; generate_invitations is a Prepare step (_workflow.py:248) — **Done in #2902.**
+- ~~**F13**~~ low spec email_infra_options.md:74-83 EmailMessage cc / bcc bare `list[str]` vs default_factory (email_send.py:62-63) — **Done in #2902.**
 - **F14** low author email_infra_options.md ✅ / ◻ ship ticks at :348-353, :409-415, :483-485, :549-551 survived old F13
 
 **G — the functional spec** (all rrw_functional_spec.md)
