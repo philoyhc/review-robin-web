@@ -88,6 +88,8 @@ The target is built in `app/web/routes_reviewer/_dashboard.py`.
   malformed or out-of-range `page` falls back to page 1.
 - The Clear POST is **session-wide** — no `{page_n}` segment; wipes
   everything and 303s to the bare session URL.
+- The Recall POST is **session-wide** — no `{page_n}` segment; reopens
+  a submitted session as a draft (see "Per-session summary").
 
 ---
 
