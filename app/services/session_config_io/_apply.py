@@ -6,8 +6,10 @@ parse + validate first (collect every error before reporting),
 then apply in a single transaction.
 
 Reachable only via Quick Setup slot 4 (graduated in 12A-3 PR 4) —
-no standalone Manage page. The lifecycle gate
-(``status in {"draft", "validated"}``) lives at the route layer.
+no standalone Manage page. The lifecycle gate (editable: ``draft`` or
+``validated``) is decided here, on the row re-read under the session
+lock (findings Bc4); the route checks it first only to choose its
+reason token.
 
 Originally a single ~1,360-line module; Segment 18O Track C
 carved the per-section parse + apply work into sibling modules

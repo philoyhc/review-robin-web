@@ -1296,21 +1296,24 @@ def _save(
     )
 
     unit_of_work.commit(db)
-    log.info(
-        "roster imported",
-        extra={
-            "session_id": session.id,
-            "source": source_label,
-            "new": len(rows),
-            "replaced": replaced,
-            "cascaded_assignments": cascaded_assignment_count,
-            **(
-                {"cascaded_relationships": cascaded_relationship_count}
-                if cascaded_relationship_count is not None
-                else {}
-            ),
-            "correlation_id": correlation_id,
-        },
+    unit_of_work.after_commit(
+        db,
+        lambda: log.info(
+            "roster imported",
+            extra={
+                "session_id": session.id,
+                "source": source_label,
+                "new": len(rows),
+                "replaced": replaced,
+                "cascaded_assignments": cascaded_assignment_count,
+                **(
+                    {"cascaded_relationships": cascaded_relationship_count}
+                    if cascaded_relationship_count is not None
+                    else {}
+                ),
+                "correlation_id": correlation_id,
+            },
+        ),
     )
     return replaced, len(rows)
 

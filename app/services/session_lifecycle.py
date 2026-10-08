@@ -804,7 +804,7 @@ def archive_session(
         ),
         correlation_id=correlation_id,
     )
-    db.commit()
+    unit_of_work.commit(db)
     db.refresh(review_session)
     return review_session
 

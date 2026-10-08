@@ -1489,3 +1489,60 @@ def test_a_session_home_config_save_is_one_commit(
     assert commits == []
     db.expire_all()
     assert db.get(ReviewSession, session.id).name == "Config"
+
+
+def test_purge_logs_only_what_the_archive_committed(
+    db: Session, monkeypatch, caplog
+) -> None:
+    """Codex on #2885: inside Purge and archive the purges only flush, so
+    their "session data purged" lines wait for the unit's commit — an
+    archive that fails logs no purge; one that lands logs it."""
+    import logging
+
+    from app.services import session_purge
+
+    failing = _make_validated_session(db, "guard-purge-log-fail")
+    real_archive = lifecycle.archive_session
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("archive failed")
+
+    monkeypatch.setattr(lifecycle, "archive_session", boom)
+    with caplog.at_level(logging.INFO):
+        with pytest.raises(RuntimeError):
+            session_purge.purge_and_archive(
+                db, review_session=failing, user=_operator(db, failing),
+                purge=["rosters"],
+            )
+    assert "session data purged" not in caplog.text
+
+    monkeypatch.setattr(lifecycle, "archive_session", real_archive)
+    landing = _make_validated_session(db, "guard-purge-log-ok")
+    with caplog.at_level(logging.INFO):
+        assert session_purge.purge_and_archive(
+            db, review_session=landing, user=_operator(db, landing),
+            purge=["rosters"],
+        )
+    assert "session data purged" in caplog.text
+
+
+def test_after_commit_runs_on_the_real_commit_and_drops_on_rollback(
+    db: Session,
+) -> None:
+    from app.services import unit_of_work
+
+    ran: list[str] = []
+    unit_of_work.after_commit(db, lambda: ran.append("outside"))
+    assert ran == ["outside"]
+
+    with unit_of_work.atomic(db):
+        unit_of_work.after_commit(db, lambda: ran.append("inside"))
+        assert ran == ["outside"]
+    assert ran == ["outside", "inside"]
+
+    with pytest.raises(RuntimeError):
+        with unit_of_work.atomic(db):
+            unit_of_work.after_commit(db, lambda: ran.append("rolled back"))
+            raise RuntimeError("refused")
+    unit_of_work.commit(db)
+    assert ran == ["outside", "inside"]

@@ -81,15 +81,18 @@ def purge_responses(
         correlation_id=correlation_id,
     )
     unit_of_work.commit(db)
-    log.info(
-        "session data purged",
-        extra={
-            "session_id": session_id,
-            "kind": "responses",
-            "responses": responses,
-            "invitations": invitations,
-            "correlation_id": correlation_id,
-        },
+    unit_of_work.after_commit(
+        db,
+        lambda: log.info(
+            "session data purged",
+            extra={
+                "session_id": session_id,
+                "kind": "responses",
+                "responses": responses,
+                "invitations": invitations,
+                "correlation_id": correlation_id,
+            },
+        ),
     )
 
 
@@ -149,19 +152,22 @@ def purge_rosters(
         correlation_id=correlation_id,
     )
     unit_of_work.commit(db)
-    log.info(
-        "session data purged",
-        extra={
-            "session_id": session_id,
-            "kind": "rosters",
-            "reviewers": reviewers,
-            "reviewees": reviewees,
-            "relationships": relationships,
-            "assignments": assignments,
-            "responses": responses,
-            "invitations": invitations,
-            "correlation_id": correlation_id,
-        },
+    unit_of_work.after_commit(
+        db,
+        lambda: log.info(
+            "session data purged",
+            extra={
+                "session_id": session_id,
+                "kind": "rosters",
+                "reviewers": reviewers,
+                "reviewees": reviewees,
+                "relationships": relationships,
+                "assignments": assignments,
+                "responses": responses,
+                "invitations": invitations,
+                "correlation_id": correlation_id,
+            },
+        ),
     )
 
 
@@ -191,14 +197,17 @@ def purge_audit_log(
         correlation_id=correlation_id,
     )
     unit_of_work.commit(db)
-    log.info(
-        "session data purged",
-        extra={
-            "session_id": review_session.id,
-            "kind": "audit_log",
-            "audit_events": purged,
-            "correlation_id": correlation_id,
-        },
+    unit_of_work.after_commit(
+        db,
+        lambda: log.info(
+            "session data purged",
+            extra={
+                "session_id": review_session.id,
+                "kind": "audit_log",
+                "audit_events": purged,
+                "correlation_id": correlation_id,
+            },
+        ),
     )
 
 
@@ -232,7 +241,10 @@ def purge_and_archive(
         # and holding locks on refused ones lets two bulk archives deadlock.
         db.rollback()
         return False
-    with unit_of_work.single_commit(db):
+    # One unit: the purges and the archive commit together, the purges'
+    # "purged" log lines run only after that commit, and a failure rolls
+    # all of it back (Codex on #2885).
+    with unit_of_work.atomic(db):
         if "audit_log" in purge:
             purge_audit_log(
                 db, review_session=review_session, user=user,
@@ -248,8 +260,8 @@ def purge_and_archive(
                 db, review_session=review_session, user=user,
                 correlation_id=correlation_id,
             )
-    lifecycle.archive_session(
-        db, review_session=review_session, user=user,
-        correlation_id=correlation_id,
-    )
+        lifecycle.archive_session(
+            db, review_session=review_session, user=user,
+            correlation_id=correlation_id,
+        )
     return True

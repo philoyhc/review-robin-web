@@ -8,22 +8,22 @@ refusal part-way through can roll the whole unit back. The caller makes
 the one real commit itself — the Instrument card's Save route (findings
 A16) — or opens :func:`atomic`, which commits and rolls back for it:
 the reviewer, reviewee and relationship imports, the label editor, the
-instrument identity and Band 2 routes and Generate
-(``assignments.replace_assignments``), which hold the session lock from
-their gate to that commit (findings Bc4). Where a service composes
-others, the last one it calls may commit instead: Purge and archive
-defers its purges and lets ``archive_session`` commit, so the lock is
-held from its gate to that commit.
+instrument identity and Band 2 routes, Session Home's config save,
+Generate (``assignments.replace_assignments``) and Purge and archive,
+which hold the session lock from their gate to that commit (findings
+Bc4). :func:`after_commit` defers a side effect — a log line saying work
+was done — to that commit, and drops it if the unit rolls back.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 
 from sqlalchemy.orm import Session
 
 _DEFER_KEY = "unit_of_work.defer_commit"
+_AFTER_KEY = "unit_of_work.after_commit"
 
 
 @contextmanager
@@ -55,15 +55,36 @@ def atomic(db: Session) -> Iterator[None]:
     except BaseException:
         if outermost:
             db.rollback()
+            db.info.pop(_AFTER_KEY, None)
         raise
 
 
 def commit(db: Session) -> None:
-    """``db.commit()``, or ``db.flush()`` inside :func:`single_commit`."""
+    """``db.commit()``, or ``db.flush()`` inside :func:`single_commit`.
+
+    A real commit runs the :func:`after_commit` callbacks queued in the
+    unit it closes; a failed one drops them."""
     if db.info.get(_DEFER_KEY, False):
         db.flush()
-    else:
+        return
+    try:
         db.commit()
+    except BaseException:
+        db.info.pop(_AFTER_KEY, None)
+        raise
+    for fn in db.info.pop(_AFTER_KEY, []):
+        fn()
 
 
-__all__ = ["atomic", "commit", "single_commit"]
+def after_commit(db: Session, fn: Callable[[], None]) -> None:
+    """Run ``fn`` once the work so far is committed: now, outside a unit;
+    after the unit's real commit inside one, and never if the unit rolls
+    back. For a side effect that must not report work the unit then
+    discards — a "purged" or "imported" log line."""
+    if db.info.get(_DEFER_KEY, False):
+        db.info.setdefault(_AFTER_KEY, []).append(fn)
+    else:
+        fn()
+
+
+__all__ = ["after_commit", "atomic", "commit", "single_commit"]
