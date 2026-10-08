@@ -327,11 +327,11 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 - ~~**H1**~~ high code backup_restore.md:85-87, operations_runbook.md:62-67 in-app removal is safe vs remove_user cascade-deleting every session the user created (§1); deployment_dev.md:321-327 and deployment_nus.md:316-318 on raw DELETE need re-reading against it — **Done in #2867**; the raw-DELETE docs hold as written
 - ~~**H2**~~ med author security_posture.md:216-243 §5.7 "no gaps found" omits POST /operator/sessions/bulk-archive (purge_and_archive deletes responses, rosters and the audit log with no confirm parameter, unlike bulk-delete; the UI has only the "Archive after purging" checkboxes) and Sys Admin remove-from-all-sessions and delete user. Is a checkbox a confirm? — **Done in #2872** (ruled 2026-10-07: the ticked purge box is the confirmation; §5.7 lists purge-and-archive and the Sys Admin removes).
-- **H3** low-med doc known_limitations.md:60-62 targeted reminders missing vs the per-row Send reminder and send_reminders_to_incomplete; what is missing is delivery (its own :51-55)
-- **H4** low trim cli_setup.md:379, :394, :646-647 still prescribe the `admin:repo_hook` scope (old H14 applied in part)
-- **H5** low doc known_limitations.md:69-71 failure "is logged" vs a log line and an audit event, session.scheduled_event_failed
-- **H6** low doc backup_restore.md:64-67, architecture.md:116-117 omit Rehydrate's dropped-responses CSV (_rehydrate.py:246); deployment_nus.md:354-355 "404 in a deployed environment" vs 404 everywhere unless REHYDRATE_ENABLED
-- **H7** low trim security_posture.md:90-92, 109-133 narrate earlier drafts, :135 "a dozen sites" (13); database.md:157-164 "added by this review"; unenforced_conventions.md §1.2 "17 routing modules" (16), §1.1, §2.1, §2.2 dated tallies
+- ~~**H3**~~ low-med doc known_limitations.md:60-62 targeted reminders missing vs the per-row Send reminder and send_reminders_to_incomplete; what is missing is delivery (its own :51-55) — **Done in #2904**.
+- ~~**H4**~~ low trim cli_setup.md:379, :394, :646-647 still prescribe the `admin:repo_hook` scope (old H14 applied in part) — **Done in #2904**.
+- ~~**H5**~~ low doc known_limitations.md:69-71 failure "is logged" vs a log line and an audit event, session.scheduled_event_failed — **Done in #2904**.
+- ~~**H6**~~ low doc backup_restore.md:64-67, architecture.md:116-117 omit Rehydrate's dropped-responses CSV (_rehydrate.py:246); deployment_nus.md:354-355 "404 in a deployed environment" vs 404 everywhere unless REHYDRATE_ENABLED — **Done in #2904** (the architecture.md citation names no stash sentence; unchanged).
+- ~~**H7**~~ low trim security_posture.md:90-92, 109-133 narrate earlier drafts, :135 "a dozen sites" (13); database.md:157-164 "added by this review"; unenforced_conventions.md §1.2 "17 routing modules" (16), §1.1, §2.1, §2.2 dated tallies — **Done in #2904**.
 - ~~**H8**~~ low guide/codex_assessment_30sep.md:11 cites docs/nus_azure_status_v7.md (gone) — **Left as is: declined as old H13, dated records are history.** Not counted.
 
 **I — root and process documents**
