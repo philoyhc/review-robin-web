@@ -2706,9 +2706,10 @@
       body.ui-v2 .col-chip-row.is-grouped {
         column-gap: var(--space-4);
       }
-      /* The one ``.tag-chip`` that is not a control: it sets
-         ``cursor: default`` itself, so it must not wear the shade that
-         claims otherwise. Cancels both halves of the edge (19J.7). */
+      /* An inert ``.tag-chip``: it sets ``cursor: default`` itself, so
+         it must not wear the shade that claims otherwise. Cancels both
+         halves of the edge (19J.7). ``is-locked`` below is the other
+         inert chip. */
       body.ui-v2 .tag-chip.is-disabled {
         cursor: default;
         opacity: 0.55;

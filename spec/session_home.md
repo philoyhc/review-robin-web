@@ -403,16 +403,19 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   and validated only; the lobby edits them in any state
   (`spec/sessions_overview.md`).
 - **Optional setup tabs and pages** (`#config-optional-tabs`, a
-  `role="group"` labeled "Optional setup tabs and pages", no subtitle) — two
-  selector chips, **Relationships** (`relationships_enabled`) and
+  `role="group"` labeled "Optional setup tabs and pages", no
+  subtitle) — two selector chips, **Relationships** (`relationships_enabled`) and
   **Observers** (`observers_enabled`), in the rosters' "Show columns"
   chip style, letting the operator opt into those optional Setup tabs
   at any point. Unlocked, each chip is a `<label>` around its
   visually hidden checkbox, filled while the box is ticked
   (`spec/ui_elements.md` "Label or control"). Locked, they are inert
-  `.tag-chip.is-locked` spans showing the stored state. Each is
-  lock-on-data: in edit mode its checkbox renders disabled and its chip
-  `is-locked` once the corresponding roster has rows
+  `.tag-chip.is-locked` spans showing the stored state, and stating it
+  to assistive technology as disabled checkboxes (`role="checkbox"`,
+  `aria-checked`, `aria-disabled`, no tab stop). Each is lock-on-data:
+  in edit mode its checkbox renders disabled and its chip `is-locked`,
+  titled "The session has relationships, so the tab stays on." (or
+  observers), once the corresponding roster has rows
   (`has_relationships` / `has_observers`), mirroring the service-layer
   guard against orphaning data.
 

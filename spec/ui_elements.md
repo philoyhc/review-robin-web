@@ -650,8 +650,8 @@ Three rules make that work:
   `border-width`, so a chip is exactly as tall
   as the status label beside it and adding an edge reflows nothing.
 - **`.tag-chip.is-disabled` cancels the edge.** It sets
-  `cursor: default` and is the one inert chip in the vocabulary; a chip
-  that says it cannot be clicked must not also say it can.
+  `cursor: default` and is an inert chip, as `.is-locked` (below) is; a
+  chip that says it cannot be clicked must not also say it can.
 
 **A chip can be a form control.** Session Home's optional-tab chips
 (`spec/session_home.md`) are each a `<label class="pill pill-count
@@ -670,7 +670,10 @@ shade; off is faded.
 pill, with `.active` taking the shade on its border and text.
 
 `.is-selected` is unchanged — a solid `--selected-bg` fill, which is how
-a chip says its filter is on, and it appears only on controls.
+a chip says its filter is on, and it reaches the reserved shade only on
+controls: a locked chip may carry it to say "on", and
+`.tag-chip.is-locked.is-selected` repaints it in the display-value
+colors.
 `tests/integration/test_chip_edge.py` pins the treatment;
 `tests/unit/test_reserved_shade.py` keeps the shade off anything static.
 

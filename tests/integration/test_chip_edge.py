@@ -185,6 +185,11 @@ def test_a_locked_chip_drops_the_edge_and_keeps_its_state(
     assert css.index("body.ui-v2 .tag-chip.is-locked.is-selected") > css.index(
         "body.ui-v2 .tag-chip.is-selected,"
     )
+    off = _rule(
+        css,
+        "body.ui-v2 .tag-chip.is-locked:not(.is-selected):not(:has(> input:checked))",
+    )
+    assert off is not None and "opacity: 0.55" in off
 
 
 def test_a_checkbox_chip_fills_from_its_box(
@@ -202,5 +207,9 @@ def test_a_checkbox_chip_fills_from_its_box(
     )
     assert block is not None
     assert "var(--selected-bg)" in block
+    # A chip that is a ``<label>`` must not take ``body.ui-v2 label``'s
+    # block box and margins (read on #2893: nothing else pinned these).
     label = _rule(css, "body.ui-v2 label.tag-chip")
-    assert label is not None and "margin: 0 var(--space-1) 0 0" in label
+    assert label is not None
+    assert "display: inline-block" in label
+    assert "margin: 0 var(--space-1) 0 0" in label

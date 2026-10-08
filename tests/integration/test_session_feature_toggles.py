@@ -384,7 +384,8 @@ def test_locked_the_chips_are_inert_and_show_the_stored_state(
     client: TestClient, db: Session
 ) -> None:
     """The card locked (display mode): the chips cannot be clicked —
-    spans, no checkbox, ``is-locked`` — and still say which tab is on."""
+    spans, no form control, ``is-locked`` — and still say which tab is
+    on, by fill and by ``aria-checked``."""
     review_session = _make_session(client, db, code="ft-chips-locked")
     review_session.observers_enabled = True
     db.commit()
@@ -392,13 +393,21 @@ def test_locked_the_chips_are_inert_and_show_the_stored_state(
 
     display = _chips(body, "display")
     assert "<input" not in display and "<label" not in display
-    spans = dict(
-        (text, classes)
-        for classes, text in re.findall(
-            r'<span class="([^"]*)"\s+aria-disabled="true">(\w+)</span>', display
+    spans = {
+        text: (classes, checked)
+        for classes, checked, text in re.findall(
+            r'<span class="([^"]*)"\s+role="checkbox" aria-checked="(true|false)"'
+            r'\s+aria-disabled="true">(\w+)</span>',
+            display,
         )
-    )
+    }
     assert set(spans) == {"Relationships", "Observers"}
-    assert all("tag-chip is-locked" in c for c in spans.values())
-    assert "is-selected" in spans["Observers"]
-    assert "is-selected" not in spans["Relationships"]
+    assert all("tag-chip is-locked" in c for c, _ in spans.values())
+    # The state is in the fill and, for assistive technology, in
+    # ``aria-checked`` — what the disabled checkboxes said before (read
+    # on #2893).
+    assert spans["Observers"] == (spans["Observers"][0], "true")
+    assert "is-selected" in spans["Observers"][0]
+    assert spans["Relationships"][1] == "false"
+    assert "is-selected" not in spans["Relationships"][0]
+    assert "tabindex" not in display

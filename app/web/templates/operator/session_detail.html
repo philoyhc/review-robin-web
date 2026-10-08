@@ -119,7 +119,9 @@
            made the two checkboxes selector chips, styled as the rosters'
            "Show columns" chips). Each mode renders its own pair, as every
            field here does: locked, the chips are inert and show the stored
-           state; unlocked, each chip is a ``<label>`` around its checkbox,
+           state — to assistive technology too, as disabled checkboxes
+           (``role="checkbox"`` with ``aria-checked``, no tab stop), which is
+           what they were before they were chips; unlocked, each chip is a ``<label>`` around its checkbox,
            so a click toggles the box and the form posts it as before. The
            wrappers carry the mode attribute because ``.col-chip-row`` sets
            ``display: flex`` and would outrank the mode's ``display: none``. #}
@@ -129,8 +131,10 @@
           <div data-display-only>
             <div class="col-chip-row">
               <span class="pill pill-count tag-chip is-locked{% if session.relationships_enabled %} is-selected{% endif %}"
+                    role="checkbox" aria-checked="{{ 'true' if session.relationships_enabled else 'false' }}"
                     aria-disabled="true">Relationships</span>
               <span class="pill pill-count tag-chip is-locked{% if session.observers_enabled %} is-selected{% endif %}"
+                    role="checkbox" aria-checked="{{ 'true' if session.observers_enabled else 'false' }}"
                     aria-disabled="true">Observers</span>
             </div>
           </div>
