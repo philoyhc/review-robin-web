@@ -1452,8 +1452,8 @@ a reviewer-centric Operations-row tab.
   search + Clear / **`Search`**.
 - **Invitations table** — one row per reviewer carrying:
   reviewer name + email, email status (the latest outbox
-  row's status — `sent` or `queued` while sending is off, `sending`
-  or `failed` once it is wired — or `not sent` with no row), email-sent timestamp, per-reviewer progress
+  row's status, `sent` or `queued` while sending is off, or `not
+  sent` with no row), email-sent timestamp, per-reviewer progress
   (not started / in progress / submitted), required-fields-
   filled count, last-reminder timestamp, per-row Send /
   Send-reminder / Regenerate actions (lifecycle-gated).
@@ -2468,7 +2468,7 @@ A full security-posture catalogue lives in
   share the same value for every boundary tag.
 - **Display field** — A read-only context column on an
   instrument, drawn from one of **nine** sources (reviewee name,
-  reviewee email, profile link, three reviewee tags, three
+  reviewee email, photo / profile link, three reviewee tags, three
   pair-context tags). Two are locked on, seven opt-in; see
   [§5.8](#58-display-field).
 - **Display label** — The user-facing string for a lifecycle
