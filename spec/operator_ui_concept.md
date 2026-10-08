@@ -84,7 +84,7 @@ only visible in the Setup chrome, and its routes only resolve (rather
 than 404), when its own toggle is on — `session.relationships_enabled`
 or `session.observers_enabled`. The operator sets these toggles via
 the **User interface settings** card on the Create Session form or the
-**Optional setup tabs** field of Session Home's `#session-config` card.
+**Optional setup tabs and pages** field of Session Home's `#session-config` card.
 
 The URL slug is `setup-invite`; the page's name is **Email Template**. The two differ and the slug stays — it is in operator bookmarks and in the route table — so prose naming the page uses the name, not the slug. The page houses the email-template editor: per-template overrides for Invitation / Reminder / Responses-received emails, with merge-tag reference, per-field reset, and a "Send confirmation when a reviewer submits?" toggle. The run-time invitation management lives in the Operations Page below.
 

@@ -254,3 +254,95 @@ the old "User interface settings card".
 - `spec/visual_style_rrw.md` — the optional Setup tabs' toggle location.
 - `spec/setup_pages.md` — the optional tabs' toggle location.
 - `spec/session_owners.md` — Create's layout no longer "approximates Session Home's placements"; Session Home holds Tags and the toggles as fields.
+
+## Item 3 — Session Home optional-tab chips (closed 2026-10-08)
+
+### Opportunity
+
+After Item 2 the author asked (2026-10-08) for three follow-ups on the
+details card: Tags sits too close to the Description box; the field's
+label undersells it ("tabs", where each also gates a page); and the two
+toggles are bare checkboxes inside text labels, where clicking the text
+did nothing in edit mode because each label wrapped two checkboxes.
+
+### Decision
+
+**Ruled 2026-10-08 by the author.** Tags gets a wider gap below
+Description. The label becomes **Optional setup tabs and pages**. The
+toggles become two selector chips, **Relationships** and **Observers**,
+in the rosters' "Show columns" style, **inert while the card is
+locked**. Each unlocked chip is a `<label>` around its checkbox, so the
+form, the lock-on-data rule and the save are unchanged.
+
+**Rejected:** chips as `role="button"` spans with a script writing a
+hidden input, as the column chips work — the form would depend on
+script, and a Cancel's `form.reset()` would leave the fill stale.
+
+### Judgment calls — decided
+
+- A locked chip is `.tag-chip.is-locked`: no edge or pointer, as
+  `is-disabled`, but not struck through; on takes the card's
+  display-value colors, off is faded, so the reserved shade stays on
+  controls (`tests/unit/test_reserved_shade.py`).
+- The selected fill reads `:has(> input:checked)`, so no script syncs it.
+- A lock-on-data chip in edit mode is `is-locked` too, with a title
+  saying why.
+
+### Blast radius (measured)
+
+Taken 2026-10-08 at `64056c04`.
+
+| What | Count | Command |
+|---|---|---|
+| Templates | 2 (`session_detail.html`, `base.html`) | `grep -rln "config-optional-tabs" app/web/templates` + the chip CSS |
+| Test files pinning the field | 4 | `grep -rln "config-optional-tabs\|Optional setup tabs" tests/ --include=*.py` |
+| Live specs naming the field | 7 | `grep -rln "Optional setup tabs" spec/` |
+
+### Status — closed 2026-10-08
+
+**Shipped as planned, in one PR**, with `spec/ui_elements.md` added to
+Doc impact for the new chip states. Driven in Chromium: a locked click
+does nothing, an unlocked click ticks the box and enables Save, Cancel
+clears the fill, Save persists, Space toggles from the keyboard. The
+author's browser check is owed. **Two reads.** The first, of `68c2949d`: locked
+chips stated on/off by color alone (now `role="checkbox"` with
+`aria-checked`), the gap on the wrong spec bullet (also `spec-writer`'s
+flag), two stale "one inert chip" / "only on controls" lines, two
+unpinned CSS rules (now pinned and mutation-checked), and the tooltip
+missing from the spec; all fixed. The second, of the fix `2226afef`,
+was clean, each new pin mutation-checked.
+
+### PR ladder
+
+1. **One PR**: plan, template, CSS, tests, specs, close.
+
+### Definition of done
+
+- The chips render as above in both modes
+  (`tests/integration/test_session_feature_toggles.py`,
+  `tests/integration/test_chip_edge.py`).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19U.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- Item 3 marked closed in its heading; the file stays in `guide/` while 19U is open
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- The Create page's **User interface settings** checkboxes: the ruling
+  names Session Home.
+
+### Doc impact
+
+- `spec/session_home.md` — the field: label, chips, the locked state, lock-on-data, the gap under Description.
+- `spec/ui_elements.md` — "Label or control": a chip around a checkbox and `.tag-chip.is-locked`.
+- `spec/rrw_functional_spec.md` — §8.8's field name and its chips.
+- `spec/operator_ui_concept.md` — the field's name.
+- `spec/settings_inventory.md` — the field's name in the two toggle rows.
+- `spec/participant_model.md` — the field's name in the two toggle rows.
+- `spec/visual_style_rrw.md` — the field's name.
+- `spec/setup_pages.md` — the field's name.

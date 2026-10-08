@@ -76,7 +76,7 @@
            tags, as the lobby's row expander does — the opposite of the
            Create page, where there is no set yet to clear
            (``spec/csv_contracts.md`` § *Settings CSV — apply precedence*). #}
-        <div id="config-tags-field">
+        <div id="config-tags-field" class="config-field-gap">
           <label for="config-tags" id="config-tags-heading">Tags (optional)</label>
           {# Locked, the tags are the lobby's pills (author's ruling,
              2026-09-23), not a comma-joined ``.config-value``; the edit
@@ -114,39 +114,51 @@
              there is no box, just the pills (author's ruling, 2026-09-23). #}
           <p class="form-help" data-edit-only>Comma-separated; also editable from the sessions list.</p>
         </div>
-        {# The optional Setup tabs (19U Item 2: out of the former "User
-           interface settings" sub-card, under Tags). Display mode shows
-           the current states as disabled checkboxes; edit mode shows the
-           live ones. #}
+        {# The optional Setup tabs and pages (19U Item 2 moved them out of
+           the former "User interface settings" sub-card, under Tags; Item 3
+           made the two checkboxes selector chips, styled as the rosters'
+           "Show columns" chips). Each mode renders its own pair, as every
+           field here does: locked, the chips are inert and show the stored
+           state — to assistive technology too, as disabled checkboxes
+           (``role="checkbox"`` with ``aria-checked``, no tab stop), which is
+           what they were before they were chips; unlocked, each chip is a ``<label>`` around its checkbox,
+           so a click toggles the box and the form posts it as before. The
+           wrappers carry the mode attribute because ``.col-chip-row`` sets
+           ``display: flex`` and would outrank the mode's ``display: none``. #}
         <div id="config-optional-tabs" role="group"
              aria-labelledby="config-optional-tabs-heading">
-          <label id="config-optional-tabs-heading">Optional setup tabs</label>
-          <div class="ui-settings-row">
-            <label class="ui-setting">
-              Relationships tab and page
-              <input type="checkbox" data-display-only disabled
-                     {% if session.relationships_enabled %}checked{% endif %}>
+          <label id="config-optional-tabs-heading">Optional setup tabs and pages</label>
+          <div data-display-only>
+            <div class="col-chip-row">
+              <span class="pill pill-count tag-chip is-locked{% if session.relationships_enabled %} is-selected{% endif %}"
+                    role="checkbox" aria-checked="{{ 'true' if session.relationships_enabled else 'false' }}"
+                    aria-disabled="true">Relationships</span>
+              <span class="pill pill-count tag-chip is-locked{% if session.observers_enabled %} is-selected{% endif %}"
+                    role="checkbox" aria-checked="{{ 'true' if session.observers_enabled else 'false' }}"
+                    aria-disabled="true">Observers</span>
+            </div>
+          </div>
+          <div data-edit-only>
+            <div class="col-chip-row">
               {# Lock-on-data — once a roster has rows the toggle can't flip
-                 True→False (would orphan data); this card disables it, and
-                 the service-layer guard rejects the flip for direct API
-                 calls. (Said "mirror the Edit page" until 2026-09-13; that
-                 page retired in 18R Item 4.) #}
-              <input type="checkbox" name="relationships_enabled" value="true"
-                     data-edit-only data-config-input
-                     form="config-save-{{ session.id }}"
-                     {% if session.relationships_enabled %}checked{% endif %}
-                     {% if has_relationships %}disabled{% endif %}>
-            </label>
-            <label class="ui-setting">
-              Observers tab and page
-              <input type="checkbox" data-display-only disabled
-                     {% if session.observers_enabled %}checked{% endif %}>
-              <input type="checkbox" name="observers_enabled" value="true"
-                     data-edit-only data-config-input
-                     form="config-save-{{ session.id }}"
-                     {% if session.observers_enabled %}checked{% endif %}
-                     {% if has_observers %}disabled{% endif %}>
-            </label>
+                 True→False (would orphan data); the chip's checkbox renders
+                 disabled, so the form omits it, and the service-layer guard
+                 rejects the flip for direct API calls. #}
+              <label class="pill pill-count tag-chip{% if has_relationships %} is-locked{% endif %}"
+                     {% if has_relationships %}title="The session has relationships, so the tab stays on."{% endif %}>
+                <input type="checkbox" class="visually-hidden"
+                       name="relationships_enabled" value="true"
+                       data-config-input form="config-save-{{ session.id }}"
+                       {% if session.relationships_enabled %}checked{% endif %}
+                       {% if has_relationships %}disabled{% endif %}>Relationships</label>
+              <label class="pill pill-count tag-chip{% if has_observers %} is-locked{% endif %}"
+                     {% if has_observers %}title="The session has observers, so the tab stays on."{% endif %}>
+                <input type="checkbox" class="visually-hidden"
+                       name="observers_enabled" value="true"
+                       data-config-input form="config-save-{{ session.id }}"
+                       {% if session.observers_enabled %}checked{% endif %}
+                       {% if has_observers %}disabled{% endif %}>Observers</label>
+            </div>
           </div>
         </div>
       </div>

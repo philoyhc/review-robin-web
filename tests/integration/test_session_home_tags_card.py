@@ -187,7 +187,19 @@ def test_the_field_sits_under_description_above_the_optional_tabs(
     assert '<div class="bottom-grid"' not in config
     assert "User interface settings" not in config
     assert "Per-session toggles" not in config
-    assert ">Optional setup tabs</label>" in config
+    assert ">Optional setup tabs and pages</label>" in config
+
+
+def test_the_field_sits_a_wider_gap_below_description(
+    client: TestClient, db: Session
+) -> None:
+    """19U Item 3 (author, 2026-10-08): Tags moves down from the
+    Description box — its own step of top margin over its label's."""
+    review_session = _create(client, db, "HOME-TAGS-GAP")
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    assert '<div id="config-tags-field" class="config-field-gap">' in body
+    assert ".config-field-gap { margin-top: var(--space-3); }" in body
 
 
 def test_locked_it_renders_the_lobbys_pills(

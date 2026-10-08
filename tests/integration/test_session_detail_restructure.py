@@ -1251,9 +1251,9 @@ def test_owners_left_the_session_config_card_for_their_own(
     assert "/remove\"" in owners
 
     assert 'id="config-optional-tabs"' in card
-    assert ">Optional setup tabs</label>" in card
-    assert "Relationships tab and page" in card
-    assert "Observers tab and page" in card
+    assert ">Optional setup tabs and pages</label>" in card
+    assert ">Relationships</label>" in card
+    assert ">Observers</label>" in card
 
     # Schedule timeline card retired from Session Home.
     assert "<h2>Schedule timeline</h2>" not in body

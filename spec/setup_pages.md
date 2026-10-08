@@ -32,7 +32,7 @@ permission check runs first.
 (`app/web/routes_operator/_setup_observers.py`) are gated by
 `require_observers_enabled_session` — the page returns 404 until
 the operator enables observers via the **User interface settings**
-card on the Create Session form or the **Optional setup tabs** field of
+card on the Create Session form or the **Optional setup tabs and pages** field of
 Session Home's **Session details** card. When
 `session.observers_enabled` is `True` the page offers the same CRUD
 operations as Reviewees — per-row edit, add, bulk status flips,

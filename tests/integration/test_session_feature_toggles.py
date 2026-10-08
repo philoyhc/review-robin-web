@@ -9,6 +9,8 @@ See ``guide/archive/participant_model_upgrade.md`` §3.8 +
 
 from __future__ import annotations
 
+import re
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -218,6 +220,10 @@ def test_lock_on_data_renders_disabled_checkbox(
         'name="relationships_enabled"', 1
     )[1].split("</label>", 1)[0]
     assert "disabled" in relationships_chunk
+    # …and on the chip around it, which drops its click affordance
+    # (19U Item 3).
+    chip = body.split('name="relationships_enabled"', 1)[0].rsplit("<label", 1)[1]
+    assert "tag-chip is-locked" in chip
 
 
 # ── Nav tab visibility ────────────────────────────────────────────────
@@ -320,7 +326,7 @@ def test_session_home_renders_the_optional_setup_tabs_field(
         f"/operator/sessions/{review_session.id}?editing=1"
     ).text
     assert 'id="config-optional-tabs"' in body
-    assert ">Optional setup tabs</label>" in body
+    assert ">Optional setup tabs and pages</label>" in body
     assert 'name="relationships_enabled"' in body
     assert 'name="observers_enabled"' in body
     # Both unchecked by default.
@@ -332,3 +338,76 @@ def test_session_home_renders_the_optional_setup_tabs_field(
         'name="observers_enabled"', 1
     )[1].split(">", 1)[0]
     assert "checked" not in obs_chunk
+
+
+def _chips(body: str, mode: str) -> str:
+    """The display- or edit-mode chip pair of the optional-tabs field."""
+    field = body[body.index('id="config-optional-tabs"'):]
+    field = field[: field.index('<div class="fill-col"')]
+    marker = "<div data-display-only>" if mode == "display" else "<div data-edit-only>"
+    start = field.index(marker)
+    other = "<div data-edit-only>" if mode == "display" else '<div class="fill-col"'
+    stop = field.find(other, start)
+    return field[start:] if stop == -1 else field[start:stop]
+
+
+def test_the_optional_tabs_are_selector_chips(
+    client: TestClient, db: Session
+) -> None:
+    """19U Item 3 (author, 2026-10-08): the two toggles are selector
+    chips styled as the rosters' "Show columns" chips. Unlocked, each
+    chip is a label around its checkbox, so the form posts it as
+    before; its checkbox is visually hidden, the chip's fill shows it."""
+    review_session = _make_session(client, db, code="ft-chips")
+    review_session.relationships_enabled = True
+    db.commit()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}?editing=1"
+    ).text
+
+    edit = _chips(body, "edit")
+    for name, label, on in (
+        ("relationships_enabled", "Relationships", True),
+        ("observers_enabled", "Observers", False),
+    ):
+        chip = edit.split(f'name="{name}"', 1)[0].rsplit("<label", 1)[1]
+        assert 'class="pill pill-count tag-chip"' in chip, chip
+        box = edit.split(f'name="{name}"', 1)[1].split(">", 1)[0]
+        assert ("checked" in box) is on
+        assert "disabled" not in box
+        assert f">{label}</label>" in edit
+    assert edit.count('type="checkbox" class="visually-hidden"') == 2
+    assert "ui-setting" not in edit
+
+
+def test_locked_the_chips_are_inert_and_show_the_stored_state(
+    client: TestClient, db: Session
+) -> None:
+    """The card locked (display mode): the chips cannot be clicked —
+    spans, no form control, ``is-locked`` — and still say which tab is
+    on, by fill and by ``aria-checked``."""
+    review_session = _make_session(client, db, code="ft-chips-locked")
+    review_session.observers_enabled = True
+    db.commit()
+    body = client.get(f"/operator/sessions/{review_session.id}").text
+
+    display = _chips(body, "display")
+    assert "<input" not in display and "<label" not in display
+    spans = {
+        text: (classes, checked)
+        for classes, checked, text in re.findall(
+            r'<span class="([^"]*)"\s+role="checkbox" aria-checked="(true|false)"'
+            r'\s+aria-disabled="true">(\w+)</span>',
+            display,
+        )
+    }
+    assert set(spans) == {"Relationships", "Observers"}
+    assert all("tag-chip is-locked" in c for c, _ in spans.values())
+    # The state is in the fill and, for assistive technology, in
+    # ``aria-checked`` — what the disabled checkboxes said before (read
+    # on #2893).
+    assert spans["Observers"] == (spans["Observers"][0], "true")
+    assert "is-selected" in spans["Observers"][0]
+    assert spans["Relationships"][1] == "false"
+    assert "is-selected" not in spans["Relationships"][0]
+    assert "tabindex" not in display

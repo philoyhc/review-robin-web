@@ -1053,7 +1053,7 @@ the SMTP section.
 
 The **Relationships** and **Observers** toggles
 ([§5.17](#517-feature-toggles)) sit on the config card, under
-**Tags**, as the **Optional setup tabs** field.
+**Tags**, as the **Optional setup tabs and pages** field.
 
 A full catalogue of every persisted setting lives in
 `spec/settings_inventory.md`.
@@ -1191,9 +1191,9 @@ redirects to the card in edit mode.
   pills, like the sessions lobby's, in display mode; one text box in
   edit mode, saved with the card's **Save** (emptying the box clears
   them). Tags are stored lower case.
-- **Optional setup tabs** — the Relationships and Observers
-  checkboxes ([§5.17](#517-feature-toggles)), each lock-on-data,
-  under Tags.
+- **Optional setup tabs and pages** — the Relationships and Observers
+  selector chips ([§5.17](#517-feature-toggles)), each lock-on-data,
+  under Tags; inert while the card is locked.
 - **Save** returns to Home in display mode. Editing metadata is
   non-destructive (never touches assignments or responses), so
   there is no response-loss acknowledgement gate, and it leaves a

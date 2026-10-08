@@ -650,14 +650,30 @@ Three rules make that work:
   `border-width`, so a chip is exactly as tall
   as the status label beside it and adding an edge reflows nothing.
 - **`.tag-chip.is-disabled` cancels the edge.** It sets
-  `cursor: default` and is the one inert chip in the vocabulary; a chip
-  that says it cannot be clicked must not also say it can.
+  `cursor: default` and is an inert chip, as `.is-locked` (below) is; a
+  chip that says it cannot be clicked must not also say it can.
+
+**A chip can be a form control.** Session Home's optional-tab chips
+(`spec/session_home.md`) are each a `<label class="pill pill-count
+tag-chip">` around a visually hidden checkbox, so a click ticks the box
+and the form posts it. `.tag-chip:has(> input:checked)` is the
+`.is-selected` fill, read off the box itself, so a form reset repaints
+the chip with no script; the hidden box's keyboard focus shows as a
+`--focus-ring` outline on the chip. **`.tag-chip.is-locked`** is the
+chip of a locked card, or one whose tab holds data: it drops the edge
+and the pointer like `is-disabled`, but is not struck through, because
+it still says on or off. On takes the card's display-value colors
+(`--config-value-bg` / `--config-value-fg`) rather than the reserved
+shade; off is faded.
 
 `.severity-chip` on Validate is the shape this generalises: an outlined
 pill, with `.active` taking the shade on its border and text.
 
 `.is-selected` is unchanged — a solid `--selected-bg` fill, which is how
-a chip says its filter is on, and it appears only on controls.
+a chip says its filter is on, and it reaches the reserved shade only on
+controls: a locked chip may carry it to say "on", and
+`.tag-chip.is-locked.is-selected` repaints it in the display-value
+colors.
 `tests/integration/test_chip_edge.py` pins the treatment;
 `tests/unit/test_reserved_shade.py` keeps the shade off anything static.
 

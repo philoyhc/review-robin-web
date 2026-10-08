@@ -240,4 +240,4 @@ def test_session_owners_card_is_half_width_above_the_danger_zone(
     # The optional-tab toggles stay in the details card (19U Item 2
     # flattened their former "User interface settings" sub-card).
     assert 'id="config-optional-tabs"' in body
-    assert "Optional setup tabs" in body
+    assert "Optional setup tabs and pages" in body

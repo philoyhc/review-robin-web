@@ -664,6 +664,9 @@
       .config-offset-row { display: flex; align-items: center; gap: var(--space-2); }
       .config-offset-row + .config-offset-row { margin-top: var(--space-1); }
       .config-value-resolved { background: var(--config-value-resolved-bg); }
+      /* Session Home's Tags field sits a step further from the Description
+         box than a label's own top margin puts it (19U Item 3). */
+      .config-field-gap { margin-top: var(--space-3); }
       /* User interface settings — both toggles on one line in display and
          edit modes; label text at normal weight/size with the On/Off pill
          (display) or checkbox (edit) inline after it, in the same slot. */
@@ -2642,7 +2645,12 @@
         border-color: var(--selected-bg);
         box-shadow: inset 0 0 0 1px var(--selected-bg);
       }
-      body.ui-v2 .tag-chip.is-selected {
+      /* A chip that wraps a checkbox (Session Home's optional-tab chips,
+         19U Item 3) is selected when its box is ticked, so the form's own
+         state drives the fill, a Cancel's ``form.reset()`` repaints it
+         with no script, and no-JS shows what a click did. */
+      body.ui-v2 .tag-chip.is-selected,
+      body.ui-v2 .tag-chip:has(> input:checked) {
         background: var(--selected-bg);
         color: var(--selected-fg);
       }
@@ -2698,15 +2706,46 @@
       body.ui-v2 .col-chip-row.is-grouped {
         column-gap: var(--space-4);
       }
-      /* The one ``.tag-chip`` that is not a control: it sets
-         ``cursor: default`` itself, so it must not wear the shade that
-         claims otherwise. Cancels both halves of the edge (19J.7). */
+      /* An inert ``.tag-chip``: it sets ``cursor: default`` itself, so
+         it must not wear the shade that claims otherwise. Cancels both
+         halves of the edge (19J.7). ``is-locked`` below is the other
+         inert chip. */
       body.ui-v2 .tag-chip.is-disabled {
         cursor: default;
         opacity: 0.55;
         text-decoration: line-through;
         border-color: transparent;
         box-shadow: none;
+      }
+      /* A locked chip (19U Item 3): Session Home's optional-tab chips
+         while the card is locked, or one whose tab holds data. It still
+         states on or off, so unlike ``is-disabled`` it keeps its text;
+         like it, it drops the edge and the pointer. "On" takes the
+         card's display-value colors rather than the reserved shade,
+         which marks only what can be clicked. */
+      body.ui-v2 .tag-chip.is-locked {
+        cursor: default;
+        border-color: transparent;
+        box-shadow: none;
+      }
+      body.ui-v2 .tag-chip.is-locked.is-selected,
+      body.ui-v2 .tag-chip.is-locked:has(> input:checked) {
+        background: var(--config-value-bg);
+        color: var(--config-value-fg);
+      }
+      body.ui-v2 .tag-chip.is-locked:not(.is-selected):not(:has(> input:checked)) {
+        opacity: 0.55;
+      }
+      /* A chip that is a ``<label>`` keeps the pill's box, not the
+         form label's block and margins, and shows its hidden box's
+         keyboard focus as a ring. */
+      body.ui-v2 label.tag-chip {
+        display: inline-block;
+        margin: 0 var(--space-1) 0 0;
+      }
+      body.ui-v2 label.tag-chip:has(> input:focus-visible) {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 1px;
       }
       /* A selected lobby row: a rail of the reserved shade on the
          first and last cells. Without it the only row-level signal is
@@ -5210,7 +5249,7 @@
       <details class="tc-cluster" open><summary>Selection, toggles & markers [P]/[A] · 2 <span class="tc-cx-count" data-cluster="Selection, toggles & markers [P]/[A]"></span></summary>
       <div class="tc-cx-grid">
         <div class="tc-cx" data-fg="--chip-active-fg" data-bg="--chip-active-bg" title="--chip-active-fg on --chip-active-bg · shipped 4.75:1 (light) · found by: a rule sets both halves — body.ui-v2 .severity-chip.active"><span class="tc-cx-sample" style="background: var(--chip-active-bg); color: var(--chip-active-fg)">Aa — chip active fg → chip active bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">4.75</span></div>
-        <div class="tc-cx" data-fg="--selected-fg" data-bg="--selected-bg" title="--selected-fg on --selected-bg · shipped 5.17:1 (light) · found by: a rule sets both halves — body.ui-v2 .tag-chip.is-selected"><span class="tc-cx-sample" style="background: var(--selected-bg); color: var(--selected-fg)">Aa — selected fg → selected bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">5.17</span></div>
+        <div class="tc-cx" data-fg="--selected-fg" data-bg="--selected-bg" title="--selected-fg on --selected-bg · shipped 5.17:1 (light) · found by: a rule sets both halves — body.ui-v2 .tag-chip.is-selected, body.ui-v2 .tag-chip:has"><span class="tc-cx-sample" style="background: var(--selected-bg); color: var(--selected-fg)">Aa — selected fg → selected bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">5.17</span></div>
       </div>
       </details>
       <details class="tc-cluster" open><summary>Participant roles [A] · 3 <span class="tc-cx-count" data-cluster="Participant roles [A]"></span></summary>

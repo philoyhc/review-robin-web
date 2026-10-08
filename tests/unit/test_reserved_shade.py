@@ -52,7 +52,12 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #: control, and each is here because someone decided it is:
 #:
 #: - ``.tag-chip.is-selected`` — the filter and column chips. The
-#:   selected fill *is* the affordance saying the filter is on.
+#:   selected fill *is* the affordance saying the filter is on. Its
+#:   ``:has(> input:checked)`` twin is the same fill on a chip that wraps
+#:   a checkbox (Session Home's optional-tab chips, 19U Item 3).
+#: - ``label.tag-chip:has(> input:focus-visible)`` — the keyboard focus
+#:   ring of such a chip, whose box is visually hidden; the inputs' own
+#:   ring uses the same ``--focus-ring``.
 #: - ``.severity-chip.active`` — the Validate page's severity filter,
 #:   an ``<a>``. Already an outlined pill; active takes the shade on its
 #:   border and text, and is the precedent rung 3 generalised.
@@ -67,7 +72,11 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #: someone has confirmed it is one. A static pill appearing in this set
 #: is the bug the file exists to catch.
 CONTROL_SELECTORS = {
-    "body.ui-v2 .tag-chip.is-selected",
+    (
+        "body.ui-v2 .tag-chip.is-selected, "
+        "body.ui-v2 .tag-chip:has(> input:checked)"
+    ),
+    "body.ui-v2 label.tag-chip:has(> input:focus-visible)",
     "body.ui-v2 .severity-chip.active",
     (
         "body.ui-v2 .tag-chip, body.ui-v2 .pill.pill-tag-clear, "

@@ -154,3 +154,62 @@ def test_the_chips_the_rule_targets_are_really_on_the_page(
     assert cycles, "no visibility cycle chip rendered on Instruments"
     for classes, tag in cycles:
         assert "tag-chip" in classes, tag
+
+
+def test_a_locked_chip_drops_the_edge_and_keeps_its_state(
+    client: TestClient, db: Session
+) -> None:
+    """19U Item 3: Session Home's optional-tab chips lock with the card.
+    A locked chip cancels the edge and the pointer, as ``is-disabled``
+    does, but says on or off in the card's display-value colors rather
+    than the reserved shade, and is not struck through."""
+    review_session = _make_session(client, db, code="19u3-locked")
+    css = client.get(f"/operator/sessions/{review_session.id}").text
+
+    block = _rule(css, "body.ui-v2 .tag-chip.is-locked")
+    assert block is not None
+    assert "cursor: default" in block
+    assert "border-color: transparent" in block
+    assert "box-shadow: none" in block
+    assert "line-through" not in block
+    assert css.index("body.ui-v2 .tag-chip.is-locked {") > css.index(
+        "body.ui-v2 .tag-chip,"
+    )
+    on = _rule(
+        css,
+        "body.ui-v2 .tag-chip.is-locked.is-selected,\n"
+        "      body.ui-v2 .tag-chip.is-locked:has(> input:checked)",
+    )
+    assert on is not None
+    assert "var(--config-value-bg)" in on and EDGE not in on
+    assert css.index("body.ui-v2 .tag-chip.is-locked.is-selected") > css.index(
+        "body.ui-v2 .tag-chip.is-selected,"
+    )
+    off = _rule(
+        css,
+        "body.ui-v2 .tag-chip.is-locked:not(.is-selected):not(:has(> input:checked))",
+    )
+    assert off is not None and "opacity: 0.55" in off
+
+
+def test_a_checkbox_chip_fills_from_its_box(
+    client: TestClient, db: Session
+) -> None:
+    """A chip wrapping a checkbox is selected when the box is ticked, so a
+    Cancel's ``form.reset()`` repaints it with no script."""
+    review_session = _make_session(client, db, code="19u3-has")
+    css = client.get(f"/operator/sessions/{review_session.id}").text
+
+    block = _rule(
+        css,
+        "body.ui-v2 .tag-chip.is-selected,\n"
+        "      body.ui-v2 .tag-chip:has(> input:checked)",
+    )
+    assert block is not None
+    assert "var(--selected-bg)" in block
+    # A chip that is a ``<label>`` must not take ``body.ui-v2 label``'s
+    # block box and margins (read on #2893: nothing else pinned these).
+    label = _rule(css, "body.ui-v2 label.tag-chip")
+    assert label is not None
+    assert "display: inline-block" in label
+    assert "margin: 0 var(--space-1) 0 0" in label

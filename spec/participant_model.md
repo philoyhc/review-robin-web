@@ -38,8 +38,8 @@ Two boolean columns on `sessions` gate which of the optional Setup tabs render a
 
 | Column | Default | Gates | Authored on |
 |---|---|---|---|
-| `relationships_enabled` | `False` | The Relationships Setup tab + every route in `_setup_relationships.py` (via `require_relationships_enabled_session`). | **User interface settings** card on Create New Session; the **Optional setup tabs** field of Session Home's Session details card (`spec/session_home.md`). |
-| `observers_enabled` | `False` | The Observers Setup tab + every route in `_setup_observers.py` (via `require_observers_enabled_session`); the observer collation surface gate `require_observer_in_session` is independent of this flag. | The same two places: the Create page's User interface settings card and Session Home's Optional setup tabs field. |
+| `relationships_enabled` | `False` | The Relationships Setup tab + every route in `_setup_relationships.py` (via `require_relationships_enabled_session`). | **User interface settings** card on Create New Session; the **Optional setup tabs and pages** field of Session Home's Session details card (`spec/session_home.md`). |
+| `observers_enabled` | `False` | The Observers Setup tab + every route in `_setup_observers.py` (via `require_observers_enabled_session`); the observer collation surface gate `require_observer_in_session` is independent of this flag. | The same two places: the Create page's User interface settings card and Session Home's Optional setup tabs and pages field. |
 
 On the Create page the card sits above the Quick Setup card; on Session Home the toggles are a field of the details card, under Tags (`spec/session_home.md`). Saving the form persists both flags through `SessionCreate` to `sessions.create_session` (on the Create form) or `sessions.update_session` (on the Session details card).
 

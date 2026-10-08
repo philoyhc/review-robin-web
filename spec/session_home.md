@@ -379,10 +379,12 @@ Two more fields follow Description in the left column. The card holds
 no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
 (§3a).
 
-- **Tags** (`#config-tags-field`, label "Tags (optional)") — a field
-  of this card: it shares the card's display/edit swap, its edit window
-  and its `config-save` form, with no save of its own. Locked, it shows
-  the tags as the sessions lobby's pills (`.pill .pill-count` in
+- **Tags** (`#config-tags-field`, label "Tags (optional)", set a step
+  further below Description than a label's own top margin puts it, by
+  `.config-field-gap`) — a field of this card: it shares the card's
+  display/edit swap, its edit window and its `config-save` form, with
+  no save of its own. Locked, it shows the tags as the sessions lobby's
+  pills (`.pill .pill-count` in
   `.session-tags`, uppercased by `.pill`), or an em dash `.config-value`
   when there are none; unlocked, one comma-separated box that completes
   the tag at the end of the line as it is typed (the shared tag
@@ -400,16 +402,22 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   refuses a non-editable session, this surface edits tags in draft
   and validated only; the lobby edits them in any state
   (`spec/sessions_overview.md`).
-- **Optional setup tabs** (`#config-optional-tabs`, a
-  `role="group"` labeled "Optional setup tabs", no subtitle) — two
-  checkboxes: **Relationships tab and page**
-  (`relationships_enabled`) and **Observers tab and page**
-  (`observers_enabled`), letting the operator opt into those
-  optional Setup tabs at any point. Display mode shows them as disabled
-  checkboxes. Each is lock-on-data: disabled in edit mode once the
-  corresponding roster has rows (`has_relationships` /
-  `has_observers`), mirroring the service-layer guard against
-  orphaning data.
+- **Optional setup tabs and pages** (`#config-optional-tabs`, a
+  `role="group"` labeled "Optional setup tabs and pages", no
+  subtitle) — two selector chips, **Relationships** (`relationships_enabled`) and
+  **Observers** (`observers_enabled`), in the rosters' "Show columns"
+  chip style, letting the operator opt into those optional Setup tabs
+  at any point. Unlocked, each chip is a `<label>` around its
+  visually hidden checkbox, filled while the box is ticked
+  (`spec/ui_elements.md` "Label or control"). Locked, they are inert
+  `.tag-chip.is-locked` spans showing the stored state, and stating it
+  to assistive technology as disabled checkboxes (`role="checkbox"`,
+  `aria-checked`, `aria-disabled`, no tab stop). Each is lock-on-data:
+  in edit mode its checkbox renders disabled and its chip `is-locked`,
+  titled "The session has relationships, so the tab stays on." (or
+  observers), once the corresponding roster has rows
+  (`has_relationships` / `has_observers`), mirroring the service-layer
+  guard against orphaning data.
 
 **Edit affordance behavior:**
 
