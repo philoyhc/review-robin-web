@@ -467,22 +467,19 @@ _LABELLED_IMPORTS = {
 }
 
 
-@pytest.mark.parametrize("roster", sorted(_LABELLED_IMPORTS))
-# Lock 1 is the save's gate, 2 the label reconcile's, 3 the tag_1
-# upsert's, 4 the tag_2 clear's.
-@pytest.mark.parametrize("at", [2, 4])
-def test_a_labelled_import_commits_nothing_before_a_later_gate_refuses(
-    db: Session, monkeypatch, roster: str, at: int
-) -> None:
-    """Codex on #2882: the label reconcile re-gates after the roster
-    replace. The import is one commit, so a session archived at any later
-    gate refuses with nothing committed, and the service drops the
-    flushed half-import itself."""
-    from app.db.models import Reviewee, Reviewer
-    from app.services import csv_imports
+def _counting_commits(monkeypatch, db: Session) -> list[bool]:
+    commits: list[bool] = []
+    real_commit = db.commit
+    monkeypatch.setattr(db, "commit", lambda: (commits.append(True), real_commit()))
+    return commits
 
-    parse, save, body = _LABELLED_IMPORTS[roster]
-    model = Reviewer if roster == "reviewers" else Reviewee
+
+def _labels_session(db: Session) -> tuple[User, ReviewSession]:
+    """A draft session that already overrides the reviewer and reviewee
+    tag_2 labels, so an import's ``clear`` of tag_2 has a row to delete
+    and reaches its own commit."""
+    from app.db.models import SessionFieldLabel
+
     user = User(email="op-labels@example.edu", display_name="Op")
     db.add(user)
     db.flush()
@@ -490,12 +487,41 @@ def test_a_labelled_import_commits_nothing_before_a_later_gate_refuses(
         name="Labels", code="guard-labels", created_by_user_id=user.id
     )
     db.add(session)
+    db.flush()
+    for source_type in ("reviewer", "reviewee"):
+        db.add(
+            SessionFieldLabel(
+                session_id=session.id,
+                source_type=source_type,
+                source_field="tag_2",
+                label="Old",
+            )
+        )
     db.commit()
+    return user, session
+
+
+@pytest.mark.parametrize("roster", sorted(_LABELLED_IMPORTS))
+# Lock 1 is the save's gate, 2 the label reconcile's, 3 the tag_1
+# upsert's, 4 the tag_2 clear's (which deletes the seeded label), 5 the
+# tag_3 clear's.
+@pytest.mark.parametrize("at", [2, 5])
+def test_a_labelled_import_commits_nothing_before_a_later_gate_refuses(
+    db: Session, monkeypatch, roster: str, at: int
+) -> None:
+    """Codex on #2882: the label reconcile re-gates after the roster
+    replace. The import is one commit, so a session archived at any later
+    gate refuses with nothing committed — past an upsert and a clear at
+    lock 5 — and the service drops the flushed half-import itself."""
+    from app.db.models import Reviewee, Reviewer
+    from app.services import csv_imports
+
+    parse, save, body = _LABELLED_IMPORTS[roster]
+    model = Reviewer if roster == "reviewers" else Reviewee
+    user, session = _labels_session(db)
     parsed = getattr(csv_imports, parse)(body)
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=at)
-    commits: list[bool] = []
-    real_commit = db.commit
-    monkeypatch.setattr(db, "commit", lambda: (commits.append(True), real_commit()))
+    commits = _counting_commits(monkeypatch, db)
 
     with pytest.raises(lifecycle.SessionStateConflict):
         getattr(csv_imports, save)(
@@ -512,6 +538,72 @@ def test_a_labelled_import_commits_nothing_before_a_later_gate_refuses(
     assert db.execute(
         select(model.id).where(model.session_id == session.id)
     ).all() == []
+
+
+def test_a_relationship_import_commits_nothing_before_its_label_gate_refuses(
+    db: Session, monkeypatch
+) -> None:
+    """Codex on #2882, the relationship import's half: the replace and
+    the pair-context label reconcile are one commit, so the reconcile's
+    gate (the import's first lock on this rung) refuses with nothing
+    committed and no relationship row left behind."""
+    from app.db.models import Relationship, Reviewee, Reviewer
+    from app.services import relationships
+
+    user, session = _labels_session(db)
+    reviewer = Reviewer(session_id=session.id, name="Alice", email="alice@example.edu")
+    reviewee = Reviewee(
+        session_id=session.id, name="Carol", email_or_identifier="carol@example.edu"
+    )
+    db.add_all([reviewer, reviewee])
+    db.commit()
+    parsed = relationships.parse_relationship_csv(
+        b"ReviewerEmail,RevieweeEmail,PairContextTag1.Mentor of\n"
+        b"alice@example.edu,carol@example.edu,cohort-a\n",
+        reviewers=[reviewer],
+        reviewees=[reviewee],
+    )
+    assert not parsed.is_blocked, parsed.issues
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"))
+    commits = _counting_commits(monkeypatch, db)
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        relationships.save_relationships(
+            db,
+            session=session,
+            user=user,
+            rows=parsed.rows,
+            filename="relationships.csv",
+            correlation_id="t",
+            field_labels_captured=parsed.field_labels,
+        )
+
+    assert commits == []
+    assert db.execute(
+        select(Relationship.id).where(Relationship.session_id == session.id)
+    ).all() == []
+
+
+def test_the_validated_to_draft_flip_lands_with_the_edit(
+    db: Session, monkeypatch
+) -> None:
+    """Codex on #2882: the flip committed on its own released the lock
+    the edit's gate took, so an archive (or a re-validate) could land
+    between the flip and the edit. It now lands in the edit's one commit."""
+    from app.services import reviewers
+
+    user, session = _labels_session(db)
+    session.status = "validated"
+    db.commit()
+    commits = _counting_commits(monkeypatch, db)
+
+    reviewers.create_reviewer(
+        db, review_session=session, name="Zed", email="zed@example.edu", user=user
+    )
+
+    assert commits == [True]
+    assert db.get(ReviewSession, session.id).status == "draft"
+    assert _count(db, session, "session.invalidated") == 1
 
 
 def test_a_row_edit_refuses_a_session_activated_at_the_lock(

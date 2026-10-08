@@ -1094,41 +1094,33 @@ def save_reviewers(
 ) -> tuple[int, int]:
     # One commit for the roster and its labels, so the lock taken by
     # the gate holds to the end and a refusal can't follow a committed
-    # replace (findings Bc4). ``unit_of_work.commit`` at the end, so a
-    # caller's own ``single_commit`` still owns the commit.
-    try:
-        with unit_of_work.single_commit(db):
-            lifecycle.require_editable(db, session)
-            result = _save(
+    # replace (findings Bc4).
+    with unit_of_work.atomic(db):
+        lifecycle.require_editable(db, session)
+        result = _save(
+            db,
+            session=session,
+            user=user,
+            model=Reviewer,
+            rows=rows,
+            event_type="reviewers.imported",
+            source_label="reviewers",
+            filename=filename,
+            correlation_id=correlation_id,
+            to_kwargs=_reviewer_to_kwargs,
+        )
+        # Segment 19C Item 1 — reconcile reviewer friendly labels from
+        # the roster header (upsert present, clear absent). ``None`` = a
+        # caller that isn't an import; skip untouched.
+        if field_labels_captured is not None:
+            field_labels.apply_import(
                 db,
-                session=session,
+                session,
+                source_type="reviewer",
+                captured=field_labels_captured,
                 user=user,
-                model=Reviewer,
-                rows=rows,
-                event_type="reviewers.imported",
-                source_label="reviewers",
-                filename=filename,
                 correlation_id=correlation_id,
-                to_kwargs=_reviewer_to_kwargs,
             )
-            # Segment 19C Item 1 — reconcile reviewer friendly labels from
-            # the roster header (upsert present, clear absent). ``None`` = a
-            # caller that isn't an import; skip untouched.
-            if field_labels_captured is not None:
-                field_labels.apply_import(
-                    db,
-                    session,
-                    source_type="reviewer",
-                    captured=field_labels_captured,
-                    user=user,
-                    correlation_id=correlation_id,
-                )
-    except Exception:
-        # Nothing above committed: drop the flushed half-import here
-        # rather than trusting every caller to.
-        db.rollback()
-        raise
-    unit_of_work.commit(db)
     return result
 
 
@@ -1146,41 +1138,34 @@ def save_reviewees(
 
     # One commit for the roster, its display fields and its labels, as
     # in ``save_reviewers`` (findings Bc4).
-    try:
-        with unit_of_work.single_commit(db):
-            lifecycle.require_editable(db, session)
-            result = _save(
+    with unit_of_work.atomic(db):
+        lifecycle.require_editable(db, session)
+        result = _save(
+            db,
+            session=session,
+            user=user,
+            model=Reviewee,
+            rows=rows,
+            event_type="reviewees.imported",
+            source_label="reviewees",
+            filename=filename,
+            correlation_id=correlation_id,
+            to_kwargs=_reviewee_to_kwargs,
+        )
+        # Lazy-seed display fields for any populated reviewee slots
+        # (profile_link / tag_1..3) — see guide/unfinished_business item #14.
+        seed_display_fields_from_reviewees(db, session)
+        # Segment 19C Item 1 — reconcile reviewee friendly labels from
+        # the roster header (upsert present, clear absent).
+        if field_labels_captured is not None:
+            field_labels.apply_import(
                 db,
-                session=session,
+                session,
+                source_type="reviewee",
+                captured=field_labels_captured,
                 user=user,
-                model=Reviewee,
-                rows=rows,
-                event_type="reviewees.imported",
-                source_label="reviewees",
-                filename=filename,
                 correlation_id=correlation_id,
-                to_kwargs=_reviewee_to_kwargs,
             )
-            # Lazy-seed display fields for any populated reviewee slots
-            # (profile_link / tag_1..3) — see guide/unfinished_business item #14.
-            seed_display_fields_from_reviewees(db, session)
-            # Segment 19C Item 1 — reconcile reviewee friendly labels from
-            # the roster header (upsert present, clear absent).
-            if field_labels_captured is not None:
-                field_labels.apply_import(
-                    db,
-                    session,
-                    source_type="reviewee",
-                    captured=field_labels_captured,
-                    user=user,
-                    correlation_id=correlation_id,
-                )
-    except Exception:
-        # Nothing above committed: drop the flushed half-import here
-        # rather than trusting every caller to.
-        db.rollback()
-        raise
-    unit_of_work.commit(db)
     return result
 
 
