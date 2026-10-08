@@ -118,6 +118,14 @@ outside one unit, one lock wait on the event loop) and one on #2885 (log
 lines before the commit). From rung 4 on, a sweep for those three shapes
 ran before every push.
 
+**Close.** `close_check.py 19U.1` passes; its coverage notes (touched
+routes whose specs are not in Doc impact: `spec/instruments.md`,
+`spec/quick_setup_card_spec.md`, `spec/permissions.md`,
+`spec/setup_pages.md` and four more) are adjudicated as no contract
+change, since those routes gained only the race-time 409 and the hop, and
+Quick Setup's slots now give the "lifecycle refusal" sentence the spec
+already promises. `spec-writer`'s two flags are Bc6 and A9 below.
+
 **Left open, as register rows** in `guide/findings_2026-10-07_corpus.md`:
 Bc5 (invitation sends gate on the loaded row), Bc6 (Activate's warnings
 detour drops its started row), Bc7 (an uncaught Generate exception
