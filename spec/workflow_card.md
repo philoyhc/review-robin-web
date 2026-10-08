@@ -216,7 +216,7 @@ missed).
 | **4** | `is_validated` + `can_activate` + no invitations | "Setup is prepared and the reviewer surface is previewable, but there are no invitations. **Prepare session** creates one per eligible reviewer — run it, and if it still creates none, no reviewer is both active and assigned. Or Activate now to receive responses." |
 | **4Err** | `is_validated`, not `can_activate` (defensive) | "Validation shows that there are error(s). Resolve them and re-run **Prepare session** before activating." |
 | **5** | `is_validated`, invites generated, none sent | "Invitations are ready to send. Send them ahead of Activation to notify reviewers, or Activate now and send afterwards." |
-| **6** | `is_validated`, invites sent | "Invitations are marked sent, but no mail leaves the app yet — nobody has actually been told. Activate the session when you’re ready to receive responses." **The copy says what the send path does**: `send_invitation` (`app/services/invitations.py`) writes an `EmailOutbox` row and flips it `queued` → `sent` in one transaction with no transport call (nothing calls `app/services/email_send.py`), so until a transport is wired this state means *stamped*, not *delivered*. |
+| **6** | `is_validated`, invites sent | "Invitations are marked sent, but no mail leaves the app yet — nobody has actually been told. Activate the session when you’re ready to receive responses." **The copy says what the send path does**: `send_invitation` (`app/services/invitations.py`) writes an `EmailOutbox` row and flips it `queued` → `sent` in one transaction with no transport call (`app/services/email_send.py` is not wired in), so until a transport is wired this state means *stamped*, not *delivered*. |
 | **7** | `is_ready`, no Invitation rows yet | "Session is open for responses, but no invitations exist — nobody has been told they can start. Only **Prepare session** creates them and an open session cannot run it: **Revert to draft** first, which stops responses, then fix the roster, Prepare, and activate again." |
 | **8** | `is_ready`, invites generated, none sent | "Session is open. Send the prepared invitations so reviewers know they can start." |
 | **9** | `is_ready`, invites sent | "Session is open. Send reminders if reviewers fall behind." |
@@ -960,9 +960,9 @@ routes:
 **The per-step `/assignments/generate` and `/activate` routes stay
 alive although the Workflow card POSTs to neither directly.**
 `/activate` is load-bearing for the Validate page's warnings-detour
-banner; `/assignments/generate` has no UI consumer and stays as a
-small surface for direct callers (test fixtures,
-programmatic-validate hooks).
+banner; `/assignments/generate` is not on the card; it stays as a small
+surface for direct callers (test fixtures, programmatic-validate
+hooks).
 
 All `/activate` and `/revert` routes honour the form field
 `return_to` against the `_REVERT_RETURN_TO` allowlist and 303 to
