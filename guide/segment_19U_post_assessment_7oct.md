@@ -304,12 +304,13 @@ Taken 2026-10-08 at `64056c04`.
 Doc impact for the new chip states. Driven in Chromium: a locked click
 does nothing, an unlocked click ticks the box and enables Save, Cancel
 clears the fill, Save persists, Space toggles from the keyboard. The
-author's browser check is owed. **One read**, of `68c2949d`: locked
+author's browser check is owed. **Two reads.** The first, of `68c2949d`: locked
 chips stated on/off by color alone (now `role="checkbox"` with
 `aria-checked`), the gap on the wrong spec bullet (also `spec-writer`'s
 flag), two stale "one inert chip" / "only on controls" lines, two
 unpinned CSS rules (now pinned and mutation-checked), and the tooltip
-missing from the spec; all fixed.
+missing from the spec; all fixed. The second, of the fix `2226afef`,
+was clean, each new pin mutation-checked.
 
 ### PR ladder
 
