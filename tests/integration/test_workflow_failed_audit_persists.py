@@ -197,3 +197,38 @@ def test_activate_commits_its_started_event_before_the_warnings_detour(
     assert not _events(committed_engine, session_id, "session.workflow_run_failed")
     with Session(bind=committed_engine) as verify:
         assert verify.get(ReviewSession, session_id).status == "validated"
+
+
+def test_an_unexpected_failure_after_a_flush_lands_only_its_failure_row(
+    committed_client: TestClient, committed_engine: Engine, monkeypatch
+) -> None:
+    """Past Generate's own unit, the route's rollback is what keeps a
+    failed step's flushed writes out of the failure row's commit
+    (findings Bc7)."""
+    import pytest
+    from sqlalchemy.exc import OperationalError
+
+    import app.web.routes_operator._workflow as workflow
+
+    session_id = _session_id(committed_client, committed_engine, "fail-flush")
+
+    def _flush_then_fail(db, review_session):
+        review_session.name = "Flushed by the failed step"
+        db.flush()
+        raise OperationalError("SELECT", {}, Exception("connection reset"))
+
+    monkeypatch.setattr(
+        workflow.validation, "validate_session_setup", _flush_then_fail
+    )
+
+    with pytest.raises(OperationalError):
+        committed_client.post(
+            f"/operator/sessions/{session_id}/workflow/prepare",
+            follow_redirects=False,
+        )
+
+    failed = _events(committed_engine, session_id, "session.workflow_run_failed")
+    assert len(failed) == 1
+    assert failed[0].detail["context"]["step"] == "validate"
+    with Session(bind=committed_engine) as verify:
+        assert verify.get(ReviewSession, session_id).name == "Fail-Flush"

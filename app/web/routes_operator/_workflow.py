@@ -22,11 +22,13 @@ Per ``guide/segment_18F_workflow_optimization.md`` and the revised
 ``spec/workflow_card.md``.
 
 Sequential best-effort runs with structured per-step error capture
-in both routes. Neither route raises to the framework — every
-failure is caught, optionally rolled back, audited via
+in both routes. An expected failure (``_StepFailed``,
+``LifecycleError``, ``ValueError``) is caught, audited via
 ``session.workflow_run_failed`` (with ``context.button`` carrying
 ``"prepare_session"`` or ``"activate_session"``), and surfaced as a
-``super_status=failed`` 303 redirect.
+``super_status=failed`` 303 redirect. Any other exception from
+Prepare's steps is rolled back and audited the same way, then
+re-raised as a 500 (findings Bc7).
 """
 
 from __future__ import annotations
@@ -295,11 +297,11 @@ def workflow_prepare(
         # an `OperationalError`) still answers 500, but the run's
         # committed `workflow_run_started` gets its failed row first
         # (findings Bc7). Rolled back before the write, so nothing the
-        # failed step flushed lands with it; if the write itself fails
-        # (the database is gone), that is logged and the original error
-        # is the one raised.
-        db.rollback()
+        # failed step flushed lands with it; if the rollback or the write
+        # fails (the database is gone), that is logged and the original
+        # error is the one raised.
         try:
+            db.rollback()
             audit.write_event(
                 db,
                 event_type="session.workflow_run_failed",
@@ -318,7 +320,6 @@ def workflow_prepare(
             )
             db.commit()
         except Exception:
-            db.rollback()
             _log.exception("could not record the failed Prepare run")
         raise
 
