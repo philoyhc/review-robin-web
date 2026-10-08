@@ -2783,7 +2783,6 @@ def test_no_boundary_group_preview_honours_links_1_and_2(
     ]
 
 
-
 _A4_LINK2_EXCLUDE = {
     "link1_mode": "all",
     "link1_combinator": "AND",
@@ -2834,12 +2833,36 @@ def test_live_grouped_pill_on_a_saved_individual_takes_reviewer_survivors(
     assert resp.json()["sample_group_member_ids"] == survivors
 
 
+def test_live_individual_pill_on_a_saved_group_stores_no_member_ids(
+    client: TestClient, db: Session
+) -> None:
+    """A4: the live Individual pill wins over a saved Group and over the
+    boundary selects the card still posts, so the Refresh stores no
+    member set."""
+    review_session, new_model = _group_band2_session(
+        client, db, code="a4-live-individual"
+    )
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            **_A4_LINK2_EXCLUDE,
+            "link3_mode": "individual",
+            "link3_boundary": ["reviewee.tag1"],
+        },
+    )
+    assert resp.json()["sample_group_member_ids"] == []
+    db.refresh(new_model)
+    assert new_model.band2_state.get("sample_group_member_ids") is None
+
+
 def test_per_reviewee_preview_stores_no_member_ids_and_renders_unfiltered(
     client: TestClient, db: Session
 ) -> None:
     """A4: a per-reviewee instrument keeps its unconstrained list. The
-    Refresh stores no member set, and a leftover one does not filter
-    the server render."""
+    Refresh stores no member set (an unknown ``link3_mode`` falls back
+    to the saved instrument), and a leftover set does not filter the
+    server render."""
     review_session, new_model = _group_band2_session(
         client, db, code="a4-individual"
     )
@@ -2848,7 +2871,7 @@ def test_per_reviewee_preview_stores_no_member_ids_and_renders_unfiltered(
     resp = client.post(
         f"/operator/sessions/{review_session.id}"
         f"/instruments/{new_model.id}/preview-sample",
-        json={**_A4_LINK2_EXCLUDE, "link3_mode": "individual"},
+        json={**_A4_LINK2_EXCLUDE, "link3_mode": "bogus"},
     )
     assert resp.json()["sample_group_member_ids"] == []
     db.refresh(new_model)
@@ -2878,6 +2901,7 @@ def test_per_reviewee_preview_stores_no_member_ids_and_renders_unfiltered(
         "Eve",
         "Fay",
     ]
+
 
 def test_boundary_change_drops_stale_sample_member_ids(
     client: TestClient, db: Session

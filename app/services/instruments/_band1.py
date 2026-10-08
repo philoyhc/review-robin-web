@@ -1055,14 +1055,16 @@ def find_sample_in_scope_reviewee(
     # persisted ``instrument.group_kind`` when None so callers that
     # don't supply it (older / non-Refresh paths) keep their old
     # behaviour.
+    grouped = (
+        link3_mode == "grouped"
+        if link3_mode is not None
+        else instrument.group_kind is not None
+    )
+    if not grouped:
+        # Per-reviewee, by the live pill or the saved instrument: no
+        # group, whatever boundary selects the card still posts.
+        return reviewee, None
     if not reviewee_boundary_fields:
-        grouped = (
-            link3_mode == "grouped"
-            if link3_mode is not None
-            else instrument.group_kind is not None
-        )
-        if not grouped:
-            return reviewee, None
         # A pair-context-only boundary (A5, ruled 2026-10-06): the
         # partition needs a reviewer's relationship tags, so the preview
         # does not split on it. A group instrument with no boundary

@@ -195,6 +195,14 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   warning.** Every importer and edit refuses a comma in a `tag_*` value
   (`comma_in_tag`); a row still holding one is refused when next edited
   until the comma is removed.
+- **Ac1** (found while fixing A4, read on #2906; low, code) **The Band 2
+  Refresh excludes self-reviews by the saved unit of review.** The
+  member set follows the live Link 3 pill since #2906, but the
+  whole-group versus pair-level self-review filter in
+  `find_sample_in_scope_reviewee` (`app/services/instruments/_band1.py`)
+  still reads the saved `group_kind`. With the pill switched and not yet
+  saved, the sample can come from the other rule. Code: read the same
+  grouped flag.
 - **Carried:** old B27 / G6 (scheduled sends fire only from Session Home;
   `guide/post_azure_todo_checklist.md` §7), re-found as B3 and G4; old D4
   (`responses_import._stage` overwrites a duplicate row), re-found and
