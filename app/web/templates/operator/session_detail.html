@@ -51,7 +51,7 @@
         window.rrwSaveFade();
         // Hold the first paint until the restore at the foot of the page
         // has run: Chromium may otherwise paint a frame of the half-parsed
-        // page at the top before it (one run in three in CI). The marker
+        // page at the top before it (measured: about one Save in five, in CI and locally). The marker
         // follows the restore script. Save's reload only; a browser
         // without ``rel=expect`` paints as soon as it can, as before.
         var hold = document.createElement('link');

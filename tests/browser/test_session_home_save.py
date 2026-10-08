@@ -122,10 +122,26 @@ def test_a_seat_left_by_a_refused_save_is_not_inherited(
     assert page.evaluate("window.scrollY") == 0
     assert page.evaluate("window.rrwSaveSeat") is None
 
+    # Fresh, on ?editing=1, but with a fragment: not Save's landing
+    # either. From another page first, so the goto is a load rather
+    # than a same-document fragment move.
+    page.goto("/operator/sessions")
+    _plant_seat(page, session_id, y=400, age_ms=0)
+    page.goto(f"/operator/sessions/{session_id}?editing=1#owners-card")
+    assert page.evaluate("window.rrwSaveSeat") is None
+
     # And the key is used at most once: gone after any Home load.
     _plant_seat(page, session_id, y=400, age_ms=0)
-    page.goto(f"/operator/sessions/{session_id}#owners-card")
-    assert page.evaluate("window.rrwSaveSeat") is None  # a fragment is not Save's landing
+    page.goto(f"/operator/sessions/{session_id}")
     assert page.evaluate(
         f"sessionStorage.getItem('sessionHomeScrollY:/operator/sessions/{session_id}')"
     ) is None
+
+
+def test_a_double_clicked_save_adds_the_fade_rule_once(
+    page: Page, new_session: Callable[[], int]
+) -> None:
+    session_id = new_session()
+    page.goto(f"/operator/sessions/{session_id}?editing=1")
+    page.evaluate("window.rrwSaveFade(); window.rrwSaveFade();")
+    assert page.evaluate("document.querySelectorAll('#rrw-save-fade').length") == 1

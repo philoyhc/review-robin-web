@@ -413,9 +413,13 @@ the first-frame claim unpinned; `spec-writer` caught two spec sentences.
 The second, of `8f0a35e0`, found the new first-frame test failing one
 run in five — Chromium could paint the half-parsed page at the top before
 the restore ran, a real flash, now held off — plus two thin tests, a
-double-added fade rule and two spec sentences, all fixed. The
-back/forward-cache branch never runs in Playwright's Chromium; it is the
-author's browser check. Without JS, Save now lands at the page top rather
+double-added fade rule and two spec sentences, all fixed. The third, of
+`57a29625`, measured the hold (60 of 60 with it, 17 of 60 failing
+without) and found it cannot stall: a missing marker releases at end of
+parse. Its four low gaps (the `blocking` attribute and the double-click
+guard unpinned, a fragment case that tested nothing new, a rate quoted
+two ways) are closed and mutation-checked. The back/forward-cache branch
+never runs in Playwright's Chromium; it is the author's browser check. Without JS, Save now lands at the page top rather
 than the card's (the fragment's cost). The author's browser check is
 owed.
 

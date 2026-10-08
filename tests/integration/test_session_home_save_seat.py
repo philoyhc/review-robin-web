@@ -39,6 +39,8 @@ def test_only_saves_reload_opts_into_the_cross_fade(
     home = client.get(f"/operator/sessions/{review_session.id}").text
     head = " ".join(home[: home.index("</head>")].split())
     assert "window.rrwSaveFade = function" in head
+    # A double-clicked Save adds the rule once.
+    assert "if (document.getElementById('rrw-save-fade')) return;" in head
     assert "prefers-reduced-motion: no-preference" in head
     assert "'@view-transition { navigation: auto; }'" in head
     # The seat counts once, fresh, and only where Save's redirect lands.
@@ -72,6 +74,10 @@ def test_the_card_form_remembers_the_scroll_and_lock_drops_the_param(
     # The render hold set in the head (Save's reload only) ends at a
     # marker after the restore script, so no frame paints before it.
     assert "hold.rel = 'expect';" in body and "'#rrw-seat-restored'" in body
+    # Without ``blocking=render`` the link holds nothing (read on #2894:
+    # the browser test alone catches its loss only some runs).
+    assert "hold.setAttribute('blocking', 'render');" in body
+    assert "document.head.appendChild(hold);" in body
     assert body.index('<div id="rrw-seat-restored" hidden></div>') > body.index(
         "</script>", marker
     )
