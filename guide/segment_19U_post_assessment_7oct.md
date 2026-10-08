@@ -188,3 +188,10 @@ uses one row; the slot-reason tests do not assert that nothing landed).
 - `spec/architecture.md` — "Three-layer split": a lifecycle-state gate is a service rule, and `session_guard` is its primitive; the `unit_of_work` paragraph names `atomic` and `after_commit` beside `single_commit` (PR 7).
 - `guide/findings_2026-10-07_corpus.md` — Bc4 ruled (PR 1), struck at close (PR 7).
 - `guide/todo_master.md` — the segment's in-progress line names Item 1 while it is open (PR 1), and drops it at the item close (PR 7).
+
+## Item 2 — Session Home session edit UI adjustment
+
+**Stub, filed 2026-10-08 by the author, for later.** An adjustment to
+how Session Home edits the session. The author gives the details when
+the item is picked up; until then it has no ladder, no `### Doc impact`
+and no `### Status`, and nothing here is built.
