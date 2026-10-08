@@ -78,62 +78,30 @@ Taken 2026-10-07 at `9eda6273`.
 ### Status — closed 2026-10-08
 
 **Laddered as planned**: rungs 2–6 are #2881–#2885 (cumulative-read
-base `d8445500`), this close is PR 7. What moved:
+base `d8445500`), the close PR 7. What moved:
 
 - **Pulled forward to rung 3** (Codex on #2882): `invalidate_if_validated`
   only flushes, so the `validated → draft` flip lands in the caller's
-  commit (all 44 call sites walked); the label editor and the roster and
-  relationship imports run as one unit; the relationship-import hops.
-- **Added at build:** `unit_of_work.atomic` (rung 3) and `after_commit`
-  (rung 6, Codex on #2885); Prepare commits `workflow_run_started` before
-  its steps (rung 4); the Band 2 save, the identity route and Session
-  Home's config save each became one unit (rungs 5–6); purge-and-archive
-  decides `can_archive` under the lock before any purge (rung 6);
-  `set_group_boundary` and `bulk_save_fields`, uncalled, gate anyway.
-- **Behavior changes:** an edit refused after the flip leaves the session
-  `validated`; a double-submitted Revert from `validated` answers 409;
-  a Generate that raises rolls back; the lobby's bulk Unarchive,
-  Purge-and-archive and Delete skip a row moved first; a Quick Setup slot
-  maps a refusal to its `lifecycle` reason.
-- **By design:** tags take no state gate; Quick Setup's slots commit
-  separately, as specified; `rehydrate_session` chains guarded saves on
-  the draft it has just created.
+  commit; the label editor and the roster and relationship imports run
+  as one unit.
+- **Added at build:** `unit_of_work.atomic` and `after_commit`; Prepare
+  commits `workflow_run_started` before its steps; the Band 2 save, the
+  identity route and the config save each became one unit;
+  purge-and-archive decides `can_archive` under the lock.
+- **Behavior changes:** a refused edit leaves the session `validated`; a
+  double Revert answers 409; a raising Generate rolls back; the lobby's
+  bulk actions skip a row moved first.
 
 **Proof at `e35ccb5c`.** `grep -rlE "require_(editable|not_archived|not_ready)\(|lock_session\(" app/services | wc -l`
-→ 27 service files gate. `test_session_state_guard.py` holds 46 tests,
-each mutation-checked by its rung's read. An AST walk of every `async`
-handler in `app/web` finds no guarded call outside a `run_in_threadpool`
-closure. Not pinned: the hops, and Postgres actually blocking (SQLite
-ignores the lock).
+→ 27 service files gate; `test_session_state_guard.py` holds 46 tests,
+each mutation-checked by its rung's read. Not pinned: Postgres actually
+blocking (SQLite ignores the lock).
 
-**Reads: 20 over the build, plus one of this close's code nits.** One
-cumulative read (rungs 2–6) and five follow-ups on rung 2, five on
-rung 3, two each on rungs 4 and 5, five on rung 6. Every medium was a
-commit that released the lock early or a lost audit row: Prepare's
-started row (rung 4), Band 2's per-field commit (rung 5), the config
-save (rung 6, the pre-push sweep). The rest were unpinned gates, stale
-docstrings and spec owed at close. **Codex: six findings, all fixed** —
-five on #2882 (three commits releasing the lock, one pair of writes
-outside one unit, one lock wait on the event loop) and one on #2885 (log
-lines before the commit). From rung 4 on, a sweep for those three shapes
-ran before every push.
-
-**Close.** `close_check.py 19U.1` passes; its coverage notes (touched
-routes whose specs are not in Doc impact: `spec/instruments.md`,
-`spec/quick_setup_card_spec.md`, `spec/permissions.md`,
-`spec/setup_pages.md` and four more) are adjudicated as no contract
-change, since those routes gained only the race-time 409 and the hop, and
-Quick Setup's slots now give the "lifecycle refusal" sentence the spec
-already promises. `spec-writer`'s two flags are Bc6 and A9 below.
-
-**Left open, as register rows** in `guide/findings_2026-10-07_corpus.md`:
-Bc5 (invitation sends gate on the loaded row), Bc6 (Activate's warnings
-detour drops its started row), Bc7 (an uncaught Generate exception
-leaves a started row with no failed row), Bc8 (the Instruments render's
-ungated writes), A9 (`preview-sample` "persists nothing"). Also noted:
-the lobby bulk Delete can delete a row archived since the page loaded
-(archived rows are deletable anyway); two weak tests (the bulk-delete skip
-uses one row; the slot-reason tests do not assert that nothing landed).
+**Reads: 20, plus Codex's six findings, all fixed.** Every medium was a
+commit that released the lock early or a lost audit row. **Close:**
+`close_check.py 19U.1` passes; its uncited-route notes are adjudicated as
+no contract change (those routes gained only the race-time 409). Left
+open as register rows Bc5–Bc8 and A9, since fixed in #2888–#2890.
 
 ### PR ladder
 
@@ -237,21 +205,15 @@ Taken 2026-10-08 at `0e330810`.
 
 ### Status — closed 2026-10-08
 
-**Shipped as planned, in one PR.** Session Home's details card holds no
-sub-card: Tags (`#config-tags-field`) sits under Description, the
-toggles (`#config-optional-tabs`, labeled "Optional setup tabs", no
-subtitle) under Tags, and the Save / Cancel / Lock cluster at the foot
-of the right column. The save path is untouched. The Tags helper moved
-below the box as `.form-help` (judgment call above). Rendered in
-Chromium in both modes before the PR; the author's browser check is
-still owed. The close's `spec-writer` pass edited seven specs; I
-reworded the Create page's "approximates Session Home's placements" in
-two more (`spec/session_owners.md`, added to Doc impact, and
-`spec/operator_ui_concept.md`). The cold read found a test passing only
-on a CSS comment (now pins `#config-optional-tabs`) and a stale line in
-`spec/participant_model.md`, both fixed. Left as is, not this item's:
-`spec/settings_inventory.md`'s `display_timezone` row still names the
-retired Edit Session Details form, and several code comments still name
+**Shipped as planned, in one PR** (#2892); the save path is untouched.
+The Tags helper sits below the box (judgment call above). Rendered in
+Chromium in both modes; the author's browser check is owed. The close's
+`spec-writer` pass edited seven specs and I reworded two more
+(`spec/session_owners.md` added to Doc impact). The cold read's two
+findings (a test passing on a CSS comment, a stale line in
+`spec/participant_model.md`) are fixed. Not this item's: the
+`display_timezone` row in `spec/settings_inventory.md` still names the
+retired Edit Session Details form, and some code comments still name
 the old "User interface settings card".
 
 ### PR ladder
