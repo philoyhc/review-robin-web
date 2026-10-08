@@ -653,6 +653,19 @@ Three rules make that work:
   `cursor: default` and is the one inert chip in the vocabulary; a chip
   that says it cannot be clicked must not also say it can.
 
+**A chip can be a form control.** Session Home's optional-tab chips
+(`spec/session_home.md`) are each a `<label class="pill pill-count
+tag-chip">` around a visually hidden checkbox, so a click ticks the box
+and the form posts it. `.tag-chip:has(> input:checked)` is the
+`.is-selected` fill, read off the box itself, so a form reset repaints
+the chip with no script; the hidden box's keyboard focus shows as a
+`--focus-ring` outline on the chip. **`.tag-chip.is-locked`** is the
+chip of a locked card, or one whose tab holds data: it drops the edge
+and the pointer like `is-disabled`, but is not struck through, because
+it still says on or off. On takes the card's display-value colors
+(`--config-value-bg` / `--config-value-fg`) rather than the reserved
+shade; off is faded.
+
 `.severity-chip` on Validate is the shape this generalises: an outlined
 pill, with `.active` taking the shade on its border and text.
 
