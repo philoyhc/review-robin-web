@@ -1563,7 +1563,7 @@ key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
   (`spec/visibility_policy.md` §5); a stored cell the rule rejects (a
   row imported before the rule) falls back to off, or to the cell's one
   permitted mode. Duplicate session copies each instrument's grid the
-  same way (findings G5; `spec/roundtrip_coverage.md`).
+  same way (`spec/roundtrip_coverage.md`).
 
 **Not cloned: assignment rows.** The duplicate starts with no pairs and
 gets them from the next Generate, exactly as `+Instrument` does. A
@@ -1613,7 +1613,12 @@ The page-wide invariants the lock model enforces:
    Bands 1 / 3 calls `lifecycle.invalidate_if_validated`. If
    the session was `validated`, it flips back to `draft` and
    the workflow card surfaces the next-action stepper from
-   State 2. Audit emits `instrument.band1_rules_updated` etc.
+   State 2. A Band 1 Save emits an event only for the part that
+   changed: `session_rule_set.created` / `session_rule_set.updated`
+   for the rules, `session_rule_set.exclude_self_reviews_set` for
+   Self reviews, `instrument.group_boundary_updated` for the unit of
+   review or its boundary tags; the invalidation records why in its
+   reason.
 4. **Save and Lock are independent.** Save persists. Lock toggles
    view mode. Lock-with-dirty fires the `confirm()` prompt.
 

@@ -161,7 +161,7 @@ override closes every non-operator grant.
 
 **The grant needs two things, and lifecycle is one of them.** The
 grant lives entirely in the after-release window, and that window
-now requires `sessions.status = "expired"` as well as a reached anchor,
+requires `sessions.status = "expired"` as well as a reached anchor,
 because responses are released *because the session is over*
 (`spec/visibility_policy.md` §3.2). Take one session and vary it:
 
@@ -176,7 +176,7 @@ The last row is why the window tests lifecycle and not the anchor
 alone. `revert_session_to_draft` accepts `expired` → `draft` and leaves
 `responses_release_at` stamped, so an anchor-only window would go on
 showing released responses on a session the operator has withdrawn. The
-anchor survives the revert; the grant it used to carry does not.
+anchor survives the revert; the grant does not.
 
 So a five-state lifecycle table would still mislead — `expired` alone
 does not produce a row, and the grant is what decides — but lifecycle is

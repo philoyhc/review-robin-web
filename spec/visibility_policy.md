@@ -148,15 +148,14 @@ other empty), which would otherwise read as "off"; and the
 
 **Stored rows obey it too.** Rows written before the rule existed (the
 `a7e3b1d92c64` backfill from the old `visible_when` columns) were
-normalized by migration `14db60023e88` (2026-10-05): a cell with one legal
+normalized by migration `14db60023e88`: a cell with one legal
 value took it (the reviewer's *Session ongoing* `raw`, the reviewee's
 off), an observer *Session ongoing* `raw` / `anonymized` became
 `summarized`, and anything else illegal became off. Only the reviewer's
 *Session ongoing* cell can read wider afterwards, and only as a stored
 value: no access check reads it — the reviewer sees their own answers
 while the session is `ready` regardless — but the reviewer surface's
-transparency table now shows `Raw responses` there, as the editor
-always has. So every stored row passes both writers, and an Instrument
+transparency table shows `Raw responses` there, as the editor does. So every stored row passes both writers, and an Instrument
 card's Save or a Settings re-import never meets one it refuses.
 
 ### 3.2 Anchor-null inertness
@@ -211,7 +210,7 @@ instrument_view_policies
 
 ### 4.1 Default state
 
-Default on instrument create: no rows. Resolver treats a missing row as "off in both windows" — instrument is invisible to that audience. The operator opts each audience in deliberately on the instrument's visibility editor. **`peer_reviewer` while ongoing is the one cell a missing row does not turn off:** it is `raw` by rule (§2.2), so with no row the reviewer still reads back their own answers while the session is `ready` (`reviewer_sees_own_responses`), and the editor and the transparency card show Raw there (`_BAND3_VISIBILITY_DEFAULTS`, `app/web/views/_instruments.py`). **Replicate and Duplicate session are the exceptions to "no rows":** each copied instrument starts with its source's rows, written through the same `upsert_policy` writer, so each is checked against the per-cell rule and audited as in §5; a stored cell the rule rejects is not carried across (`spec/instruments.md` "Replicate semantics"; Duplicate since findings G5).
+Default on instrument create: no rows. Resolver treats a missing row as "off in both windows" — instrument is invisible to that audience. The operator opts each audience in deliberately on the instrument's visibility editor. **`peer_reviewer` while ongoing is the one cell a missing row does not turn off:** it is `raw` by rule (§2.2), so with no row the reviewer still reads back their own answers while the session is `ready` (`reviewer_sees_own_responses`), and the editor and the transparency card show Raw there (`_BAND3_VISIBILITY_DEFAULTS`, `app/web/views/_instruments.py`). **Replicate and Duplicate session are the exceptions to "no rows":** each copied instrument starts with its source's rows, written through the same `upsert_policy` writer, so each is checked against the per-cell rule and audited as in §5; a stored cell the rule rejects is not carried across (`spec/instruments.md` "Replicate semantics").
 
 ---
 

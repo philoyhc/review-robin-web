@@ -69,7 +69,7 @@ page 1 is a safe default landing, until the reviewer's session pill
 reads `submitted`; from then on it links to `/me/sessions/{id}/summary`.
 The target is built in `app/web/routes_reviewer/_dashboard.py`.
 
-**URL semantics across the four routes.**
+**URL semantics across the five routes.**
 
 - The GET route renders **only the current page's instruments** — every
   instrument the reviewer has assignments on that belongs to the
@@ -88,6 +88,8 @@ The target is built in `app/web/routes_reviewer/_dashboard.py`.
   malformed or out-of-range `page` falls back to page 1.
 - The Clear POST is **session-wide** — no `{page_n}` segment; wipes
   everything and 303s to the bare session URL.
+- The Recall POST is **session-wide** — no `{page_n}` segment; reopens
+  a submitted session as a draft (see "Per-session summary").
 
 ---
 
@@ -381,7 +383,7 @@ instrument: every assignment the reviewer has on that instrument is
 one row, with response fields as columns. Wrapped in
 `.table-scroll` so very wide instruments scroll horizontally instead
 of forcing the surrounding layout to grow — as every table in the app
-now is (`spec/ui_elements.md` §10), this one being the widest and the
+is (`spec/ui_elements.md` §10), this one being the widest and the
 reason the rule reads the way it does.
 
 Reviewer-table rows use a **tighter vertical cell padding** than the
@@ -874,6 +876,10 @@ GET requests behave differently depending on which gate fails:
   a banner saying the review has closed and responses are no longer
   accepted or shown, no deadline line, and the dashboard link.
 
+- **Session `expired`** (the operator closed it). The surface
+  renders as for a `ready` session whose window has closed, below:
+  read-only, with no Save, Submit or Clear.
+
 - **Session `ready`, response window closed**
   (`accepting_responses=false` on every instrument, because the
   deadline passed). The page still renders so the reviewer can read prior
@@ -960,7 +966,8 @@ differently:
   `app/web/deps.py` folds both sides in Python and admits only
   `status == "active"` rows; inactive / removed reviewers get a 404.
 - **Dashboard** (`/me`, `app/web/routes_reviewer/_dashboard.py`) —
-  matches in SQL, `func.lower(Reviewer.email) == normalize_email(user.email)`,
+  matches in SQL, `func.lower(func.trim(Reviewer.email)) == normalize_email(user.email)`
+  (and the same on reviewee and observer rows),
   also `status == "active"` only. SQLite's `lower()` is ASCII-only
   while Postgres's is Unicode-aware, so the two sides agree on ASCII
   addresses only.
@@ -1171,7 +1178,7 @@ flag hasn't been flipped yet by `observe_deadline`.
 |---|---|---|
 | `not opened` | `pill-info` (blue, pending) | Session is `draft` or `validated` — not yet activated. Session column renders plain text (no link). |
 | `open` | `pill-success` (green) | Session is `ready` AND at least one assigned instrument is `accepting_responses` AND deadline (if set) hasn't passed. Session column links to the surface. |
-| `closed` | `pill-error` (red) | Session is `ready` AND no assigned instruments are accepting (the deadline passed). Red matches the past-deadline pill in the End column — both say *the window has closed for this reviewer* — and the muted `pill-lifecycle-archived` grey it replaced read as plain text rather than a pill. Session column **still links** so the reviewer can read their saved responses on the read-only surface. |
+| `closed` | `pill-error` (red) | Session is `ready` AND either no assigned instrument is accepting (the deadline passed) or the reviewer has no active assignment. Red matches the past-deadline pill in the End column — both say *the window has closed for this reviewer* — and the muted `pill-lifecycle-archived` grey it replaced read as plain text rather than a pill. Session column **still links** so the reviewer can read their saved responses on the read-only surface. |
 
 `closed` also resolves from `session.status == "expired"`, and must:
 an expired session reports `closed` rather than `not opened` precisely
@@ -1524,14 +1531,16 @@ The operator authors **two distinct strings** per instrument, both
 optional:
 
 - **`Instrument.short_label`** (`String(32) | None`, nullable) — the
-  operator's reviewer-facing framing. Lands in three places, none
+  operator's reviewer-facing framing. Lands in several places, none
   of them a control: the per-instrument **H2 title**, composed per
   the table in "Above the table — heading + help block"
   (`#{N}: {short_label}` on a multi-instrument session, bare
   `{short_label}` on a single-instrument one), and the **per-page
   status pill** label (`#{N} {short_label}` — a space, not a colon;
   see "Per-page status"). The missing-required and invalid-value
-  cards reuse the pill label to name each gap's instrument. Capped
+  cards reuse the pill label to name each gap's instrument, and the
+  same heading titles the summary page's sections and the reviewee
+  results and observer collation headings. Capped
   at 32 characters at the schema layer.
 - **`Instrument.description`** (`String(2000) | None`, nullable) — the
   longer per-instrument blurb. Lands as the subtitle next to the H2

@@ -234,14 +234,14 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **A — instruments and the reviewer surface**
 
-- **A1** low spec instruments.md:1611 names an `instrument.band1_rules_updated` event — no such event_type (an invalidation reason only, _band1.py:120,171); Band 1 saves emit session_rule_set.created/.updated + instrument.group_boundary_updated
+- ~~**A1**~~ low spec instruments.md:1611 names an `instrument.band1_rules_updated` event — no such event_type (an invalidation reason only, _band1.py:120,171); Band 1 saves emit session_rule_set.created/.updated + instrument.group_boundary_updated — **Done in #2897.**
 - ~~**A2**~~ med code sort_by_reviewee.md:225-229,247-248 no-op save emits nothing vs _display_fields.py:869-872 NULL != [] (§1) — **Done in #2868.**
-- **A3** low spec reviewer-surface.md:962-966 dashboard match func.lower(...) vs func.lower(func.trim(...)) (_dashboard.py:102,112,123)
+- ~~**A3**~~ low spec reviewer-surface.md:962-966 dashboard match func.lower(...) vs func.lower(func.trim(...)) (_dashboard.py:102,112,123) — **Done in #2897.**
 - **A4** low author instruments.md:934-942 group preview = rule-surviving subset vs server preview with no boundary tag = all active reviewees (§1)
-- **A5** low spec reviewer-surface.md:1527 short_label in "three places" (also the summary h2 :1246 and the results / collation headings); :72 "the four routes" vs five at :41-47 (Recall)
-- **A6** low trim provenance: instruments.md:1561 "(findings G5; …)"; visibility_policy.md:151 "(2026-10-05)", :157-159 "now shows … as the editor always has", :214 "since findings G5"; role_landing_and_visibility.md:164 "now requires", :179 "used to carry"; reviewer-surface.md:384 "now is"
+- ~~**A5**~~ low spec reviewer-surface.md:1527 short_label in "three places" (also the summary h2 :1246 and the results / collation headings); :72 "the four routes" vs five at :41-47 (Recall) — **Done in #2897.**
+- ~~**A6**~~ low trim provenance: instruments.md:1561 "(findings G5; …)"; visibility_policy.md:151 "(2026-10-05)", :157-159 "now shows … as the editor always has", :214 "since findings G5"; role_landing_and_visibility.md:164 "now requires", :179 "used to carry"; reviewer-surface.md:384 "now is" — **Done in #2897.**
 - **A7** low author visibility_policy.md:235 "whether the reviewer surface should follow is undecided"
-- **A8** low spec reviewer-surface.md:1170-1174 closed pill also shows on a ready session with no included assignment (session_lifecycle.py:808-812); :859-887 GET gating list lacks the expired bullet (read-only surface)
+- ~~**A8**~~ low spec reviewer-surface.md:1170-1174 closed pill also shows on a ready session with no included assignment (session_lifecycle.py:808-812); :859-887 GET gating list lacks the expired bullet (read-only surface) — **Done in #2897.**
 - ~~**A9**~~ low spec instruments.md:1035-1036 (at `e35ccb5c`; found while fixing Bc4, read on #2884) `preview-sample` "persists nothing" vs it saves the sample reviewee and group members through `set_band2_state` (`_instruments_band2.py`) — **Done in #2888.**
 
 **B — assignments, workflow, lifecycle, Validate**
