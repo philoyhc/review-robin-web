@@ -214,10 +214,7 @@ below describe what that panel holds.
    (`app/services/visibility_policies.py`, `spec/visibility_policy.md`).
    Rule 4 settles it independently of whatever the surrounding prose
    convention is: a card that says "anonymised" sends a reader looking
-   for a label that does not exist. (The repo's prose convention —
-   `CLAUDE.md` → Project conventions — happens to agree today; the
-   rule holds whether it does or not, and is what to reason from if
-   the two diverge.) Reviewers and Reviewees
+   for a label that does not exist. Reviewers and Reviewees
    run the same way — *who they are* → *what identifies them* → *what
    the tags do* → *what upload costs* → the Guide link on its own line.
    The two pages are deliberately near-parallel: an operator reads them

@@ -258,12 +258,12 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 **C — Setup, Session Home and the lobby**
 
 - ~~**C1**~~ low write quick_setup_card_spec.md:25 unavailable list omits archived, table :112-118 has no archived row; session_home.md:486-488 lists the same four (code greys archived, views/_quick_setup.py:196; session_home.md:517 right) — **Done in #2873** (the archived row, with B1).
-- **C2** low spec session_home.md:540 "the five Setup pages" — six
-- **C3** low spec session_home.md:149-150,568-575 the pause form is ready → draft only vs shared for expired (next_action_card.html:215-220; revert_session_to_draft accepts both)
+- ~~**C2**~~ low spec session_home.md:540 "the five Setup pages" — six — **Done in #2899.**
+- ~~**C3**~~ low spec session_home.md:149-150,568-575 the pause form is ready → draft only vs shared for expired (next_action_card.html:215-220; revert_session_to_draft accepts both) — **Done in #2899.**
 - ~~**C4**~~ low code sessions_overview.md:277-281 over-long name is a form error vs 500 on Session Home /config and Create (§1) — **Done in #2896.**
 - **C5** low author quick_setup_card_spec.md:81 unlock survives Session Home submissions vs cleared by /config, /revert, /workflow/*, /delete-data (main.py:41-42) (§1); session_owners.md:80-83 accurate
-- **C6** low trim sessions_overview.md Rehydrate off-by-default stated at :56-57, :195-196, :489-494; Go to Archive unconditional at :173-180, :200-203
-- **C7** low trim setup_pages.md:217-220 narrating parenthetical; sessions_overview.md:341-344 "undecided … new_ux_ideas.md" hedge
+- ~~**C6**~~ low trim sessions_overview.md Rehydrate off-by-default stated at :56-57, :195-196, :489-494; Go to Archive unconditional at :173-180, :200-203 — **Done in #2899.**
+- ~~**C7**~~ low trim setup_pages.md:217-220 narrating parenthetical; sessions_overview.md:341-344 "undecided … new_ux_ideas.md" hedge — **Done in #2899.**
 
 **D — data in and out**
 

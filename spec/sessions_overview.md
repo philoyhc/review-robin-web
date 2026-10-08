@@ -192,15 +192,14 @@ is which Filter controls are live:
 | Nothing at all | counts, all `0` | **inert** | active |
 | Only archived sessions | counts, `N archived` | **inert** | active |
 
-`Rehydrate` is in that column only where `rehydrate_enabled` is on; it
-ships off, and then the button is absent in all three states.
+`Rehydrate` is in that column only where `rehydrate_enabled` is on
+(the note under the wireframe).
 
 The last two rows are the same shape by design — there is nothing live
 to search in either — and they differ in what the counts say and in
-whether `Go to Archive` leads anywhere populated. `Go to Archive` is
-**always active**, including on a lobby holding nothing: an empty
-archive page is a better answer than a dead control, and it is one fewer
-rule to reason about.
+whether `Go to Archive` leads anywhere populated. It stays active even
+on a lobby holding nothing (the note above): an empty archive page is a
+better answer than a dead control.
 
 **Inert controls render as `<span class="btn … disabled"
 aria-disabled="true">`, not disabled anchors.** `a.btn.disabled` in
@@ -344,10 +343,7 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   (`bulk-unarchive`), a **disabled** Download placeholder with no route
   behind it, and a Delete gated behind "Yes, delete"
   (`bulk-delete-archived`). Its heading is the bulk phrasing at every
-  count, so one selected row reads *"1 sessions selected"*. Whether that
-  wants singular copy or the lobby's second template is undecided and
-  recorded in `guide/archive/new_ux_ideas.md` entry 2; the contract here is what
-  ships.
+  count, so one selected row reads *"1 sessions selected"*.
 - **Selected rows are marked.** Every selected row carries
   `session-row-selected`, styled in `base.html` as a **rail at each end
   and no fill** — `--selected-bg` as a 6px inset shadow on
@@ -492,11 +488,9 @@ come from.
   carries **Clear**, **Add new session**
   (`/operator/sessions/new` — the label names the noun, because the
   lobby is the one page where "new *what*" is not obvious from
-  context), **Rehydrate** (`/operator/sessions/rehydrate`) — **gated off by
-default**: `rehydrate_enabled` ships false, so the button does not render
-and the route 404s in every lobby state, independently of the
-state-dependence described above (`spec/rehydrate.md`), and **Go
-  to Archive** (`/operator/sessions/archived`). Which of these are
+  context), **Rehydrate** (`/operator/sessions/rehydrate`; while
+  `rehydrate_enabled` is off, as it ships, the route 404s too), and
+  **Go to Archive** (`/operator/sessions/archived`). Which of these are
   live depends on the lobby state — see "Lobby states" above. **Rehydrate** rebuilds a
   live draft session from a complete set of extract CSV files — see
   `spec/rehydrate.md`.
