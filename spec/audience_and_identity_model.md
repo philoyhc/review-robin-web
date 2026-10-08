@@ -148,7 +148,8 @@ Two surfaces:
    promote / demote `users.is_sys_admin`, delete `users` rows
    outright, and bulk-remove a user from every session they
    appear on, all via the Sys Admin → Accounts Management page
-   (per-row checkbox + bulk toolbar). Server-side guards
+   (a row checkbox that selects one user at a time, and an action
+   toolbar that acts on that user). Server-side guards
    (`app/services/users.py`):
    - **Actor guard** — `promote` / `demote`, and an `invite` that
      grants the admin flag, require the **actor** to be a super-admin
@@ -170,7 +171,8 @@ Two surfaces:
      sign-in recreates it. Revoke is how an operator's access is
      taken away.
    The Accounts page mirrors these in the UI (three-tier badges;
-   Promote/Demote shown only to a super-admin actor; destructive controls
+   Promote/Demote shown to whoever the actor guard would accept — a
+   super-admin, or any admin while none is configured; destructive controls
    disabled on super-admin rows) — the server guards are the real
    enforcement.
 2. **Per-session diagnostics + explicit self-add** — the Sessions

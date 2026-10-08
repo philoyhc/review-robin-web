@@ -382,7 +382,8 @@ For what works today, read the per-surface specs indexed in
   `app/services/instruments/_instrument_crud.py`
   (`ensure_default_instrument`).
 - Response fields carry a plain `data_type` (String / Integer /
-  Decimal / List) plus bounds and an optional `list_options` string.
+  Decimal / List) plus bounds and an optional `list_csv` column (the Band 2
+  payload carries it as `list_options`).
   There is no shared type-definition table — every response field
   carries its own type inline, and the operator-facing quick-fill list
   presets (`instruments/_field_presets.py`) are convenience only: the
@@ -483,8 +484,9 @@ the `email_outbox.body` so the operator can re-copy the link). Sending
 an invitation always rotates the token, so a previously delivered URL
 becomes stale.
 
-State machine: `pending` → `sent` → `opened`. Generate is idempotent
-(operator-paced, no auto-trigger on activation). Bulk Send all and
+State machine: `pending` → `sent` → `opened`. Creating invitations is
+idempotent — a Prepare step (`invitations.generate_invitations`), with
+no separate Generate control and no auto-trigger on activation. Bulk Send all and
 Regenerate all require the session to be `validated` or `ready`
 (`_require_validated_or_ready`, 409 otherwise) so the emailed link
 never points at a draft session; per-row Send / Regenerate and every
