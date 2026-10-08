@@ -175,8 +175,8 @@ to CSS classes.
 
 > **H2 (card / section title)** — `--fs-h2` (1.125rem) at weight 600,
 > **one rule for cards and sections alike**, so a heading does not change
-> size by moving into or out of a card. `--space-3` below, zeroed on the
-> top when it is a card's first child. `h3` takes `--fs-body` at the same
+> size by moving into or out of a card. `--space-3` below and no top
+> margin anywhere. `h3` takes `--fs-body` at the same
 > weight; on `/guide` it also takes a `--space-6` top margin (see §10).
 
 ### 4. Cards
@@ -350,8 +350,8 @@ to CSS classes.
 > Four variants, matched to the four semantic accents:
 > - `.banner.banner-info` (`--status-info-bg` / `--status-info-border`)
 >   — preview-mode notice on reviewer surface.
-> - `.banner.banner-success` (`--status-success-*`) — submission
->   confirmation on reviewer surface.
+> - `.banner.banner-success` (`--status-success-*`) — the Rehydrate
+>   page's "Validation passed — ready to rehydrate."
 > - `.banner.banner-warning` (`--status-warning-*`) — lifecycle-locked
 >   notices, missing-required acknowledgements, cascade
 >   confirmations.
@@ -452,7 +452,7 @@ support is a separate spec (`visual_style_general.md`).
 | `.btn.alert` | **Outline-amber (recovery in lock card)** | `--btn-amber-bg` (white) with `--btn-amber-border` + `--btn-amber-fg` — the same warning brown that frames the lock card. Per `visual_style_general.md` P7, recovery actions inside a lock card adopt the card's color family. Used e.g. for "Revert to draft" inside a `.card.lock`. |
 | `.btn.destructive` | **Destructive (outline red)** | `--btn-destructive-bg` (white) with `--btn-destructive-border` + `--btn-destructive-fg`. Irreversible row / collection **deletes** — Delete session, delete-all rosters, bulk-delete, and the delete confirm step inside `.card.danger-zone`. The role also appears **outside** a danger zone: every roster Setup page carries a `Delete` for the checkbox-selected rows in its **row expander**, not in the table toolbar. The expander is not red and does not become so — the button's own role carries the weight, and the destructive act is gated by the confirmation checkbox beside it (`spec/setup_pages.md` § *Roster controls and their route contracts*). |
 | `.btn.danger-solid` | **Alert (filled amber)** | Filled `--btn-alert-bg` with a `--btn-alert-fg` label; lightens to `--btn-alert-bg-hover`. Serious-but-**recoverable** actions — purge-and-archive, Archive session, and the Acknowledge-and-activate confirm. Amber = caution, and the role exists to stay distinct from `.btn.destructive` (red, deletes data) and `.btn.alert` (outline amber, recovery inside a lock card): three amber-or-red treatments that mean three different things, so none may borrow another's fill. |
-| `.btn` ⇄ `.btn.secondary` + `aria-pressed` | **Toggle** | A two-state on/off button for one flag on one row. On takes the Primary tokens (`.btn`), off takes Secondary (`.btn.secondary`), and `aria-pressed` carries the state; whatever changes the flag — the click handler for R and ≡, the row's state sync for ⑂ — sets the class and the attribute together. It reuses the two roles' tokens rather than adding its own, so it is a role by behavior, not a new colour. Used on the Instruments page's response-field rows only: **R** (required), **≡** (help-text card) and **⑂** (branch — on once the field has a branch, and disabled then). It is not a chip: the column chips (`col-chip`), the audience chips (`pill-count is-selected`) and the Light / Dark switch (`.theme-toggle`) toggle too, but each is its own primitive. |
+| `.btn` ⇄ `.btn.secondary` + `aria-pressed` | **Toggle** | A two-state on/off button for one flag on one row. On takes the Primary tokens (`.btn`), off takes Secondary (`.btn.secondary`), and `aria-pressed` carries the state; whatever changes the flag — the click handler for R and ≡, the row's state sync for ⑂ — sets the class and the attribute together. It reuses the two roles' tokens rather than adding its own, so it is a role by behavior, not a new colour. Used on the Instruments page's response-field rows only: **R** (required), **≡** (help-text card) and **⑂** (branch — on once the field has a branch, and disabled then). It is not a chip: the column chips (`.tag-chip` in a `.col-chip-row`) and the Light / Dark switch (`.theme-toggle`) toggle too, but each is its own primitive. |
 | `.btn.danger` | *(no rule)* | `.danger` is a context class, not a button role: `base.html` gives `.btn.danger` no rule, and nothing renders it. A `.btn` that enters a confirmation takes Secondary; the destructive treatment lands on the confirm step (`.btn.destructive`). |
 | `.btn-icon` | **Icon button** | Borderless single-glyph affordance in `--text-subtle`; the row pager's steps are its one caller. **Neither of Band 3's tables uses this role for their ▲ ▼** — both are outlined `btn secondary`, short (`btn-short`, §10) on the display-field table and full-size on the response-field table. **As an anchor** (the row pager's steps): the live cell is `<a class="btn-icon …">` and the unavailable one a `<span class="btn-icon … is-inactive" aria-disabled="true">` — a `<span>` rather than an href-less `<a>`, following `.nav-tab disabled`, because an anchor without an href is focusable-but-inert in some browsers and not others. Inactive is `opacity: 0.4` + `cursor: not-allowed` and takes **no** accent fill, the reserved shade being for things that act. An anchor `.btn-icon` also needs `text-decoration: none` on its own rule — the page's `a` rule underlines it otherwise, and an underlined `»` reads as a typo. **A specialising rule must name `.btn-icon` in its own selector.** `body.ui-v2 .btn-icon` is (0,2,1) and sits late in `base.html`, so `body.ui-v2 .table-pager-step` ties it and loses on source order — silently, if its declarations happen to match what `.btn-icon` already sets. Write `body.ui-v2 .btn-icon.table-pager-step`, which is (0,3,1) and wins. `tests/integration/test_cascade_ties.py` resolves the cascade in Python — rendered class sets against parsed rules — and fails when a canonical class's declaration is dead because an equal-specificity rule sets the same property later. A variant that comes *later* and wins (`.table-pager-cluster-bottom` over `.table-pager-cluster`) is the idiom and is not reported; a specialisation that comes *earlier* and loses is. The check covers simple class selectors on one element only: combinator rules, `@media` blocks, inline `style=` and shorthand-versus-longhand are outside it, each able to make it silent but none able to make it report a tie that is not there. |
 | `.btn-reset` | **Inline text-button** (revert-this-field) | Single-line link-styled button used to revert a single text field inside an editor without cancelling and exiting the whole editor. Reference example: per-field `Reset {{ field }} to default` on the Email Template page (`session_setupinvite.html`). Reads as a small inline link (`--text-link`, underline on hover); posts a form. The pattern can apply to any editor with per-field overrides — adopt this class instead of inline-styled buttons. |
@@ -1019,6 +1019,19 @@ below, which is what ui-v2's global `h3` rule assumes. Scoped by the
 > row for the anchor form and the specificity rule a specialising
 > variant must obey.
 
+> **Sort headers** — `th.rrw-sortable` (kept on one line) holds the
+> label and a small `.rrw-sort-btn`, the click target, so the label
+> reads as a label rather than a control. The button is borderless in
+> `--text-subtle` until hover, which adds a `--border-default` edge on
+> `--surface-muted`; `:focus-visible` takes a 2px `--focus-ring-strong`
+> outline. `.rrw-sort-badge` inside it reads `↕` on an unsorted column
+> and the column's rank and direction (`1↑`) once sorted, when it also
+> takes `.rrw-sort-badge-active` (`--text-body`, weight 600). The Band 2 preview renders the button as
+> an inert `span.rrw-sort-btn`, the same box with no control's look.
+> The table-side contract and the click semantics are in
+> `spec/setup_pages.md` and `spec/sort_by_reviewee.md`; the Instruments
+> page's `.sort-btn` below copies the button's dimensions.
+
 > **`<pre>` blocks (outbox preview)** — render as `.code-block`, the
 > same content-surface family as cards. A raw `<pre>` is not a
 > content surface and must not be used as one.
@@ -1030,9 +1043,8 @@ below, which is what ui-v2's global `h3` rule assumes. Scoped by the
 > `.code-block`: it is monospace and `pre-wrap` with no fill of its own,
 > because the card is already its surface.
 
-> **Instruments page primitives** — in `base.html` since 2026-10-06
-> (findings E14; the page carried them in its own `<style>` block until
-> then), each scoped to markup only that page renders:
+> **Instruments page primitives** — in `base.html` with the rest of
+> the app's CSS, each scoped to markup only that page renders:
 > - `data-instrument-locked` rules hide `[data-unlock-only]` /
 >   `[data-lock-only]` controls by card state, dim a locked card's
 >   `[data-lock-region]` and its visibility preview card, and hide an
@@ -1046,14 +1058,14 @@ below, which is what ui-v2's global `h3` rule assumes. Scoped by the
 >   reviewer surface's rows;
 > - `.instrument-card-collapsible` / `-summary` / `-toggle-icon` /
 >   `-drag-handle` / `-dragging`, the collapsible, draggable card (a
->   summary pill sits 1px lower to align with the title), and
+>   summary pill sits 1px higher to align with the title), and
 >   `.card-title-fallback`, the `Instrument_{N}` title of an unlabeled
 >   card;
 > - `.page-break-card` / `-label` / `-delete`, the reviewer page-break
 >   marker between cards;
 > - `.instrument-reorder-toast`, the reorder-failure toast — fixed, on
->   `--toast-error-bg`, and with **no drop shadow** (E16; the toast's
->   own fill separates it from the page).
+>   `--toast-error-bg`, and with **no drop shadow** (the toast's own
+>   fill separates it from the page).
 
 > **Inline `onclick` attributes** — the Instruments page's row controls
 > bind their handlers inline, and those attributes are load-bearing rather

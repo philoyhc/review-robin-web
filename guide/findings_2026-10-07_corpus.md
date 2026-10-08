@@ -279,20 +279,20 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **E — UI and visual style**
 
-- **E1** low-med spec ui_elements.md:353-354 `.banner-success` is the reviewer surface's submission confirmation vs used only on session_rehydrate.html:120; the reviewer surface uses banner-info / banner-warning
-- **E2** low spec ui_elements.md:1033 summary pill "1px lower" vs top:-1px, up (base.html:4551-4554)
-- **E3** low-med spec operator_button_audit.md:530 (#71j) Assignments Clear only on a search, "pre-existing and open", vs shown when filter_q or status != all (session_assignments.html:321-326)
-- **E4** low spec ui_elements.md:455 toggle note names `col-chip` (no such class; `.tag-chip` in `.col-chip-row`) and audience chips, deleted in E14 (the Visibility card is now a static pill-count and mode-cycle chips)
-- **E5** low trim ui_elements.md:1017-1018 "since 2026-10-06 (findings E14…)", :1039 "E16;"; visual_style_rrw.md:225-226 "(findings Fc3); Segment 14B retires it". Keep the reasons
-- **E6** low spec color_tokens.md:22 "tools/ harness LABELS" — none; theme_customizer.gen.py TARGETS (:110)
+- ~~**E1**~~ low-med spec ui_elements.md:353-354 `.banner-success` is the reviewer surface's submission confirmation vs used only on session_rehydrate.html:120; the reviewer surface uses banner-info / banner-warning — **Done in #2901**.
+- ~~**E2**~~ low spec ui_elements.md:1033 summary pill "1px lower" vs top:-1px, up (base.html:4551-4554) — **Done in #2901**.
+- ~~**E3**~~ low-med spec operator_button_audit.md:530 (#71j) Assignments Clear only on a search, "pre-existing and open", vs shown when filter_q or status != all (session_assignments.html:321-326) — **Done in #2901**.
+- ~~**E4**~~ low spec ui_elements.md:455 toggle note names `col-chip` (no such class; `.tag-chip` in `.col-chip-row`) and audience chips, deleted in E14 (the Visibility card is now a static pill-count and mode-cycle chips) — **Done in #2901**.
+- ~~**E5**~~ low trim ui_elements.md:1017-1018 "since 2026-10-06 (findings E14…)", :1039 "E16;"; visual_style_rrw.md:225-226 "(findings Fc3); Segment 14B retires it". Keep the reasons — **Done in #2901**.
+- ~~**E6**~~ low spec color_tokens.md:22 "tools/ harness LABELS" — none; theme_customizer.gen.py TARGETS (:110) — **Done in #2901**.
 - ~~**E7**~~ low code ui_elements.md:614 success pill text `--status-success-fg` vs the customizer's `--status-success-accent` (theme_customizer.gen.py:173-175) (§1) — **Done in #2896.**
-- **E8** low spec ui_elements.md:178-179 H2 top margin zeroed when the card's first child vs zero everywhere (base.html:1776-1781)
-- **E9** low write `.rrw-sort-btn`, `th.rrw-sortable`, `.rrw-sort-badge` (base.html:4306-4351, eight tables) in neither ui_elements.md nor operator_button_audit.md (§11 has the cloned `.sort-btn`)
+- ~~**E8**~~ low spec ui_elements.md:178-179 H2 top margin zeroed when the card's first child vs zero everywhere (base.html:1776-1781) — **Done in #2901**.
+- ~~**E9**~~ low write `.rrw-sort-btn`, `th.rrw-sortable`, `.rrw-sort-badge` (base.html:4306-4351, eight tables) in neither ui_elements.md nor operator_button_audit.md (§11 has the cloned `.sort-btn`) — **Done in #2901**.
 - **E10** low author sys_admin_session_audit_log.html:7-81 local `<style>` (audit-log table, columns, detail) uncatalogued, against base.html owning the CSS (as the E14 ruling)
 - ~~**E11**~~ low code sys_admin_session_audit_log.html:98-100 "lands in 16C PR 3" — it ships (§1) — **Done in #2896.**
 - **E12** low author ui_elements.md:278-288 `.card.placeholder` (base.html:2056-2068): no markup uses it (the unattached comment above it went in #2896)
 - **E13** low author ui_elements.md:626 every interactive chip has a 2px edge vs the dashboard's role pills and `rs-role-nav-muted` (reviewer/dashboard.html:53-67, reviewer/_role_chips.html:26) with none
-- **E14** low spec operator_ui_concept.md:386 quotes the outbox intro incompletely (the partial adds reminder, responses-received and raw-URL sentences); the partial's header says sys_admin_sessions.html only, but sys_admin_session_outbox.html renders it
+- ~~**E14**~~ low spec operator_ui_concept.md:386 quotes the outbox intro incompletely (the partial adds reminder, responses-received and raw-URL sentences); the partial's header says sys_admin_sessions.html only, but sys_admin_session_outbox.html renders it — **Done in #2901** (the partial's header comment rides a later code PR).
 - ~~**E15**~~ low code base.html comments: :242-252 help-card border "~1.5:1" (now 2.54 / 1.95), :455-459 border primitive, :1971 "TWO pages opt in" (all four rosters), :3024, :3037 line refs, :1087 "eight box-shadow uses" (§1) — **Done in #2896.**
 
 **F — architecture, roles and operations**
