@@ -79,7 +79,7 @@ signed-in user.
 
 | Gate | Predicate | Returns | On miss |
 |---|---|---|---|
-| `get_or_create_user` | signed in with an email claim | `User` (created on first sight; case-insensitive lookup, oldest match wins) | **401** if the principal carries no email |
+| `get_or_create_user` | signed in with an email claim | `User` (created on first sight; case-insensitive lookup, oldest match wins) | **401** if the principal carries no email, or if there are no identity headers and fake auth is off |
 | `require_operator` | `is_operator OR is_sys_admin` | `User` | raises `OperatorAllowlistDenied` → the handler in `app/main.py` **303s to `/me`** (deliberately not a 403 — the arrival is more often a misrouted legitimate user than an attacker; the "how do I get access" copy lives on `/about`) |
 | `require_sys_admin` | `is_sys_admin` | `User` | **403** `sys_admin required` |
 | `require_session_operator` | a `session_operators` row for (user, `{session_id}`) | `ReviewSession`; also stamps the session's display timezone on `request.state` | **404**, bare — for a non-member *and* for an id that does not resolve, so the two are indistinguishable and session ids cannot be enumerated. **Exception:** a **sys-admin** (hence super-admin) who is not an owner of an *existing* session gets **403** `You are not an owner of this session…`, pointing at the adopt door; an absent id still answers 404 |
@@ -114,7 +114,7 @@ Two things the table implies and the code relies on:
 | **every** `/operator/*` route | `require_operator` | router-level dependency on the `routes_operator` package — no operator route can opt out |
 | session-scoped operator routes `/operator/sessions/{session_id}/…` | `require_session_operator` | per route, directly or via the two feature-toggle wrappers. **Every** such route carries one. Checking it means following `Depends()` **transitively**: a decorator scan alone reports false positives, because several routes in `_instruments.py` are gated two levels deep through `Depends(_require_instrument_in_session)` and never name `require_session_operator` in their own signature. *A check that flags a correctly-gated route is worse than none, because the next reader believes it.* |
 | the two **relaxed** session routes: `POST …/owners/add`, `POST …/clone` | `require_sys_admin_or_session_operator` | a non-owner sys-admin may reach them; `owners/add` additionally enforces **self-only** for a non-owner in its handler (`self_only` error otherwise); `clone` makes the cloner owner of the copy, leaving the original untouched |
-| lobby bulk routes (tags / archive / bulk-delete) | `require_operator` + per-id re-resolution | each client-supplied `session_id` is re-resolved with `sessions.get_for_user`; non-owned ids are skipped, never acted on |
+| lobby bulk routes (tags / archive / bulk-delete, and the Archived page's bulk-unarchive / bulk-delete-archived) | `require_operator` + per-id re-resolution | each client-supplied `session_id` is re-resolved with `sessions.get_for_user`; non-owned ids are skipped, never acted on |
 | `/operator/sys-admin/*` (root redirect, Sessions Diagnostics, per-session Outbox + Audit log children, Accounts Management, adopt, and the per-user actions) | `require_sys_admin` | per route. Sessions Diagnostics also carries the **Visibility grid audit** card — a read-only report of every stored Band 3 cell whose mode its `(audience, window)` pair does not allow. It is workspace-wide by construction: one query across every session's instruments, which is why it sits here and on no per-session operator surface. It writes nothing; clearing an offending cell is the owning operator's action on that instrument's visibility editor (its "Who can see what you wrote" card, unlocked), which refuses to author the value in the first place |
 | `GET …/export/audit_log.csv` | `require_sys_admin` | the one session-scoped export that is *not* owner-reachable: there is no operator-facing entry point to it |
 | reviewer surface, save / submit / recall / clear, post-submit summary + `summary.csv` | `require_reviewer_in_session` | per route |
@@ -190,7 +190,7 @@ Full card + staging contract: `spec/session_owners.md`.
 | Action | Route | Gate | Guards | Audit event |
 |---|---|---|---|---|
 | Create's owners | `POST /operator/sessions` | router-level `require_operator` (no session to own yet) | `not_in_workspace` on any staged address — **422**, nothing created | `session.owner_added` per co-owner |
-| Add owner | `POST /operator/sessions/{id}/owners/add` | `require_sys_admin_or_session_operator` | `not_in_workspace` (target lacks both flags — admit them first), `already_owner`; handler-level `self_only` for a non-owner sys-admin | `session.owner_added` |
+| Add owner | `POST /operator/sessions/{id}/owners/add` | `require_sys_admin_or_session_operator` | `not_in_workspace` (no account matches the address, or it lacks both flags — admit them first), `already_owner`; handler-level `self_only` for a non-owner sys-admin | `session.owner_added` |
 | Remove owner | `POST …/owners/{user_id}/remove` | `require_session_operator` | `not_owner`, `last_owner` (would leave zero owners; the owner set is locked `FOR UPDATE` before counting so two concurrent removals cannot both pass) | `session.owner_removed` |
 | Owners card Lock / Unlock | `POST …/owners/lock` | `require_session_operator` | none — sets or clears the `oou_{id}` cookie; writes nothing | none |
 | Adopt (sys-admin self-add) | `POST /operator/sys-admin/sessions/{id}/adopt` | `require_sys_admin` | idempotent; `already_owner` swallowed | `session.owner_added` |
@@ -219,7 +219,7 @@ the operation-level mappings.
 | Not a session member; not an active participant | **404**, bare | `require_session_operator`, `require_reviewer_in_session`, `require_reviewee_in_session`, `require_observer_in_session` |
 | Sys-admin, not an owner of an **existing** session | **403** naming the adopt door | `require_session_operator` only |
 | Unknown session / child id, disabled feature tab, unknown invite token | **404** | the gate or route |
-| Missing email claim | **401** | `get_or_create_user` |
+| No identity headers (fake auth off), or no email claim | **401** | `get_or_create_user` |
 | `self_action` | **400** | `_sys_admin._handle_toggle` |
 | `requires_super_admin` on Promote / Demote | **403** | same |
 | `last_admin`, `owns_sessions`, `has_history`, `still_owner`, `sole_owner`, `protected_super_admin` | **409** | same |
@@ -302,7 +302,7 @@ a case when a gate changes.
   trust model, CSRF posture, deferred hardening.
 - `spec/lifecycle.md` — the edit-lock guards that sit *after* the
   permission gates on mutating routes.
-- `spec/operator_ui_concept.md` "Sys Admin" — the Accounts Management
+- `spec/operator_ui_concept.md` §6 — the Accounts Management
   and Sessions Diagnostics surfaces.
 - `spec/settings_inventory.md` — `OPERATOR_EMAILS` /
   `SYS_ADMIN_EMAILS` / `SUPER_ADMIN_EMAILS` and the fake-auth knobs.

@@ -199,10 +199,10 @@ since made ineligible keeps a row that the first counts, the second
 does not, and the table below does not list. So `created 2 · sent 1 ·
 pending 0` is a correct reading, not a bug.
 
-`Pending invitations` was aligned with the send buttons deliberately:
+`Pending invitations` counts what the send buttons act on deliberately:
 it is a nonzero-is-attention pill, so a count the operator cannot act
-on is worse than no count. `Invitations created` was left counting
-every row because pruning stale invitations is deliberately deferred
+on is worse than no count. `Invitations created` counts every row
+because pruning stale invitations is deliberately deferred
 (`guide/deferred_consolidated.md`) — once delivery is on, a *sent*
 invitation is live in a reviewer's inbox, and nothing yet distinguishes
 one safe to delete.
@@ -402,8 +402,8 @@ for a reviewer who had no invitation at all):
   `sent_at`, the state on `Invitation.status` being past `pending`, so
   a rotated token reports nothing about the previous token's delivery
   and a send with no delivery date still reports its state. It reads
-  *Send recorded*, not *Email sent*, while sending is off (findings
-  Fc2); Segment 14B restores the label. The value
+  *Send recorded*, not *Email sent*, while sending is off, until
+  Segment 14B wires real sending. The value
   set is the model's `EMAIL_OUTBOX_STATUSES` and is **rendered, not
   enumerated**, so widening it needs no change here.
 - **Last reminder** — the timestamp or an em-dash, from
