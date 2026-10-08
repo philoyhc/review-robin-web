@@ -1228,7 +1228,6 @@ def replace_assignments(
                 fresh_state[instrument.id],
             )
         db.flush()
-        unit_of_work.commit(db)
 
         # Continuous-gate invariant (PR 4 of
         # ``guide/self_review_consolidate.md``). The per-instrument
@@ -1265,12 +1264,11 @@ def replace_assignments(
             recompute_self_review_classification(
                 db, session_id=review_session.id
             )
-            unit_of_work.commit(db)
+            db.flush()
 
         # Lazy-seed pair_context display fields for any populated slots
         # — see guide/unfinished_business item #14.
         from app.services.instruments import seed_display_fields_from_assignments
 
-        if seed_display_fields_from_assignments(db, review_session):
-            unit_of_work.commit(db)
+        seed_display_fields_from_assignments(db, review_session)
         return total_replaced, total_new

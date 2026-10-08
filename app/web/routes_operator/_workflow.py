@@ -142,6 +142,10 @@ def workflow_prepare(
         context={"button": "prepare_session"},
         correlation_id=correlation_id,
     )
+    # Committed before the steps: Generate is one unit that rolls back
+    # on failure (findings Bc4), which would take this row with it and
+    # leave the run's failure with no start.
+    db.commit()
 
     # Assigned before every call that can raise, so the handler below
     # always has the real step. There is no "unknown" case: the only
