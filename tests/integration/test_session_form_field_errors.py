@@ -42,7 +42,7 @@ def test_details_save_refuses_an_over_long_name_with_a_422(
         follow_redirects=False,
     )
     assert response.status_code == 422, response.text
-    assert "name" in response.text
+    assert "name: " in response.text
     db.refresh(review_session)
     assert review_session.name == "Spring"
 

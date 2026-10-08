@@ -598,3 +598,9 @@ def test_the_customizer_paints_success_pill_text_with_its_fg_token() -> None:
     ).read_text(encoding="utf-8")
     assert '_pill("success", "Success pill")' in gen
     assert '"--status-success-accent")]),' not in gen
+    # …and ``_pill`` paints with the token the pill's own rule uses.
+    block = re.search(
+        r"body\.ui-v2 \.pill\.pill-success \{([^}]*)\}", css()
+    )
+    assert block is not None and "var(--status-success-fg)" in block.group(1)
+    assert '("text", "fg", f"--status-{name}-fg")' in gen

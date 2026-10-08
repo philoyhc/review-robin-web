@@ -1099,10 +1099,11 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         source="reviewees",
         severity=Severity.warning,
         why=(
-            "A reviewee sees the responses written about them by "
-            "signing in with the email their identifier holds. "
-            "Without a deliverable email the reviewee can't sign in, "
-            "and so won't see those responses. Non-blocking in case "
+            "A reviewee sees the responses written about them when "
+            "they sign in with the email their identifier holds. "
+            "With no email there, nothing they sign in as matches "
+            "them, so they can never reach those responses. "
+            "Non-blocking in case "
             "the identifiers are meant to be anonymous (an "
             "analysis-only session); the warning just names the "
             "implication."
@@ -1202,13 +1203,13 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         source="assignments",
         severity=Severity.warning,
         why=(
-            "Reviewers see only the assignments marked included on "
-            "the Assignments page. When every assignment across "
-            "every instrument is excluded — or none has been "
-            "generated yet — reviewers land on an empty page and "
-            "have nothing to do. Prepare again or include "
-            "assignments before activating, or proceed knowing "
-            "reviewers will see no work."
+            "Reviewers see only active assignments. When every "
+            "assignment across every instrument is inactive on the "
+            "Assignments page — or none has been generated yet — "
+            "reviewers land on an empty page and have nothing to do. "
+            "Prepare again, or select assignments there and use "
+            "Activate, before activating the session; or proceed "
+            "knowing reviewers will see no work."
         ),
         fix_url=_assignments_url,
         fix_page_label="Assignments",

@@ -478,7 +478,9 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   produces shares one correlation id (the `audit_events`
   `correlation_id` column, one value per request). A code another
   session holds answers **422** before anything is written, the
-  timezone included (`sessions.ensure_code_available`).
+  timezone included (`sessions.ensure_code_available`), and so does a
+  Name or Code longer than its column (255 / 64), which the browser's
+  `maxlength` otherwise prevents.
 - `GET /operator/sessions/{id}/edit` exists only as a **308
   permanent redirect** to `…?editing=1#session-config` for stale
   bookmarks. It keeps the `require_session_operator` gate, so a

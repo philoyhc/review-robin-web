@@ -73,7 +73,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
 - ~~**C4**~~ — **Done in #2896** (a 422, shared with the lobby). Over-long Name or Code on Session Home's Details Save, or on
   `POST /operator/sessions`, raises an unhandled `ValidationError` (500):
   `_session_home.py` and `_quick_setup.py` build `SessionCreate` outside a
-  `try`, where the lobby catches it. The timezone write commits first.
+  `try`, where the lobby catches it.
   `maxlength` hides it in a browser. *Reproduced.* Code.
 - ~~**D4**~~ — **Done in #2896.** A whitespace-only email override cell in a Settings import is
   stored as an override (`_apply_email.py` tests `if value:`);
@@ -290,7 +290,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **E9** low write `.rrw-sort-btn`, `th.rrw-sortable`, `.rrw-sort-badge` (base.html:4306-4351, eight tables) in neither ui_elements.md nor operator_button_audit.md (§11 has the cloned `.sort-btn`)
 - **E10** low author sys_admin_session_audit_log.html:7-81 local `<style>` (audit-log table, columns, detail) uncatalogued, against base.html owning the CSS (as the E14 ruling)
 - ~~**E11**~~ low code sys_admin_session_audit_log.html:98-100 "lands in 16C PR 3" — it ships (§1) — **Done in #2896.**
-- **E12** low author ui_elements.md:278-288 `.card.placeholder` (base.html:2056-2068): no markup uses it; the comment at base.html:2034-2040 is unattached
+- **E12** low author ui_elements.md:278-288 `.card.placeholder` (base.html:2056-2068): no markup uses it (the unattached comment above it went in #2896)
 - **E13** low author ui_elements.md:626 every interactive chip has a 2px edge vs the dashboard's role pills and `rs-role-nav-muted` (reviewer/dashboard.html:53-67, reviewer/_role_chips.html:26) with none
 - **E14** low spec operator_ui_concept.md:386 quotes the outbox intro incompletely (the partial adds reminder, responses-received and raw-URL sentences); the partial's header says sys_admin_sessions.html only, but sys_admin_session_outbox.html renders it
 - ~~**E15**~~ low code base.html comments: :242-252 help-card border "~1.5:1" (now 2.54 / 1.95), :455-459 border primitive, :1971 "TWO pages opt in" (all four rosters), :3024, :3037 line refs, :1087 "eight box-shadow uses" (§1) — **Done in #2896.**
