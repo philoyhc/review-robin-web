@@ -1546,3 +1546,43 @@ def test_after_commit_runs_on_the_real_commit_and_drops_on_rollback(
             raise RuntimeError("refused")
     unit_of_work.commit(db)
     assert ran == ["outside", "inside"]
+
+
+def test_after_commit_waits_for_the_commit_and_a_failed_commit_drops_it(
+    db: Session, monkeypatch
+) -> None:
+    """The callbacks run after the real commit returns — not before it —
+    and a commit that raises drops them; a callback that raises is logged
+    and the rest still run, so committed work is never reported failed."""
+    from app.services import unit_of_work
+
+    order: list[str] = []
+    real_commit = db.commit
+
+    def spying_commit():
+        real_commit()
+        order.append("commit")
+
+    monkeypatch.setattr(db, "commit", spying_commit)
+    with unit_of_work.atomic(db):
+        unit_of_work.after_commit(db, lambda: order.append("callback"))
+    assert order == ["commit", "callback"]
+
+    def failing_commit():
+        raise RuntimeError("commit failed")
+
+    monkeypatch.setattr(db, "commit", failing_commit)
+    with pytest.raises(RuntimeError):
+        with unit_of_work.atomic(db):
+            unit_of_work.after_commit(db, lambda: order.append("dropped"))
+    monkeypatch.setattr(db, "commit", spying_commit)
+    unit_of_work.commit(db)
+    assert order == ["commit", "callback", "commit"]
+
+    def raising():
+        raise ValueError("callback failed")
+
+    with unit_of_work.atomic(db):
+        unit_of_work.after_commit(db, raising)
+        unit_of_work.after_commit(db, lambda: order.append("still runs"))
+    assert order[-1] == "still runs"

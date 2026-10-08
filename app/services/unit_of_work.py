@@ -17,10 +17,13 @@ was done — to that commit, and drops it if the unit rolls back.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 
 from sqlalchemy.orm import Session
+
+_log = logging.getLogger(__name__)
 
 _DEFER_KEY = "unit_of_work.defer_commit"
 _AFTER_KEY = "unit_of_work.after_commit"
@@ -73,14 +76,24 @@ def commit(db: Session) -> None:
         db.info.pop(_AFTER_KEY, None)
         raise
     for fn in db.info.pop(_AFTER_KEY, []):
-        fn()
+        # The work is committed: a failing side effect is logged, not
+        # raised, so it cannot report that work as failed.
+        try:
+            fn()
+        except Exception:
+            _log.exception("after_commit callback failed")
 
 
 def after_commit(db: Session, fn: Callable[[], None]) -> None:
     """Run ``fn`` once the work so far is committed: now, outside a unit;
     after the unit's real commit inside one, and never if the unit rolls
     back. For a side effect that must not report work the unit then
-    discards — a "purged" or "imported" log line."""
+    discards — a "purged" or "imported" log line.
+
+    The guarantee holds for :func:`atomic` and for a :func:`single_commit`
+    closed by :func:`commit`. A bare :func:`single_commit` that its
+    caller closes with a raw ``db.commit()`` / ``db.rollback()`` leaves
+    the queue in place; no such caller queues anything today."""
     if db.info.get(_DEFER_KEY, False):
         db.info.setdefault(_AFTER_KEY, []).append(fn)
     else:
