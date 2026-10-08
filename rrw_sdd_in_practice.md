@@ -104,7 +104,7 @@ The `spec-writer` agent's charter is the same rule from the other side:
 
 **Evidence that it is followed.** Classifying each first-parent merge by the top-level folders it touches:
 - Of the **2,583** merges, 1,573 touch `app/`. Of those, **336 (21%)** also touch a live spec in the same PR, while **475 (30%)** touch a live `guide/` document.
-- Over the last 200 first-parent merges to `3559c7a7`, 118 of which touch `app/`, the plan rate is **76%** and the spec rate **31%**.
+- Over the last 200 first-parent merges to `3559c7a7`, the plan rate among the 118 that touch `app/` is **76%** and the spec rate **31%**.
 - A further **246 merges (10%)** touch a live spec and no application code at all. These are the spec-on-the-way-out PRs.
 
 The rise in the recent spec rate is the rule applied at a smaller grain, not the rule weakening. Items now close in days, and an item's close often lands its spec edits beside its last build rung.

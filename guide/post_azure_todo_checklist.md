@@ -91,7 +91,7 @@ look — which is the failure this file exists to stop repeating.
 environment as the migration's final step. At that moment several
 documents describe an environment that no longer exists, and two more
 describe a plan that the outcome has either confirmed or replaced. Work
-through them and decide each one's fate. Line counts taken 2026-10-08.
+through them and decide each one's fate. Line counts of the live documents taken 2026-10-08.
 
 | Document | Lines | The question it poses at cutover |
 |---|---|---|
