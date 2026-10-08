@@ -573,7 +573,7 @@ action card doing the explanatory job.
 
 ## Out of scope for this page
 
-- **Per-entity setup work.** Belongs on the five Setup pages.
+- **Per-entity setup work.** Belongs on the six Setup pages.
 - **Operations work** (invitations, monitoring, validation
   detail, reviewer experience preview). Belongs on the
   Operations pages. Home surfaces pointers and links, not the
@@ -603,8 +603,9 @@ action card doing the explanatory job.
   this page.
 - **Both draft-returning transitions ship under one label, "Revert to
   draft", and are two different service calls.** `ready → draft`
-  (`next-action-pause-form`, the transition legacy prose calls *Pause*)
-  reuses `lifecycle.revert_session_to_draft`; `validated → draft`
+  (`next-action-pause-form`, the transition legacy prose calls *Pause*,
+  and the same form for `expired → draft`) reuses
+  `lifecycle.revert_session_to_draft`, which accepts both; `validated → draft`
   (`next-action-revert-form`) reuses
   `lifecycle.invalidate_session(reason="operator_revert")`. Both
   are wired via the same `POST /operator/sessions/{id}/revert`
