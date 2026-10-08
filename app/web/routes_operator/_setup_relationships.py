@@ -154,7 +154,10 @@ async def relationships_import_submit(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    relationships_service.save_relationships(
+    # The service locks the session row (findings Bc4): wait for it off
+    # the event loop.
+    await run_in_threadpool(
+        relationships_service.save_relationships,
         db,
         session=review_session,
         user=user,

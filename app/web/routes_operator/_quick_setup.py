@@ -668,7 +668,10 @@ async def _run_quick_setup_relationships(
     if existing > 0 and confirm_replace != "true":
         return "needs_confirm"
 
-    relationships_service.save_relationships(
+    # The service locks the session row (findings Bc4): wait for it off
+    # the event loop.
+    await run_in_threadpool(
+        relationships_service.save_relationships,
         db,
         session=review_session,
         user=user,
