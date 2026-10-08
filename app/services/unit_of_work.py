@@ -76,12 +76,16 @@ def commit(db: Session) -> None:
         db.info.pop(_AFTER_KEY, None)
         raise
     for fn in db.info.pop(_AFTER_KEY, []):
-        # The work is committed: a failing side effect is logged, not
-        # raised, so it cannot report that work as failed.
-        try:
-            fn()
-        except Exception:
-            _log.exception("after_commit callback failed")
+        _run_callback(fn)
+
+
+def _run_callback(fn: Callable[[], None]) -> None:
+    """The work is committed: a failing side effect is logged, not
+    raised, so it cannot report that work as failed."""
+    try:
+        fn()
+    except Exception:
+        _log.exception("after_commit callback failed")
 
 
 def after_commit(db: Session, fn: Callable[[], None]) -> None:
@@ -93,11 +97,12 @@ def after_commit(db: Session, fn: Callable[[], None]) -> None:
     The guarantee holds for :func:`atomic` and for a :func:`single_commit`
     closed by :func:`commit`. A bare :func:`single_commit` that its
     caller closes with a raw ``db.commit()`` / ``db.rollback()`` leaves
-    the queue in place; no such caller queues anything today."""
+    the queue in place; no such caller queues anything today. Either way
+    a callback that raises is logged, not raised."""
     if db.info.get(_DEFER_KEY, False):
         db.info.setdefault(_AFTER_KEY, []).append(fn)
     else:
-        fn()
+        _run_callback(fn)
 
 
 __all__ = ["after_commit", "atomic", "commit", "single_commit"]

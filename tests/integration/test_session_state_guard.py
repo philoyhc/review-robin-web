@@ -1549,7 +1549,7 @@ def test_after_commit_runs_on_the_real_commit_and_drops_on_rollback(
 
 
 def test_after_commit_waits_for_the_commit_and_a_failed_commit_drops_it(
-    db: Session, monkeypatch
+    db: Session, monkeypatch, caplog
 ) -> None:
     """The callbacks run after the real commit returns — not before it —
     and a commit that raises drops them; a callback that raises is logged
@@ -1582,7 +1582,11 @@ def test_after_commit_waits_for_the_commit_and_a_failed_commit_drops_it(
     def raising():
         raise ValueError("callback failed")
 
-    with unit_of_work.atomic(db):
+    with caplog.at_level("ERROR"):
+        with unit_of_work.atomic(db):
+            unit_of_work.after_commit(db, raising)
+            unit_of_work.after_commit(db, lambda: order.append("still runs"))
+        # Outside a unit it runs at once, under the same guard.
         unit_of_work.after_commit(db, raising)
-        unit_of_work.after_commit(db, lambda: order.append("still runs"))
     assert order[-1] == "still runs"
+    assert caplog.text.count("after_commit callback failed") == 2
