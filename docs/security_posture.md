@@ -87,9 +87,7 @@ Every identity comparison in the app decides on an email match. Most
 sit behind a gate audited in §5.6; three do not appear in that table
 at all — `get_or_create_user` (which `User` row an authenticated
 principal becomes), `auth.roles.is_super_admin`, and the reviewer
-dashboard's roster match. (An earlier version of this sentence counted
-invite acceptance as a fourth. It is listed: §5.6's `/me/invite/{token}`
-row.) Roster uniqueness and CSV de-duplication fold too, so read this
+dashboard's roster match. Roster uniqueness and CSV de-duplication fold too, so read this
 as the convention rather than as an enumeration. Settled 19N Item 2
 (2026-09-13):
 
@@ -116,24 +114,22 @@ the case is not expected, but the semantics changed and the change was
 not the point of the item. `get_or_create_user` is the sharpest of the
 four, because `auth/identity.py` never strips the parsed claim and the
 row it creates keeps the untrimmed address: before this, a padded
-claim would have missed its own row and created a second one. It was
-omitted from the first version of this paragraph, which named the
-other three. It is also the one site here the fail-open paragraph
+claim would have missed its own row and created a second one. It is also the one site here the fail-open paragraph
 above does not name, which is not an inconsistency: it always folded
 with `.lower()`, never `.casefold()`, so it was exposed to the
 whitespace gap but never to the merge.
 
-**This was a live fail-open, not a hypothetical**, and the first
-write-up of this item got that wrong — it said the pre-fix state
-"failed closed" because a `ß` holder could not match their *own*
-lower-cased row, and stopped there. The other direction was never
-checked: a `ß` holder's casefolded key matched an unrelated
-*`ss`-spelled* row exactly, at every gate above. Low likelihood in an
+**This was a live fail-open, not a hypothetical.** A `ß` holder
+could not match their *own* lower-cased row — the closed direction —
+but their casefolded key matched an unrelated *`ss`-spelled* row
+exactly, at every gate above. Low likelihood in an
 ASCII tenancy, no evidence it ever occurred, and closed now — but it
 was a fail-open path and is recorded as one.
 
-**The fold is applied in Python and never composed in SQL.** A dozen
-sites compare `func.lower(column)` against a `normalize_email` value;
+**The fold is applied in Python and never composed in SQL.** Every
+site that matches an email in SQL compares `func.lower(column)` —
+`func.lower(func.trim(column))` on the three roster tables — against a
+`normalize_email` value;
 that is sound because the three implementations agree on every ASCII
 identity. It is not extended to non-ASCII because **no two of them
 agree there**. Measured 2026-09-13 against Postgres 16 (`C.UTF-8`),

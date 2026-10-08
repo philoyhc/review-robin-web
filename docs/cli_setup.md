@@ -376,7 +376,7 @@ git branch -D "$(git rev-parse --abbrev-ref @{-1})" 2>/dev/null || true
 Expected: `git push` succeeds without prompting for credentials
 (GitHub CLI installed the git credential helper on `gh auth
 login`), and the delete succeeds. If push fails with 403, run
-`gh auth refresh -s workflow,admin:repo_hook`.
+`gh auth refresh -s workflow`.
 
 ### B.4 GitHub — workflow-scope credential
 
@@ -391,7 +391,7 @@ gh api /repos/philoyhc/review-robin-web/actions/secrets \
 ```
 
 If the second command errors with "Resource not accessible by
-integration" or `HTTP 403`, run `gh auth refresh -s workflow,admin:repo_hook`
+integration" or `HTTP 403`, run `gh auth refresh -s workflow`
 and retry.
 
 ### B.5 Azure — signed in to the right tenant + subscription
@@ -643,8 +643,7 @@ the grant statements.
   `github.com`, `api.github.com`, `management.azure.com`, and
   `login.microsoftonline.com` from your workstation.
 - **GitHub auth issues (B.2, B.3, B.4).** `gh auth logout` then
-  `gh auth login` with the `repo`, `workflow`, and
-  `admin:repo_hook` scopes.
+  `gh auth login` with the `repo` and `workflow` scopes.
 - **Wrong Azure tenant (B.5).** `az login --tenant <id>` +
   `az account set --subscription "<name>"`.
 - **Insufficient Azure role (B.6, B.7).** Not a self-service

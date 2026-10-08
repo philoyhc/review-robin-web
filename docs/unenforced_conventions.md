@@ -40,18 +40,18 @@ the joke it sounds like.
   solely to enable the check is the tail wagging the dog.
 - **Verified 2026-09-08.** Replacing `| lifecycle_label` with
   `| capitalize` in `app/web/templates/operator/sys_admin_sessions.html`
-  leaves **2940 passed, 16 skipped** and `ruff` clean.
+  leaves the suite green and `ruff` clean.
 
 ### 1.2 Route handlers stay thin — no SQL, no business rules
 
 - **Written down at** `CLAUDE.md` "Architecture at a glance" §1;
   `spec/architecture.md`.
 - **Why not, and the honest part:** a naive check fails on the tree as
-  it stands. **17 of the routing modules contain `select(`**
+  it stands. **15 of the routing modules contain `select(`**
   (`app/web/routes_operator/`, `app/web/routes_reviewer/`,
-  `app/web/routes_*.py`, 2026-09-08). Whether each of those is inside a
+  `app/web/routes_*.py`, counted 2026-10-08). Whether each of those is inside a
   handler or in a module-local helper is exactly the judgement a grep
-  cannot make, and a check that fails on 17 files the day it lands is
+  cannot make, and a check that fails on 15 files the day it lands is
   the *"argued with, raised, then disabled"* sequence VI describes.
 - **What would change this.** Not a constant — a cleanup. If the SQL
   moves into services, the check becomes a one-line grep with nothing to
@@ -431,8 +431,8 @@ decision not to.
   some of the rest — a dialect accident, not enforcement.
 - **Verified 2026-09-08.** A `from sqlalchemy.dialects.postgresql import
   VARCHAR` in `app/db/models/review_session.py`, actually used as a
-  column type so `F401` cannot fire, leaves `ruff` clean and **2940
-  passed, 16 skipped**.
+  column type so `F401` cannot fire, leaves `ruff` clean and the suite
+  green.
 
 ### 2.2 No slice-to-slice imports in `app/web/routes_operator/`
 
@@ -440,7 +440,8 @@ decision not to.
   import only from `_shared.py` and from outside the package.
 - **The check.** Walk the package's import statements; fail on one slice
   importing another. Derivable from the file layout alone.
-- **Verified 2026-09-08.** **20 slices, 0 violations.** The package holds
+- **Verified 2026-09-08, re-counted 2026-10-08.** **20 slices, 0
+  violations.** The package holds
   22 `.py` files: the 20 slices `__init__.py` registers, plus
   `_shared.py` — which the convention names as the one legal import
   target and so is not itself a slice — plus `__init__.py`. The
