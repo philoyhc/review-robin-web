@@ -453,16 +453,23 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   back to Home **still unlocked** (`?editing=1`, no fragment): Save
   only saves, and **Lock** is what locks the card. The operator saves
   in place instead of hopping to a child page, and keeps their seat:
-  the card's form stores the scroll position on submit and an inline
-  script restores it on the reload (deferring to a shown
-  `.banner-scroll-target`). Save's reload alone also cross-fades
+  the card's form stores the scroll position, with the time, on
+  submit, and an inline script restores it on the reload (deferring to
+  a shown `.banner-scroll-target`). The stored seat is read once and
+  removed on any Home load, and counts only when it is under 15 seconds
+  old and the load is Save's landing URL (`?editing=1`, no fragment),
+  so a Save the server refuses — whose error page leaves the seat
+  behind — gives a later visit to Home neither its scroll nor its fade;
+  a page restored from the back/forward cache drops both too. Save's
+  reload alone also cross-fades
   rather than repainting from blank: a cross-document view
   transition whose `@view-transition` rule no stylesheet declares —
   `rrwSaveFade` adds it from script on the way out and on the way
   back, unless the reader prefers reduced motion — so every other
   navigation stays a plain load. A browser without view transitions
   skips the fade and keeps the scroll; without JS the reload lands at
-  the top. An in-place Lock or Unlock rewrites `?editing` in the
+  the top of the page (before 19U Item 4 it landed at the card's top
+  edge). An in-place Lock or Unlock rewrites `?editing` in the
   address (`history.replaceState`), so a reload keeps the card's
   mode. The
   tag write runs **after** the config apply, so a save the card

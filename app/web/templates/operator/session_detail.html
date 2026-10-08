@@ -11,28 +11,54 @@
      ``@view-transition``, which takes no selector — so neither declares
      it in CSS: ``rrwSaveFade`` adds the rule from script, on the page
      being left when the card's form submits (below) and on the page
-     coming back when the card's scroll key is waiting (here, read at
-     parse time, before the restore at the foot removes it). Only Save's
+     coming back when the seat Save left is waiting, fresh, on the URL
+     Save's redirect lands on (the script below). Only Save's
      reload fades; every other navigation — Owners, Quick Setup, the
      Workflow card, the rest of the app — stays a plain load, so nothing
      else meets a fade in progress. Skipped for readers who prefer reduced
      motion; browsers without view transitions reload as before. #}
   <script>
+    // The seat Save left: ``{y, t}`` under ``SEAT_KEY``, written by the
+    // card form's submit (foot of the page). Read here, at parse time, and
+    // always removed, so it is used at most once. It counts only when it
+    // is fresh and this load is where Save's redirect lands (``?editing=1``,
+    // no fragment): a Save the server refuses (a 422 error page) leaves the
+    // key behind, and a later visit to Home must not inherit its scroll
+    // or its fade (read on #2894).
+    window.rrwSeatKey = 'sessionHomeScrollY:' + window.location.pathname;
+    window.rrwSaveSeat = null;
     window.rrwSaveFade = function () {
       if (!window.matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
       var rule = document.createElement('style');
+      rule.id = 'rrw-save-fade';
       rule.textContent = '@view-transition { navigation: auto; }';
       document.head.appendChild(rule);
     };
     (function () {
-      var fromSave = false;
+      var raw = null;
       try {
-        fromSave = sessionStorage.getItem(
-          'sessionHomeScrollY:' + window.location.pathname
-        ) !== null;
-      } catch (e) {}
-      if (fromSave) window.rrwSaveFade();
+        raw = sessionStorage.getItem(window.rrwSeatKey);
+        sessionStorage.removeItem(window.rrwSeatKey);
+      } catch (e) { return; }
+      var seat = null;
+      try { seat = JSON.parse(raw); } catch (e) {}
+      var landing = new URLSearchParams(window.location.search).get('editing') === '1'
+        && !window.location.hash;
+      if (seat && typeof seat.y === 'number' && typeof seat.t === 'number'
+          && Date.now() - seat.t < 15000 && landing) {
+        window.rrwSaveSeat = seat.y;
+        window.rrwSaveFade();
+      }
     })();
+    // Back to the page Save left, restored from the back/forward cache:
+    // it still carries the fade rule and maybe the key, so a later
+    // Owners or Quick Setup reload would fade too. Drop both.
+    window.addEventListener('pageshow', function (e) {
+      if (!e.persisted) return;
+      var rule = document.getElementById('rrw-save-fade');
+      if (rule) rule.remove();
+      try { sessionStorage.removeItem(window.rrwSeatKey); } catch (err) {}
+    });
   </script>
 {% endblock %}
 
@@ -297,7 +323,7 @@
         {# Save / Cancel / Lock cluster at the foot of the right column,
            flushed right (18R Item 4 Slice 3 — wired; 19U Item 2 moved it
            here from under the former Tags card).
-           - Save submits the config form (POST → Home display mode). Rendered
+           - Save submits the config form (POST → Home, still unlocked). Rendered
              enabled so no-JS works; the dirty-tracking script disables it until
              an edit is made.
            - Cancel / Lock are anchors carrying real ``?editing`` hrefs (no-JS
@@ -666,28 +692,28 @@
     // Remember the scroll position when the card's form submits and put
     // it back on the reload, as the Instruments page does for its cards.
     // The redirect carries no ``#session-config`` for the same reason.
-    // Here, at the end of the content, so the page is its full height
-    // when the first restore runs; again on the next frame and on load,
-    // in case layout settles late. Without JS the reload lands at the
-    // top, as any form post here does.
+    // The head script decides whether this load has a seat to restore
+    // (``rrwSaveSeat``). Here, at the end of the content, so the page is
+    // its full height when the first restore runs; again on the next
+    // frame and on load, in case layout settles late. Without JS the
+    // reload lands at the top of the page, where before it landed at the
+    // card's top edge (``#session-config``).
     (function () {
-      var KEY = 'sessionHomeScrollY:' + window.location.pathname;
       var form = document.getElementById('config-save-{{ session.id }}');
       if (form) {
         form.addEventListener('submit', function () {
           try {
-            sessionStorage.setItem(KEY, String(window.scrollY));
+            sessionStorage.setItem(
+              window.rrwSeatKey,
+              JSON.stringify({ y: window.scrollY, t: Date.now() })
+            );
             window.rrwSaveFade();
           } catch (e) {}
         });
       }
-      var saved = null;
-      try {
-        saved = sessionStorage.getItem(KEY);
-        sessionStorage.removeItem(KEY);
-      } catch (e) { return; }
-      var y = saved === null ? NaN : parseInt(saved, 10);
-      if (isNaN(y)) return;
+      // Read, checked and removed by the head script.
+      var y = window.rrwSaveSeat;
+      if (typeof y !== 'number') return;
       function apply() {
         // A banner that wants attention wins: base.html scrolls to the
         // first ``.banner-scroll-target``. Only when it is shown, though —

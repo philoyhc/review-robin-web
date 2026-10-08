@@ -41,7 +41,13 @@ def test_only_saves_reload_opts_into_the_cross_fade(
     assert "window.rrwSaveFade = function" in head
     assert "prefers-reduced-motion: no-preference" in head
     assert "'@view-transition { navigation: auto; }'" in head
-    assert "if (fromSave) window.rrwSaveFade();" in head
+    # The seat counts once, fresh, and only where Save's redirect lands.
+    assert "sessionStorage.removeItem(window.rrwSeatKey)" in head
+    assert "Date.now() - seat.t < 15000 && landing" in head
+    assert "get('editing') === '1'" in head and "!window.location.hash" in head
+    # A page restored from the back/forward cache drops the fade rule.
+    assert "if (!e.persisted) return;" in head
+    assert "getElementById('rrw-save-fade')" in head
     # Never a static rule, on this page or any other.
     assert "@view-transition {" not in home.replace(
         "'@view-transition { navigation: auto; }'", ""
@@ -55,11 +61,13 @@ def test_the_card_form_remembers_the_scroll_and_lock_drops_the_param(
     review_session = _make_session(client, db, "seat-script")
     body = client.get(f"/operator/sessions/{review_session.id}?editing=1").text
 
-    script = body[body.index("var KEY = 'sessionHomeScrollY:'"):]
-    script = script[: script.index("</script>")]
+    marker = body.index("// Read, checked and removed by the head script.")
+    script = body[body.rindex("<script>", 0, marker) : body.index("</script>", marker)]
     assert f"getElementById('config-save-{review_session.id}')" in script
     assert "addEventListener('submit'" in script
     assert "window.rrwSaveFade();" in script
+    assert "JSON.stringify({ y: window.scrollY, t: Date.now() })" in script
+    assert "var y = window.rrwSaveSeat;" in script
     assert "window.scrollTo(0, y)" in script
     # The banner check matches base.html's: only a shown banner wins.
     assert "getClientRects().length" in script

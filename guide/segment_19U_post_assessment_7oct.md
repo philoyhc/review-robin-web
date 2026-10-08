@@ -396,14 +396,22 @@ Taken 2026-10-08 at `26adcc5d`.
 ### Status — closed 2026-10-08
 
 **Shipped as planned, in one PR.** Driven in Chromium: Save comes back
-unlocked at the same `scrollY`, restored before the first frame paints;
+unlocked at the same `scrollY`, at it from the first animation frame
+(pinned in `tests/browser/test_session_home_save.py`);
 Lock locks in place and a reload stays locked. Found at build: the
 restore first deferred to *any* `.banner-scroll-target`, and a hidden
 Quick Setup banner cancelled it on every load; and a static
 `@view-transition` on Session Home made every Home → Home reload fade,
 which held the Owners card's browser tests' clicks (`<html> intercepts
-pointer events`) — hence the script-added rule, Save only. The author's
-browser check is owed.
+pointer events`) — hence the script-added rule, Save only. **Two
+reads.** The first, of `622c94b4`, found a refused Save (422) left its
+seat behind for the next Home load to inherit, scroll and fade (now
+read once, honored only fresh and on Save's landing URL, dropped on a
+back/forward-cache restore; mutation-checked), plus a stale comment, the
+§9.4 pointer and the first-frame claim unpinned; `spec-writer` caught
+two spec sentences. Without JS, Save now lands at the page top rather
+than the card's (the fragment's cost). The author's browser check is
+owed.
 
 ### PR ladder
 
