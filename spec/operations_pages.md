@@ -135,7 +135,9 @@ lifecycle explanation on the same page is redundant (see
 `ready`.** Route and button agree, in
 `app/web/routes_operator/_operations.py`:
 
-- `send-all` and `regenerate-all` call `_require_validated_or_ready`.
+- `send-all` and `regenerate-all` call `_require_validated_or_ready`;
+  the invitation services re-decide both gates under the session lock
+  (`spec/lifecycle.md` §3.1).
   The Workflow card's **Send invites** renders in `validated` or
   `ready` once invitations exist and none has been sent
   (`send_invites_visible`, `app/web/views/_workflow_card.py`), so
