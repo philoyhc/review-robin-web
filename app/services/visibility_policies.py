@@ -532,8 +532,8 @@ def upsert_many(
     services package's commit-at-the-edge convention) — a flush only
     inside ``unit_of_work.single_commit``, so the Instrument card's Save
     can roll the whole save back on a later refusal (findings A16)."""
-
     lifecycle.require_editable(db, review_session)
+
     def _mode_or_none(value: object) -> str | None:
         if value is None:
             return None

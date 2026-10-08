@@ -365,6 +365,7 @@ def bulk_save_fields(
 
     Returns ``{"display_changed": bool, "response_order_changed": bool}``.
     """
+    lifecycle.require_editable(db, instrument.session)
     lifecycle.invalidate_if_validated(
         db,
         review_session=instrument.session,

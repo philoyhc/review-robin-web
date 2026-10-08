@@ -36,6 +36,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Instrument, ReviewSession, User
 from app.db.session import get_db
 from app.services import instruments as instruments_service
+from app.services import unit_of_work
 from app.web.deps import get_or_create_user
 from app.web.routes_operator._shared import (
     _require_instrument_editable,
@@ -116,13 +117,18 @@ async def instrument_band2_state(
     def _apply():
         acknowledged_drop = bool(body.get("acknowledged_drop", False))
         try:
-            instruments_service.set_band2_state(
-                db,
-                instrument=instrument,
-                state=body,
-                actor=user,
-                acknowledged_drop=acknowledged_drop,
-            )
+            # One unit (findings Bc4): the display-field sync inside commits
+            # per field, which released the gate's lock before the response
+            # fields and the Band 2 blob were written. A refusal below now
+            # rolls the whole save back before its response is built.
+            with unit_of_work.atomic(db):
+                instruments_service.set_band2_state(
+                    db,
+                    instrument=instrument,
+                    state=body,
+                    actor=user,
+                    acknowledged_drop=acknowledged_drop,
+                )
         except instruments_service.ResponsesPresentError as exc:
             # Wave 3 PR i — cascade-blocked delete. The Band 3 row's X
             # is rendered ``disabled`` when ``has_responses`` is true,
@@ -183,7 +189,6 @@ async def instrument_band2_state(
                 },
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
-        db.commit()
         return JSONResponse({"ok": True}, status_code=status.HTTP_200_OK)
 
     return await run_in_threadpool(_apply)

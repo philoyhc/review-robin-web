@@ -31,6 +31,11 @@ def past_draft_setup(db: Session, owner: object) -> Iterator[None]:
     db.commit()
     try:
         yield
+    except BaseException:
+        # A failed write can leave the transaction needing a rollback;
+        # restoring through it would raise over the real error.
+        db.rollback()
+        raise
     finally:
         session.status = prior
         db.commit()

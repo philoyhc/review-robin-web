@@ -917,6 +917,7 @@ def set_group_boundary(
     Only valid on a group-scoped instrument (``group_kind`` already
     non-null); raises ``ValueError`` on a per-reviewee instrument.
     """
+    lifecycle.require_editable(db, instrument.session)
     if instrument.group_kind is None:
         raise ValueError(
             "set_group_boundary is only valid on a group-scoped instrument."
