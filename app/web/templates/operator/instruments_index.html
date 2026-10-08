@@ -3193,6 +3193,10 @@
               link2_mode: collectLinkMode(instrumentCard, 'link2'),
               link2_combinator: collectLinkCombinator(instrumentCard, 'link2'),
               link2_rules: collectLinkRules(instrumentCard, 'link2'),
+              // The live unit of review (A4): a group with no boundary
+              // previews the reviewer's survivors, so the route has to
+              // know the pill, not only the saved ``group_kind``.
+              link3_mode: collectLinkMode(instrumentCard, 'link3'),
               link3_boundary: link3Boundary,
             };
             btn.disabled = true;

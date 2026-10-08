@@ -829,6 +829,7 @@ def find_sample_in_scope_reviewee(
     link2_combinator: str,
     link2_rules: list[dict[str, str]],
     link3_boundary: list[str] | None = None,
+    link3_mode: str | None = None,
 ) -> tuple[Any, list[int] | None] | None:
     """Run the rule engine with the given Band 1 + Link 2 inputs and
     return both the sample reviewee and the rule-surviving group
@@ -848,7 +849,9 @@ def find_sample_in_scope_reviewee(
       reviewees (A5, A4 — the preview does not partition on
       pair-context tags, and with no boundary the reviewer's
       survivors are the one group); ``None`` for a per-reviewee
-      instrument, whose render keeps its unconstrained list.
+      instrument, whose render keeps its unconstrained list. Grouped
+      or per-reviewee is the posted ``link3_mode`` (the live pill),
+      else the saved ``group_kind``.
 
     Returns ``None`` when the rules narrow the candidate pair space
     down to zero. Samples are drawn from active reviewees only, so the
@@ -1053,7 +1056,12 @@ def find_sample_in_scope_reviewee(
     # don't supply it (older / non-Refresh paths) keep their old
     # behaviour.
     if not reviewee_boundary_fields:
-        if instrument.group_kind is None:
+        grouped = (
+            link3_mode == "grouped"
+            if link3_mode is not None
+            else instrument.group_kind is not None
+        )
+        if not grouped:
             return reviewee, None
         # A pair-context-only boundary (A5, ruled 2026-10-06): the
         # partition needs a reviewer's relationship tags, so the preview

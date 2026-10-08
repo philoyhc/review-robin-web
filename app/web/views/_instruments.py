@@ -784,9 +784,9 @@ def _new_model_band2_state(
         # every reviewee with the matching boundary tag value,
         # even ones the rule engine actually excluded. Empty list
         # = "no constraint" (no Refresh yet, legacy band2_state from
-        # before the field shipped, or a Refresh with no boundary).
-        # A pair-context-only boundary carries the sample reviewer's
-        # survivors here (A5).
+        # before the field shipped, or a per-reviewee instrument).
+        # A pair-context-only boundary, or a group with no boundary,
+        # carries the sample reviewer's survivors here (A5, A4).
         "sample_group_member_ids": list(
             (instrument.band2_state or {}).get(
                 "sample_group_member_ids"

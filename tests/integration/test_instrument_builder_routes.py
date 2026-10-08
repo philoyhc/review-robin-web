@@ -2783,6 +2783,102 @@ def test_no_boundary_group_preview_honours_links_1_and_2(
     ]
 
 
+
+_A4_LINK2_EXCLUDE = {
+    "link1_mode": "all",
+    "link1_combinator": "AND",
+    "link1_rules": [],
+    "link2_mode": "filter",
+    "link2_combinator": "AND",
+    "link2_rules": [
+        {
+            "field": "reviewee.tag2",
+            "op": "IS NOT",
+            "operand_value": "exclude",
+            "operand_tag": "",
+        }
+    ],
+}
+
+
+@pytest.mark.parametrize("link3_boundary", [[], ["pair_context.tag1"]])
+def test_live_grouped_pill_on_a_saved_individual_takes_reviewer_survivors(
+    client: TestClient, db: Session, link3_boundary: list[str]
+) -> None:
+    """A4: grouped or per-reviewee is the live Link 3 pill the Refresh
+    posts, not the saved ``group_kind``. A saved Individual instrument
+    the operator has switched to Group, unsaved, previews the sample
+    reviewer's survivors with no boundary, and (A5) with a
+    pair-context-only one."""
+    review_session, new_model = _group_band2_session(
+        client, db, code=f"a4-live-{len(link3_boundary)}"
+    )
+    new_model.group_kind = None
+    db.commit()
+    by_name = {
+        r.name: r.id
+        for r in db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    }
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            **_A4_LINK2_EXCLUDE,
+            "link3_mode": "grouped",
+            "link3_boundary": link3_boundary,
+        },
+    )
+    survivors = sorted(by_name[n] for n in ("Dan", "Eve", "Fay"))
+    assert resp.json()["sample_group_member_ids"] == survivors
+
+
+def test_per_reviewee_preview_stores_no_member_ids_and_renders_unfiltered(
+    client: TestClient, db: Session
+) -> None:
+    """A4: a per-reviewee instrument keeps its unconstrained list. The
+    Refresh stores no member set, and a leftover one does not filter
+    the server render."""
+    review_session, new_model = _group_band2_session(
+        client, db, code="a4-individual"
+    )
+    new_model.group_kind = None
+    db.commit()
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={**_A4_LINK2_EXCLUDE, "link3_mode": "individual"},
+    )
+    assert resp.json()["sample_group_member_ids"] == []
+    db.refresh(new_model)
+    assert new_model.band2_state.get("sample_group_member_ids") is None
+
+    carol = db.execute(
+        select(Reviewee)
+        .where(Reviewee.session_id == review_session.id)
+        .where(Reviewee.name == "Carol")
+    ).scalar_one()
+    new_model.band2_state = {
+        **(new_model.band2_state or {}),
+        "sample_group_member_ids": [carol.id],
+    }
+    db.commit()
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(_band2_card(body, new_model.id).split())
+    needle = 'data-new-model-band2-sample-names="'
+    idx = flat.find(needle)
+    assert idx != -1
+    end = flat.find('"', idx + len(needle))
+    assert sorted(flat[idx + len(needle) : end].split("|")) == [
+        "Carol",
+        "Dan",
+        "Eve",
+        "Fay",
+    ]
+
 def test_boundary_change_drops_stale_sample_member_ids(
     client: TestClient, db: Session
 ) -> None:
