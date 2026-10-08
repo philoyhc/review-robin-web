@@ -929,11 +929,12 @@ name and no email — so without the rule a picked suggestion returns
 Detection is `views.assignments_picked_handles`, resolved **per
 side** against the **uncapped** label sets, so a label past the
 display cap that the operator types from memory is still recognised.
-The two sides carry different rules, both inherited from the roster
-pages rather than newly invented: a **reviewer** tail must contain
-`@` (their handle is always an email, and the guard also stops a tag
-like `Group (B)` reading as a pick), a **reviewee** tail need not
-(`email_or_identifier` may be an anonymous ID). A pick naming a side
+The two sides carry different rules: a **reviewer** tail must
+contain `@` (their handle is always an email, and on this page, where
+one box searches both sides, the guard stops a tag like `Group (B)`
+reading as a reviewer pick), a **reviewee** tail need not
+(`email_or_identifier` may be an anonymous ID). The roster pages
+themselves no longer guard on `@`. A pick naming a side
 the scope excludes matches nothing, rather than falling back to a
 substring search that would ignore the scope.
 

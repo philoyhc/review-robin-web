@@ -130,8 +130,7 @@ one.
 
 **The session's own Details do not.** `sessions.update_session`, behind
 Session Home's Details card and the lobby expander's Save, leaves a
-`validated` session `validated` (author's ruling, 2026-10-05, findings
-Cc5): no field it writes can change the check's verdict. Name and code
+`validated` session `validated`: no field it writes can change the check's verdict. Name and code
 are checked only for being present and the form requires both, help
 contact adds an info note only, and the rest (description, deadline,
 Start, offsets, the release window, the two Setup-tab toggles) are not
@@ -569,11 +568,12 @@ renders in every state, because reading a finished session's
 roster is legitimate. So does the preview-count line, which sits
 above the **preview table** rather than in the strip and is shared
 by all seven preview pages (`spec/setup_pages.md`, "Preview
-tables"). **Observers is the one exception,
-on checkboxes only**: theirs stay live until `archived` because
-they drive the cohort rule editor (`spec/setup_pages.md`), which
-is deliberately usable mid-session; its bulk *card* follows the
-common gate.
+tables"). **Observers is the one exception**: its whole selection
+surface — the row checkboxes, the bulk controls and the Unlock
+panel — stays live until `archived`, on the wider predicate above
+("Observers uses a WIDER predicate"), because observers drive the
+cohort rule editor (`spec/setup_pages.md`), which is deliberately
+usable mid-session.
 
 **The card and the controls answer the same predicate**, and have
 to. Key the card to `is_ready` while the controls read
@@ -798,7 +798,7 @@ inactive. The release window is open only once
 `responses_release_until` with no start is inert. A new reader of an
 anchor + offset pair owes the same rule. The single-valued helper
 `resolve_offset` in `app/services/scheduled_events/_duration.py`
-implements it but has no callers.
+implements it.
 
 **8.2.3 Event-precondition guard.** Beyond the anchor, each
 scheduled event has its own operational preconditions — system
@@ -904,8 +904,7 @@ translate to HTTP 422 with the per-pair error message:
 | Release-until ≤ Release-from | `Release responses until must be after Release responses from.` |
 | Release-until > Release-from + 365d | `Release responses until must be within 365 days of Release responses from.` |
 
-The **Settings CSV import** enforces the chain too (findings G22,
-ruled 2026-10-06), in its parse phase, so a violating file is refused
+The **Settings CSV import** enforces the chain too, in its parse phase, so a violating file is refused
 whole and nothing is applied. It checks the three pairs through
 `validate_schedule_ordering` (which takes `responses_release_until`
 for this caller, since the import has no per-field parser), on the
@@ -917,8 +916,7 @@ refused over a schedule it leaves alone. The lead-time floor and the
 have since passed. A session closed before its End and then released
 holds Release-from before End (**Release responses** stamps the moment
 of release), so its own export is refused until Release-from is
-cleared or moved in the file (author's ruling, 2026-10-06;
-`spec/csv_contracts.md`).
+cleared or moved in the file (`spec/csv_contracts.md`).
 
 The create form (`session_new.html`) also pins the same chain
 client-side via `min` / `max` attributes on each `datetime-local`
