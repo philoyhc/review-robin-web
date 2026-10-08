@@ -1593,3 +1593,327 @@ def test_after_commit_waits_for_the_commit_and_a_failed_commit_drops_it(
         r for r in caplog.records if r.getMessage() == "after_commit callback failed"
     ]
     assert len(failures) == 2
+
+
+# --- Findings Bc5: the invitation services gate under the lock ---------------
+
+
+def _invited_session(db: Session, code: str, status: str):
+    """A session in ``status`` with one reviewer holding a pending
+    invitation, built directly so each service reaches its gate."""
+    from app.db.models import Invitation, Reviewer
+    from app.services import invitations
+
+    session = _make_validated_session(db, code)
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == session.id)
+    ).scalars().first()
+    invitation = Invitation(
+        session_id=session.id,
+        reviewer_id=reviewer.id,
+        token_hash=invitations.hash_token(f"raw-{code}"),
+    )
+    db.add(invitation)
+    session.status = status
+    db.commit()
+    return session, reviewer, invitation
+
+
+def _invite_url(token: str) -> str:
+    return f"https://example.edu/me/invite/{token}"
+
+
+_BC5_CASES = {
+    # service: (status the request loaded, status committed at the lock)
+    "send_all_invitations": ("validated", "draft"),
+    "regenerate_all_tokens": ("ready", "expired"),
+    "send_one_invitation": ("ready", "draft"),
+    "regenerate_token": ("ready", "draft"),
+    "send_one_reminder": ("ready", "expired"),
+    "send_reminders_to_incomplete": ("ready", "draft"),
+}
+
+
+@pytest.mark.parametrize("service", sorted(_BC5_CASES))
+def test_an_invitation_action_refuses_a_state_committed_at_its_lock(
+    db: Session, monkeypatch, service: str
+) -> None:
+    """A Revert (or a close) commits as the operator's invitation action
+    starts: the service re-reads the session under the lock and refuses,
+    so no mail, token or audit row lands on a session that has left the
+    state the page showed (findings Bc5)."""
+    from app.db.models import EmailOutbox
+    from app.services import invitations
+
+    loaded, committed = _BC5_CASES[service]
+    session, reviewer, invitation = _invited_session(
+        db, f"bc5-{service.replace('_', '-')}", loaded
+    )
+    token_before = invitation.token_hash
+    user = _operator(db, session)
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, committed))
+
+    kwargs = {
+        "send_all_invitations": dict(
+            review_session=session, user=user, build_invite_url=_invite_url
+        ),
+        "regenerate_all_tokens": dict(review_session=session, user=user),
+        "send_one_invitation": dict(
+            invitation=invitation,
+            review_session=session,
+            reviewer=reviewer,
+            user=user,
+            build_invite_url=_invite_url,
+        ),
+        "regenerate_token": dict(invitation=invitation, user=user),
+        "send_one_reminder": dict(
+            invitation=invitation,
+            review_session=session,
+            reviewer=reviewer,
+            user=user,
+            build_invite_url=_invite_url,
+        ),
+        "send_reminders_to_incomplete": dict(
+            review_session=session, user=user, build_invite_url=_invite_url
+        ),
+    }[service]
+    with pytest.raises(session_guard.SessionStateConflict):
+        getattr(invitations, service)(db, **kwargs)
+
+    db.rollback()
+    db.refresh(invitation)
+    assert invitation.token_hash == token_before
+    assert invitation.status == "pending"
+    assert not db.execute(
+        select(EmailOutbox.id).where(EmailOutbox.session_id == session.id)
+    ).all()
+
+
+def test_the_per_row_reminder_lands_in_one_commit(
+    db: Session, monkeypatch
+) -> None:
+    """The reminder and its ``reminders.sent`` row commit together, so the
+    lock its gate took holds to that commit (findings Bc5)."""
+    from app.services import invitations
+
+    session, reviewer, invitation = _invited_session(db, "bc5-one-commit", "ready")
+    commits = _counting_commits(monkeypatch, db)
+    invitations.send_one_reminder(
+        db,
+        invitation=invitation,
+        review_session=session,
+        reviewer=reviewer,
+        user=_operator(db, session),
+        build_invite_url=_invite_url,
+    )
+    assert len(commits) == 1
+    assert _count(db, session, "reminders.sent") == 1
+
+
+def _second_invitation(db: Session, session: ReviewSession):
+    from app.db.models import Invitation, Reviewer
+    from app.services import invitations
+
+    reviewer = Reviewer(
+        session_id=session.id, name="Bea", email=f"bea-{session.code}@example.edu"
+    )
+    db.add(reviewer)
+    db.flush()
+    invitation = Invitation(
+        session_id=session.id,
+        reviewer_id=reviewer.id,
+        token_hash=invitations.hash_token(f"raw2-{session.code}"),
+    )
+    db.add(invitation)
+    db.commit()
+    return reviewer, invitation
+
+
+@pytest.mark.parametrize(
+    "service", ["send_all_invitations", "send_reminders_to_incomplete"]
+)
+def test_a_bulk_invitation_action_lands_in_one_commit(
+    db: Session, monkeypatch, service: str
+) -> None:
+    """The bulk Send and the bulk reminder commit once, after every row,
+    so the lock their gate took holds through the batch rather than being
+    released by the first row's commit (findings Bc5). Two rows, so a
+    commit per row would show."""
+    from types import SimpleNamespace
+
+    from app.services import invitations, monitoring
+
+    status = "validated" if service == "send_all_invitations" else "ready"
+    session, reviewer, invitation = _invited_session(
+        db, f"bc5-batch-{service.replace('_', '-')}", status
+    )
+    reviewer2, invitation2 = _second_invitation(db, session)
+    rows = [
+        SimpleNamespace(invitation=i, reviewer=r, is_incomplete=True)
+        for i, r in ((invitation, reviewer), (invitation2, reviewer2))
+    ]
+    monkeypatch.setattr(invitations, "list_sendable_invitations", lambda *_: rows)
+    monkeypatch.setattr(monitoring, "per_reviewer_progress", lambda *_: rows)
+    commits = _counting_commits(monkeypatch, db)
+
+    getattr(invitations, service)(
+        db,
+        review_session=session,
+        user=_operator(db, session),
+        build_invite_url=_invite_url,
+    )
+    assert len(commits) == 1
+    for each in (invitation, invitation2):
+        db.refresh(each)
+        assert each.status == "sent"
+
+
+def test_the_bulk_send_lists_its_rows_after_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    """A second Send-all click commits first: the rows are listed under the
+    lock, so the pending row it already sent is not mailed again."""
+    from types import SimpleNamespace
+
+    from app.db.models import EmailOutbox, Invitation
+    from app.services import invitations
+
+    session, _, invitation = _invited_session(db, "bc5-list-after", "validated")
+
+    def pending_rows(db_, session_id):
+        return [
+            SimpleNamespace(invitation=i, reviewer=i.reviewer)
+            for i in db_.execute(
+                select(Invitation).where(
+                    Invitation.session_id == session_id,
+                    Invitation.status == "pending",
+                )
+            ).scalars()
+        ]
+
+    monkeypatch.setattr(invitations, "list_sendable_invitations", pending_rows)
+    _lands_at_the_lock(
+        monkeypatch,
+        db,
+        update(Invitation).where(Invitation.id == invitation.id).values(status="sent"),
+    )
+
+    sent = invitations.send_all_invitations(
+        db,
+        review_session=session,
+        user=_operator(db, session),
+        build_invite_url=_invite_url,
+    )
+    assert sent == 0
+    assert not db.execute(
+        select(EmailOutbox.id).where(EmailOutbox.session_id == session.id)
+    ).all()
+
+
+def test_the_per_row_reminder_reads_its_invitation_after_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    """A per-row Regenerate commits as the reminder starts: the reminder
+    re-reads the invitation under the lock, sees the rotated token and
+    sends a fresh invitation rather than the dead link (findings Bc5)."""
+    from app.db.models import Invitation
+    from app.services import invitations
+
+    session, reviewer, invitation = _invited_session(db, "bc5-reread", "ready")
+    user = _operator(db, session)
+    invitations.send_invitation(
+        db,
+        invitation=invitation,
+        review_session=session,
+        reviewer=reviewer,
+        user=user,
+        build_invite_url=_invite_url,
+    )
+    # The request loaded the invitation before the Regenerate committed.
+    assert invitation.token_hash
+    _lands_at_the_lock(
+        monkeypatch,
+        db,
+        update(Invitation)
+        .where(Invitation.id == invitation.id)
+        .values(token_hash=invitations.hash_token("rotated-elsewhere")),
+    )
+
+    result = invitations.send_one_reminder(
+        db,
+        invitation=invitation,
+        review_session=session,
+        reviewer=reviewer,
+        user=user,
+        build_invite_url=_invite_url,
+    )
+    assert result.fell_back_to_invitation is True
+
+
+def _route_invited_session(client, db: Session, code: str, status: str):
+    """An operator-owned session (the client's user) with one reviewer and
+    a pending invitation."""
+    from app.db.models import Invitation, Reviewer
+    from app.services import invitations
+
+    client.post(
+        "/operator/sessions",
+        data={"name": code.title(), "code": code},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == code)
+    ).scalar_one()
+    reviewer = Reviewer(session_id=session.id, name="Rae", email=f"rae-{code}@example.edu")
+    db.add(reviewer)
+    db.flush()
+    invitation = Invitation(
+        session_id=session.id,
+        reviewer_id=reviewer.id,
+        token_hash=invitations.hash_token(f"raw-{code}"),
+    )
+    db.add(invitation)
+    session.status = status
+    db.commit()
+    return session, reviewer, invitation
+
+
+@pytest.mark.parametrize("route", ["send-all", "per-row"])
+def test_an_invitation_send_route_refuses_a_state_committed_at_the_lock(
+    client, db: Session, monkeypatch, route: str
+) -> None:
+    """The send routes reach the gated services: a Revert committing as
+    the send starts answers 409 and mails nothing (findings Bc5)."""
+    from types import SimpleNamespace
+
+    from app.db.models import EmailOutbox
+    from app.services import invitations
+
+    loaded = "validated" if route == "send-all" else "ready"
+    session, reviewer, invitation = _route_invited_session(
+        client, db, f"bc5-route-{route}", loaded
+    )
+    monkeypatch.setattr(
+        invitations,
+        "list_sendable_invitations",
+        lambda *_: [SimpleNamespace(invitation=invitation, reviewer=reviewer)],
+    )
+    monkeypatch.setattr(
+        invitations, "is_reviewer_eligible_for_invitation", lambda *_a, **_k: True
+    )
+    _lands_at_the_lock(
+        monkeypatch, db, _status_becomes(session, "draft"), commit=True
+    )
+
+    url = (
+        f"/operator/sessions/{session.id}/invitations/send-all"
+        if route == "send-all"
+        else f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    response = client.post(url, follow_redirects=False)
+
+    assert response.status_code == 409
+    db.expire_all()
+    assert not db.execute(
+        select(EmailOutbox.id).where(EmailOutbox.session_id == session.id)
+    ).all()

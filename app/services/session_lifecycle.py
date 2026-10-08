@@ -206,6 +206,35 @@ def require_not_ready(
     )
 
 
+def require_validated_or_ready(
+    db: Session, review_session: ReviewSession
+) -> ReviewSession:
+    """Lock + re-read, refuse unless ``validated`` or ``ready`` — the bulk
+    invitation Send and Regenerate gate (findings Bc5)."""
+    return session_guard.require_state(
+        db,
+        review_session,
+        lambda locked: is_validated(locked) or is_ready(locked),
+        code="not_prepared",
+        message=(
+            "Invitations can only be issued once the session has been "
+            "prepared (validated or ready)."
+        ),
+    )
+
+
+def require_ready(db: Session, review_session: ReviewSession) -> ReviewSession:
+    """Lock + re-read, refuse unless ``ready`` — the per-row invitation
+    actions' and the reminders' gate (findings Bc5)."""
+    return session_guard.require_state(
+        db,
+        review_session,
+        is_ready,
+        code="not_ready",
+        message="This action is available only once the session is Activated.",
+    )
+
+
 @dataclass
 class ReadinessReport:
     """Activation gate input split by severity."""

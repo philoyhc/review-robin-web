@@ -156,7 +156,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   save and every lifecycle transition, manual Activate included, decides
   its gate under the session lock inside the service** (Codex's ask on
   #2877). Planned as Item 1 of `guide/segment_19U_post_assessment_7oct.md`.
-- **Bc5** (found while fixing Bc4, read on #2885; low, author) **The
+- ~~**Bc5**~~ — **Done in #2889** (ruled 2026-10-08: extend the guard; the invitation services gate under the session lock, and the bulk Send and reminder commit once) (found while fixing Bc4, read on #2885; low, author) **The
   invitation Send and Regenerate gates decide on the loaded row.**
   `_require_validated_or_ready` / `_require_ready`
   (`app/web/routes_operator/_operations.py`) check the status the request
@@ -181,7 +181,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   and the display-field seeds, then commits
   (`app/web/views/_instruments.py`), on a session in any state. Author:
   gate the maintenance writes on `is_editable`, or leave them as
-  idempotent repair.
+  idempotent repair. **Ruled 2026-10-08: gate them on `is_editable`.**
 - ~~**Gc1**~~ — **Done in #2878** (found while fixing G1, Codex on #2875; low, author) **A
   roster tag value may contain a comma.** A group instrument names a group
   by its tag values joined with ", ", so two groups can render the same
@@ -225,6 +225,7 @@ id points at its row in §3 or §1.
   "queued" or "recorded"), I8 (the practices kit's engine builder).
 
 Ruled 2026-10-07: B1, Bc1, Bc2, Bc3, Bc4, G1, G2, Gc1, H2 (rows say how).
+Ruled 2026-10-08: Bc5, Bc8.
 
 ## 3. Findings by file
 

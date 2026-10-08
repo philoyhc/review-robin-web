@@ -302,8 +302,9 @@ Detail message: `"Session is <status>; revert to draft to edit"`.
 
 **The route helper is an early refusal; the service decides.** Every
 service that writes a session's roster, relationships, assignments,
-instruments, visibility policies or own settings, and the delete
-services, opens with a wrapper in `app/services/session_lifecycle.py`
+instruments, visibility policies or own settings, the delete
+services, and the operator's invitation sends, regenerates and
+reminders, opens with a wrapper in `app/services/session_lifecycle.py`
 over `session_guard.require_state`, which locks the row (`SELECT … FOR NO
 KEY UPDATE`, `populate_existing`) and re-reads it:
 
@@ -312,6 +313,8 @@ KEY UPDATE`, `populate_existing`) and re-reads it:
 | `require_editable` | not `draft`/`validated` | `not_editable` |
 | `require_not_archived` | `archived` (the Observers roster) | `archived` |
 | `require_not_ready` | `ready` (Delete Data, Delete session) | `session_ready` |
+| `require_validated_or_ready` | not `validated`/`ready` (bulk invitation Send and Regenerate, §3.3) | `not_prepared` |
+| `require_ready` | not `ready` (per-row invitation actions and reminders, §3.4) | `not_ready` |
 
 A refusal raises `SessionStateConflict`, a `LifecycleError`, which an
 app-level handler (`app/web/error_handlers.py`) renders as the same 409
@@ -375,9 +378,14 @@ The stricter invitation gate, in the same module: per-row `send` /
 Detail message: `"This action is available only once the session is
 Activated."`
 
-These gates are the only thing that stops a direct POST
-from bypassing the lifecycle. The corresponding GET pages render
-read-only banners but the source of truth is the route gate.
+Both route helpers are early refusals on the loaded row, as in §3.1:
+the invitation services (`app/services/invitations.py`) decide under
+the session lock with `require_validated_or_ready` / `require_ready`,
+so a Revert or a close committing after the page loaded is refused
+rather than mailed past. The bulk Send and the bulk reminder commit
+once, after every row, so that lock holds through the batch. The
+corresponding GET pages render read-only banners, but the source of
+truth is the service gate.
 
 ## 4. Per-instrument lifecycle
 
@@ -984,7 +992,10 @@ browsers, and direct POSTs bypass the picker entirely).
   state-gated save opens with `require_editable` / `require_not_archived`
   / `require_not_ready` (§3.1), so a roster, relationship, assignment,
   instrument, visibility or session save cannot land on a session that
-  went `ready` after the request loaded it. The gate is
+  went `ready` after the request loaded it; each operator invitation
+  action opens with `require_validated_or_ready` / `require_ready`, so a
+  send, regenerate or reminder cannot land on one reverted or closed
+  since (findings Bc5). The gate is
   `session_guard.require_state`; the route-level `_require_*` checks stay
   as early refusals and the service check can only refuse more.
   - **Re-entrant.** Several guarded calls in one request re-lock and
@@ -993,7 +1004,9 @@ browsers, and direct POSTs bypass the picker entirely).
     a save that must keep the state it gated on through its edit commits
     once (`unit_of_work.atomic`; the callers are listed in that module's
     docstring), and the automatic `validated → draft` flip (§2.3) rides
-    that commit.
+    that commit. The invitation batches and the scheduled passes do the
+    same without `atomic`: each row is written with `commit=False` and
+    the batch commits once, the request rolling back on a raise.
   - **Async handlers** await their body, then run the guarded part
     through `run_in_threadpool`, so a lock wait never blocks the event
     loop.

@@ -300,6 +300,10 @@ def _require_validated_or_ready(review_session: ReviewSession) -> None:
     settled yet) or any post-`ready` state. Only ``send-all`` and
     ``regenerate-all`` use it; the per-row actions and reminders use
     ``_require_ready``.
+
+    An early refusal on the loaded row; the invitation service decides
+    under the session lock (``lifecycle.require_validated_or_ready``,
+    findings Bc5).
     """
     if not (
         lifecycle.is_validated(review_session)
@@ -322,6 +326,9 @@ def _require_ready(review_session: ReviewSession) -> None:
     ``ready``-only, as their buttons always were. Only the bulk
     ``send-all`` and ``regenerate-all`` keep 18F's "validated or ready"
     gate, so the Workflow card can invite before activation.
+
+    An early refusal on the loaded row; the invitation service decides
+    under the session lock (``lifecycle.require_ready``, findings Bc5).
     """
     if not lifecycle.is_ready(review_session):
         raise HTTPException(
@@ -731,19 +738,15 @@ def invitations_send_all(
     # — `build_invitations_rows` goes through
     # `monitoring.per_reviewer_progress`, which is assigned-and-active —
     # so an operator saw one row and sent two mails.
-    rows = invitations.list_sendable_invitations(db, review_session.id)
-    for row in rows:
-        invitations.send_invitation(
-            db,
-            invitation=row.invitation,
-            review_session=review_session,
-            reviewer=row.reviewer,
-            user=user,
-            build_invite_url=lambda token: str(
-                request.url_for("reviewer_invite", token=token)
-            ),
-            correlation_id=request_correlation_id(),
-        )
+    invitations.send_all_invitations(
+        db,
+        review_session=review_session,
+        user=user,
+        build_invite_url=lambda token: str(
+            request.url_for("reviewer_invite", token=token)
+        ),
+        correlation_id=request_correlation_id(),
+    )
     return RedirectResponse(
         url=_invitation_redirect_url(review_session.id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -840,7 +843,7 @@ def invitations_send_one(
                 "active with at least one included assignment."
             ),
         )
-    invitations.send_invitation(
+    invitations.send_one_invitation(
         db,
         invitation=invitation,
         review_session=review_session,

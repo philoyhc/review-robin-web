@@ -30,6 +30,7 @@ from app.db.models import (
 )
 from app.logging_config import get_logger
 from app.services import audit, email_templates
+from app.services import session_lifecycle as lifecycle
 
 log = get_logger(__name__)
 
@@ -227,7 +228,11 @@ def regenerate_token(
     user: User,
     correlation_id: str | None = None,
 ) -> RegenerateResult:
-    """Rotate the token, reset the invitation to ``pending``."""
+    """Rotate the token, reset the invitation to ``pending``.
+
+    Refuses unless the session is ``ready``, decided under the session
+    lock (findings Bc5)."""
+    lifecycle.require_ready(db, invitation.session)
     raw, token_hash = _new_token()
     invitation.token_hash = token_hash
     invitation.status = "pending"
@@ -269,7 +274,10 @@ def regenerate_all_tokens(
     and ``sent_at`` / ``opened_at`` clear. The previous URLs become
     stale uniformly. Emits a single batch ``invitations.regenerated``
     audit event when at least one invitation was rotated. No-op when
-    the session has no invitations yet."""
+    the session has no invitations yet. Refuses unless the session is
+    ``validated`` or ``ready``, decided under the session lock (findings
+    Bc5)."""
+    lifecycle.require_validated_or_ready(db, review_session)
     rows = list(
         db.execute(
             select(Invitation).where(
@@ -414,6 +422,62 @@ def send_invitation(
     if commit:
         db.commit()
     return SendResult(outbox_id=outbox.id, raw_token=raw_token)
+
+
+def send_all_invitations(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    build_invite_url: Callable[[str], str],
+    correlation_id: str | None = None,
+) -> int:
+    """The bulk Send: every sendable invitation, in one commit.
+
+    Refuses unless the session is ``validated`` or ``ready``, decided
+    under the session lock, and lists the sendable rows after the lock,
+    so the lock holds from the gate to the one commit (findings Bc5).
+    Returns the count sent."""
+    lifecycle.require_validated_or_ready(db, review_session)
+    rows = list_sendable_invitations(db, review_session.id)
+    for row in rows:
+        send_invitation(
+            db,
+            invitation=row.invitation,
+            review_session=review_session,
+            reviewer=row.reviewer,
+            user=user,
+            build_invite_url=build_invite_url,
+            correlation_id=correlation_id,
+            commit=False,
+        )
+    db.commit()
+    return len(rows)
+
+
+def send_one_invitation(
+    db: Session,
+    *,
+    invitation: Invitation,
+    review_session: ReviewSession,
+    reviewer: Reviewer,
+    user: User,
+    build_invite_url: Callable[[str], str],
+    correlation_id: str | None = None,
+) -> SendResult:
+    """The per-row Send: :func:`send_invitation`, refused unless the
+    session is ``ready``, decided under the session lock (findings
+    Bc5)."""
+    lifecycle.require_ready(db, review_session)
+    return send_invitation(
+        db,
+        invitation=invitation,
+        review_session=review_session,
+        reviewer=reviewer,
+        user=user,
+        build_invite_url=build_invite_url,
+        correlation_id=correlation_id,
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -811,9 +875,14 @@ def send_reminders_to_incomplete(
     Pulls the incomplete set from ``app.services.monitoring`` (avoids a
     circular import by importing inline). Writes one batch ``reminders.sent``
     audit event when at least one reminder was sent.
+
+    Refuses unless the session is ``ready``, decided under the session
+    lock; the reminders and their batch event land in one commit, so the
+    lock holds from the gate to it (findings Bc5).
     """
     from app.services import monitoring  # local to avoid circular import
 
+    lifecycle.require_ready(db, review_session)
     rows = monitoring.per_reviewer_progress(db, review_session)
     sent_invitation_ids: list[int] = []
     sent_reviewer_ids: list[int] = []
@@ -829,6 +898,7 @@ def send_reminders_to_incomplete(
             user=user,
             build_invite_url=build_invite_url,
             correlation_id=correlation_id,
+            commit=False,
         )
         sent_invitation_ids.append(row.invitation.id)
         sent_reviewer_ids.append(row.reviewer.id)
@@ -869,7 +939,14 @@ def send_one_reminder(
     scheduled paths each write their own batch event around it;
     without this wrapper the per-row action left no audit row
     (findings G3, 2026-10-07).
+
+    Refuses unless the session is ``ready``, decided under the session
+    lock; the reminder and its event land in one commit (findings Bc5).
+    The invitation is re-read after the gate, so a Regenerate committed
+    since the request loaded it sends the fresh link, not the dead one.
     """
+    lifecycle.require_ready(db, review_session)
+    db.refresh(invitation)
     result = send_reminder(
         db,
         invitation=invitation,
@@ -878,6 +955,7 @@ def send_one_reminder(
         user=user,
         build_invite_url=build_invite_url,
         correlation_id=correlation_id,
+        commit=False,
     )
     _write_reminders_sent(
         db,
