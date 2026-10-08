@@ -8273,6 +8273,45 @@ def test_preview_sample_exclusion_drops_the_whole_group(
     )
 
 
+def test_preview_sample_exclusion_follows_the_live_link3_pill(
+    client: TestClient, db: Session
+) -> None:
+    """Ac1 (Codex on #2906): the self-review filter reads the live Link 3
+    pill, as the member set does. A saved Individual switched to Group
+    excludes Sam's whole group; a saved Group switched to Individual
+    drops only the ``(Sam, Sam)`` pair, so Zoe is the sample."""
+    from app.services import instruments as instruments_service
+
+    review_session, instrument, rule_set = _preview_session_with_self_pair(
+        client, db, "prev-self-live"
+    )
+    rule_set.exclude_self_reviews = True
+    db.commit()
+
+    def live(mode: str):
+        return instruments_service.find_sample_in_scope_reviewee(
+            db,
+            instrument=instrument,
+            link1_mode="all",
+            link1_combinator="AND",
+            link1_rules=[],
+            link2_mode="all",
+            link2_combinator="AND",
+            link2_rules=[],
+            link3_boundary=["reviewee.tag1"],
+            link3_mode=mode,
+        )
+
+    assert instrument.group_kind is None
+    assert live("grouped") is None
+
+    instrument.group_kind = "r1"
+    db.commit()
+    out = live("individual")
+    assert out is not None
+    assert out[0].name == "Zoe"
+
+
 def test_preview_sample_exclusion_is_not_the_desugar_stage(
     client: TestClient, db: Session
 ) -> None:

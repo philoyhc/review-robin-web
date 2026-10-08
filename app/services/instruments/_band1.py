@@ -978,6 +978,16 @@ def find_sample_in_scope_reviewee(
             if src == "reviewee"
         ]
 
+    # Grouped or per-reviewee: the live Link 3 pill the Refresh posts,
+    # else the saved instrument (A4). Both the self-review filter and
+    # the member-id set below read it, so neither follows a unit of
+    # review the other does not (Ac1).
+    grouped = (
+        link3_mode == "grouped"
+        if link3_mode is not None
+        else instrument.group_kind is not None
+    )
+
     # 19O Item 1 — the preview follows the instrument's self-review
     # rule (author, 2026-09-14). Applied to the engine's OUTPUT, not
     # to its options: on a grouped instrument a reviewer who is one of
@@ -1009,7 +1019,7 @@ def find_sample_in_scope_reviewee(
                 pair_context_lookup=pair_context_lookup,
             )
 
-        if instrument.group_kind is not None:
+        if grouped:
             # Membership from the roster, not from the surviving pairs,
             # as Generate reads it (``_generate._diff_one_instrument``):
             # a Link rule, or an inactive reviewee row, can take the
@@ -1055,11 +1065,6 @@ def find_sample_in_scope_reviewee(
     # persisted ``instrument.group_kind`` when None so callers that
     # don't supply it (older / non-Refresh paths) keep their old
     # behaviour.
-    grouped = (
-        link3_mode == "grouped"
-        if link3_mode is not None
-        else instrument.group_kind is not None
-    )
     if not grouped:
         # Per-reviewee, by the live pill or the saved instrument: no
         # group, whatever boundary selects the card still posts.
