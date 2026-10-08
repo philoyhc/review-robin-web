@@ -48,7 +48,7 @@ The envelope is the same shape on both sides — Python `csv.reader`
 | Filename convention | `{session_code}_{kind}.csv` via `extracts.filename(session, kind)`. E.g. `CS101_reviewers.csv`. |
 | Size caps (import) | The four roster importers — Reviewers, Reviewees, Relationships, Observers — refuse a file over **1 MiB** (`MAX_BYTES`, "File too large (max 1024 KiB)") over **5,000 data rows** (`MAX_ROWS`, "Too many rows (max 5000)"), or with any cell — header or data — past the `csv` module's **131,072-character** field limit ("A cell is longer than 131,072 characters", which a file under `MAX_BYTES` can carry), each as a single blocking issue with no rows parsed. The Settings import is not capped. |
 | Cell lengths (import) | Every string a roster importer writes is checked against its model column's declared `String(n)` — names, tags and friendly labels 255, emails 320, `ProfileLink` 2000 — and an over-long cell is a blocking issue on its row naming the column and both lengths (`cell_length_issues`); a cell past the parser's own field limit refuses the whole file instead (*Size caps*). A friendly label on a tag header (§1a) is checked against `session_field_labels.label` and refuses the file. The limits are read from the models, so they cannot drift from the schema; without the check SQLite stored the value and Postgres refused it at flush, a 500. The Settings import checks its own strings the same way (§3.3), a Data shaper shape name is held to its 255 in the service, and the single-row Add / Edit forms and the label editor hold the same limits (`spec/setup_pages.md`). |
-| Tag commas | No roster tag value may contain a comma: a `ReviewerTag1..3`, `RevieweeTag1..3`, `ObserverTag1` or `PairContextTag1..3` cell holding one is a blocking issue on its row naming the column (`tag_comma_issues`), and the single-row Add / Edit forms refuse it too (`spec/setup_pages.md`). A group instrument names a group by its tag values joined with ", ", so a comma inside one would let two groups render the same name (findings Gc1, ruled 2026-10-07). Values stored before the rule are left as they are, but nothing stores one again: such a row's Edit form refuses any save until the tag is fixed, and the session's roster export does not re-import (§4). |
+| Tag commas | No roster tag value may contain a comma: a `ReviewerTag1..3`, `RevieweeTag1..3`, `ObserverTag1` or `PairContextTag1..3` cell holding one is a blocking issue on its row naming the column (`tag_comma_issues`), and the single-row Add / Edit forms refuse it too (`spec/setup_pages.md`). A group instrument names a group by its tag values joined with ", ", so a comma inside one would let two groups render the same name. Values stored before the rule are left as they are, but nothing stores one again: such a row's Edit form refuses any save until the tag is fixed, and the session's roster export does not re-import (§4). |
 
 The header row is the **contract** — every importer matches by
 header name (case-sensitive), not by position. An extra column
@@ -584,16 +584,14 @@ with capitals are not migrated**: they stay until something rewrites them, and s
 Home's details card is one such thing, since its Tags field writes
 through `set_tags`.
 
-**The import enforces the schedule ordering chain** (findings G22,
-ruled 2026-10-06): Start ≤ End ≤ Release-from < Release-until, on the
+**The import enforces the schedule ordering chain**: Start ≤ End ≤ Release-from < Release-until, on the
 values the session would hold after the apply, refused in the parse
 phase with the details card's messages (`spec/lifecycle.md` §8.2.7).
 A pair the file supplies neither side of is not checked. **One
 legitimate session fails it:** one closed before its End and then
 released, since **Release responses** stamps Release-from at the moment
 of release. Its export is refused on import until Release-from is
-cleared or moved to End or later in the file (author's ruling,
-2026-10-06). An out-of-order schedule can therefore still be stored,
+cleared or moved to End or later in the file. An out-of-order schedule can therefore still be stored,
 and every consumer guards itself rather than trusting the chain:
 `is_response_release_window_open` returns `False` unless the session
 `is_expired` **whatever the anchors say**, a `responses_release_until`
@@ -602,8 +600,7 @@ early-open, scheduled activation fires only from `validated` and
 otherwise takes a one-shot audited skip, and past-deadline reminders
 are skipped with an audit event.
 
-**The import keeps sent auto-send entries in place** (findings Bc1,
-ruled 2026-10-07): on the values the session would hold, a new
+**The import keeps sent auto-send entries in place**: on the values the session would hold, a new
 `invite_offsets` or `reminder_offsets` entry on a position already sent
 or skipped on the anchor is refused in the parse phase, one error per
 list, the details card's rule (`spec/lifecycle.md` §8.2.6). A list the
@@ -671,7 +668,7 @@ import leaves as stored, on an unchanged anchor, is not checked.
 - **A locked display row imports shown.** The Name and Email rows
   (`reviewee.name`, `reviewee.email_or_identifier`) are stored
   `visible` whatever their `visible` cell says, on a group-scoped
-  instrument too (findings G1).
+  instrument too.
 
 **Response-field branching** adds four
 `instruments[n].response_fields[m]` attributes:
@@ -745,9 +742,7 @@ its roster export is refused on import until the tag is changed.
 **Observers is not claimed here.** It has a wired
 importer and an extract, and `Status` and `CohortRule` both read back — but
 whether the pair is *byte*-stable has not been established, so it is
-outside this contract rather than inside it by assumption. Stating the gap
-is the point: a guarantee that quietly omits one pair is how a round-trip
-regression goes unnoticed.
+outside this contract rather than inside it by assumption.
 
 Concrete guarantees the importers + serialisers maintain:
 
@@ -972,7 +967,7 @@ while creating the session.
 | Extract Setup — Reviewees tile | Out | `serialize_reviewees` | same |
 | Extract Setup — Relationships tile | Out | `serialize_relationships` | same |
 | Extract Setup — Observers tile (when `observers_enabled`) | Out | `serialize_observers` | same |
-| Extract Setup — Settings tile | Out | `serialize_session_config` (via `_session_config_csv`) | same |
+| Extract Setup — Settings tile | Out | `serialize_session_config` (via `export_settings_csv`; the Zip all bundle's copy via `build_setup_bundle`) | same |
 | Extract Setup — Zip all tile | Out | `build_setup_bundle` — a zip of the Reviewers, Reviewees, Relationships and Settings CSVs, plus `{code}_observers.csv` when `observers_enabled` (`GET /export/bundle.zip`, filename `{code}_setup.zip`) | same |
 | Extract data tab — Zip all button | Out | `build_responses_bundle` — always the unified Responses CSV; plus, for each intro chip that is on, the files that card's own button downloads under the same names and as the card is configured: the By-instrument CSVs (`?by_instrument=0` omits), the Reviewer and Reviewee metadata CSVs (`?reviewer_metadata=0` / `?reviewee_metadata=0`), every saved Data shape's CSV (`?data_shapes=0`) and, when `observers_enabled`, `{code}_participant_tokens.csv` (`?tokens=0`); each card's own query rides as `?{flag}.{param}` (`spec/extract_data.md`, Extract all data card) (`GET /export/responses_bundle.zip`, filename `{code}_responses.zip`) | `spec/extract_data.md` |
 | Extract data tab — Data shaper Zip all button | Out | `build_data_shapes_bundle` — every saved Data shape's CSV, each named and built as its own Download (`GET /export/data_shapes_bundle.zip`, filename `{code}_data_shapes.zip`; 404 with no saved shape). Row order: per-individual rows active first, then name, email / identifier, id; per-tag-combo rows by their tag values in chip order | `spec/extract_data.md` |
@@ -1009,9 +1004,11 @@ while creating the session.
 
    **A roster replace destroys more than the roster.**
    `relationships` holds `ondelete="CASCADE"` foreign keys to both
-   rosters, so re-uploading Reviewers or Reviewees deletes every pair
-   naming a removed row, alongside the assignments and responses that
-   already cascaded. The operator is told **before** the upload, not
+   rosters, and the replace deletes **every** row of the roster before
+   adding the file's — even when the file is identical to what is
+   stored — so re-uploading Reviewers or Reviewees deletes every pair
+   naming that roster, alongside the assignments and responses that
+   cascade with its rows. The operator is told **before** the upload, not
    after: the confirmation names each kind it will destroy, and the
    `reviewers.imported` / `reviewees.imported` audit event counts them
    in `cascaded_relationships` beside `cascaded_assignments`
