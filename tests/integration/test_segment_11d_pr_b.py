@@ -204,8 +204,8 @@ def test_session_edit_has_back_link_to_session_home(
 def test_session_edit_save_redirects_back_to_edit(
     client: TestClient, db: Session
 ) -> None:
-    """Save on the config card redirects back to Session Home, anchored
-    on the config card."""
+    """Save on the config card redirects back to Session Home with the
+    card still unlocked; Lock, not Save, locks it (19U Item 4)."""
     session = _create_session(client, db, code="rrw-edit-stay")
     response = client.post(
         f"/operator/sessions/{session.id}/config",
@@ -218,7 +218,7 @@ def test_session_edit_save_redirects_back_to_edit(
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.id}#session-config"
+        f"/operator/sessions/{session.id}?editing=1"
     )
 
 
