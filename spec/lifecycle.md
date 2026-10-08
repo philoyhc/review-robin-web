@@ -217,10 +217,12 @@ so the Setup pages show no lock card and no revert form), the
 session and then dispatches by that status, not the row loaded with the
 request: `validated → draft` calls
 `invalidate_session(reason="operator_revert")`. The `ready`/`expired →
-draft` branch calls `revert_session_to_draft` instead (per 2.5), so a
-scheduled activation that committed after the page loaded gets the
-`ready` path's confirm and instrument close rather than having `draft`
-written over it.
+draft` branch calls `revert_session_to_draft` instead (per 2.5). So a
+scheduled activation that committed after the page loaded `validated`
+is never overwritten with `draft`: the `validated` form sends no
+`confirm`, so the `ready` branch refuses with `needs_confirm` (400) and
+the session stays `ready`; the operator reverts from the page
+re-rendered in `ready`, whose form confirms.
 
 ### 2.7 `ready → expired` — `expire_session(...)`
 
