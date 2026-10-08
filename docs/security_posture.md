@@ -126,10 +126,10 @@ exactly, at every gate above. Low likelihood in an
 ASCII tenancy, no evidence it ever occurred, and closed now — but it
 was a fail-open path and is recorded as one.
 
-**The fold is applied in Python and never composed in SQL.** Every
-site that matches an email in SQL compares `func.lower(column)` —
-`func.lower(func.trim(column))` on the three roster tables — against a
-`normalize_email` value;
+**The fold is applied in Python and never composed in SQL.** A site
+that matches an email in SQL lowers the column (`func.lower(column)`,
+trimmed as well on most roster lookups) and compares it with a value
+folded in Python;
 that is sound because the three implementations agree on every ASCII
 identity. It is not extended to non-ASCII because **no two of them
 agree there**. Measured 2026-09-13 against Postgres 16 (`C.UTF-8`),

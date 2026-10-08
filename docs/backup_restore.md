@@ -67,8 +67,10 @@ The one exception is **Rehydrate** (off by default,
 requests. A stash expires after an hour and is deleted after a
 successful rehydrate, when an expired token is next read, or with
 its operator's `users` row; nothing sweeps abandoned stashes on a
-schedule. A rehydrate that drops responses stashes one more file the
-same way: the dropped-responses CSV it hands the operator.
+schedule. A rehydrate that drops responses stashes one more file, the
+dropped-responses CSV it hands the operator. It is written after the
+successful-rehydrate delete, so it lapses only on expiry or with its
+operator's `users` row.
 
 ## Data retention
 
