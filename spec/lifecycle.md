@@ -995,7 +995,9 @@ browsers, and direct POSTs bypass the picker entirely).
   went `ready` after the request loaded it; each operator invitation
   action opens with `require_validated_or_ready` / `require_ready`, so a
   send, regenerate or reminder cannot land on one reverted or closed
-  since (findings Bc5). The gate is
+  since (findings Bc5). The Instruments page's display-field repair
+  takes the same lock and skips, rather than refuses, a session past
+  setup (`instruments.repair_display_fields`, findings Bc8). The gate is
   `session_guard.require_state`; the route-level `_require_*` checks stay
   as early refusals and the service check can only refuse more.
   - **Re-entrant.** Several guarded calls in one request re-lock and

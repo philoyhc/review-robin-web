@@ -174,8 +174,10 @@ def repair_display_fields(db: Session, review_session: ReviewSession) -> bool:
     source has no populated value, then runs the reviewee and assignment
     lazy seeds — all idempotent. Decided under the session lock, so a
     session that went ``ready`` (or was closed or archived) after the
-    request loaded it keeps its display fields as they stand. Commits
-    either way, releasing the lock; returns whether the repair ran."""
+    request loaded it keeps its display fields as they stand. Commits on
+    every path, as the page always did, so no session lock taken earlier
+    in the request (``observe_deadline``'s) outlives the repair; returns
+    whether the repair ran."""
     from ._display_fields import (
         prune_unpopulated_display_fields,
         seed_display_fields_from_assignments,
@@ -183,6 +185,7 @@ def repair_display_fields(db: Session, review_session: ReviewSession) -> bool:
     )
 
     if not lifecycle.is_editable(review_session):
+        db.commit()
         return False
     locked = session_guard.lock_session(db, review_session)
     if not lifecycle.is_editable(locked):
@@ -203,6 +206,7 @@ def repair_display_fields(db: Session, review_session: ReviewSession) -> bool:
     seed_display_fields_from_assignments(db, review_session)
     db.commit()
     return True
+
 
 def create_instrument(
     db: Session,

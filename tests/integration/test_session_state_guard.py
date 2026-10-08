@@ -2004,3 +2004,42 @@ def test_the_instruments_repair_refuses_a_state_committed_at_its_lock(
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
     assert instruments_service.repair_display_fields(db, session) is False
     assert not _has_name_row(db, instrument)
+
+
+@pytest.mark.parametrize("status", ["ready", "expired", "archived"])
+def test_rendering_the_instruments_page_writes_nothing_past_setup(
+    client, db: Session, status: str
+) -> None:
+    """The page render goes through the gated repair: loading the
+    Instruments page of a session past setup leaves a missing locked row
+    missing (findings Bc8)."""
+    from app.db.models import InstrumentDisplayField
+
+    code = f"bc8-page-{status}"
+    client.post(
+        "/operator/sessions",
+        data={"name": code.title(), "code": code},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == code)
+    ).scalar_one()
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalars().first()
+    for row in db.execute(
+        select(InstrumentDisplayField).where(
+            InstrumentDisplayField.instrument_id == instrument.id,
+            InstrumentDisplayField.source_type == "reviewee",
+            InstrumentDisplayField.source_field == "name",
+        )
+    ).scalars():
+        db.delete(row)
+    session.status = status
+    db.commit()
+
+    response = client.get(f"/operator/sessions/{session.id}/instruments")
+
+    assert response.status_code == 200
+    db.expire_all()
+    assert not _has_name_row(db, instrument)
