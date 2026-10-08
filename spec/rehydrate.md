@@ -79,7 +79,7 @@ inherits both from the ordinary settings round-trip, which the Settings
 CSV import on Create and Session Home shares, as does backup / restore.
 Duplicate session is not one of them: it copies in the database and
 never goes through the CSV, and copies the grid through
-`copy_view_policies` (findings G5). If the settings
+`copy_view_policies`. If the settings
 carrier ever stopped emitting them, rehydrate would silently rebuild
 sessions at default visibility — which is why this is a prerequisite of
 the feature rather than a part of it.
@@ -371,8 +371,9 @@ whole-number message.
 
 1. **Reviewers / Reviewees / Observers** via `csv_imports.save_reviewers`
    / `save_reviewees` / `save_observers` (observers only if enabled). Same
-   dedup + email-lowercasing rules as normal import; `reviewees` keep
-   their `email_or_identifier` (non-email handles allowed).
+   dedup rules as normal import: emails are stored as typed and compared
+   case-insensitively; `reviewees` keep their `email_or_identifier`
+   (non-email handles allowed).
 
    **The cross-roster identity check does not run here**: this step
    calls the `save_*` functions directly, while the check sits on the
@@ -398,14 +399,14 @@ Responses are the one facet with no other import path;
 `parse_responses_csv` + `load_responses`. For each data row, resolve
 identity to the newly-created PKs and insert a `Response`:
 
-- **Reviewer** ← `ReviewerEmail` (lower-cased) → new `Reviewer.id`.
+- **Reviewer** ← `ReviewerEmail` (matched case-insensitively) → new `Reviewer.id`.
 - **Instrument** ← `InstrumentShortLabel` (primary key for the match;
   unique per session), falling back to the positional `InstrumentName`
   = `instrument_{n}` → the instrument at `order = n`.
 - **Response field** ← `(instrument, FieldKey)` →
   `InstrumentResponseField.id` (unique `(instrument_id, field_key)`).
 - **Per-reviewee rows** (`InstrumentFlavour = per-reviewee`) — **Reviewee**
-  ← `RevieweeEmail` (lower-cased / identifier); **Assignment** ←
+  ← `RevieweeEmail` (matched case-insensitively, or the identifier); **Assignment** ←
   `(reviewer, reviewee, instrument)`, **resolved, never created**. A pair
   step 3 did not generate drops the row.
 - **Insert** `Response(assignment_id, response_field_id, value=Value,
@@ -577,7 +578,7 @@ Stated plainly so the card copy and the PR description stay honest:
   responses extract writes it out, but the `csv` module refuses a cell
   that long, so the set is refused ([§3.3](#33-pre-flight-validation-mandatory)).
   Raising the parser's limit or capping answers is declined while
-  Rehydrate stays disabled (findings Dc9).
+  Rehydrate stays disabled.
 - **Group-scoped instruments / self-reviews** reconstruct correctly as
   long as the rule sets + `group_kind` in `settings.csv` regenerate the
   same graph. Where they do not, the affected responses are dropped and
