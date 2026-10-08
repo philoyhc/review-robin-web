@@ -404,24 +404,26 @@ restore first deferred to *any* `.banner-scroll-target`, and a hidden
 Quick Setup banner cancelled it on every load; and a static
 `@view-transition` on Session Home made every Home → Home reload fade,
 which held the Owners card's browser tests' clicks (`<html> intercepts
-pointer events`) — hence the script-added rule, Save only. **Two
+pointer events`) — hence the script-added rule, Save only. **Four
 reads.** The first, of `622c94b4`, found a refused Save (422) left its
 seat behind for the next Home load to inherit, scroll and fade (now
 read once, honored only fresh and on Save's landing URL, dropped on a
 back/forward-cache restore), plus a stale comment, the §9.4 pointer and
 the first-frame claim unpinned; `spec-writer` caught two spec sentences.
-The second, of `8f0a35e0`, found the new first-frame test failing one
-run in five — Chromium could paint the half-parsed page at the top before
+The second, of `8f0a35e0`, found the new first-frame test failing
+intermittently (17 of 60 runs, measured later) — Chromium could paint the half-parsed page at the top before
 the restore ran, a real flash, now held off — plus two thin tests, a
 double-added fade rule and two spec sentences, all fixed. The third, of
 `57a29625`, measured the hold (60 of 60 with it, 17 of 60 failing
 without) and found it cannot stall: a missing marker releases at end of
 parse. Its four low gaps (the `blocking` attribute and the double-click
 guard unpinned, a fragment case that tested nothing new, a rate quoted
-two ways) are closed and mutation-checked. The back/forward-cache branch
-never runs in Playwright's Chromium; it is the author's browser check. Without JS, Save now lands at the page top rather
-than the card's (the fragment's cost). The author's browser check is
-owed.
+two ways) are closed and mutation-checked. The fourth, of `86b85737`,
+was clean in code (40 of 40 runs); its prose notes (this count, one
+rate) are fixed. Without JS, Save now lands at the page top rather than
+the card's (the fragment's cost). The back/forward-cache branch never
+runs in Playwright's Chromium; with the fade's look, it is the author's
+browser check.
 
 ### PR ladder
 
