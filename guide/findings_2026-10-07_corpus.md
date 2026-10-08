@@ -155,7 +155,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   time after the scheduled one. **Ruled 2026-10-07: (a) every state-gated
   save and every lifecycle transition, manual Activate included, decides
   its gate under the session lock inside the service** (Codex's ask on
-  #2877). Planned as Item 1 of `guide/segment_19U_post_assessment_7oct.md`.
+  #2877). Planned as Item 1 of `guide/archive/segment_19U_post_assessment_7oct.md`.
 - ~~**Bc5**~~ — **Done in #2889** (ruled 2026-10-08: extend the guard; the invitation services gate under the session lock, and the bulk Send and reminder commit once) (found while fixing Bc4, read on #2885; low, author) **The
   invitation Send and Regenerate gates decide on the loaded row.**
   `_require_validated_or_ready` / `_require_ready`

@@ -1,5 +1,16 @@
 # Segment 19U — post-assessment, 2026-10-07
 
+> **Closed and archived 2026-10-08** on the author's word. Four items,
+> each closed with `tools/close_check.py 19U.<n>` at exit 0, PRs
+> **#2879 → #2894**. Item 1 put the session-state guard in the service
+> layer (findings Bc4: every gated save and every lifecycle transition
+> decided under the session lock); Items 2–4 reworked Session Home's
+> details card — Tags and the optional-tab toggles as fields, the toggles
+> as selector chips, and a Save that only saves and keeps the operator's
+> seat. The author's browser checks for Items 2–4 passed locally on
+> 2026-10-08; Item 1's Postgres `lock_timeout` question is item 11 of
+> `guide/post_azure_todo_checklist.md`.
+
 **Opened:** 2026-10-07 · **Theme:** fixes and small patches, after the 2026-10-07 corpus sweep (`guide/sweep_2026-10-07_corpus.md`), that no other plan owns · **Related:** `guide/findings_2026-10-07_corpus.md`
 
 **Items close independently**, each with its own `### Doc impact` and

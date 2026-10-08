@@ -603,7 +603,7 @@ same permission, and that permission is the one the tenant granted.
 ## 11. Bound the session-lock wait with a Postgres `lock_timeout`
 
 **Status:** open, **awaiting Azure** (author, 2026-10-08; the open
-question of `guide/segment_19U_post_assessment_7oct.md` Item 1).
+question of `guide/archive/segment_19U_post_assessment_7oct.md` Item 1).
 
 **What is there.** Every state-gated save, lifecycle transition,
 operator invitation action and scheduled pass takes `SELECT … FOR NO

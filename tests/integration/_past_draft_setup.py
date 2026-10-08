@@ -1,7 +1,7 @@
 """Test scaffolding for structure written onto a session past draft.
 
 The service layer refuses instrument and visibility writes unless the
-session is editable (findings Bc4, ``guide/segment_19U_post_assessment_7oct.md``
+session is editable (findings Bc4, ``guide/archive/segment_19U_post_assessment_7oct.md``
 Item 1), as the routes always did. Some tests build a live or closed
 session first and add a page break, a short label or a visibility cell
 afterwards, as setup rather than as the behavior under test. This
