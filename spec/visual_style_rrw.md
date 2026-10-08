@@ -223,7 +223,7 @@ Zero reads `none` rather than `0 / 0`, matching Reviewers and Reviewees; instrum
 The `Not created` vs `Not sent` split matters because the operator's next action differs: generate the invitation rows first vs. press Send. Collapsing both into a single "not sent" pill would hide that.
 
 While email sending is off, the three send states carry a `title` saying
-a send is recorded, not delivered (findings Fc3); Segment 14B retires it.
+a send is recorded, not delivered, until Segment 14B wires real sending.
 
 **Responses state values.** The Responses pill is **reviewee-centric** and **data-driven**, computed by `app.web.views.session_status_pills` (composed in `SessionStatusPills.responses_label`) — *not* gated on lifecycle state:
 

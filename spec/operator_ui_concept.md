@@ -383,8 +383,8 @@ The reminder send-path is **shared** with the Invitations page; only the selecti
 
 Dev-diagnostic page; **not an Operations row tab and not session-scoped chrome**. It sits behind the Sys Admin doorway, reached from the Sessions Diagnostics table's per-row **Outbox** button (§6). Read-only.
 
-- **Page intro** (muted text): "Dev-mode email outbox. No real SMTP backend is wired up; rows are flipped `queued → sent` synchronously when an operator clicks *Send*."
-- **Per-row card** (newest first): kind (`invitation` / `reminder`), recipient email, status pill, sent-at timestamp, then the rendered subject + body (`<pre class="code-block">`).
+- **Page intro** (muted text): "Dev-mode email outbox. No real SMTP backend is wired up; invitation and reminder rows are flipped `queued → sent` synchronously when an operator clicks *Send*, and a responses-received row stays `queued`. An invitation's rendered body includes the raw invitation URL so you can copy it into a real client."
+- **Per-row card** (newest first): kind (`invitation` / `reminder` / `responses_received`), recipient email, status pill, sent-at timestamp, then the rendered subject + body (`<pre class="code-block">`).
 - **Empty state** — "No outbox rows yet for this session."
 - **Chrome.** `sys_admin_session_outbox.html` extends `base.html` and renders the **Sys Admin** top nav plus a `.back-link` to Sessions Diagnostics — not the per-session two-row chrome.
 

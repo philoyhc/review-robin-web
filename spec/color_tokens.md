@@ -18,8 +18,8 @@ This document is the catalogue; the design rationale is in
 Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
 `spec/visual_style_general.md` (design system), `spec/ui_elements.md` (elements).
 
-**Maintenance.** Edit tokens in `base.html` (both `:root` blocks); keep the
-`tools/` harness `LABELS` and this catalogue in sync. Rules of the model
+**Maintenance.** Edit tokens in `base.html` (both `:root` blocks); keep
+`tools/theme_customizer.gen.py`'s `TARGETS` and this catalogue in sync. Rules of the model
 (independent slots; marked `@coupled` for deliberate coupling; dark `:root`
 remaps semantics onto the one primitive palette) are in `guide/archive/semantic_tokens.md`.
 
