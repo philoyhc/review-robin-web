@@ -98,7 +98,7 @@ through them and decide each one's fate. Line counts of the live documents taken
 | `docs/deployment_dev.md` | 415 | Resource names, env vars, CI/CD and bootstrap for the **personal** slot. Rewrite for NUS, or retire and let the NUS material own it? |
 | `docs/operations_runbook.md` | 94 | Opens *"Scoped to the current single Azure **dev** slot"*. Re-scope. |
 | `docs/troubleshooting.md` | 76 | Opens *"for the deployed dev slot"*. Re-scope. |
-| `docs/backup_restore.md` | 105 | Opens *"Scoped to the current single Azure **dev** slot"* — and backup policy is the one of these that an institutional host may dictate rather than leave to us. |
+| `docs/backup_restore.md` | 107 | Opens *"Scoped to the current single Azure **dev** slot"* — and backup policy is the one of these that an institutional host may dictate rather than leave to us. |
 | `docs/deployment_nus.md` | 443 | **A migration runbook whose migration is over.** Does it become the operations reference, or retire to `docs/archive/` with the operational half lifted out first? Easy to forget precisely because it is the document being worked from. |
 | ~~`docs/azure_github_setup.md`~~ <!-- path-ref-ok --> | 177 | **Retired 2026-10-03** to `docs/archive/azure_github_setup.md`, superseded by `docs/deployment_nus.md` (findings 2026-10-03 H-retire). |
 | `docs/cli_setup.md` | 657 | Companion to the above, and **the largest of the Azure documents** (third-largest in `docs/` when measured, after the status file and the practice audit, both since archived) — workstation CLI setup attached to the plan that was never executed. Its fate follows its parent's. |
