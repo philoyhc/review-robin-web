@@ -536,9 +536,15 @@ so the workflow-failure signal line adapts.
 
 **Prepare failures:**
 
-- **Generate raises.** No rollback. Redirect carries
+- **Generate raises.** Generate (`assignments.replace_assignments`) is
+  one `unit_of_work.atomic` unit, so it rolls itself back whole: no
+  assignment change lands and the session keeps its status. The run's
+  `session.workflow_run_started` is committed before the steps and
+  survives that rollback, so the failure row has its start. A refusal
+  from the session-state guard (the session left `draft`/`validated`
+  since the page loaded) lands here too. Redirect carries
   `super_button=prepare&super_step=generate&super_error=<msg>`.
-  Card lands in State 2 (draft, no summary) on next render.
+  The card renders the session's unchanged state on next render.
 - **Validate finds errors.** No rollback. The fresh assignments
   stay. The summary is computed only for a `validated` session, so
   the card shows State 2 with the failure signal line. Redirect
@@ -561,7 +567,7 @@ Each route emits two audit events bracketing the run:
 
 - `session.workflow_run_started` — once per click, with
   `context.button` carrying `"prepare_session"` or
-  `"activate_session"`.
+  `"activate_session"`. Prepare commits it before its first step.
 - `session.workflow_run_failed` — emitted in the except branch
   with `context.button`, `context.step`, and
   `context.error_message`. Successful runs are documented by the
@@ -646,15 +652,19 @@ The underlying routes gate on their own: `send-all` accepts POSTs
 from `validated` or `ready` whatever the form's visibility, and
 `remind-incomplete` accepts `ready` only (`_require_ready`, 409).
 
-- **Revert to draft** posts to `/operator/sessions/{id}/revert`:
+- **Revert to draft** posts to `/operator/sessions/{id}/revert`, which
+  calls `lifecycle.operator_revert`. It locks and re-reads the session and
+  dispatches by the status it reads there, not the row loaded with the
+  request (`spec/lifecycle.md` §2.6), so the form the page showed does
+  not decide the branch:
   - States 4 / 4Err / 5 / 6 (`is_validated`): via
-    `next-action-revert-form`. Route dispatches to
+    `next-action-revert-form`. Dispatches to
     `lifecycle.invalidate_session(reason="operator_revert")` →
     `validated → draft`, audit `session.invalidated`.
   - States 7 / 8 / 9 (`is_ready`) + State 10 (`is_expired`):
     via `next-action-pause-form` with hidden `confirm=true`.
-    Route dispatches to `lifecycle.revert_session_to_draft` →
-    `ready → draft` or `expired → draft` (the route accepts
+    Dispatches to `lifecycle.revert_session_to_draft` →
+    `ready → draft` or `expired → draft` (it accepts
     both starting states), audit `session.reverted_to_draft`.
     Instruments flip `accepting_responses = False`; responses
     are preserved.
@@ -925,8 +935,8 @@ routes:
 | `POST /operator/sessions/{id}/workflow/archive` | `lifecycle.archive_session` | any non-archived state | `archived`; 303 → `/operator/sessions/archived` | `session.archived` |
 | `POST /operator/sessions/{id}/assignments/generate` | `assignments.replace_assignments` | `draft` or `validated`; once rows exist it needs `confirm_replace=true` (else 303 to `/assignments?needs_confirm=1`) and, when any response exists, `acknowledge_response_loss=true` (else 400) | `draft` (`replace_assignments` calls `lifecycle.invalidate_if_validated`, so `validated` falls back to `draft`) | `assignments.generated`; `session.invalidated` (reason `assignments_generated`) when it was `validated` |
 | `POST /operator/sessions/{id}/activate` | `lifecycle.activate_session` | `validated` | `ready` | `session.activated` |
-| `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.invalidate_session` | `validated` | `draft` | `session.invalidated` |
-| `POST /operator/sessions/{id}/revert` (when `is_ready` or `is_expired`) | `lifecycle.revert_session_to_draft` | `ready` or `expired` | `draft` | `session.reverted_to_draft` |
+| `POST /operator/sessions/{id}/revert` (when `is_validated`) | `lifecycle.operator_revert` → `invalidate_session` | `validated` | `draft` | `session.invalidated` |
+| `POST /operator/sessions/{id}/revert` (when `is_ready` or `is_expired`) | `lifecycle.operator_revert` → `revert_session_to_draft` | `ready` or `expired` | `draft` | `session.reverted_to_draft` |
 | `POST /operator/sessions/{id}/invitations/send-all` | `invitations.send_invitation` (per row of `invitations.list_sendable_invitations` — `pending` **and** still eligible) | `validated` or `ready` | unchanged | per-invitation send events |
 | `POST /operator/sessions/{id}/invitations/remind-incomplete` | `invitations.send_reminders_to_incomplete` | `ready` | unchanged | one batch `reminders.sent` |
 

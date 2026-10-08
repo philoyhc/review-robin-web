@@ -70,12 +70,14 @@ in URLs, logs, audit events, and CSS classes.
 
 Each transition is one service function in
 `app/services/session_lifecycle.py`. All transitions emit a
-single audit event and commit atomically. One qualification:
-`invalidate_session` commits through `unit_of_work.commit`, so
-inside a route's `unit_of_work.single_commit` (the Instrument card's
-Save) the `validated → draft` flip lands with that route's one commit,
-or is rolled back with it when the Save is refused
-(`spec/instruments.md`, *Action row*).
+single audit event and commit atomically. Each locks and re-reads the
+session row before testing its precondition (§8.3, *Concurrency
+safety*). One qualification: the automatic `validated → draft` flip
+(§2.3) does not commit. It lands in its caller's commit, or in the one
+commit of a route's `unit_of_work.single_commit` (the Instrument card's
+Save), and is rolled back with it when that Save is refused
+(`spec/instruments.md`, *Action row*). Only the operator's Revert
+(§2.2) commits the flip alone.
 
 ### 2.1 `draft → validated` — `mark_validated(...)`
 
@@ -97,8 +99,9 @@ when the readiness report carries blocking errors.
 
 ### 2.2 `validated → draft` — `invalidate_session(...)`
 
-The explicit form. Idempotent (no-op when already `draft`).
-Raises `LifecycleError(code="not_validated")` when the session
+The explicit form, reached only through `operator_revert` (§2.6), and
+the one `validated → draft` flip that commits on its own (through
+`unit_of_work.commit`). Idempotent (no-op when already `draft`). Raises `LifecycleError(code="not_validated")` when the session
 is in any other status.
 
 - Reason string is required at the call site and surfaces in the
@@ -140,6 +143,16 @@ The invariant lives at the **mutation site**, not the route, so a
 route that forgets to wrap its service call cannot silently break
 it.
 
+**It flushes and does not commit, and takes no lock of its own.** The
+calling service has already locked and re-read the row through
+`require_editable` (§3.1), so the `validated` it tests is the committed
+one, and the lock holds from that gate through the edit: a commit here
+would release it before the edit landed. The flip, its
+`session.invalidated` row and the edit therefore commit together. A
+caller that fails after the flip and commits nothing loses the flip with
+the edit; one that catches the failure and commits anyway commits the
+flip too.
+
 ### 2.4 `validated → ready` — `activate_session(...)`
 
 Called by `POST /operator/sessions/{id}/activate` and by
@@ -148,7 +161,10 @@ card's solo Activate button). Flips the
 session to `ready` and sets `accepting_responses=true` on every
 instrument in the same transaction. Pre-conditions:
 
-- Session is `validated`. (Raises `not_validated`.)
+- Session is `validated`, as re-read under the session lock, so an
+  Activate that lost a race to the scheduled trigger (or to another
+  Activate) raises `not_validated` rather than activating twice.
+  (Raises `not_validated`.)
 - Readiness report still has no errors. (Raises `has_errors`.)
 - If warnings exist, the operator must have set
   `acknowledge_warnings=true` on the request. (Raises
@@ -197,10 +213,14 @@ single session-level event covers them.
 When the operator clicks the Workflow card's "Revert to draft"
 while the session is `validated` (a `validated` session is editable,
 so the Setup pages show no lock card and no revert form), the
-`/revert` route dispatches by current status: `validated → draft`
-calls `invalidate_session(reason="operator_revert")`. The
-`ready → draft` branch calls `revert_session_to_draft` instead
-(per 2.5).
+`/revert` route calls `operator_revert`, which locks and re-reads the
+session and then dispatches by that status, not the row loaded with the
+request: `validated → draft` calls
+`invalidate_session(reason="operator_revert")`. The `ready`/`expired →
+draft` branch calls `revert_session_to_draft` instead (per 2.5), so a
+scheduled activation that committed after the page loaded gets the
+`ready` path's confirm and instrument close rather than having `draft`
+written over it.
 
 ### 2.7 `ready → expired` — `expire_session(...)`
 
@@ -277,6 +297,26 @@ Six exceptions to that list, all easy to mis-read:
   `is_expired`); archived sessions go through the archived page.
 
 Detail message: `"Session is <status>; revert to draft to edit"`.
+
+**The route helper is an early refusal; the service decides.** Every
+service that writes a session's roster, relationships, assignments,
+instruments, visibility policies or own settings, and the delete
+services, opens with a wrapper in `app/services/session_lifecycle.py`
+over `session_guard.require_state`, which locks the row (`SELECT … FOR NO
+KEY UPDATE`, `populate_existing`) and re-reads it:
+
+| Wrapper | Refuses | `code` |
+|---|---|---|
+| `require_editable` | not `draft`/`validated` | `not_editable` |
+| `require_not_archived` | `archived` (the Observers roster) | `archived` |
+| `require_not_ready` | `ready` (Delete Data, Delete session) | `session_ready` |
+
+A refusal raises `SessionStateConflict`, a `LifecycleError`, which an
+app-level handler (`app/web/error_handlers.py`) renders as the same 409
+page, so a route needs no `try`. The service check is on the committed
+status and can only refuse more than the route's, which stays as the
+cheap first answer. The lobby's bulk Delete skips a row the guard
+refuses, as it skips a `ready` one up front.
 
 ### 3.2 `_require_response_loss_ack(db, session, ack)`
 
@@ -602,7 +642,7 @@ The events the lifecycle transitions and the scheduled triggers write.
 | Event type | Emitted by | Detail envelope |
 |---|---|---|
 | `session.validated` | `mark_validated` | `counts={"warnings": N, "info": N}` |
-| `session.invalidated` | `invalidate_session` (called via `invalidate_if_validated` or directly) | `reason=<string>` naming the caller: the mutation for `invalidate_if_validated` (e.g. `reviewer_created`, `assignments_generated`), `operator_revert` from `/revert`. A failed Activate writes none: the session stays `validated` |
+| `session.invalidated` | `invalidate_if_validated` (the automatic flip; lands in the caller's commit) and `invalidate_session` (the Revert; commits itself) | `reason=<string>` naming the caller: the mutation for `invalidate_if_validated` (e.g. `reviewer_created`, `assignments_generated`), `operator_revert` from `/revert`. A failed Activate writes none: the session stays `validated` |
 | `session.activated` | `activate_session` | `counts={"warnings": N, "info": N, "instruments": N}` + `context={"prev_status": "validated", "override_warnings": bool, "trigger": "operator" \| "scheduled"}` |
 | `session.reverted_to_draft` | `revert_session_to_draft` | `counts={"closed_instruments": N, "responses_at_revert": N}` |
 | `session.expired` | `expire_session` (Workflow-card **Close session**) | `counts={"closed_instruments": N}` |
@@ -628,10 +668,11 @@ canonical envelope contract these events follow.
 ## 7. Implementation principles
 
 1. **Service-layer invariants over route-layer gates.** The
-   `_require_editable` route gate is defence-in-depth; the
-   actual `validated → draft` flip lives inside each mutating
-   service via `invalidate_if_validated`. A future caller that
-   bypasses the route layer still gets the invariant.
+   `_require_editable` route gate is an early refusal; the state gate
+   is the service's `require_editable` (§3.1), decided under the
+   session lock, and the actual `validated → draft` flip lives inside
+   each mutating service via `invalidate_if_validated`. A future caller
+   that bypasses the route layer still gets both.
 
 2. **Idempotent transitions.** Every state-machine function
    no-ops when the target state is already current. Callers
@@ -639,7 +680,8 @@ canonical envelope contract these events follow.
 
 3. **Atomic commits.** Each transition commits its status flip,
    any side effects (per-instrument flag changes), and its audit
-   event in one transaction.
+   event in one transaction. The automatic `validated → draft` flip
+   (§2.3) is the exception: it commits with the edit that caused it.
 
 4. **Naive datetimes treated as UTC** for deadline comparison
    (SQLite stores naive timestamps even with
@@ -932,6 +974,27 @@ browsers, and direct POSTs bypass the picker entirely).
   sends it again (safe while sends only write outbox rows; a transport
   that delivers inside the transaction would need its own guard).
   Postgres only: SQLite has one writer.
+
+  **Every state-gated save and every transition is decided under the
+  same lock, in the service.** Each transition locks and re-reads the row
+  before its precondition, so a manual Activate that read `validated` and
+  lost the race to the scheduled activation raises `not_validated`. Each
+  state-gated save opens with `require_editable` / `require_not_archived`
+  / `require_not_ready` (§3.1), so a roster, relationship, assignment,
+  instrument, visibility or session save cannot land on a session that
+  went `ready` after the request loaded it. The gate is
+  `session_guard.require_state`; the route-level `_require_*` checks stay
+  as early refusals and the service check can only refuse more.
+  - **Re-entrant.** Several guarded calls in one request re-lock and
+    re-read; `lock_session` flushes first, so an unflushed edit survives.
+  - **Held to the commit.** The lock lasts until the transaction ends, so
+    a save that must keep the state it gated on through its edit commits
+    once (`unit_of_work.atomic`; the callers are listed in that module's
+    docstring), and the automatic `validated → draft` flip (§2.3) rides
+    that commit.
+  - **Async handlers** await their body, then run the guarded part
+    through `run_in_threadpool`, so a lock wait never blocks the event
+    loop.
 - **Retry policy.** If a precondition passes but the underlying
   transition raises (transient DB error, etc.), the trigger
   emits `session.scheduled_X_retry` (audit only — no schedule

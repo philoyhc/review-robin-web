@@ -1589,4 +1589,7 @@ def test_after_commit_waits_for_the_commit_and_a_failed_commit_drops_it(
         # Outside a unit it runs at once, under the same guard.
         unit_of_work.after_commit(db, raising)
     assert order[-1] == "still runs"
-    assert caplog.text.count("after_commit callback failed") == 2
+    failures = [
+        r for r in caplog.records if r.getMessage() == "after_commit callback failed"
+    ]
+    assert len(failures) == 2

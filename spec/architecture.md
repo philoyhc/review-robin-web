@@ -114,7 +114,22 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    their route. `unit_of_work.py` lets a route that calls several
    committing ones make them all or nothing: inside `single_commit(db)`,
    a service's `unit_of_work.commit(db)` only flushes, and the route
-   commits once (the Instrument card's Save).
+   commits once (the Instrument card's Save). `atomic(db)` is the same
+   unit that commits for itself and rolls back on a raise, for the
+   callers that hold the session lock from their gate to their one
+   commit (its docstring lists them). `after_commit(db, fn)` defers a
+   side effect, such as a log line saying work was done, to that commit
+   and drops it on a rollback.
+
+   **A lifecycle-state gate is a service rule.** Whether a session's
+   state allows a write is decided in the service, not the route:
+   `app/services/session_guard.py` holds the primitive, `lock_session`
+   (`SELECT … FOR NO KEY UPDATE` and a re-read) and
+   `require_state(...)`, which raises `SessionStateConflict`, a
+   `LifecycleError`. The services' wrappers are in
+   `session_lifecycle.py` (`spec/lifecycle.md` §3.1) and an app-level
+   handler renders the refusal as the 409 page, so a route needs no
+   `try`. A route's own `_require_*` check is only an early refusal.
 
 3. **Models** (`app/db/models/`) are SQLAlchemy 2.x declarative
    classes using `Mapped[]` / `mapped_column`. **No
