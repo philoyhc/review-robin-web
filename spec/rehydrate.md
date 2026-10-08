@@ -399,14 +399,14 @@ Responses are the one facet with no other import path;
 `parse_responses_csv` + `load_responses`. For each data row, resolve
 identity to the newly-created PKs and insert a `Response`:
 
-- **Reviewer** ← `ReviewerEmail` (lower-cased) → new `Reviewer.id`.
+- **Reviewer** ← `ReviewerEmail` (matched case-insensitively) → new `Reviewer.id`.
 - **Instrument** ← `InstrumentShortLabel` (primary key for the match;
   unique per session), falling back to the positional `InstrumentName`
   = `instrument_{n}` → the instrument at `order = n`.
 - **Response field** ← `(instrument, FieldKey)` →
   `InstrumentResponseField.id` (unique `(instrument_id, field_key)`).
 - **Per-reviewee rows** (`InstrumentFlavour = per-reviewee`) — **Reviewee**
-  ← `RevieweeEmail` (lower-cased / identifier); **Assignment** ←
+  ← `RevieweeEmail` (matched case-insensitively, or the identifier); **Assignment** ←
   `(reviewer, reviewee, instrument)`, **resolved, never created**. A pair
   step 3 did not generate drops the row.
 - **Insert** `Response(assignment_id, response_field_id, value=Value,
