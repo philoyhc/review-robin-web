@@ -691,7 +691,7 @@ Free-form labels an operator puts on a session to find it again in the
 lobby; participants never see them. Tags are typed comma-separated and
 stored trimmed and lower case, at most 64 characters each and unique
 per session. They are set on Create, on the Session details card's
-**Tags** sub-card ([§9.4](#94-session-details-config-card)), and from
+**Tags** field ([§9.4](#94-session-details-config-card)), and from
 the lobby's row and bulk expanders, whose typeahead offers the tags
 already on the operator's sessions; the lobby's tag-filter strip
 filters on them ([§9.1](#91-lobby-management)). Each change made in a
@@ -1052,8 +1052,8 @@ the SMTP section.
 ### 8.8 User-interface feature toggles
 
 The **Relationships** and **Observers** toggles
-([§5.17](#517-feature-toggles)) sit on the config card's **User
-interface settings** sub-card.
+([§5.17](#517-feature-toggles)) sit on the config card, under
+**Tags**, as the **Optional setup tabs** field.
 
 A full catalogue of every persisted setting lives in
 `spec/settings_inventory.md`.
@@ -1185,15 +1185,15 @@ redirects to the card in edit mode.
   Release-until) plus the Send-invites and Send-reminders offset
   lists — each offset shown in display mode next to its resolved
   send datetime.
-- **Owners is a card of its own**, not one of this card's sub-cards
-  — see §9.3 and `spec/session_owners.md`.
-- **User interface settings sub-card** — the Relationships and
-  Observers checkboxes ([§5.17](#517-feature-toggles)), each
-  lock-on-data.
-- **Tags sub-card** — the session's tags as pills, like the
-  sessions lobby's, in display mode; one text box in edit mode, saved with the card's
-  **Save** (emptying the box clears them). Tags are stored lower
-  case.
+- **Owners is a card of its own**, not part of this one — see §9.3
+  and `spec/session_owners.md`. This card holds no sub-cards.
+- **Tags** — a field under Description: the session's tags as
+  pills, like the sessions lobby's, in display mode; one text box in
+  edit mode, saved with the card's **Save** (emptying the box clears
+  them). Tags are stored lower case.
+- **Optional setup tabs** — the Relationships and Observers
+  checkboxes ([§5.17](#517-feature-toggles)), each lock-on-data,
+  under Tags.
 - **Save** returns to Home in display mode. Editing metadata is
   non-destructive (never touches assignments or responses), so
   there is no response-loss acknowledgement gate, and it leaves a

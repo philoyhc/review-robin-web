@@ -67,7 +67,7 @@ then a two-column bottom row.
 └──────────────────────────────────────────────────────────────┘
 ┌────────────── Session details ───────────────────────────────┐
 │  full-width; display ↔ edit swap (?editing=1)                │
-│  + UI-settings / Tags sub-cards                              │
+│  Tags + optional-tab toggles are fields; no sub-cards        │
 └──────────────────────────────────────────────────────────────┘
 ┌── Quick Setup ───────────┐  ┌── Owners ────────────────┐
 │   bulk CSV uploads       │  │   add / remove; Unlock   │
@@ -375,30 +375,21 @@ plain `<label>` above its value:
   stays put (`spec/lifecycle.md` §8.3), so a rename is never refused
   over it. Every other check still runs.
 
-Below the field block, a `.bottom-grid` of two **sub-cards**, each its
-own `.bottom-left` column (`spec/ui_elements.md` §10) — **User
-interface settings on the left, Tags on the right** with the Save /
-Cancel / Lock cluster beneath it. Owners is a card of its own (§3a).
+Two more fields follow Description in the left column. The card holds
+no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
+(§3a).
 
-- **User interface settings** (`#config-ui-settings-card`) — two
-  checkboxes: **Relationships tab and page**
-  (`relationships_enabled`) and **Observers tab and page**
-  (`observers_enabled`), letting the operator opt into those
-  optional Setup tabs at any point. Each is lock-on-data:
-  disabled once the corresponding roster has rows
-  (`has_relationships` / `has_observers`), mirroring the
-  service-layer guard against orphaning data.
-- **Tags** (`#config-tags-card`) — **a field of this
-  card that renders in its own card**, as the toggles beside it do: it
-  shares the card's display/edit swap, its edit window and its
-  `config-save` form, with no save of its own. Locked, it shows the
-  tags as the sessions lobby's pills (`.pill .pill-count` in
+- **Tags** (`#config-tags-field`, label "Tags (optional)") — a field
+  of this card: it shares the card's display/edit swap, its edit window
+  and its `config-save` form, with no save of its own. Locked, it shows
+  the tags as the sessions lobby's pills (`.pill .pill-count` in
   `.session-tags`, uppercased by `.pill`), or an em dash `.config-value`
   when there are none; unlocked, one comma-separated box that completes
   the tag at the end of the line as it is typed (the shared tag
-  typeahead, `spec/sessions_overview.md`), with a `.muted` subtitle that shows only
-  while editing because it describes the box. Its
-  `<h3>` is the field's label. **An emptied box clears the tag set**,
+  typeahead, `spec/sessions_overview.md`), with a `.form-help` below the
+  box ("Comma-separated; also editable from the sessions list.",
+  `spec/ui_elements.md` "Helper text") that shows only while editing
+  because it describes the box. **An emptied box clears the tag set**,
   as the lobby's row expander does — the opposite of the Create
   page's box, where there is no set yet (`spec/csv_contracts.md`
   § *Settings CSV — apply precedence*). The card also posts a
@@ -409,6 +400,16 @@ Cancel / Lock cluster beneath it. Owners is a card of its own (§3a).
   refuses a non-editable session, this surface edits tags in draft
   and validated only; the lobby edits them in any state
   (`spec/sessions_overview.md`).
+- **Optional setup tabs** (`#config-optional-tabs`, a
+  `role="group"` labelled "Optional setup tabs", no subtitle) — two
+  checkboxes: **Relationships tab and page**
+  (`relationships_enabled`) and **Observers tab and page**
+  (`observers_enabled`), letting the operator opt into those
+  optional Setup tabs at any point. Display mode shows them as disabled
+  checkboxes. Each is lock-on-data: disabled in edit mode once the
+  corresponding roster has rows (`has_relationships` /
+  `has_observers`), mirroring the service-layer guard against
+  orphaning data.
 
 **Edit affordance behavior:**
 
@@ -416,8 +417,8 @@ Cancel / Lock cluster beneath it. Owners is a card of its own (§3a).
   server-set into `config_editing` and gated on the session
   actually being editable (`is_draft` or `is_validated`) so a
   stale link on an Activated session degrades to display mode.
-- The Save / Cancel / Lock-toggle cluster sits bottom-right of
-  that column, below the Tags sub-card.
+- The Save / Cancel / Lock-toggle cluster sits at the foot of the
+  right (schedule) column, flushed right (`margin-top: auto`).
   **Unlock** (display mode) links to
   `?editing=1`; **Lock** (edit mode) drops it. **Cancel** and
   **Lock** are anchors carrying real `?editing` hrefs so no-JS
@@ -435,7 +436,7 @@ Cancel / Lock cluster beneath it. Owners is a card of its own (§3a).
   response-loss acknowledgement gate. It also leaves a `validated`
   session `validated`: no field on the card can change the readiness
   check's verdict (`spec/lifecycle.md` §2.3).
-- The Details / Schedule / UI-settings / Tags inputs submit as one form
+- The Details / Schedule / Tags / optional-tab inputs submit as one form
   via the HTML5 `form="config-save-{id}"` association rather than a
   literal wrapping `<form>`. The Owners card (§3a) is not among
   them — it saves through its own route.

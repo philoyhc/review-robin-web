@@ -189,9 +189,104 @@ uses one row; the slot-reason tests do not assert that nothing landed).
 - `guide/findings_2026-10-07_corpus.md` — Bc4 ruled (PR 1), struck at close (PR 7).
 - `guide/todo_master.md` — the segment's in-progress line names Item 1 while it is open (PR 1), and drops it at the item close (PR 7).
 
-## Item 2 — Session Home session edit UI adjustment
+## Item 2 — Session Home session edit UI adjustment (closed 2026-10-08)
 
-**Stub, filed 2026-10-08 by the author, for later.** An adjustment to
-how Session Home edits the session. The author gives the details when
-the item is picked up; until then it has no ladder, no `### Doc impact`
-and no `### Status`, and nothing here is built.
+### Opportunity
+
+Session Home's **Session details** card ends in two half-width sub-cards
+— **User interface settings** (the Relationships / Observers toggles)
+and **Tags** — with the Save / Cancel / Lock cluster under Tags. Each
+holds one or two controls of the card's own form, so the card reads as
+three boxes for one save. The author's mock-up (2026-10-08) folds them
+into the card.
+
+### Decision
+
+**Ruled 2026-10-08 by the author.** Tags becomes a field of the card,
+under **Description** in the left column; the two toggles follow under
+Tags, under one label, **Optional setup tabs**, with no subtitle (the
+"Per-session toggles for the optional Setup tabs." line goes). The Save
+/ Cancel / Lock cluster moves to the foot of the right column. No
+sub-card is left inside the card. Nothing about what saves, or when,
+changes: same `config-save` form, same edit window, same
+`tags_present` marker, same lock-on-data on the toggles.
+
+**Rejected:** keeping the toggles in a sub-card under Tags (the
+mock-up's interim state) — the author asked for the contents to leave
+it.
+
+### Judgment calls — decided
+
+- The Tags helper ("Comma-separated; also editable from the sessions
+  list.") becomes a field's `.form-help` below the box, edit-only, per
+  `spec/ui_elements.md` "Helper text": a card subtitle no longer applies
+  once there is no card. The mock-up shows it above the box; flip on
+  the author's word.
+- The Create page keeps its own **User interface settings** and **Tags**
+  cards: the ruling names Session Home only.
+
+### Blast radius (measured)
+
+Taken 2026-10-08 at `0e330810`.
+
+| What | Count | Command |
+|---|---|---|
+| Templates | 1 | `grep -rln "config-ui-settings-card" app/web/templates` |
+| Test files asserting the old structure | 3 | `grep -rln "config-ui-settings-card\|config-tags-card" tests/` |
+| Live specs naming the Session Home sub-cards | 8 | `grep -rln "User interface settings\|config-tags-card\|Tags card" spec/` |
+
+### Status — closed 2026-10-08
+
+**Shipped as planned, in one PR.** Session Home's details card holds no
+sub-card: Tags (`#config-tags-field`) sits under Description, the
+toggles (`#config-optional-tabs`, labelled "Optional setup tabs", no
+subtitle) under Tags, and the Save / Cancel / Lock cluster at the foot
+of the right column. The save path is untouched. The Tags helper moved
+below the box as `.form-help` (judgment call above). Rendered in
+Chromium in both modes before the PR; the author's browser check is
+still owed. The close's `spec-writer` pass edited seven of the eight
+named specs (`spec/session_home.md` through `spec/setup_pages.md`) and
+flagged `spec/session_owners.md` and `spec/operator_ui_concept.md`'s
+"approximates Session Home's placements" for the Create page, both
+reworded and the former added to Doc impact. Left as is, not this
+item's: `spec/settings_inventory.md`'s `display_timezone` row still
+names the retired Edit Session Details form.
+
+### PR ladder
+
+1. **One PR**: the plan, the template, its tests, the specs, the close.
+   A rearrangement of existing controls with no new behavior, so no
+   scaffold rung.
+
+### Definition of done
+
+- Session Home's details card holds no `.card` and no `.bottom-grid`;
+  Tags sits under Description and the toggles under Tags, labelled
+  "Optional setup tabs"; the Save cluster foots the right column
+  (`tests/integration/test_session_home_tags_card.py`).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19U.2` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- Item 2 marked closed in its heading; the file stays in `guide/` while 19U is open
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- The Create page's cards (`spec/session_owners.md` describes their
+  layout), and the Guide's screencaps of it.
+
+### Doc impact
+
+- `spec/session_home.md` — the details card: Tags and the optional-tab toggles as fields of the card, no sub-cards, the Save cluster at the foot of the right column.
+- `spec/ui_elements.md` — "Helper text": the single-field-card case names only the Create page's Tags card; Session Home's Tags helper is a field's `.form-help`.
+- `spec/rrw_functional_spec.md` — the Session details card's sub-card bullets become fields.
+- `spec/operator_ui_concept.md` — where the toggles live on Session Home.
+- `spec/settings_inventory.md` — `relationships_enabled` / `observers_enabled`: where they are authored.
+- `spec/participant_model.md` — the `relationships_enabled` row's authoring surface.
+- `spec/visual_style_rrw.md` — the optional Setup tabs' toggle location.
+- `spec/setup_pages.md` — the optional tabs' toggle location.
+- `spec/session_owners.md` — Create's layout no longer "approximates Session Home's placements"; Session Home holds Tags and the toggles as fields.

@@ -25,15 +25,15 @@ canonical description, alongside the per-page idiosyncrasies.
 (`app/web/routes_operator/_setup_relationships.py`) is gated by
 `require_relationships_enabled_session`, which answers 404 unless
 `session.relationships_enabled` is on — the **Relationships tab and
-page** toggle in the same **User interface settings** card. The
+page** toggle, set beside the Observers one (below). The
 permission check runs first.
 
 **Observers page gate.** The Observers Setup page routes
 (`app/web/routes_operator/_setup_observers.py`) are gated by
 `require_observers_enabled_session` — the page returns 404 until
 the operator enables observers via the **User interface settings**
-card on the Create Session form or Session Home's **Session details**
-card. When
+card on the Create Session form or the **Optional setup tabs** field of
+Session Home's **Session details** card. When
 `session.observers_enabled` is `True` the page offers the same CRUD
 operations as Reviewees — per-row edit, add, bulk status flips,
 delete, CSV import.

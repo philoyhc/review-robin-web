@@ -237,6 +237,7 @@ def test_session_owners_card_is_half_width_above_the_danger_zone(
     assert owners < danger
     column = body.rfind('<div class="bottom-left">', 0, owners)
     assert body.rfind('<div class="bottom-left">', 0, danger) == column
-    # User interface settings stays in the details card.
-    assert 'id="config-ui-settings-card"' in body
-    assert "User interface settings" in body
+    # The optional-tab toggles stay in the details card (19U Item 2
+    # flattened their former "User interface settings" sub-card).
+    assert 'id="config-optional-tabs"' in body
+    assert "Optional setup tabs" in body

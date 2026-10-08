@@ -1,8 +1,8 @@
-"""19S Item 9 Part B — the Tags card on Session Home's details card.
+"""19S Item 9 Part B — the Tags field on Session Home's details card.
 
-The card renders below User interface settings in the details card's
-right-hand ``.bottom-left`` column, above the Save / Cancel / Lock
-cluster. Locked it shows the session's tags as the lobby's pills
+Since 19U Item 2 it is a field of the card itself, not a sub-card: under
+Description in the left column, above the optional-tab toggles; the
+Save / Cancel / Lock cluster sits at the foot of the right column. Locked it shows the session's tags as the lobby's pills
 (an em dash ``.config-value`` when there are none, like the card's other
 empty fields); unlocked it shows a text input prefilled with the tags
 comma-joined.
@@ -121,22 +121,22 @@ def _settings_csv(tags: list[str]) -> bytes:
 
 
 def _card(body: str) -> str:
-    """The Tags card's own markup — opening tag to its closing one.
+    """The Tags field's own markup — opening tag to its closing one.
 
     A ``<div>`` depth scan, the shape 19S Item 6's review settled on:
     bounding at the next sibling card falls back to the page's tail when
     there is none, and every ``in card`` assertion then reads the rest of
     the document. ``test_the_card_helper_is_bounded`` guards it.
     """
-    anchor = body.find('id="config-tags-card"')
-    assert anchor != -1, "the Tags card is missing from Session Home"
+    anchor = body.find('id="config-tags-field"')
+    assert anchor != -1, "the Tags field is missing from Session Home"
     start = body.rfind("<div", 0, anchor)
     depth = 0
     i = start
     while True:
         opened = body.find("<div", i)
         closed = body.find("</div>", i)
-        assert closed != -1, "the Tags card's <div> is never closed"
+        assert closed != -1, "the Tags field's <div> is never closed"
         if opened != -1 and opened < closed:
             depth += 1
             i = opened + len("<div")
@@ -148,54 +148,46 @@ def _card(body: str) -> str:
 
 
 def test_the_card_helper_is_bounded(client: TestClient, db: Session) -> None:
-    """Balanced, and something rendered follows it: the card is not the
+    """Balanced, and something rendered follows it: the field is not the
     page's last element, so a tail slice would carry the Save cluster."""
     review_session = _create(client, db, "HOME-TAGS-BOUND")
     body = client.get(f"/operator/sessions/{review_session.id}").text
     card = _card(body)
 
-    assert card.startswith('<div class="card" id="config-tags-card"')
+    assert card.startswith('<div id="config-tags-field"')
     assert card.count("<div") == card.count("</div>")
     assert "data-config-save" not in card, (
-        "the Save cluster follows the card and is not inside it"
+        "the Save cluster follows the field and is not inside it"
     )
     assert "data-config-save" in body[body.index(card) + len(card):]
 
 
-def test_the_card_sits_right_of_ui_settings_above_the_save_cluster(
+def test_the_field_sits_under_description_above_the_optional_tabs(
     client: TestClient, db: Session
 ) -> None:
-    """19S Item 10 moved Owners out of the details card and Tags took a
-    slot; the author then swapped the pair (2026-09-23): User interface
-    settings in the left column, Tags in the right with the Save cluster
-    under it."""
+    """19U Item 2 (author, 2026-10-08): Tags and the optional-tab toggles
+    leave their sub-cards for the details card itself — Tags under
+    Description, the toggles under Tags, both in the left column — and
+    the Save cluster moves to the foot of the right column. No sub-card
+    or sub-card grid is left inside the details card."""
     review_session = _create(client, db, "HOME-TAGS-ORDER")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
-    grid = body.find('<div class="bottom-grid"', body.find('id="session-config"'))
-    ui = body.find('id="config-ui-settings-card"')
-    tags = body.find('id="config-tags-card"')
-    save = body.find("data-config-save")
-    assert -1 not in (grid, tags, ui, save)
-    assert grid < ui < tags < save
-
-    left = body.find('<div class="bottom-left">', grid)
-    right = body.rfind('<div class="bottom-left">', 0, tags)
-    assert body.rfind('<div class="bottom-left">', 0, ui) == left
-    assert left < ui < right, "UI settings and Tags share no column"
-    assert body.rfind('<div class="bottom-left">', 0, save) == right
-
-
-def test_the_sub_card_grid_adds_no_bottom_margin(
-    client: TestClient, db: Session
-) -> None:
-    """``.bottom-grid``'s page-level bottom margin stacked on the card's
-    padding and left the Save cluster 34px above the card's border."""
-    review_session = _create(client, db, "HOME-TAGS-GAP")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
-    grid = body.find('<div class="bottom-grid"', body.find('id="session-config"'))
-
-    assert "margin-bottom: 0;" in body[grid : body.index(">", grid)]
+    start = body.find('id="session-config"')
+    end = body.find("window.sessionConfig", start)
+    config = body[start:end]
+    description = config.find('id="mock-description"')
+    tags = config.find('id="config-tags-field"')
+    tabs = config.find('id="config-optional-tabs"')
+    right = config.find('<div class="fill-col"')
+    save = config.find("data-config-save")
+    assert -1 not in (description, tags, tabs, right, save)
+    assert description < tags < tabs < right < save
+    assert 'class="card"' not in config, "no sub-cards left"
+    assert '<div class="bottom-grid"' not in config
+    assert "User interface settings" not in config
+    assert "Per-session toggles" not in config
+    assert ">Optional setup tabs</label>" in config
 
 
 def test_locked_it_renders_the_lobbys_pills(
@@ -218,27 +210,30 @@ def test_locked_it_renders_the_lobbys_pills(
         "pilot",
     ]
     assert "2026, pilot" not in display, "no longer comma-joined"
-    assert "Tags (optional)</h3>" in card
-    # The heading is the label; there is no second "Tags" above the box.
-    assert "<label" not in card
-    assert 'aria-labelledby="config-tags-heading"' in card
+    # The field's label names the box, as Description's does.
+    assert '<label for="config-tags" id="config-tags-heading">Tags (optional)</label>' in card
+    assert card.count("<label") == 1
 
 
-def test_the_subtitle_shows_only_while_editing(
+def test_the_helper_text_shows_only_while_editing(
     client: TestClient, db: Session
 ) -> None:
-    """The subtitle describes the comma-separated box, so it is
-    ``data-edit-only``: locked, the card is its heading and the pills.
-    The CSS does the hiding; the attribute on a locked page is what a
-    server-side test can pin."""
+    """The helper text describes the comma-separated box, so it is
+    ``data-edit-only`` and sits below the box as ``.form-help`` — a
+    field's helper, since 19U Item 2 made Tags a field of the details
+    card rather than a card with a subtitle. Locked, the field is its
+    label and the pills. The CSS does the hiding; the attribute on a
+    locked page is what a server-side test can pin."""
     review_session = _create(client, db, "HOME-TAGS-SUBTITLE")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
     assert 'data-config-mode="display"' in body, "the page is locked"
     assert (
-        '<p class="muted" data-edit-only>Comma-separated; also editable '
-        "from the sessions list.</p>"
+        '<p class="form-help" data-edit-only>Comma-separated; '
+        "also editable from the sessions list.</p>"
     ) in _card(body)
+    card = _card(body)
+    assert card.index('id="config-tags"') < card.index('class="form-help"')
 
 
 def test_an_untagged_session_shows_an_em_dash(
