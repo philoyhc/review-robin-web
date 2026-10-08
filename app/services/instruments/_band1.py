@@ -843,12 +843,12 @@ def find_sample_in_scope_reviewee(
       ``Reviewee`` instance);
     - ``member_ids`` is the sorted list of unique reviewee IDs
       whose surviving pairs share the sample's reviewee-side
-      boundary key; for a pair-context-only boundary, the sample
-      reviewer's surviving reviewees (A5 — the preview does not
-      partition on pair-context tags); ``None`` when there is no
-      boundary (the posted ``link3_boundary``, else the saved
-      ``group_kind``), and the render path keeps its unconstrained
-      partition.
+      boundary key; for a pair-context-only boundary, or a group
+      instrument with no boundary, the sample reviewer's surviving
+      reviewees (A5, A4 — the preview does not partition on
+      pair-context tags, and with no boundary the reviewer's
+      survivors are the one group); ``None`` for a per-reviewee
+      instrument, whose render keeps its unconstrained list.
 
     Returns ``None`` when the rules narrow the candidate pair space
     down to zero. Samples are drawn from active reviewees only, so the
@@ -1040,10 +1040,11 @@ def find_sample_in_scope_reviewee(
     sample_reviewer, reviewee = pairs[0]
     # Gap 10: compute rule-surviving group member IDs for the
     # sample's reviewee-side boundary key. A pair-context-only
-    # boundary takes the sample reviewer's survivors instead (A5);
-    # no boundary returns None and render keeps its unconstrained
-    # partition. Iterates the pairs the engine already
-    # produced; no second engine call.
+    # boundary, and a group instrument with no boundary, take the
+    # sample reviewer's survivors instead (A5, A4); a per-reviewee
+    # instrument returns None and render keeps its unconstrained
+    # list. Iterates the pairs the engine already produced; no
+    # second engine call.
     #
     # ``link3_boundary`` is the live Band 1 boundary list (canonical
     # keys like ``"reviewee.tag3"``) — the operator's in-progress
@@ -1052,12 +1053,15 @@ def find_sample_in_scope_reviewee(
     # don't supply it (older / non-Refresh paths) keep their old
     # behaviour.
     if not reviewee_boundary_fields:
-        if not _preview_group_boundary(instrument, link3_boundary):
+        if instrument.group_kind is None:
             return reviewee, None
         # A pair-context-only boundary (A5, ruled 2026-10-06): the
         # partition needs a reviewer's relationship tags, so the preview
-        # does not split on it. It still honours Links 1-2: the group
-        # is the sample reviewer's surviving reviewees.
+        # does not split on it. A group instrument with no boundary
+        # (A4, ruled 2026-10-08) groups each reviewer's reviewees as
+        # one, as ``group_key_for_pair`` does with an empty boundary.
+        # Both honour Links 1-2: the group is the sample reviewer's
+        # surviving reviewees.
         return reviewee, sorted(
             {e.id for r, e in pairs if r.id == sample_reviewer.id}
         )

@@ -938,8 +938,8 @@ the sample's boundary key form the group; if more than 10
 qualify, a trailing `, +N more` collapses the overflow. A
 pair-context tag lives on a reviewer's relationships, so the preview
 does not partition on one: a mixed boundary partitions on its reviewee
-tags only, and a pair-context-only boundary lists the sample reviewer's
-rule-surviving reviewees as the group. The rule-surviving subset is the
+tags only, and a pair-context-only boundary — or no boundary at all —
+lists the sample reviewer's rule-surviving reviewees as the group. The rule-surviving subset is the
 one the last Refresh computed; before any Refresh there is none, and the
 group is the boundary partition of the whole active roster.
 

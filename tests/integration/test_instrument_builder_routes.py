@@ -25,6 +25,7 @@ from app.db.models import (
     ReviewSession,
     SessionRuleSet,
 )
+from app.services.instruments._instrument_crud import GROUP_KIND_SENTINEL
 from app.web.views._instruments import _REVIEWER_VP_MODE_LABELS
 from ._full_matrix import (
     generate_via_page_button,
@@ -2690,17 +2691,24 @@ def test_pair_context_only_preview_honours_links_1_and_2(
     ) == survivors
 
 
-def test_pair_context_preview_live_empty_boundary_clears_member_ids(
+def test_pair_context_preview_live_empty_boundary_takes_reviewer_survivors(
     client: TestClient, db: Session
 ) -> None:
     """A5: the posted Link 3 boundary wins over the saved one. A
-    Refresh posting no boundary over a saved ``p1`` stores no member
-    set, so the preview is unconstrained again."""
+    Refresh posting no boundary over a saved ``p1`` is a group with no
+    boundary (A4, ruled 2026-10-08): the member set is the sample
+    reviewer's survivors, here every reviewee."""
     review_session, new_model = _group_band2_session(
         client, db, code="a5-live-empty"
     )
     new_model.group_kind = "p1"
     db.commit()
+    everyone = sorted(
+        r.id
+        for r in db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    )
     resp = client.post(
         f"/operator/sessions/{review_session.id}"
         f"/instruments/{new_model.id}/preview-sample",
@@ -2714,9 +2722,65 @@ def test_pair_context_preview_live_empty_boundary_clears_member_ids(
             "link3_boundary": [],
         },
     )
-    assert resp.json()["sample_group_member_ids"] == []
+    assert resp.json()["sample_group_member_ids"] == everyone
     db.refresh(new_model)
-    assert new_model.band2_state.get("sample_group_member_ids") is None
+    assert new_model.band2_state["sample_group_member_ids"] == everyone
+
+
+def test_no_boundary_group_preview_honours_links_1_and_2(
+    client: TestClient, db: Session
+) -> None:
+    """A4 (ruled 2026-10-08): a group instrument with no boundary tag
+    previews the sample reviewer's rule survivors as its one group, on
+    the server render as in the browser, not the whole active roster."""
+    review_session, new_model = _group_band2_session(
+        client, db, code="a4-no-boundary"
+    )
+    new_model.group_kind = GROUP_KIND_SENTINEL
+    db.commit()
+    by_name = {
+        r.name: r.id
+        for r in db.execute(
+            select(Reviewee).where(Reviewee.session_id == review_session.id)
+        ).scalars()
+    }
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/preview-sample",
+        json={
+            "link1_mode": "all",
+            "link1_combinator": "AND",
+            "link1_rules": [],
+            "link2_mode": "filter",
+            "link2_combinator": "AND",
+            "link2_rules": [
+                {
+                    "field": "reviewee.tag2",
+                    "op": "IS NOT",
+                    "operand_value": "exclude",
+                    "operand_tag": "",
+                }
+            ],
+        },
+    )
+    survivors = sorted(by_name[n] for n in ("Dan", "Eve", "Fay"))
+    assert resp.json()["sample_group_member_ids"] == survivors
+    db.refresh(new_model)
+    assert new_model.band2_state["sample_group_member_ids"] == survivors
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    flat = " ".join(_band2_card(body, new_model.id).split())
+    needle = 'data-new-model-band2-sample-names="'
+    idx = flat.find(needle)
+    assert idx != -1
+    end = flat.find('"', idx + len(needle))
+    assert sorted(flat[idx + len(needle) : end].split("|")) == [
+        "Dan",
+        "Eve",
+        "Fay",
+    ]
 
 
 def test_boundary_change_drops_stale_sample_member_ids(

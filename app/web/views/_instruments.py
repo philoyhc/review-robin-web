@@ -543,8 +543,9 @@ def _new_model_band2_state(
     # Pair-context boundary tags need a specific reviewer's
     # relationships to compute, so they're skipped for the preview
     # — the partition falls back to all reviewees when the only
-    # boundary is pair-context-side, narrowed to the rule survivors
-    # the last Refresh persisted (A5).
+    # boundary is pair-context-side, or there is no boundary at all,
+    # narrowed to the rule survivors the last Refresh persisted
+    # (A5, A4).
     boundary_pairs = instruments_service.decode_group_kind(
         instrument.group_kind
     )
@@ -586,7 +587,7 @@ def _new_model_band2_state(
             "sample_group_member_ids"
         )
         if (
-            boundary_pairs
+            instrument.group_kind is not None
             and isinstance(persisted_member_ids, list)
             and persisted_member_ids
         ):
