@@ -21,6 +21,7 @@ from app.services import (
     operator_settings,
 )
 from app.services import session_lifecycle as lifecycle
+from app.services import unit_of_work
 from app.services.instruments import ensure_default_instrument
 # Wave 5 PR 5.2 — RuleSet seeding retired; ``app.services.rules.seeds``
 # module deleted entirely. New sessions land with no rows in
@@ -390,7 +391,7 @@ def update_session(
         payload=audit.changes(diffs),
         correlation_id=correlation_id,
     )
-    db.commit()
+    unit_of_work.commit(db)
     db.refresh(review_session)
     return review_session
 
@@ -449,7 +450,7 @@ def set_session_display_timezone(
         payload=audit.changes({"display_timezone": [old, timezone_name]}),
         correlation_id=correlation_id,
     )
-    db.commit()
+    unit_of_work.commit(db)
 
 
 def delete_session(

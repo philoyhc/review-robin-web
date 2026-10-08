@@ -1455,3 +1455,37 @@ def test_the_other_quick_setup_slots_report_the_lifecycle_reason(
 
     assert response.status_code == 303
     assert "quick_setup_reason=lifecycle" in response.headers["location"]
+
+
+def test_a_session_home_config_save_is_one_commit(
+    client, db: Session, monkeypatch
+) -> None:
+    """The config card saves the schedule and details, then the display
+    zone, each gated; the first used to commit on its own, so a session
+    archived at the zone's gate refused after the rename had landed."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Config", "code": "guard-config"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-config")
+    ).scalar_one()
+    # Lock 1 is the route's gate, 2 the details save's, 3 the zone's.
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=3)
+    commits = _counting_commits(monkeypatch, db)
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/config",
+        data={
+            "name": "Renamed",
+            "code": "guard-config",
+            "display_timezone": "Europe/London",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 409
+    assert commits == []
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).name == "Config"

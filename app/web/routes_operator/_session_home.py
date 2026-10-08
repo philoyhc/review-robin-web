@@ -37,6 +37,7 @@ from app.services import (
     session_owners,
     session_tags,
     sessions,
+    unit_of_work,
     validation,
 )
 from app.services import session_lifecycle as lifecycle
@@ -518,23 +519,25 @@ def _apply_session_config_form(
         responses_release_at=parsed_responses_release_at,
         responses_release_until=parsed_responses_release_until,
     )
-    sessions.update_session(
-        db,
-        review_session=review_session,
-        user=user,
-        payload=payload,
-        correlation_id=correlation_id,
-    )
-    # After the schedule write, not before: the zone write commits, and
-    # committing first would release the session lock the sent-entry
-    # check took before the lists it checked are written (findings Bc3).
-    sessions.set_session_display_timezone(
-        db,
-        review_session=review_session,
-        user=user,
-        timezone_name=timezone_name,
-        correlation_id=correlation_id,
-    )
+    # One commit for the schedule, the details and the zone: each write
+    # gates, and the session lock the sent-entry check took must hold
+    # until the lists it checked are written, so a refusal at the zone's
+    # gate cannot follow a committed schedule (findings Bc3, Bc4).
+    with unit_of_work.atomic(db):
+        sessions.update_session(
+            db,
+            review_session=review_session,
+            user=user,
+            payload=payload,
+            correlation_id=correlation_id,
+        )
+        sessions.set_session_display_timezone(
+            db,
+            review_session=review_session,
+            user=user,
+            timezone_name=timezone_name,
+            correlation_id=correlation_id,
+        )
 
 
 @router.post("/sessions/{session_id}/config")
