@@ -33,6 +33,7 @@ from app.db.models import (
 from app.schemas.imports import RelationshipImportRow
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, field_labels, session_lifecycle as lifecycle
+from app.services import unit_of_work
 from app.services.csv_imports import (
     ParseResult,
     _cell,
@@ -297,73 +298,74 @@ def save_relationships(
     Mirrors ``save_reviewers`` / ``save_reviewees`` in shape:
     invalidates the lifecycle if the session was validated,
     deletes existing rows, inserts the new ones, emits the
-    ``relationships.imported`` audit event, commits.
+    ``relationships.imported`` audit event, reconciles the header's
+    friendly labels, and commits once (``unit_of_work.atomic``).
     """
-
-    lifecycle.invalidate_if_validated(
-        db,
-        review_session=session,
-        user=user,
-        reason="relationships_imported",
-        correlation_id=correlation_id,
-    )
-
-    existing_rows = list(
-        db.execute(
-            select(Relationship).where(Relationship.session_id == session.id)
-        ).scalars()
-    )
-    before = relationship_group_keys_before(db, session_id=session.id)
-    replaced = len(existing_rows)
-    for row in existing_rows:
-        db.delete(row)
-    db.flush()
-
-    for row in rows:
-        db.add(_relationship_to_orm(row, session.id))
-    db.flush()
-    context = {"filename": filename} if filename else {}
-    context.update(
-        reconcile_relationship_groups(
-            db, session_id=session.id, before=before
-        )
-        or {}
-    )
-    _recompute_self_review(db, session_id=session.id)
-
-    audit.write_event(
-        db,
-        event_type="relationships.imported",
-        summary=f"Imported {len(rows)} relationships (replaced {replaced})",
-        actor_user_id=user.id,
-        session=session,
-        payload=audit.counts(new=len(rows), replaced=replaced),
-        context=context or None,
-        correlation_id=correlation_id,
-    )
-
-    db.commit()
-
-    # Lazy-seed pair_context display fields for any populated tag
-    # slots — see guide/unfinished_business item #14. Pre-15D this
-    # fired off the manual-CSV save path through Assignment.context;
-    # post-PR-6b the data lives on the relationships table itself,
-    # so the seeding hook moves to the relationships save.
-    from app.services.instruments import seed_display_fields_from_assignments
-
-    if seed_display_fields_from_assignments(db, session):
-        db.commit()
-    # Segment 19C Item 1 — reconcile pair-context friendly labels from
-    # the relationships header (upsert present, clear absent).
-    if field_labels_captured is not None:
-        field_labels.apply_import(
+    # One commit for the replace, its display fields and its labels, so
+    # the label reconcile's gate can't refuse after a committed replace
+    # (findings Bc4; Codex on #2882).
+    with unit_of_work.atomic(db):
+        lifecycle.invalidate_if_validated(
             db,
-            session,
-            source_type="pair_context",
-            captured=field_labels_captured,
+            review_session=session,
             user=user,
+            reason="relationships_imported",
             correlation_id=correlation_id,
         )
+
+        existing_rows = list(
+            db.execute(
+                select(Relationship).where(Relationship.session_id == session.id)
+            ).scalars()
+        )
+        before = relationship_group_keys_before(db, session_id=session.id)
+        replaced = len(existing_rows)
+        for row in existing_rows:
+            db.delete(row)
+        db.flush()
+
+        for row in rows:
+            db.add(_relationship_to_orm(row, session.id))
+        db.flush()
+        context = {"filename": filename} if filename else {}
+        context.update(
+            reconcile_relationship_groups(
+                db, session_id=session.id, before=before
+            )
+            or {}
+        )
+        _recompute_self_review(db, session_id=session.id)
+
+        audit.write_event(
+            db,
+            event_type="relationships.imported",
+            summary=f"Imported {len(rows)} relationships (replaced {replaced})",
+            actor_user_id=user.id,
+            session=session,
+            payload=audit.counts(new=len(rows), replaced=replaced),
+            context=context or None,
+            correlation_id=correlation_id,
+        )
+
+        # Lazy-seed pair_context display fields for any populated tag
+        # slots — see guide/unfinished_business item #14. Pre-15D this
+        # fired off the manual-CSV save path through Assignment.context;
+        # post-PR-6b the data lives on the relationships table itself,
+        # so the seeding hook moves to the relationships save.
+        from app.services.instruments import seed_display_fields_from_assignments
+
+        seed_display_fields_from_assignments(db, session)
+        # Segment 19C Item 1 — reconcile pair-context friendly labels from
+        # the relationships header (upsert present, clear absent).
+        if field_labels_captured is not None:
+            field_labels.apply_import(
+                db,
+                session,
+                source_type="pair_context",
+                captured=field_labels_captured,
+                user=user,
+                correlation_id=correlation_id,
+            )
     return replaced, len(rows)
 
 

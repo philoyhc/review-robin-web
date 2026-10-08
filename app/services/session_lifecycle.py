@@ -312,16 +312,44 @@ def invalidate_if_validated(
     Takes no lock of its own (findings Bc4): it is called from inside
     setup services, many reached from async handlers, so a caller that
     needs the status decided as committed takes the session lock first
-    (``require_editable``).
+    (``require_editable``). Nor does it commit: the flip lands with the
+    caller's own commit, so the lock that caller took holds from its
+    gate through the edit — a commit here would release it, and another
+    request could archive or re-validate the session before the edit
+    lands (Codex on #2882). If the caller fails after this and nothing
+    commits the transaction, the flip goes with the edit; a caller that
+    catches the failure and commits anyway commits the flip too.
     """
     if is_validated(review_session):
-        invalidate_session(
+        _flip_to_draft(
             db,
             review_session=review_session,
             user=user,
             reason=reason,
             correlation_id=correlation_id,
         )
+
+
+def _flip_to_draft(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    reason: str,
+    correlation_id: str | None,
+) -> None:
+    """``validated → draft`` and its audit row, flushed, not committed."""
+    review_session.status = SessionStatus.draft.value
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="session.invalidated",
+        summary=f"Session {review_session.code} invalidated ({reason})",
+        actor_user_id=user.id,
+        session=review_session,
+        reason=reason,
+        correlation_id=correlation_id,
+    )
 
 
 def invalidate_session(
@@ -332,7 +360,9 @@ def invalidate_session(
     reason: str,
     correlation_id: str | None = None,
 ) -> ReviewSession:
-    """Flip ``validated → draft`` after a setup-mutating action.
+    """Flip ``validated → draft`` and commit it: the operator's explicit
+    Revert (``operator_revert``). A setup edit flips through
+    :func:`invalidate_if_validated`, which leaves the commit to the edit.
 
     No-op if the session is already ``draft``. Raises ``LifecycleError`` if
     the session is in any other status (e.g. ``ready``) — those routes
@@ -346,14 +376,10 @@ def invalidate_session(
             code="not_validated",
         )
 
-    review_session.status = SessionStatus.draft.value
-    db.flush()
-    audit.write_event(
+    _flip_to_draft(
         db,
-        event_type="session.invalidated",
-        summary=f"Session {review_session.code} invalidated ({reason})",
-        actor_user_id=user.id,
-        session=review_session,
+        review_session=review_session,
+        user=user,
         reason=reason,
         correlation_id=correlation_id,
     )

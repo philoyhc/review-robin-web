@@ -48,7 +48,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, SessionFieldLabel, User
-from app.services import audit
+from app.services import audit, unit_of_work
 from app.services import session_lifecycle as lifecycle
 
 
@@ -225,6 +225,7 @@ def upsert(
     ``session_field_label.set`` audit event carrying the
     ``[old, new]`` change pair.
     """
+    lifecycle.require_editable(db, session)
     _require_known_source(source_type, source_field)
     normalised = (label or "").strip()
     if not normalised:
@@ -283,7 +284,7 @@ def upsert(
         },
         correlation_id=correlation_id,
     )
-    db.commit()
+    unit_of_work.commit(db)
     return row
 
 
@@ -314,6 +315,7 @@ def apply_import(
     unchanged; this only routes roster-header labels into the same
     ``upsert`` / ``clear`` the UI uses.
     """
+    lifecycle.require_editable(db, session)
     for source_field in sorted(_VALID_SOURCE_FIELDS[source_type]):
         label = captured.get((source_type, source_field))
         if label:
@@ -355,6 +357,7 @@ def clear(
     ``_VALID_SOURCE_FIELDS`` — the resolver is permissive on read
     but the mutators are strict.
     """
+    lifecycle.require_editable(db, session)
     _require_known_source(source_type, source_field)
 
     existing = db.execute(
@@ -402,4 +405,4 @@ def clear(
         },
         correlation_id=correlation_id,
     )
-    db.commit()
+    unit_of_work.commit(db)

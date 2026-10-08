@@ -18,6 +18,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -638,7 +639,10 @@ async def reviewers_save_field_labels(
     submitted = {
         param: str(form.get(param, "")) for param, _ in _REVIEWER_SLOTS
     }
-    _save_field_labels(
+    # The labels service locks the session row (findings Bc4): wait for
+    # it off the event loop.
+    await run_in_threadpool(
+        _save_field_labels,
         db,
         review_session=review_session,
         user=user,

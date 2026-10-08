@@ -30,6 +30,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -635,7 +636,9 @@ async def observers_cohort_rule_save(
     ]
     payload = _parse_cohort_rule_form(form)
     try:
-        observers_service.set_cohort_rule(
+        # Locks the session row (findings Bc4): off the event loop.
+        await run_in_threadpool(
+            observers_service.set_cohort_rule,
             db,
             review_session=review_session,
             observer_ids=observer_ids,
@@ -780,7 +783,10 @@ async def observers_import_submit(
     # that cannot occur, and 400d when they could not — the `if
     # existing > 0:` block it guarded went with it.
 
-    csv_imports.save_observers(
+    # The service locks the session row (findings Bc4): wait for it off
+    # the event loop.
+    await run_in_threadpool(
+        csv_imports.save_observers,
         db,
         session=review_session,
         user=user,

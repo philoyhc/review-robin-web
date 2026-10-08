@@ -25,16 +25,22 @@ from app.web.routes_operator._shared import _lifecycle_error_response
 from .test_scheduled_activation import _make_validated_session
 
 
-def _lands_at_the_lock(monkeypatch, db: Session, statement) -> None:
+def _lands_at_the_lock(
+    monkeypatch, db: Session, statement, *, at: int = 1, commit: bool = False
+) -> None:
     """Execute ``statement`` (another request's committed write) just as
-    the first lock is taken, behind the ORM's back."""
+    the ``at``-th lock is taken (the first by default), behind the ORM's
+    back. ``commit`` commits it, for a service that rolls back on refusal
+    and would otherwise take the stand-in's write with it."""
     real = session_guard.lock_session
-    fired: list[bool] = []
+    taken: list[bool] = []
 
     def landing(db_, session_):
-        if not fired:
-            fired.append(True)
+        taken.append(True)
+        if len(taken) == at:
             db.execute(statement.execution_options(synchronize_session=False))
+            if commit:
+                db.commit()
         return real(db_, session_)
 
     monkeypatch.setattr(session_guard, "lock_session", landing)
@@ -393,3 +399,349 @@ def test_the_revert_route_decides_its_path_under_the_lock(
 
     assert response.status_code == 400
     assert _count(db, session, "session.invalidated") == 0
+
+
+def _reviewer_emails(db: Session, session: ReviewSession) -> list[str]:
+    from app.db.models import Reviewer
+
+    db.expire_all()
+    return sorted(
+        db.execute(
+            select(Reviewer.email).where(Reviewer.session_id == session.id)
+        ).scalars()
+    )
+
+
+def test_a_roster_import_refuses_a_session_activated_at_the_lock(
+    client, db: Session, monkeypatch
+) -> None:
+    """The route's own gate read ``validated``; the scheduled activation
+    commits as the save starts. The import is refused with the 409, the
+    roster is untouched, and ``ready`` is not written back to ``draft``."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Import", "code": "guard-import"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-import")
+    ).scalar_one()
+    session.status = "validated"
+    db.commit()
+    before = _reviewer_emails(db, session)
+    _lands_at_the_lock(
+        monkeypatch, db, _status_becomes(session, "ready"), commit=True
+    )
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/reviewers/import",
+        data={"confirm_replace": "true", "acknowledge_response_loss": "true"},
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nZed,zed@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 409
+    assert _reviewer_emails(db, session) == before
+    assert db.get(ReviewSession, session.id).status == "ready"
+
+
+_LABELLED_IMPORTS = {
+    "reviewers": (
+        "parse_reviewer_csv",
+        "save_reviewers",
+        b"ReviewerName,ReviewerEmail,ReviewerTag1.Tutor\n"
+        b"Alice,alice@example.edu,senior\n",
+    ),
+    "reviewees": (
+        "parse_reviewee_csv",
+        "save_reviewees",
+        b"RevieweeName,RevieweeEmail,RevieweeTag1.Cohort\n"
+        b"Carol,carol@example.edu,2026\n",
+    ),
+}
+
+
+def _counting_commits(monkeypatch, db: Session) -> list[bool]:
+    commits: list[bool] = []
+    real_commit = db.commit
+    monkeypatch.setattr(db, "commit", lambda: (commits.append(True), real_commit()))
+    return commits
+
+
+def _labels_session(db: Session) -> tuple[User, ReviewSession]:
+    """A draft session that already overrides the reviewer and reviewee
+    tag_2 labels, so an import's ``clear`` of tag_2 has a row to delete
+    and reaches its own commit."""
+    from app.db.models import SessionFieldLabel
+
+    user = User(email="op-labels@example.edu", display_name="Op")
+    db.add(user)
+    db.flush()
+    session = ReviewSession(
+        name="Labels", code="guard-labels", created_by_user_id=user.id
+    )
+    db.add(session)
+    db.flush()
+    for source_type in ("reviewer", "reviewee"):
+        db.add(
+            SessionFieldLabel(
+                session_id=session.id,
+                source_type=source_type,
+                source_field="tag_2",
+                label="Old",
+            )
+        )
+    db.commit()
+    return user, session
+
+
+@pytest.mark.parametrize("roster", sorted(_LABELLED_IMPORTS))
+# Lock 1 is the save's gate, 2 the label reconcile's, 3 the tag_1
+# upsert's, 4 the tag_2 clear's (which deletes the seeded label), 5 the
+# tag_3 clear's.
+@pytest.mark.parametrize("at", [2, 5])
+def test_a_labelled_import_commits_nothing_before_a_later_gate_refuses(
+    db: Session, monkeypatch, roster: str, at: int
+) -> None:
+    """Codex on #2882: the label reconcile re-gates after the roster
+    replace. The import is one commit, so a session archived at any later
+    gate refuses with nothing committed — past an upsert and a clear at
+    lock 5 — and the service drops the flushed half-import itself."""
+    from app.db.models import Reviewee, Reviewer
+    from app.services import csv_imports
+
+    parse, save, body = _LABELLED_IMPORTS[roster]
+    model = Reviewer if roster == "reviewers" else Reviewee
+    user, session = _labels_session(db)
+    parsed = getattr(csv_imports, parse)(body)
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=at)
+    commits = _counting_commits(monkeypatch, db)
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        getattr(csv_imports, save)(
+            db,
+            session=session,
+            user=user,
+            rows=parsed.rows,
+            filename=f"{roster}.csv",
+            correlation_id="t",
+            field_labels_captured=parsed.field_labels,
+        )
+
+    assert commits == []
+    assert db.execute(
+        select(model.id).where(model.session_id == session.id)
+    ).all() == []
+
+
+def test_a_relationship_import_commits_nothing_before_its_label_gate_refuses(
+    db: Session, monkeypatch
+) -> None:
+    """Codex on #2882, the relationship import's half: the replace and
+    the pair-context label reconcile are one commit, so the reconcile's
+    gate (the import's first lock on this rung) refuses with nothing
+    committed and no relationship row left behind."""
+    from app.db.models import Relationship, Reviewee, Reviewer
+    from app.services import relationships
+
+    user, session = _labels_session(db)
+    reviewer = Reviewer(session_id=session.id, name="Alice", email="alice@example.edu")
+    reviewee = Reviewee(
+        session_id=session.id, name="Carol", email_or_identifier="carol@example.edu"
+    )
+    db.add_all([reviewer, reviewee])
+    db.commit()
+    parsed = relationships.parse_relationship_csv(
+        b"ReviewerEmail,RevieweeEmail,PairContextTag1.Mentor of\n"
+        b"alice@example.edu,carol@example.edu,cohort-a\n",
+        reviewers=[reviewer],
+        reviewees=[reviewee],
+    )
+    assert not parsed.is_blocked, parsed.issues
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"))
+    commits = _counting_commits(monkeypatch, db)
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        relationships.save_relationships(
+            db,
+            session=session,
+            user=user,
+            rows=parsed.rows,
+            filename="relationships.csv",
+            correlation_id="t",
+            field_labels_captured=parsed.field_labels,
+        )
+
+    assert commits == []
+    assert db.execute(
+        select(Relationship.id).where(Relationship.session_id == session.id)
+    ).all() == []
+
+
+def test_a_refused_import_leaves_a_validated_session_validated(
+    db: Session, monkeypatch
+) -> None:
+    """The flip goes with the edit: a validated session whose import is
+    refused at a later gate stays validated, with no ``session.invalidated``
+    row, rather than being demoted for an edit that never landed."""
+    from app.services import csv_imports
+
+    user, session = _labels_session(db)
+    session.status = "validated"
+    db.commit()
+    parsed = csv_imports.parse_reviewer_csv(_LABELLED_IMPORTS["reviewers"][2])
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=2)
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        csv_imports.save_reviewers(
+            db,
+            session=session,
+            user=user,
+            rows=parsed.rows,
+            filename="reviewers.csv",
+            correlation_id="t",
+            field_labels_captured=parsed.field_labels,
+        )
+
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).status == "validated"
+    assert _count(db, session, "session.invalidated") == 0
+
+
+def test_a_refused_edit_does_not_demote_a_validated_session(db: Session) -> None:
+    """The flip goes with the edit outside any single commit too: adding a
+    display field the instrument already has refuses after the flip, and
+    with nothing committed the session stays validated (before, the flip
+    had committed on its own)."""
+    from app.services import instruments
+    from app.services.instruments import DisplaySourceError
+
+    user, session = _labels_session(db)
+    instrument = instruments.create_instrument(db, review_session=session, actor=user)
+    existing = instrument.display_fields[0]
+    session.status = "validated"
+    db.commit()
+
+    with pytest.raises(DisplaySourceError):
+        instruments.add_display_field(
+            db,
+            instrument=instrument,
+            source_type=existing.source_type,
+            source_field=existing.source_field,
+            label="Again",
+            visible=True,
+            actor=user,
+        )
+    db.rollback()  # the route redirects without committing
+
+    assert db.get(ReviewSession, session.id).status == "validated"
+    assert _count(db, session, "session.invalidated") == 0
+
+
+def test_the_label_editor_commits_nothing_before_a_later_slot_refuses(
+    db: Session, monkeypatch
+) -> None:
+    """Codex on #2882: the label form writes up to three slots, each
+    re-gating. It is one commit, so a session archived at the second
+    slot's gate refuses with the first slot's label not committed."""
+    from app.db.models import SessionFieldLabel
+    from app.web.routes_operator._shared import _save_field_labels
+
+    user, session = _labels_session(db)
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=2)
+    commits = _counting_commits(monkeypatch, db)
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        _save_field_labels(
+            db,
+            review_session=session,
+            user=user,
+            source_type="reviewer",
+            slots=(("a", "tag_1"), ("b", "tag_2"), ("c", "tag_3")),
+            submitted={"a": "Tutor", "b": "Year", "c": "Group"},
+            correlation_id="t",
+        )
+
+    assert commits == []
+    assert db.execute(
+        select(SessionFieldLabel.id).where(
+            SessionFieldLabel.session_id == session.id,
+            SessionFieldLabel.source_field == "tag_1",
+        )
+    ).all() == []
+
+
+def test_the_validated_to_draft_flip_lands_with_the_edit(
+    db: Session, monkeypatch
+) -> None:
+    """Codex on #2882: the flip committed on its own released the lock
+    the edit's gate took, so an archive (or a re-validate) could land
+    between the flip and the edit. It now lands in the edit's one commit."""
+    from app.services import reviewers
+
+    user, session = _labels_session(db)
+    session.status = "validated"
+    db.commit()
+    commits = _counting_commits(monkeypatch, db)
+
+    reviewers.create_reviewer(
+        db, review_session=session, name="Zed", email="zed@example.edu", user=user
+    )
+
+    assert commits == [True]
+    assert db.get(ReviewSession, session.id).status == "draft"
+    assert _count(db, session, "session.invalidated") == 1
+
+
+def test_a_row_edit_refuses_a_session_activated_at_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    from app.db.models import Reviewer
+    from app.services import reviewers as reviewers_service
+
+    session = _make_validated_session(db, "guard-row")
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == session.id)
+    ).scalars().first()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        reviewers_service.update_reviewer(
+            db, reviewer=reviewer, name="Renamed", user=_operator(db, session)
+        )
+
+    db.expire_all()
+    assert db.get(Reviewer, reviewer.id).name != "Renamed"
+
+
+def test_observers_keep_their_own_gate(db: Session, monkeypatch) -> None:
+    """Observers stay editable on a running session; only an archive
+    that commits first refuses the write."""
+    from app.services import observers as observers_service
+
+    session = _make_validated_session(db, "guard-observers")
+    session.status = "ready"
+    db.commit()
+    observer = observers_service.create_observer(
+        db,
+        review_session=session,
+        email="obs@example.edu",
+        user=_operator(db, session),
+    )
+    assert observer.id is not None
+
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"))
+    with pytest.raises(lifecycle.SessionStateConflict) as raised:
+        observers_service.create_observer(
+            db,
+            review_session=session,
+            email="late@example.edu",
+            user=_operator(db, session),
+        )
+    assert raised.value.code == "archived"

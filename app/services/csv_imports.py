@@ -28,7 +28,7 @@ from app.logging_config import get_logger
 from app.schemas.observer_cohort_rule import CohortRuleSet
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, field_labels, field_label_csv
-from app.services import roster_bulk
+from app.services import roster_bulk, unit_of_work
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import EMAIL_RE, normalize_email
@@ -1092,30 +1092,35 @@ def save_reviewers(
     correlation_id: str,
     field_labels_captured: dict[tuple[str, str], str] | None = None,
 ) -> tuple[int, int]:
-    result = _save(
-        db,
-        session=session,
-        user=user,
-        model=Reviewer,
-        rows=rows,
-        event_type="reviewers.imported",
-        source_label="reviewers",
-        filename=filename,
-        correlation_id=correlation_id,
-        to_kwargs=_reviewer_to_kwargs,
-    )
-    # Segment 19C Item 1 — reconcile reviewer friendly labels from the
-    # roster header (upsert present, clear absent). ``None`` = a caller
-    # that isn't an import; skip untouched.
-    if field_labels_captured is not None:
-        field_labels.apply_import(
+    # One commit for the roster and its labels, so the lock taken by
+    # the gate holds to the end and a refusal can't follow a committed
+    # replace (findings Bc4).
+    with unit_of_work.atomic(db):
+        lifecycle.require_editable(db, session)
+        result = _save(
             db,
-            session,
-            source_type="reviewer",
-            captured=field_labels_captured,
+            session=session,
             user=user,
+            model=Reviewer,
+            rows=rows,
+            event_type="reviewers.imported",
+            source_label="reviewers",
+            filename=filename,
             correlation_id=correlation_id,
+            to_kwargs=_reviewer_to_kwargs,
         )
+        # Segment 19C Item 1 — reconcile reviewer friendly labels from
+        # the roster header (upsert present, clear absent). ``None`` = a
+        # caller that isn't an import; skip untouched.
+        if field_labels_captured is not None:
+            field_labels.apply_import(
+                db,
+                session,
+                source_type="reviewer",
+                captured=field_labels_captured,
+                user=user,
+                correlation_id=correlation_id,
+            )
     return result
 
 
@@ -1129,35 +1134,38 @@ def save_reviewees(
     correlation_id: str,
     field_labels_captured: dict[tuple[str, str], str] | None = None,
 ) -> tuple[int, int]:
-    result = _save(
-        db,
-        session=session,
-        user=user,
-        model=Reviewee,
-        rows=rows,
-        event_type="reviewees.imported",
-        source_label="reviewees",
-        filename=filename,
-        correlation_id=correlation_id,
-        to_kwargs=_reviewee_to_kwargs,
-    )
-    # Lazy-seed display fields for any populated reviewee slots
-    # (profile_link / tag_1..3) — see guide/unfinished_business item #14.
     from app.services.instruments import seed_display_fields_from_reviewees
 
-    if seed_display_fields_from_reviewees(db, session):
-        db.commit()
-    # Segment 19C Item 1 — reconcile reviewee friendly labels from the
-    # roster header (upsert present, clear absent).
-    if field_labels_captured is not None:
-        field_labels.apply_import(
+    # One commit for the roster, its display fields and its labels, as
+    # in ``save_reviewers`` (findings Bc4).
+    with unit_of_work.atomic(db):
+        lifecycle.require_editable(db, session)
+        result = _save(
             db,
-            session,
-            source_type="reviewee",
-            captured=field_labels_captured,
+            session=session,
             user=user,
+            model=Reviewee,
+            rows=rows,
+            event_type="reviewees.imported",
+            source_label="reviewees",
+            filename=filename,
             correlation_id=correlation_id,
+            to_kwargs=_reviewee_to_kwargs,
         )
+        # Lazy-seed display fields for any populated reviewee slots
+        # (profile_link / tag_1..3) — see guide/unfinished_business item #14.
+        seed_display_fields_from_reviewees(db, session)
+        # Segment 19C Item 1 — reconcile reviewee friendly labels from
+        # the roster header (upsert present, clear absent).
+        if field_labels_captured is not None:
+            field_labels.apply_import(
+                db,
+                session,
+                source_type="reviewee",
+                captured=field_labels_captured,
+                user=user,
+                correlation_id=correlation_id,
+            )
     return result
 
 
@@ -1170,6 +1178,7 @@ def save_observers(
     filename: str,
     correlation_id: str,
 ) -> tuple[int, int]:
+    lifecycle.require_not_archived(db, session)
     return _save(
         db,
         session=session,
@@ -1286,7 +1295,7 @@ def _save(
         correlation_id=correlation_id,
     )
 
-    db.commit()
+    unit_of_work.commit(db)
     log.info(
         "roster imported",
         extra={
@@ -1357,6 +1366,7 @@ def delete_all_reviewers(
     user: User,
     correlation_id: str,
 ) -> tuple[int, int]:
+    lifecycle.require_editable(db, review_session)
     return _delete_all(
         db,
         review_session=review_session,
@@ -1375,6 +1385,7 @@ def delete_all_reviewees(
     user: User,
     correlation_id: str,
 ) -> tuple[int, int]:
+    lifecycle.require_editable(db, review_session)
     return _delete_all(
         db,
         review_session=review_session,
@@ -1393,6 +1404,7 @@ def delete_all_observers(
     user: User,
     correlation_id: str,
 ) -> tuple[int, int]:
+    lifecycle.require_not_archived(db, review_session)
     return _delete_all(
         db,
         review_session=review_session,

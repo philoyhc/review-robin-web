@@ -19,6 +19,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 from fastapi import Depends, HTTPException, Request, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
@@ -39,6 +40,7 @@ from app.services import instruments as instruments_service
 from app.services import lifecycle_display, roster_bulk
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
+from app.services import unit_of_work
 from app.web import breadcrumbs, views
 from app.web.date_filters import (
     display_timezone_context_processor,
@@ -1021,7 +1023,10 @@ async def _handle_import(
     if existing > 0:
         _require_response_loss_ack(db, review_session, acknowledge_response_loss)
 
-    save_fn(
+    # The service locks the session row (findings Bc4): wait for it off
+    # the event loop.
+    await run_in_threadpool(
+        save_fn,
         db,
         session=review_session,
         user=user,
@@ -1094,24 +1099,28 @@ def _save_field_labels(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=too_long,
             )
-    for form_param, source_field in slots:
-        value = (submitted.get(form_param) or "").strip()
-        if value:
-            field_labels_service.upsert(
-                db,
-                review_session,
-                source_type=source_type,
-                source_field=source_field,
-                label=value,
-                user=user,
-                correlation_id=correlation_id,
-            )
-        else:
-            field_labels_service.clear(
-                db,
-                review_session,
-                source_type=source_type,
-                source_field=source_field,
-                user=user,
-                correlation_id=correlation_id,
-            )
+    # One commit for the form, so each slot's gate decides under the lock
+    # the first one took, and a refusal part-way lands none of them
+    # (findings Bc4; Codex on #2882).
+    with unit_of_work.atomic(db):
+        for form_param, source_field in slots:
+            value = (submitted.get(form_param) or "").strip()
+            if value:
+                field_labels_service.upsert(
+                    db,
+                    review_session,
+                    source_type=source_type,
+                    source_field=source_field,
+                    label=value,
+                    user=user,
+                    correlation_id=correlation_id,
+                )
+            else:
+                field_labels_service.clear(
+                    db,
+                    review_session,
+                    source_type=source_type,
+                    source_field=source_field,
+                    user=user,
+                    correlation_id=correlation_id,
+                )

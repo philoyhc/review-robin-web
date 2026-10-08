@@ -155,6 +155,7 @@ def create_reviewee(
     """Insert a new Reviewee row. Rejects a duplicate
     email-or-identifier within the session. Returns the persisted
     row."""
+    lifecycle.require_editable(db, review_session)
     clean_name = _normalised_name(name)
     clean_identifier = _normalised_identifier(email_or_identifier)
     clean_status = _normalised_status(status)
@@ -275,6 +276,7 @@ def update_reviewee(
     least one field actually changed; the changes envelope carries
     ``{field: [old, new]}`` for each changed field only. Returns the
     changes dict (empty if nothing changed)."""
+    lifecycle.require_editable(db, reviewee.session)
     proposed: dict[str, object] = {}
     if name is not _UNSET:
         proposed["name"] = _normalised_name(name)  # type: ignore[arg-type]
@@ -420,6 +422,7 @@ def bulk_inactivate(
     """Flip ``status="inactive"`` on every reviewee in
     ``reviewee_ids`` that isn't already inactive. Returns the ids
     actually flipped."""
+    lifecycle.require_editable(db, review_session)
     return bulk_set_status(
         db,
         review_session=review_session,
@@ -446,6 +449,7 @@ def bulk_reactivate(
     """Flip ``status="active"`` on every reviewee in
     ``reviewee_ids`` that isn't already active. Returns the ids
     actually flipped."""
+    lifecycle.require_editable(db, review_session)
     return bulk_set_status(
         db,
         review_session=review_session,
@@ -523,6 +527,7 @@ def delete_selected(
     and of ``delete_all_reviewees``, whose cascade semantics it
     inherits rather than reinvents. Segment 19I Item 2.
     """
+    lifecycle.require_editable(db, review_session)
     return bulk_delete(
         db,
         review_session=review_session,

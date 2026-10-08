@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser
 from app.services import monitoring as monitoring_service
 from app.services import responses as responses_service
+from app.services import session_lifecycle as lifecycle
 from app.services import visibility_policies
 from app.db.models import (
     Assignment,
@@ -1709,6 +1710,11 @@ def test_group_boundary_tag_change_defuncts_that_reviewees_responses(
         )
     ).scalar_one()
     operator_user = db.get(User, review_session.created_by_user_id)
+    # A roster edit needs an editable session (findings Bc4: the service
+    # gate refuses ``ready``); Revert keeps every response.
+    lifecycle.revert_session_to_draft(
+        db, review_session=review_session, user=operator_user, confirm=True
+    )
     reviewees_service.update_reviewee(
         db, reviewee=carol, tag_1="Team B", user=operator_user
     )
@@ -1819,6 +1825,11 @@ def test_tag_change_into_answered_group_refans_the_answer(
         )
     ).scalar_one()
     operator_user = db.get(User, review_session.created_by_user_id)
+    # A roster edit needs an editable session (findings Bc4: the service
+    # gate refuses ``ready``); Revert keeps every response.
+    lifecycle.revert_session_to_draft(
+        db, review_session=review_session, user=operator_user, confirm=True
+    )
     reviewees_service.update_reviewee(
         db, reviewee=carol, tag_1="Team B", user=operator_user
     )
@@ -1838,7 +1849,10 @@ def test_tag_change_into_answered_group_refans_the_answer(
         r.response_field.field_key: r.value for r in carol_rows
     }.get("rating") == "3"
 
-    # The surface still surfaces Team B's answer.
+    # The surface still surfaces Team B's answer once the session is
+    # live again (set directly: re-activation is not what this tests).
+    review_session.status = "ready"
+    db.commit()
     page = rae_client.get(
         f"/me/sessions/{review_session.id}/1"
     )
