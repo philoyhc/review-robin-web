@@ -164,12 +164,12 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   let a send land on a `draft` session. Bc4's ruling covered setup,
   roster, instrument, schedule and lifecycle writes, not sends. Author:
   extend the guard to the send paths, or accept the race.
-- **Bc6** (found while fixing Bc4, read on #2883; low, code) **Activate's
+- ~~**Bc6**~~ — **Done in #2888** (the started row is committed before the detour) (found while fixing Bc4, read on #2883; low, code) **Activate's
   warnings detour drops its started row.** `workflow_activate` writes
   `session.workflow_run_started`, then returns the detour redirect with
   no commit, so the row is rolled back with the request; the spec has
   the run paused at the acknowledgement, not unrecorded.
-- **Bc7** (found while fixing Bc4, read on #2883; low, code) **A Prepare
+- ~~**Bc7**~~ — **Done in #2888** (the route rolls back, writes the failed row and re-raises) (found while fixing Bc4, read on #2883; low, code) **A Prepare
   whose Generate raises an exception the route does not catch
   (`IntegrityError`, `OperationalError`) leaves its committed
   `workflow_run_started` with no failed row.** Since #2883 the started
@@ -241,7 +241,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **A6** low trim provenance: instruments.md:1561 "(findings G5; …)"; visibility_policy.md:151 "(2026-10-05)", :157-159 "now shows … as the editor always has", :214 "since findings G5"; role_landing_and_visibility.md:164 "now requires", :179 "used to carry"; reviewer-surface.md:384 "now is"
 - **A7** low author visibility_policy.md:235 "whether the reviewer surface should follow is undecided"
 - **A8** low spec reviewer-surface.md:1170-1174 closed pill also shows on a ready session with no included assignment (session_lifecycle.py:808-812); :859-887 GET gating list lacks the expired bullet (read-only surface)
-- **A9** low spec instruments.md:1035-1036 (at `e35ccb5c`; found while fixing Bc4, read on #2884) `preview-sample` "persists nothing" vs it saves the sample reviewee and group members through `set_band2_state` (`_instruments_band2.py`)
+- ~~**A9**~~ low spec instruments.md:1035-1036 (at `e35ccb5c`; found while fixing Bc4, read on #2884) `preview-sample` "persists nothing" vs it saves the sample reviewee and group members through `set_band2_state` (`_instruments_band2.py`) — **Done in #2888.**
 
 **B — assignments, workflow, lifecycle, Validate**
 

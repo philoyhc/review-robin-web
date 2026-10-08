@@ -22,15 +22,18 @@ Per ``guide/segment_18F_workflow_optimization.md`` and the revised
 ``spec/workflow_card.md``.
 
 Sequential best-effort runs with structured per-step error capture
-in both routes. Neither route raises to the framework — every
-failure is caught, optionally rolled back, audited via
+in both routes. An expected failure (``_StepFailed``,
+``LifecycleError``, ``ValueError``) is caught, audited via
 ``session.workflow_run_failed`` (with ``context.button`` carrying
 ``"prepare_session"`` or ``"activate_session"``), and surfaced as a
-``super_status=failed`` 303 redirect.
+``super_status=failed`` 303 redirect. Any other exception from
+Prepare's steps is rolled back and audited the same way, then
+re-raised as a 500 (findings Bc7).
 """
 
 from __future__ import annotations
 
+import logging
 
 from fastapi import APIRouter, Depends, Form
 from fastapi.responses import RedirectResponse
@@ -49,6 +52,7 @@ from app.web.deps import (
 from app.web.routes_operator._shared import _REVERT_RETURN_TO, _redirect_url
 
 router = APIRouter()
+_log = logging.getLogger(__name__)
 
 
 # Slugs the workflow routes accept as ``return_to``. Mirrors the
@@ -288,6 +292,36 @@ def workflow_prepare(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
+    except Exception as exc:
+        # Anything the branch above does not expect (an `IntegrityError`,
+        # an `OperationalError`) still answers 500, but the run's
+        # committed `workflow_run_started` gets its failed row first
+        # (findings Bc7). Rolled back before the write, so nothing the
+        # failed step flushed lands with it; if the rollback or the write
+        # fails (the database is gone), that is logged and the original
+        # error is the one raised.
+        try:
+            db.rollback()
+            audit.write_event(
+                db,
+                event_type="session.workflow_run_failed",
+                summary=(
+                    f"Prepare-session run failed for {review_session.code} "
+                    f"at {step}"
+                ),
+                actor_user_id=user.id,
+                session=review_session,
+                context={
+                    "button": "prepare_session",
+                    "step": step,
+                    "error_message": f"Unexpected error ({type(exc).__name__}).",
+                },
+                correlation_id=correlation_id,
+            )
+            db.commit()
+        except Exception:
+            _log.exception("could not record the failed Prepare run")
+        raise
 
     return RedirectResponse(
         url=_redirect_url(review_session.id, return_to),
@@ -366,8 +400,11 @@ def workflow_activate(
             )
         if report.has_non_blocking_findings:
             # Warnings detour. Operator acknowledges inline on the
-            # Validate page; no audit emission here — the run is
-            # paused at the acknowledgement step, not failed.
+            # Validate page; no failure emission here — the run is
+            # paused at the acknowledgement step, not failed. The
+            # started row is committed, as on every other return that
+            # writes one, or it dies with the connection (findings Bc6).
+            db.commit()
             return RedirectResponse(
                 url=_warnings_detour_url(review_session.id, return_to),
                 status_code=status.HTTP_303_SEE_OTHER,
