@@ -37,6 +37,7 @@ from app.services import (
     session_owners,
     session_tags,
     sessions,
+    unit_of_work,
     validation,
 )
 from app.services import session_lifecycle as lifecycle
@@ -55,7 +56,6 @@ from app.web.routes_operator._shared import (
     _owners_unlocked,
     _quick_setup_unlocked,
     _redirect_url,
-    _require_editable,
     _require_not_ready,
     _templates,
     parse_session_deadline,
@@ -300,15 +300,12 @@ def _apply_session_config_form(
     ``HTTPException(422)`` on any field / ordering validation error.
     """
     # The whole save runs under the session lock the scheduled-event
-    # observers take, re-reading the row first, so the editability gate,
-    # the stored schedule and the sent-entry record are all read as they
-    # stand and nothing changes them before the schedule is written
-    # (findings Bc3).
-    scheduled_events.lock_session(db, review_session)
-    # Editing session metadata (name / code / description / deadline /
-    # help contact / timezone / scheduled_activate_at) touches only
-    # scalar ``sessions`` columns.
-    _require_editable(review_session)
+    # observers take: the editability gate is decided on the row re-read
+    # under it (findings Bc3, Bc4), so the stored schedule and the
+    # sent-entry record are read as they stand and nothing changes them
+    # before the schedule is written. Editing session metadata touches
+    # only scalar ``sessions`` columns.
+    lifecycle.require_editable(db, review_session)
 
     # A code another session holds is refused before anything is
     # written, rather than reaching the unique constraint as a 500.
@@ -522,23 +519,25 @@ def _apply_session_config_form(
         responses_release_at=parsed_responses_release_at,
         responses_release_until=parsed_responses_release_until,
     )
-    sessions.update_session(
-        db,
-        review_session=review_session,
-        user=user,
-        payload=payload,
-        correlation_id=correlation_id,
-    )
-    # After the schedule write, not before: the zone write commits, and
-    # committing first would release the session lock the sent-entry
-    # check took before the lists it checked are written (findings Bc3).
-    sessions.set_session_display_timezone(
-        db,
-        review_session=review_session,
-        user=user,
-        timezone_name=timezone_name,
-        correlation_id=correlation_id,
-    )
+    # One commit for the schedule, the details and the zone: each write
+    # gates, and the session lock the sent-entry check took must hold
+    # until the lists it checked are written, so a refusal at the zone's
+    # gate cannot follow a committed schedule (findings Bc3, Bc4).
+    with unit_of_work.atomic(db):
+        sessions.update_session(
+            db,
+            review_session=review_session,
+            user=user,
+            payload=payload,
+            correlation_id=correlation_id,
+        )
+        sessions.set_session_display_timezone(
+            db,
+            review_session=review_session,
+            user=user,
+            timezone_name=timezone_name,
+            correlation_id=correlation_id,
+        )
 
 
 @router.post("/sessions/{session_id}/config")

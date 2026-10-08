@@ -1218,3 +1218,375 @@ def test_a_band2_save_is_one_commit(client, db: Session, monkeypatch) -> None:
             )
         ).scalars()
     )
+
+
+# --------------------------------------------------------------------------- #
+# Rung 6 — the session saves                                                  #
+# --------------------------------------------------------------------------- #
+
+
+def test_update_session_refuses_a_session_activated_at_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    from app.services import sessions as sessions_service
+
+    session = _make_validated_session(db, "guard-update")
+    payload = sessions_service.edit_payload(
+        session, name="Renamed", code=session.code, deadline=session.deadline
+    )
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        sessions_service.update_session(
+            db,
+            review_session=session,
+            user=_operator(db, session),
+            payload=payload,
+        )
+
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).name != "Renamed"
+
+
+def test_delete_session_refuses_a_session_activated_at_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    from app.services import sessions as sessions_service
+
+    session = _make_validated_session(db, "guard-delete")
+    session_id = session.id
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    with pytest.raises(lifecycle.SessionStateConflict) as raised:
+        sessions_service.delete_session(
+            db, review_session=session, user=_operator(db, session)
+        )
+
+    assert raised.value.code == "session_ready"
+    db.expire_all()
+    assert db.get(ReviewSession, session_id) is not None
+
+
+def test_the_lobby_bulk_delete_skips_a_session_activated_at_the_lock(
+    client, db: Session, monkeypatch
+) -> None:
+    """One row of a bulk Delete activated since the request read it is
+    skipped, as the route's own filter skips a ``ready`` row — not a 409
+    for the whole selection."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Bulk", "code": "guard-bulk"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-bulk")
+    ).scalar_one()
+    session_id = session.id
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    response = client.post(
+        "/operator/sessions/bulk-delete",
+        data={"session_ids": [str(session_id)], "confirm": "true"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    db.expire_all()
+    assert db.get(ReviewSession, session_id) is not None
+
+
+# --------------------------------------------------------------------------- #
+# Acting on the cumulative read                                               #
+# --------------------------------------------------------------------------- #
+
+
+def test_purge_and_archive_decides_under_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    """A scheduled activation committing as Purge and archive starts: the
+    session is not archivable on the re-read row, so nothing is purged."""
+    from app.db.models import Reviewer
+    from app.services import session_purge
+
+    session = _make_validated_session(db, "guard-purge")
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    assert not session_purge.purge_and_archive(
+        db,
+        review_session=session,
+        user=_operator(db, session),
+        purge=["rosters", "responses"],
+    )
+    # The refusal rolls the transaction back, the stand-in's write with
+    # it, so assert on what the purge must not have done.
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).status != "archived"
+    assert db.execute(
+        select(Reviewer.id).where(Reviewer.session_id == session.id)
+    ).all()
+
+
+def test_a_quick_setup_slot_reports_the_lifecycle_reason(
+    client, db: Session, monkeypatch
+) -> None:
+    """Refused under the lock, a Quick Setup roster slot answers with its
+    own ``lifecycle`` reason, as its gate does, not the bare 409 page."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "QS", "code": "guard-qs"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-qs")
+    ).scalar_one()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/quick-setup/reviewers",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nZed,zed@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert "quick_setup_reason=lifecycle" in response.headers["location"]
+    assert _reviewer_emails(db, session) == []
+
+
+@pytest.mark.parametrize("guarded", ["delete_responses", "apply_settings"])
+def test_the_other_session_writes_refuse_at_the_lock(
+    db: Session, monkeypatch, guarded
+) -> None:
+    from app.services import responses as responses_service
+    from app.services import session_config_io
+
+    session = _make_validated_session(db, f"guard-{guarded}")
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        if guarded == "delete_responses":
+            responses_service.delete_all_for_session(
+                db,
+                review_session=session,
+                user=_operator(db, session),
+                correlation_id="t",
+            )
+        else:
+            session_config_io.apply_session_config(db, session, [])
+
+
+def test_purge_and_archive_commits_once(db: Session, monkeypatch) -> None:
+    """The purges are deferred to the archive's commit: an archive that
+    fails leaves every purged row in place."""
+    from app.db.models import Reviewer
+    from app.services import session_purge
+
+    session = _make_validated_session(db, "guard-purge-once")
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("archive failed")
+
+    monkeypatch.setattr(lifecycle, "archive_session", boom)
+    with pytest.raises(RuntimeError):
+        session_purge.purge_and_archive(
+            db,
+            review_session=session,
+            user=_operator(db, session),
+            purge=["rosters"],
+        )
+    db.rollback()
+
+    assert db.execute(
+        select(Reviewer.id).where(Reviewer.session_id == session.id)
+    ).all()
+
+
+@pytest.mark.parametrize(
+    ("slot", "status_at_lock", "csv"),
+    [
+        (
+            "relationships",
+            "ready",
+            b"ReviewerEmail,RevieweeEmail\nalice@example.edu,carol@example.edu\n",
+        ),
+        (
+            "observers",
+            "archived",
+            b"ObserverEmail\nobs@example.edu\n",
+        ),
+    ],
+)
+def test_the_other_quick_setup_slots_report_the_lifecycle_reason(
+    client, db: Session, monkeypatch, slot, status_at_lock, csv
+) -> None:
+    client.post(
+        "/operator/sessions",
+        data={"name": "QS", "code": f"guard-qs-{slot}"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == f"guard-qs-{slot}")
+    ).scalar_one()
+    if slot == "relationships":
+        # The pairs name roster rows, so the rosters land first.
+        for kind, roster in (
+            ("reviewers", b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"),
+            ("reviewees", b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"),
+        ):
+            client.post(
+                f"/operator/sessions/{session.id}/quick-setup/{kind}",
+                files={"file": (f"{kind}.csv", roster, "text/csv")},
+                follow_redirects=False,
+            )
+    _lands_at_the_lock(
+        monkeypatch, db, _status_becomes(session, status_at_lock)
+    )
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/quick-setup/{slot}",
+        files={"file": (f"{slot}.csv", csv, "text/csv")},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert "quick_setup_reason=lifecycle" in response.headers["location"]
+
+
+def test_a_session_home_config_save_is_one_commit(
+    client, db: Session, monkeypatch
+) -> None:
+    """The config card saves the schedule and details, then the display
+    zone, each gated; the first used to commit on its own, so a session
+    archived at the zone's gate refused after the rename had landed."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Config", "code": "guard-config"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-config")
+    ).scalar_one()
+    # Lock 1 is the route's gate, 2 the details save's, 3 the zone's.
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=3)
+    commits = _counting_commits(monkeypatch, db)
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/config",
+        data={
+            "name": "Renamed",
+            "code": "guard-config",
+            "display_timezone": "Europe/London",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 409
+    assert commits == []
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).name == "Config"
+
+
+def test_purge_logs_only_what_the_archive_committed(
+    db: Session, monkeypatch, caplog
+) -> None:
+    """Codex on #2885: inside Purge and archive the purges only flush, so
+    their "session data purged" lines wait for the unit's commit — an
+    archive that fails logs no purge; one that lands logs it."""
+    import logging
+
+    from app.services import session_purge
+
+    failing = _make_validated_session(db, "guard-purge-log-fail")
+    real_archive = lifecycle.archive_session
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("archive failed")
+
+    monkeypatch.setattr(lifecycle, "archive_session", boom)
+    with caplog.at_level(logging.INFO):
+        with pytest.raises(RuntimeError):
+            session_purge.purge_and_archive(
+                db, review_session=failing, user=_operator(db, failing),
+                purge=["rosters"],
+            )
+    assert "session data purged" not in caplog.text
+
+    monkeypatch.setattr(lifecycle, "archive_session", real_archive)
+    landing = _make_validated_session(db, "guard-purge-log-ok")
+    with caplog.at_level(logging.INFO):
+        assert session_purge.purge_and_archive(
+            db, review_session=landing, user=_operator(db, landing),
+            purge=["rosters"],
+        )
+    assert "session data purged" in caplog.text
+
+
+def test_after_commit_runs_on_the_real_commit_and_drops_on_rollback(
+    db: Session,
+) -> None:
+    from app.services import unit_of_work
+
+    ran: list[str] = []
+    unit_of_work.after_commit(db, lambda: ran.append("outside"))
+    assert ran == ["outside"]
+
+    with unit_of_work.atomic(db):
+        unit_of_work.after_commit(db, lambda: ran.append("inside"))
+        assert ran == ["outside"]
+    assert ran == ["outside", "inside"]
+
+    with pytest.raises(RuntimeError):
+        with unit_of_work.atomic(db):
+            unit_of_work.after_commit(db, lambda: ran.append("rolled back"))
+            raise RuntimeError("refused")
+    unit_of_work.commit(db)
+    assert ran == ["outside", "inside"]
+
+
+def test_after_commit_waits_for_the_commit_and_a_failed_commit_drops_it(
+    db: Session, monkeypatch, caplog
+) -> None:
+    """The callbacks run after the real commit returns — not before it —
+    and a commit that raises drops them; a callback that raises is logged
+    and the rest still run, so committed work is never reported failed."""
+    from app.services import unit_of_work
+
+    order: list[str] = []
+    real_commit = db.commit
+
+    def spying_commit():
+        real_commit()
+        order.append("commit")
+
+    monkeypatch.setattr(db, "commit", spying_commit)
+    with unit_of_work.atomic(db):
+        unit_of_work.after_commit(db, lambda: order.append("callback"))
+    assert order == ["commit", "callback"]
+
+    def failing_commit():
+        raise RuntimeError("commit failed")
+
+    monkeypatch.setattr(db, "commit", failing_commit)
+    with pytest.raises(RuntimeError):
+        with unit_of_work.atomic(db):
+            unit_of_work.after_commit(db, lambda: order.append("dropped"))
+    monkeypatch.setattr(db, "commit", spying_commit)
+    unit_of_work.commit(db)
+    assert order == ["commit", "callback", "commit"]
+
+    def raising():
+        raise ValueError("callback failed")
+
+    with caplog.at_level("ERROR"):
+        with unit_of_work.atomic(db):
+            unit_of_work.after_commit(db, raising)
+            unit_of_work.after_commit(db, lambda: order.append("still runs"))
+        # Outside a unit it runs at once, under the same guard.
+        unit_of_work.after_commit(db, raising)
+    assert order[-1] == "still runs"
+    assert caplog.text.count("after_commit callback failed") == 2

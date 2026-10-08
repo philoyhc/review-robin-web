@@ -46,6 +46,7 @@ from app.services import (
     session_tags,
     sessions,
 )
+from app.services import session_guard
 from app.services import session_lifecycle as lifecycle
 from app.web import views
 from app.web.deps import (
@@ -670,22 +671,27 @@ async def _run_quick_setup_relationships(
 
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
-    await run_in_threadpool(
-        relationships_service.save_relationships,
-        db,
-        session=review_session,
-        user=user,
-        rows=result.rows,
-        filename=file.filename or "",
-        correlation_id=correlation_id or request_correlation_id(),
-        # Quick Setup is a thin shell over the per-entity primitives
-        # (`spec/csv_contracts.md`), so the header's friendly labels
-        # reconcile here exactly as they do on the Relationships card
-        # — upsert present, clear absent. Omitting this dropped them
-        # silently, and 19C Item 1 retired `field_labels.*` from the
-        # settings bundle, so the roster header is the only way back.
-        field_labels_captured=result.field_labels,
-    )
+    # Refused under it (activated since the gate above) reports the
+    # same ``lifecycle`` reason as that gate.
+    try:
+        await run_in_threadpool(
+            relationships_service.save_relationships,
+            db,
+            session=review_session,
+            user=user,
+            rows=result.rows,
+            filename=file.filename or "",
+            correlation_id=correlation_id or request_correlation_id(),
+            # Quick Setup is a thin shell over the per-entity primitives
+            # (`spec/csv_contracts.md`), so the header's friendly labels
+            # reconcile here exactly as they do on the Relationships card
+            # — upsert present, clear absent. Omitting this dropped them
+            # silently, and 19C Item 1 retired `field_labels.*` from the
+            # settings bundle, so the roster header is the only way back.
+            field_labels_captured=result.field_labels,
+        )
+    except lifecycle.SessionStateConflict:
+        return "lifecycle"
     return None
 
 
@@ -778,15 +784,21 @@ async def _run_quick_setup_observers(
 
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
-    await run_in_threadpool(
-        csv_imports.save_observers,
-        db,
-        session=review_session,
-        user=user,
-        rows=result.rows,
-        filename=file.filename or "",
-        correlation_id=correlation_id or request_correlation_id(),
-    )
+    # Refused under it (observers stay editable on a running session,
+    # so only an archive landing first refuses) reports the
+    # ``lifecycle`` reason, as the gate above does.
+    try:
+        await run_in_threadpool(
+            csv_imports.save_observers,
+            db,
+            session=review_session,
+            user=user,
+            rows=result.rows,
+            filename=file.filename or "",
+            correlation_id=correlation_id or request_correlation_id(),
+        )
+    except lifecycle.SessionStateConflict:
+        return "lifecycle"
     return None
 
 
@@ -842,19 +854,24 @@ async def _run_quick_setup_import(
 
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
-    await run_in_threadpool(
-        save_fn,
-        db,
-        session=review_session,
-        user=user,
-        rows=result.rows,
-        filename=file.filename or "",
-        correlation_id=correlation_id or request_correlation_id(),
-        # Same reason as the relationships helper above: this is the
-        # only save site behind five upload routes, and the labels it
-        # drops cannot be recovered from anywhere else.
-        field_labels_captured=result.field_labels,
-    )
+    # Refused under it (activated since the gate above) reports the
+    # same ``lifecycle`` reason as that gate.
+    try:
+        await run_in_threadpool(
+            save_fn,
+            db,
+            session=review_session,
+            user=user,
+            rows=result.rows,
+            filename=file.filename or "",
+            correlation_id=correlation_id or request_correlation_id(),
+            # Same reason as the relationships helper above: this is the
+            # only save site behind five upload routes, and the labels it
+            # drops cannot be recovered from anywhere else.
+            field_labels_captured=result.field_labels,
+        )
+    except lifecycle.SessionStateConflict:
+        return "lifecycle"
     return None
 
 
@@ -1133,7 +1150,7 @@ def _apply_settings_upload(
     scheduled activation that commits first is refused here rather
     than imported over (findings Bc3)."""
 
-    scheduled_events.lock_session(db, review_session)
+    session_guard.lock_session(db, review_session)
     if not lifecycle.is_editable(review_session):
         return _SettingsFailure("lifecycle")
 

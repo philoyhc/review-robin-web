@@ -20,6 +20,8 @@ from app.services import (
     date_formatting,
     operator_settings,
 )
+from app.services import session_lifecycle as lifecycle
+from app.services import unit_of_work
 from app.services.instruments import ensure_default_instrument
 # Wave 5 PR 5.2 — RuleSet seeding retired; ``app.services.rules.seeds``
 # module deleted entirely. New sessions land with no rows in
@@ -273,6 +275,7 @@ def update_session(
     only for being present and ``SessionCreate`` requires both, help
     contact adds an info note only, and nothing else here is read
     (author's ruling, 2026-10-05, findings Cc5)."""
+    lifecycle.require_editable(db, review_session)
     diffs: dict[str, list[object]] = {}
     for field_name in _UPDATED_FIELDS:
         old = getattr(review_session, field_name)
@@ -388,7 +391,7 @@ def update_session(
         payload=audit.changes(diffs),
         correlation_id=correlation_id,
     )
-    db.commit()
+    unit_of_work.commit(db)
     db.refresh(review_session)
     return review_session
 
@@ -422,6 +425,7 @@ def set_session_display_timezone(
     to inheriting the creating operator's default. A no-op when the
     value is unchanged. Raises ``ValueError`` for an unknown zone.
     """
+    lifecycle.require_editable(db, review_session)
     if timezone_name is not None and not operator_settings.is_valid_timezone(
         timezone_name
     ):
@@ -446,7 +450,7 @@ def set_session_display_timezone(
         payload=audit.changes({"display_timezone": [old, timezone_name]}),
         correlation_id=correlation_id,
     )
-    db.commit()
+    unit_of_work.commit(db)
 
 
 def delete_session(
@@ -462,6 +466,7 @@ def delete_session(
     ``session.deleted`` event is then written with ``session_id=None``
     so the deletion itself stays in the global audit log.
     """
+    lifecycle.require_not_ready(db, review_session)
     captured = {
         "id": review_session.id,
         "code": review_session.code,

@@ -366,16 +366,14 @@ def set_cohort_rule(
     when ``observer_ids`` is empty.
 
     Lifecycle: cohort_rule changes don't invalidate session
-    validation, and the service deliberately does **not** call
-    ``_require_editable``. Unlike the roster mutators
-    (``create_observer`` / ``update_observer`` /
-    ``_bulk_set_status``), the cohort rule governs **which
-    parts of response data become visible to an observer**, not
-    the response data itself or the roster shape — so editing
-    it mid-session (``ready`` / ``expired``) is a legitimate
-    flow. The route handler enforces a permissive
-    ``_require_not_archived`` gate (archived is the only hard
-    stop); the service still trusts its caller on lifecycle.
+    validation, and the gate is not editability: the cohort rule
+    governs **which parts of response data become visible to an
+    observer**, not the response data itself or the roster shape —
+    so editing it mid-session (``ready`` / ``expired``) is a
+    legitimate flow, as it is for the rest of the observer roster.
+    Archived is the only hard stop, decided here under the
+    session lock (``require_not_archived``, findings Bc4) as well as
+    by the route.
     """
     lifecycle.require_not_archived(db, review_session)
     if not observer_ids:

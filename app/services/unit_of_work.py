@@ -7,19 +7,26 @@ several in sequence and must be all-or-nothing wraps them in
 refusal part-way through can roll the whole unit back. The caller makes
 the one real commit itself — the Instrument card's Save route (findings
 A16) — or opens :func:`atomic`, which commits and rolls back for it:
-the reviewer, reviewee and relationship imports, the label editor and
-Generate (``assignments.replace_assignments``), which hold the session
-lock from their gate to that commit (findings Bc4).
+the reviewer, reviewee and relationship imports, the label editor, the
+instrument identity and Band 2 routes, Session Home's config save,
+Generate (``assignments.replace_assignments``) and Purge and archive,
+which hold the session lock from their gate to that commit (findings
+Bc4). :func:`after_commit` defers a side effect — a log line saying work
+was done — to that commit, and drops it if the unit rolls back.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+import logging
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 
 from sqlalchemy.orm import Session
 
+_log = logging.getLogger(__name__)
+
 _DEFER_KEY = "unit_of_work.defer_commit"
+_AFTER_KEY = "unit_of_work.after_commit"
 
 
 @contextmanager
@@ -51,15 +58,51 @@ def atomic(db: Session) -> Iterator[None]:
     except BaseException:
         if outermost:
             db.rollback()
+            db.info.pop(_AFTER_KEY, None)
         raise
 
 
 def commit(db: Session) -> None:
-    """``db.commit()``, or ``db.flush()`` inside :func:`single_commit`."""
+    """``db.commit()``, or ``db.flush()`` inside :func:`single_commit`.
+
+    A real commit runs the :func:`after_commit` callbacks queued in the
+    unit it closes; a failed one drops them."""
     if db.info.get(_DEFER_KEY, False):
         db.flush()
-    else:
+        return
+    try:
         db.commit()
+    except BaseException:
+        db.info.pop(_AFTER_KEY, None)
+        raise
+    for fn in db.info.pop(_AFTER_KEY, []):
+        _run_callback(fn)
 
 
-__all__ = ["atomic", "commit", "single_commit"]
+def _run_callback(fn: Callable[[], None]) -> None:
+    """The work is committed: a failing side effect is logged, not
+    raised, so it cannot report that work as failed."""
+    try:
+        fn()
+    except Exception:
+        _log.exception("after_commit callback failed")
+
+
+def after_commit(db: Session, fn: Callable[[], None]) -> None:
+    """Run ``fn`` once the work so far is committed: now, outside a unit;
+    after the unit's real commit inside one, and never if the unit rolls
+    back. For a side effect that must not report work the unit then
+    discards — a "purged" or "imported" log line.
+
+    The guarantee holds for :func:`atomic` and for a :func:`single_commit`
+    closed by :func:`commit`. A bare :func:`single_commit` that its
+    caller closes with a raw ``db.commit()`` / ``db.rollback()`` leaves
+    the queue in place; no such caller queues anything today. Either way
+    a callback that raises is logged, not raised."""
+    if db.info.get(_DEFER_KEY, False):
+        db.info.setdefault(_AFTER_KEY, []).append(fn)
+    else:
+        _run_callback(fn)
+
+
+__all__ = ["after_commit", "atomic", "commit", "single_commit"]

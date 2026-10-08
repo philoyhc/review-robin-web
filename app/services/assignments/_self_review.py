@@ -512,12 +512,12 @@ def set_instrument_self_reviews_active(
     ``counts.flipped`` + ``context.active`` +
     ``refs.instrument_id``.
     """
+    lifecycle.require_editable(db, review_session)
     # Read the canonical column to pick self-review rows on this
     # instrument. The column is the source of truth post-
     # consolidation (PR 1/2 of ``guide/self_review_consolidate.md``).
     # Rows with an inactive side stay excluded: the toggle is about
     # self-review, not roster status (findings B2).
-    lifecycle.require_editable(db, review_session)
     rows = db.execute(
         _active_self_review_rows().where(
             Assignment.session_id == review_session.id,

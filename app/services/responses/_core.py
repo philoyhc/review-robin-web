@@ -20,6 +20,7 @@ from app.db.models import (
 )
 from app.schemas.responses import ResponseUpsert
 from app.services import audit
+from app.services import session_lifecycle as lifecycle
 from app.services.text import pluralize
 from app.services.responses._branch_rule import drop_closed_branch_answers
 from app.services.responses._branching import (
@@ -957,9 +958,11 @@ def delete_all_for_session(
     """Delete every Response row for the session in one transaction.
 
     Preserves reviewers, reviewees, assignments, instruments, invitations.
-    Allowed in any session status (operator-driven wipe of response data
-    only). Emits a single ``responses.deleted_all`` audit event.
+    Refused while the session is ``ready``, decided under the session lock
+    (rulings C7 = G7; findings Bc4). Emits a single
+    ``responses.deleted_all`` audit event.
     """
+    lifecycle.require_not_ready(db, review_session)
     assignment_ids = list(
         db.execute(
             select(Assignment.id).where(

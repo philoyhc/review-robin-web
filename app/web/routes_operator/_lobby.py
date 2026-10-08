@@ -19,6 +19,7 @@ from app.services import scheduled_events
 from app.services import session_clone
 from app.services import session_purge
 from app.services import sessions
+from app.services import session_guard
 from app.services import session_lifecycle as lifecycle
 from app.services import session_tags
 from app.web import breadcrumbs, views
@@ -305,8 +306,9 @@ def lobby_edit_submit(
     """
     correlation_id = request_correlation_id()
     # The whole save runs under the session lock the scheduled-event
-    # observers take, re-reading the row first (findings Bc3).
-    scheduled_events.lock_session(db, review_session)
+    # observers take, re-reading the row first (findings Bc3). Tags take
+    # no state gate, so this is the bare lock, not a ``require_*``.
+    session_guard.lock_session(db, review_session)
 
     # Checked before the tag write, so a taken code, a deadline that
     # does not fit the stored schedule, or a name too long refuses the
@@ -455,11 +457,11 @@ def sessions_archive_selected(
                 correlation_id=correlation_id,
             )
         except lifecycle.LifecycleError:
-            # Archived by another request since this one read it (a
-            # double submit): the row is skipped rather than answering
-            # 500. Any purge ticked has already run by then; deciding
-            # ``can_archive`` under the lock before it is 19U Item 1's
-            # rung 6.
+            # A refusal from the transitions under the lock: the row is
+            # skipped rather than answering 500. A session archived by
+            # another request first (a double submit) no longer reaches
+            # this — purge_and_archive decides ``can_archive`` under the
+            # lock before any purge and returns False.
             db.rollback()
     target = (
         "/operator/sessions/archived"
@@ -508,12 +510,17 @@ def sessions_delete_selected(
             or lifecycle.is_expired(review_session)
         ):
             continue
-        sessions.delete_session(
-            db,
-            review_session=review_session,
-            user=user,
-            correlation_id=correlation_id,
-        )
+        try:
+            sessions.delete_session(
+                db,
+                review_session=review_session,
+                user=user,
+                correlation_id=correlation_id,
+            )
+        except lifecycle.SessionStateConflict:
+            # Activated since this request read it (findings Bc4): skipped,
+            # as the filter above skips a ``ready`` row.
+            db.rollback()
     return RedirectResponse(
         url="/operator/sessions",
         status_code=status.HTTP_303_SEE_OTHER,

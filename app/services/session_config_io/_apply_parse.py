@@ -333,7 +333,8 @@ def session_fired_offset_errors(
     ``session_schedule_order_errors`` does; one error per list."""
     from sqlalchemy.orm import object_session
 
-    from app.services.scheduled_events import fired_offset_errors, lock_session
+    from app.services.scheduled_events import fired_offset_errors
+    from app.services.session_guard import lock_session
 
     db = object_session(review_session)
     if db is None or review_session.id is None:

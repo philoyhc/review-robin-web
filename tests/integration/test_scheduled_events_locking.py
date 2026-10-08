@@ -205,10 +205,12 @@ def test_lock_session_keeps_an_unflushed_edit(db: Session) -> None:
 
 
 def _commit_lands_at_the_lock(monkeypatch, db: Session, apply) -> None:
-    """Patch ``scheduled_events.lock_session`` so another request's save
+    """Patch ``session_guard.lock_session`` so another request's save
     (``apply``) lands just as the first lock is taken: a caller that
     locks before reading sees it, one that read first does not."""
-    real = scheduled_events.lock_session
+    from app.services import session_guard
+
+    real = session_guard.lock_session
     fired: list[bool] = []
 
     def landing(db_, session_):
@@ -217,7 +219,8 @@ def _commit_lands_at_the_lock(monkeypatch, db: Session, apply) -> None:
             apply(session_)
         return real(db_, session_)
 
-    monkeypatch.setattr(scheduled_events, "lock_session", landing)
+    # The saves lock through ``session_guard`` (findings Bc4).
+    monkeypatch.setattr(session_guard, "lock_session", landing)
 
 
 def test_the_session_home_save_locks_before_its_editability_gate(

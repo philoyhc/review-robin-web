@@ -28,7 +28,9 @@ from app.db.models import (
 from app.logging_config import get_logger
 from app.services import audit
 from app.services import invitations as invitations_service
+from app.services import session_guard
 from app.services import session_lifecycle as lifecycle
+from app.services import unit_of_work
 
 log = get_logger(__name__)
 
@@ -78,16 +80,19 @@ def purge_responses(
         payload=audit.counts(responses=responses, invitations=invitations),
         correlation_id=correlation_id,
     )
-    db.commit()
-    log.info(
-        "session data purged",
-        extra={
-            "session_id": session_id,
-            "kind": "responses",
-            "responses": responses,
-            "invitations": invitations,
-            "correlation_id": correlation_id,
-        },
+    unit_of_work.commit(db)
+    unit_of_work.after_commit(
+        db,
+        lambda: log.info(
+            "session data purged",
+            extra={
+                "session_id": session_id,
+                "kind": "responses",
+                "responses": responses,
+                "invitations": invitations,
+                "correlation_id": correlation_id,
+            },
+        ),
     )
 
 
@@ -146,20 +151,23 @@ def purge_rosters(
         ),
         correlation_id=correlation_id,
     )
-    db.commit()
-    log.info(
-        "session data purged",
-        extra={
-            "session_id": session_id,
-            "kind": "rosters",
-            "reviewers": reviewers,
-            "reviewees": reviewees,
-            "relationships": relationships,
-            "assignments": assignments,
-            "responses": responses,
-            "invitations": invitations,
-            "correlation_id": correlation_id,
-        },
+    unit_of_work.commit(db)
+    unit_of_work.after_commit(
+        db,
+        lambda: log.info(
+            "session data purged",
+            extra={
+                "session_id": session_id,
+                "kind": "rosters",
+                "reviewers": reviewers,
+                "reviewees": reviewees,
+                "relationships": relationships,
+                "assignments": assignments,
+                "responses": responses,
+                "invitations": invitations,
+                "correlation_id": correlation_id,
+            },
+        ),
     )
 
 
@@ -188,15 +196,18 @@ def purge_audit_log(
         payload=audit.counts(audit_events=purged),
         correlation_id=correlation_id,
     )
-    db.commit()
-    log.info(
-        "session data purged",
-        extra={
-            "session_id": review_session.id,
-            "kind": "audit_log",
-            "audit_events": purged,
-            "correlation_id": correlation_id,
-        },
+    unit_of_work.commit(db)
+    unit_of_work.after_commit(
+        db,
+        lambda: log.info(
+            "session data purged",
+            extra={
+                "session_id": review_session.id,
+                "kind": "audit_log",
+                "audit_events": purged,
+                "correlation_id": correlation_id,
+            },
+        ),
     )
 
 
@@ -220,25 +231,37 @@ def purge_and_archive(
     event written by ``archive_session`` survives an audit-log purge. With an
     empty ``purge`` this is a plain archive. Returns ``True`` when archived.
     """
+    # Decided on the row re-read under the session lock, and the purges
+    # deferred to the archive's one commit so the lock holds throughout:
+    # a scheduled activation committing after the request loaded the row
+    # must not see its rosters and responses purged (findings Bc4).
+    session_guard.lock_session(db, review_session)
     if not lifecycle.can_archive(review_session):
+        # Release the lock now: a bulk caller goes on to the next session,
+        # and holding locks on refused ones lets two bulk archives deadlock.
+        db.rollback()
         return False
-    if "audit_log" in purge:
-        purge_audit_log(
+    # One unit: the purges and the archive commit together, the purges'
+    # "purged" log lines run only after that commit, and a failure rolls
+    # all of it back (Codex on #2885).
+    with unit_of_work.atomic(db):
+        if "audit_log" in purge:
+            purge_audit_log(
+                db, review_session=review_session, user=user,
+                correlation_id=correlation_id,
+            )
+        if "responses" in purge:
+            purge_responses(
+                db, review_session=review_session, user=user,
+                correlation_id=correlation_id,
+            )
+        if "rosters" in purge:
+            purge_rosters(
+                db, review_session=review_session, user=user,
+                correlation_id=correlation_id,
+            )
+        lifecycle.archive_session(
             db, review_session=review_session, user=user,
             correlation_id=correlation_id,
         )
-    if "responses" in purge:
-        purge_responses(
-            db, review_session=review_session, user=user,
-            correlation_id=correlation_id,
-        )
-    if "rosters" in purge:
-        purge_rosters(
-            db, review_session=review_session, user=user,
-            correlation_id=correlation_id,
-        )
-    lifecycle.archive_session(
-        db, review_session=review_session, user=user,
-        correlation_id=correlation_id,
-    )
     return True
