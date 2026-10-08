@@ -611,8 +611,10 @@ KEY UPDATE` on the session row (`lock_session` in
 `app/services/session_guard.py`) and holds it to its commit (19U Item 1,
 findings Bc4, Bc5, Bc8). Nothing bounds the wait: a request that holds
 the lock and stalls — a slow import, a hung connection — makes every
-other request on that session wait until it ends. SQLite, which the
-tests and local runs use, never blocks, so no test can show this.
+other request on that session wait until it ends. SQLite, which local
+runs and the default test run use, never blocks; the `ci-postgres` job
+runs the suite on Postgres (`TEST_DATABASE_URL`, `tests/conftest.py`),
+where a two-connection test can show the wait.
 
 **Why it waits here.** The bound depends on the deployed database and
 host: the Azure Postgres server, the worker count, and the App Service
@@ -628,5 +630,7 @@ this session; try again") is probably the right answer. Record the
 setting in `docs/database.md`.
 
 **Done when** a request blocked behind a held session lock on the
-deployed Postgres fails within the chosen bound with the chosen answer,
-and `docs/database.md` states the setting.
+deployed Postgres fails within the chosen bound with the chosen answer;
+a two-connection test in the `ci-postgres` suite holds the lock in one
+transaction and asserts that bound and answer from the other; and
+`docs/database.md` states the setting.
