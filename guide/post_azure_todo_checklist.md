@@ -91,19 +91,19 @@ look — which is the failure this file exists to stop repeating.
 environment as the migration's final step. At that moment several
 documents describe an environment that no longer exists, and two more
 describe a plan that the outcome has either confirmed or replaced. Work
-through them and decide each one's fate.
+through them and decide each one's fate. Line counts of the live documents taken 2026-10-08.
 
 | Document | Lines | The question it poses at cutover |
 |---|---|---|
-| `docs/deployment_dev.md` | 405 | Resource names, env vars, CI/CD and bootstrap for the **personal** slot. Rewrite for NUS, or retire and let the NUS material own it? |
-| `docs/operations_runbook.md` | 84 | Opens *"Scoped to the current single Azure **dev** slot"*. Re-scope. |
-| `docs/troubleshooting.md` | 71 | Opens *"for the deployed dev slot"*. Re-scope. |
-| `docs/backup_restore.md` | 83 | Opens *"Scoped to the current single Azure **dev** slot"* — and backup policy is the one of these that an institutional host may dictate rather than leave to us. |
-| `docs/deployment_nus.md` | 452 | **A migration runbook whose migration is over.** Does it become the operations reference, or retire to `docs/archive/` with the operational half lifted out first? Easy to forget precisely because it is the document being worked from. |
+| `docs/deployment_dev.md` | 415 | Resource names, env vars, CI/CD and bootstrap for the **personal** slot. Rewrite for NUS, or retire and let the NUS material own it? |
+| `docs/operations_runbook.md` | 94 | Opens *"Scoped to the current single Azure **dev** slot"*. Re-scope. |
+| `docs/troubleshooting.md` | 76 | Opens *"for the deployed dev slot"*. Re-scope. |
+| `docs/backup_restore.md` | 107 | Opens *"Scoped to the current single Azure **dev** slot"* — and backup policy is the one of these that an institutional host may dictate rather than leave to us. |
+| `docs/deployment_nus.md` | 443 | **A migration runbook whose migration is over.** Does it become the operations reference, or retire to `docs/archive/` with the operational half lifted out first? Easy to forget precisely because it is the document being worked from. |
 | ~~`docs/azure_github_setup.md`~~ <!-- path-ref-ok --> | 177 | **Retired 2026-10-03** to `docs/archive/azure_github_setup.md`, superseded by `docs/deployment_nus.md` (findings 2026-10-03 H-retire). |
-| `docs/cli_setup.md` | 641 | Companion to the above, and **the largest of the Azure documents** (third-largest in `docs/` when measured, after the status file and the practice audit, both since archived) — workstation CLI setup attached to the plan that was never executed. Its fate follows its parent's. |
-| `docs/architecture.md` | 124 | Infra topology and the provisioned-resource cost table. Both change at cutover. |
-| `azure_ask.md` (root) | 244 | The governance ask. Once IT has answered it, it stops being an ask and becomes a record — and it is **not indexed in `docs/README.md`** except inside another row's prose. |
+| `docs/cli_setup.md` | 657 | Companion to the above, and **the largest of the Azure documents** (third-largest in `docs/` when measured, after the status file and the practice audit, both since archived) — workstation CLI setup attached to the plan that was never executed. Its fate follows its parent's. |
+| `docs/architecture.md` | 144 | Infra topology and the provisioned-resource cost table. Both change at cutover. |
+| `azure_ask.md` (root) | 258 | The governance ask. Once IT has answered it, it stops being an ask and becomes a record — and it is **not indexed in `docs/README.md`** except inside another row's prose. |
 
 **Why it cannot be done now.** Not for want of scheduling: the correct
 text depends on facts that do not exist yet. What the NUS environment is

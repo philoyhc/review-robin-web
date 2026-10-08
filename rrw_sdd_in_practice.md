@@ -104,7 +104,7 @@ The `spec-writer` agent's charter is the same rule from the other side:
 
 **Evidence that it is followed.** Classifying each first-parent merge by the top-level folders it touches:
 - Of the **2,583** merges, 1,573 touch `app/`. Of those, **336 (21%)** also touch a live spec in the same PR, while **475 (30%)** touch a live `guide/` document.
-- Over the last 200 merges, the plan rate is **76%** and the spec rate **31%**.
+- Over the last 200 first-parent merges to `3559c7a7`, the plan rate among the 118 that touch `app/` is **76%** and the spec rate **31%**.
 - A further **246 merges (10%)** touch a live spec and no application code at all. These are the spec-on-the-way-out PRs.
 
 The rise in the recent spec rate is the rule applied at a smaller grain, not the rule weakening. Items now close in days, and an item's close often lands its spec edits beside its last build rung.
@@ -202,7 +202,7 @@ The campaign had a lesson of its own. Git reads trailers only from a message's l
 ### 6.5 Periodic sweeps and snapshots, not continuous synchronization
 
 **Decision.** Keep spec and code in agreement through scheduled sweeps and dated snapshots rather than a per-PR sync requirement.
-- **Snapshots.** Twenty-one dated codebase assessments have been written in the Claude Code lineage, and four whole-repository assessments in a separate Codex lineage. Each audits the functional areas against the code — "a route registered, a service function called, a test covering it — not against the spec's own claims". The current ones are `guide/codebase_assessment_05oct.md` and, in the Codex lineage, `guide/codex_assessment_30sep.md`.
+- **Snapshots.** By 2026-10-05, twenty-one dated codebase assessments had been written in the Claude Code lineage, and four whole-repository assessments in a separate Codex lineage. Each audits the functional areas against the code — "a route registered, a service function called, a test covering it — not against the spec's own claims". The current ones are `guide/codebase_assessment_05oct.md` and, in the Codex lineage, `guide/codex_assessment_30sep.md`.
 - **Sweeps.** A whole-folder drift sweep is due every eight weeks or 500 merges, whichever comes first. `tools/close_check.py --stale` answers whether one is due.
 - **Registers.** What an assessment surfaces but nobody owns goes into a register, each entry carrying the trigger that would promote it. Segment 19S Item 1 opened eight entries and disposed of all of them within a day.
 
@@ -305,7 +305,7 @@ RRW practices a form of spec-driven development in which **plans carry intent in
 | Maker and checker separate | `spec-writer` (at a close; reports divergence otherwise), `diff-reviewer` (cold, report-only, no model pin, once per item) and Codex, automatic on most PRs. Validated retrospectively: run cold at `9b9cc457`, `diff-reviewer` found Codex's P0.2 (`ab043317`) 25 days early | `.claude/agents/`; `CLAUDE.md` "Where work runs"; `python3 tools/pace_audit.py --cut 2460`; the Codex search in the note below |
 | Machine-checkable definition of done | For code and specs, yes: 4,800 tests on two dialects plus the gates. For UI, no: the author, looking | 15/30 fix commits browser-only; `CLAUDE.md` "Where work runs"; `guide/post_azure_todo_checklist.md` |
 | Spec coverage enforced | For absence, yes: every routing module registered, every mapped spec a live file, the declared-debt baseline empty. Adequacy, no | `tests/unit/test_spec_coverage.py`; `app/web/spec_registry.py`; `constitution.md` II |
-| Living spec, continuously synced | Periodic instead: 19 + 3 dated assessments in two model lineages, drift sweeps on a cadence, registers for what they surface | `guide/archive/codebase_assessment_*.md`; `tools/close_check.py --stale`; `docs/archive/practice-audit-2026-09-04.md` §2 |
+| Living spec, continuously synced | Periodic instead: 21 + 4 dated assessments in two model lineages by 2026-10-05, drift sweeps on a cadence, registers for what they surface | `guide/archive/codebase_assessment_*.md`; `tools/close_check.py --stale`; `docs/archive/practice-audit-2026-09-04.md` §2 |
 | Code as a generated artifact | No. Hand-edited by agents at the author's direction; specs are prose | — |
 | Autonomous agent loops | No, on stated grounds: the definition of done is not machine-checkable for the defects that occur | `docs/archive/practice-audit-2026-09-04.md` A.5 |
 | The codebase should not take the AI-authored shape | Measured: churn 1.1×, duplication 6.3% at ≥10 lines | `python3 tools/code_metrics.py` (deterministic; a few minutes, most of it the churn walk) |
