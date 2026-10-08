@@ -26,8 +26,7 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
-- None. 19U closed 2026-10-08
-  (`guide/archive/segment_19U_post_assessment_7oct.md`).
+- None.
 
 ### Queued segments
 
