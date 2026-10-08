@@ -56,10 +56,11 @@ only once diagnostics are pointed at it (`docs/deployment_nus.md` §3).
   institutional host is provisioned. Meanwhile email is optional —
   access is roster + sign-in, so the operator's own email pointing
   at the app URL covers invitations (the in-app Guide at `/guide`,
-  "Give reviewers access"). What
-  is genuinely missing is **targeted reminders** to reviewers who
-  have not submitted; until 14B, chase them by hand from the
-  Responses page's coverage view.
+  "Give reviewers access"). Reminders can already be targeted — the
+  per-row `Send reminder` on Invitations, and the Workflow card's
+  `Send reminders` to every reviewer who has not submitted — but like invitations they are
+  recorded, not delivered; until 14B, chase non-submitters by hand
+  from the Responses page's coverage view.
 - **Scheduled sends wait for a Session Home visit.** Scheduled
   activation, invitations and reminders have no clock of their own:
   they fire when an operator next opens that session's Session Home,
@@ -67,7 +68,7 @@ only once diagnostics are pointed at it (`docs/deployment_nus.md` §3).
   (`app/web/routes_operator/_session_home.py`). A reminder set for
   09:00 goes out when an operator next looks, and nothing fires while
   nobody opens the page. A failed invitation or reminder pass is
-  logged (`session.scheduled_event_failed`) and retried on the next
+  logged and audited (`session.scheduled_event_failed`) and retried on the next
   visit; scheduled activation retries a fixed number of times, then
   stops.
   Until a clock-driven trigger lands after the Azure cutover

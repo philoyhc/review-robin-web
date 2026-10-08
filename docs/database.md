@@ -154,14 +154,13 @@ above:
 | Responses by assignment | `responses.assignment_id` FK index |
 | Monitoring counts | session-scoped selects on the FK indexes above |
 | Export queries | per-session `WHERE session_id = ?` selects on FK indexes |
-| Audit events by session / date | **`ix_audit_events_session_created`** — added by this review |
+| Audit events by session / date | **`ix_audit_events_session_created`** |
 
-Only the audit-log path lacked an index. `audit_events` had a
-single-column `session_id` index but nothing covering the
-`created_at` predicate the CSV exporter
-(`ORDER BY created_at, id`) and the in-app viewer's date-range
-filter both use — so PR 3 added the composite
-`ix_audit_events_session_created (session_id, created_at)`.
+The audit-log path is the one that needs its own index: the
+single-column `session_id` index does not cover the `created_at`
+predicate the CSV exporter (`ORDER BY created_at, id`) and the in-app
+viewer's date-range filter both use, so the composite
+`ix_audit_events_session_created (session_id, created_at)` does.
 
 Index work here stays **plain cross-dialect B-tree**. Postgres-only
 index types (e.g. `JSONB` GIN) wait on the deferred type

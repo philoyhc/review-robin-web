@@ -352,7 +352,7 @@ than start clean:
   both ends.
 - **Not Rehydrate.** The app's **Extract** → **Rehydrate** round trip is not
   a carry path today: Rehydrate is off by default (`REHYDRATE_ENABLED=false`
-  in `app/config.py`), its routes 404 in a deployed environment, and it is
+  in `app/config.py`), its routes 404 wherever that flag is off, and it is
   deferred (`spec/rehydrate.md`).
 - Then run `alembic upgrade head` (or let the pipeline's migrate step) so the
   schema is current.
