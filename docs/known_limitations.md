@@ -57,8 +57,8 @@ only once diagnostics are pointed at it (`docs/deployment_nus.md` §3).
   access is roster + sign-in, so the operator's own email pointing
   at the app URL covers invitations (the in-app Guide at `/guide`,
   "Give reviewers access"). Reminders can already be targeted — the
-  per-row Send reminder on Invitations, and the Workflow card's Send
-  reminders to every reviewer who has not submitted — but like invitations they are
+  per-row `Send reminder` on Invitations, and the Workflow card's
+  `Send reminders` to every reviewer who has not submitted — but like invitations they are
   recorded, not delivered; until 14B, chase non-submitters by hand
   from the Responses page's coverage view.
 - **Scheduled sends wait for a Session Home visit.** Scheduled
