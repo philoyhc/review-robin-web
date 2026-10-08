@@ -38,6 +38,7 @@ from app.db.models import (
     SessionRuleSet,
     User,
 )
+from app.services import session_guard
 from app.services import session_lifecycle as lifecycle
 from app.services import audit
 from app.services import unit_of_work
@@ -162,6 +163,49 @@ def ensure_locked_display_fields(
         db.flush()
         db.refresh(instrument)
     return created
+
+
+
+def repair_display_fields(db: Session, review_session: ReviewSession) -> bool:
+    """The Instruments page's per-request display-field repair, which runs
+    only while setup is editable (findings Bc8, ruled 2026-10-08).
+
+    Seeds each instrument's locked Name / Email rows, prunes rows whose
+    source has no populated value, then runs the reviewee and assignment
+    lazy seeds — all idempotent. Decided under the session lock, so a
+    session that went ``ready`` (or was closed or archived) after the
+    request loaded it keeps its display fields as they stand. Commits on
+    every path, as the page always did, so no session lock taken earlier
+    in the request (``observe_deadline``'s) outlives the repair; returns
+    whether the repair ran."""
+    from ._display_fields import (
+        prune_unpopulated_display_fields,
+        seed_display_fields_from_assignments,
+        seed_display_fields_from_reviewees,
+    )
+
+    if not lifecycle.is_editable(review_session):
+        db.commit()
+        return False
+    locked = session_guard.lock_session(db, review_session)
+    if not lifecycle.is_editable(locked):
+        db.commit()
+        return False
+    instruments = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .order_by(Instrument.order, Instrument.id)
+    ).scalars()
+    for instrument in instruments:
+        ensure_locked_display_fields(db, instrument=instrument)
+    # Prune before the lazy seeds, so the canonical seed order —
+    # reviewee.* before pair_context.* — falls out naturally: any stale
+    # rows are gone, then the seeds append fresh in sequence.
+    prune_unpopulated_display_fields(db, review_session)
+    seed_display_fields_from_reviewees(db, review_session)
+    seed_display_fields_from_assignments(db, review_session)
+    db.commit()
+    return True
 
 
 def create_instrument(

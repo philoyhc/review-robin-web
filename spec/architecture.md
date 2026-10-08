@@ -603,6 +603,11 @@ session nothing does, and the reviewer is shown three blank
   slot with at least one populated value across the session's
   relationships. Sessions without populated pair-context slots
   are a no-op.
+- Rendering the Instruments page repairs these rows — the locked
+  pair, the prune of unpopulated rows, then both seeds — through
+  `instruments.repair_display_fields`, but only while setup is editable,
+  decided under the session lock (findings Bc8): a session past setup
+  keeps its rows as they stand.
 - On the reviewer surface Name and Email are still rendered by the
   hardcoded reviewee-identity column in `review_surface.html`, not as
   display-field columns. On the Instruments page they are the

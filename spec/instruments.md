@@ -865,7 +865,8 @@ Each row holds:
 
 **Name and Email are locked**: every instrument is created with these
 two rows (`ensure_locked_display_fields`, called by
-`ensure_default_instrument` and `create_instrument`), and each renders
+`ensure_default_instrument` and `create_instrument`, and by the page
+render's `repair_display_fields` while setup is editable), and each renders
 a ticked, disabled checkbox, no move buttons, and a tooltip naming the
 pinned slot — "Always shown — pinned first" (Name) / "Always shown — pinned second" (Email). **On a
 group-scoped instrument**, a field a group row can't show — Email

@@ -997,7 +997,12 @@ browsers, and direct POSTs bypass the picker entirely).
   send, regenerate or reminder cannot land on one reverted or closed
   since (findings Bc5). The gate is
   `session_guard.require_state`; the route-level `_require_*` checks stay
-  as early refusals and the service check can only refuse more.
+  as early refusals and the service check can only refuse more. The
+  Instruments page's display-field repair
+  (`instruments.repair_display_fields`, findings Bc8) is the one gate that
+  skips rather than refuses: when the loaded session looks editable it
+  re-checks under the same lock, through `lock_session` and `is_editable`
+  rather than `require_state`, and it commits on every path.
   - **Re-entrant.** Several guarded calls in one request re-lock and
     re-read; `lock_session` flushes first, so an unflushed edit survives.
   - **Held to the commit.** The lock lasts until the transaction ends, so

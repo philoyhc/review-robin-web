@@ -919,12 +919,11 @@ def build_instruments_context(
 ) -> dict[str, Any]:
     """Build the template context for the operator instruments index.
 
-    Runs the per-request idempotent display-field backfills
-    (locked-row safety net + lazy seeds + stale-row prune),
-    derives the editing-state machine, and packages the URL-driven
-    error / cascade query params into the dict the template expects.
-    Commits the backfill side-effects before returning so subsequent
-    queries see the seeded rows.
+    Runs the per-request idempotent display-field repair while setup is
+    editable (``instruments_service.repair_display_fields``, which
+    commits so subsequent queries see the seeded rows), derives the
+    editing-state machine, and packages the URL-driven error / cascade
+    query params into the dict the template expects.
     """
     instruments = list(
         db.execute(
@@ -933,30 +932,10 @@ def build_instruments_context(
             .order_by(Instrument.order, Instrument.id)
         ).scalars()
     )
-    # Make sure every instrument has its locked Name / Email Display
-    # Fields rows. The Alembic migration backfills existing instruments;
-    # this is the per-request safety net for any sessions that slip
-    # through (e.g. created before the migration ran).
-    for instrument in instruments:
-        instruments_service.ensure_locked_display_fields(
-            db, instrument=instrument
-        )
-    # Prune Display Fields rows whose underlying data source no longer
-    # has any populated value (locked Name / Email rows are exempt and
-    # always kept). Runs before the lazy seeds so the canonical seed
-    # order — reviewee.* before pair_context.* — falls out naturally:
-    # any stale rows are gone, then the seeds append fresh in the
-    # canonical sequence.
-    instruments_service.prune_unpopulated_display_fields(db, review_session)
-    # Per-request idempotent backfill of the lazy-seeded display
-    # fields. The reviewee / assignment imports already trigger these
-    # in the happy path; calling them on every GET catches sessions
-    # whose roster or assignments were imported before the lazy-seed
-    # logic landed (PR #203). Cheap — both helpers short-circuit when
-    # there's nothing to seed.
-    instruments_service.seed_display_fields_from_reviewees(db, review_session)
-    instruments_service.seed_display_fields_from_assignments(db, review_session)
-    db.commit()
+    # The idempotent display-field repair (locked Name / Email rows,
+    # stale-row prune, lazy seeds). Only while setup is editable,
+    # decided under the session lock (findings Bc8); it commits.
+    instruments_service.repair_display_fields(db, review_session)
     # The session runs ``expire_on_commit=False``, so the commit
     # above leaves any already-loaded ``display_fields`` collections
     # stale — they miss rows the lazy seeds added this request (e.g.

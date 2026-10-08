@@ -175,7 +175,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   `workflow_run_started` with no failed row.** Since #2883 the started
   row commits before the steps; Generate's partial commits made the same
   gap possible before.
-- **Bc8** (found while fixing Bc4, read on #2884; low, author) **The
+- ~~**Bc8**~~ — **Done in #2890** (the render's repair is `instruments.repair_display_fields`, gated under the session lock) (found while fixing Bc4, read on #2884; low, author) **The
   Instruments page render writes with no state gate.** Building the page
   runs `ensure_locked_display_fields`, `prune_unpopulated_display_fields`
   and the display-field seeds, then commits
