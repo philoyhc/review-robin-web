@@ -241,8 +241,8 @@
         --card-warning-fg: var(--amber-deep);
         /* Help cards — the Instruments page's slabs (`.rs-help-card`)
            and the Setup pages' guidance disclosure (`.page-guidance`).
-           Border is one step off the fill (darker in light, lighter in
-           dark): a soft edge against the page in both themes, which
+           Border is two palette steps off the fill (darker in light,
+           lighter in dark): a soft edge against the page in both themes, which
            gives the card a shape
            without outlining it. It used to resolve to the fill's own
            primitive so the edge vanished — right while the slab sat
@@ -453,8 +453,8 @@
          text on the slab would have hit 3.96:1 light / 3.41:1 dark, both
          under AA).
 
-         `--card-help-border` is one step off the fill — a soft edge,
-         where `.card`'s 2px `--border-default` would outline the
+         `--card-help-border` is two palette steps off the fill — a soft
+         edge, where `.card`'s 2px `--border-default` would outline the
          slab (see the token's own comment). They map independently
          rather than one pointing at the other, so either can be
          repointed alone.
@@ -1439,8 +1439,8 @@
          cell before it.
 
          No drop shadow on the panel, following the rest of the
-         sheet — every `box-shadow` in here is a solid offset marker
-         or a focus ring. An opaque `--surface-card` and a border do
+         sheet — every `box-shadow` in here is solid (offset markers,
+         chip edges, selection rings and focus rings). An opaque `--surface-card` and a border do
          the separating. */
       body.ui-v2 .table-pager-cluster {
         display: inline-flex;

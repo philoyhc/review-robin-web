@@ -148,8 +148,8 @@ TARGETS = [
     (".danger-zone", "Danger zone card",
      [("background", "bg", "--card-warning-bg"), ("text", "fg", "--text-body"),
       ("border", "border", "--card-warning-border")]),
-    # Border facet included: the help card's edge is its own token, one step
-    # off the fill, and Part C is how you find out *which* token paints
+    # Border facet included: the help card's edge is its own token, two palette
+    # steps off the fill, and Part C is how you find out *which* token paints
     # an edge.
     # Named "Help card", not "Instrument help card": since 19E rung 6a the
     # --card-help-* tokens also paint the page-guidance disclosure on every

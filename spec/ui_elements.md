@@ -327,8 +327,8 @@ to CSS classes.
 > same reason the family has its own `-fg` rather than inheriting
 > `--text-body`.
 >
-> **A slab with a defined edge**: `--card-help-border` is darker than the
-> fill — **2.54:1** against the page in light, **1.95:1** in dark. Enough
+> **A slab with a defined edge**: `--card-help-border` is two palette
+> steps off the fill (darker in light, lighter in dark) — **2.54:1** against the page in light, **1.95:1** in dark. Enough
 > for a card standing alone in a column to read as bounded; still short of
 > the 3:1 WCAG 1.4.11 asks of a UI-component boundary, so it is decoration
 > rather than a control edge, and does not have to reach 3:1. The two
