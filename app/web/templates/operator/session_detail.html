@@ -35,10 +35,9 @@
        an instant-swap enhancement, and the Unlock/Lock/Cancel controls keep
        real ``?editing`` hrefs so no-JS degrades to navigation.
 
-       Details / Schedule / UI-settings inputs submit as one form via the HTML5
-       ``form="config-save-{id}"`` association (they can't physically nest —
-       the Owners sub-card carries its own form in a later slice). Save posts to
-       the config route (Slice 3); the fields mirror the Edit page's names. #}
+       Details / Schedule / Tags / optional-tab inputs submit as one form via
+       the HTML5 ``form="config-save-{id}"`` association (they can't physically
+       nest). Save posts to the config route (Slice 3). #}
     <form id="config-save-{{ session.id }}" method="post"
           action="/operator/sessions/{{ session.id }}/config"></form>
     <datalist id="config-timezone-options">

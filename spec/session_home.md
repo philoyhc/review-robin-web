@@ -401,7 +401,7 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   and validated only; the lobby edits them in any state
   (`spec/sessions_overview.md`).
 - **Optional setup tabs** (`#config-optional-tabs`, a
-  `role="group"` labelled "Optional setup tabs", no subtitle) — two
+  `role="group"` labeled "Optional setup tabs", no subtitle) — two
   checkboxes: **Relationships tab and page**
   (`relationships_enabled`) and **Observers tab and page**
   (`observers_enabled`), letting the operator opt into those

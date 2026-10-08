@@ -233,24 +233,26 @@ Taken 2026-10-08 at `0e330810`.
 |---|---|---|
 | Templates | 1 | `grep -rln "config-ui-settings-card" app/web/templates` |
 | Test files asserting the old structure | 3 | `grep -rln "config-ui-settings-card\|config-tags-card" tests/` |
-| Live specs naming the Session Home sub-cards | 8 | `grep -rln "User interface settings\|config-tags-card\|Tags card" spec/` |
+| Live specs naming the Session Home sub-cards | 10 (9 edited; `spec/sessions_overview.md` already said "Tags field") | `grep -rln "User interface settings\|config-tags-card\|Tags card" spec/` |
 
 ### Status — closed 2026-10-08
 
 **Shipped as planned, in one PR.** Session Home's details card holds no
 sub-card: Tags (`#config-tags-field`) sits under Description, the
-toggles (`#config-optional-tabs`, labelled "Optional setup tabs", no
+toggles (`#config-optional-tabs`, labeled "Optional setup tabs", no
 subtitle) under Tags, and the Save / Cancel / Lock cluster at the foot
 of the right column. The save path is untouched. The Tags helper moved
 below the box as `.form-help` (judgment call above). Rendered in
 Chromium in both modes before the PR; the author's browser check is
-still owed. The close's `spec-writer` pass edited seven of the eight
-named specs (`spec/session_home.md` through `spec/setup_pages.md`) and
-flagged `spec/session_owners.md` and `spec/operator_ui_concept.md`'s
-"approximates Session Home's placements" for the Create page, both
-reworded and the former added to Doc impact. Left as is, not this
-item's: `spec/settings_inventory.md`'s `display_timezone` row still
-names the retired Edit Session Details form.
+still owed. The close's `spec-writer` pass edited seven specs; I
+reworded the Create page's "approximates Session Home's placements" in
+two more (`spec/session_owners.md`, added to Doc impact, and
+`spec/operator_ui_concept.md`). The cold read found a test passing only
+on a CSS comment (now pins `#config-optional-tabs`) and a stale line in
+`spec/participant_model.md`, both fixed. Left as is, not this item's:
+`spec/settings_inventory.md`'s `display_timezone` row still names the
+retired Edit Session Details form, and several code comments still name
+the old "User interface settings card".
 
 ### PR ladder
 
@@ -261,7 +263,7 @@ names the retired Edit Session Details form.
 ### Definition of done
 
 - Session Home's details card holds no `.card` and no `.bottom-grid`;
-  Tags sits under Description and the toggles under Tags, labelled
+  Tags sits under Description and the toggles under Tags, labeled
   "Optional setup tabs"; the Save cluster foots the right column
   (`tests/integration/test_session_home_tags_card.py`).
 - `## Doc impact` section present and current
