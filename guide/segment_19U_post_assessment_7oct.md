@@ -170,7 +170,7 @@ uses one row; the slot-reason tests do not assert that nothing landed).
 
 - A Postgres `lock_timeout` to bound a stuck wait: deployment
   configuration; **the author decides** with the Azure deployment. Still
-  open at close.
+  open at close; carried as item 11 of `guide/post_azure_todo_checklist.md`.
 
 ### Out of scope
 
