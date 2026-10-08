@@ -22,6 +22,7 @@ Routes owned by this slice:
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -123,49 +124,55 @@ async def instruments_order(
     """
     _require_instrument_editable(review_session)
     body = await require_json_object(request, label="instruments/order")
-    raw_items = body.get("items")
-    if not isinstance(raw_items, list):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="instruments/order.items must be a list",
-        )
-    items: list[int | None] = []
-    for v in raw_items:
-        if v is None:
-            items.append(None)
-        elif isinstance(v, bool):
+    # Everything after the request body is read runs in the threadpool:
+    # the instrument services lock the session row (findings Bc4), and
+    # a lock wait on the event loop would stall the worker.
+    def _apply():
+        raw_items = body.get("items")
+        if not isinstance(raw_items, list):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="instruments/order.items must be integers or null",
+                detail="instruments/order.items must be a list",
             )
-        elif isinstance(v, int):
-            items.append(v)
-        else:
+        items: list[int | None] = []
+        for v in raw_items:
+            if v is None:
+                items.append(None)
+            elif isinstance(v, bool):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="instruments/order.items must be integers or null",
+                )
+            elif isinstance(v, int):
+                items.append(v)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="instruments/order.items must be integers or null",
+                )
+        try:
+            instruments_service.reorder_instruments(
+                db, review_session=review_session, items=items, actor=user
+            )
+        except ValueError as exc:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="instruments/order.items must be integers or null",
-            )
-    try:
-        instruments_service.reorder_instruments(
-            db, review_session=review_session, items=items, actor=user
+                status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+            ) from exc
+        # Echo the persisted state so the client can patch the DOM (page-
+        # break cards + +Page break button disabled states) without a
+        # full reload.
+        rows = (
+            db.execute(
+                select(Instrument)
+                .where(Instrument.session_id == review_session.id)
+                .order_by(Instrument.order, Instrument.id)
+            ).scalars().all()
         )
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-        ) from exc
-    # Echo the persisted state so the client can patch the DOM (page-
-    # break cards + +Page break button disabled states) without a
-    # full reload.
-    rows = (
-        db.execute(
-            select(Instrument)
-            .where(Instrument.session_id == review_session.id)
-            .order_by(Instrument.order, Instrument.id)
-        ).scalars().all()
-    )
-    order = [inst.id for inst in rows]
-    breaks_at = [inst.id for inst in rows if inst.starts_new_page]
-    return JSONResponse(
-        {"ok": True, "order": order, "breaks_at": breaks_at},
-        status_code=status.HTTP_200_OK,
-    )
+        order = [inst.id for inst in rows]
+        breaks_at = [inst.id for inst in rows if inst.starts_new_page]
+        return JSONResponse(
+            {"ok": True, "order": order, "breaks_at": breaks_at},
+            status_code=status.HTTP_200_OK,
+        )
+
+    return await run_in_threadpool(_apply)

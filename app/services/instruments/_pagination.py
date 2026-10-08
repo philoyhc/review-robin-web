@@ -90,6 +90,7 @@ def reorder_instruments(
     state) short-circuit before the lifecycle invalidation + audit
     emit — mirrors ``reorder_display_fields``.
     """
+    lifecycle.require_editable(db, review_session)
     if not isinstance(items, list):
         raise ValueError("items must be a list")
     if not items or items[0] is None:
@@ -182,6 +183,7 @@ def create_page_break_after(
     operator's intent (which card's "+ Page break" button was
     clicked).
     """
+    lifecycle.require_editable(db, instrument.session)
     review_session = instrument.session
     siblings = _ordered_instruments(db, review_session)
     try:
@@ -242,6 +244,7 @@ def clear_page_break(
     page break (``starts_new_page`` is already ``False``). Callers
     that want a no-op-safe variant should check the flag first.
     """
+    lifecycle.require_editable(db, instrument.session)
     if not instrument.starts_new_page:
         raise ValueError(
             f"instrument {instrument.id} does not carry a page break"

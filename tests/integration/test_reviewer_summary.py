@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Assignment, ReviewSession
+from ._past_draft_setup import past_draft_setup
 
 
 @pytest.fixture
@@ -236,9 +237,10 @@ def test_summary_single_instrument_heading_uses_short_label_when_set(
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
-    instruments_service.update_short_label(
-        db, instrument=instrument, short_label="Self-eval", actor=None
-    )
+    with past_draft_setup(db, instrument):
+        instruments_service.update_short_label(
+            db, instrument=instrument, short_label="Self-eval", actor=None
+        )
 
     assignment = db.execute(
         select(Assignment).where(Assignment.session_id == review_session.id)
@@ -377,12 +379,14 @@ def test_summary_multi_instrument_headings_use_page_prefix(
     )
     assert len(instruments) == 2
     instrument_1, instrument_2 = instruments
-    instruments_service.update_short_label(
-        db, instrument=instrument_1, short_label="Self-eval", actor=None
-    )
-    instruments_service.update_short_label(
-        db, instrument=instrument_2, short_label="Peer review", actor=None
-    )
+    with past_draft_setup(db, instrument_1):
+        instruments_service.update_short_label(
+            db, instrument=instrument_1, short_label="Self-eval", actor=None
+        )
+    with past_draft_setup(db, instrument_2):
+        instruments_service.update_short_label(
+            db, instrument=instrument_2, short_label="Peer review", actor=None
+        )
     from ._full_matrix import pin_full_matrix_on_all_instruments
     pin_full_matrix_on_all_instruments(db, review_session.id)
     operator.post(

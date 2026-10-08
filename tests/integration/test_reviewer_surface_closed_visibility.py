@@ -39,6 +39,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._past_draft_setup import past_draft_setup
 
 
 def _restore_operator_identity(operator: AuthenticatedUser) -> None:
@@ -193,15 +194,16 @@ def _close_after_rae_submits(
     ).scalar_one()
     modes = [released_mode] + ([second_instrument_mode] if two else [])
     for instrument, mode in zip(instruments, modes):
-        visibility_policies.upsert_policy(
-            db,
-            review_session=review_session,
-            instrument=instrument,
-            audience="peer_reviewer",
-            while_ongoing_mode="raw",
-            after_release_mode=mode,
-            user=operator,
-        )
+        with past_draft_setup(db, review_session):
+            visibility_policies.upsert_policy(
+                db,
+                review_session=review_session,
+                instrument=instrument,
+                audience="peer_reviewer",
+                while_ongoing_mode="raw",
+                after_release_mode=mode,
+                user=operator,
+            )
     db.commit()
     close_resp = client.post(
         f"/operator/sessions/{review_session.id}/workflow/close",

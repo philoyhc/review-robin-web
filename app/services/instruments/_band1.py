@@ -88,6 +88,7 @@ def set_band1_assignment_rules(
             "operand_tag": "reviewee.tag1",  # used when op is IS THE SAME AS / IS DIFFERENT FROM
         }
     """
+    lifecycle.require_editable(db, instrument.session)
     rules_json = _build_rules_json(
         link1_mode=link1_mode,
         link1_combinator=link1_combinator,
@@ -408,6 +409,7 @@ def set_exclude_self_reviews(
 
     No-op writes skip the audit + lifecycle side effects.
     """
+    lifecycle.require_editable(db, instrument.session)
     current = get_exclude_self_reviews(db, instrument)
     if current == value:
         return instrument

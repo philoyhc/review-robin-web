@@ -954,3 +954,267 @@ def test_generate_refuses_a_session_activated_at_the_lock(
     assert not db.execute(
         select(Assignment.id).where(Assignment.session_id == session.id)
     ).all()
+
+
+# --------------------------------------------------------------------------- #
+# Rung 5 — instruments                                                        #
+# --------------------------------------------------------------------------- #
+
+
+def test_an_instrument_edit_refuses_a_session_activated_at_the_lock(
+    db: Session, monkeypatch
+) -> None:
+    from app.services import instruments as instruments_service
+
+    session = _make_validated_session(db, "guard-instrument")
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalars().first()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        instruments_service.update_short_label(
+            db,
+            instrument=instrument,
+            short_label="Late",
+            actor=_operator(db, session),
+        )
+
+    db.expire_all()
+    assert db.get(Instrument, instrument.id).short_label != "Late"
+
+
+def test_an_async_instrument_route_answers_409_off_the_event_loop(
+    client, db: Session, monkeypatch
+) -> None:
+    """The identity JSON route reads its body, then runs the guarded
+    write in the threadpool: the conflict still reaches the operator as
+    the 409."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Identity", "code": "guard-identity"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-identity")
+    ).scalar_one()
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalars().first()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/identity",
+        json={"short_label": "Late"},
+    )
+
+    assert response.status_code == 409
+    db.expire_all()
+    assert db.get(Instrument, instrument.id).short_label != "Late"
+
+
+def test_an_identity_save_of_both_fields_is_one_commit(
+    client, db: Session, monkeypatch
+) -> None:
+    """Short label and description each gate and used to commit apart, so
+    a session archived at the description's gate refused after the label
+    had landed. The route is one unit: the 409 lands neither."""
+    client.post(
+        "/operator/sessions",
+        data={"name": "Identity", "code": "guard-identity-two"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-identity-two")
+    ).scalar_one()
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalars().first()
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=2)
+    commits = _counting_commits(monkeypatch, db)
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/identity",
+        json={"short_label": "Late", "description": "Also late"},
+    )
+
+    assert response.status_code == 409
+    assert commits == []
+    db.expire_all()
+    assert db.get(Instrument, instrument.id).short_label != "Late"
+
+
+def _rung5_writes():
+    from app.services import instruments as i
+    from app.services import visibility_policies as vp
+
+    def first(rows):
+        return rows[0] if rows else None
+
+    def df(inst):
+        return first(list(inst.display_fields))
+
+    def rf(inst):
+        return first(list(inst.response_fields))
+
+    return {
+        "set_band1_assignment_rules": lambda db, s, n, u: i.set_band1_assignment_rules(
+            db, instrument=n, link1_mode=None, link1_combinator=None,
+            link1_rules=[], link2_mode=None, link2_combinator=None,
+            link2_rules=[], actor=u,
+        ),
+        "set_exclude_self_reviews": lambda db, s, n, u: i.set_exclude_self_reviews(
+            db, instrument=n, value=True, actor=u
+        ),
+        "set_band2_state": lambda db, s, n, u: i.set_band2_state(
+            db, instrument=n, state={}, actor=u
+        ),
+        "add_display_field": lambda db, s, n, u: i.add_display_field(
+            db, instrument=n, source_type="reviewee", source_field="tag_1",
+            label="", visible=True, actor=u,
+        ),
+        "update_display_field": lambda db, s, n, u: i.update_display_field(
+            db, field=df(n), label="x", visible=True, actor=u
+        ),
+        "delete_display_field": lambda db, s, n, u: i.delete_display_field(
+            db, field=df(n), actor=u
+        ),
+        "move_display_field": lambda db, s, n, u: i.move_display_field(
+            db, field=df(n), direction="down", actor=u
+        ),
+        "reorder_display_fields": lambda db, s, n, u: i.reorder_display_fields(
+            db, instrument=n, ordered_ids=[], actor=u
+        ),
+        "set_sort_display_fields": lambda db, s, n, u: i.set_sort_display_fields(
+            db, instrument=n, fields=[], actor=u
+        ),
+        "create_instrument": lambda db, s, n, u: i.create_instrument(
+            db, review_session=s, actor=u
+        ),
+        "replicate_instrument": lambda db, s, n, u: i.replicate_instrument(
+            db, review_session=s, source=n, actor=u
+        ),
+        "delete_instrument": lambda db, s, n, u: i.delete_instrument(
+            db, instrument=n, actor=u
+        ),
+        "update_instrument_description": (
+            lambda db, s, n, u: i.update_instrument_description(
+                db, instrument=n, description="x", actor=u
+            )
+        ),
+        "set_group_boundary": lambda db, s, n, u: i.set_group_boundary(
+            db, instrument=n, boundary_pairs=[], actor=u
+        ),
+        "set_unit_of_review": lambda db, s, n, u: i.set_unit_of_review(
+            db, instrument=n, mode="reviewee", boundary_pairs=[], actor=u
+        ),
+        "set_column_widths": lambda db, s, n, u: i.set_column_widths(
+            db, instrument=n, widths={}, actor=u
+        ),
+        "reorder_instruments": lambda db, s, n, u: i.reorder_instruments(
+            db, review_session=s, items=[]
+        ),
+        "create_page_break_after": lambda db, s, n, u: i.create_page_break_after(
+            db, instrument=n
+        ),
+        "clear_page_break": lambda db, s, n, u: i.clear_page_break(db, instrument=n),
+        "bulk_save_fields": lambda db, s, n, u: i.bulk_save_fields(
+            db, instrument=n, rows=[], actor=u
+        ),
+        "add_response_field": lambda db, s, n, u: i.add_response_field(
+            db, instrument=n, field_key="late", label="Late",
+            response_type="text", required=False, help_text="",
+            help_text_visible=False, actor=u,
+        ),
+        "add_default_response_field": lambda db, s, n, u: i.add_default_response_field(
+            db, instrument=n, actor=u
+        ),
+        "update_response_field": lambda db, s, n, u: i.update_response_field(
+            db, field=rf(n), label="x", required=False, validation=None,
+            help_text="", help_text_visible=False, actor=u,
+        ),
+        "delete_response_field": lambda db, s, n, u: i.delete_response_field(
+            db, field=rf(n), confirm=True, actor=u
+        ),
+        "move_response_field": lambda db, s, n, u: i.move_response_field(
+            db, field=rf(n), direction="down", actor=u
+        ),
+        "upsert_policy": lambda db, s, n, u: vp.upsert_policy(
+            db, review_session=s, instrument=n, audience="reviewer",
+            while_ongoing_mode=None, after_release_mode=None, user=u,
+        ),
+        "upsert_many": lambda db, s, n, u: vp.upsert_many(
+            db, review_session=s, instrument=n, rows=[], user=u
+        ),
+    }
+
+
+
+@pytest.mark.parametrize("write", sorted(_rung5_writes()))
+def test_each_rung5_write_refuses_a_session_activated_at_the_lock(
+    db: Session, monkeypatch, write: str
+) -> None:
+    """Every instrument and visibility writer gates first: a session the
+    scheduler activated as the write starts is refused, and stays ready."""
+    session = _make_validated_session(db, f"g5-{write[:24]}")
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalars().first()
+    user = _operator(db, session)
+    _lands_at_the_lock(
+        monkeypatch, db, _status_becomes(session, "ready"), commit=True
+    )
+
+    with pytest.raises(lifecycle.SessionStateConflict):
+        _rung5_writes()[write](db, session, instrument, user)
+
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).status == "ready"
+
+
+def test_a_band2_save_is_one_commit(client, db: Session, monkeypatch) -> None:
+    """The Band 2 save syncs display-field visibility one field at a time,
+    and each sync committed, releasing the gate's lock before the rest of
+    the save. The route is now one unit: a session archived at the second
+    field's gate commits nothing."""
+    from app.db.models import InstrumentDisplayField
+    from app.services import instruments as instruments_service
+
+    client.post(
+        "/operator/sessions",
+        data={"name": "Band two", "code": "guard-band2"},
+        follow_redirects=False,
+    )
+    session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "guard-band2")
+    ).scalar_one()
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalars().first()
+    for field in ("tag_1", "tag_2"):
+        instruments_service.add_display_field(
+            db, instrument=instrument, source_type="reviewee",
+            source_field=field, label="", visible=True,
+            actor=_operator(db, session),
+        )
+    # Lock 1 is the save's gate, 2 and 3 the two fields' visibility syncs.
+    _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"), at=3)
+    commits = _counting_commits(monkeypatch, db)
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/band2-state",
+        json={"selected_display_keys": []},
+    )
+
+    assert response.status_code == 409
+    assert commits == []
+    db.expire_all()
+    assert all(
+        f.visible
+        for f in db.execute(
+            select(InstrumentDisplayField).where(
+                InstrumentDisplayField.instrument_id == instrument.id,
+                InstrumentDisplayField.source_field.in_(["tag_1", "tag_2"]),
+            )
+        ).scalars()
+    )
