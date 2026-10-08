@@ -394,13 +394,13 @@ def assignments_picked_handles(
     """``(reviewer_handle, reviewee_handle)`` when ``needle`` is
     exactly one of that side's offered labels, else ``None`` per side.
 
-    Resolved per side because the two carry different rules, and both
-    are the roster pages' own: a **reviewer** tail must contain ``@``
-    (their handle is always an email, and the guard also keeps a tag
-    like ``Group (B)`` from reading as a pick), a **reviewee** tail
-    need not (``email_or_identifier`` may be an anonymous ID in the
-    asymmetric mode). Mirroring them here beats inventing a third
-    rule for the page that joins the two.
+    Resolved per side because the two carry different rules: a
+    **reviewer** tail must contain ``@`` (their handle is always an
+    email), a **reviewee** tail need not (``email_or_identifier`` may
+    be an anonymous ID in the asymmetric mode). The roster pages no
+    longer guard on ``@`` (old findings C5), but this page joins the
+    two sides in one box, where the guard keeps a tag like
+    ``Group (B)`` from reading as a reviewer pick.
     """
     reviewer_tail = _picked_label_handle(needle, _reviewer_labels(reviewers))
     reviewee_tail = _picked_label_handle(needle, _reviewee_labels(reviewees))

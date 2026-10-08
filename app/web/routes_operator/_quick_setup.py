@@ -29,6 +29,7 @@ from fastapi import (
 )
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
@@ -57,6 +58,7 @@ from app.web.deps import (
 from app.web.routes_operator._shared import (
     _quick_setup_cookie_name,
     _require_response_loss_ack,
+    session_payload_error,
 )
 
 
@@ -222,21 +224,24 @@ async def create_session(
     # (19S Item 9 rung 4; Session Home's save got the same fix in rung 2).
     correlation_id = request_correlation_id()
 
-    payload = SessionCreate(
-        name=name,
-        code=code,
-        description=description or None,
-        deadline=parsed_deadline,
-        display_timezone=timezone_name,
-        help_contact=help_contact or None,
-        scheduled_activate_at=parsed_scheduled_activate_at,
-        invite_offsets=parsed_invite_offsets,
-        reminder_offsets=parsed_reminder_offsets,
-        relationships_enabled=relationships_enabled,
-        observers_enabled=observers_enabled,
-        responses_release_at=parsed_responses_release_at,
-        responses_release_until=parsed_responses_release_until,
-    )
+    try:
+        payload = SessionCreate(
+            name=name,
+            code=code,
+            description=description or None,
+            deadline=parsed_deadline,
+            display_timezone=timezone_name,
+            help_contact=help_contact or None,
+            scheduled_activate_at=parsed_scheduled_activate_at,
+            invite_offsets=parsed_invite_offsets,
+            reminder_offsets=parsed_reminder_offsets,
+            relationships_enabled=relationships_enabled,
+            observers_enabled=observers_enabled,
+            responses_release_at=parsed_responses_release_at,
+            responses_release_until=parsed_responses_release_until,
+        )
+    except ValidationError as exc:
+        raise session_payload_error(exc) from exc
     review_session = sessions.create_session(
         db,
         user=user,

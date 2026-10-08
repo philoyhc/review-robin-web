@@ -22,6 +22,7 @@ from fastapi import Depends, HTTPException, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -328,6 +329,20 @@ def _lifecycle_error_response(exc: lifecycle.LifecycleError) -> HTTPException:
     return HTTPException(
         status_code=code_to_status.get(exc.code, status.HTTP_400_BAD_REQUEST),
         detail=str(exc),
+    )
+
+
+def session_payload_error(exc: ValidationError) -> HTTPException:
+    """A session payload's field errors (a Name over 255 characters, say)
+    as the 422 every session form answers with, rather than a 500
+    (findings C4). The lobby expander, Session Home's Details Save and
+    Create share it."""
+    return HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail="; ".join(
+            f"{'.'.join(map(str, error['loc'])) or 'session'}: {error['msg']}"
+            for error in exc.errors()
+        ),
     )
 
 

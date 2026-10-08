@@ -282,7 +282,7 @@ def export(
             if path == ".gitignore":
                 missing = _gitignore_lines_missing(target)
                 if not missing:
-                    report.append(f"kept     {path} (all three harness lines present)")
+                    report.append(f"kept     {path} (all {len(GITIGNORE_REQUIRED)} harness lines present)")
                     continue
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with target.open("a", encoding="utf-8") as fh:

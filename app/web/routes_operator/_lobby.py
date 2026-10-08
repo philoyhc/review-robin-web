@@ -29,7 +29,11 @@ from app.web.deps import (
     require_session_operator,
     require_sys_admin_or_session_operator,
 )
-from app.web.routes_operator._shared import _templates, parse_session_deadline
+from app.web.routes_operator._shared import (
+    _templates,
+    parse_session_deadline,
+    session_payload_error,
+)
 
 
 router = APIRouter()
@@ -348,14 +352,7 @@ def lobby_edit_submit(
                 review_session, name=name, code=code, deadline=parsed_deadline
             )
         except ValidationError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="; ".join(
-                    f"{'.'.join(map(str, error['loc'])) or 'session'}: "
-                    f"{error['msg']}"
-                    for error in exc.errors()
-                ),
-            ) from exc
+            raise session_payload_error(exc) from exc
 
     if payload is not None and sessions.payload_changes_session(
         review_session, payload

@@ -5,11 +5,9 @@
 
 {% block extra_head %}
   <style>
-    /* Audit-log table — constrain column widths so the JSON
-       detail cell wraps rather than horizontally bloating the
-       table. PR 3 will replace the raw JSON with a per-shape
-       pretty-printer + per-row expander; until then, this is
-       the cheap fix. */
+    /* Audit-log table — constrain column widths so the detail
+       cell (the per-row expander below) wraps rather than
+       horizontally bloating the table. */
     body.ui-v2 .audit-log-table {
       table-layout: fixed;
       width: 100%;
@@ -95,9 +93,8 @@
     </div>
     <p class="muted">
       Append-only record of every mutating action on this
-      session. Newer events first. The canonical detail envelope
-      is rendered raw as JSON in this view; per-row pretty-print
-      lands in 16C PR 3.
+      session. Newer events first. Open a row's "Show detail" to
+      read it.
     </p>
 
     <form method="get" action="{{ viewer_base_url }}" style="margin-top: 16px;">
