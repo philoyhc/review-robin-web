@@ -8,7 +8,7 @@ and `python3 tools/close_check.py 19U.1` reads Item 1's. The segment stays
 open after Item 1 for the author's further small patches (2026-10-07), and
 closes only when the author says so.
 
-## Item 1 — session-state guard in the service layer
+## Item 1 — session-state guard in the service layer (closed 2026-10-08)
 
 ### Opportunity
 
@@ -75,6 +75,66 @@ Taken 2026-10-07 at `9eda6273`.
 | `invalidate_if_validated(` callers | 44 | `grep -rn "invalidate_if_validated(" app/ \| grep -v "def " \| wc -l` |
 | Lifecycle transition functions | 11 | `grep -n "^def " app/services/session_lifecycle.py` |
 
+### Status — closed 2026-10-08
+
+**Laddered as planned**: rungs 2–6 are #2881–#2885 (cumulative-read
+base `d8445500`), this close is PR 7. What moved:
+
+- **Pulled forward to rung 3** (Codex on #2882): `invalidate_if_validated`
+  only flushes, so the `validated → draft` flip lands in the caller's
+  commit (all 44 call sites walked); the label editor and the roster and
+  relationship imports run as one unit; the relationship-import hops.
+- **Added at build:** `unit_of_work.atomic` (rung 3) and `after_commit`
+  (rung 6, Codex on #2885); Prepare commits `workflow_run_started` before
+  its steps (rung 4); the Band 2 save, the identity route and Session
+  Home's config save each became one unit (rungs 5–6); purge-and-archive
+  decides `can_archive` under the lock before any purge (rung 6);
+  `set_group_boundary` and `bulk_save_fields`, uncalled, gate anyway.
+- **Behavior changes:** an edit refused after the flip leaves the session
+  `validated`; a double-submitted Revert from `validated` answers 409;
+  a Generate that raises rolls back; the lobby's bulk Unarchive,
+  Purge-and-archive and Delete skip a row moved first; a Quick Setup slot
+  maps a refusal to its `lifecycle` reason.
+- **By design:** tags take no state gate; Quick Setup's slots commit
+  separately, as specified; `rehydrate_session` chains guarded saves on
+  the draft it has just created.
+
+**Proof at `e35ccb5c`.** `grep -rlE "require_(editable|not_archived|not_ready)\(|lock_session\(" app/services | wc -l`
+→ 27 service files gate. `test_session_state_guard.py` holds 46 tests,
+each mutation-checked by its rung's read. An AST walk of every `async`
+handler in `app/web` finds no guarded call outside a `run_in_threadpool`
+closure. Not pinned: the hops, and Postgres actually blocking (SQLite
+ignores the lock).
+
+**Reads: 20 over the build, plus one of this close's code nits.** One
+cumulative read (rungs 2–6) and five follow-ups on rung 2, five on
+rung 3, two each on rungs 4 and 5, five on rung 6. Every medium was a
+commit that released the lock early or a lost audit row: Prepare's
+started row (rung 4), Band 2's per-field commit (rung 5), the config
+save (rung 6, the pre-push sweep). The rest were unpinned gates, stale
+docstrings and spec owed at close. **Codex: six findings, all fixed** —
+five on #2882 (three commits releasing the lock, one pair of writes
+outside one unit, one lock wait on the event loop) and one on #2885 (log
+lines before the commit). From rung 4 on, a sweep for those three shapes
+ran before every push.
+
+**Close.** `close_check.py 19U.1` passes; its coverage notes (touched
+routes whose specs are not in Doc impact: `spec/instruments.md`,
+`spec/quick_setup_card_spec.md`, `spec/permissions.md`,
+`spec/setup_pages.md` and four more) are adjudicated as no contract
+change, since those routes gained only the race-time 409 and the hop, and
+Quick Setup's slots now give the "lifecycle refusal" sentence the spec
+already promises. `spec-writer`'s two flags are Bc6 and A9 below.
+
+**Left open, as register rows** in `guide/findings_2026-10-07_corpus.md`:
+Bc5 (invitation sends gate on the loaded row), Bc6 (Activate's warnings
+detour drops its started row), Bc7 (an uncaught Generate exception
+leaves a started row with no failed row), Bc8 (the Instruments render's
+ungated writes), A9 (`preview-sample` "persists nothing"). Also noted:
+the lobby bulk Delete can delete a row archived since the page loaded
+(archived rows are deletable anyway); two weak tests (the bulk-delete skip
+uses one row; the slot-reason tests do not assert that nothing landed).
+
 ### PR ladder
 
 1. **PR 1 — plan and Bc4 ruling.** Prose only.
@@ -109,7 +169,8 @@ Taken 2026-10-07 at `9eda6273`.
 ### Open questions
 
 - A Postgres `lock_timeout` to bound a stuck wait: deployment
-  configuration; **the author decides** with the Azure deployment.
+  configuration; **the author decides** with the Azure deployment. Still
+  open at close.
 
 ### Out of scope
 
@@ -120,8 +181,10 @@ Taken 2026-10-07 at `9eda6273`.
 
 ### Doc impact
 
-- `spec/lifecycle.md` — "Concurrency safety": every state-gated save and every transition is decided under the session lock, in the service; §2's qualification, §2.3, §7 "Atomic commits" and the `session.invalidated` audit row: the automatic `validated → draft` flip lands in the caller's commit, and only the operator's Revert commits it alone (PR 7).
-- `spec/workflow_card.md` — Prepare failures: a Generate that raises now rolls itself back (the session keeps its status), and the run's `workflow_run_started` is committed before the steps (PR 7).
-- `spec/architecture.md` — "Three-layer split": a lifecycle-state gate is a service rule, and `session_guard` is its primitive (PR 7).
+- `spec/lifecycle.md` — "Concurrency safety": every state-gated save and every transition is decided under the session lock, in the service; §2's qualification, §2.3, §7 "Atomic commits" and the `session.invalidated` audit row: the automatic `validated → draft` flip lands in the caller's commit, and only the operator's Revert commits it alone; §2.6: `/revert` decides invalidate or revert under the lock, through `operator_revert`; §3.1: the route's `_require_editable` is an early refusal and the service's `require_editable` decides; the lobby bulk Delete skips a row the guard refuses (PR 7).
+- `spec/workflow_card.md` — Prepare failures: a Generate that raises now rolls itself back (the session keeps its status), and the run's `workflow_run_started` is committed before the steps; Revert dispatches under the lock (PR 7).
+- `spec/session_home.md` — Revert dispatches by the status read under the lock, not the loaded row (PR 7).
+- `spec/sessions_overview.md` — bulk Delete skips a row the guard refuses; Purge and archive decides `can_archive` under the lock before any purge, and its purges land in the archive's one commit (PR 7).
+- `spec/architecture.md` — "Three-layer split": a lifecycle-state gate is a service rule, and `session_guard` is its primitive; the `unit_of_work` paragraph names `atomic` and `after_commit` beside `single_commit` (PR 7).
 - `guide/findings_2026-10-07_corpus.md` — Bc4 ruled (PR 1), struck at close (PR 7).
 - `guide/todo_master.md` — the segment's in-progress line names Item 1 while it is open (PR 1), and drops it at the item close (PR 7).

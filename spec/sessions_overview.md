@@ -259,7 +259,12 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   refuses (`ready` or already `archived`) — `spec/lifecycle.md` §1. It
   shares its route and service with the Extract data page's Archive
   card, whose section in `spec/extract_data.md` (*`Archive session`
-  card*) owns the purge options and their order.
+  card*) owns the purge options and their order. The refusal is decided
+  on the row re-read under the session lock, before any purge, so a
+  session activated since the page loaded keeps its rosters and
+  responses. The purges and the archive commit as one unit: a failure
+  part-way rolls all of it back, and each purge's log line is written
+  only after that commit.
 - **Name / Code / Deadline edit in `draft` or `validated`; Tags in
   any state.** The gate is `lifecycle.is_editable`, the one Session
   Home's Details card uses, so the two pages agree. On any other
@@ -525,7 +530,11 @@ button is gated behind a "Yes, delete" checkbox
 3. **Delete loop.** For each surviving session, calls
    `sessions.delete_session(...)`, which cascades reviewers /
    reviewees / instruments / assignments / invitations /
-   email_outbox rows + writes a `session.deleted` audit row.
+   email_outbox rows + writes a `session.deleted` audit row. The
+   service refuses a `ready` session under the session lock
+   (`lifecycle.require_not_ready`); a row it refuses, one activated since
+   the request read it, is skipped like a `ready` row in step 2 and the
+   loop goes on.
 4. **Redirect.** 303 to `/operator/sessions` (the list reloads
    without the deleted rows).
 

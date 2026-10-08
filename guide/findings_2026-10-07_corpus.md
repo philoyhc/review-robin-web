@@ -141,7 +141,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   the session (Postgres deadlock risk). **Ruled 2026-10-07: rework the
   observer's locking.** Each entry is decided, sent and recorded under a
   re-reading lock, and every schedule save locks before its gate.
-- **Bc4** (found while fixing Bc3; medium, author) **The roster imports
+- ~~**Bc4**~~ — **Done in #2881–#2885** (19U Item 1; found while fixing Bc3; medium, author) **The roster imports
   gate editability before any lock.** `_run_quick_setup_import` checks
   `is_editable` on the session loaded with the request, then saves; a
   scheduled activation committing in between leaves the roster replaced
@@ -156,6 +156,32 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
   save and every lifecycle transition, manual Activate included, decides
   its gate under the session lock inside the service** (Codex's ask on
   #2877). Planned as Item 1 of `guide/segment_19U_post_assessment_7oct.md`.
+- **Bc5** (found while fixing Bc4, read on #2885; low, author) **The
+  invitation Send and Regenerate gates decide on the loaded row.**
+  `_require_validated_or_ready` / `_require_ready`
+  (`app/web/routes_operator/_operations.py`) check the status the request
+  loaded, outside the session lock, so a Revert committing in between can
+  let a send land on a `draft` session. Bc4's ruling covered setup,
+  roster, instrument, schedule and lifecycle writes, not sends. Author:
+  extend the guard to the send paths, or accept the race.
+- **Bc6** (found while fixing Bc4, read on #2883; low, code) **Activate's
+  warnings detour drops its started row.** `workflow_activate` writes
+  `session.workflow_run_started`, then returns the detour redirect with
+  no commit, so the row is rolled back with the request; the spec has
+  the run paused at the acknowledgement, not unrecorded.
+- **Bc7** (found while fixing Bc4, read on #2883; low, code) **A Prepare
+  whose Generate raises an exception the route does not catch
+  (`IntegrityError`, `OperationalError`) leaves its committed
+  `workflow_run_started` with no failed row.** Since #2883 the started
+  row commits before the steps; Generate's partial commits made the same
+  gap possible before.
+- **Bc8** (found while fixing Bc4, read on #2884; low, author) **The
+  Instruments page render writes with no state gate.** Building the page
+  runs `ensure_locked_display_fields`, `prune_unpopulated_display_fields`
+  and the display-field seeds, then commits
+  (`app/web/views/_instruments.py`), on a session in any state. Author:
+  gate the maintenance writes on `is_editable`, or leave them as
+  idempotent repair.
 - ~~**Gc1**~~ — **Done in #2878** (found while fixing G1, Codex on #2875; low, author) **A
   roster tag value may contain a comma.** A group instrument names a group
   by its tag values joined with ", ", so two groups can render the same
@@ -182,7 +208,7 @@ id points at its row in §3 or §1.
   group-scoped instrument).
 - **Lifecycle and Setup:** Bc1 (fired offsets keyed by index), Bc2 (the
   reminder outbox key carries no anchor), Bc3 (the observer's lock
-  across a pass), Bc4 (roster imports gate before the lock), B1 (Quick Setup's availability against the
+  across a pass), Bc4 (roster imports gate before the lock), Bc5 (invitation sends gate on the loaded row), Bc8 (the Instruments render's ungated writes), B1 (Quick Setup's availability against the
   `is_editable` predicate), B4 (aged Start on a rename), B5 (the P30D
   archive default nothing writes), C5 (unlock cookies across Session Home
   forms).
@@ -215,6 +241,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - **A6** low trim provenance: instruments.md:1561 "(findings G5; …)"; visibility_policy.md:151 "(2026-10-05)", :157-159 "now shows … as the editor always has", :214 "since findings G5"; role_landing_and_visibility.md:164 "now requires", :179 "used to carry"; reviewer-surface.md:384 "now is"
 - **A7** low author visibility_policy.md:235 "whether the reviewer surface should follow is undecided"
 - **A8** low spec reviewer-surface.md:1170-1174 closed pill also shows on a ready session with no included assignment (session_lifecycle.py:808-812); :859-887 GET gating list lacks the expired bullet (read-only surface)
+- **A9** low spec instruments.md:1035-1036 (at `e35ccb5c`; found while fixing Bc4, read on #2884) `preview-sample` "persists nothing" vs it saves the sample reviewee and group members through `set_band2_state` (`_instruments_band2.py`)
 
 **B — assignments, workflow, lifecycle, Validate**
 

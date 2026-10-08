@@ -576,7 +576,10 @@ action card doing the explanatory job.
   (`next-action-revert-form`) reuses
   `lifecycle.invalidate_session(reason="operator_revert")`. Both
   are wired via the same `POST /operator/sessions/{id}/revert`
-  endpoint, which dispatches by current status.
+  endpoint, which calls `lifecycle.operator_revert`. That dispatches by
+  the status read under the session lock, not the loaded row, so a
+  scheduled activation that committed after the page loaded takes the
+  `ready → draft` branch (`spec/lifecycle.md` §2.6).
 - **Lifecycle display mapping.** Single function in
   `app/services/lifecycle_display.py`, registered as the
   `lifecycle_label` Jinja filter on the operator templates
