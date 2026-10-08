@@ -39,7 +39,7 @@ timezone), not in the per-session chrome.
 | URL | Surface |
 |---|---|
 | `/operator/sessions` | Sessions lobby — selection-aware inline row-expander that edits a session's Name, Code, Deadline and Tags, free-form tagging (click-to-filter tag strip), one-click clone (full-setup or config-shell), client-side search, sortable columns, and **Purge and archive** (selective hard-delete of responses / rosters / audit log via `session_purge`, then archive). |
-| `/operator/sessions/archived` | Archived sessions — the live off-ramp: the lobby's Purge and archive and the Extract data page archive any session that is not activated (`ready`) or already archived, the Workflow card offers Archive on a closed session, and unarchiving restores it to `draft`. |
+| `/operator/sessions/archived` | Archived sessions — the live off-ramp: the lobby's **Purge and archive** and the Extract data page archive any session that is not activated (`ready`) or already archived, the Workflow card offers `Archive session` on a closed session, and unarchiving restores it to `draft`. |
 | `/operator/sessions/new` | Create a new session. |
 | `/operator/settings` | **Operator Settings** — per-operator SMTP credentials (encrypted at rest) + display timezone. Honours `?return_to=<path>` so the user-menu link returns to the calling page. |
 | `/operator/sys-admin` | Sys Admin chrome root (sys-admin-gated). |
