@@ -177,7 +177,7 @@ Specifics:
 - **Active row** (the one containing the active tab): the row label renders at `--text-body` instead of `--text-subtle`, and the triangle after it emphasizes correspondingly.
 - **Hovering a tab** in a non-active row previews-emphasizes that row's label without transferring active state — gives the operator a sense of "this is the row you're about to enter."
 - **Same tab shape** across both rows. Differences between rows are carried by row labels and row tints, not by tab shape.
-- **Relationships and Observers are optional Setup tabs**, each rendered only when its per-session toggle is enabled (User interface settings on Session Home's `#session-config` card). When disabled, the tab is omitted and the Setup row is correspondingly shorter.
+- **Relationships and Observers are optional Setup tabs**, each rendered only when its per-session toggle is enabled (the Optional setup tabs field of Session Home's `#session-config` card). When disabled, the tab is omitted and the Setup row is correspondingly shorter.
 
 **On Home itself**: chrome renders in the same shape, with no tab active. Both rows remain visible and clickable.
 

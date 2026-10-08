@@ -27,9 +27,7 @@ Two sibling registers hold the open work that is not queued here:
 ### In progress
 
 - **19U — post-assessment, 2026-10-07.** Items close independently;
-  the segment stays open for the author's small patches. **Item 2**
-  (Session Home session edit UI adjustment) is a stub awaiting the
-  author's details.
+  the segment stays open for the author's small patches. No item open.
   **Plan:** `guide/segment_19U_post_assessment_7oct.md`.
 
 ### Queued segments

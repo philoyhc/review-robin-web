@@ -24,9 +24,10 @@ audit events; this spec owns the two cards' shape and staging.
 
 Template: `app/web/templates/operator/session_new.html`, `#session-owners`
 — second card in the page's right-hand `.bottom-left` column, below Tags;
-the left column holds User interface settings over Quick Setup, so the
-page approximates Session Home's placements (`spec/ui_elements.md`
-§10; `spec/operator_ui_concept.md` "Create new session").
+the left column holds User interface settings over Quick Setup
+(`spec/ui_elements.md` §10; `spec/operator_ui_concept.md` "Create new
+session"). Session Home holds Tags and the optional-tab toggles as
+fields of its details card instead (19U Item 2).
 
 - **Table**: the creator's row first (Email / Name / Role "owner" /
   Added "—"), no Remove — a session always keeps its first owner. Rows

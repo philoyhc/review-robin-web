@@ -1227,7 +1227,7 @@ def test_owners_left_the_session_config_card_for_their_own(
     19S Item 10 moved it to a card of its own, stacked above the Danger
     Zone in one column (author's ruling 2026-09-23), with
     the same columns and the wired add / remove. The details card keeps
-    User interface settings. The Schedule timeline card is gone."""
+    the optional-tab toggles. The Schedule timeline card is gone."""
     review_session = _make_session(client, db, code="cfg-owners")
     body = client.get(f"/operator/sessions/{review_session.id}").text
 
@@ -1250,8 +1250,8 @@ def test_owners_left_the_session_config_card_for_their_own(
     assert "alice@example.edu" in owners
     assert "/remove\"" in owners
 
-    assert 'id="config-ui-settings-card"' in card
-    assert ">User interface settings</h3>" in card
+    assert 'id="config-optional-tabs"' in card
+    assert ">Optional setup tabs</label>" in card
     assert "Relationships tab and page" in card
     assert "Observers tab and page" in card
 

@@ -310,14 +310,17 @@ def test_relationships_route_200_when_flag_on(
 # ── Edit page surface ─────────────────────────────────────────────────
 
 
-def test_edit_page_renders_user_interface_settings_card(
+def test_session_home_renders_the_optional_setup_tabs_field(
     client: TestClient, db: Session
 ) -> None:
+    """Since 19U Item 2 the toggles are a field of the details card,
+    "Optional setup tabs", not a "User interface settings" sub-card."""
     review_session = _make_session(client, db, code="ft-ui")
     body = client.get(
         f"/operator/sessions/{review_session.id}?editing=1"
     ).text
-    assert "User interface settings" in body
+    assert 'id="config-optional-tabs"' in body
+    assert ">Optional setup tabs</label>" in body
     assert 'name="relationships_enabled"' in body
     assert 'name="observers_enabled"' in body
     # Both unchecked by default.

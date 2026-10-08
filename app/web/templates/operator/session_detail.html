@@ -35,10 +35,9 @@
        an instant-swap enhancement, and the Unlock/Lock/Cancel controls keep
        real ``?editing`` hrefs so no-JS degrades to navigation.
 
-       Details / Schedule / UI-settings inputs submit as one form via the HTML5
-       ``form="config-save-{id}"`` association (they can't physically nest —
-       the Owners sub-card carries its own form in a later slice). Save posts to
-       the config route (Slice 3); the fields mirror the Edit page's names. #}
+       Details / Schedule / Tags / optional-tab inputs submit as one form via
+       the HTML5 ``form="config-save-{id}"`` association (they can't physically
+       nest). Save posts to the config route (Slice 3). #}
     <form id="config-save-{{ session.id }}" method="post"
           action="/operator/sessions/{{ session.id }}/config"></form>
     <datalist id="config-timezone-options">
@@ -69,6 +68,87 @@
         <textarea id="mock-description" name="description" maxlength="2000"
                   data-edit-only form="config-save-{{ session.id }}"
                   style="flex: 1 1 auto; min-height: 8em;">{{ session.description or "" }}</textarea>
+        {# Tags (19S Item 9 Part B; 19U Item 2 moved it out of its own
+           card to sit under Description as a field of this card). It
+           follows the card's display/edit swap, its edit window and its
+           ``config-save`` form — no second save. Locked it shows the tags
+           as the lobby's pills (below). An emptied box **clears** the
+           tags, as the lobby's row expander does — the opposite of the
+           Create page, where there is no set yet to clear
+           (``spec/csv_contracts.md`` § *Settings CSV — apply precedence*). #}
+        <div id="config-tags-field">
+          <label for="config-tags" id="config-tags-heading">Tags (optional)</label>
+          {# Locked, the tags are the lobby's pills (author's ruling,
+             2026-09-23), not a comma-joined ``.config-value``; the edit
+             box stays comma-separated. The wrapper carries
+             ``data-display-only`` because ``body.ui-v2 .session-tags``
+             sets ``display: flex`` and outranks the edit-mode
+             ``display: none`` on the same element. #}
+          {% if session_tag_list %}
+            <div data-display-only>
+              <div class="session-tags">
+                {% for tag in session_tag_list %}
+                  <span class="pill pill-count">{{ tag }}</span>
+                {% endfor %}
+              </div>
+            </div>
+          {% else %}
+            <div class="config-value" data-display-only>—</div>
+          {% endif %}
+          {# The marker says "this form carries the Tags field". Without
+             it, a page rendered before the field existed — a tab left open
+             across a deploy — would post no ``tags`` at all, which FastAPI
+             hands the route as an empty box, and its first Save would
+             clear every tag (Item 9 close, cold read M3). #}
+          <input type="hidden" name="tags_present" value="1"
+                 form="config-save-{{ session.id }}">
+          <input type="text" id="config-tags" name="tags"
+                 data-edit-only data-config-input
+                 form="config-save-{{ session.id }}"
+                 data-tag-typeahead autocomplete="off"
+                 value="{{ session_tag_list | join(', ') }}"
+                 placeholder="e.g. pilot, 2026, engineering">
+          {# Helper text, now that Tags is a field rather than a card: below
+             the box as ``.form-help`` (``spec/ui_elements.md`` "Helper
+             text"), and edit-only because it describes the box — locked
+             there is no box, just the pills (author's ruling, 2026-09-23). #}
+          <p class="form-help" data-edit-only>Comma-separated; also editable from the sessions list.</p>
+        </div>
+        {# The optional Setup tabs (19U Item 2: out of the former "User
+           interface settings" sub-card, under Tags). Display mode shows
+           the current states as disabled checkboxes; edit mode shows the
+           live ones. #}
+        <div id="config-optional-tabs" role="group"
+             aria-labelledby="config-optional-tabs-heading">
+          <label id="config-optional-tabs-heading">Optional setup tabs</label>
+          <div class="ui-settings-row">
+            <label class="ui-setting">
+              Relationships tab and page
+              <input type="checkbox" data-display-only disabled
+                     {% if session.relationships_enabled %}checked{% endif %}>
+              {# Lock-on-data — once a roster has rows the toggle can't flip
+                 True→False (would orphan data); this card disables it, and
+                 the service-layer guard rejects the flip for direct API
+                 calls. (Said "mirror the Edit page" until 2026-09-13; that
+                 page retired in 18R Item 4.) #}
+              <input type="checkbox" name="relationships_enabled" value="true"
+                     data-edit-only data-config-input
+                     form="config-save-{{ session.id }}"
+                     {% if session.relationships_enabled %}checked{% endif %}
+                     {% if has_relationships %}disabled{% endif %}>
+            </label>
+            <label class="ui-setting">
+              Observers tab and page
+              <input type="checkbox" data-display-only disabled
+                     {% if session.observers_enabled %}checked{% endif %}>
+              <input type="checkbox" name="observers_enabled" value="true"
+                     data-edit-only data-config-input
+                     form="config-save-{{ session.id }}"
+                     {% if session.observers_enabled %}checked{% endif %}
+                     {% if has_observers %}disabled{% endif %}>
+            </label>
+          </div>
+        </div>
       </div>
 
       <div class="fill-col" style="min-width: 0;">
@@ -169,113 +249,9 @@
                    value="{{ responses_release_until_input_value }}">
           </div>
         </div>
-      </div>
-    </div>
-
-    {# Half-width sub-cards inside the Session details card, below the
-       unified details block: User interface settings (left) + Tags
-       (right), with the card's Save / Cancel / Lock cluster under Tags.
-       Both follow the card-wide data-config-mode swap and save with its
-       ``config-save`` form. Tags took a slot here when the Owners card
-       left this card for its own (19S Item 10; above the Danger Zone
-       since a later ruling the same day),
-       and the two swapped sides on the author's ruling (2026-09-23).
-       ``margin-bottom: 0``: ``.bottom-grid`` carries a page-level bottom
-       margin, which here stacked on the card's own padding and left the
-       cluster 34px above the border, against 18px on the Owners card's
-       Save row (measured in Chromium, 2026-09-23) — as the ``.page-grid``
-       above zeroes its own. #}
-    <div class="bottom-grid" style="margin-top: calc(var(--space-3) * 2); margin-bottom: 0;">
-      {# User interface settings — left of Tags. Display mode shows the
-         current toggle states; edit mode shows the checkboxes. #}
-      <div class="bottom-left">
-        <div class="card" id="config-ui-settings-card">
-          <h3 style="margin-top: 0;">User interface settings</h3>
-          <p class="muted">Per-session toggles for the optional Setup tabs.</p>
-          {# Both items on one line in both modes at normal card body font.
-             Display mode shows an inactive (disabled) checkbox reflecting
-             the current state; edit mode shows an active checkbox. #}
-          <div class="ui-settings-row">
-            <label class="ui-setting">
-              Relationships tab and page
-              <input type="checkbox" data-display-only disabled
-                     {% if session.relationships_enabled %}checked{% endif %}>
-              {# Lock-on-data — once a roster has rows the toggle can't flip
-                 True→False (would orphan data); this card disables it, and
-                 the service-layer guard rejects the flip for direct API
-                 calls. (Said "mirror the Edit page" until 2026-09-13; that
-                 page retired in 18R Item 4.) #}
-              <input type="checkbox" name="relationships_enabled" value="true"
-                     data-edit-only data-config-input
-                     form="config-save-{{ session.id }}"
-                     {% if session.relationships_enabled %}checked{% endif %}
-                     {% if has_relationships %}disabled{% endif %}>
-            </label>
-            <label class="ui-setting">
-              Observers tab and page
-              <input type="checkbox" data-display-only disabled
-                     {% if session.observers_enabled %}checked{% endif %}>
-              <input type="checkbox" name="observers_enabled" value="true"
-                     data-edit-only data-config-input
-                     form="config-save-{{ session.id }}"
-                     {% if session.observers_enabled %}checked{% endif %}
-                     {% if has_observers %}disabled{% endif %}>
-            </label>
-          </div>
-        </div>
-      </div>
-      <div class="bottom-left">
-        {# Tags (19S Item 9 Part B). A field of this card that renders in
-           its own card, as the UI toggles beside it do: it follows the card's
-           display/edit swap, its edit window and its ``config-save`` form
-           — no second save. Locked it shows the tags as the lobby's
-           pills (below). The
-           ``<h3>`` is the field's label, as on the Create page's Tags
-           card, so there is no second "Tags" above the box. An emptied
-           box **clears** the tags, as the lobby's row expander does —
-           the opposite of the Create page, where there is no set yet to
-           clear (``spec/csv_contracts.md`` § *Settings CSV — apply
-           precedence*). #}
-        <div class="card" id="config-tags-card">
-          <h3 style="margin-top: 0;" id="config-tags-heading">Tags (optional)</h3>
-          <p class="muted" data-edit-only>Comma-separated; also editable from the sessions list.</p>
-          {# The subtitle above is edit-only: it describes the box, and
-             locked there is no box — just the pills (author's ruling,
-             2026-09-23). #}
-          {# Locked, the tags are the lobby's pills (author's ruling,
-             2026-09-23), not a comma-joined ``.config-value``; the edit
-             box stays comma-separated. The wrapper carries
-             ``data-display-only`` because ``body.ui-v2 .session-tags``
-             sets ``display: flex`` and outranks the edit-mode
-             ``display: none`` on the same element. #}
-          {% if session_tag_list %}
-            <div data-display-only>
-              <div class="session-tags">
-                {% for tag in session_tag_list %}
-                  <span class="pill pill-count">{{ tag }}</span>
-                {% endfor %}
-              </div>
-            </div>
-          {% else %}
-            <div class="config-value" data-display-only>—</div>
-          {% endif %}
-          {# The marker says "this form carries the Tags field". Without
-             it, a page rendered before the field existed — a tab left open
-             across a deploy — would post no ``tags`` at all, which FastAPI
-             hands the route as an empty box, and its first Save would
-             clear every tag (Item 9 close, cold read M3). #}
-          <input type="hidden" name="tags_present" value="1"
-                 form="config-save-{{ session.id }}">
-          <input type="text" id="config-tags" name="tags"
-                 data-edit-only data-config-input
-                 form="config-save-{{ session.id }}"
-                 aria-labelledby="config-tags-heading"
-                 data-tag-typeahead autocomplete="off"
-                 value="{{ session_tag_list | join(', ') }}"
-                 placeholder="e.g. pilot, 2026, engineering">
-        </div>
-        {# Save / Cancel / Lock cluster just below the Tags card,
-           flushed right (18R Item 4 Slice 3 — wired).
+        {# Save / Cancel / Lock cluster at the foot of the right column,
+           flushed right (18R Item 4 Slice 3 — wired; 19U Item 2 moved it
+           here from under the former Tags card).
            - Save submits the config form (POST → Home display mode). Rendered
              enabled so no-JS works; the dirty-tracking script disables it until
              an edit is made.
@@ -285,7 +261,7 @@
            - Unlock (display) links to ``?editing=1``; Lock (edit) drops it.
            The whole cluster is gated on the session being editable, mirroring
            the working card's Edit button. #}
-        <div style="display: flex; justify-content: flex-end; gap: var(--space-2);">
+        <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: auto; padding-top: var(--space-3);">
           <button type="submit" form="config-save-{{ session.id }}"
                   class="btn secondary" data-config-save data-edit-only>Save</button>
           <a class="btn secondary" data-config-cancel data-edit-only
@@ -302,6 +278,7 @@
         </div>
       </div>
     </div>
+
   </div>
 
   <script>

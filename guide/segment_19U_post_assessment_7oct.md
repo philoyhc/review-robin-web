@@ -78,62 +78,30 @@ Taken 2026-10-07 at `9eda6273`.
 ### Status — closed 2026-10-08
 
 **Laddered as planned**: rungs 2–6 are #2881–#2885 (cumulative-read
-base `d8445500`), this close is PR 7. What moved:
+base `d8445500`), the close PR 7. What moved:
 
 - **Pulled forward to rung 3** (Codex on #2882): `invalidate_if_validated`
   only flushes, so the `validated → draft` flip lands in the caller's
-  commit (all 44 call sites walked); the label editor and the roster and
-  relationship imports run as one unit; the relationship-import hops.
-- **Added at build:** `unit_of_work.atomic` (rung 3) and `after_commit`
-  (rung 6, Codex on #2885); Prepare commits `workflow_run_started` before
-  its steps (rung 4); the Band 2 save, the identity route and Session
-  Home's config save each became one unit (rungs 5–6); purge-and-archive
-  decides `can_archive` under the lock before any purge (rung 6);
-  `set_group_boundary` and `bulk_save_fields`, uncalled, gate anyway.
-- **Behavior changes:** an edit refused after the flip leaves the session
-  `validated`; a double-submitted Revert from `validated` answers 409;
-  a Generate that raises rolls back; the lobby's bulk Unarchive,
-  Purge-and-archive and Delete skip a row moved first; a Quick Setup slot
-  maps a refusal to its `lifecycle` reason.
-- **By design:** tags take no state gate; Quick Setup's slots commit
-  separately, as specified; `rehydrate_session` chains guarded saves on
-  the draft it has just created.
+  commit; the label editor and the roster and relationship imports run
+  as one unit.
+- **Added at build:** `unit_of_work.atomic` and `after_commit`; Prepare
+  commits `workflow_run_started` before its steps; the Band 2 save, the
+  identity route and the config save each became one unit;
+  purge-and-archive decides `can_archive` under the lock.
+- **Behavior changes:** a refused edit leaves the session `validated`; a
+  double Revert answers 409; a raising Generate rolls back; the lobby's
+  bulk actions skip a row moved first.
 
 **Proof at `e35ccb5c`.** `grep -rlE "require_(editable|not_archived|not_ready)\(|lock_session\(" app/services | wc -l`
-→ 27 service files gate. `test_session_state_guard.py` holds 46 tests,
-each mutation-checked by its rung's read. An AST walk of every `async`
-handler in `app/web` finds no guarded call outside a `run_in_threadpool`
-closure. Not pinned: the hops, and Postgres actually blocking (SQLite
-ignores the lock).
+→ 27 service files gate; `test_session_state_guard.py` holds 46 tests,
+each mutation-checked by its rung's read. Not pinned: Postgres actually
+blocking (SQLite ignores the lock).
 
-**Reads: 20 over the build, plus one of this close's code nits.** One
-cumulative read (rungs 2–6) and five follow-ups on rung 2, five on
-rung 3, two each on rungs 4 and 5, five on rung 6. Every medium was a
-commit that released the lock early or a lost audit row: Prepare's
-started row (rung 4), Band 2's per-field commit (rung 5), the config
-save (rung 6, the pre-push sweep). The rest were unpinned gates, stale
-docstrings and spec owed at close. **Codex: six findings, all fixed** —
-five on #2882 (three commits releasing the lock, one pair of writes
-outside one unit, one lock wait on the event loop) and one on #2885 (log
-lines before the commit). From rung 4 on, a sweep for those three shapes
-ran before every push.
-
-**Close.** `close_check.py 19U.1` passes; its coverage notes (touched
-routes whose specs are not in Doc impact: `spec/instruments.md`,
-`spec/quick_setup_card_spec.md`, `spec/permissions.md`,
-`spec/setup_pages.md` and four more) are adjudicated as no contract
-change, since those routes gained only the race-time 409 and the hop, and
-Quick Setup's slots now give the "lifecycle refusal" sentence the spec
-already promises. `spec-writer`'s two flags are Bc6 and A9 below.
-
-**Left open, as register rows** in `guide/findings_2026-10-07_corpus.md`:
-Bc5 (invitation sends gate on the loaded row), Bc6 (Activate's warnings
-detour drops its started row), Bc7 (an uncaught Generate exception
-leaves a started row with no failed row), Bc8 (the Instruments render's
-ungated writes), A9 (`preview-sample` "persists nothing"). Also noted:
-the lobby bulk Delete can delete a row archived since the page loaded
-(archived rows are deletable anyway); two weak tests (the bulk-delete skip
-uses one row; the slot-reason tests do not assert that nothing landed).
+**Reads: 20, plus Codex's six findings, all fixed.** Every medium was a
+commit that released the lock early or a lost audit row. **Close:**
+`close_check.py 19U.1` passes; its uncited-route notes are adjudicated as
+no contract change (those routes gained only the race-time 409). Left
+open as register rows Bc5–Bc8 and A9, since fixed in #2888–#2890.
 
 ### PR ladder
 
@@ -189,9 +157,100 @@ uses one row; the slot-reason tests do not assert that nothing landed).
 - `guide/findings_2026-10-07_corpus.md` — Bc4 ruled (PR 1), struck at close (PR 7).
 - `guide/todo_master.md` — the segment's in-progress line names Item 1 while it is open (PR 1), and drops it at the item close (PR 7).
 
-## Item 2 — Session Home session edit UI adjustment
+## Item 2 — Session Home session edit UI adjustment (closed 2026-10-08)
 
-**Stub, filed 2026-10-08 by the author, for later.** An adjustment to
-how Session Home edits the session. The author gives the details when
-the item is picked up; until then it has no ladder, no `### Doc impact`
-and no `### Status`, and nothing here is built.
+### Opportunity
+
+Session Home's **Session details** card ends in two half-width sub-cards
+— **User interface settings** (the Relationships / Observers toggles)
+and **Tags** — with the Save / Cancel / Lock cluster under Tags. Each
+holds one or two controls of the card's own form, so the card reads as
+three boxes for one save. The author's mock-up (2026-10-08) folds them
+into the card.
+
+### Decision
+
+**Ruled 2026-10-08 by the author.** Tags becomes a field of the card,
+under **Description** in the left column; the two toggles follow under
+Tags, under one label, **Optional setup tabs**, with no subtitle (the
+"Per-session toggles for the optional Setup tabs." line goes). The Save
+/ Cancel / Lock cluster moves to the foot of the right column. No
+sub-card is left inside the card. Nothing about what saves, or when,
+changes: same `config-save` form, same edit window, same
+`tags_present` marker, same lock-on-data on the toggles.
+
+**Rejected:** keeping the toggles in a sub-card under Tags (the
+mock-up's interim state) — the author asked for the contents to leave
+it.
+
+### Judgment calls — decided
+
+- The Tags helper ("Comma-separated; also editable from the sessions
+  list.") becomes a field's `.form-help` below the box, edit-only, per
+  `spec/ui_elements.md` "Helper text": a card subtitle no longer applies
+  once there is no card. The mock-up shows it above the box; flip on
+  the author's word.
+- The Create page keeps its own **User interface settings** and **Tags**
+  cards: the ruling names Session Home only.
+
+### Blast radius (measured)
+
+Taken 2026-10-08 at `0e330810`.
+
+| What | Count | Command |
+|---|---|---|
+| Templates | 1 | `grep -rln "config-ui-settings-card" app/web/templates` |
+| Test files asserting the old structure | 3 | `grep -rln "config-ui-settings-card\|config-tags-card" tests/` |
+| Live specs naming the Session Home sub-cards | 10 (9 edited; `spec/sessions_overview.md` already said "Tags field") | `grep -rln "User interface settings\|config-tags-card\|Tags card" spec/` |
+
+### Status — closed 2026-10-08
+
+**Shipped as planned, in one PR** (#2892); the save path is untouched.
+The Tags helper sits below the box (judgment call above). Rendered in
+Chromium in both modes; the author's browser check is owed. The close's
+`spec-writer` pass edited seven specs and I reworded two more
+(`spec/session_owners.md` added to Doc impact). The cold read's two
+findings (a test passing on a CSS comment, a stale line in
+`spec/participant_model.md`) are fixed. Not this item's: the
+`display_timezone` row in `spec/settings_inventory.md` still names the
+retired Edit Session Details form, and some code comments still name
+the old "User interface settings card".
+
+### PR ladder
+
+1. **One PR**: the plan, the template, its tests, the specs, the close.
+   A rearrangement of existing controls with no new behavior, so no
+   scaffold rung.
+
+### Definition of done
+
+- Session Home's details card holds no `.card` and no `.bottom-grid`;
+  Tags sits under Description and the toggles under Tags, labeled
+  "Optional setup tabs"; the Save cluster foots the right column
+  (`tests/integration/test_session_home_tags_card.py`).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19U.2` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- Item 2 marked closed in its heading; the file stays in `guide/` while 19U is open
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- The Create page's cards (`spec/session_owners.md` describes their
+  layout), and the Guide's screencaps of it.
+
+### Doc impact
+
+- `spec/session_home.md` — the details card: Tags and the optional-tab toggles as fields of the card, no sub-cards, the Save cluster at the foot of the right column.
+- `spec/ui_elements.md` — "Helper text": the single-field-card case names only the Create page's Tags card; Session Home's Tags helper is a field's `.form-help`.
+- `spec/rrw_functional_spec.md` — the Session details card's sub-card bullets become fields.
+- `spec/operator_ui_concept.md` — where the toggles live on Session Home.
+- `spec/settings_inventory.md` — `relationships_enabled` / `observers_enabled`: where they are authored.
+- `spec/participant_model.md` — the `relationships_enabled` row's authoring surface.
+- `spec/visual_style_rrw.md` — the optional Setup tabs' toggle location.
+- `spec/setup_pages.md` — the optional tabs' toggle location.
+- `spec/session_owners.md` — Create's layout no longer "approximates Session Home's placements"; Session Home holds Tags and the toggles as fields.
