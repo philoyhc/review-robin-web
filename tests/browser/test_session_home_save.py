@@ -105,6 +105,10 @@ def test_a_seat_left_by_a_refused_save_is_not_inherited(
     page.locator("[data-config-save]").click()
     page.wait_for_load_state("load")
     assert "/config" in page.url  # the refusal page, not Home
+    # The case under test: the refused Save left its seat behind.
+    assert page.evaluate(
+        f"sessionStorage.getItem('sessionHomeScrollY:/operator/sessions/{session_id}')"
+    ) is not None
 
     # Fresh key, but Home without ?editing=1: not where Save lands.
     page.goto(f"/operator/sessions/{session_id}")
@@ -121,6 +125,7 @@ def test_a_seat_left_by_a_refused_save_is_not_inherited(
     # And the key is used at most once: gone after any Home load.
     _plant_seat(page, session_id, y=400, age_ms=0)
     page.goto(f"/operator/sessions/{session_id}#owners-card")
+    assert page.evaluate("window.rrwSaveSeat") is None  # a fragment is not Save's landing
     assert page.evaluate(
         f"sessionStorage.getItem('sessionHomeScrollY:/operator/sessions/{session_id}')"
     ) is None

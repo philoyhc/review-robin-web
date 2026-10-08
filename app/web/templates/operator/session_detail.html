@@ -29,6 +29,7 @@
     window.rrwSaveSeat = null;
     window.rrwSaveFade = function () {
       if (!window.matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+      if (document.getElementById('rrw-save-fade')) return;  // a double-clicked Save
       var rule = document.createElement('style');
       rule.id = 'rrw-save-fade';
       rule.textContent = '@view-transition { navigation: auto; }';
@@ -48,6 +49,16 @@
           && Date.now() - seat.t < 15000 && landing) {
         window.rrwSaveSeat = seat.y;
         window.rrwSaveFade();
+        // Hold the first paint until the restore at the foot of the page
+        // has run: Chromium may otherwise paint a frame of the half-parsed
+        // page at the top before it (one run in three in CI). The marker
+        // follows the restore script. Save's reload only; a browser
+        // without ``rel=expect`` paints as soon as it can, as before.
+        var hold = document.createElement('link');
+        hold.rel = 'expect';
+        hold.href = '#rrw-seat-restored';
+        hold.setAttribute('blocking', 'render');
+        document.head.appendChild(hold);
       }
     })();
     // Back to the page Save left, restored from the back/forward cache:
@@ -728,4 +739,6 @@
       window.addEventListener('load', apply, { once: true });
     })();
   </script>
+  {# The head script's render hold ends here, after the restore has run. #}
+  <div id="rrw-seat-restored" hidden></div>
 {% endblock %}

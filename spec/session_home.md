@@ -459,7 +459,8 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   removed on any Home load, and counts only when it is under 15 seconds
   old and the load is Save's landing URL (`?editing=1`, no fragment),
   so a Save the server refuses — whose error page leaves the seat
-  behind — gives a later visit to Home neither its scroll nor its fade;
+  behind — gives a visit to Home after 15 seconds, or anywhere but
+  Save's landing URL, neither its scroll nor its fade;
   a page restored from the back/forward cache drops both too. Save's
   reload alone also cross-fades
   rather than repainting from blank: a cross-document view
@@ -469,7 +470,7 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   navigation stays a plain load. A browser without view transitions
   skips the fade and keeps the scroll; without JS the reload lands at
   the top of the page (before 19U Item 4 it landed at the card's top
-  edge). An in-place Lock or Unlock rewrites `?editing` in the
+  edge). An in-place Lock, Unlock or Cancel rewrites `?editing` in the
   address (`history.replaceState`), so a reload keeps the card's
   mode. The
   tag write runs **after** the config apply, so a save the card

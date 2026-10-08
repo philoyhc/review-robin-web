@@ -396,8 +396,9 @@ Taken 2026-10-08 at `26adcc5d`.
 ### Status — closed 2026-10-08
 
 **Shipped as planned, in one PR.** Driven in Chromium: Save comes back
-unlocked at the same `scrollY`, at it from the first animation frame
-(pinned in `tests/browser/test_session_home_save.py`);
+unlocked at the same `scrollY`, at it from the first animation frame —
+held there by a `rel=expect` render block, Save's reload only (pinned in
+`tests/browser/test_session_home_save.py`);
 Lock locks in place and a reload stays locked. Found at build: the
 restore first deferred to *any* `.banner-scroll-target`, and a hidden
 Quick Setup banner cancelled it on every load; and a static
@@ -407,9 +408,14 @@ pointer events`) — hence the script-added rule, Save only. **Two
 reads.** The first, of `622c94b4`, found a refused Save (422) left its
 seat behind for the next Home load to inherit, scroll and fade (now
 read once, honored only fresh and on Save's landing URL, dropped on a
-back/forward-cache restore; mutation-checked), plus a stale comment, the
-§9.4 pointer and the first-frame claim unpinned; `spec-writer` caught
-two spec sentences. Without JS, Save now lands at the page top rather
+back/forward-cache restore), plus a stale comment, the §9.4 pointer and
+the first-frame claim unpinned; `spec-writer` caught two spec sentences.
+The second, of `8f0a35e0`, found the new first-frame test failing one
+run in five — Chromium could paint the half-parsed page at the top before
+the restore ran, a real flash, now held off — plus two thin tests, a
+double-added fade rule and two spec sentences, all fixed. The
+back/forward-cache branch never runs in Playwright's Chromium; it is the
+author's browser check. Without JS, Save now lands at the page top rather
 than the card's (the fragment's cost). The author's browser check is
 owed.
 

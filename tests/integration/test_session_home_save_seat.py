@@ -69,6 +69,12 @@ def test_the_card_form_remembers_the_scroll_and_lock_drops_the_param(
     assert "JSON.stringify({ y: window.scrollY, t: Date.now() })" in script
     assert "var y = window.rrwSaveSeat;" in script
     assert "window.scrollTo(0, y)" in script
+    # The render hold set in the head (Save's reload only) ends at a
+    # marker after the restore script, so no frame paints before it.
+    assert "hold.rel = 'expect';" in body and "'#rrw-seat-restored'" in body
+    assert body.index('<div id="rrw-seat-restored" hidden></div>') > body.index(
+        "</script>", marker
+    )
     # The banner check matches base.html's: only a shown banner wins.
     assert "getClientRects().length" in script
 
