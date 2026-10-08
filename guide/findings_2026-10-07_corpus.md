@@ -318,10 +318,10 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**G2**~~ med author §9.9 :1450 "engagement (opened / first-response / submitted)", §2.7 "invitation engagement" vs Progress = not started / in progress / submitted (views/_progress.py:30-35); nothing renders opened_at; operations_pages.md:298 right — **Done in #2872** (ruled 2026-10-07: the spec follows Progress).
 - ~~**G3**~~ med author §2.12 :113-115 every send attempt audited, §5.13 every mutating service vs the per-row reminder (§1); §15 :2280-2282 contradicts §2.12 — **Done in #2869.**
 - **G4** — carried, old B27 / G6: §8.3 :966-969 triggers fire on the next operator GET. Same as B3. Not counted.
-- **G5** low spec §5.12 :606-608 an invitation created "(or auto-send schedule)" vs only Prepare creates (invitations.py:155); §11.4 :1984-1987 says so
-- **G6** low trim §12.5 :2135-2137 "seeded entries omitted from the Settings extract" — nothing seeds (_serialize.py:562); "Four of the five roster pairs (… Settings)" loose
-- **G7** low write §9.1 :1070-1072 lobby expander "rename and deadline adjust" omits Code and Tags; §9.2 :1129-1130 "Clone" vs "Duplicate" / "Duplicate settings only"
-- **G8** low :1448-1449 email status sent / queued / not sent omits sending and failed (email_outbox.py:23) [write]; glossary :2463-2468 "D6 source" plan label [trim]; preamble :7-8 URLs live in per-surface specs, yet the file carries routes and event names [author]
+- ~~**G5**~~ low spec §5.12 :606-608 an invitation created "(or auto-send schedule)" vs only Prepare creates (invitations.py:155); §11.4 :1984-1987 says so — **Done in #2903.**
+- ~~**G6**~~ low trim §12.5 :2135-2137 "seeded entries omitted from the Settings extract" — nothing seeds (_serialize.py:562); "Four of the five roster pairs (… Settings)" loose — **Done in #2903.**
+- ~~**G7**~~ low write §9.1 :1070-1072 lobby expander "rename and deadline adjust" omits Code and Tags; §9.2 :1129-1130 "Clone" vs "Duplicate" / "Duplicate settings only" — **Done in #2903.**
+- **G8** low :1448-1449 email status sent / queued / not sent omits sending and failed (email_outbox.py:23) [write]; glossary :2463-2468 "D6 source" plan label [trim]; preamble :7-8 URLs live in per-surface specs, yet the file carries routes and event names [author] — **Write and trim parts done in #2903**; the preamble stays with the author.
 
 **H — docs/**
 
