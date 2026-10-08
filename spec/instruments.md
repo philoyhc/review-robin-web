@@ -1613,9 +1613,12 @@ The page-wide invariants the lock model enforces:
    Bands 1 / 3 calls `lifecycle.invalidate_if_validated`. If
    the session was `validated`, it flips back to `draft` and
    the workflow card surfaces the next-action stepper from
-   State 2. Band 1 Saves emit `session_rule_set.created` /
-   `session_rule_set.updated` and `instrument.group_boundary_updated`;
-   the invalidation records why in its reason.
+   State 2. A Band 1 Save emits an event only for the part that
+   changed: `session_rule_set.created` / `session_rule_set.updated`
+   for the rules, `session_rule_set.exclude_self_reviews_set` for
+   Self reviews, `instrument.group_boundary_updated` for the unit of
+   review or its boundary tags; the invalidation records why in its
+   reason.
 4. **Save and Lock are independent.** Save persists. Lock toggles
    view mode. Lock-with-dirty fires the `confirm()` prompt.
 
