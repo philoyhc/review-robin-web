@@ -317,6 +317,12 @@ own database rather than in memory. Having resolved it, write it back to
 the settings object, so a no-argument engine built anywhere in the app
 reaches the database the fixtures built and not the file.
 
+`philoyhc/review-robin-web`, where this kit comes from, predates the
+shape and has not moved to it: its `app/db/session.py`,
+`alembic/env.py` and `tests/conftest.py` each build their own engine,
+and nothing writes the test URL back. Copy the shape described here,
+not those three files.
+
 **Resolve and write back at `tests/conftest.py` import time, not inside
 the fixture.** pytest imports `conftest.py` before it imports the test
 modules beside it, and a test module that builds or caches an engine at

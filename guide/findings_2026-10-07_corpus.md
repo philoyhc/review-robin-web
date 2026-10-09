@@ -237,7 +237,7 @@ id points at its row in §3 or §1.
 
 Ruled 2026-10-07: B1, Bc1, Bc2, Bc3, Bc4, G1, G2, Gc1, H2 (rows say how).
 Ruled 2026-10-08: Bc5, Bc8, A4, A7.
-Ruled 2026-10-09: B5, C5, D2, D5, D9, E10, E12, E13, F3, F14, F4, G8.
+Ruled 2026-10-09: B5, C5, D2, D5, D9, E10, E12, E13, F3, F14, F4, G8, I7, I8.
 
 ## 3. Findings by file
 
@@ -354,8 +354,8 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**I4**~~ low doc rrw_sdd_in_practice.md:107 (+ :244, :302) "last 200 merges" plan 76% / spec 31% do not reproduce (77 / 26 at 3559c7a7; 89 / 70 at HEAD); the window is undefined — **Done in #2905** (the window is now defined; the figures reproduce at `3559c7a7`).
 - ~~**I5**~~ low doc README.md:42, :81 "any non-archived session can be archived" vs can_archive refuses ready (session_lifecycle.py:80-86); the Workflow card offers it on expired only — **Done in #2905**.
 - ~~**I6**~~ low doc README.md:41 "per-row rename" vs the expander edits Name, Code, Deadline and Tags — **Done in #2905**.
-- **I7** low author rrw_design_rationale.md:195 email "queued but not yet wired" vs "recorded, not sent" elsewhere (README.md:103); invitations flip to sent, responses-received stays queued
-- **I8** low author new_project_practices_setup.md:307-326 one shared engine builder with URL write-back vs this repo's three (conftest.py:60-62, session.py:30, env.py:25), none writing back
+- ~~**I7**~~ low author rrw_design_rationale.md:195 email "queued but not yet wired" vs "recorded, not sent" elsewhere (README.md:103); invitations flip to sent, responses-received stays queued — **Ruled 2026-10-09: README's wording. Done in #2916.**
+- ~~**I8**~~ low author new_project_practices_setup.md:307-326 one shared engine builder with URL write-back vs this repo's three (conftest.py:60-62, session.py:30, env.py:25), none writing back — **Ruled 2026-10-09: the kit keeps the shape and notes this repo differs. Done in #2916.**
 - ~~**I9**~~ low code tools/practice_kit.py:285 "three" over seven (§1) — **Done in #2896.**
 - **I10** low author azure_ask.md:228-229 migrations round-tripped on SQLite and Postgres, wrong at its date (2026-07-09). A dated record; old I5 left it so
 
