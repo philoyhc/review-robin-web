@@ -264,3 +264,115 @@ Taken 2026-10-09 at `8372fa12`.
 - `spec/ui_elements.md` — §1's busy-indicator exclusion names the Instruments and Observers guards beside Session Home's.
 - `spec/instruments.md` — the nav-away guard's sentence notes the busy indicator stands aside.
 - `guide/things_to_check_in_browser.md` — a section for the PR.
+
+---
+
+## Item 3 — Three chip types, one look each
+
+### Opportunity
+
+The lobby's AND/OR and Select all / Clear all chips wear the off look of
+a tag filter chip (light fill, accent edge), so they read as two
+unselected filters. A survey on 2026-10-09 found the same mismatch on
+Extract: three two-state chips ("All reviewers ↔ Reviewers with
+responses" and its reviewee and assignment-row siblings) flip light and
+dark as if one of two valid choices were "off". `spec/ui_elements.md` §9
+names the lobby chips' fill but sets no rule for chips that aren't
+on/off.
+
+### Decision
+
+The author's taxonomy (2026-10-09), each type with one look:
+
+1. **On/off.** Selected dark, not selected light; the label doesn't
+   change. Standard: the Reviewers page's column chips.
+2. **Cycle.** Every state is a positive choice, so the chip is always
+   dark and the label names the state. A deliberate "off" is one such
+   state. Standard: Extract's Data shaper "All rows ↔ Rows with data".
+3. **Cycle with an unset state.** One state means "not configured yet"
+   and takes the amber `pill-empty` fill; the others are dark. Standard:
+   the Instruments page's Band 1 link chips.
+
+Applied:
+
+- **Lobby AND/OR and Select all / Clear all** (and the Archived page's
+  Select all / Clear all) become type 2: always dark. Select all / Clear
+  all is the edge case whose label names the next click, accepted.
+- **Extract's three "All … ↔ … with responses/data" chips** become type
+  2: always dark, the state still carried by `aria-pressed`.
+- **The Instruments Visibility cells stay as they are**: type 2, with
+  "—" a deliberate off and so a positive state.
+
+**Rejected:** a light "off" for type 3 alongside amber "unset". The
+author's ruling: a deliberate off is a positive state, so it is type 2.
+
+### Semantics
+
+- **Type 2 state** stays where each chip keeps it today (the lobby's
+  `localStorage` mode, Extract's `aria-pressed` and stored key); only
+  the fill changes.
+- **The edge** (`spec/ui_elements.md` §9's reserved shade) is unchanged
+  on every chip.
+- **Contrast:** the dark fill is `--selected-bg` / `--selected-fg`,
+  already audited on `.tag-chip.is-selected`.
+
+### Judgment calls — decided
+
+- Lobby chips take the type 2 look in CSS (the `.tag-mode-chip` and
+  `.pill-tag-clear` rules take `--selected-bg` / `--selected-fg`)
+  rather than an `is-selected` class, which the lobby's script would
+  have to keep from toggling off. (2026-10-09)
+
+### Blast radius (measured)
+
+Taken 2026-10-09 at `49dabecb`.
+
+| What | Count | Command |
+|---|---|---|
+| Files naming the two lobby chip classes | 4 app, 2 tests, 1 spec | `grep -rln "tag-mode-chip\|pill-tag-clear" app tests spec` |
+| Extract chips with `data-label-on` | 3 | `grep -n "data-label-on=" app/web/templates/operator/session_extract_data.html` |
+| Tests and specs naming those chips | 2 tests, 1 spec | `grep -rln "data-label-on\|all-reviewers\|Reviewers with responses" tests spec` |
+
+### PR ladder
+
+1. **The taxonomy and the lobby.** `spec/ui_elements.md` §9 states the
+   three types; `base.html` gives `.tag-mode-chip` and `.pill-tag-clear`
+   the dark fill; `test_chip_edge` / `test_reserved_shade` updated; a
+   lobby browser test or integration assertion pins the fill.
+2. **Extract's three chips.** Their toggle keeps `is-selected` on while
+   flipping `aria-pressed` and the label; `spec/extract_data.md` says
+   they are type 2. The item's cumulative `diff-reviewer` read runs here,
+   from the main SHA before PR 1.
+
+### Definition of done
+
+- `spec/ui_elements.md` §9 defines the three chip types with a standard
+  each.
+- The lobby AND/OR and Select all / Clear all chips, the Archived page's
+  Select all / Clear all, and Extract's three two-state chips render
+  dark in every state; a test pins each.
+- `guide/things_to_check_in_browser.md` has a section per PR.
+- `### Doc impact` current, every bullet checked by hand.
+- `spec-writer` run against the doc-impact specs; flags adjudicated.
+- `### Status` compacted; `guide/todo_master.md` entry updated.
+
+### Open questions
+
+- None at planning.
+
+### Out of scope
+
+- Chips already matching their type: column chips (1), Data shaper and
+  Self-review cycles (2), Band 1 link chips (3), Visibility cells (2).
+- Extract's radio-like axis and field chips: one-of-many selection is
+  type 1 per chip; unchanged.
+- The `btn secondary` AND/OR on Observers and Instruments: buttons, not
+  chips.
+
+### Doc impact
+
+- `spec/ui_elements.md` — §9 states the three chip types; the lobby chips' `--surface-muted` fill becomes the type 2 dark fill (PR 1).
+- `spec/sessions_overview.md` — the tag filter's mode and clear chips are type 2 (PR 1).
+- `spec/extract_data.md` — the three empty-row-drop chips are type 2, always dark (PR 2).
+- `guide/things_to_check_in_browser.md` — a section per PR.
+
