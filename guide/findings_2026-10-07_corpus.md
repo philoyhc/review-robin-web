@@ -237,6 +237,7 @@ id points at its row in §3 or §1.
 
 Ruled 2026-10-07: B1, Bc1, Bc2, Bc3, Bc4, G1, G2, Gc1, H2 (rows say how).
 Ruled 2026-10-08: Bc5, Bc8, A4, A7.
+Ruled 2026-10-09: B5.
 
 ## 3. Findings by file
 
@@ -261,7 +262,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**B2**~~ low spec lifecycle.md:521-526 Observers exception "checkboxes only, bulk card follows the common gate", contradicting :423 vs :434; code gates the whole Unlock panel, selection and checkboxes on not archived (session_observers.html:13-18,229,559; setup_pages.md:360 right) — **Done in #2898.**
 - **B3** — carried, old B27 / G6: lifecycle.md:864-870 the lazy observer runs on Session Home, Operations and the lobby vs Session Home only (_session_home.py:125). Not counted.
 - ~~**B4**~~ med author lifecycle.md:886-889 aged value stays put vs Details Save re-validates the stored Start (§1) — **Done in #2870.**
-- **B5** low author lifecycle.md:698,727 archive_offset default P30D vs nullable, no default, nothing writes it (review_session.py:108); settings_inventory.md:117 "no editor, CSV only"
+- ~~**B5**~~ low author lifecycle.md:698,727 archive_offset default P30D vs nullable, no default, nothing writes it (review_session.py:108); settings_inventory.md:117 "no editor, CSV only" — **Ruled 2026-10-09: the spec marks P30D as the intended default. Done in #2908.**
 - ~~**B6**~~ low spec assignments.md:932-937 reviewer-tail `@` guard "inherited from the roster pages" — C5 dropped it from filter_reviewers_rows / filter_observers_rows (_filters.py:316,526); assignments_picked_handles (:408) keeps it, its docstring (:394-404) stale — **Done in #2898.**
 - ~~**B7**~~ low code validate_page.md:518-520 no internal names in a why line vs validation.py:1098-1112, 1171-1188, 1205-1218 (§1) — **Done in #2896.**
 - ~~**B8**~~ low trim lifecycle.md:130-131 "(author's ruling, 2026-10-05, findings Cc5)", :836-837 "(findings G22, ruled 2026-10-06)", :849 "(author's ruling, 2026-10-06)"; self-staling "no callers": lifecycle.md:746-748, workflow_card.md:219, :933-938. Keep lifecycle.md:621-622 (data compatibility) — **Done in #2898.**
