@@ -97,6 +97,14 @@ Taken 2026-10-09 at `3b8672bd`. `P` is
 | `.lockable-body` users | 1 template + `base.html` | `grep -rln "lockable-body" app/web/templates` |
 | Live specs and root docs | 7 + `README.md` | `grep -rlE "qsu_\|oou_\|quick-setup/lock\|owners/lock\|Unlock.*(Quick Setup\|Owners)\|(Quick Setup\|Owners).*(Lock\|Unlock)" spec docs *.md`, less `archive/` |
 
+### Status
+
+- **PR 1 (dirty guard)** built 2026-10-09 on main `daa7b3b1`, which is
+  the base for PR 3's cumulative read. Four browser tests: a dirty card
+  prompts, and an accepted prompt leaves and drops the edit; Save, Cancel
+  and Lock leave without a prompt. The two prompt tests fail without the
+  guard.
+
 ### PR ladder
 
 1. **Dirty guard.** The `beforeunload` guard in `session_detail.html`, a
