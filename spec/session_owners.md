@@ -73,11 +73,7 @@ the page's card list; this spec owns its contents.
   card's state (`spec/session_home.md`'s Session details card is the
   surface that swaps; this one doesn't).
 - **No Lock / Unlock.** The card is live on load: the picker, Add owner
-  and every Remove but the last owner's work at once. Its Lock / Unlock
-  (`oou_` cookie, `owners/lock`) retired 2026-10-09
-  (`guide/operator_pages_enhancements.md` Item 1): it guarded nothing
-  the routes did not, and the one accident it still caught is the
-  confirm's below.
+  and every Remove but the last owner's work at once.
 - **Table**: every current owner, Email / Name / Role / Added / a
   **Remove** per row, your own included. Each Remove is its own form
   posting to `owners/{user_id}/remove` and saves at once. It is
@@ -202,8 +198,8 @@ since Session Home is then a 404 for you.
 | **Who may** | The creator (whoever is filling the form). | Any owner, removing any owner, the creator included. A non-owner sys-admin must adopt first. |
 | **A stale target** | Not applicable. | `not_owner`: a 303 back with the card's banner. |
 | **Audit** | None — a staged row that is removed was never written. | `session.owner_removed`, a snapshot of the row, with its own correlation id. |
-| **Confirmation** | None (nothing to confirm — no Remove on the one unremovable row). | The self-removal `confirm()` above; none removing another owner. |
-| **Without JavaScript** | Nothing to remove — the buttons stay `hidden`; the email box submits one address. | Works: plain forms. The self-removal confirm is skipped. |
+| **Confirmation** | None (nothing to confirm — no Remove on the one unremovable row). | A `confirm()` naming the owner (§2); your own says you will lose access. |
+| **Without JavaScript** | Nothing to remove — the buttons stay `hidden`; the email box submits one address. | Works: plain forms. Either Remove's confirm is skipped. |
 
 ---
 

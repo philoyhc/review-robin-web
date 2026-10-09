@@ -200,9 +200,7 @@ new session (`session_clone`). Self-removal is allowed when another
 owner remains, and redirects to the sessions lobby. `owners/add` and
 `owners/{user_id}/remove` carry no lifecycle check; Session Home's
 Owners card posts to them directly, each action saving at once
-(`spec/session_owners.md` §2 and §7). Neither reads
-the card's Lock / Unlock cookie, which is a guard against accidental
-edits and not a permission.
+(`spec/session_owners.md` §2 and §7).
 
 ---
 

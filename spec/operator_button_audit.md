@@ -253,8 +253,8 @@ shown, no display/edit swap; full contract in `spec/session_owners.md`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 159 | Owners card | Add owner | `<button type="submit" form="owners-add-form">` | `btn secondary` | Secondary | Posts the picker's address to `owners/add` and saves at once. Sits alone in the card's action row, outside its form. Live on load: the card has no Lock / Unlock (#192 retired). |
-| 190 | Owners card | Remove (per row) | `<button type="submit">` | `chrome-link` | **Not `.btn`** — see #187's note | Its own form per row, posting to `owners/{user_id}/remove`; saves at once. `disabled` when one owner remains. Every other row's form asks first (`confirm()` on submit): your own that you will lose access, another owner's naming them, its text in a `data-confirm` attribute |
+| 159 | Owners card | Add owner | `<button type="submit" form="owners-add-form">` | `btn secondary` | Secondary | Posts the picker's address to `owners/add` and saves at once. Sits alone in the card's action row, outside its form. Live on load: the card has no Lock / Unlock. |
+| 190 | Owners card | Remove (per row) | `<button type="submit">` | `chrome-link` | **Not `.btn`** — see #187's note | Its own form per row, posting to `owners/{user_id}/remove`; saves at once. `disabled` when one owner remains. Every other row's form asks first (`confirm()` on submit): your own that you will lose access; another owner's naming them, its text in a `data-confirm` attribute |
 
 Rows 188, 189 and 191 — the card's staged **Save**, **Cancel** and a
 `<noscript>` Remove fallback — are retired with the staging; the
