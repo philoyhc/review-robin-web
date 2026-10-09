@@ -808,9 +808,9 @@ def _preview_excludes_self_reviews(
 
     Reads the PERSISTED flag rather than a form field: the Link 3
     checkbox is not among the inputs the Refresh handler posts, so an
-    unsaved tick is not reflected until the card is saved. The preview
-    already blends live Link 1 / Link 2 edits with persisted Link 3
-    state, so this matches what is around it.
+    unsaved tick is not reflected until the card is saved. Only the
+    flag is persisted: Links 1-2, the boundary and the Individual /
+    Group pill all come from the live edit.
     """
     if instrument.rule_set_id is None:
         return False

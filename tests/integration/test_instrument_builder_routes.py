@@ -8310,6 +8310,7 @@ def test_preview_sample_exclusion_follows_the_live_link3_pill(
     out = live("individual")
     assert out is not None
     assert out[0].name == "Zoe"
+    assert out[1] is None
 
 
 def test_preview_sample_exclusion_is_not_the_desugar_stage(

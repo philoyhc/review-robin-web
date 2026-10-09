@@ -757,8 +757,10 @@ live preview of one sample row inline.
 >
 > It reads the **persisted** flag: the checkbox is not among the
 > fields the Refresh handler posts, so an unsaved tick shows after
-> the card is saved. The preview already blends live Link 1 / Link 2
-> edits with persisted Link 3 state.
+> the card is saved. Everything else Refresh reads is live: the
+> Link 1 / Link 2 edits, the Link 3 boundary selects and the
+> Individual / Group pill, so "a grouped instrument" above is
+> whichever the pill shows.
 >
 > See `spec/assignments.md` § *Self-review policy* for the two
 > supported ways to suppress self-reviews.
