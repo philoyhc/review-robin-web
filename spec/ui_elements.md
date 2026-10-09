@@ -99,7 +99,7 @@ to CSS classes.
 > Three pages set it, each to the predicate its `beforeunload` guard
 > reads: Session Home's details card over unsaved edits, the Instruments
 > page over a dirty card, and the Observers expander over an unsaved
-> cohort rule. Otherwise the bar would
+> cohort rule. Without the hook the bar would
 > sit behind the prompt, and an operator who stays gets no load to clear
 > it. A leave the operator confirms loads without a bar.
 > *Busy control:* the clicked link or submit button gets
