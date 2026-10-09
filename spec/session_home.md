@@ -70,7 +70,7 @@ then a two-column bottom row.
 │  Tags + optional-tab toggles are fields; no sub-cards        │
 └──────────────────────────────────────────────────────────────┘
 ┌── Quick Setup ───────────┐  ┌── Owners ────────────────┐
-│   bulk CSV uploads       │  │   add / remove; Unlock   │
+│   bulk CSV uploads       │  │   add / remove owners    │
 │                          │  ├── Danger Zone ───────────┤
 │                          │  │   Delete Data / Delete   │
 └──────────────────────────┘  └──────────────────────────┘

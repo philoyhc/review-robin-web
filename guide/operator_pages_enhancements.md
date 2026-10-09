@@ -117,7 +117,7 @@ Shipped as laddered: PR 1 #2919, PR 2 #2920, PR 3 #2921.
 - **Reads:** a `spec-writer` verify pass per rung (1, 6 and 11 stale
   passages or comments) and one at close; one cumulative `diff-reviewer`
   read on `daa7b3b1..7d2f75d2` — no code defect, four stale spec
-  passages, one weak test — plus a read of the delta after it, clean.
+  passages, one weak test — plus a read of the delta after it, clean; the close pass found one more, `spec/session_home.md`'s wireframe label.
 - **Owed to the browser:** the bfcache re-arm of the dirty guard has no
   test; `guide/things_to_check_in_browser.md` carries it.
 
