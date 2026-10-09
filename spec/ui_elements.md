@@ -96,10 +96,10 @@ to CSS classes.
 > does not.
 > Nor does it arm, for a link or a submit, while the page says it will
 > ask before being left (`window.rrwLeaveWillPrompt()` returns `true`).
-> Every page with a `beforeunload` guard sets it to the predicate its
-> guard reads: Session Home's details card over unsaved edits, the
-> Instruments page over a dirty card, and the Observers expander over an
-> unsaved cohort rule. Otherwise the bar would
+> Three pages set it, each to the predicate its `beforeunload` guard
+> reads: Session Home's details card over unsaved edits, the Instruments
+> page over a dirty card, and the Observers expander over an unsaved
+> cohort rule. Otherwise the bar would
 > sit behind the prompt, and an operator who stays gets no load to clear
 > it. A leave the operator confirms loads without a bar.
 > *Busy control:* the clicked link or submit button gets
