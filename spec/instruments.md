@@ -1491,7 +1491,9 @@ Bottom row of the card, right-aligned, in this order:
   warns before navigating away while any card is dirty — the reason
   Replicate, Delete, +Instrument and +Page break need no lock-driven
   disable of their own: a form post from one of them is a navigation
-  the guard already catches.
+  the guard already catches. The guard's predicate is also
+  `window.rrwLeaveWillPrompt`, so the navigation busy indicator stands
+  aside while it would ask (`spec/ui_elements.md` §1).
 
 ## Add / Replicate / Delete
 

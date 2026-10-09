@@ -232,6 +232,14 @@ Taken 2026-10-09 at `8372fa12`.
 | Tests naming `beforeunload` | 3 + 1 unit | `grep -rln "beforeunload" tests --include=*.py` |
 | Specs naming `beforeunload` | 5 | `grep -rln "beforeunload" spec/*.md` |
 
+### Status
+
+- **PR 1** built 2026-10-09 on main `d91e4737`. Each guard's predicate is
+  hoisted into a `willPrompt()` its `beforeunload` handler now calls, so
+  the hook and the guard cannot drift; the Observers one coerces
+  `cohortDirty` to a boolean, since `base.html` checks `=== true`. Two
+  browser tests (one per page) fail without their hook.
+
 ### PR ladder
 
 1. **The two hooks.** Both templates set `window.rrwLeaveWillPrompt`; a
