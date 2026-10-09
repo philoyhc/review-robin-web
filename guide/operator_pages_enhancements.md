@@ -110,6 +110,14 @@ Taken 2026-10-09 at `3b8672bd`. `P` is
   `window.rrwLeaveWillPrompt()` is true. The Instruments page and
   Observers guards have the same gap and don't set the hook yet; that is
   left for a later item.
+- **PR 2 (Owners without a lock)** built 2026-10-09 on main `acec4255`.
+  The keep-list in `app/main.py` keeps its `/owners/...` paths until
+  PR 3, so an owner add or remove still leaves Quick Setup unlocked; only
+  the cookie regex dropped `oou_`. The confirm's text rides in an
+  autoescaped `data-confirm` attribute, so no display name reaches the
+  script. The build found three docs the manifest missed:
+  `spec/rrw_functional_spec.md`, `spec/quick_setup_card_spec.md`'s
+  `oou_` aside, and `guide/post_azure_todo_checklist.md` item 5's rows.
 
 ### PR ladder
 
@@ -158,9 +166,11 @@ cookie. Each rung's specs are tagged in `Doc impact`. The cumulative
 - `spec/session_owners.md` — §2 drops the Lock / Unlock bullet; Remove of another owner asks first (PR 2).
 - `spec/permissions.md` — drops the `owners/lock` row and its notes (PR 2).
 - `spec/ui_elements.md` — §1's busy indicator stands aside for a leave prompt (PR 1); §10's `.quick-setup-*` row drops `.lockable-body.locked` (PR 2) and the footer's Lock / Unlock (PR 3).
-- `spec/quick_setup_card_spec.md` — drops "Lock state on navigation", the footer toggle and the locked-state copy; unavailable still grays (PR 3).
+- `spec/quick_setup_card_spec.md` — the `oou_` aside goes (PR 2); drops "Lock state on navigation", the footer toggle and the locked-state copy; unavailable still grays (PR 3).
 - `spec/settings_inventory.md` — drops the `oou_` (PR 2) and `qsu_` (PR 3) cookie rows.
 - `spec/operator_button_audit.md` — drops rows 32 and 192 (Lock / Unlock); the Owners Remove row records the confirm (PR 2, PR 3).
+- `spec/rrw_functional_spec.md` — the Session Home Owners bullet drops "guarded by its own Lock / Unlock" (PR 2).
+- `guide/post_azure_todo_checklist.md` — item 5's Owners rows lose the lock rows and gain the confirm (PR 2).
 - `README.md` — the Quick Setup line drops "behind a single Lock / Unlock toggle" (PR 3).
 - `guide/things_to_check_in_browser.md` — a section per PR.
 - `guide/todo_master.md` — delete this item's entry at close.

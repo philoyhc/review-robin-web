@@ -276,3 +276,18 @@ section (git history keeps it), so this file lists only what is owed.
   then leave: no prompt.
 - [ ] **A clean card doesn't ask.** Unlock without typing, then leave:
   no prompt.
+
+## Owners without a lock; removing another owner asks (operator pages Item 1, PR 2)
+
+- [ ] **The card is live on load.** Open Session Home: the Owners card
+  has no Lock / Unlock and isn't greyed; the picker and Add owner work
+  straight away.
+- [ ] **Removing another owner asks, by name.** Click Remove on another
+  owner's row: the browser's confirm reads "Remove *their name* as an
+  owner of this session?" (their email if they have no name). Cancel
+  posts nothing and leaves no loading bar; OK removes them.
+- [ ] **Your own row and the last owner are unchanged.** Your own
+  Remove still warns that you'll lose access; on a one-owner session
+  the Remove is disabled.
+- [ ] **Quick Setup is unaffected.** Unlock Quick Setup, add an owner:
+  Quick Setup is still unlocked when the page comes back.

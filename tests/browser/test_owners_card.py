@@ -38,12 +38,6 @@ def _open_home(page: Page, session_id: int) -> None:
     page.goto(f"/operator/sessions/{session_id}")
 
 
-def _unlock(page: Page) -> None:
-    with page.expect_navigation():
-        page.locator("#owners-lock-toggle").click()
-    expect(page.locator("#owners-lock-toggle")).to_have_text("Lock")
-
-
 def _add(page: Page, email: str) -> None:
     page.locator("#owners-add-email").fill(email)
     with page.expect_navigation():
@@ -56,30 +50,27 @@ def _two_owner_session(
     _sign_in_colleague(api)
     session_id = new_session()
     _open_home(page, session_id)
-    _unlock(page)
     _add(page, COLLEAGUE_EMAIL)
     expect(_owner_row(page, COLLEAGUE_EMAIL)).to_have_count(1)
     return session_id
 
 
-def test_the_card_starts_locked(
+def test_the_card_is_live_with_no_lock(
     page: Page, api: httpx.Client, new_session: Callable[[], int]
 ) -> None:
-    """Item 5, 'The card starts locked'."""
-    # Two owners, so a Remove that only the lock disables is on the card,
-    # and a second colleague, so the picker still has someone to offer.
+    """``guide/operator_pages_enhancements.md`` Item 1: no Lock / Unlock;
+    the picker, Add owner and another owner's Remove are live on load."""
     session_id = _two_owner_session(page, api, new_session)
     sign_in(api, SECOND_COLLEAGUE_EMAIL)
     page.goto("/operator/sessions")
     _open_home(page, session_id)
 
-    expect(page.locator("#owners-card-body")).to_have_class("lockable-body locked")
-    expect(page.locator("#owners-add-email")).to_be_disabled()
-    expect(page.locator("#owners-add-submit")).to_be_disabled()
-    expect(page.locator("#owners-lock-toggle")).to_have_text("Unlock")
+    expect(page.locator("#owners-lock-toggle")).to_have_count(0)
+    expect(_card(page).locator(".locked")).to_have_count(0)
+    expect(page.locator("#owners-add-email")).to_be_enabled()
+    expect(page.locator("#owners-add-submit")).to_be_enabled()
     remove = _owner_row(page, COLLEAGUE_EMAIL).get_by_role("button", name="Remove")
-    expect(remove).to_be_disabled()
-    expect(remove).to_have_attribute("title", "Unlock the card to change owners.")
+    expect(remove).to_be_enabled()
 
 
 def test_add_and_remove_each_save_at_once(
@@ -91,6 +82,7 @@ def test_add_and_remove_each_save_at_once(
     expect(_card(page).locator("[role=alert]")).to_have_count(0)
     expect(page.locator(f"#owners-candidates option[value='{COLLEAGUE_EMAIL}']")).to_have_count(0)
 
+    page.once("dialog", lambda dialog: dialog.accept())
     with page.expect_navigation():
         _owner_row(page, COLLEAGUE_EMAIL).get_by_role("button", name="Remove").click()
 
@@ -98,12 +90,40 @@ def test_add_and_remove_each_save_at_once(
     expect(page.locator(f"#owners-candidates option[value='{COLLEAGUE_EMAIL}']")).to_have_count(1)
 
 
+def test_removing_another_owner_asks_and_cancel_posts_nothing(
+    page: Page, api: httpx.Client, new_session: Callable[[], int]
+) -> None:
+    """``guide/operator_pages_enhancements.md`` Item 1: the confirm that
+    replaced the Owners lock, naming whom it removes."""
+    _two_owner_session(page, api, new_session)
+    remove = _owner_row(page, COLLEAGUE_EMAIL).get_by_role("button", name="Remove")
+    asked: list[Dialog] = []
+    posted: list[str] = []
+    page.on("request", lambda r: posted.append(r.url) if r.method == "POST" else None)
+
+    def dismiss(dialog: Dialog) -> None:
+        asked.append(dialog)
+        dialog.dismiss()
+
+    page.once("dialog", dismiss)
+    remove.click()
+    expect(_owner_row(page, COLLEAGUE_EMAIL)).to_have_count(1)
+    assert len(asked) == 1 and asked[0].type == "confirm"
+    assert asked[0].message == (
+        f"Remove {COLLEAGUE_EMAIL} as an owner of this session?"
+    )
+    assert posted == []
+    # Declining leaves no busy indicator behind (base.html skips a
+    # submit whose onsubmit cancelled it).
+    page.wait_for_timeout(400)
+    expect(page.locator("[data-rrw-busy-bar]")).to_be_hidden()
+
+
 def test_the_last_owner_cannot_be_removed(
     page: Page, new_session: Callable[[], int]
 ) -> None:
     """Item 5, 'The last owner cannot go'."""
     _open_home(page, new_session())
-    _unlock(page)
 
     remove = _owner_row(page, FAKE_OPERATOR_EMAIL).get_by_role("button", name="Remove")
     expect(remove).to_be_disabled()
@@ -146,21 +166,8 @@ def test_owners_change_in_an_activated_session(
     activate(api, live_server.database_url, session_id)
     _open_home(page, session_id)
 
-    _unlock(page)
     _add(page, COLLEAGUE_EMAIL)
     expect(_owner_row(page, COLLEAGUE_EMAIL)).to_have_count(1)
-
-
-def test_the_card_relocks_after_leaving_home(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
-) -> None:
-    """Item 5, 'It relocks'."""
-    session_id = _two_owner_session(page, api, new_session)
-    expect(page.locator("#owners-lock-toggle")).to_have_text("Lock")
-
-    page.goto("/operator/sessions")
-    _open_home(page, session_id)
-    expect(page.locator("#owners-lock-toggle")).to_have_text("Unlock")
 
 
 def test_add_and_self_remove_work_without_javascript(
@@ -173,10 +180,11 @@ def test_add_and_self_remove_work_without_javascript(
     try:
         page = context.new_page()
         _open_home(page, session_id)
-        _unlock(page)
         _add(page, COLLEAGUE_EMAIL)
         expect(_owner_row(page, COLLEAGUE_EMAIL)).to_have_count(1)
 
+        # Another owner's Remove posts straight through too: no script,
+        # no confirm, as self-removal.
         with page.expect_navigation():
             _owner_row(page, COLLEAGUE_EMAIL).get_by_role("button", name="Remove").click()
         expect(_owner_row(page, COLLEAGUE_EMAIL)).to_have_count(0)

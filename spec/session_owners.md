@@ -72,25 +72,25 @@ the page's card list; this spec owns its contents.
   display/edit swap — the card renders one way whatever the details
   card's state (`spec/session_home.md`'s Session details card is the
   surface that swaps; this one doesn't).
-- **Lock / Unlock, as on Quick Setup**, against accidental edits. The
-  card renders **locked** by default: the body
-  (`.lockable-body.locked`) greys, and the picker, Add owner and every
-  Remove are `disabled`. **Unlock** (`.btn.secondary`, right
-  of Add owner) posts `owners/lock` with `action=unlock`, which sets
-  the `oou_{session_id}=1` cookie (`spec/settings_inventory.md`
-  "Cookies"). **Lock** clears it. The card stays unlocked across its own
-  adds and removes and relocks when the operator leaves Session Home,
-  submits a Session Home form other than its own or Quick Setup's, or
-  opens another session's Home, through the navigation middleware
-  Quick Setup's `qsu_` cookie uses.
-  The lock is **visual only**: `owners/add` and
-  `owners/{user_id}/remove` don't read it, so a direct POST still saves.
+- **No Lock / Unlock.** The card is live on load: the picker, Add owner
+  and every Remove but the last owner's work at once. Its Lock / Unlock
+  (`oou_` cookie, `owners/lock`) retired 2026-10-09
+  (`guide/operator_pages_enhancements.md` Item 1): it guarded nothing
+  the routes did not, and the one accident it still caught is the
+  confirm's below.
 - **Table**: every current owner, Email / Name / Role / Added / a
   **Remove** per row, your own included. Each Remove is its own form
   posting to `owners/{user_id}/remove` and saves at once. It is
-  `disabled` when one owner remains (locked or not) and while the card
-  is locked; on your own row the form asks first (`window.confirm` on
-  submit).
+  `disabled` when one owner remains. Every other Remove **asks first**
+  (`window.confirm` on submit; canceling posts nothing):
+  - **your own row**: "Remove yourself as an owner? You will lose access
+    to this session.";
+  - **another owner's row**: "Remove *name* as an owner of this
+    session?", naming the owner's display name, or the email when there
+    is none. The text rides in an autoescaped `data-confirm` attribute
+    that the handler reads, so no display name reaches the script.
+
+  Without JavaScript either Remove posts unconfirmed.
 - **Add owner** (`.btn.secondary`, `type="submit"`) posts the picker's
   address (`target_email`, `required`) to `owners/add` and saves at
   once. Plain forms throughout, so the card needs no JavaScript.
@@ -173,13 +173,11 @@ dropped.
 | `POST /operator/sessions` (Create) | router-level `require_operator` (no session to own yet) | n/a | `owners` (repeated) |
 | `POST /operator/sessions/{id}/owners/add` | `require_sys_admin_or_session_operator` | any state | `target_email` |
 | `POST /operator/sessions/{id}/owners/{user_id}/remove` | `require_session_operator` | any state | — |
-| `POST /operator/sessions/{id}/owners/lock` | `require_session_operator` | any state | `action` (`unlock` sets the cookie; anything else clears it) |
 
 Full gate/refusal/status-code/audit-event contract:
 `spec/permissions.md` §4.2 and §5.
 
-All three redirect to `_owners_redirect_url`. `owners/lock` only ever
-lands on `#owners-card`. The two per-action routes go to
+Both Session Home routes redirect to `_owners_redirect_url`:
 `#owners-card` on success, `?owners_error=<code>#owners-card` on a
 refusal — except `last_owner` on remove, a bare 409 (the card disables
 that Remove, so only a direct POST or a concurrent remove reaches it),
@@ -194,10 +192,10 @@ since Session Home is then a 404 for you.
 |---|---|---|
 | **Where it shows** | On each staged co-owner row. The creator's row has none. | On every owner row, your own included. |
 | **Element** | `<button type="button" class="chrome-link" data-owners-remove>`, built by the stager. | `<button type="submit" class="chrome-link">` in its own `<form>` per row, posting to `owners/{user_id}/remove`. |
-| **A click** | Takes the row out of the table. Nothing is written. | Deletes the owner row at once. On your own row, a `confirm()` first; canceling posts nothing. Locked by default: **Unlock** first. |
+| **A click** | Takes the row out of the table. Nothing is written. | Deletes the owner row at once. A `confirm()` first, naming the owner (or, on your own row, saying you will lose access); canceling posts nothing. |
 | **Saved by** | Nothing on its own. **Create session** submits whatever rows remain. | Itself. |
 | **Undo** | Pick the address again. Leaving the page discards all staging. | Add the owner back with **Add owner** — they are a candidate again. |
-| **Other unsaved edits** | Untouched — Remove never posts. | Lost: the post reloads the page, so an unlocked details card's unsaved edits go with it. The Owners card itself holds nothing unsaved. |
+| **Other unsaved edits** | Untouched — Remove never posts. | The post reloads the page, so an unlocked details card with unsaved edits asks first (its `beforeunload` guard, `spec/session_home.md` §4); leaving anyway loses them. The Owners card itself holds nothing unsaved. |
 | **Removing yourself** | Impossible: the creator's row carries no Remove. | Allowed while another owner remains; confirmed at the click; redirects to `/operator/sessions`. |
 | **The last owner** | Cannot arise — the creator is always kept (`[creator, *staged]`). | Remove renders `disabled`; a direct POST is a bare **409** (`last_owner`), the owner rows locked `FOR UPDATE` while counting. |
 | **Lifecycle** | No session yet. | Any state — neither the card nor the route carries a lifecycle gate. |

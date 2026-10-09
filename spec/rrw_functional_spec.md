@@ -1166,8 +1166,8 @@ Top → bottom:
   confirm-gated, live in every state but `ready`, and
   visible-but-disabled in `ready`, route-enforced server-side.
 - **Owners card**, stacked above Danger Zone — the session's own
-  owner set, editable in every session state, guarded by its own
-  Lock / Unlock against accidental edits. `spec/session_owners.md` carries the full contract.
+  owner set, editable in every session state, with no Lock / Unlock;
+  removing another owner asks first. `spec/session_owners.md` carries the full contract.
 
 The round-trip **setup CSV download tiles** are not on Session
 Home: they live on the Operations-strip **Extract data** tab (see
