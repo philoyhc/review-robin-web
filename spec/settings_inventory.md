@@ -356,7 +356,6 @@ preference stored?" finds the answer quickly.
 
 | Cookie | Scope | Purpose |
 |---|---|---|
-| `qsu_{session_id}=1` | path `/`, `HttpOnly`, `SameSite=Lax` | Quick Setup card unlock state. Set by `POST /operator/sessions/{id}/quick-setup/lock?action=unlock`; cleared by a Starlette middleware in `app/main.py` whenever the operator navigates anywhere that isn't **this session's** Home or one of its `/operator/sessions/{id}/quick-setup/...` or `/owners/...` endpoints (so leaving Home for the lobby, operator settings, `/about` or another session's Home relocks the card on return). The path is `/` so the cookie is visible on every subsequent request — without that, navigations outside `/operator/sessions/{id}/` couldn't observe and clear the cookie. |
 | `rrw-sort-{surface}-{session_id}[-{instrument_id}]` | path `/operator/sessions/{id}` (`/me/sessions/{id}` for `rs`), `SameSite=Lax`, 1-year Max-Age, **not** `HttpOnly` | Per-(browser, session, table) sort spec for any opt-in `<table data-rrw-sortable="...">`. Carries JSON `[{"key": "...", "dir": "asc|desc"}, ...]` in cascade order (max 3 entries; malformed JSON / unknown keys silently drop), **percent-encoded** by the browser (`encodeURIComponent`), so the SSR decoders must `unquote()` before `json.loads` (see `spec/sort_by_reviewee.md`). Surfaces: `rs` (reviewer-surface, one cookie per instrument), `reviewers` / `reviewees` / `relationships` / `assignments` / `invitations` / `responses` (operator setup + operations tables, one cookie per page). The three Setup tables also offer an `updated_at` sort key. Written by `_rrwWriteCookie` in `base.html` on every click; read by the JS on `DOMContentLoaded` to seed badges + by the route layer at render time so the initial HTML lands in the persisted order (no JS-reorder flicker). The exception is an `rs` spec holding a `response:N` key: the server cannot sort by response values, so it renders the operator default and the on-load script re-sorts by the whole spec (`spec/sort_by_reviewee.md`). Clearing the sort writes an expired cookie. |
 | `rrw-sort-lobby` / `rrw-sort-archived` | path `/`, `SameSite=Lax`, 1-year Max-Age, **not** `HttpOnly` | The same sort-spec cookie for the two session-list tables — the Sessions lobby and the archived-sessions index. Not session-scoped, so no id in the name, and read at render time by the lobby routes like the per-session ones. |
 
@@ -411,8 +410,7 @@ the pattern itself is specified in `spec/setup_pages.md`.
 | `?editing=…&saved=…` plus `?rf_save_error=…` and `?sort_save_error=…&sort_save_error_instrument_id=…` flash params | Instruments page | Per-instrument editing target + post-Save success flash, plus flash params for response-field and sort-order errors and would-empty / delete-blocked confirmation flows. |
 
 **Canonical specs:** `spec/setup_pages.md` (visibility-toggle
-pattern), `spec/quick_setup_card_spec.md` (cookie + lock semantics),
-`spec/operator_ui_concept.md` (chrome-detour return-to-origin).
+pattern), `spec/operator_ui_concept.md` (chrome-detour return-to-origin).
 
 ---
 
@@ -610,9 +608,6 @@ rules, and the round-trip stability contract).
   load flow.
 - `app/services/email_templates.py` — `OVERRIDE_KEYS` +
   `RESPONSES_RECEIVED_ENABLED_KEY`.
-- `app/main.py` — the Quick Setup unlock-cookie navigation
-  middleware (mirrors the `qsu_` prefix in
-  `app/web/routes_operator/_shared.py`).
 - `spec/csv_contracts.md` — the CSV export / import contract
   referenced by §10.
 - `spec/setup_pages.md` — the inline-editable Setup rows + Add +

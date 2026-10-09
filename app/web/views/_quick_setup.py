@@ -8,10 +8,10 @@ Owns the ``QuickSetupSlot`` / ``QuickSetupContext`` dataclasses,
 the per-slot error-message renderer, and the two context builders:
 
 - ``build_quick_setup_context(...)`` — Session Home variant.
-  Reads the operator's lock-toggle cookie + the session lifecycle
-  to decide ``is_available`` / ``is_locked`` / ``show_lock_toggle``.
+  Reads the session lifecycle and responses to decide
+  ``is_available`` / ``is_locked``.
 - ``build_new_session_quick_setup_context(...)`` — new-session
-  page variant. Card always unlocked, lock toggle suppressed.
+  page variant. Card always live.
 
 15D PR 7a retired the legacy "Assignments (manual CSV or RuleSet
 pick)" slot. Generation is now an explicit operator action on the
@@ -100,20 +100,17 @@ class QuickSetupContext:
     ``slots`` renders top-to-bottom in the order given; the card
     iterates and the ``quick_setup_slot`` macro renders each one.
 
-    Two status signals — ``is_locked`` (visual greying) and
-    ``show_lock_toggle`` (whether the operator can unlock) —
-    together capture the card's availability:
+    ``is_locked`` (visual greying, inputs disabled) is the card's
+    availability, and nothing else — there is no Lock / Unlock
+    (``guide/operator_pages_enhancements.md`` Item 1):
 
     - **Available** (setup editable — ``draft`` or ``validated`` —
-      AND no persisted responses):
-      ``show_lock_toggle=True``. ``is_locked`` is ``True`` by
-      default on every fresh page load; the cookie-driven
-      ``is_unlocked`` flips it off. The operator must explicitly
-      Unlock before any submit.
+      AND no persisted responses): ``is_locked=False``; the slots are
+      live on load and the replace checkbox gates every replacing
+      submit.
     - **Unavailable** (``ready`` or later, or any session with
-      persisted responses): ``show_lock_toggle=False``
-      and ``is_locked=True`` permanently. The body greys; the
-      operator can't unlock. Defense-in-depth route gates (each
+      persisted responses): ``is_locked=True``. The body greys and
+      the inputs are disabled. Defense-in-depth route gates (each
       slot's inline ``is_editable`` check, plus
       ``_require_response_loss_ack`` on the Reviewers, Reviewees and
       Settings slots) stay in place but never fire from this surface
@@ -128,11 +125,6 @@ class QuickSetupContext:
     ``"Quick Setup"``; the new-session preview variant uses
     ``"Quick setup (optional)"`` to convey that the card surfaces
     early as a hint about post-creation setup paths.
-
-    ``show_lock_toggle`` gates the Lock / Unlock footer button.
-    Session Home renders it only while the card is available
-    (``draft`` AND no responses); the new-session preview variant
-    also suppresses it (no session row → nothing to lock).
     """
 
     slots: list[QuickSetupSlot]
@@ -140,7 +132,6 @@ class QuickSetupContext:
     is_locked: bool
     description: str
     title: str = "Quick Setup"
-    show_lock_toggle: bool = True
     show_confirm_replace: bool = True
     """Gate the card-level "Yes, replace existing reviewers, reviewees
     or settings, according to what is uploaded. …" checkbox just above
@@ -161,16 +152,11 @@ def build_quick_setup_context(
     review_session: ReviewSession,
     *,
     user: User | None = None,
-    is_unlocked: bool = False,
     error_kind: str | None = None,
     error_reason: str | None = None,
     error_details: tuple[str, ...] = (),
 ) -> QuickSetupContext:
     """Build the Quick Setup card context for Session Home.
-
-    ``is_unlocked`` reflects the operator's lock-toggle cookie
-    (``qsu_{session_id}=1``). Default is ``False`` ⇒ ``is_locked=True``
-    on every fresh page load.
 
     ``error_kind`` + ``error_reason`` come from the
     ``?quick_setup_error=...&quick_setup_reason=...`` redirect flag set
@@ -186,7 +172,7 @@ def build_quick_setup_context(
     # reviewer responses exist yet. Outside that window — ``ready``,
     # ``expired``, ``archived``, or any session with persisted responses
     # from a prior activation cycle — the card stays permanently
-    # locked (body greyed, Lock / Unlock toggle hidden). A submit that
+    # locked (body greyed, controls disabled). A submit that
     # arrives anyway is refused by the slot's inline ``is_editable``
     # check, or, on a session with responses, by
     # ``_require_response_loss_ack``. The single description copy
@@ -329,21 +315,14 @@ def build_quick_setup_context(
             "validated) and the session has no responses."
         )
 
-    # Default-locked on every fresh page load when the card is
-    # available; the cookie-driven ``is_unlocked`` flips it off
-    # until the operator locks again or the cookie is cleared.
-    # When the card isn't available (``ready`` / ``expired`` /
-    # ``archived``, or any session with persisted responses), force-lock and
-    # hide the toggle entirely so the operator can't visually
-    # unlock something the route layer would reject anyway.
-    is_locked = True if not is_available else not is_unlocked
-
+    # Locked exactly when unavailable (``ready`` / ``expired`` /
+    # ``archived``, or any session with persisted responses), so the
+    # card never offers what the route layer would reject.
     return QuickSetupContext(
         slots=slots,
         is_disabled=is_disabled,
-        is_locked=is_locked,
+        is_locked=not is_available,
         description=description,
-        show_lock_toggle=is_available,
     )
 
 
@@ -461,9 +440,7 @@ def build_new_session_quick_setup_context(
     shape — every slot ``is_wired=False`` — for callers that want
     the eventual visual without hooking up the back end.
 
-    The card is always unlocked (``is_locked=False``) and the
-    Lock / Unlock toggle is suppressed: there's no session to lock.
-    The card-level replace-confirmation checkbox is also suppressed
+    The card is always live (``is_locked=False``). The card-level replace-confirmation checkbox is also suppressed
     (``show_confirm_replace=False``) — there's nothing to replace
     on a freshly-created session.
     """
@@ -534,7 +511,6 @@ def build_new_session_quick_setup_context(
             "place — submitted alongside the session details above."
         ),
         title="Quick setup (optional)",
-        show_lock_toggle=False,
         show_confirm_replace=False,
         external_form_id="create-session-form" if is_wired else None,
     )

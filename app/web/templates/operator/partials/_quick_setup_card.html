@@ -3,8 +3,8 @@
 
    One outer ``<form>`` wraps every slot's inputs and posts to the
    single ``/quick-setup/submit-all`` endpoint. The bottom of the
-   card carries one Submit button (next to Lock / Unlock); the per-
-   slot Submit buttons are gone. The bottom Submit is gated client-
+   card carries one Submit button; the per-slot Submit buttons are
+   gone. The bottom Submit is gated client-
    side — disabled until at least one ``<input type="file">`` has a
    file selected and, where it renders, the replacement-confirmation
    checkbox is ticked.
@@ -26,16 +26,11 @@
    on submit; the route's server-side gate is the source of truth.
 
    Status awareness collapses on a single signal — ``is_locked`` —
-   so the body picks up ``.locked`` greying when locked (which now
-   includes the H2 title and the confirmation checkbox). The
-   Lock / Unlock toggle in the footer flips it via
-   ``POST /operator/sessions/{id}/quick-setup/lock`` (a per-session
-   ``HttpOnly`` cookie carries the operator's last choice).
-
-   Once setup isn't editable (Activated or later), or once the
-   session holds responses, the card
-   is locked for good and the toggle does not render
-   (``views._quick_setup``). Each slot's inline ``is_editable``
+   so the body picks up ``.locked`` greying when locked (which
+   includes the H2 title and the confirmation checkbox). There is no
+   Lock / Unlock (``guide/operator_pages_enhancements.md`` Item 1):
+   the card is live on load while setup is editable and the session
+   holds no responses, and locked otherwise (``views._quick_setup``). Each slot's inline ``is_editable``
    check, and ``_require_response_loss_ack`` on a session with
    responses, are still the hard gates; a rejected submit comes back as a
    full-width ``banner-error`` above the slots, tied to its slot by
@@ -54,9 +49,9 @@
        card, not per-slot. #}
     <div class="quick-setup-slot-controls">
       {# ``locked`` disables the input outright — not just the CSS
-         greying — so an unavailable / locked card can't have a file
-         staged. ``is_locked`` is force-``True`` whenever the card
-         is unavailable (see ``views._quick_setup``). #}
+         greying — so an unavailable card can't have a file staged.
+         ``is_locked`` is ``True`` exactly when the card is
+         unavailable (see ``views._quick_setup``). #}
       <input type="file"
              name="{{ slot.key }}_file"
              accept=".csv"
@@ -132,9 +127,7 @@
   {# Body wrapper carries ``.locked`` greying when the card is
      locked. The H2 title + replacement-confirmation checkbox both
      sit inside the wrapper so they grey along with the slot
-     controls. The footer (Submit + Lock toggle) sits outside this
-     wrapper so the toggle stays vivid even while the body is
-     greyed. #}
+     controls. The footer (Submit) sits outside this wrapper. #}
   <div class="quick-setup-body{% if quick_setup.is_locked %} locked{% endif %}">
     <h2>{{ quick_setup.title }}</h2>
     <p class="form-help">{{ quick_setup.description }}</p>
@@ -187,9 +180,8 @@
       </p>
     {% endif %}
   </div>
-  {# Footer: bottom-aligned row with the consolidated Submit button
-     on the left and the Lock / Unlock toggle on the right. The
-     Submit button is associated with the outer submit-all form via
+  {# Footer: bottom-aligned row, flush right, holding the
+     consolidated Submit button. It is associated with the outer submit-all form via
      the HTML ``form="..."`` attribute and starts ``disabled``;
      inline JS below toggles it on/off based on whether any file
      input has a file selected.
@@ -204,18 +196,6 @@
               form="{{ submit_all_form_id }}"
               id="quick-setup-submit-all"
               disabled>Submit</button>
-      {% if quick_setup.show_lock_toggle %}
-        <form method="post"
-              action="/operator/sessions/{{ session.id }}/quick-setup/lock"
-              style="margin: 0;">
-          <input type="hidden"
-                 name="action"
-                 value="{% if quick_setup.is_locked %}unlock{% else %}lock{% endif %}">
-          <button type="submit"
-                  class="btn secondary"
-                  id="quick-setup-lock-toggle">{% if quick_setup.is_locked %}Unlock{% else %}Lock{% endif %}</button>
-        </form>
-      {% endif %}
     </div>
   {% endif %}
 </div>

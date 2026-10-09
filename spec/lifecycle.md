@@ -613,7 +613,7 @@ doesn't stack a yellow lock card on top — disabled treatment on
 Home is plain greying-out. The Quick Setup card on Home follows
 the same convention: available on the same `is_editable` predicate
 while the session has no responses, and otherwise body-greyed with
-the Lock / Unlock toggle hidden (`spec/quick_setup_card_spec.md`).
+its controls disabled (`spec/quick_setup_card_spec.md`).
 
 **Assignments answers to the same predicate**, and splits the way
 the roster pages do: the selection-driven

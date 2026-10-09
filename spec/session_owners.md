@@ -191,7 +191,7 @@ since Session Home is then a 404 for you.
 | **A click** | Takes the row out of the table. Nothing is written. | Deletes the owner row at once. A `confirm()` first, naming the owner (or, on your own row, saying you will lose access); canceling posts nothing. |
 | **Saved by** | Nothing on its own. **Create session** submits whatever rows remain. | Itself. |
 | **Undo** | Pick the address again. Leaving the page discards all staging. | Add the owner back with **Add owner** — they are a candidate again. |
-| **Other unsaved edits** | Untouched — Remove never posts. | The post reloads the page, so an unlocked details card with unsaved edits asks first (its `beforeunload` guard, `spec/session_home.md` §4); leaving anyway loses them. The Owners card itself holds nothing unsaved. |
+| **Other unsaved edits** | Untouched — Remove never posts. | The post reloads the page, so an unlocked details card with unsaved edits asks first (its `beforeunload` guard, `spec/session_home.md` §4) — on another owner's row, after the Remove's own confirm; leaving anyway loses them. The Owners card itself holds nothing unsaved. |
 | **Removing yourself** | Impossible: the creator's row carries no Remove. | Allowed while another owner remains; confirmed at the click; redirects to `/operator/sessions`. |
 | **The last owner** | Cannot arise — the creator is always kept (`[creator, *staged]`). | Remove renders `disabled`; a direct POST is a bare **409** (`last_owner`), the owner rows locked `FOR UPDATE` while counting. |
 | **Lifecycle** | No session yet. | Any state — neither the card nor the route carries a lifecycle gate. |

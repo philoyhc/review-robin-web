@@ -216,13 +216,12 @@ of this one; its buttons, including #159, are in §5f.
 Source: `partials/_quick_setup_card.html`. Also rendered on
 `session_new.html`, where the slots' inputs associate with the
 create-session form via `form="create-session-form"` and the card
-renders neither Submit nor Lock of its own — the page's **Create
+renders no Submit of its own — the page's **Create
 session** button submits both halves.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 31 | Quick Setup footer | Submit | `<button type="submit">` | `btn secondary` | Secondary | Disabled until ≥1 file selected; posts `/quick-setup/submit-all` |
-| 32 | Quick Setup footer | Lock / Unlock | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle; posts `/quick-setup/lock` |
 | 160 | Quick Setup slot | Cancel | `<a>` | `btn alert` | **Outline-amber** | Per-slot cancel on an inline `.banner.banner-error` — same banner convention as #155, not a lock card |
 
 ### 5d — Extract Data — not on this page
@@ -430,7 +429,7 @@ per instrument card.
 | 55 | Bottom action row | Delete | `<button type="submit">` | `btn destructive` | Destructive | Ships `disabled`; a paired confirm checkbox flush-right below the row (`data-delete-confirm` / `data-delete-btn`) gates it. Disabled outright when it is the only instrument or the session is not editable. |
 | 56 | Bottom action row | +Instrument | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/add-new-model` with `after={iid}`. **The sole "create new instrument" affordance on the row** — every new instrument is a new-model one, so there is no separate `Add instrument` / `Add group instrument` pair. |
 | 56b | Bottom action row | +Page break | `<button type="submit">` | `btn secondary` | Secondary | Posts `/instruments/{iid}/page-break/create` (sets `starts_new_page=true` on the successor). Same Secondary role as +Instrument. Disabled on the last instrument, when the successor already carries a break, or past the editable window. |
-| 57 | Bottom action row | Lock / Unlock | `<a>` | `btn secondary` | Secondary | The gating toggle, both anchors always rendered and swapped in-page by the client lock layer; their `?editing=<id>` hrefs are the no-JS fallback. An in-page Lock strips `?editing` from the URL. Clicking Lock with a dirty Save prompts `confirm()`. Marked disabled (`.disabled`, `aria-disabled`) only when the session is not editable. Same footer shape as the Quick Setup card's. |
+| 57 | Bottom action row | Lock / Unlock | `<a>` | `btn secondary` | Secondary | The gating toggle, both anchors always rendered and swapped in-page by the client lock layer; their `?editing=<id>` hrefs are the no-JS fallback. An in-page Lock strips `?editing` from the URL. Clicking Lock with a dirty Save prompts `confirm()`. Marked disabled (`.disabled`, `aria-disabled`) only when the session is not editable. |
 | 238 | Card header (unlocked) | Lock | `<a>` | `btn secondary` | Secondary | Header mirror of #57's Lock, sharing its `data-instrument-lock-toggle` so the dirty-state `confirm()` fires from either; there so the operator need not scroll past Bands 1–3 to change mode. Marked disabled (`.disabled`, `aria-disabled`) when the session is not editable |
 | 239 | Card header (unlocked) | Save | `<button type="submit" form="dfsave-{iid}">` | `btn secondary` | Secondary | Header mirror of #52; starts `disabled` and is enabled in lockstep with it by the dirty tracker |
 | 240 | Card header (unlocked) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Header mirror of #53; starts `disabled`, enabled with Save |
