@@ -480,35 +480,6 @@ def _require_instrument_editable(review_session: ReviewSession) -> None:
 
 
 # ------------------------------------------------------------------ #
-# Quick Setup cookie naming.
-#
-# The companion regex ``_UNLOCK_COOKIE_RE`` lives in
-# ``app/main.py`` and drives the navigation middleware that expires
-# the unlock cookie when the operator leaves Session Home. If you
-# rename the prefix here, update the regex literal there too — both
-# files cross-reference each other in comments.
-# ------------------------------------------------------------------ #
-_QUICK_SETUP_COOKIE_PREFIX = "qsu"
-
-
-def _quick_setup_cookie_name(session_id: int) -> str:
-    return f"{_QUICK_SETUP_COOKIE_PREFIX}_{session_id}"
-
-
-def _quick_setup_unlocked(
-    request: Request, review_session: ReviewSession
-) -> bool:
-    """``True`` when the operator's last lock-toggle action was Unlock.
-
-    Read from the per-session cookie set by
-    ``POST /sessions/{id}/quick-setup/lock``. Absent ⇒ default locked.
-    """
-    return (
-        request.cookies.get(_quick_setup_cookie_name(review_session.id)) == "1"
-    )
-
-
-# ------------------------------------------------------------------ #
 # Setup-roster plumbing (cross-slice).
 #
 # Shared by the Reviewers / Reviewees / Relationships Setup-page

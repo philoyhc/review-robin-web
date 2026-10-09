@@ -56,7 +56,6 @@ from app.web.deps import (
     require_session_operator,
 )
 from app.web.routes_operator._shared import (
-    _quick_setup_cookie_name,
     _require_response_loss_ack,
     session_payload_error,
 )
@@ -421,10 +420,8 @@ async def create_session(
 # Segment 11J PR A — Quick Setup card live wiring
 # --------------------------------------------------------------------------- #
 #
-# Three live POST endpoints back the Quick Setup card on Session Home:
+# Live POST endpoints back the Quick Setup card on Session Home:
 #
-#   - ``POST /sessions/{id}/quick-setup/lock`` flips the per-session
-#     ``HttpOnly`` cookie that drives the card's ``is_locked`` state.
 #   - ``POST /sessions/{id}/quick-setup/reviewers`` /
 #     ``POST /sessions/{id}/quick-setup/reviewees`` delegate to a thin
 #     ``_handle_quick_setup_import`` wrapper that reuses the existing
@@ -434,59 +431,6 @@ async def create_session(
 #     303s with ``?quick_setup_error={kind}&quick_setup_reason=...``
 #     so the GET render places a ``.banner.banner-error`` inside the
 #     offending slot.
-
-
-@router.post(
-    "/sessions/{session_id}/quick-setup/lock",
-    response_class=HTMLResponse,
-    response_model=None,
-)
-def quick_setup_lock_toggle(
-    action: str = Form(...),
-    review_session: ReviewSession = Depends(require_session_operator),
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> RedirectResponse:
-    """Flip the Quick Setup card's per-session lock cookie.
-
-    ``action="unlock"`` sets ``qsu_{id}=1`` (and the next render
-    drops ``.locked`` from the body wrapper); ``action="lock"`` clears
-    the cookie. The toggle is visual only — each slot's own inline
-    ``is_editable`` check stays the source of truth for whether its
-    submit can mutate.
-    """
-
-    redirect = RedirectResponse(
-        url=(
-            f"/operator/sessions/{review_session.id}#quick-setup"
-        ),
-        status_code=status.HTTP_303_SEE_OTHER,
-    )
-    cookie_name = _quick_setup_cookie_name(review_session.id)
-    # Path ``/`` so the cookie is visible on every subsequent request
-    # — including pages outside ``/operator/sessions/{id}/`` like
-    # ``/operator/sessions`` (lobby), ``/operator/settings``, and
-    # ``/about``. The navigation middleware in ``app/main.py`` deletes
-    # the cookie on any path that isn't Session Home or a quick-setup
-    # endpoint, so leaving Home from any direction relocks the card.
-    cookie_path = "/"
-    if action == "unlock":
-        redirect.set_cookie(
-            key=cookie_name,
-            value="1",
-            path=cookie_path,
-            httponly=True,
-            samesite="lax",
-        )
-    else:
-        redirect.delete_cookie(
-            key=cookie_name,
-            path=cookie_path,
-        )
-    # Touch unused params to silence type checkers; ``user`` / ``db``
-    # are pulled in for the operator-permission dependency chain.
-    del user, db
-    return redirect
 
 
 @router.post(

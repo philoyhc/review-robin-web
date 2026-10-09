@@ -258,9 +258,9 @@ section (git history keeps it), so this file lists only what is owed.
 
 ## Quick Setup on a validated session (#2873)
 
-- [ ] **The card is live and loads locked.** Prepare a session so it is
-  Validated, with no responses. On Session Home, Quick Setup shows
-  **Unlock**; Unlock enables the slots and lets a file be staged.
+- [ ] **The card is live.** Prepare a session so it is Validated, with
+  no responses. On Session Home, Quick Setup's slots take a file
+  straight away (no Unlock since operator pages Item 1, PR 3).
 - [ ] **A submit lands and demotes.** Stage a Reviewers CSV, tick the
   replace confirmation, and Submit:
   the roster changes, the session reads Draft, and the Workflow card
@@ -269,7 +269,7 @@ section (git history keeps it), so this file lists only what is owed.
 ## Session Home asks before unsaved details are lost (operator pages Item 1, PR 1)
 
 - [ ] **A dirty card asks.** Unlock Session details, type into the
-  description, then click Quick Setup's Unlock (or any link off Home):
+  description, then click a link off Home (or another card's button):
   the browser asks whether to leave. Stay, and the typing is still there.
 - [ ] **Save, Cancel and Lock don't ask.** Edit again and Save: no prompt,
   and the saved card comes back clean. Edit and Cancel, or edit and Lock,
@@ -289,5 +289,16 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **Your own row and the last owner are unchanged.** Your own
   Remove still warns that you'll lose access; on a one-owner session
   the Remove is disabled.
-- [ ] **Quick Setup is unaffected.** Unlock Quick Setup, add an owner:
-  Quick Setup is still unlocked when the page comes back.
+- [ ] **Quick Setup is unaffected.** Add an owner: Quick Setup is as it
+  was when the page comes back.
+
+## Quick Setup without a lock (operator pages Item 1, PR 3)
+
+- [ ] **Live on load.** On a Draft session with no responses, Session
+  Home's Quick Setup isn't greyed and has no Lock / Unlock; a file can
+  be staged at once, and Submit sits alone at the bottom right.
+- [ ] **Still locked when unavailable.** On an Activated session (or one
+  with responses) the card is greyed, its file inputs and the replace
+  checkbox can't be used, and there is nothing to unlock.
+- [ ] **Nothing relocks.** Stage nothing, go to the lobby and back, or
+  to another session's Home and back: the card is as it was.

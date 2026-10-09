@@ -360,24 +360,18 @@ def test_removing_another_owner_asks_first_by_name(
     )
 
 
-def test_an_owners_change_keeps_quick_setup_unlocked(
+def test_an_owners_change_leaves_quick_setup_live(
     client: TestClient, db: Session
 ) -> None:
-    """``/owners/...`` stays on the navigation middleware's keep-list, so
-    an add or a remove still lands on Home with Quick Setup as it was."""
+    """Neither card has a lock to lose: an owner add lands on Home with
+    Quick Setup live."""
     review_session = _create(client, db, "OWN-LIVE-4")
     db.add(User(email="bob@example.edu", is_operator=True))
     db.commit()
     client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/lock",
-        data={"action": "unlock"},
-        follow_redirects=False,
-    )
-    response = client.post(
         f"/operator/sessions/{review_session.id}/owners/add",
         data={"target_email": "bob@example.edu"},
         follow_redirects=False,
     )
-    assert f"qsu_{review_session.id}" not in response.headers.get("set-cookie", "")
     assert 'class="quick-setup-body"' in _home(client, review_session)
 

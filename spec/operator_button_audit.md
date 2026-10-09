@@ -222,7 +222,6 @@ session** button submits both halves.
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 31 | Quick Setup footer | Submit | `<button type="submit">` | `btn secondary` | Secondary | Disabled until ≥1 file selected; posts `/quick-setup/submit-all` |
-| 32 | Quick Setup footer | Lock / Unlock | `<button type="submit">` | `btn secondary` | Secondary | Two-state toggle; posts `/quick-setup/lock` |
 | 160 | Quick Setup slot | Cancel | `<a>` | `btn alert` | **Outline-amber** | Per-slot cancel on an inline `.banner.banner-error` — same banner convention as #155, not a lock card |
 
 ### 5d — Extract Data — not on this page

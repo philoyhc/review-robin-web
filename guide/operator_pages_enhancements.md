@@ -119,6 +119,12 @@ Taken 2026-10-09 at `3b8672bd`. `P` is
   `spec/rrw_functional_spec.md`, `spec/quick_setup_card_spec.md`'s
   `oou_` aside, and `guide/post_azure_todo_checklist.md` item 5's rows;
   the `spec-writer` verify pass found a fourth, `spec/audience_and_identity_model.md`.
+- **PR 3 (Quick Setup without a lock; the middleware goes)** built
+  2026-10-09 on main `cc29be42`. `is_locked` is now `not is_available`;
+  `show_lock_toggle` and the `is_unlocked` parameter went, and with them
+  the `quick-setup/lock` route, the `qsu_` helpers and the whole
+  navigation middleware in `app/main.py`. The `#2873` browser-check row
+  ("loads locked") was rewritten for the live card.
 
 ### PR ladder
 

@@ -776,7 +776,7 @@ def test_quick_setup_card_greys_in_ready(
         "and the session has no responses." in body
     )
     # Slot anchors still rendered (the body's still in the DOM, just
-    # greyed) but the Lock / Unlock toggle is suppressed entirely.
+    # greyed); there is no Lock / Unlock to offer.
     assert 'id="quick-setup-reviewers"' in body
     assert 'id="quick-setup-reviewees"' in body
     assert 'id="quick-setup-lock-toggle"' not in body

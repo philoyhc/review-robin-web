@@ -125,7 +125,6 @@ def test_build_new_session_quick_setup_context_shape() -> None:
     assert all(slot.count == 0 for slot in context.slots)
     assert context.is_disabled is False
     assert context.is_locked is False
-    assert context.show_lock_toggle is False
     assert context.title == "Quick setup (optional)"
 
 
@@ -217,13 +216,12 @@ def test_create_session_with_no_quick_setup_files_still_works(
     )
 
 
-def test_session_home_quick_setup_keeps_default_title_and_lock_toggle(
+def test_session_home_quick_setup_keeps_default_title(
     client: TestClient,
     db,
 ) -> None:
-    """Regression — extending QuickSetupContext with ``title`` /
-    ``show_lock_toggle`` defaults must not change Session Home's
-    rendered card."""
+    """Regression — extending QuickSetupContext with a ``title``
+    default must not change Session Home's rendered card."""
 
     response = client.post(
         "/operator/sessions",
@@ -242,5 +240,5 @@ def test_session_home_quick_setup_keeps_default_title_and_lock_toggle(
 
     # Default title preserved.
     assert "<h2>Quick Setup</h2>" in body
-    # Lock toggle still renders in draft.
-    assert 'id="quick-setup-lock-toggle"' in body
+    # Its own form and Submit, as before (the Create page has neither).
+    assert 'id="quick-setup-submit-all"' in body

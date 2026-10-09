@@ -510,14 +510,11 @@ Session settings — plus a conditional Observers slot when
 
 Layout: a 2-column grid — Reviewers
 + Reviewees stack in the left column; Relationships, Observers (when
-rendered) and Session settings stack in the right column. A Lock / Unlock button sits in a footer
-at the bottom-right and renders only while the card is available —
-setup editable (`draft` or `validated`) with no persisted responses (`spec/quick_setup_card_spec.md`
-"Visibility"); there the card defaults to locked so the operator
-must explicitly Unlock before any setup change. Lock state lives in a per-session `HttpOnly`
-cookie (`qsu_{session_id}=1` when unlocked, path `/` so the
-navigation middleware can expire it anywhere; `spec/settings_inventory.md`
-"Cookies").
+rendered) and Session settings stack in the right column, with Submit
+in a footer at the bottom-right. There is **no Lock / Unlock**: the
+card is live on load while it is available — setup editable (`draft`
+or `validated`) with no persisted responses
+(`spec/quick_setup_card_spec.md` "Visibility") — and locked otherwise.
 
 State-conditional copy only — the card frame is constant:
 
@@ -529,8 +526,8 @@ State-conditional copy only — the card frame is constant:
   responses from a prior activation. Use the individual Setup pages
   to make changes."
 - Whenever the card is unavailable (any session with responses,
-  `ready`, `expired`, `archived`) the body greys and the Lock /
-  Unlock button is hidden.
+  `ready`, `expired`, `archived`) the body greys and its controls are
+  disabled.
 
 ## Placeholder cards
 

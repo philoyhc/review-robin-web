@@ -53,7 +53,6 @@ from app.web.deps import (
 from app.web.routes_operator._shared import (
     _REVERT_RETURN_TO,
     _lifecycle_error_response,
-    _quick_setup_unlocked,
     _redirect_url,
     _require_not_ready,
     _templates,
@@ -158,7 +157,6 @@ def session_detail(
                 db,
                 review_session,
                 user=user,
-                is_unlocked=_quick_setup_unlocked(request, review_session),
                 error_kind=quick_setup_error,
                 error_reason=quick_setup_reason,
                 error_details=tuple(quick_setup_detail),
