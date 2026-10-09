@@ -237,7 +237,7 @@ id points at its row in §3 or §1.
 
 Ruled 2026-10-07: B1, Bc1, Bc2, Bc3, Bc4, G1, G2, Gc1, H2 (rows say how).
 Ruled 2026-10-08: Bc5, Bc8, A4, A7.
-Ruled 2026-10-09: B5, C5, D2, D5, D9, E10, E12.
+Ruled 2026-10-09: B5, C5, D2, D5, D9, E10, E12, E13.
 
 ## 3. Findings by file
 
@@ -302,9 +302,15 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**E9**~~ low write `.rrw-sort-btn`, `th.rrw-sortable`, `.rrw-sort-badge` (base.html:4306-4351, eight tables) in neither ui_elements.md nor operator_button_audit.md (§11 has the cloned `.sort-btn`) — **Done in #2901**.
 - ~~**E10**~~ low author sys_admin_session_audit_log.html:7-81 local `<style>` (audit-log table, columns, detail) uncatalogued, against base.html owning the CSS (as the E14 ruling) — **Ruled 2026-10-09: move it into base.html and catalogue it. Done in #2911.**
 - ~~**E11**~~ low code sys_admin_session_audit_log.html:98-100 "lands in 16C PR 3" — it ships (§1) — **Done in #2896.**
+<<<<<<< HEAD
 - ~~**E12**~~ low author ui_elements.md:278-288 `.card.placeholder` (base.html:2056-2068): no markup uses it (the unattached comment above it went in #2896) — **Ruled 2026-10-09: keep it for scaffolds; the spec says so. Done in #2911.**
 - **E13** low author ui_elements.md:626 every interactive chip has a 2px edge vs the dashboard's role pills and `rs-role-nav-muted` (reviewer/dashboard.html:53-67, reviewer/_role_chips.html:26) with none
 - ~~**E14**~~ low spec operator_ui_concept.md:386 quotes the outbox intro incompletely (the partial adds reminder, responses-received and raw-URL sentences); the partial's header says sys_admin_sessions.html only, but sys_admin_session_outbox.html renders it — **Done in #2901**; the partial's header comment in #2911.
+=======
+- **E12** low author ui_elements.md:278-288 `.card.placeholder` (base.html:2056-2068): no markup uses it (the unattached comment above it went in #2896)
+- ~~**E13**~~ low author ui_elements.md:626 every interactive chip has a 2px edge vs the dashboard's role pills and `rs-role-nav-muted` (reviewer/dashboard.html:53-67, reviewer/_role_chips.html:26) with none — **Ruled 2026-10-09: linked role pills take the edge. Done in #2912.**
+- ~~**E14**~~ low spec operator_ui_concept.md:386 quotes the outbox intro incompletely (the partial adds reminder, responses-received and raw-URL sentences); the partial's header says sys_admin_sessions.html only, but sys_admin_session_outbox.html renders it — **Done in #2901** (the partial's header comment rides a later code PR).
+>>>>>>> 75bb0f76 (fix: a role pill that links somewhere wears the chip edge (E13))
 - ~~**E15**~~ low code base.html comments: :242-252 help-card border "~1.5:1" (now 2.54 / 1.95), :455-459 border primitive, :1971 "TWO pages opt in" (all four rosters), :3024, :3037 line refs, :1087 "eight box-shadow uses" (§1) — **Done in #2896.**
 
 **F — architecture, roles and operations**
