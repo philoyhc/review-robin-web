@@ -225,7 +225,9 @@ def test_strict_mode_rejects_a_ref_key_without_the_id_suffix(
     """Findings F4: ``refs`` keys end in ``_id``, so a ref named for
     the entity rather than its PK is drift."""
     user, review_session = _make_user_and_session(db, "strict-refkey")
-    with pytest.raises(audit.AuditDetailValidationError, match="_id"):
+    with pytest.raises(
+        audit.AuditDetailValidationError, match="refs keys must end in _id"
+    ):
         audit.write_event(
             db,
             event_type="instrument.field_added",
