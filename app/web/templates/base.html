@@ -2615,9 +2615,14 @@
         font-size: var(--fs-small);
         color: var(--text-subtle);
       }
-      body.ui-v2 .pill.pill-tag-clear {
-        background: var(--surface-muted);
-        color: var(--text-body);
+      /* The lobby's AND/OR and Select all / Clear all chips are cycle
+         chips (``spec/ui_elements.md`` §9, type 2): every state is a
+         positive choice, so they are always dark, never the light "off"
+         of a tag filter beside them. Only the label changes. */
+      body.ui-v2 .pill.pill-tag-clear,
+      body.ui-v2 .pill.tag-mode-chip {
+        background: var(--selected-bg);
+        color: var(--selected-fg);
         cursor: pointer;
       }
       /* Tag-filter chips — clickable; the selected ones flip to a
@@ -2657,11 +2662,6 @@
       body.ui-v2 .tag-chip:has(> input:checked) {
         background: var(--selected-bg);
         color: var(--selected-fg);
-      }
-      body.ui-v2 .pill.tag-mode-chip {
-        background: var(--surface-muted);
-        color: var(--text-body);
-        cursor: pointer;
       }
       /* Column-visibility chips (Segment 18E Part 1) — each chip
          toggles whether its column shows in the preview table.

@@ -314,3 +314,10 @@ section (git history keeps it), so this file lists only what is owed.
   is enough), click a nav tab and choose to stay: no loading bar.
 - [ ] **A confirmed leave still works** on both pages: choose to leave
   and the next page loads (without the bar, as on Session Home).
+
+## Lobby cycle chips are always dark (operator pages Item 3, PR 1)
+
+- [ ] **Lobby.** With tagged sessions, the AND/OR and Select all / Clear
+  all chips are dark like a selected tag, in both of their labels, in
+  light and dark themes; unselected tag chips stay light.
+- [ ] **Archived page.** The Select all / Clear all chip is dark too.

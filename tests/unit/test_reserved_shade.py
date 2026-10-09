@@ -83,6 +83,10 @@ CONTROL_SELECTORS = {
     ),
     "body.ui-v2 label.tag-chip:has(> input:focus-visible)",
     "body.ui-v2 .severity-chip.active",
+    # The lobby's AND/OR and Select all / Clear all chips: cycle chips
+    # (``spec/ui_elements.md`` §9, type 2), always filled, and controls
+    # (``role="button"``) — operator pages Item 3.
+    "body.ui-v2 .pill.pill-tag-clear, body.ui-v2 .pill.tag-mode-chip",
     (
         "body.ui-v2 .tag-chip, body.ui-v2 .pill.pill-tag-clear, "
         "body.ui-v2 .pill.tag-mode-chip"

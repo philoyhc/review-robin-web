@@ -435,7 +435,8 @@ The lobby carries all three:
   the panel, the edit and the row order are all left as they were.
 - **Tag filter.** A `sessions-tag-filter` chip strip ("Show
   sessions tagged with:") with one `tag-chip` per tag in the
-  lobby tag vocabulary, an AND/OR mode chip, and a clear chip.
+  lobby tag vocabulary, then an AND/OR mode chip and a Select all /
+  Clear all chip — cycle chips, always dark (`spec/ui_elements.md` §9).
   Client-side filtering against each row's `data-tags`.
 **It is a filter, not a search.** It hides rows already rendered, live
 on every keystroke, and never queries or navigates — so there is nothing
