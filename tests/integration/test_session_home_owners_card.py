@@ -6,13 +6,13 @@ Lock / Unlock, always shown and in every lifecycle state. **Each action
 saves at once** (author's ruling, 2026-09-23, retiring the staged Save /
 Cancel): Add owner posts to ``owners/add`` and each row's Remove to
 ``owners/{user_id}/remove`` — plain forms, so the card works without
-JavaScript. The last owner's Remove is disabled, your own row's asks
-first, and removing yourself lands on the sessions lobby.
+JavaScript. The last owner's Remove is disabled; every other Remove
+asks first — your own row that you lose access, another owner's naming
+whom it removes — and removing yourself lands on the sessions lobby.
 
-**Lock / Unlock, as on Quick Setup** (author's ruling, 2026-09-23,
-against accidental edits): the card renders locked until
-``owners/lock`` sets the ``oou_{id}`` cookie, and leaving Session Home
-relocks it. The lock is visual only; the owners routes don't read it.
+**No Lock / Unlock** (``guide/operator_pages_enhancements.md`` Item 1,
+reversing the 2026-09-23 ruling that added one): the card is always
+live, and the confirm on another owner's Remove is the accident guard.
 """
 
 from __future__ import annotations
@@ -73,15 +73,6 @@ def _card(body: str, marker: str = 'id="owners-card"') -> str:
         i = closed + len("</div>")
         if depth == 0:
             return body[start:i]
-
-
-def _unlock(client: TestClient, review_session: ReviewSession) -> None:
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/lock",
-        data={"action": "unlock"},
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
 
 
 def _home(client: TestClient, review_session: ReviewSession, query: str = "") -> str:
@@ -205,9 +196,7 @@ def test_each_row_removes_at_once(client: TestClient, db: Session) -> None:
 
 
 def test_the_last_owners_remove_is_disabled(client: TestClient, db: Session) -> None:
-    """Unlocked too: the last-owner rule, not the lock, disables it."""
     review_session = _create(client, db, "OWN-CARD-7")
-    _unlock(client, review_session)
     card = _card(_home(client, review_session))
 
     remove = re.search(r"<button class=\"chrome-link\" type=\"submit\"[^>]*>", card)
@@ -221,7 +210,6 @@ def test_removing_yourself_asks_first_and_lands_on_the_lobby(
     review_session = _create(client, db, "OWN-CARD-8")
     bob = _add_bob(db, review_session)
     alice = db.execute(select(User).where(User.email == CREATOR)).scalar_one()
-    _unlock(client, review_session)
     card = _card(_home(client, review_session))
 
     forms = re.findall(r"<form method=\"post\"[^>]*/remove\"[^>]*>", card)
@@ -229,7 +217,9 @@ def test_removing_yourself_asks_first_and_lands_on_the_lobby(
     own = [f for f in forms if f"/owners/{alice.id}/remove" in f]
     other = [f for f in forms if f"/owners/{bob.id}/remove" in f]
     assert "window.confirm(" in own[0] and "data-owners-self-remove" in own[0]
-    assert "window.confirm(" not in other[0]
+    assert "lose access" in own[0]
+    # Bob's row asks too, but as another owner's (below).
+    assert "data-owners-self-remove" not in other[0]
     assert all("disabled" not in b for b in re.findall(r"<button[^>]*>Remove", card))
 
     response = client.post(
@@ -304,160 +294,90 @@ def test_create_ships_its_add_owner_hidden_too(
     assert re.search(r'id="session-owners-add" data-owners-add hidden>', body)
 
 
-# --- Lock / Unlock ----------------------------------------------------------
+# --- No lock; another owner's Remove asks first ----------------------------
 
 
-def _toggle(card: str) -> str:
-    return re.search(r'id="owners-lock-toggle">(\w+)</button>', card).group(1)
+def _remove_form(card: str, user: User) -> str:
+    return re.search(
+        rf"<form method=\"post\"[^>]*/owners/{user.id}/remove\"[^>]*>", card
+    ).group(0)
 
 
-def test_the_card_renders_locked_by_default(client: TestClient, db: Session) -> None:
-    review_session = _create(client, db, "OWN-LOCK-1")
+def test_the_card_has_no_lock_and_is_live(client: TestClient, db: Session) -> None:
+    review_session = _create(client, db, "OWN-LIVE-1")
     _add_bob(db, review_session)
     db.add(User(email="carol@example.edu", is_operator=True))
     db.commit()
-    card = _card(_home(client, review_session))
+    body = _home(client, review_session)
+    card = _card(body)
 
-    assert 'class="lockable-body locked"' in card
-    assert _toggle(card) == "Unlock"
-    removes = re.findall(r"<button class=\"chrome-link\" type=\"submit\"[^>]*>", card)
-    assert len(removes) == 2
-    assert all("disabled" in b and "Unlock the card" in b for b in removes)
-    assert "disabled" in _tag(card, 'id="owners-add-email"')
-    assert "disabled" in _tag(card, 'id="owners-add-submit"')
-    # The toggle itself stays live, outside the greyed body.
-    assert "disabled" not in _tag(card, 'id="owners-lock-toggle"')
-    greyed = _card(card, 'id="owners-card-body"')
-    assert 'id="owners-add-email"' in greyed
-    assert 'id="owners-lock-toggle"' not in greyed
-    # Its form posts the unlock.
-    lock_form = card[card.rfind("<form", 0, card.index('id="owners-lock-toggle"')) :]
-    lock_form = lock_form[: lock_form.index("</form>")]
-    assert f'action="/operator/sessions/{review_session.id}/owners/lock"' in lock_form
-    assert 'name="action"' in lock_form and 'value="unlock"' in lock_form
-
-
-def test_locked_the_last_owners_remove_still_names_the_last_owner_rule(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _create(client, db, "OWN-LOCK-1B")
-    card = _card(_home(client, review_session))
-
-    remove = re.search(r"<button class=\"chrome-link\" type=\"submit\"[^>]*>", card)
-    assert remove and "at least one owner" in remove.group(0)
-    assert "Unlock the card" not in remove.group(0)
-
-
-def test_unlock_enables_the_card_and_lock_restores_it(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _create(client, db, "OWN-LOCK-2")
-    _add_bob(db, review_session)
-    db.add(User(email="carol@example.edu", is_operator=True))
-    db.commit()
-
-    response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/lock",
-        data={"action": "unlock"},
-        follow_redirects=False,
-    )
-    assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}#owners-card"
-    )
-    assert response.cookies.get(f"oou_{review_session.id}") == "1"
-    card = _card(_home(client, review_session))
-    assert 'class="lockable-body"' in card
-    assert _toggle(card) == "Lock"
+    assert "owners-lock-toggle" not in card
+    assert "/owners/lock" not in card
+    assert " locked" not in card
+    assert "Unlock" not in card
     assert "disabled" not in _tag(card, 'id="owners-add-email"')
     assert "disabled" not in _tag(card, 'id="owners-add-submit"')
     removes = re.findall(r"<button class=\"chrome-link\" type=\"submit\"[^>]*>", card)
     assert len(removes) == 2
     assert all("disabled" not in b for b in removes)
-    assert 'value="lock"' in card
 
-    client.post(
+
+def test_the_owners_lock_route_is_gone(client: TestClient, db: Session) -> None:
+    review_session = _create(client, db, "OWN-LIVE-2")
+    response = client.post(
         f"/operator/sessions/{review_session.id}/owners/lock",
-        data={"action": "lock"},
+        data={"action": "unlock"},
         follow_redirects=False,
     )
+    assert response.status_code in (404, 405)
+    assert "set-cookie" not in response.headers
+
+
+def test_removing_another_owner_asks_first_by_name(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _create(client, db, "OWN-LIVE-3")
+    bob = _add_bob(db, review_session)
     card = _card(_home(client, review_session))
-    assert 'class="lockable-body locked"' in card
-    assert _toggle(card) == "Unlock"
+
+    # No display name: the confirm names the email.
+    form = _remove_form(card, bob)
+    assert "data-owners-remove" in form
+    assert 'onsubmit="return window.confirm(this.dataset.confirm);"' in form
+    assert (
+        'data-confirm="Remove bob@example.edu as an owner of this session?"' in form
+    )
+
+    # A display name wins, and rides autoescaped: quotes and markup in a
+    # name can't break out of the attribute (the script reads it, never
+    # interpolates it).
+    bob.display_name = 'Bob "B" <b>Builder</b>'
+    db.commit()
+    form = _remove_form(_card(_home(client, review_session)), bob)
+    assert (
+        'data-confirm="Remove Bob &#34;B&#34; &lt;b&gt;Builder&lt;/b&gt; as an owner'
+        " of this session?\"" in form
+    )
 
 
-def test_the_lock_is_per_session_and_separate_from_quick_setup(
+def test_an_owners_change_keeps_quick_setup_unlocked(
     client: TestClient, db: Session
 ) -> None:
-    session_a = _create(client, db, "OWN-LOCK-3A")
-    session_b = _create(client, db, "OWN-LOCK-3B")
-    _unlock(client, session_a)
-
-    body_a = _home(client, session_a)
-    assert 'class="lockable-body"' in _card(body_a)
-    # Unlocking Owners leaves Quick Setup locked.
-    assert 'class="quick-setup-body locked"' in body_a
-    body_b = _home(client, session_b)
-    assert 'class="lockable-body locked"' in _card(body_b)
-
-
-def test_an_add_keeps_the_card_unlocked_and_leaving_home_relocks_it(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _create(client, db, "OWN-LOCK-4")
+    """``/owners/...`` stays on the navigation middleware's keep-list, so
+    an add or a remove still lands on Home with Quick Setup as it was."""
+    review_session = _create(client, db, "OWN-LIVE-4")
     db.add(User(email="bob@example.edu", is_operator=True))
     db.commit()
-    _unlock(client, review_session)
-
     client.post(
-        f"/operator/sessions/{review_session.id}/owners/add",
-        data={"target_email": "bob@example.edu"},
+        f"/operator/sessions/{review_session.id}/quick-setup/lock",
+        data={"action": "unlock"},
         follow_redirects=False,
     )
-    assert 'class="lockable-body"' in _card(_home(client, review_session))
-
-    client.get("/operator/sessions")
-    assert 'class="lockable-body locked"' in _card(_home(client, review_session))
-
-
-def test_the_lock_is_visual_only(client: TestClient, db: Session) -> None:
-    """A direct POST still saves: the routes don't read the cookie, as
-    Quick Setup's service gate, not its toggle, is the source of truth."""
-    review_session = _create(client, db, "OWN-LOCK-5")
-    db.add(User(email="bob@example.edu", is_operator=True))
-    db.commit()
-
     response = client.post(
         f"/operator/sessions/{review_session.id}/owners/add",
         data={"target_email": "bob@example.edu"},
         follow_redirects=False,
     )
-    assert response.headers["location"].endswith("#owners-card")
-    card = _card(_home(client, review_session))
-    assert 'class="lockable-body locked"' in card
-    assert "bob@example.edu" in card[card.index("<table>") : card.index("</table>")]
+    assert f"qsu_{review_session.id}" not in response.headers.get("set-cookie", "")
+    assert 'class="quick-setup-body"' in _home(client, review_session)
 
-
-def test_opening_another_sessions_home_relocks_both_cards(
-    client: TestClient, db: Session
-) -> None:
-    """Session B's Home keeps only B's unlock cookies (Codex on #2591):
-    back on A, its Owners and Quick Setup cards are locked again."""
-    session_a = _create(client, db, "OWN-LOCK-6A")
-    session_b = _create(client, db, "OWN-LOCK-6B")
-    _unlock(client, session_a)
-    client.post(
-        f"/operator/sessions/{session_a.id}/quick-setup/lock",
-        data={"action": "unlock"},
-        follow_redirects=False,
-    )
-    body_a = _home(client, session_a)
-    assert 'class="lockable-body"' in _card(body_a)
-    assert 'class="quick-setup-body"' in body_a
-
-    _unlock(client, session_b)
-    body_b = _home(client, session_b)
-    assert 'class="lockable-body"' in _card(body_b), "B keeps its own unlock"
-
-    body_a = _home(client, session_a)
-    assert 'class="lockable-body locked"' in _card(body_a)
-    assert 'class="quick-setup-body locked"' in body_a

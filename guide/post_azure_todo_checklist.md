@@ -357,8 +357,9 @@ need no deployment either, so they moved to
 `guide/deferred_consolidated.md` Part C rather than waiting here.
 
 **What.** Segment 19S Item 10 gave Session Home's Owners card a card
-of its own, where each Add owner and Remove saves at once behind a
-Lock / Unlock like Quick Setup's (`spec/session_owners.md`), and Item 7 put a typeahead on
+of its own, where each Add owner and Remove saves at once
+(`spec/session_owners.md`; its Lock / Unlock retired 2026-10-09,
+`guide/operator_pages_enhancements.md` Item 1), and Item 7 put a typeahead on
 the four tag boxes. The suite pins their markup; headless Chromium
 drove the scripts, but draws no datalist popup.
 
@@ -366,14 +367,13 @@ drove the scripts, but draws no datalist popup.
 
 | Check | How | Passes when |
 |---|---|---|
-| The card starts locked | Open Session Home | The Owners card is greyed; the picker, Add owner and every Remove do nothing; **Unlock** sits right of Add owner |
-| Add owner saves at once | Session Home → Owners card: **Unlock**, pick an operator, **Add owner** | The page reloads at the card with them in the table and gone from the picker; no banner |
-| Remove saves at once | Click **Remove** on another owner's row | The page reloads with that row gone and them back in the picker |
+| The card is live | Open Session Home | The Owners card has no Lock / Unlock; the picker, Add owner and another owner's Remove work at once |
+| Add owner saves at once | Session Home → Owners card: pick an operator, **Add owner** | The page reloads at the card with them in the table and gone from the picker; no banner |
+| Remove asks, then saves at once | Click **Remove** on another owner's row | The browser's confirm names them; **Cancel** posts nothing. Confirming reloads with that row gone and them back in the picker |
 | The last owner cannot go | On a one-owner session | That row's Remove is disabled |
 | Removing yourself asks | Click Remove on your own row | The browser's confirm names losing access; **Cancel** posts nothing. Confirming lands on the sessions lobby |
 | Any lifecycle state | Repeat the first row on an Activated session | It saves; the details card stays locked |
-| It relocks | Unlock, add or remove an owner, then go to the lobby and back; again via another session's Home | Still unlocked after the add or remove; locked again after the lobby or the other session. Quick Setup's lock is unaffected throughout |
-| Without JavaScript | Disable JavaScript, reload Session Home | Add owner and every Remove still work (plain forms); your own row's Remove skips the confirm |
+| Without JavaScript | Disable JavaScript, reload Session Home | Add owner and every Remove still work (plain forms); every Remove skips the confirm |
 | Owners sits above the Danger Zone | Session Home, wide and narrow windows | Owners starts level with Quick Setup and the Danger Zone follows it in the right column; narrowed, the order is Quick Setup → Owners → Danger Zone |
 | Create is unchanged | Create new session → Owners, JavaScript on and off | On: Add owner stages a row and a staged row's Remove takes it out again, with no confirm; Create session saves what remains. Off: no Add owner; the picker's one address is saved with Create session. *(Off could not pass before #2714, 2026-10-01: Create rendered disabled without script; now `test_create_without_javascript_saves_the_typed_owner` repeats it.)* |
 | The tag popup, after each comma | The lobby's row and bulk expanders, Create's Tags card, Session Home's Tags field: type `a` then `pilot, e` | A popup of your existing tags each time, completing only the tag after the last comma, never offering one already in the box |

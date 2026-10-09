@@ -22,26 +22,28 @@ from app.web.routes_reviewer import router as reviewer_router
 
 
 # Paths whose responses should NOT clear the operator's per-session
-# unlock cookies — ``qsu_{session_id}=1`` (Quick Setup) and
-# ``oou_{session_id}=1`` (Owners, 19S) — Session Home itself plus every
-# ``/quick-setup/...`` and ``/owners/...`` endpoint (lock toggles, file
-# submits, owner adds and removes). Every other path clears both, so
-# navigating away from Home (whether to another operator page like
+# Quick Setup unlock cookie ``qsu_{session_id}=1`` — Session Home itself
+# plus every ``/quick-setup/...`` endpoint (the lock toggle, file
+# submits) and every ``/owners/...`` one (owner adds and removes, which
+# land back on Home). Every other path clears it, so navigating away
+# from Home (whether to another operator page like
 # ``/operator/settings``, the sessions lobby ``/operator/sessions``, or
-# ``/about``) and returning relocks both cards.
+# ``/about``) and returning relocks the card. (The Owners card's own
+# unlock cookie retired with its lock,
+# ``guide/operator_pages_enhancements.md`` Item 1.)
 #
-# The ``qsu`` / ``oou`` literals in ``_UNLOCK_COOKIE_RE`` mirror
-# ``_QUICK_SETUP_COOKIE_PREFIX`` and ``_OWNERS_COOKIE_PREFIX`` in
-# ``app/web/routes_operator/_shared.py``. If you rename a cookie
+# The ``qsu`` literal in ``_UNLOCK_COOKIE_RE`` mirrors
+# ``_QUICK_SETUP_COOKIE_PREFIX`` in
+# ``app/web/routes_operator/_shared.py``. If you rename the cookie
 # prefix in either file, update the other.
 #
-# Only the cookies of the session in the path survive: opening session
-# B's Home clears session A's, so returning to A finds both cards locked
-# (Codex on #2591; the Quick Setup cookie had the same gap).
+# Only the cookie of the session in the path survives: opening session
+# B's Home clears session A's, so returning to A finds the card locked
+# (Codex on #2591).
 _UNLOCK_KEEP_COOKIE_RE = re.compile(
     r"^/operator/sessions/(\d+)(?:/(?:quick-setup|owners)(?:/.*)?)?/?$"
 )
-_UNLOCK_COOKIE_RE = re.compile(r"^(?:qsu|oou)_(\d+)$")
+_UNLOCK_COOKIE_RE = re.compile(r"^qsu_(\d+)$")
 
 
 class _RevalidatingStaticFiles(StaticFiles):
@@ -134,11 +136,11 @@ def create_app() -> FastAPI:
         response = await call_next(request)
         keep = _UNLOCK_KEEP_COOKIE_RE.match(request.url.path)
         kept_session_id = keep.group(1) if keep else None
-        # Expire every ``qsu_`` / ``oou_{session_id}`` cookie the request
-        # carried except the current Session Home's own: navigating away
-        # from Home (and away from the Quick Setup and Owners endpoints
-        # that own the cookies' lifecycle), or to another session's Home,
-        # relocks both cards. The cookies are set with path ``/`` (see
+        # Expire every ``qsu_{session_id}`` cookie the request carried
+        # except the current Session Home's own: navigating away from
+        # Home (and away from the Quick Setup and Owners endpoints that
+        # land back on it), or to another session's Home, relocks the
+        # Quick Setup card. The cookies are set with path ``/`` (see
         # ``app/web/routes_operator/_quick_setup.py``) so the same path
         # here matches the browser's stored cookie.
         for cookie_name in list(request.cookies.keys()):
