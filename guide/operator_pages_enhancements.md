@@ -369,10 +369,10 @@ Closed 2026-10-09. Shipped as planned in two PRs, #2926 and #2927.
   `aria-pressed="true"`, and the wording was fixed. The close
   `spec-writer` pass found all three doc-impact specs current and dropped
   a provenance date from §9's lead-in.
-- **For the author:** type 2 chips carry their state two ways. The
-  Extract chips use `aria-pressed`; the Data shaper chip uses a data
-  attribute and stays pressed. Both are left as planned, pending a
-  ruling.
+- **Two ways to carry type 2 state, kept** (author's ruling,
+  2026-10-09). The Extract page-level chips use `aria-pressed`; the
+  Data shaper chip uses a data attribute and stays pressed. A code
+  comment at each says so.
 
 ### PR ladder
 
