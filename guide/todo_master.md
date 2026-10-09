@@ -26,7 +26,8 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
-- None.
+- **Operator pages enhancements** — `guide/operator_pages_enhancements.md`.
+  Item 1 (one lock on Session Home) is planned; its PR ladder lives there.
 
 ### Queued segments
 
