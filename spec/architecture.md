@@ -217,8 +217,12 @@ the method), not 301.
 `reviewers/delete-all`), while **`remove`** detaches a
 relationship/membership without destroying the far side
 (`owners/{uid}/remove`, `users/{id}/remove-from-all-sessions`).
-Creation is `{collection}/add` for a single-kind collection
-(`owners/add`). `instruments/add-new-model` is the one legacy
+Creation follows the same split: **`create`** makes a new row in a
+collection (`reviewers/create`, `reviewees/create`,
+`relationships/create`, `observers/create`,
+`instruments/{id}/page-break/create`), while **`add`** attaches an
+existing row as a member and pairs with `remove` (`owners/add` /
+`owners/{uid}/remove`). `instruments/add-new-model` is the one legacy
 exception: a verb-first, kind-naming URL, not a pattern to copy.
 
 **Whole-set saves end in `/save`, verb last**:
