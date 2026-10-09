@@ -204,6 +204,41 @@ def test_strict_mode_rejects_set_changes_with_extra_keys(db: Session) -> None:
         )
 
 
+def test_strict_mode_rejects_a_negative_count(db: Session) -> None:
+    """Findings F4: ``counts`` values are non-negative, as
+    ``spec/architecture.md`` states."""
+    user, review_session = _make_user_and_session(db, "strict-negcount")
+    with pytest.raises(audit.AuditDetailValidationError):
+        audit.write_event(
+            db,
+            event_type="reviewers.imported",
+            summary="bad",
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.counts(added=-1),
+        )
+
+
+def test_strict_mode_rejects_a_ref_key_without_the_id_suffix(
+    db: Session,
+) -> None:
+    """Findings F4: ``refs`` keys end in ``_id``, so a ref named for
+    the entity rather than its PK is drift."""
+    user, review_session = _make_user_and_session(db, "strict-refkey")
+    with pytest.raises(
+        audit.AuditDetailValidationError, match="refs keys must end in _id"
+    ):
+        audit.write_event(
+            db,
+            event_type="instrument.field_added",
+            summary="bad",
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.snapshot({"field_key": "q1"}),
+            refs={"instrument": 7},
+        )
+
+
 # --------------------------------------------------------------------------- #
 # Canonical-path emits pass under strict mode
 # --------------------------------------------------------------------------- #
