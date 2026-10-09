@@ -304,7 +304,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**E11**~~ low code sys_admin_session_audit_log.html:98-100 "lands in 16C PR 3" — it ships (§1) — **Done in #2896.**
 - ~~**E12**~~ low author ui_elements.md:278-288 `.card.placeholder` (base.html:2056-2068): no markup uses it (the unattached comment above it went in #2896) — **Ruled 2026-10-09: keep it for scaffolds; the spec says so. Done in #2911.**
 - **E13** low author ui_elements.md:626 every interactive chip has a 2px edge vs the dashboard's role pills and `rs-role-nav-muted` (reviewer/dashboard.html:53-67, reviewer/_role_chips.html:26) with none
-- ~~**E14**~~ low spec operator_ui_concept.md:386 quotes the outbox intro incompletely (the partial adds reminder, responses-received and raw-URL sentences); the partial's header says sys_admin_sessions.html only, but sys_admin_session_outbox.html renders it — **Done in #2901** (the partial's header comment rides a later code PR).
+- ~~**E14**~~ low spec operator_ui_concept.md:386 quotes the outbox intro incompletely (the partial adds reminder, responses-received and raw-URL sentences); the partial's header says sys_admin_sessions.html only, but sys_admin_session_outbox.html renders it — **Done in #2901**; the partial's header comment in #2911.
 - ~~**E15**~~ low code base.html comments: :242-252 help-card border "~1.5:1" (now 2.54 / 1.95), :455-459 border primitive, :1971 "TWO pages opt in" (all four rosters), :3024, :3037 line refs, :1087 "eight box-shadow uses" (§1) — **Done in #2896.**
 
 **F — architecture, roles and operations**
