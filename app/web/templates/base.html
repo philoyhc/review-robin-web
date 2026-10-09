@@ -5637,6 +5637,20 @@
             busy[i].removeAttribute("aria-busy");
           }
         }
+        /* A page that asks before it is left — a `beforeunload` guard
+           over unsaved edits — says so through `rrwLeaveWillPrompt`.
+           Arming would put the bar up behind the prompt, and if the
+           operator stays no load comes to clear it: bar, progress
+           cursor and "Loading…" on an idle page until the give-up
+           timer. So the indicator stands aside; a leave the operator
+           confirms loads without a bar, as every load did before
+           19J.4. */
+        function leaveWillPrompt() {
+          try {
+            return typeof window.rrwLeaveWillPrompt === "function"
+              && window.rrwLeaveWillPrompt() === true;
+          } catch (e) { return false; }
+        }
         function markBusy(el) {
           /* aria-busy only. See rule 2 above. */
           if (el && el.setAttribute) el.setAttribute("aria-busy", "true");
@@ -5661,6 +5675,7 @@
               && link.href.split("#")[0] === window.location.href.split("#")[0]) {
             return;
           }
+          if (leaveWillPrompt()) return;
           markBusy(link);
           arm();
         });
@@ -5692,6 +5707,7 @@
               } catch (e) { /* fall through and arm */ }
             }
           }
+          if (leaveWillPrompt()) return;
           markBusy(event.submitter || document.activeElement || form);
           arm();
         });

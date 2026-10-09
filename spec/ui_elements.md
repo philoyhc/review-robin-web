@@ -94,6 +94,11 @@ to CSS classes.
 > anchor in the app whose response is an attachment carries
 > `download`; a unit test scans the templates and fails on one that
 > does not.
+> Nor does it arm, for a link or a submit, while the page says it will
+> ask before being left (`window.rrwLeaveWillPrompt()` returns `true`,
+> as Session Home's details card does over unsaved edits): the bar would
+> sit behind the prompt, and an operator who stays gets no load to clear
+> it. A leave the operator confirms loads without a bar.
 > *Busy control:* the clicked link or submit button gets
 > `aria-busy="true"`, never `disabled` — a disabled control is not
 > serialized, so its `name`/`value` would vanish from the payload.

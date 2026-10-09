@@ -265,3 +265,14 @@ section (git history keeps it), so this file lists only what is owed.
   replace confirmation, and Submit:
   the roster changes, the session reads Draft, and the Workflow card
   asks to Prepare again.
+
+## Session Home asks before unsaved details are lost (operator pages Item 1, PR 1)
+
+- [ ] **A dirty card asks.** Unlock Session details, type into the
+  description, then click Quick Setup's Unlock (or any link off Home):
+  the browser asks whether to leave. Stay, and the typing is still there.
+- [ ] **Save, Cancel and Lock don't ask.** Edit again and Save: no prompt,
+  and the saved card comes back clean. Edit and Cancel, or edit and Lock,
+  then leave: no prompt.
+- [ ] **A clean card doesn't ask.** Unlock without typing, then leave:
+  no prompt.

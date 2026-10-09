@@ -435,6 +435,15 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   **Save** submits the config form and starts `disabled` (a
   dirty-tracking script enables it once an edit is made, but it
   renders enabled server-side so no-JS still works).
+- **Leaving Home with unsaved edits asks first.** While the card is in
+  edit mode and dirty, a `beforeunload` guard prompts on every other way
+  off the page: another card's form, a link, a reload, closing the tab.
+  The browser shows its own generic prompt. The card's own Save submit
+  stands the guard down until the page is restored from the
+  back/forward cache, which re-arms it; Cancel and Lock clear the dirty
+  flag. None of the three prompt. The flag is set on input and never recomputed,
+  so typing a value back to its original still counts as dirty. Without
+  JS there is no dirty tracking and no guard.
 - In Activated (and any non-editable) state the Lock toggle
   renders **inert** — `aria-disabled="true"` with a "Revert the
   session to draft to edit its details" tooltip.

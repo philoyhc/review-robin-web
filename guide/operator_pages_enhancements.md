@@ -97,6 +97,20 @@ Taken 2026-10-09 at `3b8672bd`. `P` is
 | `.lockable-body` users | 1 template + `base.html` | `grep -rln "lockable-body" app/web/templates` |
 | Live specs and root docs | 7 + `README.md` | `grep -rlE "qsu_\|oou_\|quick-setup/lock\|owners/lock\|Unlock.*(Quick Setup\|Owners)\|(Quick Setup\|Owners).*(Lock\|Unlock)" spec docs *.md`, less `archive/` |
 
+### Status
+
+- **PR 1 (dirty guard)** built 2026-10-09 on main `daa7b3b1`, which is
+  the base for PR 3's cumulative read. Four browser tests: a dirty card
+  prompts, and an accepted prompt leaves and drops the edit; Save, Cancel
+  and Lock leave without a prompt. The two prompt tests fail without the
+  guard.
+- **Scope added at PR 1 (Codex on #2919):** declining the prompt left
+  `base.html`'s busy indicator armed for its 60 s give-up, since no load
+  came to clear it. The indicator now stands aside while
+  `window.rrwLeaveWillPrompt()` is true. The Instruments page and
+  Observers guards have the same gap and don't set the hook yet; that is
+  left for a later item.
+
 ### PR ladder
 
 1. **Dirty guard.** The `beforeunload` guard in `session_detail.html`, a
@@ -143,7 +157,7 @@ cookie. Each rung's specs are tagged in `Doc impact`. The cumulative
 - `spec/session_home.md` — the dirty-form guard (PR 1); the cards no longer list Lock / Unlock (PR 2, PR 3).
 - `spec/session_owners.md` — §2 drops the Lock / Unlock bullet; Remove of another owner asks first (PR 2).
 - `spec/permissions.md` — drops the `owners/lock` row and its notes (PR 2).
-- `spec/ui_elements.md` — §10's `.quick-setup-*` row drops `.lockable-body.locked` (PR 2) and the footer's Lock / Unlock (PR 3).
+- `spec/ui_elements.md` — §1's busy indicator stands aside for a leave prompt (PR 1); §10's `.quick-setup-*` row drops `.lockable-body.locked` (PR 2) and the footer's Lock / Unlock (PR 3).
 - `spec/quick_setup_card_spec.md` — drops "Lock state on navigation", the footer toggle and the locked-state copy; unavailable still grays (PR 3).
 - `spec/settings_inventory.md` — drops the `oou_` (PR 2) and `qsu_` (PR 3) cookie rows.
 - `spec/operator_button_audit.md` — drops rows 32 and 192 (Lock / Unlock); the Owners Remove row records the confirm (PR 2, PR 3).

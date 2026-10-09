@@ -443,6 +443,40 @@
         window.sessionConfig.refresh(card);
       });
     })();
+
+    // Leaving Home with unsaved edits on the card asks first
+    // (``guide/operator_pages_enhancements.md`` Item 1). Every other way
+    // off the page — another card's form, a link, a reload, closing the
+    // tab — would drop them without a word. The card's own Save is the
+    // one exit that keeps them, so its submit stands the guard down;
+    // Cancel and Lock already clear the dirty flag. Same idiom as the
+    // Instruments page and the Observers expander.
+    (function () {
+      var saving = false;
+      document.querySelectorAll('[data-config-mode]').forEach(function (card) {
+        var form = card.querySelector('form');
+        if (form) form.addEventListener('submit', function () { saving = true; });
+      });
+      // Back to this page from the back/forward cache after a Save: the
+      // edits shown are live again, so the guard is too.
+      window.addEventListener('pageshow', function (e) {
+        if (e.persisted) saving = false;
+      });
+      function willPrompt() {
+        return !saving && !!document.querySelector(
+          '[data-config-mode="edit"][data-config-dirty="true"]'
+        );
+      }
+      // Read by base.html's navigation busy indicator, which stands
+      // aside rather than sit behind the prompt.
+      window.rrwLeaveWillPrompt = willPrompt;
+      window.addEventListener('beforeunload', function (e) {
+        if (!willPrompt()) return undefined;
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      });
+    })();
   </script>
 
   {# Two-column bottom layout: Quick Setup (left) + Owners, then Danger
