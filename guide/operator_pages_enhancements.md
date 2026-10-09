@@ -97,41 +97,29 @@ Taken 2026-10-09 at `3b8672bd`. `P` is
 | `.lockable-body` users | 1 template + `base.html` | `grep -rln "lockable-body" app/web/templates` |
 | Live specs and root docs | 7 + `README.md` | `grep -rlE "qsu_\|oou_\|quick-setup/lock\|owners/lock\|Unlock.*(Quick Setup\|Owners)\|(Quick Setup\|Owners).*(Lock\|Unlock)" spec docs *.md`, less `archive/` |
 
-### Status
+### Status — closed 2026-10-09
 
-- **PR 1 (dirty guard)** built 2026-10-09 on main `daa7b3b1`, which is
-  the base for PR 3's cumulative read. Four browser tests: a dirty card
-  prompts, and an accepted prompt leaves and drops the edit; Save, Cancel
-  and Lock leave without a prompt. The two prompt tests fail without the
-  guard.
-- **Scope added at PR 1 (Codex on #2919):** declining the prompt left
-  `base.html`'s busy indicator armed for its 60 s give-up, since no load
-  came to clear it. The indicator now stands aside while
-  `window.rrwLeaveWillPrompt()` is true. The Instruments page and
-  Observers guards have the same gap and don't set the hook yet; that is
-  left for a later item.
-- **PR 2 (Owners without a lock)** built 2026-10-09 on main `acec4255`.
-  The keep-list in `app/main.py` keeps its `/owners/...` paths until
-  PR 3, so an owner add or remove still leaves Quick Setup unlocked; only
-  the cookie regex dropped `oou_`. The confirm's text rides in an
-  autoescaped `data-confirm` attribute, so no display name reaches the
-  script. The build found three docs the manifest missed:
-  `spec/rrw_functional_spec.md`, `spec/quick_setup_card_spec.md`'s
-  `oou_` aside, and `guide/post_azure_todo_checklist.md` item 5's rows;
-  the `spec-writer` verify pass found a fourth, `spec/audience_and_identity_model.md`.
-- **PR 3 (Quick Setup without a lock; the middleware goes)** built
-  2026-10-09 on main `cc29be42`. `is_locked` is now `not is_available`;
-  `show_lock_toggle` and the `is_unlocked` parameter went, and with them
-  the `quick-setup/lock` route, the `qsu_` helpers and the whole
-  navigation middleware in `app/main.py`. The `#2873` browser-check row
-  ("loads locked") was rewritten for the live card.
-- **Reads.** One `spec-writer` verify pass per rung (PR 1: the bfcache
-  clause; PR 2: six stale passages; PR 3: six stale passages and five
-  stale comments). One cumulative `diff-reviewer` read at PR 3 on
-  `daa7b3b1..7d2f75d2`: no code defect; four stale spec passages the
-  blast-radius grep missed (its pattern needed "Quick Setup"/"Owners"
-  and "Lock" on one line), two weak tests, and no test for the bfcache
-  re-arm, left to the browser check. All acted on in #2921.
+Shipped as laddered: PR 1 #2919, PR 2 #2920, PR 3 #2921.
+
+- **Scope added:** declining the leave prompt left `base.html`'s busy
+  indicator armed until its 60 s give-up (Codex on #2919). It now stands
+  aside while `window.rrwLeaveWillPrompt()` is true; Session Home sets
+  the hook. The Instruments and Observers guards share the gap — Item 2.
+- **Decisions confirmed at build:** the Owners confirm's text rides in
+  an autoescaped `data-confirm` attribute, so no display name reaches
+  the script; the middleware kept its `/owners/...` keep-list until PR 3
+  went, so Quick Setup never relocked mid-ladder; `is_locked` is now
+  `not is_available`.
+- **Manifest:** the blast-radius grep needed "Quick Setup"/"Owners" and
+  "Lock" on one line, so wrapped sentences escaped it. Builds and reads
+  added `spec/audience_and_identity_model.md`, `spec/lifecycle.md`,
+  `spec/rrw_functional_spec.md` and `guide/post_azure_todo_checklist.md`.
+- **Reads:** a `spec-writer` verify pass per rung (1, 6 and 11 stale
+  passages or comments) and one at close; one cumulative `diff-reviewer`
+  read on `daa7b3b1..7d2f75d2` — no code defect, four stale spec
+  passages, one weak test — plus a read of the delta after it, clean.
+- **Owed to the browser:** the bfcache re-arm of the dirty guard has no
+  test; `guide/things_to_check_in_browser.md` carries it.
 
 ### PR ladder
 
@@ -190,3 +178,89 @@ cookie. Each rung's specs are tagged in `Doc impact`. The cumulative
 - `README.md` — the Quick Setup line drops "behind a single Lock / Unlock toggle" (PR 3).
 - `guide/things_to_check_in_browser.md` — a section per PR.
 - `guide/todo_master.md` — delete this item's entry at close.
+
+---
+
+## Item 2 — Busy indicator stands aside on every leave prompt
+
+### Opportunity
+
+Item 1 taught `base.html`'s navigation busy indicator to stand aside
+while a page will ask before it is left, through
+`window.rrwLeaveWillPrompt()`. Only Session Home sets the hook. The two
+older `beforeunload` guards — the Instruments page's dirty-card guard
+(`instruments_index.html`, `_newModelWireNavGuard`) and the Observers
+expander's cohort guard (`session_observers.html`) — don't, so declining
+their prompt leaves the bar, the progress cursor and "Loading…" on an
+idle page for 60 s, exactly the defect Codex found on #2919.
+
+### Decision
+
+Each guard sets `window.rrwLeaveWillPrompt` to the same predicate its
+`beforeunload` handler reads, as Session Home's does: Instruments
+`!_newModelIntentionalNav && <a dirty card>`, Observers
+`!intentionalNav && cohortDirty`. One hook per page; neither page shares
+Home, so there is no collision.
+
+**Rejected:** a generic registry in `base.html` (each guard registers a
+predicate, the indicator ORs them). Three pages, one guard each; a
+registry is machinery for a case that doesn't exist.
+
+### Semantics
+
+- **When the hook is true** a link click or a form submit doesn't arm the
+  bar. A confirmed leave loads without one, as on Home.
+- **Each page's own deliberate exits** already clear the predicate before
+  navigating (Instruments' discard reload, Observers' panel actions after
+  their `confirm`), so they still arm the bar.
+- **Without JS** neither guard nor bar exists; unchanged.
+
+### Judgment calls — decided
+
+- Reuse the predicate the `beforeunload` handler reads, by hoisting it
+  into a named function, rather than a second copy that could drift.
+  (2026-10-09)
+
+### Blast radius (measured)
+
+Taken 2026-10-09 at `8372fa12`.
+
+| What | Count | Command |
+|---|---|---|
+| Templates with a `beforeunload` guard | 3 (Home done) | `grep -rln "addEventListener(.beforeunload" app/web/templates` |
+| Pages setting the hook | 1 | `grep -rln "rrwLeaveWillPrompt =" app/web/templates` |
+| Tests naming `beforeunload` | 3 + 1 unit | `grep -rln "beforeunload" tests --include=*.py` |
+| Specs naming `beforeunload` | 5 | `grep -rln "beforeunload" spec/*.md` |
+
+### PR ladder
+
+1. **The two hooks.** Both templates set `window.rrwLeaveWillPrompt`; a
+   browser test per page: a dirty card or cohort, a link clicked, the
+   prompt declined, and the bar still hidden past its 200 ms arming
+   delay. `spec/ui_elements.md` §1 names the three pages. A code slice
+   outside a ladder: it takes its own `diff-reviewer` read.
+
+### Definition of done
+
+- `grep -rln "rrwLeaveWillPrompt =" app/web/templates` lists three
+  templates.
+- A browser test per page fails without its hook.
+- `spec/ui_elements.md` §1 states the exclusion for every leave prompt.
+- `guide/things_to_check_in_browser.md` has the PR's section.
+- `### Doc impact` current, every bullet checked by hand.
+- `spec-writer` run against the doc-impact specs; flags adjudicated.
+- `### Status` compacted; `guide/todo_master.md` entry updated.
+
+### Open questions
+
+- None at planning.
+
+### Out of scope
+
+- The guards themselves (when they fire, their wording) — unchanged.
+
+### Doc impact
+
+- `spec/ui_elements.md` — §1's busy-indicator exclusion names the Instruments and Observers guards beside Session Home's.
+- `spec/instruments.md` — the nav-away guard's sentence notes the busy indicator stands aside.
+- `guide/things_to_check_in_browser.md` — a section for the PR.
