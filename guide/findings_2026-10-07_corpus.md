@@ -237,7 +237,7 @@ id points at its row in §3 or §1.
 
 Ruled 2026-10-07: B1, Bc1, Bc2, Bc3, Bc4, G1, G2, Gc1, H2 (rows say how).
 Ruled 2026-10-08: Bc5, Bc8, A4, A7.
-Ruled 2026-10-09: B5, C5, D2, D5, D9, E10, E12, E13, F3, F14, F4.
+Ruled 2026-10-09: B5, C5, D2, D5, D9, E10, E12, E13, F3, F14, F4, G8.
 
 ## 3. Findings by file
 
@@ -333,7 +333,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**G5**~~ low spec §5.12 :606-608 an invitation created "(or auto-send schedule)" vs only Prepare creates (invitations.py:155); §11.4 :1984-1987 says so — **Done in #2903.**
 - ~~**G6**~~ low trim §12.5 :2135-2137 "seeded entries omitted from the Settings extract" — nothing seeds (_serialize.py:562); "Four of the five roster pairs (… Settings)" loose — **Done in #2903.**
 - ~~**G7**~~ low write §9.1 :1070-1072 lobby expander "rename and deadline adjust" omits Code and Tags; §9.2 :1129-1130 "Clone" vs "Duplicate" / "Duplicate settings only" — **Done in #2903.**
-- **G8** low :1448-1449 email status sent / queued / not sent omits sending and failed (email_outbox.py:23) [write]; glossary :2463-2468 "D6 source" plan label [trim]; preamble :7-8 URLs live in per-surface specs, yet the file carries routes and event names [author] — **Write and trim parts done in #2903**; the preamble stays with the author.
+- ~~**G8**~~ low :1448-1449 email status sent / queued / not sent omits sending and failed (email_outbox.py:23) [write]; glossary :2463-2468 "D6 source" plan label [trim]; preamble :7-8 URLs live in per-surface specs, yet the file carries routes and event names [author] — **Write and trim parts done in #2903**; the preamble ruled 2026-10-09 (soften it, no sweep) and **done in #2915.**
 
 **H — docs/**
 

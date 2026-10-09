@@ -5,7 +5,9 @@
 > user- and concept-level terms — not **how** it is built.
 >
 > Implementation details (URLs, code modules, data types, frameworks)
-> live in the per-page / per-subsystem specs alongside this file.
+> are owned by the per-page / per-subsystem specs alongside this file.
+> This one names a route or an event type only where the contract
+> turns on it, and the owning spec governs if the two differ.
 > Cross-references are
 > noted in [§19 Reading guide](#19-reading-guide).
 
