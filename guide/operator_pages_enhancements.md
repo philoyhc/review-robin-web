@@ -125,6 +125,13 @@ Taken 2026-10-09 at `3b8672bd`. `P` is
   the `quick-setup/lock` route, the `qsu_` helpers and the whole
   navigation middleware in `app/main.py`. The `#2873` browser-check row
   ("loads locked") was rewritten for the live card.
+- **Reads.** One `spec-writer` verify pass per rung (PR 1: the bfcache
+  clause; PR 2: six stale passages; PR 3: six stale passages and five
+  stale comments). One cumulative `diff-reviewer` read at PR 3 on
+  `daa7b3b1..7d2f75d2`: no code defect; four stale spec passages the
+  blast-radius grep missed (its pattern needed "Quick Setup"/"Owners"
+  and "Lock" on one line), two weak tests, and no test for the bfcache
+  re-arm, left to the browser check. All acted on in #2921.
 
 ### PR ladder
 
@@ -177,7 +184,8 @@ cookie. Each rung's specs are tagged in `Doc impact`. The cumulative
 - `spec/settings_inventory.md` — drops the `oou_` (PR 2) and `qsu_` (PR 3) cookie rows.
 - `spec/operator_button_audit.md` — drops rows 32 and 192 (Lock / Unlock); the Owners Remove row records the confirm (PR 2, PR 3).
 - `spec/audience_and_identity_model.md` — the Owners card sentence drops "behind its own Lock / Unlock" (PR 2).
-- `spec/rrw_functional_spec.md` — the Session Home Owners bullet drops "guarded by its own Lock / Unlock" (PR 2).
+- `spec/lifecycle.md` — Quick Setup's unavailable state drops "the Lock / Unlock toggle hidden" (PR 3).
+- `spec/rrw_functional_spec.md` — the Session Home Owners bullet drops "guarded by its own Lock / Unlock" (PR 2); the Owners paragraph and the Quick Setup bullet drop their Unlock (PR 3).
 - `guide/post_azure_todo_checklist.md` — item 5's Owners rows lose the lock rows and gain the confirm (PR 2).
 - `README.md` — the Quick Setup line drops "behind a single Lock / Unlock toggle" (PR 3).
 - `guide/things_to_check_in_browser.md` — a section per PR.

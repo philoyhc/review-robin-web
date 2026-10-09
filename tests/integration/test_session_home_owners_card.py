@@ -368,10 +368,16 @@ def test_an_owners_change_leaves_quick_setup_live(
     review_session = _create(client, db, "OWN-LIVE-4")
     db.add(User(email="bob@example.edu", is_operator=True))
     db.commit()
-    client.post(
+    response = client.post(
         f"/operator/sessions/{review_session.id}/owners/add",
         data={"target_email": "bob@example.edu"},
         follow_redirects=False,
     )
-    assert 'class="quick-setup-body"' in _home(client, review_session)
+    assert response.headers["location"] == (
+        f"/operator/sessions/{review_session.id}#owners-card"
+    )
+    body = _home(client, review_session)
+    card = _card(body)
+    assert "bob@example.edu" in card[card.index("<table>") : card.index("</table>")]
+    assert 'class="quick-setup-body"' in body
 

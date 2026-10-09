@@ -276,6 +276,9 @@ section (git history keeps it), so this file lists only what is owed.
   then leave: no prompt.
 - [ ] **A clean card doesn't ask.** Unlock without typing, then leave:
   no prompt.
+- [ ] **Back after a Save re-arms it.** Edit and Save, edit again, go
+  to another page, then come back with the browser's Back button and
+  leave again: it asks (the back/forward-cache case no test covers).
 
 ## Owners without a lock; removing another owner asks (operator pages Item 1, PR 2)
 

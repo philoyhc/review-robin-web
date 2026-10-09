@@ -890,9 +890,8 @@ co-owners on Create's **Owners** card, saved with the session. An
 owner can add another allowlisted operator as a co-owner and
 remove a co-owner, themselves included; the last owner cannot be
 removed. Each add or remove saves at once and is audited as
-`session.owner_added` / `session.owner_removed`. The card renders
-locked, and **Unlock** enables its controls — a guard against
-accidental edits, not a permission. Per-session add and remove are
+`session.owner_added` / `session.owner_removed`. The card has no
+Lock / Unlock; removing another owner asks first. Per-session add and remove are
 for owners only: a non-owner admin can only **self-add** (the adopt
 bootstrap from Sessions Diagnostics) or clone. The one exception is
 Accounts Management's **remove from all sessions**, which takes a
@@ -1158,8 +1157,8 @@ Top → bottom:
   plus an Observers slot when the Observers toggle is on) and one
   **Submit** button that runs the staged imports in dependency order.
   It is available only while setup is editable (`draft` or
-  `validated`) and the session holds no responses: then it loads locked, and **Unlock** enables it;
-  otherwise it stays locked with no Unlock.
+  `validated`) and the session holds no responses: then it is live on
+  load; otherwise it is greyed with its controls disabled.
 - **Danger Zone card** (bottom right) —
   **Delete Data** (wipes every reviewer response, preserves setup)
   and **Delete Session** (removes the session entirely). Both are
