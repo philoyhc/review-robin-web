@@ -13,7 +13,7 @@ the cadence (2 of 56 days, 46 of 500 merges).
 (#2828 → #2865). Nine `spec-writer` reads ran in verify mode, split by
 area, each reading every file in its area against the code. None edited a
 file. **This sweep changed no file in scope.** Every divergence is in
-`guide/findings_2026-10-07_corpus.md` with who decides it; act from the
+`guide/archive/findings_2026-10-07_corpus.md` with who decides it; act from the
 register. This record says what was read and what was found, file by file.
 
 ## 0. Carried forward

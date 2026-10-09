@@ -1,7 +1,8 @@
 # Findings — corpus sweep (2026-10-07)
 
 **Found by:** `guide/sweep_2026-10-07_corpus.md` · **Read at:** `ff7f4425`
-(#2865) · **Open:** every row below that is not struck.
+(#2865) · **Open:** none. Every row is struck or closed; archived
+2026-10-09 with nothing open.
 
 Every spec, `docs/` file and root document was read against the code it
 describes, in nine verify-mode reads split by area. **Nothing in scope was
@@ -260,7 +261,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 - ~~**B1**~~ med spec (author if the card should follow `is_editable`) lifecycle.md:560-565 Quick Setup body greyed with toggle visible but inert vs available only on draft with no responses, toggle hidden on validated (views/_quick_setup.py:201,340; _quick_setup_card.html:35-40), while the routes gate on is_editable; the card is narrower than the single predicate §3.1 / §5 say nothing undercuts; :560 also names the retired "Next Action card" — **Done in #2873** (ruled 2026-10-07: the card follows `is_editable` while no responses exist).
 - ~~**B2**~~ low spec lifecycle.md:521-526 Observers exception "checkboxes only, bulk card follows the common gate", contradicting :423 vs :434; code gates the whole Unlock panel, selection and checkboxes on not archived (session_observers.html:13-18,229,559; setup_pages.md:360 right) — **Done in #2898.**
-- **B3** — carried, old B27 / G6: lifecycle.md:864-870 the lazy observer runs on Session Home, Operations and the lobby vs Session Home only (_session_home.py:125). Not counted.
+- ~~**B3**~~ — carried, old B27 / G6: lifecycle.md:864-870 the lazy observer runs on Session Home, Operations and the lobby vs Session Home only (_session_home.py:125). Not counted. **Closed 2026-10-09:** stays tracked as `guide/post_azure_todo_checklist.md` §7.
 - ~~**B4**~~ med author lifecycle.md:886-889 aged value stays put vs Details Save re-validates the stored Start (§1) — **Done in #2870.**
 - ~~**B5**~~ low author lifecycle.md:698,727 archive_offset default P30D vs nullable, no default, nothing writes it (review_session.py:108); settings_inventory.md:117 "no editor, CSV only" — **Ruled 2026-10-09: the spec marks P30D as the intended default. Done in #2908.**
 - ~~**B6**~~ low spec assignments.md:932-937 reviewer-tail `@` guard "inherited from the roster pages" — C5 dropped it from filter_reviewers_rows / filter_observers_rows (_filters.py:316,526); assignments_picked_handles (:408) keeps it, its docstring (:394-404) stale — **Done in #2898.**
@@ -279,7 +280,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 
 **D — data in and out**
 
-- **D1** — carried, old D4, reproduced: rehydrate.md:417 every row loaded or dropped vs `_stage` overwrites a duplicate (assignment, field) — "rows 2, loaded 1, dropped 0", also when two instruments share a short label (responses_import.py:293-306). Not counted.
+- ~~**D1**~~ — carried, old D4, reproduced: rehydrate.md:417 every row loaded or dropped vs `_stage` overwrites a duplicate (assignment, field) — "rows 2, loaded 1, dropped 0", also when two instruments share a short label (responses_import.py:293-306). Not counted. **Closed 2026-10-09:** stays tracked under `guide/deferred_consolidated.md` "Rehydrate is incomplete and not exposed".
 - ~~**D2**~~ low author rehydrate.md:460-466 Scale: streaming, batched inserts, a higher bound vs a full list and one flush (responses_import.py:129-175, 272-425); the MAX_ROWS / MAX_BYTES non-reuse holds — **Ruled 2026-10-09: the spec describes what ships; streaming stays deferred. Done in #2910.**
 - ~~**D3**~~ low write csv_contracts.md:992-1000 roster re-upload deletes every pair naming a removed row vs every roster row deleted and re-added, so every relationship, assignment and response goes, even on an identical file (csv_imports.py:1189-1206) — **Done in #2900.**
 - ~~**D4**~~ low code email_template_editor.md:100,260-261 whitespace resets vs stored as an override (_apply_email.py:49-52) (§1) — **Done in #2896.**
@@ -329,7 +330,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**G1**~~ med author §5.8 :518-522 a group-scoped instrument has no locked rows (unticking Name drops member names); the service allows it and the reviewer surface honors it (_response_fields.py:417-427; _reviewer_summary.py:327-333), but the builder always locks Name (views/_instruments.py:661; instruments_index.html:1939-1943, 4045); instruments.md:871-874 "stays ticked" and :932 "when Name is selected" disagree — **Ruled 2026-10-07: Name stays locked on group instruments.** Spec in #2872; in #2875 the service and Settings import keep Name shown, and every reader that lists a group's members does so whatever a stored row says.
 - ~~**G2**~~ med author §9.9 :1450 "engagement (opened / first-response / submitted)", §2.7 "invitation engagement" vs Progress = not started / in progress / submitted (views/_progress.py:30-35); nothing renders opened_at; operations_pages.md:298 right — **Done in #2872** (ruled 2026-10-07: the spec follows Progress).
 - ~~**G3**~~ med author §2.12 :113-115 every send attempt audited, §5.13 every mutating service vs the per-row reminder (§1); §15 :2280-2282 contradicts §2.12 — **Done in #2869.**
-- **G4** — carried, old B27 / G6: §8.3 :966-969 triggers fire on the next operator GET. Same as B3. Not counted.
+- ~~**G4**~~ — carried, old B27 / G6: §8.3 :966-969 triggers fire on the next operator GET. Same as B3. Not counted. **Closed 2026-10-09** with B3.
 - ~~**G5**~~ low spec §5.12 :606-608 an invitation created "(or auto-send schedule)" vs only Prepare creates (invitations.py:155); §11.4 :1984-1987 says so — **Done in #2903.**
 - ~~**G6**~~ low trim §12.5 :2135-2137 "seeded entries omitted from the Settings extract" — nothing seeds (_serialize.py:562); "Four of the five roster pairs (… Settings)" loose — **Done in #2903.**
 - ~~**G7**~~ low write §9.1 :1070-1072 lobby expander "rename and deadline adjust" omits Code and Tags; §9.2 :1129-1130 "Clone" vs "Duplicate" / "Duplicate settings only" — **Done in #2903.**
@@ -357,7 +358,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**I7**~~ low author rrw_design_rationale.md:195 email "queued but not yet wired" vs "recorded, not sent" elsewhere (README.md:103); invitations flip to sent, responses-received stays queued — **Ruled 2026-10-09: README's wording. Done in #2916.**
 - ~~**I8**~~ low author new_project_practices_setup.md:307-326 one shared engine builder with URL write-back vs this repo's three (conftest.py:60-62, session.py:30, env.py:25), none writing back — **Ruled 2026-10-09: the kit keeps the shape and notes this repo differs. Done in #2916.**
 - ~~**I9**~~ low code tools/practice_kit.py:285 "three" over seven (§1) — **Done in #2896.**
-- **I10** low author azure_ask.md:228-229 migrations round-tripped on SQLite and Postgres, wrong at its date (2026-07-09). A dated record; old I5 left it so
+- ~~**I10**~~ low author azure_ask.md:228-229 migrations round-tripped on SQLite and Postgres, wrong at its date (2026-07-09). A dated record; old I5 left it so — **Closed 2026-10-09: left as written**; the file is a dated record of what was asked on 2026-07-09.
 
 **Outside the corpus** (found by the I read; low, no area id)
 
