@@ -27,10 +27,9 @@ Two sibling registers hold the open work that is not queued here:
 ### In progress
 
 - **Operator pages enhancements** — `guide/operator_pages_enhancements.md`.
-  Item 1 (one lock on Session Home) closed 2026-10-09. Item 2 (busy
-  indicator stands aside on the Instruments and Observers leave prompts)
-  is planned, one PR. Item 3 (three chip types, one look each) is
-  planned, two PRs.
+  Items 1 (one lock on Session Home) and 2 (busy indicator stands aside
+  on every leave prompt) closed 2026-10-09. Item 3 (three chip types,
+  one look each) is in progress, two PRs.
 
 ### Queued segments
 

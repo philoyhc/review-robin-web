@@ -233,17 +233,17 @@ Taken 2026-10-09 at `8372fa12`.
 | Tests naming `beforeunload` | 3 + 1 unit | `grep -rln "beforeunload" tests --include=*.py` |
 | Specs naming `beforeunload` | 5 | `grep -rln "beforeunload" spec/*.md` |
 
-### Status
+### Status — closed 2026-10-09
 
-- **PR 1** built 2026-10-09 on main `d91e4737`. Each guard's predicate is
-  hoisted into a `willPrompt()` its `beforeunload` handler now calls, so
-  the hook and the guard cannot drift; the Observers one coerces
-  `cohortDirty` to a boolean, since `base.html` checks `=== true`. Two
-  browser tests (one per page) fail without their hook.
-- **Read** (`diff-reviewer`, `d91e4737..6a863395`): no high or medium
-  finding; two low ones, both prose — §1's "every page sets it" is
-  unenforced, so it names the three pages; Semantics wrongly said the
-  Instruments discard reload arms the bar.
+Shipped as planned in #2924. Each guard's predicate is hoisted into a
+`willPrompt()` its `beforeunload` handler calls and exposes as the hook,
+so the two cannot drift; the Observers one coerces `cohortDirty` to a
+boolean, since `base.html` checks `=== true`. One `diff-reviewer` read:
+no high or medium finding, two prose ones, fixed (§1 names the three
+pages rather than claiming every guard; Instruments' discard reload is a
+script reload and never armed the bar). The `spec-writer` pass on the
+final state found no divergence and served as the close pass. Codex: no
+findings.
 
 ### PR ladder
 
