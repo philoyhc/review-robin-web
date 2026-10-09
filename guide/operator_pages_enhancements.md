@@ -366,7 +366,9 @@ Closed 2026-10-09. Shipped as planned in two PRs, #2926 and #2927.
   fixed in #2927; the fourth is the divergence above. A follow-up read on
   the fix commit found two wording gaps, also fixed. The PR 2
   `spec-writer` pass caught that the Data shaper chip keeps
-  `aria-pressed="true"`, and the wording was fixed.
+  `aria-pressed="true"`, and the wording was fixed. The close
+  `spec-writer` pass found all three doc-impact specs current and dropped
+  a provenance date from §9's lead-in.
 - **For the author:** type 2 chips carry their state two ways. The
   Extract chips use `aria-pressed`; the Data shaper chip uses a data
   attribute and stays pressed. Both are left as planned, pending a
