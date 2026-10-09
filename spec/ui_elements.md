@@ -704,7 +704,9 @@ page's Select all / Clear all, are cycle chips (`.tag-mode-chip`,
 `.pill-tag-clear` take `--selected-bg` / `--selected-fg` outright).
 Select all / Clear all is the edge case whose label names the next click
 rather than a state. The Instruments Visibility cells are cycle chips
-too, "—" being a deliberate off.
+too, "—" being a deliberate off. So are Extract's three empty-row chips
+("All reviewers ↔ Reviewers with responses" and its two siblings), which
+keep `is-selected` on in both labels (`spec/extract_data.md`).
 `tests/integration/test_chip_edge.py` pins the treatment;
 `tests/unit/test_reserved_shade.py` keeps the shade off anything static.
 

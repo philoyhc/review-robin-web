@@ -321,3 +321,13 @@ section (git history keeps it), so this file lists only what is owed.
   all chips are dark like a selected tag, in both of their labels, in
   light and dark themes; unselected tag chips stay light.
 - [ ] **Archived page.** The Select all / Clear all chip is dark too.
+
+## Extract empty-row chips are always dark (operator pages Item 3, PR 2)
+
+- [ ] **Both labels dark.** On Extract data, click "All assignment rows",
+  "All reviewers" and "All reviewees": each flips to its "… with data" /
+  "… with responses" label and stays dark, in light and dark themes.
+  "Include metadata" and the instrument chips still go light when off.
+- [ ] **Reload.** With a chip on its "with responses" label, reload: it
+  comes back on that label, still dark, and its card's download still
+  drops the empty rows.

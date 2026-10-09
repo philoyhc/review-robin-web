@@ -129,7 +129,9 @@ operator's selection.
 
 Every chip uses the canonical `pill pill-count tag-chip`
 selectable-chip primitive (`spec/ui_elements.md` §10), with
-`is-selected` + `aria-pressed` driving the visual state.
+`is-selected` + `aria-pressed` driving the visual state of an
+on/off chip; the cross-cutting cycle chips below are always dark
+(`spec/ui_elements.md` §9).
 Three families of chip live on the page:
 
 - **Family / scope toggles** (intro card) — one per card whose
@@ -147,7 +149,10 @@ Three families of chip live on the page:
   metadata cards + Data shaper) — two-state cycling pills
   that flip between an "include everything" label and a
   "drop empty rows" label so the OFF state reads as a
-  named intent rather than a not-pressed chip:
+  named intent rather than a not-pressed chip. They are cycle
+  chips (`spec/ui_elements.md` §9 type 2): both labels keep the
+  dark fill, and `aria-pressed` plus the label carry the state,
+  when clicked and when restored on reload:
 
   | Card | "Include" label | "Drop empty" label |
   |---|---|---|

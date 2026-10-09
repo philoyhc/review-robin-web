@@ -353,6 +353,13 @@ Taken 2026-10-09 at `49dabecb`.
   `--selected-bg` / `--selected-fg`; `test_reserved_shade`'s control
   allowlist gains it; a browser test per page compares each chip's fill
   with a selected tag chip's in both labels and fails without the CSS.
+- **PR 2** built 2026-10-09. One `setPressed` helper in the Extract page
+  script serves both the click toggle and the `localStorage` restore,
+  keeping `is-selected` on for any chip carrying both `data-label-on` and
+  `data-label-off`; the download links already read `aria-pressed`. A
+  browser test clicks each chip off, reloads, and finds it dark with the
+  off label and `all_rows=0` still on the link; it fails without the
+  change. §9 also gains the three chips in its type 2 list.
 
 ### PR ladder
 
@@ -398,7 +405,7 @@ Taken 2026-10-09 at `49dabecb`.
 
 ### Doc impact
 
-- `spec/ui_elements.md` — §9 states the three chip types; the lobby chips' `--surface-muted` fill becomes the type 2 dark fill (PR 1).
+- `spec/ui_elements.md` — §9 states the three chip types; the lobby chips' `--surface-muted` fill becomes the type 2 dark fill (PR 1); Extract's three chips join the type 2 list (PR 2).
 - `spec/sessions_overview.md` — the tag filter's mode and clear chips are type 2 (PR 1).
 - `spec/extract_data.md` — the three empty-row-drop chips are type 2, always dark (PR 2).
 - `guide/things_to_check_in_browser.md` — a section per PR.
