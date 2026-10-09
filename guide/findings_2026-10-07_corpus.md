@@ -237,7 +237,7 @@ id points at its row in §3 or §1.
 
 Ruled 2026-10-07: B1, Bc1, Bc2, Bc3, Bc4, G1, G2, Gc1, H2 (rows say how).
 Ruled 2026-10-08: Bc5, Bc8, A4, A7.
-Ruled 2026-10-09: B5, C5.
+Ruled 2026-10-09: B5, C5, D2, D5, D9.
 
 ## 3. Findings by file
 
@@ -280,14 +280,14 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 **D — data in and out**
 
 - **D1** — carried, old D4, reproduced: rehydrate.md:417 every row loaded or dropped vs `_stage` overwrites a duplicate (assignment, field) — "rows 2, loaded 1, dropped 0", also when two instruments share a short label (responses_import.py:293-306). Not counted.
-- **D2** low author rehydrate.md:460-466 Scale: streaming, batched inserts, a higher bound vs a full list and one flush (responses_import.py:129-175, 272-425); the MAX_ROWS / MAX_BYTES non-reuse holds
+- ~~**D2**~~ low author rehydrate.md:460-466 Scale: streaming, batched inserts, a higher bound vs a full list and one flush (responses_import.py:129-175, 272-425); the MAX_ROWS / MAX_BYTES non-reuse holds — **Ruled 2026-10-09: the spec describes what ships; streaming stays deferred. Done in #2910.**
 - ~~**D3**~~ low write csv_contracts.md:992-1000 roster re-upload deletes every pair naming a removed row vs every roster row deleted and re-added, so every relationship, assignment and response goes, even on an identical file (csv_imports.py:1189-1206) — **Done in #2900.**
 - ~~**D4**~~ low code email_template_editor.md:100,260-261 whitespace resets vs stored as an override (_apply_email.py:49-52) (§1) — **Done in #2896.**
-- **D5** low author csv_contracts.md:126,141,317 Status `active` / `inactive` only, else an error, vs lowercased first (csv_imports.py `_parse_status`); only Relationships (:355) says case-insensitive
+- ~~**D5**~~ low author csv_contracts.md:126,141,317 Status `active` / `inactive` only, else an error, vs lowercased first (csv_imports.py `_parse_status`); only Relationships (:355) says case-insensitive — **Ruled 2026-10-09: the spec says case-insensitive. Done in #2910.**
 - ~~**D6**~~ low spec rehydrate.md:374-375 import lowercases emails vs stored as typed, only comparison keys normalized (csv_imports.py:1143-1166) — **Done in #2900.**
 - ~~**D7**~~ low trim csv_contracts.md:957 names `_session_config_csv` — none; the code is export_settings_csv (_extracts.py:84) and build_setup_bundle (zip_bundle.py:90) — **Done in #2900.**
 - ~~**D8**~~ low trim csv_contracts.md:583-584, :592, :652-653; rehydrate.md:82, :576; roundtrip_coverage.md:90; settings_inventory.md:583 (findings ids, ruling dates, "before … now"); hedges csv_contracts.md:728-733, :742-744 — **Done in #2900.**
-- **D9** low author settings_inventory.md:110 Generate / Prepare "writes the session flag back" vs applies the flag to each pair's include and never writes the session flag (_generate.py:419,573-580)
+- ~~**D9**~~ low author settings_inventory.md:110 Generate / Prepare "writes the session flag back" vs applies the flag to each pair's include and never writes the session flag (_generate.py:419,573-580) — **Ruled 2026-10-09: the spec says Generate re-applies the flag to the pairs. Done in #2910.**
 
 **E — UI and visual style**
 

@@ -464,11 +464,15 @@ durable instrument key.
 
 **Scale.** `responses.csv` for a large session (e.g. 1,500 reviewers) far
 exceeds the roster importer's `MAX_ROWS = 5000` / `MAX_BYTES = 1 MiB`
-caps (`csv_imports.py`). The responses parser therefore **must not** reuse
-those limits — it streams rows and inserts in batches
-(`Session.bulk_save_objects` or chunked `add_all` + periodic flush),
-with its own, higher bound. This is called out because reusing
-`csv_imports`' guard rails here would silently truncate real data.
+caps (`csv_imports.py`). The responses parser therefore **does not** reuse
+those limits, because reusing `csv_imports`' guard rails here would
+silently truncate real data. What ships is unbounded and in memory:
+`parse_responses_csv` decodes the whole file into a list of rows, and
+`load_responses` stages every row and flushes once at the end, with no
+row or byte cap of its own. A streaming parser with batched inserts and
+its own, higher bound is deferred with the rest of the incomplete
+feature (`guide/deferred_consolidated.md`, "Rehydrate is incomplete and
+not exposed").
 
 ### 6.5 Land the session
 
