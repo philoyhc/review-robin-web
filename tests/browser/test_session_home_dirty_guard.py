@@ -57,6 +57,12 @@ def test_a_dirty_card_asks_before_a_link_leaves_home(
     expect(page.locator("#mock-description")).to_have_value("Unsaved")
     assert seen == ["beforeunload"]
     assert page.url.endswith(f"/operator/sessions/{session_id}?editing=1")
+    # And not claiming to load: no load comes to clear base.html's busy
+    # indicator, so it must not have armed (Codex on #2919). Past its
+    # 200 ms arming delay.
+    page.wait_for_timeout(400)
+    expect(page.locator("[data-rrw-busy-bar]")).to_be_hidden()
+    assert "rrw-navigating" not in (page.locator("body").get_attribute("class") or "")
 
 
 def test_accepting_the_prompt_leaves_and_drops_the_edit(

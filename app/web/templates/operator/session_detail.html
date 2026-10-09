@@ -462,11 +462,16 @@
       window.addEventListener('pageshow', function (e) {
         if (e.persisted) saving = false;
       });
-      window.addEventListener('beforeunload', function (e) {
-        if (saving) return undefined;
-        if (!document.querySelector(
+      function willPrompt() {
+        return !saving && !!document.querySelector(
           '[data-config-mode="edit"][data-config-dirty="true"]'
-        )) return undefined;
+        );
+      }
+      // Read by base.html's navigation busy indicator, which stands
+      // aside rather than sit behind the prompt.
+      window.rrwLeaveWillPrompt = willPrompt;
+      window.addEventListener('beforeunload', function (e) {
+        if (!willPrompt()) return undefined;
         e.preventDefault();
         e.returnValue = '';
         return '';
