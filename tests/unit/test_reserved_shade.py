@@ -61,8 +61,8 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #: - ``.severity-chip.active`` — the Validate page's severity filter,
 #:   an ``<a>``. Already an outlined pill; active takes the shade on its
 #:   border and text, and is the precedent rung 3 generalised.
-#: - the lobby's cycle-chip fill — the AND/OR and Select all / Clear all
-#:   chips, always dark because every state is a choice
+#: - the lobby and Archived cycle-chip fill — the AND/OR and Select all /
+#:   Clear all chips (``role="button"``), always dark because every state is a choice
 #:   (``spec/ui_elements.md`` §9 type 2; operator pages Item 3).
 #: - the three-selector chip rule — every ``.tag-chip`` (which is every
 #:   Band 2 pill too), plus the lobby's Select all / Clear all and AND/OR
