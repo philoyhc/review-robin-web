@@ -88,7 +88,7 @@ Confirmed by reading the code; *reproduced* means a reader also ran it.
 - ~~**B7**~~ — **Done in #2896** (and a registry test keeps internals out of every why line). Three Validate `why` lines name internals the spec forbids:
   `include`, `rule_set_id` with a spec path, and `/me/sessions/{id}/results`
   (`validation.py`). Code (copy).
-- **F4** The audit validator checks `counts` and `refs` only as
+- ~~**F4**~~ — **Done in #2914** (ruled 2026-10-09: tighten the validator). The audit validator checks `counts` and `refs` only as
   `dict[str, int]`; `spec/architecture.md` adds non-negative counts and
   `_id`-suffixed ref keys. Author: tighten the validator or the spec.
 - ~~**A4**~~ A Group instrument with no boundary tag previews every active
@@ -237,7 +237,7 @@ id points at its row in §3 or §1.
 
 Ruled 2026-10-07: B1, Bc1, Bc2, Bc3, Bc4, G1, G2, Gc1, H2 (rows say how).
 Ruled 2026-10-08: Bc5, Bc8, A4, A7.
-Ruled 2026-10-09: B5, C5, D2, D5, D9, E10, E12, E13, F3, F14.
+Ruled 2026-10-09: B5, C5, D2, D5, D9, E10, E12, E13, F3, F14, F4.
 
 ## 3. Findings by file
 
@@ -312,7 +312,7 @@ says against what the code does. Rows that duplicate a §1 defect name it.
 - ~~**F1**~~ med spec operations_pages.md:292 reviewer name links "when an Invitation row exists" vs :373-381 every row, reviewer-keyed; code links unconditionally (session_invitations.html:218-221) — **Done in #2871.**
 - ~~**F2**~~ low trim operations_pages.md:402-404 "(findings Fc2); Segment 14B restores the label" (keep the constraint); :200-206 narrates "was aligned … was left counting" — **Done in #2902.**
 - ~~**F3**~~ low author architecture.md:205-206 creation is `{collection}/add` vs reviewers/create, observers/create, page-break/create and bare collection POSTs (_setup_reviewers.py:370) — **Ruled 2026-10-09: `create` makes a row, `add` attaches a member. Done in #2913.**
-- **F4** low author architecture.md:687-690, 759-761 counts non-negative, refs keys end `_id` vs audit.py:313-319 (§1)
+- ~~**F4**~~ low author architecture.md:687-690, 759-761 counts non-negative, refs keys end `_id` vs audit.py:313-319 (§1) — **Ruled 2026-10-09: tighten the validator. Done in #2914.**
 - ~~**F5**~~ low spec audience_and_identity_model.md:167-169 Promote / Demote shown only to a super-admin vs can_manage_admins, also any admin while none is configured (_sys_admin.py:233-236); permissions.md:170-177 right — **Done in #2902.**
 - ~~**F6**~~ low spec audience_and_identity_model.md:147-151 per-row checkbox and bulk toolbar vs single selection (sys_admin_users.html:102-109, 390-395) — **Done in #2902.**
 - ~~**F7**~~ low spec permissions.md:117 re-resolve list omits bulk-unarchive and bulk-delete-archived (_lobby.py:223-270) — **Done in #2902.**

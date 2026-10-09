@@ -23,7 +23,13 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    NonNegativeInt,
+    ValidationError,
+    field_validator,
+)
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -312,11 +318,25 @@ class _CanonicalDetail(BaseModel):
     session_code: str | None = None
     changes: dict[str, list[Any]] | None = None
     snapshot: dict[str, Any] | None = None
-    counts: dict[str, int] | None = None
+    # Non-negative, and ref keys end in ``_id``, as
+    # ``spec/architecture.md`` "Audit-event detail schema" states
+    # (findings F4, 2026-10-09).
+    counts: dict[str, NonNegativeInt] | None = None
     set_changes: _SetChangesShape | None = None
     reason: str | None = None
     refs: dict[str, int] | None = None
     context: dict[str, str | int | bool] | None = None
+
+    @field_validator("refs")
+    @classmethod
+    def _ref_keys_end_in_id(
+        cls, value: dict[str, int] | None
+    ) -> dict[str, int] | None:
+        if value is not None:
+            bad = sorted(k for k in value if not k.endswith("_id"))
+            if bad:
+                raise ValueError(f"refs keys must end in _id: {bad}")
+        return value
 
 
 @dataclass(frozen=True)
