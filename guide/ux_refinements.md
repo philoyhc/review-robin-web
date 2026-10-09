@@ -58,6 +58,12 @@ Both sides become type 1 chips that wrap the existing checkbox:
   don't respond to clicks.
 - **Fields a group row can't show** keep their disabled state, shown as
   an `is-disabled` chip.
+- **A disabled checkbox shows on its chip whenever it is disabled**,
+  including after load: `newModelRfRecomputeActionStates` disables a
+  governed field's Active when its parent is unticked, and re-enables it
+  after. The chip reads that from the input with a CSS rule on
+  `label.tag-chip:has(> input:disabled)` (no edge, no pointer), so no
+  script has to keep a class in step (Codex on #2930).
 
 ### Judgment calls — decided
 
@@ -88,7 +94,9 @@ Taken 2026-10-09 at `2569876a`.
    chip, mirrored live, left-aligned and capped, with the bounds boxes'
    minimum width. A browser test renames a field and checks the chip
    follows, and toggles a field with responses to confirm the confirm
-   still fires. `spec/instruments.md` (Response fields table) and
+   still fires, and unticks a parent to check its governed fields'
+   chips lose the edge and the pointer and come back when it is ticked
+   again. `spec/instruments.md` (Response fields table) and
    `spec/ui_elements.md` (`rf-table`, `rf-active-cell`) updated. The
    item's cumulative `diff-reviewer` read runs here, from the main SHA
    before PR 1.
