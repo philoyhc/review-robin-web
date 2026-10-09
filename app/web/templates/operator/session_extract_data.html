@@ -976,6 +976,12 @@
       // §9 type 2): either label is a positive choice, so they
       // stay dark — ``setPressed`` keeps ``is-selected`` on and
       // only ``aria-pressed`` and the label carry the state.
+      // Deliberately unlike the Data shaper's empty-row chip,
+      // which stays ``aria-pressed="true"`` and keeps its state
+      // in a data attribute: the download links, Zip all and
+      // ``persist`` read ``aria-pressed`` here, so it stays the
+      // state (author's ruling, 2026-10-09; ``spec/extract_data.md``
+      // Chip vocabulary).
       function isCycle(chip) {
         return !!chip.getAttribute("data-label-on") && !!chip.getAttribute("data-label-off");
       }
@@ -1461,7 +1467,10 @@
       // shapes. Mirrors the Self-review handling chip's state
       // machine: attribute on the chip, persisted column on the
       // shape (``data-shape-include-empty-rows``), restored on
-      // Edit via ``restoreShapeChipState``.
+      // Edit via ``restoreShapeChipState``. ``aria-pressed`` stays
+      // "true" whatever the state, deliberately unlike the three
+      // page-level empty-row chips, whose ``aria-pressed`` carries
+      // theirs (author's ruling, 2026-10-09; see ``setPressed``).
       var SHAPER_IER_LABELS = {
         "true": "All rows",
         "false": "Rows with data",
