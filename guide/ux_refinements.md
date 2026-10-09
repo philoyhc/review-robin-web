@@ -153,7 +153,8 @@ that can't be changed, so each surface invented its own look.
 A fourth chip type, **Fixed**: a switch held at its value. It keeps the
 full dark fill of its sibling chips (`--selected-bg` / `--selected-fg`),
 drops the edge and the pointer, and carries a small lock glyph before
-the label (`.tag-chip.is-fixed`). The author's pick of four mocked-up
+the label (`.tag-chip.is-fixed`). A switch fixed **off** is the off chip
+with the same glyph. The author's pick of four mocked-up
 variants, 2026-10-09: lock glyph (chosen), hatched fill, dashed inner
 ring, toned-down dark.
 
@@ -219,9 +220,10 @@ this item's PR 1.
 
 ### Open questions
 
-- A fixed **off** (Band 3's group-hidden display fields; a response
-  field under a hidden parent, Item 1 PR 2): the off chip plus the
-  glyph is the proposal. The author decides before Item 1's PR 1.
+- ~~How does a fixed **off** look?~~ The off chip plus the lock glyph
+  (author, 2026-10-09). It covers Band 3's group-hidden display fields
+  (Item 1 PR 1) and a response field under a hidden parent (Item 1
+  PR 2).
 
 ### Out of scope
 
