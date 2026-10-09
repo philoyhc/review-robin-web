@@ -757,8 +757,10 @@ live preview of one sample row inline.
 >
 > It reads the **persisted** flag: the checkbox is not among the
 > fields the Refresh handler posts, so an unsaved tick shows after
-> the card is saved. The preview already blends live Link 1 / Link 2
-> edits with persisted Link 3 state.
+> the card is saved. Everything else Refresh reads is live: the
+> Link 1 / Link 2 edits, the Link 3 boundary selects and the
+> Individual / Group pill, so "a grouped instrument" above is
+> whichever the pill shows.
 >
 > See `spec/assignments.md` § *Self-review policy* for the two
 > supported ways to suppress self-reviews.
@@ -938,8 +940,8 @@ the sample's boundary key form the group; if more than 10
 qualify, a trailing `, +N more` collapses the overflow. A
 pair-context tag lives on a reviewer's relationships, so the preview
 does not partition on one: a mixed boundary partitions on its reviewee
-tags only, and a pair-context-only boundary lists the sample reviewer's
-rule-surviving reviewees as the group. The rule-surviving subset is the
+tags only, and a pair-context-only boundary — or no boundary at all —
+lists the sample reviewer's rule-surviving reviewees as the group. The rule-surviving subset is the
 one the last Refresh computed; before any Refresh there is none, and the
 group is the boundary partition of the whole active roster.
 

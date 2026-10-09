@@ -245,6 +245,12 @@ async def instrument_preview_sample(
         link3_boundary = (
             _str_list(raw_boundary) if raw_boundary is not None else None
         )
+        raw_link3_mode = body.get("link3_mode")
+        link3_mode = (
+            raw_link3_mode
+            if raw_link3_mode in ("individual", "grouped")
+            else None
+        )
         sample_pick = instruments_service.find_sample_in_scope_reviewee(
             db,
             instrument=instrument,
@@ -255,6 +261,7 @@ async def instrument_preview_sample(
             link2_combinator=str(body.get("link2_combinator") or "AND"),
             link2_rules=_rule_list(body.get("link2_rules")),
             link3_boundary=link3_boundary,
+            link3_mode=link3_mode,
         )
         if sample_pick is None:
             return JSONResponse(
@@ -268,8 +275,8 @@ async def instrument_preview_sample(
         # persist the rule-surviving group-member ID set (Gap 10) so
         # the next render's Grouped-mode preview filters its member
         # list against the engine's actual survivors rather than the
-        # full active-reviewee roster. None when no boundary is posted
-        # or saved — render falls back to its unconstrained partition.
+        # full active-reviewee roster. None for a per-reviewee
+        # instrument — render falls back to its unconstrained list.
         # set_band2_state preserves the existing selected_display_keys
         # + response_fields when not in the payload.
         state_update: dict[str, Any] = {
@@ -296,8 +303,8 @@ async def instrument_preview_sample(
                 # Gap 10 — the rule-surviving group-member IDs so the
                 # client-side preview rebuild can intersect its
                 # boundary partition against the engine's actual
-                # survivors. Empty list when there is no boundary; render
-                # falls back to the unconstrained partition there.
+                # survivors. Empty list for a per-reviewee instrument;
+                # render falls back to the unconstrained list there.
                 "sample_group_member_ids": (
                     sample_group_member_ids
                     if sample_group_member_ids is not None

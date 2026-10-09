@@ -808,9 +808,9 @@ def _preview_excludes_self_reviews(
 
     Reads the PERSISTED flag rather than a form field: the Link 3
     checkbox is not among the inputs the Refresh handler posts, so an
-    unsaved tick is not reflected until the card is saved. The preview
-    already blends live Link 1 / Link 2 edits with persisted Link 3
-    state, so this matches what is around it.
+    unsaved tick is not reflected until the card is saved. Only the
+    flag is persisted: Links 1-2, the boundary and the Individual /
+    Group pill all come from the live edit.
     """
     if instrument.rule_set_id is None:
         return False
@@ -829,6 +829,7 @@ def find_sample_in_scope_reviewee(
     link2_combinator: str,
     link2_rules: list[dict[str, str]],
     link3_boundary: list[str] | None = None,
+    link3_mode: str | None = None,
 ) -> tuple[Any, list[int] | None] | None:
     """Run the rule engine with the given Band 1 + Link 2 inputs and
     return both the sample reviewee and the rule-surviving group
@@ -843,12 +844,14 @@ def find_sample_in_scope_reviewee(
       ``Reviewee`` instance);
     - ``member_ids`` is the sorted list of unique reviewee IDs
       whose surviving pairs share the sample's reviewee-side
-      boundary key; for a pair-context-only boundary, the sample
-      reviewer's surviving reviewees (A5 — the preview does not
-      partition on pair-context tags); ``None`` when there is no
-      boundary (the posted ``link3_boundary``, else the saved
-      ``group_kind``), and the render path keeps its unconstrained
-      partition.
+      boundary key; for a pair-context-only boundary, or a group
+      instrument with no boundary, the sample reviewer's surviving
+      reviewees (A5, A4 — the preview does not partition on
+      pair-context tags, and with no boundary the reviewer's
+      survivors are the one group); ``None`` for a per-reviewee
+      instrument, whose render keeps its unconstrained list. Grouped
+      or per-reviewee is the posted ``link3_mode`` (the live pill),
+      else the saved ``group_kind``.
 
     Returns ``None`` when the rules narrow the candidate pair space
     down to zero. Samples are drawn from active reviewees only, so the
@@ -975,6 +978,16 @@ def find_sample_in_scope_reviewee(
             if src == "reviewee"
         ]
 
+    # Grouped or per-reviewee: the live Link 3 pill the Refresh posts,
+    # else the saved instrument (A4). Both the self-review filter and
+    # the member-id set below read it, so neither follows a unit of
+    # review the other does not (Ac1).
+    grouped = (
+        link3_mode == "grouped"
+        if link3_mode is not None
+        else instrument.group_kind is not None
+    )
+
     # 19O Item 1 — the preview follows the instrument's self-review
     # rule (author, 2026-09-14). Applied to the engine's OUTPUT, not
     # to its options: on a grouped instrument a reviewer who is one of
@@ -1006,7 +1019,7 @@ def find_sample_in_scope_reviewee(
                 pair_context_lookup=pair_context_lookup,
             )
 
-        if instrument.group_kind is not None:
+        if grouped:
             # Membership from the roster, not from the surviving pairs,
             # as Generate reads it (``_generate._diff_one_instrument``):
             # a Link rule, or an inactive reviewee row, can take the
@@ -1040,10 +1053,11 @@ def find_sample_in_scope_reviewee(
     sample_reviewer, reviewee = pairs[0]
     # Gap 10: compute rule-surviving group member IDs for the
     # sample's reviewee-side boundary key. A pair-context-only
-    # boundary takes the sample reviewer's survivors instead (A5);
-    # no boundary returns None and render keeps its unconstrained
-    # partition. Iterates the pairs the engine already
-    # produced; no second engine call.
+    # boundary, and a group instrument with no boundary, take the
+    # sample reviewer's survivors instead (A5, A4); a per-reviewee
+    # instrument returns None and render keeps its unconstrained
+    # list. Iterates the pairs the engine already produced; no
+    # second engine call.
     #
     # ``link3_boundary`` is the live Band 1 boundary list (canonical
     # keys like ``"reviewee.tag3"``) — the operator's in-progress
@@ -1051,13 +1065,18 @@ def find_sample_in_scope_reviewee(
     # persisted ``instrument.group_kind`` when None so callers that
     # don't supply it (older / non-Refresh paths) keep their old
     # behaviour.
+    if not grouped:
+        # Per-reviewee, by the live pill or the saved instrument: no
+        # group, whatever boundary selects the card still posts.
+        return reviewee, None
     if not reviewee_boundary_fields:
-        if not _preview_group_boundary(instrument, link3_boundary):
-            return reviewee, None
         # A pair-context-only boundary (A5, ruled 2026-10-06): the
         # partition needs a reviewer's relationship tags, so the preview
-        # does not split on it. It still honours Links 1-2: the group
-        # is the sample reviewer's surviving reviewees.
+        # does not split on it. A group instrument with no boundary
+        # (A4, ruled 2026-10-08) groups each reviewer's reviewees as
+        # one, as ``group_key_for_pair`` does with an empty boundary.
+        # Both honour Links 1-2: the group is the sample reviewer's
+        # surviving reviewees.
         return reviewee, sorted(
             {e.id for r, e in pairs if r.id == sample_reviewer.id}
         )
