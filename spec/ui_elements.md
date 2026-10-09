@@ -690,8 +690,7 @@ controls: a locked chip may carry it to say "on", and
 `.tag-chip.is-locked.is-selected` repaints it in the display-value
 colors.
 
-**Three chip types, one look each** (author's taxonomy, 2026-10-09).
-What a chip's states mean decides its fill:
+**Three chip types, one look each.** What a chip's states mean decides its fill:
 
 | Type | States | Fill | Standard |
 |---|---|---|---|

@@ -348,25 +348,31 @@ Taken 2026-10-09 at `49dabecb`.
 
 ### Status
 
-- **PR 1** built 2026-10-09 on main `f9534903` (the base for PR 2's
-  cumulative read). The two lobby chip rules merged into one taking
-  `--selected-bg` / `--selected-fg`; `test_reserved_shade`'s control
-  allowlist gains it; a browser test per page compares each chip's fill
-  with a selected tag chip's in both labels and fails without the CSS.
-- **PR 2** built 2026-10-09. One `setPressed` helper in the Extract page
-  script serves both the click toggle and the `localStorage` restore,
-  keeping `is-selected` on for any chip carrying both `data-label-on` and
-  `data-label-off`; the download links already read `aria-pressed`. A
-  browser test clicks each chip off, reloads, and finds it dark with the
-  off label and `all_rows=0` still on the link; it fails without the
-  change. §9 also gains the three chips in its type 2 list.
-- **Read:** one cumulative `diff-reviewer` read (`f9534903..` PR 2), no
-  code defects; four low findings. Fixed in PR 2: §9 cited
-  `test_chip_edge` for the fills, a stale "Click flips `is-selected`"
-  template comment, the `test_reserved_shade` allowlist docs. Left for
-  the close: ladder rung 1 promised a `test_chip_edge` update the
-  unchanged edge rule didn't need. `spec-writer` (PR 2): the Data shaper
-  chip keeps `aria-pressed="true"`; wording fixed.
+Closed 2026-10-09. Shipped as planned in two PRs, #2926 and #2927.
+
+- **PR 1 (#2926):** the two lobby chip rules merged into one taking
+  `--selected-bg` / `--selected-fg`, allowlisted in
+  `test_reserved_shade`. A browser test compares each lobby and Archived
+  chip's fill with a selected tag chip's in both labels.
+- **PR 2 (#2927):** one `setPressed` helper serves the Extract chips'
+  click toggle and `localStorage` restore, keeping `is-selected` on for
+  any chip with both `data-label-on` and `data-label-off`. A browser test
+  clicks each chip off, reloads, and finds it still dark. Both tests fail
+  without their change.
+- **Diverged from the ladder:** rung 1's `test_chip_edge` update wasn't
+  needed, because the edge rule didn't change.
+- **Reads:** one cumulative `diff-reviewer` read (base `f9534903`) found
+  no code defects and four low prose and comment findings. Three were
+  fixed in #2927; the fourth is the divergence above. A follow-up read on
+  the fix commit found two wording gaps, also fixed. The PR 2
+  `spec-writer` pass caught that the Data shaper chip keeps
+  `aria-pressed="true"`, and the wording was fixed. The close
+  `spec-writer` pass found all three doc-impact specs current and dropped
+  a provenance date from §9's lead-in.
+- **For the author:** type 2 chips carry their state two ways. The
+  Extract chips use `aria-pressed`; the Data shaper chip uses a data
+  attribute and stays pressed. Both are left as planned, pending a
+  ruling.
 
 ### PR ladder
 
