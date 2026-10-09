@@ -330,7 +330,7 @@ A card of its own, half width, stacked above Danger Zone in the same
 details card, and gated on no lifecycle state: it is always visible,
 in every state, with no `?editing=1`. It has a **Lock / Unlock of its
 own, as Quick Setup does**, against accidental edits: locked by default, the `oou_{session_id}` cookie
-when unlocked, relocked on leaving Home or on any other Home form's submit, visual only. **Add owner and
+when unlocked, relocked on leaving Home or on a Home form's submit other than its own or Quick Setup's, visual only. **Add owner and
 each Remove save at once** — no Save or Cancel. Full contract — the table, the
 candidates, and the Create page's matching card, which stages instead
 — in `spec/session_owners.md`.
