@@ -2598,9 +2598,14 @@
         font-size: var(--fs-small);
         color: var(--text-subtle);
       }
-      body.ui-v2 .pill.pill-tag-clear {
-        background: var(--surface-muted);
-        color: var(--text-body);
+      /* The lobby's AND/OR and Select all / Clear all chips are cycle
+         chips (``spec/ui_elements.md`` §9, type 2): every state is a
+         positive choice, so they are always dark, never the light "off"
+         of a tag filter beside them. Only the label changes. */
+      body.ui-v2 .pill.pill-tag-clear,
+      body.ui-v2 .pill.tag-mode-chip {
+        background: var(--selected-bg);
+        color: var(--selected-fg);
         cursor: pointer;
       }
       /* Tag-filter chips — clickable; the selected ones flip to a
@@ -2640,11 +2645,6 @@
       body.ui-v2 .tag-chip:has(> input:checked) {
         background: var(--selected-bg);
         color: var(--selected-fg);
-      }
-      body.ui-v2 .pill.tag-mode-chip {
-        background: var(--surface-muted);
-        color: var(--text-body);
-        cursor: pointer;
       }
       /* Column-visibility chips (Segment 18E Part 1) — each chip
          toggles whether its column shows in the preview table.
@@ -5309,7 +5309,7 @@
         <div class="tc-cx" data-fg="--text-body" data-bg="--surface-tint-5" title="--text-body on --surface-tint-5 · shipped 16.15:1 (light) · found by: text token against every surface"><span class="tc-cx-sample" style="background: var(--surface-tint-5); color: var(--text-body)">Aa — body → tint 5</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">16.15</span></div>
         <div class="tc-cx" data-fg="--text-body" data-bg="--surface-tint-3" title="--text-body on --surface-tint-3 · shipped 16.17:1 (light) · found by: text token against every surface"><span class="tc-cx-sample" style="background: var(--surface-tint-3); color: var(--text-body)">Aa — body → tint 3</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">16.17</span></div>
         <div class="tc-cx" data-fg="--text-body" data-bg="--lifecycle-archived-bg" title="--text-body on --lifecycle-archived-bg · shipped 16.29:1 (light) · found by: a rule sets both halves — body.ui-v2 .pill-lifecycle-archived"><span class="tc-cx-sample" style="background: var(--lifecycle-archived-bg); color: var(--text-body)">Aa — body → lifecycle archived bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">16.29</span></div>
-        <div class="tc-cx" data-fg="--text-body" data-bg="--surface-muted" title="--text-body on --surface-muted · shipped 16.29:1 (light) · found by: a rule sets both halves — body.ui-v2 .pill.pill-tag-clear"><span class="tc-cx-sample" style="background: var(--surface-muted); color: var(--text-body)">Aa — body → muted</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">16.29</span></div>
+        <div class="tc-cx" data-fg="--text-body" data-bg="--surface-muted" title="--text-body on --surface-muted · shipped 16.29:1 (light) · found by: a rule sets both halves — body.ui-v2 .code-block"><span class="tc-cx-sample" style="background: var(--surface-muted); color: var(--text-body)">Aa — body → muted</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">16.29</span></div>
         <div class="tc-cx" data-fg="--text-body" data-bg="--surface-tint-1" title="--text-body on --surface-tint-1 · shipped 16.64:1 (light) · found by: text token against every surface"><span class="tc-cx-sample" style="background: var(--surface-tint-1); color: var(--text-body)">Aa — body → tint 1</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">16.64</span></div>
         <div class="tc-cx" data-fg="--text-body" data-bg="--surface-tint-4" title="--text-body on --surface-tint-4 · shipped 16.71:1 (light) · found by: text token against every surface"><span class="tc-cx-sample" style="background: var(--surface-tint-4); color: var(--text-body)">Aa — body → tint 4</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">16.71</span></div>
         <div class="tc-cx" data-fg="--text-body" data-bg="--surface-tint-2" title="--text-body on --surface-tint-2 · shipped 16.84:1 (light) · found by: text token against every surface"><span class="tc-cx-sample" style="background: var(--surface-tint-2); color: var(--text-body)">Aa — body → tint 2</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">16.84</span></div>
@@ -5322,7 +5322,7 @@
       <details class="tc-cluster" open><summary>Selection, toggles & markers [P]/[A] · 2 <span class="tc-cx-count" data-cluster="Selection, toggles & markers [P]/[A]"></span></summary>
       <div class="tc-cx-grid">
         <div class="tc-cx" data-fg="--chip-active-fg" data-bg="--chip-active-bg" title="--chip-active-fg on --chip-active-bg · shipped 4.75:1 (light) · found by: a rule sets both halves — body.ui-v2 .severity-chip.active"><span class="tc-cx-sample" style="background: var(--chip-active-bg); color: var(--chip-active-fg)">Aa — chip active fg → chip active bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">4.75</span></div>
-        <div class="tc-cx" data-fg="--selected-fg" data-bg="--selected-bg" title="--selected-fg on --selected-bg · shipped 5.17:1 (light) · found by: a rule sets both halves — body.ui-v2 .tag-chip.is-selected, body.ui-v2 .tag-chip:has"><span class="tc-cx-sample" style="background: var(--selected-bg); color: var(--selected-fg)">Aa — selected fg → selected bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">5.17</span></div>
+        <div class="tc-cx" data-fg="--selected-fg" data-bg="--selected-bg" title="--selected-fg on --selected-bg · shipped 5.17:1 (light) · found by: a rule sets both halves — body.ui-v2 .pill.pill-tag-clear, body.ui-v2 .pill.tag-mode"><span class="tc-cx-sample" style="background: var(--selected-bg); color: var(--selected-fg)">Aa — selected fg → selected bg</span><span class="tc-cx-ratio">—</span><span class="tc-cx-badge">—</span><span class="tc-cx-shipped" title="ratio as shipped, light theme">5.17</span></div>
       </div>
       </details>
       <details class="tc-cluster" open><summary>Participant roles [A] · 3 <span class="tc-cx-count" data-cluster="Participant roles [A]"></span></summary>

@@ -346,13 +346,24 @@ Taken 2026-10-09 at `49dabecb`.
 | Extract chips with `data-label-on` | 3 | `grep -n "data-label-on=" app/web/templates/operator/session_extract_data.html` |
 | Tests and specs naming those chips | 2 tests, 1 spec | `grep -rln "data-label-on\|all-reviewers\|Reviewers with responses" tests spec` |
 
+### Status
+
+- **PR 1** built 2026-10-09 on main `f9534903` (the base for PR 2's
+  cumulative read). The two lobby chip rules merged into one taking
+  `--selected-bg` / `--selected-fg`; `test_reserved_shade`'s control
+  allowlist gains it; a browser test per page compares each chip's fill
+  with a selected tag chip's in both labels and fails without the CSS.
+
 ### PR ladder
 
 1. **The taxonomy and the lobby.** `spec/ui_elements.md` §9 states the
    three types; `base.html` gives `.tag-mode-chip` and `.pill-tag-clear`
    the dark fill; `test_chip_edge` / `test_reserved_shade` updated; a
    lobby browser test or integration assertion pins the fill.
-2. **Extract's three chips.** Both paths that set their fill keep
+2. **Extract's three chips.** (Also `spec/extract_data.md`'s "is-selected
+   + aria-pressed driving the visual state" line, which the PR 1
+   `spec-writer` pass flagged as false for cycle chips once this lands.)
+   Both paths that set their fill keep
    `is-selected` on while flipping `aria-pressed` and the label: the
    click toggle and the load-time restore from `localStorage` (Codex on
    #2923 — the restore toggles the class too). A test reloads with a

@@ -640,9 +640,9 @@ shade** (`--blue-strong` / `--blue-glow` — see
 `spec/color_tokens.md` "Deliberate couplings"), drawn as the 1px
 border plus a 1px inset shadow. That covers
 `.tag-chip` — which is every lobby tag filter, every column toggle and
-every *clickable* Instruments Band 2 pill — plus the lobby's Clear
-(`.pill-tag-clear`, also on the Archived page) and AND/OR
-(`.tag-mode-chip`) chips, which keep a `--surface-muted` fill, and a
+every *clickable* Instruments Band 2 pill — plus the lobby's Select all /
+Clear all (`.pill-tag-clear`, also on the Archived page) and AND/OR
+(`.tag-mode-chip`) chips, and a
 role pill when it is a link (`a.pill.pill-role-*`: the `/me`
 dashboard's role column and the role navigator's other-role links,
 whose `<span>` forms stay plain). Static pills carry no edge: the display-field table's
@@ -689,6 +689,22 @@ a chip says its filter is on, and it reaches the reserved shade only on
 controls: a locked chip may carry it to say "on", and
 `.tag-chip.is-locked.is-selected` repaints it in the display-value
 colors.
+
+**Three chip types, one look each** (author's taxonomy, 2026-10-09).
+What a chip's states mean decides its fill:
+
+| Type | States | Fill | Standard |
+|---|---|---|---|
+| **On/off** | selected, not selected; the label doesn't change | dark (`--selected-bg`) when on, light when off | the Setup pages' column chips |
+| **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always dark | Extract's Data shaper "All rows ↔ Rows with data" |
+| **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, dark otherwise | the Instruments page's Band 1 link chips |
+
+The lobby's AND/OR and Select all / Clear all chips, and the Archived
+page's Select all / Clear all, are cycle chips (`.tag-mode-chip`,
+`.pill-tag-clear` take `--selected-bg` / `--selected-fg` outright).
+Select all / Clear all is the edge case whose label names the next click
+rather than a state. The Instruments Visibility cells are cycle chips
+too, "—" being a deliberate off.
 `tests/integration/test_chip_edge.py` pins the treatment;
 `tests/unit/test_reserved_shade.py` keeps the shade off anything static.
 
