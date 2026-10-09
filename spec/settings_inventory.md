@@ -410,8 +410,7 @@ the pattern itself is specified in `spec/setup_pages.md`.
 | `?editing=…&saved=…` plus `?rf_save_error=…` and `?sort_save_error=…&sort_save_error_instrument_id=…` flash params | Instruments page | Per-instrument editing target + post-Save success flash, plus flash params for response-field and sort-order errors and would-empty / delete-blocked confirmation flows. |
 
 **Canonical specs:** `spec/setup_pages.md` (visibility-toggle
-pattern), `spec/quick_setup_card_spec.md` (cookie + lock semantics),
-`spec/operator_ui_concept.md` (chrome-detour return-to-origin).
+pattern), `spec/operator_ui_concept.md` (chrome-detour return-to-origin).
 
 ---
 

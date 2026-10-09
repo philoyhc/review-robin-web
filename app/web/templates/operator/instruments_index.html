@@ -171,11 +171,10 @@
   {# Per-instrument action row. Shared by the ordinary instrument card
      and the Segment 13C group-scoped placeholder card so both carry
      the same button set. Wave 4 — Edit / Cancel retired in favour of
-     a Lock / Unlock toggle at the end of the row, modelled on the
-     Quick Setup card's footer. Unlocked = edit mode (``?editing=<id>``
-     in the URL); locked = view mode. Save sits beside Lock/Unlock so
-     they share a visual group (mirrors Quick Setup's Submit + Lock /
-     Unlock footer). #}
+     a Lock / Unlock toggle at the end of the row, modelled on Quick
+     Setup's former footer toggle. Unlocked = edit mode
+     (``?editing=<id>`` in the URL); locked = view mode. Save sits
+     beside Lock/Unlock so they share a visual group. #}
   {% macro instrument_action_row(session, instrument, is_editing, can_edit, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title, page_break_disabled=False, page_break_title="") %}
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">

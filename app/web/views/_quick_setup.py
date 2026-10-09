@@ -172,7 +172,7 @@ def build_quick_setup_context(
     # reviewer responses exist yet. Outside that window — ``ready``,
     # ``expired``, ``archived``, or any session with persisted responses
     # from a prior activation cycle — the card stays permanently
-    # locked (body greyed, Lock / Unlock toggle hidden). A submit that
+    # locked (body greyed, controls disabled). A submit that
     # arrives anyway is refused by the slot's inline ``is_editable``
     # check, or, on a session with responses, by
     # ``_require_response_loss_ack``. The single description copy

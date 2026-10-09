@@ -1,4 +1,4 @@
-"""Quick Setup card on Session Home — per-slot lock toggle, per-slot
+"""Quick Setup card on Session Home — per-slot
 submit handlers (reviewers / reviewees / assignments), and the
 consolidated submit-all handler. Also owns ``POST /sessions``
 (``create_session``), which dispatches the same per-slot pipeline

@@ -3,8 +3,8 @@
 
    One outer ``<form>`` wraps every slot's inputs and posts to the
    single ``/quick-setup/submit-all`` endpoint. The bottom of the
-   card carries one Submit button (next to Lock / Unlock); the per-
-   slot Submit buttons are gone. The bottom Submit is gated client-
+   card carries one Submit button; the per-slot Submit buttons are
+   gone. The bottom Submit is gated client-
    side — disabled until at least one ``<input type="file">`` has a
    file selected and, where it renders, the replacement-confirmation
    checkbox is ticked.
@@ -127,9 +127,7 @@
   {# Body wrapper carries ``.locked`` greying when the card is
      locked. The H2 title + replacement-confirmation checkbox both
      sit inside the wrapper so they grey along with the slot
-     controls. The footer (Submit + Lock toggle) sits outside this
-     wrapper so the toggle stays vivid even while the body is
-     greyed. #}
+     controls. The footer (Submit) sits outside this wrapper. #}
   <div class="quick-setup-body{% if quick_setup.is_locked %} locked{% endif %}">
     <h2>{{ quick_setup.title }}</h2>
     <p class="form-help">{{ quick_setup.description }}</p>
