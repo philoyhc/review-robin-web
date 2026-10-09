@@ -1455,6 +1455,9 @@ selector scoped under `body.ui-v2`:
   text-decoration: underline;`, the affordance that says clickable.
 - `.rs-role-nav .rs-role-nav-active` — `font-weight: 600;`, keeping the
   role's own palette to read as selected.
+- A linked chip (`a.pill.pill-role-*`) also wears the interactive-chip
+  edge (`spec/ui_elements.md` "Label or control"); the `<span>` forms
+  do not.
 
 **The observer collation** applies the `responses_release_at` +
 `responses_release_until` gates inside the per-instrument render only —

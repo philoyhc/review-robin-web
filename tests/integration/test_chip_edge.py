@@ -213,3 +213,31 @@ def test_a_checkbox_chip_fills_from_its_box(
     assert label is not None
     assert "display: inline-block" in label
     assert "margin: 0 var(--space-1) 0 0" in label
+
+
+def test_a_linked_role_pill_wears_the_edge_and_a_span_does_not(
+    client: TestClient, db: Session
+) -> None:
+    """Findings E13: the ``/me`` dashboard's role pills and the role
+    navigator's other-role pills are anchors when they lead somewhere, so
+    they carry the chip edge. The rule names ``a.pill``, which is what
+    keeps the ``<span>`` forms — the current role, an unreachable one —
+    static labels: a selector broadened past the anchor stops matching
+    the exact lookup below, and ``test_reserved_shade``'s allowlist.
+    That the templates render the anchors is pinned by
+    ``test_me_surface_role_chips.py`` and ``test_me_dashboard_links.py``."""
+    review_session = _make_session(client, db, code="e13-role-edge")
+    css = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+
+    block = _rule(
+        css,
+        "body.ui-v2 a.pill.pill-role-reviewer,\n"
+        "      body.ui-v2 a.pill.pill-role-reviewee,\n"
+        "      body.ui-v2 a.pill.pill-role-observer",
+    )
+    assert block is not None, "the linked role-pill edge rule is gone"
+    assert f"border-color: {EDGE}" in block
+    assert f"box-shadow: inset 0 0 0 1px {EDGE}" in block
+    assert "background" not in block

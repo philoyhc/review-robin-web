@@ -68,6 +68,11 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #:   interactive, and ``is-disabled`` — the one inert variant — cancels
 #:   the edge rather than inheriting it.
 #:
+#: - the linked role pills — the ``/me`` dashboard's role column and the
+#:   role navigator's other-role links, both ``<a>``. The selector names
+#:   the anchor, so the ``<span>`` forms (current role, unreachable role)
+#:   stay static (findings E13, 2026-10-09).
+#:
 #: A new entry means a new control surface, and belongs here only once
 #: someone has confirmed it is one. A static pill appearing in this set
 #: is the bug the file exists to catch.
@@ -81,6 +86,11 @@ CONTROL_SELECTORS = {
     (
         "body.ui-v2 .tag-chip, body.ui-v2 .pill.pill-tag-clear, "
         "body.ui-v2 .pill.tag-mode-chip"
+    ),
+    (
+        "body.ui-v2 a.pill.pill-role-reviewer, "
+        "body.ui-v2 a.pill.pill-role-reviewee, "
+        "body.ui-v2 a.pill.pill-role-observer"
     ),
 }
 

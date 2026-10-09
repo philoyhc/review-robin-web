@@ -634,7 +634,10 @@ border plus a 1px inset shadow. That covers
 `.tag-chip` — which is every lobby tag filter, every column toggle and
 every *clickable* Instruments Band 2 pill — plus the lobby's Clear
 (`.pill-tag-clear`, also on the Archived page) and AND/OR
-(`.tag-mode-chip`) chips, which keep a `--surface-muted` fill. Static pills carry no edge: the display-field table's
+(`.tag-mode-chip`) chips, which keep a `--surface-muted` fill, and a
+role pill when it is a link (`a.pill.pill-role-*`: the `/me`
+dashboard's role column and the role navigator's other-role links,
+whose `<span>` forms stay plain). Static pills carry no edge: the display-field table's
 field-label pill (`spec/instruments.md` "Display-field table") and the
 Visibility card's locked mode cells (`spec/instruments.md` "Visibility
 card") are the static, no-click-handler pattern. The locked Name / Email

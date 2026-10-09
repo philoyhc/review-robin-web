@@ -3757,6 +3757,16 @@
         background: var(--role-observer-bg);
         color: var(--role-observer-fg);
       }
+      /* A role pill that links somewhere is a control, so it wears the
+         chip edge (``.tag-chip`` above; findings E13, 2026-10-09). Only
+         the ``<a>`` form: the ``<span>`` a template writes for the
+         current role or an unreachable one stays a plain label. */
+      body.ui-v2 a.pill.pill-role-reviewer,
+      body.ui-v2 a.pill.pill-role-reviewee,
+      body.ui-v2 a.pill.pill-role-observer {
+        border-color: var(--selected-bg);
+        box-shadow: inset 0 0 0 1px var(--selected-bg);
+      }
       /* Role-navigator chip strip below the session-name header
          on each role-specific ``/me`` surface (review surface,
          summary, results, collation). The chip matching the
