@@ -343,10 +343,10 @@ Today (per-operator on `users` table, populated via
 Future per-deployment defaults (env vars / App Service settings):
 none required today; operator-level credentials are sufficient.
 
-**Required app infrastructure.**
+**Required app infrastructure.** Both pieces are in place.
 
-- ✅ SMTP client — `smtplib` from stdlib.
-- ✅ Secure credential storage — `cryptography.fernet` keyed off
+- SMTP client — `smtplib` from stdlib.
+- Secure credential storage — `cryptography.fernet` keyed off
   the `SMTP_ENCRYPTION_KEY` env var. App Service application
   settings are encrypted at rest; for higher-sensitivity
   deployments, Azure Key Vault reference is preferred for the
@@ -406,11 +406,11 @@ Per-deployment (env vars / App Service settings):
 
 **Required app infrastructure.**
 
-- ◻ A Microsoft Authentication Library (MSAL) client. Python:
+- A Microsoft Authentication Library (MSAL) client. Python:
   `msal` package — new runtime dependency.
-- ◻ Token acquisition and caching. Tokens last ~1 hour; the app
+- Token acquisition and caching. Tokens last ~1 hour; the app
   should cache and refresh them rather than acquiring per-send.
-- ◻ HTTP client capable of calling Microsoft Graph endpoints —
+- HTTP client capable of calling Microsoft Graph endpoints —
   `httpx` (already a transitive dev dep, would promote to
   runtime).
 
@@ -480,9 +480,9 @@ Per-deployment (env vars / App Service settings):
 
 **Required app infrastructure.**
 
-- ◻ Azure Communication Services SDK
+- Azure Communication Services SDK
   (`azure-communication-email`) — new runtime dependency.
-- ◻ HTTP client for SDK operations (the SDK handles this).
+- HTTP client for SDK operations (the SDK handles this).
 
 **Required Azure setup (the app's own subscription, not
 institutional).**
@@ -546,8 +546,8 @@ Per-deployment (env vars / App Service settings):
 
 **Required app infrastructure.**
 
-- ◻ The provider's SDK, or `httpx` for direct API calls.
-- ◻ Or, if going via SMTP, the existing `SmtpEmailTransport`
+- The provider's SDK, or `httpx` for direct API calls.
+- Or, if going via SMTP, the existing `SmtpEmailTransport`
   with the third-party's SMTP credentials — no new code needed.
 
 **Required third-party setup (the app's own account).**
