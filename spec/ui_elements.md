@@ -286,6 +286,10 @@ to CSS classes.
 > There is **no macro**: a placeholder card writes the canonical heading + body + disabled
 > action button directly, and the class above is what keeps every
 > instance identical.
+> **No markup uses it between scaffolds, and that is expected**: it
+> exists for the scaffold-first slices `CLAUDE.md` requires, which land a
+> new page with every card a static placeholder before any card is
+> wired.
 
 > **`.card.next-action` (Session Home's Workflow card)** —
 > `.card`'s shape with a `--card-active-border` border and
@@ -1066,6 +1070,14 @@ below, which is what ui-v2's global `h3` rule assumes. Scoped by the
 > - `.instrument-reorder-toast`, the reorder-failure toast — fixed, on
 >   `--toast-error-bg`, and with **no drop shadow** (the toast's own
 >   fill separates it from the page).
+
+> **Admin audit-log primitives** — in `base.html`, scoped to markup only
+> `operator/sys_admin_session_audit_log.html` renders:
+> - `.audit-log-table`, `table-layout: fixed` with a `.col-*` width per
+>   column, so the detail cell wraps instead of widening the table;
+> - `.audit-detail` / `-section` / `-raw`, the per-row expander: a link-
+>   colored `summary`, a `<dl>` grid per envelope section, and the raw
+>   JSON in a nested `<details>`.
 
 > **Inline `onclick` attributes** — the Instruments page's row controls
 > bind their handlers inline, and those attributes are load-bearing rather
