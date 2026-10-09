@@ -124,7 +124,7 @@ importers (§3.2b, §3.3).
 | 4 | `ReviewerTag2` | `reviewer.tag_2` | Same. |
 | 5 | `ReviewerTag3` | `reviewer.tag_3` | Same. |
 | 6 | `ProfileLink` | `reviewer.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. Mirrors the Reviewees `ProfileLink` column. |
-| 7 | `Status` | `reviewer.status` | `active` / `inactive`. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
+| 7 | `Status` | `reviewer.status` | `active` / `inactive`, case-insensitively and ignoring surrounding whitespace. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
 
 **Row order:** active rows first (`status='active'`), then by
 `name`, then by `email`. Deterministic.
@@ -139,7 +139,7 @@ importers (§3.2b, §3.3).
 | 4 | `RevieweeTag2` | `reviewee.tag_2` | Optional. |
 | 5 | `RevieweeTag3` | `reviewee.tag_3` | Optional. |
 | 6 | `ProfileLink` | `reviewee.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. |
-| 7 | `Status` | `reviewee.status` | `active` / `inactive`. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
+| 7 | `Status` | `reviewee.status` | `active` / `inactive`, case-insensitively and ignoring surrounding whitespace. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
 
 **Row order:** active rows first, then by `name`, then by
 `email_or_identifier`.
@@ -317,7 +317,7 @@ in `app/services/csv_imports.py` reads `ProfileLink` first and falls
 back to `PhotoLink`; a non-blank `ProfileLink` wins when a file
 carries both. `Status` is
 also optional — blank/absent ⇒ `active`; `active` / `inactive` only,
-else a per-row error. The `*Tag1..3` columns may also carry a
+case-insensitively, else a per-row error. The `*Tag1..3` columns may also carry a
 `.<label>` friendly-label suffix (§1a).
 
 **Save:** `save_reviewers(db, *, session, user, rows, filename,
@@ -411,7 +411,7 @@ both round-trip.
 | Cell length | `ObserverEmail`, `ObserverName` or `ObserverTag1` longer than its column → per-row error naming the column (§1, *Cell lengths*). |
 | Tag comma | An `ObserverTag1` cell holding a comma → per-row error (§1, *Tag commas*). |
 | Cross-roster identity | As §3.1 — `check_cross_table_identity` with `kind="observers"`, against the reviewer and reviewee rosters. A row with no `ObserverName` is skipped: `Observer.display_name` is nullable and its column optional, and a missing name is not a different one. One person may be an observer and a reviewer; the check blocks only two names on one mailbox. |
-| `Status` value | Blank/absent → `active`; `active` / `inactive` only, else per-row error. |
+| `Status` value | Blank/absent → `active`; `active` / `inactive` only, case-insensitively and ignoring surrounding whitespace, else per-row error. |
 | `CohortRule` shape | Non-blank cell must be valid JSON **and** pass `CohortRuleSet.model_validate` → per-row error otherwise. Blank cell → `cohort_rule = NULL`. |
 
 **Save:** `save_observers(...)` wipe-and-replace within the session's
