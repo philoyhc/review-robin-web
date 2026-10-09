@@ -154,7 +154,9 @@ A fourth chip type, **Fixed**: a switch held at its value. It keeps the
 full dark fill of its sibling chips (`--selected-bg` / `--selected-fg`),
 drops the edge and the pointer, and carries a small lock glyph before
 the label (`.tag-chip.is-fixed`). A switch fixed **off** is the off chip
-with the same glyph. The author's pick of four mocked-up
+with the same glyph; on Band 3 it is the chip whose checkbox is
+disabled, so Item 1's `label.tag-chip:has(> input:disabled)` rule
+carries the glyph rather than a class. The author's pick of four mocked-up
 variants, 2026-10-09: lock glyph (chosen), hatched fill, dashed inner
 ring, toned-down dark.
 
