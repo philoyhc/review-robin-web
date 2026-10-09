@@ -5,13 +5,17 @@
 positive choice, so it never wears the light "off" of an on/off chip.
 The lobby's AND/OR and Select all / Clear all chips, and the Archived
 page's Select all / Clear all, are cycle chips: their fill matches a
-selected tag chip's whatever their label says.
+selected tag chip's whatever their label says. So are the Extract data
+page's three empty-row chips, whose "off" (``Reviewers with responses``
+and siblings) is a named choice; their state rides on ``aria-pressed``
+and the label, both when clicked and when restored from ``localStorage``.
 """
 
 from __future__ import annotations
 
 import re
 import uuid
+from collections.abc import Callable
 
 import httpx
 from playwright.sync_api import Locator, Page, expect
@@ -86,3 +90,43 @@ def test_archived_select_all_chip_stays_dark(
     for _ in range(2):
         assert _fill(clear) == on, clear.inner_text()
         clear.click()
+
+
+EXTRACT_CYCLE_CHIPS = (
+    "[data-by-instrument-chip='all-assignment-rows']",
+    "[data-reviewer-metadata-chip='all-reviewers']",
+    "[data-reviewee-metadata-chip='all-reviewees']",
+)
+
+
+def test_extract_empty_row_chips_stay_dark(
+    page: Page, new_session: Callable[[], int]
+) -> None:
+    session_id = new_session()
+    page.goto(f"/operator/sessions/{session_id}/extract-data")
+    # An on/off chip on the same page gives the two fills.
+    meta = page.locator("[data-by-instrument-chip='include-metadata']")
+    on = _fill(meta)
+    meta.click()
+    off = _fill(meta)
+    meta.click()
+    assert on != off, "an on/off chip's fills should differ"
+
+    for selector in EXTRACT_CYCLE_CHIPS:
+        chip = page.locator(selector)
+        assert _fill(chip) == on, chip.inner_text()
+        chip.click()
+        expect(chip).to_have_attribute("aria-pressed", "false")
+        expect(chip).to_have_text(chip.get_attribute("data-label-off") or "")
+        assert _fill(chip) == on, chip.inner_text()
+
+    # The restore path: the stored off value comes back dark too, and
+    # still drives the download link.
+    page.reload()
+    for selector in EXTRACT_CYCLE_CHIPS:
+        chip = page.locator(selector)
+        expect(chip).to_have_attribute("aria-pressed", "false")
+        expect(chip).to_have_text(chip.get_attribute("data-label-off") or "")
+        assert _fill(chip) == on, chip.inner_text()
+    href = page.locator("#extract-data-by-instrument-zip").get_attribute("href")
+    assert href and "all_rows=0" in href

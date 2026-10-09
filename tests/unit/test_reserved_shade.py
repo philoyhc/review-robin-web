@@ -61,8 +61,12 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #: - ``.severity-chip.active`` — the Validate page's severity filter,
 #:   an ``<a>``. Already an outlined pill; active takes the shade on its
 #:   border and text, and is the precedent rung 3 generalised.
+#: - the lobby and Archived cycle-chip fill — the AND/OR and Select all /
+#:   Clear all chips (``role="button"``), always dark because every state is a choice
+#:   (``spec/ui_elements.md`` §9 type 2; operator pages Item 3).
 #: - the three-selector chip rule — every ``.tag-chip`` (which is every
-#:   Band 2 pill too), plus the lobby's Clear and AND/OR chips. Added at
+#:   Band 2 pill too), plus the lobby's Select all / Clear all and AND/OR
+#:   chips. Added at
 #:   rung 3, which is what gives a chip its edge. Checked before it
 #:   landed: every element carrying ``.tag-chip`` in the app is
 #:   interactive, and ``is-disabled`` — the one inert variant — cancels
@@ -83,9 +87,6 @@ CONTROL_SELECTORS = {
     ),
     "body.ui-v2 label.tag-chip:has(> input:focus-visible)",
     "body.ui-v2 .severity-chip.active",
-    # The lobby's AND/OR and Select all / Clear all chips: cycle chips
-    # (``spec/ui_elements.md`` §9, type 2), always filled, and controls
-    # (``role="button"``) — operator pages Item 3.
     "body.ui-v2 .pill.pill-tag-clear, body.ui-v2 .pill.tag-mode-chip",
     (
         "body.ui-v2 .tag-chip, body.ui-v2 .pill.pill-tag-clear, "

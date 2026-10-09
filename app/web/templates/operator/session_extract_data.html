@@ -902,7 +902,8 @@
   {# Progressive-enhancement toggle for the Extract-data chip
      rows (intro card's ``data-extract-all-chip`` selectors
      plus the By-instrument card's ``data-by-instrument-chip``
-     selectors). Click flips ``is-selected`` + ``aria-pressed``.
+     selectors). Click flips ``aria-pressed`` (and ``is-selected``,
+     except on the two-label cycle chips — see ``setPressed``).
 
      By-instrument chips drive the Zip-all button's href +
      enabled state in real time:
@@ -970,7 +971,19 @@
       // chip's two-state-with-explicit-labels pattern. Other
       // chips (per-instrument, ``include-metadata``,
       // ``extract-all`` toggles) keep the single-label
-      // semantics; ``syncLabel`` no-ops on those.
+      // semantics; ``syncLabel`` no-ops on those. The three
+      // two-label chips are cycle chips (``spec/ui_elements.md``
+      // §9 type 2): either label is a positive choice, so they
+      // stay dark — ``setPressed`` keeps ``is-selected`` on and
+      // only ``aria-pressed`` and the label carry the state.
+      function isCycle(chip) {
+        return !!chip.getAttribute("data-label-on") && !!chip.getAttribute("data-label-off");
+      }
+      function setPressed(chip, pressed) {
+        chip.classList.toggle("is-selected", pressed || isCycle(chip));
+        chip.setAttribute("aria-pressed", pressed ? "true" : "false");
+        syncLabel(chip);
+      }
       function syncLabel(chip) {
         var onLabel = chip.getAttribute("data-label-on");
         var offLabel = chip.getAttribute("data-label-off");
@@ -981,16 +994,10 @@
       chips.forEach(function (chip) {
         var key = chipKey(chip);
         if (key && Object.prototype.hasOwnProperty.call(stored, key)) {
-          var pressed = !!stored[key];
-          chip.classList.toggle("is-selected", pressed);
-          chip.setAttribute("aria-pressed", pressed ? "true" : "false");
-          syncLabel(chip);
+          setPressed(chip, !!stored[key]);
         }
         function toggle() {
-          var pressed = chip.getAttribute("aria-pressed") !== "true";
-          chip.classList.toggle("is-selected", pressed);
-          chip.setAttribute("aria-pressed", pressed ? "true" : "false");
-          syncLabel(chip);
+          setPressed(chip, chip.getAttribute("aria-pressed") !== "true");
           persist();
           syncAllButtons();
         }
