@@ -339,8 +339,11 @@ Taken 2026-10-09 at `49dabecb`.
    three types; `base.html` gives `.tag-mode-chip` and `.pill-tag-clear`
    the dark fill; `test_chip_edge` / `test_reserved_shade` updated; a
    lobby browser test or integration assertion pins the fill.
-2. **Extract's three chips.** Their toggle keeps `is-selected` on while
-   flipping `aria-pressed` and the label; `spec/extract_data.md` says
+2. **Extract's three chips.** Both paths that set their fill keep
+   `is-selected` on while flipping `aria-pressed` and the label: the
+   click toggle and the load-time restore from `localStorage` (Codex on
+   #2923 — the restore toggles the class too). A test reloads with a
+   stored off value and finds the chip dark. `spec/extract_data.md` says
    they are type 2. The item's cumulative `diff-reviewer` read runs here,
    from the main SHA before PR 1.
 
