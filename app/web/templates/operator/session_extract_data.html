@@ -902,7 +902,8 @@
   {# Progressive-enhancement toggle for the Extract-data chip
      rows (intro card's ``data-extract-all-chip`` selectors
      plus the By-instrument card's ``data-by-instrument-chip``
-     selectors). Click flips ``is-selected`` + ``aria-pressed``.
+     selectors). Click flips ``aria-pressed`` (and ``is-selected``,
+     except on the two-label cycle chips — see ``setPressed``).
 
      By-instrument chips drive the Zip-all button's href +
      enabled state in real time:

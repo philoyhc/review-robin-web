@@ -360,6 +360,13 @@ Taken 2026-10-09 at `49dabecb`.
   browser test clicks each chip off, reloads, and finds it dark with the
   off label and `all_rows=0` still on the link; it fails without the
   change. §9 also gains the three chips in its type 2 list.
+- **Read:** one cumulative `diff-reviewer` read (`f9534903..` PR 2), no
+  code defects; four low findings. Fixed in PR 2: §9 cited
+  `test_chip_edge` for the fills, a stale "Click flips `is-selected`"
+  template comment, the `test_reserved_shade` allowlist docs. Left for
+  the close: ladder rung 1 promised a `test_chip_edge` update the
+  unchanged edge rule didn't need. `spec-writer` (PR 2): the Data shaper
+  chip keeps `aria-pressed="true"`; wording fixed.
 
 ### PR ladder
 
