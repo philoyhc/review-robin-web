@@ -95,8 +95,11 @@ to CSS classes.
 > `download`; a unit test scans the templates and fails on one that
 > does not.
 > Nor does it arm, for a link or a submit, while the page says it will
-> ask before being left (`window.rrwLeaveWillPrompt()` returns `true`,
-> as Session Home's details card does over unsaved edits): the bar would
+> ask before being left (`window.rrwLeaveWillPrompt()` returns `true`).
+> Three pages set it, each to the predicate its `beforeunload` guard
+> reads: Session Home's details card over unsaved edits, the Instruments
+> page over a dirty card, and the Observers expander over an unsaved
+> cohort rule. Without the hook the bar would
 > sit behind the prompt, and an operator who stays gets no load to clear
 > it. A leave the operator confirms loads without a bar.
 > *Busy control:* the clicked link or submit button gets

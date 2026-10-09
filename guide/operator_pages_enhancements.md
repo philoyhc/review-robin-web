@@ -210,9 +210,10 @@ registry is machinery for a case that doesn't exist.
 
 - **When the hook is true** a link click or a form submit doesn't arm the
   bar. A confirmed leave loads without one, as on Home.
-- **Each page's own deliberate exits** already clear the predicate before
-  navigating (Instruments' discard reload, Observers' panel actions after
-  their `confirm`), so they still arm the bar.
+- **Each page's own deliberate exits** clear the predicate before
+  navigating. The Observers panel's actions (submits, after their
+  `confirm`) still arm the bar; Instruments' discard reload is a script
+  `location.reload`, which never armed it.
 - **Without JS** neither guard nor bar exists; unchanged.
 
 ### Judgment calls — decided
@@ -231,6 +232,18 @@ Taken 2026-10-09 at `8372fa12`.
 | Pages setting the hook | 1 | `grep -rln "rrwLeaveWillPrompt =" app/web/templates` |
 | Tests naming `beforeunload` | 3 + 1 unit | `grep -rln "beforeunload" tests --include=*.py` |
 | Specs naming `beforeunload` | 5 | `grep -rln "beforeunload" spec/*.md` |
+
+### Status
+
+- **PR 1** built 2026-10-09 on main `d91e4737`. Each guard's predicate is
+  hoisted into a `willPrompt()` its `beforeunload` handler now calls, so
+  the hook and the guard cannot drift; the Observers one coerces
+  `cohortDirty` to a boolean, since `base.html` checks `=== true`. Two
+  browser tests (one per page) fail without their hook.
+- **Read** (`diff-reviewer`, `d91e4737..6a863395`): no high or medium
+  finding; two low ones, both prose — §1's "every page sets it" is
+  unenforced, so it names the three pages; Semantics wrongly said the
+  Instruments discard reload arms the bar.
 
 ### PR ladder
 

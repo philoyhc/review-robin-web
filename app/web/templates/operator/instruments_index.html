@@ -3874,16 +3874,20 @@
             if (window._newModelNavGuardWired) { return; }
             window._newModelNavGuardWired = true;
             window._newModelIntentionalNav = false;
-            window.addEventListener('beforeunload', function (e) {
-              if (window._newModelIntentionalNav) { return undefined; }
-              if (document.querySelector(
+            function willPrompt() {
+              return !window._newModelIntentionalNav && !!document.querySelector(
                 '[data-instrument-card][data-instrument-dirty="true"]'
-              )) {
-                e.preventDefault();
-                e.returnValue = '';
-                return '';
-              }
-              return undefined;
+              );
+            }
+            // Read by base.html's navigation busy indicator, which stands
+            // aside rather than sit behind the prompt
+            // (``guide/operator_pages_enhancements.md`` Item 2).
+            window.rrwLeaveWillPrompt = willPrompt;
+            window.addEventListener('beforeunload', function (e) {
+              if (!willPrompt()) { return undefined; }
+              e.preventDefault();
+              e.returnValue = '';
+              return '';
             });
           }
           // Segment 18R Item 2 — the instrument-name input lives inside

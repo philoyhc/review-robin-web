@@ -305,3 +305,12 @@ section (git history keeps it), so this file lists only what is owed.
   checkbox can't be used, and there is nothing to unlock.
 - [ ] **Nothing relocks.** Stage nothing, go to the lobby and back, or
   to another session's Home and back: the card is as it was.
+
+## No stuck loading bar after declining a leave prompt (operator pages Item 2)
+
+- [ ] **Instruments.** Unlock a card, type in a field name, click a nav
+  tab and choose to stay: no loading bar, no progress cursor.
+- [ ] **Observers.** Select an observer, change the cohort rule (AND/OR
+  is enough), click a nav tab and choose to stay: no loading bar.
+- [ ] **A confirmed leave still works** on both pages: choose to leave
+  and the next page loads (without the bar, as on Session Home).

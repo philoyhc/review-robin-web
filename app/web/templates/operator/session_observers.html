@@ -1623,9 +1623,15 @@
         // shows — so this is a stop, not an explanation. The
         // explanation is the `confirm` above, which covers the paths
         // that stay on the page.
+        function willPrompt() {
+          return !intentionalNav && !!cohortDirty;
+        }
+        // Read by base.html's navigation busy indicator, which stands
+        // aside rather than sit behind the prompt
+        // (`guide/operator_pages_enhancements.md` Item 2).
+        window.rrwLeaveWillPrompt = willPrompt;
         window.addEventListener("beforeunload", function (e) {
-          if (intentionalNav) return undefined;
-          if (!cohortDirty) return undefined;
+          if (!willPrompt()) return undefined;
           e.preventDefault();
           e.returnValue = "";
           return "";

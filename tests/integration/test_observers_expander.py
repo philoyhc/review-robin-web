@@ -629,8 +629,16 @@ def test_an_unsaved_rule_edit_is_guarded_on_every_discard_path(
 
     # The nav-away half.
     assert 'addEventListener("beforeunload"' in js, "no nav-away guard"
-    assert "if (intentionalNav) return undefined;" in js, (
+    # One predicate, read by the guard and by base.html's busy indicator
+    # (operator pages Item 2), so the two cannot disagree.
+    assert "return !intentionalNav && !!cohortDirty;" in js, (
         "the deliberate navigations still warn"
+    )
+    assert "if (!willPrompt()) return undefined;" in js, (
+        "the guard does not read the shared predicate"
+    )
+    assert "window.rrwLeaveWillPrompt = willPrompt;" in js, (
+        "the busy indicator is not told the page will ask"
     )
 
     # Save carries the flag, and carries it from the CREATION site —
