@@ -1025,11 +1025,11 @@ post-flip. The flag has no editor; it is set by the Settings CSV
 import or Duplicate.
 
 Separately, each instrument's rule can **exclude self-reviews
-outright**: the **Self reviews** checkbox under Link 3 of the
-instrument's Band 1 ([§9.6](#96-configure-instruments)), off by
-default and shown only once every Link is set. Its wording follows
-the unit of review — on a group-scoped instrument it excludes every
-group the reviewer belongs to. It takes effect at the next Generate:
+outright**: the **Include / Exclude self reviews** chip under Link 3 of the
+instrument's Band 1 ([§9.6](#96-configure-instruments)), *Include*
+by default and shown only once every Link is set. The line under it
+follows the unit of review: on a group-scoped instrument, excluding
+self reviews drops every group the reviewer belongs to. It takes effect at the next Generate:
 excluded pairs are not generated at all, so an instrument that has
 already generated loses those rows and their responses, behind the
 Prepare confirmation ([§14](#14-reconciling-regeneration)). The
@@ -1312,8 +1312,8 @@ most one instrument unlocked at a time). Its stripes:
   Full Matrix default can't ship silently. When Link 3 is Group, it
   picks the **boundary tags** — reviewee and pair-context tags whose
   shared values define a group ([§10.4](#104-group-scoped-review-surface)).
-  Below Link 3, once every Link is set, sits the **Self reviews**
-  exclusion checkbox ([§8.6](#86-self-review-behaviour)). (The card's
+  Below Link 3, once every Link is set, sits the **Include / Exclude
+  self reviews** chip ([§8.6](#86-self-review-behaviour)). (The card's
   heading is **Instrument assignment rule**; "Band 1" is this spec's
   shorthand for it. It is the only place a rule is authored.)
 - **Band 2 — Preview** — a live preview of one sample reviewee row

@@ -165,7 +165,7 @@ section (git history keeps it), so this file lists only what is owed.
 ## The preview drops a self-review group Generate drops (B1)
 
 - [ ] **A filtered self-row still excludes the group.** On a grouped
-  instrument with **Self reviews** excluded, add a Link 2 rule that
+  instrument with self reviews excluded, add a Link 2 rule that
   keeps a reviewer's teammates but not the reviewer's own reviewee row.
   The Band 2 preview no longer offers one of those teammates as its
   sample; with the exclusion off, it does.
@@ -360,4 +360,16 @@ section (git history keeps it), so this file lists only what is owed.
   self-review row in the table below and it is amber with N = 1; a
   click makes it dark again. On an activated or closed session it is
   fixed (lock glyph, no click).
+
+## The Instruments card's self-review chip (UX refinements Item 8)
+
+- [ ] **Instruments, unlocked card, all three Links set.** Under Link 3,
+  below the rule, a dark chip reads "Include self reviews"; a click
+  makes it "Exclude self reviews", still dark. The line under it reads
+  "A self review is where the individual reviewed is the reviewer", and
+  switching Link 3 to Group using tags changes it to the group sentence
+  and turns an Exclude chip back to Include. Setting any Link to Not
+  set hides the divider, chip and line.
+- [ ] **Locked card.** The chip is a plain pill like Band 3's, and
+  "Include self reviews" is not faded.
 

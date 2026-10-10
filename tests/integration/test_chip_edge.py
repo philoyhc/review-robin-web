@@ -297,4 +297,6 @@ def test_a_locked_instrument_cards_chips_read_as_display_pills(
         assert decl in block, decl
     assert EDGE not in block
     assert _rule(css, locked + "::before") == " content: none; "
-    assert _rule(css, locked + ":not(:has(> input:checked))") == " opacity: 0.55; "
+    # A cycle chip (Band 1's self-review chip, Item 8) names its state,
+    # so ``is-selected`` exempts it from the fade.
+    assert _rule(css, locked + ":not(.is-selected):not(:has(> input:checked))") == " opacity: 0.55; "

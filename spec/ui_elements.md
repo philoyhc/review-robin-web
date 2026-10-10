@@ -675,7 +675,8 @@ Three rules make that work:
 response-field name chips (`spec/instruments.md` "Display-field table",
 "Response fields"), and the Assignments status table's instrument-name
 and self-review chips (`spec/assignments.md` "Per-instrument status
-table"), are each a `<label
+table"), and the Instruments card's Band 1 self-review chip
+(`spec/instruments.md` "Self-review exclusion"), are each a `<label
 class="pill pill-count tag-chip">` around a visually hidden checkbox, so
 a click ticks the box and the form or row script reads it. `.tag-chip:has(> input:checked)` is the
 `.is-selected` fill, read off the box itself, so a form reset repaints
@@ -685,9 +686,11 @@ chip of a locked card: it drops the edge
 and the pointer like `is-disabled`, but is not struck through, because
 it still says on or off. On takes the card's display-value colors
 (`--config-value-bg` / `--config-value-fg`) rather than the reserved
-shade; off is faded. **A locked Instruments card's Band 3 chips read as
-plain `pill-count` pills** (the author, 2026-10-10): no edge, pointer or
-lock glyph, an unticked field faded, read off the card's
+shade; off is faded. **A locked Instruments card's chips read as plain
+`pill-count` pills** (the author, 2026-10-10), Band 3's and Band 1's
+self-review chip alike: no edge, pointer or lock glyph, an unticked
+field faded (a cycle chip names its state and is not faded), read off
+the card's
 `data-instrument-locked` so an in-page lock or unlock repaints them.
 
 `.severity-chip` on Validate is the shape this generalises: an outlined
@@ -707,7 +710,7 @@ its fill; a fixed switch keeps the fill of the state it is held at:
 |---|---|---|---|
 | **On/off** | selected, not selected; the label doesn't change | dark (`--selected-bg`) when on, light when off | the Setup pages' column chips |
 | **On/off with a partial state** | all, none, or some of a set; the label counts how many are on | dark when all, light when none, amber (`pill-empty`) when some; a click on light or amber turns all on | the Assignments page's "Include N self reviews" |
-| **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always dark | Extract's Data shaper "All rows ↔ Rows with data" |
+| **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always dark (on a locked Instruments card, the plain pill, unfaded) | Extract's Data shaper "All rows ↔ Rows with data"; the Instruments card's "Include ↔ Exclude self reviews" |
 | **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, dark otherwise | the Instruments page's Band 1 link chips |
 | **Fixed** | one switch held at its value while the chips beside it stay live | its siblings' fill for the held state (dark when on), with no edge or pointer and a lock glyph before the label (`.tag-chip.is-fixed`) | Session Home's optional tab once it holds data |
 
@@ -789,7 +792,7 @@ One row per primitive. Colours and spacing come from tokens throughout.
 | `.subcard-row` (+ `.stepped`, `.subcard-arrow`) | Equal-width tile row inside a card. Detailed below. |
 | `.guide-figure` (+ `.guide-figure-narrow`) | The `/guide` screencap figure. Detailed below. |
 | `.table-scroll` (`overflow-x: auto`) | A wide table's overflow stays inside its card instead of scrolling the page. **Every table but one sits in one** — see below |
-| `.col-divider` (`border-top: 1px solid var(--border-default)`) | A horizontal rule **inside** a column, marking that what follows shares the column for space rather than belonging to what precedes it. Takes the same `--border-default` as the vertical rules between columns, so the two read as one system — that match is the point, and a divider drawn from another token would say the wrong thing. Today: the self-review exclusion checkbox under Link 3 of the Instrument assignment rule card, which is not a unit-of-review setting and must not read as a third Link 3 state (`spec/instruments.md` § *Self-review exclusion*). **Use it only where a reader would otherwise misattribute the control to the block above**; a rule between two things that do belong together is noise |
+| `.col-divider` (`border-top: 1px solid var(--border-default)`) | A horizontal rule **inside** a column, marking that what follows shares the column for space rather than belonging to what precedes it. Takes the same `--border-default` as the vertical rules between columns, so the two read as one system — that match is the point, and a divider drawn from another token would say the wrong thing. Today: the self-review chip under Link 3 of the Instrument assignment rule card, which is not a unit-of-review setting and must not read as a third Link 3 state (`spec/instruments.md` § *Self-review exclusion*). **Use it only where a reader would otherwise misattribute the control to the block above**; a rule between two things that do belong together is noise |
 | `row-group-start` (`tr.row-group-start > td { border-top: 2px solid var(--border-default); }`) | A heavier rule above a **table row** that starts a new group, where the table already separates every row with 1px. First user: the Observers row of an instrument's visibility editor (`spec/instruments.md` § *Visibility card*) |
 | `table-compact` (`body.ui-v2 table.table-compact th, td { padding: var(--space-1) var(--space-2); }`) | A table whose rows sit closer together than the default cell padding gives. First user: Band 3's display-field table (`spec/instruments.md` § *Display-field table*) |
 | `rf-table` | Band 3's response-field table (`spec/instruments.md` § *Response fields*). One `<tbody>` per field, ruled underneath (`border-bottom: 1px solid var(--border-default)` on the `<tbody>`) and not inside it (`border-bottom: 0` on each `<td>`), so a branch's parent, condition row and governed fields share one `<tbody>` as one ruled group (`td.rf-branch-bar` draws the branch's bar, 4px at 0.35 opacity, from a parent's + column (`td.rf-branch-bar-start`), and `--rf-glyph-width` (2rem, R and X's own width) gives every row button — +, ⑂, ↰ / ↳, R, ≡, ▲, ▼, X — one width; `td.rf-active-cell` is every row's first column, holding the field's name chip (`label.rf-name-chip`: an on/off chip around the Active checkbox, flush left, `max-width: 8em` border box, a longer name ending in "…"), `td.rf-slot` is an empty column of the glyph width, two after ↰ / ↳, into which a branch's rows shift one column per level (a level-1 row fills both, its ↰ in the first and its ↳ in the second), `tr.rf-inner-top` / `tr.rf-inner-end` rule a branch inside a branch above its parent and below its last field from the parent's + column (`td:nth-child(n+3)`) rightward, and the condition row's `td.rf-condition-lead` / `td.rf-condition-op` (on a List parent `tr.rf-condition-list`, the operator shrunk and its box beside it) put "If the above" right-aligned before the name column and the operator in it). The table keeps `min-width: 66rem` and scrolls in its `.table-scroll` on a narrow card, locked or not: a locked card makes the table inert, never its `.table-scroll`. The name column takes a fixed share (20%) and the type column `8.5rem`, about an "Agreement" select; the bounds column takes the rest, its boxes no narrower than `3.5rem` (room for "2000"). An empty name box (`td.rf-name input`) shows its default label muted, as its placeholder (`color: var(--text-subtle)`, `opacity: 1`, so the color alone mutes it whatever opacity a browser gives placeholders by default) |
