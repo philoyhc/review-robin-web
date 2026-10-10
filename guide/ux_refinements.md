@@ -985,14 +985,16 @@ Taken 2026-10-10 at `879069ac`.
   (`SECTIONS`), `app/web/templates/base.html` (`.guide-controls-*`,
   five planned at the stamp; six built, seven after the cold read), `tools/theme_customizer.html` (regenerated).
 - `tests/integration/test_guide_scaffold.py` (`SECTION_HEADINGS`), one
-  new browser test.
+  new browser test (rung 2).
 - `grep -rln "guide-controls" spec/` → none; §6 and §9 gain a line.
 
 ### Status — in progress
 
-One PR (#2949). The author saw the mockup and ruled on its shape (two
-columns, the title, live chips, operators only) before the build, so it
-stood in for the scaffold slice. **Reads:** one `spec-writer` verify
+**The ladder split in two** (Codex on #2949, citing `CLAUDE.md`
+"scaffold-first"): the mockup was not a landed slice, so #2949 became
+the inert scaffold and the chip script, the guard pairing and the
+browser test moved to rung 2. Rung 1's reads covered the wired card,
+so rung 2 restores what they read. **Reads (rung 1):** one `spec-writer` verify
 (the Not set sample didn't cycle back; the Delete row and locked-card
 note overclaimed) and one `diff-reviewer` read ("dark is on" is false
 in dark theme, so the copy says solid blue and pale; the Not set
@@ -1009,18 +1011,20 @@ that fix, found only plan and register wording, fixed.
 
 ### PR ladder
 
-1. **The card.** Markup, chip script, CSS, tests, the spec line. The
-   mockup was the scaffold (`CLAUDE.md` "scaffold-first"), its shape
-   ruled on before the build. One code slice outside a ladder, so it
-   takes its own `diff-reviewer` read; `spec-writer` because it touches
-   `spec/`.
+1. **The scaffold** (#2949). The card with its real copy and layout,
+   every sample inert, the CSS, `SECTIONS`, the scaffold test and the
+   §6 / §9 lines. ~~The card and its wiring in one PR~~ (split, above).
+2. **The wiring.** The chip script, the guard's `data-delete-confirm`
+   pairing, the "try it" copy, `tests/browser/test_guide_controls.py`, <!-- path-ref-ok -->
+   and §9's "every switchable sample working". Takes its own
+   `diff-reviewer` read.
 
 ### Definition of done
 
 - The card renders for an operator, after "What Review Robin Web does";
   `test_guide_scaffold.py` lists it.
-- `tests/browser/test_guide_controls.py` drives every chip sample and
-  the guard.
+- `tests/browser/test_guide_controls.py` drives every chip sample and <!-- path-ref-ok -->
+  the guard (rung 2).
 - `guide/things_to_check_in_browser.md` has a section for the PR.
 - `### Doc impact` current; `spec-writer` flags adjudicated.
 - `### Status` compacted.

@@ -54,9 +54,9 @@
   {# UX refinements Item 10. One sample of every button role
      (spec/ui_elements.md §6), every chip type (§9 "Five chip types") and
      the delete-confirm guard (§4), on the classes the app itself uses, so
-     a change to a role's look reaches this card with no edit here. Every
-     chip sample works: a chip's blue edge says "click me", and a sample
-     that ignored the click would teach the opposite. Nothing posts. #}
+     a change to a role's look reaches this card with no edit here. This
+     is the scaffold (rung 1): the samples are inert, and rung 2 wires
+     each chip sample and the guard. Nothing posts. #}
   <div class="card" id="guide-controls">
     <h2>Reading the controls</h2>
     <p>
@@ -93,14 +93,14 @@
         <p>
           Most steps that can't be undone sit behind a checkbox that says
           exactly what will happen. Its button stays off until you tick the
-          box. Try it; nothing is deleted.
+          box.
         </p>
         <div class="guide-controls-demo">
           <label class="confirm-label">
-            <input type="checkbox" data-delete-confirm="guide-demo" autocomplete="off">
+            <input type="checkbox" autocomplete="off">
             <span>Yes, delete the existing <span class="pill pill-empty">12 reviewers</span>.</span>
           </label>
-          <button class="btn destructive" type="button" data-delete-btn="guide-demo"
+          <button class="btn destructive" type="button"
                   disabled aria-disabled="true">Delete all reviewers</button>
         </div>
       </div>
@@ -110,8 +110,7 @@
         <p>
           A <strong>pill</strong> states a fact, and clicking it does
           nothing. A <strong>chip</strong> is a switch: it has a blue edge,
-          and clicking it changes something. The chips here work, so try
-          each one; nothing is saved.
+          and clicking it changes something.
         </p>
         <div class="table-scroll">
           <table class="guide-controls-table">
@@ -121,15 +120,14 @@
             <tbody>
               <tr><td><span class="pill pill-count">12 reviewers</span> <span class="pill pill-lifecycle-draft">Draft</span></td>
                   <td><strong>A pill</strong>: a count, a type or a status.</td></tr>
-              <tr><td><label class="pill pill-count tag-chip"><input type="checkbox" class="visually-hidden" checked autocomplete="off">Email</label>
-                      <label class="pill pill-count tag-chip"><input type="checkbox" class="visually-hidden" autocomplete="off">Tag1</label></td>
+              <tr><td><span class="pill pill-count tag-chip is-selected">Email</span>
+                      <span class="pill pill-count tag-chip">Tag1</span></td>
                   <td><strong>On or off.</strong> Solid blue is on, a faint tint is off.</td></tr>
-              <tr><td><label class="pill pill-count tag-chip pill-empty" data-guide-partial-chip data-total="2" data-on="1"><input type="checkbox" class="visually-hidden" autocomplete="off" aria-label="Include 1 self review, some"><span data-guide-chip-label>Include 1 self review</span></label></td>
+              <tr><td><span class="pill pill-count tag-chip pill-empty">Include 1 self review</span></td>
                   <td><strong>Some of a set.</strong> Solid blue when all are on, faint when none, amber when some.</td></tr>
-              <tr><td><label class="pill pill-count tag-chip is-selected" data-guide-cycle-chip><input type="checkbox" class="visually-hidden" autocomplete="off" aria-label="Exclude self reviews"><span data-guide-chip-label>Include self reviews</span></label></td>
+              <tr><td><span class="pill pill-count tag-chip is-selected">Include self reviews</span></td>
                   <td><strong>A choice between named options.</strong> Always solid blue; the label says which is chosen, and a click moves to the next.</td></tr>
-              <tr><td><span class="pill pill-empty tag-chip is-unset" data-guide-unset-chip
-                            role="button" tabindex="0" aria-pressed="mixed">Not set</span></td>
+              <tr><td><span class="pill pill-empty tag-chip is-unset">Not set</span></td>
                   <td><strong>Not chosen yet.</strong> Amber until you pick an option; a click moves through the options and back.</td></tr>
               <tr><td><label class="pill pill-count tag-chip is-fixed" title="The session has observers, so the tab stays on."><input type="checkbox" class="visually-hidden" checked disabled autocomplete="off">Observers</label></td>
                   <td><strong>Held where it is.</strong> The lock says it can't change now, usually because data depends on it; hover for why, where the page gives one.</td></tr>
@@ -143,77 +141,6 @@
       </div>
     </div>
   </div>
-  <script>
-    /* The three chip samples whose label or fill moves with a click. The
-       on/off pair needs no script: `.tag-chip:has(> input:checked)` fills
-       them off the box, as it does everywhere else. */
-    (function () {
-      var card = document.getElementById("guide-controls");
-      if (!card) return;
-
-      // Some of a set: a click on faint or amber turns all on, a click on
-      // solid blue turns all off, as on the Assignments page.
-      var partial = card.querySelector("[data-guide-partial-chip]");
-      if (partial) {
-        var partialBox = partial.querySelector("input");
-        var partialLabel = partial.querySelector("[data-guide-chip-label]");
-        var total = Number(partial.getAttribute("data-total"));
-        var paintPartial = function (on) {
-          partial.setAttribute("data-on", String(on));
-          var some = on > 0 && on < total;
-          partial.classList.toggle("pill-empty", some);
-          partialBox.checked = on === total;
-          partialBox.indeterminate = some;
-          var text = "Include " + on + " self review" + (on === 1 ? "" : "s");
-          partialLabel.textContent = text;
-          partialBox.setAttribute("aria-label",
-            text + ", " + (some ? "some" : on === total ? "all" : "none"));
-        };
-        paintPartial(Number(partial.getAttribute("data-on")));
-        partialBox.addEventListener("change", function () {
-          var on = Number(partial.getAttribute("data-on"));
-          paintPartial(on === total ? 0 : total);
-        });
-      }
-
-      // A choice between named options: always solid blue, the label moves.
-      var cycle = card.querySelector("[data-guide-cycle-chip]");
-      if (cycle) {
-        var cycleBox = cycle.querySelector("input");
-        var cycleLabel = cycle.querySelector("[data-guide-chip-label]");
-        // The box's name is what its tick means, as on the Instruments
-        // card: ticked is "Exclude".
-        cycleBox.addEventListener("change", function () {
-          cycleLabel.textContent = cycleBox.checked
-            ? "Exclude self reviews" : "Include self reviews";
-        });
-      }
-
-      // Not chosen yet: amber "Not set", then the named options in turn
-      // and back to "Not set", as the Instruments page's link chips do.
-      var unset = card.querySelector("[data-guide-unset-chip]");
-      if (unset) {
-        var states = ["Not set", "All", "Filter using tags"];
-        var step = 0;
-        var advance = function () {
-          step = (step + 1) % states.length;
-          unset.textContent = states[step];
-          unset.classList.toggle("pill-empty", step === 0);
-          unset.classList.toggle("is-unset", step === 0);
-          unset.classList.toggle("is-selected", step !== 0);
-          unset.setAttribute("aria-pressed",
-            step === 0 ? "mixed" : step === 2 ? "true" : "false");
-        };
-        unset.addEventListener("click", advance);
-        unset.addEventListener("keydown", function (event) {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            advance();
-          }
-        });
-      }
-    })();
-  </script>
   {% endif %}
 
   {% if "create_and_set_up" in visible_sections %}

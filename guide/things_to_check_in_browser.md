@@ -339,12 +339,6 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **/guide, light and dark.** The card sits under "What Review
   Robin Web does", Buttons and Checkbox guards on the left, Pills and
   chips on the right; below 800px it stacks to one column.
-- [ ] **Every chip sample.** Email and Tag1 switch between solid blue
-  and the faint tint; "Include 1 self review" goes solid (2), then faint
-  (0); "Include self reviews" flips to "Exclude self reviews" and stays
-  solid; "Not set" goes to "All", then "Filter using tags", then back to
-  "Not set"; "Observers" doesn't move and shows its reason on hover.
-  The copy's "solid blue" and "faint" read true in both themes.
-- [ ] **The button samples** don't change the pointer or tint on hover.
-- [ ] **The guard.** "Delete all reviewers" is off until the box is
-  ticked, and clicking it does nothing.
+- [ ] **The samples are inert for now** (the scaffold): clicking a chip
+  or a button changes nothing, and ticking the guard's box doesn't turn
+  its button on; the next PR wires them.

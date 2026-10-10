@@ -713,8 +713,8 @@ colors.
 
 **Five chip types, one look each.** What a chip's states mean decides
 its fill; a fixed switch keeps the fill of the state it is held at. The
-Guide's "Reading the controls" card samples each type, every switchable
-sample working, so a new type adds a row there too:
+Guide's "Reading the controls" card samples each type, so a new type
+adds a row there too:
 
 | Type | States | Fill | Standard |
 |---|---|---|---|
