@@ -990,33 +990,33 @@ Taken 2026-10-10 at `879069ac`.
   new browser test (rung 2).
 - `grep -rln "guide-controls" spec/` → none; §6 and §9 gain a line.
 
-### Status — in progress
+### Status — closed 2026-10-10
 
-**The ladder split in two** (Codex on #2949, citing `CLAUDE.md`
-"scaffold-first"): the mockup was not a landed slice, so #2949 became
-the inert scaffold and the chip script, the guard pairing and the
-browser test moved to rung 2. Rung 1's reads covered the wired card,
-so rung 2 restores what they read. Between the two, rung 1's chip
-samples carried the edge but did nothing, a temporary break of §9's
-edge-means-clickable rule that rung 2 ends. **Reads (rung 1):** one `spec-writer` verify
-(the Not set sample didn't cycle back; the Delete row and locked-card
-note overclaimed) and one `diff-reviewer` read ("dark is on" is false
-in dark theme, so the copy says solid blue and pale; the Not set
-sample's label is the real "Filter using tags"; the guard copy hedged
-to "most"; the CSS block split a comment). **Found, left for their own
-change:** Operator Settings' "Clear all settings" is destructive with
-no checkbox, against §4's delete-confirm standard; and a Band 1 link
-chip rendered already set doesn't gain `pill-empty` when cycled back to
-"Not set", so it turns faint rather than amber. Both are filed as
-stubs in `guide/todo_master.md`. A second read of the fixes found "pale" untrue
-in dark theme too (now "faint"); §9's Fill column still says
-dark/light, for the close's `spec-writer`. A third read, of
-that fix, found only plan and register wording, fixed. A read of the
-split found only wording (fixed in #2949). **Reads (rung 2):** one
-`diff-reviewer` read, finding a stale "inert" browser check and a
-missing theme and keyboard check (fixed), and that the real Band 1
-link chips take no Enter or Space, though the sample does (filed as a
-stub).
+Shipped in four PRs: the ladder split in two (Codex on #2949, citing
+`CLAUDE.md` "scaffold-first"), then the author added a third rung on the
+merged card, and the guard tooltip needed a follow-up.
+
+- **#2949, the scaffold:** the card under "What Review Robin Web does",
+  operators only, every sample inert.
+- **#2950, the wiring:** each chip sample answers a click as the chip it
+  stands for does; the guard's button is on the app-wide
+  `data-delete-confirm` pairing; `tests/browser/test_guide_controls.py`.
+- **#2951 and #2952, the button samples (author):** the samples take
+  their role's hover, R is one live Toggle, and every sample has a
+  tooltip; the disabled Delete's tooltip sits on a wrapper (a disabled
+  `.btn` takes no pointer events) and goes once the box is ticked.
+- **Reads:** one `spec-writer` verify and ten `diff-reviewer` reads
+  (four on rung 1 and its split, one on rung 2, four on rung 3 and its
+  fix commits, one on #2952). They found copy untrue in dark
+  theme ("dark", then "pale"; now "solid blue" and "faint"), a Not set
+  sample that didn't cycle back, overclaiming guard and Delete copy, a
+  stale "inert" browser check and missing theme and keyboard checks;
+  all fixed. #2952's read found nothing.
+- **Found, filed as `guide/todo_master.md` stubs:** Operator Settings'
+  "Clear all settings" has no confirm checkbox; a Band 1 link chip
+  cycled back to Not set turns faint, not amber; the real Band 1 link
+  chips ignore Enter and Space.
+- **Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
 
@@ -1122,12 +1122,25 @@ Taken 2026-10-10 at `2af9c113`.
   `session_home.md:560`, `visual_style_rrw.md:11` ("six"); `CLAUDE.md`
   / `AGENTS.md` list the six roles.
 
-### Status — in progress
+### Status — closed 2026-10-10
 
-One PR, after the plan (#2953). **Found at build:** §5a made every
-banner's Cancel `.btn.alert`, so changing only two would have broken it;
-the author ruled all eight Secondary. The light alert-hover pair leaves
-`ACCEPTED_BELOW_AA` and `docs/known_limitations.md` with its token.
+Shipped in one PR (#2954), after the plan (#2953), as laddered.
+
+- **Found at build:** §5a made every banner's Cancel `.btn.alert`, so
+  changing only two would have broken it; the author ruled all eight
+  Secondary. The light alert-hover pair left `ACCEPTED_BELOW_AA` and
+  `docs/known_limitations.md` with its token.
+- **Added at build (Codex on #2953):** the audit legend joined Doc
+  impact, and `tests/unit/test_button_roles.py` pins each moved button's
+  class, exact Cancel counts where the banner Cancels live, and the
+  retired class's absence from `app/`.
+- **Reads:** one `spec-writer` verify and four `diff-reviewer` reads
+  (the build, then three on fixes). They found stale "three pairs"
+  counts, the §5a summary in `spec/visual_style_rrw.md`, the narrow
+  Outline-amber definition in `spec/visual_style_general.md`, history in
+  §6's lead-in, and a role test whose regex a comment could swallow and
+  whose Cancel floors were loose; all fixed. Codex on #2954 found nothing.
+- **Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
 
