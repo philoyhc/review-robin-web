@@ -516,7 +516,9 @@ eight PNGs in `app/web/static/guide/`, no spec quotes the Guide text
   1200px, so their text reads about a third smaller. The fields pair was
   retaken (`Guide_v5b`) so Rating's bounds match the preview, 0–5.
   The branching pair keeps Rating at 1–5, a separate example (author,
-  2026-10-10). Three wording fixes accepted (author, 2026-10-10).
+  2026-10-10). The three wording fixes accepted, plus a
+  fourth from the cold read: Name and Email "aren't optional" (author,
+  2026-10-10).
 
 ### PR ladder
 
