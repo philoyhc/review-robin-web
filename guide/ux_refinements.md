@@ -488,8 +488,8 @@ revised the section and retook its screencaps (`Guide_v5a.docx`,
 Take the author's revision as written, with three factual fixes the
 check found (author may veto on the PR): the Visibility cells that can't
 change "carry a lock" (Item 2), not "are plain labels"; ↰'s branch-start
-condition spelled out, and ⑂'s new field named; one run-on screencap
-sentence split. Alt text rewritten for the four new figure pairs.
+condition spelled out, and ⑂'s new field named; one run-on sentence
+(the bounds one) split. Alt text rewritten for the four new figure pairs.
 **Rejected:** rescaling the wider captures here (no image tool in the
 container); the author can retake them at the usual width.
 
@@ -529,7 +529,9 @@ eight PNGs in `app/web/static/guide/`, no spec quotes the Guide text
 
 ### Open questions
 
-- None.
+- The fields and branching pairs are a third scale, which
+  `spec/ui_elements.md` §10's two capture widths don't allow for: retake
+  them at ~1750px, or rule an exception there — the author.
 
 ### Out of scope
 
