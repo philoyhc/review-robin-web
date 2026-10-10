@@ -638,3 +638,70 @@ Taken 2026-10-10 at `c738dbaa`.
 - `spec/operator_button_audit.md` — row #245: the level-1 ↰'s start path and off states.
 - `guide/things_to_check_in_browser.md` — a section for the PR.
 
+---
+
+## Item 6 — The dead Response Fields Help table goes
+
+### Opportunity
+
+A sweep for checkboxes that switch something on or off (2026-10-10)
+found `instruments_index.html`'s `response_fields_help_table` macro, a
+"Response Fields Help" table with a Show checkbox per field. Nothing
+calls it; the builder's ≡ button replaced it. Its row scripts
+(`addRow`, `deleteRow`, `_showOrHideEmptyState`) have no caller either.
+
+### Decision
+
+Delete the macro and the three scripts (the author, 2026-10-10).
+**Rejected:** also deleting the block's other uncalled scripts
+(`moveRow`, `_refreshOrderColumn`, `syncGroupByInclude`), which the
+ruling didn't name; they are recorded under Out of scope.
+
+### Semantics
+
+- No behavior changes: nothing rendered the macro. The live ≡ button
+  saves `help_text_visible` in each row of the Band 2 payload
+  (`app/services/instruments/_band2.py`); `help_text_visible_ids`, the
+  dead checkbox's name, is read by nothing.
+
+### Judgment calls — decided
+
+- None.
+
+### Blast radius (measured)
+
+Taken 2026-10-10 at `c8343bf3`.
+
+| What | Count | Command |
+|---|---|---|
+| Callers of the macro | 0 | `grep -rn "response_fields_help_table" app` |
+| Callers of the three scripts | 0 outside each other | `grep -n "addRow(\|deleteRow(\|_showOrHideEmptyState(" app/web/templates/operator/instruments_index.html` |
+| Live spec mentions | 0 (`spec/archive/` only) | `grep -rln "Response Fields Help" spec docs` |
+
+### Status
+
+- **Built 2026-10-10** in one PR: 160 lines deleted, no test changes.
+
+### PR ladder
+
+1. **Delete it.** One code slice outside a ladder, so it takes its own
+   `diff-reviewer` read.
+
+### Definition of done
+
+- `grep -rn "rfhelp" app` finds nothing; the suite passes unchanged.
+- `### Status` compacted.
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- `moveRow`, `_refreshOrderColumn` and `syncGroupByInclude` in the same
+  script block, also uncalled; a later cleanup if wanted.
+
+### Doc impact
+
+- None: no live spec or doc names the table.
+
