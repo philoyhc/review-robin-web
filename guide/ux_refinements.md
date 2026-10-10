@@ -107,7 +107,7 @@ Taken 2026-10-09 at `2569876a`.
    fields take `is-disabled`.~~ Name and Email take Item 2's fixed-on
    chip, and the `:has(> input:disabled)` rule gives group-hidden fields
    the fixed-off look, glyph included (revised for Item 2; this rung
-   follows Item 2's PR 1). A browser test toggles a field through its
+   follows Item 2). A browser test toggles a field through its
    chip and checks the fill. `spec/instruments.md` (Display fields row
    list) updated.
 2. **Response fields name chips.** The Active checkbox becomes a name
@@ -138,7 +138,7 @@ Taken 2026-10-09 at `2569876a`.
 
 - ~~Should Name and Email show the plain "on" fill rather than the
   muted locked one?~~ Neither: they take Item 2's fixed-switch chip
-  (author, 2026-10-09), so PR 1 follows Item 2's PR 1.
+  (author, 2026-10-09), so PR 1 follows Item 2.
 
 ### Out of scope
 
@@ -220,19 +220,19 @@ Taken 2026-10-09 at `2e0379b8`.
 
 ### PR ladder
 
-1. **The fixed chip.** `.tag-chip.is-fixed` in `base.html` (fill,
-   glyph, no edge or pointer), allowlisted in `test_reserved_shade`,
-   `tools/theme_customizer.html` regenerated. §9 gains the Fixed row.
-   Session Home's tab-holds-data chips move from `is-locked` to
-   `is-fixed`. A browser test compares the fill with a selected chip's
-   and checks the glyph.
-2. **The Visibility card's fixed cells.** `b3_static_pill` renders a
-   fixed chip; `test_band3_static_pills` updated. `spec/instruments.md`
-   (Visibility editor) says so.
-
-**Revised 2026-10-10 (author): one PR.** Rungs 1 and 2 land together;
-the split only kept slices small, and nothing depended on it. The
-item's `diff-reviewer` read runs on that PR.
+1. **The fixed chip, everywhere it applies — one PR** (revised
+   2026-10-10, author: the split only kept slices small, and nothing
+   depended on it).
+   - `.tag-chip.is-fixed` in `base.html` (fill, glyph, no edge or
+     pointer), allowlisted in `test_reserved_shade`,
+     `tools/theme_customizer.html` regenerated. §9 gains the Fixed row.
+   - Session Home's tab-holds-data chips move from `is-locked` to
+     `is-fixed`.
+   - The Visibility card's fixed cells: `b3_static_pill` renders a
+     fixed chip; `test_band3_static_pills` updated.
+   - A browser test compares the fill with a selected chip's and checks
+     the glyph. The item's `diff-reviewer` read runs on this PR.
+2. ~~**The Visibility card's fixed cells.**~~ Merged into rung 1.
 
 Band 3's Name and Email take the fixed chip in Item 1's PR 1, after
 this item.
@@ -263,9 +263,9 @@ this item.
 
 ### Doc impact
 
-- `spec/ui_elements.md` — §9's chip-types table gains Fixed; `is-locked` is the locked card's chip only (PR 1).
-- `spec/session_home.md` — the optional-tab chips are fixed once the tab holds data (PR 1).
-- `spec/instruments.md` — the Visibility editor's two fixed cells are fixed chips (PR 2).
+- `spec/ui_elements.md` — §9's chip-types table gains Fixed; `is-locked` is the locked card's chip only.
+- `spec/session_home.md` — the optional-tab chips are fixed once the tab holds data.
+- `spec/instruments.md` — the Visibility editor's two fixed cells are fixed chips.
 - `guide/things_to_check_in_browser.md` — a section per PR.
 
 
