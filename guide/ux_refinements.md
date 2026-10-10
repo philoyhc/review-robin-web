@@ -967,6 +967,7 @@ the moment a role's tokens move, where live classes follow it.
 
 ### Semantics
 
+- Rung 1 ships every sample inert; the click behavior below is rung 2's.
 - Operators only (author): `GuideSection("controls", OPERATOR)`.
 - Nothing posts. The guard's button is `type="button"` on the app-wide
   `data-delete-confirm` pairing; the chips' boxes sit in no form.
@@ -994,7 +995,9 @@ Taken 2026-10-10 at `879069ac`.
 "scaffold-first"): the mockup was not a landed slice, so #2949 became
 the inert scaffold and the chip script, the guard pairing and the
 browser test moved to rung 2. Rung 1's reads covered the wired card,
-so rung 2 restores what they read. **Reads (rung 1):** one `spec-writer` verify
+so rung 2 restores what they read. Until it lands, rung 1's chip
+samples carry the edge but do nothing, a known, temporary break of
+§9's edge-means-clickable rule. **Reads (rung 1):** one `spec-writer` verify
 (the Not set sample didn't cycle back; the Delete row and locked-card
 note overclaimed) and one `diff-reviewer` read ("dark is on" is false
 in dark theme, so the copy says solid blue and pale; the Not set
@@ -1016,8 +1019,9 @@ that fix, found only plan and register wording, fixed.
    §6 / §9 lines. ~~The card and its wiring in one PR~~ (split, above).
 2. **The wiring.** The chip script, the guard's `data-delete-confirm`
    pairing, the "try it" copy, `tests/browser/test_guide_controls.py`, <!-- path-ref-ok -->
-   and §9's "every switchable sample working". Takes its own
-   `diff-reviewer` read.
+   and §9's "every switchable sample working", with the click checks in
+   `guide/things_to_check_in_browser.md`. Takes its own `diff-reviewer`
+   read.
 
 ### Definition of done
 
