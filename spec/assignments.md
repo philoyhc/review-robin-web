@@ -22,7 +22,7 @@ This spec covers:
 - The Assignments operator page at
   `/operator/sessions/{session_id}/assignments` — the
   per-instrument status table, the preview table, the
-  Self-review and Show toggles, and the bulk Inactivate /
+  Self-review and instrument-name chips, and the bulk Inactivate /
   Activate of selected rows.
 - The reconcile + regenerate path that preserves saved
   responses across re-runs, and why it may not be simplified
@@ -763,11 +763,11 @@ Columns (left → right):
 
 | Column | Meaning |
 |---|---|
-| Instrument | An on/off chip (`label.pill.pill-count.tag-chip` around a hidden checkbox) carrying `block.instrument_label` and filtering the preview table below: a client-side DOM toggle that hides or shows the instrument's pairs, on by default when any row materialised (`guide/ux_refinements.md` Item 7; a separate Show column before it). The label is the operator-facing one from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{session_seq}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md`, the operator-identifier policy) — it is not part of the label chain, so a search or a label built from it would match a string no operator can see. The column's server-side sort key is the SQL form of the same rule (`assignments/_coverage.py::_instrument_label_sql`), pinned against the Python one by `tests/integration/test_instrument_session_seq.py`, so the page sorts by the string it displays. |
+| Instrument | An on/off chip carrying `block.instrument_label` and filtering the preview table below: a client-side DOM toggle that hides or shows the instrument's pairs, on by default when any row materialised. The label is the operator-facing one from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{session_seq}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md`, the operator-identifier policy) — it is not part of the label chain, so a search or a label built from it would match a string no operator can see. The column's server-side sort key is the SQL form of the same rule (`assignments/_coverage.py::_instrument_label_sql`), pinned against the Python one by `tests/integration/test_instrument_session_seq.py`, so the page sorts by the string it displays. |
 | Type | A display pill (`pill pill-count`), "Individual" or "Group" (driven by `Instrument.group_kind`). |
 | Generated | Pill carrying the row count. "Not generated yet" when zero. A `stale` pill rides alongside when the rows have fallen out of step — see "Staleness". |
 | Groups | Group count (distinct `(reviewer, group key)` over the rows, the key derived by `responses.group_keys`) for group instruments; "—" for individual. |
-| Self review | An on/off chip, **"Include N self reviews"** (N the included rows; "review" when N is 1), that bulk-flips `Assignment.include` on those rows in this instrument — counting and flipping only rows whose reviewer and reviewee are both active (an inactive side's row stays excluded by status). Dark when every counted row is included, light when none is, amber (`pill-empty`) when some are; a click on a light or amber chip includes them all, on a dark one excludes them all (`guide/ux_refinements.md` Item 7). The chip renders only when `self_review_total > 0`: not on a session with no roster overlaps, nor when every self-review row has an inactive side, where the cell reads "—". |
+| Self review | An on/off chip, **"Include N self reviews"** (N the included rows; "review" when N is 1), that bulk-flips `Assignment.include` on those rows in this instrument — counting and flipping only rows whose reviewer and reviewee are both active (an inactive side's row stays excluded by status). Dark when every counted row is included, light when none is, amber (`pill-empty`) when some are; a click on a light or amber chip includes them all, on a dark one excludes them all. The cell reads **"Excluded by rule"** when the instrument's rule excludes self reviews and none remain; otherwise the chip renders only when `self_review_total > 0`, and the cell reads "—" on a session with no roster overlaps or when every self-review row has an inactive side. |
 | Included | Pill carrying the count of `include=True` rows. "—" before Generate. |
 | (action) | "Edit on Instruments page" deep-link to the instrument's card. |
 
@@ -815,7 +815,7 @@ status button the selection makes actionable.
 **M is the *visible* rows, not the rendered window.** The rosters'
 contract says rendered window and is right for them, because they
 filter server-side. Here `rows()` filters `allRows()` to
-`style.display !== "none"`, so the `Show` checkboxes move M as well as
+`style.display !== "none"`, so the instrument-name chips move M as well as
 what can be ticked — which is the whole reason this page needs its own
 statement of the count.
 
@@ -833,7 +833,7 @@ page is:
   count is the only other thing in the row.
 - **The funnel counts visible rows, not selected ones.** This is the
   only page with a *client-side* filter: the status table's
-  per-instrument `Show` checkboxes hide rows with `display: none`,
+  instrument-name chips hide rows with `display: none`,
   which breaks the rosters' unstated assumption that a selectable row
   is a visible one. The panel anchors after the last **visible**
   selected row and its `colSpan` is recounted on every chip toggle. The page's
@@ -940,7 +940,7 @@ substring search that would ignore the scope.
 
 **Not partitioned by instrument.** A session carries a handful of
 distinct instruments against a roster of hundreds, so an instrument
-partition divides the list barely at all. The per-instrument `Show` checkboxes in the status table remain
+partition divides the list barely at all. The instrument-name chips in the status table remain
 the instrument-side filter — client-side, over the rendered window.
 
 ### Status filter
@@ -1060,7 +1060,7 @@ left → right:
 | Reviewee.tag1 / 2 / 3 | yes | implicit |
 | Pair.tag1 / 2 / 3 | yes | implicit |
 | Include | yes (boolean) | yes (toggle) |
-| Instrument | yes | yes (per-instrument Show checkbox in the status table above) |
+| Instrument | yes | yes (the instrument-name chip in the status table above) |
 
 A row with `include=False` renders its Include cell as a
 warning-coloured `no` pill (`.pill-empty`); the row itself is **not**

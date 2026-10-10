@@ -321,7 +321,8 @@ this item.
 
 ### Definition of done
 
-- §9 defines four chip types, Fixed among them, with a standard.
+- §9 defines four chip types, Fixed among them, with a standard (five
+  since Item 7).
 - Session Home's tab-holds-data chips and the two Visibility cells
   render as fixed chips; a test pins each.
 - `guide/things_to_check_in_browser.md` has a section per PR.
