@@ -331,3 +331,13 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **Reload.** With a chip on its "with responses" label, reload: it
   comes back on that label, still dark, and its card's download still
   drops the empty rows.
+
+## ↰ only joins a branch (UX refinements Item 3)
+
+- [ ] **Off under a plain field.** On an unlocked instrument card, the
+  ↰ of a field below a plain Integer, Decimal or List field is greyed
+  out, titled "No branch ends directly above"; clicking it adds no
+  condition row.
+- [ ] **Joins once a branch is there.** Press ⑂ on the field above,
+  then ↰ on the field below: it moves into the branch, under the
+  condition, and its ↳ takes it back out.
