@@ -94,7 +94,7 @@ CX_PAIRS = hc.collect_contrast_pairs(base_css)
 # every facet by token). Verified against base.html's rules; a browser-side
 # self-check compares each facet's computed colour to its token to catch drift.
 def _btn(mod, label, key):
-    sel = "button.btn" + (("." + mod) if mod else ":not(.secondary):not(.destructive):not(.danger-solid):not(.alert)")
+    sel = "button.btn" + (("." + mod) if mod else ":not(.secondary):not(.destructive):not(.alert)")
     # exclude in-card button instances (e.g. the danger-zone button) — they just
     # follow their canonical role, so only the Buttons-section samples are picked.
     sel += ":not(.danger-zone *)"
@@ -112,8 +112,7 @@ TARGETS = [
     _btn("", "Primary button", "primary"),
     _btn("secondary", "Secondary button", "secondary"),
     _btn("destructive", "Destructive button", "destructive"),
-    _btn("danger-solid", "Alert button", "alert"),
-    _btn("alert", "Amber button", "amber"),
+    _btn("alert", "Outline-amber button", "amber"),
     ("@page", "Page background", [("background", "bg", "--surface-page")]),
     # Chrome — top bar
     (".chrome-app-identity", "App identity", [("text", "fg", "--text-subtle")]),

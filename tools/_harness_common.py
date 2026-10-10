@@ -142,10 +142,6 @@ ON_FILL = {
 #: belongs to measures **3.33 at rest** — that is not a transient dip,
 #: it is the worst point of a control already below the line.
 ACCEPTED_BELOW_AA = {
-    ("light", "--btn-alert-fg", "--btn-alert-bg-hover"): {
-        "resting_bg": "--btn-alert-bg",
-        "reason": "hover dip; the alert button's label is 7.09:1 at rest",
-    },
     ("light", "--btn-primary-fg", "--btn-primary-bg-hover"): {
         "resting_bg": "--btn-primary-bg",
         "reason": "hover dip; the primary button's label is 5.17:1 at rest",
@@ -442,22 +438,20 @@ def component_sections():
       </div>
     </section>"""),
         ("buttons", """    <section class="ph-section">
-      <h2 class="ph-h">Buttons — canonical roles (spec/ui_elements.md §6): Primary <code>.btn</code>, Secondary <code>.secondary</code>, Destructive <code>.destructive</code>, Alert <code>.danger-solid</code>, Amber <code>.alert</code></h2>
+      <h2 class="ph-h">Buttons — canonical roles (spec/ui_elements.md §6): Primary <code>.btn</code>, Secondary <code>.secondary</code>, Destructive <code>.destructive</code>, Outline-amber <code>.alert</code></h2>
       <p class="muted ph-anno" style="margin: 0 0 6px;">Active</p>
       <div class="ph-row" style="margin-bottom: 14px;">
         <button class="btn">Primary</button>
         <button class="btn secondary">Secondary</button>
         <button class="btn destructive">Destructive</button>
-        <button class="btn danger-solid">Alert</button>
-        <button class="btn alert">Amber</button>
+        <button class="btn alert">Outline-amber</button>
       </div>
       <p class="muted ph-anno" style="margin: 0 0 6px;">Disabled — same shape at opacity 0.5 (colour retained per role)</p>
       <div class="ph-row">
         <button class="btn" disabled>Primary</button>
         <button class="btn secondary" disabled>Secondary</button>
         <button class="btn destructive" disabled>Destructive</button>
-        <button class="btn danger-solid" disabled>Alert</button>
-        <button class="btn alert" disabled>Amber</button>
+        <button class="btn alert" disabled>Outline-amber</button>
       </div>
     </section>"""),
         ("pills", """    <section class="ph-section">

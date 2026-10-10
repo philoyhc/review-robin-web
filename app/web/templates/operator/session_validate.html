@@ -32,7 +32,7 @@
           {% endfor %}
         </ul>
         <div class="banner-actions">
-          <a class="btn alert"
+          <a class="btn secondary"
              href="/operator/sessions/{{ session.id }}/validate">Cancel</a>
           <form method="post"
                 action="/operator/sessions/{{ session.id }}/activate">
@@ -40,7 +40,7 @@
             {% if activate_return_to %}
               <input type="hidden" name="return_to" value="{{ activate_return_to }}">
             {% endif %}
-            <button class="btn danger-solid" type="submit">Acknowledge and activate</button>
+            <button class="btn alert" type="submit">Acknowledge and activate</button>
           </form>
         </div>
       </div>
@@ -59,7 +59,7 @@
           {% endfor %}
         </ul>
         <div class="banner-actions">
-          <a class="btn alert"
+          <a class="btn secondary"
              href="/operator/sessions/{{ session.id }}/validate">Cancel</a>
         </div>
       </div>

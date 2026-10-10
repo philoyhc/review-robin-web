@@ -140,10 +140,10 @@
            lands the operator back at where they were before the
            banner appeared. Slice 4d / banner-scroll convention. #}
         {% if editing_instrument_id %}
-          <a class="btn alert"
+          <a class="btn secondary"
              href="/operator/sessions/{{ session.id }}/instruments?editing={{ editing_instrument_id }}#instrument-{{ editing_instrument_id }}">Cancel</a>
         {% else %}
-          <a class="btn alert"
+          <a class="btn secondary"
              href="/operator/sessions/{{ session.id }}/instruments">Cancel</a>
         {% endif %}
       </div>
@@ -157,7 +157,7 @@
     <div class="banner banner-error banner-scroll-target" id="sort-save-error-banner">
       <p style="margin: 0;"><strong>Could not save the sort order:</strong> {{ sort_save_error }}</p>
       <div class="banner-actions">
-        <a class="btn alert"
+        <a class="btn secondary"
            href="/operator/sessions/{{ session.id }}/instruments?editing={{ sort_save_error_instrument_id }}#instrument-{{ sort_save_error_instrument_id }}">Cancel</a>
       </div>
     </div>

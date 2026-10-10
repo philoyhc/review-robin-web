@@ -49,9 +49,9 @@ token exists that it does not name.
 itself made twice. ``test_the_ratio_matches_published_values`` pins the
 arithmetic instead.
 
-**Three pairs fall under AA, all accepted; none is open.** Since
+**Two pairs fall under AA, both accepted; none is open.** Since
 19K.10 the palette clears AA normal against every pair it forms, in
-both themes, and ``OPEN_SHORTFALLS`` is empty. The three accepted are
+both themes, and ``OPEN_SHORTFALLS`` is empty. The two accepted are
 light button labels that dip only under the pointer; their exemption is
 stored as its *premise* (the resting pair) and re-checked on every run,
 rather than as a conclusion.
@@ -456,7 +456,7 @@ def test_the_customizer_panel_can_show_a_shortfall() -> None:
 def test_accepted_pairs_still_earn_their_acceptance() -> None:
     """The reason for each exemption, checked rather than trusted.
 
-    Three pairs are accepted (`ACCEPTED_BELOW_AA`, in the shared
+    Two pairs are accepted (`ACCEPTED_BELOW_AA`, in the shared
     harness) on one stated ground: the control's label is comfortably
     legible at rest and dips only while the pointer is on it. That
     ground is a *measurement*, not an opinion, so it is asserted —
@@ -512,7 +512,7 @@ def test_the_panel_marks_every_accepted_pair_in_its_own_theme() -> None:
     its attribute would show as red, which is the failure this split
     exists to prevent.
 
-    Per-theme is the load-bearing part. All three acceptances are
+    Per-theme is the load-bearing part. Both acceptances are
     light-only, and the same pair unaccepted in dark must stay red
     there — so the attribute is `data-accepted-light`, never a bare
     `data-accepted`.

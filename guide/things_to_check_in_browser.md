@@ -366,3 +366,21 @@ section (git history keeps it), so this file lists only what is owed.
   what a click does; the Delete says "Off until the box is ticked" until
   it is, then its own tooltip; the Delete sits level with the guard's
   sentence, with no stray tooltip strip around it once on.
+
+## The filled amber is gone (UX refinements Item 11)
+
+- [ ] **Workflow card, Closed.** Archive session is the amber outline,
+  no longer filled, in light and dark.
+- [ ] **Workflow card, Prepare confirm** (setup changed so pairs with
+  saved responses drop). Regenerate & prepare is the red outline;
+  Cancel is the grey Secondary.
+- [ ] **Validate, Activate with warnings.** Acknowledge and activate is
+  the amber outline; Cancel is Secondary, as is the errors-present
+  banner's Cancel.
+- [ ] **Purge and archive** (lobby single and bulk expanders, Extract
+  data's Archive card) is the amber outline.
+- [ ] **Other banner Cancels** (Instruments save-error and sort-save
+  error, Quick Setup slot, Assignments replace-not-confirmed) are
+  Secondary.
+- [ ] **/guide's controls card** shows five button rows; Archive session
+  is the amber outline.
