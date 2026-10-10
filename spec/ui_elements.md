@@ -673,7 +673,9 @@ Three rules make that work:
 **A chip can be a form control.** Session Home's optional-tab chips
 (`spec/session_home.md`) and the Instruments display-field and
 response-field name chips (`spec/instruments.md` "Display-field table",
-"Response fields") are each a `<label
+"Response fields"), and the Assignments status table's instrument-name
+and self-review chips (`spec/assignments.md` "Per-instrument status
+table"), are each a `<label
 class="pill pill-count tag-chip">` around a visually hidden checkbox, so
 a click ticks the box and the form or row script reads it. `.tag-chip:has(> input:checked)` is the
 `.is-selected` fill, read off the box itself, so a form reset repaints
@@ -698,12 +700,13 @@ exception): a locked chip may carry it to say "on", and
 `.tag-chip.is-locked.is-selected` repaints it in the display-value
 colors.
 
-**Four chip types, one look each.** What a chip's states mean decides
+**Five chip types, one look each.** What a chip's states mean decides
 its fill; a fixed switch keeps the fill of the state it is held at:
 
 | Type | States | Fill | Standard |
 |---|---|---|---|
 | **On/off** | selected, not selected; the label doesn't change | dark (`--selected-bg`) when on, light when off | the Setup pages' column chips |
+| **On/off with a partial state** | all, none, or some of a set; the label counts how many are on | dark when all, light when none, amber (`pill-empty`) when some; a click on light or amber turns all on | the Assignments page's "Include N self reviews" |
 | **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always dark | Extract's Data shaper "All rows ↔ Rows with data" |
 | **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, dark otherwise | the Instruments page's Band 1 link chips |
 | **Fixed** | one switch held at its value while the chips beside it stay live | its siblings' fill for the held state (dark when on), with no edge or pointer and a lock glyph before the label (`.tag-chip.is-fixed`) | Session Home's optional tab once it holds data |
@@ -721,7 +724,9 @@ instrument the fields a group row can't show (`spec/instruments.md`
 hidden ("Response fields"). It is per item: a card's locked view stays
 `is-locked`, or on a locked Instruments card the plain pill (above). Its other use is the Instruments
 Visibility card's two cells whose mode isn't the operator's to choose
-(`spec/instruments.md` "Visibility card").
+(`spec/instruments.md` "Visibility card"), and the Assignments page's
+self-review chip on a session that isn't editable, which keeps its
+amber when mixed.
 
 The lobby's AND/OR and Select all / Clear all chips, and the Archived
 page's Select all / Clear all, are cycle chips (`.tag-mode-chip`,
@@ -891,8 +896,8 @@ a rewrite.
   `render()` on Reviewers, Reviewees, Relationships and Assignments,
   `renderPanel()` on Observers. The contract is the funnel, not its
   name. **Assignments' funnel counts only visible rows**, because it is
-  the one page with a client-side filter: its per-instrument `Show`
-  checkboxes hide rows with `display: none`, and an expander anchored
+  the one page with a client-side filter: its instrument-name chips
+  hide rows with `display: none`, and an expander anchored
   after a hidden row, or a `colSpan` counted before a chip toggle, both
   follow from treating a selectable row as a visible one.
 - **A sort drops the panel and re-anchors it.** `_rrwApplySort` removes

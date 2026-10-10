@@ -127,7 +127,8 @@ section (git history keeps it), so this file lists only what is owed.
 
 - [ ] **Inactivate a relationship.** In a session whose instrument
   groups by a relationship tag, generate assignments and note the
-  instrument's self-review count on Assignments. On Relationships,
+  instrument's self-review count on Assignments (the N in its
+  "Include N self reviews" chip since UX refinements Item 7). On Relationships,
   inactivate the row that puts a reviewer's group-mate in their group.
   Back on Assignments, without generating again, the self-review count
   drops by that row. Reactivate it and the count comes back.
@@ -348,4 +349,15 @@ section (git history keeps it), so this file lists only what is owed.
   amber condition, no new row, the bar starting at its +, and the
   focus in the condition's value. Fill it, Save, reopen: three levels
   as built. Make the field above a String: ↰ goes off with its reason.
+
+## The Assignments status table's chips (UX refinements Item 7)
+
+- [ ] **Assignments, Per-instrument status.** The instrument's name is a
+  chip; clicking it hides and shows its pairs in the table below. Type
+  is a plain pill; there is no Show column.
+- [ ] **Self review chip.** "Include N self reviews" is dark with all in;
+  a click makes it light, "Include 0 self reviews"; Activate one
+  self-review row in the table below and it is amber with N = 1; a
+  click makes it dark again. On an activated or closed session it is
+  fixed (lock glyph, no click).
 

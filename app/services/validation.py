@@ -903,7 +903,7 @@ def _check_instruments_zero_included(
     ``included_count == 0``.
 
     Typical cause: the operator bulk-deactivated every row on the
-    instrument (e.g. flipping the Self review checkbox off on a
+    instrument (e.g. flipping the Self review chip off on a
     self-review-only instrument). Reviewers will land on the
     instrument's page and see nothing.
 

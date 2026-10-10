@@ -277,14 +277,12 @@ def test_self_reviews_column_omits_checkbox_when_count_zero(
         f"/operator/sessions/{review_session.id}/assignments"
     ).text
     instrument_id = _self_review_instrument_id(db, review_session.id)
-    # 0 self-review rows → pill still renders (with value 0) but no
-    # toggle checkbox.
-    assert (
-        f'data-self-review-count="{instrument_id}">0</span>' in body
-    )
+    # 0 self-review rows → a dash and no chip (ux_refinements Item 7).
+    assert '<span class="muted" title="No self-review pairs">—</span>' in body
     assert (
         f'data-self-review-instrument="{instrument_id}"' not in body
     )
+    assert f'data-self-review-chip="{instrument_id}"' not in body
 
 
 # ---------------------------------------------------------------------------

@@ -1355,10 +1355,10 @@ on the Operations row of the chrome. It carries:
 - **Per-instrument status card** — one block per instrument,
   showing type (Individual / Group), generated pair count (with a
   `stale` pill when the current rule + roster would produce a
-  different set), group count, self-review count + per-instrument
-  self-review toggle (locked outside `draft` / `validated`), included
-  count, and a per-instrument "Show in preview table" filter
-  checkbox.
+  different set), group count, per-instrument "Include N self reviews"
+  chip (locked outside `draft` / `validated`), included
+  count, and the instrument's name as a chip filtering the preview
+  table.
 - **Assignments preview table** — every materialised pair,
   with reviewer identity + tag columns, reviewee identity +
   tag columns, pair-context tag columns, an Include yes / no pill,

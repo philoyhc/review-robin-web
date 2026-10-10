@@ -515,10 +515,9 @@ assignment matrix.
 **Generation fires from the Workflow card's stepper** (rendered by
 `next_action_card.html`) — this page carries no standalone Generate or
 Rule Based Assignment card, and no Self-reviews toggle card.
-Per-instrument Self review is an inline checkbox column on the
-Per-instrument status table, and Self review / Show on that table are
-plain form checkboxes rather than `.btn`-shaped controls, so they are
-not enumerated here. **The `.btn`-shaped controls sit where the four
+Per-instrument Self review and the instrument-name filter on the
+Per-instrument status table are chips (`spec/ui_elements.md` §9)
+rather than `.btn`-shaped controls, so they are not enumerated here. **The `.btn`-shaped controls sit where the four
 roster pages put theirs**: the filter strip in the preview table's
 toolbar right pane, the selection's status buttons in the row
 expander.

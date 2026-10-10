@@ -21,7 +21,7 @@
   {# Segment 15B Slice 3a + refinements — per-instrument status
      card renders in BOTH draft + ready states (the "status info
      card" sits first under chrome, matching the Instruments
-     page pattern). Self review checkboxes are disabled in ready
+     page pattern). Self review chips are fixed in ready
      state — review is ongoing, no flipping include flags from
      here. Rule selection lives on the Instruments page (Slice
      2a per-card picker); the standalone session-wide self-
@@ -50,20 +50,22 @@
           <th>Groups</th>
           <th>Self review</th>
           <th>Included</th>
-          <th>Show</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
         {% for block in page_ctx.status_blocks %}
-          {# Self review pill class tracks the checkbox state:
-             ``pill-info`` (blue) when included (checked);
-             ``pill-warning`` (yellow) when not (unchecked /
-             indeterminate). #}
-          {% set sr_pill_class = 'pill-info' if block.self_review_checkbox_state == 'checked' else 'pill-warning' %}
           <tr id="status-block-{{ block.instrument_id }}">
-            <td>{{ block.instrument_label }}</td>
-            <td>{{ "Group" if block.is_group else "Individual" }}</td>
+            {# ux_refinements Item 7 — the instrument's name is an
+               on/off chip filtering the preview table below (the
+               Show column it replaces). #}
+            <td><label class="pill pill-count tag-chip"
+                       title="Show this instrument's pairs in the preview table">
+                <input type="checkbox" class="visually-hidden"
+                       data-filter-instrument="{{ block.instrument_id }}"
+                       {% if block.generated_count > 0 %}checked{% endif %}
+                       aria-label="Show {{ block.instrument_label }}'s pairs in the preview table">{{ block.instrument_label }}</label></td>
+            <td><span class="pill pill-count">{{ "Group" if block.is_group else "Individual" }}</span></td>
             <td>
               {% if block.generated_count %}
                 <span class="pill pill-count">{{ block.generated_count }}</span>
@@ -87,7 +89,7 @@
                  self-reviews generates no such row, so a bare ``0``
                  here would be indistinguishable from a roster that
                  simply has no self-pairs. *None exist* and *none kept*
-                 are different facts. The checkbox needs no separate
+                 are different facts. The chip needs no separate
                  suppression: its ``> 0`` guard already hides it, and
                  the flag only reads "Excluded by rule" once the count
                  is actually 0 — a flagged-but-not-yet-regenerated
@@ -95,24 +97,30 @@
               {% if block.self_review_excluded_by_rule %}
                 <span class="muted"
                       data-self-review-excluded="{{ block.instrument_id }}">Excluded by rule</span>
-              {% else %}
-              <span class="pill {{ sr_pill_class }}"
-                    data-self-review-count="{{ block.instrument_id }}">{{ block.self_review_total }}</span>
-              {% endif %}
-              {% if block.self_review_total > 0 %}
+              {% elif block.self_review_total > 0 %}
+                {# ux_refinements Item 7 — an on/off chip naming how
+                   many self-review rows are in: dark when all are,
+                   light when none, amber (``pill-empty``) when some.
+                   A click on a light or amber chip includes them all,
+                   on a dark one excludes them all. #}
+                {% set _sr_n = block.self_review_active_count %}
                 <form method="post"
                       action="{{ block.self_review_toggle_url }}"
                       id="sr-form-{{ block.instrument_id }}"
-                      style="display: inline; margin-left: 8px;">
+                      style="display: inline;">
                   <input type="hidden" name="active" value="true">
-                  <input type="checkbox"
+                  <label class="pill pill-count tag-chip{% if block.self_review_checkbox_state == 'indeterminate' %} pill-empty{% endif %}"
+                         data-self-review-chip="{{ block.instrument_id }}"
+                         title="{% if not can_edit %}{{ lock_action }} to change self-review inclusion.{% elif block.self_review_checkbox_state == 'checked' %}Exclude every self review{% else %}Include every self review{% endif %}">
+                  <input type="checkbox" class="visually-hidden"
                          data-self-review-instrument="{{ block.instrument_id }}"
                          data-self-review-state="{{ block.self_review_checkbox_state }}"
                          {% if block.self_review_checkbox_state == 'checked' %}checked{% endif %}
-                         {% if not can_edit %}disabled aria-disabled="true"
-                           title="{{ lock_action }} to change self-review inclusion."{% endif %}
-                         aria-label="Include self-reviews for this instrument">
+                         {% if not can_edit %}disabled aria-disabled="true"{% endif %}
+                         aria-label="Include {{ _sr_n }} self review{{ '' if _sr_n == 1 else 's' }}, {{ block.instrument_label }}">Include {{ _sr_n }} self review{{ '' if _sr_n == 1 else 's' }}</label>
                 </form>
+              {% else %}
+                <span class="muted" title="No self-review pairs">—</span>
               {% endif %}
             </td>
             <td>
@@ -122,12 +130,6 @@
               {% else %}
                 <span class="muted">—</span>
               {% endif %}
-            </td>
-            <td>
-              <input type="checkbox"
-                     data-filter-instrument="{{ block.instrument_id }}"
-                     {% if block.generated_count > 0 %}checked{% endif %}
-                     aria-label="Show this instrument's pairs in the preview table">
             </td>
             <td>
               <a href="{{ block.edit_url }}">Edit on Instruments page</a>
@@ -535,9 +537,9 @@
           {{ ("/operator/sessions/" ~ session.id ~ "/assignments") | tojson }};
 
         // Only the rows the operator can see. This page has something
-        // no roster page has: a CLIENT-side filter. The `Show`
-        // checkboxes in the status blocks set `style.display = "none"`
-        // on rows of an unticked instrument, so a row can be in the
+        // no roster page has: a CLIENT-side filter. The instrument-name
+        // chips in the status blocks set `style.display = "none"`
+        // on rows of an instrument turned off, so a row can be in the
         // DOM, still ticked, and invisible — while the roster pages
         // filter server-side, where a filtered-out row is not in the
         // DOM at all and cannot be selected.
@@ -758,11 +760,13 @@
     {% endif %}
   {% endif %}
 
-  {# Per-instrument Self review column — set ``indeterminate`` on
-     mixed-state checkboxes; submit the bulk-toggle form on change
-     so a single click flips every self-review row on this
-     instrument. The hidden ``active`` field mirrors the checkbox's
-     new ``checked`` value at submit time. #}
+  {# Per-instrument Self review chip — submit the bulk-toggle form on
+     change so a single click flips every self-review row on this
+     instrument. The hidden ``active`` field mirrors the box's new
+     ``checked`` value at submit time; a mixed chip's box is unticked,
+     so its click includes them all (ux_refinements Item 7). The box
+     is set ``indeterminate`` too, so a screen reader hears "mixed"
+     where the amber says it. #}
   <script>
     (function () {
       var boxes = document.querySelectorAll(
@@ -783,22 +787,20 @@
     })();
   </script>
 
-  {# Per-instrument Show column — client-side filter of the pairs
-     preview table. Server-side default: every instrument with
-     ``generated_count > 0`` renders checked, so the post-Generate
-     view shows every materialised pair. Untick to hide that
-     instrument's rows; untick all to empty the table (the user's
-     "show only if ticked" rule).
-
-     The per-row count moved to the new Included column; the Show
-     cell is just the checkbox. #}
+  {# Per-instrument name chip — client-side filter of the pairs
+     preview table (ux_refinements Item 7; the Show column's checkbox
+     before it). Server-side default: every instrument with
+     ``generated_count > 0`` renders on, so the post-Generate view
+     shows every materialised pair. Turn one off to hide that
+     instrument's rows; all off empties the table (the user's "show
+     only if ticked" rule). #}
   <script>
     (function () {
       var boxes = document.querySelectorAll(
         "input[data-filter-instrument]"
       );
       // Defensive guard: if the status table somehow didn't
-      // render any Show checkboxes (e.g. a future page state with
+      // render any name chips (e.g. a future page state with
       // no instruments), skip wiring entirely — otherwise
       // ``apply()`` would hide every preview row.
       if (boxes.length === 0) return;

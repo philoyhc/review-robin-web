@@ -225,9 +225,9 @@ def test_set_instrument_self_reviews_active_emits_audit_event(
 def test_status_block_indeterminate_state_when_mixed(db: Session) -> None:
     """``InstrumentStatusBlock.self_review_checkbox_state`` is
     ``"indeterminate"`` when an instrument has a mix of
-    include=true and include=false self-review rows. The inline JS
-    on the Assignments page reads ``data-self-review-state`` to
-    set the HTML5 ``indeterminate`` property on the checkbox."""
+    include=true and include=false self-review rows: the Assignments
+    page's Self review chip is amber, and its inline JS reads
+    ``data-self-review-state`` to set the box ``indeterminate``."""
 
     user, review_session, inst_a, inst_b, alice_r, alice_e = (
         _seed_multi_instrument(db, code="sr-mixed")
@@ -395,23 +395,16 @@ def test_status_block_reports_included_count_per_instrument(
     assert by_id[inst_b.id].included_count == 1
 
 
-def test_self_review_pill_class_tracks_checkbox_state(
+def test_self_review_chip_tracks_the_include_state(
     client: TestClient, db: Session
 ) -> None:
-    """Self review count pill: ``pill-info`` (blue) when self-
-    reviews are included for that instrument (checkbox ticked);
-    ``pill-warning`` (yellow) when not (unchecked or
-    indeterminate)."""
-
-    # Use the existing integration fixture to seed a session with
-    # an Alice→Alice self-review pair, then exercise the per-
-    # instrument toggle to flip include states and re-fetch the
-    # rendered page.
+    """ux_refinements Item 7 — the Self review cell is an on/off chip,
+    "Include N self reviews" with N the included rows: dark (its box
+    ticked) when all are in, light when none are, amber
+    (``pill-empty``) when some are."""
     # Relative, per the convention `_assignment_states.py` documents:
     # the `pytest` console script puts nothing on `sys.path`, so an
-    # absolute `from tests.…` fails. Function-scoped here, so it
-    # broke only this test rather than collection — which is how it
-    # survived. Named by 19O.7 entry 14's cold read.
+    # absolute `from tests.…` fails.
     from .test_assignments_operations_page import (
         _generate_with_self_reviews,
         _make_session,
@@ -419,37 +412,52 @@ def test_self_review_pill_class_tracks_checkbox_state(
         _self_review_instrument_id,
     )
 
-    review_session = _make_session(client, db, code="sr-pill")
+    review_session = _make_session(client, db, code="sr-chip")
     _seed_population_with_self_review(client, review_session.id)
     _generate_with_self_reviews(client, db, review_session.id)
     instrument_id = _self_review_instrument_id(db, review_session.id)
 
-    # Default ``self_reviews_active=True`` → self-review row lands
-    # include=True → state "checked" → blue pill.
-    checked_body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
-    ).text
-    checked_pill = checked_body.split(
-        f'data-self-review-count="{instrument_id}"', 1
-    )[0][-80:]
-    assert "pill-info" in checked_pill
-    assert "pill-warning" not in checked_pill
+    def chip() -> str:
+        """The chip's ``<label …>…</label>``, its box inside it."""
+        body = client.get(
+            f"/operator/sessions/{review_session.id}/assignments"
+        ).text
+        head, tail = body.split(f'data-self-review-chip="{instrument_id}"', 1)
+        return "<label" + head.rsplit("<label", 1)[1] + tail.split("</label>", 1)[0] + "</label>"
 
-    # Flip to unticked → state "unchecked" → yellow pill.
+    # Default ``self_reviews_active=True`` → the row lands included.
+    on = chip()
+    assert "pill-empty" not in on
+    assert 'data-self-review-state="checked"' in on
+    assert "Include 1 self review</label>" in on
+
     client.post(
         f"/operator/sessions/{review_session.id}"
         f"/assignments/{instrument_id}/self-reviews/active",
         data={"active": "false"},
         follow_redirects=False,
     )
-    unticked_body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
-    ).text
-    unticked_pill = unticked_body.split(
-        f'data-self-review-count="{instrument_id}"', 1
-    )[0][-80:]
-    assert "pill-warning" in unticked_pill
-    assert "pill-info" not in unticked_pill
+    off = chip()
+    assert 'data-self-review-state="unchecked"' in off
+    assert "pill-empty" not in off
+    assert "Include 0 self reviews" in off
+
+    # A second, included self-review row makes the instrument mixed.
+    instrument = db.get(Instrument, instrument_id)
+    bob_r = Reviewer(session_id=review_session.id, name="Bob", email="bob@example.edu")
+    bob_e = Reviewee(
+        session_id=review_session.id, name="Bob", email_or_identifier="bob@example.edu"
+    )
+    db.add_all([bob_r, bob_e])
+    db.flush()
+    _self_review(
+        db, review_session=review_session, instrument=instrument,
+        reviewer=bob_r, reviewee=bob_e, include=True,
+    )
+    mixed = chip()
+    assert 'data-self-review-state="indeterminate"' in mixed
+    assert "pill-empty" in mixed
+    assert "Include 1 self review" in mixed
 
 
 # --------------------------------------------------------------------- #

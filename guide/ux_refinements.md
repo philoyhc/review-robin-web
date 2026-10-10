@@ -321,7 +321,8 @@ this item.
 
 ### Definition of done
 
-- §9 defines four chip types, Fixed among them, with a standard.
+- §9 defines four chip types, Fixed among them, with a standard (five
+  since Item 7).
 - Session Home's tab-holds-data chips and the two Visibility cells
   render as fixed chips; a test pins each.
 - `guide/things_to_check_in_browser.md` has a section per PR.
@@ -704,4 +705,102 @@ Taken 2026-10-10 at `c8343bf3`.
 ### Doc impact
 
 - None: no live spec or doc names the table.
+
+---
+
+## Item 7 — The Assignments status table's checkboxes become chips
+
+### Opportunity
+
+The 2026-10-10 checkbox sweep: the Assignments page's Per-instrument
+status table still has two checkboxes of the kind Band 3 dropped. A
+**Show** column's checkbox filters the preview table, and the **Self
+review** cell's checkbox (beside a count pill) bulk-flips the
+instrument's self-review rows, with a third, indeterminate state when
+some are in and some out.
+
+### Decision
+
+The author's ruling (2026-10-10):
+
+- **The instrument's name is the filter**, an on/off chip; the Show
+  column goes.
+- **Self review is an on/off chip, "Include N self reviews"**, N the
+  included rows, replacing the count pill: dark when all are in, light
+  when none, amber when some.
+- **Type is a display pill.**
+
+**Rejected:** "Show N pairs" for the Self review chip, the first
+wording: the box doesn't filter anything, it changes who reviews whom,
+so "Show" would read as the filter beside it.
+
+### Semantics
+
+- **Mixed:** the box is unticked, so a click includes them all, as the
+  checkbox's did. A dark chip's click excludes them all.
+- **No counted rows** (no overlaps, or every self-review row has an
+  inactive side): "—", no chip. "Excluded by rule" is unchanged.
+- **Locked session:** the box is disabled, so the chip reads fixed
+  (`label.tag-chip:has(> input:disabled)`), amber if mixed.
+
+### Judgment calls — decided
+
+- "review" for N = 1. The partial state is a fifth row in
+  `spec/ui_elements.md` §9's chip table, not a new class: `pill-empty`
+  already gives a `tag-chip` its amber.
+
+### Blast radius (measured)
+
+Taken 2026-10-10 at `c8343bf3`.
+
+| What | Count | Command |
+|---|---|---|
+| Template | 1 (`session_assignments.html`) | `grep -rln "data-filter-instrument" app` |
+| Tests pinning the old cells | 4 files (3 needed edits) | `grep -rln "data-filter-instrument\|data-self-review-instrument\|data-self-review-count" tests` |
+| Specs | 5 | `grep -rln "Self review checkbox\|Show checkbox\|filter checkbox\|self-review toggle" spec` |
+
+### Status
+
+- **Built 2026-10-10** in one PR. Found at build: no view change was
+  needed (`self_review_active_count` and the three states were already
+  there). The cold read found stale prose (five `spec/assignments.md`
+  passages, `README.md`, three docstrings, the Guide's alt text) and
+  an accessibility gap: the box keeps `indeterminate` so a screen
+  reader still hears "mixed", and its name now carries the chip's
+  text. All fixed in the PR. **The Guide's `assignments-page` screencap
+  pair shows the old checkboxes**; its retake is the author's.
+
+### PR ladder
+
+1. **The chips.** Template, three tests, a browser test of both
+   chips, the specs. One code slice outside a ladder, so it takes its
+   own `diff-reviewer` read; `spec-writer` because it touches `spec/`.
+
+### Definition of done
+
+- The status table has no checkbox in sight and no Show column; a test
+  pins each chip and the three fills.
+- `guide/things_to_check_in_browser.md` has a section for the PR.
+- `### Doc impact` current; `spec-writer` flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- The Guide's `assignments-page` screencaps: a retake, when the author
+  is at the capturing machine.
+
+### Out of scope
+
+- The preview table's own row checkboxes (selection for bulk actions).
+
+### Doc impact
+
+- `spec/assignments.md` — "Per-instrument status table": the Instrument, Type and Self review columns; Show removed.
+- `spec/ui_elements.md` — §9: the on/off chip with a partial state.
+- `spec/operator_ui_concept.md` — the Assignments status card.
+- `spec/operator_button_audit.md` — the status table's controls are chips.
+- `spec/rrw_functional_spec.md` — the Per-instrument status card.
+- `guide/things_to_check_in_browser.md` — a section for the PR.
+- `README.md` — the `assignments` route row.
+- `app/web/templates/guide.html` — the Assignments figure's alt text (found at build).
 
