@@ -137,7 +137,8 @@ Taken 2026-10-09 at `2569876a`.
 
 ### Out of scope
 
-- The response row's other controls (+, ⑂, ↰ / ↳, R, ≡, ▲ ▼, X).
+- What the response row's other controls (+, ⑂, ↰ / ↳, R, ≡, ▲ ▼, X)
+  do. Only their widths change, per the 2026-10-10 judgment call.
 - Redesigning the response row so the name box moves out of it.
 
 ### Doc impact
