@@ -265,8 +265,17 @@
     </figure>
     <p>
       The expanded card has <strong>three main parts</strong>. Unlock the card
-      to make any edits, and don't forget to save. The first part lets you
-      rename the instrument and set its assignment rule:
+      to make any edits, and don't forget to save.
+    </p>
+    <p>
+      The first part lets you rename the instrument and set its assignment
+      rule. Each instrument carries its own assignment rule, set on the
+      <strong>Instrument assignment rule</strong> band: who does the review,
+      who is being reviewed, and whether the unit of review is each reviewee
+      individually or a group. Setting all three to <em>all, all,
+      individual</em> pairs everyone eligible with everyone else. To narrow
+      it, switch a link to <strong>filter</strong> and choose the tags and
+      connectors by clicking the pills.
     </p>
     <figure class="guide-figure">
       <img src="/static/guide/instrument-card-assignment-rule.png"
@@ -276,7 +285,8 @@
                 Save and Cancel buttons, and the Instrument assignment rule
                 band showing Who does the review set to ALL, Who is being
                 reviewed set to FILTER USING TAGS with Group IS THE SAME AS
-                Group, and Unit of review set to INDIVIDUAL.">
+                Group AND Team IS THE SAME AS Team, and Unit of review set to
+                INDIVIDUAL.">
       <img src="/static/guide/instrument-card-assignment-rule-dark.png"
            data-theme-variant="dark" loading="lazy"
            alt="The top of an unlocked instrument card named Group Peer
@@ -284,24 +294,16 @@
                 Save and Cancel buttons, and the Instrument assignment rule
                 band showing Who does the review set to ALL, Who is being
                 reviewed set to FILTER USING TAGS with Group IS THE SAME AS
-                Group, and Unit of review set to INDIVIDUAL.">
+                Group AND Team IS THE SAME AS Team, and Unit of review set to
+                INDIVIDUAL.">
     </figure>
     <p>
-      Each instrument carries its own assignment rule, set on the
-      <strong>Instrument assignment rule</strong> band: who does the review,
-      who is being reviewed, and whether the unit of review is each reviewee
-      individually or a group. Setting all three to <em>all, all,
-      individual</em> pairs everyone eligible with everyone else. To narrow
-      it, switch a link to <strong>filter</strong> and choose the tags and
-      connectors by clicking the pills. In the screencap above the instrument
-      has a rule where all reviewers are given this form, each reviewing the
-      people who share the same Tag 1 as them (here given the friendly label
-      <em>Group</em>), and they review each subject individually rather than
-      as a group.
-    </p>
-    <p>
-      The assignment pairs are not generated here: that happens when you
-      Prepare the session.
+      In the screencap above the instrument has a rule where all reviewers
+      are given this form, each reviewing the people who share both the same
+      Tag 1 (here given the friendly label <em>Group</em>) and the same Tag 2
+      (friendly label <em>Team</em>), and they review each subject
+      individually rather than as a group. The assignment pairs are not
+      generated here: that happens when you Prepare the session.
     </p>
     <p>
       The second part is a <strong>preview of what the reviewer will see</strong>.
@@ -315,20 +317,24 @@
     <figure class="guide-figure">
       <img src="/static/guide/instrument-card-preview.png"
            data-theme-variant="light" loading="lazy"
-           alt="The Preview review instrument part of the card: on the left the
-                instrument's name card over the Who can see what you wrote table,
-                on the right the Rating and Comments help-text cards, then the
-                required and all-items counts and a sample reviewee row with
-                Tutor, Group, Team and Profile columns and the Rating and
-                Comments inputs.">
+           alt="The Preview review instrument part of a locked card: on the
+                left the instrument's name and description over the Who can
+                see what you wrote table, where You see raw responses while
+                the session is ongoing and nothing once released, and
+                Reviewees see nothing; on the right the Rating and Comments
+                help-text cards; then the required and all-items counts and
+                a sample reviewee row with Profile, Tutor, Group and Team
+                columns and the Rating and Comments inputs.">
       <img src="/static/guide/instrument-card-preview-dark.png"
            data-theme-variant="dark" loading="lazy"
-           alt="The Preview review instrument part of the card: on the left the
-                instrument's name card over the Who can see what you wrote table,
-                on the right the Rating and Comments help-text cards, then the
-                required and all-items counts and a sample reviewee row with
-                Tutor, Group, Team and Profile columns and the Rating and
-                Comments inputs.">
+           alt="The Preview review instrument part of a locked card: on the
+                left the instrument's name and description over the Who can
+                see what you wrote table, where You see raw responses while
+                the session is ongoing and nothing once released, and
+                Reviewees see nothing; on the right the Rating and Comments
+                help-text cards; then the required and all-items counts and
+                a sample reviewee row with Profile, Tutor, Group and Team
+                columns and the Rating and Comments inputs.">
     </figure>
     <p>
       Per instrument you can set <strong>who sees responses and in what
@@ -336,42 +342,49 @@
       — for reviewers, reviewees and observers. A reviewer reads back only
       their own answers, so their released cell is raw or off. Unlock the card and
       click a cell in the <strong>Who can see what you wrote</strong> table
-      to cycle it; the cells that don't change are plain labels. Observers appear
+      to cycle it; the cells that can't change carry a lock. Observers appear
       only while the card is unlocked, since reviewers never see that row.
+      In the screencap above, the instrument has a description and help
+      text for both response fields, and reviewers see their own raw
+      responses while the session is ongoing but not after. The column
+      widths have also been adjusted to fit. The instrument is locked
+      (unlock it to edit).
     </p>
     <p>
       The last part lets you adjust the <strong>Display fields</strong> and
       <strong>Response fields</strong>. Click a field's chip to show or
-      hide it and ▲ ▼ to move it, and add, delete and edit response
-      fields.
+      hide it, and use ▲ ▼ to reorder them; Name and Email carry a lock,
+      since they always show.
     </p>
     <figure class="guide-figure">
       <img src="/static/guide/instrument-card-fields-and-visibility.png"
            data-theme-variant="light" loading="lazy"
-           alt="The foot of the instrument card: the Display fields table with
-                a checkbox per field and ▲ ▼ on the movable ones, the Response fields rows for
-                Rating and Comments with their type, bounds and the R, ≡, ▲ ▼
-                and X buttons, and the locked card's Replicate, Delete,
-                +Instrument, +Page break and Unlock buttons above the
-                delete-confirmation checkbox.">
+           alt="The foot of an unlocked instrument card: the Display fields
+                as chips, Name and Email each with a lock and the others with
+                ▲ ▼; the Response fields rows starting with their Rating and
+                Comments chips, then the +, ⑂ and ↰ buttons, name, type,
+                bounds and the R, ≡, ▲ ▼ and X buttons; and the Save,
+                Cancel, Replicate, Delete, +Instrument, +Page break and Lock
+                buttons above the delete-confirmation checkbox.">
       <img src="/static/guide/instrument-card-fields-and-visibility-dark.png"
            data-theme-variant="dark" loading="lazy"
-           alt="The foot of the instrument card: the Display fields table with
-                a checkbox per field and ▲ ▼ on the movable ones, the Response fields rows for
-                Rating and Comments with their type, bounds and the R, ≡, ▲ ▼
-                and X buttons, and the locked card's Replicate, Delete,
-                +Instrument, +Page break and Unlock buttons above the
-                delete-confirmation checkbox.">
+           alt="The foot of an unlocked instrument card: the Display fields
+                as chips, Name and Email each with a lock and the others with
+                ▲ ▼; the Response fields rows starting with their Rating and
+                Comments chips, then the +, ⑂ and ↰ buttons, name, type,
+                bounds and the R, ≡, ▲ ▼ and X buttons; and the Save,
+                Cancel, Replicate, Delete, +Instrument, +Page break and Lock
+                buttons above the delete-confirmation checkbox.">
     </figure>
     <p>
-      Use <strong>+</strong> to add a field below a row
+      Use the <strong>+</strong> button to add a response field below a row
       (until you type a name, it goes by <em>Field 1</em>, <em>Field 2</em>
       and so on, shown grayed out, and a name you clear goes back to that
-      label) and <strong>X</strong> to delete
-      one, the <strong>R</strong> button to make a field required, and the
+      label), the <strong>X</strong> button to delete one, the
+      <strong>R</strong> button to make a field required, and the
       <strong>≡</strong> button to call up a help-text box for that field.
       The preview follows each edit once the field's name and bounds are
-      valid; a row whose bounds aren't valid yet is marked in amber, and the
+      valid. A row whose bounds aren't valid yet is marked in amber, and the
       preview keeps its last valid shape. Don't forget to save any edits for
       them to take effect.
     </p>
@@ -383,20 +396,19 @@
     </p>
     <p>
       An instrument counts as set up once it has at least one visible response
-      field and all three assignment links have been set — which is what the
+      field and all three assignment links set. This is also what the
       status bar's <strong>Instruments</strong> pill counts.
     </p>
 
     <h3>Advanced features: conditional branching</h3>
     <p>
       The <strong>⑂</strong> button adds a conditional branch below a field,
-      the <strong>↰</strong> button joins the current row to a conditional
-      branch above, and the
+      with a new field in it. The <strong>↰</strong> button joins the current
+      row to a conditional branch above, or, when the field directly above
+      is an Integer, Decimal or List field with no branch of its own, starts
+      a branch on it with this row as its only field. The
       <strong>↳</strong> button detaches the current row from its conditional
-      branch. In the example below, Rating and Comments can only be answered
-      if the reviewer gives more than 3 for Familiarity; and if Rating is less
-      than 3 or more than 4, Comments becomes required (else it is shown but
-      optional). A field inside a branch can have a branch of its own, one
+      branch. A field inside a branch can have a branch of its own, one
       level down. Once reviewers have answered fields in a branch, its
       condition, and which fields belong to it, can no longer be changed; the
       same holds for any branch above it. Only 2 levels of branching are
@@ -406,21 +418,31 @@
     <figure class="guide-figure">
       <img src="/static/guide/instrument-card-branching.png"
            data-theme-variant="light" loading="lazy"
-           alt="The Response fields rows with a branch inside a branch: Familiarity,
-                with the condition row If the above is more than (exclusive) 3
-                then Show the below; Rating in that branch, one column right
-                under a bar, with the condition is outside (exclusive) 3 to 4
-                then Require the below (else, optional); and Comments in
-                Rating's branch, one column further right under a second bar.">
+           alt="The Response fields rows with a branch inside a branch:
+                Familiarity, with the condition row If the above is more
+                than (exclusive) 3 then Show the below; Rating in that
+                branch, one column right under a bar, with the condition is
+                outside (exclusive) 3 to 4 then Require the below (else,
+                optional); and Comments in Rating's branch, one column
+                further right under a second bar. Each row starts with its
+                field's chip.">
       <img src="/static/guide/instrument-card-branching-dark.png"
            data-theme-variant="dark" loading="lazy"
-           alt="The Response fields rows with a branch inside a branch: Familiarity,
-                with the condition row If the above is more than (exclusive) 3
-                then Show the below; Rating in that branch, one column right
-                under a bar, with the condition is outside (exclusive) 3 to 4
-                then Require the below (else, optional); and Comments in
-                Rating's branch, one column further right under a second bar.">
+           alt="The Response fields rows with a branch inside a branch:
+                Familiarity, with the condition row If the above is more
+                than (exclusive) 3 then Show the below; Rating in that
+                branch, one column right under a bar, with the condition is
+                outside (exclusive) 3 to 4 then Require the below (else,
+                optional); and Comments in Rating's branch, one column
+                further right under a second bar. Each row starts with its
+                field's chip.">
     </figure>
+    <p>
+      In the example above, Rating and Comments can only be answered if the
+      reviewer gives more than 3 for Familiarity; and if Rating is less than
+      3 or more than 4, Comments becomes required (else it is shown but
+      optional).
+    </p>
 
     <h3>Optional: relationships and observers</h3>
     <p>
