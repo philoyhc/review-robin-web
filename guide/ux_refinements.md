@@ -470,3 +470,80 @@ Taken 2026-10-10 at `4d993658`.
 - `spec/instruments.md` — "Join (↰) and detach (↳)": ↰ joins a branch that ends directly above, and is off otherwise; ⑂ is the only way to start one. *(Reversed 2026-10-10: ↰ starts one on a plain number or List field again.)*
 - `spec/operator_button_audit.md` — row #245: ↰ joins the branch above and never starts one (found at build). *(Reversed 2026-10-10.)*
 - `guide/things_to_check_in_browser.md` — a section for the PR.
+
+---
+
+## Item 4 — The Guide's Instruments section catches up
+
+### Opportunity
+
+Items 1–3 changed what Band 3 looks like and what ↰ does, and the
+Guide's Instruments section (`/guide`, `app/web/templates/guide.html`)
+still showed checkboxes and described the pre-chip card. The author
+revised the section and retook its screencaps (`Guide_v5a.docx`,
+2026-10-10) once the behaviors settled.
+
+### Decision
+
+Take the author's revision as written, with three factual fixes the
+check found (author may veto on the PR): the Visibility cells that can't
+change "carry a lock" (Item 2), not "are plain labels"; ↰'s branch-start
+condition spelled out, and ⑂'s new field named; one run-on sentence
+(the bounds one) split. Alt text rewritten for the four new figure pairs.
+**Rejected:** rescaling the wider captures here (no image tool in the
+container); the author can retake them at the usual width.
+
+### Semantics
+
+- The collapsed-bar figure is unchanged; the other four pairs are
+  replaced under the same filenames, so no reference moves.
+
+### Judgment calls — decided
+
+- None.
+
+### Blast radius (measured)
+
+Taken 2026-10-10 at `b2065e3c`: one template section
+(`grep -n "Build the form (Instruments)" app/web/templates/guide.html`),
+eight PNGs in `app/web/static/guide/`, no spec quotes the Guide text
+(`grep -rln "plain labels" spec docs` finds none).
+
+### Status
+
+- **Built 2026-10-10** in one PR. The fields and branching captures are
+  ~2690px wide against ~1756px for the others; every capture renders at
+  1200px, so their text reads about a third smaller. The fields pair was
+  retaken (`Guide_v5b`) so Rating's bounds match the preview, 0–5.
+  The branching pair keeps Rating at 1–5, a separate example (author,
+  2026-10-10). The three wording fixes accepted, plus a
+  fourth from the cold read: Name and Email "aren't optional" (author,
+  2026-10-10).
+
+### PR ladder
+
+1. **The section and its captures.** `guide.html`'s Instruments section,
+   the eight PNGs, and the browser check.
+
+### Definition of done
+
+- The Guide's Instruments section matches the app after Items 1–3.
+- `guide/things_to_check_in_browser.md` has a section for the PR.
+- `### Status` compacted.
+
+### Open questions
+
+- The fields and branching pairs are a third scale, which
+  `spec/ui_elements.md` §10's two capture widths don't allow for: retake
+  them at ~1750px, or rule an exception there — the author. A retake
+  waits until the author is back at the capturing machine; it can also
+  take the fields pair after Save, as the current one shows an unsaved
+  edit.
+
+### Out of scope
+
+- The rest of the Guide.
+
+### Doc impact
+
+- `guide/things_to_check_in_browser.md` — a section for the PR.
