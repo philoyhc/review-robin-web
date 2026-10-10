@@ -684,10 +684,9 @@ and the pointer like `is-disabled`, but is not struck through, because
 it still says on or off. On takes the card's display-value colors
 (`--config-value-bg` / `--config-value-fg`) rather than the reserved
 shade; off is faded. **A locked Instruments card's Band 3 chips read as
-the display pills they replaced** (the author, 2026-10-10): the plain
-`pill-count` fill with no edge, pointer or lock glyph, an unticked field
-faded, read off the card's `data-instrument-locked` so an in-page lock
-or unlock repaints them.
+plain `pill-count` pills** (the author, 2026-10-10): no edge, pointer or
+lock glyph, an unticked field faded, read off the card's
+`data-instrument-locked` so an in-page lock or unlock repaints them.
 
 `.severity-chip` on Validate is the shape this generalises: an outlined
 pill, with `.active` taking the shade on its border and text.
@@ -716,10 +715,11 @@ fill only while its box is ticked, so a switch fixed off stays the off
 chip, with the glyph. A `<label>` chip whose box is disabled is fixed
 too, read off the box (`label.tag-chip:has(> input:disabled)`), so a
 script that disables or re-enables the box needs no class in step: the
-display-field table's Name and Email chips, and on a group-scoped
+display-field table's Name and Email chips, on a group-scoped
 instrument the fields a group row can't show (`spec/instruments.md`
-"Display-field table"). It is per item: a card's
-locked view stays `is-locked`. Its other use is the Instruments
+"Display-field table"), and a response field whose branch parent is
+hidden ("Response fields"). It is per item: a card's locked view stays
+`is-locked`, or on a locked Instruments card the plain pill (above). Its other use is the Instruments
 Visibility card's two cells whose mode isn't the operator's to choose
 (`spec/instruments.md` "Visibility card").
 

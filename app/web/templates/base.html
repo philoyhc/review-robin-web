@@ -2880,8 +2880,9 @@
       /* Band 3's response-field table (19T Item 9). One <tbody> per
          field, ruled underneath and not inside, so a branch can later
          join its parent's <tbody> as one ruled group
-         (guide/archive/advanced_instruments.md Item 1). The name and type
-         columns take fixed shares; the bounds take the rest. */
+         (guide/archive/advanced_instruments.md Item 1). The name column
+         takes a fixed share and the type column a fixed width (below);
+         the bounds take the rest. */
       body.ui-v2 table.rf-table > tbody > tr > td {
         padding: var(--space-1);
         border-bottom: 0;
@@ -2951,8 +2952,8 @@
         min-width: 3.5rem;
       }
       /* A branch in Band 3's response-field table (19T Item 10). The bar
-         runs down the checkbox column from the parent's checkbox through
-         its condition and governed rows, broad and pale (the author,
+         runs down the parent's + column (its checkbox column before
+         ux_refinements Item 1) through its condition and governed rows, broad and pale (the author,
          2026-09-27); the condition row reads "If the above [operator]
          [value] then [mode]" (19T Item 13). A branch inside a branch
          runs its own bar one column right (19T Item 14). */

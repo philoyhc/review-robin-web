@@ -989,7 +989,7 @@ leading columns on every row — see
 
 | Control | Bound to | Notes |
 |---|---|---|
-| **Name chip** (`label.tag-chip.rf-name-chip`, `spec/ui_elements.md` §9) around the visually hidden **Active** checkbox | `InstrumentResponseField.visible` | The field's selection — whether it renders on the participant surfaces and their CSVs (see below) — as an on/off chip labeled with the field's name, mirrored live from the name box (an empty box: the default it shows muted), flush left and capped at 8em; a longer name ends in "…" and shows in full on hover. Unticking a field with saved responses asks to confirm first — "Hide … from the reviewer surface?", naming the response count and that the data is preserved for audit. An inactive row is not dimmed. A governed field whose parent is hidden has its box disabled, so its chip is a fixed switch held off, its tooltip saying why. |
+| **Name chip** (`label.tag-chip.rf-name-chip`, `spec/ui_elements.md` §9) around the visually hidden **Active** checkbox | `InstrumentResponseField.visible` | The field's selection — whether it renders on the participant surfaces and their CSVs (see below) — as an on/off chip labeled with the field's name, mirrored live from the name box (an empty box: the default it shows muted), flush left and capped at 8em; a longer name ends in "…" and shows in full on hover. Unticking a field with saved responses asks to confirm first — "Hide … from the reviewer surface?", naming the response count and that the data is preserved for audit. An inactive row is not dimmed. A governed field whose parent is hidden has its box disabled, so its chip is a fixed switch held off, its tooltip saying why. On a locked card it reads as a plain display pill, an unticked field faded (`spec/ui_elements.md` §9). |
 | **+** button | — | Inserts a new row (its own `<tbody>` group) directly after this one's, seeded with the next default label (see "A field's default label" below). On a governed row it adds a field to the same branch instead, directly after the row's unit — the row, its condition row and every deeper row (see ["Branching between response fields"](#branching-between-response-fields)). |
 | **⑂** / **↰** / **↳** | `branch_parent_id` / `branch_op` / `branch_value` / `branch_mode` | Fork, join and detach — see ["Branching between response fields"](#branching-between-response-fields) below. |
 | Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Empty until typed — see "A field's default label" below. |
@@ -1054,12 +1054,12 @@ the per-field routes `/fields`, `/fields/add-row`,
 and `/display-fields`, remain available to fixture and programmatic
 callers only.
 
-`InstrumentResponseField.visible` — read live off each row's Active
-checkbox — is what the reviewer surface form, the reviewer summary
+`InstrumentResponseField.visible` — read live off each row's name chip
+(its hidden Active checkbox) — is what the reviewer surface form, the reviewer summary
 HTML, the reviewer-record CSV, the reviewee results page and the
 observer collation page and its per-instrument CSV filter response
 fields by it.
-Unticking Active drops the column from every participant-facing render
+Turning a field's chip off drops the column from every participant-facing render
 in one step. The operator's own extracts keep it, and the row itself
 stays present in Band 3 so its bounds and help text remain editable.
 
@@ -1650,7 +1650,7 @@ of rules against instruments. Active ones that surface here
   response fields.
 - **`instruments.no_visible_response_fields`** (warning) — every
   response field has `visible=False`. Reviewer page would render
-  empty; toggle a row's Visible checkbox.
+  empty; turn on a field's name chip.
 - **`instruments.no_display_fields`** (warning) — instrument has
   zero display fields. Reviewer surface still works (Name + Email
   always render) but is sparse.

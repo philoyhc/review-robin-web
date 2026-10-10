@@ -191,8 +191,8 @@ section (git history keeps it), so this file lists only what is owed.
 
 ## Observers see what reviewers see (A3, A18)
 
-- [ ] **A hidden field stays hidden.** On an instrument, untick a
-  response field's Active box. As an observer on the collation page,
+- [ ] **A hidden field stays hidden.** On an instrument, click a
+  response field's chip off. As an observer on the collation page,
   the field has no column, and the instrument's Download CSV has no
   column for it either. The operator's By-instrument extract still has
   it.
@@ -391,3 +391,6 @@ section (git history keeps it), so this file lists only what is owed.
   dropdown is about an "Agreement" wide and its open list isn't cut;
   Min / Max / Step still show "2000" whole. Check at a 1366px window and
   in both themes.
+- [ ] **The Guide's screencaps** (`instrument-card-fields-and-visibility`,
+  light and dark) still show checkboxes in Band 3; retake them, and update
+  their alt text to name the chips.

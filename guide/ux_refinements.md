@@ -89,6 +89,8 @@ Both sides become type 1 chips that wrap the existing checkbox:
   - +, ⑂ and ↰ / ↳ take the width of R, ≡, ▲, ▼ and X, which set the
     standard: `--rf-glyph-width` (2.25rem today, also the width of each
     empty `td.rf-slot`) becomes that button width.
+    *Found at build (2026-10-10): the five weren't one width (R ≡ X
+    ~31px, ▲ ▼ 36px), so all eight take 2rem, R and X's own.*
 - **The name chip is the row's first column at every level** (author,
   2026-10-10). The Active checkbox moves one column right per branch
   level, into columns the glyph buttons share, so a chip there would
@@ -137,6 +139,15 @@ Taken 2026-10-09 at `2569876a`.
   the chip, and a hidden parent's fixed-off chips; all three fail
   without the change. Nine tests that pinned the checkbox column were
   moved to the new layout, two browser ones now click the chip.
+- **Reads:** two `spec-writer` verifies (one per PR) and one cumulative
+  `diff-reviewer` read from `212042cd`. The read found one defect: a
+  pending row whose default another row's name took kept its old chip
+  label (a pending row never commits, so never recomputed); fixed, with a
+  browser test that fails without it. It also asked for the box's own
+  tooltip back on display fields, the hide confirm's "Tick Active" wording,
+  the Guide's checkbox sentence, a browser test of the script-built
+  column order, and stale comments and checklist rows; all done. Codex
+  on #2936 found the locked-card look (above).
 
 ### PR ladder
 
@@ -188,6 +199,10 @@ Taken 2026-10-09 at `2569876a`.
 
 - `spec/instruments.md` — Display fields rows are on/off chips (PR 1); the Response fields Active checkbox is a name chip (PR 2).
 - `spec/ui_elements.md` — `rf-table` / `rf-active-cell` describe the name chip, its cap, the type dropdown's cap, the bounds boxes' widths and the glyph-button width (PR 2).
+- `spec/operator_button_audit.md` — §9c: each Band 3 row carries its field's chip (PR 1, PR 2; found at build).
+- `spec/rrw_functional_spec.md` — the Band 3 bullet names the name chip (PR 2; found at build).
+- `spec/reviewer-surface.md` — the dropped-fields notice names the row's name chip (PR 2; found at build).
+- `app/web/templates/guide.html` — the Guide's Band 3 sentence says to click a field's chip; its screencaps are the author's to retake (PR 2; found at build).
 - `guide/things_to_check_in_browser.md` — a section per PR.
 
 ---

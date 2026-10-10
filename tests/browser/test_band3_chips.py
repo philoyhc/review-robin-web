@@ -161,6 +161,8 @@ def test_a_locked_cards_chips_drop_the_edge_until_it_unlocks(
     unlock(card)
     assert _style(tag, "cursor") == "pointer"
     assert _style(tag, "box-shadow") != "none"
+
+
 # ---- Response fields: name chips (ux_refinements Item 1, PR 2) ----
 
 
@@ -250,3 +252,82 @@ def test_a_hidden_parents_branch_chips_are_fixed_off(
     assert _style(chip, "background-color") == on_fill
     assert _style(chip, "cursor") == "pointer"
     assert "svg" not in _glyph(chip)
+
+
+def test_a_pending_rows_chip_follows_its_default_when_another_takes_it(
+    page: Page, new_session: Callable[[], int]
+) -> None:
+    """The cold read: a name edit can move another row's default, and a
+    pending row (one that can't commit) still relabels its chip."""
+    card = open_unlocked(page, new_session())
+    rows(card).first.locator("[data-new-model-rf-add]").click()
+    added = rows(card).nth(1)
+    expect(_rf_chip(added)).to_have_text(re.compile(r"^Field \d+$"))
+    # The default as typed (inner_text would give the pill's uppercase).
+    taken = added.locator("[data-new-model-rf-name]").get_attribute("placeholder") or ""
+    expect(_rf_chip(added).locator("[data-new-model-rf-chip-label]")).to_have_text(taken)
+    added.locator("[data-new-model-rf-data-type]").select_option("integer")
+    added.locator('[data-new-model-rf-bound="min"]').fill("abc")
+    expect(added).to_have_attribute("data-row-pending", "true")
+
+    comments = rows(card).last
+    comments.locator("[data-new-model-rf-name]").fill(taken)
+    placeholder = added.locator("[data-new-model-rf-name]")
+    expect(placeholder).not_to_have_attribute("placeholder", taken)
+    expect(_rf_chip(added).locator("[data-new-model-rf-chip-label]")).to_have_text(
+        placeholder.get_attribute("placeholder") or ""
+    )
+    expect(added.locator("[data-new-model-rf-active]")).to_have_attribute(
+        "aria-label", "Show " + (placeholder.get_attribute("placeholder") or "")
+    )
+
+
+def _leading(row: Locator) -> list[str]:
+    """Each leading cell's role, up to the name: chip, bar, or the
+    control it holds."""
+    return row.evaluate(
+        """r => {
+          const out = [];
+          for (const td of r.cells) {
+            if (td.classList.contains('rf-name')) { break; }
+            if (td.querySelector('label.rf-name-chip')) { out.push('chip'); }
+            else if (td.classList.contains('rf-branch-bar')) { out.push('bar'); }
+            else if (td.querySelector('[data-new-model-rf-add]')) {
+              out.push(td.classList.contains('rf-branch-bar-start') ? '+start' : '+');
+            }
+            else if (td.querySelector('[data-new-model-rf-fork]')) { out.push('fork'); }
+            else if (td.querySelector('[data-new-model-rf-nest]')) { out.push('nest'); }
+            else if (td.querySelector('[data-new-model-rf-join]')) { out.push('join'); }
+            else { out.push('slot'); }
+          }
+          return out;
+        }"""
+    )
+
+
+def test_the_row_script_keeps_the_chip_first_at_every_level(
+    page: Page, new_session: Callable[[], int]
+) -> None:
+    """The cold read: the rows the script builds and re-levels (fork, a
+    fork one level down, ending a branch) keep the chip first and start a
+    parent's bar at its +."""
+    card = open_unlocked(page, new_session())
+    parent = rows(card).first
+    parent.locator("[data-new-model-rf-fork]").click()
+    governed = card.locator("[data-new-model-rf-level='1']").first
+    governed.locator("[data-new-model-rf-name]").fill("Strength")
+    governed.locator("[data-new-model-rf-data-type]").select_option("integer")
+    governed.locator("[data-new-model-rf-fork]").click()
+    inner = card.locator("[data-new-model-rf-level='2']").first
+
+    assert _leading(parent) == ["chip", "+start", "fork", "join", "slot", "slot"]
+    assert _leading(governed) == ["chip", "bar", "+start", "fork", "nest", "join"]
+    assert _leading(inner) == ["chip", "bar", "bar", "+", "slot", "join"]
+    for condition in card.locator("[data-new-model-rf-condition]").all():
+        first = condition.evaluate("c => c.cells[0].className")
+        assert "rf-active-cell" in first, first
+
+    # Ending the inner branch (↳ on its only field) takes the bar's start
+    # off the governed row's + again.
+    inner.locator("[data-new-model-rf-join]").click()
+    assert _leading(governed)[2] == "+"

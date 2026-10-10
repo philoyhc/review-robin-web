@@ -1943,8 +1943,10 @@
               if (locked) { box.checked = !off; }
               else if (off) { box.checked = false; }
               box.disabled = locked || off;
-              // The tooltip sits on the chip, the box being hidden.
-              box.parentNode.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');
+              // The tooltip sits on the chip, the box being hidden, and on
+              // the box too, for assistive technology.
+              box.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');
+              box.parentNode.title = box.title;
             });
           }
           // 19T Item 8 — the display fields are Band 3's table rows, in
@@ -3097,7 +3099,7 @@
                   + responseCount + ' saved response' + pluralR
                   + ' will be preserved for audit but no longer appear '
                   + 'on the surface, summary, or reviewer-record CSV. '
-                  + 'Tick Active again later to restore the column.'
+                  + 'Click its chip again later to restore the column.'
                 );
                 if (!confirmed) { return false; }
                 acknowledgedDrop = true;
@@ -4058,6 +4060,7 @@
                            {% if _on %}checked{% endif %}
                            aria-label="Show {{ field.label }}"
                            data-title-on="{{ _title_on }}"
+                           title="{{ 'Not shown on group rows' if _group_off else _title_on }}"
                            onchange="newModelDfToggle(this)">{{ field.label }}</label></td>
                   <td class="col-shrink">
                     {% if not field.locked %}
@@ -4086,9 +4089,10 @@
           {# 19T Item 9 — the rows are a table (`rf-table`, base.html),
              one <tbody> per field so a branch can later join its parent's
              group under one rule (guide/archive/advanced_instruments.md Item 1).
-             Each row reads Active, +, ⑂, join (↰ / ↳, 19T Item 10),
-             name, type, bounds, R, ≡, ▲, ▼, X. The Active checkbox is
-             the field's selection; ▲ ▼ move the row's <tbody>. A row
+             Each row reads its name chip, +, ⑂, join (↰ / ↳, 19T Item
+             10), name, type, bounds, R, ≡, ▲, ▼, X. The chip's hidden
+             Active checkbox is the field's selection (ux_refinements
+             Item 1); ▲ ▼ move the row's <tbody>. A row
              commits its name and shape to the preview whenever they are
              valid (the pills and ✓ retired, 19T Item 9).
              The X button drops a row (never the last row); each row's
@@ -4192,11 +4196,11 @@
             {# 19T Item 10 — one <tbody> per group: a field on its own, or
                a parent with its condition row and the fields it governs
                (``views._response_field_groups``), a field inside it
-               with its own branch too (19T Item 14). A governed row
-               shifts one column right per level, into the two slots after
-               join: the bar in the checkbox column, its checkbox in the +
-               column, its + in the ⑂ column; from the name onward every
-               row aligns. A branch with responses anywhere below its
+               with its own branch too (19T Item 14). Each row's name chip
+               comes first and never moves (ux_refinements Item 1); after
+               it a governed row shifts one column right per level, into
+               the two slots after join: the bar in the + column, its + in
+               the ⑂ column; from the name onward every row aligns. A branch with responses anywhere below its
                parent is locked: its condition and membership can't
                change. The lock is per branch (``rf.branch_locked``,
                ``condition.locked``; the row script's
@@ -5789,7 +5793,11 @@
           window.newModelRfRecomputeActionStates(row);
           window.newModelRfMaybeCommit(row);
           changed.forEach(function (other) {
-            if (other !== row) { window.newModelRfMaybeCommit(other); }
+            if (other === row) { return; }
+            // Its name chip goes by the default too, committed or not
+            // (ux_refinements Item 1: a pending row never commits).
+            window.newModelRfRecomputeActionStates(other);
+            window.newModelRfMaybeCommit(other);
           });
         };
         // Sync each row on page load so the initial data-type pick
