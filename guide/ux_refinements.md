@@ -74,6 +74,16 @@ Both sides become type 1 chips that wrap the existing checkbox:
 - The Min/Max/default boxes get a minimum width so the narrower name
   column doesn't clip them; the mockup clipped "2000" to "200".
   (2026-10-09)
+- **Room for the chip comes from the rest of the row** (author,
+  2026-10-10):
+  - the type dropdown is capped at about the width of "Agreement  "
+    (measured from the font, like the chip cap); its open list keeps its
+    natural width;
+  - the Min/Max/default boxes are shaved slightly, still wide enough to
+    show "2000" unclipped;
+  - +, ⑂ and ↰ / ↳ take the width of R, ≡, ▲, ▼ and X, which set the
+    standard: `--rf-glyph-width` (2.25rem today, also the width of each
+    empty `td.rf-slot`) becomes that button width.
 
 ### Blast radius (measured)
 
@@ -97,7 +107,9 @@ Taken 2026-10-09 at `2569876a`.
    list) updated.
 2. **Response fields name chips.** The Active checkbox becomes a name
    chip, mirrored live, left-aligned and capped, with the bounds boxes'
-   minimum width. A browser test renames a field and checks the chip
+   minimum width. The row makes room per the 2026-10-10 judgment call:
+   type dropdown capped, bounds boxes shaved, glyph buttons at the R
+   button's width. A browser test renames a field and checks the chip
    follows, and toggles a field with responses to confirm the confirm
    still fires, and unticks a parent to check its governed fields'
    chips take the fixed-off look (no edge or pointer, lock glyph) and
@@ -131,7 +143,7 @@ Taken 2026-10-09 at `2569876a`.
 ### Doc impact
 
 - `spec/instruments.md` — Display fields rows are on/off chips (PR 1); the Response fields Active checkbox is a name chip (PR 2).
-- `spec/ui_elements.md` — `rf-table` / `rf-active-cell` describe the name chip, its cap and the bounds minimum width (PR 2).
+- `spec/ui_elements.md` — `rf-table` / `rf-active-cell` describe the name chip, its cap, the type dropdown's cap, the bounds boxes' widths and the glyph-button width (PR 2).
 - `guide/things_to_check_in_browser.md` — a section per PR.
 
 ---
