@@ -202,13 +202,17 @@ def test_a_fixed_chip_drops_the_edge_and_keeps_the_fill(
     review_session = _make_session(client, db, code="ux2-fixed")
     css = client.get(f"/operator/sessions/{review_session.id}").text
 
-    block = _rule(css, "body.ui-v2 .tag-chip.is-fixed")
+    block = _rule(
+        css,
+        "body.ui-v2 .tag-chip.is-fixed,\n"
+        "      body.ui-v2 label.tag-chip:has(> input:disabled)",
+    )
     assert block is not None
     assert "cursor: default" in block
     assert "border-color: transparent" in block
     assert "box-shadow: none" in block
     assert EDGE not in block
-    assert css.index("body.ui-v2 .tag-chip.is-fixed {") > css.index(
+    assert css.index("body.ui-v2 .tag-chip.is-fixed,") > css.index(
         "body.ui-v2 .tag-chip,"
     )
     fill = _rule(
@@ -217,7 +221,11 @@ def test_a_fixed_chip_drops_the_edge_and_keeps_the_fill(
         "      body.ui-v2 label.tag-chip.is-fixed:has(> input:checked)",
     )
     assert fill is not None and "var(--selected-bg)" in fill
-    glyph = _rule(css, "body.ui-v2 .tag-chip.is-fixed::before")
+    glyph = _rule(
+        css,
+        "body.ui-v2 .tag-chip.is-fixed::before,\n"
+        "      body.ui-v2 label.tag-chip:has(> input:disabled)::before",
+    )
     assert glyph is not None and "mask:" in glyph and "currentColor" in glyph
 
 

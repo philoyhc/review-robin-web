@@ -2734,8 +2734,13 @@
          ``currentColor``, says why it doesn't move. ``is-locked`` stays the
          chip of a whole card's locked view. The dark fill follows the
          state: a ``<span>`` is always on, a ``<label>`` only while its box
-         is ticked, so a switch fixed off is the off chip with the glyph. */
-      body.ui-v2 .tag-chip.is-fixed {
+         is ticked, so a switch fixed off is the off chip with the glyph.
+         A ``<label>`` chip whose box is disabled is fixed too, read off
+         the box (ux_refinements Item 1): Band 3's display fields disable
+         and re-enable theirs as the unit of review changes, so no script
+         has to keep a class in step. */
+      body.ui-v2 .tag-chip.is-fixed,
+      body.ui-v2 label.tag-chip:has(> input:disabled) {
         cursor: default;
         border-color: transparent;
         box-shadow: none;
@@ -2745,7 +2750,8 @@
         background: var(--selected-bg);
         color: var(--selected-fg);
       }
-      body.ui-v2 .tag-chip.is-fixed::before {
+      body.ui-v2 .tag-chip.is-fixed::before,
+      body.ui-v2 label.tag-chip:has(> input:disabled)::before {
         content: "";
         display: inline-block;
         width: 0.8em;

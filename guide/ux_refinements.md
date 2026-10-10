@@ -100,6 +100,19 @@ Taken 2026-10-09 at `2569876a`.
 | Lines naming the response-field checkbox | 9 app; 6 test files | `grep -rn "data-new-model-rf-active" app \| wc -l`; `grep -rl … tests` |
 | Rules and specs naming `rf-active-cell` | 1 CSS rule; 1 test file; 2 specs | `grep -rln "rf-active-cell" app tests spec` |
 
+### Status
+
+- **PR 1 built 2026-10-10** on main `212042cd` (the base for the item's
+  cumulative read at PR 2). Each display field is a `label.tag-chip`
+  around its now visually hidden checkbox, which carries the tooltip;
+  the checkbox column is gone. Name and Email take no class: base.html
+  reads `label.tag-chip:has(> input:disabled)` as fixed, so the same
+  rule covers a field a group row can't show when grouped mode disables
+  its box. A browser test toggles a field through its chip and checks
+  both fixed looks; all three fail without the change.
+- **Found at build:** switching to group mode only marks Band 2; the
+  rows re-sync on the preview's Refresh, as before this item.
+
 ### PR ladder
 
 1. **Display fields chips.** The label pill wraps the checkbox and the

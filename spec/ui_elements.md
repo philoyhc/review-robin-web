@@ -645,12 +645,12 @@ Clear all (`.pill-tag-clear`, also on the Archived page) and AND/OR
 (`.tag-mode-chip`) chips, and a
 role pill when it is a link (`a.pill.pill-role-*`: the `/me`
 dashboard's role column and the role navigator's other-role links,
-whose `<span>` forms stay plain). Static pills carry no edge: the display-field table's
-field-label pill (`spec/instruments.md` "Display-field table") and the
+whose `<span>` forms stay plain). Static pills carry no edge: the
 Visibility card's locked preview table (`spec/instruments.md` "Visibility
-card") are the static, no-click-handler pattern. A fixed switch carries
-no edge either (`.tag-chip.is-fixed`, below). The locked Name / Email
-fields are not pills at all but that table's disabled, ticked checkboxes.
+card") is the static, no-click-handler pattern. A fixed switch carries
+no edge either (`.tag-chip.is-fixed`, below), and that includes the
+display-field table's locked Name / Email chips (`spec/instruments.md`
+"Display-field table").
 
 Three rules make that work:
 
@@ -707,7 +707,12 @@ A fixed switch keeps its siblings' dark fill so it reads as a switch
 that is on rather than a display; the glyph (a CSS mask in
 `currentColor`) says why it doesn't move. A `<label>` chip takes the
 fill only while its box is ticked, so a switch fixed off stays the off
-chip, with the glyph. It is per item: a card's
+chip, with the glyph. A `<label>` chip whose box is disabled is fixed
+too, read off the box (`label.tag-chip:has(> input:disabled)`), so a
+script that disables or re-enables the box needs no class in step: the
+display-field table's Name and Email chips, and on a group-scoped
+instrument the fields a group row can't show (`spec/instruments.md`
+"Display-field table"). It is per item: a card's
 locked view stays `is-locked`. Its other use is the Instruments
 Visibility card's two cells whose mode isn't the operator's to choose
 (`spec/instruments.md` "Visibility card").
