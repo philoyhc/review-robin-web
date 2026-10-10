@@ -53,6 +53,7 @@ class GuideSection:
 #: experience" material, not by being shown the reviewer's own section.
 SECTIONS: tuple[GuideSection, ...] = (
     GuideSection("what_it_does", OPERATOR),
+    GuideSection("controls", OPERATOR),
     GuideSection("create_and_set_up", OPERATOR),
     GuideSection("prepare_and_launch", OPERATOR),
     # The Validate page is the pre-activation gate and an operator

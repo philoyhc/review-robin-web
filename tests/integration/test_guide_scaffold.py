@@ -38,6 +38,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 # view's SECTIONS, which carries the audience mapping.
 SECTION_HEADINGS = (
     "What Review Robin Web does",
+    "Reading the controls",
     "Create and set up a session",
     "Prepare and activate",
     "Check readiness",
@@ -68,7 +69,7 @@ def test_every_committed_section_exists_in_the_template() -> None:
     """Every card the page commits to is still written.
 
     Split from the render check below at rung 7: once the filter narrows,
-    no single viewer sees all eleven, so a render can no longer prove a
+    no single viewer sees every card, so a render can no longer prove a
     card exists. Deleting a card would otherwise look identical to being
     filtered out of that viewer's page.
     """
@@ -84,7 +85,7 @@ def test_guide_renders_exactly_the_sections_its_viewer_is_owed(
 ) -> None:
     """And the render still has to agree with the view.
 
-    The conftest viewer is an operator, so the eight operator cards render
+    The conftest viewer is an operator, so the operator cards render
     and the three role-addressed ones do not. Derived from `SECTIONS`
     rather than listed, so retagging a section's audience updates both
     sides at once — a hand-kept list here would just start lying.
