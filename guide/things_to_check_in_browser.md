@@ -375,7 +375,7 @@ section (git history keeps it), so this file lists only what is owed.
 
 ## The Email Template page's confirmation chip (UX refinements Item 9)
 
-- [ ] **Emails, Responses received tab.** Under the heading, a dark chip
+- [ ] **Email Template, Responses received tab.** Under the heading, a dark chip
   reads "Send response confirmation"; the old checkbox and its "Default
   is on" line are gone. A click makes it "Don't send response
   confirmation", still dark, and Save turns on; after Save the page

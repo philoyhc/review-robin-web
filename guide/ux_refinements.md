@@ -967,7 +967,7 @@ Taken 2026-10-10 at `c8343bf3`.
 ### Doc impact
 
 - `spec/email_template_editor.md` — the Responses received tab's control is a chip.
-- `spec/operator_ui_concept.md` — the Emails composer paragraph.
+- `spec/operator_ui_concept.md` — the Email Template composer paragraph.
 - `spec/ui_elements.md` — §9's cycle standard and form-control list name the chip.
 - `guide/things_to_check_in_browser.md` — a section for the PR.
 

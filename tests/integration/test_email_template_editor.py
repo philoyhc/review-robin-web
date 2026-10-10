@@ -314,7 +314,7 @@ def test_invitation_tab_does_not_show_send_on_submit_checkbox(
         f"/operator/sessions/{review_session.id}/setup-invite?template=invitation"
     ).text
 
-    assert "send response confirmation</span>" not in body
+    assert "Send response confirmation</span>" not in body
     assert 'name="enabled"' not in body
 
 

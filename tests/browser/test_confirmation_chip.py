@@ -26,8 +26,8 @@ def test_the_confirmation_chip_cycles_and_saves(
     expect(chip).to_have_text("Don't send response confirmation")
     assert chip.evaluate("el => getComputedStyle(el).backgroundColor") == dark
     expect(save).to_be_enabled()
-    save.click()
-    page.wait_for_load_state()
+    with page.expect_navigation():
+        save.click()
 
     chip = page.locator("[data-send-confirmation-chip]")
     expect(chip).to_have_text("Don't send response confirmation")
