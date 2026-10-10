@@ -338,3 +338,13 @@ section (git history keeps it), so this file lists only what is owed.
   light and dark) still show checkboxes in Band 3; retake them, and update
   their alt text to name the chips. Deferred until the Band 3 behaviors
   settle (the author, 2026-10-10).
+
+## ↰ starts a branch again (UX refinements Item 3 reversed)
+
+- [ ] **Under a plain number field.** On a fresh card, Comments' ↰ reads
+  "Start a branch on the field above with this field"; clicking it makes
+  Rating a parent with an empty, amber condition and Comments its only
+  field, with no new row added, the bar running down from Rating's +, and
+  the condition's value box focused.
+- [ ] **Under a String or unnamed field** ↰ is off and its tooltip says
+  why; after ⑂ on a number field, a row below still joins that branch.

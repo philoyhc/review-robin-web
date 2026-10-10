@@ -354,7 +354,7 @@ this item.
 
 ---
 
-## Item 3 — ↰ only joins a branch
+## Item 3 — ~~↰ only joins a branch~~ (reversed, 2026-10-10)
 
 ### Opportunity
 
@@ -430,6 +430,13 @@ Taken 2026-10-10 at `4d993658`.
   comments, a redundant local, this record and a live guide line fixed)
   and a `spec-writer` verify pass (the two misses above).
 - **Browser checks passed** (the author, 2026-10-10).
+- **Reversed 2026-10-10** (the author). ⑂ starts a branch *with a new
+  field row*; ↰'s fork on a plain number or List field above starts one
+  with the row itself, so no extra, possibly unneeded, row appears. That
+  was why the second way to fork existed, and the Decision's "duplicates
+  ⑂" missed it. One PR restores the fork path in `newModelRfSyncJoin` /
+  `newModelRfJoin`, on Item 1's layout (the parent's bar from its +);
+  Items 1 and 2 are untouched. Item 3's name condition on ↰ stays.
 
 ### PR ladder
 

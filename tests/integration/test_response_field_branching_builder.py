@@ -308,8 +308,9 @@ def test_the_row_script_joins_and_detaches(client: TestClient, db: Session) -> N
         "A field with a branch can't join another",
         "It has saved responses, so it can't move into a branch",
         "Its branch has saved responses, so no field can join it",
+        "The field above is String, so it can't have a branch",
         "Join the branch above",
-        "No branch ends directly above",
+        "Start a branch on the field above with this field",
         "Detach this field and end its branch",
         "Move this field out of its branch",
     ):
@@ -324,11 +325,11 @@ def test_the_row_script_joins_and_detaches(client: TestClient, db: Session) -> N
     # turned it off (Codex on #2646).
     ungoverned = _rf_fn(body, "newModelRfMakeUngoverned")
     assert "active.disabled = false;" in ungoverned
-    # ↰ only joins: with no branch ending above it does nothing, and it
-    # never starts one (guide/ux_refinements.md Item 3; ⑂ does).
-    assert "if (!above || !above.hasAttribute('data-new-model-rf-branch')) { return; }" in join
-    assert "newModelRfNewConditionRow" not in join
-    assert "Start a branch on the field above" not in sync
+    # Joining a plain field starts a branch on it with an empty
+    # condition and no new field row (the author, 2026-10-10, reversing
+    # guide/ux_refinements.md Item 3), its bar from the parent's +.
+    assert "parent.setAttribute('data-new-model-rf-parent', 'true');" in join
+    assert "var add = parent.querySelector('[data-new-model-rf-add]');" in join
     # Joining lands at the deepest branch that ends directly above.
     assert "window.newModelRfMakeGoverned(row, joinLevel);" in join
     recompute = _rf_fn(body, "newModelRfRecomputeActionStates")

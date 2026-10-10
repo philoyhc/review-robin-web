@@ -31,7 +31,7 @@ def test_join_reads_the_up_arrow_and_detach_the_down_arrow(
         (glyph, dq or sq)
         for glyph, dq, sq in re.findall(r"""set\('(.)', (?:"([^"]+)"|'([^']+)')""", sync)
     ]
-    assert len(calls) == 11, calls
+    assert len(calls) == 13, calls
     detach_titles = {
         "A field with a branch can't leave its branch",
         "Its branch has saved responses, so its fields can't change",
