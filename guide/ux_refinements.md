@@ -838,6 +838,11 @@ like the absence of a setting.
 
 - The line takes the old label's two-sentence swap on Link 3, so it
   stays a whole sentence in each mode.
+- The box's accessible name is what its tick means, "Exclude self
+  reviews", so a screen reader's "not checked" reads true; the cost is
+  that while the chip shows "Include self reviews" the name doesn't
+  contain the visible text (WCAG 2.5.3). Item 7's chip, whose label
+  doesn't flip, keeps its visible text as its name.
 
 ### Blast radius (measured)
 
@@ -857,9 +862,8 @@ Taken 2026-10-10 at `c8343bf3`.
   cycle chip is now exempt (`:not(.is-selected)`), and a browser test
   pins it. Also fixed: the box's accessible name is what its tick means
   ("Exclude self reviews"), `autocomplete="off"`, a browser test of the
-  Link 3 clear, and stale spec wording. **The Guide's
-  `instrument-card-assignment-rule` screencap pair shows the old
-  checkbox**; its retake is the author's.
+  Link 3 clear, and stale spec wording. Two reads in all; the second
+  found only wording.
 
 ### PR ladder
 

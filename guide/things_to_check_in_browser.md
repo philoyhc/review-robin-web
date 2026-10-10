@@ -370,4 +370,6 @@ section (git history keeps it), so this file lists only what is owed.
   switching Link 3 to Group using tags changes it to the group sentence
   and turns an Exclude chip back to Include. Setting any Link to Not
   set hides the divider, chip and line.
+- [ ] **Locked card.** The chip is a plain pill like Band 3's, and
+  "Include self reviews" is not faded.
 
