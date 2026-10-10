@@ -191,8 +191,8 @@ section (git history keeps it), so this file lists only what is owed.
 
 ## Observers see what reviewers see (A3, A18)
 
-- [ ] **A hidden field stays hidden.** On an instrument, untick a
-  response field's Active box. As an observer on the collation page,
+- [ ] **A hidden field stays hidden.** On an instrument, click a
+  response field's chip off. As an observer on the collation page,
   the field has no column, and the instrument's Download CSV has no
   column for it either. The operator's By-instrument extract still has
   it.
@@ -372,3 +372,25 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **Locked card (Codex on #2936).** Lock the card: every Band 3 chip
   is a plain pill, with no edge, pointer or lock glyph, and unticked
   fields are faded. Unlock: the chips come back live without a reload.
+
+## Band 3 response-field name chips (UX refinements Item 1, PR 2)
+
+- [ ] **Instruments, Band 3 right column.** Each row starts with a chip
+  showing the field's name; no Active checkbox shows. Typing in the name
+  box relabels the chip as you type; emptying the box shows the muted
+  default; a long name ends in "…" and shows in full on hover.
+- [ ] **Branches.** Fork a field, then fork a governed Integer field one
+  level down: the chips stay in one left-hand column at every level, the
+  bars drop from each parent's + button, and from the name onward every
+  row still lines up.
+- [ ] **Hide a parent** by its chip: its branch's chips turn light with a
+  lock glyph and no edge, and their tooltip says the parent is hidden;
+  show it again and they come back live. On a field with saved responses
+  the chip still asks before hiding it.
+- [ ] **Widths.** +, ⑂, ↰ / ↳, R, ≡, ▲, ▼ and X are one width; the type
+  dropdown is about an "Agreement" wide and its open list isn't cut;
+  Min / Max / Step still show "2000" whole. Check at a 1366px window and
+  in both themes.
+- [ ] **The Guide's screencaps** (`instrument-card-fields-and-visibility`,
+  light and dark) still show checkboxes in Band 3; retake them, and update
+  their alt text to name the chips.

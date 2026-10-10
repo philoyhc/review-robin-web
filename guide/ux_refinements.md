@@ -89,6 +89,8 @@ Both sides become type 1 chips that wrap the existing checkbox:
   - +, ⑂ and ↰ / ↳ take the width of R, ≡, ▲, ▼ and X, which set the
     standard: `--rf-glyph-width` (2.25rem today, also the width of each
     empty `td.rf-slot`) becomes that button width.
+    *Found at build (2026-10-10): the five weren't one width (R ≡ X
+    ~31px, ▲ ▼ 36px), so all eight take 2rem, R and X's own.*
 - **The name chip is the row's first column at every level** (author,
   2026-10-10). The Active checkbox moves one column right per branch
   level, into columns the glyph buttons share, so a chip there would
@@ -124,6 +126,32 @@ Taken 2026-10-09 at `2569876a`.
   author's ruling (2026-10-10) a locked card's Band 3 chips read as plain
   display pills (no edge, pointer or glyph; unticked faded), keyed on
   `data-instrument-locked`; a browser test locks and unlocks.
+- **PR 2 built 2026-10-10.** Each response row's first cell is a name
+  chip around its hidden Active checkbox, relabeled by
+  `newModelRfRecomputeActionStates` from the typed name or the box's
+  default; bars and the six leading columns follow it, a parent's bar
+  now starting under its + (`td:nth-child(n+3)` for the inner rule). Every
+  row button takes `--rf-glyph-width` 2rem (R and X's width; ▲ ▼ and
+  + ⑂ ↰ were 36px); the type column is `8.5rem`; the bounds boxes floor
+  at `3.5rem`, their inline `min-width: 0` dropped. The chip cap is the
+  border box, 8em: a "Comments" chip measured 94.7px at the chip's 12px.
+  Browser tests cover the live label and cap, the hide confirm through
+  the chip, and a hidden parent's fixed-off chips; all three fail
+  without the change. Nine tests that pinned the checkbox column were
+  moved to the new layout, two browser ones now click the chip.
+- **Reads:** two `spec-writer` verifies (one per PR) and one cumulative
+  `diff-reviewer` read from `212042cd`. The read found one defect: a
+  pending row whose default another row's name took kept its old chip
+  label (a pending row never commits, so never recomputed); fixed, with a
+  browser test that fails without it. It also asked for the box's own
+  tooltip back on display fields, the hide confirm's "Tick Active" wording,
+  the Guide's checkbox sentence, a browser test of the script-built
+  column order, and stale comments; all done. A read of those fixes
+  asked for the detached row's order to be pinned too, and kept
+  `guide/post_azure_todo_checklist.md` §6 as the dated record the author
+  checked (the chip checks are owed in
+  `guide/things_to_check_in_browser.md` instead). Codex on #2936 found
+  the locked-card look (above).
 
 ### PR ladder
 
@@ -175,6 +203,10 @@ Taken 2026-10-09 at `2569876a`.
 
 - `spec/instruments.md` — Display fields rows are on/off chips (PR 1); the Response fields Active checkbox is a name chip (PR 2).
 - `spec/ui_elements.md` — `rf-table` / `rf-active-cell` describe the name chip, its cap, the type dropdown's cap, the bounds boxes' widths and the glyph-button width (PR 2).
+- `spec/operator_button_audit.md` — §9c: each Band 3 row carries its field's chip (PR 1, PR 2; found at build).
+- `spec/rrw_functional_spec.md` — the Band 3 bullet names the name chip (PR 2; found at build).
+- `spec/reviewer-surface.md` — the dropped-fields notice names the row's name chip (PR 2; found at build).
+- `app/web/templates/guide.html` — the Guide's Band 3 sentence says to click a field's chip; its screencaps are the author's to retake (PR 2; found at build).
 - `guide/things_to_check_in_browser.md` — a section per PR.
 
 ---

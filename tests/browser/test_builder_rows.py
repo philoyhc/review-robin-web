@@ -106,7 +106,7 @@ def test_unticking_active_drops_the_column_and_save_keeps_it(
     session_id = new_session()
     card = open_unlocked(page, session_id)
 
-    rows(card).nth(1).locator("[data-new-model-rf-active]").uncheck()
+    rows(card).nth(1).locator("label.rf-name-chip").uncheck()
     assert preview_headers(card) == ["Rating"]
     save(page, card)
 

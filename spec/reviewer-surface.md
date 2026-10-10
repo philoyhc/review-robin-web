@@ -1058,7 +1058,7 @@ In preview mode:
 - **The dropped-fields notice renders here too.**
   *"Some saved responses are no longer collected: …"* names fields the
   reviewer has an answer on that the operator has since made inactive
-  (the row's Active checkbox in Band 3; the field's `visible`). When
+  (the row's name chip in Band 3; the field's `visible`). When
   inspecting a real reviewer a dropped field is exactly what the
   operator needs to know, since the form omits it silently.
 - **Read-only side-effects.** The preview GET emits no audit

@@ -1943,8 +1943,10 @@
               if (locked) { box.checked = !off; }
               else if (off) { box.checked = false; }
               box.disabled = locked || off;
-              // The tooltip sits on the chip, the box being hidden.
-              box.parentNode.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');
+              // The tooltip sits on the chip, the box being hidden, and on
+              // the box too, for assistive technology.
+              box.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');
+              box.parentNode.title = box.title;
             });
           }
           // 19T Item 8 — the display fields are Band 3's table rows, in
@@ -3097,7 +3099,7 @@
                   + responseCount + ' saved response' + pluralR
                   + ' will be preserved for audit but no longer appear '
                   + 'on the surface, summary, or reviewer-record CSV. '
-                  + 'Tick Active again later to restore the column.'
+                  + 'Click its chip again later to restore the column.'
                 );
                 if (!confirmed) { return false; }
                 acknowledgedDrop = true;
@@ -4058,6 +4060,7 @@
                            {% if _on %}checked{% endif %}
                            aria-label="Show {{ field.label }}"
                            data-title-on="{{ _title_on }}"
+                           title="{{ 'Not shown on group rows' if _group_off else _title_on }}"
                            onchange="newModelDfToggle(this)">{{ field.label }}</label></td>
                   <td class="col-shrink">
                     {% if not field.locked %}
@@ -4086,9 +4089,10 @@
           {# 19T Item 9 — the rows are a table (`rf-table`, base.html),
              one <tbody> per field so a branch can later join its parent's
              group under one rule (guide/archive/advanced_instruments.md Item 1).
-             Each row reads Active, +, ⑂, join (↰ / ↳, 19T Item 10),
-             name, type, bounds, R, ≡, ▲, ▼, X. The Active checkbox is
-             the field's selection; ▲ ▼ move the row's <tbody>. A row
+             Each row reads its name chip, +, ⑂, join (↰ / ↳, 19T Item
+             10), name, type, bounds, R, ≡, ▲, ▼, X. The chip's hidden
+             Active checkbox is the field's selection (ux_refinements
+             Item 1); ▲ ▼ move the row's <tbody>. A row
              commits its name and shape to the preview whenever they are
              valid (the pills and ✓ retired, 19T Item 9).
              The X button drops a row (never the last row); each row's
@@ -4099,6 +4103,19 @@
              there are none.
              Each row's data-row-key is ``rf_<idx>`` for a saved row, or
              a fresh ``rf_N`` from the row counter for a row "+" added. #}
+          {# ux_refinements Item 1 — a field's name chip: an on/off chip
+             (spec/ui_elements.md §9) around its visually hidden Active
+             checkbox, labeled with the field's name and capped, a longer
+             name ending in "…" with the full name on hover. The row
+             script relabels it as the name box changes
+             (``newModelRfRecomputeActionStates``); a disabled box makes
+             it a fixed switch held off (base.html). #}
+          {% macro rf_chip(name, selected) %}<label class="pill pill-count tag-chip rf-name-chip"
+                 title="{{ name }}"><input type="checkbox" class="visually-hidden" data-new-model-rf-active
+                 {% if selected %}checked{% endif %}
+                 aria-label="Show {{ name }}"
+                 title="Show this field in the preview and to reviewers"
+                 onchange="newModelRfToggleActive(this)"><span data-new-model-rf-chip-label>{{ name }}</span></label>{% endmacro %}
           {% macro rf_condition_row(condition) %}
                 {% set _value_input %}
                     <input type="text" data-new-model-rf-condition-value
@@ -4119,13 +4136,14 @@
                       <option value="require"{% if condition.mode == 'require' %} selected{% endif %}>Require the below (else, optional)</option>
                     </select></span>{% endset %}
                 {# 19T Item 14 — a condition row sits at its fields' level:
-                   a bar per branch it is in, its "+" under its parent's ⑂,
+                   the chip column empty (ux_refinements Item 1), a bar per
+                   branch it is in, its "+" under its parent's ⑂,
                    and "If the above" spanning the columns left before the
                    name. #}
                 {% set _clevel = condition.level or 1 %}
                 <tr data-new-model-rf-condition{% if condition.is_list %} class="rf-condition-list"{% endif %}>
+                  <td class="col-shrink rf-active-cell"></td>
                   {% for _ in range(_clevel) %}<td class="col-shrink rf-branch-bar"></td>{% endfor %}
-                  <td class="col-shrink"></td>
                   <td class="col-shrink"><button type="button" class="btn secondary rf-glyph"
                           data-new-model-rf-condition-add
                           {% if condition.locked %}disabled{% endif %}
@@ -4178,11 +4196,11 @@
             {# 19T Item 10 — one <tbody> per group: a field on its own, or
                a parent with its condition row and the fields it governs
                (``views._response_field_groups``), a field inside it
-               with its own branch too (19T Item 14). A governed row
-               shifts one column right per level, into the two slots after
-               join: the bar in the checkbox column, its checkbox in the +
-               column, its + in the ⑂ column; from the name onward every
-               row aligns. A branch with responses anywhere below its
+               with its own branch too (19T Item 14). Each row's name chip
+               comes first and never moves (ux_refinements Item 1); after
+               it a governed row shifts one column right per level, into
+               the two slots after join: the bar in the + column, its + in
+               the ⑂ column; from the name onward every row aligns. A branch with responses anywhere below its
                parent is locked: its condition and membership can't
                change. The lock is per branch (``rf.branch_locked``,
                ``condition.locked``; the row script's
@@ -4227,18 +4245,18 @@
                    data-help-text="{{ rf.help_text or '' }}"
                    data-response-count="{{ rf.response_count or 0 }}"
                    {% if rf.has_responses %}data-has-responses="true" data-new-model-rf-shape-locked="true"{% endif %}>
-                {# 19T Item 14 — six leading columns at every level: a bar per
-                   branch the row is in, then Active, +, ⑂ (none at level
-                   2, the depth limit: its slot stays empty), a level-1
-                   row's ↰ (rung 5), join / detach, and empty slots to fill
-                   the six. #}
+                {# 19T Item 14 — six leading columns at every level. The
+                   field's name chip comes first and never moves
+                   (ux_refinements Item 1: an on/off chip around the Active
+                   checkbox, labeled with the field's name, which the row
+                   script keeps in step with the name box); then a bar per
+                   branch the row is in, +, ⑂ (none at level 2, the depth
+                   limit: its slot stays empty), a level-1 row's ↰ (rung
+                   5), join / detach, and empty slots to fill the six. A
+                   parent's bar runs down from its + column. #}
+                <td class="col-shrink rf-active-cell">{{ rf_chip(rf.name, rf.selected) }}</td>
                 {% for _ in range(_level) %}<td class="col-shrink rf-branch-bar"></td>{% endfor %}
-                <td class="col-shrink rf-active-cell{% if rf.is_parent %} rf-branch-bar-start{% endif %}"><input type="checkbox" data-new-model-rf-active
-                         {% if rf.selected %}checked{% endif %}
-                         aria-label="Show {{ rf.name }}"
-                         title="Show this field in the preview and to reviewers"
-                         onchange="newModelRfToggleActive(this)"></td>
-                <td class="col-shrink">
+                <td class="col-shrink{% if rf.is_parent %} rf-branch-bar-start{% endif %}">
                 <button type="button" class="btn secondary rf-glyph"
                         data-new-model-rf-add
                         onclick="newModelRfAddRow(this)"
@@ -4312,21 +4330,21 @@
                          value="{{ rf.min }}"
                          oninput="newModelRfFieldChanged(this)"
                          {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
-                         style="min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type == 'list' %} display: none;{% endif %}">
+                         style="padding: 4px 8px; box-sizing: border-box;{% if rf.data_type == 'list' %} display: none;{% endif %}">
                   <input type="text"
                          data-new-model-rf-bound="max"
                          placeholder="Max"
                          value="{{ rf.max }}"
                          oninput="newModelRfFieldChanged(this)"
                          {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
-                         style="min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type == 'list' %} display: none;{% endif %}">
+                         style="padding: 4px 8px; box-sizing: border-box;{% if rf.data_type == 'list' %} display: none;{% endif %}">
                   <input type="text"
                          data-new-model-rf-bound="step"
                          placeholder="Step"
                          value="{{ rf.step }}"
                          oninput="newModelRfFieldChanged(this)"
                          {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
-                         style="min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type not in ('integer', 'decimal') %} display: none;{% endif %}">
+                         style="padding: 4px 8px; box-sizing: border-box;{% if rf.data_type not in ('integer', 'decimal') %} display: none;{% endif %}">
                   <input type="text"
                          data-new-model-rf-bound="list"
                          placeholder="List (comma-separated)"
@@ -4394,10 +4412,7 @@
           <template data-new-model-rf-row-template>
             <tbody data-new-model-rf-group>
               <tr data-new-model-rf-row data-selected="true">
-              <td class="col-shrink rf-active-cell"><input type="checkbox" data-new-model-rf-active checked
-                         aria-label="Show this field"
-                         title="Show this field in the preview and to reviewers"
-                         onchange="newModelRfToggleActive(this)"></td>
+              <td class="col-shrink rf-active-cell">{{ rf_chip('', true) }}</td>
               <td class="col-shrink">
               <button type="button" class="btn secondary rf-glyph"
                       data-new-model-rf-add
@@ -4448,17 +4463,17 @@
                        data-new-model-rf-bound="min"
                        placeholder="Min"
                        oninput="newModelRfFieldChanged(this)"
-                       style="min-width: 0; padding: 4px 8px; box-sizing: border-box;">
+                       style="padding: 4px 8px; box-sizing: border-box;">
                 <input type="text"
                        data-new-model-rf-bound="max"
                        placeholder="Max"
                        oninput="newModelRfFieldChanged(this)"
-                       style="min-width: 0; padding: 4px 8px; box-sizing: border-box;">
+                       style="padding: 4px 8px; box-sizing: border-box;">
                 <input type="text"
                        data-new-model-rf-bound="step"
                        placeholder="Step"
                        oninput="newModelRfFieldChanged(this)"
-                       style="min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
+                       style="padding: 4px 8px; box-sizing: border-box; display: none;">
                 <input type="text"
                        data-new-model-rf-bound="list"
                        placeholder="List (comma-separated)"
@@ -4958,7 +4973,8 @@
           for (var j = 0; j < level; j++) {
             var bar = document.createElement('td');
             bar.className = 'col-shrink rf-branch-bar';
-            row.insertBefore(bar, row.firstElementChild);
+            // After the name chip, which never moves (ux_refinements Item 1).
+            row.insertBefore(bar, row.firstElementChild.nextSibling);
           }
         };
         // A condition row for a branch whose fields sit at ``level``: a bar
@@ -4969,7 +4985,7 @@
           for (var i = 1; i < level; i++) {
             var bar = document.createElement('td');
             bar.className = 'col-shrink rf-branch-bar';
-            cond.insertBefore(bar, cond.firstElementChild);
+            cond.insertBefore(bar, cond.firstElementChild.nextSibling);
           }
           var lead = cond.querySelector('.rf-condition-lead');
           if (lead) { lead.colSpan = 4 - level; }
@@ -5336,8 +5352,10 @@
           var cond = window.newModelRfNewConditionRow(band3, window.newModelRfRowLevel(row) + 1);
           row.setAttribute('data-new-model-rf-parent', 'true');
           group.setAttribute('data-new-model-rf-branch', '');
-          var active = row.querySelector('[data-new-model-rf-active]');
-          if (active) { active.closest('td').classList.add('rf-branch-bar-start'); }
+          // The bar runs down from the parent's + column (ux_refinements
+          // Item 1: the name chip before it never moves).
+          var add = row.querySelector('[data-new-model-rf-add]');
+          if (add) { add.closest('td').classList.add('rf-branch-bar-start'); }
           row.insertAdjacentElement('afterend', cond);
           window.newModelRfSyncConditionOps(group, row);
           var governed = window.newModelRfNewGovernedRow(band3, cond);
@@ -5382,8 +5400,8 @@
           var cond = window.newModelRfConditionOf(parentRow);
           if (cond) { cond.remove(); }
           parentRow.removeAttribute('data-new-model-rf-parent');
-          var active = parentRow.querySelector('[data-new-model-rf-active]');
-          if (active) { active.closest('td').classList.remove('rf-branch-bar-start'); }
+          var add = parentRow.querySelector('[data-new-model-rf-add]');
+          if (add) { add.closest('td').classList.remove('rf-branch-bar-start'); }
           if (window.newModelRfRowLevel(parentRow) === 0) {
             var group = parentRow.closest('[data-new-model-rf-group]');
             group.removeAttribute('data-new-model-rf-branch');
@@ -5695,6 +5713,20 @@
               ? 'Its parent field is hidden, so this field is too'
               : 'Show this field in the preview and to reviewers');
           }
+          // ux_refinements Item 1 — the name chip goes by the row's name:
+          // the typed name, else the default the name box shows muted.
+          // Its tooltip is the full name, which a long one's "…" cuts,
+          // and why a disabled box doesn't move.
+          var chipText = row.querySelector('[data-new-model-rf-chip-label]');
+          if (chipText && activeBox) {
+            var nameNow = window.newModelRfSaveName(row)
+              || (nameBox && nameBox.placeholder) || 'Response field';
+            chipText.textContent = nameNow;
+            activeBox.setAttribute('aria-label', 'Show ' + nameNow);
+            chipText.parentNode.setAttribute('title', activeBox.disabled
+              ? nameNow + ': ' + activeBox.getAttribute('title')
+              : nameNow);
+          }
           var typeSel = row.querySelector('[data-new-model-rf-data-type]');
           var stringOpt = typeSel && typeSel.querySelector('option[value="string"]');
           if (stringOpt) { stringOpt.disabled = isParent; }
@@ -5761,7 +5793,11 @@
           window.newModelRfRecomputeActionStates(row);
           window.newModelRfMaybeCommit(row);
           changed.forEach(function (other) {
-            if (other !== row) { window.newModelRfMaybeCommit(other); }
+            if (other === row) { return; }
+            // Its name chip goes by the default too, committed or not
+            // (ux_refinements Item 1: a pending row never commits).
+            window.newModelRfRecomputeActionStates(other);
+            window.newModelRfMaybeCommit(other);
           });
         };
         // Sync each row on page load so the initial data-type pick

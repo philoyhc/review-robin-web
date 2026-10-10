@@ -981,14 +981,15 @@ fields renders one blank, unlabelled placeholder row instead — not a
 field until the operator types into it — so there is always a "+" to
 press; deleting down to one row leaves that row rather than none.
 
-Each row holds, left to right (a governed row shifts these one column
-right per level, behind a bar per branch it sits in; two slots after
-join, `td.rf-slot`, keep six leading columns on every row — see
+Each row holds, left to right (the name chip first at every level; a
+governed row shifts the rest one column right per level, behind a bar
+per branch it sits in; two slots after join, `td.rf-slot`, keep six
+leading columns on every row — see
 ["Branching between response fields"](#branching-between-response-fields)):
 
 | Control | Bound to | Notes |
 |---|---|---|
-| **Active** checkbox | `InstrumentResponseField.visible` | The field's selection — whether it renders on the participant surfaces and their CSVs (see below). Unticking a field with saved responses asks to confirm first — "Hide … from the reviewer surface?", naming the response count and that the data is preserved for audit. An inactive row is not dimmed. |
+| **Name chip** (`label.tag-chip.rf-name-chip`, `spec/ui_elements.md` §9) around the visually hidden **Active** checkbox | `InstrumentResponseField.visible` | The field's selection — whether it renders on the participant surfaces and their CSVs (see below) — as an on/off chip labeled with the field's name, mirrored live from the name box (an empty box: the default it shows muted), flush left and capped at 8em; a longer name ends in "…" and shows in full on hover. Unticking a field with saved responses asks to confirm first — "Hide … from the reviewer surface?", naming the response count and that the data is preserved for audit. An inactive row is not dimmed. A governed field whose parent is hidden has its box disabled, so its chip is a fixed switch held off, its tooltip saying why. On a locked card it reads as a plain display pill, an unticked field faded (`spec/ui_elements.md` §9). |
 | **+** button | — | Inserts a new row (its own `<tbody>` group) directly after this one's, seeded with the next default label (see "A field's default label" below). On a governed row it adds a field to the same branch instead, directly after the row's unit — the row, its condition row and every deeper row (see ["Branching between response fields"](#branching-between-response-fields)). |
 | **⑂** / **↰** / **↳** | `branch_parent_id` / `branch_op` / `branch_value` / `branch_mode` | Fork, join and detach — see ["Branching between response fields"](#branching-between-response-fields) below. |
 | Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Empty until typed — see "A field's default label" below. |
@@ -1053,12 +1054,12 @@ the per-field routes `/fields`, `/fields/add-row`,
 and `/display-fields`, remain available to fixture and programmatic
 callers only.
 
-`InstrumentResponseField.visible` — read live off each row's Active
-checkbox — is what the reviewer surface form, the reviewer summary
+`InstrumentResponseField.visible` — read live off each row's name chip
+(its hidden Active checkbox) — is what the reviewer surface form, the reviewer summary
 HTML, the reviewer-record CSV, the reviewee results page and the
 observer collation page and its per-instrument CSV filter response
 fields by it.
-Unticking Active drops the column from every participant-facing render
+Turning a field's chip off drops the column from every participant-facing render
 in one step. The operator's own extracts keep it, and the row itself
 stays present in Band 3 so its bounds and help text remain editable.
 
@@ -1185,22 +1186,24 @@ branch above it is open or Require.
 **⑂**, just after **+**, creates a branch: outline on an Integer,
 Decimal or List field with none, selected (filled, like a pressed R) on
 a parent, and inactive on a String field ("A String field can't have a
-branch"). A governed row shifts one column right — the bar sits in the
-checkbox column, its checkbox in the **+** column, its **+** in the ⑂
-column, its ⑂ in the join column, and its ↰ and ↳ in the two empty
-slots after join (`td.rf-slot`) — so every row has six leading columns
-and aligns from the name onward, parent and governed alike. A level-1
+branch"). **The name chip is every row's first column and never moves**
+(the author, 2026-10-10). After it, a governed row shifts one column
+right — the bar sits in the **+** column, its **+** in the ⑂ column, its
+⑂ in the join column, and its ↰ and ↳ in the two empty slots after join
+(`td.rf-slot`) — so every row has six leading columns and aligns from
+the name onward, parent and governed alike; a parent's bar runs down
+from its **+**. A level-1
 row's ⑂ forks it one level down ("Add a branch inside this branch,
 below this field"): its condition row and fields shift one more column
 right, with their own bar. A level-2 row shifts two columns: two bars,
-its checkbox in the ⑂ column, its **+** in the join column, no ⑂ or ↰
+its **+** in the join column, no ⑂ or ↰
 (the first slot stays empty) and its ↳ in the last slot, under a
 level-1 row's. In an answered branch a level-1 row's ⑂ is off, like its "+".
 **A branch inside a branch is ruled** above its parent and below its
-last field, from the parent's checkbox column rightward, clear of the
-outer branch's bar (`tr.rf-inner-top` / `tr.rf-inner-end`); a
-top-level group's rule stays full width. The checkbox sits
-centered in whichever column holds it (`td.rf-active-cell`).
+last field, from the parent's **+** column rightward, clear of the name
+chips and the outer branch's bar (`tr.rf-inner-top` /
+`tr.rf-inner-end`); a top-level group's rule stays full width. A
+condition row leaves the chip column (`td.rf-active-cell`) empty.
 
 **The condition row** reads "If the above [operator] [value] then
 [mode]", the mode a select of **Show the below** (the default) and
@@ -1277,7 +1280,9 @@ the field's name first, then both ends — "Rating ≥ 2 and ≤ 4", "Rating
 start a hint (or an extract cell, `spec/extract_data.md`) as a
 spreadsheet formula.
 
-**Join (↰) and detach (↳)** sit after ⑂, sharing its width (`.rf-glyph`).
+**Join (↰) and detach (↳)** sit after ⑂, sharing its width
+(`--rf-glyph-width`, 2rem: R and X's own width, which every row button
+takes).
 Two empty slots of that width follow a plain row's join (`td.rf-slot`);
 each level of branching shifts a row one column right into them. A
 level-1 row has both, ↰ before ↳.
@@ -1343,6 +1348,8 @@ it is: its ↳ is off ("A field with a branch can't leave its branch").
 - **Active cascades both ways**, through every level below. Unticking
   a parent's Active writes `visible = False` onto every field below it,
   a branch inside its branch included; re-ticking it re-ticks them all.
+  While the parent is hidden its fields' boxes are disabled, so their
+  chips show as fixed off (`spec/ui_elements.md` §9).
 - **An answered field can't move into a branch.** ↰ is off on a row
   with saved responses, and Save refuses the move, since the field's
   answers could then sit in a closed branch. Nor can a parent with
@@ -1643,7 +1650,7 @@ of rules against instruments. Active ones that surface here
   response fields.
 - **`instruments.no_visible_response_fields`** (warning) — every
   response field has `visible=False`. Reviewer page would render
-  empty; toggle a row's Visible checkbox.
+  empty; turn on a field's name chip.
 - **`instruments.no_display_fields`** (warning) — instrument has
   zero display fields. Reviewer surface still works (Name + Email
   always render) but is sparse.

@@ -9479,9 +9479,11 @@ def test_locked_display_fields_cannot_be_unselected(
     assert "else if (off) { box.checked = false; }" in refresh
     assert "box.disabled = locked || off;" in refresh
     assert (
-        "box.parentNode.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');"
+        "box.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');"
         in refresh
     )
+    # The chip around the hidden box shows the same tooltip.
+    assert "box.parentNode.title = box.title;" in refresh
 
 
 def test_band3_visibility_cycle_repaints_band2_preview_card(
@@ -9910,7 +9912,7 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
             assert 'onclick="newModelRfMove(this)"' in move
     boxes = {
         re.search(r'value="([^"]+)"', c.split("data-new-model-rf-name", 1)[1]).group(1):
-        re.search(r'<input type="checkbox" data-new-model-rf-active[^>]*>', c).group(0)
+        re.search(r'<input type="checkbox" class="visually-hidden" data-new-model-rf-active[^>]*>', c).group(0)
         for c in chunks
     }
     assert " checked" in boxes["Rating"] and " disabled" not in boxes["Rating"]
@@ -9918,7 +9920,7 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
     for box in boxes.values():
         assert 'onchange="newModelRfToggleActive(this)"' in box
     # The "+" template's row starts selected, its checkbox ticked and live.
-    tpl_box = re.search(r'<input type="checkbox" data-new-model-rf-active[^>]*>', template).group(0)
+    tpl_box = re.search(r'<input type="checkbox" class="visually-hidden" data-new-model-rf-active[^>]*>', template).group(0)
     assert " checked" in tpl_box and " disabled" not in tpl_box
     ups = [re.search(r'<button[^>]*data-new-model-rf-move="up"[^>]*>', c).group(0) for c in chunks]
     downs = [re.search(r'<button[^>]*data-new-model-rf-move="down"[^>]*>', c).group(0) for c in chunks]
@@ -9968,7 +9970,7 @@ def test_band3_response_rows_are_the_model(client: TestClient, db: Session) -> N
     setter = body[start : body.index("\n          }\n", start)]
     assert "row.getAttribute('data-response-count')" in setter
     assert "row.setAttribute('data-selected', next ? 'true' : 'false');" in setter
-    assert "'Tick Active again later to restore the column.'" in setter
+    assert "'Click its chip again later to restore the column.'" in setter
     assert "pill" not in setter
     start = body.index("window.newModelHelpCardInput =")
     help_input = body[start : body.index("\n          };", start)]

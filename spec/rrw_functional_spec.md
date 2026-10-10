@@ -1331,7 +1331,8 @@ most one instrument unlocked at a time). Its stripes:
   85% of the band. The left picks and orders the display fields
   (Reviewee Name / Email always shown; the populated tag sources
   opt-in). The right is the response-field table, one row per field:
-  an Active checkbox (per-field surface visibility), Name, **Type**
+  a name chip (per-field surface visibility, labeled with the field's
+  name), Name, **Type**
   (String / Integer / Decimal / List, plus a Quick-fill group of List
   presets), inline bounds (min / max / step, or the list options),
   Required toggle, help-text toggle, ▲ ▼ for order, and a fork control
