@@ -852,7 +852,7 @@ Band 3's left column (`data-new-model-band3-left`) is a headerless,
 compact (`table-compact`, `spec/ui_elements.md` §10) table
 (`data-new-model-df-table`), one row per display field
 (`data-new-model-df-row`), in display order. **The row is the
-display-field model**: order is display order, and the row's checkbox is
+display-field model**: order is display order, and the row's chip is
 its selection — both read live by Band 2's preview and persisted only
 through the card's Save (`dfRows` in
 `app/web/templates/operator/instruments_index.html`). An edit shows in
@@ -860,10 +860,12 @@ the preview at once.
 
 Each row holds:
 
-- an **Active** checkbox (`data-new-model-df-active`) — the field's
-  selection;
-- the field's session-wide label as a display-only pill (`pill
-  pill-count`, no click handler);
+- the field's session-wide label as an on/off chip (`label.pill
+  pill-count tag-chip`, `spec/ui_elements.md` §9) around a visually
+  hidden checkbox (`data-new-model-df-active`), the field's selection —
+  a click on the chip ticks the box, and the chip carries the row's
+  tooltip; on a locked card it reads as a plain display pill, an
+  unticked field faded (`spec/ui_elements.md` §9);
 - ▲ / ▼ `btn secondary btn-short` move buttons (not `.btn-icon` —
   `spec/ui_elements.md` §10), absent on a locked row. An unticked row
   can still be moved.
@@ -872,15 +874,17 @@ Each row holds:
 two rows (`ensure_locked_display_fields`, called by
 `ensure_default_instrument` and `create_instrument`, and by the page
 render's `repair_display_fields` while setup is editable), and each renders
-a ticked, disabled checkbox, no move buttons, and a tooltip naming the
-pinned slot — "Always shown — pinned first" (Name) / "Always shown — pinned second" (Email). **On a
+a ticked, disabled checkbox — so its chip is a fixed switch, dark with a
+lock glyph (`spec/ui_elements.md` §9 "Fixed") — no move buttons, and a
+tooltip naming the pinned slot — "Always shown — pinned first" (Name) / "Always shown — pinned second" (Email). **On a
 group-scoped instrument**, a field a group row can't show — Email
-included — renders unticked and disabled, tooltip "Not shown on group
-rows"; Name stays locked and ticked in group mode, so member names
+included — renders unticked and disabled, a fixed switch held off,
+tooltip "Not shown on group rows"; Name stays locked and ticked in group mode, so member names
 always show (author's ruling, 2026-10-07; see "Group-flavor preview"
 below). Every other row's tooltip is "Show this
-column". These disabled checkboxes are the locked-field affordance
-(`spec/ui_elements.md` "Label or control").
+column". A chip whose box is disabled reads as fixed from the box itself,
+so it follows a mode change with no class kept in step
+(`spec/ui_elements.md` §9 "Fixed").
 
 #### Preview row
 

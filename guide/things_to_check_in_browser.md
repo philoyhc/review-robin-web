@@ -354,3 +354,21 @@ section (git history keeps it), so this file lists only what is owed.
   beside them, with a lock and no edge, and don't cycle on click.
 - [ ] **The glyph** sits on the text's baseline and reads at the chip's
   size in both themes.
+
+## Band 3 display fields as chips (UX refinements Item 1, PR 1)
+
+- [ ] **Instruments, Band 3 left column.** Unlock a card: each display
+  field is one chip, with no checkbox beside it. Clicking a chip turns
+  it dark or light and the preview gains or drops the column; ▲ ▼ still
+  move it.
+- [ ] **Name and Email** are dark with a lock glyph, no edge, and don't
+  respond; their tooltips name the pinned slot.
+- [ ] **Group-scoped instrument.** Switch to group and Refresh the
+  preview: Email (and any field a group row can't show) turns light with
+  the lock glyph and the tooltip "Not shown on group rows"; switching
+  back restores it as a live chip.
+- [ ] **Locked card.** The chips show their state and don't respond.
+  Check the column still fits at 15% width, in both themes.
+- [ ] **Locked card (Codex on #2936).** Lock the card: every Band 3 chip
+  is a plain pill, with no edge, pointer or lock glyph, and unticked
+  fields are faded. Unlock: the chips come back live without a reload.

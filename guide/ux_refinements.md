@@ -89,6 +89,14 @@ Both sides become type 1 chips that wrap the existing checkbox:
   - +, ⑂ and ↰ / ↳ take the width of R, ≡, ▲, ▼ and X, which set the
     standard: `--rf-glyph-width` (2.25rem today, also the width of each
     empty `td.rf-slot`) becomes that button width.
+- **The name chip is the row's first column at every level** (author,
+  2026-10-10). The Active checkbox moves one column right per branch
+  level, into columns the glyph buttons share, so a chip there would
+  widen every button column. The chip column stays put like the name
+  box; the per-level indent moves to the buttons after it, and a branch
+  bar runs down from the parent's + column. Rejected: the chip shifting
+  per level (wide button gaps), and a chip column just before the name
+  box (the same name twice, side by side).
 
 ### Blast radius (measured)
 
@@ -99,6 +107,23 @@ Taken 2026-10-09 at `2569876a`.
 | Lines naming the display-field checkbox | 3 app; 1 test file, 1 spec | `grep -rn "data-new-model-df-active" app \| wc -l`; `grep -rl … tests spec` |
 | Lines naming the response-field checkbox | 9 app; 6 test files | `grep -rn "data-new-model-rf-active" app \| wc -l`; `grep -rl … tests` |
 | Rules and specs naming `rf-active-cell` | 1 CSS rule; 1 test file; 2 specs | `grep -rln "rf-active-cell" app tests spec` |
+
+### Status
+
+- **PR 1 built 2026-10-10** on main `212042cd` (the base for the item's
+  cumulative read at PR 2). Each display field is a `label.tag-chip`
+  around its now visually hidden checkbox, which carries the tooltip;
+  the checkbox column is gone. Name and Email take no class: base.html
+  reads `label.tag-chip:has(> input:disabled)` as fixed, so the same
+  rule covers a field a group row can't show when grouped mode disables
+  its box. A browser test toggles a field through its chip and checks
+  both fixed looks; all three fail without the change.
+- **Found at build:** switching to group mode only marks Band 2; the
+  rows re-sync on the preview's Refresh, as before this item.
+- **Codex on #2936:** a locked card's chips kept the live edge. By the
+  author's ruling (2026-10-10) a locked card's Band 3 chips read as plain
+  display pills (no edge, pointer or glyph; unticked faded), keyed on
+  `data-instrument-locked`; a browser test locks and unlocks.
 
 ### PR ladder
 

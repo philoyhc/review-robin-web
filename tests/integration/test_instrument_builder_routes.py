@@ -9464,8 +9464,8 @@ def test_locked_display_fields_cannot_be_unselected(
         assert 'data-locked="true"' in row, key
         box = re.search(r'<input type="checkbox"[^>]*>', row).group(0)
         assert " checked" in box and " disabled" in box, key
-        # The tooltip names the slot the server pins it to.
-        assert f'title="Always shown — pinned {slot}"' in box, key
+        # The chip's tooltip names the slot the server pins it to.
+        assert f'title="Always shown — pinned {slot}"' in _df_chip(row), key
         assert "data-new-model-df-move" not in row, key
     tag_1 = rows["reviewee.tag_1"]
     assert "data-locked" not in tag_1
@@ -9479,7 +9479,7 @@ def test_locked_display_fields_cannot_be_unselected(
     assert "else if (off) { box.checked = false; }" in refresh
     assert "box.disabled = locked || off;" in refresh
     assert (
-        "box.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');"
+        "box.parentNode.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');"
         in refresh
     )
 
@@ -9663,11 +9663,18 @@ def _df_rows(flat: str, instrument_id: int) -> list[str]:
 
 
 def _df_label(row: str) -> str:
-    """A display-field row's field name, which is a pill that only shows
-    it: no chip, no handler (19T Item 8)."""
+    """A display-field row's field name: the label of its on/off chip,
+    which wraps the row's hidden checkbox (ux_refinements Item 1)."""
     return re.search(
-        r'<td><span class="pill pill-count">([^<]+)</span></td>', row
+        r'<td><label class="pill pill-count tag-chip"[^>]*><input [^>]*>([^<]+)</label></td>',
+        row,
     ).group(1)
+
+
+def _df_chip(row: str) -> str:
+    """A display-field row's chip opening tag, which carries the tooltip
+    (the box inside it is hidden; ux_refinements Item 1)."""
+    return re.search(r'<label class="pill pill-count tag-chip"[^>]*>', row).group(0)
 
 
 def test_band3_display_field_table(
@@ -9765,7 +9772,8 @@ def test_band3_display_field_table(
     }
     assert " checked" in boxes["Name"]
     assert " checked" not in boxes["Email"]
-    assert 'title="Not shown on group rows"' in boxes["Email"]
+    email = next(r for r in _df_rows(flat, new_model.id) if _df_label(r) == "Email")
+    assert 'title="Not shown on group rows"' in _df_chip(email)
 
 
 def test_band3_display_field_rows_are_the_model(
@@ -9825,7 +9833,7 @@ def test_band3_display_field_table_group_off_field(
         )
         assert 'data-selectable-in-group="false"' in row
         assert "data-locked" not in row
-        return re.search(r'<input type="checkbox"[^>]*>', row).group(0)
+        return _df_chip(row) + re.search(r'<input type="checkbox"[^>]*>', row).group(0)
 
     profile = db.scalars(
         select(InstrumentDisplayField).where(

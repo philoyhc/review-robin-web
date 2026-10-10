@@ -1943,7 +1943,8 @@
               if (locked) { box.checked = !off; }
               else if (off) { box.checked = false; }
               box.disabled = locked || off;
-              box.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');
+              // The tooltip sits on the chip, the box being hidden.
+              box.parentNode.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');
             });
           }
           // 19T Item 8 — the display fields are Band 3's table rows, in
@@ -4017,18 +4018,19 @@
       <div data-new-model-band3 class="band3-grid">
         {# 19T Item 8 — the display-field table
            (``guide/archive/advanced_instruments.md`` Item 5). One row per display
-           field, no header row: Active checkbox, field, up, down. The rows
+           field, no header row: the field's chip, up, down. The rows
            are the display-field model: their order is the display order,
-           each checkbox its selection, and each row carries the field's
+           each chip's checkbox its selection, and each row carries the field's
            data (label, source, sample value, width) that the preview and
            Save read (``dfRows`` and friends). Band 2's display pills are
-           retired. Name and Email have a checkbox
-           that only shows their state, and no arrows; on a group-scoped
-           instrument the fields a group row can't show are unticked and
-           fixed. An unticked row can still be moved. The rows are compact
-           (``table-compact``, base.html) rather than aligned with the
-           response-field rows beside them, and each field name is a pill
-           that only shows it. #}
+           retired. Each field is an on/off chip around a visually hidden
+           checkbox (guide/ux_refinements.md Item 1). Name and Email's box
+           is disabled, which makes the chip a fixed switch (base.html
+           reads ``:has(> input:disabled)``), and they have no arrows; on a
+           group-scoped instrument the fields a group row can't show are
+           unticked and fixed the same way. An unticked row can still be
+           moved. The rows are compact (``table-compact``, base.html)
+           rather than aligned with the response-field rows beside them. #}
         <div data-new-model-band3-left>
           <h3 style="margin: 0 0 12px 0;">Display fields</h3>
           <div class="table-scroll">
@@ -4049,16 +4051,14 @@
                     data-width="{{ field.width_px or '' }}"
                     data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
                     {% if field.locked %}data-locked="true"{% endif %}>
-                  <td class="col-shrink">
-                    <input type="checkbox" data-new-model-df-active
+                  <td><label class="pill pill-count tag-chip"
+                             title="{{ 'Not shown on group rows' if _group_off else _title_on }}"><input
+                           type="checkbox" class="visually-hidden" data-new-model-df-active
                            {% if field.locked or _group_off %}disabled{% endif %}
                            {% if _on %}checked{% endif %}
                            aria-label="Show {{ field.label }}"
                            data-title-on="{{ _title_on }}"
-                           title="{{ 'Not shown on group rows' if _group_off else _title_on }}"
-                           onchange="newModelDfToggle(this)">
-                  </td>
-                  <td><span class="pill pill-count">{{ field.label }}</span></td>
+                           onchange="newModelDfToggle(this)">{{ field.label }}</label></td>
                   <td class="col-shrink">
                     {% if not field.locked %}
                       <button type="button" class="btn secondary btn-short"

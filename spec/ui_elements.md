@@ -645,12 +645,12 @@ Clear all (`.pill-tag-clear`, also on the Archived page) and AND/OR
 (`.tag-mode-chip`) chips, and a
 role pill when it is a link (`a.pill.pill-role-*`: the `/me`
 dashboard's role column and the role navigator's other-role links,
-whose `<span>` forms stay plain). Static pills carry no edge: the display-field table's
-field-label pill (`spec/instruments.md` "Display-field table") and the
+whose `<span>` forms stay plain). Static pills carry no edge: the
 Visibility card's locked preview table (`spec/instruments.md` "Visibility
-card") are the static, no-click-handler pattern. A fixed switch carries
-no edge either (`.tag-chip.is-fixed`, below). The locked Name / Email
-fields are not pills at all but that table's disabled, ticked checkboxes.
+card") is the static, no-click-handler pattern. A fixed switch carries
+no edge either (`.tag-chip.is-fixed`, below), and that includes the
+display-field table's locked Name / Email chips (`spec/instruments.md`
+"Display-field table").
 
 Three rules make that work:
 
@@ -671,9 +671,10 @@ Three rules make that work:
   chip that says it cannot be clicked must not also say it can.
 
 **A chip can be a form control.** Session Home's optional-tab chips
-(`spec/session_home.md`) are each a `<label class="pill pill-count
-tag-chip">` around a visually hidden checkbox, so a click ticks the box
-and the form posts it. `.tag-chip:has(> input:checked)` is the
+(`spec/session_home.md`) and the Instruments display-field chips
+(`spec/instruments.md` "Display-field table") are each a `<label
+class="pill pill-count tag-chip">` around a visually hidden checkbox, so
+a click ticks the box and the form or row script reads it. `.tag-chip:has(> input:checked)` is the
 `.is-selected` fill, read off the box itself, so a form reset repaints
 the chip with no script; the hidden box's keyboard focus shows as a
 `--focus-ring` outline on the chip. **`.tag-chip.is-locked`** is the
@@ -681,7 +682,11 @@ chip of a locked card: it drops the edge
 and the pointer like `is-disabled`, but is not struck through, because
 it still says on or off. On takes the card's display-value colors
 (`--config-value-bg` / `--config-value-fg`) rather than the reserved
-shade; off is faded.
+shade; off is faded. **A locked Instruments card's Band 3 chips read as
+the display pills they replaced** (the author, 2026-10-10): the plain
+`pill-count` fill with no edge, pointer or lock glyph, an unticked field
+faded, read off the card's `data-instrument-locked` so an in-page lock
+or unlock repaints them.
 
 `.severity-chip` on Validate is the shape this generalises: an outlined
 pill, with `.active` taking the shade on its border and text.
@@ -707,7 +712,12 @@ A fixed switch keeps its siblings' dark fill so it reads as a switch
 that is on rather than a display; the glyph (a CSS mask in
 `currentColor`) says why it doesn't move. A `<label>` chip takes the
 fill only while its box is ticked, so a switch fixed off stays the off
-chip, with the glyph. It is per item: a card's
+chip, with the glyph. A `<label>` chip whose box is disabled is fixed
+too, read off the box (`label.tag-chip:has(> input:disabled)`), so a
+script that disables or re-enables the box needs no class in step: the
+display-field table's Name and Email chips, and on a group-scoped
+instrument the fields a group row can't show (`spec/instruments.md`
+"Display-field table"). It is per item: a card's
 locked view stays `is-locked`. Its other use is the Instruments
 Visibility card's two cells whose mode isn't the operator's to choose
 (`spec/instruments.md` "Visibility card").

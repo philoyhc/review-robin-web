@@ -2742,6 +2742,21 @@
       body.ui-v2 .tag-chip.is-locked:not(.is-selected):not(:has(> input:checked)) {
         opacity: 0.55;
       }
+      /* An Instruments card's Band 3 chips while the card is locked read
+         as the display pills they replaced (the author, 2026-10-10;
+         Codex on #2936): the plain pill, with no edge, pointer or lock
+         glyph, and an unticked field faded so the state still shows.
+         Read off the card's lock attribute, so an in-page lock or unlock
+         repaints them with no class kept in step. */
+      body.ui-v2 [data-instrument-card][data-instrument-locked="true"] [data-lock-region] label.tag-chip {
+        cursor: default;
+        border-color: transparent;
+        box-shadow: none;
+        background: var(--status-info-bg);
+        color: var(--text-body);
+      }
+      body.ui-v2 [data-instrument-card][data-instrument-locked="true"] [data-lock-region] label.tag-chip::before { content: none; }
+      body.ui-v2 [data-instrument-card][data-instrument-locked="true"] [data-lock-region] label.tag-chip:not(:has(> input:checked)) { opacity: 0.55; }
       /* A fixed switch (spec/ui_elements.md §9 "Fixed";
          guide/ux_refinements.md Item 2): one item held at its value while
          the chips beside it stay live, such as Session Home's optional tab
@@ -2751,8 +2766,13 @@
          ``currentColor``, says why it doesn't move. ``is-locked`` stays the
          chip of a whole card's locked view. The dark fill follows the
          state: a ``<span>`` is always on, a ``<label>`` only while its box
-         is ticked, so a switch fixed off is the off chip with the glyph. */
-      body.ui-v2 .tag-chip.is-fixed {
+         is ticked, so a switch fixed off is the off chip with the glyph.
+         A ``<label>`` chip whose box is disabled is fixed too, read off
+         the box (ux_refinements Item 1): Band 3's display fields disable
+         and re-enable theirs as the unit of review changes, so no script
+         has to keep a class in step. */
+      body.ui-v2 .tag-chip.is-fixed,
+      body.ui-v2 label.tag-chip:has(> input:disabled) {
         cursor: default;
         border-color: transparent;
         box-shadow: none;
@@ -2762,7 +2782,8 @@
         background: var(--selected-bg);
         color: var(--selected-fg);
       }
-      body.ui-v2 .tag-chip.is-fixed::before {
+      body.ui-v2 .tag-chip.is-fixed::before,
+      body.ui-v2 label.tag-chip:has(> input:disabled)::before {
         content: "";
         display: inline-block;
         width: 0.8em;
