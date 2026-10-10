@@ -146,8 +146,12 @@ Taken 2026-10-09 at `2569876a`.
   browser test that fails without it. It also asked for the box's own
   tooltip back on display fields, the hide confirm's "Tick Active" wording,
   the Guide's checkbox sentence, a browser test of the script-built
-  column order, and stale comments and checklist rows; all done. Codex
-  on #2936 found the locked-card look (above).
+  column order, and stale comments; all done. A read of those fixes
+  asked for the detached row's order to be pinned too, and kept
+  `guide/post_azure_todo_checklist.md` §6 as the dated record the author
+  checked (the chip checks are owed in
+  `guide/things_to_check_in_browser.md` instead). Codex on #2936 found
+  the locked-card look (above).
 
 ### PR ladder
 

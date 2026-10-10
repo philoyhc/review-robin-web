@@ -1,7 +1,8 @@
 """19T Item 12A — small adjustments to Band 3's response-field table, on
 the author's instruction: join reads ↰ and detach ↳; a number's condition
-boxes take the parent's Min width; the Active checkbox is centered in its
-cell."""
+boxes take the parent's Min width; the Active checkbox was centered in its
+cell, and is now inside the field's name chip, flush left in the first
+column (ux_refinements Item 1)."""
 
 from __future__ import annotations
 

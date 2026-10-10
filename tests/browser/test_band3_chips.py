@@ -323,6 +323,7 @@ def test_the_row_script_keeps_the_chip_first_at_every_level(
     assert _leading(parent) == ["chip", "+start", "fork", "join", "slot", "slot"]
     assert _leading(governed) == ["chip", "bar", "+start", "fork", "nest", "join"]
     assert _leading(inner) == ["chip", "bar", "bar", "+", "slot", "join"]
+    expect(card.locator("[data-new-model-rf-condition]")).to_have_count(2)
     for condition in card.locator("[data-new-model-rf-condition]").all():
         first = condition.evaluate("c => c.cells[0].className")
         assert "rf-active-cell" in first, first
@@ -331,3 +332,7 @@ def test_the_row_script_keeps_the_chip_first_at_every_level(
     # off the governed row's + again.
     inner.locator("[data-new-model-rf-join]").click()
     assert _leading(governed)[2] == "+"
+    # The detached row, re-levelled to 1 by the script, keeps the chip
+    # first too.
+    detached = card.locator("[data-new-model-rf-level='1']").nth(1)
+    assert _leading(detached) == ["chip", "bar", "+", "fork", "nest", "join"]
