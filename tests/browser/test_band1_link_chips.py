@@ -61,17 +61,18 @@ def test_a_set_link_chip_cycled_back_to_not_set_is_amber(
     amber = _amber(card)
     for i in range(3):
         chip = chips.nth(i)
+        # Rendered set: the first state of the pinned matrix ("All" /
+        # "Individual"), two clicks from "Not set".
         expect(chip).not_to_have_text("Not set")
-        assert _fill(chip) != amber
-        for _ in range(2):  # set -> next set -> Not set
-            if chip.inner_text() == "Not set":
-                break
-            chip.click()
+        solid = _fill(chip)
+        assert solid != amber
+        chip.click()
+        chip.click()
         expect(chip).to_have_text("Not set")
         expect(chip).to_have_attribute("aria-pressed", "mixed")
         assert _fill(chip) == amber, i
         chip.click()
-        assert _fill(chip) != amber, i
+        assert _fill(chip) == solid, i
 
 
 def test_enter_and_space_cycle_a_link_chip(

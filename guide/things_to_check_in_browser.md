@@ -351,4 +351,6 @@ section (git history keeps it), so this file lists only what is owed.
   as on a new instrument, in light and dark; one more click turns it
   solid again.
 - [ ] **Keys.** Tab to a Link chip: Enter and Space each advance it one
-  step, as a click does; on a locked card the chips take no focus.
+  step, as a click does, Space without scrolling the page, and the
+  card's Save wakes; the chip shows a focus ring; on a locked card the
+  chips take no focus.

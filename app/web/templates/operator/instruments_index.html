@@ -1080,6 +1080,8 @@
         window.newModelChipKey = window.newModelChipKey || function (btn, event) {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
+            // A held key repeats; a <button> fires once.
+            if (event.repeat) { return; }
             btn.click();
           }
         };
@@ -1126,9 +1128,9 @@
             // not_set submit doesn't carry over a stale "filter".
             if (modeInput) { modeInput.value = 'all'; }
           }
-          // Not set is amber (pill-empty) and a set link the faint
-          // pill-count under is-selected's fill, whichever state the
-          // chip rendered in, so both classes swap with the state.
+          // Not set is amber (pill-empty); a set link wears
+          // is-selected's solid fill over pill-count. Both pairs swap
+          // with the state, whichever one the chip rendered in.
           if (next === 'not_set') {
             btn.classList.add('is-unset', 'pill-empty');
             btn.classList.remove('is-selected', 'pill-count');
@@ -1186,9 +1188,9 @@
             builder.style.pointerEvents = 'none';
             if (modeInput) { modeInput.value = 'individual'; }
           }
-          // Not set is amber (pill-empty) and a set link the faint
-          // pill-count under is-selected's fill, whichever state the
-          // chip rendered in, so both classes swap with the state.
+          // Not set is amber (pill-empty); a set link wears
+          // is-selected's solid fill over pill-count. Both pairs swap
+          // with the state, whichever one the chip rendered in.
           if (next === 'not_set') {
             btn.classList.add('is-unset', 'pill-empty');
             btn.classList.remove('is-selected', 'pill-count');
