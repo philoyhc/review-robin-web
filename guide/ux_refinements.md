@@ -1074,9 +1074,10 @@ recoverable and deleting isn't. The Guide's "Reading the controls" card
 
 Retire the filled amber (author, 2026-10-10). Its recoverable callers
 take the amber outline (`.btn.alert`); **Regenerate & prepare**, which
-deletes saved responses, takes Destructive; a **Cancel** beside one of
-them takes Secondary, so the proceed button stays the louder of the
-pair. Rejected: keeping the fill on the Workflow card only, where the
+deletes saved responses, takes Destructive; and **every banner Cancel**
+takes Secondary (author, 2026-10-10, found at build: `spec/ui_elements.md`
+§5a had made each banner's Cancel `.btn.alert`), so a proceed button
+always reads louder than the Cancel beside it. Rejected: keeping the fill on the Workflow card only, where the
 card hosts a series of main actions; the author chose one fewer role
 over that case.
 
@@ -1087,13 +1088,13 @@ over that case.
   **Outline-amber** name. "Alert" retires with the fill.
 - Six roles become five: Primary, Secondary, Destructive, Outline-amber,
   Toggle.
+- §5a's banner rule changes: a banner's Cancel is Secondary, which §6
+  already lists Cancel under.
 - `--btn-alert-bg`, `-fg`, `-border`, `-bg-hover` retire with the rule;
   the `--btn-amber-*` tokens `.btn.alert` reads are unchanged.
 
 ### Judgment calls — decided
 
-- Validate's error-banner **Cancel** (no proceed button beside it) takes
-  Secondary too, so the page's two Cancels match (2026-10-10).
 - The Guide card's **Archive session** row goes: it was the role's
   sample (2026-10-10).
 
@@ -1105,13 +1106,17 @@ Taken 2026-10-10 at `2af9c113`.
   (`partials/next_action_card.html` 2, `session_validate.html` 1,
   `session_extract_data.html` 1, `sessions_list.html` 2), plus
   `guide.html` 1 and `base.html` 2 rules.
-- Cancels to Secondary: `session_validate.html:35`, `:62`;
-  `partials/next_action_card.html:103`.
+- Banner Cancels to Secondary (`grep -rn 'class="btn alert"'`, the
+  Cancel links): `session_validate.html:35`, `:62`;
+  `partials/next_action_card.html:103`; `instruments_index.html:143`,
+  `:146`, `:160`; `partials/_quick_setup_card.html:95`;
+  `session_assignments.html:156` — eight.
 - `--btn-alert-*`: 14 lines in `base.html`; `spec/color_tokens.md`
   (4 rows and two mentions); `tools/_harness_common.py` (contrast pair,
   two harness buttons); `tools/theme_customizer.gen.py` (2).
 - Tests: `test_extract_data_scaffold.py:529` (class assertion),
-  `test_cascade_ties.py:67` (class list).
+  `test_cascade_ties.py:67` (class list),
+  `test_assignments_page_generate.py:351` (banner Cancel class).
 - Specs naming the role: `ui_elements.md` (3), `operator_button_audit.md`
   (6 rows), `workflow_card.md` (2), `extract_data.md` (1),
   `session_home.md:560`, `visual_style_rrw.md:11` ("six"); `CLAUDE.md`
@@ -1119,7 +1124,7 @@ Taken 2026-10-10 at `2af9c113`.
 
 ### PR ladder
 
-1. **The swap.** Every call site, the Cancels, the CSS and tokens, the
+1. **The swap.** Every call site, the eight banner Cancels, the CSS and tokens, the
    regenerated customizer, the harness, the two tests, the Guide row,
    the specs and the twins. No scaffold: no new page, card or
    affordance. One code slice outside a ladder, so it takes its own
@@ -1147,9 +1152,9 @@ Taken 2026-10-10 at `2af9c113`.
 
 ### Doc impact
 
-- `spec/ui_elements.md` — §6: five roles; the Alert row goes; Outline-amber reads "serious but recoverable"; the hover list and the delete-confirm note lose `.danger-solid`.
-- `spec/operator_button_audit.md` — rows 153, 154, 203, 209, 221 and 69 take their new roles; the two Cancels take Secondary.
-- `spec/workflow_card.md` — Archive session and Regenerate & prepare take their new roles.
+- `spec/ui_elements.md` — §5a: a banner's Cancel is Secondary, and the confirm-banner note loses `.danger-solid`; §6: five roles, the Alert row goes, Outline-amber reads "serious but recoverable", the hover list loses `.danger-solid`.
+- `spec/operator_button_audit.md` — rows 153, 154, 203, 209, 221 and 69 take their new roles; the banner Cancel rows (155, 160, 236, 237, 257, 68, 70, 71k) take Secondary.
+- `spec/workflow_card.md` — Archive session and Regenerate & prepare take their new roles; the confirm banner's Cancel is Secondary.
 - `spec/extract_data.md` — the Archive card's button is Outline-amber.
 - `spec/session_home.md` — the Closed row's Archive session is Outline-amber.
 - `spec/color_tokens.md` — the four `--btn-alert-*` rows retire.
