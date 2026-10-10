@@ -68,6 +68,11 @@ the PR body unless it says otherwise.
   `.btn.destructive` and wipes a whole set with no "Yes, delete…"
   checkbox, against `spec/ui_elements.md` §4's delete-confirm standard
   (`app/web/templates/operator/operator_settings.html`).
+- **The Band 1 link chips ignore Enter and Space** *(filed 2026-10-10,
+  found building UX refinements Item 10)*. They are `role="button"
+  tabindex="0"` spans with only `onclick`, so a keyboard user can focus
+  them but not cycle them (`app/web/templates/operator/instruments_index.html`;
+  the Guide's sample handles both keys).
 - **A Band 1 link chip cycled back to "Not set" turns faint, not amber**
   *(filed 2026-10-10, found building UX refinements Item 10)*. A chip
   rendered already set starts `pill-count`; `newModelToggleRuleMode` and
