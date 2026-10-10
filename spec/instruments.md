@@ -1292,12 +1292,15 @@ branch that ends directly above it, at that branch's level, or, on a
 named plain Integer, Decimal or List field, a new branch with an empty
 condition and this row as its only field ("Start a branch on the field
 above with this field"; off when the field above is a String or
-unnamed). That second way to fork adds no new field row, where ⑂ does;
-a branch inside a branch is started with ⑂, not ↰. **A level-1 row's
-↰** joins the branch of the field directly above it in its own branch,
-at level 2, when that field has one; otherwise it is off ("No branch inside this branch ends
-directly above"), off on an unnamed field, and off, as ↳ is, on a parent or in a locked branch —
-which a row with saved responses always is, its answers locking it. Joining keeps the
+unnamed). That second way to fork adds no new field row, where ⑂ does.
+**A level-1 row's ↰** does the same one level down, with the field
+directly above it in its own branch: it joins that field's branch at
+level 2, or, on a named plain Integer, Decimal or List field, starts one
+there with this row as its only field. It is off on the branch's first
+field ("The first field in a branch can't join a branch"), under a
+String or unnamed field, on an unnamed field, and, as ↳ is, on a parent
+or in a locked branch — which a row with saved responses always is, its
+answers locking it. Joining keeps the
 row's **R** — Save refuses the result if the row's R is
 now required with no anchor elsewhere in the instrument. A governed row
 in an unlocked branch can detach (↳) one level up, to directly below

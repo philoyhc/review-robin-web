@@ -4275,14 +4275,16 @@
                 {% endif %}
                 {# 19T Item 14 rung 5 — a level-1 row's ↰ joins the branch
                    inside its own branch that ends directly above it, at
-                   level 2; it sits before its ↳. #}
+                   level 2, or starts one on a plain number or List field
+                   directly above (ux_refinements Item 5); it sits before
+                   its ↳. #}
                 {% if _level == 1 %}
                 <td class="col-shrink" data-new-model-rf-nest-cell>
                 <button type="button" class="btn secondary rf-glyph"
                         data-new-model-rf-nest
                         onclick="newModelRfNest(this)"
                         {% if rf.is_parent or rf.branch_locked or not rf.nest_target %}disabled{% endif %}
-                        title="{% if rf.is_parent %}A field with a branch can't join another{% elif rf.branch_locked %}Its branch has saved responses, so its fields can't change{% elif not rf.nest_target %}No branch inside this branch ends directly above{% else %}Join the branch above{% endif %}">↰</button></td>
+                        title="{% if rf.is_parent %}A field with a branch can't join another{% elif rf.branch_locked %}Its branch has saved responses, so its fields can't change{% elif not rf.nest_target and rf.nest_first %}The first field in a branch can't join a branch{% elif not rf.nest_target %}The field above is String, so it can't have a branch{% elif rf.nest_target == 'start' %}Start a branch on the field above with this field{% else %}Join the branch above{% endif %}">↰</button></td>
                 {% endif %}
                 {# 19T Item 10 rung 7b — join the unit above (↰), or, on a
                    governed row, detach from the branch (↳). The row script
@@ -5479,14 +5481,17 @@
             active.setAttribute('title', 'Show this field in the preview and to reviewers');
           }
         };
-        // 19T Item 14 rung 5 — a level-1 row's ↰: live only when the field
-        // directly above it in its branch has a branch of its own, which
-        // it joins at level 2. It never starts one (⑂ does).
+        // 19T Item 14 rung 5 — a level-1 row's ↰: when the field directly
+        // above it in its branch has a branch of its own, it joins it at
+        // level 2; when that field is a plain named Integer, Decimal or
+        // List field, it starts a branch on it with this row as its only
+        // field, as a level-0 row's ↰ does (ux_refinements Item 5).
         window.newModelRfSyncNest = window.newModelRfSyncNest || function (row) {
           var btn = row && row.querySelector('[data-new-model-rf-nest]');
           if (!btn) { return; }
           var above = window.newModelRfBranchSibling(row, true);
           var off = null;
+          var title = 'Join the branch above';
           if (row.hasAttribute('data-new-model-rf-parent')) {
             off = "A field with a branch can't join another";
           } else if (window.newModelRfBranchLocked(window.newModelRfParentOf(row))) {
@@ -5495,11 +5500,21 @@
             off = "Its branch has saved responses, so its fields can't change";
           } else if (!window.newModelRfSaveName(row)) {
             off = 'Enter a field name first.';
-          } else if (!above || !above.hasAttribute('data-new-model-rf-parent')) {
-            off = 'No branch inside this branch ends directly above';
+          } else if (!above) {
+            off = "The first field in a branch can't join a branch";
+          } else if (!above.hasAttribute('data-new-model-rf-parent')) {
+            var typeSel = above.querySelector('[data-new-model-rf-data-type]');
+            var aboveType = typeSel ? typeSel.value : 'string';
+            if (!window.newModelRfSaveName(above)) {
+              off = 'Name the field above first.';
+            } else if (['integer', 'decimal', 'list'].indexOf(aboveType) < 0) {
+              off = "The field above is String, so it can't have a branch";
+            } else {
+              title = 'Start a branch on the field above with this field';
+            }
           }
           btn.disabled = !!off;
-          btn.setAttribute('title', off || 'Join the branch above');
+          btn.setAttribute('title', off || title);
         };
         // A branch inside a branch is ruled above its parent and below its
         // unit's last row (``rf-inner-top`` / ``rf-inner-end``, base.html),
@@ -5516,11 +5531,26 @@
           });
         };
         // The row already sits directly after that branch's last row, so
-        // moving it down a level makes it the branch's last field.
+        // moving it down a level makes it the branch's last field. Above a
+        // plain field, the branch starts first: that field becomes a
+        // parent with an empty condition, amber until filled, as ⑂'s is,
+        // and no new field row is added (ux_refinements Item 5).
         window.newModelRfNest = window.newModelRfNest || function (btn) {
           var row = btn.closest('[data-new-model-rf-row]');
           var rows = row && row.closest('[data-new-model-rf-rows]');
           if (!row || !rows || btn.disabled) { return; }
+          var focus = null;
+          var above = window.newModelRfBranchSibling(row, true);
+          if (above && !above.hasAttribute('data-new-model-rf-parent')) {
+            var cond = window.newModelRfNewConditionRow(btn.closest('[data-new-model-band3]'), 2);
+            above.setAttribute('data-new-model-rf-parent', 'true');
+            // The bar runs down from the parent's + (ux_refinements Item 1).
+            var add = above.querySelector('[data-new-model-rf-add]');
+            if (add) { add.closest('td').classList.add('rf-branch-bar-start'); }
+            above.insertAdjacentElement('afterend', cond);
+            window.newModelRfSyncConditionOps(row.closest('[data-new-model-rf-group]'), above);
+            focus = cond.querySelector('[data-new-model-rf-condition-value]');
+          }
           window.newModelRfSetLevel(row, 2);
           var parentRow = window.newModelRfParentOf(row);
           if (parentRow && parentRow.getAttribute('data-selected') !== 'true') {
@@ -5531,7 +5561,8 @@
           });
           window.newModelRfBranchEdited(row);
           var detach = row.querySelector('[data-new-model-rf-join]');
-          if (detach && !detach.disabled) { detach.focus(); }
+          if (focus) { focus.focus(); }
+          else if (detach && !detach.disabled) { detach.focus(); }
         };
         // ↰ / ↳: join the unit above, or detach from the branch.
         window.newModelRfJoin = window.newModelRfJoin || function (btn) {
@@ -5791,6 +5822,10 @@
           // group, and whether that branch is locked.
           window.newModelRfSyncJoin(row);
           window.newModelRfSyncNest(row);
+          // The next field in its branch, whose ↰ reads this row's name
+          // and type (ux_refinements Item 5).
+          var nextMember = governed && window.newModelRfBranchSibling(row, false);
+          if (nextMember) { window.newModelRfSyncNest(nextMember); }
           window.newModelRfSyncInnerBorders(group);
           var nextGroup = group && !governed && window.newModelRfGroupSibling(group, false);
           if (nextGroup) {

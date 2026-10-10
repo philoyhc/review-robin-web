@@ -210,3 +210,53 @@ def test_a_second_level_saves_and_a_third_is_not_offered(
     card = open_unlocked(page, session_id)
     assert names(card) == ["Rating", "Why", "Detail", "Comments"]
     assert _levels(card) == ["0", "1", "2", "0"]
+
+
+def test_a_level_one_join_under_a_plain_field_starts_a_branch_inside(
+    page: Page, new_session: Callable[[], int]
+) -> None:
+    """guide/ux_refinements.md Item 5: a level-1 row's ↰ under a plain
+    number or List field in its branch starts a branch on it with the row
+    itself, as a level-0 row's ↰ does, so no extra row appears."""
+    session_id = new_session()
+    card = open_unlocked(page, session_id)
+    rows(card).first.locator("[data-new-model-rf-fork]").click()
+    _conditions(card).first.locator("[data-new-model-rf-condition-value]").fill("4")
+    why = _governed(card).first
+    why.locator("[data-new-model-rf-name]").fill("Why")
+    why.locator("[data-new-model-rf-data-type]").select_option("integer")
+    comments = rows(card).filter(has=page.locator("[data-new-model-rf-name][value=Comments]"))
+    comments.locator("[data-new-model-rf-join]").click()
+    assert _levels(card) == ["0", "1", "1"]
+    nest = comments.locator("[data-new-model-rf-nest]")
+    expect(nest).to_be_enabled()
+    expect(nest).to_have_attribute("title", "Start a branch on the field above with this field")
+
+    nest.click()
+    assert _levels(card) == ["0", "1", "2"]
+    expect(rows(card)).to_have_count(3)
+    expect(_conditions(card)).to_have_count(2)
+    expect(why).to_have_attribute("data-new-model-rf-parent", "true")
+    assert why.evaluate(
+        "r => r.querySelector('[data-new-model-rf-add]').closest('td')"
+        ".classList.contains('rf-branch-bar-start')"
+    )
+    inner = _conditions(card).nth(1)
+    expect(inner).to_have_attribute("data-row-pending", "true")
+    expect(inner.locator("[data-new-model-rf-condition-value]")).to_be_focused()
+    inner.locator("[data-new-model-rf-condition-value]").fill("3")
+    save(page, card)
+
+    card = open_unlocked(page, session_id)
+    assert names(card) == ["Rating", "Why", "Comments"]
+    assert _levels(card) == ["0", "1", "2"]
+
+    # Detached back to level 1, its branch ends; under a String it says why not.
+    comments = rows(card).filter(has=page.locator("[data-new-model-rf-name][value=Comments]"))
+    comments.locator("[data-new-model-rf-join]").click()
+    expect(_conditions(card)).to_have_count(1)
+    assert _levels(card) == ["0", "1", "1"]
+    rows(card).nth(1).locator("[data-new-model-rf-data-type]").select_option("string")
+    nest = comments.locator("[data-new-model-rf-nest]")
+    expect(nest).to_be_disabled()
+    expect(nest).to_have_attribute("title", "The field above is String, so it can't have a branch")

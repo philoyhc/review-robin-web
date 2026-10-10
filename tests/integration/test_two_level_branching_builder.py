@@ -278,9 +278,13 @@ def test_detachs_title_counts_the_rows_own_branch(client: TestClient, db: Sessio
 # ends directly above it (the author's screen cap, 2026-09-29).
 
 
-def _with_other(client: TestClient, db: Session, code: str, *, answered: str | None = None):
+def _with_other(
+    client: TestClient, db: Session, code: str, *,
+    answered: str | None = None, other_type: str = "String",
+):
     """The chain plus Other and Last, level-1 fields under Familiarity
-    after Rating's branch; ``answered`` names one to give a response."""
+    after Rating's branch; ``answered`` names one to give a response,
+    ``other_type`` is Other's type (Last is a String)."""
     from .test_response_field_branching_save import _add_response
 
     review_session, instrument, _, _, _ = _chain_page(client, db, code)
@@ -288,7 +292,8 @@ def _with_other(client: TestClient, db: Session, code: str, *, answered: str | N
     for offset, label in ((1, "Other"), (2, "Last")):
         fields[label] = InstrumentResponseField(
             instrument_id=instrument.id, field_key=label.lower(), label=label,
-            order=fields["Comments"].order + offset, _inline_data_type="String",
+            order=fields["Comments"].order + offset,
+            _inline_data_type=other_type if label == "Other" else "String",
             branch_parent_id=fields["Familiarity"].id,
         )
         db.add(fields[label])
@@ -318,10 +323,21 @@ def test_a_level_one_row_below_a_branch_can_join_it(client: TestClient, db: Sess
     rating = _nest(_row(table, "Rating"))
     assert " disabled" in rating
     assert 'title="A field with a branch can\'t join another"' in rating
-    # Other, above Last, has none.
+    # Other, above Last, has none, and is a String, so can't have one.
     last = _nest(_row(table, "Last"))
     assert " disabled" in last
-    assert 'title="No branch inside this branch ends directly above"' in last
+    assert 'title="The field above is String, so it can\'t have a branch"' in last
+
+
+def test_a_level_one_row_below_a_plain_number_field_can_start_its_branch(
+    client: TestClient, db: Session
+) -> None:
+    """ux_refinements Item 5 — as a level-0 row's ↰ does: Other is an
+    Integer with no branch, so Last's ↰ starts one on it."""
+    table, _ = _with_other(client, db, "two-level-nest-start", other_type="Integer")
+    last = _nest(_row(table, "Last"))
+    assert " disabled" not in last
+    assert 'title="Start a branch on the field above with this field"' in last
 
 
 def test_a_level_one_rows_join_is_off_in_an_answered_branch(
@@ -344,12 +360,19 @@ def test_the_row_script_nests_a_level_one_row(client: TestClient, db: Session) -
     sync = fn("newModelRfSyncNest")
     for line in (
         "var above = window.newModelRfBranchSibling(row, true);",
-        "} else if (!above || !above.hasAttribute('data-new-model-rf-parent')) {",
+        "} else if (!above) {",
+        "} else if (!above.hasAttribute('data-new-model-rf-parent')) {",
+        "} else if (['integer', 'decimal', 'list'].indexOf(aboveType) < 0) {",
+        "title = 'Start a branch on the field above with this field';",
         "} else if (window.newModelRfBranchLocked(window.newModelRfParentOf(row))) {",
-        "btn.setAttribute('title', off || 'Join the branch above');",
+        "btn.setAttribute('title', off || title);",
     ):
         assert line in sync, line
-    assert "window.newModelRfSetLevel(row, 2);" in fn("newModelRfNest")
+    nest = fn("newModelRfNest")
+    assert "window.newModelRfSetLevel(row, 2);" in nest
+    # ux_refinements Item 5 — above a plain field, the branch starts first.
+    assert "above.setAttribute('data-new-model-rf-parent', 'true');" in nest
+    assert "window.newModelRfNewConditionRow(btn.closest('[data-new-model-band3]'), 2);" in nest
     recompute = fn("newModelRfRecomputeActionStates")
     assert "window.newModelRfSyncNest(row);" in recompute
     assert "window.newModelRfSyncInnerBorders(group);" in recompute

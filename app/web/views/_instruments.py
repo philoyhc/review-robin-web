@@ -355,9 +355,11 @@ def _response_field_groups(
     on the unanswered sample row: every branch above it is Require), and
     a parent carries its own ``condition``, rendered right after it at
     the next level. ``only_member`` marks a governed field its parent
-    governs alone, whose ↳ ends that branch, and ``nest_target`` one whose
-    previous field in its branch has a branch of its own, which its ↰
-    joins (rung 5). A level-1 parent is ``inner_top`` and its branch's
+    governs alone, whose ↳ ends that branch, and ``nest_target`` what a
+    level-1 field's ↰ does with the previous field in its branch:
+    ``"join"`` its branch (rung 5), ``"start"`` one on a plain number or
+    List field (ux_refinements Item 5), or None, off; ``nest_first``
+    marks the branch's first field, which has none above. A level-1 parent is ``inner_top`` and its branch's
     last field ``inner_end``: the rules around a branch inside a branch.
     """
     from app.services.responses import (
@@ -365,6 +367,7 @@ def _response_field_groups(
         BRANCH_MODE_SHOW,
         LIST_OP_CHOICES,
         NUMERIC_OP_CHOICES,
+        PARENT_DATA_TYPES,
         RANGE_OPS,
         RANGE_SEPARATOR,
     )
@@ -433,9 +436,19 @@ def _response_field_groups(
         )
         rf["only_member"] = parent_id is not None and member_counts.get(parent_id) == 1
         # 19T Item 14 rung 5 — a level-1 field's ↰ joins the branch of the
-        # field directly above it in its own branch, if that has one.
+        # field directly above it in its own branch, if that has one, or
+        # starts one on it if it is a number or List field
+        # (ux_refinements Item 5).
         previous = last_member.get(parent_id) if parent_id is not None else None
-        rf["nest_target"] = previous is not None and previous.get("id") in parent_ids
+        rf["nest_first"] = previous is None
+        rf["nest_target"] = None
+        if previous is not None and previous.get("id") in parent_ids:
+            rf["nest_target"] = "join"
+        elif (
+            previous is not None
+            and str(previous.get("data_type") or "").capitalize() in PARENT_DATA_TYPES
+        ):
+            rf["nest_target"] = "start"
         if parent_id is not None:
             last_member[parent_id] = rf
         rf["condition"] = None
