@@ -89,6 +89,14 @@ Both sides become type 1 chips that wrap the existing checkbox:
   - +, ⑂ and ↰ / ↳ take the width of R, ≡, ▲, ▼ and X, which set the
     standard: `--rf-glyph-width` (2.25rem today, also the width of each
     empty `td.rf-slot`) becomes that button width.
+- **The name chip is the row's first column at every level** (author,
+  2026-10-10). The Active checkbox moves one column right per branch
+  level, into columns the glyph buttons share, so a chip there would
+  widen every button column. The chip column stays put like the name
+  box; the per-level indent moves to the buttons after it, and a branch
+  bar runs down from the parent's + column. Rejected: the chip shifting
+  per level (wide button gaps), and a chip column just before the name
+  box (the same name twice, side by side).
 
 ### Blast radius (measured)
 

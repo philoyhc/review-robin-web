@@ -671,9 +671,10 @@ Three rules make that work:
   chip that says it cannot be clicked must not also say it can.
 
 **A chip can be a form control.** Session Home's optional-tab chips
-(`spec/session_home.md`) are each a `<label class="pill pill-count
-tag-chip">` around a visually hidden checkbox, so a click ticks the box
-and the form posts it. `.tag-chip:has(> input:checked)` is the
+(`spec/session_home.md`) and the Instruments display-field chips
+(`spec/instruments.md` "Display-field table") are each a `<label
+class="pill pill-count tag-chip">` around a visually hidden checkbox, so
+a click ticks the box and the form or row script reads it. `.tag-chip:has(> input:checked)` is the
 `.is-selected` fill, read off the box itself, so a form reset repaints
 the chip with no script; the hidden box's keyboard focus shows as a
 `--focus-ring` outline on the chip. **`.tag-chip.is-locked`** is the
