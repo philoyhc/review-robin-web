@@ -354,3 +354,11 @@ section (git history keeps it), so this file lists only what is owed.
   step, as a click does, Space without scrolling the page, and the
   card's Save wakes; the chip shows a focus ring; on a locked card the
   chips take no focus.
+
+## Locked cards' Band 1 link chips look plain
+
+- [ ] **Locked.** On a locked Instruments card the three Link chips have
+  no blue edge and no pointer; a set Link reads as the plain light pill,
+  a "Not set" Link stays amber, in light and dark.
+- [ ] **Unlock and lock again.** Unlocking brings the edge, pointer and
+  solid fill back; locking takes them away, with no reload.
