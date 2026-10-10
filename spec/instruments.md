@@ -828,7 +828,7 @@ its `(audience, window)` cell; the cycle sets themselves are not restated
 here. The two cells that can't — Reviewer / Session-ongoing (pinned to
 Raw) and Reviewees / Session-ongoing (pinned to off) — are fixed
 switches (`b3_static_pill`: `.tag-chip.is-fixed`, `spec/ui_elements.md`
-§9), the cycle chips' dark fill with no edge or pointer, a lock glyph,
+§9), the cycle chips' solid fill with no edge or pointer, a lock glyph,
 no role or handler, and the title "Fixed". Both macros keep the `b3_`
 prefix from when the editor lived in Band 3's table, which this card
 retires.

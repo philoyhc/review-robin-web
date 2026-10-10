@@ -1016,6 +1016,10 @@ merged card, and the guard tooltip needed a follow-up.
   "Clear all settings" has no confirm checkbox; a Band 1 link chip
   cycled back to Not set turns faint, not amber; the real Band 1 link
   chips ignore Enter and Space.
+- **Close `spec-writer` pass:** §9's Fill column said dark/light, which
+  is backwards in dark theme; it now reads solid/faint with the tokens,
+  and the four specs citing it (`email_template_editor.md`,
+  `extract_data.md`, `instruments.md`, `sessions_overview.md`) follow.
 - **Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
@@ -1056,6 +1060,7 @@ merged card, and the guard tooltip needed a follow-up.
 ### Doc impact
 
 - `spec/ui_elements.md` — §6 and §9 note that the Guide's "Reading the controls" card samples every role and chip type, so a new one is added there too.
+- `spec/email_template_editor.md`, `spec/extract_data.md`, `spec/instruments.md`, `spec/sessions_overview.md` — "dark" chips read "solid", after §9's Fill column (found at the close).
 - `guide/things_to_check_in_browser.md` — a section for the PR.
 
 ---
@@ -1140,6 +1145,7 @@ Shipped in one PR (#2954), after the plan (#2953), as laddered.
   Outline-amber definition in `spec/visual_style_general.md`, history in
   §6's lead-in, and a role test whose regex a comment could swallow and
   whose Cancel floors were loose; all fixed. Codex on #2954 found nothing.
+  The close's `spec-writer` pass found nothing to change.
 - **Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
