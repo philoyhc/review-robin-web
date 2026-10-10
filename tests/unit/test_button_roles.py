@@ -61,14 +61,17 @@ def test_each_moved_button_keeps_its_role(
     assert classes == [cls], (template, label, classes)
 
 
-# The eight banner Cancels Item 11 moved, by template. Other Cancels
-# share some of these templates, so each count is a floor.
-BANNER_CANCELS = {
+# Every Cancel in the templates holding the eight banner Cancels Item 11
+# moved, banner ones included (Instruments has two lock-card Cancels
+# beside its three banner ones), plus the reviewer pair a comment once
+# hid. Exact, so a dropped or relabelled Cancel fails here.
+PINNED_CANCELS = {
     "operator/session_validate.html": 2,
     "operator/partials/next_action_card.html": 1,
-    "operator/instruments_index.html": 3,
+    "operator/instruments_index.html": 5,
     "operator/partials/_quick_setup_card.html": 1,
     "operator/session_assignments.html": 1,
+    "reviewer/_action_row.html": 2,
 }
 
 
@@ -83,9 +86,8 @@ def test_every_cancel_is_secondary() -> None:
                 seen[template] = seen.get(template, 0) + 1
                 if cls.split()[:2] != ["btn", "secondary"]:
                     off.append(f"{template}: {cls!r}")
-    for template, floor in BANNER_CANCELS.items():
-        assert seen.get(template, 0) >= floor, (template, seen.get(template))
-    assert "reviewer/_action_row.html" in seen  # not swallowed by a comment
+    for template, count in PINNED_CANCELS.items():
+        assert seen.get(template, 0) == count, (template, seen.get(template))
     assert not off, off
 
 
