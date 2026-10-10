@@ -513,8 +513,8 @@ eight PNGs in `app/web/static/guide/`, no spec quotes the Guide text
 
 - **Built 2026-10-10** in one PR. The fields and branching captures are
   ~2690px wide against ~1756px for the others; every capture renders at
-  1200px, so their text reads about a third smaller. The preview capture
-  shows Rating 0–5 and the fields capture 1–5 (reported to the author).
+  1200px, so their text reads about a third smaller. The fields pair was
+  retaken (`Guide_v5b`) so Rating's bounds match the preview, 0–5.
 
 ### PR ladder
 
