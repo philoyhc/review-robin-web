@@ -636,7 +636,7 @@ Source: `app/web/templates/operator/operator_settings.html`.
 | 92 | Email send (SMTP) form | Cancel | `<a>` | `btn secondary` | Secondary | Returns to `?return_to=<path>` |
 | 93 | Email send (SMTP) form | Save | `<button type="submit">` | `btn secondary` | Secondary | Disabled until input touched |
 | 93a | Date & time card | Save timezone | `<button type="submit">` | `btn secondary` | Secondary | Posts `/operator/settings/timezone`; persists the `display_timezone` preference |
-| 94 | Danger Zone | Clear all settings | `<button type="submit">` | `btn destructive` | Destructive | Posts `/operator/settings/clear` |
+| 94 | Clear all settings (SMTP) | Clear all settings | `<button type="submit">` | `btn destructive` | Destructive | Posts `/operator/settings/clear`; disabled until its "Yes, delete every SMTP setting on this account." box is ticked (`data-delete-confirm="clear-settings"`), and the route answers 400 without `confirm=true` |
 
 ---
 
@@ -897,7 +897,7 @@ per-field overrides.
 
 Every destructive button (delete-all, delete-data, delete-session,
 revert, replace-upload, per-instrument delete, per-shape delete,
-clear-responses) ships `disabled` and is enabled only while a paired
+clear-responses, clear-settings) ships `disabled` and is enabled only while a paired
 confirm checkbox is ticked. **The pairing is declarative and there is
 one implementation**: `data-delete-confirm="KEY"` on the checkbox,
 `data-delete-btn="KEY"` on the button, wired by a single global JS block

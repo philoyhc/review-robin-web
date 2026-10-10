@@ -170,9 +170,15 @@ def operator_settings_save_timezone(
 @router.post("/settings/clear")
 def operator_settings_clear(
     return_to: str | None = Form(default=None),
+    confirm: str | None = Form(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
+    if confirm != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="confirm checkbox required",
+        )
     operator_settings.clear_email_settings(
         db, user=user, correlation_id=request_correlation_id()
     )

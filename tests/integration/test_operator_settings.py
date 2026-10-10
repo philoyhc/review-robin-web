@@ -18,6 +18,7 @@ Covers the round-trip through ``/operator/settings``:
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
 
 import pytest
@@ -292,7 +293,9 @@ def test_settings_clear_wipes_everything_and_audits(
         },
         follow_redirects=False,
     )
-    response = client.post("/operator/settings/clear", follow_redirects=False)
+    response = client.post(
+        "/operator/settings/clear", data={"confirm": "true"}, follow_redirects=False
+    )
     assert response.status_code == 303
     assert response.headers["location"] == "/operator/settings"
 
@@ -312,6 +315,36 @@ def test_settings_clear_wipes_everything_and_audits(
         )
     ).scalar_one()
     assert event.actor_user_id == user.id
+
+
+def test_settings_clear_refuses_without_the_confirm(
+    client: TestClient, db: Session, fernet_key: str
+) -> None:
+    """The confirm box is the gate (spec/ui_elements.md §4): without it
+    the route clears nothing."""
+    client.post(
+        "/operator/settings",
+        data={"smtp_host": "smtp.office365.com", "smtp_port": "587"},
+        follow_redirects=False,
+    )
+    response = client.post("/operator/settings/clear", follow_redirects=False)
+    assert response.status_code == 400
+    assert _alice_row(db).smtp_host == "smtp.office365.com"
+
+
+def test_settings_clear_card_is_guarded(client: TestClient) -> None:
+    """The card's button ships disabled, paired with a "Yes, delete…"
+    box, under its "(SMTP)" header."""
+    body = client.get("/operator/settings").text
+    assert "<h2>Clear all settings (SMTP)</h2>" in body
+    box = re.search(r'<input[^>]*data-delete-confirm="clear-settings"[^>]*>', body)
+    assert box, "the clear card has no confirm box"
+    for attr in ('name="confirm"', 'value="true"', "required"):
+        assert attr in box.group(0), attr
+    button = re.search(r'<button[^>]*data-delete-btn="clear-settings"[^>]*>', body)
+    assert button, "the clear card has no paired button"
+    assert 'disabled aria-disabled="true"' in button.group(0)
+    assert "Yes, delete every SMTP setting on this account." in body
 
 
 # ── operator_settings.get_email_settings ─────────────────────────────────

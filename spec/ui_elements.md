@@ -243,9 +243,10 @@ to CSS classes.
 > submit is **disabled-until-checked**: the button ships
 > `disabled aria-disabled="true"` and a paired confirmation checkbox
 > enables it. The checkbox is also `required` — belt-and-suspenders
-> against a JS-off submit — **wherever the gate owns its form**: the
-> `Danger Zone`'s `delete-all` and the Upload card's `replace-roster`,
-> on all four roster pages.
+> against a JS-off submit — **wherever the gate owns its form**: e.g.
+> the `Danger Zone`'s `delete-all` and the Upload card's
+> `replace-roster` on all four roster pages, Session Home's
+> `delete-data` / `delete-session`, and Settings' `clear-settings`.
 >
 > **It is not `required` where the gate shares a form with
 > non-destructive submits**, and that is forced rather than an

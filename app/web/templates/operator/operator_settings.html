@@ -12,7 +12,7 @@
 
   {# 19T Item 16 entry 3 — two columns: the SMTP card on the left (its
      "Bring your own SMTP" intro folded in below the header), Date & time
-     and Clear all settings stacked on the right. `.bottom-grid` with a
+     and Clear all settings (SMTP) stacked on the right. `.bottom-grid` with a
      `.bottom-left` stack per side (spec/ui_elements.md §10): each side
      keeps its own height, and the pair collapses to one column at 800px. #}
   <div class="bottom-grid">
@@ -198,7 +198,7 @@
   </script>
 
   <div class="card danger-zone" id="danger-zone">
-    <h2>Clear all settings</h2>
+    <h2>Clear all settings (SMTP)</h2>
     <p>
       Wipes every SMTP field on this account. Existing outbox rows are
       not affected. You can re-enter credentials any time.
@@ -207,8 +207,19 @@
       {% if return_to_raw %}
         <input type="hidden" name="return_to" value="{{ return_to_raw }}">
       {% endif %}
+      <p>
+        <label style="font-weight: normal;">
+          <input type="checkbox" name="confirm" value="true" required
+                 data-delete-confirm="clear-settings">
+          Yes, delete every SMTP setting on this account.
+        </label>
+      </p>
+      {# Disabled-until-checked (app-wide data-delete-confirm standard,
+         spec/ui_elements.md §4); the route re-checks confirm. #}
       <div style="display: flex; justify-content: flex-end;">
-        <button class="btn destructive" type="submit">Clear all settings</button>
+        <button class="btn destructive" type="submit"
+                data-delete-btn="clear-settings"
+                disabled aria-disabled="true">Clear all settings</button>
       </div>
     </form>
   </div>
