@@ -36,18 +36,27 @@ def _fill(chip: Locator) -> str:
     return chip.evaluate("el => getComputedStyle(el).backgroundColor")
 
 
+def _probe(card: Locator, classes: str) -> tuple[str, str]:
+    """The fill and text color a span with these classes wears in the card."""
+    return tuple(
+        card.evaluate(
+            """(card, classes) => {
+                const probe = document.createElement('span');
+                probe.className = classes;
+                card.appendChild(probe);
+                const style = getComputedStyle(probe);
+                const out = [style.backgroundColor, style.color];
+                probe.remove();
+                return out;
+            }""",
+            classes,
+        )
+    )
+
+
 def _amber(card: Locator) -> str:
     """The fill a chip rendered on "Not set" wears."""
-    return card.evaluate(
-        """card => {
-            const probe = document.createElement('span');
-            probe.className = 'pill pill-empty tag-chip is-unset';
-            card.appendChild(probe);
-            const fill = getComputedStyle(probe).backgroundColor;
-            probe.remove();
-            return fill;
-        }"""
-    )
+    return _probe(card, "pill pill-empty tag-chip is-unset")[0]
 
 
 def test_a_set_link_chip_cycled_back_to_not_set_is_amber(
@@ -94,20 +103,6 @@ def test_enter_and_space_cycle_a_link_chip(
     expect(chip).to_have_text("Not set")
 
 
-def _probe_fill(card: Locator, classes: str) -> str:
-    return card.evaluate(
-        """(card, classes) => {
-            const probe = document.createElement('span');
-            probe.className = classes;
-            card.appendChild(probe);
-            const fill = getComputedStyle(probe).backgroundColor;
-            probe.remove();
-            return fill;
-        }""",
-        classes,
-    )
-
-
 def _style(chip: Locator, prop: str) -> str:
     return chip.evaluate("(el, p) => getComputedStyle(el)[p]", prop)
 
@@ -123,10 +118,12 @@ def test_a_locked_cards_link_chips_read_as_plain_pills(
     expect(card).to_have_attribute("data-instrument-locked", "true")
     chips = card.locator(LINK_CHIPS)
     assert chips.count() == 3
-    plain = _probe_fill(card, "pill pill-count")
+    plain_fill, plain_text = _probe(card, "pill pill-count")
     for i in range(3):
         chip = chips.nth(i)
-        assert _fill(chip) == plain, i
+        assert _fill(chip) == plain_fill, i
+        assert _style(chip, "color") == plain_text, i
+        assert _style(chip, "borderTopColor") == "rgba(0, 0, 0, 0)", i
         assert _style(chip, "cursor") == "default", i
         assert _style(chip, "boxShadow") == "none", i
 
