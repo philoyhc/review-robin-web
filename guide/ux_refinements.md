@@ -32,7 +32,8 @@ and the author ruled that the two sets should match (2026-10-09).
 Both sides become type 1 chips that wrap the existing checkbox:
 
 - **Display fields:** the label pill becomes the chip and the checkbox
-  column goes. Name and Email keep the locked chip treatment.
+  column goes. ~~Name and Email keep the locked chip treatment.~~ Name
+  and Email are fixed-on chips (Item 2, revised 2026-10-09).
 - **Response fields:** the Active checkbox becomes a chip labeled with
   the field's name, mirrored live from the name box, left-aligned in its
   cell and capped at about the width of a "Comments  " chip. A longer
@@ -56,14 +57,15 @@ Both sides become type 1 chips that wrap the existing checkbox:
   label, the same default the name box shows muted.
 - **A locked card** stays inert as today; its chips show state and
   don't respond to clicks.
-- **Fields a group row can't show** keep their disabled state, shown as
-  an `is-disabled` chip.
+- **Fields a group row can't show** keep their disabled checkbox, and
+  so show as fixed-off chips (Item 2).
 - **A disabled checkbox shows on its chip whenever it is disabled**,
   including after load: `newModelRfRecomputeActionStates` disables a
   governed field's Active when its parent is unticked, and re-enables it
   after. The chip reads that from the input with a CSS rule on
-  `label.tag-chip:has(> input:disabled)` (no edge, no pointer), so no
-  script has to keep a class in step (Codex on #2930).
+  `label.tag-chip:has(> input:disabled)` (no edge, no pointer, and
+  Item 2's lock glyph: the fixed-off look), so no script has to keep a
+  class in step (Codex on #2930).
 
 ### Judgment calls — decided
 
@@ -86,8 +88,11 @@ Taken 2026-10-09 at `2569876a`.
 ### PR ladder
 
 1. **Display fields chips.** The label pill wraps the checkbox and the
-   checkbox column goes. Name and Email take `is-locked`; group-hidden
-   fields take `is-disabled`. A browser test toggles a field through its
+   checkbox column goes. ~~Name and Email take `is-locked`; group-hidden
+   fields take `is-disabled`.~~ Name and Email take Item 2's fixed-on
+   chip, and the `:has(> input:disabled)` rule gives group-hidden fields
+   the fixed-off look, glyph included (revised for Item 2; this rung
+   follows Item 2's PR 1). A browser test toggles a field through its
    chip and checks the fill. `spec/instruments.md` (Display fields row
    list) updated.
 2. **Response fields name chips.** The Active checkbox becomes a name
@@ -95,8 +100,8 @@ Taken 2026-10-09 at `2569876a`.
    minimum width. A browser test renames a field and checks the chip
    follows, and toggles a field with responses to confirm the confirm
    still fires, and unticks a parent to check its governed fields'
-   chips lose the edge and the pointer and come back when it is ticked
-   again. `spec/instruments.md` (Response fields table) and
+   chips take the fixed-off look (no edge or pointer, lock glyph) and
+   come back when it is ticked again. `spec/instruments.md` (Response fields table) and
    `spec/ui_elements.md` (`rf-table`, `rf-active-cell`) updated. The
    item's cumulative `diff-reviewer` read runs here, from the main SHA
    before PR 1.
@@ -114,9 +119,9 @@ Taken 2026-10-09 at `2569876a`.
 
 ### Open questions
 
-- Should Name and Email show the plain "on" fill rather than the muted
-  locked one? Decided by the author at PR 1, with the app-wide survey of
-  fixed-value controls (2026-10-09) in hand.
+- ~~Should Name and Email show the plain "on" fill rather than the
+  muted locked one?~~ Neither: they take Item 2's fixed-switch chip
+  (author, 2026-10-09), so PR 1 follows Item 2's PR 1.
 
 ### Out of scope
 
@@ -128,3 +133,116 @@ Taken 2026-10-09 at `2569876a`.
 - `spec/instruments.md` — Display fields rows are on/off chips (PR 1); the Response fields Active checkbox is a name chip (PR 2).
 - `spec/ui_elements.md` — `rf-table` / `rf-active-cell` describe the name chip, its cap and the bounds minimum width (PR 2).
 - `guide/things_to_check_in_browser.md` — a section per PR.
+
+---
+
+## Item 2 — A fixed-switch chip
+
+### Opportunity
+
+A survey on 2026-10-09 found per-item controls held at a value while
+the controls beside them stay live, shown three ways:
+
+- Session Home's Relationships / Observers chips, once the tab holds
+  data: `.tag-chip.is-locked`, a muted display-value fill;
+- Band 3's Name and Email: ticked checkboxes, greyed out;
+- the Visibility card's "You (reviewer)" × ongoing ("Raw responses")
+  and "Reviewees" × ongoing ("—"): plain pills titled "Fixed", beside
+  cycle chips.
+
+`spec/ui_elements.md` §9's chip-types table has no row for a switch
+that can't be changed, so each surface invented its own look.
+
+### Decision
+
+A fourth chip type, **Fixed**: a switch held at its value. It keeps the
+full dark fill of its sibling chips (`--selected-bg` / `--selected-fg`),
+drops the edge and the pointer, and carries a small lock glyph before
+the label (`.tag-chip.is-fixed`). A switch fixed **off** is the off chip
+with the same glyph; on Band 3 it is the chip whose checkbox is
+disabled, so Item 1's `label.tag-chip:has(> input:disabled)` rule
+carries the glyph rather than a class. The author's pick of four mocked-up
+variants, 2026-10-09: lock glyph (chosen), hatched fill, dashed inner
+ring, toned-down dark.
+
+**Rejected:** the muted locked fill for a fixed "on". It reads as a
+display, not a switch (the author). `.tag-chip.is-locked` stays for a
+whole card's locked view.
+
+Not in scope: Band 1's "Not set" link chips (`is-disabled`, struck
+through) mean "unavailable", not "fixed", and keep their look.
+
+### Semantics
+
+- **Fixed is per item.** A card's lock still uses `is-locked`; a fixed
+  chip on a locked card looks like any other locked chip.
+- **The value still submits** where it does today: Session Home's
+  hidden checkbox stays checked, the Visibility cells' hidden inputs
+  keep their fixed values.
+- **The tooltip says why** (today's titles: "The session has
+  relationships, so the tab stays on.", "Fixed").
+- **Contrast:** the glyph is `currentColor` on the audited
+  `--selected-bg` / `--selected-fg` pair.
+
+### Judgment calls — decided
+
+- The glyph is a CSS mask in `currentColor`, not an emoji, so it
+  follows the theme and the font. (2026-10-09)
+
+### Blast radius (measured)
+
+Taken 2026-10-09 at `2e0379b8`.
+
+| What | Count | Command |
+|---|---|---|
+| Session Home chips taking `is-locked` | 4 (2 card-locked, 2 tab-holds-data) | `grep -n "tag-chip is-locked\|tag-chip{% if" app/web/templates/operator/session_detail.html` |
+| `.tag-chip.is-locked` rules in `base.html` | 4 | `grep -n "tag-chip.is-locked" app/web/templates/base.html` |
+| `b3_static_pill` / "Fixed" lines on Instruments | 5 | `grep -n "b3_static_pill\|title=\"Fixed\"" app/web/templates/operator/instruments_index.html` |
+| Specs naming `is-locked` | 2 | `grep -rln "is-locked" spec` |
+
+### PR ladder
+
+1. **The fixed chip.** `.tag-chip.is-fixed` in `base.html` (fill,
+   glyph, no edge or pointer), allowlisted in `test_reserved_shade`,
+   `tools/theme_customizer.html` regenerated. §9 gains the Fixed row.
+   Session Home's tab-holds-data chips move from `is-locked` to
+   `is-fixed`. A browser test compares the fill with a selected chip's
+   and checks the glyph.
+2. **The Visibility card's fixed cells.** `b3_static_pill` renders a
+   fixed chip; `test_band3_static_pills` updated. `spec/instruments.md`
+   (Visibility editor) says so.
+
+Band 3's Name and Email take the fixed chip in Item 1's PR 1, after
+this item's PR 1.
+
+### Definition of done
+
+- §9 defines four chip types, Fixed among them, with a standard.
+- Session Home's tab-holds-data chips and the two Visibility cells
+  render as fixed chips; a test pins each.
+- `guide/things_to_check_in_browser.md` has a section per PR.
+- `### Doc impact` current, every bullet checked by hand.
+- `spec-writer` run against the doc-impact specs; flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- ~~How does a fixed **off** look?~~ The off chip plus the lock glyph
+  (author, 2026-10-09). It covers Band 3's group-hidden display fields
+  (Item 1 PR 1) and a response field under a hidden parent (Item 1
+  PR 2).
+
+### Out of scope
+
+- Band 1's "Not set" chips (above).
+- Fixed values on buttons, selects and inputs (R, ⑂, a field's type,
+  locked conditions, the Danger zone's paired checkbox, closed cells on
+  the reviewer surface): not chips.
+
+### Doc impact
+
+- `spec/ui_elements.md` — §9's chip-types table gains Fixed; `is-locked` is the locked card's chip only (PR 1).
+- `spec/session_home.md` — the optional-tab chips are fixed once the tab holds data (PR 1).
+- `spec/instruments.md` — the Visibility editor's two fixed cells are fixed chips (PR 2).
+- `guide/things_to_check_in_browser.md` — a section per PR.
+
