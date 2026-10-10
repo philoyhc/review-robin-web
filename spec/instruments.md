@@ -1281,7 +1281,7 @@ With no branch ending directly above, ↰ is off ("No branch ends
 directly above"). **A level-1 row's
 ↰** joins the branch of the field directly above it in its own branch,
 at level 2, when that field has one; otherwise it is off ("No branch inside this branch ends
-directly above"), and off, as ↳ is, on a parent or in a locked branch —
+directly above"), off on an unnamed field, and off, as ↳ is, on a parent or in a locked branch —
 which a row with saved responses always is, its answers locking it. Joining keeps the
 row's **R** — Save refuses the result if the row's R is
 now required with no anchor elsewhere in the instrument. A governed row
