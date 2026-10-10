@@ -10,7 +10,7 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Page, expect
 
-from ._builder import open_unlocked, pin_full_matrix, save
+from ._builder import open_card, open_unlocked, pin_full_matrix, save
 from .conftest import LiveServer
 
 
@@ -37,3 +37,19 @@ def test_the_self_review_chip_cycles_and_saves(
     chip = card.locator("[data-new-model-self-review-chip]")
     expect(chip).to_have_text("Exclude self reviews")
     expect(chip.locator('input[name="exclude_self_reviews"]')).to_be_checked()
+
+
+def test_a_locked_cards_self_review_chip_is_a_plain_unfaded_pill(
+    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+) -> None:
+    """On a locked card the chip reads as a display pill, as Band 3's do,
+    but "Include self reviews" is a state, not an off switch, so it is
+    not faded (ux_refinements Item 8)."""
+    session_id = new_session()
+    pin_full_matrix(live_server.database_url, session_id)
+    card = open_card(page, session_id)
+    expect(card).to_have_attribute("data-instrument-locked", "true")
+    chip = card.locator("[data-new-model-self-review-chip]")
+    expect(chip).to_have_text("Include self reviews")
+    assert chip.evaluate("el => getComputedStyle(el).opacity") == "1"
+

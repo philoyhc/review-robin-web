@@ -509,8 +509,9 @@ setting. It sits here for space alone, and says so twice: a horizontal
 three columns — separates it from the unit-of-review controls above, and
 the control names itself, so it does not read as a third Link 3 state.
 
-**The control is a cycle chip** (`spec/ui_elements.md` §9), always
-dark, reading **Include self reviews** or **Exclude self reviews**
+**The control is a cycle chip** (`spec/ui_elements.md` §9), dark on
+an unlocked card and the plain display pill, unfaded, on a locked one,
+reading **Include self reviews** or **Exclude self reviews**
 (`exclude_self_reviews`, off by default), around the hidden box the
 form posts. **A line under it says what a self review is, following the
 Link 3 pill live**, in two whole sentences rather than one with a
@@ -535,8 +536,8 @@ re-scoped is also false:
 
 | Transition | Why |
 |---|---|
-| Any Link → `Not set` | A flag left ticked would sit in the rule set, invisible on the page and live at the next Generate. |
-| Link 3 `Individual` → `Group using tags` | The two modes except different things. A tick agreed against *the individual reviewed is the reviewer* must not carry into *the reviewer is in the group being reviewed*, which drops every member row of that group. |
+| Any Link → `Not set` | A flag left on would sit in the rule set, invisible on the page and live at the next Generate. |
+| Link 3 `Individual` → `Group using tags` | The two modes except different things. An exclusion agreed against *the individual reviewed is the reviewer* must not carry into *the reviewer is in the group being reviewed*, which drops every member row of that group. |
 
 Both are enforced **server-side on save** (`resolve_exclude_self_reviews`),
 with the client clearing the box, and the chip back to *Include self
@@ -1642,7 +1643,7 @@ The page-wide invariants the lock model enforces:
    State 2. A Band 1 Save emits an event only for the part that
    changed: `session_rule_set.created` / `session_rule_set.updated`
    for the rules, `session_rule_set.exclude_self_reviews_set` for
-   Self reviews, `instrument.group_boundary_updated` for the unit of
+   the self-review chip, `instrument.group_boundary_updated` for the unit of
    review or its boundary tags; the invalidation records why in its
    reason.
 4. **Save and Lock are independent.** Save persists. Lock toggles

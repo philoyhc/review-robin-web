@@ -687,7 +687,8 @@ it still says on or off. On takes the card's display-value colors
 (`--config-value-bg` / `--config-value-fg`) rather than the reserved
 shade; off is faded. **A locked Instruments card's Band 3 chips read as
 plain `pill-count` pills** (the author, 2026-10-10): no edge, pointer or
-lock glyph, an unticked field faded, read off the card's
+lock glyph, an unticked field faded (a cycle chip, such as Band 1's
+self-review chip, names its state and is not faded), read off the card's
 `data-instrument-locked` so an in-page lock or unlock repaints them.
 
 `.severity-chip` on Validate is the shape this generalises: an outlined
