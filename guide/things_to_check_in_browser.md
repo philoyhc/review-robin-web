@@ -341,8 +341,7 @@ section (git history keeps it), so this file lists only what is owed.
   chips on the right; below 800px it stacks to one column.
 - [ ] **The copy's colors.** "Solid blue", "faint" and "amber" read
   true of the samples in both themes.
-- [ ] **The button samples** take no pointer or hover tint, and
-  "Observers" shows its reason on hover.
+- [ ] **"Observers"** shows its reason on hover.
 
 ## The Guide's "Reading the controls" card works (UX refinements Item 10, rung 2)
 
@@ -355,3 +354,15 @@ section (git history keeps it), so this file lists only what is owed.
   focus ring, and Space flips it.
 - [ ] **The guard.** "Delete all reviewers" is off until the box is
   ticked, and clicking it then does nothing.
+
+## The Guide card's button samples (UX refinements Item 10, rung 3)
+
+- [ ] **Hover.** Each button sample takes its role's hover tint and a
+  pointer, in light and dark.
+- [ ] **R.** One R; a click flips it between solid blue (on) and the
+  outlined off, and back.
+- [ ] **Tooltips.** Hovering each button, pill and chip sample, and the
+  guard's box and Delete, shows a tooltip naming it and, for a control,
+  what a click does; the Delete says "Off until the box is ticked" until
+  it is, then its own tooltip; the Delete sits level with the guard's
+  sentence, with no stray tooltip strip around it once on.

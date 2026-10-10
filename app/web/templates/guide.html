@@ -74,18 +74,18 @@
               <tr><th>Looks like</th><th>Means</th></tr>
             </thead>
             <tbody>
-              <tr><td><span class="btn">Activate</span></td>
+              <tr><td><span class="btn" title="Primary button: the page's main step">Activate</span></td>
                   <td><strong>The main step</strong> on this part of the page. There is at most one.</td></tr>
-              <tr><td><span class="btn secondary">Save</span></td>
+              <tr><td><span class="btn secondary" title="Secondary button: an everyday action">Save</span></td>
                   <td><strong>An everyday action</strong>: save, upload, cancel, view.</td></tr>
-              <tr><td><span class="btn destructive">Delete</span></td>
+              <tr><td><span class="btn destructive" title="Destructive button: deletes data for good">Delete</span></td>
                   <td><strong>Deletes data for good.</strong> Most that delete a whole set stay off until you tick the box beside them (below).</td></tr>
-              <tr><td><span class="btn danger-solid">Archive session</span></td>
+              <tr><td><span class="btn danger-solid" title="Alert button: serious but recoverable">Archive session</span></td>
                   <td><strong>Serious but recoverable</strong>, such as archiving a session.</td></tr>
-              <tr><td><span class="btn alert">Revert to draft</span></td>
+              <tr><td><span class="btn alert" title="Outline-amber button: unlocks a locked card">Revert to draft</span></td>
                   <td><strong>Unlocks a locked card</strong>, in the card's own amber.</td></tr>
-              <tr><td><span class="btn">R</span> <span class="btn secondary">R</span></td>
-                  <td><strong>A switch on one row</strong> of the Instruments page: R (required), ≡ (help text), ⑂ (branch). Solid blue is on.</td></tr>
+              <tr><td><button class="btn" type="button" aria-pressed="true" title="Toggle button: R marks a field required. Click to switch it." data-guide-toggle>R</button></td>
+                  <td><strong>A switch on one row</strong> of the Instruments page: R (required), ≡ (help text), ⑂ (branch). Solid blue is on; try it.</td></tr>
             </tbody>
           </table>
         </div>
@@ -98,11 +98,18 @@
         </p>
         <div class="guide-controls-demo">
           <label class="confirm-label">
-            <input type="checkbox" data-delete-confirm="guide-demo" autocomplete="off">
-            <span>Yes, delete the existing <span class="pill pill-empty">12 reviewers</span>.</span>
+            <input type="checkbox" data-delete-confirm="guide-demo" autocomplete="off"
+                   title="Tick to turn on the Delete button">
+            <span>Yes, delete the existing <span class="pill pill-empty" title="Count pill: how many rows the delete removes, not a control">12 reviewers</span>.</span>
           </label>
-          <button class="btn destructive" type="button" data-delete-btn="guide-demo"
-                  disabled aria-disabled="true">Delete all reviewers</button>
+          {# A disabled .btn takes no pointer events (spec/ui_elements.md §6),
+             so its own title can't show; the wrapper carries the off-state
+             tooltip and the button the on-state one. #}
+          <span title="Off until the box is ticked" data-guide-guard-tip>
+            <button class="btn destructive" type="button" data-delete-btn="guide-demo"
+                    title="Destructive button: deletes data for good. Nothing is deleted here."
+                    disabled aria-disabled="true">Delete all reviewers</button>
+          </span>
         </div>
       </div>
 
@@ -120,19 +127,20 @@
               <tr><th>Looks like</th><th>Means</th></tr>
             </thead>
             <tbody>
-              <tr><td><span class="pill pill-count">12 reviewers</span> <span class="pill pill-lifecycle-draft">Draft</span></td>
+              <tr><td><span class="pill pill-count" title="Count pill: a fact, not a control">12 reviewers</span> <span class="pill pill-lifecycle-draft" title="Status pill: the session's state, not a control">Draft</span></td>
                   <td><strong>A pill</strong>: a count, a type or a status.</td></tr>
-              <tr><td><label class="pill pill-count tag-chip"><input type="checkbox" class="visually-hidden" checked autocomplete="off">Email</label>
-                      <label class="pill pill-count tag-chip"><input type="checkbox" class="visually-hidden" autocomplete="off">Tag1</label></td>
+              <tr><td><label class="pill pill-count tag-chip" title="On/off chip: click to show or hide Email"><input type="checkbox" class="visually-hidden" checked autocomplete="off">Email</label>
+                      <label class="pill pill-count tag-chip" title="On/off chip: click to show or hide Tag1"><input type="checkbox" class="visually-hidden" autocomplete="off">Tag1</label></td>
                   <td><strong>On or off.</strong> Solid blue is on, a faint tint is off.</td></tr>
-              <tr><td><label class="pill pill-count tag-chip pill-empty" data-guide-partial-chip data-total="2" data-on="1"><input type="checkbox" class="visually-hidden" autocomplete="off" aria-label="Include 1 self review, some"><span data-guide-chip-label>Include 1 self review</span></label></td>
+              <tr><td><label class="pill pill-count tag-chip pill-empty" data-guide-partial-chip data-total="2" data-on="1" title="Some-of-a-set chip: click to include all, click again for none"><input type="checkbox" class="visually-hidden" autocomplete="off" aria-label="Include 1 self review, some"><span data-guide-chip-label>Include 1 self review</span></label></td>
                   <td><strong>Some of a set.</strong> Solid blue when all are on, faint when none, amber when some.</td></tr>
-              <tr><td><label class="pill pill-count tag-chip is-selected" data-guide-cycle-chip><input type="checkbox" class="visually-hidden" autocomplete="off" aria-label="Exclude self reviews"><span data-guide-chip-label>Include self reviews</span></label></td>
+              <tr><td><label class="pill pill-count tag-chip is-selected" data-guide-cycle-chip title="Cycle chip: click to switch between Include and Exclude"><input type="checkbox" class="visually-hidden" autocomplete="off" aria-label="Exclude self reviews"><span data-guide-chip-label>Include self reviews</span></label></td>
                   <td><strong>A choice between named options.</strong> Always solid blue; the label says which is chosen, and a click moves to the next.</td></tr>
               <tr><td><span class="pill pill-empty tag-chip is-unset" data-guide-unset-chip
-                            role="button" tabindex="0" aria-pressed="mixed">Not set</span></td>
+                            role="button" tabindex="0" aria-pressed="mixed"
+                            title="Chip with an unset state: click to cycle Not set → All → Filter using tags → Not set">Not set</span></td>
                   <td><strong>Not chosen yet.</strong> Amber until you pick an option; a click moves through the options and back.</td></tr>
-              <tr><td><label class="pill pill-count tag-chip is-fixed" title="The session has observers, so the tab stays on."><input type="checkbox" class="visually-hidden" checked disabled autocomplete="off">Observers</label></td>
+              <tr><td><label class="pill pill-count tag-chip is-fixed" title="Fixed chip: the session has observers, so the tab stays on."><input type="checkbox" class="visually-hidden" checked disabled autocomplete="off">Observers</label></td>
                   <td><strong>Held where it is.</strong> The lock says it can't change now, usually because data depends on it; hover for why, where the page gives one.</td></tr>
             </tbody>
           </table>
@@ -145,9 +153,10 @@
     </div>
   </div>
   <script>
-    /* The three chip samples whose label or fill moves with a click. The
-       on/off pair needs no script: `.tag-chip:has(> input:checked)` fills
-       them off the box, as it does everywhere else. */
+    /* The row switch and the three chip samples whose label or fill
+       moves with a click. The on/off chip pair (Email, Tag1) needs no
+       script: `.tag-chip:has(> input:checked)` fills them off the box,
+       as it does everywhere else. */
     (function () {
       var card = document.getElementById("guide-controls");
       if (!card) return;
@@ -174,6 +183,17 @@
         partialBox.addEventListener("change", function () {
           var on = Number(partial.getAttribute("data-on"));
           paintPartial(on === total ? 0 : total);
+        });
+      }
+
+      // A switch on one row: on takes Primary, off Secondary, and
+      // aria-pressed carries the state, as R and ≡ do on Instruments.
+      var toggle = card.querySelector("[data-guide-toggle]");
+      if (toggle) {
+        toggle.addEventListener("click", function () {
+          var on = toggle.getAttribute("aria-pressed") !== "true";
+          toggle.setAttribute("aria-pressed", on ? "true" : "false");
+          toggle.classList.toggle("secondary", !on);
         });
       }
 

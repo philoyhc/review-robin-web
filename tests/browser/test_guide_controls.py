@@ -1,6 +1,7 @@
 """The Guide's "Reading the controls" card (guide/ux_refinements.md Item 10):
-every chip sample answers a click the way the chip it stands for does, and
-the delete guard's button stays off until its box is ticked.
+every chip sample answers a click the way the chip it stands for does, the
+row-switch sample R toggles like R on Instruments, and the delete guard's
+button stays off until its box is ticked.
 """
 
 from __future__ import annotations
@@ -17,10 +18,17 @@ def test_the_chip_samples_answer_a_click(page: Page) -> None:
     card = page.locator("#guide-controls")
     email = card.locator("label.tag-chip", has_text="Email")
     tag = card.locator("label.tag-chip", has_text="Tag1")
-    # The button samples act on nothing, so they take no pointer.
-    assert card.locator("span.btn").first.evaluate(
-        "el => getComputedStyle(el).pointerEvents"
-    ) == "none"
+    # The row switch: a click flips it between Primary and Secondary.
+    toggle = card.locator("[data-guide-toggle]")
+    expect(toggle).to_have_attribute("aria-pressed", "true")
+    on_bg = _bg(toggle)
+    toggle.click()
+    expect(toggle).to_have_attribute("aria-pressed", "false")
+    expect(toggle).to_have_class("btn secondary")
+    assert _bg(toggle) != on_bg
+    toggle.click()
+    expect(toggle).to_have_attribute("aria-pressed", "true")
+    expect(toggle).to_have_class("btn")
     dark = _bg(email)
     light = _bg(tag)
     assert dark != light
@@ -84,3 +92,33 @@ def test_the_delete_guard_turns_its_button_on(page: Page) -> None:
     expect(button).to_be_enabled()
     card.locator('[data-delete-confirm="guide-demo"]').uncheck()
     expect(button).to_be_disabled()
+
+
+def test_every_sample_has_a_tooltip(page: Page) -> None:
+    """Each button, pill and chip sample, and the guard's box and button,
+    says on hover what it is (the author, 2026-10-10)."""
+    page.goto("/guide")
+    samples = page.locator(
+        "#guide-controls .guide-controls-table td:first-child > *,"
+        " #guide-controls .guide-controls-demo input,"
+        " #guide-controls .guide-controls-demo .pill,"
+        " #guide-controls .guide-controls-demo button"
+    )
+    count = samples.count()
+    assert count == 17
+    for i in range(count):
+        title = samples.nth(i).get_attribute("title")
+        assert title and title.strip(), samples.nth(i).inner_text()
+    # A disabled .btn takes no pointer events, so the off-state tooltip
+    # sits on its wrapper, which is what the pointer reaches.
+    tip = page.locator("#guide-controls [data-guide-guard-tip]")
+    assert tip.get_attribute("title")
+    tip.scroll_into_view_if_needed()
+    box = tip.locator("button").bounding_box()
+    assert box
+    reached = page.evaluate(
+        "([x, y]) => document.elementFromPoint(x, y).closest('[title]')"
+        ".getAttribute('title')",
+        [box["x"] + box["width"] / 2, box["y"] + box["height"] / 2],
+    )
+    assert reached == tip.get_attribute("title")
