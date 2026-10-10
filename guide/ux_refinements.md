@@ -511,10 +511,12 @@ eight PNGs in `app/web/static/guide/`, no spec quotes the Guide text
 
 ### Status
 
-- **Built 2026-10-10** in one PR. The fields and branching captures are
-  ~2690px wide against ~1756px for the others; every capture renders at
-  1200px, so their text reads about a third smaller. The fields pair was
-  retaken (`Guide_v5b`) so Rating's bounds match the preview, 0–5.
+- **Built 2026-10-10** in two PRs: the section (#2940), then the
+  retake (#2942). The fields and branching captures
+  came in at ~2690px wide against ~1756px for the others, so their text
+  read about a third smaller at the shared 1200px; the author retook
+  both pairs at ~1755px (`Guide_v5c`), the fields pair saved, with
+  Rating's bounds 0–5 as in the preview.
   The branching pair keeps Rating at 1–5, a separate example (author,
   2026-10-10). The three wording fixes accepted, plus a
   fourth from the cold read: Name and Email "aren't optional" (author,
@@ -524,6 +526,8 @@ eight PNGs in `app/web/static/guide/`, no spec quotes the Guide text
 
 1. **The section and its captures.** `guide.html`'s Instruments section,
    the eight PNGs, and the browser check.
+2. **The retake** (added at build). The fields and branching pairs at
+   the usual width.
 
 ### Definition of done
 
@@ -533,12 +537,8 @@ eight PNGs in `app/web/static/guide/`, no spec quotes the Guide text
 
 ### Open questions
 
-- The fields and branching pairs are a third scale, which
-  `spec/ui_elements.md` §10's two capture widths don't allow for: retake
-  them at ~1750px, or rule an exception there — the author. A retake
-  waits until the author is back at the capturing machine; it can also
-  take the fields pair after Save, as the current one shows an unsaved
-  edit.
+- ~~Retake the wider pairs or rule a third scale?~~ Retaken at ~1755px
+  (author, 2026-10-10).
 
 ### Out of scope
 

@@ -336,8 +336,8 @@ section (git history keeps it), so this file lists only what is owed.
 
 - [ ] **/guide, Build the form (Instruments).** The four new figure
   pairs show in light and dark, the text reads as intended (the three
-  wording fixes noted in the PR), and the fields and branching captures
-  are legible at their smaller apparent scale.
+  wording fixes noted in the PR), and the retaken fields and branching
+  captures read at the same scale as the others.
 
 ## A level-1 row's ↰ starts a branch (UX refinements Item 5)
 
