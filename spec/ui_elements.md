@@ -436,9 +436,9 @@ doesn't fire on the dismissed page because no
 
 Five canonical roles — **Primary**, **Secondary**, **Destructive**
 (outline red), **Outline-amber** (serious but recoverable) and
-**Toggle** (a two-state per-row flag). A sixth, filled-amber **Alert**
-(`.btn.danger-solid`), retired in `guide/ux_refinements.md` Item 11: it
-read louder than Destructive for a recoverable act. Every `.btn` shares one shape: `var(--space-2) var(--space-4)`
+**Toggle** (a two-state per-row flag). A recoverable act takes the
+amber outline, never a fill, so it never reads louder than Destructive.
+Every `.btn` shares one shape: `var(--space-2) var(--space-4)`
 padding, `var(--radius-button)` radius, `--fs-small` at weight 500, a 1px
 border, single-line label. **Roles differ by token, not by shape**, so a
 role change is a colour change and nothing else. If a button does not fit
@@ -468,7 +468,7 @@ support is a separate spec (`visual_style_general.md`).
 |---|---|---|
 | `.btn` (no modifier) | **Primary** | `--btn-primary-bg` fill, `--btn-primary-fg` label, `--btn-primary-border` border. Reserved for the page's *single* main affirmative action — at most one per page region. "Submit this form" doesn't qualify; routine submits use Secondary. |
 | `.btn.secondary` | **Secondary** | `--btn-secondary-bg` (white) with a `--btn-secondary-fg` label and a `--btn-secondary-border` outline — a medium grey, a shade lighter than the label. The default button. Used for routine submits (Upload, Save), Cancel, View detail, etc. |
-| `.btn.alert` | **Outline-amber (serious but recoverable)** | `--btn-amber-bg` (white) with `--btn-amber-border` + `--btn-amber-fg` — the same warning brown that frames the lock card. Archive session, purge-and-archive, and the Acknowledge-and-activate confirm, and the recovery action inside a lock card. Per `visual_style_general.md` P7, recovery actions inside a lock card adopt the card's color family. Used e.g. for "Revert to draft" inside a `.card.lock`. |
+| `.btn.alert` | **Outline-amber (serious but recoverable)** | `--btn-amber-bg` (white) with `--btn-amber-border` + `--btn-amber-fg` — the same warning brown that frames the lock card. Archive session, purge-and-archive, the Acknowledge-and-activate confirm, and the recovery action inside a lock card. Per `visual_style_general.md` P7, recovery actions inside a lock card adopt the card's color family. Used e.g. for "Revert to draft" inside a `.card.lock`. |
 | `.btn.destructive` | **Destructive (outline red)** | `--btn-destructive-bg` (white) with `--btn-destructive-border` + `--btn-destructive-fg`. Irreversible row / collection **deletes** — Delete session, delete-all rosters, bulk-delete, and the delete confirm step inside `.card.danger-zone`. The role also appears **outside** a danger zone: every roster Setup page carries a `Delete` for the checkbox-selected rows in its **row expander**, not in the table toolbar. The expander is not red and does not become so — the button's own role carries the weight, and the destructive act is gated by the confirmation checkbox beside it (`spec/setup_pages.md` § *Roster controls and their route contracts*). |
 | `.btn` ⇄ `.btn.secondary` + `aria-pressed` | **Toggle** | A two-state on/off button for one flag on one row. On takes the Primary tokens (`.btn`), off takes Secondary (`.btn.secondary`), and `aria-pressed` carries the state; whatever changes the flag — the click handler for R and ≡, the row's state sync for ⑂ — sets the class and the attribute together. It reuses the two roles' tokens rather than adding its own, so it is a role by behavior, not a new colour. Used on the Instruments page's response-field rows only: **R** (required), **≡** (help-text card) and **⑂** (branch — on once the field has a branch, and disabled then). It is not a chip: the column chips (`.tag-chip` in a `.col-chip-row`) and the Light / Dark switch (`.theme-toggle`) toggle too, but each is its own primitive. |
 | `.btn.danger` | *(no rule)* | `.danger` is a context class, not a button role: `base.html` gives `.btn.danger` no rule, and nothing renders it. A `.btn` that enters a confirmation takes Secondary; the destructive treatment lands on the confirm step (`.btn.destructive`). |
