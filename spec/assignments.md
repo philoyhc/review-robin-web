@@ -763,13 +763,12 @@ Columns (left → right):
 
 | Column | Meaning |
 |---|---|
-| Instrument | `block.instrument_label` — the operator-facing label from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{session_seq}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md`, the operator-identifier policy) — it is not part of the label chain, so a search or a label built from it would match a string no operator can see. The column's server-side sort key is the SQL form of the same rule (`assignments/_coverage.py::_instrument_label_sql`), pinned against the Python one by `tests/integration/test_instrument_session_seq.py`, so the page sorts by the string it displays. |
-| Type | "Individual" or "Group" (driven by `Instrument.group_kind`). |
+| Instrument | An on/off chip (`label.pill.pill-count.tag-chip` around a hidden checkbox) carrying `block.instrument_label` and filtering the preview table below: a client-side DOM toggle that hides or shows the instrument's pairs, on by default when any row materialised (`guide/ux_refinements.md` Item 7; a separate Show column before it). The label is the operator-facing one from `instruments._instrument_label`: **`short_label`**, else the `Instrument_{session_seq}` fallback that nudges the operator to set one. The stored `name` is a pure internal handle and is **never** rendered (`spec/instruments.md`, the operator-identifier policy) — it is not part of the label chain, so a search or a label built from it would match a string no operator can see. The column's server-side sort key is the SQL form of the same rule (`assignments/_coverage.py::_instrument_label_sql`), pinned against the Python one by `tests/integration/test_instrument_session_seq.py`, so the page sorts by the string it displays. |
+| Type | A display pill (`pill pill-count`), "Individual" or "Group" (driven by `Instrument.group_kind`). |
 | Generated | Pill carrying the row count. "Not generated yet" when zero. A `stale` pill rides alongside when the rows have fallen out of step — see "Staleness". |
 | Groups | Group count (distinct `(reviewer, group key)` over the rows, the key derived by `responses.group_keys`) for group instruments; "—" for individual. |
-| Self review | Pill carrying the self-review row count, plus an inline checkbox that bulk-flips `Assignment.include` on those rows in this instrument — counting and flipping only rows whose reviewer and reviewee are both active (an inactive side's row stays excluded by status). Pill color is `pill-info` (blue) when every counted row is included, `pill-warning` (yellow) when not. The checkbox renders only when `self_review_total > 0`: not on a session with no roster overlaps, nor when every self-review row has an inactive side. |
+| Self review | An on/off chip, **"Include N self reviews"** (N the included rows; "review" when N is 1), that bulk-flips `Assignment.include` on those rows in this instrument — counting and flipping only rows whose reviewer and reviewee are both active (an inactive side's row stays excluded by status). Dark when every counted row is included, light when none is, amber (`pill-empty`) when some are; a click on a light or amber chip includes them all, on a dark one excludes them all (`guide/ux_refinements.md` Item 7). The chip renders only when `self_review_total > 0`: not on a session with no roster overlaps, nor when every self-review row has an inactive side, where the cell reads "—". |
 | Included | Pill carrying the count of `include=True` rows. "—" before Generate. |
-| Show | Per-instrument filter checkbox — client-side DOM toggle that hides / shows the instrument's pairs in the preview table below. Default: checked when any row materialised. |
 | (action) | "Edit on Instruments page" deep-link to the instrument's card. |
 
 **There is no Rule column**, and re-adding one buys nothing: the
@@ -778,7 +777,7 @@ rule name here names either Band 1 or nothing.
 
 ### Self-review toggle wiring
 
-The checkbox is bound to a per-instrument form
+The chip's hidden box is bound to a per-instrument form
 `POST /sessions/{sid}/assignments/{iid}/self-reviews/active`
 with `active=true|false`. The service helper
 `assignments.set_instrument_self_reviews_active`:
@@ -794,7 +793,8 @@ with `active=true|false`. The service helper
    `counts.flipped` + `context.active` + `refs.instrument_id`.
 
 Whenever the session is **not editable** — `ready`, `expired` or
-`archived` — the checkbox disables, matching the
+`archived` — the chip's box disables (the chip reads fixed),
+matching the
 `_require_editable` its route enforces. Gating the template on
 `is_ready` alone instead leaves the box live on `expired` and
 `archived`, where the route answers 409. Its title

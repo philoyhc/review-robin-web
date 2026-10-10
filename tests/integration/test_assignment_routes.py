@@ -266,23 +266,18 @@ def test_assignments_hub_renders_count_and_mode(
     # preview`` <h2>, which was the only one on a preview card
     # anywhere in the app.
     assert 'id="assignments-table"' in populated.text
-    # The per-instrument status table renders a Self review pill
-    # (even when the instrument has zero self-review rows). Reads
-    # the count via the ``data-self-review-count`` attribute so the
-    # assertion is robust to formatting tweaks.
-    assert 'data-self-review-count=' in populated.text
-    # Show column: header renamed from "Filter" → "Show"; the
-    # filter checkbox renders ``checked`` by default for any
+    # ux_refinements Item 7 — the Show column retired: the
+    # instrument's name is the filter chip, on by default for any
     # instrument with generated rows so the post-Generate view
-    # surfaces every materialised pair (the user's "all ticked"
-    # rule). The row-count pill that used to sit before the
-    # checkbox retired — that count moved to the new Included
-    # column.
-    assert "<th>Show</th>" in populated.text
+    # surfaces every materialised pair (the user's "all ticked" rule);
+    # Type is a display pill.
+    assert "<th>Self review</th>" in populated.text
+    assert "<th>Show</th>" not in populated.text
     assert "<th>Included</th>" in populated.text
     assert "<th>Filter</th>" not in populated.text
     assert "data-show-pill=" not in populated.text
     assert "data-included-count=" in populated.text
+    assert '<span class="pill pill-count">Individual</span>' in populated.text
     instrument_id = db.execute(
         select(Instrument.id).where(Instrument.session_id == review_session.id)
     ).scalars().first()
@@ -290,6 +285,8 @@ def test_assignments_hub_renders_count_and_mode(
         f'data-filter-instrument="{instrument_id}"', 1
     )[1][:200]
     assert "checked" in show_cell
+    chip = populated.text.split(f'data-filter-instrument="{instrument_id}"', 1)[0]
+    assert chip.rsplit("<label", 1)[1].startswith(' class="pill pill-count tag-chip"')
 
 
 def test_assignments_hub_no_flash_banner_after_generate(
