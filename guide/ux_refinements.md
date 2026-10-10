@@ -259,3 +259,100 @@ this item's PR 1.
 - `spec/instruments.md` — the Visibility editor's two fixed cells are fixed chips (PR 2).
 - `guide/things_to_check_in_browser.md` — a section per PR.
 
+
+---
+
+## Item 3 — ↰ only joins a branch
+
+### Opportunity
+
+The author's intended behavior for Band 3's branch buttons (2026-10-10):
+
+- **⑂** adds a branch below this field: the condition row and one
+  field it governs.
+- **↰** joins the branch above; with no branch above, it is off.
+- **↳** detaches the field from its branch, ending the branch if it
+  was the only field.
+
+Checked against the code on 2026-10-10 at `4d993658`. ⑂ and ↳ match,
+and a level-1 row's ↰ (`newModelRfNest`) already only joins ("It never
+starts one (⑂ does)"). **A level-0 row's ↰ does more:** when the unit
+directly above is a plain Integer, Decimal or List field,
+`newModelRfJoin` makes that field a parent, adds an empty condition row
+and moves this row under it ("Start a branch on the field above with
+this field"). That is a second way to fork, overlapping ⑂.
+`spec/instruments.md` ("Join (↰) and detach (↳)") documents it.
+
+### Decision
+
+↰ only joins. A level-0 row's ↰ is live only when a branch ends
+directly above it, and it joins the deepest unlocked one at its level,
+as today. With no branch above it is off, titled "No branch ends
+directly above", in the wording of the level-1 ↰. ⑂ stays the only way
+to start a branch.
+
+**Rejected:** keeping ↰'s fork on a plain field above. It duplicates
+⑂, and it forks the field *above* rather than the one whose button was
+pressed.
+
+### Semantics
+
+- **The other off states stay**: the first field, a parent, a field
+  with saved responses, an unnamed field, and a locked branch above.
+- **The String-above title goes.** "The field above is String, so it
+  can't have a branch" and "Name the field above first." only explained
+  the fork path. A String field above has no branch, so it gets the
+  new title.
+- **Saved instruments are unaffected.** This is a builder control; no
+  branch shape that was reachable before becomes unreachable, since ⑂
+  then ↰ builds the same thing.
+
+### Judgment calls — decided
+
+- None yet.
+
+### Blast radius (measured)
+
+Taken 2026-10-10 at `4d993658`.
+
+| What | Count | Command |
+|---|---|---|
+| Functions to change | 2 (`newModelRfSyncJoin`, `newModelRfJoin`) | `grep -n "newModelRfSyncJoin = \|newModelRfJoin = " app/web/templates/operator/instruments_index.html` |
+| Tests pinning the fork path | 1 file (titles + `parent.setAttribute` assertion) | `grep -rln "Start a branch on the field above\|Joining a plain field" tests` |
+| Browser tests driving ↰ | 1 file; it joins an existing branch, so it is unaffected | `grep -rln "data-new-model-rf-join" tests/browser` |
+| Spec paragraphs | 1 | `grep -n "a new branch with an empty condition" spec/instruments.md` |
+
+### PR ladder
+
+1. **↰ only joins.** `newModelRfSyncJoin` drops the plain-field-above
+   branch and turns ↰ off with "No branch ends directly above";
+   `newModelRfJoin` drops the new-branch block. The integration test's
+   titles and fork assertion change to match; a browser test presses ↰
+   below a plain Integer field and finds it disabled, then forks with ⑂
+   and joins. `spec/instruments.md` updated. One code slice outside a
+   ladder, so it takes its own `diff-reviewer` read.
+
+### Definition of done
+
+- A level-0 ↰ under a plain field is disabled with "No branch ends
+  directly above"; under a branch it joins as before. A test pins each.
+- `spec/instruments.md` no longer says ↰ starts a branch.
+- `guide/things_to_check_in_browser.md` has a section for the PR.
+- `### Doc impact` current, every bullet checked by hand.
+- `spec-writer` run against the doc-impact specs; flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- ⑂ and ↳, which match the intended behavior.
+- Which branch ↰ joins when several end above it (the deepest, an
+  earlier ruling, 19T Item 14).
+
+### Doc impact
+
+- `spec/instruments.md` — "Join (↰) and detach (↳)": ↰ joins a branch that ends directly above, and is off otherwise; ⑂ is the only way to start one.
+- `guide/things_to_check_in_browser.md` — a section for the PR.
