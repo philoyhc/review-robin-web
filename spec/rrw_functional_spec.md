@@ -1567,12 +1567,13 @@ The operator's Settings page (`/operator/settings`) carries:
   configured.
 - **Date & time** — the operator's default display timezone (IANA
   typeahead with a worked-example live preview).
-- **Clear all settings** — wipes the SMTP fields on the account.
+- **Clear all settings (SMTP)** — wipes the SMTP fields on the account,
+  behind a "Yes, delete…" confirm box.
 
 The cards sit in two columns: Email send (SMTP) alone
 on the left, its "Bring your own SMTP" intro (shown only until an SMTP
 host is saved) below its header and above its fields; Date & time and
-Clear all settings stacked on the right.
+Clear all settings (SMTP) stacked on the right.
 
 ### 9.14 Sys admin surface
 

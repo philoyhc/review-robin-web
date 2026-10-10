@@ -333,3 +333,11 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **Reload.** With a chip on its "with responses" label, reload: it
   comes back on that label, still dark, and its card's download still
   drops the empty rows.
+
+## Clear all settings asks first (Operator Settings)
+
+- [ ] **The guard.** On `/operator/settings` the card reads "Clear all
+  settings (SMTP)"; its button is off until "Yes, delete every SMTP
+  setting on this account." is ticked, and off again when unticked.
+- [ ] **The clear.** Ticked, the button wipes the SMTP fields and
+  returns to Settings; the Date & time zone stays.

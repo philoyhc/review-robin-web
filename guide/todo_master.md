@@ -61,11 +61,6 @@ Both are **gated on the institutional Azure deployment concluding**
 Small items with no plan doc; each fits one PR and its reasoning fits
 the PR body unless it says otherwise.
 
-- **Operator Settings' "Clear all settings" has no confirm** *(filed
-  2026-10-10, found building UX refinements Item 10)*. It is
-  `.btn.destructive` and wipes a whole set with no "Yes, delete…"
-  checkbox, against `spec/ui_elements.md` §4's delete-confirm standard
-  (`app/web/templates/operator/operator_settings.html`).
 - **The Band 1 link chips ignore Enter and Space** *(filed 2026-10-10,
   found building UX refinements Item 10)*. They are `role="button"
   tabindex="0"` spans with only `onclick`, so a keyboard user can focus

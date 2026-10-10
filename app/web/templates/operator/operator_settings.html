@@ -198,7 +198,7 @@
   </script>
 
   <div class="card danger-zone" id="danger-zone">
-    <h2>Clear all settings</h2>
+    <h2>Clear all settings (SMTP)</h2>
     <p>
       Wipes every SMTP field on this account. Existing outbox rows are
       not affected. You can re-enter credentials any time.
@@ -207,8 +207,19 @@
       {% if return_to_raw %}
         <input type="hidden" name="return_to" value="{{ return_to_raw }}">
       {% endif %}
+      <p>
+        <label style="font-weight: normal;">
+          <input type="checkbox" name="confirm" value="true" required
+                 data-delete-confirm="clear-settings">
+          Yes, delete every SMTP setting on this account.
+        </label>
+      </p>
+      {# Disabled-until-checked (app-wide data-delete-confirm standard,
+         spec/ui_elements.md §4); the route re-checks confirm. #}
       <div style="display: flex; justify-content: flex-end;">
-        <button class="btn destructive" type="submit">Clear all settings</button>
+        <button class="btn destructive" type="submit"
+                data-delete-btn="clear-settings"
+                disabled aria-disabled="true">Clear all settings</button>
       </div>
     </form>
   </div>

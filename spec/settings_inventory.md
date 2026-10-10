@@ -34,8 +34,9 @@ co-operates.
 carries Cancel + Save (both Secondary); the page also carries a
 **Date & time** card (its own Save, Secondary) editing the
 `display_timezone` preference key, with a live worked-sample preview
-that names the selected zone in full; and a **Clear all settings**
-card (`.btn destructive`, `POST /operator/settings/clear`) that wipes
+that names the selected zone in full; and a **Clear all settings (SMTP)**
+card (`.btn destructive`, `POST /operator/settings/clear`, behind a
+"Yes, delete…" confirm box the route re-checks) that wipes
 every SMTP field and resets `smtp_transport` to `smtp`, leaving
 `preferences` alone, audited as `operator_email_settings.cleared`. The
 `← Back to {{ return_to_label }}` chrome back-link returns the
