@@ -673,7 +673,9 @@ Three rules make that work:
 **A chip can be a form control.** Session Home's optional-tab chips
 (`spec/session_home.md`) and the Instruments display-field and
 response-field name chips (`spec/instruments.md` "Display-field table",
-"Response fields") are each a `<label
+"Response fields"), and the Assignments status table's instrument-name
+and self-review chips (`spec/assignments.md` "Per-instrument status
+table"), are each a `<label
 class="pill pill-count tag-chip">` around a visually hidden checkbox, so
 a click ticks the box and the form or row script reads it. `.tag-chip:has(> input:checked)` is the
 `.is-selected` fill, read off the box itself, so a form reset repaints
@@ -722,7 +724,9 @@ instrument the fields a group row can't show (`spec/instruments.md`
 hidden ("Response fields"). It is per item: a card's locked view stays
 `is-locked`, or on a locked Instruments card the plain pill (above). Its other use is the Instruments
 Visibility card's two cells whose mode isn't the operator's to choose
-(`spec/instruments.md` "Visibility card").
+(`spec/instruments.md` "Visibility card"), and the Assignments page's
+self-review chip on a session that isn't editable, which keeps its
+amber when mixed.
 
 The lobby's AND/OR and Select all / Clear all chips, and the Archived
 page's Select all / Clear all, are cycle chips (`.tag-mode-chip`,

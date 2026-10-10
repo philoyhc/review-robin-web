@@ -127,7 +127,8 @@ section (git history keeps it), so this file lists only what is owed.
 
 - [ ] **Inactivate a relationship.** In a session whose instrument
   groups by a relationship tag, generate assignments and note the
-  instrument's self-review count on Assignments. On Relationships,
+  instrument's self-review count on Assignments (the N in its
+  "Include N self reviews" chip since UX refinements Item 7). On Relationships,
   inactivate the row that puts a reviewer's group-mate in their group.
   Back on Assignments, without generating again, the self-review count
   drops by that row. Reactivate it and the count comes back.

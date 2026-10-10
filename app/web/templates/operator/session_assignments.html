@@ -21,7 +21,7 @@
   {# Segment 15B Slice 3a + refinements — per-instrument status
      card renders in BOTH draft + ready states (the "status info
      card" sits first under chrome, matching the Instruments
-     page pattern). Self review checkboxes are disabled in ready
+     page pattern). Self review chips are fixed in ready
      state — review is ongoing, no flipping include flags from
      here. Rule selection lives on the Instruments page (Slice
      2a per-card picker); the standalone session-wide self-
@@ -117,7 +117,7 @@
                          data-self-review-state="{{ block.self_review_checkbox_state }}"
                          {% if block.self_review_checkbox_state == 'checked' %}checked{% endif %}
                          {% if not can_edit %}disabled aria-disabled="true"{% endif %}
-                         aria-label="Include self-reviews for this instrument">Include {{ _sr_n }} self review{{ '' if _sr_n == 1 else 's' }}</label>
+                         aria-label="Include {{ _sr_n }} self review{{ '' if _sr_n == 1 else 's' }}, {{ block.instrument_label }}">Include {{ _sr_n }} self review{{ '' if _sr_n == 1 else 's' }}</label>
                 </form>
               {% else %}
                 <span class="muted" title="No self-review pairs">—</span>
@@ -764,13 +764,18 @@
      change so a single click flips every self-review row on this
      instrument. The hidden ``active`` field mirrors the box's new
      ``checked`` value at submit time; a mixed chip's box is unticked,
-     so its click includes them all (ux_refinements Item 7). #}
+     so its click includes them all (ux_refinements Item 7). The box
+     is set ``indeterminate`` too, so a screen reader hears "mixed"
+     where the amber says it. #}
   <script>
     (function () {
       var boxes = document.querySelectorAll(
         "input[data-self-review-instrument]"
       );
       boxes.forEach(function (box) {
+        if (box.dataset.selfReviewState === "indeterminate") {
+          box.indeterminate = true;
+        }
         box.addEventListener("change", function () {
           var form = box.closest("form");
           if (!form) return;

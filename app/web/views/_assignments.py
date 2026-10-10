@@ -61,10 +61,10 @@ class InstrumentStatusBlock:
       instrument with ``include=True``.
     - ``self_review_checkbox_state`` — ``"checked"`` /
       ``"unchecked"`` / ``"indeterminate"``. Drives the per-
-      instrument Self review column checkbox; mixed states render
-      indeterminate via inline JS.
+      instrument Self review chip: dark, light, or amber with its
+      box set indeterminate by inline JS.
     - ``self_review_toggle_url`` — POST target for the Self
-      review checkbox's bulk-flip form.
+      review chip's bulk-flip form.
     - ``self_review_excluded_by_rule`` — the instrument's rule set
       carries ``exclude_self_reviews`` AND no self-review rows
       remain, so the Self review cell reads *"Excluded by rule"*

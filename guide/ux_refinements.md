@@ -756,18 +756,23 @@ Taken 2026-10-10 at `c8343bf3`.
 | What | Count | Command |
 |---|---|---|
 | Template | 1 (`session_assignments.html`) | `grep -rln "data-filter-instrument" app` |
-| Tests pinning the old cells | 5 files | `grep -rln "data-filter-instrument\|data-self-review-instrument\|data-self-review-count" tests` |
+| Tests pinning the old cells | 4 files (3 needed edits) | `grep -rln "data-filter-instrument\|data-self-review-instrument\|data-self-review-count" tests` |
 | Specs | 5 | `grep -rln "Self review checkbox\|Show checkbox\|filter checkbox\|self-review toggle" spec` |
 
 ### Status
 
 - **Built 2026-10-10** in one PR. Found at build: no view change was
   needed (`self_review_active_count` and the three states were already
-  there).
+  there). The cold read found stale prose (five `spec/assignments.md`
+  passages, `README.md`, three docstrings, the Guide's alt text) and
+  an accessibility gap: the box keeps `indeterminate` so a screen
+  reader still hears "mixed", and its name now carries the chip's
+  text. All fixed in the PR. **The Guide's `assignments-page` screencap
+  pair shows the old checkboxes**; its retake is the author's.
 
 ### PR ladder
 
-1. **The chips.** Template, the five tests, a browser test of both
+1. **The chips.** Template, three tests, a browser test of both
    chips, the specs. One code slice outside a ladder, so it takes its
    own `diff-reviewer` read; `spec-writer` because it touches `spec/`.
 
@@ -781,7 +786,8 @@ Taken 2026-10-10 at `c8343bf3`.
 
 ### Open questions
 
-- None.
+- The Guide's `assignments-page` screencaps: a retake, when the author
+  is at the capturing machine.
 
 ### Out of scope
 
@@ -795,4 +801,6 @@ Taken 2026-10-10 at `c8343bf3`.
 - `spec/operator_button_audit.md` — the status table's controls are chips.
 - `spec/rrw_functional_spec.md` — the Per-instrument status card.
 - `guide/things_to_check_in_browser.md` — a section for the PR.
+- `README.md` — the `assignments` route row.
+- `app/web/templates/guide.html` — the Assignments figure's alt text (found at build).
 

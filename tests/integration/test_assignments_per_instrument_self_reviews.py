@@ -225,9 +225,9 @@ def test_set_instrument_self_reviews_active_emits_audit_event(
 def test_status_block_indeterminate_state_when_mixed(db: Session) -> None:
     """``InstrumentStatusBlock.self_review_checkbox_state`` is
     ``"indeterminate"`` when an instrument has a mix of
-    include=true and include=false self-review rows. The inline JS
-    on the Assignments page reads ``data-self-review-state`` to
-    set the HTML5 ``indeterminate`` property on the checkbox."""
+    include=true and include=false self-review rows: the Assignments
+    page's Self review chip is amber, and its inline JS reads
+    ``data-self-review-state`` to set the box ``indeterminate``."""
 
     user, review_session, inst_a, inst_b, alice_r, alice_e = (
         _seed_multi_instrument(db, code="sr-mixed")

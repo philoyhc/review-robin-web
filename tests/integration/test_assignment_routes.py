@@ -320,13 +320,13 @@ def test_ready_session_preview_rows_render_alongside_show_script(
     """On ready sessions the per-instrument status card still
     renders (matching the Instruments-page pattern: status info
     card stays first under chrome, yellow banner sits beneath).
-    Self-review checkboxes are disabled — review is ongoing and
-    flipping include flags from this surface would silently
-    change live invitation eligibility. Show + Filter checkboxes
-    remain interactive (they're pure client-side affordances).
+    Self-review chips are fixed — review is ongoing and flipping
+    include flags from this surface would silently change live
+    invitation eligibility. The instrument-name filter chips remain
+    interactive (they're pure client-side affordances).
 
     Pin: on a ready session, the status table renders, the self-
-    review checkbox carries ``disabled``, the Show checkbox does
+    review chip's box carries ``disabled``, the name chip's does
     not, and the early-return guard remains in place for the
     no-instruments edge case.
     """
@@ -371,11 +371,10 @@ def test_ready_session_preview_rows_render_alongside_show_script(
     # Status table renders in ready state too.
     assert 'id="assignments-status-blocks"' in body
     assert "data-filter-instrument=" in body
-    # The Show + Filter checkboxes are interactive (no disabled
-    # attribute on the Show row).
+    # The name chip's box is interactive (no disabled attribute).
     show_cell = body.split("data-filter-instrument=", 1)[1][:200]
     assert "disabled" not in show_cell
-    # Self-review checkbox carries the disabled attribute.
+    # The self-review chip's box carries the disabled attribute.
     assert "data-self-review-instrument=" in body
     sr_cell = body.split("data-self-review-instrument=", 1)[1][:300]
     assert "disabled" in sr_cell

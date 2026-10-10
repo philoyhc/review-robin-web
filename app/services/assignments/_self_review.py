@@ -454,10 +454,9 @@ def self_review_breakdown_per_instrument(
     """Per-instrument ``(active, deactivated)`` counts for
     self-review assignments. Drives the per-instrument **Self
     review** column on the Assignments-page status blocks: the
-    pill text is ``active + deactivated``; the checkbox state is
-    derived from the (active, deactivated) ratio (all-active →
-    checked; all-deactivated → unchecked; mixed →
-    ``indeterminate``).
+    chip names the ``active`` count, and its state is derived from
+    the (active, deactivated) ratio (all-active → checked;
+    all-deactivated → unchecked; mixed → ``indeterminate``).
 
     "Self-review assignment" is group-aware — every
     member-assignment in a group whose reviewer is themselves a

@@ -797,7 +797,7 @@ Whenever the session is **not editable** — `ready`, `expired` or
 matching the
 `_require_editable` its route enforces. Gating the template on
 `is_ready` alone instead leaves the box live on `expired` and
-`archived`, where the route answers 409. Its title
+`archived`, where the route answers 409. The chip's title
 names the way out that state actually has: *"Revert to draft to
 change self-review inclusion."* on `ready` and `expired`, which
 `revert_session_to_draft` accepts, and *"Unarchive this session

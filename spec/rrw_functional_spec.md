@@ -1355,8 +1355,8 @@ on the Operations row of the chrome. It carries:
 - **Per-instrument status card** — one block per instrument,
   showing type (Individual / Group), generated pair count (with a
   `stale` pill when the current rule + roster would produce a
-  different set), group count, self-review count + per-instrument
-  self-review chip (locked outside `draft` / `validated`), included
+  different set), group count, per-instrument "Include N self reviews"
+  chip (locked outside `draft` / `validated`), included
   count, and the instrument's name as a chip filtering the preview
   table.
 - **Assignments preview table** — every materialised pair,
