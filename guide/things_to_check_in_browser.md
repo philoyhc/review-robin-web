@@ -364,4 +364,5 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **Tooltips.** Hovering each button, pill and chip sample, and the
   guard's box and Delete, shows a tooltip naming it and, for a control,
   what a click does; the Delete says "Off until the box is ticked" until
-  it is.
+  it is, then its own tooltip; the Delete sits level with the guard's
+  sentence, with no stray tooltip strip around it once on.
