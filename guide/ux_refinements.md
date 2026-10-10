@@ -152,6 +152,7 @@ Taken 2026-10-09 at `2569876a`.
   checked (the chip checks are owed in
   `guide/things_to_check_in_browser.md` instead). Codex on #2936 found
   the locked-card look (above).
+- **Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
 
@@ -297,6 +298,7 @@ Taken 2026-10-09 at `2e0379b8`.
   missed). The first cold read led to the Observers chip test and a
   `test_chip_edge` pin; the second, on those fixes, found the CSS split
   sound and three stale spec and plan lines.
+- **Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
 
@@ -427,6 +429,7 @@ Taken 2026-10-10 at `4d993658`.
 - **Reads:** one `diff-reviewer` read (no behavior defects; stale
   comments, a redundant local, this record and a live guide line fixed)
   and a `spec-writer` verify pass (the two misses above).
+- **Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
 
