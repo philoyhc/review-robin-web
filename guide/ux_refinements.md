@@ -1011,14 +1011,18 @@ stubs in `guide/todo_master.md`. A second read of the fixes found "pale" untrue
 in dark theme too (now "faint"); §9's Fill column still says
 dark/light, for the close's `spec-writer`. A third read, of
 that fix, found only plan and register wording, fixed. A read of the
-split found only wording (fixed in #2949).
+split found only wording (fixed in #2949). **Reads (rung 2):** one
+`diff-reviewer` read, finding a stale "inert" browser check and a
+missing theme and keyboard check (fixed), and that the real Band 1
+link chips take no Enter or Space, though the sample does (filed as a
+stub).
 
 ### PR ladder
 
 1. **The scaffold** (#2949). The card with its real copy and layout,
    every sample inert, the CSS, `SECTIONS`, the scaffold test and the
    §6 / §9 lines. ~~The card and its wiring in one PR~~ (split, above).
-2. **The wiring** (this rung). The chip script, the guard's `data-delete-confirm`
+2. **The wiring** (#2950). The chip script, the guard's `data-delete-confirm`
    pairing, the "try it" copy, `tests/browser/test_guide_controls.py`,
    and §9's "every switchable sample working", with the click checks in
    `guide/things_to_check_in_browser.md`. Takes its own `diff-reviewer`
