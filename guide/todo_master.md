@@ -26,10 +26,8 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
-- **UX refinements** — `guide/ux_refinements.md`. Items 1–5 built;
-  Item 3 (↰ only joins a branch) reversed 2026-10-10, and Item 5
-  extends ↰'s branch start to level 1. Each item's close is owed.
-  (`guide/operator_pages_enhancements.md` Items 1–3 closed 2026-10-09;
+- None. (`guide/operator_pages_enhancements.md` Items 1–3 closed
+  2026-10-09 and `guide/ux_refinements.md` Items 1–9 closed 2026-10-10;
   new items are added there.)
 
 ### Queued segments
