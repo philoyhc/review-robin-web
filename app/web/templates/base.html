@@ -2749,11 +2749,16 @@
          a switch that is on, not as a display; like ``is-locked`` it drops
          the edge and the pointer; a lock glyph before the label, drawn in
          ``currentColor``, says why it doesn't move. ``is-locked`` stays the
-         chip of a whole card's locked view. */
+         chip of a whole card's locked view. The dark fill follows the
+         state: a ``<span>`` is always on, a ``<label>`` only while its box
+         is ticked, so a switch fixed off is the off chip with the glyph. */
       body.ui-v2 .tag-chip.is-fixed {
         cursor: default;
         border-color: transparent;
         box-shadow: none;
+      }
+      body.ui-v2 span.tag-chip.is-fixed,
+      body.ui-v2 label.tag-chip.is-fixed:has(> input:checked) {
         background: var(--selected-bg);
         color: var(--selected-fg);
       }

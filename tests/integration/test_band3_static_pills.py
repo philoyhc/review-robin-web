@@ -1,4 +1,4 @@
-"""The visibility grid: labels must not wear a control's classes.
+"""The visibility grid: a fixed cell must not pass for a control.
 
 Segment 19J Item 7 rung 1, when the grid was Band 3's table. Since 19T
 Item 7 it is the editor in Band 2's "Who can see what you wrote" card,
@@ -117,7 +117,7 @@ def _band3_spans(client: TestClient, db: Session, *, code: str) -> list[Span]:
     return collector.spans
 
 
-def test_fixed_cells_carry_no_control_classes(
+def test_fixed_cells_are_fixed_switches_not_controls(
     client: TestClient, db: Session
 ) -> None:
     """The two ``b3_static_pill`` cells are fixed switches, not controls."""

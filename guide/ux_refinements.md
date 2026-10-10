@@ -229,9 +229,16 @@ Taken 2026-10-09 at `2e0379b8`.
   `is-fixed` as the one `tag-chip` that offers no click. A browser test
   compares each surface's fill with a live chip's and checks the glyph;
   both fail without the change.
-- **Scope held:** the fixed-off look (Band 3, via
-  `:has(> input:disabled)`) lands with Item 1, its first user; §9 states
-  only what this PR ships.
+- **Fixed off is half here:** the cold read found the fill ignored the
+  box's state, so a `<label>` chip takes it only while ticked and an
+  unticked one stays the off chip with the glyph. Band 3's disabled
+  checkboxes (`:has(> input:disabled)`) still land with Item 1.
+- **Reads:** one `spec-writer` verify and one `diff-reviewer` cold read.
+  Both found specs and comments still saying the reserved shade never
+  reaches an inert element; `spec/color_tokens.md` now records
+  `is-fixed` as the one ruled exception (a Doc impact bullet the plan
+  missed). The cold read also added the Observers chip and a
+  `test_chip_edge` pin.
 
 ### PR ladder
 
@@ -281,6 +288,7 @@ this item.
 - `spec/ui_elements.md` — §9's chip-types table gains Fixed; `is-locked` is the locked card's chip only.
 - `spec/session_home.md` — the optional-tab chips are fixed once the tab holds data.
 - `spec/instruments.md` — the Visibility editor's two fixed cells are fixed chips.
+- `spec/color_tokens.md` — "Deliberate couplings" records `is-fixed` as the reserved shade's one inert exception (found at build).
 - `guide/things_to_check_in_browser.md` — a section per PR.
 
 

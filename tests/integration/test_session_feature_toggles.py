@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, Relationship, ReviewSession, Reviewer, Reviewee
+from app.db.models import AuditEvent, Observer, Relationship, ReviewSession, Reviewer, Reviewee
 
 
 def _make_session(
@@ -223,6 +223,26 @@ def test_lock_on_data_renders_disabled_checkbox(
     # …and on the chip around it, a fixed switch: dark, no click
     # affordance, a lock glyph (guide/ux_refinements.md Item 2).
     chip = body.split('name="relationships_enabled"', 1)[0].rsplit("<label", 1)[1]
+    assert "tag-chip is-fixed" in chip
+    assert "is-locked" not in chip
+
+
+def test_observers_chip_with_data_is_a_fixed_switch(
+    client: TestClient, db: Session
+) -> None:
+    """The Observers chip takes the same fixed-switch look once the
+    session has an observer (guide/ux_refinements.md Item 2)."""
+    review_session = _make_session(client, db, code="ft-lock-obs")
+    review_session.observers_enabled = True
+    db.add(Observer(session_id=review_session.id, email="o@example.org", status="active"))
+    db.commit()
+
+    body = client.get(
+        f"/operator/sessions/{review_session.id}?editing=1"
+    ).text
+    box = body.split('name="observers_enabled"', 1)[1].split("</label>", 1)[0]
+    assert "disabled" in box
+    chip = body.split('name="observers_enabled"', 1)[0].rsplit("<label", 1)[1]
     assert "tag-chip is-fixed" in chip
     assert "is-locked" not in chip
 

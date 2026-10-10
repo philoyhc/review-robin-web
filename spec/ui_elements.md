@@ -705,7 +705,9 @@ its fill; a fixed switch has no states, so it keeps its siblings':
 
 A fixed switch keeps its siblings' dark fill so it reads as a switch
 that is on rather than a display; the glyph (a CSS mask in
-`currentColor`) says why it doesn't move. It is per item: a card's
+`currentColor`) says why it doesn't move. A `<label>` chip takes the
+fill only while its box is ticked, so a switch fixed off stays the off
+chip, with the glyph. It is per item: a card's
 locked view stays `is-locked`. Its other use is the Instruments
 Visibility card's two cells whose mode isn't the operator's to choose
 (`spec/instruments.md` "Visibility card").

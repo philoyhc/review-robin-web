@@ -1646,9 +1646,7 @@
                         {# 19T Item 3 entry 3 — the editor's cycle repaints
                            these cells live (``newModelCycleVisibilityCell``),
                            since Save doesn't reload. 19T Item 8 — each mode
-                           is a pill that only shows it, as the editor's fixed
-                           cells are (``b3_static_pill``, less the "Fixed"
-                           tooltip). #}
+                           is a plain pill that only shows it. #}
                         <td style="padding: 4px 8px;"><span class="pill pill-count"
                             data-new-model-vp-preview-cell="{{ vp.audience }}-while_ongoing">{{ vp.while_ongoing_label }}</span></td>
                         <td style="padding: 4px 8px;"><span class="pill pill-count"
@@ -1661,7 +1659,8 @@
                 {% endif %}
                 {# 19T Item 7 — the visibility editor, shown while the card
                    is unlocked. The cells that can change are cycle chips
-                   (``b3_mode_cycle``); the fixed ones stay labels. The
+                   (``b3_mode_cycle``); the fixed ones are fixed switches
+                   (``b3_static_pill``, ``is-fixed``). The
                    hidden inputs ride the dfsave form, so Save persists
                    them with everything else on the card. Observers show
                    here only, below a divider (``row-group-start``,
