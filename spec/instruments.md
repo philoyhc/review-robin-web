@@ -568,7 +568,7 @@ behind. Writes emit
 `session_rule_set.exclude_self_reviews_set` and invalidate a validated
 session.
 
-The checkbox is inert with the rest of the Band 1 grid while the card is
+The chip is inert with the rest of the Band 1 grid while the card is
 locked.
 
 **It takes effect at the next Generate**, not on save — the generator
@@ -758,8 +758,8 @@ live preview of one sample row inline.
 > empty and silently drop the test to pair level while the generator
 > still grouped.
 >
-> It reads the **persisted** flag: the checkbox is not among the
-> fields the Refresh handler posts, so an unsaved tick shows after
+> It reads the **persisted** flag: the chip's box is not among the
+> fields the Refresh handler posts, so an unsaved change shows after
 > the card is saved. Everything else Refresh reads is live: the
 > Link 1 / Link 2 edits, the Link 3 boundary selects and the
 > Individual / Group pill, so "a grouped instrument" above is
@@ -883,7 +883,7 @@ tooltip naming the pinned slot — "Always shown — pinned first" (Name) / "Alw
 group-scoped instrument**, a field a group row can't show — Email
 included — renders unticked and disabled, a fixed switch held off,
 tooltip "Not shown on group rows"; Name stays locked and ticked in group mode, so member names
-always show (author's ruling, 2026-10-07; see "Group-flavor preview"
+always show (see "Group-flavor preview"
 below). Every other row's tooltip is "Show this
 column". A chip whose box is disabled reads as fixed from the box itself,
 so it follows a mode change with no class kept in step
@@ -1189,8 +1189,8 @@ branch above it is open or Require.
 **⑂**, just after **+**, creates a branch: outline on an Integer,
 Decimal or List field with none, selected (filled, like a pressed R) on
 a parent, and inactive on a String field ("A String field can't have a
-branch"). **The name chip is every row's first column and never moves**
-(the author, 2026-10-10). After it, a governed row shifts one column
+branch"). **The name chip is every row's first column and never moves.**
+After it, a governed row shifts one column
 right — the bar sits in the **+** column, its **+** in the ⑂ column, its
 ⑂ in the join column, and its ↰ and ↳ in the two empty slots after join
 (`td.rf-slot`) — so every row has six leading columns and aligns from

@@ -692,7 +692,7 @@ and the pointer like `is-disabled`, but is not struck through, because
 it still says on or off. On takes the card's display-value colors
 (`--config-value-bg` / `--config-value-fg`) rather than the reserved
 shade; off is faded. **A locked Instruments card's chips read as plain
-`pill-count` pills** (the author, 2026-10-10), Band 3's and Band 1's
+`pill-count` pills**, Band 3's and Band 1's
 self-review chip alike: no edge, pointer or lock glyph, an unticked
 field faded (a cycle chip names its state and is not faded), read off
 the card's

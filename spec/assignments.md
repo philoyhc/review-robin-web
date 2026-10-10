@@ -93,7 +93,7 @@ instrument. Each row carries:
   instruments have none.
 - `include: bool` — whether the reviewer sees this reviewee on
   their per-instrument page. Defaults to True; the
-  Assignments-page **Self review** toggle and the preview
+  Assignments-page **Self review** chip and the preview
   table's bulk **Inactivate** / **Activate** on selected rows
   drive it (the table's Include cell is a read-only pill).
 
@@ -414,7 +414,7 @@ Two attributes still drive whether self-review rows appear as
 
 1. **`SessionRuleSet.exclude_self_reviews`** (rule-set level).
    Operator-settable, default `False`: written by the Link 3
-   checkbox, by session-config import, and carried by a session
+   chip, by session-config import, and carried by a session
    clone. The *engine* ignores it (layer 2 above), but the
    generator honors it after the fan-out, so a `True` means the
    instrument generates no self-review row at all. Also surfaces
@@ -1361,8 +1361,8 @@ rates their own team's collaboration.
 - For **Peer review**: the 10 × 10 universe leaves 10 × 5 = 50
   surviving pairs, so 50 `Assignment` rows. The 10 self-review rows
   (reviewer == reviewee) materialise with `include=True`, from
-  `self_reviews_active`, until the operator unticks the instrument's
-  Self review toggle on the Assignments page, which flips them to
+  `self_reviews_active`, until the operator turns off the instrument's
+  Self review chip on the Assignments page, which flips them to
   `False` and leaves 40 included.
 - For **Team retro**: the same 50 pairs, but the derived group key is
   the team name, so each reviewer's five rows form one group. Every

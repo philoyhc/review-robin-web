@@ -14,6 +14,11 @@ New items go at the end, numbered on, in the item shape of
 `guide/segment_plan_template.md`, each with its own `### Doc impact` and
 `### Status`.
 
+**Items 1–9 closed 2026-10-10.** The close's `spec-writer` pass found
+the doc-impact specs current apart from five control words still naming
+a checkbox or toggle and four ruling attributions in contract prose,
+all fixed in the close.
+
 **Build order** (author, 2026-10-10): Item 3, then Item 2, then Item 1.
 Item 1's PR 1 needs Item 2's fixed chip; Item 3 depends on neither, and
 landing it first gets its edits to the Instruments template in before
@@ -110,48 +115,25 @@ Taken 2026-10-09 at `2569876a`.
 | Lines naming the response-field checkbox | 9 app; 6 test files | `grep -rn "data-new-model-rf-active" app \| wc -l`; `grep -rl … tests` |
 | Rules and specs naming `rf-active-cell` | 1 CSS rule; 1 test file; 2 specs | `grep -rln "rf-active-cell" app tests spec` |
 
-### Status
+### Status — closed 2026-10-10
 
-- **PR 1 built 2026-10-10** on main `212042cd` (the base for the item's
-  cumulative read at PR 2). Each display field is a `label.tag-chip`
-  around its now visually hidden checkbox, which carries the tooltip;
-  the checkbox column is gone. Name and Email take no class: base.html
-  reads `label.tag-chip:has(> input:disabled)` as fixed, so the same
-  rule covers a field a group row can't show when grouped mode disables
-  its box. A browser test toggles a field through its chip and checks
-  both fixed looks; all three fail without the change.
-- **Found at build:** switching to group mode only marks Band 2; the
-  rows re-sync on the preview's Refresh, as before this item.
-- **Codex on #2936:** a locked card's chips kept the live edge. By the
-  author's ruling (2026-10-10) a locked card's Band 3 chips read as plain
-  display pills (no edge, pointer or glyph; unticked faded), keyed on
-  `data-instrument-locked`; a browser test locks and unlocks.
-- **PR 2 built 2026-10-10.** Each response row's first cell is a name
-  chip around its hidden Active checkbox, relabeled by
-  `newModelRfRecomputeActionStates` from the typed name or the box's
-  default; bars and the six leading columns follow it, a parent's bar
-  now starting under its + (`td:nth-child(n+3)` for the inner rule). Every
-  row button takes `--rf-glyph-width` 2rem (R and X's width; ▲ ▼ and
-  + ⑂ ↰ were 36px); the type column is `8.5rem`; the bounds boxes floor
-  at `3.5rem`, their inline `min-width: 0` dropped. The chip cap is the
-  border box, 8em: a "Comments" chip measured 94.7px at the chip's 12px.
-  Browser tests cover the live label and cap, the hide confirm through
-  the chip, and a hidden parent's fixed-off chips; all three fail
-  without the change. Nine tests that pinned the checkbox column were
-  moved to the new layout, two browser ones now click the chip.
-- **Reads:** two `spec-writer` verifies (one per PR) and one cumulative
-  `diff-reviewer` read from `212042cd`. The read found one defect: a
-  pending row whose default another row's name took kept its old chip
-  label (a pending row never commits, so never recomputed); fixed, with a
-  browser test that fails without it. It also asked for the box's own
-  tooltip back on display fields, the hide confirm's "Tick Active" wording,
-  the Guide's checkbox sentence, a browser test of the script-built
-  column order, and stale comments; all done. A read of those fixes
-  asked for the detached row's order to be pinned too, and kept
-  `guide/post_azure_todo_checklist.md` §6 as the dated record the author
-  checked (the chip checks are owed in
-  `guide/things_to_check_in_browser.md` instead). Codex on #2936 found
-  the locked-card look (above).
+Shipped in two PRs as laddered (#2936, #2937).
+
+- **PR 1:** each display field is a `label.tag-chip` around its hidden
+  checkbox; the checkbox column is gone. Name and Email are fixed,
+  read off the disabled box (`label.tag-chip:has(> input:disabled)`), so
+  the same rule covers a field a group row can't show.
+- **PR 2:** each response row starts with its name chip around the
+  hidden Active box, relabeled from the typed name; bars start under the
+  parent's +; every row button is `--rf-glyph-width` (2rem), the type
+  column `8.5rem`, the bounds floor `3.5rem`, the chip capped at 8em.
+- **Added at build (author, 2026-10-10, on Codex's #2936 finding):** a
+  locked card's Band 3 chips read as plain display pills, keyed on
+  `data-instrument-locked`.
+- **Reads:** two `spec-writer` verifies and one cumulative
+  `diff-reviewer` read; it found a pending row keeping a stale chip
+  label (fixed, with a test) and prose and test gaps, all fixed. Codex
+  found the locked-card look above.
 - **Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
@@ -276,29 +258,16 @@ Taken 2026-10-09 at `2e0379b8`.
 | `b3_static_pill` / "Fixed" lines on Instruments | 5 | `grep -n "b3_static_pill\|title=\"Fixed\"" app/web/templates/operator/instruments_index.html` |
 | Specs naming `is-locked` | 2 | `grep -rln "is-locked" spec` |
 
-### Status
+### Status — closed 2026-10-10
 
-- **Built 2026-10-10** as one PR. `base.html` gains
-  `.tag-chip.is-fixed` (the `--selected-bg` fill, no edge or pointer, a
-  `::before` lock glyph masked in `currentColor`), allowlisted in
-  `test_reserved_shade`. Session Home's tab-holds-data chips and the
-  Visibility card's two `b3_static_pill` cells take it; the card-locked
-  display chips stay `is-locked`. `test_band3_static_pills` now treats
-  `is-fixed` as the one `tag-chip` that offers no click. A browser test
-  compares each surface's fill with a live chip's and checks the glyph;
-  both fail without the change.
-- **Fixed off is half here:** the cold read found the fill ignored the
-  box's state, so a `<label>` chip takes it only while ticked and an
-  unticked one stays the off chip with the glyph. Band 3's disabled
-  checkboxes (`:has(> input:disabled)`) still land with Item 1.
-- **Reads:** one `spec-writer` verify and two `diff-reviewer` reads.
-  The first two found specs and comments still saying the reserved shade
-  never reaches an inert element; `spec/color_tokens.md` now records
-  `is-fixed` as the one ruled exception (a Doc impact bullet the plan
-  missed). The first cold read led to the Observers chip test and a
-  `test_chip_edge` pin; the second, on those fixes, found the CSS split
-  sound and three stale spec and plan lines.
-- **Browser checks passed** (the author, 2026-10-10).
+Shipped in one PR. `.tag-chip.is-fixed` (the `--selected-bg` fill, no
+edge or pointer, a masked lock glyph) on Session Home's tab-holds-data
+chips and the Visibility card's two fixed cells; a `<label>` chip takes
+the fill only while its box is ticked, so fixed off stays the off chip
+with the glyph. **Reads:** one `spec-writer` verify, two `diff-reviewer`
+reads; `spec/color_tokens.md` was found missing from Doc impact and now
+records `is-fixed` as the reserved shade's one inert exception.
+**Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
 
@@ -415,25 +384,22 @@ Taken 2026-10-10 at `4d993658`.
 | Browser tests driving ↰ | 1 file; it joins an existing branch, so it is unaffected | `grep -rln "data-new-model-rf-join" tests/browser` |
 | Spec paragraphs | 1 | `grep -n "a new branch with an empty condition" spec/instruments.md` |
 
-### Status
+### Status — closed 2026-10-10 (reversed)
 
-- **Built 2026-10-10** in one PR, as planned. `newModelRfSyncJoin`'s
-  plain-unit-above branch becomes "No branch ends directly above", off;
-  `newModelRfJoin` returns unless a branch ends above. The new-row
-  template's ↰ title reads "Join the branch above". A browser test finds
-  ↰ off under a plain Integer field, then on after ⑂, and joining; it
-  fails without the change.
-- **Found at build:** the blast radius missed a second test pinning the
-  old path (`test_builder_adjustments_12a` counts `newModelRfSyncJoin`'s
-  `set()` calls, 13 → 11) and a second spec (`spec/operator_button_audit.md`
-  #245), both fixed; `spec/instruments.md` also gains ↰'s name condition.
-- **Reads:** one `diff-reviewer` read (no behavior defects; stale
-  comments, a redundant local, this record and a live guide line fixed)
-  and a `spec-writer` verify pass (the two misses above).
-- **Browser checks passed** (the author, 2026-10-10).
-- **Reversed 2026-10-10** (the author): ⑂ adds a field row, ↰'s fork
-  doesn't, which the Decision's "duplicates ⑂" missed. One PR restores
-  the fork on Item 1's layout; Items 1 and 2 and ↰'s name condition stay.
+Shipped as planned in one PR (↰ off under a plain field; the blast
+radius missed `test_builder_adjustments_12a` and
+`spec/operator_button_audit.md` #245, both fixed), then **reversed the
+same day** by the author: ⑂ adds a field row and ↰'s fork doesn't, which
+the Decision's "duplicates ⑂" missed. The restore put the fork back on
+Item 1's layout, keeping ↰'s name condition, and rode in #2941 with
+Item 5. **Reads:** two `diff-reviewer` reads and two `spec-writer`
+verifies, one of each on the first PR and on the restore. The restore's
+found lines Item 3 had changed that it hadn't put back (the
+`guide/README.md` row, `guide/todo_master.md`, the post-Azure
+checklist's Item 10, a template comment, Item 3's Doc impact and
+Definition of done), the String-or-unnamed off states missing from the
+specs, and a title and a bar class no test pinned; all fixed in the
+restore. **Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
 
@@ -510,18 +476,15 @@ Taken 2026-10-10 at `b2065e3c`: one template section
 eight PNGs in `app/web/static/guide/`, no spec quotes the Guide text
 (`grep -rln "plain labels" spec docs` finds none).
 
-### Status
+### Status — closed 2026-10-10
 
-- **Built 2026-10-10** in two PRs: the section (#2940), then the
-  retake (#2942). The fields and branching captures
-  came in at ~2690px wide against ~1756px for the others, so their text
-  read about a third smaller at the shared 1200px; the author retook
-  both pairs at ~1755px (`Guide_v5c`), the fields pair saved, with
-  Rating's bounds 0–5 as in the preview.
-  The branching pair keeps Rating at 1–5, a separate example (author,
-  2026-10-10). The three wording fixes accepted, plus a
-  fourth from the cold read: Name and Email "aren't optional" (author,
-  2026-10-10).
+Shipped in two PRs: the section (#2940), then the fields and branching
+captures retaken at the usual ~1755px width (#2942). The author accepted
+the three wording fixes plus a fourth from the cold read (Name and Email
+"aren't optional"); the branching pair keeps Rating at 1–5 as a separate
+example. **Reads:** three `diff-reviewer` reads, finding the Email
+claim, a chip line in the alt text and the capture scale, all fixed.
+**Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
 
@@ -599,12 +562,13 @@ Taken 2026-10-10 at `c738dbaa`.
 | Tests pinning the join-only title | 1 file | `grep -rln "No branch inside this branch ends directly above" tests` |
 | Spec paragraphs | 2 (`spec/instruments.md`, `spec/operator_button_audit.md` #245) | `grep -rn "No branch inside this branch\|joins the branch inside its own" spec` |
 
-### Status
+### Status — closed 2026-10-10
 
-- **Built 2026-10-10** in one PR. **Found at build:** a level-1 row's ↰
-  didn't follow edits to the field above it (only the edited row's
-  buttons were recomputed), so the row script now resyncs the next
-  field in the branch too; the browser test fails without it.
+Shipped in one PR (#2941). **Found at build:** a level-1 row's ↰ didn't
+follow edits to the field above it; the row script now resyncs the next
+field in the branch, and the browser test fails without it. One
+`diff-reviewer` read and one `spec-writer` verify, neither finding a
+defect. **Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
 
@@ -679,9 +643,11 @@ Taken 2026-10-10 at `c8343bf3`.
 | Callers of the three scripts | 0 outside each other | `grep -n "addRow(\|deleteRow(\|_showOrHideEmptyState(" app/web/templates/operator/instruments_index.html` |
 | Live spec mentions | 0 (`spec/archive/` only) | `grep -rln "Response Fields Help" spec docs` |
 
-### Status
+### Status — closed 2026-10-10
 
-- **Built 2026-10-10** in one PR: 160 lines deleted, no test changes.
+Shipped in one PR (#2943): 160 lines deleted, no test changes. One
+`diff-reviewer` read; its one finding (the Semantics line misnamed what
+≡ posts) was fixed.
 
 ### PR ladder
 
@@ -759,16 +725,16 @@ Taken 2026-10-10 at `c8343bf3`.
 | Tests pinning the old cells | 4 files (3 needed edits) | `grep -rln "data-filter-instrument\|data-self-review-instrument\|data-self-review-count" tests` |
 | Specs | 5 | `grep -rln "Self review checkbox\|Show checkbox\|filter checkbox\|self-review toggle" spec` |
 
-### Status
+### Status — closed 2026-10-10
 
-- **Built 2026-10-10** in one PR. Found at build: no view change was
-  needed (`self_review_active_count` and the three states were already
-  there). The cold read found stale prose (five `spec/assignments.md`
-  passages, `README.md`, three docstrings, the Guide's alt text) and
-  an accessibility gap: the box keeps `indeterminate` so a screen
-  reader still hears "mixed", and its name now carries the chip's
-  text. All fixed in the PR. **The Guide's `assignments-page` screencap
-  pair shows the old checkboxes**; its retake is the author's.
+Shipped in one PR (#2944); no view change was needed. **Reads:** three
+`diff-reviewer` reads and one `spec-writer` verify. They found stale
+prose (five `spec/assignments.md` passages, `README.md`, docstrings, the
+Guide's alt text) and an accessibility gap: the box keeps
+`indeterminate` so a screen reader hears "mixed", and its name carries
+the chip's text. All fixed in the PR. The Guide's `assignments-page`
+pair was retaken by the author (`Guide_v5d`, #2947). **Browser checks
+passed** (the author, 2026-10-10).
 
 ### PR ladder
 
@@ -853,16 +819,16 @@ Taken 2026-10-10 at `c8343bf3`.
 | Tests pinning the heading and labels | 3 | `grep -n "def test_self_review_c" tests/integration/test_instrument_builder_routes.py` |
 | Specs | 5 | `grep -rln "Self reviews\*\* checkbox\|Link 3 checkbox\|exclusion checkbox\|Exclude if the" spec` |
 
-### Status
+### Status — closed 2026-10-10
 
-- **Built 2026-10-10** in one PR. The cold read and the `spec-writer`
-  pass found the locked card fading "Include self reviews" as if it
-  were off (Band 3's locked-card rule reaches Band 1's lock region): a
-  cycle chip is now exempt (`:not(.is-selected)`), and a browser test
-  pins it. Also fixed: the box's accessible name is what its tick means
-  ("Exclude self reviews"), `autocomplete="off"`, a browser test of the
-  Link 3 clear, and stale spec wording. Two reads in all; the second
-  found only wording.
+Shipped in one PR (#2945). **Found at build:** Band 3's locked-card rule
+reaches Band 1's lock region and faded "Include self reviews" as if
+off; a cycle chip is exempt (`:not(.is-selected)`), pinned by a browser
+test. The box's accessible name is what its tick means, with
+`autocomplete="off"`. **Reads:** two `diff-reviewer` reads and one
+`spec-writer` verify; the second read found only wording. The Guide's
+`instrument-card-assignment-rule` pair was retaken by the author
+(`Guide_v5d`, #2947). **Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
 
@@ -936,9 +902,14 @@ Taken 2026-10-10 at `c8343bf3`.
 | Tests pinning the checkbox | 1 file, 2 tests | `grep -n "Send this confirmation" tests/integration/test_email_template_editor.py` |
 | Specs | 2 | `grep -rln "Send this confirmation" spec` |
 
-### Status
+### Status — closed 2026-10-10
 
-- **Built 2026-10-10** in one PR.
+Shipped in one PR (#2946). **Reads:** two `diff-reviewer` reads and one
+`spec-writer` verify; they found the page's name ("Email Template", not
+"Emails"), a browser test that didn't wait for the save's reload, and
+stale spec lines, all fixed. Codex found an older browser check still
+naming the old checkbox, fixed. **Browser checks passed** (the author,
+2026-10-10).
 
 ### PR ladder
 
