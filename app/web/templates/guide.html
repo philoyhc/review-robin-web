@@ -84,7 +84,7 @@
                   <td><strong>Serious but recoverable</strong>, such as archiving a session.</td></tr>
               <tr><td><span class="btn alert" title="Outline-amber button: unlocks a locked card">Revert to draft</span></td>
                   <td><strong>Unlocks a locked card</strong>, in the card's own amber.</td></tr>
-              <tr><td><button class="btn" type="button" aria-pressed="true" title="Toggle button: R marks a field required. Click to switch it." data-guide-toggle>R</button></td>
+              <tr><td><button class="btn" type="button" aria-pressed="true" title="R marks a field required. Click to switch it." data-guide-toggle>R</button></td>
                   <td><strong>A switch on one row</strong> of the Instruments page: R (required), ≡ (help text), ⑂ (branch). Solid blue is on; try it.</td></tr>
             </tbody>
           </table>
@@ -100,11 +100,16 @@
           <label class="confirm-label">
             <input type="checkbox" data-delete-confirm="guide-demo" autocomplete="off"
                    title="Tick to turn on the Delete button">
-            <span>Yes, delete the existing <span class="pill pill-empty" title="Pill: how many rows the delete removes">12 reviewers</span>.</span>
+            <span>Yes, delete the existing <span class="pill pill-empty" title="Count pill: how many rows the delete removes, not a control">12 reviewers</span>.</span>
           </label>
-          <button class="btn destructive" type="button" data-delete-btn="guide-demo"
-                  title="Off until the box is ticked. Nothing is deleted here."
-                  disabled aria-disabled="true">Delete all reviewers</button>
+          {# A disabled .btn takes no pointer events (spec/ui_elements.md §6),
+             so its own title can't show; the wrapper carries the off-state
+             tooltip and the button the on-state one. #}
+          <span title="Off until the box is ticked" data-guide-guard-tip>
+            <button class="btn destructive" type="button" data-delete-btn="guide-demo"
+                    title="Destructive button, now on. Nothing is deleted here."
+                    disabled aria-disabled="true">Delete all reviewers</button>
+          </span>
         </div>
       </div>
 
@@ -122,7 +127,7 @@
               <tr><th>Looks like</th><th>Means</th></tr>
             </thead>
             <tbody>
-              <tr><td><span class="pill pill-count" title="Count pill: a fact, not a control">12 reviewers</span> <span class="pill pill-lifecycle-draft" title="Status pill: the session's state">Draft</span></td>
+              <tr><td><span class="pill pill-count" title="Count pill: a fact, not a control">12 reviewers</span> <span class="pill pill-lifecycle-draft" title="Status pill: the session's state, not a control">Draft</span></td>
                   <td><strong>A pill</strong>: a count, a type or a status.</td></tr>
               <tr><td><label class="pill pill-count tag-chip" title="On/off chip: click to show or hide Email"><input type="checkbox" class="visually-hidden" checked autocomplete="off">Email</label>
                       <label class="pill pill-count tag-chip" title="On/off chip: click to show or hide Tag1"><input type="checkbox" class="visually-hidden" autocomplete="off">Tag1</label></td>
@@ -133,7 +138,7 @@
                   <td><strong>A choice between named options.</strong> Always solid blue; the label says which is chosen, and a click moves to the next.</td></tr>
               <tr><td><span class="pill pill-empty tag-chip is-unset" data-guide-unset-chip
                             role="button" tabindex="0" aria-pressed="mixed"
-                            title="Click to cycle: Not set → All → Filter using tags → Not set">Not set</span></td>
+                            title="Unset chip. Click to cycle: Not set → All → Filter using tags → Not set">Not set</span></td>
                   <td><strong>Not chosen yet.</strong> Amber until you pick an option; a click moves through the options and back.</td></tr>
               <tr><td><label class="pill pill-count tag-chip is-fixed" title="Fixed chip: the session has observers, so the tab stays on."><input type="checkbox" class="visually-hidden" checked disabled autocomplete="off">Observers</label></td>
                   <td><strong>Held where it is.</strong> The lock says it can't change now, usually because data depends on it; hover for why, where the page gives one.</td></tr>

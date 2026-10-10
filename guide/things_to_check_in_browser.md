@@ -362,5 +362,6 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **R.** One R; a click flips it between solid blue (on) and the
   outlined off, and back.
 - [ ] **Tooltips.** Hovering each button, pill and chip sample, and the
-  guard's box and Delete, shows a tooltip naming it and what a click
-  does.
+  guard's box and Delete, shows a tooltip naming it and, for a control,
+  what a click does; the Delete says "Off until the box is ticked" until
+  it is.

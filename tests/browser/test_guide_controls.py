@@ -109,3 +109,16 @@ def test_every_sample_has_a_tooltip(page: Page) -> None:
     for i in range(count):
         title = samples.nth(i).get_attribute("title")
         assert title and title.strip(), samples.nth(i).inner_text()
+    # A disabled .btn takes no pointer events, so the off-state tooltip
+    # sits on its wrapper, which is what the pointer reaches.
+    tip = page.locator("#guide-controls [data-guide-guard-tip]")
+    assert tip.get_attribute("title")
+    tip.scroll_into_view_if_needed()
+    box = tip.locator("button").bounding_box()
+    assert box
+    reached = page.evaluate(
+        "([x, y]) => document.elementFromPoint(x, y).closest('[title]')"
+        ".getAttribute('title')",
+        [box["x"] + box["width"] / 2, box["y"] + box["height"] / 2],
+    )
+    assert reached == tip.get_attribute("title")

@@ -1030,7 +1030,7 @@ stub).
    read.
 3. **The button samples** (#2951; author, 2026-10-10). Hover, one live
    R (the Decision's note), and a tooltip on every sample saying what it
-   is and what a click does. Takes its own `diff-reviewer` read.
+   is and, for a control, what a click does. Takes its own `diff-reviewer` read.
 
 ### Definition of done
 
