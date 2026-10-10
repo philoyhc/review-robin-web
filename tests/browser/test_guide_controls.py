@@ -1,6 +1,7 @@
 """The Guide's "Reading the controls" card (guide/ux_refinements.md Item 10):
-every chip sample answers a click the way the chip it stands for does, and
-the delete guard's button stays off until its box is ticked.
+every chip sample answers a click the way the chip it stands for does, the
+row-switch sample R toggles like R on Instruments, and the delete guard's
+button stays off until its box is ticked.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ def test_the_chip_samples_answer_a_click(page: Page) -> None:
     assert _bg(toggle) != on_bg
     toggle.click()
     expect(toggle).to_have_attribute("aria-pressed", "true")
+    expect(toggle).to_have_class("btn")
     dark = _bg(email)
     light = _bg(tag)
     assert dark != light

@@ -84,7 +84,7 @@
                   <td><strong>Serious but recoverable</strong>, such as archiving a session.</td></tr>
               <tr><td><span class="btn alert">Revert to draft</span></td>
                   <td><strong>Unlocks a locked card</strong>, in the card's own amber.</td></tr>
-              <tr><td><button class="btn" type="button" aria-pressed="true" data-guide-toggle>R</button></td>
+              <tr><td><button class="btn" type="button" aria-pressed="true" title="Required" data-guide-toggle>R</button></td>
                   <td><strong>A switch on one row</strong> of the Instruments page: R (required), ≡ (help text), ⑂ (branch). Solid blue is on; try it.</td></tr>
             </tbody>
           </table>
@@ -146,8 +146,9 @@
   </div>
   <script>
     /* The row switch and the three chip samples whose label or fill
-       moves with a click. The on/off pair needs no script: `.tag-chip:has(> input:checked)` fills
-       them off the box, as it does everywhere else. */
+       moves with a click. The on/off chip pair (Email, Tag1) needs no
+       script: `.tag-chip:has(> input:checked)` fills them off the box,
+       as it does everywhere else. */
     (function () {
       var card = document.getElementById("guide-controls");
       if (!card) return;

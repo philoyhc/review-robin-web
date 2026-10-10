@@ -962,7 +962,8 @@ sample works**, since a chip's edge says "click me" and a sample that
 ignored the click would teach the opposite; button samples are spans,
 since a button's look is the lesson and a sample that acted would need
 somewhere to go; they take no pointer or hover tint, so they don't
-promise a click. Rejected: screenshots of the controls, which go stale
+promise a click. *(Reversed by the author on the merged card, rung 3:
+the samples take their role's hover, and R is one live Toggle.)* Rejected: screenshots of the controls, which go stale
 the moment a role's tokens move, where live classes follow it.
 
 ### Semantics
@@ -1027,11 +1028,8 @@ stub).
    and §9's "every switchable sample working", with the click checks in
    `guide/things_to_check_in_browser.md`. Takes its own `diff-reviewer`
    read.
-3. **The button samples** (author, 2026-10-10, on the merged card). The
-   button samples take their role's hover, reversing the Decision's "no
-   pointer or hover tint"; R is one live toggle (`btn` ⇄ `btn secondary`
-   with `aria-pressed`), not an on/off pair. Takes its own
-   `diff-reviewer` read.
+3. **The button samples** (#2951; author, 2026-10-10). Hover, and one
+   live R (the Decision's note). Takes its own `diff-reviewer` read.
 
 ### Definition of done
 
