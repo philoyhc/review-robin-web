@@ -1028,8 +1028,8 @@ Separately, each instrument's rule can **exclude self-reviews
 outright**: the **Include / Exclude self reviews** chip under Link 3 of the
 instrument's Band 1 ([§9.6](#96-configure-instruments)), *Include*
 by default and shown only once every Link is set. The line under it
-follows the unit of review — on a group-scoped instrument it excludes every
-group the reviewer belongs to. It takes effect at the next Generate:
+follows the unit of review: on a group-scoped instrument, excluding
+self reviews drops every group the reviewer belongs to. It takes effect at the next Generate:
 excluded pairs are not generated at all, so an instrument that has
 already generated loses those rows and their responses, behind the
 Prepare confirmation ([§14](#14-reconciling-regeneration)). The

@@ -686,10 +686,11 @@ chip of a locked card: it drops the edge
 and the pointer like `is-disabled`, but is not struck through, because
 it still says on or off. On takes the card's display-value colors
 (`--config-value-bg` / `--config-value-fg`) rather than the reserved
-shade; off is faded. **A locked Instruments card's Band 3 chips read as
-plain `pill-count` pills** (the author, 2026-10-10): no edge, pointer or
-lock glyph, an unticked field faded (a cycle chip, such as Band 1's
-self-review chip, names its state and is not faded), read off the card's
+shade; off is faded. **A locked Instruments card's chips read as plain
+`pill-count` pills** (the author, 2026-10-10), Band 3's and Band 1's
+self-review chip alike: no edge, pointer or lock glyph, an unticked
+field faded (a cycle chip names its state and is not faded), read off
+the card's
 `data-instrument-locked` so an in-page lock or unlock repaints them.
 
 `.severity-chip` on Validate is the shape this generalises: an outlined
@@ -709,7 +710,7 @@ its fill; a fixed switch keeps the fill of the state it is held at:
 |---|---|---|---|
 | **On/off** | selected, not selected; the label doesn't change | dark (`--selected-bg`) when on, light when off | the Setup pages' column chips |
 | **On/off with a partial state** | all, none, or some of a set; the label counts how many are on | dark when all, light when none, amber (`pill-empty`) when some; a click on light or amber turns all on | the Assignments page's "Include N self reviews" |
-| **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always dark | Extract's Data shaper "All rows ↔ Rows with data"; the Instruments card's "Include ↔ Exclude self reviews" |
+| **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always dark (on a locked Instruments card, the plain pill, unfaded) | Extract's Data shaper "All rows ↔ Rows with data"; the Instruments card's "Include ↔ Exclude self reviews" |
 | **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, dark otherwise | the Instruments page's Band 1 link chips |
 | **Fixed** | one switch held at its value while the chips beside it stay live | its siblings' fill for the held state (dark when on), with no edge or pointer and a lock glyph before the label (`.tag-chip.is-fixed`) | Session Home's optional tab once it holds data |
 
