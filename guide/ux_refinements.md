@@ -515,6 +515,8 @@ eight PNGs in `app/web/static/guide/`, no spec quotes the Guide text
   ~2690px wide against ~1756px for the others; every capture renders at
   1200px, so their text reads about a third smaller. The fields pair was
   retaken (`Guide_v5b`) so Rating's bounds match the preview, 0–5.
+  The branching pair keeps Rating at 1–5, a separate example (author,
+  2026-10-10). Three wording fixes accepted (author, 2026-10-10).
 
 ### PR ladder
 
@@ -531,7 +533,10 @@ eight PNGs in `app/web/static/guide/`, no spec quotes the Guide text
 
 - The fields and branching pairs are a third scale, which
   `spec/ui_elements.md` §10's two capture widths don't allow for: retake
-  them at ~1750px, or rule an exception there — the author.
+  them at ~1750px, or rule an exception there — the author. A retake
+  waits until the author is back at the capturing machine; it can also
+  take the fields pair after Save, as the current one shows an unsaved
+  edit.
 
 ### Out of scope
 
