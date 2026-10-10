@@ -2876,9 +2876,13 @@
       /* +, ⑂ and join / detach (↰ ↳) share one width, so the columns
          line up whichever glyph a row shows (the author, 2026-09-27).
          One variable, so the room after join / detach below stays two
-         buttons wide if the width changes (19T Item 12A). */
-      body.ui-v2 table.rf-table { --rf-glyph-width: 2.25rem; }
-      body.ui-v2 table.rf-table .btn.rf-glyph {
+         buttons wide if the width changes (19T Item 12A). R, ≡, ▲, ▼ and
+         X set it (ux_refinements Item 1, the author, 2026-10-10: 2rem,
+         R and X's own width) and take it too, so every row button is one
+         width and the name chip has room. */
+      body.ui-v2 table.rf-table { --rf-glyph-width: 2rem; }
+      body.ui-v2 table.rf-table .btn.rf-glyph,
+      body.ui-v2 table.rf-table td.col-shrink > .btn {
         width: var(--rf-glyph-width);
         padding-left: 0;
         padding-right: 0;
@@ -2921,7 +2925,14 @@
         align-items: stretch;
       }
       body.ui-v2 table.rf-table td.rf-name { width: 20%; }
-      body.ui-v2 table.rf-table td.rf-type { width: 15%; }
+      /* The type column is capped at about an "Agreement" select (its
+         open list keeps its natural width), and the bounds boxes keep
+         room for "2000", so the name chip's column comes out of them
+         (ux_refinements Item 1, the author, 2026-10-10). */
+      body.ui-v2 table.rf-table td.rf-type { width: 8.5rem; }
+      body.ui-v2 table.rf-table [data-new-model-rf-bounds-wrap] > input {
+        min-width: 3.5rem;
+      }
       /* A branch in Band 3's response-field table (19T Item 10). The bar
          runs down the checkbox column from the parent's checkbox through
          its condition and governed rows, broad and pale (the author,
@@ -2941,15 +2952,19 @@
         border-left: 4px solid var(--btn-primary-border);
         opacity: 0.35;
       }
-      body.ui-v2 table.rf-table td.rf-branch-bar-start::before { top: 70%; }
+      /* A parent's bar starts under its + button, from the cell's padding
+         (ux_refinements Item 1; under its checkbox before). */
+      body.ui-v2 table.rf-table td.rf-branch-bar-start::before {
+        top: calc(100% - var(--space-1));
+      }
       /* A branch inside a branch is ruled above its parent and below its
-         last field, from the parent's checkbox column rightward, clear of
-         the outer branch's bar; a top-level branch's <tbody> rule stays
+         last field, from the parent's + column rightward, clear of the
+         name chips and the outer branch's bar (ux_refinements Item 1); a top-level branch's <tbody> rule stays
          full width (the author, 2026-09-29, 19T Item 14 rung 5). */
-      body.ui-v2 table.rf-table > tbody > tr.rf-inner-top > td:nth-child(n+2) {
+      body.ui-v2 table.rf-table > tbody > tr.rf-inner-top > td:nth-child(n+3) {
         border-top: 1px solid var(--border-default);
       }
-      body.ui-v2 table.rf-table > tbody > tr.rf-inner-end > td:nth-child(n+2) {
+      body.ui-v2 table.rf-table > tbody > tr.rf-inner-end > td:nth-child(n+3) {
         border-bottom: 1px solid var(--border-default);
       }
       body.ui-v2 table.rf-table td.rf-condition-cell {
@@ -2972,9 +2987,22 @@
         width: var(--rf-condition-box, 12em);
         box-sizing: border-box;
       }
-      /* The Active checkbox sits centered in its cell, one column
-         further right per level of branching (19T Items 12A, 14). */
-      body.ui-v2 table.rf-table td.rf-active-cell { text-align: center; }
+      /* The field's name chip, around its Active checkbox, is the row's
+         first column at every level and sits flush left in it
+         (ux_refinements Item 1; the checkbox moved right per level
+         before). It is capped at 8em, about a nine-letter name (the
+         author's measure was the default text field's); a longer name
+         ends in "…", in full on hover. */
+      body.ui-v2 table.rf-table td.rf-active-cell { text-align: left; }
+      body.ui-v2 table.rf-table label.rf-name-chip {
+        max-width: 8em;
+        box-sizing: border-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+        margin: 0;
+      }
       /* A governed response cell whose branch is closed (19T Item 10):
          muted, its control disabled until the parent's answer opens it.
          The cell's title names the condition. */

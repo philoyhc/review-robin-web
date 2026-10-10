@@ -43,21 +43,27 @@ def test_join_reads_the_up_arrow_and_detach_the_down_arrow(
     assert re.search(r"<button[^>]*data-new-model-rf-join[^>]*>↰</button>", template)
 
 
-def test_the_active_checkbox_is_centered_on_every_row(
+def test_the_name_chip_starts_every_row_flush_left(
     client: TestClient, db: Session
 ) -> None:
+    """ux_refinements Item 1 (12A centered the checkbox it replaces): the
+    Active checkbox sits in the field's name chip, the row's first cell,
+    flush left and capped."""
     _, _, card, flat = _page(client, db, "12a-active")
     table = _rows_table(card)
     for name in ("Rating", "Comments"):
-        cell = re.search(
-            r'<td class="([^"]*)"><input type="checkbox" data-new-model-rf-active',
-            _row(table, name),
-        )
-        assert cell and "rf-active-cell" in cell.group(1).split(), name
-    # A row the script adds from the template is centered too.
+        row = _row(table, name)
+        first = re.search(r"<td[^>]*>.*?</td>", row.split(">", 1)[1]).group(0)
+        assert first.startswith('<td class="col-shrink rf-active-cell"><label class="pill pill-count tag-chip rf-name-chip"'), name
+        assert "data-new-model-rf-active" in first, name
+        assert f"<span data-new-model-rf-chip-label>{name}</span>" in first, name
+    # A row the script adds from the template has one too, labeled by the
+    # row script.
     template = flat.split("<template data-new-model-rf-row-template>")[1].split("</template>")[0]
-    assert '<td class="col-shrink rf-active-cell"><input type="checkbox" data-new-model-rf-active' in template
-    assert "body.ui-v2 table.rf-table td.rf-active-cell { text-align: center; }" in flat
+    assert '<td class="col-shrink rf-active-cell"><label class="pill pill-count tag-chip rf-name-chip"' in template
+    assert "<span data-new-model-rf-chip-label></span>" in template
+    assert "body.ui-v2 table.rf-table td.rf-active-cell { text-align: left; }" in flat
+    assert "max-width: 8em;" in flat.split("body.ui-v2 table.rf-table label.rf-name-chip {")[1].split("}")[0]
 
 
 def test_a_numbers_condition_boxes_follow_the_parents_min_box(
@@ -105,7 +111,12 @@ def test_join_and_detach_leave_room_for_two_more_buttons(
     assert template.count(slot) == 2
     # Each slot is a button wide (``.rf-glyph``'s width, one variable for
     # both), with a cell's two paddings, as a button's cell has.
-    assert "body.ui-v2 table.rf-table { --rf-glyph-width: 2.25rem; }" in flat
+    # R, ≡, ▲, ▼ and X set the width (ux_refinements Item 1).
+    assert "body.ui-v2 table.rf-table { --rf-glyph-width: 2rem; }" in flat
+    assert (
+        "body.ui-v2 table.rf-table .btn.rf-glyph, "
+        "body.ui-v2 table.rf-table td.col-shrink > .btn { width: var(--rf-glyph-width);"
+    ) in flat
     assert "body.ui-v2 table.rf-table td.rf-slot { width: var(--rf-glyph-width); }" in flat
     assert "padding-right: calc(2 * var(--rf-glyph-width)" not in flat
 

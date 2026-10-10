@@ -68,22 +68,25 @@ def test_each_level_shifts_one_column_and_the_name_stays(
     for label, cells in rows.items():
         assert len(cells) == 14, label
         assert "data-new-model-rf-name" in cells[6], label
-    # Familiarity: Active, +, ⑂, ↰, two slots.
+    # Every row's name chip, around its Active box, is its first cell at
+    # every level (ux_refinements Item 1); the shift happens after it.
+    for label, cells in rows.items():
+        assert "data-new-model-rf-active" in cells[0] and "rf-name-chip" in cells[0], label
+    # Familiarity: chip, + (its bar starts here), ⑂, ↰, two slots.
     fam = rows["Familiarity"]
-    assert "data-new-model-rf-active" in fam[0] and "rf-branch-bar-start" in fam[0]
+    assert "data-new-model-rf-add" in fam[1] and "rf-branch-bar-start" in fam[1]
     assert "data-new-model-rf-fork" in fam[2] and "data-new-model-rf-join" in fam[3]
     assert fam[4].startswith(' class="col-shrink rf-slot">') and fam[5].startswith(' class="col-shrink rf-slot">')
-    # Rating: bar, Active (its own bar starts here), +, ⑂, ↰ (rung 5), ↳.
+    # Rating: chip, bar, + (its own bar starts here), ⑂, ↰ (rung 5), ↳.
     rating = rows["Rating"]
-    assert "rf-branch-bar" in rating[0]
-    assert "data-new-model-rf-active" in rating[1] and "rf-branch-bar-start" in rating[1]
-    assert "data-new-model-rf-add" in rating[2]
+    assert "rf-branch-bar" in rating[1] and "rf-branch-bar-start" not in rating[1]
+    assert "data-new-model-rf-add" in rating[2] and "rf-branch-bar-start" in rating[2]
     assert "data-new-model-rf-fork" in rating[3] and "data-new-model-rf-nest" in rating[4]
     assert "data-new-model-rf-join" in rating[5] and ">↳</button>" in rating[5]
-    # Comments: two bars, Active, +, ⑂'s slot left empty, ↳.
+    # Comments: chip, two bars, +, ⑂'s slot left empty, ↳.
     comments = rows["Comments"]
-    assert "rf-branch-bar" in comments[0] and "rf-branch-bar" in comments[1]
-    assert "data-new-model-rf-active" in comments[2] and "data-new-model-rf-add" in comments[3]
+    assert "rf-branch-bar" in comments[1] and "rf-branch-bar" in comments[2]
+    assert "data-new-model-rf-add" in comments[3]
     assert comments[4].startswith(' class="col-shrink rf-slot">')
     assert "data-new-model-rf-join" in comments[5] and ">↳</button>" in comments[5]
     assert "data-new-model-rf-fork" not in _row(table, "Comments")
@@ -96,11 +99,14 @@ def test_a_condition_rows_plus_sits_under_its_parents_fork(
     table = _rows_table(card)
     conditions = [c.split("</tr>")[0] for c in table.split("<tr data-new-model-rf-condition")[1:]]
     level1, level2 = (_cells(c) for c in conditions)
-    # Level 1: bar, blank, "+" (under Familiarity's ⑂), the lead across 3.
-    assert "rf-branch-bar" in level1[0] and "data-new-model-rf-condition-add" in level1[2]
+    # Level 1: the chip column blank, bar, "+" (under Familiarity's ⑂),
+    # the lead across 3.
+    assert level1[0].startswith(' class="col-shrink rf-active-cell"></td>')
+    assert "rf-branch-bar" in level1[1] and "data-new-model-rf-condition-add" in level1[2]
     assert 'colspan="3">If the above' in level1[3]
-    # Level 2: two bars, blank, "+" (under Rating's ⑂), the lead across 2.
-    assert "rf-branch-bar" in level2[0] and "rf-branch-bar" in level2[1]
+    # Level 2: blank, two bars, "+" (under Rating's ⑂), the lead across 2.
+    assert level2[0].startswith(' class="col-shrink rf-active-cell"></td>')
+    assert "rf-branch-bar" in level2[1] and "rf-branch-bar" in level2[2]
     assert "data-new-model-rf-condition-add" in level2[3]
     assert 'colspan="2">If the above' in level2[4]
     # Each shows its own condition.
@@ -353,8 +359,9 @@ def test_a_branch_inside_a_branch_is_ruled_above_and_below(
     client: TestClient, db: Session
 ) -> None:
     """The author's second rung-5 entry: Rating's branch is ruled above
-    Rating and below Comments, its last field, from Rating's checkbox
-    column rightward, clear of Familiarity's bar."""
+    Rating and below Comments, its last field, from Rating's + column
+    rightward (its checkbox column before ux_refinements Item 1), clear of
+    the name chips and Familiarity's bar."""
     table, body = _with_other(client, db, "two-level-rules")
     assert 'class="rf-inner-top"' in _row(table, "Rating")
     assert 'class="rf-inner-end"' in _row(table, "Comments")
@@ -364,8 +371,8 @@ def test_a_branch_inside_a_branch_is_ruled_above_and_below(
     assert 'class="rf-inner-end"' in _row(_rows_table(card), "Comments")
     flat = " ".join(body.split())
     for rule in (
-        "body.ui-v2 table.rf-table > tbody > tr.rf-inner-top > td:nth-child(n+2) { border-top: 1px solid var(--border-default); }",
-        "body.ui-v2 table.rf-table > tbody > tr.rf-inner-end > td:nth-child(n+2) { border-bottom: 1px solid var(--border-default); }",
+        "body.ui-v2 table.rf-table > tbody > tr.rf-inner-top > td:nth-child(n+3) { border-top: 1px solid var(--border-default); }",
+        "body.ui-v2 table.rf-table > tbody > tr.rf-inner-end > td:nth-child(n+3) { border-bottom: 1px solid var(--border-default); }",
     ):
         assert rule in flat, rule
     sync = " ".join(_rf_fn(body, "newModelRfSyncInnerBorders").split())

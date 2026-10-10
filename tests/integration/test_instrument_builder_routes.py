@@ -9910,7 +9910,7 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
             assert 'onclick="newModelRfMove(this)"' in move
     boxes = {
         re.search(r'value="([^"]+)"', c.split("data-new-model-rf-name", 1)[1]).group(1):
-        re.search(r'<input type="checkbox" data-new-model-rf-active[^>]*>', c).group(0)
+        re.search(r'<input type="checkbox" class="visually-hidden" data-new-model-rf-active[^>]*>', c).group(0)
         for c in chunks
     }
     assert " checked" in boxes["Rating"] and " disabled" not in boxes["Rating"]
@@ -9918,7 +9918,7 @@ def test_band3_response_fields_are_a_table(client: TestClient, db: Session) -> N
     for box in boxes.values():
         assert 'onchange="newModelRfToggleActive(this)"' in box
     # The "+" template's row starts selected, its checkbox ticked and live.
-    tpl_box = re.search(r'<input type="checkbox" data-new-model-rf-active[^>]*>', template).group(0)
+    tpl_box = re.search(r'<input type="checkbox" class="visually-hidden" data-new-model-rf-active[^>]*>', template).group(0)
     assert " checked" in tpl_box and " disabled" not in tpl_box
     ups = [re.search(r'<button[^>]*data-new-model-rf-move="up"[^>]*>', c).group(0) for c in chunks]
     downs = [re.search(r'<button[^>]*data-new-model-rf-move="down"[^>]*>', c).group(0) for c in chunks]

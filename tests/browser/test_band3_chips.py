@@ -1,5 +1,8 @@
 """Band 3's fields are on/off chips around their Active checkbox.
 
+A response field's chip is labeled with its name, mirrored live from the
+name box, and capped; it is the row's first cell at every level.
+
 ``guide/ux_refinements.md`` Item 1; ``spec/instruments.md`` "Display-field
 table". A display field's chip wraps its hidden checkbox, so a click on
 the chip ticks the box and the preview follows. Name and Email, whose box
@@ -9,12 +12,13 @@ show once the instrument is grouped.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 import httpx
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Dialog, Locator, Page, expect
 
-from ._builder import REVIEWERS_CSV, open_card, open_unlocked, preview_headers, unlock
+from ._builder import REVIEWERS_CSV, open_card, open_unlocked, preview_headers, rows, unlock
 
 
 def _style(chip: Locator, prop: str, pseudo: str | None = None) -> str:
@@ -146,7 +150,9 @@ def test_a_locked_cards_chips_drop_the_edge_until_it_unlocks(
     tag = _chip(card, "reviewee.tag_1")
     name = _chip(card, "reviewee.name")
     pill = card.locator("[data-new-model-vp-preview-cell]").first
-    for chip in (tag, name):
+    # A response field's name chip too (PR 2).
+    rating = card.locator("label.rf-name-chip").first
+    for chip in (tag, name, rating):
         assert _style(chip, "cursor") == "default"
         assert _style(chip, "box-shadow") == "none"
         assert _style(chip, "background-color") == _style(pill, "background-color")
@@ -155,3 +161,92 @@ def test_a_locked_cards_chips_drop_the_edge_until_it_unlocks(
     unlock(card)
     assert _style(tag, "cursor") == "pointer"
     assert _style(tag, "box-shadow") != "none"
+# ---- Response fields: name chips (ux_refinements Item 1, PR 2) ----
+
+
+def _rf_chip(row: Locator) -> Locator:
+    return row.locator("label.rf-name-chip")
+
+
+def test_a_response_chip_follows_its_name_live(
+    page: Page, new_session: Callable[[], int]
+) -> None:
+    card = open_unlocked(page, new_session())
+    row = rows(card).first
+    chip = _rf_chip(row)
+    expect(chip).to_have_text("Rating")
+    # The chip is the row's first cell, flush left.
+    assert row.evaluate("r => r.cells[0].contains(r.querySelector('label.rf-name-chip'))")
+
+    long = "Overall impression of the work"
+    row.locator("[data-new-model-rf-name]").fill(long)
+    expect(chip).to_have_text(long)
+    expect(chip).to_have_attribute("title", long)
+    # Capped at about a nine-letter name; the rest ends in "…".
+    width = chip.evaluate("el => el.getBoundingClientRect().width")
+    font = float(_style(chip, "font-size").removesuffix("px"))
+    assert width <= 8 * font + 1, width
+    assert _style(chip, "text-overflow") == "ellipsis"
+    assert chip.evaluate("el => el.scrollWidth > el.clientWidth")
+
+    # An empty box: the chip goes by the default the box shows muted.
+    row.locator("[data-new-model-rf-name]").fill("")
+    placeholder = row.locator("[data-new-model-rf-name]").get_attribute("placeholder")
+    expect(chip).to_have_text(placeholder or "")
+
+    # A row "+" adds is labeled too.
+    row.locator("[data-new-model-rf-add]").click()
+    added = rows(card).nth(1)
+    expect(_rf_chip(added)).to_have_text(re.compile(r"^Field \d+$"))
+
+
+def test_hiding_a_field_with_responses_through_its_chip_still_asks(
+    page: Page, new_session: Callable[[], int]
+) -> None:
+    card = open_unlocked(page, new_session())
+    row = rows(card).first
+    box = row.locator("[data-new-model-rf-active]")
+    # The confirm reads the row's saved-response count, which a field with
+    # answers renders; set it here rather than seed a whole review.
+    row.evaluate("r => r.setAttribute('data-response-count', '2')")
+    messages: list[str] = []
+
+    def dismiss(dialog: Dialog) -> None:
+        messages.append(dialog.message)
+        dialog.dismiss()
+
+    page.once("dialog", dismiss)
+    _rf_chip(row).click()
+    expect(box).to_be_checked()
+    assert messages and "2 saved responses" in messages[0], messages
+
+    page.once("dialog", lambda dialog: dialog.accept())
+    _rf_chip(row).click()
+    expect(box).not_to_be_checked()
+
+
+def test_a_hidden_parents_branch_chips_are_fixed_off(
+    page: Page, new_session: Callable[[], int]
+) -> None:
+    card = open_unlocked(page, new_session())
+    parent = rows(card).first
+    parent.locator("[data-new-model-rf-fork]").click()
+    governed = card.locator("[data-new-model-rf-governed]").first
+    chip = _rf_chip(governed)
+    on_fill = _style(chip, "background-color")
+    assert _style(chip, "cursor") == "pointer"
+    assert "svg" not in _glyph(chip)
+
+    _rf_chip(parent).click()
+    expect(governed.locator("[data-new-model-rf-active]")).to_be_disabled()
+    assert _style(chip, "background-color") == _style(_rf_chip(parent), "background-color")
+    assert _style(chip, "cursor") == "default"
+    assert _style(chip, "box-shadow") == "none"
+    assert "svg" in _glyph(chip)
+    expect(chip).to_have_attribute("title", re.compile("parent field is hidden"))
+
+    _rf_chip(parent).click()
+    expect(governed.locator("[data-new-model-rf-active]")).to_be_enabled()
+    assert _style(chip, "background-color") == on_fill
+    assert _style(chip, "cursor") == "pointer"
+    assert "svg" not in _glyph(chip)

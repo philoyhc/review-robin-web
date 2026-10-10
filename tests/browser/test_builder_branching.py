@@ -133,11 +133,13 @@ def test_unticking_a_parent_cascades_to_its_branch(
     governed_active = _governed(card).first.locator("[data-new-model-rf-active]")
     expect(governed_active).to_be_checked()
 
-    parent.locator("[data-new-model-rf-active]").uncheck()
+    # The chip around the box is what a person clicks (ux_refinements
+    # Item 1).
+    parent.locator("label.rf-name-chip").uncheck()
     expect(governed_active).not_to_be_checked()
     expect(governed_active).to_be_disabled()
 
-    parent.locator("[data-new-model-rf-active]").check()
+    parent.locator("label.rf-name-chip").check()
     expect(governed_active).to_be_checked()
     expect(governed_active).to_be_enabled()
 

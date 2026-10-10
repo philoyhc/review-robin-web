@@ -124,6 +124,19 @@ Taken 2026-10-09 at `2569876a`.
   author's ruling (2026-10-10) a locked card's Band 3 chips read as plain
   display pills (no edge, pointer or glyph; unticked faded), keyed on
   `data-instrument-locked`; a browser test locks and unlocks.
+- **PR 2 built 2026-10-10.** Each response row's first cell is a name
+  chip around its hidden Active checkbox, relabeled by
+  `newModelRfRecomputeActionStates` from the typed name or the box's
+  default; bars and the six leading columns follow it, a parent's bar
+  now starting under its + (`td:nth-child(n+3)` for the inner rule). Every
+  row button takes `--rf-glyph-width` 2rem (R and X's width; ▲ ▼ and
+  + ⑂ ↰ were 36px); the type column is `8.5rem`; the bounds boxes floor
+  at `3.5rem`, their inline `min-width: 0` dropped. The chip cap is the
+  border box, 8em: a "Comments" chip measured 94.7px at the chip's 12px.
+  Browser tests cover the live label and cap, the hide confirm through
+  the chip, and a hidden parent's fixed-off chips; all three fail
+  without the change. Nine tests that pinned the checkbox column were
+  moved to the new layout, two browser ones now click the chip.
 
 ### PR ladder
 

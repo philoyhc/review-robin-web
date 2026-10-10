@@ -448,12 +448,13 @@ buttons) — see `spec/instruments.md` "Response fields". There is no ✓
 button: a row commits to the preview by itself once its live name and
 shape are valid.
 
-A response-field row carries an Active checkbox and a display-field row
-its field's on/off chip (`spec/instruments.md` "Display-field table");
+Each row carries its field's on/off chip around a hidden Active checkbox
+— a response field's labeled with its name (`spec/instruments.md`
+"Response fields" and "Display-field table");
 both carry ▲ ▼ move buttons, `btn secondary`, except Name and Email. The
-bindings differ: a response-field row's checkbox is the field's
-`InstrumentResponseField.visible`; a display-field chip's hidden box puts
-its key in the instrument's `selected_display_keys`. The response-field row's ▲ ▼
+bindings differ: a response-field chip's box is the field's
+`InstrumentResponseField.visible`; a display-field chip's puts its key in
+the instrument's `selected_display_keys`. The response-field row's ▲ ▼
 are full-size, like its other row buttons; the display-field row's are
 the short size, `btn secondary btn-short` — see `spec/instruments.md` "Display-field table".
 
