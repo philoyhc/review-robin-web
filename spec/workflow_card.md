@@ -337,7 +337,7 @@ the manual release shortcut post-deadline.
 ### Per-state visible-button table
 
 `Pri` = Primary (`.btn`), `Sec` = Secondary (`.btn.secondary`),
-`Alert` = Alert, filled amber (`.btn.danger-solid`), per
+`Amber` = Outline-amber (`.btn.alert`), per
 `spec/ui_elements.md` §6; blank = not rendered. Order preserved across the row;
 blank cells collapse so the row reads left-to-right with no
 gaps.
@@ -352,7 +352,7 @@ gaps.
 | Close session | | | | | | | | Sec | Sec | Sec | | |
 | Release responses | | | | | | | | | | | Sec | |
 | Stop releasing | | | | | | | | | | | | Sec |
-| Archive session | | | | | | | | | | | Alert | Alert |
+| Archive session | | | | | | | | | | | Amber | Amber |
 | **Visible total** | **0** | **1** | — | **3** | **3–4†** | **4** | **3** | **2** | **3** | **3** | **3** | **3** |
 
 **The `W` overlay has no column**, because it changes no cell's visibility:
@@ -468,11 +468,11 @@ saved responses"* over *"Regenerating drops M assignment pairs that
 the current setup no longer produces, along with their saved
 responses. Responses on unchanged pairs are kept."*, then two buttons:
 
-- **Regenerate & prepare** (`.btn.danger-solid`) posts back to `/workflow/prepare`
+- **Regenerate & prepare** (`.btn.destructive`, since it deletes saved responses) posts back to `/workflow/prepare`
   with `acknowledge_response_loss=true`, which skips the detour
   so the run proceeds: the reconcile deletes the responses on
   the orphaned pairs, keeps the rest, and Validate follows.
-- **Cancel** (`.btn.alert`, outline amber) is a plain link back to
+- **Cancel** (`.btn.secondary`, per `spec/ui_elements.md` §5a) is a plain link back to
   the host page — nothing runs.
 
 Like the warnings detour on Activate, the confirmation detour

@@ -96,11 +96,11 @@
           Responses on unchanged pairs are kept.
         </p>
         <div class="next-action-buttons" style="margin-top: var(--space-3);">
-          <button class="btn danger-solid" type="submit"
+          <button class="btn destructive" type="submit"
                   form="next-action-prepare-regenerate-form">
             Regenerate &amp; prepare
           </button>
-          <a class="btn alert" href="{{ _next_action_page_href }}">
+          <a class="btn secondary" href="{{ _next_action_page_href }}">
             Cancel
           </a>
         </div>
@@ -335,7 +335,7 @@
     {% endif %}
 
     {% if archive_visible %}
-      <button class="btn danger-solid" type="submit"
+      <button class="btn alert" type="submit"
               form="next-action-archive-form">Archive<br>session</button>
     {% endif %}
   </div>

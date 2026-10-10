@@ -524,6 +524,6 @@ def test_no_button_on_the_page_carries_an_inline_style(
     buttons = re.findall(r"<button\b[^>]*>", page)
     assert buttons
     assert [b for b in buttons if "style=" in b] == []
-    # The purge button is the lobby's role, not the lock card's.
+    # The purge button is serious but recoverable: Outline-amber (Item 11).
     card = _archive_card(page)
-    assert 'class="btn danger-solid" type="submit"' in card
+    assert 'class="btn alert" type="submit"' in card

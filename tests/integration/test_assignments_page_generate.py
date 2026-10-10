@@ -348,7 +348,7 @@ def test_generate_with_existing_pairs_requires_confirm(
         f'href="/operator/sessions/{review_session.id}/assignments">Cancel</a>'
         in banner
     )
-    assert 'class="btn alert"' in banner
+    assert 'class="btn secondary"' in banner
     assert (
         len(
             list(

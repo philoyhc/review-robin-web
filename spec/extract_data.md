@@ -1135,7 +1135,7 @@ of the active lobby once the operator has the data they need.
 | Body copy | "Files the session out of the active lobby once you've extracted the data you need. Optionally purge responses, rosters, and/or the audit log first; archiving is otherwise non-destructive and reversible from the archived-sessions page." |
 | Form | `POST /operator/sessions/bulk-archive` with `session_ids={id}` and `return_to=archived` |
 | Purge checkboxes | `Archive after purging`: `Responses` (`purge=responses`), `Rosters` (`purge=rosters`), `Audit log` (`purge=audit_log`); none ticked by default |
-| Button | `.btn.danger-solid` (Alert, `spec/ui_elements.md` §6) — `Purge and archive`, or `Already archived` on an archived session |
+| Button | `.btn.alert` (Outline-amber, `spec/ui_elements.md` §6) — `Purge and archive`, or `Already archived` on an archived session |
 
 **Same route and service as the lobby's "Purge and archive"**
 (`spec/sessions_overview.md`): `session_purge.purge_and_archive`

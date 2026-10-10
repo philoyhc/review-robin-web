@@ -22,9 +22,10 @@ other AI coding agent working in this repository.
 - Do not introduce a full frontend framework unless explicitly requested.
 - When working on a page, migrate any inline-styled buttons on it
   to the canonical `.btn` roles defined in `spec/ui_elements.md` §6
-  (Primary / Secondary / Destructive [outline red] / Alert [filled
-  amber] / Outline-amber [lock-card recovery] / Toggle [two-state
-  per-row flag]). Ask first if a button
+  (Primary / Secondary / Destructive [outline red] / Outline-amber
+  [serious but recoverable, lock-card recovery included] / Toggle
+  [two-state per-row flag]; the filled-amber Alert retired in UX
+  refinements Item 11). Ask first if a button
   doesn't cleanly fit one of those roles — don't invent a new one
   without confirmation. (The pre-19B six-name scheme — Primary Outline /
   Alert Outline / Danger Outline — is superseded, and `.danger` is a

@@ -397,15 +397,17 @@ renders.
 **Cancel button.** Every such banner — both red error banners
 ("Could not save…", "Could not delete…") and amber confirmation
 banners ("Cascade preview…") — must carry a **Cancel button**
-(`.btn.alert`) right-aligned at the bottom of the card. The
+(`.btn.secondary`) right-aligned at the bottom of the card. The
 Cancel button links back to the page **without** the
 query-string flag, so the operator has a one-click way to
 dismiss the banner and return to the table state. For
 confirmation-style banners (e.g. cascade-preview before a
 destructive action), Cancel sits next to the confirm button —
-`.btn.danger-solid` (filled amber) for a recoverable proceed
-(archive / regenerate-&-prepare / acknowledge-&-activate),
-`.btn.destructive` (outline red) for an irreversible delete. For
+`.btn.alert` (outline amber) for a recoverable proceed
+(archive / acknowledge-&-activate), `.btn.destructive` (outline red)
+for one that deletes data (an irreversible delete, or
+regenerate-&-prepare, which drops saved responses). Cancel takes
+Secondary so the proceed button is always the louder of the two. For
 pure error banners (no
 confirm path — the operator must fix the underlying issue),
 Cancel is the only button.
@@ -432,13 +434,15 @@ doesn't fire on the dismissed page because no
 
 ### 6. Buttons
 
-Six canonical roles — **Primary**, **Secondary**, **Destructive**
-(outline red), **Alert** (filled amber), **Outline-amber** (lock-card
-recovery) and **Toggle** (a two-state per-row flag). Every `.btn` shares one shape: `var(--space-2) var(--space-4)`
+Five canonical roles — **Primary**, **Secondary**, **Destructive**
+(outline red), **Outline-amber** (serious but recoverable) and
+**Toggle** (a two-state per-row flag). A sixth, filled-amber **Alert**
+(`.btn.danger-solid`), retired in `guide/ux_refinements.md` Item 11: it
+read louder than Destructive for a recoverable act. Every `.btn` shares one shape: `var(--space-2) var(--space-4)`
 padding, `var(--radius-button)` radius, `--fs-small` at weight 500, a 1px
 border, single-line label. **Roles differ by token, not by shape**, so a
 role change is a colour change and nothing else. If a button does not fit
-one of the six, ask before inventing a seventh.
+one of the five, ask before inventing a sixth.
 The Guide's "Reading the controls" card (`app/web/templates/guide.html`)
 shows one sample of each role on the classes in the table below, so a
 role's look reaches it unedited; a new role adds a row there.
@@ -464,9 +468,8 @@ support is a separate spec (`visual_style_general.md`).
 |---|---|---|
 | `.btn` (no modifier) | **Primary** | `--btn-primary-bg` fill, `--btn-primary-fg` label, `--btn-primary-border` border. Reserved for the page's *single* main affirmative action — at most one per page region. "Submit this form" doesn't qualify; routine submits use Secondary. |
 | `.btn.secondary` | **Secondary** | `--btn-secondary-bg` (white) with a `--btn-secondary-fg` label and a `--btn-secondary-border` outline — a medium grey, a shade lighter than the label. The default button. Used for routine submits (Upload, Save), Cancel, View detail, etc. |
-| `.btn.alert` | **Outline-amber (recovery in lock card)** | `--btn-amber-bg` (white) with `--btn-amber-border` + `--btn-amber-fg` — the same warning brown that frames the lock card. Per `visual_style_general.md` P7, recovery actions inside a lock card adopt the card's color family. Used e.g. for "Revert to draft" inside a `.card.lock`. |
+| `.btn.alert` | **Outline-amber (serious but recoverable)** | `--btn-amber-bg` (white) with `--btn-amber-border` + `--btn-amber-fg` — the same warning brown that frames the lock card. Archive session, purge-and-archive, and the Acknowledge-and-activate confirm, and the recovery action inside a lock card. Per `visual_style_general.md` P7, recovery actions inside a lock card adopt the card's color family. Used e.g. for "Revert to draft" inside a `.card.lock`. |
 | `.btn.destructive` | **Destructive (outline red)** | `--btn-destructive-bg` (white) with `--btn-destructive-border` + `--btn-destructive-fg`. Irreversible row / collection **deletes** — Delete session, delete-all rosters, bulk-delete, and the delete confirm step inside `.card.danger-zone`. The role also appears **outside** a danger zone: every roster Setup page carries a `Delete` for the checkbox-selected rows in its **row expander**, not in the table toolbar. The expander is not red and does not become so — the button's own role carries the weight, and the destructive act is gated by the confirmation checkbox beside it (`spec/setup_pages.md` § *Roster controls and their route contracts*). |
-| `.btn.danger-solid` | **Alert (filled amber)** | Filled `--btn-alert-bg` with a `--btn-alert-fg` label; lightens to `--btn-alert-bg-hover`. Serious-but-**recoverable** actions — purge-and-archive, Archive session, and the Acknowledge-and-activate confirm. Amber = caution, and the role exists to stay distinct from `.btn.destructive` (red, deletes data) and `.btn.alert` (outline amber, recovery inside a lock card): three amber-or-red treatments that mean three different things, so none may borrow another's fill. |
 | `.btn` ⇄ `.btn.secondary` + `aria-pressed` | **Toggle** | A two-state on/off button for one flag on one row. On takes the Primary tokens (`.btn`), off takes Secondary (`.btn.secondary`), and `aria-pressed` carries the state; whatever changes the flag — the click handler for R and ≡, the row's state sync for ⑂ — sets the class and the attribute together. It reuses the two roles' tokens rather than adding its own, so it is a role by behavior, not a new colour. Used on the Instruments page's response-field rows only: **R** (required), **≡** (help-text card) and **⑂** (branch — on once the field has a branch, and disabled then). It is not a chip: the column chips (`.tag-chip` in a `.col-chip-row`) and the Light / Dark switch (`.theme-toggle`) toggle too, but each is its own primitive. |
 | `.btn.danger` | *(no rule)* | `.danger` is a context class, not a button role: `base.html` gives `.btn.danger` no rule, and nothing renders it. A `.btn` that enters a confirmation takes Secondary; the destructive treatment lands on the confirm step (`.btn.destructive`). |
 | `.btn-icon` | **Icon button** | Borderless single-glyph affordance in `--text-subtle`; the row pager's steps are its one caller. **Neither of Band 3's tables uses this role for their ▲ ▼** — both are outlined `btn secondary`, short (`btn-short`, §10) on the display-field table and full-size on the response-field table. **As an anchor** (the row pager's steps): the live cell is `<a class="btn-icon …">` and the unavailable one a `<span class="btn-icon … is-inactive" aria-disabled="true">` — a `<span>` rather than an href-less `<a>`, following `.nav-tab disabled`, because an anchor without an href is focusable-but-inert in some browsers and not others. Inactive is `opacity: 0.4` + `cursor: not-allowed` and takes **no** accent fill, the reserved shade being for things that act. An anchor `.btn-icon` also needs `text-decoration: none` on its own rule — the page's `a` rule underlines it otherwise, and an underlined `»` reads as a typo. **A specialising rule must name `.btn-icon` in its own selector.** `body.ui-v2 .btn-icon` is (0,2,1) and sits late in `base.html`, so `body.ui-v2 .table-pager-step` ties it and loses on source order — silently, if its declarations happen to match what `.btn-icon` already sets. Write `body.ui-v2 .btn-icon.table-pager-step`, which is (0,3,1) and wins. `tests/integration/test_cascade_ties.py` resolves the cascade in Python — rendered class sets against parsed rules — and fails when a canonical class's declaration is dead because an equal-specificity rule sets the same property later. A variant that comes *later* and wins (`.table-pager-cluster-bottom` over `.table-pager-cluster`) is the idiom and is not reported; a specialisation that comes *earlier* and loses is. The check covers simple class selectors on one element only: combinator rules, `@media` blocks, inline `style=` and shorthand-versus-longhand are outside it, each able to make it silent but none able to make it report a tie that is not there. |
@@ -478,8 +481,7 @@ support is a separate spec (`visual_style_general.md`).
 outline controls gain a subtle tint in their own family. One direction
 everywhere, so "you can click this" reads the same way on every control.
 
-- *Filled* — Primary moves to `--btn-primary-bg-hover`;
-  `.btn.danger-solid` to `--btn-alert-bg-hover`.
+- *Filled* — Primary moves to `--btn-primary-bg-hover`.
 - *Outline* — Secondary to `--btn-secondary-bg-hover`, `.btn.destructive`
   to `--btn-destructive-bg-hover`, `.btn.alert` to
   `--btn-amber-bg-hover`. Border and label stay put.

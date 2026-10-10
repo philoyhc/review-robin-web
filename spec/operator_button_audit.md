@@ -42,8 +42,7 @@ shorthand:
 | **Primary** | Solid fill. The page's single main affirmative action. |
 | **Secondary** | White bg + `border-default` outline. The default button — routine submits, Cancel, View detail, etc. |
 | **Destructive** | Outline red. The confirm step inside `.card.danger-zone`, and the roster Setup pages' `Delete` for checkbox-selected rows — which carries the role **outside** a danger zone. See `spec/ui_elements.md` §6. |
-| **Alert** | Filled amber, light label. The attention-seeking affirmative — used where an action is safe but consequential. (See `spec/ui_elements.md` §6.) |
-| **Outline-amber** | Outline amber. Recovery action inside a `.card.lock`. |
+| **Outline-amber** | Outline amber. Serious but recoverable: archive, purge-and-archive, acknowledge-and-activate, and the recovery action inside a `.card.lock`. (See `spec/ui_elements.md` §6.) |
 | **Nav (page-internal)** | Page-internal view switcher (e.g. Email Template tabs). Reuses the chrome's `.nav-tab` styling for visual consistency: active uses `<span class="nav-tab active" aria-current="page">`, siblings use `<a class="nav-tab">`, "coming soon" uses `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `.tab-strip`. (See `spec/ui_elements.md` §6.) |
 | **Inline text-button (`.btn-reset`)** | Single-line link-styled button used to revert a single field inside an editor without cancelling and exiting. (See `spec/ui_elements.md` §6.) |
 | **Return-to (`.back-link`)** | Top-of-body inline link to "wherever you came from" (`return_to_url` round-trip). Required on chrome-detour pages (Operator Settings, About) and on the Sys Admin child pages. (See `spec/ui_elements.md` §6.) |
@@ -94,13 +93,13 @@ Source: `app/web/templates/operator/sessions_list.html`.
 | 200 | Row expander (single) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Unticks the row, which closes the expander; writes nothing |
 | 201 | Row expander (single) | Duplicate | `<button type="button">` | `btn secondary` | Secondary | Posts `{id}/clone` with `mode=all` |
 | 202 | Row expander (single) | Duplicate settings only | `<button type="button">` | `btn secondary` | Secondary | Posts `{id}/clone` with `mode=config` |
-| 203 | Row expander (single) | Purge and archive | `<button type="submit">` | `btn danger-solid` | Alert | Posts `bulk-archive` with the ticked purge options (Responses / Rosters / Audit log); inert when the row's lifecycle state cannot be archived |
+| 203 | Row expander (single) | Purge and archive | `<button type="submit">` | `btn alert` | Outline-amber | Posts `bulk-archive` with the ticked purge options (Responses / Rosters / Audit log); inert when the row's lifecycle state cannot be archived |
 | 204 | Row expander (bulk) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Unticks the expander's anchor row, re-anchoring it to the previous selection (or swapping to the single-session expander once one row remains) |
 | 205 | Row expander (bulk) | Unselect others | `<button type="button">` | `btn secondary` | Secondary | Unticks every selected row but the anchor |
 | 206 | Row expander (bulk) | Unselect all | `<button type="button">` | `btn secondary` | Secondary | Clears the selection |
 | 207 | Row expander (bulk) | All tags to all | `<button type="submit">` | `btn secondary` | Secondary | Posts `bulk-tags` with `op=add`: adds the Tags box's tags to every selected session |
 | 208 | Row expander (bulk) | Remove from all | `<button type="submit">` | `btn secondary` | Secondary | Posts `bulk-tags` with `op=remove`. The Tags box is prefilled with the union of the selection's tags |
-| 209 | Row expander (bulk) | Purge and archive all | `<button type="submit">` | `btn danger-solid` | Alert | Posts `bulk-archive`; non-archivable rows are skipped server-side, and the button is inert only when none of the selection can be archived |
+| 209 | Row expander (bulk) | Purge and archive all | `<button type="submit">` | `btn alert` | Outline-amber | Posts `bulk-archive`; non-archivable rows are skipped server-side, and the button is inert only when none of the selection can be archived |
 
 ---
 
@@ -192,9 +191,9 @@ each button site carries, and that no site carries an inline style.
 | 150 | Close session | `<button type="submit">` | `btn secondary` | Secondary |
 | 151 | Release responses | `<button type="submit">` | `btn secondary` | Secondary |
 | 152 | Stop releasing responses | `<button type="submit">` | `btn secondary` | Secondary |
-| 153 | Archive session | `<button type="submit">` | `btn danger-solid` | **Alert (filled amber)** — serious but recoverable, per §6 |
-| 154 | Regenerate & prepare | `<button type="submit">` | `btn danger-solid` | **Alert (filled amber)** |
-| 155 | Cancel | `<a>` | `btn alert` | **Outline-amber** — the mandatory Cancel on an inline `.banner.banner-warning`, per `spec/ui_elements.md` §5a. Not a lock card: §6's lock-card example is one use of this role, not its definition |
+| 153 | Archive session | `<button type="submit">` | `btn alert` | **Outline-amber** — serious but recoverable, per §6 |
+| 154 | Regenerate & prepare | `<button type="submit">` | `btn destructive` | **Destructive** — it deletes the saved responses on the pairs it drops |
+| 155 | Cancel | `<a>` | `btn secondary` | **Secondary** — the mandatory Cancel on an inline `.banner.banner-warning`, per `spec/ui_elements.md` §5a |
 
 ### 5b — Session Details card (`#session-config`)
 
@@ -222,7 +221,7 @@ session** button submits both halves.
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 31 | Quick Setup footer | Submit | `<button type="submit">` | `btn secondary` | Secondary | Disabled until ≥1 file selected; posts `/quick-setup/submit-all` |
-| 160 | Quick Setup slot | Cancel | `<a>` | `btn alert` | **Outline-amber** | Per-slot cancel on an inline `.banner.banner-error` — same banner convention as #155, not a lock card |
+| 160 | Quick Setup slot | Cancel | `<a>` | `btn secondary` | **Secondary** | Per-slot cancel on an inline `.banner.banner-error` — same banner convention as #155 |
 
 ### 5d — Extract Data — not on this page
 
@@ -415,9 +414,9 @@ per instrument card.
 | 49 | Lock card (when Activated or Closed) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
 | 234 | Session status card | Expand all instruments | `<button type="button">` | `btn secondary` | Secondary | Opens every per-instrument card's `<details>` on the page |
 | 235 | Session status card | Collapse all instruments | `<button type="button">` | `btn secondary` | Secondary | Closes every per-instrument card's `<details>` |
-| 236 | Save-error banner (an instrument being edited) | Cancel | `<a>` | `btn alert` | Outline-amber | The mandatory Cancel on the `.banner.banner-error` a rejected bulk save renders (`spec/ui_elements.md` §5a). Returns to `?editing=<id>#instrument-<id>`, so the card stays unlocked |
-| 237 | Save-error banner (no instrument being edited) | Cancel | `<a>` | `btn alert` | Outline-amber | The same banner's Cancel when no `editing` id is carried; returns to the bare page |
-| 257 | Sort-save error banner | Cancel | `<a>` | `btn alert` | Outline-amber | The Cancel on `#sort-save-error-banner`, which renders when the no-JS `/fields/save` fallback rejects a sort spec. Returns to `?editing=<id>#instrument-<id>` for the instrument named by `sort_save_error_instrument_id` |
+| 236 | Save-error banner (an instrument being edited) | Cancel | `<a>` | `btn secondary` | Secondary | The mandatory Cancel on the `.banner.banner-error` a rejected bulk save renders (`spec/ui_elements.md` §5a). Returns to `?editing=<id>#instrument-<id>`, so the card stays unlocked |
+| 237 | Save-error banner (no instrument being edited) | Cancel | `<a>` | `btn secondary` | Secondary | The same banner's Cancel when no `editing` id is carried; returns to the bare page |
+| 257 | Sort-save error banner | Cancel | `<a>` | `btn secondary` | Secondary | The Cancel on `#sort-save-error-banner`, which renders when the no-JS `/fields/save` fallback rejects a sort spec. Returns to `?editing=<id>#instrument-<id>` for the instrument named by `sort_save_error_instrument_id` |
 
 ### 9b — Per-instrument card (one set per instrument)
 
@@ -497,9 +496,9 @@ Source: `app/web/templates/operator/session_validate.html`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 68 | Activate banner (warnings present) | Cancel | `<a>` | `btn alert` | Outline-amber | Returns to validate page without `?activate=1` |
-| 69 | Activate banner (warnings present) | Acknowledge and activate | `<button type="submit">` | `btn danger-solid` | Alert (filled amber) | Posts `/activate` with `acknowledge_warnings=true` |
-| 70 | Activate banner (errors present) | Cancel | `<a>` | `btn alert` | Outline-amber | Errors block activation; this just dismisses the banner |
+| 68 | Activate banner (warnings present) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to validate page without `?activate=1` |
+| 69 | Activate banner (warnings present) | Acknowledge and activate | `<button type="submit">` | `btn alert` | Outline-amber | Posts `/activate` with `acknowledge_warnings=true` |
+| 70 | Activate banner (errors present) | Cancel | `<a>` | `btn secondary` | Secondary | Errors block activation; this just dismisses the banner |
 | 71 | Severity filter chip strip | All / Errors / Warnings / Info | `<a>` | `severity-chip` (with `.active` state) | Filter chip (custom — not in §6) | One per severity level; not part of the canonical button family |
 
 ---
@@ -528,7 +527,7 @@ expander.
 | 71h | Row expander | Activate | `<button type="submit">` | `btn secondary` | Secondary | `formaction` `/assignments/bulk-activate`; enabled on ≥1 selection **and** `can_edit`. Emitted only when the selection holds an excluded pair — see 71g. **No `Edit` and no `Delete` join them**: assignments are not edited row by row and not deleted, so this expander is the count and the status button(s) — two only on a mixed selection — where the rosters' also carries `Edit`, `Delete` and its confirm. |
 | 71i | Table toolbar | Search | `<button type="submit">` | `btn secondary` | Secondary | Submits the "Search by" (All / Reviewers / Reviewees) + search GET; last in the `filter-actions` row, which is now the toolbar's right pane. Carries the `#assignments-table-card` fragment so a search lands on the table. |
 | 71j | Table toolbar | Clear | `<a>` | `btn secondary` | Secondary | Resets the filter; rendered whenever a filter is on — a search term or a status other than All — as on the other table pages. |
-| 71k | Replace-not-confirmed banner | Cancel | `<a>` | `btn alert` | Outline-amber | The mandatory Cancel on the `.banner.banner-error` a direct POST to `/assignments/generate` without `confirm_replace` lands on (`?needs_confirm=1`; `spec/ui_elements.md` §5a). Returns to the bare page |
+| 71k | Replace-not-confirmed banner | Cancel | `<a>` | `btn secondary` | Secondary | The mandatory Cancel on the `.banner.banner-error` a direct POST to `/assignments/generate` without `confirm_replace` lands on (`?needs_confirm=1`; `spec/ui_elements.md` §5a). Returns to the bare page |
 
 Button numbers in this section carry letter suffixes (`71g` etc.) so
 that inserting the section did not renumber every section after it.
@@ -620,7 +619,7 @@ once, as are the Extract Setup card's per-entity rows
 | 218 | Data shaper, shape sub-card | +Shape | `<button type="button">` | `btn secondary` | Secondary | Spawns a blank sub-card after this one and selects it |
 | 219 | Data shaper, shape sub-card | Download | `<a download>` | `btn secondary` | Secondary (Disabled until saved) | `aria-disabled` until the shape has an id, then `GET …/shapes/{shape_id}/download.csv` |
 | 220 | Data shaper | Zip all | `<a download>` | `btn secondary` | Secondary (Disabled until a shape is saved) | `GET …/export/data_shapes_bundle.zip`, every saved shape's file; `href="#"` + `aria-disabled` while none is saved, re-synced as shapes save and delete |
-| 221 | Archive session | Purge and archive / Already archived | `<button type="submit">` | `btn danger-solid` | Alert | Posts `/operator/sessions/bulk-archive` with the ticked purge options and `return_to=archived` — the lobby's #203 route. Disabled when the session is Activated or already archived |
+| 221 | Archive session | Purge and archive / Already archived | `<button type="submit">` | `btn alert` | Outline-amber | Posts `/operator/sessions/bulk-archive` with the ticked purge options and `return_to=archived` — the lobby's #203 route. Disabled when the session is Activated or already archived |
 | 222 | Token keys | Download token keys | `<a>` | `btn secondary` | Secondary | `GET …/export/participant_tokens.csv`. The card renders only when `observers_enabled` |
 | 227 | Extract Setup, per-entity row (Reviewers / Reviewees / Relationships / Observers) | Download | `<a download>` | `btn secondary` | Secondary (Disabled when the roster is empty) | `GET …/export/{key}.csv`. With no rows it renders `aria-disabled="true"` with no `href`, titled "No {noun}s to download yet". The Observers row renders only when `observers_enabled` |
 | 228 | Extract Setup | Download (Session settings) | `<a download>` | `btn secondary` | Secondary | `GET …/export/settings.csv`; always live |
@@ -731,12 +730,12 @@ Notes:
   rule is what lets the form wrapper need none. Styling one of the
   three differently — a link-styled button beside two button-styled
   anchors, say — hides the inconsistency rather than resolving it.
-- **Why Secondary and not Alert.** Adopting a session grants yourself
+- **Why Secondary and not Outline-amber.** Adopting a session grants yourself
   ownership, which is consequential — but it is reversible, audited, and
   the routine way a sys-admin opens someone else's session. Per
   `spec/ui_elements.md` §6, gravity belongs to the surrounding context,
-  not the button colour; filled amber in every row of a diagnostics table
-  would spend the alarm on the normal case.
+  not the button colour; amber in every row of a diagnostics table would
+  spend the alarm on the normal case.
 - **The page also carries the read-only Visibility grid audit card** —
   prose and a table, no buttons, so it contributes no rows here.
 

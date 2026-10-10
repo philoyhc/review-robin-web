@@ -170,10 +170,6 @@
         --btn-destructive-fg: var(--red-strong);
         --btn-destructive-border: var(--red-strong);
         --btn-destructive-bg-hover: var(--red-pale);
-        --btn-alert-bg: var(--amber-deep);
-        --btn-alert-fg: var(--white);
-        --btn-alert-border: var(--amber-deep);
-        --btn-alert-bg-hover: var(--amber-strong);
         --btn-amber-bg: var(--white);
         --btn-amber-fg: var(--amber-deep);
         --btn-amber-border: var(--amber-deep);
@@ -326,10 +322,6 @@
         --btn-destructive-fg: var(--red-bright);
         --btn-destructive-border: var(--red-bright);
         --btn-destructive-bg-hover: var(--red-abyss);
-        --btn-alert-bg: var(--amber-glow);
-        --btn-alert-fg: var(--ink);
-        --btn-alert-border: var(--amber-glow);
-        --btn-alert-bg-hover: var(--amber-bright);
         --btn-amber-bg: var(--ink-abyss);
         --btn-amber-fg: var(--amber-glow);
         --btn-amber-border: var(--amber-glow);
@@ -2524,20 +2516,12 @@
         color: var(--btn-destructive-fg);
         border-color: var(--btn-destructive-border);
       }
-      /* Danger-solid — FILLED amber, for serious-but-recoverable
-         actions (purge-and-archive, archive session, acknowledge-and-
-         activate). Amber = caution; distinct from the outline-red
-         .destructive (delete) and the outline-amber .alert (lock
-         recovery). Consistency-audit U5 / U6. */
-      body.ui-v2 .btn.danger-solid {
-        background: var(--btn-alert-bg);
-        color: var(--btn-alert-fg);
-        border-color: var(--btn-alert-border);
-      }
-      /* Alert (outline brown) — for the recovery action inside a
-         lock card. Uses the same brown that frames the lock card
-         so the action sits in the card's color family rather than
-         clashing as a Primary blue would. */
+      /* Outline-amber — serious but recoverable: the recovery action
+         inside a lock card, archive and purge-and-archive, and
+         acknowledge-and-activate. The brown that frames the lock card,
+         so it reads as caution without outweighing the outline-red
+         .destructive (UX refinements Item 11 retired the filled amber
+         that did). */
       body.ui-v2 .btn.alert {
         background: var(--btn-amber-bg);
         color: var(--btn-amber-fg);
@@ -2564,12 +2548,6 @@
         background: var(--btn-destructive-bg-hover);
         color: var(--btn-destructive-fg);
         border-color: var(--btn-destructive-border);
-      }
-      /* Filled amber lightens on hover (filled-button convention). */
-      body.ui-v2 .btn.danger-solid:hover {
-        background: var(--btn-alert-bg-hover);
-        color: var(--btn-alert-fg);
-        border-color: var(--btn-alert-bg-hover);
       }
       body.ui-v2 .btn.alert:hover {
         background: var(--btn-amber-bg-hover);

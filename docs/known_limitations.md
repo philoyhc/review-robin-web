@@ -97,14 +97,13 @@ only once diagnostics are pointed at it (`docs/deployment_nus.md` §3).
   every foreground/background pair the palette forms, in both
   themes, and fails on any new pair under AA. Details in
   `spec/color_tokens.md`, "The AA floor on text".
-- **Three pairs are under AA and accepted** (author,
+- **Two pairs are under AA and accepted** (author,
   2026-09-12, reviewing the panel). Each is a button label dipping
   **only while the pointer is on it**, where the control is
   comfortably legible at rest — not worth chasing:
 
   | Hover | At rest | Control |
   |---|---|---|
-  | 3.19 | **7.09** | alert button, light |
   | 3.68 | **5.17** | primary button, light |
   | 3.95 | **4.83** | destructive button, light |
 

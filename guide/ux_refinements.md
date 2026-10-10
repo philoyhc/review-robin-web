@@ -1122,6 +1122,13 @@ Taken 2026-10-10 at `2af9c113`.
   `session_home.md:560`, `visual_style_rrw.md:11` ("six"); `CLAUDE.md`
   / `AGENTS.md` list the six roles.
 
+### Status — in progress
+
+One PR, after the plan (#2953). **Found at build:** §5a made every
+banner's Cancel `.btn.alert`, so changing only two would have broken it;
+the author ruled all eight Secondary. The light alert-hover pair leaves
+`ACCEPTED_BELOW_AA` and `docs/known_limitations.md` with its token.
+
 ### PR ladder
 
 1. **The swap.** Every call site, the eight banner Cancels, the CSS and tokens, the

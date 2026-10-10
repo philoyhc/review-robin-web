@@ -23,7 +23,7 @@ Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
 (independent slots; marked `@coupled` for deliberate coupling; dark `:root`
 remaps semantics onto the one primitive palette) are in `guide/archive/semantic_tokens.md`.
 
-**80 primitives · 104 semantic tokens · 14 non-colour scale tokens.**
+**80 primitives · 100 semantic tokens · 14 non-colour scale tokens.**
 
 ---
 
@@ -219,9 +219,9 @@ the text floor rules out. **The point of the separate token is that the
 faint value cannot drift back onto a label**: a `color:` declaration
 naming `--decor-muted` fails the test.
 
-**Three pairs fall short of AA normal, all accepted; none is open.**
-The three are light button labels dipping **only under the pointer** —
-3.19/3.68/3.95 on hover against 7.09/5.17/4.83 at rest — and that
+**Two pairs fall short of AA normal, both accepted; none is open.**
+The two are light button labels dipping **only under the pointer** —
+3.68/3.95 on hover against 5.17/4.83 at rest — and that
 acceptance is **conditional on the resting pair**, which the suite
 asserts rather than assumes. They are listed in
 `docs/known_limitations.md` and pinned in `ACCEPTED_BELOW_AA`. **A new
@@ -229,10 +229,9 @@ sub-AA pair fails the suite rather than joining a list**: the accepted
 set is closed, and reopening it is a decision, not a fix.
 
 **A label on a bright dark accent fill inverts rather than staying
-white.** `--btn-alert-fg` takes `--white` in light
-and `--ink` in dark, because the dark alert fill is bright;
-`--btn-primary-fg`, `--selected-fg` and `--text-on-accent` follow the
-same rule for the same reason. White on `--blue-glow` reaches only
+white.** `--btn-primary-fg` takes `--white` in light and `--ink` in
+dark, because the dark primary fill is bright; `--selected-fg` and
+`--text-on-accent` follow the same rule for the same reason. White on `--blue-glow` reaches only
 **2.54** on the hover pair, which would be the worst in the palette;
 `--ink` gives **5.33** at rest and **6.98** on hover.
 
@@ -324,10 +323,6 @@ to 4.14:1 light / 3.55:1 dark, both under AA. See "Card accents" below and
 | `--btn-destructive-fg` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
 | `--btn-destructive-border` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
 | `--btn-destructive-bg-hover` | `--red-pale` | `--red-abyss` | `#fee2e2` | `#3d1a1a` |
-| `--btn-alert-bg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
-| `--btn-alert-fg` | `--white` | `--ink` | `#ffffff` | `#111827` |
-| `--btn-alert-border` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
-| `--btn-alert-bg-hover` | `--amber-strong` | `--amber-bright` | `#d97706` | `#fbbf24` |
 | `--btn-amber-bg` | `--white` | `--ink-abyss` | `#ffffff` | `#0f141b` |
 | `--btn-amber-fg` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
 | `--btn-amber-border` | `--amber-deep` | `--amber-glow` | `#92400e` | `#fcd34d` |
@@ -559,8 +554,8 @@ Theme-agnostic; not redefined per theme.
 
 - **Dark neutrals invert; accent fills stay hued, and their labels flip.** The
   accent fills remain blue and amber in dark rather than greying out; the
-  labels on them — `--text-on-accent`, `--btn-alert-fg`,
-  `--btn-primary-fg`, `--selected-fg` — take `--ink` rather than `--white`,
+  labels on them — `--text-on-accent`, `--btn-primary-fg`,
+  `--selected-fg` — take `--ink` rather than `--white`,
   because the dark fills are bright. See **The AA floor on text** above.
 - **A token with no consumer is not kept.** When a rule's last consumer goes,
   its token goes with it in the same change; an orphan token reads as a slot
