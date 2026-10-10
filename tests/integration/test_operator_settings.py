@@ -18,6 +18,7 @@ Covers the round-trip through ``/operator/settings``:
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
 
 import pytest
@@ -336,11 +337,13 @@ def test_settings_clear_card_is_guarded(client: TestClient) -> None:
     box, under its "(SMTP)" header."""
     body = client.get("/operator/settings").text
     assert "<h2>Clear all settings (SMTP)</h2>" in body
-    assert 'data-delete-confirm="clear-settings"' in body
-    assert (
-        'data-delete-btn="clear-settings"\n                disabled aria-disabled="true"'
-        in body
-    )
+    box = re.search(r'<input[^>]*data-delete-confirm="clear-settings"[^>]*>', body)
+    assert box, "the clear card has no confirm box"
+    for attr in ('name="confirm"', 'value="true"', "required"):
+        assert attr in box.group(0), attr
+    button = re.search(r'<button[^>]*data-delete-btn="clear-settings"[^>]*>', body)
+    assert button, "the clear card has no paired button"
+    assert 'disabled aria-disabled="true"' in button.group(0)
     assert "Yes, delete every SMTP setting on this account." in body
 
 

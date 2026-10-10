@@ -897,7 +897,7 @@ per-field overrides.
 
 Every destructive button (delete-all, delete-data, delete-session,
 revert, replace-upload, per-instrument delete, per-shape delete,
-clear-responses) ships `disabled` and is enabled only while a paired
+clear-responses, clear-settings) ships `disabled` and is enabled only while a paired
 confirm checkbox is ticked. **The pairing is declarative and there is
 one implementation**: `data-delete-confirm="KEY"` on the checkbox,
 `data-delete-btn="KEY"` on the button, wired by a single global JS block

@@ -341,3 +341,5 @@ section (git history keeps it), so this file lists only what is owed.
   setting on this account." is ticked, and off again when unticked.
 - [ ] **The clear.** Ticked, the button wipes the SMTP fields and
   returns to Settings; the Date & time zone stays.
+- [ ] **Layout.** The taller card sits cleanly under Date & time at
+  full width and below 800px, in light and dark.
