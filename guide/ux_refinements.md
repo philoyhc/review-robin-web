@@ -511,7 +511,8 @@ eight PNGs in `app/web/static/guide/`, no spec quotes the Guide text
 
 ### Status
 
-- **Built 2026-10-10** in one PR. The fields and branching captures
+- **Built 2026-10-10** in two PRs: the section (#2940), then the
+  retake (#2942). The fields and branching captures
   came in at ~2690px wide against ~1756px for the others, so their text
   read about a third smaller at the shared 1200px; the author retook
   both pairs at ~1755px (`Guide_v5c`), the fields pair saved, with
@@ -525,6 +526,8 @@ eight PNGs in `app/web/static/guide/`, no spec quotes the Guide text
 
 1. **The section and its captures.** `guide.html`'s Instruments section,
    the eight PNGs, and the browser check.
+2. **The retake** (added at build). The fields and branching pairs at
+   the usual width.
 
 ### Definition of done
 
