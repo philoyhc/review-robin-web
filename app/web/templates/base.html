@@ -2742,6 +2742,21 @@
       body.ui-v2 .tag-chip.is-locked:not(.is-selected):not(:has(> input:checked)) {
         opacity: 0.55;
       }
+      /* An Instruments card's Band 3 chips while the card is locked read
+         as the display pills they replaced (the author, 2026-10-10;
+         Codex on #2936): the plain pill, with no edge, pointer or lock
+         glyph, and an unticked field faded so the state still shows.
+         Read off the card's lock attribute, so an in-page lock or unlock
+         repaints them with no class kept in step. */
+      body.ui-v2 [data-instrument-card][data-instrument-locked="true"] [data-lock-region] label.tag-chip {
+        cursor: default;
+        border-color: transparent;
+        box-shadow: none;
+        background: var(--status-info-bg);
+        color: var(--text-body);
+      }
+      body.ui-v2 [data-instrument-card][data-instrument-locked="true"] [data-lock-region] label.tag-chip::before { content: none; }
+      body.ui-v2 [data-instrument-card][data-instrument-locked="true"] [data-lock-region] label.tag-chip:not(:has(> input:checked)) { opacity: 0.55; }
       /* A fixed switch (spec/ui_elements.md §9 "Fixed";
          guide/ux_refinements.md Item 2): one item held at its value while
          the chips beside it stay live, such as Session Home's optional tab

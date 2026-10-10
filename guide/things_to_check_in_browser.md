@@ -369,3 +369,6 @@ section (git history keeps it), so this file lists only what is owed.
   back restores it as a live chip.
 - [ ] **Locked card.** The chips show their state and don't respond.
   Check the column still fits at 15% width, in both themes.
+- [ ] **Locked card (Codex on #2936).** Lock the card: every Band 3 chip
+  is a plain pill, with no edge, pointer or lock glyph, and unticked
+  fields are faded. Unlock: the chips come back live without a reload.

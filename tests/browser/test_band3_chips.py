@@ -14,7 +14,7 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Locator, Page, expect
 
-from ._builder import REVIEWERS_CSV, open_unlocked, preview_headers
+from ._builder import REVIEWERS_CSV, open_card, open_unlocked, preview_headers, unlock
 
 
 def _style(chip: Locator, prop: str, pseudo: str | None = None) -> str:
@@ -132,3 +132,26 @@ def test_a_field_a_group_row_cant_show_is_fixed_off(
     assert _style(email, "background-color") == off_fill
     assert _style(email, "cursor") == "default"
     assert "svg" in _glyph(email)
+
+
+def test_a_locked_cards_chips_drop_the_edge_until_it_unlocks(
+    page: Page, api: httpx.Client, new_session: Callable[[], int]
+) -> None:
+    """A locked card's chips read as the display pills they replaced (the
+    author, 2026-10-10; Codex on #2936), read off the card's lock
+    attribute, and come back live on unlock."""
+    session_id = new_session()
+    _seed(api, session_id)
+    card = open_card(page, session_id)
+    tag = _chip(card, "reviewee.tag_1")
+    name = _chip(card, "reviewee.name")
+    pill = card.locator("[data-new-model-vp-preview-cell]").first
+    for chip in (tag, name):
+        assert _style(chip, "cursor") == "default"
+        assert _style(chip, "box-shadow") == "none"
+        assert _style(chip, "background-color") == _style(pill, "background-color")
+        assert _style(chip, "content", "::before") == "none"
+
+    unlock(card)
+    assert _style(tag, "cursor") == "pointer"
+    assert _style(tag, "box-shadow") != "none"

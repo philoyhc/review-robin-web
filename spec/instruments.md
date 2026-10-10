@@ -864,7 +864,8 @@ Each row holds:
   pill-count tag-chip`, `spec/ui_elements.md` §9) around a visually
   hidden checkbox (`data-new-model-df-active`), the field's selection —
   a click on the chip ticks the box, and the chip carries the row's
-  tooltip;
+  tooltip; on a locked card it reads as a plain display pill, an
+  unticked field faded (`spec/ui_elements.md` §9);
 - ▲ / ▼ `btn secondary btn-short` move buttons (not `.btn-icon` —
   `spec/ui_elements.md` §10), absent on a locked row. An unticked row
   can still be moved.

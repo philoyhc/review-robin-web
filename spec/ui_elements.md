@@ -682,7 +682,11 @@ chip of a locked card: it drops the edge
 and the pointer like `is-disabled`, but is not struck through, because
 it still says on or off. On takes the card's display-value colors
 (`--config-value-bg` / `--config-value-fg`) rather than the reserved
-shade; off is faded.
+shade; off is faded. **A locked Instruments card's Band 3 chips read as
+the display pills they replaced** (the author, 2026-10-10): the plain
+`pill-count` fill with no edge, pointer or lock glyph, an unticked field
+faded, read off the card's `data-instrument-locked` so an in-page lock
+or unlock repaints them.
 
 `.severity-chip` on Validate is the shape this generalises: an outlined
 pill, with `.active` taking the shade on its border and text.

@@ -120,6 +120,10 @@ Taken 2026-10-09 at `2569876a`.
   both fixed looks; all three fail without the change.
 - **Found at build:** switching to group mode only marks Band 2; the
   rows re-sync on the preview's Refresh, as before this item.
+- **Codex on #2936:** a locked card's chips kept the live edge. By the
+  author's ruling (2026-10-10) a locked card's Band 3 chips read as plain
+  display pills (no edge, pointer or glyph; unticked faded), keyed on
+  `data-instrument-locked`; a browser test locks and unlocks.
 
 ### PR ladder
 

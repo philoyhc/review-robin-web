@@ -278,3 +278,23 @@ def test_a_linked_role_pill_wears_the_edge_and_a_span_does_not(
     assert f"border-color: {EDGE}" in block
     assert f"box-shadow: inset 0 0 0 1px {EDGE}" in block
     assert "background" not in block
+
+
+def test_a_locked_instrument_cards_chips_read_as_display_pills(
+    client: TestClient, db: Session
+) -> None:
+    """ux_refinements Item 1 (the author, 2026-10-10; Codex on #2936): a
+    locked Instruments card's Band 3 chips are plain display pills — no
+    edge, pointer or glyph, the pill's own fill — an unticked one faded,
+    keyed on the card's lock attribute."""
+    review_session = _make_session(client, db, code="ux1-locked-card")
+    css = client.get(f"/operator/sessions/{review_session.id}").text
+    locked = 'body.ui-v2 [data-instrument-card][data-instrument-locked="true"] [data-lock-region] label.tag-chip'
+    block = _rule(css, locked)
+    assert block is not None
+    for decl in ("cursor: default", "border-color: transparent", "box-shadow: none",
+                 "background: var(--status-info-bg)", "color: var(--text-body)"):
+        assert decl in block, decl
+    assert EDGE not in block
+    assert _rule(css, locked + "::before") == " content: none; "
+    assert _rule(css, locked + ":not(:has(> input:checked))") == " opacity: 0.55; "
