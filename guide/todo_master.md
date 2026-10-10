@@ -61,16 +61,6 @@ Both are **gated on the institutional Azure deployment concluding**
 Small items with no plan doc; each fits one PR and its reasoning fits
 the PR body unless it says otherwise.
 
-- **The Band 1 link chips ignore Enter and Space** *(filed 2026-10-10,
-  found building UX refinements Item 10)*. They are `role="button"
-  tabindex="0"` spans with only `onclick`, so a keyboard user can focus
-  them but not cycle them (`app/web/templates/operator/instruments_index.html`;
-  the Guide's sample handles both keys).
-- **A Band 1 link chip cycled back to "Not set" turns faint, not amber**
-  *(filed 2026-10-10, found building UX refinements Item 10)*. A chip
-  rendered already set starts `pill-count`; `newModelToggleRuleMode` and
-  `newModelToggleUnitMode` add only `is-unset` on the way back, never
-  `pill-empty` (`app/web/templates/operator/instruments_index.html`).
 - **Technical-support contact (global)** *(filed 2026-05-03)*. A
   deployment-wide "something looks broken" address, distinct from the
   per-session help contact on `ReviewSession`

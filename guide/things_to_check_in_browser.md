@@ -343,3 +343,14 @@ section (git history keeps it), so this file lists only what is owed.
   returns to Settings; the Date & time zone stays.
 - [ ] **Layout.** The taller card sits cleanly under Date & time at
   full width and below 800px, in light and dark.
+
+## Band 1 link chips: amber on Not set, and the keyboard
+
+- [ ] **Amber.** On a saved instrument whose three Links are set, unlock
+  the card and click each Link chip round to "Not set": it turns amber,
+  as on a new instrument, in light and dark; one more click turns it
+  solid again.
+- [ ] **Keys.** Tab to a Link chip: Enter and Space each advance it one
+  step, as a click does, Space without scrolling the page, and the
+  card's Save wakes; the chip shows a focus ring; on a locked card the
+  chips take no focus.

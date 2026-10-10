@@ -603,6 +603,11 @@ terminating** so the operator can put a Link back to `Not set`
 and surface the instrument as unconfigured on the workflow card
 again.
 
+**Look and keys.** `Not set` is amber (`pill-empty`) whichever state
+the pill rendered in, and a set state wears the selected fill
+(`spec/ui_elements.md` §9, "Cycle with an unset state"). The pill is a
+`role="button"` span, so Enter and Space advance it as a click does.
+
 **Disabled state.** When the session has no usable tags for a
 Link's namespace, the pill is permanently stuck on `Not set`
 with `aria-disabled="true"` and the title "No usable tags for
