@@ -786,8 +786,7 @@ Taken 2026-10-10 at `c8343bf3`.
 
 ### Open questions
 
-- The Guide's `assignments-page` screencaps: a retake, when the author
-  is at the capturing machine.
+- ~~The Guide's screencap retake~~ Retaken by the author (`Guide_v5d`, 2026-10-10).
 
 ### Out of scope
 
@@ -881,8 +880,7 @@ Taken 2026-10-10 at `c8343bf3`.
 
 ### Open questions
 
-- The Guide's `instrument-card-assignment-rule` screencaps: a retake,
-  with Item 7's `assignments-page` pair.
+- ~~The Guide's screencap retake~~ Retaken by the author (`Guide_v5d`, 2026-10-10).
 
 ### Out of scope
 
