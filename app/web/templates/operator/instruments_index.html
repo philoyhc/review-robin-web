@@ -4284,7 +4284,7 @@
                         {% if rf.is_parent or rf.branch_locked or not rf.nest_target %}disabled{% endif %}
                         title="{% if rf.is_parent %}A field with a branch can't join another{% elif rf.branch_locked %}Its branch has saved responses, so its fields can't change{% elif not rf.nest_target %}No branch inside this branch ends directly above{% else %}Join the branch above{% endif %}">↰</button></td>
                 {% endif %}
-                {# 19T Item 10 rung 7b — join the branch above (↰), or, on a
+                {# 19T Item 10 rung 7b — join the unit above (↰), or, on a
                    governed row, detach from the branch (↳). The row script
                    computes its state; a governed row's ↳ sits in the last
                    of the six leading columns (19T Item 14 rung 5). #}

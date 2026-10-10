@@ -309,6 +309,7 @@ def test_the_row_script_joins_and_detaches(client: TestClient, db: Session) -> N
         "It has saved responses, so it can't move into a branch",
         "Its branch has saved responses, so no field can join it",
         "The field above is String, so it can't have a branch",
+        "Name the field above first.",
         "Join the branch above",
         "Start a branch on the field above with this field",
         "Detach this field and end its branch",
@@ -330,6 +331,7 @@ def test_the_row_script_joins_and_detaches(client: TestClient, db: Session) -> N
     # guide/ux_refinements.md Item 3), its bar from the parent's +.
     assert "parent.setAttribute('data-new-model-rf-parent', 'true');" in join
     assert "var add = parent.querySelector('[data-new-model-rf-add]');" in join
+    assert "add.closest('td').classList.add('rf-branch-bar-start');" in join
     # Joining lands at the deepest branch that ends directly above.
     assert "window.newModelRfMakeGoverned(row, joinLevel);" in join
     recompute = _rf_fn(body, "newModelRfRecomputeActionStates")

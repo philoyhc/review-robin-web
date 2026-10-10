@@ -1291,10 +1291,9 @@ isn't itself a parent can join the unit above: the deepest unlocked
 branch that ends directly above it, at that branch's level, or, on a
 named plain Integer, Decimal or List field, a new branch with an empty
 condition and this row as its only field ("Start a branch on the field
-above with this field"; off under a String field or an unnamed one).
-That second way to fork adds no new field row, where ⑂ does (the
-author, 2026-10-10); a branch inside a branch is started with ⑂, not
-↰. **A level-1 row's
+above with this field"; off when the field above is a String or
+unnamed). That second way to fork adds no new field row, where ⑂ does;
+a branch inside a branch is started with ⑂, not ↰. **A level-1 row's
 ↰** joins the branch of the field directly above it in its own branch,
 at level 2, when that field has one; otherwise it is off ("No branch inside this branch ends
 directly above"), off on an unnamed field, and off, as ↳ is, on a parent or in a locked branch —

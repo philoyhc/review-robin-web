@@ -26,9 +26,9 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
-- **UX refinements** — `guide/ux_refinements.md`. Planned, built in the
-  order Item 3 (↰ only joins a branch, one PR), Item 2 (a fixed-switch
-  chip, one PR), Item 1 (Band 3 fields as chips, two PRs). (`guide/operator_pages_enhancements.md`
+- **UX refinements** — `guide/ux_refinements.md`. Items 1–3 built;
+  Item 3 (↰ only joins a branch) reversed 2026-10-10, restored in one
+  PR. Each item's close is owed. (`guide/operator_pages_enhancements.md`
   Items 1–3 closed 2026-10-09; new items are added there.)
 
 ### Queued segments
