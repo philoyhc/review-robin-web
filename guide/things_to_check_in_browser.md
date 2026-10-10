@@ -332,65 +332,9 @@ section (git history keeps it), so this file lists only what is owed.
   comes back on that label, still dark, and its card's download still
   drops the empty rows.
 
-## ↰ only joins a branch (UX refinements Item 3)
+## Retake the Guide's Band 3 screencaps (UX refinements Item 1)
 
-- [ ] **Off under a plain field.** On an unlocked instrument card, the
-  ↰ of a field below a plain Integer, Decimal or List field is greyed
-  out, titled "No branch ends directly above"; clicking it adds no
-  condition row.
-- [ ] **Joins once a branch is there.** Press ⑂ on the field above,
-  then ↰ on the field below: it moves into the branch, under the
-  condition, and its ↳ takes it back out.
-
-## The fixed-switch chip (UX refinements Item 2)
-
-- [ ] **Session Home.** On a session with relationships (or observers),
-  edit the config card: that optional-tab chip is dark like a ticked
-  one, has no edge, shows a small lock before "Relationships", and
-  doesn't respond to a click; its tooltip says why. In light and dark
-  themes.
-- [ ] **Instruments, Visibility.** Unlock a card: "Raw responses" (You ×
-  ongoing) and "—" (Reviewees × ongoing) are dark like the cycle chips
-  beside them, with a lock and no edge, and don't cycle on click.
-- [ ] **The glyph** sits on the text's baseline and reads at the chip's
-  size in both themes.
-
-## Band 3 display fields as chips (UX refinements Item 1, PR 1)
-
-- [ ] **Instruments, Band 3 left column.** Unlock a card: each display
-  field is one chip, with no checkbox beside it. Clicking a chip turns
-  it dark or light and the preview gains or drops the column; ▲ ▼ still
-  move it.
-- [ ] **Name and Email** are dark with a lock glyph, no edge, and don't
-  respond; their tooltips name the pinned slot.
-- [ ] **Group-scoped instrument.** Switch to group and Refresh the
-  preview: Email (and any field a group row can't show) turns light with
-  the lock glyph and the tooltip "Not shown on group rows"; switching
-  back restores it as a live chip.
-- [ ] **Locked card.** The chips show their state and don't respond.
-  Check the column still fits at 15% width, in both themes.
-- [ ] **Locked card (Codex on #2936).** Lock the card: every Band 3 chip
-  is a plain pill, with no edge, pointer or lock glyph, and unticked
-  fields are faded. Unlock: the chips come back live without a reload.
-
-## Band 3 response-field name chips (UX refinements Item 1, PR 2)
-
-- [ ] **Instruments, Band 3 right column.** Each row starts with a chip
-  showing the field's name; no Active checkbox shows. Typing in the name
-  box relabels the chip as you type; emptying the box shows the muted
-  default; a long name ends in "…" and shows in full on hover.
-- [ ] **Branches.** Fork a field, then fork a governed Integer field one
-  level down: the chips stay in one left-hand column at every level, the
-  bars drop from each parent's + button, and from the name onward every
-  row still lines up.
-- [ ] **Hide a parent** by its chip: its branch's chips turn light with a
-  lock glyph and no edge, and their tooltip says the parent is hidden;
-  show it again and they come back live. On a field with saved responses
-  the chip still asks before hiding it.
-- [ ] **Widths.** +, ⑂, ↰ / ↳, R, ≡, ▲, ▼ and X are one width; the type
-  dropdown is about an "Agreement" wide and its open list isn't cut;
-  Min / Max / Step still show "2000" whole. Check at a 1366px window and
-  in both themes.
 - [ ] **The Guide's screencaps** (`instrument-card-fields-and-visibility`,
   light and dark) still show checkboxes in Band 3; retake them, and update
-  their alt text to name the chips.
+  their alt text to name the chips. Deferred until the Band 3 behaviors
+  settle (the author, 2026-10-10).
