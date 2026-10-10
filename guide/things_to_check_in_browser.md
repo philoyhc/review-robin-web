@@ -57,7 +57,8 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **A second submit refreshes it.** Recall and resubmit: still one
   queued row for that reviewer, not two.
 - [ ] **Off sends nothing.** On the session's Email Template page,
-  choose Responses received, untick "Send this confirmation when a reviewer submits" and save.
+  choose Responses received, click the chip to "Don't send response
+  confirmation" and save.
   Another reviewer's submit adds no row, and the submit itself still
   succeeds.
 

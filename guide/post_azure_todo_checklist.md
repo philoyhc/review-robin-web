@@ -574,8 +574,9 @@ dispatcher should claim a row (flip it to `sending`) before sending,
 since a resubmit rewrites a row that is still `queued`. Then send queued `responses_received` rows like any other,
 and stamp them per item 8.
 
-**Done when** a reviewer who submits on a session with the box ticked
-receives the confirmation, and one with it unticked receives nothing.
+**Done when** a reviewer who submits on a session set to "Send response
+confirmation" receives the confirmation, and one set to "Don't send
+response confirmation" receives nothing.
 
 ## 10. Settle which Graph permission the Graph backend uses
 
