@@ -574,7 +574,7 @@
             <span class="pill {% if _is_active %}{% if _pill_state == 'not_set' %}pill-empty tag-chip is-unset{% else %}pill-count tag-chip is-selected{% endif %}{% else %}pill-empty tag-chip is-disabled{% endif %}"
                   data-new-model-rule-mode="{{ _pill_state }}"
                   data-new-model-mode-on-label="{{ on_label }}"
-                  {% if _is_active %}role="button" tabindex="0" aria-pressed="{{ 'mixed' if _pill_state == 'not_set' else ('true' if _filter_on else 'false') }}" onclick="newModelToggleRuleMode(this)"{% else %}aria-disabled="true"{% endif %}
+                  {% if _is_active %}role="button" tabindex="0" aria-pressed="{{ 'mixed' if _pill_state == 'not_set' else ('true' if _filter_on else 'false') }}" onclick="newModelToggleRuleMode(this)" onkeydown="newModelChipKey(this, event)"{% else %}aria-disabled="true"{% endif %}
                   title="{{ 'Click to cycle: Not set → All → ' ~ on_label ~ ' → Not set' if _is_active else 'No usable tags for this link' }}">{{ _pill_label }}</span>
           </h3>
           {# Hidden inputs that carry mode + combinator state
@@ -787,7 +787,7 @@
               <span class="pill {% if _link3_active %}{% if _link3_pill_state == 'not_set' %}pill-empty tag-chip is-unset{% else %}pill-count tag-chip is-selected{% endif %}{% else %}pill-empty tag-chip is-disabled{% endif %}"
                     data-new-model-unit-mode="{{ _link3_pill_state }}"
                     data-new-model-mode-on-label="Group using tags"
-                    {% if _link3_active %}role="button" tabindex="0" aria-pressed="{{ 'mixed' if _link3_pill_state == 'not_set' else ('true' if _link3_pill_state == 'group' else 'false') }}" onclick="newModelToggleUnitMode(this)"{% else %}aria-disabled="true"{% endif %}
+                    {% if _link3_active %}role="button" tabindex="0" aria-pressed="{{ 'mixed' if _link3_pill_state == 'not_set' else ('true' if _link3_pill_state == 'group' else 'false') }}" onclick="newModelToggleUnitMode(this)" onkeydown="newModelChipKey(this, event)"{% else %}aria-disabled="true"{% endif %}
                     title="{{ 'Click to cycle: Not set → Individual → Group using tags → Not set' if _link3_active else 'No usable tags for this link' }}">{{ _link3_pill_label }}</span>
             </h3>
             {# Segment 18R Item 2 PR 1 — always rendered so a
@@ -1075,6 +1075,14 @@
             cell.remove();
           }
         };
+        // The Band 1 link chips are role="button" spans, so Enter and
+        // Space have to be wired to the click a <button> would get.
+        window.newModelChipKey = window.newModelChipKey || function (btn, event) {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            btn.click();
+          }
+        };
         window.newModelToggleRuleMode = window.newModelToggleRuleMode || function (btn) {
           // 3-state cycle: not_set → all → filter → not_set → …
           // Each click advances one step; the cycle wraps so the
@@ -1118,13 +1126,16 @@
             // not_set submit doesn't carry over a stale "filter".
             if (modeInput) { modeInput.value = 'all'; }
           }
+          // Not set is amber (pill-empty) and a set link the faint
+          // pill-count under is-selected's fill, whichever state the
+          // chip rendered in, so both classes swap with the state.
           if (next === 'not_set') {
-            btn.classList.add('is-unset');
-            btn.classList.remove('is-selected');
+            btn.classList.add('is-unset', 'pill-empty');
+            btn.classList.remove('is-selected', 'pill-count');
             if (touchedInput) { touchedInput.value = 'false'; }
           } else {
-            btn.classList.remove('is-unset');
-            btn.classList.add('is-selected');
+            btn.classList.remove('is-unset', 'pill-empty');
+            btn.classList.add('is-selected', 'pill-count');
             if (touchedInput) { touchedInput.value = 'true'; }
           }
           window.newModelSyncSelfReviewBlock(btn);
@@ -1175,13 +1186,16 @@
             builder.style.pointerEvents = 'none';
             if (modeInput) { modeInput.value = 'individual'; }
           }
+          // Not set is amber (pill-empty) and a set link the faint
+          // pill-count under is-selected's fill, whichever state the
+          // chip rendered in, so both classes swap with the state.
           if (next === 'not_set') {
-            btn.classList.add('is-unset');
-            btn.classList.remove('is-selected');
+            btn.classList.add('is-unset', 'pill-empty');
+            btn.classList.remove('is-selected', 'pill-count');
             if (touchedInput) { touchedInput.value = 'false'; }
           } else {
-            btn.classList.remove('is-unset');
-            btn.classList.add('is-selected');
+            btn.classList.remove('is-unset', 'pill-empty');
+            btn.classList.add('is-selected', 'pill-count');
             if (touchedInput) { touchedInput.value = 'true'; }
           }
           // 19O Item 2 — the self-review exclusion copy names what
