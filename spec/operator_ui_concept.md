@@ -349,7 +349,7 @@ Per-session email-template editor for the Invitation, Reminder, and Responses-re
 
 The page renders, top-to-bottom: chrome (with `Email Template` highlighted as the current Setup tab); a `<div class="tab-strip tab-strip-page">` row of three page-internal nav tabs (`Invitation` / `Reminder` / `Responses received`) using the chrome's `.nav-tab` styling — see `spec/ui_elements.md` §6 "Nav button"; then a two-card body with the email composer on the left (form fields per template + per-field `Reset to default` `.btn-reset` button) and the Merge tags reference card on the right. Cancel + Save sit bottom-left of the composer card; Save is Secondary (routine submit) and renders disabled until any composer field is touched.
 
-The composer's `?template=` query param keeps each tab bookmarkable. The `responses_received` tab also surfaces a "Send this confirmation when a reviewer submits?" checkbox above the composer fields that gates the per-session auto-send.
+The composer's `?template=` query param keeps each tab bookmarkable. The `responses_received` tab also surfaces a "Send response confirmation" / "Don't send response confirmation" chip under its heading that gates the per-session auto-send.
 
 ### `/operator/sessions/{id}/validate` — Setup validation
 

@@ -99,10 +99,12 @@ submits a *separate* one-field form (`…/setup-invite/reset`, hidden
 forms sit outside the composer form's HTML scope. Saving a field
 **blank or whitespace-only** is the same as resetting it.
 
-On the **Responses received** tab only, one extra control sits above
-the fields: a checkbox **"Send this confirmation when a reviewer
-submits."** (`name="enabled"`), checked by default. There is no
-separate reset for it — re-checking the box *is* the reset.
+On the **Responses received** tab only, one extra control sits under
+the heading, above the fields: a cycle chip (`spec/ui_elements.md` §9),
+always dark, reading **"Send response confirmation"** or **"Don't send
+response confirmation"**, around a hidden box (`name="enabled"`), on by
+default. There is no separate reset for it — clicking back to *Send*
+*is* the reset.
 
 **Right card — Merge tags** (`.card.merge-tags`, `<h2>` "Merge
 tags"): "Use these placeholders in the subject or body; they're
@@ -303,7 +305,7 @@ types are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
   rendering and defaults, 404s on unknown kind / field, save persists
   + audits, no-change saves do not audit, blank clears an override,
   reset removes + audits, Reset control renders only for overridden
-  fields, the third tab and its checkbox (absent on other tabs,
+  fields, the third tab and its chip (absent on other tabs,
   explicit-`False` on uncheck, key removed on re-check).
 - `tests/unit/test_email_templates.py` — resolver fall-through
   (`NULL` / blank / subject-only), all five tags substitute, unknown
