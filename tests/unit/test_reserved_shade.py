@@ -2,7 +2,8 @@
 
 Segment 19J Items 7 and 10. ``--blue-strong`` (``#2563eb``, light) and
 ``--blue-glow`` (``#4b8bf5``, dark) — the pair ``--selected-bg`` resolves
-to — mean "you can act on this". Nothing static carries them.
+to — mean "you can act on this". Nothing static carries them, bar the
+one ruled exception, the fixed switch (``.tag-chip.is-fixed``).
 
 **The scope is the ambiguity, not the element type** (author,
 2026-09-11, closing Item 10). The rule exists because a pill and a chip
@@ -49,7 +50,8 @@ from ._base_css import token_maps as _token_maps
 RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 
 #: Selectors permitted to reach the reserved pair. Every entry is a
-#: control, and each is here because someone decided it is:
+#: control, bar the ruled fixed-switch exception, and each is here
+#: because someone decided it is:
 #:
 #: - ``.tag-chip.is-selected`` — the filter and column chips. The
 #:   selected fill *is* the affordance saying the filter is on. Its
@@ -64,13 +66,18 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #: - the lobby and Archived cycle-chip fill — the AND/OR and Select all /
 #:   Clear all chips (``role="button"``), always dark because every state is a choice
 #:   (``spec/ui_elements.md`` §9 type 2; operator pages Item 3).
+#: - ``.tag-chip.is-fixed`` — a fixed switch (``spec/ui_elements.md`` §9,
+#:   guide/ux_refinements.md Item 2): one switch held at its value beside
+#:   live ones. It is not clickable, but the author ruled (2026-10-09)
+#:   that it keeps its siblings' fill so it reads as a switch that is on;
+#:   the lock glyph and the missing edge say it doesn't move.
 #: - the three-selector chip rule — every ``.tag-chip`` (which is every
 #:   Band 2 pill too), plus the lobby's Select all / Clear all and AND/OR
 #:   chips. Added at
 #:   rung 3, which is what gives a chip its edge. Checked before it
 #:   landed: every element carrying ``.tag-chip`` in the app is
-#:   interactive, and ``is-disabled`` — the one inert variant — cancels
-#:   the edge rather than inheriting it.
+#:   interactive, and the inert variants (``is-disabled``, ``is-locked``,
+#:   ``is-fixed``) cancel the edge rather than inheriting it.
 #:
 #: - the linked role pills — the ``/me`` dashboard's role column and the
 #:   role navigator's other-role links, both ``<a>``. The selector names
@@ -78,8 +85,9 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #:   stay static (findings E13, 2026-10-09).
 #:
 #: A new entry means a new control surface, and belongs here only once
-#: someone has confirmed it is one. A static pill appearing in this set
-#: is the bug the file exists to catch.
+#: someone has confirmed it is one. A static pill appearing in this set,
+#: other than by a ruling recorded here, is the bug the file exists to
+#: catch.
 CONTROL_SELECTORS = {
     (
         "body.ui-v2 .tag-chip.is-selected, "
@@ -88,6 +96,7 @@ CONTROL_SELECTORS = {
     "body.ui-v2 label.tag-chip:has(> input:focus-visible)",
     "body.ui-v2 .severity-chip.active",
     "body.ui-v2 .pill.pill-tag-clear, body.ui-v2 .pill.tag-mode-chip",
+    "body.ui-v2 span.tag-chip.is-fixed, body.ui-v2 label.tag-chip.is-fixed:has(> input:checked)",
     (
         "body.ui-v2 .tag-chip, body.ui-v2 .pill.pill-tag-clear, "
         "body.ui-v2 .pill.tag-mode-chip"

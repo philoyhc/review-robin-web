@@ -510,6 +510,12 @@ twin to be confused with. Two consequences:
   anchors. It is in scope, and it holds — the inert form takes
   `--text-subtle` at 0.4 opacity and never the accent.
 
+**One deliberate exception: `.tag-chip.is-fixed`** (the author's
+ruling, 2026-10-09). A fixed switch is inert but keeps its siblings'
+`--selected-bg` fill, so it reads as a switch that is on; the missing
+edge and pointer and the lock glyph carry the *can't act on this*
+reading instead (`spec/ui_elements.md` §9).
+
 `--focus-ring`, `--btn-primary-bg` and `--card-active-border` sit on
 actionable or focus surfaces and are unambiguous either way. Every
 other blue stays freely available to static elements —
@@ -518,7 +524,8 @@ other blue stays freely available to static elements —
 shade, not the hue.
 
 `tests/unit/test_reserved_shade.py` resolves every token in both themes
-and fails if anything but a confirmed control lands on the pair. Its
+and fails if anything but a confirmed control, or the ruled
+`.tag-chip.is-fixed` exception, lands on the pair. Its
 selector filter is a **consequence** of the rule rather than the rule
 itself, and grows when a new element class acquires the dual nature —
 which is why `.btn-icon` is in it.

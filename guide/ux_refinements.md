@@ -218,6 +218,29 @@ Taken 2026-10-09 at `2e0379b8`.
 | `b3_static_pill` / "Fixed" lines on Instruments | 5 | `grep -n "b3_static_pill\|title=\"Fixed\"" app/web/templates/operator/instruments_index.html` |
 | Specs naming `is-locked` | 2 | `grep -rln "is-locked" spec` |
 
+### Status
+
+- **Built 2026-10-10** as one PR. `base.html` gains
+  `.tag-chip.is-fixed` (the `--selected-bg` fill, no edge or pointer, a
+  `::before` lock glyph masked in `currentColor`), allowlisted in
+  `test_reserved_shade`. Session Home's tab-holds-data chips and the
+  Visibility card's two `b3_static_pill` cells take it; the card-locked
+  display chips stay `is-locked`. `test_band3_static_pills` now treats
+  `is-fixed` as the one `tag-chip` that offers no click. A browser test
+  compares each surface's fill with a live chip's and checks the glyph;
+  both fail without the change.
+- **Fixed off is half here:** the cold read found the fill ignored the
+  box's state, so a `<label>` chip takes it only while ticked and an
+  unticked one stays the off chip with the glyph. Band 3's disabled
+  checkboxes (`:has(> input:disabled)`) still land with Item 1.
+- **Reads:** one `spec-writer` verify and two `diff-reviewer` reads.
+  The first two found specs and comments still saying the reserved shade
+  never reaches an inert element; `spec/color_tokens.md` now records
+  `is-fixed` as the one ruled exception (a Doc impact bullet the plan
+  missed). The first cold read led to the Observers chip test and a
+  `test_chip_edge` pin; the second, on those fixes, found the CSS split
+  sound and three stale spec and plan lines.
+
 ### PR ladder
 
 1. **The fixed chip, everywhere it applies — one PR** (revised
@@ -266,6 +289,7 @@ this item.
 - `spec/ui_elements.md` — §9's chip-types table gains Fixed; `is-locked` is the locked card's chip only.
 - `spec/session_home.md` — the optional-tab chips are fixed once the tab holds data.
 - `spec/instruments.md` — the Visibility editor's two fixed cells are fixed chips.
+- `spec/color_tokens.md` — "Deliberate couplings" records `is-fixed` as the reserved shade's one inert exception (found at build).
 - `guide/things_to_check_in_browser.md` — a section per PR.
 
 

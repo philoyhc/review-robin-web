@@ -1518,17 +1518,20 @@
                 "anonymized": "Anonymized responses",
                 "summarized": "Anonymized summaries",
           } %}
-          {# A label, not a control (19J.7 rung 1). This macro used to
-             carry ``tag-chip is-selected`` — the *identical* class string
-             to ``b3_mode_cycle`` below it, so the five fixed cells were
-             indistinguishable from the clickable ones, and ``tag-chip``'s
-             ``cursor: pointer`` aimed the one affordance the pill
-             vocabulary has at the cells that do nothing. Dropping the two
-             classes also takes the reserved accent shade
-             (``is-selected`` → ``--selected-bg``) off an inert element,
-             which is the rule the rest of Item 7 builds on. #}
+          {# A fixed switch (guide/ux_refinements.md Item 2): the cell's
+             mode is not the operator's to choose, so it is a cycle chip
+             held at its value — the dark fill of the chips beside it, no
+             edge or pointer, a lock glyph (``is-fixed``,
+             spec/ui_elements.md §9) — and no role or handler. History:
+             19J.7 rung 1 made it a plain label, because it then carried
+             ``tag-chip is-selected``, the *identical* class string to
+             ``b3_mode_cycle`` below it, so the fixed cells (five, in Band
+             3's table then) were indistinguishable from the clickable
+             ones. ``is-fixed`` brings the dark fill back as a ruled
+             exception (spec/color_tokens.md) and tells the cells apart
+             by edge, pointer and glyph instead. #}
           {% macro b3_static_pill(label) %}
-            <span class="pill pill-count"
+            <span class="pill pill-count tag-chip is-fixed"
                   title="Fixed">{{ label }}</span>
           {% endmacro %}
           {% macro b3_mode_cycle(audience, window, slugs, current_mode) %}
@@ -1643,9 +1646,7 @@
                         {# 19T Item 3 entry 3 — the editor's cycle repaints
                            these cells live (``newModelCycleVisibilityCell``),
                            since Save doesn't reload. 19T Item 8 — each mode
-                           is a pill that only shows it, as the editor's fixed
-                           cells are (``b3_static_pill``, less the "Fixed"
-                           tooltip). #}
+                           is a plain pill that only shows it. #}
                         <td style="padding: 4px 8px;"><span class="pill pill-count"
                             data-new-model-vp-preview-cell="{{ vp.audience }}-while_ongoing">{{ vp.while_ongoing_label }}</span></td>
                         <td style="padding: 4px 8px;"><span class="pill pill-count"
@@ -1658,7 +1659,8 @@
                 {% endif %}
                 {# 19T Item 7 — the visibility editor, shown while the card
                    is unlocked. The cells that can change are cycle chips
-                   (``b3_mode_cycle``); the fixed ones stay labels. The
+                   (``b3_mode_cycle``); the fixed ones are fixed switches
+                   (``b3_static_pill``, ``is-fixed``). The
                    hidden inputs ride the dfsave form, so Save persists
                    them with everything else on the card. Observers show
                    here only, below a divider (``row-group-start``,

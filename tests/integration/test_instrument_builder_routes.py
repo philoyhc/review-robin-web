@@ -9626,8 +9626,10 @@ def test_band2_visibility_card_is_the_editor(
         ("observer", "while_ongoing", "|summarized", "summarized"),
         ("observer", "after_release", "|raw|anonymized|summarized", "raw"),
     ]
-    # The fixed cells stay labels.
-    assert re.findall(r'<span class="pill pill-count" title="Fixed">([^<]+)</span>', editor) == [
+    # The fixed cells are fixed switches (guide/ux_refinements.md Item 2).
+    assert re.findall(
+        r'<span class="pill pill-count tag-chip is-fixed" title="Fixed">([^<]+)</span>', editor
+    ) == [
         "Raw responses",
         "—",
     ]

@@ -647,8 +647,9 @@ role pill when it is a link (`a.pill.pill-role-*`: the `/me`
 dashboard's role column and the role navigator's other-role links,
 whose `<span>` forms stay plain). Static pills carry no edge: the display-field table's
 field-label pill (`spec/instruments.md` "Display-field table") and the
-Visibility card's locked mode cells (`spec/instruments.md` "Visibility
-card") are the static, no-click-handler pattern. The locked Name / Email
+Visibility card's locked preview table (`spec/instruments.md` "Visibility
+card") are the static, no-click-handler pattern. A fixed switch carries
+no edge either (`.tag-chip.is-fixed`, below). The locked Name / Email
 fields are not pills at all but that table's disabled, ticked checkboxes.
 
 Three rules make that work:
@@ -665,7 +666,8 @@ Three rules make that work:
   `border-width`, so a chip is exactly as tall
   as the status label beside it and adding an edge reflows nothing.
 - **`.tag-chip.is-disabled` cancels the edge.** It sets
-  `cursor: default` and is an inert chip, as `.is-locked` (below) is; a
+  `cursor: default` and is an inert chip, as `.is-locked` and
+  `.is-fixed` (below) are; a
   chip that says it cannot be clicked must not also say it can.
 
 **A chip can be a form control.** Session Home's optional-tab chips
@@ -675,7 +677,7 @@ and the form posts it. `.tag-chip:has(> input:checked)` is the
 `.is-selected` fill, read off the box itself, so a form reset repaints
 the chip with no script; the hidden box's keyboard focus shows as a
 `--focus-ring` outline on the chip. **`.tag-chip.is-locked`** is the
-chip of a locked card, or one whose tab holds data: it drops the edge
+chip of a locked card: it drops the edge
 and the pointer like `is-disabled`, but is not struck through, because
 it still says on or off. On takes the card's display-value colors
 (`--config-value-bg` / `--config-value-fg`) rather than the reserved
@@ -686,30 +688,43 @@ pill, with `.active` taking the shade on its border and text.
 
 `.is-selected` is unchanged — a solid `--selected-bg` fill, which is how
 a chip says its filter is on, and it reaches the reserved shade only on
-controls: a locked chip may carry it to say "on", and
+controls (a fixed switch, `.tag-chip.is-fixed`, is the one inert
+exception): a locked chip may carry it to say "on", and
 `.tag-chip.is-locked.is-selected` repaints it in the display-value
 colors.
 
-**Three chip types, one look each.** What a chip's states mean decides its fill:
+**Four chip types, one look each.** What a chip's states mean decides
+its fill; a fixed switch keeps the fill of the state it is held at:
 
 | Type | States | Fill | Standard |
 |---|---|---|---|
 | **On/off** | selected, not selected; the label doesn't change | dark (`--selected-bg`) when on, light when off | the Setup pages' column chips |
 | **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always dark | Extract's Data shaper "All rows ↔ Rows with data" |
 | **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, dark otherwise | the Instruments page's Band 1 link chips |
+| **Fixed** | one switch held at its value while the chips beside it stay live | its siblings' fill for the held state (dark when on), with no edge or pointer and a lock glyph before the label (`.tag-chip.is-fixed`) | Session Home's optional tab once it holds data |
+
+A fixed switch keeps its siblings' dark fill so it reads as a switch
+that is on rather than a display; the glyph (a CSS mask in
+`currentColor`) says why it doesn't move. A `<label>` chip takes the
+fill only while its box is ticked, so a switch fixed off stays the off
+chip, with the glyph. It is per item: a card's
+locked view stays `is-locked`. Its other use is the Instruments
+Visibility card's two cells whose mode isn't the operator's to choose
+(`spec/instruments.md` "Visibility card").
 
 The lobby's AND/OR and Select all / Clear all chips, and the Archived
 page's Select all / Clear all, are cycle chips (`.tag-mode-chip`,
 `.pill-tag-clear` take `--selected-bg` / `--selected-fg` outright).
 Select all / Clear all is the edge case whose label names the next click
-rather than a state. The Instruments Visibility cells are cycle chips
-too, "—" being a deliberate off. So are Extract's three empty-row chips
+rather than a state. The Instruments Visibility cells that can change
+are cycle chips too, "—" being a deliberate off. So are Extract's three empty-row chips
 ("All reviewers ↔ Reviewers with responses" and its two siblings), which
 keep `is-selected` on in both labels (`spec/extract_data.md`).
 `tests/browser/test_cycle_chips.py` pins the lobby, Archived and Extract
 fills;
 `tests/integration/test_chip_edge.py` pins the edge treatment;
-`tests/unit/test_reserved_shade.py` keeps the shade off anything static.
+`tests/unit/test_reserved_shade.py` keeps the shade off anything static
+except `.tag-chip.is-fixed`.
 
 > **Lifecycle badges** — one `.pill-lifecycle-*` set covers all five
 > states, each on its own token pair so a state's colour can move without

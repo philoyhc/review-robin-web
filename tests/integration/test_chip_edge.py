@@ -192,6 +192,35 @@ def test_a_locked_chip_drops_the_edge_and_keeps_its_state(
     assert off is not None and "opacity: 0.55" in off
 
 
+def test_a_fixed_chip_drops_the_edge_and_keeps_the_fill(
+    client: TestClient, db: Session
+) -> None:
+    """guide/ux_refinements.md Item 2: a fixed switch cancels the edge and
+    the pointer, as ``is-locked`` does, but keeps the live chips' dark
+    fill — a ``<span>`` always, a ``<label>`` only while its box is
+    ticked, so one fixed off stays the off chip."""
+    review_session = _make_session(client, db, code="ux2-fixed")
+    css = client.get(f"/operator/sessions/{review_session.id}").text
+
+    block = _rule(css, "body.ui-v2 .tag-chip.is-fixed")
+    assert block is not None
+    assert "cursor: default" in block
+    assert "border-color: transparent" in block
+    assert "box-shadow: none" in block
+    assert EDGE not in block
+    assert css.index("body.ui-v2 .tag-chip.is-fixed {") > css.index(
+        "body.ui-v2 .tag-chip,"
+    )
+    fill = _rule(
+        css,
+        "body.ui-v2 span.tag-chip.is-fixed,\n"
+        "      body.ui-v2 label.tag-chip.is-fixed:has(> input:checked)",
+    )
+    assert fill is not None and "var(--selected-bg)" in fill
+    glyph = _rule(css, "body.ui-v2 .tag-chip.is-fixed::before")
+    assert glyph is not None and "mask:" in glyph and "currentColor" in glyph
+
+
 def test_a_checkbox_chip_fills_from_its_box(
     client: TestClient, db: Session
 ) -> None:

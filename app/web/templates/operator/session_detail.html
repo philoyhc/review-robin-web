@@ -214,15 +214,17 @@
               {# Lock-on-data — once a roster has rows the toggle can't flip
                  True→False (would orphan data); the chip's checkbox renders
                  disabled, so the form omits it, and the service-layer guard
-                 rejects the flip for direct API calls. #}
-              <label class="pill pill-count tag-chip{% if has_relationships %} is-locked{% endif %}"
+                 rejects the flip for direct API calls. The chip is a fixed
+                 switch (``is-fixed``, spec/ui_elements.md §9): dark, with a
+                 lock glyph. #}
+              <label class="pill pill-count tag-chip{% if has_relationships %} is-fixed{% endif %}"
                      {% if has_relationships %}title="The session has relationships, so the tab stays on."{% endif %}>
                 <input type="checkbox" class="visually-hidden"
                        name="relationships_enabled" value="true"
                        data-config-input form="config-save-{{ session.id }}"
                        {% if session.relationships_enabled %}checked{% endif %}
                        {% if has_relationships %}disabled{% endif %}>Relationships</label>
-              <label class="pill pill-count tag-chip{% if has_observers %} is-locked{% endif %}"
+              <label class="pill pill-count tag-chip{% if has_observers %} is-fixed{% endif %}"
                      {% if has_observers %}title="The session has observers, so the tab stays on."{% endif %}>
                 <input type="checkbox" class="visually-hidden"
                        name="observers_enabled" value="true"
