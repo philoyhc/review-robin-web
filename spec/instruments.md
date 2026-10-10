@@ -1287,10 +1287,13 @@ Two empty slots of that width follow a plain row's join (`td.rf-slot`);
 each level of branching shifts a row one column right into them. A
 level-1 row has both, ↰ before ↳.
 A plain row that isn't the first, is named, has no saved responses and
-isn't itself a parent can join the deepest unlocked branch that ends directly
-above it, at that branch's level. ↰ never starts a branch; only ⑂ does.
-With no branch ending directly above, ↰ is off ("No branch ends
-directly above"). **A level-1 row's
+isn't itself a parent can join the unit above: the deepest unlocked
+branch that ends directly above it, at that branch's level, or, on a
+named plain Integer, Decimal or List field, a new branch with an empty
+condition and this row as its only field ("Start a branch on the field
+above with this field"; off when the field above is a String or
+unnamed). That second way to fork adds no new field row, where ⑂ does;
+a branch inside a branch is started with ⑂, not ↰. **A level-1 row's
 ↰** joins the branch of the field directly above it in its own branch,
 at level 2, when that field has one; otherwise it is off ("No branch inside this branch ends
 directly above"), off on an unnamed field, and off, as ↳ is, on a parent or in a locked branch —

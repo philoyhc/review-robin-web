@@ -354,7 +354,7 @@ this item.
 
 ---
 
-## Item 3 — ↰ only joins a branch
+## Item 3 — ~~↰ only joins a branch~~ (reversed, 2026-10-10)
 
 ### Opportunity
 
@@ -430,6 +430,9 @@ Taken 2026-10-10 at `4d993658`.
   comments, a redundant local, this record and a live guide line fixed)
   and a `spec-writer` verify pass (the two misses above).
 - **Browser checks passed** (the author, 2026-10-10).
+- **Reversed 2026-10-10** (the author): ⑂ adds a field row, ↰'s fork
+  doesn't, which the Decision's "duplicates ⑂" missed. One PR restores
+  the fork on Item 1's layout; Items 1 and 2 and ↰'s name condition stay.
 
 ### PR ladder
 
@@ -445,7 +448,8 @@ Taken 2026-10-10 at `4d993658`.
 
 - A level-0 ↰ under a plain field is disabled with "No branch ends
   directly above"; under a branch it joins as before. A test pins each.
-- `spec/instruments.md` no longer says ↰ starts a branch.
+- `spec/instruments.md` no longer says ↰ starts a branch. *(Reversed
+  2026-10-10: it says so again.)*
 - `guide/things_to_check_in_browser.md` has a section for the PR.
 - `### Doc impact` current, every bullet checked by hand.
 - `spec-writer` run against the doc-impact specs; flags adjudicated.
@@ -463,6 +467,6 @@ Taken 2026-10-10 at `4d993658`.
 
 ### Doc impact
 
-- `spec/instruments.md` — "Join (↰) and detach (↳)": ↰ joins a branch that ends directly above, and is off otherwise; ⑂ is the only way to start one.
-- `spec/operator_button_audit.md` — row #245: ↰ joins the branch above and never starts one (found at build).
+- `spec/instruments.md` — "Join (↰) and detach (↳)": ↰ joins a branch that ends directly above, and is off otherwise; ⑂ is the only way to start one. *(Reversed 2026-10-10: ↰ starts one on a plain number or List field again.)*
+- `spec/operator_button_audit.md` — row #245: ↰ joins the branch above and never starts one (found at build). *(Reversed 2026-10-10.)*
 - `guide/things_to_check_in_browser.md` — a section for the PR.

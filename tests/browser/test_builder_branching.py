@@ -83,24 +83,39 @@ def test_join_and_detach_move_a_field_in_and_out_of_a_branch(
     expect(_conditions(card)).to_have_count(0)
 
 
-def test_join_is_off_under_a_plain_field_and_only_joins_a_branch(
+def test_join_under_a_plain_field_starts_a_branch_without_a_new_row(
     page: Page, new_session: Callable[[], int]
 ) -> None:
-    """guide/ux_refinements.md Item 3: ↰ never starts a branch; ⑂ does."""
+    """The author, 2026-10-10, reversing guide/ux_refinements.md Item 3: ⑂
+    starts a branch with a new field; ↰ under a plain number or List
+    field starts one with the row itself, so no extra row appears."""
     card = open_unlocked(page, new_session())
     comments = rows(card).filter(has=page.locator("[data-new-model-rf-name][value=Comments]"))
     join = comments.locator("[data-new-model-rf-join]")
-    # The field above is a plain Integer: no branch ends above Comments.
-    expect(join).to_be_disabled()
-    expect(join).to_have_attribute("title", "No branch ends directly above")
-    expect(_conditions(card)).to_have_count(0)
-
-    rows(card).first.locator("[data-new-model-rf-fork]").click()
+    # The field above is a plain Integer.
     expect(join).to_be_enabled()
-    expect(join).to_have_attribute("title", "Join the branch above")
+    expect(join).to_have_attribute("title", "Start a branch on the field above with this field")
+    expect(rows(card)).to_have_count(2)
+
     join.click()
     expect(comments).to_have_attribute("data-new-model-rf-governed", "true")
     expect(_conditions(card)).to_have_count(1)
+    expect(rows(card)).to_have_count(2)
+    expect(rows(card).first).to_have_attribute("data-new-model-rf-parent", "true")
+    # The parent's bar starts at its + (ux_refinements Item 1), and the
+    # condition's value box takes the focus.
+    assert rows(card).first.evaluate(
+        "r => r.querySelector('[data-new-model-rf-add]').closest('td')"
+        ".classList.contains('rf-branch-bar-start')"
+    )
+    expect(card.locator("[data-new-model-rf-condition-value]").first).to_be_focused()
+
+    # Detached again, it is plain under a String field: ↰ says why not.
+    join.click()
+    expect(_conditions(card)).to_have_count(0)
+    rows(card).first.locator("[data-new-model-rf-data-type]").select_option("string")
+    expect(join).to_be_disabled()
+    expect(join).to_have_attribute("title", "The field above is String, so it can't have a branch")
 
 
 def test_list_conditions_offer_is_and_is_not_and_name_a_missing_option(
