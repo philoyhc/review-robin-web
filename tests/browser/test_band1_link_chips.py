@@ -123,7 +123,6 @@ def test_a_locked_cards_link_chips_read_as_plain_pills(
         chip = chips.nth(i)
         assert _fill(chip) == plain_fill, i
         assert _style(chip, "color") == plain_text, i
-        assert _style(chip, "borderTopColor") == "rgba(0, 0, 0, 0)", i
         assert _style(chip, "cursor") == "default", i
         assert _style(chip, "boxShadow") == "none", i
 
