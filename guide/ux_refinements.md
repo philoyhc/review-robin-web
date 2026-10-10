@@ -14,6 +14,11 @@ New items go at the end, numbered on, in the item shape of
 `guide/segment_plan_template.md`, each with its own `### Doc impact` and
 `### Status`.
 
+**Build order** (author, 2026-10-10): Item 3, then Item 2, then Item 1.
+Item 1's PR 1 needs Item 2's fixed chip; Item 3 depends on neither, and
+landing it first gets its edits to the Instruments template in before
+the larger chip changes.
+
 ---
 
 ## Item 1 — Band 3 fields as chips
@@ -102,7 +107,7 @@ Taken 2026-10-09 at `2569876a`.
    fields take `is-disabled`.~~ Name and Email take Item 2's fixed-on
    chip, and the `:has(> input:disabled)` rule gives group-hidden fields
    the fixed-off look, glyph included (revised for Item 2; this rung
-   follows Item 2's PR 1). A browser test toggles a field through its
+   follows Item 2). A browser test toggles a field through its
    chip and checks the fill. `spec/instruments.md` (Display fields row
    list) updated.
 2. **Response fields name chips.** The Active checkbox becomes a name
@@ -133,7 +138,7 @@ Taken 2026-10-09 at `2569876a`.
 
 - ~~Should Name and Email show the plain "on" fill rather than the
   muted locked one?~~ Neither: they take Item 2's fixed-switch chip
-  (author, 2026-10-09), so PR 1 follows Item 2's PR 1.
+  (author, 2026-10-09), so PR 1 follows Item 2.
 
 ### Out of scope
 
@@ -215,18 +220,22 @@ Taken 2026-10-09 at `2e0379b8`.
 
 ### PR ladder
 
-1. **The fixed chip.** `.tag-chip.is-fixed` in `base.html` (fill,
-   glyph, no edge or pointer), allowlisted in `test_reserved_shade`,
-   `tools/theme_customizer.html` regenerated. §9 gains the Fixed row.
-   Session Home's tab-holds-data chips move from `is-locked` to
-   `is-fixed`. A browser test compares the fill with a selected chip's
-   and checks the glyph.
-2. **The Visibility card's fixed cells.** `b3_static_pill` renders a
-   fixed chip; `test_band3_static_pills` updated. `spec/instruments.md`
-   (Visibility editor) says so.
+1. **The fixed chip, everywhere it applies — one PR** (revised
+   2026-10-10, author: the split only kept slices small, and nothing
+   depended on it).
+   - `.tag-chip.is-fixed` in `base.html` (fill, glyph, no edge or
+     pointer), allowlisted in `test_reserved_shade`,
+     `tools/theme_customizer.html` regenerated. §9 gains the Fixed row.
+   - Session Home's tab-holds-data chips move from `is-locked` to
+     `is-fixed`.
+   - The Visibility card's fixed cells: `b3_static_pill` renders a
+     fixed chip; `test_band3_static_pills` updated.
+   - A browser test compares the fill with a selected chip's and checks
+     the glyph. The item's `diff-reviewer` read runs on this PR.
+2. ~~**The Visibility card's fixed cells.**~~ Merged into rung 1.
 
 Band 3's Name and Email take the fixed chip in Item 1's PR 1, after
-this item's PR 1.
+this item.
 
 ### Definition of done
 
@@ -254,8 +263,105 @@ this item's PR 1.
 
 ### Doc impact
 
-- `spec/ui_elements.md` — §9's chip-types table gains Fixed; `is-locked` is the locked card's chip only (PR 1).
-- `spec/session_home.md` — the optional-tab chips are fixed once the tab holds data (PR 1).
-- `spec/instruments.md` — the Visibility editor's two fixed cells are fixed chips (PR 2).
+- `spec/ui_elements.md` — §9's chip-types table gains Fixed; `is-locked` is the locked card's chip only.
+- `spec/session_home.md` — the optional-tab chips are fixed once the tab holds data.
+- `spec/instruments.md` — the Visibility editor's two fixed cells are fixed chips.
 - `guide/things_to_check_in_browser.md` — a section per PR.
 
+
+---
+
+## Item 3 — ↰ only joins a branch
+
+### Opportunity
+
+The author's intended behavior for Band 3's branch buttons (2026-10-10):
+
+- **⑂** adds a branch below this field: the condition row and one
+  field it governs.
+- **↰** joins the branch above; with no branch above, it is off.
+- **↳** detaches the field from its branch, ending the branch if it
+  was the only field.
+
+Checked against the code on 2026-10-10 at `4d993658`. ⑂ and ↳ match,
+and a level-1 row's ↰ (`newModelRfNest`) already only joins ("It never
+starts one (⑂ does)"). **A level-0 row's ↰ does more:** when the unit
+directly above is a plain Integer, Decimal or List field,
+`newModelRfJoin` makes that field a parent, adds an empty condition row
+and moves this row under it ("Start a branch on the field above with
+this field"). That is a second way to fork, overlapping ⑂.
+`spec/instruments.md` ("Join (↰) and detach (↳)") documents it.
+
+### Decision
+
+↰ only joins. A level-0 row's ↰ is live only when a branch ends
+directly above it, and it joins the deepest unlocked one at its level,
+as today. With no branch above it is off, titled "No branch ends
+directly above", in the wording of the level-1 ↰. ⑂ stays the only way
+to start a branch.
+
+**Rejected:** keeping ↰'s fork on a plain field above. It duplicates
+⑂, and it forks the field *above* rather than the one whose button was
+pressed.
+
+### Semantics
+
+- **The other off states stay**: the first field, a parent, a field
+  with saved responses, an unnamed field, and a locked branch above.
+- **The String-above title goes.** "The field above is String, so it
+  can't have a branch" and "Name the field above first." only explained
+  the fork path. A String field above has no branch, so it gets the
+  new title.
+- **Saved instruments are unaffected.** This is a builder control; no
+  branch shape that was reachable before becomes unreachable, since ⑂
+  then ↰ builds the same thing.
+
+### Judgment calls — decided
+
+- None yet.
+
+### Blast radius (measured)
+
+Taken 2026-10-10 at `4d993658`.
+
+| What | Count | Command |
+|---|---|---|
+| Functions to change | 2 (`newModelRfSyncJoin`, `newModelRfJoin`) | `grep -n "newModelRfSyncJoin = \|newModelRfJoin = " app/web/templates/operator/instruments_index.html` |
+| Tests pinning the fork path | 1 file (titles + `parent.setAttribute` assertion) | `grep -rln "Start a branch on the field above\|Joining a plain field" tests` |
+| Browser tests driving ↰ | 1 file; it joins an existing branch, so it is unaffected | `grep -rln "data-new-model-rf-join" tests/browser` |
+| Spec paragraphs | 1 | `grep -n "a new branch with an empty condition" spec/instruments.md` |
+
+### PR ladder
+
+1. **↰ only joins.** `newModelRfSyncJoin` drops the plain-field-above
+   branch and turns ↰ off with "No branch ends directly above";
+   `newModelRfJoin` drops the new-branch block. The integration test's
+   titles and fork assertion change to match; a browser test presses ↰
+   below a plain Integer field and finds it disabled, then forks with ⑂
+   and joins. `spec/instruments.md` updated. One code slice outside a
+   ladder, so it takes its own `diff-reviewer` read.
+
+### Definition of done
+
+- A level-0 ↰ under a plain field is disabled with "No branch ends
+  directly above"; under a branch it joins as before. A test pins each.
+- `spec/instruments.md` no longer says ↰ starts a branch.
+- `guide/things_to_check_in_browser.md` has a section for the PR.
+- `### Doc impact` current, every bullet checked by hand.
+- `spec-writer` run against the doc-impact specs; flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- ⑂ and ↳, which match the intended behavior.
+- Which branch ↰ joins when several end above it (the deepest, an
+  earlier ruling, 19T Item 14).
+
+### Doc impact
+
+- `spec/instruments.md` — "Join (↰) and detach (↳)": ↰ joins a branch that ends directly above, and is off otherwise; ⑂ is the only way to start one.
+- `guide/things_to_check_in_browser.md` — a section for the PR.
