@@ -101,7 +101,7 @@ forms sit outside the composer form's HTML scope. Saving a field
 
 On the **Responses received** tab only, one extra control sits under
 the heading, above the From / To rows: a cycle chip (`spec/ui_elements.md` §9),
-always dark, reading **"Send response confirmation"** or **"Don't send
+always solid, reading **"Send response confirmation"** or **"Don't send
 response confirmation"**, around a hidden box (`name="enabled"`), on by
 default. There is no separate reset for it — clicking back to *Send*
 *is* the reset.

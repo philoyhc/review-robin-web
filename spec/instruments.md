@@ -509,7 +509,7 @@ setting. It sits here for space alone, and says so twice: a horizontal
 three columns — separates it from the unit-of-review controls above, and
 the control names itself, so it does not read as a third Link 3 state.
 
-**The control is a cycle chip** (`spec/ui_elements.md` §9), dark on
+**The control is a cycle chip** (`spec/ui_elements.md` §9), solid on
 an unlocked card and the plain display pill, unfaded, on a locked one,
 reading **Include self reviews** or **Exclude self reviews**
 (`exclude_self_reviews`, off by default), around the hidden box the
@@ -828,7 +828,7 @@ its `(audience, window)` cell; the cycle sets themselves are not restated
 here. The two cells that can't — Reviewer / Session-ongoing (pinned to
 Raw) and Reviewees / Session-ongoing (pinned to off) — are fixed
 switches (`b3_static_pill`: `.tag-chip.is-fixed`, `spec/ui_elements.md`
-§9), the cycle chips' dark fill with no edge or pointer, a lock glyph,
+§9), the cycle chips' solid fill with no edge or pointer, a lock glyph,
 no role or handler, and the title "Fixed". Both macros keep the `b3_`
 prefix from when the editor lived in Band 3's table, which this card
 retires.
@@ -877,7 +877,7 @@ Each row holds:
 two rows (`ensure_locked_display_fields`, called by
 `ensure_default_instrument` and `create_instrument`, and by the page
 render's `repair_display_fields` while setup is editable), and each renders
-a ticked, disabled checkbox — so its chip is a fixed switch, dark with a
+a ticked, disabled checkbox — so its chip is a fixed switch, solid with a
 lock glyph (`spec/ui_elements.md` §9 "Fixed") — no move buttons, and a
 tooltip naming the pinned slot — "Always shown — pinned first" (Name) / "Always shown — pinned second" (Email). **On a
 group-scoped instrument**, a field a group row can't show — Email

@@ -714,19 +714,23 @@ exception): a locked chip may carry it to say "on", and
 colors.
 
 **Five chip types, one look each.** What a chip's states mean decides
-its fill; a fixed switch keeps the fill of the state it is held at. The
-Guide's "Reading the controls" card samples each type, every switchable
-sample working, so a new type adds a row there too:
+its fill; a fixed switch keeps the fill of the state it is held at. **Solid** is the
+`.is-selected` fill (`--selected-bg`, a solid blue in both themes);
+**faint** is the plain `pill-count` fill (`--status-info-bg`, pale blue in
+light and deep navy in dark). On and off read as strong against quiet in
+either theme, not as dark against light. The Guide's "Reading the
+controls" card samples each type, every switchable sample working, so a
+new type adds a row there too:
 
 | Type | States | Fill | Standard |
 |---|---|---|---|
-| **On/off** | selected, not selected; the label doesn't change | dark (`--selected-bg`) when on, light when off | the Setup pages' column chips |
-| **On/off with a partial state** | all, none, or some of a set; the label counts how many are on | dark when all, light when none, amber (`pill-empty`) when some; a click on light or amber turns all on | the Assignments page's "Include N self reviews" |
-| **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always dark (on a locked Instruments card, the plain pill, unfaded) | Extract's Data shaper "All rows ↔ Rows with data"; the Instruments card's "Include ↔ Exclude self reviews"; the Email Template page's "Send ↔ Don't send response confirmation" |
-| **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, dark otherwise | the Instruments page's Band 1 link chips |
-| **Fixed** | one switch held at its value while the chips beside it stay live | its siblings' fill for the held state (dark when on), with no edge or pointer and a lock glyph before the label (`.tag-chip.is-fixed`) | Session Home's optional tab once it holds data |
+| **On/off** | selected, not selected; the label doesn't change | solid when on, faint when off | the Setup pages' column chips |
+| **On/off with a partial state** | all, none, or some of a set; the label counts how many are on | solid when all, faint when none, amber (`pill-empty`) when some; a click on faint or amber turns all on | the Assignments page's "Include N self reviews" |
+| **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always solid (on a locked Instruments card, the plain pill, unfaded) | Extract's Data shaper "All rows ↔ Rows with data"; the Instruments card's "Include ↔ Exclude self reviews"; the Email Template page's "Send ↔ Don't send response confirmation" |
+| **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, solid otherwise | the Instruments page's Band 1 link chips |
+| **Fixed** | one switch held at its value while the chips beside it stay live | its siblings' fill for the held state (solid when on), with no edge or pointer and a lock glyph before the label (`.tag-chip.is-fixed`) | Session Home's optional tab once it holds data |
 
-A fixed switch keeps its siblings' dark fill so it reads as a switch
+A fixed switch keeps its siblings' solid fill so it reads as a switch
 that is on rather than a display; the glyph (a CSS mask in
 `currentColor`) says why it doesn't move. A `<label>` chip takes the
 fill only while its box is ticked, so a switch fixed off stays the off
