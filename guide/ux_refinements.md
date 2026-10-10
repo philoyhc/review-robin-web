@@ -547,3 +547,94 @@ eight PNGs in `app/web/static/guide/`, no spec quotes the Guide text
 ### Doc impact
 
 - `guide/things_to_check_in_browser.md` — a section for the PR.
+
+---
+
+## Item 5 — A level-1 row's ↰ starts a branch too
+
+### Opportunity
+
+The author, 2026-10-10, on a screencap: Comments, a level-1 field under
+Rating in Familiarity's branch, can't use ↰ to start a branch on Rating.
+A level-0 row's ↰ can do this on the field above it (Item 3's reversal),
+but a level-1 row's ↰ (`newModelRfNest`) only joins a branch that
+already ends above it ("It never starts one (⑂ does)"). So the second
+way to fork, which adds no new field row, stops at level 0.
+
+### Decision
+
+A level-1 row's ↰ works as a level-0 row's does, one level down: when
+the field directly above it in its branch has a branch, it joins it at
+level 2; when that field is a named plain Integer, Decimal or List field,
+it starts a branch on it, with an empty condition and this row as its
+only field. **Rejected:** leaving level 1 join-only, which keeps ⑂'s
+extra row as the only way to branch there.
+
+### Semantics
+
+- **Off states**, titled as at level 0: the branch's first field ("The
+  first field in a branch can't join a branch"), a String field above,
+  an unnamed field above, and, as today, a parent, an unnamed row, and
+  a locked branch. An answered field above locks the shared branch, so
+  it is covered by the last.
+- **Depth:** the new branch is at level 2, the limit; a level-2 row has
+  no ↰.
+- **Saved instruments are unaffected:** ⑂ on the field above, then ↰,
+  already built the same shape.
+
+### Judgment calls — decided
+
+- The server render carries `nest_target` as `"join"` / `"start"` /
+  None plus `nest_first`, so the first paint matches the script.
+
+### Blast radius (measured)
+
+Taken 2026-10-10 at `c738dbaa`.
+
+| What | Count | Command |
+|---|---|---|
+| Script functions | 2 (`newModelRfSyncNest`, `newModelRfNest`) | `grep -n "newModelRfSyncNest = \|newModelRfNest = " app/web/templates/operator/instruments_index.html` |
+| View flag | 1 (`nest_target`, `app/web/views/_instruments.py`) | `grep -rn "nest_target" app --include=*.py --include=*.html` |
+| Tests pinning the join-only title | 1 file | `grep -rln "No branch inside this branch ends directly above" tests` |
+| Spec paragraphs | 2 (`spec/instruments.md`, `spec/operator_button_audit.md` #245) | `grep -rn "No branch inside this branch\|joins the branch inside its own" spec` |
+
+### Status
+
+- **Built 2026-10-10** in one PR. **Found at build:** a level-1 row's ↰
+  didn't follow edits to the field above it (only the edited row's
+  buttons were recomputed), so the row script now resyncs the next
+  field in the branch too; the browser test fails without it.
+
+### PR ladder
+
+1. **↰ starts a branch at level 1.** `newModelRfSyncNest` and
+   `newModelRfNest`, the view's `nest_target`, the template's title; an
+   integration test for each title and a browser test that starts,
+   saves, detaches and refuses under a String. `spec/instruments.md` and
+   `spec/operator_button_audit.md` #245. One code slice outside a
+   ladder, so it takes its own `diff-reviewer` read.
+
+### Definition of done
+
+- A level-1 ↰ under a plain number or List field starts a branch on it
+  and saves at level 2; under a String it is off with its reason. A test
+  pins each.
+- `guide/things_to_check_in_browser.md` has a section for the PR.
+- `### Doc impact` current, every bullet checked by hand.
+- `spec-writer` run against the doc-impact specs; flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- A third level, which stays refused.
+
+### Doc impact
+
+- `spec/instruments.md` — "Join (↰) and detach (↳)": a level-1 row's ↰ starts a branch on a plain number or List field above it in its branch, as a level-0 row's does.
+- `spec/operator_button_audit.md` — row #245: the level-1 ↰'s start path and off states.
+- `guide/things_to_check_in_browser.md` — a section for the PR.
+

@@ -338,3 +338,14 @@ section (git history keeps it), so this file lists only what is owed.
   pairs show in light and dark, the text reads as intended (the three
   wording fixes noted in the PR), and the fields and branching captures
   are legible at their smaller apparent scale.
+
+## A level-1 row's ↰ starts a branch (UX refinements Item 5)
+
+- [ ] **Instruments, unlocked card.** Fork an Integer field, name its
+  new field and make it an Integer, then ↰ the field below into the
+  branch. That row's second ↰ reads "Start a branch on the field above
+  with this field"; pressing it makes the field above a parent with an
+  amber condition, no new row, the bar starting at its +, and the
+  focus in the condition's value. Fill it, Save, reopen: three levels
+  as built. Make the field above a String: ↰ goes off with its reason.
+
