@@ -961,7 +961,8 @@ and chips on the right (author, 2026-10-10, from a mockup). **Every chip
 sample works**, since a chip's edge says "click me" and a sample that
 ignored the click would teach the opposite; button samples are spans,
 since a button's look is the lesson and a sample that acted would need
-somewhere to go. Rejected: screenshots of the controls, which go stale
+somewhere to go; they take no pointer or hover tint, so they don't
+promise a click. Rejected: screenshots of the controls, which go stale
 the moment a role's tokens move, where live classes follow it.
 
 ### Semantics
@@ -971,7 +972,7 @@ the moment a role's tokens move, where live classes follow it.
   `data-delete-confirm` pairing; the chips' boxes sit in no form.
 - Some of a set: a click on light or amber turns all on, on dark all
   off (as Item 7). Cycle: the box's name is what its tick means
-  (as Item 8). Not set: amber, then "All", "Filter by Tag1" and back
+  (as Item 8). Not set: amber, then "All", "Filter using tags" and back
   to "Not set" (as the Band 1 link chips cycle).
 - Fixed: a `<label>` around a checked, disabled box, so a click
   changes nothing.
@@ -982,10 +983,25 @@ Taken 2026-10-10 at `879069ac`.
 
 - `app/web/templates/guide.html`, `app/web/views/_guide.py`
   (`SECTIONS`), `app/web/templates/base.html` (`.guide-controls-*`,
-  five rules), `tools/theme_customizer.html` (regenerated).
+  seven rules), `tools/theme_customizer.html` (regenerated).
 - `tests/integration/test_guide_scaffold.py` (`SECTION_HEADINGS`), one
   new browser test.
 - `grep -rln "guide-controls" spec/` → none; §6 and §9 gain a line.
+
+### Status — in progress
+
+One PR (#2949). The author saw the mockup and ruled on its shape (two
+columns, the title, live chips, operators only) before the build, so it
+stood in for the scaffold slice. **Reads:** one `spec-writer` verify
+(the Not set sample didn't cycle back; the Delete row and locked-card
+note overclaimed) and one `diff-reviewer` read ("dark is on" is false
+in dark theme, so the copy says solid blue and pale; the Not set
+sample's label is the real "Filter using tags"; the guard copy hedged
+to "most"; the CSS block split a comment). **Found, left for their own
+change:** Operator Settings' "Clear all settings" is destructive with
+no checkbox, against §4's delete-confirm standard; and the Band 1 link
+chips don't regain `pill-empty` when cycled back to "Not set", so they
+turn pale rather than amber.
 
 ### PR ladder
 

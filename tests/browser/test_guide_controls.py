@@ -57,7 +57,7 @@ def test_the_chip_samples_answer_a_click(page: Page) -> None:
     expect(unset).to_have_text("All")
     assert _bg(unset) == dark
     unset.press("Enter")
-    expect(unset).to_have_text("Filter by Tag1")
+    expect(unset).to_have_text("Filter using tags")
     unset.click()
     expect(unset).to_have_text("Not set")
     assert _bg(unset) == amber

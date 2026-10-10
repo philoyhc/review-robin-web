@@ -1059,12 +1059,6 @@
          the trailing paragraph margin needs clearing so the tile's
          padding is the only bottom space. */
       body.ui-v2 .subcard-row > .card > :last-child { margin-bottom: 0; }
-      /* Guide screencaps. The images are captured at the app's own width
-         and are far wider than the prose column, so they scale down and
-         the figure gets the border the screenshot itself does not have —
-         without it a white-backed capture bleeds into the page and the
-         reader cannot tell where the app stops. `max-width: 100%` plus
-         `height: auto` keeps the aspect ratio at every viewport. */
       /* The Guide's "Reading the controls" card: a sample column wide
          enough for two samples side by side, and the checkbox guard's
          demo with its button beside the sentence. */
@@ -1076,6 +1070,11 @@
       }
       body.ui-v2 .guide-controls-grid > div > h3:first-child {
         margin-top: 0;
+      }
+      /* The button samples are spans that act on nothing, so they
+         take no pointer and no hover tint, which would promise a click. */
+      body.ui-v2 .guide-controls-table span.btn {
+        pointer-events: none;
       }
       body.ui-v2 .guide-controls-table td:first-child {
         white-space: nowrap;
@@ -1089,6 +1088,12 @@
         align-items: center;
         gap: var(--space-3) var(--space-4);
       }
+      /* Guide screencaps. The images are captured at the app's own width
+         and are far wider than the prose column, so they scale down and
+         the figure gets the border the screenshot itself does not have —
+         without it a white-backed capture bleeds into the page and the
+         reader cannot tell where the app stops. `max-width: 100%` plus
+         `height: auto` keeps the aspect ratio at every viewport. */
       /* Guide screencaps are pictures OF this app, rendered INSIDE this
          app, so a bare bordered image reads as more page rather than as
          an illustration of one — the capture's own white ground runs
