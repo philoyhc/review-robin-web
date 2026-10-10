@@ -26,9 +26,10 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
-- None. (`guide/operator_pages_enhancements.md` Items 1–3 closed
-  2026-10-09 and `guide/ux_refinements.md` Items 1–9 closed 2026-10-10;
-  new items are added there.)
+- **UX refinements Item 10** — `guide/ux_refinements.md`: the Guide's
+  "Reading the controls" card, one PR. (`guide/operator_pages_enhancements.md`
+  Items 1–3 closed 2026-10-09; `guide/ux_refinements.md` Items 1–9
+  closed 2026-10-10.)
 
 ### Queued segments
 

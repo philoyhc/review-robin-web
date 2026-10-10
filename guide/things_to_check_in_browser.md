@@ -333,3 +333,16 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **Reload.** With a chip on its "with responses" label, reload: it
   comes back on that label, still dark, and its card's download still
   drops the empty rows.
+
+## The Guide's "Reading the controls" card (UX refinements Item 10)
+
+- [ ] **/guide, light and dark.** The card sits under "What Review
+  Robin Web does", Buttons and Checkbox guards on the left, Pills and
+  chips on the right; below 800px it stacks to one column.
+- [ ] **Every chip sample.** Email and Tag1 go dark and light; "Include
+  1 self review" goes dark (2), then light (0); "Include self reviews"
+  flips to "Exclude self reviews" and stays dark; "Not set" goes to
+  "All", then "Filter by Tag1"; "Observers" doesn't move and shows its
+  reason on hover.
+- [ ] **The guard.** "Delete all reviewers" is off until the box is
+  ticked, and clicking it does nothing.

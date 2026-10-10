@@ -1065,6 +1065,30 @@
          without it a white-backed capture bleeds into the page and the
          reader cannot tell where the app stops. `max-width: 100%` plus
          `height: auto` keeps the aspect ratio at every viewport. */
+      /* The Guide's "Reading the controls" card: a sample column wide
+         enough for two samples side by side, and the checkbox guard's
+         demo with its button beside the sentence. */
+      body.ui-v2 .guide-controls-grid {
+        margin-top: var(--space-4);
+      }
+      body.ui-v2 .guide-controls-grid > div {
+        min-width: 0;
+      }
+      body.ui-v2 .guide-controls-grid > div > h3:first-child {
+        margin-top: 0;
+      }
+      body.ui-v2 .guide-controls-table td:first-child {
+        white-space: nowrap;
+      }
+      body.ui-v2 .guide-controls-note {
+        margin-top: var(--space-3);
+      }
+      body.ui-v2 .guide-controls-demo {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-3) var(--space-4);
+      }
       /* Guide screencaps are pictures OF this app, rendered INSIDE this
          app, so a bare bordered image reads as more page rather than as
          an illustration of one — the capture's own white ground runs

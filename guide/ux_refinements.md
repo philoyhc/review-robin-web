@@ -940,3 +940,83 @@ naming the old checkbox, fixed. **Browser checks passed** (the author,
 - `spec/ui_elements.md` — §9's cycle standard and form-control list name the chip.
 - `guide/things_to_check_in_browser.md` — a section for the PR.
 
+
+---
+
+## Item 10 — The Guide's "Reading the controls" card
+
+### Opportunity
+
+The app's buttons, pills, chips and delete guards each follow one rule
+(`spec/ui_elements.md` §6, §9, §4's delete-confirm standard), but
+nothing tells an operator those rules exist. A first-time operator
+meets five chip types and five button colors with no key to them.
+
+### Decision
+
+A card on `/guide`, under "What Review Robin Web does", that samples
+each button role, each chip type and the delete guard on the app's own
+classes, in two columns: Buttons and Checkbox guards on the left, Pills
+and chips on the right (author, 2026-10-10, from a mockup). **Every chip
+sample works**, since a chip's edge says "click me" and a sample that
+ignored the click would teach the opposite; button samples are spans,
+since a button's look is the lesson and a sample that acted would need
+somewhere to go. Rejected: screenshots of the controls, which go stale
+the moment a role's tokens move, where live classes follow it.
+
+### Semantics
+
+- Operators only (author): `GuideSection("controls", OPERATOR)`.
+- Nothing posts. The guard's button is `type="button"` on the app-wide
+  `data-delete-confirm` pairing; the chips' boxes sit in no form.
+- Some of a set: a click on light or amber turns all on, on dark all
+  off (as Item 7). Cycle: the box's name is what its tick means
+  (as Item 8). Not set: amber, then "All" ↔ "Filter by Tag1", never
+  back to unset (as the Band 1 link chips).
+- Fixed: a `<label>` around a checked, disabled box, so a click
+  changes nothing.
+
+### Blast radius (measured)
+
+Taken 2026-10-10 at `879069ac`.
+
+- `app/web/templates/guide.html`, `app/web/views/_guide.py`
+  (`SECTIONS`), `app/web/templates/base.html` (`.guide-controls-*`,
+  five rules), `tools/theme_customizer.html` (regenerated).
+- `tests/integration/test_guide_scaffold.py` (`SECTION_HEADINGS`), one
+  new browser test.
+- `grep -rln "guide-controls" spec/` → none; §6 and §9 gain a line.
+
+### PR ladder
+
+1. **The card.** Markup, chip script, CSS, tests, the spec line. The
+   mockup was the scaffold (`CLAUDE.md` "scaffold-first"), its shape
+   ruled on before the build. One code slice outside a ladder, so it
+   takes its own `diff-reviewer` read; `spec-writer` because it touches
+   `spec/`.
+
+### Definition of done
+
+- The card renders for an operator, after "What Review Robin Web does";
+  `test_guide_scaffold.py` lists it.
+- `tests/browser/test_guide_controls.py` drives every chip sample and
+  the guard.
+- `guide/things_to_check_in_browser.md` has a section for the PR.
+- `### Doc impact` current; `spec-writer` flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- None. Title "Reading the controls", live chips and operators only
+  were the author's (2026-10-10).
+
+### Out of scope
+
+- Icon buttons, the in-page view tabs and the lifecycle badges beyond
+  one Draft pill.
+- A Guide screencap of the card: the card is live markup.
+
+### Doc impact
+
+- `spec/ui_elements.md` — §6 and §9 note that the Guide's "Reading the controls" card samples every role and chip type, so a new one is added there too.
+- `guide/things_to_check_in_browser.md` — a section for the PR.

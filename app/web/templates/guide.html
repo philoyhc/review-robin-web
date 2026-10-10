@@ -50,6 +50,170 @@
   </div>
   {% endif %}
 
+  {% if "controls" in visible_sections %}
+  {# UX refinements Item 10. One sample of every button role
+     (spec/ui_elements.md §6), every chip type (§9 "Five chip types") and
+     the delete-confirm guard (§4), on the classes the app itself uses, so
+     a change to a role's look reaches this card with no edit here. Every
+     chip sample works: a chip's blue edge says "click me", and a sample
+     that ignored the click would teach the opposite. Nothing posts. #}
+  <div class="card" id="guide-controls">
+    <h2>Reading the controls</h2>
+    <p>
+      Each kind of control looks the same on every page, so once you know
+      these few you can read any page at a glance.
+    </p>
+
+    <div class="page-grid guide-controls-grid">
+      <div>
+        <h3>Buttons</h3>
+        <div class="table-scroll">
+          <table class="guide-controls-table">
+            <thead>
+              <tr><th>Looks like</th><th>Means</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="btn">Activate</span></td>
+                  <td><strong>The main step</strong> on this part of the page. There is at most one.</td></tr>
+              <tr><td><span class="btn secondary">Save</span></td>
+                  <td><strong>An everyday action</strong>: save, upload, cancel, view.</td></tr>
+              <tr><td><span class="btn destructive">Delete</span></td>
+                  <td><strong>Deletes data for good.</strong> It stays off until you tick the box beside it (below).</td></tr>
+              <tr><td><span class="btn danger-solid">Archive session</span></td>
+                  <td><strong>Serious but recoverable</strong>, such as archiving a session.</td></tr>
+              <tr><td><span class="btn alert">Revert to draft</span></td>
+                  <td><strong>Unlocks a locked card</strong>, in the card's own amber.</td></tr>
+              <tr><td><span class="btn">R</span> <span class="btn secondary">R</span></td>
+                  <td><strong>A switch on one row</strong> of the Instruments page: R (required), ≡ (help text), ⑂ (branch). Dark is on.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Checkbox guards</h3>
+        <p>
+          A step that can't be undone sits behind a checkbox that says
+          exactly what will happen. Its button stays off until you tick the
+          box. Try it; nothing is deleted.
+        </p>
+        <div class="guide-controls-demo">
+          <label class="confirm-label">
+            <input type="checkbox" data-delete-confirm="guide-demo" autocomplete="off">
+            <span>Yes, delete the existing <span class="pill pill-empty">12 reviewers</span>.</span>
+          </label>
+          <button class="btn destructive" type="button" data-delete-btn="guide-demo"
+                  disabled aria-disabled="true">Delete all reviewers</button>
+        </div>
+      </div>
+
+      <div>
+        <h3>Pills and chips</h3>
+        <p>
+          A <strong>pill</strong> states a fact, and clicking it does
+          nothing. A <strong>chip</strong> is a switch: it has a blue edge,
+          and clicking it changes something. The chips here work, so try
+          each one; nothing is saved.
+        </p>
+        <div class="table-scroll">
+          <table class="guide-controls-table">
+            <thead>
+              <tr><th>Looks like</th><th>Means</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="pill pill-count">12 reviewers</span> <span class="pill pill-lifecycle-draft">Draft</span></td>
+                  <td><strong>A pill</strong>: a count, a type or a status.</td></tr>
+              <tr><td><label class="pill pill-count tag-chip"><input type="checkbox" class="visually-hidden" checked autocomplete="off">Email</label>
+                      <label class="pill pill-count tag-chip"><input type="checkbox" class="visually-hidden" autocomplete="off">Tag1</label></td>
+                  <td><strong>On or off.</strong> Dark is on, light is off.</td></tr>
+              <tr><td><label class="pill pill-count tag-chip pill-empty" data-guide-partial-chip data-total="2" data-on="1"><input type="checkbox" class="visually-hidden" autocomplete="off" aria-label="Include 1 self review, some"><span data-guide-chip-label>Include 1 self review</span></label></td>
+                  <td><strong>Some of a set.</strong> Dark when all are on, light when none, amber when some.</td></tr>
+              <tr><td><label class="pill pill-count tag-chip is-selected" data-guide-cycle-chip><input type="checkbox" class="visually-hidden" autocomplete="off" aria-label="Exclude self reviews"><span data-guide-chip-label>Include self reviews</span></label></td>
+                  <td><strong>A choice between named options.</strong> Always dark; the label says which is chosen, and a click moves to the next.</td></tr>
+              <tr><td><span class="pill pill-empty tag-chip is-unset" data-guide-unset-chip
+                            role="button" tabindex="0" aria-pressed="mixed">Not set</span></td>
+                  <td><strong>Not chosen yet.</strong> Amber until you pick an option.</td></tr>
+              <tr><td><label class="pill pill-count tag-chip is-fixed" title="The session has observers, so the tab stays on."><input type="checkbox" class="visually-hidden" checked disabled autocomplete="off">Observers</label></td>
+                  <td><strong>Held where it is.</strong> The lock says it can't change now, usually because data depends on it; hover for why.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted guide-controls-note">
+          On a locked card the chips show their values as plain pills. The
+          card says what unlocks it.
+        </p>
+      </div>
+    </div>
+  </div>
+  <script>
+    /* The three chip samples whose label or fill moves with a click. The
+       on/off pair needs no script: `.tag-chip:has(> input:checked)` fills
+       them off the box, as it does everywhere else. */
+    (function () {
+      var card = document.getElementById("guide-controls");
+      if (!card) return;
+
+      // Some of a set: a click on light or amber turns all on, a click on
+      // dark turns all off, as on the Assignments page.
+      var partial = card.querySelector("[data-guide-partial-chip]");
+      if (partial) {
+        var partialBox = partial.querySelector("input");
+        var partialLabel = partial.querySelector("[data-guide-chip-label]");
+        var total = Number(partial.getAttribute("data-total"));
+        var paintPartial = function (on) {
+          partial.setAttribute("data-on", String(on));
+          var some = on > 0 && on < total;
+          partial.classList.toggle("pill-empty", some);
+          partialBox.checked = on === total;
+          partialBox.indeterminate = some;
+          var text = "Include " + on + " self review" + (on === 1 ? "" : "s");
+          partialLabel.textContent = text;
+          partialBox.setAttribute("aria-label",
+            text + ", " + (some ? "some" : on === total ? "all" : "none"));
+        };
+        paintPartial(Number(partial.getAttribute("data-on")));
+        partialBox.addEventListener("change", function () {
+          var on = Number(partial.getAttribute("data-on"));
+          paintPartial(on === total ? 0 : total);
+        });
+      }
+
+      // A choice between named options: always dark, the label moves.
+      var cycle = card.querySelector("[data-guide-cycle-chip]");
+      if (cycle) {
+        var cycleBox = cycle.querySelector("input");
+        var cycleLabel = cycle.querySelector("[data-guide-chip-label]");
+        // The box's name is what its tick means, as on the Instruments
+        // card: ticked is "Exclude".
+        cycleBox.addEventListener("change", function () {
+          cycleLabel.textContent = cycleBox.checked
+            ? "Exclude self reviews" : "Include self reviews";
+        });
+      }
+
+      // Not chosen yet: amber "Not set", then the named options in turn,
+      // never back to unset, as the Instruments page's link chips do.
+      var unset = card.querySelector("[data-guide-unset-chip]");
+      if (unset) {
+        var options = ["All", "Filter by Tag1"];
+        var step = -1;
+        var advance = function () {
+          step = (step + 1) % options.length;
+          unset.textContent = options[step];
+          unset.classList.remove("pill-empty", "is-unset");
+          unset.classList.add("is-selected");
+          unset.setAttribute("aria-pressed", step === 1 ? "true" : "false");
+        };
+        unset.addEventListener("click", advance);
+        unset.addEventListener("keydown", function (event) {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            advance();
+          }
+        });
+      }
+    })();
+  </script>
+  {% endif %}
+
   {% if "create_and_set_up" in visible_sections %}
   <div class="card" id="guide-create_and_set_up">
     <h2>Create and set up a session</h2>
