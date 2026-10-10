@@ -1028,8 +1028,9 @@ stub).
    and §9's "every switchable sample working", with the click checks in
    `guide/things_to_check_in_browser.md`. Takes its own `diff-reviewer`
    read.
-3. **The button samples** (#2951; author, 2026-10-10). Hover, and one
-   live R (the Decision's note). Takes its own `diff-reviewer` read.
+3. **The button samples** (#2951; author, 2026-10-10). Hover, one live
+   R (the Decision's note), and a tooltip on every sample saying what it
+   is and what a click does. Takes its own `diff-reviewer` read.
 
 ### Definition of done
 

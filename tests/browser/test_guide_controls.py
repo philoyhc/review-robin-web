@@ -92,3 +92,20 @@ def test_the_delete_guard_turns_its_button_on(page: Page) -> None:
     expect(button).to_be_enabled()
     card.locator('[data-delete-confirm="guide-demo"]').uncheck()
     expect(button).to_be_disabled()
+
+
+def test_every_sample_has_a_tooltip(page: Page) -> None:
+    """Each button, pill and chip sample, and the guard's box and button,
+    says on hover what it is (the author, 2026-10-10)."""
+    page.goto("/guide")
+    samples = page.locator(
+        "#guide-controls .guide-controls-table td:first-child > *,"
+        " #guide-controls .guide-controls-demo input,"
+        " #guide-controls .guide-controls-demo .pill,"
+        " #guide-controls .guide-controls-demo button"
+    )
+    count = samples.count()
+    assert count == 17
+    for i in range(count):
+        title = samples.nth(i).get_attribute("title")
+        assert title and title.strip(), samples.nth(i).inner_text()
