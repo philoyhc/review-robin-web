@@ -418,7 +418,7 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   observers), once the corresponding roster has rows
   (`has_relationships` / `has_observers`), mirroring the service-layer
   guard against orphaning data. Such a chip is a fixed switch
-  (`.tag-chip.is-fixed`, `spec/ui_elements.md` §9): dark, with no edge
+  (`.tag-chip.is-fixed`, `spec/ui_elements.md` §9): solid, with no edge
   or pointer and a lock glyph.
 
 **Edit affordance behavior:**

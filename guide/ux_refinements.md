@@ -1018,8 +1018,10 @@ merged card, and the guard tooltip needed a follow-up.
   chips ignore Enter and Space.
 - **Close `spec-writer` pass:** §9's Fill column said dark/light, which
   is backwards in dark theme; it now reads solid/faint with the tokens,
-  and the four specs citing it (`email_template_editor.md`,
-  `extract_data.md`, `instruments.md`, `sessions_overview.md`) follow.
+  and the specs describing chips by it (`assignments.md`,
+  `email_template_editor.md`, `extract_data.md`, `instruments.md`,
+  `session_home.md`, `sessions_overview.md`) follow; Codex on #2955
+  found the two the pass missed.
 - **Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
@@ -1060,7 +1062,7 @@ merged card, and the guard tooltip needed a follow-up.
 ### Doc impact
 
 - `spec/ui_elements.md` — §6 and §9 note that the Guide's "Reading the controls" card samples every role and chip type, so a new one is added there too.
-- `spec/email_template_editor.md`, `spec/extract_data.md`, `spec/instruments.md`, `spec/sessions_overview.md` — "dark" chips read "solid", after §9's Fill column (found at the close).
+- `spec/assignments.md`, `spec/email_template_editor.md`, `spec/extract_data.md`, `spec/instruments.md`, `spec/session_home.md`, `spec/sessions_overview.md` — "dark" / "light" chips read "solid" / "faint", after §9's Fill column (found at the close).
 - `guide/things_to_check_in_browser.md` — a section for the PR.
 
 ---
