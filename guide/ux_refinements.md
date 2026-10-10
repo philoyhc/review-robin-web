@@ -14,6 +14,11 @@ New items go at the end, numbered on, in the item shape of
 `guide/segment_plan_template.md`, each with its own `### Doc impact` and
 `### Status`.
 
+**Items 1–9 closed 2026-10-10.** The close's `spec-writer` pass found
+the doc-impact specs current apart from five control words still naming
+a checkbox or toggle and four ruling attributions in contract prose,
+all fixed in the close.
+
 **Build order** (author, 2026-10-10): Item 3, then Item 2, then Item 1.
 Item 1's PR 1 needs Item 2's fixed chip; Item 3 depends on neither, and
 landing it first gets its edits to the Instruments template in before
