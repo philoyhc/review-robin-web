@@ -83,6 +83,26 @@ def test_join_and_detach_move_a_field_in_and_out_of_a_branch(
     expect(_conditions(card)).to_have_count(0)
 
 
+def test_join_is_off_under_a_plain_field_and_only_joins_a_branch(
+    page: Page, new_session: Callable[[], int]
+) -> None:
+    """guide/ux_refinements.md Item 3: ↰ never starts a branch; ⑂ does."""
+    card = open_unlocked(page, new_session())
+    comments = rows(card).filter(has=page.locator("[data-new-model-rf-name][value=Comments]"))
+    join = comments.locator("[data-new-model-rf-join]")
+    # The field above is a plain Integer: no branch ends above Comments.
+    expect(join).to_be_disabled()
+    expect(join).to_have_attribute("title", "No branch ends directly above")
+    expect(_conditions(card)).to_have_count(0)
+
+    rows(card).first.locator("[data-new-model-rf-fork]").click()
+    expect(join).to_be_enabled()
+    expect(join).to_have_attribute("title", "Join the branch above")
+    join.click()
+    expect(comments).to_have_attribute("data-new-model-rf-governed", "true")
+    expect(_conditions(card)).to_have_count(1)
+
+
 def test_list_conditions_offer_is_and_is_not_and_name_a_missing_option(
     page: Page, new_session: Callable[[], int]
 ) -> None:

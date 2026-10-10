@@ -409,8 +409,9 @@ wrote" card repaint on a Band 3 Visibility edit. Item 6 put a `*` on the
 Required pill, refused fractional Integer bounds and printed Decimal
 bounds as entered. Item 7 moved the visibility editor into Band 2's "Who
 can see what you wrote" card. Item 8 moved display fields from Band 2's
-pills to a table in Band 3's left column. Item 10 added branching: ⑂ or
-↰ puts optional governed fields under a number or List field, shown on
+pills to a table in Band 3's left column. Item 10 added branching: ⑂ puts
+optional governed fields under a number or List field (↰ joins more
+fields to its branch), shown on
 the reviewer surface only while the parent's answer meets a condition. Item 12
 added ranges to a number's condition: within or outside two ends,
 inclusive or exclusive.

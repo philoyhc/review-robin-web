@@ -331,6 +331,22 @@ Taken 2026-10-10 at `4d993658`.
 | Browser tests driving ↰ | 1 file; it joins an existing branch, so it is unaffected | `grep -rln "data-new-model-rf-join" tests/browser` |
 | Spec paragraphs | 1 | `grep -n "a new branch with an empty condition" spec/instruments.md` |
 
+### Status
+
+- **Built 2026-10-10** in one PR, as planned. `newModelRfSyncJoin`'s
+  plain-unit-above branch becomes "No branch ends directly above", off;
+  `newModelRfJoin` returns unless a branch ends above. The new-row
+  template's ↰ title reads "Join the branch above". A browser test finds
+  ↰ off under a plain Integer field, then on after ⑂, and joining; it
+  fails without the change.
+- **Found at build:** the blast radius missed a second test pinning the
+  old path (`test_builder_adjustments_12a` counts `newModelRfSyncJoin`'s
+  `set()` calls, 13 → 11) and a second spec (`spec/operator_button_audit.md`
+  #245), both fixed; `spec/instruments.md` also gains ↰'s name condition.
+- **Reads:** one `diff-reviewer` read (no behavior defects; stale
+  comments, a redundant local, this record and a live guide line fixed)
+  and a `spec-writer` verify pass (the two misses above).
+
 ### PR ladder
 
 1. **↰ only joins.** `newModelRfSyncJoin` drops the plain-field-above
@@ -364,4 +380,5 @@ Taken 2026-10-10 at `4d993658`.
 ### Doc impact
 
 - `spec/instruments.md` — "Join (↰) and detach (↳)": ↰ joins a branch that ends directly above, and is off otherwise; ⑂ is the only way to start one.
+- `spec/operator_button_audit.md` — row #245: ↰ joins the branch above and never starts one (found at build).
 - `guide/things_to_check_in_browser.md` — a section for the PR.
