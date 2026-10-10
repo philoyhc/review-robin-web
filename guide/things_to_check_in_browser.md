@@ -373,7 +373,7 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **Locked card.** The chip is a plain pill like Band 3's, and
   "Include self reviews" is not faded.
 
-## The Emails page's confirmation chip (UX refinements Item 9)
+## The Email Template page's confirmation chip (UX refinements Item 9)
 
 - [ ] **Emails, Responses received tab.** Under the heading, a dark chip
   reads "Send response confirmation"; the old checkbox and its "Default

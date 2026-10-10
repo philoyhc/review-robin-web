@@ -1,4 +1,4 @@
-"""The Emails page's response-confirmation chip (guide/ux_refinements.md
+"""The Email Template page's response-confirmation chip (guide/ux_refinements.md
 Item 9): a cycle chip under the "Responses received email" heading, always
 dark, reading "Send response confirmation" or "Don't send response
 confirmation", saved with the composer.

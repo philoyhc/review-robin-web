@@ -86,7 +86,7 @@ or `session.observers_enabled`. The operator sets these toggles via
 the **User interface settings** card on the Create Session form or the
 **Optional setup tabs and pages** field of Session Home's `#session-config` card.
 
-The URL slug is `setup-invite`; the page's name is **Email Template**. The two differ and the slug stays — it is in operator bookmarks and in the route table — so prose naming the page uses the name, not the slug. The page houses the email-template editor: per-template overrides for Invitation / Reminder / Responses-received emails, with merge-tag reference, per-field reset, and a "Send confirmation when a reviewer submits?" toggle. The run-time invitation management lives in the Operations Page below.
+The URL slug is `setup-invite`; the page's name is **Email Template**. The two differ and the slug stays — it is in operator bookmarks and in the route table — so prose naming the page uses the name, not the slug. The page houses the email-template editor: per-template overrides for Invitation / Reminder / Responses-received emails, with merge-tag reference, per-field reset, and a "Send / Don't send response confirmation" chip on the Responses received tab. The run-time invitation management lives in the Operations Page below.
 
 **Relationships** carries pair-level context — the `relationships` table. Reviewer × reviewee rows carry three `tag_N` slots consumed by the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names, plus an `active` / `inactive` status. The page mirrors the other roster pages — CSV upload behind the Unlock panel, preview table with per-row authoring and its `Show columns:` chips, Danger Zone.
 

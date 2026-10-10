@@ -900,11 +900,11 @@ Taken 2026-10-10 at `c8343bf3`.
 
 ---
 
-## Item 9 — The Emails page's send-on-submit checkbox becomes a chip
+## Item 9 — The Email Template page's send-on-submit checkbox becomes a chip
 
 ### Opportunity
 
-The 2026-10-10 checkbox sweep: the Emails page's Responses received tab
+The 2026-10-10 checkbox sweep: the Email Template page's Responses received tab
 carries a checkbox, "Send this confirmation when a reviewer submits.",
 with a help line under it ("Default is on. Uncheck to suppress …").
 Both choices are positive ones, drawn as a checkbox.

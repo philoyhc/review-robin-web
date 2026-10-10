@@ -670,17 +670,20 @@ Three rules make that work:
   `.is-fixed` (below) are; a
   chip that says it cannot be clicked must not also say it can.
 
-**A chip can be a form control.** Session Home's optional-tab chips
-(`spec/session_home.md`) and the Instruments display-field and
-response-field name chips (`spec/instruments.md` "Display-field table",
-"Response fields"), and the Assignments status table's instrument-name
-and self-review chips (`spec/assignments.md` "Per-instrument status
-table"), the Instruments card's Band 1 self-review chip
-(`spec/instruments.md` "Self-review exclusion"), and the Emails page's
-response-confirmation chip (`spec/email_template_editor.md`), are each a
-`<label
-class="pill pill-count tag-chip">` around a visually hidden checkbox, so
-a click ticks the box and the form or row script reads it. `.tag-chip:has(> input:checked)` is the
+**A chip can be a form control**: a `<label class="pill pill-count
+tag-chip">` around a visually hidden checkbox, so a click ticks the box
+and the form or row script reads it. The ones that are:
+
+- Session Home's optional-tab chips (`spec/session_home.md`);
+- the Instruments display-field and response-field name chips
+  (`spec/instruments.md` "Display-field table", "Response fields"), and
+  the card's Band 1 self-review chip ("Self-review exclusion");
+- the Assignments status table's instrument-name and self-review chips
+  (`spec/assignments.md` "Per-instrument status table");
+- the Email Template page's response-confirmation chip
+  (`spec/email_template_editor.md`).
+
+`.tag-chip:has(> input:checked)` is the
 `.is-selected` fill, read off the box itself, so a form reset repaints
 the chip with no script; the hidden box's keyboard focus shows as a
 `--focus-ring` outline on the chip. **`.tag-chip.is-locked`** is the
@@ -712,7 +715,7 @@ its fill; a fixed switch keeps the fill of the state it is held at:
 |---|---|---|---|
 | **On/off** | selected, not selected; the label doesn't change | dark (`--selected-bg`) when on, light when off | the Setup pages' column chips |
 | **On/off with a partial state** | all, none, or some of a set; the label counts how many are on | dark when all, light when none, amber (`pill-empty`) when some; a click on light or amber turns all on | the Assignments page's "Include N self reviews" |
-| **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always dark (on a locked Instruments card, the plain pill, unfaded) | Extract's Data shaper "All rows ↔ Rows with data"; the Instruments card's "Include ↔ Exclude self reviews"; the Emails page's "Send ↔ Don't send response confirmation" |
+| **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always dark (on a locked Instruments card, the plain pill, unfaded) | Extract's Data shaper "All rows ↔ Rows with data"; the Instruments card's "Include ↔ Exclude self reviews"; the Email Template page's "Send ↔ Don't send response confirmation" |
 | **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, dark otherwise | the Instruments page's Band 1 link chips |
 | **Fixed** | one switch held at its value while the chips beside it stay live | its siblings' fill for the held state (dark when on), with no edge or pointer and a lock glyph before the label (`.tag-chip.is-fixed`) | Session Home's optional tab once it holds data |
 
