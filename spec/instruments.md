@@ -605,7 +605,9 @@ again.
 
 **Look and keys.** `Not set` is amber (`pill-empty`) whichever state
 the pill rendered in, and a set state wears the selected fill
-(`spec/ui_elements.md` §9, "Cycle with an unset state"). The pill is a
+(`spec/ui_elements.md` §9, "Cycle with an unset state"); on a locked
+card a set pill reads as the plain display pill, with no edge or
+pointer, and `Not set` stays amber. The pill is a
 `role="button"` span, so Enter and Space advance it as a click does.
 
 **Disabled state.** When the session has no usable tags for a

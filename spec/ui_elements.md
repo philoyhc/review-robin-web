@@ -698,10 +698,11 @@ and the pointer like `is-disabled`, but is not struck through, because
 it still says on or off. On takes the card's display-value colors
 (`--config-value-bg` / `--config-value-fg`) rather than the reserved
 shade; off is faded. **A locked Instruments card's chips read as plain
-`pill-count` pills**, Band 3's and Band 1's
-self-review chip alike: no edge, pointer or lock glyph, an unticked
-field faded (a cycle chip names its state and is not faded), read off
-the card's
+`pill-count` pills**, Band 3's, Band 1's
+self-review chip and Band 1's three link chips alike: no edge, pointer
+or lock glyph, an unticked field faded (a cycle chip names its state
+and is not faded; a link chip on "Not set" keeps its amber, a status),
+read off the card's
 `data-instrument-locked` so an in-page lock or unlock repaints them.
 
 `.severity-chip` on Validate is the shape this generalises: an outlined
@@ -728,7 +729,7 @@ new type adds a row there too:
 | **On/off** | selected, not selected; the label doesn't change | solid when on, faint when off | the Setup pages' column chips |
 | **On/off with a partial state** | all, none, or some of a set; the label counts how many are on | solid when all, faint when none, amber (`pill-empty`) when some; a click on faint or amber turns all on | the Assignments page's "Include N self reviews" |
 | **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always solid (on a locked Instruments card, the plain pill, unfaded) | Extract's Data shaper "All rows ↔ Rows with data"; the Instruments card's "Include ↔ Exclude self reviews"; the Email Template page's "Send ↔ Don't send response confirmation" |
-| **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, solid otherwise | the Instruments page's Band 1 link chips |
+| **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, solid otherwise (on a locked Instruments card, the plain pill when set; amber stays) | the Instruments page's Band 1 link chips |
 | **Fixed** | one switch held at its value while the chips beside it stay live | its siblings' fill for the held state (solid when on), with no edge or pointer and a lock glyph before the label (`.tag-chip.is-fixed`) | Session Home's optional tab once it holds data |
 
 A fixed switch keeps its siblings' solid fill so it reads as a switch
