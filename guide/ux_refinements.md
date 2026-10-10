@@ -32,7 +32,8 @@ and the author ruled that the two sets should match (2026-10-09).
 Both sides become type 1 chips that wrap the existing checkbox:
 
 - **Display fields:** the label pill becomes the chip and the checkbox
-  column goes. Name and Email keep the locked chip treatment.
+  column goes. ~~Name and Email keep the locked chip treatment.~~ Name
+  and Email are fixed-on chips (Item 2, revised 2026-10-09).
 - **Response fields:** the Active checkbox becomes a chip labeled with
   the field's name, mirrored live from the name box, left-aligned in its
   cell and capped at about the width of a "Comments  " chip. A longer
@@ -56,14 +57,15 @@ Both sides become type 1 chips that wrap the existing checkbox:
   label, the same default the name box shows muted.
 - **A locked card** stays inert as today; its chips show state and
   don't respond to clicks.
-- **Fields a group row can't show** keep their disabled state, shown as
-  an `is-disabled` chip.
+- **Fields a group row can't show** keep their disabled checkbox, and
+  so show as fixed-off chips (Item 2).
 - **A disabled checkbox shows on its chip whenever it is disabled**,
   including after load: `newModelRfRecomputeActionStates` disables a
   governed field's Active when its parent is unticked, and re-enables it
   after. The chip reads that from the input with a CSS rule on
-  `label.tag-chip:has(> input:disabled)` (no edge, no pointer), so no
-  script has to keep a class in step (Codex on #2930).
+  `label.tag-chip:has(> input:disabled)` (no edge, no pointer, and
+  Item 2's lock glyph: the fixed-off look), so no script has to keep a
+  class in step (Codex on #2930).
 
 ### Judgment calls — decided
 
@@ -86,8 +88,11 @@ Taken 2026-10-09 at `2569876a`.
 ### PR ladder
 
 1. **Display fields chips.** The label pill wraps the checkbox and the
-   checkbox column goes. Name and Email take `is-locked`; group-hidden
-   fields take `is-disabled`. A browser test toggles a field through its
+   checkbox column goes. ~~Name and Email take `is-locked`; group-hidden
+   fields take `is-disabled`.~~ Name and Email take Item 2's fixed-on
+   chip, and the `:has(> input:disabled)` rule gives group-hidden fields
+   the fixed-off look, glyph included (revised for Item 2; this rung
+   follows Item 2's PR 1). A browser test toggles a field through its
    chip and checks the fill. `spec/instruments.md` (Display fields row
    list) updated.
 2. **Response fields name chips.** The Active checkbox becomes a name
@@ -95,8 +100,8 @@ Taken 2026-10-09 at `2569876a`.
    minimum width. A browser test renames a field and checks the chip
    follows, and toggles a field with responses to confirm the confirm
    still fires, and unticks a parent to check its governed fields'
-   chips lose the edge and the pointer and come back when it is ticked
-   again. `spec/instruments.md` (Response fields table) and
+   chips take the fixed-off look (no edge or pointer, lock glyph) and
+   come back when it is ticked again. `spec/instruments.md` (Response fields table) and
    `spec/ui_elements.md` (`rf-table`, `rf-active-cell`) updated. The
    item's cumulative `diff-reviewer` read runs here, from the main SHA
    before PR 1.
