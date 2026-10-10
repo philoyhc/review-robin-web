@@ -1522,16 +1522,14 @@
              mode is not the operator's to choose, so it is a cycle chip
              held at its value — the dark fill of the chips beside it, no
              edge or pointer, a lock glyph (``is-fixed``,
-             spec/ui_elements.md §9) — and no role or handler. History: a
-             label, not a control (19J.7 rung 1). This macro used to
-             carry ``tag-chip is-selected`` — the *identical* class string
-             to ``b3_mode_cycle`` below it, so the five fixed cells were
-             indistinguishable from the clickable ones, and ``tag-chip``'s
-             ``cursor: pointer`` aimed the one affordance the pill
-             vocabulary has at the cells that do nothing. Dropping the two
-             classes also takes the reserved accent shade
-             (``is-selected`` → ``--selected-bg``) off an inert element,
-             which is the rule the rest of Item 7 builds on. #}
+             spec/ui_elements.md §9) — and no role or handler. History:
+             19J.7 rung 1 made it a plain label, because it then carried
+             ``tag-chip is-selected``, the *identical* class string to
+             ``b3_mode_cycle`` below it, so the fixed cells (five, in Band
+             3's table then) were indistinguishable from the clickable
+             ones. ``is-fixed`` brings the dark fill back as a ruled
+             exception (spec/color_tokens.md) and tells the cells apart
+             by edge, pointer and glyph instead. #}
           {% macro b3_static_pill(label) %}
             <span class="pill pill-count tag-chip is-fixed"
                   title="Fixed">{{ label }}</span>

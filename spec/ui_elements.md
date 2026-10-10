@@ -666,7 +666,8 @@ Three rules make that work:
   `border-width`, so a chip is exactly as tall
   as the status label beside it and adding an edge reflows nothing.
 - **`.tag-chip.is-disabled` cancels the edge.** It sets
-  `cursor: default` and is an inert chip, as `.is-locked` (below) is; a
+  `cursor: default` and is an inert chip, as `.is-locked` and
+  `.is-fixed` (below) are; a
   chip that says it cannot be clicked must not also say it can.
 
 **A chip can be a form control.** Session Home's optional-tab chips
@@ -687,11 +688,13 @@ pill, with `.active` taking the shade on its border and text.
 
 `.is-selected` is unchanged — a solid `--selected-bg` fill, which is how
 a chip says its filter is on, and it reaches the reserved shade only on
-controls: a locked chip may carry it to say "on", and
+controls (a fixed switch, `.tag-chip.is-fixed`, is the one inert
+exception): a locked chip may carry it to say "on", and
 `.tag-chip.is-locked.is-selected` repaints it in the display-value
 colors.
 
-**Three chip types, one look each.** What a chip's states mean decides its fill:
+**Four chip types, one look each.** What a chip's states mean decides
+its fill; a fixed switch has no states, so it keeps its siblings':
 
 | Type | States | Fill | Standard |
 |---|---|---|---|
@@ -711,14 +714,15 @@ The lobby's AND/OR and Select all / Clear all chips, and the Archived
 page's Select all / Clear all, are cycle chips (`.tag-mode-chip`,
 `.pill-tag-clear` take `--selected-bg` / `--selected-fg` outright).
 Select all / Clear all is the edge case whose label names the next click
-rather than a state. The Instruments Visibility cells are cycle chips
-too, "—" being a deliberate off. So are Extract's three empty-row chips
+rather than a state. The Instruments Visibility cells that can change
+are cycle chips too, "—" being a deliberate off. So are Extract's three empty-row chips
 ("All reviewers ↔ Reviewers with responses" and its two siblings), which
 keep `is-selected` on in both labels (`spec/extract_data.md`).
 `tests/browser/test_cycle_chips.py` pins the lobby, Archived and Extract
 fills;
 `tests/integration/test_chip_edge.py` pins the edge treatment;
-`tests/unit/test_reserved_shade.py` keeps the shade off anything static.
+`tests/unit/test_reserved_shade.py` keeps the shade off anything static
+except `.tag-chip.is-fixed`.
 
 > **Lifecycle badges** — one `.pill-lifecycle-*` set covers all five
 > states, each on its own token pair so a state's colour can move without
