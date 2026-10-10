@@ -390,10 +390,16 @@ Shipped as planned in one PR (↰ off under a plain field; the blast
 radius missed `test_builder_adjustments_12a` and
 `spec/operator_button_audit.md` #245, both fixed), then **reversed the
 same day** by the author: ⑂ adds a field row and ↰'s fork doesn't, which
-the Decision's "duplicates ⑂" missed. One PR restored the fork on Item
-1's layout, keeping ↰'s name condition. One `diff-reviewer` read and one
-`spec-writer` verify on the first PR. **Browser checks passed** (the
-author, 2026-10-10).
+the Decision's "duplicates ⑂" missed. The restore put the fork back on
+Item 1's layout, keeping ↰'s name condition, and rode in #2941 with
+Item 5. **Reads:** two `diff-reviewer` reads and two `spec-writer`
+verifies, one of each on the first PR and on the restore. The restore's
+found lines Item 3 had changed that it hadn't put back (the
+`guide/README.md` row, `guide/todo_master.md`, the post-Azure
+checklist's Item 10, a template comment, Item 3's Doc impact and
+Definition of done), the String-or-unnamed off states missing from the
+specs, and a title and a bar class no test pinned; all fixed in the
+restore. **Browser checks passed** (the author, 2026-10-10).
 
 ### PR ladder
 
