@@ -970,8 +970,8 @@ the moment a role's tokens move, where live classes follow it.
 - Operators only (author): `GuideSection("controls", OPERATOR)`.
 - Nothing posts. The guard's button is `type="button"` on the app-wide
   `data-delete-confirm` pairing; the chips' boxes sit in no form.
-- Some of a set: a click on light or amber turns all on, on dark all
-  off (as Item 7). Cycle: the box's name is what its tick means
+- Some of a set: a click on faint or amber turns all on, on solid blue
+  all off (as Item 7). Cycle: the box's name is what its tick means
   (as Item 8). Not set: amber, then "All", "Filter using tags" and back
   to "Not set" (as the Band 1 link chips cycle).
 - Fixed: a `<label>` around a checked, disabled box, so a click
@@ -983,7 +983,7 @@ Taken 2026-10-10 at `879069ac`.
 
 - `app/web/templates/guide.html`, `app/web/views/_guide.py`
   (`SECTIONS`), `app/web/templates/base.html` (`.guide-controls-*`,
-  seven rules), `tools/theme_customizer.html` (regenerated).
+  six rules at the stamp, seven after the cold read), `tools/theme_customizer.html` (regenerated).
 - `tests/integration/test_guide_scaffold.py` (`SECTION_HEADINGS`), one
   new browser test.
 - `grep -rln "guide-controls" spec/` → none; §6 and §9 gain a line.
@@ -995,13 +995,16 @@ columns, the title, live chips, operators only) before the build, so it
 stood in for the scaffold slice. **Reads:** one `spec-writer` verify
 (the Not set sample didn't cycle back; the Delete row and locked-card
 note overclaimed) and one `diff-reviewer` read ("dark is on" is false
-in dark theme, so the copy says solid blue and pale; the Not set
+in dark theme, so the copy says solid blue and faint; the Not set
 sample's label is the real "Filter using tags"; the guard copy hedged
 to "most"; the CSS block split a comment). **Found, left for their own
 change:** Operator Settings' "Clear all settings" is destructive with
-no checkbox, against §4's delete-confirm standard; and the Band 1 link
-chips don't regain `pill-empty` when cycled back to "Not set", so they
-turn pale rather than amber.
+no checkbox, against §4's delete-confirm standard; and a Band 1 link
+chip rendered already set doesn't gain `pill-empty` when cycled back to
+"Not set", so it turns faint rather than amber. Both are queued in
+`guide/todo_master.md`. A second read of the fixes found "pale" untrue
+in dark theme too (now "faint"); §9's Fill column still says
+dark/light, for the close's `spec-writer`.
 
 ### PR ladder
 

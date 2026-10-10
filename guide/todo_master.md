@@ -27,7 +27,10 @@ Two sibling registers hold the open work that is not queued here:
 ### In progress
 
 - **UX refinements Item 10** — `guide/ux_refinements.md`: the Guide's
-  "Reading the controls" card, one PR. (`guide/operator_pages_enhancements.md`
+  "Reading the controls" card, one PR. Found while building it, each
+  its own small change: Operator Settings' "Clear all settings" has no
+  delete-confirm checkbox; a Band 1 link chip rendered already set
+  turns faint, not amber, when cycled back to "Not set". (`guide/operator_pages_enhancements.md`
   Items 1–3 closed 2026-10-09; `guide/ux_refinements.md` Items 1–9
   closed 2026-10-10.)
 

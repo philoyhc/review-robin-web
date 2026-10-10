@@ -123,9 +123,9 @@
                   <td><strong>A pill</strong>: a count, a type or a status.</td></tr>
               <tr><td><label class="pill pill-count tag-chip"><input type="checkbox" class="visually-hidden" checked autocomplete="off">Email</label>
                       <label class="pill pill-count tag-chip"><input type="checkbox" class="visually-hidden" autocomplete="off">Tag1</label></td>
-                  <td><strong>On or off.</strong> Solid blue is on, a pale tint is off.</td></tr>
+                  <td><strong>On or off.</strong> Solid blue is on, a faint tint is off.</td></tr>
               <tr><td><label class="pill pill-count tag-chip pill-empty" data-guide-partial-chip data-total="2" data-on="1"><input type="checkbox" class="visually-hidden" autocomplete="off" aria-label="Include 1 self review, some"><span data-guide-chip-label>Include 1 self review</span></label></td>
-                  <td><strong>Some of a set.</strong> Solid blue when all are on, pale when none, amber when some.</td></tr>
+                  <td><strong>Some of a set.</strong> Solid blue when all are on, faint when none, amber when some.</td></tr>
               <tr><td><label class="pill pill-count tag-chip is-selected" data-guide-cycle-chip><input type="checkbox" class="visually-hidden" autocomplete="off" aria-label="Exclude self reviews"><span data-guide-chip-label>Include self reviews</span></label></td>
                   <td><strong>A choice between named options.</strong> Always solid blue; the label says which is chosen, and a click moves to the next.</td></tr>
               <tr><td><span class="pill pill-empty tag-chip is-unset" data-guide-unset-chip
@@ -151,8 +151,8 @@
       var card = document.getElementById("guide-controls");
       if (!card) return;
 
-      // Some of a set: a click on light or amber turns all on, a click on
-      // dark turns all off, as on the Assignments page.
+      // Some of a set: a click on faint or amber turns all on, a click on
+      // solid blue turns all off, as on the Assignments page.
       var partial = card.querySelector("[data-guide-partial-chip]");
       if (partial) {
         var partialBox = partial.querySelector("input");
@@ -176,7 +176,7 @@
         });
       }
 
-      // A choice between named options: always dark, the label moves.
+      // A choice between named options: always solid blue, the label moves.
       var cycle = card.querySelector("[data-guide-cycle-chip]");
       if (cycle) {
         var cycleBox = cycle.querySelector("input");

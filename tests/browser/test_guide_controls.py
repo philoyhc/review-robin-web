@@ -17,6 +17,10 @@ def test_the_chip_samples_answer_a_click(page: Page) -> None:
     card = page.locator("#guide-controls")
     email = card.locator("label.tag-chip", has_text="Email")
     tag = card.locator("label.tag-chip", has_text="Tag1")
+    # The button samples act on nothing, so they take no pointer.
+    assert card.locator("span.btn").first.evaluate(
+        "el => getComputedStyle(el).pointerEvents"
+    ) == "none"
     dark = _bg(email)
     light = _bg(tag)
     assert dark != light
