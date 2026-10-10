@@ -26,8 +26,9 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
-- None. (`guide/operator_pages_enhancements.md` Items 1–3 closed
-  2026-10-09; new items are added there.)
+- **UX refinements** — `guide/ux_refinements.md`. Item 1 (Band 3 fields
+  as chips) is planned, two PRs. (`guide/operator_pages_enhancements.md`
+  Items 1–3 closed 2026-10-09; new items are added there.)
 
 ### Queued segments
 
