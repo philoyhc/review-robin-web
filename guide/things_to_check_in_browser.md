@@ -375,7 +375,8 @@ section (git history keeps it), so this file lists only what is owed.
   saved responses drop). Regenerate & prepare is the red outline;
   Cancel is the grey Secondary.
 - [ ] **Validate, Activate with warnings.** Acknowledge and activate is
-  the amber outline; Cancel is Secondary.
+  the amber outline; Cancel is Secondary, as is the errors-present
+  banner's Cancel.
 - [ ] **Purge and archive** (lobby single and bulk expanders, Extract
   data's Archive card) is the amber outline.
 - [ ] **Other banner Cancels** (Instruments save-error and sort-save
