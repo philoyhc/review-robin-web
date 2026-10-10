@@ -284,10 +284,17 @@ def test_get_with_responses_received_template_renders_third_tab(
     # Per-template merge tags: $submitted_at present, $invite_url absent.
     assert "$submitted_at" in body
     assert "$invite_url" not in body
-    # Send-on-submit checkbox renders default-checked.
+    # The send-on-submit chip (ux_refinements Item 9), on by default:
+    # a cycle chip, always dark, naming the state.
     assert 'name="enabled"' in body
-    assert "Send this confirmation when a reviewer submits." in body
-    assert "checked" in body
+    chip = body[body.index("data-send-confirmation-chip") :]
+    chip = chip[: chip.index("</label>")]
+    assert "checked" in chip
+    assert "Send response confirmation</span>" in chip
+    assert "Send this confirmation when a reviewer submits." not in body
+    assert "Uncheck to suppress" not in body
+    opening = body[body.rindex("<label", 0, body.index("data-send-confirmation-chip")) :]
+    assert opening.startswith('<label class="pill pill-count tag-chip is-selected"')
     # The other two tabs link back via the selector.
     assert (
         f'href="/operator/sessions/{review_session.id}/setup-invite?template=invitation"'
@@ -307,7 +314,7 @@ def test_invitation_tab_does_not_show_send_on_submit_checkbox(
         f"/operator/sessions/{review_session.id}/setup-invite?template=invitation"
     ).text
 
-    assert "Send this confirmation when a reviewer submits." not in body
+    assert "Send response confirmation</span>" not in body
     assert 'name="enabled"' not in body
 
 
@@ -344,6 +351,31 @@ def test_save_responses_received_persists_overrides_and_audits(
     ).scalar_one()
     assert event.detail["context"]["template"] == "responses_received"
     assert "responses_received_subject" in event.detail["changes"]
+
+
+def test_the_confirmation_chip_reads_dont_send_once_turned_off(
+    client: TestClient, db: Session
+) -> None:
+    """ux_refinements Item 9 — off, the chip names that state, box
+    unticked, still the always-dark cycle chip."""
+    review_session = _make_session(client, db, code="rr-chip-off")
+    client.post(
+        f"/operator/sessions/{review_session.id}/setup-invite",
+        data={"template": "responses_received", "subject": "", "body": "", "cc": "", "bcc": ""},
+        follow_redirects=False,
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}/setup-invite"
+        "?template=responses_received"
+    ).text
+    chip = body[body.index("data-send-confirmation-chip") :]
+    chip = chip[: chip.index("</label>")]
+    assert "Don&#39;t send response confirmation</span>" in chip
+    box = chip[chip.index("<input") : chip.index(">", chip.index("<input"))]
+    assert "checked" not in box
+    assert 'class="pill pill-count tag-chip is-selected"' in body[
+        body.rindex("<label", 0, body.index("data-send-confirmation-chip")) :
+    ][:60]
 
 
 def test_save_responses_received_unchecking_persists_explicit_false(

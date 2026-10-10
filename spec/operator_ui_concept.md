@@ -86,7 +86,7 @@ or `session.observers_enabled`. The operator sets these toggles via
 the **User interface settings** card on the Create Session form or the
 **Optional setup tabs and pages** field of Session Home's `#session-config` card.
 
-The URL slug is `setup-invite`; the page's name is **Email Template**. The two differ and the slug stays — it is in operator bookmarks and in the route table — so prose naming the page uses the name, not the slug. The page houses the email-template editor: per-template overrides for Invitation / Reminder / Responses-received emails, with merge-tag reference, per-field reset, and a "Send confirmation when a reviewer submits?" toggle. The run-time invitation management lives in the Operations Page below.
+The URL slug is `setup-invite`; the page's name is **Email Template**. The two differ and the slug stays — it is in operator bookmarks and in the route table — so prose naming the page uses the name, not the slug. The page houses the email-template editor: per-template overrides for Invitation / Reminder / Responses-received emails, with merge-tag reference, per-field reset, and a "Send / Don't send response confirmation" chip on the Responses received tab. The run-time invitation management lives in the Operations Page below.
 
 **Relationships** carries pair-level context — the `relationships` table. Reviewer × reviewee rows carry three `tag_N` slots consumed by the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names, plus an `active` / `inactive` status. The page mirrors the other roster pages — CSV upload behind the Unlock panel, preview table with per-row authoring and its `Show columns:` chips, Danger Zone.
 
@@ -349,7 +349,7 @@ Per-session email-template editor for the Invitation, Reminder, and Responses-re
 
 The page renders, top-to-bottom: chrome (with `Email Template` highlighted as the current Setup tab); a `<div class="tab-strip tab-strip-page">` row of three page-internal nav tabs (`Invitation` / `Reminder` / `Responses received`) using the chrome's `.nav-tab` styling — see `spec/ui_elements.md` §6 "Nav button"; then a two-card body with the email composer on the left (form fields per template + per-field `Reset to default` `.btn-reset` button) and the Merge tags reference card on the right. Cancel + Save sit bottom-left of the composer card; Save is Secondary (routine submit) and renders disabled until any composer field is touched.
 
-The composer's `?template=` query param keeps each tab bookmarkable. The `responses_received` tab also surfaces a "Send this confirmation when a reviewer submits?" checkbox above the composer fields that gates the per-session auto-send.
+The composer's `?template=` query param keeps each tab bookmarkable. The `responses_received` tab also surfaces a "Send response confirmation" / "Don't send response confirmation" chip under its heading that gates the per-session auto-send.
 
 ### `/operator/sessions/{id}/validate` — Setup validation
 

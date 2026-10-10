@@ -898,3 +898,76 @@ Taken 2026-10-10 at `c8343bf3`.
 - `app/web/templates/base.html` — the locked-card fade spares a cycle chip (found at build).
 - `guide/things_to_check_in_browser.md` — a section for the PR.
 
+---
+
+## Item 9 — The Email Template page's send-on-submit checkbox becomes a chip
+
+### Opportunity
+
+The 2026-10-10 checkbox sweep: the Email Template page's Responses received tab
+carries a checkbox, "Send this confirmation when a reviewer submits.",
+with a help line under it ("Default is on. Uncheck to suppress …").
+Both choices are positive ones, drawn as a checkbox.
+
+### Decision
+
+The author's ruling (2026-10-10): remove the checkbox and its help
+line; under the "Responses received email" heading, a cycle chip,
+**"Send response confirmation" / "Don't send response confirmation"**.
+**Rejected:** placing the chip inside the heading, which would fold a
+control into the card's title.
+
+### Semantics
+
+- The chip wraps the same `name="enabled"` box (default on), so the
+  route, the stored override and the reset-by-re-checking are unchanged.
+- The box's `change` already enables the composer's Save.
+
+### Judgment calls — decided
+
+- The box's name is what its tick means ("Send response confirmation")
+  with `autocomplete="off"`, as Item 8's chip.
+
+### Blast radius (measured)
+
+Taken 2026-10-10 at `c8343bf3`.
+
+| What | Count | Command |
+|---|---|---|
+| Template | 1 (`session_setupinvite.html`) | `grep -rln 'name="enabled"' app/web/templates` |
+| Tests pinning the checkbox | 1 file, 2 tests | `grep -n "Send this confirmation" tests/integration/test_email_template_editor.py` |
+| Specs | 2 | `grep -rln "Send this confirmation" spec` |
+
+### Status
+
+- **Built 2026-10-10** in one PR.
+
+### PR ladder
+
+1. **The chip.** Template, the two tests plus one for the off state, a
+   browser test, the specs. One code slice outside a ladder, so it
+   takes its own `diff-reviewer` read; `spec-writer` because it touches
+   `spec/`.
+
+### Definition of done
+
+- The chip renders, cycles and saves; a test pins each state.
+- `guide/things_to_check_in_browser.md` has a section for the PR.
+- `### Doc impact` current; `spec-writer` flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- The Invitation and Reminder tabs, which have no such control.
+
+### Doc impact
+
+- `spec/email_template_editor.md` — the Responses received tab's control is a chip.
+- `spec/operator_ui_concept.md` — the Email Template composer paragraph.
+- `spec/ui_elements.md` — §9's cycle standard and form-control list name the chip.
+- `guide/things_to_check_in_browser.md` — a section for the PR.
+

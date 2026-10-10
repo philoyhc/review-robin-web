@@ -63,32 +63,31 @@
             id="setupinvite-form">
         <input type="hidden" name="template" value="{{ active_template }}">
 
+        {% if active_template == "responses_received" %}
+          {# ux_refinements Item 9 — a cycle chip
+             under the heading, always dark: "Send response
+             confirmation" / "Don't send response confirmation", around
+             the send-on-submit box (default on). The submit-time
+             enqueue (``invitations.queue_responses_received``) reads
+             the flag. The box's name is what its tick means, as on the
+             Instruments card's self-review chip (Item 8). #}
+          <p style="margin: 0 0 12px 0;">
+            <label class="pill pill-count tag-chip is-selected"
+                   data-send-confirmation-chip
+                   title="Click to switch between sending and not sending the confirmation">
+              <input type="checkbox" class="visually-hidden" name="enabled" value="on"
+                     autocomplete="off" aria-label="Send response confirmation"
+                     {% if responses_received_enabled %}checked{% endif %}><span
+                     data-send-confirmation-label>{{ "Send response confirmation" if responses_received_enabled else "Don't send response confirmation" }}</span></label>
+          </p>
+        {% endif %}
+
         <div class="muted">
           <strong>From:</strong> <em>(your configured SMTP From email — see <a href="/operator/settings?return_to={{ request.url.path | urlencode }}">Settings</a>)</em>
         </div>
         <div class="muted">
           <strong>To:</strong> <em>(sent individually to each reviewer)</em>
         </div>
-
-        {% if active_template == "responses_received" %}
-          {# Send-on-submit toggle. Default-on; uncheck to suppress
-             the confirmation entirely for this session. The submit-
-             time enqueue (``invitations.queue_responses_received``)
-             reads this flag.
-             "Reset to default" for the toggle is just re-checking
-             the box — no separate reset link. #}
-          <div>
-            <label>
-              <input type="checkbox" name="enabled" value="on"
-                     {% if responses_received_enabled %}checked{% endif %}>
-              Send this confirmation when a reviewer submits.
-            </label>
-            <p class="muted" style="margin-top: 4px;">
-              Default is on. Uncheck to suppress the confirmation
-              email for this session.
-            </p>
-          </div>
-        {% endif %}
 
         {% for row in rows %}
           <div>
@@ -199,6 +198,16 @@
       function enable() { save.disabled = false; }
       form.addEventListener("input", enable);
       form.addEventListener("change", enable);
+      // ux_refinements Item 9 — the confirmation chip names its box.
+      var box = form.querySelector("[data-send-confirmation-chip] input");
+      var text = form.querySelector("[data-send-confirmation-label]");
+      if (box && text) {
+        box.addEventListener("change", function () {
+          text.textContent = box.checked
+            ? "Send response confirmation"
+            : "Don't send response confirmation";
+        });
+      }
     })();
   </script>
 {% endblock %}
