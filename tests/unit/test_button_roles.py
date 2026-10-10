@@ -62,9 +62,10 @@ def test_each_moved_button_keeps_its_role(
 
 
 # Every Cancel in the templates holding the eight banner Cancels Item 11
-# moved, banner ones included (Instruments has two lock-card Cancels
-# beside its three banner ones), plus the reviewer pair a comment once
-# hid. Exact, so a dropped or relabelled Cancel fails here.
+# moved, banner ones included (Instruments has two instrument-card
+# Cancels, bottom row and header, beside its three banner ones), plus
+# the reviewer pair a comment once hid. Exact, so a dropped or
+# relabelled Cancel fails here.
 PINNED_CANCELS = {
     "operator/session_validate.html": 2,
     "operator/partials/next_action_card.html": 1,
