@@ -983,7 +983,7 @@ Taken 2026-10-10 at `879069ac`.
 
 - `app/web/templates/guide.html`, `app/web/views/_guide.py`
   (`SECTIONS`), `app/web/templates/base.html` (`.guide-controls-*`,
-  six rules at the stamp, seven after the cold read), `tools/theme_customizer.html` (regenerated).
+  five planned at the stamp; six built, seven after the cold read), `tools/theme_customizer.html` (regenerated).
 - `tests/integration/test_guide_scaffold.py` (`SECTION_HEADINGS`), one
   new browser test.
 - `grep -rln "guide-controls" spec/` → none; §6 and §9 gain a line.
@@ -995,16 +995,17 @@ columns, the title, live chips, operators only) before the build, so it
 stood in for the scaffold slice. **Reads:** one `spec-writer` verify
 (the Not set sample didn't cycle back; the Delete row and locked-card
 note overclaimed) and one `diff-reviewer` read ("dark is on" is false
-in dark theme, so the copy says solid blue and faint; the Not set
+in dark theme, so the copy says solid blue and pale; the Not set
 sample's label is the real "Filter using tags"; the guard copy hedged
 to "most"; the CSS block split a comment). **Found, left for their own
 change:** Operator Settings' "Clear all settings" is destructive with
 no checkbox, against §4's delete-confirm standard; and a Band 1 link
 chip rendered already set doesn't gain `pill-empty` when cycled back to
-"Not set", so it turns faint rather than amber. Both are queued in
-`guide/todo_master.md`. A second read of the fixes found "pale" untrue
+"Not set", so it turns faint rather than amber. Both are filed as
+stubs in `guide/todo_master.md`. A second read of the fixes found "pale" untrue
 in dark theme too (now "faint"); §9's Fill column still says
-dark/light, for the close's `spec-writer`.
+dark/light, for the close's `spec-writer`. A third read, of
+that fix, found only plan and register wording, fixed.
 
 ### PR ladder
 

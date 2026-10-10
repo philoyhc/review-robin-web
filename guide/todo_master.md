@@ -27,10 +27,7 @@ Two sibling registers hold the open work that is not queued here:
 ### In progress
 
 - **UX refinements Item 10** — `guide/ux_refinements.md`: the Guide's
-  "Reading the controls" card, one PR. Found while building it, each
-  its own small change: Operator Settings' "Clear all settings" has no
-  delete-confirm checkbox; a Band 1 link chip rendered already set
-  turns faint, not amber, when cycled back to "Not set". (`guide/operator_pages_enhancements.md`
+  "Reading the controls" card, one PR. (`guide/operator_pages_enhancements.md`
   Items 1–3 closed 2026-10-09; `guide/ux_refinements.md` Items 1–9
   closed 2026-10-10.)
 
@@ -65,6 +62,16 @@ Both are **gated on the institutional Azure deployment concluding**
 Small items with no plan doc; each fits one PR and its reasoning fits
 the PR body unless it says otherwise.
 
+- **Operator Settings' "Clear all settings" has no confirm** *(filed
+  2026-10-10, found building UX refinements Item 10)*. It is
+  `.btn.destructive` and wipes a whole set with no "Yes, delete…"
+  checkbox, against `spec/ui_elements.md` §4's delete-confirm standard
+  (`app/web/templates/operator/operator_settings.html`).
+- **A Band 1 link chip cycled back to "Not set" turns faint, not amber**
+  *(filed 2026-10-10, found building UX refinements Item 10)*. A chip
+  rendered already set starts `pill-count`; `newModelToggleRuleMode` and
+  `newModelToggleUnitMode` add only `is-unset` on the way back, never
+  `pill-empty` (`app/web/templates/operator/instruments_index.html`).
 - **Technical-support contact (global)** *(filed 2026-05-03)*. A
   deployment-wide "something looks broken" address, distinct from the
   per-session help contact on `ReviewSession`
