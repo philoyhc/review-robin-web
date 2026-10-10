@@ -233,12 +233,13 @@ Taken 2026-10-09 at `2e0379b8`.
   box's state, so a `<label>` chip takes it only while ticked and an
   unticked one stays the off chip with the glyph. Band 3's disabled
   checkboxes (`:has(> input:disabled)`) still land with Item 1.
-- **Reads:** one `spec-writer` verify and one `diff-reviewer` cold read.
-  Both found specs and comments still saying the reserved shade never
-  reaches an inert element; `spec/color_tokens.md` now records
+- **Reads:** one `spec-writer` verify and two `diff-reviewer` reads.
+  The first two found specs and comments still saying the reserved shade
+  never reaches an inert element; `spec/color_tokens.md` now records
   `is-fixed` as the one ruled exception (a Doc impact bullet the plan
-  missed). The cold read also added the Observers chip and a
-  `test_chip_edge` pin.
+  missed). The first cold read led to the Observers chip test and a
+  `test_chip_edge` pin; the second, on those fixes, found the CSS split
+  sound and three stale spec and plan lines.
 
 ### PR ladder
 

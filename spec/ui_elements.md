@@ -694,14 +694,14 @@ exception): a locked chip may carry it to say "on", and
 colors.
 
 **Four chip types, one look each.** What a chip's states mean decides
-its fill; a fixed switch has no states, so it keeps its siblings':
+its fill; a fixed switch keeps the fill of the state it is held at:
 
 | Type | States | Fill | Standard |
 |---|---|---|---|
 | **On/off** | selected, not selected; the label doesn't change | dark (`--selected-bg`) when on, light when off | the Setup pages' column chips |
 | **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always dark | Extract's Data shaper "All rows ↔ Rows with data" |
 | **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, dark otherwise | the Instruments page's Band 1 link chips |
-| **Fixed** | one switch held at its value while the chips beside it stay live | dark, with no edge or pointer and a lock glyph before the label (`.tag-chip.is-fixed`) | Session Home's optional tab once it holds data |
+| **Fixed** | one switch held at its value while the chips beside it stay live | its siblings' fill for the held state (dark when on), with no edge or pointer and a lock glyph before the label (`.tag-chip.is-fixed`) | Session Home's optional tab once it holds data |
 
 A fixed switch keeps its siblings' dark fill so it reads as a switch
 that is on rather than a display; the glyph (a CSS mask in

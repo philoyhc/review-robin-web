@@ -524,7 +524,8 @@ other blue stays freely available to static elements —
 shade, not the hue.
 
 `tests/unit/test_reserved_shade.py` resolves every token in both themes
-and fails if anything but a confirmed control lands on the pair. Its
+and fails if anything but a confirmed control, or the ruled
+`.tag-chip.is-fixed` exception, lands on the pair. Its
 selector filter is a **consequence** of the rule rather than the rule
 itself, and grows when a new element class acquires the dual nature —
 which is why `.btn-icon` is in it.
