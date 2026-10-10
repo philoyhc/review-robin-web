@@ -249,7 +249,7 @@ and the engine substitutes the synthetic Full Matrix at evaluate
 time.
 
 **One control materializes a row without any Link rule**: turning
-on the Link 3 self-review exclusion checkbox
+on the Link 3 self-review chip to *Exclude self reviews*
 (`spec/instruments.md` § *Self-review exclusion*), which needs
 somewhere to store its flag. The row it creates carries
 `rules_json=[]`, which the engine evaluates identically to the
@@ -342,7 +342,7 @@ they are what keeps the exclusion out of the desugar stage.
    row into a schema — the row's `exclude_self_reviews` column is
    ignored, and this hardcode is what makes the engine ignore it.
    The column itself is operator-settable (config import and
-   the Link 3 checkbox) and is not reset
+   the Link 3 chip) and is not reset
    on a Band-1 save, so a `True` can persist in the row and in
    the by-instrument extract's *Self-review excluded* cell while
    the engine still ignores it.
@@ -360,11 +360,11 @@ they are what keeps the exclusion out of the desugar stage.
 Two supported affordances, answering different questions —
 *don't generate them* and *don't count the ones generated*.
 
-- **Exclude at the rule (Link 3 checkbox).** The **Self reviews**
-  control in the Link 3 column, whose label follows the unit of
-  review — see `spec/instruments.md` § *Self-review exclusion* for
-  both spellings, which are stated there and deliberately not
-  repeated here. It writes
+- **Exclude at the rule (Link 3 chip).** The **Include / Exclude
+  self reviews** chip in the Link 3 column, whose explanatory line
+  follows the unit of review — see `spec/instruments.md`
+  § *Self-review exclusion* for both spellings, which are stated
+  there and deliberately not repeated here. It writes
   `SessionRuleSet.exclude_self_reviews`. Honored at
   the `pair_include` branch of `_diff_one_instrument`, **after**
   the fan-out: the pair is omitted from `new_pairs` entirely
@@ -654,7 +654,7 @@ Steps:
    never drops `(R, R)` pairs at the desugar stage. Exclusion, when
    an operator asks for it, happens **after** this pipeline — see
    the "Self-review policy" section above for why, and for the two
-   supported suppression paths (the Link 3 checkbox + the
+   supported suppression paths (the Link 3 chip + the
    per-instrument Self-review toggle).
 4. **Apply QUOTA.** Currently inert — no Band-1 QUOTA emission.
 5. **Materialise.**

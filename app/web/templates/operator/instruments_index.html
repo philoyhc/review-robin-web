@@ -867,7 +867,8 @@
                 {% endfor %}
               </div>
             </div>
-            {# 19O Item 1 rung 2 — the self-review exclusion checkbox.
+            {# 19O Item 1 rung 2 — the self-review exclusion control
+               (a checkbox until ux_refinements Item 8, a chip now).
                It lives in this column for space, NOT because it is a
                unit-of-review setting (author, 2026-09-14); the
                ``.col-divider`` rule above it is what says so, and is
@@ -892,8 +893,8 @@
                2026-09-14). An instrument with an unset Link has no
                settled rule to except self-reviews FROM, so the
                control would be asking about a rule that does not
-               exist yet. Hidden as one unit — rule, heading and
-               checkbox — because a lone divider under nothing reads
+               exist yet. Hidden as one unit — rule, chip and the line
+               under it — because a lone divider under nothing reads
                as a rendering fault. The stored flag is cleared on
                save in the same case, so what is hidden is also
                false. #}
@@ -903,20 +904,29 @@
             <div data-new-model-self-review-block
                  {% if not _links_all_set %}style="display: none;"{% endif %}>
             <hr class="col-divider">
-            <h4 style="margin: 0 0 8px 0; font-weight: normal;">Self reviews</h4>
-            <label style="display: flex; align-items: flex-start; gap: 8px;
-                          font-size: 0.9rem; color: var(--text-body);">
-              <input form="dfsave-{{ instrument.id }}" type="checkbox"
+            {# ux_refinements Item 8 — a cycle chip where the
+               heading was: "Include self reviews" / "Exclude self
+               reviews", both positive choices, so always dark. It
+               wraps the hidden ``exclude_self_reviews`` box, which
+               the scripts below clear and ``newModelSyncSelfReviewChip``
+               names. The line under it says what a self review is,
+               following the Link 3 pill. #}
+            {% set _sr_excluded = _link3_state.exclude_self_reviews %}
+            <label class="pill pill-count tag-chip is-selected"
+                   data-new-model-self-review-chip
+                   title="Click to switch between including and excluding self reviews">
+              <input form="dfsave-{{ instrument.id }}" type="checkbox" class="visually-hidden"
                      name="exclude_self_reviews" value="true"
-                     style="margin-top: 2px; flex-shrink: 0;"
-                     {% if _link3_state.exclude_self_reviews %}checked{% endif %}>
-              <span data-new-model-self-review-copy
-                    data-copy-individual="Exclude if the individual reviewed is the reviewer"
-                    data-copy-group="Exclude if the reviewer is in the group being reviewed"
-                    >{{ "Exclude if the reviewer is in the group being reviewed"
-                        if (_link3_touched and _link3_grouped)
-                        else "Exclude if the individual reviewed is the reviewer" }}</span>
-            </label>
+                     onchange="newModelSyncSelfReviewChip(this)"
+                     {% if _sr_excluded %}checked{% endif %}><span
+                     data-new-model-self-review-chip-label>{{ "Exclude self reviews" if _sr_excluded else "Include self reviews" }}</span></label>
+            <p class="muted" style="margin: 6px 0 0 0; font-size: 0.9rem;"
+               data-new-model-self-review-copy
+               data-copy-individual="A self review is where the individual reviewed is the reviewer"
+               data-copy-group="A self review is where the reviewer is in the group being reviewed"
+               >{{ "A self review is where the reviewer is in the group being reviewed"
+                   if (_link3_touched and _link3_grouped)
+                   else "A self review is where the individual reviewed is the reviewer" }}</p>
             </div>
           </div>
         </div>
@@ -955,7 +965,22 @@
             // hidden, and then saved. The save path clears it
             // server-side too — this is the visible half.
             var box = block.querySelector('input[name="exclude_self_reviews"]');
-            if (box) { box.checked = false; }
+            if (box) {
+              box.checked = false;
+              window.newModelSyncSelfReviewChip(box);
+            }
+          }
+        };
+
+        // ux_refinements Item 8 — the self-review chip names what its
+        // hidden box holds; called on its change and wherever a script
+        // clears the box.
+        window.newModelSyncSelfReviewChip =
+          window.newModelSyncSelfReviewChip || function (box) {
+          var label = box && box.closest('[data-new-model-self-review-chip]');
+          var text = label && label.querySelector('[data-new-model-self-review-chip-label]');
+          if (text) {
+            text.textContent = box.checked ? 'Exclude self reviews' : 'Include self reviews';
           }
         };
 
@@ -1182,7 +1207,10 @@
             var srBox = wrap.querySelector(
               'input[name="exclude_self_reviews"]'
             );
-            if (srBox) { srBox.checked = false; }
+            if (srBox) {
+              srBox.checked = false;
+              window.newModelSyncSelfReviewChip(srBox);
+            }
           }
           window.newModelSyncSelfReviewBlock(btn);
           // Band 2's preview depends on the unit-of-review mode —

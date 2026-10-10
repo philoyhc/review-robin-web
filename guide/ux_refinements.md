@@ -804,3 +804,83 @@ Taken 2026-10-10 at `c8343bf3`.
 - `README.md` — the `assignments` route row.
 - `app/web/templates/guide.html` — the Assignments figure's alt text (found at build).
 
+---
+
+## Item 8 — The Instruments card's self-review checkbox becomes a chip
+
+### Opportunity
+
+The 2026-10-10 checkbox sweep: under Link 3, a "Self reviews" heading
+sits over a checkbox labeled "Exclude if the individual reviewed is the
+reviewer" (or the group sentence). It is a two-way choice, each side a
+positive one, drawn as a checkbox.
+
+### Decision
+
+The author's ruling (2026-10-10): a cycle chip where the heading was,
+**"Include self reviews" / "Exclude self reviews"**, and under it the
+line **"A self review is where the individual reviewed is the
+reviewer"** (on a group unit, "…where the reviewer is in the group
+being reviewed"). The show/hide behavior stays: the divider, chip and
+line are hidden while any Link is not set. **Rejected:** an on/off chip
+reading "Exclude self reviews", which would make including them look
+like the absence of a setting.
+
+### Semantics
+
+- The chip wraps the same hidden `exclude_self_reviews` box, so the save
+  path, `resolve_exclude_self_reviews` and the import are unchanged.
+- Both scripts that clear the box (any Link back to not set; Link 3
+  Individual → Group) also rename the chip, through
+  `newModelSyncSelfReviewChip`.
+
+### Judgment calls — decided
+
+- The line takes the old label's two-sentence swap on Link 3, so it
+  stays a whole sentence in each mode.
+
+### Blast radius (measured)
+
+Taken 2026-10-10 at `c8343bf3`.
+
+| What | Count | Command |
+|---|---|---|
+| Template | 1 block + 2 script sites | `grep -n "exclude_self_reviews" app/web/templates/operator/instruments_index.html` |
+| Tests pinning the heading and labels | 3 | `grep -n "def test_self_review_c" tests/integration/test_instrument_builder_routes.py` |
+| Specs | 6 | `grep -rln "Self reviews\*\* checkbox\|Link 3 checkbox\|exclusion checkbox\|Exclude if the" spec` |
+
+### Status
+
+- **Built 2026-10-10** in one PR.
+
+### PR ladder
+
+1. **The chip.** Template, the three tests, a new browser test, the
+   specs. One code slice outside a ladder, so it takes its own
+   `diff-reviewer` read; `spec-writer` because it touches `spec/`.
+
+### Definition of done
+
+- The chip renders and cycles; a saved exclusion reopens as "Exclude
+  self reviews"; the line follows Link 3. A test pins each.
+- `guide/things_to_check_in_browser.md` has a section for the PR.
+- `### Doc impact` current; `spec-writer` flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- The Assignments page's self-review chip (Item 7).
+
+### Doc impact
+
+- `spec/instruments.md` — "Self-review exclusion": the chip and its line.
+- `spec/ui_elements.md` — §9's cycle standard and §10's `.col-divider` row name the chip.
+- `spec/rrw_functional_spec.md` — §8.6 and §9.6 name the chip.
+- `spec/assignments.md` — the Link 3 control is a chip.
+- `spec/settings_inventory.md` — `exclude_self_reviews` is written by the chip.
+- `guide/things_to_check_in_browser.md` — a section for the PR.
+

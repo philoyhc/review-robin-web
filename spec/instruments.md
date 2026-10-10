@@ -507,23 +507,25 @@ The Link 3 column carries one control that is **not** a unit-of-review
 setting. It sits here for space alone, and says so twice: a horizontal
 `.col-divider` rule — the sibling of the 1px vertical rules between the
 three columns — separates it from the unit-of-review controls above, and
-its own heading **Self reviews** names it, so it does not read as a third
-Link 3 state. The heading takes the unbold weight of the three Link
-labels; bold belongs to the card title.
+the control names itself, so it does not read as a third Link 3 state.
 
-**The checkbox copy follows the Link 3 pill, live.** Two whole
-sentences, not one with a swapped noun:
+**The control is a cycle chip** (`spec/ui_elements.md` §9), always
+dark, reading **Include self reviews** or **Exclude self reviews**
+(`exclude_self_reviews`, off by default), around the hidden box the
+form posts. **A line under it says what a self review is, following the
+Link 3 pill live**, in two whole sentences rather than one with a
+swapped noun:
 
-| Link 3 mode | Label |
+| Link 3 mode | Line |
 |---|---|
-| Individual, or `Not set` | *Exclude if the individual reviewed is the reviewer* |
-| Group using tags | *Exclude if the reviewer is in the group being reviewed* |
+| Individual, or `Not set` | *A self review is where the individual reviewed is the reviewer* |
+| Group using tags | *A self review is where the reviewer is in the group being reviewed* |
 
 `Not set` takes the individual sentence because that is the `link3_mode`
 value it submits.
 
 **The control is hidden while any of the three Links is `Not set`** —
-rule, heading and checkbox together, since a lone divider under nothing
+rule, chip and line together, since a lone divider under nothing
 reads as a rendering fault. An instrument with an unset Link has no
 settled rule to except self-reviews *from*. Visibility follows the pills
 live, from one function both pill handlers call.
@@ -537,8 +539,8 @@ re-scoped is also false:
 | Link 3 `Individual` → `Group using tags` | The two modes except different things. A tick agreed against *the individual reviewed is the reviewer* must not carry into *the reviewer is in the group being reviewed*, which drops every member row of that group. |
 
 Both are enforced **server-side on save** (`resolve_exclude_self_reviews`),
-with the client clearing the box at the same moment so the page and the
-store agree. **Session-config import is held to the first rule too**
+with the client clearing the box, and the chip back to *Include self
+reviews*, at the same moment so the page and the store agree. **Session-config import is held to the first rule too**
 (`clear_unsettled_exclude_self_reviews`, run once both the rule-set rows
 and the instrument rows have landed): a bundle pairs those halves
 independently, so without it an import could store a flag the UI then
@@ -710,8 +712,8 @@ Band 1 saves through `app/services/instruments/_band1.py:set_band1_assignment_ru
   `_create_band1_rule_set`. Stored shape:
   - `combinator="ALL_OF"` (the outer wrap that intersects Links).
   - `exclude_self_reviews=False` — aligned with the synthetic
-    Full Matrix default; the Link 3 column's **Self reviews**
-    checkbox (§ *Self-review exclusion* above) is the control
+    Full Matrix default; the Link 3 column's self-review
+    chip (§ *Self-review exclusion* above) is the control
     that sets it.
   - `rules_json` carries one COMPOSITE per Link with the
     operator's MATCH rules inside.
@@ -739,7 +741,7 @@ live preview of one sample row inline.
 > member, they appear in their own group.
 >
 > **The preview follows the instrument's self-review rule.** When
-> the Link 3 checkbox is set, the picker drops self-reviews from the
+> the Link 3 chip reads *Exclude self reviews*, the picker drops self-reviews from the
 > engine's **output** before choosing a sample — never by flipping
 > `excludeSelfReviews`, which would drop pairs before group
 > composition is known. On a grouped instrument the whole group

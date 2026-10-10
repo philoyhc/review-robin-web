@@ -361,3 +361,13 @@ section (git history keeps it), so this file lists only what is owed.
   click makes it dark again. On an activated or closed session it is
   fixed (lock glyph, no click).
 
+## The Instruments card's self-review chip (UX refinements Item 8)
+
+- [ ] **Instruments, unlocked card, all three Links set.** Under Link 3,
+  below the rule, a dark chip reads "Include self reviews"; a click
+  makes it "Exclude self reviews", still dark. The line under it reads
+  "A self review is where the individual reviewed is the reviewer", and
+  switching Link 3 to Group using tags changes it to the group sentence
+  and turns an Exclude chip back to Include. Setting any Link to Not
+  set hides the divider, chip and line.
+

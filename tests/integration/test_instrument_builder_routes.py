@@ -8512,14 +8512,12 @@ def _instrument_card(body: str, instrument_id: int) -> str:
     return body[start:] if nxt == -1 else body[start:nxt]
 
 
-def test_self_review_control_has_a_heading(
+def test_self_review_control_is_a_cycle_chip_with_its_line_below(
     client: TestClient, db: Session
 ) -> None:
-    """The control carries the heading "Self reviews".
-
-    Item 1 chose the ``.col-divider`` to say *this is a second thing in
-    this column*; a heading is the other half of that sentence, and
-    without it what the divider separates is left to inference.
+    """ux_refinements Item 8 — where the "Self reviews" heading was, a
+    cycle chip (always dark) wrapping the hidden box; the line saying
+    what a self review is comes after it, and the divider before.
     """
     review_session, new_model = _new_model_for(client, db, "nm-sr-heading")
     body = client.get(
@@ -8528,11 +8526,42 @@ def test_self_review_control_has_a_heading(
     ).text
     card = _instrument_card(body, new_model.id)
     divider = card.index('<hr class="col-divider">')
-    heading = card.index("Self reviews")
+    chip = card.index("data-new-model-self-review-chip")
     checkbox = card.index('name="exclude_self_reviews"')
-    assert divider < heading < checkbox, (
-        "the heading belongs between the divider and the checkbox"
+    line = card.index("A self review is where")
+    assert divider < chip < checkbox < line
+    opening = card[card.rindex("<label", 0, chip) : chip]
+    assert 'class="pill pill-count tag-chip is-selected"' in opening
+    label = card[chip : card.index("</label>", chip)]
+    assert "Include self reviews</span>" in label
+    assert "Self reviews</h4>" not in card
+
+
+def test_the_self_review_chip_names_a_saved_exclusion(
+    client: TestClient, db: Session
+) -> None:
+    """A saved exclusion renders the box ticked and the chip "Exclude
+    self reviews"; the sync helper names the box on every change."""
+    review_session, new_model = _new_model_for(client, db, "nm-sr-chip")
+    client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data=_band1_payload(exclude_self_reviews="true"),
+        follow_redirects=False,
     )
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments?editing={new_model.id}"
+    ).text
+    card = _instrument_card(body, new_model.id)
+    chip = card.index("data-new-model-self-review-chip")
+    label = card[chip : card.index("</label>", chip)]
+    assert "Exclude self reviews</span>" in label
+    box = label[label.index("<input") : label.index(">", label.index("<input"))]
+    assert "checked" in box
+    sync = body[body.index("window.newModelSyncSelfReviewChip =") :]
+    sync = sync[: sync.index("};")]
+    assert "box.checked ? 'Exclude self reviews' : 'Include self reviews'" in sync
 
 
 def test_self_review_copy_matches_the_persisted_unit_of_review(
@@ -8565,9 +8594,9 @@ def test_self_review_copy_matches_the_persisted_unit_of_review(
         )
         start = card.index("data-new-model-self-review-copy")
         opening_end = card.index(">", start)
-        return card[opening_end + 1 : card.index("</span>", opening_end)]
+        return card[opening_end + 1 : card.index("</p>", opening_end)]
 
-    assert "Exclude if the individual reviewed is the reviewer" in _copy()
+    assert "A self review is where the individual reviewed is the reviewer" in _copy()
     assert "in the group being reviewed" not in _copy()
 
     client.post(
@@ -8581,7 +8610,7 @@ def test_self_review_copy_matches_the_persisted_unit_of_review(
         follow_redirects=False,
     )
     rendered = _copy()
-    assert "Exclude if the reviewer is in the group being reviewed" in rendered
+    assert "A self review is where the reviewer is in the group being reviewed" in rendered
     assert "the individual reviewed" not in rendered
 
 
@@ -8607,12 +8636,12 @@ def test_self_review_copy_carries_both_spellings_for_the_pill(
     start = card.index("data-new-model-self-review-copy")
     element = card[start : start + 600]
     assert (
-        'data-copy-individual="Exclude if the individual reviewed '
-        'is the reviewer"' in element
+        'data-copy-individual="A self review is where the individual '
+        'reviewed is the reviewer"' in element
     )
     assert (
-        'data-copy-group="Exclude if the reviewer is in the group '
-        'being reviewed"' in element
+        'data-copy-group="A self review is where the reviewer is in '
+        'the group being reviewed"' in element
     )
     # And the handler that owns every other live consequence of the
     # pill must be the one that swaps them — not a second listener.
