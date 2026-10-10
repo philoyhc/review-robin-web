@@ -220,10 +220,11 @@ def test_lock_on_data_renders_disabled_checkbox(
         'name="relationships_enabled"', 1
     )[1].split("</label>", 1)[0]
     assert "disabled" in relationships_chunk
-    # …and on the chip around it, which drops its click affordance
-    # (19U Item 3).
+    # …and on the chip around it, a fixed switch: dark, no click
+    # affordance, a lock glyph (guide/ux_refinements.md Item 2).
     chip = body.split('name="relationships_enabled"', 1)[0].rsplit("<label", 1)[1]
-    assert "tag-chip is-locked" in chip
+    assert "tag-chip is-fixed" in chip
+    assert "is-locked" not in chip
 
 
 # ── Nav tab visibility ────────────────────────────────────────────────

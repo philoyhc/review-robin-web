@@ -413,11 +413,13 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   `.tag-chip.is-locked` spans showing the stored state, and stating it
   to assistive technology as disabled checkboxes (`role="checkbox"`,
   `aria-checked`, `aria-disabled`, no tab stop). Each is lock-on-data:
-  in edit mode its checkbox renders disabled and its chip `is-locked`,
+  in edit mode its checkbox renders disabled and its chip `is-fixed`,
   titled "The session has relationships, so the tab stays on." (or
   observers), once the corresponding roster has rows
   (`has_relationships` / `has_observers`), mirroring the service-layer
-  guard against orphaning data.
+  guard against orphaning data. Such a chip is a fixed switch
+  (`.tag-chip.is-fixed`, `spec/ui_elements.md` §9): dark, with no edge
+  or pointer and a lock glyph.
 
 **Edit affordance behavior:**
 

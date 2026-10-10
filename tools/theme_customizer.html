@@ -2705,7 +2705,8 @@
         box-shadow: none;
       }
       /* A locked chip (19U Item 3): Session Home's optional-tab chips
-         while the card is locked, or one whose tab holds data. It still
+         while the card is locked (one whose tab holds data is
+         ``is-fixed`` below, guide/ux_refinements.md Item 2). It still
          states on or off, so unlike ``is-disabled`` it keeps its text;
          like it, it drops the edge and the pointer. "On" takes the
          card's display-value colors rather than the reserved shade,
@@ -2722,6 +2723,32 @@
       }
       body.ui-v2 .tag-chip.is-locked:not(.is-selected):not(:has(> input:checked)) {
         opacity: 0.55;
+      }
+      /* A fixed switch (spec/ui_elements.md §9 "Fixed";
+         guide/ux_refinements.md Item 2): one item held at its value while
+         the chips beside it stay live, such as Session Home's optional tab
+         once it holds data. It keeps their dark fill, so it still reads as
+         a switch that is on, not as a display; like ``is-locked`` it drops
+         the edge and the pointer; a lock glyph before the label, drawn in
+         ``currentColor``, says why it doesn't move. ``is-locked`` stays the
+         chip of a whole card's locked view. */
+      body.ui-v2 .tag-chip.is-fixed {
+        cursor: default;
+        border-color: transparent;
+        box-shadow: none;
+        background: var(--selected-bg);
+        color: var(--selected-fg);
+      }
+      body.ui-v2 .tag-chip.is-fixed::before {
+        content: "";
+        display: inline-block;
+        width: 0.8em;
+        height: 0.8em;
+        margin-right: 0.35em;
+        vertical-align: -0.08em;
+        background: currentColor;
+        -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M4 7V5a4 4 0 1 1 8 0v2h1v8H3V7h1zm2 0h4V5a2 2 0 1 0-4 0v2z'/></svg>") no-repeat center / contain;
+        mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M4 7V5a4 4 0 1 1 8 0v2h1v8H3V7h1zm2 0h4V5a2 2 0 1 0-4 0v2z'/></svg>") no-repeat center / contain;
       }
       /* A chip that is a ``<label>`` keeps the pill's box, not the
          form label's block and margins, and shows its hidden box's

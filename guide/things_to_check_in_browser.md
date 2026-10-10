@@ -341,3 +341,16 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **Joins once a branch is there.** Press ⑂ on the field above,
   then ↰ on the field below: it moves into the branch, under the
   condition, and its ↳ takes it back out.
+
+## The fixed-switch chip (UX refinements Item 2)
+
+- [ ] **Session Home.** On a session with relationships (or observers),
+  edit the config card: that optional-tab chip is dark like a ticked
+  one, has no edge, shows a small lock before "Relationships", and
+  doesn't respond to a click; its tooltip says why. In light and dark
+  themes.
+- [ ] **Instruments, Visibility.** Unlock a card: "Raw responses" (You ×
+  ongoing) and "—" (Reviewees × ongoing) are dark like the cycle chips
+  beside them, with a lock and no edge, and don't cycle on click.
+- [ ] **The glyph** sits on the text's baseline and reads at the chip's
+  size in both themes.

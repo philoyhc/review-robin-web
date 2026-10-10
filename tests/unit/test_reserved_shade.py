@@ -64,6 +64,11 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #: - the lobby and Archived cycle-chip fill — the AND/OR and Select all /
 #:   Clear all chips (``role="button"``), always dark because every state is a choice
 #:   (``spec/ui_elements.md`` §9 type 2; operator pages Item 3).
+#: - ``.tag-chip.is-fixed`` — a fixed switch (``spec/ui_elements.md`` §9,
+#:   guide/ux_refinements.md Item 2): one switch held at its value beside
+#:   live ones. It is not clickable, but the author ruled (2026-10-09)
+#:   that it keeps its siblings' fill so it reads as a switch that is on;
+#:   the lock glyph and the missing edge say it doesn't move.
 #: - the three-selector chip rule — every ``.tag-chip`` (which is every
 #:   Band 2 pill too), plus the lobby's Select all / Clear all and AND/OR
 #:   chips. Added at
@@ -88,6 +93,7 @@ CONTROL_SELECTORS = {
     "body.ui-v2 label.tag-chip:has(> input:focus-visible)",
     "body.ui-v2 .severity-chip.active",
     "body.ui-v2 .pill.pill-tag-clear, body.ui-v2 .pill.tag-mode-chip",
+    "body.ui-v2 .tag-chip.is-fixed",
     (
         "body.ui-v2 .tag-chip, body.ui-v2 .pill.pill-tag-clear, "
         "body.ui-v2 .pill.tag-mode-chip"

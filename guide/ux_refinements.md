@@ -218,6 +218,21 @@ Taken 2026-10-09 at `2e0379b8`.
 | `b3_static_pill` / "Fixed" lines on Instruments | 5 | `grep -n "b3_static_pill\|title=\"Fixed\"" app/web/templates/operator/instruments_index.html` |
 | Specs naming `is-locked` | 2 | `grep -rln "is-locked" spec` |
 
+### Status
+
+- **Built 2026-10-10** as one PR. `base.html` gains
+  `.tag-chip.is-fixed` (the `--selected-bg` fill, no edge or pointer, a
+  `::before` lock glyph masked in `currentColor`), allowlisted in
+  `test_reserved_shade`. Session Home's tab-holds-data chips and the
+  Visibility card's two `b3_static_pill` cells take it; the card-locked
+  display chips stay `is-locked`. `test_band3_static_pills` now treats
+  `is-fixed` as the one `tag-chip` that offers no click. A browser test
+  compares each surface's fill with a live chip's and checks the glyph;
+  both fail without the change.
+- **Scope held:** the fixed-off look (Band 3, via
+  `:has(> input:disabled)`) lands with Item 1, its first user; §9 states
+  only what this PR ships.
+
 ### PR ladder
 
 1. **The fixed chip, everywhere it applies — one PR** (revised

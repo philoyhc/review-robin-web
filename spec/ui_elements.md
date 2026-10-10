@@ -647,8 +647,9 @@ role pill when it is a link (`a.pill.pill-role-*`: the `/me`
 dashboard's role column and the role navigator's other-role links,
 whose `<span>` forms stay plain). Static pills carry no edge: the display-field table's
 field-label pill (`spec/instruments.md` "Display-field table") and the
-Visibility card's locked mode cells (`spec/instruments.md` "Visibility
-card") are the static, no-click-handler pattern. The locked Name / Email
+Visibility card's locked preview table (`spec/instruments.md` "Visibility
+card") are the static, no-click-handler pattern. A fixed switch carries
+no edge either (`.tag-chip.is-fixed`, below). The locked Name / Email
 fields are not pills at all but that table's disabled, ticked checkboxes.
 
 Three rules make that work:
@@ -675,7 +676,7 @@ and the form posts it. `.tag-chip:has(> input:checked)` is the
 `.is-selected` fill, read off the box itself, so a form reset repaints
 the chip with no script; the hidden box's keyboard focus shows as a
 `--focus-ring` outline on the chip. **`.tag-chip.is-locked`** is the
-chip of a locked card, or one whose tab holds data: it drops the edge
+chip of a locked card: it drops the edge
 and the pointer like `is-disabled`, but is not struck through, because
 it still says on or off. On takes the card's display-value colors
 (`--config-value-bg` / `--config-value-fg`) rather than the reserved
@@ -697,6 +698,14 @@ colors.
 | **On/off** | selected, not selected; the label doesn't change | dark (`--selected-bg`) when on, light when off | the Setup pages' column chips |
 | **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always dark | Extract's Data shaper "All rows ↔ Rows with data" |
 | **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, dark otherwise | the Instruments page's Band 1 link chips |
+| **Fixed** | one switch held at its value while the chips beside it stay live | dark, with no edge or pointer and a lock glyph before the label (`.tag-chip.is-fixed`) | Session Home's optional tab once it holds data |
+
+A fixed switch keeps its siblings' dark fill so it reads as a switch
+that is on rather than a display; the glyph (a CSS mask in
+`currentColor`) says why it doesn't move. It is per item: a card's
+locked view stays `is-locked`. Its other use is the Instruments
+Visibility card's two cells whose mode isn't the operator's to choose
+(`spec/instruments.md` "Visibility card").
 
 The lobby's AND/OR and Select all / Clear all chips, and the Archived
 page's Select all / Clear all, are cycle chips (`.tag-mode-chip`,

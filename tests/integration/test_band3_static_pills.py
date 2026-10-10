@@ -11,6 +11,13 @@ state told them apart, and because the static one carried ``tag-chip``
 it also inherited ``cursor: pointer``, aiming the pill vocabulary's one
 affordance at the cells that do nothing.
 
+Since ``guide/ux_refinements.md`` Item 2 the fixed cells are fixed
+switches: ``tag-chip is-fixed``, the dark fill of the chips beside them
+with no edge, no pointer and a lock glyph (``spec/ui_elements.md`` §9),
+and still no role or handler. ``is-fixed`` is what cancels ``tag-chip``'s
+pointer, so the invariant below reads "a chip offers a click unless it
+is fixed".
+
 The assertions here read the **rendered elements** inside the editor
 rather than searching the page for a class name. A bare
 ``"tag-chip" in body`` check passes on every page in the app: the class
@@ -44,9 +51,12 @@ class Span:
 
     @property
     def is_control(self) -> bool:
-        """Does this element offer a click, by class or by attribute?"""
+        """Does this element offer a click, by class or by attribute?
+
+        A fixed chip carries ``tag-chip`` but ``is-fixed`` takes its
+        pointer and edge away, so it offers none."""
         return (
-            "tag-chip" in self.classes
+            ("tag-chip" in self.classes and "is-fixed" not in self.classes)
             or self.attrs.get("role") == "button"
             or "onclick" in self.attrs
         )
@@ -110,17 +120,16 @@ def _band3_spans(client: TestClient, db: Session, *, code: str) -> list[Span]:
 def test_fixed_cells_carry_no_control_classes(
     client: TestClient, db: Session
 ) -> None:
-    """The two ``b3_static_pill`` cells are labels, and look like it."""
+    """The two ``b3_static_pill`` cells are fixed switches, not controls."""
     spans = _band3_spans(client, db, code="19j7-1")
     fixed = [s for s in spans if s.attrs.get("title") == "Fixed"]
 
     assert [s.text.strip() for s in fixed] == FIXED_LABELS
 
     for span in fixed:
-        assert span.classes == ["pill", "pill-count"], (
-            f"{span.text.strip()!r} renders {span.classes}; a fixed cell "
-            "must carry neither tag-chip (cursor: pointer) nor "
-            "is-selected (the reserved accent shade)"
+        assert span.classes == ["pill", "pill-count", "tag-chip", "is-fixed"], (
+            f"{span.text.strip()!r} renders {span.classes}; a fixed cell is "
+            "a fixed switch (is-fixed), never a live chip (is-selected)"
         )
         assert not span.is_control
 
@@ -159,7 +168,7 @@ def test_no_label_in_the_grid_pretends_to_be_clickable(
     spans = _band3_spans(client, db, code="19j7-3")
 
     for span in spans:
-        has_control_class = "tag-chip" in span.classes
+        has_control_class = "tag-chip" in span.classes and "is-fixed" not in span.classes
         has_control_behaviour = (
             span.attrs.get("role") == "button" or "onclick" in span.attrs
         )
