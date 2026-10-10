@@ -1057,3 +1057,114 @@ stub).
 
 - `spec/ui_elements.md` — §6 and §9 note that the Guide's "Reading the controls" card samples every role and chip type, so a new one is added there too.
 - `guide/things_to_check_in_browser.md` — a section for the PR.
+
+---
+
+## Item 11 — Retire the filled-amber button
+
+### Opportunity
+
+`.btn.danger-solid` (Alert, filled amber) is the loudest button the app
+has: on Session Home's Workflow card, **Archive session** outweighs the
+red-outline **Delete** it sits near in meaning, though archiving is
+recoverable and deleting isn't. The Guide's "Reading the controls" card
+(Item 10) shows the inversion side by side.
+
+### Decision
+
+Retire the filled amber (author, 2026-10-10). Its recoverable callers
+take the amber outline (`.btn.alert`); **Regenerate & prepare**, which
+deletes saved responses, takes Destructive; and **every banner Cancel**
+takes Secondary (author, 2026-10-10, found at build: `spec/ui_elements.md`
+§5a had made each banner's Cancel `.btn.alert`), so a proceed button
+always reads louder than the Cancel beside it. Rejected: keeping the fill on the Workflow card only, where the
+card hosts a series of main actions; the author chose one fewer role
+over that case.
+
+### Semantics
+
+- `.btn.alert` widens from lock-card recovery to *serious but
+  recoverable*, lock-card recovery included; it keeps the
+  **Outline-amber** name. "Alert" retires with the fill.
+- Six roles become five: Primary, Secondary, Destructive, Outline-amber,
+  Toggle.
+- §5a's banner rule changes: a banner's Cancel is Secondary, which §6
+  already lists Cancel under.
+- `--btn-alert-bg`, `-fg`, `-border`, `-bg-hover` retire with the rule;
+  the `--btn-amber-*` tokens `.btn.alert` reads are unchanged.
+
+### Judgment calls — decided
+
+- The Guide card's Alert and Outline-amber rows merge into one
+  Outline-amber row, sampled by **Archive session** (2026-10-10).
+
+### Blast radius (measured)
+
+Taken 2026-10-10 at `2af9c113`.
+
+- `grep -rc "danger-solid"` → 6 buttons in 4 operator templates
+  (`partials/next_action_card.html` 2, `session_validate.html` 1,
+  `session_extract_data.html` 1, `sessions_list.html` 2), plus
+  `guide.html` 1 and `base.html` 2 rules.
+- Banner Cancels to Secondary (`grep -rn 'class="btn alert"'`, the
+  Cancel links): `session_validate.html:35`, `:62`;
+  `partials/next_action_card.html:103`; `instruments_index.html:143`,
+  `:146`, `:160`; `partials/_quick_setup_card.html:95`;
+  `session_assignments.html:156` — eight.
+- `--btn-alert-*`: 14 lines in `base.html`; `spec/color_tokens.md`
+  (4 rows and two mentions); `tools/_harness_common.py` (contrast pair,
+  two harness buttons); `tools/theme_customizer.gen.py` (2).
+- Tests: `test_extract_data_scaffold.py:529` (class assertion),
+  `test_cascade_ties.py:67` (class list),
+  `test_assignments_page_generate.py:351` (banner Cancel class).
+- Specs naming the role: `ui_elements.md` (3), `operator_button_audit.md`
+  (6 rows), `workflow_card.md` (2), `extract_data.md` (1),
+  `session_home.md:560`, `visual_style_rrw.md:11` ("six"); `CLAUDE.md`
+  / `AGENTS.md` list the six roles.
+
+### PR ladder
+
+1. **The swap.** Every call site, the eight banner Cancels, the CSS and tokens, the
+   regenerated customizer, the harness, the three tests above plus the
+   Guide card's browser test, a new test pinning each moved button's
+   role and the retired class's absence, the Guide row, the specs and
+   the twins. No scaffold: no new page, card or
+   affordance. One code slice outside a ladder, so it takes its own
+   `diff-reviewer` read; `spec-writer` because it touches `spec/`.
+
+### Definition of done
+
+- `grep -rn "danger-solid\|--btn-alert-" app/ tools/*.py tests/ spec/`
+  finds nothing outside a retirement note.
+- `tests/unit/test_contrast_audit.py` and
+  `tests/unit/test_generated_tools_are_current.py` pass.
+- A test pins every moved button's role (the five recoverable buttons,
+  Regenerate & prepare, the eight banner Cancels) and fails on
+  `danger-solid` or `--btn-alert-` anywhere in `app/`.
+- `guide/things_to_check_in_browser.md` has a section for the PR.
+- `### Doc impact` current; `spec-writer` flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- None. The Cancel and Regenerate rulings were the author's
+  (2026-10-10).
+
+### Out of scope
+
+- The two defects filed from Item 10 (`guide/todo_master.md` stubs).
+- Restyling `.btn.alert` itself.
+
+### Doc impact
+
+- `spec/ui_elements.md` — §5a: a banner's Cancel is Secondary, and the confirm-banner note loses `.danger-solid`; §6: five roles, the Alert row goes, Outline-amber reads "serious but recoverable", the hover list loses `.danger-solid`.
+- `spec/operator_button_audit.md` — the shorthand legend loses Alert and widens Outline-amber; rows 153, 154, 203, 209, 221 and 69 take their new roles; the banner Cancel rows (155, 160, 236, 237, 257, 68, 70, 71k) take Secondary.
+- `spec/workflow_card.md` — Archive session and Regenerate & prepare take their new roles; the confirm banner's Cancel is Secondary.
+- `spec/extract_data.md` — the Archive card's button is Outline-amber.
+- `spec/session_home.md` — the Closed row's Archive session is Outline-amber.
+- `spec/color_tokens.md` — the four `--btn-alert-*` rows retire.
+- `spec/visual_style_rrw.md` — "six canonical `.btn` roles" becomes five, and the §5a summary's mandatory Cancel is `.btn.secondary`.
+- `spec/visual_style_general.md` — the Outline-amber role reads serious but recoverable, not only lock-card recovery.
+- `docs/known_limitations.md` — the light alert-hover pair leaves the accepted-below-AA table.
+- `CLAUDE.md` — the role list drops Alert [filled amber]; `AGENTS.md` copied.
+- `guide/things_to_check_in_browser.md` — a section for the PR.
