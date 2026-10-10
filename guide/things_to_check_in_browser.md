@@ -334,7 +334,7 @@ section (git history keeps it), so this file lists only what is owed.
   comes back on that label, still dark, and its card's download still
   drops the empty rows.
 
-## The Guide's "Reading the controls" card (UX refinements Item 10)
+## The Guide's "Reading the controls" card (UX refinements Item 10, rung 1)
 
 - [ ] **/guide, light and dark.** The card sits under "What Review
   Robin Web does", Buttons and Checkbox guards on the left, Pills and
@@ -346,3 +346,13 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **The samples are inert for now** (the scaffold): clicking a chip
   or a button changes nothing, and ticking the guard's box doesn't turn
   its button on; the next PR wires them.
+
+## The Guide's "Reading the controls" card works (UX refinements Item 10, rung 2)
+
+- [ ] **Every chip sample.** Email and Tag1 switch between solid blue
+  and the faint tint; "Include 1 self review" goes solid (2), then faint
+  (0); "Include self reviews" flips to "Exclude self reviews" and stays
+  solid; "Not set" goes to "All", then "Filter using tags", then back to
+  "Not set", by click and by Enter; "Observers" doesn't move.
+- [ ] **The guard.** "Delete all reviewers" is off until the box is
+  ticked, and clicking it then does nothing.

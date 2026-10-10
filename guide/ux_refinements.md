@@ -995,9 +995,9 @@ Taken 2026-10-10 at `879069ac`.
 "scaffold-first"): the mockup was not a landed slice, so #2949 became
 the inert scaffold and the chip script, the guard pairing and the
 browser test moved to rung 2. Rung 1's reads covered the wired card,
-so rung 2 restores what they read. Until it lands, rung 1's chip
-samples carry the edge but do nothing, a known, temporary break of
-§9's edge-means-clickable rule. **Reads (rung 1):** one `spec-writer` verify
+so rung 2 restores what they read. Between the two, rung 1's chip
+samples carried the edge but did nothing, a temporary break of §9's
+edge-means-clickable rule that rung 2 ends. **Reads (rung 1):** one `spec-writer` verify
 (the Not set sample didn't cycle back; the Delete row and locked-card
 note overclaimed) and one `diff-reviewer` read ("dark is on" is false
 in dark theme, so the copy says solid blue and pale; the Not set
@@ -1010,15 +1010,16 @@ chip rendered already set doesn't gain `pill-empty` when cycled back to
 stubs in `guide/todo_master.md`. A second read of the fixes found "pale" untrue
 in dark theme too (now "faint"); §9's Fill column still says
 dark/light, for the close's `spec-writer`. A third read, of
-that fix, found only plan and register wording, fixed.
+that fix, found only plan and register wording, fixed. A read of the
+split found only wording (fixed in #2949).
 
 ### PR ladder
 
 1. **The scaffold** (#2949). The card with its real copy and layout,
    every sample inert, the CSS, `SECTIONS`, the scaffold test and the
    §6 / §9 lines. ~~The card and its wiring in one PR~~ (split, above).
-2. **The wiring.** The chip script, the guard's `data-delete-confirm`
-   pairing, the "try it" copy, `tests/browser/test_guide_controls.py`, <!-- path-ref-ok -->
+2. **The wiring** (this rung). The chip script, the guard's `data-delete-confirm`
+   pairing, the "try it" copy, `tests/browser/test_guide_controls.py`,
    and §9's "every switchable sample working", with the click checks in
    `guide/things_to_check_in_browser.md`. Takes its own `diff-reviewer`
    read.
@@ -1027,7 +1028,7 @@ that fix, found only plan and register wording, fixed.
 
 - The card renders for an operator, after "What Review Robin Web does";
   `test_guide_scaffold.py` lists it.
-- `tests/browser/test_guide_controls.py` drives every chip sample and <!-- path-ref-ok -->
+- `tests/browser/test_guide_controls.py` drives every chip sample and
   the guard (rung 2).
 - `guide/things_to_check_in_browser.md` has a section for the PR.
 - `### Doc impact` current; `spec-writer` flags adjudicated.
