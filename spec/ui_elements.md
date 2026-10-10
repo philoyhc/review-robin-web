@@ -436,8 +436,8 @@ doesn't fire on the dismissed page because no
 
 Five canonical roles — **Primary**, **Secondary**, **Destructive**
 (outline red), **Outline-amber** (serious but recoverable) and
-**Toggle** (a two-state per-row flag). A recoverable act takes the
-amber outline, never a fill, so it never reads louder than Destructive.
+**Toggle** (a two-state per-row flag). A serious but recoverable act
+takes the amber outline, never a fill, so it never reads louder than Destructive.
 Every `.btn` shares one shape: `var(--space-2) var(--space-4)`
 padding, `var(--radius-button)` radius, `--fs-small` at weight 500, a 1px
 border, single-line label. **Roles differ by token, not by shape**, so a

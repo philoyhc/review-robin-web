@@ -22,11 +22,16 @@ TEMPLATES = ROOT / "app" / "web" / "templates"
 _ELEMENT = re.compile(r"<(button|a)\b([^>]*)>(.*?)</\1>", re.S)
 _CLASS = re.compile(r'class="([^"]*)"')
 _TAG = re.compile(r"<[^>]+>")
+# Comments and script / style bodies can name `<a>` or `<button>` in
+# prose; a match opened there would swallow the real elements after it.
+_NOT_MARKUP = re.compile(
+    r"\{#.*?#\}|<!--.*?-->|<(script|style)\b.*?</\1>", re.S
+)
 
 
 def _buttons(template: str) -> list[tuple[str, str]]:
     """Every `<button>` / `<a>` in the template as (label, class)."""
-    source = (TEMPLATES / template).read_text(encoding="utf-8")
+    source = _NOT_MARKUP.sub("", (TEMPLATES / template).read_text(encoding="utf-8"))
     found = []
     for match in _ELEMENT.finditer(source):
         label = " ".join(_TAG.sub(" ", match.group(3)).split())
@@ -56,18 +61,31 @@ def test_each_moved_button_keeps_its_role(
     assert classes == [cls], (template, label, classes)
 
 
+# The eight banner Cancels Item 11 moved, by template. Other Cancels
+# share some of these templates, so each count is a floor.
+BANNER_CANCELS = {
+    "operator/session_validate.html": 2,
+    "operator/partials/next_action_card.html": 1,
+    "operator/instruments_index.html": 3,
+    "operator/partials/_quick_setup_card.html": 1,
+    "operator/session_assignments.html": 1,
+}
+
+
 def test_every_cancel_is_secondary() -> None:
     """§5a: a banner's Cancel is Secondary, and so is every other one."""
     off = []
-    seen = 0
+    seen: dict[str, int] = {}
     for path in sorted(TEMPLATES.rglob("*.html")):
-        template = str(path.relative_to(TEMPLATES))
+        template = path.relative_to(TEMPLATES).as_posix()
         for label, cls in _buttons(template):
             if label == "Cancel":
-                seen += 1
+                seen[template] = seen.get(template, 0) + 1
                 if cls.split()[:2] != ["btn", "secondary"]:
                     off.append(f"{template}: {cls!r}")
-    assert seen >= 8, seen  # the eight banner Cancels at least
+    for template, floor in BANNER_CANCELS.items():
+        assert seen.get(template, 0) >= floor, (template, seen.get(template))
+    assert "reviewer/_action_row.html" in seen  # not swallowed by a comment
     assert not off, off
 
 
