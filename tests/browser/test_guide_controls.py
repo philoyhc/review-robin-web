@@ -17,10 +17,16 @@ def test_the_chip_samples_answer_a_click(page: Page) -> None:
     card = page.locator("#guide-controls")
     email = card.locator("label.tag-chip", has_text="Email")
     tag = card.locator("label.tag-chip", has_text="Tag1")
-    # The button samples act on nothing, so they take no pointer.
-    assert card.locator("span.btn").first.evaluate(
-        "el => getComputedStyle(el).pointerEvents"
-    ) == "none"
+    # The row switch: a click flips it between Primary and Secondary.
+    toggle = card.locator("[data-guide-toggle]")
+    expect(toggle).to_have_attribute("aria-pressed", "true")
+    on_bg = _bg(toggle)
+    toggle.click()
+    expect(toggle).to_have_attribute("aria-pressed", "false")
+    expect(toggle).to_have_class("btn secondary")
+    assert _bg(toggle) != on_bg
+    toggle.click()
+    expect(toggle).to_have_attribute("aria-pressed", "true")
     dark = _bg(email)
     light = _bg(tag)
     assert dark != light

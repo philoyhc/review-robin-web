@@ -1027,6 +1027,11 @@ stub).
    and §9's "every switchable sample working", with the click checks in
    `guide/things_to_check_in_browser.md`. Takes its own `diff-reviewer`
    read.
+3. **The button samples** (author, 2026-10-10, on the merged card). The
+   button samples take their role's hover, reversing the Decision's "no
+   pointer or hover tint"; R is one live toggle (`btn` ⇄ `btn secondary`
+   with `aria-pressed`), not an on/off pair. Takes its own
+   `diff-reviewer` read.
 
 ### Definition of done
 

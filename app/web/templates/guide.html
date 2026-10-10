@@ -84,8 +84,8 @@
                   <td><strong>Serious but recoverable</strong>, such as archiving a session.</td></tr>
               <tr><td><span class="btn alert">Revert to draft</span></td>
                   <td><strong>Unlocks a locked card</strong>, in the card's own amber.</td></tr>
-              <tr><td><span class="btn">R</span> <span class="btn secondary">R</span></td>
-                  <td><strong>A switch on one row</strong> of the Instruments page: R (required), ≡ (help text), ⑂ (branch). Solid blue is on.</td></tr>
+              <tr><td><button class="btn" type="button" aria-pressed="true" data-guide-toggle>R</button></td>
+                  <td><strong>A switch on one row</strong> of the Instruments page: R (required), ≡ (help text), ⑂ (branch). Solid blue is on; try it.</td></tr>
             </tbody>
           </table>
         </div>
@@ -145,8 +145,8 @@
     </div>
   </div>
   <script>
-    /* The three chip samples whose label or fill moves with a click. The
-       on/off pair needs no script: `.tag-chip:has(> input:checked)` fills
+    /* The row switch and the three chip samples whose label or fill
+       moves with a click. The on/off pair needs no script: `.tag-chip:has(> input:checked)` fills
        them off the box, as it does everywhere else. */
     (function () {
       var card = document.getElementById("guide-controls");
@@ -174,6 +174,17 @@
         partialBox.addEventListener("change", function () {
           var on = Number(partial.getAttribute("data-on"));
           paintPartial(on === total ? 0 : total);
+        });
+      }
+
+      // A switch on one row: on takes Primary, off Secondary, and
+      // aria-pressed carries the state, as R and ≡ do on Instruments.
+      var toggle = card.querySelector("[data-guide-toggle]");
+      if (toggle) {
+        toggle.addEventListener("click", function () {
+          var on = toggle.getAttribute("aria-pressed") !== "true";
+          toggle.setAttribute("aria-pressed", on ? "true" : "false");
+          toggle.classList.toggle("secondary", !on);
         });
       }
 
