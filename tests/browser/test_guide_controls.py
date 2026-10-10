@@ -65,6 +65,8 @@ def test_the_chip_samples_answer_a_click(page: Page) -> None:
     unset.click()
     expect(unset).to_have_text("Not set")
     assert _bg(unset) == amber
+    unset.press("Space")
+    expect(unset).to_have_text("All")
 
     # Held where it is: dark, and a click changes nothing.
     fixed = card.locator("label.tag-chip.is-fixed")
