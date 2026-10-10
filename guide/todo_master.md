@@ -27,8 +27,9 @@ Two sibling registers hold the open work that is not queued here:
 ### In progress
 
 - **UX refinements Item 10** — `guide/ux_refinements.md`: the Guide's
-  "Reading the controls" card, three PRs: the scaffold (#2949), the
-  wiring (#2950), then the button samples (#2951). (`guide/operator_pages_enhancements.md`
+  "Reading the controls" card, built (#2949–#2952); its close is owed.
+- **UX refinements Item 11** — `guide/ux_refinements.md`: retire the
+  filled-amber button, one PR. (`guide/operator_pages_enhancements.md`
   Items 1–3 closed 2026-10-09; `guide/ux_refinements.md` Items 1–9
   closed 2026-10-10.)
 
