@@ -910,13 +910,17 @@
                wraps the hidden ``exclude_self_reviews`` box, which
                the scripts below clear and ``newModelSyncSelfReviewChip``
                names. The line under it says what a self review is,
-               following the Link 3 pill. #}
+               following the Link 3 pill. The box's name is what its
+               tick means, so "not checked" reads true either way;
+               ``autocomplete="off"`` keeps a reload from restoring a
+               tick the label didn't follow. #}
             {% set _sr_excluded = _link3_state.exclude_self_reviews %}
             <label class="pill pill-count tag-chip is-selected"
                    data-new-model-self-review-chip
                    title="Click to switch between including and excluding self reviews">
               <input form="dfsave-{{ instrument.id }}" type="checkbox" class="visually-hidden"
-                     name="exclude_self_reviews" value="true"
+                     name="exclude_self_reviews" value="true" autocomplete="off"
+                     aria-label="Exclude self reviews"
                      onchange="newModelSyncSelfReviewChip(this)"
                      {% if _sr_excluded %}checked{% endif %}><span
                      data-new-model-self-review-chip-label>{{ "Exclude self reviews" if _sr_excluded else "Include self reviews" }}</span></label>

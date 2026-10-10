@@ -675,7 +675,8 @@ Three rules make that work:
 response-field name chips (`spec/instruments.md` "Display-field table",
 "Response fields"), and the Assignments status table's instrument-name
 and self-review chips (`spec/assignments.md` "Per-instrument status
-table"), are each a `<label
+table"), and the Instruments card's Band 1 self-review chip
+(`spec/instruments.md` "Self-review exclusion"), are each a `<label
 class="pill pill-count tag-chip">` around a visually hidden checkbox, so
 a click ticks the box and the form or row script reads it. `.tag-chip:has(> input:checked)` is the
 `.is-selected` fill, read off the box itself, so a form reset repaints

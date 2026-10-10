@@ -1026,8 +1026,8 @@ import or Duplicate.
 
 Separately, each instrument's rule can **exclude self-reviews
 outright**: the **Include / Exclude self reviews** chip under Link 3 of the
-instrument's Band 1 ([§9.6](#96-configure-instruments)), off by
-default and shown only once every Link is set. The line under it
+instrument's Band 1 ([§9.6](#96-configure-instruments)), *Include*
+by default and shown only once every Link is set. The line under it
 follows the unit of review — on a group-scoped instrument it excludes every
 group the reviewer belongs to. It takes effect at the next Generate:
 excluded pairs are not generated at all, so an instrument that has

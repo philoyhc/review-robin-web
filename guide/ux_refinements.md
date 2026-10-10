@@ -847,11 +847,19 @@ Taken 2026-10-10 at `c8343bf3`.
 |---|---|---|
 | Template | 1 block + 2 script sites | `grep -n "exclude_self_reviews" app/web/templates/operator/instruments_index.html` |
 | Tests pinning the heading and labels | 3 | `grep -n "def test_self_review_c" tests/integration/test_instrument_builder_routes.py` |
-| Specs | 6 | `grep -rln "Self reviews\*\* checkbox\|Link 3 checkbox\|exclusion checkbox\|Exclude if the" spec` |
+| Specs | 5 | `grep -rln "Self reviews\*\* checkbox\|Link 3 checkbox\|exclusion checkbox\|Exclude if the" spec` |
 
 ### Status
 
-- **Built 2026-10-10** in one PR.
+- **Built 2026-10-10** in one PR. The cold read and the `spec-writer`
+  pass found the locked card fading "Include self reviews" as if it
+  were off (Band 3's locked-card rule reaches Band 1's lock region): a
+  cycle chip is now exempt (`:not(.is-selected)`), and a browser test
+  pins it. Also fixed: the box's accessible name is what its tick means
+  ("Exclude self reviews"), `autocomplete="off"`, a browser test of the
+  Link 3 clear, and stale spec wording. **The Guide's
+  `instrument-card-assignment-rule` screencap pair shows the old
+  checkbox**; its retake is the author's.
 
 ### PR ladder
 
@@ -869,7 +877,8 @@ Taken 2026-10-10 at `c8343bf3`.
 
 ### Open questions
 
-- None.
+- The Guide's `instrument-card-assignment-rule` screencaps: a retake,
+  with Item 7's `assignments-page` pair.
 
 ### Out of scope
 
@@ -882,5 +891,6 @@ Taken 2026-10-10 at `c8343bf3`.
 - `spec/rrw_functional_spec.md` — §8.6 and §9.6 name the chip.
 - `spec/assignments.md` — the Link 3 control is a chip.
 - `spec/settings_inventory.md` — `exclude_self_reviews` is written by the chip.
+- `app/web/templates/base.html` — the locked-card fade spares a cycle chip (found at build).
 - `guide/things_to_check_in_browser.md` — a section for the PR.
 
