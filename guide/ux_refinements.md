@@ -971,8 +971,8 @@ the moment a role's tokens move, where live classes follow it.
   `data-delete-confirm` pairing; the chips' boxes sit in no form.
 - Some of a set: a click on light or amber turns all on, on dark all
   off (as Item 7). Cycle: the box's name is what its tick means
-  (as Item 8). Not set: amber, then "All" ↔ "Filter by Tag1", never
-  back to unset (as the Band 1 link chips).
+  (as Item 8). Not set: amber, then "All", "Filter by Tag1" and back
+  to "Not set" (as the Band 1 link chips cycle).
 - Fixed: a `<label>` around a checked, disabled box, so a click
   changes nothing.
 

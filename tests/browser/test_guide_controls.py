@@ -48,7 +48,8 @@ def test_the_chip_samples_answer_a_click(page: Page) -> None:
     cycle.click()
     expect(cycle).to_have_text("Include self reviews")
 
-    # Not chosen yet: amber until a click, then the options in turn.
+    # Not chosen yet: amber until a click, then the options in turn and
+    # back to unset, as the Instruments page's link chips cycle.
     unset = card.locator("[data-guide-unset-chip]")
     expect(unset).to_have_text("Not set")
     assert _bg(unset) == amber
@@ -58,7 +59,8 @@ def test_the_chip_samples_answer_a_click(page: Page) -> None:
     unset.press("Enter")
     expect(unset).to_have_text("Filter by Tag1")
     unset.click()
-    expect(unset).to_have_text("All")
+    expect(unset).to_have_text("Not set")
+    assert _bg(unset) == amber
 
     # Held where it is: dark, and a click changes nothing.
     fixed = card.locator("label.tag-chip.is-fixed")

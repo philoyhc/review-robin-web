@@ -440,8 +440,8 @@ border, single-line label. **Roles differ by token, not by shape**, so a
 role change is a colour change and nothing else. If a button does not fit
 one of the six, ask before inventing a seventh.
 The Guide's "Reading the controls" card (`app/web/templates/guide.html`)
-shows one sample of each role on these classes, so a role's look reaches
-it unedited; a new role adds a row there.
+shows one sample of each role on the classes in the table below, so a
+role's look reaches it unedited; a new role adds a row there.
 
 **A `.btn` never extends past its container.** The mechanism is `box-sizing: border-box` on the base `.btn`
 rule, and it is stated here because the default is a trap rather than a
@@ -713,8 +713,8 @@ colors.
 
 **Five chip types, one look each.** What a chip's states mean decides
 its fill; a fixed switch keeps the fill of the state it is held at. The
-Guide's "Reading the controls" card samples each type, every sample
-working, so a new type adds a row there too:
+Guide's "Reading the controls" card samples each type, every switchable
+sample working, so a new type adds a row there too:
 
 | Type | States | Fill | Standard |
 |---|---|---|---|

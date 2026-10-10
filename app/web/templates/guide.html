@@ -78,7 +78,7 @@
               <tr><td><span class="btn secondary">Save</span></td>
                   <td><strong>An everyday action</strong>: save, upload, cancel, view.</td></tr>
               <tr><td><span class="btn destructive">Delete</span></td>
-                  <td><strong>Deletes data for good.</strong> It stays off until you tick the box beside it (below).</td></tr>
+                  <td><strong>Deletes data for good.</strong> One that deletes a whole set stays off until you tick the box beside it (below).</td></tr>
               <tr><td><span class="btn danger-solid">Archive session</span></td>
                   <td><strong>Serious but recoverable</strong>, such as archiving a session.</td></tr>
               <tr><td><span class="btn alert">Revert to draft</span></td>
@@ -130,15 +130,15 @@
                   <td><strong>A choice between named options.</strong> Always dark; the label says which is chosen, and a click moves to the next.</td></tr>
               <tr><td><span class="pill pill-empty tag-chip is-unset" data-guide-unset-chip
                             role="button" tabindex="0" aria-pressed="mixed">Not set</span></td>
-                  <td><strong>Not chosen yet.</strong> Amber until you pick an option.</td></tr>
+                  <td><strong>Not chosen yet.</strong> Amber until you pick an option; a click moves through the options and back.</td></tr>
               <tr><td><label class="pill pill-count tag-chip is-fixed" title="The session has observers, so the tab stays on."><input type="checkbox" class="visually-hidden" checked disabled autocomplete="off">Observers</label></td>
                   <td><strong>Held where it is.</strong> The lock says it can't change now, usually because data depends on it; hover for why.</td></tr>
             </tbody>
           </table>
         </div>
         <p class="muted guide-controls-note">
-          On a locked card the chips show their values as plain pills. The
-          card says what unlocks it.
+          On a locked card the chips still show their values but don't
+          respond. The card says what unlocks it.
         </p>
       </div>
     </div>
@@ -189,18 +189,20 @@
         });
       }
 
-      // Not chosen yet: amber "Not set", then the named options in turn,
-      // never back to unset, as the Instruments page's link chips do.
+      // Not chosen yet: amber "Not set", then the named options in turn
+      // and back to "Not set", as the Instruments page's link chips do.
       var unset = card.querySelector("[data-guide-unset-chip]");
       if (unset) {
-        var options = ["All", "Filter by Tag1"];
-        var step = -1;
+        var states = ["Not set", "All", "Filter by Tag1"];
+        var step = 0;
         var advance = function () {
-          step = (step + 1) % options.length;
-          unset.textContent = options[step];
-          unset.classList.remove("pill-empty", "is-unset");
-          unset.classList.add("is-selected");
-          unset.setAttribute("aria-pressed", step === 1 ? "true" : "false");
+          step = (step + 1) % states.length;
+          unset.textContent = states[step];
+          unset.classList.toggle("pill-empty", step === 0);
+          unset.classList.toggle("is-unset", step === 0);
+          unset.classList.toggle("is-selected", step !== 0);
+          unset.setAttribute("aria-pressed",
+            step === 0 ? "mixed" : step === 2 ? "true" : "false");
         };
         unset.addEventListener("click", advance);
         unset.addEventListener("keydown", function (event) {
