@@ -659,8 +659,10 @@ ruling didn't name; they are recorded under Out of scope.
 
 ### Semantics
 
-- No behavior changes: the server still reads `help_text_visible_ids`,
-  which the ≡ button posts.
+- No behavior changes: nothing rendered the macro. The live ≡ button
+  saves `help_text_visible` in each row of the Band 2 payload
+  (`app/services/instruments/_band2.py`); `help_text_visible_ids`, the
+  dead checkbox's name, is read by nothing.
 
 ### Judgment calls — decided
 
