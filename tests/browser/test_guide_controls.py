@@ -122,3 +122,10 @@ def test_every_sample_has_a_tooltip(page: Page) -> None:
         [box["x"] + box["width"] / 2, box["y"] + box["height"] / 2],
     )
     assert reached == tip.get_attribute("title")
+    # Once the box is ticked the off-state tooltip goes, and comes back
+    # when it is unticked.
+    guard = page.locator('#guide-controls [data-delete-confirm="guide-demo"]')
+    guard.check()
+    assert tip.get_attribute("title") is None
+    guard.uncheck()
+    assert tip.get_attribute("title") == "Off until the box is ticked"
