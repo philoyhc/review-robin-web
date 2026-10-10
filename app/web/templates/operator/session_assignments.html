@@ -537,9 +537,9 @@
           {{ ("/operator/sessions/" ~ session.id ~ "/assignments") | tojson }};
 
         // Only the rows the operator can see. This page has something
-        // no roster page has: a CLIENT-side filter. The `Show`
-        // checkboxes in the status blocks set `style.display = "none"`
-        // on rows of an unticked instrument, so a row can be in the
+        // no roster page has: a CLIENT-side filter. The instrument-name
+        // chips in the status blocks set `style.display = "none"`
+        // on rows of an instrument turned off, so a row can be in the
         // DOM, still ticked, and invisible — while the roster pages
         // filter server-side, where a filtered-out row is not in the
         // DOM at all and cannot be selected.

@@ -896,8 +896,8 @@ a rewrite.
   `render()` on Reviewers, Reviewees, Relationships and Assignments,
   `renderPanel()` on Observers. The contract is the funnel, not its
   name. **Assignments' funnel counts only visible rows**, because it is
-  the one page with a client-side filter: its per-instrument `Show`
-  checkboxes hide rows with `display: none`, and an expander anchored
+  the one page with a client-side filter: its instrument-name chips
+  hide rows with `display: none`, and an expander anchored
   after a hidden row, or a `colSpan` counted before a chip toggle, both
   follow from treating a selectable row as a visible one.
 - **A sort drops the panel and re-anchors it.** `_rrwApplySort` removes
