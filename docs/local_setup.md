@@ -299,7 +299,9 @@ it provisioned, so there is no manual setup:
 - **In the image:** Python 3.12 and Node LTS (so
   `tests/integration/test_inline_scripts_parse.py` runs rather than
   skips).
-- **On create, once:** `pip install -e '.[dev]'`; a `.env` copied from
+- **On create, once:** a project `.venv` (on `PATH` in every terminal,
+  so `pytest`, `alembic`, `uvicorn` and `ruff` are its own) and
+  `pip install -e '.[dev]'` into it; a `.env` copied from
   `.env.example`, whose `ALLOW_FAKE_AUTH=true` and fake operator need no
   editing (an existing `.env` is kept); `alembic upgrade head`.
 - **On every start:** `alembic upgrade head` again (a pulled branch may

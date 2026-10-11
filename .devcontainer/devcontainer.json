@@ -9,22 +9,32 @@
     // than skip (CLAUDE.md, "Where work runs").
     "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
   },
-  // Once, on create: dependencies, a fake-auth .env (kept if one exists),
-  // and the local SQLite schema.
-  "postCreateCommand": "python -m pip install --upgrade pip && pip install -e '.[dev]' && { [ -f .env ] || cp .env.example .env; } && alembic upgrade head",
+  // Once, on create: a project .venv (the image's user can't write the
+  // system site-packages, and pip's ~/.local/bin fallback is not on PATH
+  // here), dependencies, a fake-auth .env (kept if one exists), and the
+  // local SQLite schema. Tools are called by their .venv path, so neither
+  // step depends on PATH.
+  "postCreateCommand": "python -m venv .venv && .venv/bin/python -m pip install --upgrade pip && .venv/bin/pip install -e '.[dev]' && { [ -f .env ] || cp .env.example .env; } && .venv/bin/alembic upgrade head",
   // Every start: migrate in the foreground (a pulled branch may add one),
   // then serve in the background, detached so it outlives this step, so
   // the forwarded port answers without a terminal command. Only the
   // subshell is backgrounded: a bare trailing & would take the migration
   // with it. Log: /tmp/rrw-uvicorn.log.
-  "postStartCommand": "alembic upgrade head && (setsid nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 > /tmp/rrw-uvicorn.log 2>&1 &)",
+  "postStartCommand": ".venv/bin/alembic upgrade head && (setsid nohup .venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 > /tmp/rrw-uvicorn.log 2>&1 &)",
+  // Terminals find the .venv's pytest, alembic, uvicorn and ruff.
+  "remoteEnv": {
+    "PATH": "${containerWorkspaceFolder}/.venv/bin:${containerEnv:PATH}"
+  },
   "forwardPorts": [8000],
   "portsAttributes": {
     "8000": { "label": "RRW app", "onAutoForward": "openBrowser" }
   },
   "customizations": {
     "vscode": {
-      "extensions": ["ms-python.python", "charliermarsh.ruff"]
+      "extensions": ["ms-python.python", "charliermarsh.ruff"],
+      "settings": {
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python"
+      }
     }
   }
 }
