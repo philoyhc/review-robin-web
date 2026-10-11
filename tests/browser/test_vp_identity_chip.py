@@ -14,7 +14,7 @@ from collections.abc import Callable
 
 from playwright.sync_api import Locator, Page, expect
 
-from ._builder import open_unlocked, save
+from ._builder import open_unlocked, save, save_button
 
 
 def _cycle(card: Locator, audience: str) -> Locator:
@@ -32,9 +32,12 @@ def test_enter_and_space_cycle_a_mode_chip(
     card = open_unlocked(page, new_session())
     cycle = _cycle(card, "reviewee")
     expect(cycle).to_have_text("—")
+    expect(save_button(card)).to_be_disabled()
     cycle.focus()
     page.keyboard.press("Enter")  # — → Raw
     expect(cycle).to_have_attribute("data-new-model-vp-current-slug", "raw")
+    # The keyed cycle marks the card dirty, as a click does.
+    expect(save_button(card)).to_be_enabled()
     chip = card.locator('[data-new-model-vp-identity="reviewee"]')
     expect(chip).to_be_visible()
     page.keyboard.press("Space")  # Raw → Anonymized
