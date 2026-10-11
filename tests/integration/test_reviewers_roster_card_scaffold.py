@@ -1542,9 +1542,9 @@ def _panel(html: str) -> str:
 
 def test_the_labels_editor_lives_only_in_the_unlock_panel(client, db):
     """The tag-labels editor has one home, the Unlock panel. Its
-    `.card-columns` fallback, a disabled copy shown while the panel
-    could not render, was retired on 2026-10-11 at the author's ruling:
-    the labels read in the table headers and the populated-column chips.
+    `.card-columns` fallback, shown while the panel could not render
+    (disabled when locked, live during a row edit / add), was retired on
+    2026-10-11 at the author's ruling.
 
     Was `test_card_columns_renders_only_where_the_unlock_panel_cannot`.
     """
@@ -1630,11 +1630,13 @@ def test_the_editor_is_the_row_and_the_anchor_names_it(client, db):
      ("expired", False, False), ("expired", True, False),
      ("archived", False, False), ("archived", True, False)],
 )
-def test_the_labels_editor_renders_exactly_once_in_every_state(
+def test_the_labels_editor_renders_once_with_its_panel_else_never(
     client, db, state, adding, panel_expected
 ):
     """The editor renders once where the Unlock panel does, and nowhere
     where it cannot (the fallback home retired 2026-10-11).
+
+    Was `test_the_labels_editor_renders_exactly_once_in_every_state`.
 
     Two renders would put two `#field-labels-form-reviewer` ids on one
     page — and the partial's own script resolves its inputs by

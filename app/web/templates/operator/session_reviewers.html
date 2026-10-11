@@ -100,25 +100,9 @@
     {% include "operator/partials/_roster_lock_card.html" %}
   {% endwith %}
 
-  {# 19E rung 6b — every card above the preview table in two
-     independent column stacks: the guidance card then the tag-label
-     editor on the left, Operator actions on the right. Opening the
-     guidance grows only the left column, and the right one neither
-     moves nor stretches.
-
-     19I Item 12 rung 4 retired the "Fields with data" card that used
-     to head the right stack. Its pills named the columns holding any
-     value, which the column chips above the preview table now say —
-     and say better, since a chip both reports the fact and acts on
-     it. The two identity pills it also carried (Name, Email) were
-     appended whenever the roster had any rows at all, so they
-     restated a count the chrome status strip already shows.
-
-     The Activated lock card sits ABOVE the container rather than
-     between the two pairs (where it used to be, splitting them into
-     two row grids): it is full width, and a full-width card inside a
-     two-column stack would have to span, which `.card-columns` does
-     not do. Its notice reads at the top of the page anyway. #}
+  {# The Activated lock card sits above the roster card, full width;
+     the 19E `.card-columns` stack that once followed it is gone (19P,
+     then the labels fallback's retirement on 2026-10-11). #}
   {# 19P.1 rung 2a — page guidance leads the page, full width. Its prose
      runs in two columns when open: at full width one measure is ~150
      characters, well past what stays readable. #}
@@ -567,11 +551,11 @@
     {% endif %}
   </div>
 
-  {# The tag-labels editor lives only in the Unlock panel. A read-only
-     copy used to fall back here while the panel could not render
-     (locked session, row edit); the author retired it on 2026-10-11 as a
-     leftover: the labels already read in the table headers and the
-     "Populated columns" chips. #}
+  {# The tag-labels editor lives only in the Unlock panel. A fallback
+     copy used to render here while the panel could not (disabled when
+     locked, live during a row edit / add); the author retired it on
+     2026-10-11 as a leftover. Locked, the labels read in the populated
+     columns' headers only. #}
 
   {# 19P.1 — there is no Add / Edit editor card.
 

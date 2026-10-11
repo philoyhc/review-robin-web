@@ -432,8 +432,8 @@ has a ProfileLink.
 
 - [ ] **Locked.** On an activated session, Reviewers, Reviewees and
   Relationships show no "… tag labels" card below the roster card; the
-  labels still read in the table headers and the "Populated columns"
-  chips.
+  labels still read in the headers of the populated tag columns (a
+  label on an empty column shows nowhere when locked, by ruling).
 - [ ] **Mid-edit.** On a draft, Add or Edit a row: no labels card
   appears below the roster card while the row is open.
 - [ ] **Unlocked.** On a draft, Unlock: the labels card is in the panel

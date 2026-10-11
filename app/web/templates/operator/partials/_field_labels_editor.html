@@ -6,10 +6,10 @@
   at the bottom. Both buttons render in the canonical
   ``.btn.secondary`` style and start ``disabled``; inline JS
   enables them when an input changes (and re-disables them after
-  Cancel discards the pending edits). Inputs render disabled (no
-  Save/Cancel buttons) whenever the session is **not editable** —
-  the page's ``<div class="card lock">`` already messages the way
-  out for that state.
+  Cancel discards the pending edits). Every include sits inside the
+  Unlock panel, which renders only while the session is editable, so
+  the ``not is_editable`` branch below (inputs disabled, no buttons) is
+  defensive; a locked page renders no editor at all.
 
   This was ``is_ready`` until Segment 19H Item 7, so on ``expired``
   and ``archived`` the inputs rendered enabled, the Save button

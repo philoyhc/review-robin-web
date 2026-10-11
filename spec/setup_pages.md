@@ -321,10 +321,13 @@ card's replace*.
   panel stands down rather than rendering disabled controls.
 - **The tag-label editor lives only in the panel.** Where the panel
   cannot render — a locked session, or while a row is edited or added —
-  no copy of it renders elsewhere: the labels read in the table's tag
-  headers and the roster index's pills. (A disabled `.card-columns`
-  fallback copy shipped with 19P.1 and was retired on 2026-10-11 at the
-  author's ruling, as a leftover.)
+  no copy of it renders elsewhere. The labels still read in the table's
+  tag headers and the roster index's pills, but only for populated
+  columns, so a label on an empty tag column is not shown on a locked
+  page; and labels cannot be edited mid-edit or mid-add (Cancel, then
+  Unlock). (A `.card-columns` fallback copy shipped with 19P.1 —
+  disabled when locked, live in edit / add mode — and was retired on
+  2026-10-11 at the author's ruling, as a leftover.)
 - **The `Danger Zone` renders only when the roster has rows** — and for
   a reason worth stating, because the route does *not* refuse an empty
   one: it answers 303 and writes an audit row reading "Deleted all 0
@@ -1410,9 +1413,9 @@ axes. Restated here only as far as its own reasons go:
   this page has no label slots, so the columns cannot correspond.
 - **`Lock` follows the card, not the column** — the empty-roster case
   described in that section's table.
-- **`.card-columns` is absent in every state**, not just most: with no
-  label editor there is no fallback tenant, and the cohort editor lives
-  in the row expander.
+- **`.card-columns` is absent**, as on the other three since the label
+  editor's fallback copy retired; the cohort editor lives in the row
+  expander.
 
 **And elsewhere on the page, which the shared section's table
 deliberately does not cover.** Counted here so a reader has one place
@@ -1653,9 +1656,8 @@ Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
 
   **The Unlock panel takes the same predicate**, `is_editable` (plus
   "not mid-edit"), and is *suppressed*, not rendered disabled, so a
-  locked page carries no `Save labels`. The one addition is the label editor's second
-  position, which renders on the complement so a locked page can still
-  show the labels without offering the control.
+  locked page carries no `Save labels`. The tag-label editor has no
+  second position: it lives only in the panel.
 
   **`is_ready` is the wrong predicate here, and the failure mode is
   silent.** It is true only in `ready`, so a control keyed to it stays

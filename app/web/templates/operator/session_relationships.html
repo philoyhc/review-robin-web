@@ -153,7 +153,7 @@
      Reviewers' arrangement, not Observers': the tag-labels editor over
      the `Danger Zone` on the left, `Upload` on the right, `Lock`
      beneath the upload card. Observers has no labels editor, so its
-     panel could not answer the two-homes question this page has to.
+     panel has no left-column tenant to arrange.
      ------------------------------------------------------------------ #}
   <div class="card roster-card" id="roster-card">
     <div class="roster-readouts">
@@ -357,11 +357,11 @@
     {% endif %}
   </div>
 
-  {# The tag-labels editor lives only in the Unlock panel. A read-only
-     copy used to fall back here while the panel could not render
-     (locked session, row edit); the author retired it on 2026-10-11 as a
-     leftover: the labels already read in the table headers and the
-     "Populated columns" chips. #}
+  {# The tag-labels editor lives only in the Unlock panel. A fallback
+     copy used to render here while the panel could not (disabled when
+     locked, live during a row edit / add); the author retired it on
+     2026-10-11 as a leftover. Locked, the labels read in the populated
+     columns' headers only. #}
 
 
   {# Pair-context labels editor (left, half-width) + operator-actions

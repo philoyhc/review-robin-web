@@ -157,8 +157,8 @@ editor nor the allowlist, though their built-in defaults ("Name" /
 
   Save / Cancel pair (both Secondary, both disabled-until-dirty).
   **Gated by `is_editable`**, not `is_ready` (`status == "ready"`
-  alone), so `expired` and `archived` render it locked too. Inputs
-  render disabled in every locked state, and the page's `.card.lock` messages the way out. The same
+  alone), so `expired` and `archived` suppress it too, and the page's
+  `.card.lock` messages the way out. The same
   nine slots can also be set via the roster CSV header suffix (see
   **Round-trip** below).
 - **Read:** Friendly label flows through every operator
