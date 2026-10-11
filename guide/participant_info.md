@@ -95,6 +95,7 @@ see of a reviewer; this is what the reviewer sees of themselves).
   Reviewers: the readout row is one shape across them, and
   `tests/integration/test_roster_unlock_panel.py` pins its label as
   `{Noun} roster:` for all four. `Shown on surface:` is Reviewers only.
+  (Confirmed by the author, 2026-10-11.)
 
 - The line sits on the role chips' row, after the last chip: with only
   the `Reviewer` role (the common case) that is just after its pill, and
