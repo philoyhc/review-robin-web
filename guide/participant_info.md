@@ -42,6 +42,11 @@ The author's ruling, 2026-10-11:
   the header, one selector chip per field that has data in the roster:
   Name, Email, Profile selected by default; Tag 1–3, under their
   friendly labels, unselected.
+- **What the roster card reports** (author, 2026-10-11, answering the
+  open question on locked sessions). The roster card's readout row, in
+  every state, ends with **Shown on surface:** and a pill per selected
+  field, on the same line as the others. The row's two labels shorten:
+  `Reviewers roster:` → `Roster:`, `Populated columns:` → `Populated:`.
 
 Stored once per session, as a list of field keys. Rejected: a
 per-instrument setting (the line is in the page header, above every
@@ -58,6 +63,9 @@ see of a reviewer; this is what the reviewer sees of themselves).
   import); Profile and each tag only while some reviewer row holds a
   value. A stored key whose column has since emptied is kept, renders
   nothing, and shows its chip so it can be cleared.
+- **The readout.** `Shown on surface:` lists the selected fields by
+  label (a tag under its friendly label), in roster order; with none
+  selected it reads `none`, as the index's empty branch does.
 - **The line.** Selected fields in roster order, separated as the
   header's other muted text is; a field empty on this reviewer's row is
   skipped. Profile follows `_partials/profile_value.html` (link, `•••`
@@ -68,12 +76,18 @@ see of a reviewer; this is what the reviewer sees of themselves).
   reviewer, so the operator sees what that reviewer sees.
 - **Gate.** The card lives in the Unlock panel, so it renders only while
   `is_editable` and no row is edited or added; its route answers 409
-  otherwise, as `_save_field_labels` does. A save never demotes a
+  otherwise, as `_save_field_labels` does. Locked, the readout row's
+  `Shown on surface:` pills still say what the reviewer sees. A save never demotes a
   `validated` session: the setting is display-only.
 - **Round trip.** The Settings CSV carries it as a `session.*` row;
   Duplicate copies it; an audit event records each change.
 
 ### Judgment calls — decided
+
+- The two label renames land on all four roster pages, not only
+  Reviewers: the readout row is one shape across them, and
+  `tests/integration/test_roster_unlock_panel.py` pins its label as
+  `{Noun} roster:` for all four. `Shown on surface:` is Reviewers only.
 
 - The line sits on the role chips' row, after the last chip: with only
   the `Reviewer` role (the common case) that is just after its pill, and
@@ -100,6 +114,10 @@ Taken 2026-10-11 at `7e329db5`.
 - Writers: `app/services/session_config_io/` (`_serialize.py`,
   `_apply_parse.py`, `_apply_session.py`), `app/services/session_clone.py`
   (~line 137), `app/services/audit.py` (`EVENT_SCHEMAS`).
+- Readout labels: `grep -rln 'roster:</span>\|Populated columns' app/web/templates tests --include=*.html --include=*.py`
+  → 6 (the four roster templates, `test_roster_unlock_panel.py`,
+  `test_observers_unlock_panel.py`); `spec/setup_pages.md` names
+  `Populated columns` once.
 - Tests: `grep -rln "rs-role-nav" tests | wc -l` → 2;
   `grep -rln "preview_surface\|preview_mode" tests | wc -l` → 13.
 
@@ -107,9 +125,11 @@ Taken 2026-10-11 at `7e329db5`.
 
 1. **This plan.** Prose only.
 2. **Scaffold.** The card in the Unlock panel, inert: header, chips at
-   their defaults, Save / Cancel disabled. The surface and preview line
-   showing the default fields, which is what `NULL` will mean, so no
-   page shows a choice it later ignores. Specs untouched until rung 3.
+   their defaults, Save / Cancel disabled. The readout row's two renames
+   on all four roster pages and its `Shown on surface:` pills at the
+   default. The surface and preview line showing the default fields,
+   which is what `NULL` will mean, so no page shows a choice it later
+   ignores. Specs untouched until rung 3.
 3. **Storage and the live card.** Column, migration, service and audit
    event, the save route, the Settings CSV row, Duplicate, the line
    reading the stored list, specs, a browser-check section. The item's
@@ -130,10 +150,8 @@ Taken 2026-10-11 at `7e329db5`.
 
 ### Open questions
 
-- **Locked sessions** (author): the Unlock panel is suppressed once the
-  session is activated, so the operator can neither change nor see the
-  selection then. Is that right, or should the roster card show the
-  selection read-only when locked?
+- None open. Locked sessions: the roster card's readout row shows the
+  selection in every state (author, 2026-10-11; see Decision).
 
 ### Out of scope
 
@@ -144,7 +162,7 @@ Taken 2026-10-11 at `7e329db5`.
 ### Doc impact
 
 - `spec/reviewer-surface.md` — the header line after the `Reviewer` pill, and the preview's static pill.
-- `spec/setup_pages.md` — the Reviewers Unlock panel's new card above `Upload Reviewers`.
+- `spec/setup_pages.md` — the Reviewers Unlock panel's new card above `Upload Reviewers`; the roster card's readout labels (`Roster:`, `Populated:`) on all four pages and Reviewers' `Shown on surface:` readout.
 - `spec/settings_inventory.md` — the new per-session setting, its default and its gate.
 - `spec/csv_contracts.md` — the Settings CSV `session.*` row.
 - `spec/roundtrip_coverage.md` — the new column round-trips.
