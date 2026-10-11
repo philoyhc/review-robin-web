@@ -71,7 +71,7 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #:   live ones. It is not clickable, but the author ruled (2026-10-09)
 #:   that it keeps its siblings' fill so it reads as a switch that is on;
 #:   the lock glyph and the missing edge say it doesn't move.
-#: - the three-selector chip rule — every ``.tag-chip`` (which is every
+#: - the four-selector chip rule — every ``.tag-chip`` (which is every
 #:   Band 2 pill too), plus the lobby's Select all / Clear all and AND/OR
 #:   chips. Added at
 #:   rung 3, which is what gives a chip its edge. Checked before it
@@ -98,8 +98,8 @@ CONTROL_SELECTORS = {
     "body.ui-v2 .pill.pill-tag-clear, body.ui-v2 .pill.tag-mode-chip",
     "body.ui-v2 span.tag-chip.is-fixed, body.ui-v2 label.tag-chip.is-fixed:has(> input:checked)",
     (
-        "body.ui-v2 .tag-chip, body.ui-v2 .pill.pill-tag-clear, "
-        "body.ui-v2 .pill.tag-mode-chip"
+        "body.ui-v2 .tag-chip, body.ui-v2 .pill.tag-chip, "
+        "body.ui-v2 .pill.pill-tag-clear, body.ui-v2 .pill.tag-mode-chip"
     ),
     (
         "body.ui-v2 a.pill.pill-role-reviewer, "

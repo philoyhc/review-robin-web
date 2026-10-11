@@ -2648,8 +2648,13 @@
          The second pixel comes from an inset shadow rather than a wider
          ``border-width`` so the box never changes size, and ``.pill``'s 1px transparent
          border (below) keeps a bordered chip exactly as tall as the
-         status label beside it in the same table cell. */
+         status label beside it in the same table cell. That reset is a
+         ``border`` shorthand at this rule's weight and later in the sheet,
+         so every chip (all of them are ``.pill``) needs ``.pill.tag-chip``
+         here to keep its colored border; without it the edge was the
+         shadow's 1px alone. */
       body.ui-v2 .tag-chip,
+      body.ui-v2 .pill.tag-chip,
       body.ui-v2 .pill.pill-tag-clear,
       body.ui-v2 .pill.tag-mode-chip {
         cursor: pointer;

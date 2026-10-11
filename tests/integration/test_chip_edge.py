@@ -58,7 +58,8 @@ def _chip_rule(css: str) -> str:
     """The block that gives every chip its edge."""
     block = _rule(
         css,
-        "body.ui-v2 .tag-chip,\n      body.ui-v2 .pill.pill-tag-clear,"
+        "body.ui-v2 .tag-chip,\n      body.ui-v2 .pill.tag-chip,"
+        "\n      body.ui-v2 .pill.pill-tag-clear,"
         "\n      body.ui-v2 .pill.tag-mode-chip",
     )
     assert block is not None, "the chip-edge rule is gone or was resplit"
@@ -117,8 +118,10 @@ def test_an_inert_chip_does_not_wear_the_shade(
     assert block is not None
     assert "border-color: transparent" in block
     assert "box-shadow: none" in block
-    # Specificity, spelled out: (0,3,1) beats the chip rule's (0,2,1),
-    # so the cancellation actually wins rather than merely being written.
+    # Specificity, spelled out: (0,3,1) ties the chip rule's most specific
+    # member (``.pill.tag-chip``), so source order decides, and the
+    # cancellation has to come after it to win rather than merely be
+    # written.
     assert css.index("body.ui-v2 .tag-chip.is-disabled") > css.index(
         "body.ui-v2 .tag-chip,"
     )
