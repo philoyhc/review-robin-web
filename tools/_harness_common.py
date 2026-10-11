@@ -370,10 +370,10 @@ def component_sections():
       <a class="back-link" href="#" style="display: inline-block; margin-top: 16px;">&larr; Back to Sessions</a>
       <div class="rs-page-header"><h1>Reviewers</h1></div>
       <div class="ph-row" style="margin: 8px 0;">
-        <span class="tag-chip is-selected">Tutor</span>
-        <span class="tag-chip">Peer</span>
-        <span class="tag-chip is-selected">Mentor</span>
-        <span class="tag-chip">External</span>
+        <span class="pill pill-count tag-chip is-selected">Tutor</span>
+        <span class="pill pill-count tag-chip">Peer</span>
+        <span class="pill pill-count tag-chip is-selected">Mentor</span>
+        <span class="pill pill-count tag-chip">External</span>
       </div>
     </section>"""),
         ("text", f"""    <section class="ph-section">
