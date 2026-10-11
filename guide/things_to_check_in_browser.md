@@ -334,48 +334,6 @@ section (git history keeps it), so this file lists only what is owed.
   comes back on that label, still dark, and its card's download still
   drops the empty rows.
 
-## Clear all settings asks first (Operator Settings)
-
-- [ ] **The guard.** On `/operator/settings` the card reads "Clear all
-  settings (SMTP)"; its button is off until "Yes, delete every SMTP
-  setting on this account." is ticked, and off again when unticked.
-- [ ] **The clear.** Ticked, the button wipes the SMTP fields and
-  returns to Settings; the Date & time zone stays.
-- [ ] **Layout.** The taller card sits cleanly under Date & time at
-  full width and below 800px, in light and dark.
-
-## Band 1 link chips: amber on Not set, and the keyboard
-
-- [ ] **Amber.** On a saved instrument whose three Links are set, unlock
-  the card and click each Link chip round to "Not set": it turns amber,
-  as on a new instrument, in light and dark; one more click turns it
-  solid again.
-- [ ] **Keys.** Tab to a Link chip: Enter and Space each advance it one
-  step, as a click does, Space without scrolling the page, and the
-  card's Save wakes; the chip shows a focus ring; on a locked card the
-  chips take no focus.
-
-## Locked cards' Band 1 link chips look plain (#2958)
-
-- [ ] **Locked.** On a locked Instruments card the three Link chips have
-  no blue edge and no pointer; a set Link reads as the plain display
-  pill (pale blue in light, deep navy in dark), a "Not set" Link stays
-  amber, in light and dark.
-- [ ] **Unlock and lock again.** Unlocking brings the edge, pointer and
-  solid fill back; locking takes them away, with no reload.
-
-## Every live chip's edge is 2px
-
-- [ ] **Lobby.** A tag chip's blue edge now matches AND/OR's and Clear
-  all's weight; the chip is no taller or wider than before.
-- [ ] **Elsewhere.** The Setup pages' column-visibility chips, the
-  Archived page's tag chips, Session Home's tab chips (card unlocked),
-  the Instruments card's Band 1 and Band 3 chips (unlocked), Assignments'
-  status chips, Extract data's and the Email Template page's cycle chips,
-  and /guide's samples show the same 2px edge, in light and dark.
-- [ ] **No edge where there was none.** Fixed chips, a locked card's
-  chips and disabled chips still show no edge.
-
 ## Reviewers gets a Profile column chip
 
 - [ ] **With data.** On a Reviewers page where some reviewer has a
