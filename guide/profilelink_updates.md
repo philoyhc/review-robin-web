@@ -197,6 +197,11 @@ Taken 2026-10-11 at `e8dcd994`.
   and the locked table, shown only beside a Raw cell. It needed a
   `body.ui-v2 .pill[hidden]` rule in `base.html`, since `.pill`'s
   `display` outranked `hidden`, as `.btn`'s once did.
+- Rung 2 (2026-10-11): the column (`b7e3d91a4c62`), the service's
+  level and refusals, the Settings CSV round trip, copies, and both
+  readers. `upsert_policy` keeps a stored level unless one is passed,
+  so the card's Save, which sends none until rung 3, leaves it alone.
+  The specs land with rung 3.
 
 ### PR ladder
 

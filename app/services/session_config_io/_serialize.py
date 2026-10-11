@@ -30,6 +30,7 @@ from app.services.email_templates import (
     RESPONSES_RECEIVED_ENABLED_KEY,
 )
 from app.services.sessions import resolve_session_timezone
+from app.services.visibility_policies import REVIEWER_IDENTITY_AUDIENCES
 
 from app.services.session_config_io._rows import (
     Row,
@@ -547,6 +548,16 @@ def _view_policy_rows(instrument: Instrument, n: int) -> list[Row]:
                 "string",
             )
         )
+        # ProfileLink updates Item 2: only the audiences that carry a
+        # reviewer-identity level write the row; empty is the default.
+        if policy.audience in REVIEWER_IDENTITY_AUDIENCES:
+            rows.append(
+                Row(
+                    f"{prefix}.after_release_reviewer_identity",
+                    _str(policy.after_release_reviewer_identity),
+                    "string",
+                )
+            )
     return rows
 
 

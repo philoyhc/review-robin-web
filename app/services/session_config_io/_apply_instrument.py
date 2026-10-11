@@ -32,6 +32,10 @@ from app.services.instruments._response_fields import (
     _validation_block_from_default_spec,
     validation_block_from_inline,
 )
+from app.services.visibility_policies import (
+    VisibilityPolicyError,
+    validate_reviewer_identity,
+)
 from app.services.responses import (
     BRANCH_MODE_REQUIRE,
     BRANCH_MODES,
@@ -212,6 +216,15 @@ def _apply_instrument_kv(
                     f"expected one of {sorted(_VALID_VP_IDENTIFICATION)}"
                 )
             setattr(vp, attr, value or None)
+        elif attr == "after_release_reviewer_identity":
+            # ProfileLink updates Item 2: refused here, row by row, as
+            # an unknown granularity is; the audience check too, since
+            # it needs nothing but this row.
+            try:
+                validate_reviewer_identity(audience, value or None)
+            except VisibilityPolicyError as exc:
+                raise _ParseError(exc.message) from exc
+            vp.after_release_reviewer_identity = value or None
         elif attr == "observer_tag":
             # Retired 2026-10-02 (findings A19): nothing ever read it,
             # and an observer's cohort rule decides who they see.
@@ -543,6 +556,9 @@ def _apply_instruments(
                     after_release_granularity=vp_spec.after_release_granularity,
                     after_release_identification=(
                         vp_spec.after_release_identification
+                    ),
+                    after_release_reviewer_identity=(
+                        vp_spec.after_release_reviewer_identity
                     ),
                 )
             )

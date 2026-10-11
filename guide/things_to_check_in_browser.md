@@ -356,3 +356,23 @@ section (git history keeps it), so this file lists only what is owed.
   locked table's Reviewees row shows the plain "Name, email" pill after
   "Raw responses". The chips wrap cleanly in the narrow column, at full
   width and below 800px, in light and dark.
+
+## Raw names the reviewer at the stored level (ProfileLink Item 2, rung 2)
+
+Only the Settings CSV sets the level until rung 3. Export a session's
+Settings CSV, set `instruments[1].view_policies[reviewee].after_release_reviewer_identity`
+(and the `observer` one) to `name`, `name_email` or `name_email_profile`,
+and import it on a session whose Reviewees and Observers released cells
+are Raw, with the release window open and a reviewer who has a
+ProfileLink.
+
+- [ ] **Reviewee, `name`.** On `/me/sessions/{id}/results` the Reviewer
+  cell shows the name only, no email.
+- [ ] **Reviewee, `name_email_profile`.** The name, the email, and a
+  "link" under them that opens the reviewer's page in a new tab.
+- [ ] **Observer download.** `name` leaves `ReviewerEmail` and the three
+  reviewer tag columns empty; `name_email_profile` adds a
+  `ReviewerProfileLink` column after `ReviewerEmail`, which opens
+  cleanly in a spreadsheet.
+- [ ] **Unchanged.** A session whose CSV never set the level reads as
+  before, and the card's Save keeps a stored level.
