@@ -292,7 +292,8 @@ by the Azure platform), which still needs the Azure dev slot.
 | Real Entra / Easy Auth sign-in, redirect flows, tenant allowlist | ❌ No — needs the Azure dev slot |
 
 **Start.** From the repo on GitHub: **Code ▸ Codespaces ▸ Create codespace
-on `main`** (or a feature branch). `.devcontainer/devcontainer.json` boots
+on `main`** (or a feature branch); `docs/setup_codespaces.md` has the
+click-by-click version for a browser, tablets included. `.devcontainer/devcontainer.json` boots
 it provisioned, so there is no manual setup:
 
 - **On create, once:** Python 3.12 and Node LTS (so
