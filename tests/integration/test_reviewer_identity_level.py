@@ -13,6 +13,7 @@ from __future__ import annotations
 import csv
 import io
 from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -169,14 +170,34 @@ def test_anonymized_never_reads_the_level(
 # ── The observer's download ──────────────────────────────────────────
 
 
-def _download(client: TestClient, db: Session, *, code: str, level: str | None, identification: str = "identified") -> list[list[str]]:
+def _download(
+    client: TestClient,
+    db: Session,
+    *,
+    code: str,
+    level: str | None,
+    mode: str = "raw",
+    extra: Callable[[Session, dict], None] | None = None,
+) -> list[list[str]]:
+    """The observer's download through the only path the product allows
+    a per-row mode on: the Responses released cell, with the session
+    expired and its release window open."""
     review_session = _make_session(client, db, code=code)
-    seeded = _seed_one_instrument(
-        db, review_session, while_ongoing_identification=identification
-    )
+    seeded = _seed_one_instrument(db, review_session)
     seeded["reviewer"].profile_link = LINK
+    if extra is not None:
+        extra(db, seeded)
     policy = vp.list_for_instrument(db, seeded["instrument"].id)["observer"]
+    policy.while_ongoing_granularity = None
+    policy.while_ongoing_identification = None
+    granularity, identification = vp.encode_mode(mode)
+    policy.after_release_granularity = granularity
+    policy.after_release_identification = identification
     policy.after_release_reviewer_identity = level
+    review_session.status = "expired"
+    review_session.responses_release_at = datetime.now(timezone.utc) - timedelta(
+        hours=1
+    )
     db.commit()
     _add_observer(db, review_session, email="alice@example.edu", cohort_rule=_MATH_RULE)
     response = client.get(
@@ -199,6 +220,53 @@ def test_name_only_blanks_the_email_and_the_reviewer_tags(
     assert row[1:5] == ["", "", "", ""]
     # The reviewee's side is not the reviewer's identity: it stays.
     assert row[5:8] == ["Ree", "ree@x", "mathcohort"]
+
+
+def _a_namesake(db: Session, seeded: dict) -> None:
+    """A second "Rev", added after the first, whose email sorts first."""
+    from app.db.models import Assignment, Response
+
+    twin = Reviewer(
+        session_id=seeded["instrument"].session_id,
+        name="Rev",
+        email="aaa@x",
+        tag_1="mathcohort",
+    )
+    db.add(twin)
+    db.flush()
+    assignment = Assignment(
+        session_id=seeded["instrument"].session_id,
+        instrument_id=seeded["instrument"].id,
+        reviewer_id=twin.id,
+        reviewee_id=seeded["reviewee"].id,
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=seeded["field"].id,
+            value="9",
+            submitted_at=datetime.now(timezone.utc),
+        )
+    )
+
+
+def test_name_only_does_not_sort_namesakes_by_their_hidden_emails(
+    client: TestClient, db: Session
+) -> None:
+    """Two reviewers called Rev: with emails shown they sort by email
+    (aaa@x, answer 9, first); with Name only the order must not give
+    that away, so it falls to the assignment (rev@x, answer 4, first)."""
+    _, *shown = _download(
+        client, db, code="rid-csv-twin-shown", level="name_email", extra=_a_namesake
+    )
+    assert [row[1] for row in shown] == ["aaa@x", "rev@x"]
+    _, *hidden = _download(
+        client, db, code="rid-csv-twin-hidden", level="name", extra=_a_namesake
+    )
+    rating = shown[0].index("9")
+    assert [row[rating] for row in hidden] == ["4", "9"]
 
 
 @pytest.mark.parametrize("level", [None, "name_email"])
@@ -231,7 +299,7 @@ def test_an_anonymized_download_ignores_the_level(
         db,
         code="rid-csv-anon",
         level="name_email_profile",
-        identification="deidentified",
+        mode="anonymized",
     )
     assert "ReviewerProfileLink" not in header
     assert LINK not in ",".join(row)
@@ -281,15 +349,48 @@ def test_the_cards_save_keeps_a_stored_level(
     assert policy.after_release_reviewer_identity == "name"
 
 
-def test_a_copy_carries_the_level(client: TestClient, db: Session) -> None:
+def _actor(db: Session):
     from app.db.models import User
 
-    review_session, instrument, _ = _session_with_policy(client, db, "rid-copy")
-    replica = Instrument(session_id=review_session.id, name="Replica", order=9)
-    db.add(replica)
-    db.flush()
-    actor = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
-    copy_view_policies(db, review_session, instrument, replica, actor)
+    return db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
+
+
+def test_replicate_carries_the_level(client: TestClient, db: Session) -> None:
+    from app.services.instruments import replicate_instrument
+
+    review_session, instrument, _ = _session_with_policy(client, db, "rid-replicate")
+    replica = replicate_instrument(
+        db, review_session=review_session, source=instrument, actor=_actor(db)
+    )
     db.commit()
     copied = vp.list_for_instrument(db, replica.id)["reviewee"]
     assert copied.after_release_reviewer_identity == "name"
+
+
+def test_duplicate_carries_the_level(client: TestClient, db: Session) -> None:
+    from app.services import session_clone
+
+    review_session, _, _ = _session_with_policy(client, db, "rid-dup")
+    clone = session_clone.clone_session(
+        db, source=review_session, user=_actor(db), mode="all"
+    )
+    db.commit()
+    [copied_instrument] = db.execute(
+        select(Instrument).where(Instrument.session_id == clone.id)
+    ).scalars().all()
+    copied = vp.list_for_instrument(db, copied_instrument.id)["reviewee"]
+    assert copied.after_release_reviewer_identity == "name"
+
+
+def test_a_copy_drops_a_level_that_is_not_one(client: TestClient, db: Session) -> None:
+    review_session, instrument, policy = _session_with_policy(client, db, "rid-copy-bad")
+    policy.after_release_reviewer_identity = "everything"
+    db.commit()
+    replica = Instrument(session_id=review_session.id, name="Replica", order=9)
+    db.add(replica)
+    db.flush()
+    copy_view_policies(db, review_session, instrument, replica, _actor(db))
+    db.commit()
+    copied = vp.list_for_instrument(db, replica.id)["reviewee"]
+    assert copied.after_release_reviewer_identity is None
+    assert copied.after_release_identification == "identified"

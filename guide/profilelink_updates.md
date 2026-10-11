@@ -207,6 +207,14 @@ Taken 2026-10-11 at `e8dcd994`.
   clears it), the locked and reviewer-surface pills, and the specs,
   written by `spec-writer` at the close; it added a pointer in
   `spec/reviewer-surface.md`, outside `Doc impact`.
+- One cumulative `diff-reviewer` read on `73e7291a..HEAD` at rung 3: no
+  disclosure leak. Fixed: a false spec line (the mode chips take no
+  Enter/Space; the identity chip does, a gap left for its own fix); the
+  observer tests used a Session ongoing Raw the product forbids, now the
+  released cell with the window open; Replicate and Duplicate tested
+  end to end, and a bad stored level dropped on copy; a `Name only`
+  download no longer sorts namesakes by their hidden emails; §6 rows,
+  stale browser-check lines, a misplaced constant.
 
 ### PR ladder
 

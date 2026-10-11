@@ -345,13 +345,13 @@ section (git history keeps it), so this file lists only what is owed.
 
 ## Band 2's reviewer-identity pill (ProfileLink Item 2, rung 1)
 
+Rung 3 made the pill a live chip; its section below covers that.
+
 - [ ] **Beside Raw only.** Unlock an Instruments card. In "Who can see
   what you wrote", cycle the Reviewees "Responses released" chip: a
   "Name, email" pill appears to its right on Raw and goes on any other
   value. The same on the Observers row. No pill on the You (reviewer)
   row.
-- [ ] **Inert.** The pill is a plain display pill: no blue edge, no pointer, no
-  focus, and a click on it does nothing.
 - [ ] **Locked.** Save with Reviewees on Raw and lock the card: the
   locked table's Reviewees row shows the plain "Name, email" pill after
   "Raw responses". The chips wrap cleanly in the narrow column, at full
@@ -359,12 +359,12 @@ section (git history keeps it), so this file lists only what is owed.
 
 ## Raw names the reviewer at the stored level (ProfileLink Item 2, rung 2)
 
-Only the Settings CSV sets the level until rung 3. Export a session's
-Settings CSV, set `instruments[1].view_policies[reviewee].after_release_reviewer_identity`
-(and the `observer` one) to `name`, `name_email` or `name_email_profile`,
-and import it on a session whose Reviewees and Observers released cells
-are Raw, with the release window open and a reviewer who has a
-ProfileLink.
+Set the level with the card's chip (rung 3) or the Settings CSV:
+`instruments[1].view_policies[reviewee].after_release_reviewer_identity`
+(and the `observer` one) takes `name`, `name_email` or
+`name_email_profile`. Use a session whose Reviewees and Observers
+released cells are Raw, with the release window open and a reviewer who
+has a ProfileLink.
 
 - [ ] **Reviewee, `name`.** On `/me/sessions/{id}/results` the Reviewer
   cell shows the name only, no email.

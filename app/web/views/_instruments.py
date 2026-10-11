@@ -1197,6 +1197,15 @@ def _band3_visibility_states_for(
     return result
 
 
+#: The reviewer-identity level chip's words (ProfileLink updates Item 2),
+#: in its cycle order.
+REVIEWER_IDENTITY_LABELS: dict[str, str] = {
+    "name": "Name only",
+    "name_email": "Name, email",
+    "name_email_profile": "Name, email, profile",
+}
+
+
 # Reviewer-surface "Who can see what you wrote (other than admin)"
 # transparency table. Renders read-only next to the per-instrument
 # intro card, showing the persisted visibility policy from the
@@ -1209,15 +1218,6 @@ def _band3_visibility_states_for(
 # cells the operator can't author are pinned to their baseline
 # label regardless of stored state (Reviewers Session-ongoing
 # always Raw, Reviewees Session-ongoing always off).
-#: The reviewer-identity level chip's words (ProfileLink updates Item 2),
-#: in its cycle order.
-REVIEWER_IDENTITY_LABELS: dict[str, str] = {
-    "name": "Name only",
-    "name_email": "Name, email",
-    "name_email_profile": "Name, email, profile",
-}
-
-
 _REVIEWER_VP_MODE_LABELS: dict[str | None, str] = {
     None: "—",
     "raw": "Raw responses",
