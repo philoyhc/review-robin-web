@@ -5,7 +5,7 @@ ProfileLink updates Item 2 rung 2 (``guide/profilelink_updates.md``):
 reviewee and observer rows. ``name`` drops the email (and, in the
 observer download, the reviewer tags); ``name_email`` is Raw as it was;
 ``name_email_profile`` adds the reviewer's ``ProfileLink``. Anonymized
-never reads it. Until rung 3, only the Settings CSV sets it.
+never reads it. The card's chip (rung 3) and the Settings CSV set it.
 """
 
 from __future__ import annotations

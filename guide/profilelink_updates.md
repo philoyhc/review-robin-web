@@ -207,14 +207,17 @@ Taken 2026-10-11 at `e8dcd994`.
   clears it), the locked and reviewer-surface pills, and the specs,
   written by `spec-writer` at the close; it added a pointer in
   `spec/reviewer-surface.md`, outside `Doc impact`.
-- One cumulative `diff-reviewer` read on `73e7291a..HEAD` at rung 3: no
-  disclosure leak. Fixed: a false spec line (the mode chips take no
-  Enter/Space; the identity chip does, a gap left for its own fix); the
-  observer tests used a Session ongoing Raw the product forbids, now the
-  released cell with the window open; Replicate and Duplicate tested
-  end to end, and a bad stored level dropped on copy; a `Name only`
-  download no longer sorts namesakes by their hidden emails; §6 rows,
-  stale browser-check lines, a misplaced constant.
+- Reads: one cumulative `diff-reviewer` read on `73e7291a..HEAD` at rung
+  3, then a read of its fixes. Found and fixed: a `Name only` download
+  still sorted namesakes by their hidden emails (a small leak; nothing
+  else showed an email, tag or link it shouldn't); a false spec line
+  (the mode chips take no Enter/Space, the identity chip does; the gap
+  is left for its own fix); observer tests that reached Raw through a
+  Session ongoing cell the product forbids, now the released cell with
+  the window open; Replicate and Duplicate tested through their
+  services, and a bad stored level dropped on copy; §6 rows, stale
+  browser-check and docstring lines, a misplaced constant. Codex then
+  found a corrupt stored level blocking Save; it now goes out empty.
 
 ### PR ladder
 

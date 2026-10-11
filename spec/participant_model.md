@@ -91,7 +91,7 @@ The **Acknowledge card** (`section.card.rs-acknowledge-card`) always renders at 
 
 ### 4.2 Reviewer-identity level in the observer download and on the reviewer surface
 
-For a Raw observer download the level (`spec/visibility_policy.md` §4) sets the reviewer columns: `name` blanks `ReviewerEmail` and the three reviewer tag columns, which can identify as surely as an email (the headers stay); `name_email` is the full block; `name_email_profile` adds a `ReviewerProfileLink` column after `ReviewerEmail`. `Anonymized` ignores the level. The level covers the reviewer's identity only, not the reviewee's columns, and operator extracts are unchanged.
+For a Raw observer download the level (`spec/visibility_policy.md` §4) sets the reviewer columns: `name` blanks `ReviewerEmail` and the three reviewer tag columns, which can identify as surely as an email (the headers stay); `name_email` is the full block; `name_email_profile` adds a `ReviewerProfileLink` column after `ReviewerEmail`. `Anonymized` ignores the level. Under `name` the rows don't sort on the hidden email either: two same-named reviewers fall back to assignment order, where `spec/extract_data.md`'s data-row sort would use the email. The level covers the reviewer's identity only, not the reviewee's columns, and operator extracts are unchanged.
 
 The reviewer surface's "Who can see what you wrote" card shows the level as a plain pill after a Raw Reviewees "Responses released" cell (`spec/reviewer-surface.md`); the Observers row stays operator-only.
 
