@@ -20,6 +20,10 @@ pair-context rosters. `spec/csv_contracts.md` says the reviewer's link
 is "rendered as a clickable link on the reviewer surface", which is true
 only of the reviewee's.
 
+**Items 2 and 3 closed 2026-10-11**, with the author's browser check.
+The close's `spec-writer` pass found every doc-impact spec current,
+#2972's wider Responses released column included; it changed nothing.
+
 ---
 
 ## Item 1 — The Reviewers page's Profile column chip
@@ -191,33 +195,24 @@ Taken 2026-10-11 at `e8dcd994`.
   cells, Replicate and clone, reviewee results body, and the observer
   CSV.
 
-### Status
+### Status — closed 2026-10-11
 
-- Rung 1 (2026-10-11), base `73e7291a`: the inert pill in the editor
-  and the locked table, shown only beside a Raw cell. It needed a
-  `body.ui-v2 .pill[hidden]` rule in `base.html`, since `.pill`'s
-  `display` outranked `hidden`, as `.btn`'s once did.
-- Rung 2 (2026-10-11): the column (`b7e3d91a4c62`), the service's
-  level and refusals, the Settings CSV round trip, copies, and both
-  readers. `upsert_policy` keeps a stored level unless one is passed,
-  so the card's Save, which sends none until rung 3, leaves it alone.
-  The specs land with rung 3.
-- Rung 3 (2026-10-11): the live chip (cycle, Enter/Space, hidden inputs
-  on the card's Save; an absent input keeps the level, an empty one
-  clears it), the locked and reviewer-surface pills, and the specs,
-  written by `spec-writer` at the close; it added a pointer in
-  `spec/reviewer-surface.md`, outside `Doc impact`.
-- Reads: one cumulative `diff-reviewer` read on `73e7291a..HEAD` at rung
-  3, then a read of its fixes. Found and fixed: a `Name only` download
-  still sorted namesakes by their hidden emails (a small leak; nothing
-  else showed an email, tag or link it shouldn't); a false spec line
-  (the mode chips take no Enter/Space, the identity chip does; the gap
-  is left for its own fix); observer tests that reached Raw through a
-  Session ongoing cell the product forbids, now the released cell with
-  the window open; Replicate and Duplicate tested through their
-  services, and a bad stored level dropped on copy; §6 rows, stale
-  browser-check and docstring lines, a misplaced constant. Codex then
-  found a corrupt stored level blocking Save; it now goes out empty.
+Shipped as laddered in three rungs (#2964–#2966), from base `73e7291a`.
+
+- **Built as planned**, with one addition: `body.ui-v2 .pill[hidden]` in
+  `base.html`, since `.pill`'s `display` outranked `hidden`.
+- **Decided at build:** `upsert_policy` keeps a stored level unless one
+  is passed; on the card's Save an absent input keeps the level and an
+  empty one clears it; a corrupt stored level goes out empty and is
+  dropped on copy.
+- **Reads:** one cumulative `diff-reviewer` read and a read of its
+  fixes. They found a `Name only` download still sorting namesakes by
+  their hidden emails (fixed), observer tests reaching Raw through a
+  cell the product forbids (moved to the released cell), and prose gaps.
+  Codex found the corrupt-level Save block. `spec-writer` wrote the
+  specs at rung 3, adding `spec/reviewer-surface.md` to `Doc impact`.
+- **After:** #2972 widened the Responses released column while the pill
+  shows, on the card and the reviewer surface.
 
 ### PR ladder
 
@@ -328,20 +323,20 @@ Taken 2026-10-11 at `e5794301`.
   `ProfileLink` rows).
 - Tests naming the field: `grep -rln "profile_link\|ProfileLink\|is_profile_link" tests | wc -l` → 69.
 
-### Status
+### Status — closed 2026-10-11
 
-- Rung 2 (2026-10-11): `views.is_web_link`, `_partials/profile_value.html`
-  on the six template renderers, the preview's `isWebLink` /
-  `profileCell`, the specs. Its `diff-reviewer` read found no blocker;
-  fixed from it: Python's case folding let `httpſ://` match and a
-  stripped test left a leading-space value as a relative `href`, so
-  both sides now match the unstripped value, ASCII only; an empty-value
-  test for the summary and results; `spec/settings_inventory.md`'s
-  "Optional URL" rows, outside `Doc impact`, now added. `spec-writer`
-  verified the four specs and flagged the same rows. A second read, of
-  the fixes, found nothing wrong (Python and JS agree on every BMP code
-  point); its wording nit ("a host character", not "a host") and edge
-  cases are in.
+Shipped as laddered: the plan (#2968), then the rule in one code rung
+(#2969).
+
+- **Built as planned.** `views.is_web_link` and
+  `_partials/profile_value.html` on the six template renderers, and the
+  preview's `isWebLink` / `profileCell`.
+- **Decided at build:** both sides match the unstripped value, ASCII
+  only, so `httpſ://` and a leading-space value never link.
+- **Reads:** one `diff-reviewer` read, which found those two matching
+  gaps, and a read of the fixes, which found Python and JS agreeing on
+  every BMP code point. `spec-writer` verified the specs and added the
+  `spec/settings_inventory.md` rows to `Doc impact`.
 
 ### PR ladder
 
