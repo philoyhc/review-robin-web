@@ -477,7 +477,7 @@ Same predicate, one gate, and the Unlock control
 itself goes with it: a locked page offers no way to open a panel
 whose contents its routes would refuse. The tag-label editor has no
 copy outside the panel; a locked page reads the labels from the
-populated columns' headers.
+populated columns' headers and the roster index's pills.
 
 **Observers uses a WIDER predicate.** Its mutating surface reads
 `not is_archived`, so the roster stays editable through `ready` and

@@ -285,7 +285,7 @@ Source: `app/web/templates/operator/session_reviewers.html`.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 105 | Reviewer tag labels | Cancel | `<button type="button">` | `btn secondary` | Secondary | Inline JS reverts the three tag inputs to their initial snapshot and re-disables the pair. Suppressed whenever the session is not `is_editable`. **In the Unlock panel**, the editor's only home (its `.card-columns` fallback retired 2026-10-11). |
+| 105 | Reviewer tag labels | Cancel | `<button type="button">` | `btn secondary` | Secondary | Inline JS reverts the three tag inputs to their initial snapshot and re-disables the pair. Suppressed whenever the session is not `is_editable`. **In the Unlock panel**, the editor's only home. |
 | 106 | Reviewer tag labels | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewers/field-labels`. Starts `disabled`; inline JS flips both Save + Cancel on when the form is dirty. Suppressed whenever the session is not `is_editable` — which is why the whole panel is suppressed rather than disabled, since a locked page must carry no `Save labels` anywhere. **In the Unlock panel**; its redirect carries `?unlocked=1` so the save does not close the panel it was made from. |
 | 34 | Lock card (when Activated or Closed) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | Inside `.card.lock` |
 | 35 | Upload Reviewers | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewers/import`. **In the roster card's Unlock panel**. |

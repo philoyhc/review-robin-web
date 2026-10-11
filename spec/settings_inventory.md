@@ -152,7 +152,7 @@ editor nor the allowlist, though their built-in defaults ("Name" /
 
   **It renders only in the roster card's Unlock panel** on all three;
   where the panel cannot render (a locked session, or while a row is
-  edited) it does not render at all (`spec/setup_pages.md` § *The roster
+  edited or added) it does not render at all (`spec/setup_pages.md` § *The roster
   card and the Unlock panel*).
 
   Save / Cancel pair (both Secondary, both disabled-until-dirty).

@@ -114,7 +114,7 @@ below describe what that panel holds.
 
    | Page | Placement |
    |---|---|
-   | The four roster pages | **Not in the container.** The guidance card leads the page at **full width**, above everything else. `.card-columns` is absent in every state: the tag-label editor lives only in the Unlock panel (§ *The roster card and the Unlock panel*). The lock card leads the page, as elsewhere. |
+   | The four roster pages | **Not in the container.** The guidance card leads the page at **full width**, above everything else. `.card-columns` is absent in every state: the tag-label editor lives only in the Unlock panel (§ *The roster card and the Unlock panel*). The lock card sits above the guidance card, as elsewhere. |
    | Email Template | `.card-columns` — composer left; guidance then `Merge tags` right |
    | Instruments | `.card-columns` — guidance left, `Session deadline` right; the `Expand all` / `Collapse all` toggles sit in the deadline card |
 
@@ -251,8 +251,8 @@ below describe what that panel holds.
    via `app/services/field_labels.py`. Observers has no label slots and
    no editor.
 
-   Gated by `is_editable`: in every locked state its inputs render
-   `disabled` and the Save / Cancel pair is suppressed, and
+   Gated by `is_editable`: in every locked state the Unlock panel that
+   holds it is suppressed, so the editor does not render, and
    `POST …/field-labels` answers 409. The lifecycle-gate card above
    carries the way out for that state. A label longer than
    `session_field_labels.label` (255) answers 422, and every slot is
@@ -325,9 +325,7 @@ card's replace*.
   tag headers and the roster index's pills, but only for populated
   columns, so a label on an empty tag column is not shown on a locked
   page; and labels cannot be edited mid-edit or mid-add (Cancel, then
-  Unlock). (A `.card-columns` fallback copy shipped with 19P.1 —
-  disabled when locked, live in edit / add mode — and was retired on
-  2026-10-11 at the author's ruling, as a leftover.)
+  Unlock).
 - **The `Danger Zone` renders only when the roster has rows** — and for
   a reason worth stating, because the route does *not* refuse an empty
   one: it answers 303 and writes an audit row reading "Deleted all 0
@@ -1413,9 +1411,8 @@ axes. Restated here only as far as its own reasons go:
   this page has no label slots, so the columns cannot correspond.
 - **`Lock` follows the card, not the column** — the empty-roster case
   described in that section's table.
-- **`.card-columns` is absent**, as on the other three since the label
-  editor's fallback copy retired; the cohort editor lives in the row
-  expander.
+- **`.card-columns` is absent**, as on the other three; the cohort
+  editor lives in the row expander.
 
 **And elsewhere on the page, which the shared section's table
 deliberately does not cover.** Counted here so a reader has one place
