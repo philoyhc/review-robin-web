@@ -3782,6 +3782,16 @@
          `hidden` unless its cell is Raw (guide/profilelink_updates.md
          Item 2). */
       body.ui-v2 .pill[hidden] { display: none; }
+      /* "Who can see what you wrote" (the reviewer surface, its operator
+         preview, and Band 2's locked table and editor): Audience narrow,
+         the two windows even. A visible reviewer-identity pill beside a
+         Raw released cell takes room, so that column widens; `:has()`
+         follows the editor's chips as they cycle. */
+      body.ui-v2 table.vp-grid th.vp-col-audience { width: 28%; }
+      body.ui-v2 table.vp-grid th.vp-col-window { width: 36%; }
+      body.ui-v2 table.vp-grid:has(.vp-identity-pill:not([hidden])) th.vp-col-audience { width: 20%; }
+      body.ui-v2 table.vp-grid:has(.vp-identity-pill:not([hidden])) th.vp-col-ongoing { width: 28%; }
+      body.ui-v2 table.vp-grid:has(.vp-identity-pill:not([hidden])) th.vp-col-released { width: 52%; }
       body.ui-v2 .pill-count,
       body.ui-v2 .pill.pill-info {
         background: var(--status-info-bg);

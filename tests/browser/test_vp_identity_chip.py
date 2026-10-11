@@ -90,3 +90,33 @@ def test_the_identity_chip_follows_its_cell_and_cycles(
         expect(card.locator(f'[data-new-model-vp-identity="{audience}"]')).to_have_text(
             "Name only"
         )
+
+
+def _widths(card: Locator) -> list[float]:
+    """The editor table's three header widths, in px."""
+    return card.locator("[data-new-model-vp-editor] table.vp-grid th").evaluate_all(
+        "ths => ths.map(th => th.getBoundingClientRect().width)"
+    )
+
+
+def test_the_released_column_widens_while_an_identity_pill_shows(
+    page: Page, new_session: Callable[[], int]
+) -> None:
+    """The author, 2026-10-11: the second pill crowded the column. A
+    visible identity pill widens Responses released; hiding it again
+    restores the even windows, live, as the chip cycles."""
+    card = open_unlocked(page, new_session())
+    audience, ongoing, released = _widths(card)
+    assert abs(ongoing - released) < 2
+    cycle = _cycle(card, "reviewee")
+    cycle.click()  # — → Raw: the identity pill shows
+    expect(card.locator('[data-new-model-vp-identity="reviewee"]')).to_be_visible()
+    audience_wide, ongoing_wide, released_wide = _widths(card)
+    assert released_wide > ongoing_wide + 50
+    assert released_wide > released + 50
+    assert audience_wide < audience - 20  # 28% → 20%
+    cycle.click()  # Raw → Anonymized: hidden again
+    expect(card.locator('[data-new-model-vp-identity="reviewee"]')).to_be_hidden()
+    audience_back, ongoing_back, released_back = _widths(card)
+    assert abs(ongoing_back - released_back) < 2
+    assert abs(audience_back - audience) < 2

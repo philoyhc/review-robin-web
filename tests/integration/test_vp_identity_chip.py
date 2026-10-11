@@ -103,6 +103,16 @@ def test_the_chip_is_a_cycle_control_beside_a_raw_cell(
     assert 'data-new-model-vp-identity-slugs="name|name_email"' in chip
     assert " hidden" in _span(body, 'data-new-model-vp-identity="observer"')
     assert " hidden" not in _span(body, 'data-new-model-vp-identity-preview="reviewee"')
+    # Every identity pill widens its table's released column
+    # (base.html ``table.vp-grid:has(.vp-identity-pill...)``): the
+    # editor's two chips and the locked table's pill.
+    for attr in (
+        'data-new-model-vp-identity="reviewee"',
+        'data-new-model-vp-identity="observer"',
+        'data-new-model-vp-identity-preview="reviewee"',
+    ):
+        assert "vp-identity-pill" in _span(body, attr), attr
+    assert body.count('<table class="vp-grid"') == 2
 
 
 def test_the_profile_level_is_offered_once_a_reviewer_has_a_link(
@@ -265,3 +275,8 @@ def test_the_reviewer_sees_the_level_after_a_raw_reviewees_cell(
     assert _span(body, "data-rs-reviewer-identity").endswith(
         ">Name, email, profile</span>"
     )
+    # The pill widens its column (base.html's ``table.vp-grid:has(...)``;
+    # tests/browser/test_vp_identity_chip.py measures it on Band 2).
+    assert "vp-identity-pill" in _span(body, "data-rs-reviewer-identity")
+    assert '<table class="vp-grid"' in body
+    assert 'class="muted vp-col-window vp-col-released"' in body

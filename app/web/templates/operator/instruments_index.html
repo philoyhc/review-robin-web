@@ -1564,7 +1564,7 @@
                cycle writes a level. #}
             {% set _level = state.get("reviewer_identity", "name_email") %}
             {% set _slugs = ["name", "name_email"] + (["name_email_profile"] if reviewers_have_profile_link else []) %}
-            <span class="pill pill-count tag-chip is-selected"
+            <span class="pill pill-count tag-chip is-selected vp-identity-pill"
                   role="button" tabindex="0"
                   data-new-model-vp-identity="{{ audience }}"
                   data-new-model-vp-identity-slugs="{{ _slugs | join('|') }}"
@@ -1655,12 +1655,12 @@
                    19T Item 7 — locked, the card is the reviewer's; unlocked,
                    the editor below replaces it (the description box's swap). #}
                 <div class="table-scroll" data-lock-only>
-                <table style="width: 100%; border-collapse: collapse;">
+                <table class="vp-grid" style="width: 100%; border-collapse: collapse;">
                   <thead>
                     <tr style="text-align: left;">
-                      <th style="padding: 4px 8px; width: 28%;" class="muted">Audience</th>
-                      <th style="padding: 4px 8px; width: 36%;" class="muted">Session ongoing</th>
-                      <th style="padding: 4px 8px; width: 36%;" class="muted">Responses released</th>
+                      <th style="padding: 4px 8px;" class="muted vp-col-audience">Audience</th>
+                      <th style="padding: 4px 8px;" class="muted vp-col-window vp-col-ongoing">Session ongoing</th>
+                      <th style="padding: 4px 8px;" class="muted vp-col-window vp-col-released">Responses released</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1678,7 +1678,7 @@
                           {# ProfileLink updates Item 2 — how much of the
                              reviewer a Raw result names, beside a Raw cell
                              only; the identity cycle repaints it. #}
-                          {% if vp.audience == "reviewee" %}<span class="pill pill-count"
+                          {% if vp.audience == "reviewee" %}<span class="pill pill-count vp-identity-pill"
                             data-new-model-vp-identity-preview="reviewee"
                             {% if vp.after_release_mode != "raw" %}hidden{% endif %}>{{ vp.reviewer_identity_label }}</span>{% endif %}</td>
                       </tr>
@@ -1733,12 +1733,12 @@
                          data-new-model-vp-identity-input="{{ _aud }}"
                          value="{{ _st.get('reviewer_identity_stored', '') }}">
                   {% endfor %}
-                <table style="width: 100%; border-collapse: collapse;">
+                <table class="vp-grid" style="width: 100%; border-collapse: collapse;">
                   <thead>
                     <tr style="text-align: left;">
-                      <th style="padding: 4px 8px; width: 28%;" class="muted">Audience</th>
-                      <th style="padding: 4px 8px; width: 36%;" class="muted">Session ongoing</th>
-                      <th style="padding: 4px 8px; width: 36%;" class="muted">Responses released</th>
+                      <th style="padding: 4px 8px;" class="muted vp-col-audience">Audience</th>
+                      <th style="padding: 4px 8px;" class="muted vp-col-window vp-col-ongoing">Session ongoing</th>
+                      <th style="padding: 4px 8px;" class="muted vp-col-window vp-col-released">Responses released</th>
                     </tr>
                   </thead>
                   <tbody>
