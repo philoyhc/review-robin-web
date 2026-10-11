@@ -375,3 +375,12 @@ section (git history keeps it), so this file lists only what is owed.
   and /guide's samples show the same 2px edge, in light and dark.
 - [ ] **No edge where there was none.** Fixed chips, a locked card's
   chips and disabled chips still show no edge.
+
+## Reviewers gets a Profile column chip
+
+- [ ] **With data.** On a Reviewers page where some reviewer has a
+  ProfileLink, "Show columns:" carries a Profile chip; a click hides the
+  Profile column and another brings it back, and the choice survives a
+  reload, as on Reviewees.
+- [ ] **Without.** Where no reviewer has one, there is no Profile chip
+  and no Profile column (until a row is being edited).
