@@ -288,7 +288,7 @@ by the Azure platform), which still needs the Azure dev slot.
 | Alembic migration round-trip on SQLite | ✅ Yes |
 | Run the app + click through operator / reviewer surfaces | ✅ Yes — fake auth + forwarded port |
 | `ruff` lint | ✅ Yes |
-| Postgres-dialect parity (what `ci-postgres` catches) | ⚙️ Optional — add a Postgres service (below) |
+| Postgres-dialect parity (what `ci-postgres` catches) | ⚙️ Optional — add Docker to the container, then run Postgres (below) |
 | Real Entra / Easy Auth sign-in, redirect flows, tenant allowlist | ❌ No — needs the Azure dev slot |
 
 **Start.** From the repo on GitHub: **Code ▸ Codespaces ▸ Create codespace
@@ -296,13 +296,15 @@ on `main`** (or a feature branch); `docs/setup_codespaces.md` has the
 click-by-click version for a browser, tablets included. `.devcontainer/devcontainer.json` boots
 it provisioned, so there is no manual setup:
 
-- **On create, once:** Python 3.12 and Node LTS (so
+- **In the image:** Python 3.12 and Node LTS (so
   `tests/integration/test_inline_scripts_parse.py` runs rather than
-  skips); `pip install -e '.[dev]'`; `cp -n .env.example .env`, whose
-  `ALLOW_FAKE_AUTH=true` and fake operator need no editing (an existing
-  `.env` is kept); `alembic upgrade head`.
+  skips).
+- **On create, once:** `pip install -e '.[dev]'`; a `.env` copied from
+  `.env.example`, whose `ALLOW_FAKE_AUTH=true` and fake operator need no
+  editing (an existing `.env` is kept); `alembic upgrade head`.
 - **On every start:** `alembic upgrade head` again (a pulled branch may
-  add a migration), then the dev server in the background on port
+  add a migration; its errors land in the Codespace's creation log),
+  then the dev server in the background on port
   **8000**, logging to `/tmp/rrw-uvicorn.log`.
 
 The first create installs everything; later starts only migrate and

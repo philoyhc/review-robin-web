@@ -11,11 +11,13 @@
   },
   // Once, on create: dependencies, a fake-auth .env (kept if one exists),
   // and the local SQLite schema.
-  "postCreateCommand": "python -m pip install --upgrade pip && pip install -e '.[dev]' && cp -n .env.example .env && alembic upgrade head",
-  // Every start: migrate (a pulled branch may add one), then serve in the
-  // background so the forwarded port answers without a terminal command.
-  // Log: /tmp/rrw-uvicorn.log.
-  "postStartCommand": "alembic upgrade head && setsid nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 > /tmp/rrw-uvicorn.log 2>&1 &",
+  "postCreateCommand": "python -m pip install --upgrade pip && pip install -e '.[dev]' && { [ -f .env ] || cp .env.example .env; } && alembic upgrade head",
+  // Every start: migrate in the foreground (a pulled branch may add one),
+  // then serve in the background, detached so it outlives this step, so
+  // the forwarded port answers without a terminal command. Only the
+  // subshell is backgrounded: a bare trailing & would take the migration
+  // with it. Log: /tmp/rrw-uvicorn.log.
+  "postStartCommand": "alembic upgrade head && (setsid nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 > /tmp/rrw-uvicorn.log 2>&1 &)",
   "forwardPorts": [8000],
   "portsAttributes": {
     "8000": { "label": "RRW app", "onAutoForward": "openBrowser" }
