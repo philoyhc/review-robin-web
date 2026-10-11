@@ -312,8 +312,8 @@ shared roster shape — toolbar, row expander, Unlock panel
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 107 | Reviewee field labels | Cancel | `<button type="button">` | `btn secondary` | Secondary | Inline JS reverts the six inputs (Name / Email / Photo / Tag 1-3) to their initial snapshot and re-disables the pair. Suppressed whenever the session is not `is_editable`. |
-| 108 | Reviewee field labels | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewees/field-labels`. Starts `disabled`; dirty-check via inline JS. Suppressed whenever the session is not `is_editable`. |
+| 107 | Reviewee tag labels | Cancel | `<button type="button">` | `btn secondary` | Secondary | Inline JS reverts the three tag inputs to their initial snapshot and re-disables the pair. Suppressed whenever the session is not `is_editable`. |
+| 108 | Reviewee tag labels | Save labels | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewees/field-labels`. Starts `disabled`; dirty-check via inline JS. Suppressed whenever the session is not `is_editable`. |
 | 38 | Lock card (when Activated or Closed) | Revert to draft | `<button type="submit">` | `btn alert` | Outline-amber | |
 | 39 | Upload Reviewees | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/reviewees/import`. In the **Unlock panel's right column**; nothing sits below the preview table. Ships `disabled` behind the `replace-roster` confirm whenever the roster has rows. |
 | 40 | Row expander | Edit | `<button type="button">` | `btn secondary` | Secondary | Selection-driven — enabled on exactly one checked row; JS navigates to `?edit_id=`. |
