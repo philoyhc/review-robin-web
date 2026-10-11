@@ -264,3 +264,105 @@ Taken 2026-10-11 at `e8dcd994`.
 - `spec/roundtrip_coverage.md` — the new column round-trips.
 - `spec/reviewer-surface.md` — the visibility card's line points at the identity pill (added at the close).
 - `guide/things_to_check_in_browser.md` — a section per rung.
+
+---
+
+## Item 3 — A profile value that is not a web address
+
+### Opportunity
+
+A `ProfileLink` is any string up to 2,000 characters: nothing checks
+its scheme on import or edit. Every renderer puts it straight into an
+`href` — the operator rosters' `link`, the reviewer surface's, the
+summary's and the reviewee results' `View`, the reviewer card's
+`link` (Item 2) and the Band 2 preview. A plain string (`AB1234`,
+`www.example.edu/rae`) becomes a relative link to an app path that
+answers 404 or 422, and a `javascript:` value runs on click, since no
+CSP header is set (traced 2026-10-11).
+
+### Decision
+
+The author's ruling, 2026-10-11: a value that starts `http://` or
+`https://` stays a link; any other non-empty value renders a muted
+marker that says a value is there but not shown (which marker is open,
+below); an empty one stays empty. The same rule on every surface
+that renders the value, operator rosters included. Downloads carry the
+value whole: the observer CSV's `ReviewerProfileLink` already does at
+the profile level, and the roster extracts are the operator's.
+
+So the field can hold an id an operator never meant participants to
+follow. Whether it shows at all stays where it is: the reviewee's under
+the instrument's display fields, the reviewer's under Item 2's level.
+
+Rejected: rendering the text itself — the profile columns are sized for
+`View` (`profile_column_ch_width`) under `white-space: nowrap`, so a
+long id would spill into the next cell. Rejected: a Validate warning
+for non-link values — an id is a legitimate use, so the warning would
+be noise.
+
+### Semantics
+
+- **Link test.** The trimmed value starts `http://` or `https://`, case
+  insensitive. One helper; the preview's JS mirrors it.
+- **Stored data.** Nothing changes on import, edit or export; the rule
+  is render-only, so a value turns into a link when it is corrected.
+- **Sort.** The reviewer surface's `data-sort-value` is the link for a
+  link, a constant for a marked row and empty for an empty one, so the
+  page source carries no hidden value and marked rows sort together.
+- **`Name, email, profile`.** Still offered when any reviewer has a
+  non-empty value: the CSV carries text values too.
+
+### Blast radius (measured)
+
+Taken 2026-10-11 at `e5794301`.
+
+- Renderers (`grep -rn 'href="{{' app/web/templates | grep profile`,
+  plus the reviewer surface's display cells): 7 — `session_reviewees.html:848`,
+  `session_reviewers.html:1030`, `review_surface.html:433`,
+  `summary.html:136`, `results.html:146`, `results.html:156`, and the
+  preview's `isProfile` branch in `instruments_index.html` (~2411).
+- Specs naming the render: `spec/reviewer-surface.md` (§ display cells),
+  `spec/participant_model.md` (`raw` bullet), `spec/setup_pages.md`
+  (both rosters' Profile row), `spec/csv_contracts.md` (both
+  `ProfileLink` rows).
+- Tests naming the field: `grep -rln "profile_link\|ProfileLink\|is_profile_link" tests | wc -l` → 69.
+
+### PR ladder
+
+1. **This plan.** Prose only.
+2. **The rule.** The helper, a Jinja global, the seven renderers, the
+   specs, a test per surface for a link, a non-link and an empty value,
+   and a browser-check section. One code rung, so it takes its own
+   `diff-reviewer` read.
+
+### Definition of done
+
+- Each of the seven renderers shows a link for an `http(s)` value, the
+  marker for any other value and nothing for an empty one, by test;
+  no rendered `href` carries a non-`http(s)` profile value.
+- The observer CSV carries a text value whole at the profile level, by
+  test.
+- `### Doc impact` current; `spec-writer` flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- **The marker** (author). Not the em dash: Anonymized already uses it
+  on `/results` for a hidden cell, and elsewhere it reads as nothing.
+  Candidates: muted `•••` (masked, like a password field; recommended),
+  a muted unlinked `View`, a muted `Hidden`, or a lock glyph. Each with
+  a `title` and `aria-label` reading "Profile not shown".
+- Ruled 2026-10-11: no validation; the CSV carries the value whole.
+
+### Out of scope
+
+- Refusing or correcting a non-link value on import or edit.
+- A CSP header: a wider change than one field.
+
+### Doc impact
+
+- `spec/reviewer-surface.md` — the display-cell render: link, marker or empty.
+- `spec/participant_model.md` — the `raw` bullet's profile anchor follows the same rule.
+- `spec/setup_pages.md` — both rosters' Profile cell.
+- `spec/csv_contracts.md` — both `ProfileLink` rows say what a non-link value shows.
+- `guide/things_to_check_in_browser.md` — a section for rung 2.
