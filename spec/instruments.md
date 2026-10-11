@@ -832,7 +832,8 @@ reviewers don't see this row."
 The four cells that can change are cycle chips (`b3_mode_cycle`), each
 rotating through the modes `spec/visibility_policy.md` §3.1 allows for
 its `(audience, window)` cell; the cycle sets themselves are not restated
-here. The two cells that can't — Reviewer / Session-ongoing (pinned to
+here. A click, Enter or Space advances one step (`newModelChipKey`, as on
+Band 1's link chips). The two cells that can't — Reviewer / Session-ongoing (pinned to
 Raw) and Reviewees / Session-ongoing (pinned to off) — are fixed
 switches (`b3_static_pill`: `.tag-chip.is-fixed`, `spec/ui_elements.md`
 §9), the cycle chips' solid fill with no edge or pointer, a lock glyph,
@@ -840,7 +841,7 @@ no role or handler, and the title "Fixed". Both macros keep the `b3_`
 prefix from when the editor lived in Band 3's table, which this card
 retires.
 
-**Reviewer-identity chip.** Beside a Reviewees or Observers "Responses released" cell that is Raw, a second cycle chip (`b3_identity_chip`, `data-new-model-vp-identity`) sets how much of the reviewer Raw names (`spec/visibility_policy.md` §4): `Name only` → `Name, email` → `Name, email, profile`. The third is offered only when some reviewer in the session has a `ProfileLink`; a stored profile level still renders as itself, so it can be cycled off. Enter and Space cycle it too (`newModelChipKey`); the mode chips beside it take no key yet, a gap that predates this chip. It is hidden unless the cell is Raw, and cycling the mode shows or hides it. Its `*_after_release_reviewer_identity` hidden input rides `dfsave-{id}` with the mode inputs and Save stores it. Locked, the table shows the level as a plain `pill pill-count` after a Raw Reviewees cell (no Observers row there), repainted on a cycle like the mode pills.
+**Reviewer-identity chip.** Beside a Reviewees or Observers "Responses released" cell that is Raw, a second cycle chip (`b3_identity_chip`, `data-new-model-vp-identity`) sets how much of the reviewer Raw names (`spec/visibility_policy.md` §4): `Name only` → `Name, email` → `Name, email, profile`. The third is offered only when some reviewer in the session has a `ProfileLink`; a stored profile level still renders as itself, so it can be cycled off. Enter and Space cycle it, as they do the mode chips (`newModelChipKey`). It is hidden unless the cell is Raw, and cycling the mode shows or hides it. Its `*_after_release_reviewer_identity` hidden input rides `dfsave-{id}` with the mode inputs and Save stores it. Locked, the table shows the level as a plain `pill pill-count` after a Raw Reviewees cell (no Observers row there), repainted on a cycle like the mode pills.
 
 The six `*_mode` hidden inputs ride the card's `dfsave-{id}` form and
 render unconditionally, whatever the lock state, so Save always carries

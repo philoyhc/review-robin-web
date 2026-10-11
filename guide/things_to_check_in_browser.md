@@ -392,3 +392,11 @@ has a ProfileLink.
   section.
 - [ ] **Layout.** Two chips in the narrow Responses released column wrap
   cleanly at full width and below 800px, in light and dark.
+
+## Enter and Space cycle the visibility mode chips
+
+- [ ] **Keys.** Unlock an Instruments card and Tab to a "Who can see
+  what you wrote" mode chip: Enter and Space each advance it one step,
+  Space without scrolling the page, and the card's Save wakes. Cycling
+  Reviewees "Responses released" to Raw this way brings up the identity
+  chip, which is the next Tab stop.
