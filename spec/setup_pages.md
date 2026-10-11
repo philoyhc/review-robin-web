@@ -621,13 +621,10 @@ The pattern:
   operator adding or editing a row sees every tag column and can type
   into an empty one, which is the only way a tag ever stops being
   empty. The Profile column works the same way.
-- The Reviewees row also carries a chip for the **profile-link
-  column** (`data-col-toggle="profile"`, cells `class="profile-col"`).
-  Chip and column are gated on the same `col_data["profile"]`, so
-  neither can appear without the other. **Reviewers does not
-  have this chip**, though it renders the same `profile-col` cells:
-  there, the column's visibility is a server-side decision only. The
-  asymmetry is deliberate.
+- The Reviewers and Reviewees rows also carry a chip for the
+  **profile-link column** (`data-col-toggle="profile"`, cells
+  `class="profile-col"`). Chip and column are gated on the same
+  `col_data["profile"]`, so neither can appear without the other.
 - Operator choice persists per browser via `localStorage` under a
   per-table key, which the primitive reads from the table's
   `data-rrw-col-toggles` attribute:
@@ -656,8 +653,8 @@ The pattern:
 **What is shared, and what is not.** The behavior is one
 implementation in `base.html`, never a per-template copy. The
 **markup and the scoped `<style>` block stay
-per-template**: each page's column shape differs enough (Reviewees
-adds the profile-link chip; Assignments renders three chip rows)
+per-template**: each page's column shape differs enough (Reviewers
+and Reviewees add the profile-link chip; Assignments renders three chip rows)
 that a Jinja macro would need a sprawling parameter list to say
 less than the markup already does. The primitive is deliberately
 ignorant of slot vocabulary — it toggles `col-hidden-{slot}` on
@@ -1289,7 +1286,7 @@ CSV header copy lists `ReviewerName`, `ReviewerEmail` required;
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the **row expander** below |
 | 1 | Name | — | `reviewer.name` |
 | 2 | Email | — | `<code>{{ reviewer.email }}</code>` |
-| 3 | Profile | — | Conditional: rendered only when at least one reviewer has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` when populated; input in edit mode. `class="profile-col"`. Uses the display-only `("reviewer", "profile_link")` label "Profile"; it is not in `_VALID_SOURCE_FIELDS`, so a session cannot rename it. **Not toggleable** — unlike the Reviewees Profile column, this one has no chip and no `col-hidden-profile` rule; its visibility is decided server-side only. The asymmetry with Reviewees is deliberate. |
+| 3 | Profile | ✓ | Conditional: rendered only when at least one reviewer has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` when populated; input in edit mode. `data-col-toggle="profile"` / `class="profile-col"`. Uses the display-only `("reviewer", "profile_link")` label "Profile"; it is not in `_VALID_SOURCE_FIELDS`, so a session cannot rename it. |
 | 4 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
 | 5 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 6 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |

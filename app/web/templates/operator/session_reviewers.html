@@ -725,9 +725,14 @@
           {# A chip row with no chips in it is a label and nothing else,
              so the row goes too when every slot is empty (19I Item 12
              rung 3). #}
-          {% if reviewers and not edit_mode and (col_data["tag-1"] or col_data["tag-2"] or col_data["tag-3"]) %}
+          {% if reviewers and not edit_mode and (col_data["tag-1"] or col_data["tag-2"] or col_data["tag-3"] or col_data["profile"]) %}
             <p class="col-chip-row" data-col-toggles-for="reviewers-table">
               <span>Show columns:</span>
+              {% if col_data["profile"] %}
+                <span class="pill pill-count tag-chip is-selected"
+                      data-col-toggle="profile" role="button" tabindex="0"
+                      aria-pressed="true">Profile</span>
+              {% endif %}
               {% for slot in [1, 2, 3] if col_data["tag-" ~ slot] %}
                 <span class="pill pill-count tag-chip is-selected"
                       data-col-toggle="tag-{{ slot }}"
@@ -1135,7 +1140,8 @@
     <style>
       #reviewers-table.col-hidden-tag-1 .tag-col-1,
       #reviewers-table.col-hidden-tag-2 .tag-col-2,
-      #reviewers-table.col-hidden-tag-3 .tag-col-3 {
+      #reviewers-table.col-hidden-tag-3 .tag-col-3,
+      #reviewers-table.col-hidden-profile .profile-col {
         display: none;
       }
     </style>

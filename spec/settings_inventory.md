@@ -364,7 +364,7 @@ preference stored?" finds the answer quickly.
 
 | Key | Surface | Purpose |
 |---|---|---|
-| `rrw-reviewer-tag-visibility` | Setup > Reviewers preview table | Per-column toggle state (Tag1 / Tag2 / Tag3). |
+| `rrw-reviewer-tag-visibility` | Setup > Reviewers preview table | Per-column toggle state (Profile / Tag1 / Tag2 / Tag3). |
 | `rrw-reviewee-tag-visibility` | Setup > Reviewees preview table | Per-column toggle state (Profile / Tag1 / Tag2 / Tag3). |
 | `rrw-relationship-tag-visibility` | Setup > Relationships preview table | Per-column toggle state (Tag1 / Tag2 / Tag3). |
 | `rrw-assignment-col-visibility` | Operations > Assignments preview table | Per-column toggle state — three groups of three (Reviewer Tag{n} / Reviewee Tag{n} / Relationship Ctx{n}). Three chip rows, one key: the key rides on the table, not the row. |

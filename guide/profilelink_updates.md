@@ -60,6 +60,15 @@ Taken 2026-10-11 at `e8dcd994`.
   markup note, the Reviewers column table) and `spec/csv_contracts.md`
   (the `reviewers.csv` `ProfileLink` row).
 
+### Status
+
+Built as planned, in one rung. Two `diff-reviewer` reads. The first and
+the `spec-writer` verify both found the `rrw-reviewer-tag-visibility`
+row in `spec/settings_inventory.md` still listing tags only (fixed, and
+added to `Doc impact`); the first also found a negative test half that
+couldn't see a failed import (tightened). The second read the fixes and
+found nothing blocking.
+
 ### PR ladder
 
 1. **The chip.** Template, test, specs, a browser-check section. One
@@ -86,6 +95,7 @@ Taken 2026-10-11 at `e8dcd994`.
 
 - `spec/setup_pages.md` — the chip bullet and the shared-markup note name Reviewers; the Reviewers Profile column is toggleable.
 - `spec/csv_contracts.md` — the `reviewers.csv` `ProfileLink` row says where the link shows (the Reviewers page and extract), not the reviewer surface.
+- `spec/settings_inventory.md` — the `rrw-reviewer-tag-visibility` row lists Profile among the columns it remembers.
 - `guide/things_to_check_in_browser.md` — a section for the PR.
 
 ---

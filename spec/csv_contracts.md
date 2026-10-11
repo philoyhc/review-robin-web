@@ -123,7 +123,7 @@ importers (§3.2b, §3.3).
 | 3 | `ReviewerTag1` | `reviewer.tag_1` | Optional on import. Empty cell ⇒ NULL. |
 | 4 | `ReviewerTag2` | `reviewer.tag_2` | Same. |
 | 5 | `ReviewerTag3` | `reviewer.tag_3` | Same. |
-| 6 | `ProfileLink` | `reviewer.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. Mirrors the Reviewees `ProfileLink` column. |
+| 6 | `ProfileLink` | `reviewer.profile_link` | Optional. Shown on the Reviewers page's Profile column (`spec/setup_pages.md`) and in the Reviewers extract; no participant surface shows a reviewer's link. Mirrors the Reviewees `ProfileLink` column. |
 | 7 | `Status` | `reviewer.status` | `active` / `inactive`, case-insensitively and ignoring surrounding whitespace. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
 
 **Row order:** active rows first (`status='active'`), then by

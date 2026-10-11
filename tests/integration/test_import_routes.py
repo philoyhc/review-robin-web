@@ -707,6 +707,51 @@ def test_reviewees_page_lists_imported_rows_with_profilelink(
     assert 'class="profile-col"' in flat
 
 
+def test_reviewers_page_offers_a_profile_chip_only_with_data(
+    client: TestClient, db: Session
+) -> None:
+    """Reviewers gets the Profile column chip Reviewees has, shown only
+    while some reviewer carries a ProfileLink (the author, 2026-10-11)."""
+    review_session = _make_session(client, db, code="r-profile")
+    url = f"/operator/sessions/{review_session.id}/reviewers"
+    client.post(
+        f"{url}/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail,ProfileLink\n"
+                b"Ann,ann@example.edu,https://example.edu/ann\n"
+                b"Ben,ben@example.edu,\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    flat = re.sub(r"\s+", " ", client.get(url).text)
+    assert "Show columns:" in flat
+    assert 'tag-chip is-selected" data-col-toggle="profile"' in flat
+    assert 'class="profile-col"' in flat
+    assert "#reviewers-table.col-hidden-profile .profile-col" in flat
+
+    bare = _make_session(client, db, code="r-noprof")
+    bare_url = f"/operator/sessions/{bare.id}/reviewers"
+    client.post(
+        f"{bare_url}/import",
+        files={
+            "file": (
+                "r.csv",
+                b"ReviewerName,ReviewerEmail\nAnn,ann@example.edu\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    bare_page = client.get(bare_url).text
+    assert "ann@example.edu" in bare_page  # the import landed
+    assert 'data-col-toggle="profile"' not in bare_page
+    assert 'class="profile-col"' not in bare_page
+
+
 def test_relationships_page_renders_column_chips(
     client: TestClient, db: Session
 ) -> None:
