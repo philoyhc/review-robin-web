@@ -6,10 +6,10 @@
   at the bottom. Both buttons render in the canonical
   ``.btn.secondary`` style and start ``disabled``; inline JS
   enables them when an input changes (and re-disables them after
-  Cancel discards the pending edits). Inputs render disabled (no
-  Save/Cancel buttons) whenever the session is **not editable** —
-  the page's ``<div class="card lock">`` already messages the way
-  out for that state.
+  Cancel discards the pending edits). Every include sits inside the
+  Unlock panel, which renders only while the session is editable, so
+  the ``not is_editable`` branch below (inputs disabled, no buttons) is
+  defensive; a locked page renders no editor at all.
 
   This was ``is_ready`` until Segment 19H Item 7, so on ``expired``
   and ``archived`` the inputs rendered enabled, the Save button
@@ -42,9 +42,9 @@
     since 15A, which the Unlock panel made worth fixing: the panel's
     Upload and Danger Zone cards are both labeled sections, so this
     was the one tenant a screen reader met as an unnamed group. The id
-    is suffixed with the entity, because the partial renders twice per
-    page (panel home and `.card-columns` fallback) on complementary
-    conditions — one at a time, so the id is unique per response. The
+    is suffixed with the entity, so it stays unique if a page ever holds
+    two editors (it renders once, in the Unlock panel, since its
+    `.card-columns` fallback retired 2026-10-11). The
     suffix is `field_labels_source_type`, which each page already sets
     (`reviewer` / `reviewee` / `pair_context`), rather than a fourth
     variable meaning the same thing. -#}

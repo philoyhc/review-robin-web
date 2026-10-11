@@ -427,3 +427,14 @@ has a ProfileLink.
 - [ ] **Reviewer surface and preview.** With Reviewees released Raw, the
   reviewer's "Who can see what you wrote" card shows both pills on one
   line at full width; below ~800px they may wrap, without overflowing.
+
+## The tag-labels card shows only in the Unlock panel
+
+- [ ] **Locked.** On an activated session, Reviewers, Reviewees and
+  Relationships show no "… tag labels" card below the roster card; the
+  labels still read in the headers of the populated tag columns (as a
+  consequence, a label on an empty column shows nowhere when locked).
+- [ ] **Mid-edit.** On a draft, Add or Edit a row: no labels card
+  appears below the roster card while the row is open.
+- [ ] **Unlocked.** On a draft, Unlock: the labels card is in the panel
+  and saves as before.

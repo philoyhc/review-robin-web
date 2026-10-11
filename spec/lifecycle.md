@@ -475,10 +475,9 @@ inside the roster card's **Unlock panel**, and it is the whole panel
 that is suppressed.
 Same predicate, one gate, and the Unlock control
 itself goes with it: a locked page offers no way to open a panel
-whose contents its routes would refuse. The tag-label editor is the
-one exception and deliberately so — it re-renders outside the panel
-with its inputs disabled and its buttons dropped, because a locked
-page must still let an operator *read* the labels.
+whose contents its routes would refuse. The tag-label editor has no
+copy outside the panel; a locked page reads the labels from the
+populated columns' headers and the roster index's pills.
 
 **Observers uses a WIDER predicate.** Its mutating surface reads
 `not is_archived`, so the roster stays editable through `ready` and
@@ -544,7 +543,7 @@ control. See `spec/instruments.md`.
 
 **Every setup-mutation control on those pages answers that one
 predicate**, the friendly-label editor included: both halves of its
-gate — the template's `disabled` and `_save_field_labels` — read
+gate — the Unlock panel's suppression and `_save_field_labels` — read
 `is_editable`. On `is_ready` alone it would accept a save on
 `expired` and `archived` (303, not 409) while the lock card two
 elements above says the roster cannot be modified. See

@@ -1527,10 +1527,6 @@ def _div_block(html: str, marker: str) -> str:
     raise AssertionError(f"{marker} never closes")
 
 
-def _card_columns(html: str) -> str:
-    return _div_block(html, '<div class="card-columns">')
-
-
 def _panel(html: str) -> str:
     """The Unlock panel, found by its id rather than by a literal tag.
 
@@ -1544,56 +1540,29 @@ def _panel(html: str) -> str:
     return _div_block(html, m.group(0))
 
 
-def _count_cards(block: str) -> int:
-    """Elements whose class list carries the `card` token.
+def test_the_labels_editor_lives_only_in_the_unlock_panel(client, db):
+    """The tag-labels editor has one home, the Unlock panel. Its
+    `.card-columns` fallback, shown while the panel could not render
+    (disabled when locked, live during a row edit / add), was retired on
+    2026-10-11 at the author's ruling.
 
-    `\bcard\b` counts `card-columns` too — `-` is a word boundary — so
-    the container scored itself and the first version of the caller
-    below failed against correct markup.
-
-    Matches double-quoted `class="…"` only. Every template in this repo
-    quotes attributes that way, and Jinja renders them that way; a
-    single-quoted class would be invisible here.
-    """
-    return sum(
-        1
-        for m in re.finditer(r'class="([^"]*)"', block)
-        if "card" in m.group(1).split()
-    )
-
-
-def test_card_columns_renders_only_where_the_unlock_panel_cannot(client, db):
-    """Rung 3a's complement, from the outside.
-
-    The tag-labels editor has two homes and one include: the Unlock
-    panel when the panel can render, `.card-columns` when it cannot. The
-    container therefore appears on exactly the pages the panel does not,
-    and holds that one card when it does appear.
-
-    Was `..._is_left_holding_the_labels_editor_alone`, which asserted the
-    container is always present — true between 2b and 3a, false after.
+    Was `test_card_columns_renders_only_where_the_unlock_panel_cannot`.
     """
     rs = _with_reviewers(client, db, "rc-s3-alone")
 
-    # Draft, not editing: the panel renders, so the container must not.
+    # Draft, not editing: the panel renders, holding the editor.
     resting = _markup(_page(client, rs))
     assert 'id="roster-unlock-panel"' in resting, "no panel on a draft page"
-    assert 'class="card-columns"' not in resting, (
-        "the container renders alongside the panel — two homes at once"
-    )
+    assert "Reviewer tag labels" in _panel(resting)
+    assert 'class="card-columns"' not in resting
 
-    # Add mode: the panel stands down, so the container takes over.
+    # Add mode: the panel stands down, and nothing takes its place.
     adding = _add_page(client, rs)
     assert 'id="roster-unlock-panel"' not in adding, (
         "the panel renders during an edit"
     )
-    block = _card_columns(adding)
-    assert "Reviewer tag labels" in block, (
-        "the editor has no home at all while editing"
-    )
-    assert _count_cards(block) == 1, (
-        "`.card-columns` holds more than the tag-labels editor"
-    )
+    assert "Reviewer tag labels" not in adding, "the fallback is back"
+    assert 'class="card-columns"' not in adding
 
 
 def test_the_editor_is_the_row_and_the_anchor_names_it(client, db):
@@ -1661,25 +1630,20 @@ def test_the_editor_is_the_row_and_the_anchor_names_it(client, db):
      ("expired", False, False), ("expired", True, False),
      ("archived", False, False), ("archived", True, False)],
 )
-def test_the_labels_editor_renders_exactly_once_in_every_state(
+def test_the_labels_editor_renders_once_with_its_panel_else_never(
     client, db, state, adding, panel_expected
 ):
-    """The invariant rung 3a's `unlock_available` exists to hold.
+    """The editor renders once where the Unlock panel does, and nowhere
+    where it cannot (the fallback home retired 2026-10-11).
 
-    One include, two positions. Two renders would put two
-    `#field-labels-form-reviewer` ids on one page — and the partial's own
-    script resolves its inputs by `getElementById`, so the dirty-check
-    would drive the wrong copy. Zero renders loses the labels entirely,
-    which on a locked session is the only place they are shown in full
-    (the roster readouts pill only the columns that HOLD data, so a
-    friendly label on an empty tag column appears nowhere else).
+    Was `test_the_labels_editor_renders_exactly_once_in_every_state`.
 
-    Parametrized over BOTH axes of `unlock_available`, not just the
-    lifecycle: `edit_mode` is the other half, and on an editable session
-    it is the half that decides which home renders. A first version
-    covered the five states at rest only — five of the ten that matter —
-    so a third include gated on `edit_mode` would have rendered the
-    editor twice in add mode with nothing counting it.
+    Two renders would put two `#field-labels-form-reviewer` ids on one
+    page — and the partial's own script resolves its inputs by
+    `getElementById`, so the dirty-check would drive the wrong copy.
+
+    Parametrized over BOTH axes of `unlock_available`: the lifecycle and
+    `edit_mode`.
     """
     rs = _with_reviewers(client, db, f"rc-3a-{state[:5]}-{int(adding)}")
     review_session = db.get(ReviewSession, rs.id)
@@ -1693,30 +1657,24 @@ def test_the_labels_editor_renders_exactly_once_in_every_state(
     html = _markup(response.text)
     where = f"{state}, add={adding}"
 
-    assert html.count('id="field-labels-form-reviewer"') == 1, where
-    assert html.count("Reviewer tag labels") == 1, where
-
-    # The form's TARGET, in whichever home it landed. Unguarded until a
-    # cold read pointed the fallback copy at `/reviewees/field-labels`
-    # and watched the whole suite pass — a live Save, during an edit,
-    # writing this page's labels onto another roster's and 303ing.
-    assert html.count(
-        f'action="/operator/sessions/{review_session.id}'
-        f'/reviewers/field-labels"'
-    ) == 1, where
-    # ...and all three slots, which the fallback copy also did not pin:
-    # it could be cut to one and nothing failed.
-    for slot in ("tag_1", "tag_2", "tag_3"):
-        assert f'name="{slot}"' in html, f"{where}: {slot} missing"
+    expected = 1 if panel_expected else 0
+    assert html.count('id="field-labels-form-reviewer"') == expected, where
+    assert html.count("Reviewer tag labels") == expected, where
+    assert 'class="card-columns"' not in html, where
 
     in_panel = 'id="roster-unlock-panel"' in html
     assert in_panel is panel_expected, where
     if panel_expected:
         panel = _panel(html)
         assert "field-labels-editor" in panel, f"{where}: editor outside panel"
-        assert 'class="card-columns"' not in html, where
-    else:
-        assert "field-labels-editor" in _card_columns(html), where
+        # The form's TARGET: a cold read once pointed a copy at
+        # `/reviewees/field-labels` and the whole suite passed.
+        assert html.count(
+            f'action="/operator/sessions/{review_session.id}'
+            f'/reviewers/field-labels"'
+        ) == 1, where
+        for slot in ("tag_1", "tag_2", "tag_3"):
+            assert f'name="{slot}"' in panel, f"{where}: {slot} missing"
 
 
 def test_no_empty_script_element_is_left_behind(client, db):

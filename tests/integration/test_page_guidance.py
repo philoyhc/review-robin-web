@@ -383,21 +383,14 @@ def test_no_roster_page_renders_the_column_container_beside_its_panel(
     rung 5, Reviewees and Relationships at 19P.3 rung 4 — because the
     panel took the last tenant each of them had.
 
-    Scoped to the panel and not to "a draft": a draft in edit mode
-    suppresses the panel and brings the container back, which is the
-    complement below, not a counter-example.
-
     Was `test_the_roster_pages_put_every_top_card_in_one_column_container`,
     which asserted the source order of that container's tenants. With no
     tenants on any page there is no order left to assert, so the claim
     becomes the one that survives the move: a panel where the container
     was, on all four.
 
-    The container has NOT gone from the codebase — it is the tag-labels
-    editor's fallback home, which the test below exercises in the states
-    where the panel cannot render. That complement is the point: a page
-    showing both, or neither, is the drift the two-homes contract exists
-    to prevent.
+    The container's last roster-page tenant, the tag-labels editor's
+    fallback home, retired on 2026-10-11; the test below pins that.
     """
     session_id = _session_id(client, db)
     review_session = db.get(ReviewSession, session_id)
@@ -418,21 +411,17 @@ def test_no_roster_page_renders_the_column_container_beside_its_panel(
         assert "page-guidance-wide" in body, f"{page} guidance is not full width"
 
 
-def test_the_container_comes_back_as_the_labels_editors_fallback(
+def test_no_roster_page_renders_the_container_where_the_panel_cannot(
     client: TestClient, db: Session
 ) -> None:
     """The complement of the test above. Where the Unlock panel cannot
-    render, the tag-labels editor falls back to `.card-columns` — and
-    exactly one of the two homes is used per request.
+    render — a locked session, or edit mode on a draft — the tag-labels
+    editor used to fall back to `.card-columns`. The author retired that
+    fallback on 2026-10-11: the labels read in the table headers and the
+    populated-column chips. So neither the container nor the editor
+    renders there.
 
-    Two states suppress the panel, and both are checked: `ready`, the
-    locked state (a locked page must carry no "Save labels", and the
-    panel holds one), and edit mode on a draft (`?add=1`), where
-    `unlock_available` is `is_editable and not edit_mode`. The second is
-    why the test above is scoped to the panel rather than to drafts.
-
-    Observers is excluded: it has no labels editor, so it has no fallback
-    and no container in any state.
+    Was `test_the_container_comes_back_as_the_labels_editors_fallback`.
     """
     session_id = _session_id(client, db)
     review_session = db.get(ReviewSession, session_id)
@@ -442,44 +431,33 @@ def test_the_container_comes_back_as_the_labels_editors_fallback(
 
     for page in ("reviewers", "reviewees", "relationships"):
         body = client.get(f"/operator/sessions/{session_id}/{page}").text
-        assert body.count('class="card-columns"') == 1, (
-            f"{page} lost the labels editor's fallback home"
-        )
+        assert 'class="card-columns"' not in body, page
         assert 'id="roster-unlock-panel"' not in body, (
             f"{page} offers Unlock on a locked session"
         )
-        assert body.count("field-labels-form") == 1, (
-            f"{page} renders the editor twice, or not at all"
-        )
-        assert "Save labels" not in body, (
-            f"{page} offers a control its route will refuse"
-        )
+        assert "field-labels-form" not in body, f"{page} kept the fallback"
+        assert "Save labels" not in body, page
 
-    # Edit mode on a DRAFT: the panel is suppressed by `not edit_mode`
-    # rather than by the lifecycle, so here the editor is live and
-    # "Save labels" is expected — the container is what carries it.
     review_session.status = "draft"
     db.flush()
     for page in ("reviewers", "reviewees", "relationships"):
         body = client.get(
             f"/operator/sessions/{session_id}/{page}?add=1"
         ).text
-        assert body.count('class="card-columns"') == 1, (
-            f"{page} lost the fallback home in edit mode"
-        )
-        assert 'id="roster-unlock-panel"' not in body, (
-            f"{page} renders both homes in edit mode"
-        )
+        assert 'class="card-columns"' not in body, page
+        assert 'id="roster-unlock-panel"' not in body, page
+        assert "field-labels-form" not in body, f"{page} kept the fallback"
 
 
-def test_the_activated_lock_card_sits_above_the_columns(
+def test_the_activated_lock_card_leads_the_roster_card(
     client: TestClient, db: Session
 ) -> None:
-    """It is full width, and `.card-columns` has no spanning slot — a
-    full-width card between the two pairs is what forced them into two
-    separate row grids before. Above the container it reads at the top
-    of the page, which is where an "you cannot edit this" notice
-    belongs."""
+    """It is full width, and reads at the top of the page, which is where
+    a "you cannot edit this" notice belongs.
+
+    Was `test_the_activated_lock_card_sits_above_the_columns`; the
+    columns it sat above were the labels editor's fallback, retired
+    2026-10-11."""
     session_id = _session_id(client, db)
     review_session = db.get(ReviewSession, session_id)
     review_session.status = "ready"
@@ -488,7 +466,7 @@ def test_the_activated_lock_card_sits_above_the_columns(
     body = client.get(f"/operator/sessions/{session_id}/reviewers").text
 
     assert 'class="card lock"' in body
-    assert body.index('class="card lock"') < body.index('class="card-columns"')
+    assert body.index('class="card lock"') < body.index('id="roster-card"')
 
 
 # --------------------------------------------------------------------------- #
