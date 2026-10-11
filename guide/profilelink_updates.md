@@ -130,8 +130,10 @@ would need adding per instrument).
   the profile level adds the reviewer's link under the email as the
   operator pages' `link` anchor (`target="_blank" rel="noopener"`),
   when that reviewer has one.
-- Observers' Raw download: `Name only` blanks `ReviewerEmail` (the
-  header stays); the profile level adds a `ReviewerProfileLink` column
+- Observers' Raw download: `Name only` blanks `ReviewerEmail` and the
+  three reviewer tag columns, which can identify as surely as an email
+  (the headers stay; Codex on #2961); the other two levels keep the
+  tags, as Raw does today. The profile level adds a `ReviewerProfileLink` column
   after `ReviewerEmail`, in the observer's download only. Operator
   extracts are unchanged.
 - No reviewer has a link: the cycle skips the third state; a stored
@@ -183,17 +185,21 @@ Taken 2026-10-11 at `e8dcd994`.
 
 1. **Scaffold.** The level chip on the card and the locked pill, inert,
    showing `Name, email`. No storage. Lands the shape for a browser look.
-2. **Storage and writers.** Column, migration, service, Save, Settings
-   CSV round trip, copies. The chip cycles and persists; no reader yet.
-3. **Readers.** Reviewee identity cell, observer download, reviewer
-   surface pill. The item's last build rung: a `diff-reviewer` read on
-   the cumulative diff from rung 1's base, and a `spec-writer` verify.
+2. **Storage and readers.** Column, migration, service, Settings CSV
+   round trip, copies, and both readers (reviewee identity cell,
+   observer download). Only the Settings CSV can set a level, so the
+   readers honor every level before any control offers one.
+3. **The live chip.** The card's chip cycles and Save persists it; the
+   locked and reviewer-surface pills show the stored level. Never a
+   control whose choice the participant pages ignore (Codex on #2961).
+   The item's last build rung: a `diff-reviewer` read on the cumulative
+   diff from rung 1's base, and a `spec-writer` verify.
 
 ### Definition of done
 
 - Each level renders as Semantics says on the reviewee page and in the
-  observer download, by test; Anonymized and Summarized never show an
-  email or a link.
+  observer download, by test; `Name only` shows no email or reviewer
+  tag, and Anonymized and Summarized never show an email or a link.
 - The level round-trips through Save, the Settings CSV, Replicate and
   Duplicate, by test; Postgres CI runs the migration both ways.
 - `### Doc impact` current; `spec-writer` flags adjudicated.
