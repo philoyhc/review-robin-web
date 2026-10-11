@@ -1286,7 +1286,7 @@ CSV header copy lists `ReviewerName`, `ReviewerEmail` required;
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the **row expander** below |
 | 1 | Name | — | `reviewer.name` |
 | 2 | Email | — | `<code>{{ reviewer.email }}</code>` |
-| 3 | Profile | ✓ | Conditional: rendered only when at least one reviewer has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` when populated; input in edit mode. `data-col-toggle="profile"` / `class="profile-col"`. Uses the display-only `("reviewer", "profile_link")` label "Profile"; it is not in `_VALID_SOURCE_FIELDS`, so a session cannot rename it. |
+| 3 | Profile | ✓ | Conditional: rendered only when at least one reviewer has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` for an `http(s)` value and a muted `•••` with the value as its hover for any other (`_partials/profile_value.html`); input in edit mode. `data-col-toggle="profile"` / `class="profile-col"`. Uses the display-only `("reviewer", "profile_link")` label "Profile"; it is not in `_VALID_SOURCE_FIELDS`, so a session cannot rename it. |
 | 4 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
 | 5 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 6 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
@@ -1324,7 +1324,7 @@ CSV header copy lists `RevieweeName`, `RevieweeEmail` required;
 | 0 | (select) | — | Leftmost checkbox column — per-row select + header select-all; drives the **row expander** below |
 | 1 | Name | — | `reviewee.name` |
 | 2 | Email (`Email / Identifier` in edit mode) | — | `<code>{{ reviewee.email_or_identifier }}</code>` |
-| 3 | Profile | ✓ | Conditional: rendered only when at least one reviewee has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>`. `data-col-toggle="profile"` / `class="profile-col"`. Uses the display-only `("reviewee", "profile_link")` label "Profile"; it is not in `_VALID_SOURCE_FIELDS`, so a session cannot rename it. |
+| 3 | Profile | ✓ | Conditional: rendered only when at least one reviewee has `profile_link` **or** while a row is being edited (`edit_mode`). Cell renders `<a href="…" target="_blank">link</a>` for an `http(s)` value and a muted `•••` with the value as its hover for any other (`_partials/profile_value.html`). `data-col-toggle="profile"` / `class="profile-col"`. Uses the display-only `("reviewee", "profile_link")` label "Profile"; it is not in `_VALID_SOURCE_FIELDS`, so a session cannot rename it. |
 | 4 | Tag1 | ✓ | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"` |
 | 5 | Tag2 | ✓ | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 6 | Tag3 | ✓ | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |

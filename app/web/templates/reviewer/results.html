@@ -11,6 +11,7 @@
    dashed; ``"summarized"`` — one aggregated row. An Acknowledge
    card closes the page. #}
 {% extends "base.html" %}
+{% from "_partials/profile_value.html" import profile_value %}
 
 {% block title %}{{ session.name }} — Results — Review Robin Web{% endblock %}
 
@@ -143,7 +144,7 @@
               <tr>
                 <td class="rs-reviewee">
                   {% if _identify %}
-                    <strong>{{ row.reviewer_name }}</strong>{% if row.reviewer_email %}<br><code>{{ row.reviewer_email }}</code>{% endif %}{% if row.reviewer_profile_link %}<br><a href="{{ row.reviewer_profile_link }}" target="_blank" rel="noopener">link</a>{% endif %}
+                    <strong>{{ row.reviewer_name }}</strong>{% if row.reviewer_email %}<br><code>{{ row.reviewer_email }}</code>{% endif %}{% if row.reviewer_profile_link %}<br>{{ profile_value(row.reviewer_profile_link, "link", new_tab=True) }}{% endif %}
                   {% else %}
                     <span class="muted">—</span>
                   {% endif %}
@@ -153,7 +154,7 @@
                     {% if not _identify %}
                       <span class="muted">—</span>
                     {% elif cell.is_profile_link %}
-                      {% if cell.value %}<a href="{{ cell.value }}">View</a>{% endif %}
+                      {{ profile_value(cell.value, "View") }}
                     {% else %}
                       {{ cell.value or "" }}
                     {% endif %}

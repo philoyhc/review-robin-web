@@ -528,7 +528,13 @@ In rendered order:
    if the operator added them, because they'd duplicate column 1).
    Each cell renders per the field's source:
    - `reviewee.profile_link` → `<a href="{value}">View</a>` when the
-     value is non-empty; empty otherwise (no broken anchor).
+     value is an `http://` / `https://` address (`views.is_web_link`);
+     any other non-empty value → a muted `•••` whose `title` (and
+     visually-hidden text) carries the value, never an `href`; empty
+     otherwise. One macro, `_partials/profile_value.html`, renders it
+     here, on the summary, the reviewee results and the operator
+     rosters; the Band 2 preview's `profileCell` mirrors it. The cell's
+     `data-sort-value` is the stored value.
    - `pair_context.{n}` and the rest → plain text.
    Header carries `class="rs-narrow"` for `profile_link` (URL
    columns are kept narrow); other display headers have no width

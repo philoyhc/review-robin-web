@@ -93,6 +93,7 @@ def _results(
     code: str,
     level: str | None,
     mode: str = "raw",
+    link: str = LINK,
 ) -> str:
     operator = make_client(alice)
     review_session = _seed_and_activate(operator, db, code=code)
@@ -111,7 +112,7 @@ def _results(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == review_session.id)
     ).scalar_one()
-    reviewer.profile_link = LINK
+    reviewer.profile_link = link
     db.commit()
     response = make_client(carol).get(f"/me/sessions/{review_session.id}/results")
     assert response.status_code == 200, response.text
@@ -178,13 +179,14 @@ def _download(
     level: str | None,
     mode: str = "raw",
     extra: Callable[[Session, dict], None] | None = None,
+    link: str = LINK,
 ) -> list[list[str]]:
     """The observer's download through the only path the product allows
     a per-row mode on: the Responses released cell, with the session
     expired and its release window open."""
     review_session = _make_session(client, db, code=code)
     seeded = _seed_one_instrument(db, review_session)
-    seeded["reviewer"].profile_link = LINK
+    seeded["reviewer"].profile_link = link
     if extra is not None:
         extra(db, seeded)
     policy = vp.list_for_instrument(db, seeded["instrument"].id)["observer"]

@@ -123,7 +123,7 @@ importers (§3.2b, §3.3).
 | 3 | `ReviewerTag1` | `reviewer.tag_1` | Optional on import. Empty cell ⇒ NULL. |
 | 4 | `ReviewerTag2` | `reviewer.tag_2` | Same. |
 | 5 | `ReviewerTag3` | `reviewer.tag_3` | Same. |
-| 6 | `ProfileLink` | `reviewer.profile_link` | Optional. Shown on the Reviewers page's Profile column (`spec/setup_pages.md`) and in the Reviewers extract. A participant sees it only at an instrument's `name_email_profile` reviewer-identity level (`spec/visibility_policy.md` §4): on a reviewee's Raw results and in an observer's Raw download (`spec/participant_model.md` §4.1, §4.2). Mirrors the Reviewees `ProfileLink` column. |
+| 6 | `ProfileLink` | `reviewer.profile_link` | Optional. Shown on the Reviewers page's Profile column (`spec/setup_pages.md`) and in the Reviewers extract. A participant sees it only at an instrument's `name_email_profile` reviewer-identity level (`spec/visibility_policy.md` §4): on a reviewee's Raw results and in an observer's Raw download (`spec/participant_model.md` §4.1, §4.2). Mirrors the Reviewees `ProfileLink` column. Any string is accepted; only an `http://` / `https://` value renders as a link, any other as a muted `•••` whose hover shows it, while every extract carries it whole. |
 | 7 | `Status` | `reviewer.status` | `active` / `inactive`, case-insensitively and ignoring surrounding whitespace. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
 
 **Row order:** active rows first (`status='active'`), then by
@@ -138,7 +138,7 @@ importers (§3.2b, §3.3).
 | 3 | `RevieweeTag1` | `reviewee.tag_1` | Optional. |
 | 4 | `RevieweeTag2` | `reviewee.tag_2` | Optional. |
 | 5 | `RevieweeTag3` | `reviewee.tag_3` | Optional. |
-| 6 | `ProfileLink` | `reviewee.profile_link` | Optional. Rendered as a clickable link on the reviewer surface when populated. |
+| 6 | `ProfileLink` | `reviewee.profile_link` | Optional. Where an instrument's display fields show it, an `http://` / `https://` value renders as a link and any other as a muted `•••` whose hover shows it (`spec/reviewer-surface.md`); every extract carries it whole. |
 | 7 | `Status` | `reviewee.status` | `active` / `inactive`, case-insensitively and ignoring surrounding whitespace. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
 
 **Row order:** active rows first, then by `name`, then by

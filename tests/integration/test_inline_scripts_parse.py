@@ -263,3 +263,51 @@ def test_band_2s_intro_heading_matches_the_surfaces() -> None:
         )
         expected.append({"title": heading.title, "subtitle": heading.subtitle})
     assert json.loads(out) == expected
+
+
+# ProfileLink Item 3 — the Band 2 preview's copy of
+# ``views.is_web_link`` must agree with it, and its ``profileCell``
+# must never put a non-address into an ``href``.
+
+_PROFILE_CASES = (
+    "https://example.edu/a",
+    "HTTP://example.edu",
+    "  https://example.edu  ",
+    "http://",
+    "https:example.edu",
+    "//example.edu",
+    "www.example.edu/a",
+    "AB1234",
+    "javascript:alert(1)",
+    "",
+)
+
+
+def test_the_previews_profile_cell_matches_the_surfaces() -> None:
+    import json
+
+    from app.web.views import is_web_link
+
+    template = (
+        Path(__file__).resolve().parents[2]
+        / "app/web/templates/operator/instruments_index.html"
+    ).read_text()
+    start = template.index("          function esc(s) {")
+    end = template.index("          // Gap 3 (18J Wave 1)", start)
+    script = (
+        template[start:end]
+        + "\nconsole.log(JSON.stringify(" + json.dumps(_PROFILE_CASES)
+        + ".map(function (v) { return [isWebLink(v), profileCell(v)]; })));"
+    )
+    out = json.loads(subprocess.run(
+        ["node", "-e", script], capture_output=True, text=True, check=True
+    ).stdout)
+    for value, (linked, cell) in zip(_PROFILE_CASES, out):
+        assert linked is is_web_link(value), value
+        if not value:
+            assert cell == "", value
+        elif linked:
+            assert cell.startswith('<a href="'), value
+        else:
+            assert "href" not in cell, value
+            assert "data-profile-masked" in cell and "•••" in cell, value

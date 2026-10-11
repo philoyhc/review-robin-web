@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_partials/profile_value.html" import profile_value %}
 
 {% block title %}{{ session.name }} — Review{% endblock %}
 
@@ -430,7 +431,7 @@
                   <td{% if cell.is_profile_link %} class="rs-narrow"{% endif %}
                       data-sort-value="{{ cell.value or '' }}">
                     {% if cell.is_profile_link %}
-                      {% if cell.value %}<a href="{{ cell.value }}" aria-label="View — {{ row.assignment.reviewee.name }}">View</a>{% endif %}
+                      {{ profile_value(cell.value, "View", aria_label="View — " ~ row.assignment.reviewee.name) }}
                     {% else %}
                       {{ cell.value or "" }}
                     {% endif %}
