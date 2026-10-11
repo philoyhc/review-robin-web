@@ -376,3 +376,19 @@ ProfileLink.
   cleanly in a spreadsheet.
 - [ ] **Unchanged.** A session whose CSV never set the level reads as
   before, and the card's Save keeps a stored level.
+
+## The reviewer-identity chip is live (ProfileLink Item 2, rung 3)
+
+- [ ] **Cycle.** Unlock an Instruments card and set the Reviewees
+  "Responses released" chip to Raw: the identity chip beside it now has
+  the blue edge and pointer and cycles "Name only" → "Name, email" by
+  click, Enter or Space; "Name, email, profile" joins the cycle once a
+  reviewer has a ProfileLink. The same on the Observers row.
+- [ ] **Save.** Pick "Name only", Save, reload: it stays. The locked
+  table shows "Name only" after "Raw responses", and so does the
+  reviewer's own "Who can see what you wrote" card.
+- [ ] **Readers.** With the release window open, the reviewee's results
+  and the observer's download read the saved level, as in rung 2's
+  section.
+- [ ] **Layout.** Two chips in the narrow Responses released column wrap
+  cleanly at full width and below 800px, in light and dark.

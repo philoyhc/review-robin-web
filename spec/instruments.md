@@ -840,6 +840,8 @@ no role or handler, and the title "Fixed". Both macros keep the `b3_`
 prefix from when the editor lived in Band 3's table, which this card
 retires.
 
+**Reviewer-identity chip.** Beside a Reviewees or Observers "Responses released" cell that is Raw, a second cycle chip (`b3_identity_chip`, `data-new-model-vp-identity`) sets how much of the reviewer Raw names (`spec/visibility_policy.md` §4): `Name only` → `Name, email` → `Name, email, profile`. The third is offered only when some reviewer in the session has a `ProfileLink`; a stored profile level still renders as itself, so it can be cycled off. Enter and Space cycle it as they do the mode chips. It is hidden unless the cell is Raw, and cycling the mode shows or hides it. Its `*_after_release_reviewer_identity` hidden input rides `dfsave-{id}` with the mode inputs and Save stores it. Locked, the table shows the level as a plain `pill pill-count` after a Raw Reviewees cell (no Observers row there), repainted on a cycle like the mode pills.
+
 The six `*_mode` hidden inputs ride the card's `dfsave-{id}` form and
 render unconditionally, whatever the lock state, so Save always carries
 them. A cycle also repaints the locked table's matching pill
@@ -1596,7 +1598,9 @@ key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
   per-cell rule and emits its own `instrument.view_policy_set`
   (`spec/visibility_policy.md` §5); a stored cell the rule rejects (a
   row imported before the rule) falls back to off, or to the cell's one
-  permitted mode. Duplicate session copies each instrument's grid the
+  permitted mode; the reviewer-identity level (`spec/visibility_policy.md` §4)
+  travels with the row, unless it is invalid for the audience, when it is
+  dropped. Duplicate session copies each instrument's grid the
   same way (`spec/roundtrip_coverage.md`).
 
 **Not cloned: assignment rows.** The duplicate starts with no pairs and

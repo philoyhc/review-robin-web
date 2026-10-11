@@ -199,6 +199,9 @@ instrument_view_policies
   after_release_granularity     String(16)  NULL  'row' | 'aggregated' | NULL
   after_release_identification  String(16)  NULL  'identified' | 'deidentified' | NULL
 
+  -- How much of the reviewer a Raw released view names (see below).
+  after_release_reviewer_identity  String(24)  NULL  'name' | 'name_email' | 'name_email_profile' | NULL
+
   created_at      DateTime(tz) NOT NULL
   updated_at      DateTime(tz) NOT NULL
   UNIQUE (instrument_id, audience)
@@ -206,6 +209,7 @@ instrument_view_policies
 
 - One row per (instrument, audience). Upserts cover both the create and update cases.
 - Rows with both windows off (all four pair columns NULL) persist; the resolver reads them as off.
+- **Reviewer-identity level** (`after_release_reviewer_identity`; Alembic `b7e3d91a4c62`). How much of the reviewer a Raw released view names: `name`, `name_email` or `name_email_profile` (the reviewer's `ProfileLink`). `NULL` reads as `name_email`, which is Raw as it was before the level existed. Only the `reviewee` and `observer` rows carry it; a level on `peer_reviewer` is refused (`validate_reviewer_identity`, `invalid_reviewer_identity`), since a reviewer reading their own work is identified to no one. Only **Raw** reads it; `Anonymized` and `Summarized` never do. A stored level is kept when the cell's mode changes, so cycling back to Raw restores it. `upsert_policy` leaves the stored level alone unless a value is passed; the card's Save passes the level when its form carries one (absent input keeps, empty clears). The Settings CSV, Replicate and Duplicate carry it. What each reader shows per level: `spec/participant_model.md`; the control: `spec/instruments.md` § *Visibility card*.
 - There is no `observer_tag` column. An older settings CSV that still carries `…view_policies[observer].observer_tag` imports the row with that value dropped.
 
 ### 4.1 Default state

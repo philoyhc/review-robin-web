@@ -202,6 +202,11 @@ Taken 2026-10-11 at `e8dcd994`.
   readers. `upsert_policy` keeps a stored level unless one is passed,
   so the card's Save, which sends none until rung 3, leaves it alone.
   The specs land with rung 3.
+- Rung 3 (2026-10-11): the live chip (cycle, Enter/Space, hidden inputs
+  on the card's Save; an absent input keeps the level, an empty one
+  clears it), the locked and reviewer-surface pills, and the specs,
+  written by `spec-writer` at the close; it added a pointer in
+  `spec/reviewer-surface.md`, outside `Doc impact`.
 
 ### PR ladder
 
@@ -246,4 +251,5 @@ Taken 2026-10-11 at `e8dcd994`.
 - `spec/csv_contracts.md` — the Settings CSV `view_policies[<audience>]` attribute, and the reviewer `ProfileLink` row naming where it now shows.
 - `spec/settings_inventory.md` — the new persisted setting under the per-instrument visibility policy.
 - `spec/roundtrip_coverage.md` — the new column round-trips.
+- `spec/reviewer-surface.md` — the visibility card's line points at the identity pill (added at the close).
 - `guide/things_to_check_in_browser.md` — a section per rung.

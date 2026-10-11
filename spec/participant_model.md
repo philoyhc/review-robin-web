@@ -68,13 +68,13 @@ Three surfaces are participant-role-specific. All three render the reviewer-surf
 |---|---|---|---|
 | Reviewer surface | `/me/sessions/{id}/{page_n}` + `/me/sessions/{id}/summary` | `require_reviewer_in_session` | Full response collection. See `spec/reviewer-surface.md`. |
 | Reviewee results | `/me/sessions/{id}/results` | `require_reviewee_with_current_grant` | Per-instrument sections in raw / anonymized / summarized mode, plus the Acknowledge card at the foot. `POST /me/sessions/{id}/results/acknowledge` stamps `reviewees.results_acknowledged_at` (idempotent). See §4.1 below. |
-| Observer collation | `/me/sessions/{id}/collation` | `require_observer_in_session` | Per-instrument 3-row tables: Row 1 distinct-reviewer headcount + shared aggregate over the in-cohort assignment pool, Row 2 distinct-reviewee headcount + same aggregate, Row 3 conditional `Download CSV` button. Both rows draw from the same in-cohort pool computed by `materialize_cohort_assignments(observer, instrument_id)` via the per-row predicate `assignment_matches_cohort`; the per-side headcount badge is the only legitimate row-to-row difference. Identification mode follows the per-instrument Band 3 observer policy (Raw / Anonymized rows / Anonymized summaries). Per-instrument CSV download at `.../collation/instruments/{instrument_id}.csv`. |
+| Observer collation | `/me/sessions/{id}/collation` | `require_observer_in_session` | Per-instrument 3-row tables: Row 1 distinct-reviewer headcount + shared aggregate over the in-cohort assignment pool, Row 2 distinct-reviewee headcount + same aggregate, Row 3 conditional `Download CSV` button. Both rows draw from the same in-cohort pool computed by `materialize_cohort_assignments(observer, instrument_id)` via the per-row predicate `assignment_matches_cohort`; the per-side headcount badge is the only legitimate row-to-row difference. Identification mode follows the per-instrument Band 3 observer policy (Raw / Anonymized rows / Anonymized summaries). Per-instrument CSV download at `.../collation/instruments/{instrument_id}.csv`; its Raw form reads the reviewer-identity level (§4.2). |
 
 ### 4.1 Reviewee results surface
 
 `GET /me/sessions/{id}/results` renders the reviewer-surface chrome plus a list of per-instrument sections built by `app/web/views/_reviewee_results.py::build_reviewee_results_context`. Sections appear only for instruments whose `reviewee` visibility policy row resolves to a mode and that have at least one included assignment to this reviewee; the section's mode is one of:
 
-- **`raw`** — one row per reviewer with an included assignment to the reviewee (an excluded pair has no row); Reviewer name + email shown in the identity column. Rows sort by reviewer name (case-insensitive), then reviewer id.
+- **`raw`** — one row per reviewer with an included assignment to the reviewee (an excluded pair has no row); Reviewer name + email shown in the identity column, as the instrument's reviewer-identity level says (`spec/visibility_policy.md` §4): `name` drops the email; `name_email_profile` adds the reviewer's `ProfileLink`, when they have one, under the name and email as a `link` anchor opening in a new tab. Rows sort by reviewer name (case-insensitive), then reviewer id.
 - **`anonymized`** — same per-row table; every identification cell (Reviewer name, email, display-field cells) collapsed to a muted em-dash. Rows sort by the reviewer's participant token (`app/services/participant_tokens.py`), then reviewer id — never by name, whose alphabetical slot would identify a dashed row, nor by reviewer id, which follows roster import order.
 - **`summarized`** — per-instrument sections collapse to one aggregate row. The identity column header reads "Summary" and the cell carries two counts: "Number of reviewers assigned" and "Number of reviewers with some responses". Response-field cells render per data type:
   - `Integer` / `Decimal`: Average, Median, Min, Max, (based on N responses). At zero responses, all labels render with em-dash placeholders.
@@ -88,6 +88,12 @@ The **Acknowledge card** (`section.card.rs-acknowledge-card`) always renders at 
 `POST /me/sessions/{id}/results/acknowledge` calls `app/services/reviewees.py::acknowledge_results`, which stamps `reviewees.results_acknowledged_at = now()` and emits `reviewee.results_acknowledged` (snapshot envelope: `reviewee_id` + `acknowledged_at`). The operation is **idempotent** — a second POST is a no-op (original timestamp preserved). On success, 303 → `GET /results`.
 
 **Mount-order note.** The routes (`_results.py`, `_collation.py`) are registered **before** `_surface` in `routes_reviewer/__init__.py` because the surface's `/me/sessions/{id}/{page_n}` would otherwise swallow `/results` and `/collation` as the `page_n` value. Treat this as load-bearing — adding any further literal-segment `/me/sessions/{id}/<thing>` routes needs the same precedence.
+
+### 4.2 Reviewer-identity level in the observer download and on the reviewer surface
+
+For a Raw observer download the level (`spec/visibility_policy.md` §4) sets the reviewer columns: `name` blanks `ReviewerEmail` and the three reviewer tag columns, which can identify as surely as an email (the headers stay); `name_email` is the full block; `name_email_profile` adds a `ReviewerProfileLink` column after `ReviewerEmail`. `Anonymized` ignores the level. The level covers the reviewer's identity only, not the reviewee's columns, and operator extracts are unchanged.
+
+The reviewer surface's "Who can see what you wrote" card shows the level as a plain pill after a Raw Reviewees "Responses released" cell (`spec/reviewer-surface.md`); the Observers row stays operator-only.
 
 ### Reachability windows
 
