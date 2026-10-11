@@ -98,8 +98,8 @@ CONTROL_SELECTORS = {
     "body.ui-v2 .pill.pill-tag-clear, body.ui-v2 .pill.tag-mode-chip",
     "body.ui-v2 span.tag-chip.is-fixed, body.ui-v2 label.tag-chip.is-fixed:has(> input:checked)",
     (
-        "body.ui-v2 .tag-chip, body.ui-v2 .pill.pill-tag-clear, "
-        "body.ui-v2 .pill.tag-mode-chip"
+        "body.ui-v2 .tag-chip, body.ui-v2 .pill.tag-chip, "
+        "body.ui-v2 .pill.pill-tag-clear, body.ui-v2 .pill.tag-mode-chip"
     ),
     (
         "body.ui-v2 a.pill.pill-role-reviewer, "

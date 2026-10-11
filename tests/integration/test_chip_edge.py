@@ -58,7 +58,8 @@ def _chip_rule(css: str) -> str:
     """The block that gives every chip its edge."""
     block = _rule(
         css,
-        "body.ui-v2 .tag-chip,\n      body.ui-v2 .pill.pill-tag-clear,"
+        "body.ui-v2 .tag-chip,\n      body.ui-v2 .pill.tag-chip,"
+        "\n      body.ui-v2 .pill.pill-tag-clear,"
         "\n      body.ui-v2 .pill.tag-mode-chip",
     )
     assert block is not None, "the chip-edge rule is gone or was resplit"
