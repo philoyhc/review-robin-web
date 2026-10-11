@@ -278,7 +278,8 @@ _WEB_LINK = re.compile(r"https?://[^/?#\x00-\x20]", re.IGNORECASE | re.ASCII)
 def is_web_link(value: str | None) -> bool:
     """Whether a stored ``profile_link`` renders as a link.
 
-    Only an ``http://`` or ``https://`` address with a host does; any
+    Only an ``http://`` or ``https://`` value with a host character
+    after the ``//`` does; any
     other non-empty value renders the muted ``•••`` marker with the
     value as its hover (``guide/profilelink_updates.md`` Item 3). So a
     plain id never becomes a relative ``href`` and a ``javascript:``

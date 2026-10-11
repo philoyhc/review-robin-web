@@ -274,6 +274,8 @@ _PROFILE_CASES = (
     "HTTP://example.edu",
     "  https://example.edu",
     "\u00a0https://example.edu",
+    "https://example.edu  ",
+    "http://\x01example.edu",
     "\ufeffhttps://example.edu",
     "http\u017f://example.edu",
     "http://\u00a0example.edu",

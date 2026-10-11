@@ -65,6 +65,11 @@ def _hrefs(body: str) -> list[str]:
         # Unstripped: a leading space would leave a relative href.
         ("  https://example.edu", False),
         ("\u00a0https://example.edu", False),
+        # Trailing whitespace is harmless: browsers strip it from an href.
+        ("https://example.edu  ", True),
+        # No host character after the "//".
+        ("http:// example.edu", False),
+        ("http://\x01example.edu", False),
         ("\ufeffhttps://example.edu", False),
         # ASCII only: "ſ" must not fold to "s".
         ("http\u017f://example.edu", False),

@@ -338,7 +338,10 @@ Taken 2026-10-11 at `e5794301`.
   both sides now match the unstripped value, ASCII only; an empty-value
   test for the summary and results; `spec/settings_inventory.md`'s
   "Optional URL" rows, outside `Doc impact`, now added. `spec-writer`
-  verified the four specs and flagged the same rows.
+  verified the four specs and flagged the same rows. A second read, of
+  the fixes, found nothing wrong (Python and JS agree on every BMP code
+  point); its wording nit ("a host character", not "a host") and edge
+  cases are in.
 
 ### PR ladder
 
