@@ -20,6 +20,7 @@ Source range in pre-PR-6 ``_legacy.py``: lines 38-335.
 from __future__ import annotations
 
 import math
+import re
 from decimal import Decimal
 from dataclasses import dataclass
 from typing import Any
@@ -265,6 +266,26 @@ def numeric_column_ch_width(
     header_ch = len(field.label) + (2 if marked else 0) + 4
     input_ch = digit_span + 3
     return max(header_ch, input_ch)
+
+
+# An ``http://`` / ``https://`` address with a host character after the
+# ``//``, ASCII only (so no ``ſ`` folds to ``s``) and unstripped (so the
+# ``href`` is exactly what matched). The Band 2 preview's ``isWebLink``
+# uses the same pattern.
+_WEB_LINK = re.compile(r"https?://[^/?#\x00-\x20]", re.IGNORECASE | re.ASCII)
+
+
+def is_web_link(value: str | None) -> bool:
+    """Whether a stored ``profile_link`` renders as a link.
+
+    Only an ``http://`` or ``https://`` value with a host character
+    after the ``//`` does; any
+    other non-empty value renders the muted ``•••`` marker with the
+    value as its hover (``guide/profilelink_updates.md`` Item 3). So a
+    plain id never becomes a relative ``href`` and a ``javascript:``
+    value never runs. The Band 2 preview mirrors it (``isWebLink``).
+    """
+    return bool(value) and _WEB_LINK.match(value) is not None
 
 
 def profile_column_ch_width(label: str) -> int:

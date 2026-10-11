@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_partials/profile_value.html" import profile_value %}
 {% import "operator/partials/_page_guidance.html" as page_guidance %}
 {% from "operator/partials/_field_label_header.html" import field_label_header, field_label_canonical_subtext %}
 
@@ -844,9 +845,7 @@
               <td data-sort-value="{{ reviewee.email_or_identifier }}"><code>{{ reviewee.email_or_identifier }}</code></td>
               {% if show_profile_link %}
                 <td class="profile-col">
-                  {% if reviewee.profile_link %}
-                    <a href="{{ reviewee.profile_link }}" target="_blank" rel="noopener">link</a>
-                  {% endif %}
+                  {{ profile_value(reviewee.profile_link, "link", new_tab=True) }}
                 </td>
               {% endif %}
               {% if show_tag[1] %}<td class="tag-col tag-col-1" data-sort-value="{{ reviewee.tag_1 or '' }}">{{ reviewee.tag_1 or "" }}</td>{% endif %}

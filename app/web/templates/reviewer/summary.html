@@ -4,6 +4,7 @@
    instrument the reviewer responded on; each section is a small
    table of reviewees (rows) × field values (cells). #}
 {% extends "base.html" %}
+{% from "_partials/profile_value.html" import profile_value %}
 
 {% block title %}Your responses — {{ session.name }} — Review Robin Web{% endblock %}
 
@@ -133,7 +134,7 @@
               {% for cell in row.display_cells %}
                 <td{% if cell.is_profile_link %} class="rs-narrow"{% endif %}>
                   {% if cell.is_profile_link %}
-                    {% if cell.value %}<a href="{{ cell.value }}">View</a>{% endif %}
+                    {{ profile_value(cell.value, "View") }}
                   {% else %}
                     {{ cell.value or "" }}
                   {% endif %}

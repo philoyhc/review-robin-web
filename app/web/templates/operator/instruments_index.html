@@ -2232,6 +2232,19 @@
           function esc(s) {
             return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
           }
+          // views.is_web_link: only an http(s) address is a link; any
+          // other profile value shows a muted ••• with the value as its
+          // hover (_partials/profile_value.html).
+          function isWebLink(v) {
+            return /^https?:\/\/[^\/?#\x00-\x20]/i.test(String(v || ''));
+          }
+          function profileCell(v) {
+            if (!v) { return ''; }
+            if (isWebLink(v)) { return '<a href="' + esc(v) + '">View</a>'; }
+            return '<span class="muted" title="' + esc(v) + '" data-profile-masked>'
+              + '<span aria-hidden="true">•••</span>'
+              + '<span class="visually-hidden">' + esc(v) + '</span></span>';
+          }
           // Gap 3 (18J Wave 1) — sort-badge for a display-field
           // column's <th>. Reads the persisted spec from the
           // band2 wrapper's data-new-model-band2-sort-spec attr,
@@ -2409,7 +2422,7 @@
               var v = o.value || '';
               var cell;
               if (isProfile) {
-                cell = v ? '<a href="' + esc(v) + '">View</a>' : '';
+                cell = profileCell(v);
               } else {
                 cell = esc(v || '—');
               }

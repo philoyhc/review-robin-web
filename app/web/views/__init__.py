@@ -125,6 +125,7 @@ from ._instruments import (
     new_model_usable_tags,
     numeric_column_ch_width,
     profile_column_ch_width,
+    is_web_link,
     placeholder_for_field,
     textarea_rows_for,
 )
@@ -298,6 +299,7 @@ __all__ = [
     "new_model_usable_tags",
     "numeric_column_ch_width",
     "profile_column_ch_width",
+    "is_web_link",
     "textarea_rows_for",
     "cohort_rule_signature",
     "cohort_rule_summary",

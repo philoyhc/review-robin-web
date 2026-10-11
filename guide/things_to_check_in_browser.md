@@ -400,3 +400,20 @@ has a ProfileLink.
   Space without scrolling the page, and the card's Save wakes. Cycling
   Reviewees "Responses released" to Raw this way brings up the identity
   chip, which is the next Tab stop.
+
+## A profile value that is not a web address shows ••• (ProfileLink Item 3)
+
+- [ ] **Rosters.** Give one reviewee a ProfileLink of `AB1234` and
+  another `https://example.edu/x`: on the Reviewees page the first's
+  Profile cell shows a gray `•••` whose hover reads `AB1234`, the
+  second's `link` opens the address in a new tab. The same on Reviewers.
+- [ ] **Reviewer surface.** Add the reviewee Profile display field to an
+  instrument: the reviewer's table shows `•••` (hover `AB1234`) and
+  `View`, the column stays narrow, and sorting by Profile still works.
+  The same on the reviewer's summary and the reviewee's results.
+- [ ] **Reviewer card.** At "Name, email, profile", a reviewer whose
+  ProfileLink is not an address shows `•••` under their email on the
+  reviewee's results; the observer's download carries the value whole.
+- [ ] **Preview.** The Band 2 preview shows the same `•••` and `View`.
+- [ ] **Look.** The `•••` reads as muted in light and dark, and a screen
+  reader announces the value rather than "bullet bullet bullet".

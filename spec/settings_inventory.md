@@ -298,7 +298,7 @@ bulk inactivate-reactivate on all four pages, observers included.
 |---|---|---|
 | `name` | `String(255)` | |
 | `email` | `String(320)` | Identity used for invitation matching. |
-| `profile_link` | `String(2000)` | Optional URL. Mirrors the reviewee column. |
+| `profile_link` | `String(2000)` | Optional. Any string; only an `http(s)` address renders as a link, anything else as a muted `•••` (`spec/reviewer-surface.md`). Mirrors the reviewee column. |
 | `status` | `String(32)` | `active` / `inactive`. Flipped via the per-row Edit / bulk inactivate-reactivate UI. |
 | `tag_1`, `tag_2`, `tag_3` | `String(255)` | Free-form labels. Used by rule-based assignment matching and surfaced on the reviewer surface when the corresponding column toggle is enabled. |
 
@@ -308,7 +308,7 @@ bulk inactivate-reactivate on all four pages, observers included.
 |---|---|---|
 | `name` | `String(255)` | |
 | `email_or_identifier` | `String(320)` | Identity (may be a non-email identifier in non-email cohorts). |
-| `profile_link` | `String(2000)` | Optional URL or photo link. |
+| `profile_link` | `String(2000)` | Optional. Any string (a URL, a photo link or a plain id); only an `http(s)` address renders as a link (`spec/reviewer-surface.md`). |
 | `status` | `String(32)` | `active` / `inactive`. |
 | `tag_1`, `tag_2`, `tag_3` | `String(255)` | Same shape as reviewer tags. |
 

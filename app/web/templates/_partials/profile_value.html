@@ -1,0 +1,13 @@
+{#- A stored profile_link (guide/profilelink_updates.md Item 3): an
+    http(s) address renders as a link; any other non-empty value as a
+    muted ••• whose hover carries the value, so a plain id never
+    becomes a relative href and a javascript: value never runs; an
+    empty one renders nothing. The Band 2 preview mirrors this in JS
+    (isWebLink / profileCell in instruments_index.html). -#}
+{% macro profile_value(value, text, new_tab=False, aria_label=None) -%}
+  {%- if value and is_web_link(value) -%}
+    <a href="{{ value }}"{% if new_tab %} target="_blank" rel="noopener"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %}>{{ text }}</a>
+  {%- elif value -%}
+    <span class="muted" title="{{ value }}" data-profile-masked><span aria-hidden="true">•••</span><span class="visually-hidden">{{ value }}</span></span>
+  {%- endif -%}
+{%- endmacro %}
