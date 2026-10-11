@@ -1550,6 +1550,7 @@
                   data-new-model-vp-cycle-slugs="{{ slugs | join('|') }}"
                   data-new-model-vp-current-slug="{{ _current }}"
                   onclick="newModelCycleVisibilityCell(this)"
+                  onkeydown="newModelChipKey(this, event)"
                   title="Click to cycle">{{ _b3_mode_labels.get(_current, "—") }}</span>
           {% endmacro %}
           {% macro b3_identity_chip(audience, state) %}
