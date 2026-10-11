@@ -26,9 +26,11 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
-- None. (`guide/operator_pages_enhancements.md` Items 1–3 closed
-  2026-10-09 and `guide/ux_refinements.md` Items 1–11 closed 2026-10-10;
-  new items are added there.)
+- **ProfileLink updates** — `guide/profilelink_updates.md`: Item 1, the
+  Reviewers page's Profile column chip; Item 2, a Raw identity-level
+  chip (name; name, email; name, email, profile) for reviewees and observers. (`guide/operator_pages_enhancements.md`
+  Items 1–3 closed 2026-10-09 and `guide/ux_refinements.md` Items 1–11
+  closed 2026-10-10; new items are added there.)
 
 ### Queued segments
 
