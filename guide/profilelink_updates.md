@@ -284,19 +284,21 @@ CSP header is set (traced 2026-10-11).
 
 The author's ruling, 2026-10-11: a value that starts `http://` or
 `https://` stays a link; any other non-empty value renders a muted
-marker that says a value is there but not shown (which marker is open,
-below); an empty one stays empty. The same rule on every surface
+`•••` whose hover (`title`) shows the value; an empty one stays empty. The same rule on every surface
 that renders the value, operator rosters included. Downloads carry the
 value whole: the observer CSV's `ReviewerProfileLink` already does at
 the profile level, and the roster extracts are the operator's.
 
-So the field can hold an id an operator never meant participants to
-follow. Whether it shows at all stays where it is: the reviewee's under
-the instrument's display fields, the reviewer's under Item 2's level.
+So the field can hold an id that is not a link. Whether it shows at
+all stays where it is — the reviewee's under the instrument's display
+fields, the reviewer's under Item 2's level — and where it shows, the
+value may be read: it is in the download anyway.
 
-Rejected: rendering the text itself — the profile columns are sized for
-`View` (`profile_column_ch_width`) under `white-space: nowrap`, so a
-long id would spill into the next cell. Rejected: a Validate warning
+Rejected: the em dash — Anonymized uses it on `/results` for a hidden
+cell, and elsewhere it reads as nothing. Rejected: rendering the text
+itself — the profile columns are sized for `View`
+(`profile_column_ch_width`) under `white-space: nowrap`, so a long id
+would spill into the next cell. Rejected: a Validate warning
 for non-link values — an id is a legitimate use, so the warning would
 be noise.
 
@@ -306,9 +308,7 @@ be noise.
   insensitive. One helper; the preview's JS mirrors it.
 - **Stored data.** Nothing changes on import, edit or export; the rule
   is render-only, so a value turns into a link when it is corrected.
-- **Sort.** The reviewer surface's `data-sort-value` is the link for a
-  link, a constant for a marked row and empty for an empty one, so the
-  page source carries no hidden value and marked rows sort together.
+- **Sort.** Unchanged: the reviewer surface sorts on the stored value.
 - **`Name, email, profile`.** Still offered when any reviewer has a
   non-empty value: the CSV carries text values too.
 
@@ -338,7 +338,8 @@ Taken 2026-10-11 at `e5794301`.
 ### Definition of done
 
 - Each of the seven renderers shows a link for an `http(s)` value, the
-  marker for any other value and nothing for an empty one, by test;
+  `•••` carrying the value as its `title` for any other value and
+  nothing for an empty one, by test;
   no rendered `href` carries a non-`http(s)` profile value.
 - The observer CSV carries a text value whole at the profile level, by
   test.
@@ -347,12 +348,9 @@ Taken 2026-10-11 at `e5794301`.
 
 ### Open questions
 
-- **The marker** (author). Not the em dash: Anonymized already uses it
-  on `/results` for a hidden cell, and elsewhere it reads as nothing.
-  Candidates: muted `•••` (masked, like a password field; recommended),
-  a muted unlinked `View`, a muted `Hidden`, or a lock glyph. Each with
-  a `title` and `aria-label` reading "Profile not shown".
-- Ruled 2026-10-11: no validation; the CSV carries the value whole.
+- None open. The author ruled on 2026-10-11: the `•••` marker, its
+  hover showing the value on every surface, no validation, and the CSV
+  carrying the value whole.
 
 ### Out of scope
 
