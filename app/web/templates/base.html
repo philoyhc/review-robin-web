@@ -3794,6 +3794,11 @@
            toggle (19J.7 rung 3). */
         border: 1px solid transparent;
       }
+      /* The `display` above outranks the browser's `[hidden]`, as the
+         `.btn` one did. The Band 2 card's identity-level pill ships
+         `hidden` unless its cell is Raw (guide/profilelink_updates.md
+         Item 2). */
+      body.ui-v2 .pill[hidden] { display: none; }
       body.ui-v2 .pill-count,
       body.ui-v2 .pill.pill-info {
         background: var(--status-info-bg);

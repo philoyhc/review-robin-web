@@ -191,6 +191,13 @@ Taken 2026-10-11 at `e8dcd994`.
   cells, Replicate and clone, reviewee results body, and the observer
   CSV.
 
+### Status
+
+- Rung 1 (2026-10-11), base `73e7291a`: the inert pill in the editor
+  and the locked table, shown only beside a Raw cell. It needed a
+  `body.ui-v2 .pill[hidden]` rule in `base.html`, since `.pill`'s
+  `display` outranked `hidden`, as `.btn`'s once did.
+
 ### PR ladder
 
 1. **Scaffold.** The level chip on the card and the locked pill, inert,

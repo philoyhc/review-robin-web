@@ -1191,7 +1191,8 @@ def build_reviewer_visibility_rows(
 
     Each row dict carries ``audience`` (the policy audience slug) /
     ``audience_label`` / ``while_ongoing_label`` /
-    ``after_release_label``. Audiences
+    ``after_release_label`` / ``after_release_mode`` (the slug, ``""``
+    for off). Audiences
     with no persisted policy row fall back to
     :data:`_BAND3_VISIBILITY_DEFAULTS`. The display labels are
     the Band 3 cycle chips' own words (``Raw responses`` /
@@ -1234,6 +1235,9 @@ def build_reviewer_visibility_rows(
                     "audience_label": label,
                     "while_ongoing_label": _REVIEWER_VP_MODE_LABELS[wo_mode],
                     "after_release_label": _REVIEWER_VP_MODE_LABELS[ar_mode],
+                    # ProfileLink updates Item 2: the identity-level pill
+                    # follows a Raw released cell.
+                    "after_release_mode": ar_mode or "",
                 }
             )
         result[instrument.id] = rows

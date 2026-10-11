@@ -342,3 +342,17 @@ section (git history keeps it), so this file lists only what is owed.
   reload, as on Reviewees.
 - [ ] **Without.** Where no reviewer has one, there is no Profile chip
   and no Profile column (until a row is being edited).
+
+## Band 2's reviewer-identity pill (ProfileLink Item 2, rung 1)
+
+- [ ] **Beside Raw only.** Unlock an Instruments card. In "Who can see
+  what you wrote", cycle the Reviewees "Responses released" chip: a
+  "Name, email" pill appears to its right on Raw and goes on any other
+  value. The same on the Observers row. No pill on the You (reviewer)
+  row.
+- [ ] **Inert.** The pill is a plain display pill: no blue edge, no pointer, no
+  focus, and a click on it does nothing.
+- [ ] **Locked.** Save with Reviewees on Raw and lock the card: the
+  locked table's Reviewees row shows the plain "Name, email" pill after
+  "Raw responses". The chips wrap cleanly in the narrow column, at full
+  width and below 800px, in light and dark.

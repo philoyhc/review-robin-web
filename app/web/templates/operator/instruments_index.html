@@ -1552,6 +1552,18 @@
                   onclick="newModelCycleVisibilityCell(this)"
                   title="Click to cycle">{{ _b3_mode_labels.get(_current, "—") }}</span>
           {% endmacro %}
+          {% macro b3_identity_chip(audience, current_mode) %}
+            {# ProfileLink updates Item 2 rung 1 — the reviewer-identity
+               level beside a Raw released cell. Scaffold: a plain display
+               pill, not yet a ``tag-chip`` (the grid's chips are all
+               controls, ``test_band3_static_pills.py``), reading today's
+               Raw until the level is stored; the mode cycle shows or
+               hides it. #}
+            <span class="pill pill-count"
+                  data-new-model-vp-identity="{{ audience }}"
+                  title="How much of the reviewer Raw shows; not yet settable"
+                  {% if current_mode != "raw" %}hidden{% endif %}>Name, email</span>
+          {% endmacro %}
           {% set _rf_list = _band2.response_fields or [] %}
           {# 19T Item 10 — a governed field isn't an item while its branch is
              closed, as on the surface; the sample row is unanswered, so
@@ -1652,7 +1664,14 @@
                         <td style="padding: 4px 8px;"><span class="pill pill-count"
                             data-new-model-vp-preview-cell="{{ vp.audience }}-while_ongoing">{{ vp.while_ongoing_label }}</span></td>
                         <td style="padding: 4px 8px;"><span class="pill pill-count"
-                            data-new-model-vp-preview-cell="{{ vp.audience }}-after_release">{{ vp.after_release_label }}</span></td>
+                            data-new-model-vp-preview-cell="{{ vp.audience }}-after_release">{{ vp.after_release_label }}</span>
+                          {# ProfileLink updates Item 2 rung 1 — how much of
+                             the reviewer a Raw result names. Scaffold: the
+                             level is not stored yet, so it reads today's Raw,
+                             and shows only beside a Raw cell. #}
+                          {% if vp.audience == "reviewee" %}<span class="pill pill-count"
+                            data-new-model-vp-identity-preview="reviewee"
+                            {% if vp.after_release_mode != "raw" %}hidden{% endif %}>Name, email</span>{% endif %}</td>
                       </tr>
                     {% endfor %}
                   </tbody>
@@ -1729,6 +1748,7 @@
                         {{ b3_mode_cycle("reviewee", "after_release",
                                           ["", "raw", "anonymized", "summarized"],
                                           _re.after_release_mode) }}
+                        {{ b3_identity_chip("reviewee", _re.after_release_mode) }}
                       </td>
                     </tr>
                     {# Observers — cross-cohort. While the session runs
@@ -1746,6 +1766,7 @@
                         {{ b3_mode_cycle("observer", "after_release",
                                           ["", "raw", "anonymized", "summarized"],
                                           _ob.after_release_mode) }}
+                        {{ b3_identity_chip("observer", _ob.after_release_mode) }}
                       </td>
                     </tr>
                     <tr>
@@ -6867,6 +6888,16 @@
         '[data-new-model-vp-preview-cell="' + audience + '-' + window_ + '"]'
       );
       if (cell) cell.textContent = _VP_CELL_LABELS[nextSlug] || nextSlug;
+      // ProfileLink updates Item 2 — the identity level shows only
+      // beside a Raw released cell, in the editor and the locked table.
+      if (window_ === 'after_release' && card) {
+        var raw = nextSlug === 'raw';
+        var chips = card.querySelectorAll(
+          '[data-new-model-vp-identity="' + audience + '"],' +
+          '[data-new-model-vp-identity-preview="' + audience + '"]'
+        );
+        for (var i = 0; i < chips.length; i++) chips[i].hidden = !raw;
+      }
     };
   </script>
 {% endblock %}
