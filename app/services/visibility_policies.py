@@ -484,8 +484,8 @@ def upsert_policy(
     three coherent modes plus ``None``.
 
     ``after_release_reviewer_identity`` is left as stored unless a
-    value is passed (:data:`KEEP`, the default): the card's Save does
-    not send it yet, and must not clear what a Settings CSV set.
+    value is passed (:data:`KEEP`, the default), so a caller that
+    doesn't carry the identity chip never clears what it set.
     """
     lifecycle.require_editable(db, review_session)
     _validate_per_window(
@@ -583,7 +583,9 @@ def upsert_many(
 ) -> list[tuple[str, dict[str, list[object]]]]:
     """Upsert several audience rows in one call. ``rows`` is an
     iterable of dicts with keys ``audience`` /
-    ``while_ongoing_mode`` / ``after_release_mode``. Each mode value is either ``None``
+    ``while_ongoing_mode`` / ``after_release_mode``, and optionally
+    ``after_release_reviewer_identity`` (absent keeps the stored level;
+    ``None`` or empty clears it). Each mode value is either ``None``
     ("off in this window") or one of the operator-facing labels
     ``"raw"`` / ``"anonymized"`` / ``"summarized"``.
 
@@ -616,6 +618,11 @@ def upsert_many(
             after_release_mode=_mode_or_none(row.get("after_release_mode")),
             user=user,
             correlation_id=correlation_id,
+            after_release_reviewer_identity=(
+                _mode_or_none(row["after_release_reviewer_identity"])
+                if "after_release_reviewer_identity" in row
+                else KEEP
+            ),
         )
         result.append((str(row["audience"]), changes))
     unit_of_work.commit(db)

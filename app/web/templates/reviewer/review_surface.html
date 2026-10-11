@@ -273,7 +273,11 @@
                           {# Each mode a display-only pill, as on Band 2's
                              preview of this card (findings 2026-10-07 A7). #}
                           <td style="padding: 4px 8px;"><span class="pill pill-count">{{ vp.while_ongoing_label }}</span></td>
-                          <td style="padding: 4px 8px;"><span class="pill pill-count">{{ vp.after_release_label }}</span></td>
+                          <td style="padding: 4px 8px;"><span class="pill pill-count">{{ vp.after_release_label }}</span>
+                            {# ProfileLink updates Item 2 — how much of the
+                               reviewer a Raw released view names. #}
+                            {% if vp.audience == "reviewee" and vp.after_release_mode == "raw" %}<span class="pill pill-count"
+                              data-rs-reviewer-identity>{{ vp.reviewer_identity_label }}</span>{% endif %}</td>
                         </tr>
                       {% endfor %}
                     </tbody>
