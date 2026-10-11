@@ -1,0 +1,28 @@
+// GitHub Codespaces / VS Code dev container: boots provisioned and serving.
+// docs/local_setup.md §9 explains each step and what a Codespace can't do.
+{
+  "name": "review-robin-web",
+  // Python 3.12, the floor pyproject.toml pins.
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "features": {
+    // node lets tests/integration/test_inline_scripts_parse.py run rather
+    // than skip (CLAUDE.md, "Where work runs").
+    "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
+  },
+  // Once, on create: dependencies, a fake-auth .env (kept if one exists),
+  // and the local SQLite schema.
+  "postCreateCommand": "python -m pip install --upgrade pip && pip install -e '.[dev]' && cp -n .env.example .env && alembic upgrade head",
+  // Every start: migrate (a pulled branch may add one), then serve in the
+  // background so the forwarded port answers without a terminal command.
+  // Log: /tmp/rrw-uvicorn.log.
+  "postStartCommand": "alembic upgrade head && setsid nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 > /tmp/rrw-uvicorn.log 2>&1 &",
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": { "label": "RRW app", "onAutoForward": "openBrowser" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "charliermarsh.ruff"]
+    }
+  }
+}

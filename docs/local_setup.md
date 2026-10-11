@@ -292,24 +292,39 @@ by the Azure platform), which still needs the Azure dev slot.
 | Real Entra / Easy Auth sign-in, redirect flows, tenant allowlist | ❌ No — needs the Azure dev slot |
 
 **Start.** From the repo on GitHub: **Code ▸ Codespaces ▸ Create codespace
-on `main`** (or a feature branch). The default image ships **Python 3.12**,
-Git, and the GitHub CLI. There is **no `.devcontainer/` in the repo yet**,
-so the first-run setup is the same manual sequence as [§4](#4-first-time-setup)
-(skip the clone — the Codespace arrives with the repo). `.env.example`
-already ships `ALLOW_FAKE_AUTH=true` + a fake operator, so `cp .env.example
-.env` needs no editing.
+on `main`** (or a feature branch). `.devcontainer/devcontainer.json` boots
+it provisioned, so there is no manual setup:
 
-**Open the app.** `uvicorn app.main:app --reload` — Codespaces auto-forwards
-port **8000** (a private `*.app.github.dev` URL in the **Ports** tab). If it
-isn't auto-forwarded, bind explicitly: `uvicorn app.main:app --reload --host
-0.0.0.0 --port 8000` and add port 8000 in the **Ports** tab. You land signed
-in as the fake `operator@example.edu` (operator + sys-admin + super-admin,
-per §3); surface-check `/health`, `/`, `/auth/me`, `/auth/me/debug`, `/docs`
-as in [§6](#6-verifying-each-surface-area).
+- **On create, once:** Python 3.12 and Node LTS (so
+  `tests/integration/test_inline_scripts_parse.py` runs rather than
+  skips); `pip install -e '.[dev]'`; `cp -n .env.example .env`, whose
+  `ALLOW_FAKE_AUTH=true` and fake operator need no editing (an existing
+  `.env` is kept); `alembic upgrade head`.
+- **On every start:** `alembic upgrade head` again (a pulled branch may
+  add a migration), then the dev server in the background on port
+  **8000**, logging to `/tmp/rrw-uvicorn.log`.
 
-**Postgres parity (optional).** Docker is available in the default image, so
-you can reproduce a dialect-only issue (the `BOOLEAN DEFAULT 1` /
-`WHERE bool_col = 1` / FK-drop-order / index-name traps in `CLAUDE.md`):
+The first create installs everything; later starts only migrate and
+serve.
+Chromium is not installed, so `tests/browser/` skips with a reason; run
+`python -m playwright install --with-deps chromium` once in the Codespace
+if you want those too.
+
+**Open the app.** Port 8000 opens in a new browser tab when it forwards (a
+private `*.app.github.dev` URL; it is also in the **Ports** tab), and works
+from a tablet's or phone's browser the same way. **Keep the port
+private:** with fake auth anyone who can reach it is signed in as
+`operator@example.edu`, an operator, sys-admin and super-admin (§3).
+Surface-check `/health`, `/`, `/auth/me`, `/auth/me/debug`, `/docs` as in
+[§6](#6-verifying-each-surface-area). If the server is not answering, read
+`/tmp/rrw-uvicorn.log`, or stop it and run it in a terminal:
+`pkill -f "uvicorn app.main" ; uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`.
+
+**Postgres parity (optional).** The dev container has no Docker; add
+`"ghcr.io/devcontainers/features/docker-in-docker:2": {}` to its
+`features` and rebuild the Codespace, and you can reproduce a
+dialect-only issue (the `BOOLEAN DEFAULT 1` / `WHERE bool_col = 1` /
+FK-drop-order / index-name traps in `CLAUDE.md`):
 
 ```bash
 docker run -d --name rrw-pg -e POSTGRES_PASSWORD=pw -p 5432:5432 postgres:16
@@ -323,23 +338,6 @@ fixture runs `DROP SCHEMA public CASCADE` before migrating, so point
 and run it without `-n` (each worker would drop the schema under the
 others). Unset it to return to SQLite. The fixture reads that variable
 alone, so an exported `DATABASE_URL` never selects the test database.
-
-**One-click boot (optional).** Dropping a `.devcontainer/devcontainer.json`
-makes a Codespace boot fully provisioned. A minimal one:
-
-```jsonc
-{
-  "name": "review-robin-web",
-  "image": "mcr.microsoft.com/devcontainers/python:3.12",
-  "postCreateCommand": "python -m pip install --upgrade pip && pip install -e .[dev] && cp -n .env.example .env && alembic upgrade head",
-  "forwardPorts": [8000],
-  "portsAttributes": { "8000": { "label": "RRW app", "onAutoForward": "notify" } },
-  "customizations": { "vscode": { "extensions": ["ms-python.python", "charliermarsh.ruff"] } }
-}
-```
-
-Adding it is a project decision — it's not in the repo, so both the manual
-path above and this snippet are offered.
 
 ---
 
