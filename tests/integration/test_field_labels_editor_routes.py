@@ -211,27 +211,21 @@ def test_reviewers_page_renders_editor_when_not_ready(
 
 
 @pytest.mark.parametrize("state", ("ready", "expired", "archived"))
-def test_reviewers_page_renders_editor_disabled_in_every_locked_state(
+def test_reviewers_page_renders_no_editor_in_every_locked_state(
     client: TestClient, db: Session, state: str
 ) -> None:
     """The page must not offer a control its route will refuse — the
-    rule 19I.3 applied to the rest of this page and 19H.7 applies to
-    the last control that was still keyed to ``is_ready``."""
+    rule 19I.3 applied to the rest of this page. Locked, the Unlock
+    panel does not render, and since 2026-10-11 neither does a disabled
+    copy of the editor (the author retired it as a leftover)."""
     review_session = _make_session(client, db, f"fle-ro-{state[:4]}")
     review_session.status = state
     db.flush()
     body = client.get(
         f"/operator/sessions/{review_session.id}/reviewers"
     ).text
-    assert "Reviewer tag labels" in body, state
-    # Inputs render with ``disabled``; the Save + Cancel buttons
-    # are suppressed entirely. ``disabled`` is asserted on the input
-    # itself rather than anywhere in the page — the page carries
-    # other disabled controls, and an unscoped check would hold for
-    # the wrong reason.
-    tag_input = body[body.index('name="tag_1"'):]
-    tag_input = tag_input[: tag_input.index(">") + 1]
-    assert "disabled" in tag_input, state
+    assert "Reviewer tag labels" not in body, state
+    assert 'name="tag_1"' not in body, state
     assert "Save labels" not in body, state
     assert "data-field-labels-cancel" not in body, state
 

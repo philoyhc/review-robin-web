@@ -114,7 +114,7 @@ below describe what that panel holds.
 
    | Page | Placement |
    |---|---|
-   | The four roster pages | **Not in the container.** The guidance card leads the page at **full width**, above everything else. On the three that have a tag-label editor, `.card-columns` renders **only** as that editor's fallback home, in the two states the Unlock panel cannot render in; see § *The roster card and the Unlock panel*. The rest of the time it is absent rather than empty, and it never holds the guidance. On Observers, which has no label slots, it is absent in every state. The lock card sits above it, as elsewhere. |
+   | The four roster pages | **Not in the container.** The guidance card leads the page at **full width**, above everything else. `.card-columns` is absent in every state: the tag-label editor lives only in the Unlock panel (§ *The roster card and the Unlock panel*). The lock card leads the page, as elsewhere. |
    | Email Template | `.card-columns` — composer left; guidance then `Merge tags` right |
    | Instruments | `.card-columns` — guidance left, `Session deadline` right; the `Expand all` / `Collapse all` toggles sit in the deadline card |
 
@@ -258,9 +258,8 @@ below describe what that panel holds.
    `session_field_labels.label` (255) answers 422, and every slot is
    checked before any is written, so the save lands whole or not at all.
 
-   **On the roster pages it lives in the Unlock panel**, with
-   `.card-columns` as its fallback home in the two states the panel
-   cannot render in — § *The roster card and the Unlock panel*.
+   **On the roster pages it lives only in the Unlock panel** — §
+   *The roster card and the Unlock panel*.
 
 5. **Preview table card** — all four roster pages. Always renders when
    the entity is non-empty (or when Add mode is active), regardless of
@@ -298,8 +297,7 @@ section says so and this one names the axis.
 
 Top-to-bottom, every roster page renders: chrome, the status strip, the
 **lock card** when locked, the **full-width guidance card**, the
-**roster card**, the `.card-columns` holding the tag-label editor *when
-the Unlock panel cannot render*, and the **preview table card**.
+**roster card**, and the **preview table card**.
 Nothing below the table.
 
 **The roster card** (`.card.roster-card#roster-card`) always renders.
@@ -321,25 +319,12 @@ card's replace*.
   is locked**, and likewise in edit / add mode. A locked page must
   carry no `Save labels` and no live `Upload` anywhere, so the whole
   panel stands down rather than rendering disabled controls.
-- **The tag-label editor therefore has two homes**, one include in two
-  positions on the exact complement of that condition: inside the panel
-  when the panel can render, and in `.card-columns` when it cannot.
-  That complement is **two different states, and the editor behaves
-  differently in each** — the partial reads `is_editable`, not the
-  panel's condition. On a **locked** session it renders disabled with
-  its buttons dropped, which is what forces the second home at all: a
-  locked page must still let an operator *read* the labels, since the
-  rule is about not offering a control the route will refuse rather
-  than about hiding information, and the roster index does not cover it
-  (it pills only the columns that hold data). In **edit / add mode on
-  an editable session** the same fallback renders **live**, with
-  working inputs and a working `Save labels` — correctly, because the
-  route would accept it. So "the editor outside the panel is read-only"
-  is false, and a guard asserting no `Save labels` outside
-  `#roster-unlock-panel` fails on any add-mode render. This is the only
-  tenant `.card-columns` has on a roster page, and the container
-  renders only in these two states — not empty the rest of the time,
-  absent.
+- **The tag-label editor lives only in the panel.** Where the panel
+  cannot render — a locked session, or while a row is edited or added —
+  no copy of it renders elsewhere: the labels read in the table's tag
+  headers and the roster index's pills. (A disabled `.card-columns`
+  fallback copy shipped with 19P.1 and was retired on 2026-10-11 at the
+  author's ruling, as a leftover.)
 - **The `Danger Zone` renders only when the roster has rows** — and for
   a reason worth stating, because the route does *not* refuse an empty
   one: it answers 303 and writes an audit row reading "Deleted all 0

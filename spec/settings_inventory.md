@@ -150,13 +150,9 @@ editor nor the allowlist, though their built-in defaults ("Name" /
   and `/operator/sessions/{id}/relationships` (3 pair-context slots).
   Observers has no slots and no editor.
 
-  **Its position is conditional rather than fixed** on all three. The same editor
-  renders inside the roster card's **Unlock panel** when that panel
-  can render, and in its `.card-columns` fallback home when it cannot
-  — a locked session, or while a row is being edited. One include in
-  two positions, on exactly complementary conditions, because a locked
-  page must still let an operator *read* the labels while offering no
-  control the route would refuse (`spec/setup_pages.md` § *The roster
+  **It renders only in the roster card's Unlock panel** on all three;
+  where the panel cannot render (a locked session, or while a row is
+  edited) it does not render at all (`spec/setup_pages.md` § *The roster
   card and the Unlock panel*).
 
   Save / Cancel pair (both Secondary, both disabled-until-dirty).
