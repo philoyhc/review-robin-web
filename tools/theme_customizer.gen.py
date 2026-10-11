@@ -127,7 +127,7 @@ TARGETS = [
     (".session-home-anchor.active", "Session Home anchor (selected)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
     (".row-label.active-group", "Nav row label (active)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
     (".row-label:not(.active-group)", "Nav row label", [("background", "bg", "--surface-page"), ("text", "fg", "--text-subtle")]),
-    (".tag-chip:not(.is-selected)", "Tag chip", [("infill", "bg", "--status-info-bg"), ("text", "fg", "--text-body")]),
+    (".tag-chip:not(.is-selected)", "Tag chip", [("infill", "bg", "--status-info-bg"), ("text", "fg", "--text-body"), ("border", "border", "--selected-bg")]),
     # Text
     ("h1", "Heading", [("text", "fg", "--text-body")]),
     (".card:not(.danger-zone) h2", "Card heading", [("text", "fg", "--text-body")]),
@@ -202,7 +202,7 @@ TARGETS = [
      [("text", "fg", "--text-subtle"), ("strip", "bg", "--nav-strip-setup-bg")]),
     (".tab-strip-ops .nav-tab:not(.active)", "Nav tab · Operations",
      [("text", "fg", "--text-subtle"), ("strip", "bg", "--nav-strip-ops-bg")]),
-    (".tag-chip.is-selected", "Selected tag chip", [("infill", "bg", "--selected-bg"), ("text", "fg", "--selected-fg")]),
+    (".tag-chip.is-selected", "Selected tag chip", [("infill", "bg", "--selected-bg"), ("text", "fg", "--selected-fg"), ("border", "border", "--selected-bg")]),
     (".back-link", "Back link", [("text", "fg", "--text-link")]),
 ]
 TARGETS += [(f".ph-tint:nth-child({i})", f"Instrument tint {i}", [("background", "bg", f"--surface-tint-{i}")])
