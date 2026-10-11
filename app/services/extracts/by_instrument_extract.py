@@ -116,6 +116,7 @@ def serialize_by_instrument(
     row_filter: Callable[[Assignment], bool] | None = None,
     identification: str = "raw",
     visible_only: bool = False,
+    reviewer_identity: str = "name_email",
 ) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for one instrument's wide-format extract.
 
@@ -156,6 +157,13 @@ def serialize_by_instrument(
     - ``visible_only`` — drop the response fields the operator marked
       not visible, as the observer collation page does (findings A3).
       The operator's extract keeps them.
+    - ``reviewer_identity`` — Raw only: how much of the reviewer the
+      rows name (``guide/profilelink_updates.md`` Item 2).
+      ``"name_email"`` (default) is the full Raw block; ``"name"``
+      blanks ``ReviewerEmail`` and the three reviewer tag columns,
+      which can identify as surely as an email, headers kept;
+      ``"name_email_profile"`` adds a ``ReviewerProfileLink`` column
+      after ``ReviewerEmail``. The operator's extract never passes it.
     """
 
     session_zone = resolve_session_timezone(review_session)
@@ -173,6 +181,7 @@ def serialize_by_instrument(
         if identification == "anonymized"
         else None
     )
+    level = reviewer_identity if identification == "raw" else "name_email"
 
     if include_metadata:
         yield from _meta_block(
@@ -188,6 +197,7 @@ def serialize_by_instrument(
         include_empty_assignments=include_empty_assignments,
         row_filter=row_filter,
         tokenizer=tokenizer,
+        reviewer_identity=level,
     )
 
 
@@ -377,9 +387,12 @@ def _data_block(
     include_empty_assignments: bool,
     row_filter: Callable[[Assignment], bool] | None = None,
     tokenizer: ParticipantTokenizer | None = None,
+    reviewer_identity: str = "name_email",
 ) -> Iterable[tuple[str, ...]]:
-    yield _header_row(review_session, fields)
-    yield from _data_rows(
+    header = _header_row(review_session, fields)
+    with_link = reviewer_identity == "name_email_profile"
+    yield _with_profile_column(header, "ReviewerProfileLink") if with_link else header
+    for reviewer, row in _data_rows(
         db,
         review_session,
         instrument,
@@ -388,7 +401,19 @@ def _data_block(
         include_empty_assignments=include_empty_assignments,
         row_filter=row_filter,
         tokenizer=tokenizer,
-    )
+    ):
+        if reviewer_identity == "name":
+            row = (row[0], "", "", "", "", *row[5:])
+        elif with_link:
+            row = _with_profile_column(row, reviewer.profile_link or "")
+        yield row
+
+
+def _with_profile_column(
+    row: tuple[str, ...], value: str
+) -> tuple[str, ...]:
+    """``row`` with ``value`` after ``ReviewerEmail`` (index 1)."""
+    return (*row[:2], value, *row[2:])
 
 
 def _header_row(
@@ -423,7 +448,9 @@ def _data_rows(
     include_empty_assignments: bool,
     row_filter: Callable[[Assignment], bool] | None = None,
     tokenizer: ParticipantTokenizer | None = None,
-) -> Iterable[tuple[str, ...]]:
+) -> Iterable[tuple[Reviewer, tuple[str, ...]]]:
+    """Each data row, sorted, with the reviewer it names (for the
+    identity-level columns :func:`_data_block` adjusts)."""
     assignments = list(
         db.execute(
             select(Assignment)
@@ -457,7 +484,9 @@ def _data_rows(
     )
 
     field_ids = [f.id for f in fields]
-    rows: list[tuple[tuple[str, str, str, str, int], tuple[str, ...]]] = []
+    rows: list[
+        tuple[tuple[str, str, str, str, int], Reviewer, tuple[str, ...]]
+    ] = []
     seen_group_rows: set[tuple[int, tuple[str, ...]]] = set()
     for assignment in assignments:
         assignment_responses = responses_by_assignment.get(
@@ -485,11 +514,11 @@ def _data_rows(
         # emails, then the assignment id — a full key, so rosters
         # sharing a name still export in one order (findings D9).
         sort_key = (row[5], row[0], row[6], row[1], assignment.id)
-        rows.append((sort_key, row))
+        rows.append((sort_key, assignment.reviewer, row))
 
-    rows.sort(key=lambda pair: pair[0])
-    for _, row in rows:
-        yield row
+    rows.sort(key=lambda entry: entry[0])
+    for _, reviewer, row in rows:
+        yield reviewer, row
 
 
 def _assignment_row(

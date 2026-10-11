@@ -54,5 +54,13 @@ class InstrumentViewPolicy(Base, TimestampMixin):
     while_ongoing_identification: Mapped[str | None] = mapped_column(String(16))
     after_release_granularity: Mapped[str | None] = mapped_column(String(16))
     after_release_identification: Mapped[str | None] = mapped_column(String(16))
+    # How much of the reviewer a Raw released view names, on a reviewee
+    # or observer row: ``name`` / ``name_email`` /
+    # ``name_email_profile``; ``NULL`` reads as ``name_email``, which
+    # is what Raw showed before the level existed. Only Raw reads it.
+    # ``guide/profilelink_updates.md`` Item 2.
+    after_release_reviewer_identity: Mapped[str | None] = mapped_column(
+        String(24)
+    )
 
     instrument: Mapped[Instrument] = relationship(back_populates="view_policies")

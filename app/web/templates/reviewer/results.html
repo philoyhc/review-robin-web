@@ -143,7 +143,7 @@
               <tr>
                 <td class="rs-reviewee">
                   {% if _identify %}
-                    <strong>{{ row.reviewer_name }}</strong>{% if row.reviewer_email %}<br><code>{{ row.reviewer_email }}</code>{% endif %}
+                    <strong>{{ row.reviewer_name }}</strong>{% if row.reviewer_email %}<br><code>{{ row.reviewer_email }}</code>{% endif %}{% if row.reviewer_profile_link %}<br><a href="{{ row.reviewer_profile_link }}" target="_blank" rel="noopener">link</a>{% endif %}
                   {% else %}
                     <span class="muted">—</span>
                   {% endif %}

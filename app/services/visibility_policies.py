@@ -39,6 +39,10 @@ from app.services import session_lifecycle as lifecycle
 from app.services.instruments import _instrument_label
 
 
+#: ``upsert_policy``'s default for a column the caller doesn't set.
+KEEP = object()
+
+
 # Three audiences are operator-configurable; the operator audience
 # is implicit (always sees everything) and never stored.
 AUDIENCES: tuple[str, ...] = ("peer_reviewer", "reviewee", "observer")
@@ -113,6 +117,52 @@ def valid_modes_for_cell(
     return _PER_CELL_VALID_MODES[(audience, window)]
 
 
+# How much of the reviewer a Raw released view names
+# (``guide/profilelink_updates.md`` Item 2), on the reviewee and
+# observer rows only: a reviewer reading their own work is identified
+# to no one. Stored on ``after_release_reviewer_identity``; ``NULL``
+# reads as the default, which is what Raw showed before the level
+# existed. Anonymized and Summarized never read it.
+REVIEWER_IDENTITY_LEVELS: tuple[str, ...] = (
+    "name",
+    "name_email",
+    "name_email_profile",
+)
+DEFAULT_REVIEWER_IDENTITY = "name_email"
+REVIEWER_IDENTITY_AUDIENCES: frozenset[str] = frozenset(
+    {"reviewee", "observer"}
+)
+
+
+def reviewer_identity(policy: InstrumentViewPolicy | None) -> str:
+    """The identity level a Raw view of this row shows: the stored
+    value, or :data:`DEFAULT_REVIEWER_IDENTITY` when there is none or
+    the stored one is not a level (a corrupt row reads as today's Raw
+    rather than 500ing, as :func:`decode_pair_to_mode` does)."""
+    stored = policy.after_release_reviewer_identity if policy else None
+    if stored in REVIEWER_IDENTITY_LEVELS:
+        return stored
+    return DEFAULT_REVIEWER_IDENTITY
+
+
+def validate_reviewer_identity(audience: str, level: str | None) -> None:
+    """Refuse a level that isn't one, or any level on an audience that
+    doesn't carry it. ``None`` (unset) is always allowed."""
+    if level is None:
+        return
+    if level not in REVIEWER_IDENTITY_LEVELS:
+        raise VisibilityPolicyError(
+            "invalid_reviewer_identity",
+            f"reviewer identity must be one of "
+            f"{list(REVIEWER_IDENTITY_LEVELS)}; got {level!r}.",
+        )
+    if audience not in REVIEWER_IDENTITY_AUDIENCES:
+        raise VisibilityPolicyError(
+            "invalid_reviewer_identity",
+            f"audience {audience!r} carries no reviewer identity level.",
+        )
+
+
 class VisibilityPolicyError(ValueError):
     """Raised when a visibility-policy upsert violates an invariant.
 
@@ -120,6 +170,8 @@ class VisibilityPolicyError(ValueError):
     - ``invalid_audience`` — ``audience`` not in :data:`AUDIENCES`.
     - ``invalid_mode`` — ``mode`` outside the per-(audience, window)
       set.
+    - ``invalid_reviewer_identity`` — not a level, or set on an
+      audience that carries none.
     """
 
     def __init__(self, code: str, message: str) -> None:
@@ -401,6 +453,7 @@ def upsert_policy(
     after_release_mode: str | None,
     user: User,
     correlation_id: str | None = None,
+    after_release_reviewer_identity: str | None | object = KEEP,
 ) -> tuple[InstrumentViewPolicy, dict[str, list[object]]]:
     """Insert or update the ``(instrument, audience)`` row.
 
@@ -429,6 +482,10 @@ def upsert_policy(
     Session-ongoing ``None``, Observer Session-ongoing
     ``"summarized"`` or ``None``; the other two cells accept the
     three coherent modes plus ``None``.
+
+    ``after_release_reviewer_identity`` is left as stored unless a
+    value is passed (:data:`KEEP`, the default): the card's Save does
+    not send it yet, and must not clear what a Settings CSV set.
     """
     lifecycle.require_editable(db, review_session)
     _validate_per_window(
@@ -436,6 +493,10 @@ def upsert_policy(
         while_ongoing_mode=while_ongoing_mode,
         after_release_mode=after_release_mode,
     )
+    if after_release_reviewer_identity is not KEEP:
+        validate_reviewer_identity(
+            audience, after_release_reviewer_identity  # type: ignore[arg-type]
+        )
 
     while_ongoing_pair: tuple[str | None, str | None] = (None, None)
     after_release_pair: tuple[str | None, str | None] = (None, None)
@@ -457,6 +518,10 @@ def upsert_policy(
         "after_release_granularity": after_release_pair[0],
         "after_release_identification": after_release_pair[1],
     }
+    if after_release_reviewer_identity is not KEEP:
+        proposed["after_release_reviewer_identity"] = (
+            after_release_reviewer_identity  # type: ignore[assignment]
+        )
     changes: dict[str, list[object]] = {}
     if existing is None:
         # On insert every column is a "change" from default →
@@ -559,6 +624,10 @@ def upsert_many(
 
 __all__ = [
     "AUDIENCES",
+    "DEFAULT_REVIEWER_IDENTITY",
+    "KEEP",
+    "REVIEWER_IDENTITY_AUDIENCES",
+    "REVIEWER_IDENTITY_LEVELS",
     "MODE_LABELS",
     "VisibilityPolicyError",
     "decode_mode",
@@ -568,8 +637,10 @@ __all__ = [
     "peer_reviewer_policies",
     "resolve_mode",
     "reviewee_has_current_grant",
+    "reviewer_identity",
     "reviewer_sees_own_responses",
     "upsert_many",
     "upsert_policy",
     "valid_modes_for_cell",
+    "validate_reviewer_identity",
 ]

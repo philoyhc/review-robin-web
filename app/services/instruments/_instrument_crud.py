@@ -552,6 +552,15 @@ def copy_view_policies(
                     m for m in allowed if m is not None
                 )[0]
             modes[window] = mode
+        # The reviewer-identity level travels with the row
+        # (``guide/profilelink_updates.md`` Item 2); a stored value
+        # that isn't a level, or sits on an audience without one, is
+        # not carried, like a rejected cell.
+        identity = policy.after_release_reviewer_identity
+        try:
+            vp.validate_reviewer_identity(policy.audience, identity)
+        except vp.VisibilityPolicyError:
+            identity = None
         vp.upsert_policy(
             db,
             review_session=review_session,
@@ -559,6 +568,7 @@ def copy_view_policies(
             audience=policy.audience,
             while_ongoing_mode=modes["while_ongoing"],
             after_release_mode=modes["after_release"],
+            after_release_reviewer_identity=identity,
             user=actor,
             correlation_id=correlation_id,
         )

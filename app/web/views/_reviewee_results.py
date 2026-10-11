@@ -101,6 +101,10 @@ class ResultsRow:
     reviewer_email: str | None
     display_cells: list[SummaryDisplayCell]
     values: list[str]
+    # Raw only, and only at the ``name_email_profile`` level
+    # (``guide/profilelink_updates.md`` Item 2): the reviewer's
+    # ``ProfileLink``, under the name and email. ``None`` otherwise.
+    reviewer_profile_link: str | None = None
 
 
 @dataclass(frozen=True)
@@ -311,6 +315,9 @@ def build_reviewee_results_context(
         review_session
     )
     instrument_mode: dict[int, str] = {}
+    # How much of the reviewer a Raw section names (ProfileLink
+    # updates Item 2); the other modes never read it.
+    instrument_identity: dict[int, str] = {}
     for instrument in instruments:
         policy = visibility_policies.list_for_instrument(
             db, instrument.id
@@ -322,6 +329,9 @@ def build_reviewee_results_context(
         )
         if mode in ("raw", "anonymized", "summarized"):
             instrument_mode[instrument.id] = mode
+            instrument_identity[instrument.id] = (
+                visibility_policies.reviewer_identity(policy)
+            )
 
     if not instrument_mode:
         return RevieweeResultsContext(
@@ -665,12 +675,23 @@ def build_reviewee_results_context(
                                 ),
                             )
                         )
+                identity = instrument_identity[instrument.id]
+                is_raw = picked_mode == "raw"
                 section_rows.append(
                     ResultsRow(
                         reviewer_name=reviewer.name or "",
-                        reviewer_email=reviewer.email or None,
+                        reviewer_email=(
+                            None
+                            if is_raw and identity == "name"
+                            else reviewer.email or None
+                        ),
                         display_cells=display_cells,
                         values=values,
+                        reviewer_profile_link=(
+                            reviewer.profile_link or None
+                            if is_raw and identity == "name_email_profile"
+                            else None
+                        ),
                     )
                 )
 

@@ -63,15 +63,17 @@ class _ResponseFieldSpec:
 @dataclass
 class _ViewPolicySpec:
     """One ``instruments[N].view_policies[<audience>].*`` row group —
-    Segment 18P PR A2. The five columns of one
+    Segment 18P PR A2. The columns of one
     ``InstrumentViewPolicy`` row (the two per-window
-    ``(granularity, identification)`` pairs);
+    ``(granularity, identification)`` pairs, and the Raw released
+    view's reviewer-identity level, ProfileLink updates Item 2);
     the audience is the dict key on ``_InstrumentSpec``."""
 
     while_ongoing_granularity: str | None = None
     while_ongoing_identification: str | None = None
     after_release_granularity: str | None = None
     after_release_identification: str | None = None
+    after_release_reviewer_identity: str | None = None
 
 
 @dataclass

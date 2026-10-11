@@ -186,6 +186,9 @@ def observer_collation_instrument_csv(
             row_filter=_row_in_cohort,
             identification=mode,
             visible_only=True,
+            # How much of the reviewer Raw names (ProfileLink updates
+            # Item 2); the extract ignores it for Anonymized.
+            reviewer_identity=visibility_policies.reviewer_identity(policy),
         ):
             writer.writerow(row)
             yield buffer.getvalue().encode("utf-8")
