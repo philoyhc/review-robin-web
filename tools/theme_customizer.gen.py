@@ -127,7 +127,7 @@ TARGETS = [
     (".session-home-anchor.active", "Session Home anchor (selected)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
     (".row-label.active-group", "Nav row label (active)", [("background", "bg", "--surface-page"), ("text", "fg", "--text-body")]),
     (".row-label:not(.active-group)", "Nav row label", [("background", "bg", "--surface-page"), ("text", "fg", "--text-subtle")]),
-    (".tag-chip:not(.is-selected)", "Tag chip", [("text", "fg", "--text-body")]),
+    (".tag-chip:not(.is-selected)", "Tag chip", [("infill", "bg", "--status-info-bg"), ("text", "fg", "--text-body")]),
     # Text
     ("h1", "Heading", [("text", "fg", "--text-body")]),
     (".card:not(.danger-zone) h2", "Card heading", [("text", "fg", "--text-body")]),
