@@ -17,6 +17,14 @@ os.environ.setdefault("AUDIT_STRICT_MODE", "true")
 # to off so turning it on here cannot hide that.
 os.environ.setdefault("REHYDRATE_ENABLED", "true")
 
+# A developer's ``.env`` (the dev container writes one from
+# ``.env.example``) sets ``ALLOW_FAKE_AUTH=true``, which folds the fake
+# identity into the super-admin set (``app/auth/roles.py``) and fails the
+# "no super tier configured" tests. Pin it off, as CI has it; a test that
+# needs fake auth turns it on itself. An environment variable outranks
+# ``.env`` in pydantic-settings, so this holds whatever the file says.
+os.environ["ALLOW_FAKE_AUTH"] = "false"
+
 from collections.abc import Iterator  # noqa: E402
 from pathlib import Path  # noqa: E402
 
