@@ -20,9 +20,10 @@ pair-context rosters. `spec/csv_contracts.md` says the reviewer's link
 is "rendered as a clickable link on the reviewer surface", which is true
 only of the reviewee's.
 
-**Items 2 and 3 closed 2026-10-11**, with the author's browser check.
-The close's `spec-writer` pass found every doc-impact spec current,
-#2972's wider Responses released column included; it changed nothing.
+**All three items closed 2026-10-11**, with the author's browser check.
+The Items 2–3 close's `spec-writer` pass found every doc-impact spec
+current, #2972's wider Responses released column included; Item 1's is
+recorded in its `Status`.
 
 ---
 
@@ -64,14 +65,16 @@ Taken 2026-10-11 at `e8dcd994`.
   markup note, the Reviewers column table) and `spec/csv_contracts.md`
   (the `reviewers.csv` `ProfileLink` row).
 
-### Status
+### Status — closed 2026-10-11
 
-Built as planned, in one rung. Two `diff-reviewer` reads. The first and
+Built as planned, in one rung (#2962). Two `diff-reviewer` reads. The first and
 the `spec-writer` verify both found the `rrw-reviewer-tag-visibility`
 row in `spec/settings_inventory.md` still listing tags only (fixed, and
 added to `Doc impact`); the first also found a negative test half that
 couldn't see a failed import (tightened). The second read the fixes and
-found nothing blocking.
+found nothing blocking. The close's `spec-writer` pass found all three
+doc-impact specs current, `spec/csv_contracts.md`'s `ProfileLink` row
+included after Items 2 and 3; it changed nothing.
 
 ### PR ladder
 

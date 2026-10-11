@@ -334,15 +334,6 @@ section (git history keeps it), so this file lists only what is owed.
   comes back on that label, still dark, and its card's download still
   drops the empty rows.
 
-## Reviewers gets a Profile column chip
-
-- [ ] **With data.** On a Reviewers page where some reviewer has a
-  ProfileLink, "Show columns:" carries a Profile chip; a click hides the
-  Profile column and another brings it back, and the choice survives a
-  reload, as on Reviewees.
-- [ ] **Without.** Where no reviewer has one, there is no Profile chip
-  and no Profile column (until a row is being edited).
-
 ## Enter and Space cycle the visibility mode chips
 
 - [ ] **Keys.** Unlock an Instruments card and Tab to a "Who can see
