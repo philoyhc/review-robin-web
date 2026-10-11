@@ -405,7 +405,7 @@ has a ProfileLink.
 
 - [ ] **Rosters.** Give one reviewee a ProfileLink of `AB1234` and
   another `https://example.edu/x`: on the Reviewees page the first's
-  Profile cell shows a grey `•••` whose hover reads `AB1234`, the
+  Profile cell shows a gray `•••` whose hover reads `AB1234`, the
   second's `link` opens the address in a new tab. The same on Reviewers.
 - [ ] **Reviewer surface.** Add the reviewee Profile display field to an
   instrument: the reviewer's table shows `•••` (hover `AB1234`) and

@@ -2236,7 +2236,7 @@
           // other profile value shows a muted ••• with the value as its
           // hover (_partials/profile_value.html).
           function isWebLink(v) {
-            return /^https?:\/\/[^\/?#\s]/i.test(String(v || '').trim());
+            return /^https?:\/\/[^\/?#\x00-\x20]/i.test(String(v || ''));
           }
           function profileCell(v) {
             if (!v) { return ''; }

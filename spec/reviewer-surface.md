@@ -528,7 +528,8 @@ In rendered order:
    if the operator added them, because they'd duplicate column 1).
    Each cell renders per the field's source:
    - `reviewee.profile_link` → `<a href="{value}">View</a>` when the
-     value is an `http://` / `https://` address (`views.is_web_link`);
+     value is an `http://` / `https://` address with a host, matched
+     unstripped and ASCII-only (`views.is_web_link`);
      any other non-empty value → a muted `•••` whose `title` (and
      visually-hidden text) carries the value, never an `href`; empty
      otherwise. One macro, `_partials/profile_value.html`, renders it

@@ -268,9 +268,11 @@ def numeric_column_ch_width(
     return max(header_ch, input_ch)
 
 
-# An ``http://`` / ``https://`` address with something after the
-# ``//``. The Band 2 preview's ``isWebLink`` uses the same pattern.
-_WEB_LINK = re.compile(r"https?://[^/?#\s]", re.IGNORECASE)
+# An ``http://`` / ``https://`` address with a host character after the
+# ``//``, ASCII only (so no ``ſ`` folds to ``s``) and unstripped (so the
+# ``href`` is exactly what matched). The Band 2 preview's ``isWebLink``
+# uses the same pattern.
+_WEB_LINK = re.compile(r"https?://[^/?#\x00-\x20]", re.IGNORECASE | re.ASCII)
 
 
 def is_web_link(value: str | None) -> bool:
@@ -282,7 +284,7 @@ def is_web_link(value: str | None) -> bool:
     plain id never becomes a relative ``href`` and a ``javascript:``
     value never runs. The Band 2 preview mirrors it (``isWebLink``).
     """
-    return bool(value) and _WEB_LINK.match(value.strip()) is not None
+    return bool(value) and _WEB_LINK.match(value) is not None
 
 
 def profile_column_ch_width(label: str) -> int:

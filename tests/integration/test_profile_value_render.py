@@ -62,7 +62,12 @@ def _hrefs(body: str) -> list[str]:
     [
         ("https://example.edu/a", True),
         ("HTTP://example.edu", True),
-        ("  https://example.edu  ", True),
+        # Unstripped: a leading space would leave a relative href.
+        ("  https://example.edu", False),
+        ("\u00a0https://example.edu", False),
+        ("\ufeffhttps://example.edu", False),
+        # ASCII only: "ſ" must not fold to "s".
+        ("http\u017f://example.edu", False),
         ("http://", False),
         ("https:example.edu", False),
         ("//example.edu", False),
@@ -249,6 +254,19 @@ def test_the_summary_and_the_results_link_an_address(
         assert "data-profile-masked" not in body, name
 
 
+def test_the_summary_and_the_results_leave_an_empty_value_empty(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    for name, body in zip(
+        ("summary", "results"), _pages(db, make_client, alice, "pv-pages-empty", "")
+    ):
+        assert ">Profile</th>" in body, name
+        assert ">View</a>" not in body, name
+        assert "data-profile-masked" not in body, name
+
+
 def test_the_summary_and_the_results_mask_anything_else(
     db: Session,
     alice: AuthenticatedUser,
@@ -319,6 +337,8 @@ def test_the_download_carries_a_value_that_is_not_an_address(
 
 
 def test_the_preview_mirrors_the_rule(client: TestClient, db: Session) -> None:
+    """The source is wired in; ``test_inline_scripts_parse`` runs it under
+    node against ``is_web_link``."""
     from .test_instrument_builder_routes import _new_model_with_tags
 
     review_session, instrument = _new_model_with_tags(client, db, code="pv-preview")
@@ -327,7 +347,7 @@ def test_the_preview_mirrors_the_rule(client: TestClient, db: Session) -> None:
     ).text
     flat = " ".join(body.split())
     for line in (
-        r"return /^https?:\/\/[^\/?#\s]/i.test(String(v || '').trim());",
+        r"return /^https?:\/\/[^\/?#\x00-\x20]/i.test(String(v || ''));",
         "if (isWebLink(v)) { return '<a href=\"' + esc(v) + '\">View</a>'; }",
         "return '<span class=\"muted\" title=\"' + esc(v) + '\" data-profile-masked>'",
         "cell = profileCell(v);",

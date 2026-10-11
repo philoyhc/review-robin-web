@@ -272,7 +272,11 @@ def test_band_2s_intro_heading_matches_the_surfaces() -> None:
 _PROFILE_CASES = (
     "https://example.edu/a",
     "HTTP://example.edu",
-    "  https://example.edu  ",
+    "  https://example.edu",
+    "\u00a0https://example.edu",
+    "\ufeffhttps://example.edu",
+    "http\u017f://example.edu",
+    "http://\u00a0example.edu",
     "http://",
     "https:example.edu",
     "//example.edu",

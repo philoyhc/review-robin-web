@@ -304,8 +304,9 @@ be noise.
 
 ### Semantics
 
-- **Link test.** The trimmed value starts `http://` or `https://`, case
-  insensitive. One helper; the preview's JS mirrors it.
+- **Link test.** The value starts `http://` or `https://`, case
+  insensitive, with a host character after the `//`. One helper; the
+  preview's JS mirrors it.
 - **Stored data.** Nothing changes on import, edit or export; the rule
   is render-only, so a value turns into a link when it is corrected.
 - **Sort.** Unchanged: the reviewer surface sorts on the stored value.
@@ -326,6 +327,18 @@ Taken 2026-10-11 at `e5794301`.
   (both rosters' Profile row), `spec/csv_contracts.md` (both
   `ProfileLink` rows).
 - Tests naming the field: `grep -rln "profile_link\|ProfileLink\|is_profile_link" tests | wc -l` → 69.
+
+### Status
+
+- Rung 2 (2026-10-11): `views.is_web_link`, `_partials/profile_value.html`
+  on the six template renderers, the preview's `isWebLink` /
+  `profileCell`, the specs. Its `diff-reviewer` read found no blocker;
+  fixed from it: Python's case folding let `httpſ://` match and a
+  stripped test left a leading-space value as a relative `href`, so
+  both sides now match the unstripped value, ASCII only; an empty-value
+  test for the summary and results; `spec/settings_inventory.md`'s
+  "Optional URL" rows, outside `Doc impact`, now added. `spec-writer`
+  verified the four specs and flagged the same rows.
 
 ### PR ladder
 
@@ -363,4 +376,5 @@ Taken 2026-10-11 at `e5794301`.
 - `spec/participant_model.md` — the `raw` bullet's profile anchor follows the same rule.
 - `spec/setup_pages.md` — both rosters' Profile cell.
 - `spec/csv_contracts.md` — both `ProfileLink` rows say what a non-link value shows.
+- `spec/settings_inventory.md` — both `profile_link` rows: any string, only an address links (added at rung 2).
 - `guide/things_to_check_in_browser.md` — a section for rung 2.
