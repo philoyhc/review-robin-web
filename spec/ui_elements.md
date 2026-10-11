@@ -550,6 +550,13 @@ everywhere, so "you can click this" reads the same way on every control.
 > `.rs-status` on the trailing status column). Reviewer-surface specific; they shape widths only and do
 > not conflict with the general table treatment.
 
+> **"Who can see what you wrote" widths (`table.vp-grid`, `.vp-col-*`,
+> `.vp-identity-pill`)** — the visibility table on the reviewer surface
+> and in Band 2: Audience 28% and each window 36%, or 20% / 28% / 52%
+> while a visible `.vp-identity-pill` sits in the Responses released
+> column (`:has()`, so the editor's chips widen it live;
+> `spec/instruments.md`).
+
 ### 8. Forms / inputs
 
 > **Text inputs** — one rule covers `input[type="text"]`, `date`,
