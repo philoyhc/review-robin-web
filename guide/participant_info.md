@@ -31,8 +31,10 @@ extract and Band 2 identity level all use it (author, 2026-10-11).
 The author's ruling, 2026-10-11:
 
 - **Where it shows.** On the reviewer surface and its operator preview,
-  inline just after the `Reviewer` pill beneath the session name and
+  inline after the `Reviewer` pill beneath the session name and
   deadline: the selected fields of the signed-in reviewer's own row.
+  For a reviewer who holds other roles too, it follows the last role
+  pill rather than splitting them (see Judgment calls).
 - **What shows by default.** Name, email and profile. Tags can be
   shown but start off; a reviewer seeing their own tags is useful for
   checking them, not a default.
@@ -55,14 +57,19 @@ see of a reviewer; this is what the reviewer sees of themselves).
 
 ### Semantics
 
-- **Storage.** A nullable JSON list on `review_sessions` of keys from
+- **Storage.** A nullable JSON list on the `sessions` table (the
+  `ReviewSession` model) of keys from
   `name`, `email`, `profile_link`, `tag_1`–`tag_3`. `NULL` means the
   default, `name`, `email`, `profile_link`; an empty list shows nothing
   after the pill.
 - **Chips offered.** Name and Email always (both are required on
   import); Profile and each tag only while some reviewer row holds a
-  value. A stored key whose column has since emptied is kept, renders
-  nothing, and shows its chip so it can be cleared.
+  value.
+- **Save keeps what it cannot show.** A selected key with no chip on
+  offer, whether stored or from the `NULL` default, is carried through
+  Save unchanged: the card posts it as a hidden input. So `profile_link`
+  stays selected while no reviewer has a profile, and shows once one
+  does; an operator removes a key only by deselecting its chip.
 - **The readout.** `Shown on surface:` lists the selected fields by
   label (a tag under its friendly label), in roster order; with none
   selected it reads `none`, as the index's empty branch does.
@@ -139,9 +146,10 @@ Taken 2026-10-11 at `7e329db5`.
 ### Definition of done
 
 - A reviewer's surface and its preview show the selected fields of that
-  reviewer's own row after the `Reviewer` pill, by test; with nothing
+  reviewer's own row after the role pills, by test; with nothing
   stored, name, email and profile; tags only when selected.
-- The card offers a chip only for a field with data, saves the
+- The card offers a chip only for a field with data, keeps a selected
+  key it cannot offer, saves the
   selection, and answers 409 on a locked session, by test.
 - The selection round-trips through the Settings CSV and Duplicate, by
   test; Postgres CI runs the migration both ways.
@@ -161,7 +169,7 @@ Taken 2026-10-11 at `7e329db5`.
 
 ### Doc impact
 
-- `spec/reviewer-surface.md` — the header line after the `Reviewer` pill, and the preview's static pill.
+- `spec/reviewer-surface.md` — the header line after the role pills, and the preview's static pill.
 - `spec/setup_pages.md` — the Reviewers Unlock panel's new card above `Upload Reviewers`; the roster card's readout labels (`Roster:`, `Populated:`) on all four pages and Reviewers' `Shown on surface:` readout.
 - `spec/settings_inventory.md` — the new per-session setting, its default and its gate.
 - `spec/csv_contracts.md` — the Settings CSV `session.*` row.
