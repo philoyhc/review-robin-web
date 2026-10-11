@@ -1068,6 +1068,12 @@ def build_instruments_context(
         "band3_visibility_by_instrument": _band3_visibility_states_for(
             db, instruments
         ),
+        # ProfileLink updates Item 2 — the identity chip offers
+        # "Name, email, profile" only when some reviewer has a link.
+        "reviewer_identity_labels": REVIEWER_IDENTITY_LABELS,
+        "reviewers_have_profile_link": _reviewers_have_profile_link(
+            db, review_session
+        ),
         # Reviewer-surface "Who can see what you wrote (other than
         # admin)" rows, served back to the operator's Band 2 intro
         # grid as a preview alongside the description card. Same
@@ -1125,6 +1131,24 @@ _BAND3_VISIBILITY_DEFAULTS: dict[str, dict[str, object]] = {
 _decode_pair_to_mode = visibility_policies.decode_pair_to_mode
 
 
+def _reviewers_have_profile_link(
+    db: Session, review_session: ReviewSession
+) -> bool:
+    """Whether any reviewer in the session carries a ``ProfileLink``."""
+    return (
+        db.execute(
+            select(Reviewer.id)
+            .where(
+                Reviewer.session_id == review_session.id,
+                Reviewer.profile_link.is_not(None),
+                Reviewer.profile_link != "",
+            )
+            .limit(1)
+        ).first()
+        is not None
+    )
+
+
 def _band3_visibility_states_for(
     db: Session, instruments: list[Instrument]
 ) -> dict[int, dict[str, dict[str, object]]]:
@@ -1134,7 +1158,9 @@ def _band3_visibility_states_for(
     ``after_release_mode``. Each mode is one
     of ``None`` / ``"raw"`` / ``"anonymized"`` / ``"summarized"``.
     Audiences with no persisted row fall back to
-    :data:`_BAND3_VISIBILITY_DEFAULTS`."""
+    :data:`_BAND3_VISIBILITY_DEFAULTS`. Each state also carries
+    ``reviewer_identity_stored`` (the column, ``""`` when unset) and
+    ``reviewer_identity`` (the level a Raw view shows)."""
     result: dict[int, dict[str, dict[str, object]]] = {}
     for instrument in instruments:
         persisted = visibility_policies.list_for_instrument(
@@ -1144,8 +1170,22 @@ def _band3_visibility_states_for(
         for audience in visibility_policies.AUDIENCES:
             row = persisted.get(audience)
             defaults = _BAND3_VISIBILITY_DEFAULTS[audience]
+            # ProfileLink updates Item 2: the reviewer-identity level,
+            # stored (``""`` when unset, which Save sends back as is)
+            # and as read. A stored value that isn't a level goes out as
+            # ``""``, as a corrupt mode pair reads as off: sent back as
+            # is, Save would refuse it and block every other edit.
+            stored = row.after_release_reviewer_identity if row else None
+            identity = {
+                "reviewer_identity_stored": (
+                    stored
+                    if stored in visibility_policies.REVIEWER_IDENTITY_LEVELS
+                    else ""
+                ),
+                "reviewer_identity": visibility_policies.reviewer_identity(row),
+            }
             if row is None:
-                per_audience[audience] = dict(defaults)
+                per_audience[audience] = {**defaults, **identity}
                 continue
             per_audience[audience] = {
                 "while_ongoing_mode": _decode_pair_to_mode(
@@ -1156,9 +1196,19 @@ def _band3_visibility_states_for(
                     row.after_release_granularity,
                     row.after_release_identification,
                 ),
+                **identity,
             }
         result[instrument.id] = per_audience
     return result
+
+
+#: The reviewer-identity level chip's words (ProfileLink updates Item 2),
+#: in its cycle order.
+REVIEWER_IDENTITY_LABELS: dict[str, str] = {
+    "name": "Name only",
+    "name_email": "Name, email",
+    "name_email_profile": "Name, email, profile",
+}
 
 
 # Reviewer-surface "Who can see what you wrote (other than admin)"
@@ -1192,7 +1242,7 @@ def build_reviewer_visibility_rows(
     Each row dict carries ``audience`` (the policy audience slug) /
     ``audience_label`` / ``while_ongoing_label`` /
     ``after_release_label`` / ``after_release_mode`` (the slug, ``""``
-    for off). Audiences
+    for off) / ``reviewer_identity_label``. Audiences
     with no persisted policy row fall back to
     :data:`_BAND3_VISIBILITY_DEFAULTS`. The display labels are
     the Band 3 cycle chips' own words (``Raw responses`` /
@@ -1229,12 +1279,16 @@ def build_reviewer_visibility_rows(
                     row.after_release_granularity,
                     row.after_release_identification,
                 )
+            level = visibility_policies.reviewer_identity(row)
             rows.append(
                 {
                     "audience": audience,
                     "audience_label": label,
                     "while_ongoing_label": _REVIEWER_VP_MODE_LABELS[wo_mode],
                     "after_release_label": _REVIEWER_VP_MODE_LABELS[ar_mode],
+                    # How much of the reviewer the Raw released view
+                    # names; shown after a Raw cell on the reviewee row.
+                    "reviewer_identity_label": REVIEWER_IDENTITY_LABELS[level],
                     # ProfileLink updates Item 2: the identity-level pill
                     # follows a Raw released cell.
                     "after_release_mode": ar_mode or "",

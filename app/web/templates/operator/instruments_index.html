@@ -1552,17 +1552,26 @@
                   onclick="newModelCycleVisibilityCell(this)"
                   title="Click to cycle">{{ _b3_mode_labels.get(_current, "—") }}</span>
           {% endmacro %}
-          {% macro b3_identity_chip(audience, current_mode) %}
-            {# ProfileLink updates Item 2 rung 1 — the reviewer-identity
-               level beside a Raw released cell. Scaffold: a plain display
-               pill, not yet a ``tag-chip`` (the grid's chips are all
-               controls, ``test_band3_static_pills.py``), reading today's
-               Raw until the level is stored; the mode cycle shows or
-               hides it. #}
-            <span class="pill pill-count"
+          {% macro b3_identity_chip(audience, state) %}
+            {# ProfileLink updates Item 2 — how much of the reviewer a Raw
+               released view names, beside that cell; the mode cycle shows
+               or hides it. A cycle chip over ``Name only`` / ``Name,
+               email`` and, only when some reviewer has a ProfileLink,
+               ``Name, email, profile``. A stored profile level renders
+               as itself either way, so it can be cycled off. The hidden
+               input carries the stored value (``""`` when unset) until a
+               cycle writes a level. #}
+            {% set _level = state.get("reviewer_identity", "name_email") %}
+            {% set _slugs = ["name", "name_email"] + (["name_email_profile"] if reviewers_have_profile_link else []) %}
+            <span class="pill pill-count tag-chip is-selected"
+                  role="button" tabindex="0"
                   data-new-model-vp-identity="{{ audience }}"
-                  title="How much of the reviewer Raw shows; not yet settable"
-                  {% if current_mode != "raw" %}hidden{% endif %}>Name, email</span>
+                  data-new-model-vp-identity-slugs="{{ _slugs | join('|') }}"
+                  data-new-model-vp-identity-current="{{ _level }}"
+                  onclick="newModelCycleIdentity(this)"
+                  onkeydown="newModelChipKey(this, event)"
+                  title="How much of the reviewer Raw shows; click to cycle"
+                  {% if state.get("after_release_mode") != "raw" %}hidden{% endif %}>{{ reviewer_identity_labels[_level] }}</span>
           {% endmacro %}
           {% set _rf_list = _band2.response_fields or [] %}
           {# 19T Item 10 — a governed field isn't an item while its branch is
@@ -1665,13 +1674,12 @@
                             data-new-model-vp-preview-cell="{{ vp.audience }}-while_ongoing">{{ vp.while_ongoing_label }}</span></td>
                         <td style="padding: 4px 8px;"><span class="pill pill-count"
                             data-new-model-vp-preview-cell="{{ vp.audience }}-after_release">{{ vp.after_release_label }}</span>
-                          {# ProfileLink updates Item 2 rung 1 — how much of
-                             the reviewer a Raw result names. Scaffold: the
-                             level is not stored yet, so it reads today's Raw,
-                             and shows only beside a Raw cell. #}
+                          {# ProfileLink updates Item 2 — how much of the
+                             reviewer a Raw result names, beside a Raw cell
+                             only; the identity cycle repaints it. #}
                           {% if vp.audience == "reviewee" %}<span class="pill pill-count"
                             data-new-model-vp-identity-preview="reviewee"
-                            {% if vp.after_release_mode != "raw" %}hidden{% endif %}>Name, email</span>{% endif %}</td>
+                            {% if vp.after_release_mode != "raw" %}hidden{% endif %}>{{ vp.reviewer_identity_label }}</span>{% endif %}</td>
                       </tr>
                     {% endfor %}
                   </tbody>
@@ -1717,6 +1725,13 @@
                   <input form="dfsave-{{ instrument.id }}" type="hidden" name="observer_after_release_mode"
                          data-new-model-vp-input="observer-after_release"
                          value="{{ _ob.after_release_mode or '' }}">
+                  {# ProfileLink updates Item 2 — the identity level, per
+                     audience; ``newModelCycleIdentity`` writes them. #}
+                  {% for _aud, _st in (("reviewee", _re), ("observer", _ob)) %}
+                  <input form="dfsave-{{ instrument.id }}" type="hidden" name="{{ _aud }}_after_release_reviewer_identity"
+                         data-new-model-vp-identity-input="{{ _aud }}"
+                         value="{{ _st.get('reviewer_identity_stored', '') }}">
+                  {% endfor %}
                 <table style="width: 100%; border-collapse: collapse;">
                   <thead>
                     <tr style="text-align: left;">
@@ -1748,7 +1763,7 @@
                         {{ b3_mode_cycle("reviewee", "after_release",
                                           ["", "raw", "anonymized", "summarized"],
                                           _re.after_release_mode) }}
-                        {{ b3_identity_chip("reviewee", _re.after_release_mode) }}
+                        {{ b3_identity_chip("reviewee", _re) }}
                       </td>
                     </tr>
                     {# Observers — cross-cohort. While the session runs
@@ -1766,7 +1781,7 @@
                         {{ b3_mode_cycle("observer", "after_release",
                                           ["", "raw", "anonymized", "summarized"],
                                           _ob.after_release_mode) }}
-                        {{ b3_identity_chip("observer", _ob.after_release_mode) }}
+                        {{ b3_identity_chip("observer", _ob) }}
                       </td>
                     </tr>
                     <tr>
@@ -3486,6 +3501,7 @@
                 || t.closest('[data-new-model-unit-add]')
                 || t.closest('[data-new-model-unit-remove]')
                 || t.closest('[data-new-model-vp-cycle-audience]')
+                || t.closest('[data-new-model-vp-identity]')
                 || t.closest('.sort-btn')) {
                 markDirty();
               }
@@ -6898,6 +6914,31 @@
         );
         for (var i = 0; i < chips.length; i++) chips[i].hidden = !raw;
       }
+    };
+    // ProfileLink updates Item 2 — cycle the reviewer-identity level,
+    // write its hidden input, and repaint the locked table's pill. A
+    // level not in the cycle (a stored profile level with no reviewer
+    // link) steps to the first.
+    var _VP_IDENTITY_LABELS = {{ reviewer_identity_labels | tojson }};
+    window.newModelCycleIdentity = function (chip) {
+      var slugs = (
+        chip.getAttribute('data-new-model-vp-identity-slugs') || ''
+      ).split('|');
+      var current = chip.getAttribute('data-new-model-vp-identity-current');
+      var next = slugs[(slugs.indexOf(current) + 1) % slugs.length];
+      var audience = chip.getAttribute('data-new-model-vp-identity');
+      chip.setAttribute('data-new-model-vp-identity-current', next);
+      chip.textContent = _VP_IDENTITY_LABELS[next] || next;
+      var form = chip.closest('[data-new-model-vp-form]');
+      var input = form && form.querySelector(
+        '[data-new-model-vp-identity-input="' + audience + '"]'
+      );
+      if (input) input.value = next;
+      var card = chip.closest('[data-instrument-card]');
+      var pill = card && card.querySelector(
+        '[data-new-model-vp-identity-preview="' + audience + '"]'
+      );
+      if (pill) pill.textContent = _VP_IDENTITY_LABELS[next] || next;
     };
   </script>
 {% endblock %}

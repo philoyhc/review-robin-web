@@ -2,9 +2,9 @@
 
 ProfileLink updates Item 2 rung 2 (``guide/profilelink_updates.md``):
 ``instruments[N].view_policies[<audience>].after_release_reviewer_identity``
-on the reviewee and observer rows, empty for the default. Until rung 3
-the import is the only writer, so it refuses what the card will refuse:
-a value that is not a level, and any level on the reviewer row.
+on the reviewee and observer rows, empty for the default. The import
+refuses what the card's Save refuses: a value that is not a level, and
+any level on the reviewer row.
 """
 
 from __future__ import annotations

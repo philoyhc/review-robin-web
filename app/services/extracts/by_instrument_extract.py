@@ -401,6 +401,7 @@ def _data_block(
         include_empty_assignments=include_empty_assignments,
         row_filter=row_filter,
         tokenizer=tokenizer,
+        sort_by_reviewer_email=reviewer_identity != "name",
     ):
         if reviewer_identity == "name":
             row = (row[0], "", "", "", "", *row[5:])
@@ -448,9 +449,13 @@ def _data_rows(
     include_empty_assignments: bool,
     row_filter: Callable[[Assignment], bool] | None = None,
     tokenizer: ParticipantTokenizer | None = None,
+    sort_by_reviewer_email: bool = True,
 ) -> Iterable[tuple[Reviewer, tuple[str, ...]]]:
     """Each data row, sorted, with the reviewer it names (for the
-    identity-level columns :func:`_data_block` adjusts)."""
+    identity-level columns :func:`_data_block` adjusts). A ``Name only``
+    download blanks the email, so it doesn't sort on it either: the
+    order of two same-named reviewers would otherwise spell out which
+    email was whose."""
     assignments = list(
         db.execute(
             select(Assignment)
@@ -513,7 +518,13 @@ def _data_rows(
         # Composed reviewee name, then reviewer name, then the two
         # emails, then the assignment id — a full key, so rosters
         # sharing a name still export in one order (findings D9).
-        sort_key = (row[5], row[0], row[6], row[1], assignment.id)
+        sort_key = (
+            row[5],
+            row[0],
+            row[6],
+            row[1] if sort_by_reviewer_email else "",
+            assignment.id,
+        )
         rows.append((sort_key, assignment.reviewer, row))
 
     rows.sort(key=lambda entry: entry[0])

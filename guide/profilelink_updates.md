@@ -202,6 +202,22 @@ Taken 2026-10-11 at `e8dcd994`.
   readers. `upsert_policy` keeps a stored level unless one is passed,
   so the card's Save, which sends none until rung 3, leaves it alone.
   The specs land with rung 3.
+- Rung 3 (2026-10-11): the live chip (cycle, Enter/Space, hidden inputs
+  on the card's Save; an absent input keeps the level, an empty one
+  clears it), the locked and reviewer-surface pills, and the specs,
+  written by `spec-writer` at the close; it added a pointer in
+  `spec/reviewer-surface.md`, outside `Doc impact`.
+- Reads: one cumulative `diff-reviewer` read on `73e7291a..HEAD` at rung
+  3, then a read of its fixes. Found and fixed: a `Name only` download
+  still sorted namesakes by their hidden emails (a small leak; nothing
+  else showed an email, tag or link it shouldn't); a false spec line
+  (the mode chips take no Enter/Space, the identity chip does; the gap
+  is left for its own fix); observer tests that reached Raw through a
+  Session ongoing cell the product forbids, now the released cell with
+  the window open; Replicate and Duplicate tested through their
+  services, and a bad stored level dropped on copy; §6 rows, stale
+  browser-check and docstring lines, a misplaced constant. Codex then
+  found a corrupt stored level blocking Save; it now goes out empty.
 
 ### PR ladder
 
@@ -246,4 +262,5 @@ Taken 2026-10-11 at `e8dcd994`.
 - `spec/csv_contracts.md` — the Settings CSV `view_policies[<audience>]` attribute, and the reviewer `ProfileLink` row naming where it now shows.
 - `spec/settings_inventory.md` — the new persisted setting under the per-instrument visibility policy.
 - `spec/roundtrip_coverage.md` — the new column round-trips.
+- `spec/reviewer-surface.md` — the visibility card's line points at the identity pill (added at the close).
 - `guide/things_to_check_in_browser.md` — a section per rung.

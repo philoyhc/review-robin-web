@@ -482,7 +482,9 @@ together on every Band 3 / R toggle).
   (`.rs-intro-columns`, two `.rs-intro-col`), each a start-aligned stack
   so every card is as tall as its own text. **The left column** stacks
   the heading card (short label and description, rendered only when
-  there is a title) over "Who can see what you wrote". **The right
+  there is a title) over "Who can see what you wrote" (after a Raw
+  Reviewees cell it also shows the reviewer-identity level,
+  `spec/participant_model.md` §4.2). **The right
   column** holds one `.rs-help-stack`: a `.rs-help-card` for each
   response field that has both `help_text` set and
   `help_text_visible=true`, in field order. Which card goes where never

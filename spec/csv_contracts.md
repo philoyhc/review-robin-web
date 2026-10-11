@@ -123,7 +123,7 @@ importers (§3.2b, §3.3).
 | 3 | `ReviewerTag1` | `reviewer.tag_1` | Optional on import. Empty cell ⇒ NULL. |
 | 4 | `ReviewerTag2` | `reviewer.tag_2` | Same. |
 | 5 | `ReviewerTag3` | `reviewer.tag_3` | Same. |
-| 6 | `ProfileLink` | `reviewer.profile_link` | Optional. Shown on the Reviewers page's Profile column (`spec/setup_pages.md`) and in the Reviewers extract; no participant surface shows a reviewer's link. Mirrors the Reviewees `ProfileLink` column. |
+| 6 | `ProfileLink` | `reviewer.profile_link` | Optional. Shown on the Reviewers page's Profile column (`spec/setup_pages.md`) and in the Reviewers extract. A participant sees it only at an instrument's `name_email_profile` reviewer-identity level (`spec/visibility_policy.md` §4): on a reviewee's Raw results and in an observer's Raw download (`spec/participant_model.md` §4.1, §4.2). Mirrors the Reviewees `ProfileLink` column. |
 | 7 | `Status` | `reviewer.status` | `active` / `inactive`, case-insensitively and ignoring surrounding whitespace. Optional on import: blank/absent ⇒ `active`; any other value is a per-row error. |
 
 **Row order:** active rows first (`status='active'`), then by
@@ -652,6 +652,12 @@ import leaves as stored, on an unchanged anchor, is not checked.
   carrying exactly that pair has it cleared to off before the cell
   check runs, rather than refusing the whole apply. Any other illegal
   cell is still refused.
+- **`instruments[n].view_policies[<audience>].after_release_reviewer_identity`
+  is the reviewer-identity level** (`spec/visibility_policy.md` §4):
+  `name`, `name_email` or `name_email_profile`. Only the `reviewee` and
+  `observer` blocks emit it; an empty cell is the default (`name_email`).
+  A value that is not a level, or a level on a `peer_reviewer` block, is
+  refused in the parse phase, before anything is written.
 - **`instruments[n].order` is informational.** Apply ignores the `order`
   cell — **the `[n]` number is authoritative**, not the rows' place in
   the file. Each instrument is stored at its 0-based rank among the

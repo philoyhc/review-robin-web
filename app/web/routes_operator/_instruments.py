@@ -683,21 +683,29 @@ async def instrument_bulk_save_fields(
                 ar_raw = form.get(f"{audience}_after_release_mode")
                 if wo_raw is None and ar_raw is None:
                     continue
-                vp_rows.append(
-                    {
-                        "audience": audience,
-                        "while_ongoing_mode": (
-                            (str(wo_raw).strip() or None)
-                            if wo_raw is not None
-                            else None
-                        ),
-                        "after_release_mode": (
-                            (str(ar_raw).strip() or None)
-                            if ar_raw is not None
-                            else None
-                        ),
-                    }
+                vp_row: dict[str, object] = {
+                    "audience": audience,
+                    "while_ongoing_mode": (
+                        (str(wo_raw).strip() or None)
+                        if wo_raw is not None
+                        else None
+                    ),
+                    "after_release_mode": (
+                        (str(ar_raw).strip() or None)
+                        if ar_raw is not None
+                        else None
+                    ),
+                }
+                # ProfileLink updates Item 2 — the identity chip's input,
+                # when the form carries one; absent keeps the stored level.
+                identity_raw = form.get(
+                    f"{audience}_after_release_reviewer_identity"
                 )
+                if identity_raw is not None:
+                    vp_row["after_release_reviewer_identity"] = (
+                        str(identity_raw).strip() or None
+                    )
+                vp_rows.append(vp_row)
             if vp_rows:
                 try:
                     visibility_policies.upsert_many(
@@ -891,21 +899,29 @@ async def instrument_consolidated_save(
                 ar_raw = form.get(f"{audience}_after_release_mode")
                 if wo_raw is None and ar_raw is None:
                     continue
-                vp_rows.append(
-                    {
-                        "audience": audience,
-                        "while_ongoing_mode": (
-                            (str(wo_raw).strip() or None)
-                            if wo_raw is not None
-                            else None
-                        ),
-                        "after_release_mode": (
-                            (str(ar_raw).strip() or None)
-                            if ar_raw is not None
-                            else None
-                        ),
-                    }
+                vp_row: dict[str, object] = {
+                    "audience": audience,
+                    "while_ongoing_mode": (
+                        (str(wo_raw).strip() or None)
+                        if wo_raw is not None
+                        else None
+                    ),
+                    "after_release_mode": (
+                        (str(ar_raw).strip() or None)
+                        if ar_raw is not None
+                        else None
+                    ),
+                }
+                # ProfileLink updates Item 2 — the identity chip's input,
+                # when the form carries one; absent keeps the stored level.
+                identity_raw = form.get(
+                    f"{audience}_after_release_reviewer_identity"
                 )
+                if identity_raw is not None:
+                    vp_row["after_release_reviewer_identity"] = (
+                        str(identity_raw).strip() or None
+                    )
+                vp_rows.append(vp_row)
             if vp_rows:
                 try:
                     visibility_policies.upsert_many(
