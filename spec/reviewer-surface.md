@@ -484,7 +484,8 @@ together on every Band 3 / R toggle).
   the heading card (short label and description, rendered only when
   there is a title) over "Who can see what you wrote" (after a Raw
   Reviewees cell it also shows the reviewer-identity level,
-  `spec/participant_model.md` §4.2). **The right
+  `spec/participant_model.md` §4.2, and its Responses released column
+  widens to make room: `table.vp-grid`, `spec/instruments.md`). **The right
   column** holds one `.rs-help-stack`: a `.rs-help-card` for each
   response field that has both `help_text` set and
   `help_text_visible=true`, in field order. Which card goes where never

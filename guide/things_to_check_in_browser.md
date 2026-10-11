@@ -417,3 +417,13 @@ has a ProfileLink.
 - [ ] **Preview.** The Band 2 preview shows the same `•••` and `View`.
 - [ ] **Look.** The `•••` reads as muted in light and dark, and a screen
   reader announces the value rather than "bullet bullet bullet".
+
+## The Responses released column widens beside an identity pill
+
+- [ ] **Band 2.** Unlock an Instruments card and cycle Reviewees
+  "Responses released" to Raw: the column widens so "Raw responses" and
+  "Name, email" sit side by side; cycle on to Anonymized and the two
+  window columns are even again. The same on the locked table.
+- [ ] **Reviewer surface and preview.** With Reviewees released Raw, the
+  reviewer's "Who can see what you wrote" card shows both pills on one
+  line at full width; below ~800px they may wrap, without overflowing.

@@ -265,3 +265,8 @@ def test_the_reviewer_sees_the_level_after_a_raw_reviewees_cell(
     assert _span(body, "data-rs-reviewer-identity").endswith(
         ">Name, email, profile</span>"
     )
+    # The pill widens its column (base.html's ``table.vp-grid:has(...)``;
+    # tests/browser/test_vp_identity_chip.py measures it on Band 2).
+    assert "vp-identity-pill" in _span(body, "data-rs-reviewer-identity")
+    assert '<table class="vp-grid"' in body
+    assert 'class="muted vp-col-window vp-col-released"' in body

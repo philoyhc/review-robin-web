@@ -259,12 +259,12 @@
                   {# `.table-scroll` (base.html): a table wider than its card
                      scrolls inside the card rather than pushing the page sideways. #}
                   <div class="table-scroll">
-                  <table style="width: 100%; border-collapse: collapse;">
+                  <table class="vp-grid" style="width: 100%; border-collapse: collapse;">
                     <thead>
                       <tr style="text-align: left;">
-                        <th style="padding: 4px 8px; width: 28%;" class="muted">Audience</th>
-                        <th style="padding: 4px 8px; width: 36%;" class="muted">Session ongoing</th>
-                        <th style="padding: 4px 8px; width: 36%;" class="muted">Responses released</th>
+                        <th style="padding: 4px 8px;" class="muted vp-col-audience">Audience</th>
+                        <th style="padding: 4px 8px;" class="muted vp-col-window vp-col-ongoing">Session ongoing</th>
+                        <th style="padding: 4px 8px;" class="muted vp-col-window vp-col-released">Responses released</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -277,7 +277,7 @@
                           <td style="padding: 4px 8px;"><span class="pill pill-count">{{ vp.after_release_label }}</span>
                             {# ProfileLink updates Item 2 — how much of the
                                reviewer a Raw released view names. #}
-                            {% if vp.audience == "reviewee" and vp.after_release_mode == "raw" %}<span class="pill pill-count"
+                            {% if vp.audience == "reviewee" and vp.after_release_mode == "raw" %}<span class="pill pill-count vp-identity-pill"
                               data-rs-reviewer-identity>{{ vp.reviewer_identity_label }}</span>{% endif %}</td>
                         </tr>
                       {% endfor %}
