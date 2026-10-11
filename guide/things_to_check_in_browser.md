@@ -343,56 +343,6 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **Without.** Where no reviewer has one, there is no Profile chip
   and no Profile column (until a row is being edited).
 
-## Band 2's reviewer-identity pill (ProfileLink Item 2, rung 1)
-
-Rung 3 made the pill a live chip; its section below covers that.
-
-- [ ] **Beside Raw only.** Unlock an Instruments card. In "Who can see
-  what you wrote", cycle the Reviewees "Responses released" chip: a
-  "Name, email" pill appears to its right on Raw and goes on any other
-  value. The same on the Observers row. No pill on the You (reviewer)
-  row.
-- [ ] **Locked.** Save with Reviewees on Raw and lock the card: the
-  locked table's Reviewees row shows the plain "Name, email" pill after
-  "Raw responses". The chips wrap cleanly in the narrow column, at full
-  width and below 800px, in light and dark.
-
-## Raw names the reviewer at the stored level (ProfileLink Item 2, rung 2)
-
-Set the level with the card's chip (rung 3) or the Settings CSV:
-`instruments[1].view_policies[reviewee].after_release_reviewer_identity`
-(and the `observer` one) takes `name`, `name_email` or
-`name_email_profile`. Use a session whose Reviewees and Observers
-released cells are Raw, with the release window open and a reviewer who
-has a ProfileLink.
-
-- [ ] **Reviewee, `name`.** On `/me/sessions/{id}/results` the Reviewer
-  cell shows the name only, no email.
-- [ ] **Reviewee, `name_email_profile`.** The name, the email, and a
-  "link" under them that opens the reviewer's page in a new tab.
-- [ ] **Observer download.** `name` leaves `ReviewerEmail` and the three
-  reviewer tag columns empty; `name_email_profile` adds a
-  `ReviewerProfileLink` column after `ReviewerEmail`, which opens
-  cleanly in a spreadsheet.
-- [ ] **Unchanged.** A session whose CSV never set the level reads as
-  before, and the card's Save keeps a stored level.
-
-## The reviewer-identity chip is live (ProfileLink Item 2, rung 3)
-
-- [ ] **Cycle.** Unlock an Instruments card and set the Reviewees
-  "Responses released" chip to Raw: the identity chip beside it now has
-  the blue edge and pointer and cycles "Name only" → "Name, email" by
-  click, Enter or Space; "Name, email, profile" joins the cycle once a
-  reviewer has a ProfileLink. The same on the Observers row.
-- [ ] **Save.** Pick "Name only", Save, reload: it stays. The locked
-  table shows "Name only" after "Raw responses", and so does the
-  reviewer's own "Who can see what you wrote" card.
-- [ ] **Readers.** With the release window open, the reviewee's results
-  and the observer's download read the saved level, as in rung 2's
-  section.
-- [ ] **Layout.** Two chips in the narrow Responses released column wrap
-  cleanly at full width and below 800px, in light and dark.
-
 ## Enter and Space cycle the visibility mode chips
 
 - [ ] **Keys.** Unlock an Instruments card and Tab to a "Who can see
@@ -400,23 +350,6 @@ has a ProfileLink.
   Space without scrolling the page, and the card's Save wakes. Cycling
   Reviewees "Responses released" to Raw this way brings up the identity
   chip, which is the next Tab stop.
-
-## A profile value that is not a web address shows ••• (ProfileLink Item 3)
-
-- [ ] **Rosters.** Give one reviewee a ProfileLink of `AB1234` and
-  another `https://example.edu/x`: on the Reviewees page the first's
-  Profile cell shows a gray `•••` whose hover reads `AB1234`, the
-  second's `link` opens the address in a new tab. The same on Reviewers.
-- [ ] **Reviewer surface.** Add the reviewee Profile display field to an
-  instrument: the reviewer's table shows `•••` (hover `AB1234`) and
-  `View`, the column stays narrow, and sorting by Profile still works.
-  The same on the reviewer's summary and the reviewee's results.
-- [ ] **Reviewer card.** At "Name, email, profile", a reviewer whose
-  ProfileLink is not an address shows `•••` under their email on the
-  reviewee's results; the observer's download carries the value whole.
-- [ ] **Preview.** The Band 2 preview shows the same `•••` and `View`.
-- [ ] **Look.** The `•••` reads as muted in light and dark, and a screen
-  reader announces the value rather than "bullet bullet bullet".
 
 ## The Responses released column widens beside an identity pill
 
