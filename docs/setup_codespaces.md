@@ -18,9 +18,21 @@ does, and what a Codespace can't do (real Entra sign-in), is in
    terminal shows the install and the database migration. This happens
    once per Codespace.
 4. **Open the app.** When port 8000 forwards, the app opens in a new tab.
-   If the browser blocked the tab, open the **Ports** panel (bottom of the
-   editor) and click the globe icon on the `RRW app` row. You are signed in
-   as the fake operator, `operator@example.edu`.
+   A browser often blocks that tab, a tablet's especially; then:
+   1. **Open the Ports panel.** Tap the antenna icon with a count (`1`) in
+      the status bar along the very bottom. If that does nothing, use
+      ☰ (top left) ▸ **View ▸ Open View… ▸ Ports**.
+   2. **Open the app.** On the `8000 · RRW app` row, tap the globe icon
+      (**Open in Browser**). You are signed in as the fake operator,
+      `operator@example.edu`.
+   3. **If the tab errors or there is no row**, open a terminal
+      (☰ ▸ **Terminal ▸ New Terminal**) and read `cat /tmp/rrw-uvicorn.log`,
+      or restart the server there (stopping any old one first):
+      `pkill -f "uvicorn app.main" ; uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`.
+
+   The database starts empty: create a session and import a few roster
+   rows to have something to look at. The editor's own Chat panel is
+   GitHub Copilot, not the Claude session that maintains this repository.
 
 **Keep port 8000 private**, the default. Fake auth makes anyone who can
 reach the URL a super-admin.
