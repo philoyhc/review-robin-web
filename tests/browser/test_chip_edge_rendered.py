@@ -4,8 +4,9 @@
 not see that ``.pill``'s later ``border: 1px solid transparent`` reset won
 the cascade on every ``.pill.tag-chip``, which left only the inset
 shadow's 1px (``spec/ui_elements.md`` §9, the author, 2026-10-10). This
-reads the computed border and shadow: a live chip wears the reserved
-shade in both, and a fixed chip in neither.
+reads the computed border and shadow: a live chip draws a 1px solid
+border and an inset shadow, both in the reserved shade (``--selected-bg``),
+and a fixed chip neither.
 """
 
 from __future__ import annotations
@@ -26,9 +27,23 @@ def _edge(chip: Locator) -> tuple[str, str]:
 
 
 def _assert_two_pixel_edge(chip: Locator) -> None:
+    """A drawn 1px border in the reserved shade, and the inset shadow in
+    the same shade inside it."""
+    width, style, shade = chip.evaluate(
+        """el => {
+            const s = getComputedStyle(el);
+            const probe = document.createElement('span');
+            probe.style.color = 'var(--selected-bg)';
+            el.parentElement.appendChild(probe);
+            const shade = getComputedStyle(probe).color;
+            probe.remove();
+            return [s.borderTopWidth, s.borderTopStyle, shade];
+        }"""
+    )
     border, shadow = _edge(chip)
-    assert border != "rgba(0, 0, 0, 0)", "the border is the reset's transparent"
-    assert shadow.startswith(border) and shadow.endswith("inset"), (border, shadow)
+    assert (width, style) == ("1px", "solid"), (width, style)
+    assert border == shade, "the border is not the reserved shade"
+    assert shadow.startswith(shade) and shadow.endswith("inset"), shadow
 
 
 def test_lobby_chips_wear_a_two_pixel_edge(page: Page, api: httpx.Client) -> None:

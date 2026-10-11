@@ -118,8 +118,10 @@ def test_an_inert_chip_does_not_wear_the_shade(
     assert block is not None
     assert "border-color: transparent" in block
     assert "box-shadow: none" in block
-    # Specificity, spelled out: (0,3,1) beats the chip rule's (0,2,1),
-    # so the cancellation actually wins rather than merely being written.
+    # Specificity, spelled out: (0,3,1) ties the chip rule's widest
+    # member (``.pill.tag-chip``), so source order decides, and the
+    # cancellation has to come after it to win rather than merely be
+    # written.
     assert css.index("body.ui-v2 .tag-chip.is-disabled") > css.index(
         "body.ui-v2 .tag-chip,"
     )

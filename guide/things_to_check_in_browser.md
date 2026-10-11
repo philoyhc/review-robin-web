@@ -368,9 +368,10 @@ section (git history keeps it), so this file lists only what is owed.
 
 - [ ] **Lobby.** A tag chip's blue edge now matches AND/OR's and Clear
   all's weight; the chip is no taller or wider than before.
-- [ ] **Elsewhere.** Session Home's tab chips, the Instruments card's
-  Band 1 and Band 3 chips (unlocked), Assignments' status chips, Extract
-  data's and the Email Template page's cycle chips, and /guide's samples
-  show the same 2px edge, in light and dark.
+- [ ] **Elsewhere.** The Setup pages' column-visibility chips, the
+  Archived page's tag chips, Session Home's tab chips (card unlocked),
+  the Instruments card's Band 1 and Band 3 chips (unlocked), Assignments'
+  status chips, Extract data's and the Email Template page's cycle chips,
+  and /guide's samples show the same 2px edge, in light and dark.
 - [ ] **No edge where there was none.** Fixed chips, a locked card's
   chips and disabled chips still show no edge.
