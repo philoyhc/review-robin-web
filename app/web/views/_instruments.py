@@ -1172,10 +1172,15 @@ def _band3_visibility_states_for(
             defaults = _BAND3_VISIBILITY_DEFAULTS[audience]
             # ProfileLink updates Item 2: the reviewer-identity level,
             # stored (``""`` when unset, which Save sends back as is)
-            # and as read.
+            # and as read. A stored value that isn't a level goes out as
+            # ``""``, as a corrupt mode pair reads as off: sent back as
+            # is, Save would refuse it and block every other edit.
+            stored = row.after_release_reviewer_identity if row else None
             identity = {
                 "reviewer_identity_stored": (
-                    (row.after_release_reviewer_identity or "") if row else ""
+                    stored
+                    if stored in visibility_policies.REVIEWER_IDENTITY_LEVELS
+                    else ""
                 ),
                 "reviewer_identity": visibility_policies.reviewer_identity(row),
             }

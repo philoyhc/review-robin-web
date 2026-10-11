@@ -185,6 +185,37 @@ def test_an_empty_input_clears_the_level_and_a_missing_one_keeps_it(
     assert policy.after_release_reviewer_identity is None
 
 
+def test_a_corrupt_stored_level_does_not_block_save(
+    client: TestClient, db: Session
+) -> None:
+    """A stored value that isn't a level (only a direct database edit
+    can write one) renders as the default and goes out empty, so the
+    card's ordinary Save still works (Codex on #2966)."""
+    session_id, instrument_id = _session(client, db, "vp-ident-corrupt")
+    _save(client, session_id, instrument_id, reviewee_after_release_mode="raw")
+    policy = vp.list_for_instrument(db, instrument_id)["reviewee"]
+    policy.after_release_reviewer_identity = "everything"
+    db.commit()
+    body = _page(client, session_id)
+    assert _span(body, 'data-new-model-vp-identity="reviewee"').endswith(">Name, email</span>")
+    match = re.search(
+        r'name="reviewee_after_release_reviewer_identity"\s*'
+        r'data-new-model-vp-identity-input="reviewee"\s*value="([^"]*)"',
+        body,
+    )
+    assert match and match.group(1) == ""
+    _save(
+        client,
+        session_id,
+        instrument_id,
+        reviewee_after_release_mode="anonymized",
+        reviewee_after_release_reviewer_identity=match.group(1),
+    )
+    db.refresh(policy)
+    assert policy.after_release_identification == "deidentified"
+    assert policy.after_release_reviewer_identity is None
+
+
 def test_save_refuses_a_level_that_is_not_one(
     client: TestClient, db: Session
 ) -> None:
