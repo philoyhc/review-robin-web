@@ -26,6 +26,8 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
+- **Participant info** — `guide/participant_info.md`: Item 1, a
+  reviewer sees their own roster entry on the reviewer surface.
 - **ProfileLink updates** — `guide/profilelink_updates.md`: Item 1, the
   Reviewers page's Profile column chip (Items 2 and 3 closed
   2026-10-11). (`guide/operator_pages_enhancements.md`
