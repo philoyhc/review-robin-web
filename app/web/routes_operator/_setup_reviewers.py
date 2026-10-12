@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
-from app.services import assignments, csv_imports
+from app.services import assignments, csv_imports, participant_info
 from app.services import reviewers as reviewers_service
 from app.services import roster_bulk
 from app.services import session_lifecycle as lifecycle
@@ -198,6 +198,8 @@ def _render_reviewers_page(
         }
 
     column_state = views.reviewer_column_state(db, review_session)
+    self_fields = participant_info.effective_reviewer_self_fields(review_session)
+    self_field_chips = views.reviewer_self_chips(column_state.readouts, self_fields)
 
     return _templates.TemplateResponse(
         request,
@@ -318,12 +320,17 @@ def _render_reviewers_page(
             "col_readouts": column_state.readouts,
             # participant info Item 1 — the reviewer's own fields on
             # the surface: the Unlock panel's chips and the readout
-            # row's pills. The default until rung 3 stores a selection.
-            "self_field_chips": views.reviewer_self_chips(
-                column_state.readouts, views.REVIEWER_SELF_DEFAULT
-            ),
+            # row's pills, from the stored selection or the default.
+            "self_field_chips": self_field_chips,
+            # Selected keys the card offers no chip for (no data in that
+            # column): posted back as hidden `keep` inputs so a save does
+            # not drop them.
+            "self_field_kept": [
+                key for key in self_fields
+                if key not in {chip.key for chip in self_field_chips}
+            ],
             "self_field_readout": views.reviewer_self_readout(
-                review_session, views.REVIEWER_SELF_DEFAULT
+                review_session, self_fields
             ),
             "edit_id": edit_id,
             "add_mode": add_mode,
@@ -614,6 +621,45 @@ def reviewers_delete_all(
     # route answers 303 like 3a's. It matched the status code; it did
     # not match the contract, which is what moving a control into the
     # panel actually costs.
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/reviewers"
+            "?unlocked=1#roster-card"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/reviewers/self-fields",
+    response_class=RedirectResponse,
+)
+async def reviewers_save_self_fields(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Save what reviewers see of their own entry (participant info
+    Item 1): the ticked chips plus ``keep``, the selected keys the card
+    offered no chip for, so a field with no data stays selected."""
+    form = await request.form()
+    keys = [str(v) for v in form.getlist("fields")]
+    keys += [str(v) for v in form.getlist("keep")]
+    try:
+        # The service locks the session row: wait for it off the loop.
+        await run_in_threadpool(
+            participant_info.set_reviewer_self_fields,
+            db,
+            review_session=review_session,
+            user=user,
+            keys=keys,
+            correlation_id=request_correlation_id(),
+        )
+    except participant_info.SelfFieldsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
     return RedirectResponse(
         url=(
             f"/operator/sessions/{review_session.id}/reviewers"

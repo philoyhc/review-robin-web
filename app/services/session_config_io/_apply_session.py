@@ -9,7 +9,13 @@ from __future__ import annotations
 
 from app.db.models import ReviewSession
 
+from app.services.participant_info import (
+    SelfFieldsError,
+    normalize_reviewer_self_fields,
+)
+
 from ._apply_shared import (
+    _ParseError,
     _ParsedConfig,
     _parse_bool,
     _parse_datetime,
@@ -87,6 +93,26 @@ def _apply_session_kv(
         parsed = _parse_json(value, default=None)
         plan.session_overrides[key] = parsed if parsed else None
         return
+    if key == "reviewer_self_fields":
+        # participant info Item 1. Blank → ``None`` (the default); a
+        # JSON list of roster field keys otherwise, ``[]`` meaning
+        # nothing. An unknown key is refused rather than dropped.
+        if not value:
+            plan.session_overrides[key] = None
+            return
+        parsed = _parse_json(value, default=None)
+        if not isinstance(parsed, list) or not all(
+            isinstance(item, str) for item in parsed
+        ):
+            raise _ParseError(
+                f"session.reviewer_self_fields: expected a JSON list of "
+                f"field keys, got {value!r}"
+            )
+        try:
+            plan.session_overrides[key] = normalize_reviewer_self_fields(parsed)
+        except SelfFieldsError as exc:
+            raise _ParseError(f"session.reviewer_self_fields: {exc}") from exc
+        return
     if key in {"name", "code", "description", "help_contact"}:
         plan.session_overrides[key] = value or None
 
@@ -132,6 +158,7 @@ def _apply_session_metadata(
         "self_reviews_active",
         "relationships_enabled",
         "observers_enabled",
+        "reviewer_self_fields",
         "scheduled_activate_at",
         "responses_release_at",
         "responses_release_until",

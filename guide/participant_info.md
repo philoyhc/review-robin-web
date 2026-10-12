@@ -143,6 +143,15 @@ Taken 2026-10-11 at `7e329db5`.
   `test_the_panel_holds_three_wired_cards_and_nothing_else` became
   `..._its_four_cards_...`, excising the scaffold card by its marker
   until rung 3 wires it.
+- Rung 3 (2026-10-12): `app/services/participant_info.py` (keys, default,
+  normalize, effective selection, the save and its
+  `session.reviewer_self_fields_set` audit event); migration
+  `c4a8e2f6d1b3` adds `sessions.reviewer_self_fields`,
+  `reviewee_self_fields` and `observer_self_fields`; the card posts to
+  `/reviewers/self-fields` (409 locked, 422 unknown key), unoffered
+  selected keys riding as hidden `keep` inputs; the Settings CSV carries
+  `session.reviewer_self_fields` as a JSON list (blank is the default,
+  `[]` nothing); Duplicate copies all three columns.
 
 ### PR ladder
 

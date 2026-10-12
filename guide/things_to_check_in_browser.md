@@ -379,3 +379,16 @@ section (git history keeps it), so this file lists only what is owed.
   line; a reviewer who is also a reviewee sees it after both pills.
 - [ ] **The preview.** The operator's surface preview shows a plain
   `Reviewer` pill and the previewed reviewer's line.
+
+## A reviewer's own info: the live card (participant info Item 1, rung 3)
+
+- [ ] **Save.** On a draft, Unlock Reviewers: ticking or unticking a
+  chip enables Save and Cancel; Cancel restores the chips; Save lands
+  back on the open panel with the readout's `Shown on surface:` pills
+  matching.
+- [ ] **The surface follows.** Activate, sign in as that reviewer: the
+  line after the role pills shows exactly the saved fields, a tag as
+  `Label: value`; with nothing selected, nothing follows the pill.
+- [ ] **A field with no data.** With no reviewer profile in the roster,
+  the card shows no Profile chip, yet the readout still lists Profile
+  and a save keeps it.

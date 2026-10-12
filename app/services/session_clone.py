@@ -147,6 +147,23 @@ def clone_session(
         # along or the Setup pages would hide them).
         relationships_enabled=source.relationships_enabled,
         observers_enabled=source.observers_enabled,
+        # participant info — what each participant sees of their own
+        # entry. All three columns, though Item 1 reads only the first.
+        reviewer_self_fields=(
+            list(source.reviewer_self_fields)
+            if source.reviewer_self_fields is not None
+            else None
+        ),
+        reviewee_self_fields=(
+            list(source.reviewee_self_fields)
+            if source.reviewee_self_fields is not None
+            else None
+        ),
+        observer_self_fields=(
+            list(source.observer_self_fields)
+            if source.observer_self_fields is not None
+            else None
+        ),
         retention_exception=source.retention_exception,
         retention_overrides=(
             dict(source.retention_overrides)

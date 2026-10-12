@@ -388,27 +388,65 @@
            a class over an inline style. It is the same left-vs-right
            question 3b's Delete-all button already opened for the dev
            slot — one answer for the panel, not two. #}
-        {# participant info Item 1 rung 2 — SCAFFOLD, inert: the chips
-           sit at the default and toggle only on screen, the form posts
-           nowhere, and Save / Cancel stay disabled. Rung 3 stores the
-           selection. One chip per populated column (Name and Email
-           always), as the roster index reads. #}
+        {# participant info Item 1 — what reviewers see of their own
+           entry, after the role pills on the reviewer surface. One chip
+           per populated column (Name and Email always), as the roster
+           index reads; a selected key the card cannot offer (its column
+           holds no data) rides along as a hidden `keep` input, so a save
+           never drops it. Save / Cancel are disabled until a chip moves,
+           as the tag-labels editor's are. #}
         <section class="card" id="reviewer-self-fields"
                  aria-labelledby="reviewer-self-fields-h"
                  data-reviewer-self-card>
           <h2 id="reviewer-self-fields-h">Reviewer information shown on surface</h2>
-          <div class="reviewer-self-chips">
-            {% for chip in self_field_chips %}
-              <label class="pill pill-count tag-chip">
-                <input type="checkbox" class="visually-hidden"
-                       name="fields" value="{{ chip.key }}"
-                       {% if chip.selected %}checked{% endif %}>{{ chip.label }}</label>
+          <form method="post" action="{{ reviewers_base_url }}/self-fields"
+                id="reviewer-self-fields-form">
+            <div class="reviewer-self-chips">
+              {% for chip in self_field_chips %}
+                <label class="pill pill-count tag-chip">
+                  <input type="checkbox" class="visually-hidden"
+                         name="fields" value="{{ chip.key }}"
+                         {% if chip.selected %}checked{% endif %}>{{ chip.label }}</label>
+              {% endfor %}
+            </div>
+            {% for key in self_field_kept %}
+              <input type="hidden" name="keep" value="{{ key }}">
             {% endfor %}
-          </div>
-          <div class="unlock-col-actions">
-            <button type="button" class="btn secondary" disabled>Cancel</button>
-            <button type="button" class="btn secondary" disabled>Save</button>
-          </div>
+            <div class="unlock-col-actions">
+              <button type="button" class="btn secondary"
+                      data-reviewer-self-cancel disabled>Cancel</button>
+              <button type="submit" class="btn secondary"
+                      data-reviewer-self-save disabled>Save</button>
+            </div>
+          </form>
+          <script>
+            (function () {
+              var form = document.getElementById("reviewer-self-fields-form");
+              if (!form) return;
+              var saveBtn = form.querySelector("[data-reviewer-self-save]");
+              var cancelBtn = form.querySelector("[data-reviewer-self-cancel]");
+              var boxes = form.querySelectorAll('input[type="checkbox"]');
+              var initial = Array.prototype.map.call(boxes, function (b) {
+                return b.checked;
+              });
+              function refresh() {
+                var dirty = Array.prototype.some.call(boxes, function (b, i) {
+                  return b.checked !== initial[i];
+                });
+                saveBtn.disabled = !dirty;
+                cancelBtn.disabled = !dirty;
+              }
+              Array.prototype.forEach.call(boxes, function (b) {
+                b.addEventListener("change", refresh);
+              });
+              cancelBtn.addEventListener("click", function () {
+                Array.prototype.forEach.call(boxes, function (b, i) {
+                  b.checked = initial[i];
+                });
+                refresh();
+              });
+            })();
+          </script>
         </section>
 
         <section class="card" id="upload-csv"

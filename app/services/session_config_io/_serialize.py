@@ -163,6 +163,18 @@ def _session_rows(review_session: ReviewSession) -> list[Row]:
             _bool(review_session.observers_enabled),
             "boolean",
         ),
+        # participant info Item 1 — what reviewers see of their own
+        # entry. Blank is the default (``NULL``); ``[]`` shows nothing,
+        # which is why this is a JSON list, not a comma list.
+        Row(
+            "session.reviewer_self_fields",
+            (
+                ""
+                if review_session.reviewer_self_fields is None
+                else _json(list(review_session.reviewer_self_fields))
+            ),
+            "json",
+        ),
         # Segment 18N PR 5 — the eight 18G scheduled-event columns
         # added 2026-05-20 (Part 0 schema) + lit up across Parts 1-3.
         # Two datetime anchors + four offset / offset-list strings +
