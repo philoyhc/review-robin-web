@@ -413,11 +413,12 @@ plus the ability to read every card the panel holds.
 
 ### The roster index
 
-One row of readouts in the roster card, labeled the same on all four
-pages: `Roster:` carries the roster count, and `Populated:` carries one
-pill per column showing its label and how many rows hold a value.
-Reviewers adds a third readout to the row, `Shown on surface:` (§
-*Reviewers page*).
+One row of readouts in the roster card, the same on all four pages:
+`Roster:`, then one run of `pill-count` pills — the roster count as
+`<Noun> (N)` (`Reviewers (3)`, `Relationships (0)`), a muted `|`
+divider (`.roster-readout-sep`, `aria-hidden`), then one pill per
+column showing its label and how many rows hold a value. Reviewers adds
+a second readout to the row, `Reviewers see:` (§ *Reviewers page*).
 
 **Whole-roster counts** — a search or a page turn does not shrink them.
 
@@ -1262,7 +1263,7 @@ reads as this page's description with Observers' differences named
 beside it — plus one card and one readout of its own, below.
 
 Its panel holds the tag-label editor over the `Danger Zone` on the
-left; on the right the **Reviewer information shown on surface** card
+left; on the right the **What reviewers see of their own entry** card
 above `Upload Reviewers`, and `Lock` beneath the upload card. The
 suppression predicate is `is_editable`.
 
@@ -1277,7 +1278,7 @@ gate are in `spec/settings_inventory.md` §2, and the line it drives is
 in `spec/reviewer-surface.md` § *Role-navigator chip strip*. Two
 surfaces on this page:
 
-- **The `Shown on surface:` readout**, last in the roster card's
+- **The `Reviewers see:` readout**, last in the roster card's
   readout row, in every lifecycle state (so a locked session still
   reports what its reviewers see). One `pill-count` pill per selected
   field, in roster order, each under the label this page shows for that
@@ -1675,7 +1676,7 @@ Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
   `views.<roster>_column_state` (`app/web/views/_setup.py`), which
   counts each slot with `app/services/_queries.py::tag_slot_counts`
   and derives `col_data["tag-n"]` as that count being non-zero — one
-  set of queries for both the `Populated:` chips and the
+  set of queries for both the column pills and the
   visibility flags. Invitations and Responses ask `tag_slot_presence`
   and re-key it with `views.chip_slots`. The route passes one
   `col_data` map; **no template computes the flag**.

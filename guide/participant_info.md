@@ -49,6 +49,11 @@ The author's ruling, 2026-10-11:
   every state, ends with **Shown on surface:** and a pill per selected
   field, on the same line as the others. The row's two labels shorten:
   `Reviewers roster:` → `Roster:`, `Populated columns:` → `Populated:`.
+- **Amended** (author, 2026-10-12, on a mock-up): `Populated:` gives way
+  to a muted `|`, so the column pills run on from the roster count, which
+  reads `<Noun> (N)` like them (`Reviewers (3)`), on all four pages;
+  `Shown on surface:` becomes **Reviewers see:**, and the card's heading
+  **What reviewers see of their own entry**.
 
 Stored once per session, as a list of field keys. Rejected: a
 per-instrument setting (the line is in the page header, above every
@@ -79,7 +84,7 @@ see of a reviewer; this is what the reviewer sees of themselves).
   Save unchanged: the card posts it as a hidden input. So `profile_link`
   stays selected while no reviewer has a profile, and shows once one
   does; an operator removes a key only by deselecting its chip.
-- **The readout.** `Shown on surface:` lists the selected fields by
+- **The readout.** `Reviewers see:` lists the selected fields by
   label (a tag under its friendly label), in roster order; with none
   selected it reads `none`, as the index's empty branch does.
 - **The line.** Selected fields in roster order, separated as the
@@ -93,7 +98,7 @@ see of a reviewer; this is what the reviewer sees of themselves).
 - **Gate.** The card lives in the Unlock panel, so it renders only while
   `is_editable` and no row is edited or added; its route answers 409
   otherwise, as `_save_field_labels` does. Locked, the readout row's
-  `Shown on surface:` pills still say what the reviewer sees. A save never demotes a
+  `Reviewers see:` pills still say what the reviewer sees. A save never demotes a
   `validated` session: the setting is display-only.
 - **Round trip.** The Settings CSV carries it as a `session.*` row;
   Duplicate copies it; an audit event records each change.
@@ -103,7 +108,7 @@ see of a reviewer; this is what the reviewer sees of themselves).
 - The two label renames land on all four roster pages, not only
   Reviewers: the readout row is one shape across them, and
   `tests/integration/test_roster_unlock_panel.py` pins its label as
-  `{Noun} roster:` for all four. `Shown on surface:` is Reviewers only.
+  `{Noun} roster:` for all four. `Reviewers see:` is Reviewers only.
   (Confirmed by the author, 2026-10-11.)
 
 - The line sits on the role chips' row, after the last chip: with only
@@ -159,6 +164,14 @@ Taken 2026-10-11 at `7e329db5`.
   selected keys riding as hidden `keep` inputs; the Settings CSV carries
   `session.reviewer_self_fields` as a JSON list (blank is the default,
   `[]` nothing); Duplicate copies all three columns.
+- Reads: one cumulative `diff-reviewer` read on `f97e6219..` and two
+  reads of its fixes. Fixed from them: the audit's old value is what was
+  stored, not the effective default; the save's no-op compares with the
+  stored list, so a save repairs a hand-edited value; a non-list or
+  non-string stored value reads as the default; the kept-keys logic moved
+  to `views`; `autocomplete="off"` on the form; stale test and template
+  prose. `spec-writer` wrote the doc-impact specs and added rows to
+  `spec/operator_button_audit.md` and `spec/ui_elements.md`.
 
 ### PR ladder
 
@@ -202,7 +215,7 @@ Taken 2026-10-11 at `7e329db5`.
 ### Doc impact
 
 - `spec/reviewer-surface.md` — the header line after the role pills, and the preview's static pill.
-- `spec/setup_pages.md` — the Reviewers Unlock panel's new card above `Upload Reviewers`; the roster card's readout labels (`Roster:`, `Populated:`) on all four pages and Reviewers' `Shown on surface:` readout.
+- `spec/setup_pages.md` — the Reviewers Unlock panel's new card above `Upload Reviewers`; the roster card's readout row (`Roster:`, the `<Noun> (N)` count, a `|`, the column pills) on all four pages and Reviewers' `Reviewers see:` readout.
 - `spec/settings_inventory.md` — the new per-session setting, its default and its gate.
 - `spec/csv_contracts.md` — the Settings CSV `session.*` row.
 - `spec/roundtrip_coverage.md` — the new column round-trips.

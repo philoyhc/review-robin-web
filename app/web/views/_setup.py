@@ -299,7 +299,7 @@ def chip_slots(
 
 @dataclass(frozen=True)
 class ColumnReadout:
-    """One `Populated:` chip: the column's operator-facing name and
+    """One column pill in the roster index: the column's operator-facing name and
     how many rows of the roster carry a value in it."""
 
     slot: str

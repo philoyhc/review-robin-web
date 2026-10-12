@@ -195,11 +195,8 @@
     <div class="roster-readouts">
       <div class="roster-readout">
         <span class="roster-readout-label">Roster:</span>
-        <span class="pill pill-count">{{ total_row_count }}
-          reviewer{% if total_row_count != 1 %}s{% endif %}</span>
-      </div>
-      <div class="roster-readout">
-        <span class="roster-readout-label">Populated:</span>
+        <span class="pill pill-count">Reviewers ({{ total_row_count }})</span>
+        <span class="roster-readout-sep" aria-hidden="true">|</span>
         <span class="roster-readout-values">
           {# Label and count both come from the server: the label from the
              same `field_labels.resolve_pair` the preview's own column
@@ -229,7 +226,7 @@
          every state: locked, the operator still reads the selection
          here though its card (in the Unlock panel) is gone. #}
       <div class="roster-readout" data-reviewer-self-readout>
-        <span class="roster-readout-label">Shown on surface:</span>
+        <span class="roster-readout-label">Reviewers see:</span>
         <span class="roster-readout-values">
           {% for label in self_field_readout %}
             <span class="pill pill-count">{{ label }}</span>
@@ -373,7 +370,7 @@
         <section class="card" id="reviewer-self-fields"
                  aria-labelledby="reviewer-self-fields-h"
                  data-reviewer-self-card>
-          <h2 id="reviewer-self-fields-h">Reviewer information shown on surface</h2>
+          <h2 id="reviewer-self-fields-h">What reviewers see of their own entry</h2>
           <form method="post" action="{{ reviewers_base_url }}/self-fields"
                 id="reviewer-self-fields-form" autocomplete="off">
             <div class="reviewer-self-chips">

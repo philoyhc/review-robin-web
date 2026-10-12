@@ -349,10 +349,12 @@ def test_the_index_reports_the_roster_and_its_populated_columns(
         card, re.S,
     )
     assert m, "no roster readout"
-    assert " ".join(m.group(1).split()) == f"3 {noun}s"
+    assert " ".join(m.group(1).split()) == f"{Noun} (3)"
 
+    # The column pills, without the roster count pill that leads the run.
     chips = [c.strip() for c in
-             re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)]
+             re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)
+             if not c.strip().startswith(f"{Noun} (")]
     if page == "reviewees":
         # Identity columns are text and always listed, at their count.
         assert any("(3)" in c for c in chips), chips
@@ -391,9 +393,12 @@ def test_an_empty_roster_reports_what_its_index_can_report(
         r'<span class="pill pill-count">(.*?)</span>',
         card, re.S,
     )
-    assert m and " ".join(m.group(1).split()) == f"0 {noun}s", card[:400]
+    assert m and " ".join(m.group(1).split()) == f"{Noun} (0)", card[:400]
 
-    chips = re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)
+    chips = [
+        c for c in re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)
+        if not c.strip().startswith(f"{Noun} (")
+    ]
     identity = [c.strip() for c in chips if "(0)" in c]
     if page == "reviewees":
         assert len(identity) == 2, (

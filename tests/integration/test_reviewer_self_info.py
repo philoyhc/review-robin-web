@@ -1,7 +1,8 @@
 """A reviewer sees their own roster entry — participant info Item 1.
 
 `guide/participant_info.md` Item 1. The Reviewers page's roster card
-reports `Shown on surface:` (and its two readout labels shorten), the
+reports `Reviewers see:` (its roster count reads `Reviewers (N)`, a `|` then
+the populated columns), the
 Unlock panel's card stores the selection, and the reviewer surface and
 its preview show the reviewer's own fields after the role pills. With
 nothing stored: name, email and profile, tags off.
@@ -112,12 +113,16 @@ def test_the_readout_row_reports_what_the_surface_shows(
     rs = _pair(client, db, "rsi-readout")
     html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
     readouts = _div_at(html, 'class="roster-readouts"')
-    assert 'roster-readout-label">Roster:</span>' in readouts
-    assert 'roster-readout-label">Populated:</span>' in readouts
+    assert re.search(
+        r'roster-readout-label">Roster:</span>\s*'
+        r'<span class="pill pill-count">Reviewers \(1\)</span>\s*'
+        r'<span class="roster-readout-sep" aria-hidden="true">\|</span>',
+        readouts,
+    ), readouts
+    assert "Populated" not in readouts
     assert "Reviewers roster:" not in html
-    assert "Populated columns:" not in html
     shown = _div_at(html, "data-reviewer-self-readout")
-    assert "Shown on surface:" in shown
+    assert "Reviewers see:" in shown
     assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
         "Name", "Email", "Profile",
     ]
@@ -133,7 +138,7 @@ def test_the_card_sits_above_upload_with_a_chip_per_populated_column(
     )
     assert card, "the reviewer-information card is missing"
     card_html = card.group(0)
-    assert "Reviewer information shown on surface" in card_html
+    assert "What reviewers see of their own entry" in card_html
     # Above `Upload Reviewers`, in the panel's right column.
     right = html.index("unlock-stack unlock-right")
     assert right < html.index("data-reviewer-self-card") < html.index('id="upload-csv"')
@@ -172,7 +177,7 @@ def test_locked_the_readout_stays_and_the_card_goes(
     rs = _pair(client, db, "rsi-locked")
     _activate(client, db, rs)
     html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
-    assert "Shown on surface:" in _div_at(html, "data-reviewer-self-readout")
+    assert "Reviewers see:" in _div_at(html, "data-reviewer-self-readout")
     assert "data-reviewer-self-card" not in html
 
 

@@ -366,11 +366,13 @@ section (git history keeps it), so this file lists only what is owed.
 ## A reviewer's own info: the scaffold (participant info Item 1, rung 2)
 
 - [ ] **Readout row.** On Reviewers, Reviewees, Relationships and
-  Observers the roster card reads `Roster:` and `Populated:`; on
-  Reviewers it also ends with `Shown on surface:` Name, Email, Profile,
+  Observers the roster card reads `Roster:` then one run of pills: the
+  count as `Reviewers (3)` (or Reviewees, Relationships, Observers), a
+  muted `|`, then the column pills; on Reviewers it also ends with
+  `Reviewers see:` Name, Email, Profile,
   on the same line, locked or unlocked.
-- [ ] **The card.** On a draft, Unlock Reviewers: "Reviewer information
-  shown on surface" sits half width above `Upload Reviewers`, with a
+- [ ] **The card.** On a draft, Unlock Reviewers: "What reviewers see
+  of their own entry" sits half width above `Upload Reviewers`, with a
   chip per populated column (Name, Email, Profile selected; tags, under
   their labels, not). Saving is the rung 3 section below.
 - [ ] **The surface.** As a reviewer, the role row reads `Reviewer` then
@@ -383,7 +385,7 @@ section (git history keeps it), so this file lists only what is owed.
 
 - [ ] **Save.** On a draft, Unlock Reviewers: ticking or unticking a
   chip enables Save and Cancel; Cancel restores the chips; Save lands
-  back on the open panel with the readout's `Shown on surface:` pills
+  back on the open panel with the readout's `Reviewers see:` pills
   matching.
 - [ ] **The surface follows.** Activate, sign in as that reviewer: the
   line after the role pills shows exactly the saved fields, a tag as

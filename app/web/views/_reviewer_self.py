@@ -117,7 +117,7 @@ def reviewer_self_kept(
 def reviewer_self_readout(
     review_session: ReviewSession, selected: Iterable[str]
 ) -> list[str]:
-    """The roster card's `Shown on surface:` pills, in roster order."""
+    """The roster card's `Reviewers see:` pills, in roster order."""
     chosen = set(selected)
     return [
         reviewer_self_label(review_session, key)

@@ -695,7 +695,7 @@ and the form or row script reads it. The ones that are:
   (`spec/assignments.md` "Per-instrument status table");
 - the Email Template page's response-confirmation chip
   (`spec/email_template_editor.md`);
-- the Reviewers page's **Reviewer information shown on surface** chips
+- the Reviewers page's **What reviewers see of their own entry** chips
   (`spec/setup_pages.md` § *Reviewers page*).
 
 `.tag-chip:has(> input:checked)` is the
@@ -808,7 +808,7 @@ One row per primitive. Colours and spacing come from tokens throughout.
 | `.bottom-grid` + `.bottom-left` | Two-column grid at `align-items: start`, so each side keeps its natural height instead of stretching to match the taller column. `.bottom-left` is the flex column for stacking several cards on one side. At 800px or narrower it collapses to one column with a 20px `row-gap`, since `.bottom-grid .card` zeroes the cards' own margins. |
 | `.card-action-row` | A right-flushed row for a card's own action, `--space-3` above it, as the card's **last child**. Used by the Owners card on the Create page and on Session Home, and the Invitations reviewer drill-in's Review Progress card. |
 | `.roster-card` (+ `.roster-readouts`, `.roster-readout*`, `.roster-card-actions`) | The roster pages' roster card: a flex column at a 16px gap. `.roster-readouts` is one wrapping row of label + values readouts, not a one-row table; each readout wraps as a unit so a label never parts from its values. `.roster-card-actions` sits flush right. `spec/setup_pages.md` "The roster card and the Unlock panel" owns the contract. |
-| `.reviewer-self-chips` | The wrapping row of selector chips in the Reviewers Unlock panel's **Reviewer information shown on surface** card: `display: flex; flex-wrap: wrap` at a `--space-1` gap. `spec/setup_pages.md` § *Reviewers page* owns the contract. |
+| `.reviewer-self-chips` | The wrapping row of selector chips in the Reviewers Unlock panel's **What reviewers see of their own entry** card: `display: flex; flex-wrap: wrap` at a `--space-1` gap. `spec/setup_pages.md` § *Reviewers page* owns the contract. |
 | `.unlock-panel` (+ `.unlock-stack`, `.unlock-right`, `.unlock-col-actions`) | Two equal `minmax(0, 1fr)` columns at a 20px gap, top-aligned, one column at 800px or narrower. `.unlock-stack` stacks a column's cards at the same 20px, and cards inside take no margin of their own. **`.unlock-panel[hidden]` restates `display: none`**, because the grid's `display` beats the attribute's UA rule. |
 | `.row-expander-body` (+ `.row-expander-actions`, `.row-expander-pane*`, `.row-expander-label`, `.row-expander-count`) | The interior of the injected row-action panel: a wrapping flex row whose `.row-expander-actions` take `margin-left: auto`, so the buttons sit flush right. The `.is-split` modifier makes it a two-column top-aligned grid (Observers; see the expander rules below). |
 | `.session-expander-*` + `.exp-*` | The lobby expander's field and button rows. `.exp-field-name` / `-code` / `-deadline` / `-tags` share the row 3 / 2 / 2 / 3, and the bulk expander's `.exp-field-bulk-tags` takes half of it flush right. `.exp-allow-delete` is the confirm, `.exp-purge-opts` (+ `.exp-purge-title`) the purge checkboxes, grayed to 0.5 opacity by `.is-disabled`, and `.exp-sep` the divider between them. `spec/sessions_overview.md` owns the contract. |
