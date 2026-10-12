@@ -3130,10 +3130,15 @@
         justify-content: flex-end;
         gap: var(--space-2);
       }
-      /* Open, the control is the panel's last child: a row spanning both
-         columns, flush right, so it sits at the bottom right of the whole
-         card whichever column is taller (participant info Item 2). */
-      body.ui-v2 .unlock-panel > .roster-card-actions { grid-column: 1 / -1; }
+      /* Open, the control ends the right column, 20px (the stack's gap)
+         under its last card. The column stretches to the row, so with no
+         card in it (an empty Observers roster) `margin-top: auto` puts the
+         control at the column's foot rather than level with the left
+         card's heading (participant info Item 2). A row of its own under
+         both columns was tried first and left a gap under a shorter right
+         column: 59px on Reviewers, 124px on Observers. */
+      body.ui-v2 .unlock-panel > .unlock-right { align-self: stretch; }
+      body.ui-v2 .unlock-right > .roster-card-actions:first-child { margin-top: auto; }
       /* Two equal columns: upload left, tag labels over Danger Zone
          right. `minmax(0, …)` on both tracks, since the default `auto`
          minimum lets a long label push a track past its share. Stacks

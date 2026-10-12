@@ -28,7 +28,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Relationship, Reviewee, Reviewer, ReviewSession
 
-from ._unlock_panel import assert_lock_at_panel_foot, panel_columns
+from ._unlock_panel import assert_lock_ends_right_column, panel_columns
 
 #: The muted divider between the roster count and the column pills.
 _SEP = '<span class="roster-readout-sep" aria-hidden="true">|</span>'
@@ -169,13 +169,13 @@ def test_the_lock_control_starts_inside_the_panel_when_it_arrives_open(
     client: TestClient, db: Session, page: str, noun: str, Noun: str
 ) -> None:
     """One element, two homes. Collapsed it is the card's last child;
-    open it is the panel's foot, inside the panel. The toggle
+    open it ends the panel's right column. The toggle
     MOVES it rather than rendering two copies — so a page that arrives
     open has to start it in the panel, or the first Lock click moves it
     out of a place it was never in.
 
-    Read by position: the control is the panel's last child when open
-    (after both columns) and outside the panel when closed.
+    Read by position: the control is the right column's last child
+    when open and outside the panel when closed.
     """
     rs = _mk(client, db, f"up-l-{page[:4]}")
     _seed(db, rs.id, page)
@@ -188,7 +188,7 @@ def test_the_lock_control_starts_inside_the_panel_when_it_arrives_open(
     )
 
     opened = _card(_get(client, rs, page, "?unlocked=1"), page)
-    assert_lock_at_panel_foot(opened)
+    assert_lock_ends_right_column(opened)
 
 
 @pytest.mark.parametrize("page,noun,Noun", PAGES)
@@ -197,14 +197,14 @@ def test_the_toggle_moves_one_control_rather_than_rendering_two(
 ) -> None:
     """Two copies of one control is how they drift apart. Source
     assertion on the script: the control's parent goes
-    `.card.roster-card` -> the panel itself (its foot, participant info
+    `.card.roster-card` -> the end of `.unlock-right` (participant info
     Item 2) -> back on each click.
     """
     body = _get(client, _mk(client, db, f"up-m-{page[:4]}"), page)
     assert body.count('class="roster-card-actions"') == 1, (
         "two copies of the Lock control"
     )
-    assert "panel.appendChild(actions)" in body, (
+    assert 'panel.querySelector(".unlock-right").appendChild(actions)' in body, (
         "the control has no second home; opening the panel orphans it"
     )
     assert "card.appendChild(actions)" in body
@@ -253,8 +253,8 @@ def test_upload_goes_left_and_the_labels_editor_right_over_the_danger_zone(
     client: TestClient, db: Session, page: str, noun: str, Noun: str
 ) -> None:
     """The author's order (participant info Item 2): `Upload` on the
-    left; the editor over the Danger Zone on the right; `Lock` at the
-    panel's foot, after both columns."""
+    left; the editor over the Danger Zone on the right; `Lock` ending
+    the right column."""
     rs = _mk(client, db, f"up-a-{page[:4]}")
     _seed(db, rs.id, page)
     card = _card(_get(client, rs, page, "?unlocked=1"), page)
@@ -265,7 +265,7 @@ def test_upload_goes_left_and_the_labels_editor_right_over_the_danger_zone(
     assert right.index("field-labels-form") < right.index(
         'class="card danger-zone"'
     ), "the Danger Zone is not under the labels editor"
-    assert_lock_at_panel_foot(card)
+    assert_lock_ends_right_column(card)
 
 
 @pytest.mark.parametrize("page,noun,Noun", PAGES)

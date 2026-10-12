@@ -235,8 +235,8 @@
     </form>
   {% endif %}
 
-  {# The `Lock` control, called once, at the panel's foot (participant
-     info Item 2). A macro since 19P.2, when two columns could call it;
+  {# The `Lock` control, called once, at the end of the right column
+     (participant info Item 2). A macro since 19P.2, when two columns could call it;
      left as one rather than churned. #}
   {% macro lock_control() %}
     <div class="roster-card-actions">
@@ -329,8 +329,9 @@
       {# The Danger Zone is gated on rows, so on an EMPTY roster the
          right column has nothing in it. `Lock` used to follow whichever
          column held a card (19P.2, `data-lock-home`); since participant
-         info Item 2 it is the panel's last child, spanning both
-         columns, so an empty column no longer moves it. #}
+         info Item 2 it always ends the right column, and the column
+         stretches to the row so an empty one puts `Lock` at its foot
+         rather than level with Upload's heading. #}
       {% set danger_visible = total_row_count and total_row_count > 0 %}
       <div class="unlock-panel" id="roster-unlock-panel"{% if not panel_open %} hidden{% endif %}>
         {# Left column: the import card. #}
@@ -439,17 +440,16 @@
               </form>
             </section>
           {% endif %}
+          {# Open, `Lock` is the right column's last child, 20px under its
+             last card (participant info Item 2, after the author's browser
+             check). With no card in the column it is pushed to the column's
+             foot instead, which stretches to the row. #}
+          {% if panel_open %}{{ lock_control() }}{% endif %}
         </div>
-
-        {# Open, `Lock` is the panel's last child: a row of its own
-           spanning both columns, at the bottom right of the whole
-           card (participant info Item 2) — on an empty roster too,
-           where the right column holds nothing. #}
-        {% if panel_open %}{{ lock_control() }}{% endif %}
       </div>
 
       {# Collapsed this sits here, as the card's last child; open it
-         is the panel's foot, inside the panel. The toggle
+         ends the panel's right column. The toggle
          MOVES the one element between those two homes rather than
          rendering two copies, so arriving open has to start it in the
          panel — otherwise the first `Lock` click would move it out of
@@ -490,8 +490,8 @@
           var panel = document.getElementById("roster-unlock-panel");
           if (!btn || !panel) return;
           // The control has two homes and one element. Collapsed it is
-          // the card's last child; open it belongs at the panel's
-          // foot, after both columns — which means inside the
+          // the card's last child; open it ends the panel's right
+          // column — which means inside the
           // panel, and the panel is `display: none` when closed. So it
           // moves rather than being rendered twice: two copies of one
           // control is how they drift apart.
@@ -500,7 +500,7 @@
           btn.addEventListener("click", function () {
             var open = !panel.hidden;
             if (open) card.appendChild(actions);
-            else panel.appendChild(actions);
+            else panel.querySelector(".unlock-right").appendChild(actions);
             panel.hidden = open;
             // The label names the state the control moves TO, not
             // "Done": the panel is a lock state, not a form being

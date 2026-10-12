@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewer, ReviewSession
 
 from ._feature_toggles import enable_observers, enable_relationships
-from ._unlock_panel import assert_lock_at_panel_foot, panel_columns
+from ._unlock_panel import assert_lock_ends_right_column, panel_columns
 from ._unlock_panel import div_block as _div_block
 
 R_CSV = b"ReviewerName,ReviewerEmail\nR1,r1@example.com\nR2,r2@example.com\n"
@@ -808,7 +808,8 @@ def test_the_hidden_unlock_panel_is_actually_hidden(client, db):
 
 def test_the_lock_control_ships_as_the_cards_last_child(client, db):
     """Collapsed is the served state, so the markup puts the control at
-    the card's foot. Open, the script moves it to the panel's foot —
+    the card's foot. Open, the script moves it to the end of the right
+    column —
     see the test below."""
     html = _page(client, _with_reviewers(client, db, "rc23"))
     card = re.search(r'id="roster-card".*?(?=<!-- |\n  <div class="card-columns")',
@@ -823,17 +824,20 @@ def test_the_lock_control_ships_as_the_cards_last_child(client, db):
     )
 
 
-def test_the_lock_row_spans_both_columns(client, db):
-    """Open, `Lock` is a row of its own at the panel's foot, so it sits
-    at the bottom right of the whole card whichever column is taller
-    (participant info Item 2). The suite has no layout engine, so the
-    rule that places it is asserted as a rule."""
+def test_the_lock_ends_the_right_column(client, db):
+    """Open, `Lock` ends the right column, 20px under its last card; the
+    column stretches to the row, so with no card in it `Lock` sits at its
+    foot (participant info Item 2, after the author's browser check).
+    The suite has no layout engine, so the rules that place it are
+    asserted as rules."""
     html = _page(client, _with_reviewers(client, db, "rc24"))
+    assert "body.ui-v2 .unlock-panel > .unlock-right { align-self: stretch; }" in html
     assert (
-        "body.ui-v2 .unlock-panel > .roster-card-actions { grid-column: 1 / -1; }"
-        in html
+        "body.ui-v2 .unlock-right > .roster-card-actions:first-child "
+        "{ margin-top: auto; }" in html
     )
-    assert ".unlock-right > .roster-card-actions" not in html
+    # The full-width row it replaced left a gap under a shorter column.
+    assert ".unlock-panel > .roster-card-actions" not in html
 
 
 def test_the_lock_control_moves_between_its_two_homes(client, db):
@@ -848,7 +852,7 @@ def test_the_lock_control_moves_between_its_two_homes(client, db):
     assert handler, "toggle handler not found"
     body = handler.group(0)
     assert "card.appendChild(actions)" in body, body
-    assert "panel.appendChild(actions)" in body, body
+    assert 'panel.querySelector(".unlock-right").appendChild(actions)' in body, body
 
 
 
@@ -1797,12 +1801,12 @@ def test_the_panel_arrives_open_when_the_flag_is_set(client, db):
     assert 'id="roster-unlock-btn"' not in _panel(closed), (
         "the control starts inside the panel while closed"
     )
-    # At the panel's foot specifically, not merely somewhere in the
-    # panel. The toggle reopens into `panel.appendChild`, the panel's
-    # last child (participant info Item 2), so a server render anywhere
+    # At the end of the right column specifically, not merely somewhere
+    # in the panel. The toggle reopens into `.unlock-right` (participant
+    # info Item 2), so a server render anywhere
     # else puts the control in one place on arrival and another after a
     # Lock/Unlock round trip.
-    assert_lock_at_panel_foot(opened)
+    assert_lock_ends_right_column(opened)
     # The label is on its own line inside the button, so match the
     # element and read its text rather than needling `>Lock<`.
     btn = re.search(

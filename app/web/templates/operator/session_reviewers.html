@@ -520,12 +520,10 @@
             </form>
           </section>
           {% endif %}
-        </div>
-
-        {# Open, `Lock` is the panel's last child: a row of its own
-           spanning both columns, so it sits at the bottom right of
-           the whole card whichever column is taller (participant
-           info Item 2). #}
+        {# Open, `Lock` is the right column's last child, 20px under its
+           last card (participant info Item 2, after the author's browser
+           check). With no card in the column it is pushed to the column's
+           foot instead, which stretches to the row. #}
         {% if panel_open %}
         <div class="roster-card-actions">
           <button type="button" class="btn secondary" id="roster-unlock-btn"
@@ -541,11 +539,12 @@
           </noscript>
         </div>
         {% endif %}
+        </div>
       </div>
 
 
       {# Collapsed this sits here, as the card's last child; open it
-         is the panel's foot, inside the panel. The toggle
+         ends the panel's right column. The toggle
          MOVES the one element between those two homes rather than
          rendering two copies, so arriving open has to start it in the
          panel — otherwise the first Lock click would move it out of a
@@ -597,8 +596,8 @@
           var panel = document.getElementById("roster-unlock-panel");
           if (!btn || !panel) return;
           // The control has two homes, and one element. Collapsed it is
-          // the card's last child; open it belongs at the panel's foot,
-          // after both columns — which means inside the panel,
+          // the card's last child; open it ends the panel's right
+          // column — which means inside the panel,
           // and the panel is `display: none` when closed. So it moves,
           // rather than being rendered twice: two copies of one control
           // is how they drift apart.
@@ -607,7 +606,7 @@
           btn.addEventListener("click", function () {
             var open = !panel.hidden;
             if (open) card.appendChild(actions);
-            else panel.appendChild(actions);
+            else panel.querySelector(".unlock-right").appendChild(actions);
             panel.hidden = open;
             // The label names the state the control moves to, not "Done":
             // the panel is a lock state, not a form being finished.

@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Observer, ReviewSession
 
-from ._unlock_panel import assert_lock_at_panel_foot
+from ._unlock_panel import assert_lock_ends_right_column
 
 CSV = b"ObserverEmail,ObserverName\no1@example.org,O1\no2@example.org,O2\n"
 
@@ -217,7 +217,7 @@ def test_the_lock_control_ships_as_the_cards_last_child(
     client: TestClient, db: Session
 ) -> None:
     """Collapsed, the control is the card's last child; open, it is the
-    panel's foot (participant info Item 2). One element, two homes — the
+    end of the panel's right column (participant info Item 2). One element, two homes — the
     toggle MOVES it, so where it *starts* decides whether the first
     click moves it out of a place it was never in.
     """
@@ -229,18 +229,18 @@ def test_the_lock_control_ships_as_the_cards_last_child(
     # panel is a lock state, not a form being finished.
     assert _control_label(card) == "Unlock", _control_label(card)
 
-    # Open, it is the panel's own last child, after both columns.
+    # Open, it ends the right column, under the Danger Zone.
     open_card = _card(
         _page(client, _session(client, db, "unl-3b"), "?unlocked=1")
     )
-    assert_lock_at_panel_foot(open_card)
+    assert_lock_ends_right_column(open_card)
     assert _control_label(open_card) == "Lock", _control_label(open_card)
 
     # And the toggle knows both homes, which is what makes one element
     # serve two positions.
     toggle = _toggle(_page(client, _session(client, db, "unl-3c")))
     assert "card.appendChild(actions)" in toggle
-    assert "panel.appendChild(actions)" in toggle
+    assert 'panel.querySelector(".unlock-right").appendChild(actions)' in toggle
 
 
 def test_the_lock_control_stays_at_the_foot_on_an_empty_roster(
@@ -249,7 +249,9 @@ def test_the_lock_control_stays_at_the_foot_on_an_empty_roster(
     """On an EMPTY roster the right column holds nothing — the Danger
     Zone is gated on rows. Until participant info Item 2 `Lock` followed
     whichever column held a card (`data-lock-home`); now it is the
-    panel's foot either way, so an empty column cannot strand it.
+    right column's last child either way, and the column stretches to
+    the row, so an empty one puts it at the foot, not beside Upload's
+    heading.
 
     The empty case is not an edge: it is first use, and the state
     `delete-all` redirects into (`?unlocked=1`).
@@ -262,7 +264,7 @@ def test_the_lock_control_stays_at_the_foot_on_an_empty_roster(
     )
     assert "danger-zone" in full and "danger-zone" not in empty
     for card in (full, empty):
-        assert_lock_at_panel_foot(card)
+        assert_lock_ends_right_column(card)
         assert "data-lock-home" not in card
 
 
