@@ -20,6 +20,9 @@ land. Audit event ``relationships.imported`` (registered in
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -30,7 +33,11 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.schemas.imports import RelationshipImportRow
+from app.schemas.imports import (
+    RelationshipImportRow,
+    RevieweeImportRow,
+    ReviewerImportRow,
+)
 from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, field_labels, session_lifecycle as lifecycle
 from app.services import unit_of_work
@@ -59,8 +66,10 @@ from app.services.roster_status import ROSTER_STATUSES, normalise_status
 def parse_relationship_csv(
     content: bytes,
     *,
-    reviewers: list[Reviewer],
-    reviewees: list[Reviewee],
+    reviewers: Sequence[Reviewer | IncomingReviewer],
+    reviewees: Sequence[Reviewee | IncomingReviewee],
+    reviewers_uploaded: bool = False,
+    reviewees_uploaded: bool = False,
 ) -> ParseResult:
     """Parse a Relationships CSV against the session's existing rosters.
 
@@ -76,6 +85,13 @@ def parse_relationship_csv(
     case-insensitive match. Unknown identifiers are validation
     errors. The returned ``RelationshipImportRow`` rows carry the
     resolved FK ids so the save step doesn't repeat the lookup.
+
+    ``reviewers_uploaded`` / ``reviewees_uploaded`` say the matching
+    list stands for a roster file uploaded alongside this one
+    (:func:`rosters_for_relationships`), so an unknown email names that
+    file instead of the roster. Its rows then carry stand-in ids: such
+    a parse checks, and the save must parse again once the rosters are
+    written.
     """
 
     source = "relationships"
@@ -146,11 +162,16 @@ def parse_relationship_csv(
                     row_number=index,
                     field="ReviewerEmail",
                     message=(
-                        f"Unknown reviewer '{reviewer_email}' — import "
-                        f"reviewers first."
+                        f"Unknown reviewer '{reviewer_email}' — not in "
+                        f"the uploaded Reviewers file."
+                        if reviewers_uploaded
+                        else f"Unknown reviewer '{reviewer_email}' — "
+                        f"import reviewers first."
                     ),
                     problem=(
-                        "ReviewerEmail is not on the Reviewers roster "
+                        "ReviewerEmail is not in the uploaded Reviewers file"
+                        if reviewers_uploaded
+                        else "ReviewerEmail is not on the Reviewers roster "
                         "(import reviewers first)"
                     ),
                 )
@@ -165,11 +186,16 @@ def parse_relationship_csv(
                     row_number=index,
                     field="RevieweeEmail",
                     message=(
-                        f"Unknown reviewee '{reviewee_email}' — import "
-                        f"reviewees first."
+                        f"Unknown reviewee '{reviewee_email}' — not in "
+                        f"the uploaded Reviewees file."
+                        if reviewees_uploaded
+                        else f"Unknown reviewee '{reviewee_email}' — "
+                        f"import reviewees first."
                     ),
                     problem=(
-                        "RevieweeEmail is not on the Reviewees roster "
+                        "RevieweeEmail is not in the uploaded Reviewees file"
+                        if reviewees_uploaded
+                        else "RevieweeEmail is not on the Reviewees roster "
                         "(import reviewees first)"
                     ),
                 )
@@ -258,6 +284,62 @@ def parse_relationship_csv(
         parsed.append(row)
 
     return ParseResult(rows=parsed, issues=issues, field_labels=captured_labels)
+
+
+@dataclass(frozen=True)
+class IncomingReviewer:
+    """A reviewer row from a file uploaded alongside a Relationships
+    file: what :func:`parse_relationship_csv` reads of a ``Reviewer``.
+    ``id`` is a stand-in (negative, so never a real row's)."""
+
+    id: int
+    email: str
+
+
+@dataclass(frozen=True)
+class IncomingReviewee:
+    """As :class:`IncomingReviewer`, for a reviewee row."""
+
+    id: int
+    email_or_identifier: str
+
+
+def rosters_for_relationships(
+    db: Session,
+    session_id: int,
+    *,
+    incoming_reviewers: Sequence[ReviewerImportRow] | None = None,
+    incoming_reviewees: Sequence[RevieweeImportRow] | None = None,
+) -> tuple[list[Reviewer | IncomingReviewer], list[Reviewee | IncomingReviewee]]:
+    """The reviewers and reviewees a Relationships file is checked
+    against: an uploaded roster file's rows where one is attached,
+    otherwise the session's current roster (``guide/quick_setup_update.md``
+    Item 1). Pass the result to :func:`parse_relationship_csv` with
+    ``reviewers_uploaded`` / ``reviewees_uploaded`` set to match.
+
+    Every row counts, active or not, as the current rosters do here.
+    """
+    from app.services.assignments import list_reviewees, list_reviewers
+
+    reviewers: list[Reviewer | IncomingReviewer] = (
+        [
+            IncomingReviewer(id=-index, email=row.email)
+            for index, row in enumerate(incoming_reviewers, start=1)
+        ]
+        if incoming_reviewers is not None
+        else list(list_reviewers(db, session_id))
+    )
+    reviewees: list[Reviewee | IncomingReviewee] = (
+        [
+            IncomingReviewee(
+                id=-index, email_or_identifier=row.email_or_identifier
+            )
+            for index, row in enumerate(incoming_reviewees, start=1)
+        ]
+        if incoming_reviewees is not None
+        else list(list_reviewees(db, session_id))
+    )
+    return reviewers, reviewees
 
 
 def existing_count(db: Session, session_id: int) -> int:
