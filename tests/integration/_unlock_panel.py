@@ -1,9 +1,10 @@
 """Shared checks on the roster pages' Unlock panel (participant info Item 2).
 
-Every roster page puts `Lock`, while the panel is open, at the panel's
-foot: its last child, after both column stacks, so it sits at the bottom
-right of the whole card (`.unlock-panel > .roster-card-actions` spans the
-grid's columns). One helper so the four pages assert it one way.
+Every roster page ends the panel's right column, while the panel is open,
+with `Lock`: 20px under the column's last card, or at the column's foot
+when it holds none (the column stretches to the row; base.html's
+`.unlock-right > .roster-card-actions:first-child` rule). One helper so
+the four pages assert it one way.
 """
 
 from __future__ import annotations
@@ -37,23 +38,22 @@ def panel_columns(html: str) -> tuple[str, str, str]:
     return panel, left, right
 
 
-def assert_lock_at_panel_foot(html: str) -> None:
-    """Open, the one `Lock` control is the panel's direct last child,
-    after both columns — not inside either stack, and not wrapped."""
+def assert_lock_ends_right_column(html: str) -> None:
+    """Open, the one `Lock` control is the right column's direct last
+    child — not in the left column, not wrapped, and not a row of its own
+    after the columns (that left a gap under a shorter right column)."""
     panel, left, right = panel_columns(html)
     assert html.count('id="roster-unlock-btn"') == 1, "two Lock controls"
-    assert 'class="roster-card-actions"' not in left + right, (
-        "Lock sits inside a column rather than at the panel's foot"
+    assert 'class="roster-card-actions"' not in left, (
+        "Lock sits in the left column"
     )
-    # After the right stack: only comments and whitespace, then the
-    # actions row, then nothing but the panel's own close tag.
-    rest = panel[panel.index(right) + len(right):]
-    rest = re.sub(r"<!--.*?-->", "", rest, flags=re.S).strip()
     marker = '<div class="roster-card-actions">'
-    assert rest.startswith(marker), (
-        "Lock is not the panel's next child after both columns"
-    )
-    actions = div_block(rest, marker)
-    assert rest[len(actions):].strip() == "</div>", (
-        "Lock is not the panel's last child"
+    assert marker in right, "Lock is not in the right column"
+    tail = right[right.index(marker):]
+    actions = div_block(tail, marker)
+    rest = re.sub(r"<!--.*?-->", "", tail[len(actions):], flags=re.S)
+    assert rest.strip() == "</div>", "Lock is not the right column's last child"
+    after = panel[panel.index(right) + len(right):]
+    assert re.sub(r"<!--.*?-->", "", after, flags=re.S).strip() == "</div>", (
+        "something follows the right column inside the panel"
     )

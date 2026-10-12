@@ -313,12 +313,14 @@ which columns arrived.
 the tag-label editor, `Upload` and `Danger Zone` cards (Reviewers adds a
 fourth, § *Reviewers page*): **`Upload` on the left**, and **the
 tag-label editor over the `Danger Zone` on the right**. While the panel
-is open, **`Lock` is its last child** — a row spanning both columns,
-flush right — so it sits at the bottom right of the whole card whichever
-column is taller, an empty one included. Collapsed, the same control is
-the roster card's last child; the toggle moves the one element between
-the two, and a page arriving open (`?unlocked=1`, a failed import)
-renders it at the panel's foot already. The label
+is open, **`Lock` ends the right column**, flush right and 20px under
+its last card. The right column stretches to the row, so where it holds
+no card (an empty Observers roster) `Lock` sits at its foot, level with
+the bottom of the left column, not beside the left card's heading.
+Collapsed, the same control is the roster card's last child; the toggle
+moves the one element between the two, and a page arriving open
+(`?unlocked=1`, a failed import) renders it at the end of the right
+column already. The label
 editor is the same shared partial used elsewhere, and the two
 destructive cards' routes and gates are specified in § *The Danger Zone's `delete-all`* and § *The Upload
 card's replace*.
@@ -349,7 +351,7 @@ card's replace*.
 | Axis | Reviewers / Reviewees / Relationships | Observers |
 |---|---|---|
 | Suppression predicate | `is_editable` | `not is_archived` — every mutating observers route takes `_require_not_archived`, so on `ready` and `expired` both tenants are live and hiding them would withhold controls the routes accept |
-| Right column | the tag-label editor over the `Danger Zone` | the `Danger Zone` alone — no label slots — so on an **empty** roster it is empty; `Lock` is at the panel's foot either way |
+| Right column | the tag-label editor over the `Danger Zone` | the `Danger Zone` alone — no label slots — so on an **empty** roster it is empty; `Lock` ends it either way, at its foot when empty |
 
 **Observers differs elsewhere on the page too**, and those are not
 this table's subject — they are listed once in its own § *Body layout*
@@ -1271,7 +1273,7 @@ beside it — plus one card and one readout of its own, below.
 
 Its panel holds the **What reviewers see of their own entry** card
 above `Upload Reviewers` on the left, the tag-label editor over the
-`Danger Zone` on the right, and `Lock` at the panel's foot. The
+`Danger Zone` on the right, and `Lock` ending the right column. The
 suppression predicate is `is_editable`.
 
 CSV header copy lists `ReviewerName`, `ReviewerEmail` required;
@@ -1342,7 +1344,7 @@ edited row is reached as `#reviewer-row-<id>`.
 The shared shape — § *The roster card and the Unlock panel* — on the
 same terms as Reviewers, with neither of Observers' two differences: the
 panel holds `Upload Reviewees` on the left, the tag-label editor over
-the `Danger Zone` on the right, `Lock` at the panel's foot, and the
+the `Danger Zone` on the right, `Lock` ending the right column, and the
 suppression predicate is `is_editable`.
 
 CSV header copy lists `RevieweeName`, `RevieweeEmail` required;
@@ -1382,7 +1384,7 @@ predicate field names, plus a per-row `active` / `inactive` status.
 The shared shape — § *The roster card and the Unlock panel* — on the
 same terms as Reviewers and Reviewees: `Upload Relationships` left,
 the tag-label editor over the `Danger Zone` right, `Lock` at the
-panel's foot, suppression on `is_editable`.
+right column's end, suppression on `is_editable`.
 
 **Two in-place 400 paths where the others have one**, both of which
 set the panel open server-side: a blocked CSV, and the
@@ -1452,8 +1454,7 @@ axes. Restated here only as far as its own reasons go:
   live and hiding them would withhold controls their own routes accept.
 - **`Upload Observers` is on the left, as on the other three, and the
   `Danger Zone` alone on the right**: this page has no label slots.
-  On an empty roster the right column is empty, and `Lock` stays at the
-  panel's foot.
+  On an empty roster the right column holds only `Lock`, at its foot.
 - **`.card-columns` is absent**, as on the other three; the cohort
   editor lives in the row expander.
 

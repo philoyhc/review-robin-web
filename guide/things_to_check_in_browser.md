@@ -365,17 +365,20 @@ section (git history keeps it), so this file lists only what is owed.
 
 ## The Unlock panels' card order (participant info Item 2)
 
-- [ ] **Reviewers.** On a draft with rows, Unlock: left, "What
-  reviewers see of their own entry" over `Upload Reviewers`; right,
-  `Reviewer tag labels` over the `Danger Zone`; `Lock` at the bottom
-  right of the whole card, below both columns.
-- [ ] **Reviewees and Relationships.** Unlock: `Upload` left, tag
-  labels over the `Danger Zone` right, `Lock` bottom right.
-- [ ] **Observers.** Unlock with observers: `Upload` left, `Danger
-  Zone` right, `Lock` bottom right. With none (the right column empty),
-  `Lock` is still bottom right, not under `Upload`.
+- [ ] **Order.** On a draft with rows, Unlock: Reviewers has "What
+  reviewers see of their own entry" over `Upload Reviewers` left and
+  `Reviewer tag labels` over the `Danger Zone` right; Reviewees and
+  Relationships have `Upload` left and tag labels over the `Danger
+  Zone` right; Observers has `Upload` left and the `Danger Zone` right.
+- [ ] **No gap above `Lock`.** On a draft with rows, Unlock on each of
+  the four pages: `Lock` sits flush right, one ordinary card gap under
+  the right column's last card (the `Danger Zone`) — on Reviewers and
+  Observers too, where the left column is taller.
+- [ ] **Observers, empty.** With no observers, Unlock: `Lock` is at the
+  bottom right, level with the bottom of the `Upload` card, not beside
+  its heading.
 - [ ] **The toggle.** On each page, Lock then Unlock again: `Lock`
-  returns to the same bottom-right place, and collapsed `Unlock` sits
-  where it did before.
+  returns to the same place, and collapsed `Unlock` sits where it did
+  before.
 - [ ] **Narrow.** At 800px or less the columns stack (left's cards, then
   right's), with `Lock` last, flush right.

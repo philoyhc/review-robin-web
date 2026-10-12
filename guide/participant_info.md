@@ -252,17 +252,23 @@ The author's ruling, 2026-10-12, on all four roster pages:
   `What observers see` once a later item adds it.
 - **`Lock` at the bottom right of the whole card**, on every page: a
   row of its own at the panel's foot, flush right.
+- **Amended** (author, 2026-10-12, on the browser check): no extra gap
+  between the Danger Zone and `Lock`. `Lock` ends the right column, 20px
+  under its last card; an empty right column (Observers with no rows)
+  stretches to the row and puts `Lock` at its foot.
 
 Rejected: `Lock` beneath the right column's last card (19P.1's rule).
 The right column now ends wherever its cards do — on an empty Observers
 roster it holds none — so "under the column" is not the card's corner.
+*(Overturned by the amendment above: the column now stretches to the
+row, which answers the empty-Observers objection.)*
 
 ### Semantics
 
 - `Upload` is left on all four pages, so Observers stops being the
-  mirror of the other three, and `Lock` stops following a card: the
-  toggle moves it to the panel's foot, never into a column, and the
-  `data-lock-home` marker retires.
+  mirror of the other three, and `Lock` stops following a card: it
+  always ends the right column (since rung 3; rung 2 made it a row at
+  the panel's foot), and the `data-lock-home` marker retires.
 - Narrow (≤ 800px) the columns stack left then right, then `Lock`.
 - The server-rendered open panel (`?unlocked=1`, a failed import)
   renders `Lock` in the same place the toggle puts it.
@@ -272,9 +278,10 @@ roster it holds none — so "under the column" is not the card's corner.
 - "Reviewees page to follow" read as *follows Reviewers' order*:
   Reviewees has no self card yet, so it is Upload left, labels over
   Danger Zone right.
-- `Lock` at the foot on all four pages, not only Observers: after the
+- ~~`Lock` at the foot on all four pages, not only Observers: after the
   reorder Reviewers' right column is the shorter one, so the old rule
-  would leave `Lock` mid-card there too.
+  would leave `Lock` mid-card there too.~~ Superseded by the amendment:
+  the gap below a shorter column is what the author ruled out.
 
 ### Blast radius (measured)
 
@@ -296,11 +303,14 @@ Taken 2026-10-12 at `1fa68b24`.
 2. **The reorder.** The four templates, the `Lock` row's CSS and
    toggle, tests, the two specs, a browser-check section. One rung,
    read on its own diff.
+3. **Lock ends the right column** (added 2026-10-12, the author's
+   browser check): the `Lock` placement and its CSS, tests, specs, the
+   browser-check section restated. Read on its own diff.
 
 ### Definition of done
 
 - Each page's panel renders its cards in the Decision's order and
-  `Lock` after both columns, by test, open on load and after the toggle.
+  `Lock` ending the right column, by test, open on load and after the toggle.
 - `### Doc impact` current; `spec-writer` flags adjudicated.
 - `### Status` compacted.
 
@@ -315,11 +325,23 @@ Taken 2026-10-12 at `1fa68b24`.
 
 ### Status
 
-- Rung 2 (2026-10-12): the four templates reordered; `Lock` is the
-  panel's last child, `.unlock-panel > .roster-card-actions` spanning
-  both columns, and the toggle appends it to the panel;
-  `data-lock-home` retired. `tests/integration/_unlock_panel.py` holds
-  the one "Lock at the panel's foot" check the four pages share.
+- Rung 2 (2026-10-12, #2981): the four templates reordered; `Lock`
+  the panel's last child, a row spanning both columns; `data-lock-home`
+  retired. `tests/integration/_unlock_panel.py` holds the one placement
+  check the four pages share.
+- Rung 3 (2026-10-12): the row under the taller column left a gap under
+  a shorter right one, measured in Chromium at 59px on Reviewers and
+  124px on Observers with rows by the agent's Chromium render of the
+  four pages (author: remove it). `Lock` ends the
+  right column again; `.unlock-panel > .unlock-right` stretches to the
+  row and `.roster-card-actions:first-child` takes `margin-top: auto`,
+  so an empty right column puts it at the foot. 20px from the last card
+  on all four pages in the same render; the author's check is owed.
+  Its `diff-reviewer` read found the plan still rejecting what the
+  amendment adopts, three stale plan lines, no rung 3 in the ladder, the
+  moved block under-indented, and no check that `Lock` is an empty
+  right column's only element; all fixed. A second read of those fixes
+  found the new ladder rung filed under Item 1; moved.
 - Reads: two `diff-reviewer` reads and one `spec-writer` verify. The
   first read and the verify both
   found the old placement in four specs the plan had not named (they
@@ -330,8 +352,8 @@ Taken 2026-10-12 at `1fa68b24`.
 
 ### Doc impact
 
-- `spec/setup_pages.md` — the Unlock panel's column contents on all four pages and `Lock` at the panel's foot; Observers no longer the mirror.
-- `spec/ui_elements.md` — the `.unlock-panel` row: the `Lock` row at the foot.
+- `spec/setup_pages.md` — the Unlock panel's column contents on all four pages and `Lock` ending the right column; Observers no longer the mirror.
+- `spec/ui_elements.md` — the `.unlock-panel` row: `Lock` ending the stretched right column.
 - `spec/operator_button_audit.md` — the rows naming a panel column (#39, #41, #43, #45, #178, #179, #269).
 - `spec/visual_style_rrw.md` — the roster pages' arrangement example.
 - `spec/rrw_functional_spec.md` — Observers' panel no longer mirrored.
