@@ -549,9 +549,9 @@ def relationship_column_state(
     `ci-postgres` job red. Exactly the dialect gap `CLAUDE.md` warns
     about, met in a query rather than a migration.
 
-    So this page lists its pair-context tags and nothing else, and on an
-    empty roster its readout list is genuinely empty — which makes the
-    chip row's `{% else %}` ("none yet") reachable HERE and nowhere else,
+    So this page lists its pair-context tags and nothing else, and with
+    no tag populated its readout list is genuinely empty — the one page
+    where the readout row stops at the count, with no `|` divider,
     since the other three always emit identity entries.
     """
     sid = review_session.id

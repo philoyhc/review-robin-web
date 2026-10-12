@@ -28,9 +28,10 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Relationship, Reviewee, Reviewer, ReviewSession
 
-#: ``(page, noun, Noun)`` — the two pages this rung moves.
+#: The muted divider between the roster count and the column pills.
 _SEP = '<span class="roster-readout-sep" aria-hidden="true">|</span>'
 
+#: ``(page, noun, Noun)`` — the two pages this rung moves.
 PAGES = [
     ("reviewees", "reviewee", "Reviewees"),
     ("relationships", "relationship", "Relationships"),
@@ -380,9 +381,9 @@ def test_an_empty_roster_reports_what_its_index_can_report(
     required column is itself worth seeing — it is what an operator who
     uploaded a CSV missing that column needs to be told.
 
-    **Relationships lists nothing**, so the chip row's `{% else %}`
-    ("none yet") fires. Its identity columns are non-nullable integer
-    FKs, which `slot_row_count` cannot even be asked about — see
+    **Relationships lists nothing**, so the row stops at the count: no
+    divider, no column pills. Its identity columns are non-nullable
+    integer FKs, which `slot_row_count` cannot even be asked about — see
     `relationship_column_state`.
 
     That asymmetry is why this test is parametrized rather than shared:
@@ -411,7 +412,31 @@ def test_an_empty_roster_reports_what_its_index_can_report(
         assert _SEP in card
     else:
         assert identity == [], chips
-        assert _SEP not in card, "an empty index renders a bare divider"
+        assert _SEP not in card, "an empty index renders no divider"
+
+
+def test_relationship_tags_run_on_from_the_count_after_the_divider(
+    client: TestClient, db: Session
+) -> None:
+    """The other half of the stop-at-the-count rule: once a pair-context
+    tag holds data, Relationships lists it after the `|`, as the other
+    pages list their columns."""
+    rs = _mk(client, db, "up-reltag")
+    _seed(db, rs.id, "relationships", n=3)
+    rel = db.query(Relationship).filter_by(session_id=rs.id).first()
+    rel.tag_1 = "Cohort A"
+    db.commit()
+    card = _card(_get(client, rs, "relationships"), "relationships")
+
+    m = re.search(
+        r'<span class="pill pill-count">\s*Relationships \(3\)\s*</span>\s*'
+        + re.escape(_SEP)
+        + r'\s*<span class="roster-readout-values">(.*?)</div>',
+        card, re.S,
+    )
+    assert m, card[:600]
+    pills = re.findall(r'<span class="pill pill-count">([^<]*)</span>', m.group(1))
+    assert [" ".join(c.split()) for c in pills] == ["Pair context 1 (1)"], pills
 
 
 def test_the_reviewees_index_lists_a_column_only_where_it_is_populated(
