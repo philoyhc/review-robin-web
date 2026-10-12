@@ -1241,7 +1241,8 @@ of these points**, flagged inline; `spec/setup_pages.md`
   Delete All, confirm-gated, wiping it. Both live in the roster
   card's **Unlock panel** above the table, alongside the
   friendly-label editor on the three pages that have one; on
-  Observers the panel holds these two alone, mirrored left-to-right.
+  Observers the panel holds these two alone. Upload is on the left on
+  every page.
   **Nothing renders below the table.**
 
 All four pages share this shape. `spec/setup_pages.md` § *The roster
