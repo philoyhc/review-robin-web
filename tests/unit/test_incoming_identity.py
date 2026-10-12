@@ -109,24 +109,47 @@ def test_the_same_rename_alone_is_still_refused(db: Session) -> None:
     assert _problems(issues) == [f"ReviewerEmail {ROSTER_PROBLEM}"]
 
 
-def test_one_file_matches_check_cross_table_identity(db: Session) -> None:
-    """``check_cross_table_identity`` is the one-kind case, message and
-    all, so every single-file path keeps its verdict and wording."""
+def test_one_file_keeps_check_cross_table_identity_wording(db: Session) -> None:
+    """``check_cross_table_identity`` is now the one-kind case, so pin its
+    output literally rather than against itself: every single-file path
+    keeps its verdict and wording."""
     s = _session(db)
-    db.add_all(
-        [
-            Reviewee(session_id=s.id, name="Bob Smith", email_or_identifier=BOB),
-            Observer(session_id=s.id, display_name="B. Smith", email="b@x.edu"),
-        ]
-    )
+    db.add(Reviewee(session_id=s.id, name="Bob Smith", email_or_identifier=BOB))
     db.flush()
-    rows = [_reviewer("Robert Smith"), _reviewer("Bea", email="b@x.edu")]
 
-    assert check_incoming_identity(
-        db, session_id=s.id, incoming={"reviewers": rows}
-    )["reviewers"] == check_cross_table_identity(
-        db, session_id=s.id, rows=rows, kind="reviewers"
+    (issue,) = check_cross_table_identity(
+        db,
+        session_id=s.id,
+        rows=[_reviewer("Bea", email="b@x.edu"), _reviewer("Robert Smith")],
+        kind="reviewers",
     )
+
+    assert issue.row_number == 2
+    assert issue.field == "ReviewerEmail"
+    assert issue.source == "reviewers"
+    assert issue.message == (
+        f"ReviewerEmail '{BOB}' is already used by reviewee 'Bob Smith' "
+        "in this session — names must match (got 'Robert Smith')."
+    )
+    assert issue.problem == f"ReviewerEmail {ROSTER_PROBLEM}"
+
+
+def test_an_uploaded_kind_with_no_rows_still_replaces_its_roster(
+    db: Session,
+) -> None:
+    """A kind in ``incoming`` is being replaced even with no rows (a
+    blocked file rides in empty), so its old roster holds no name."""
+    s = _session(db)
+    db.add(Reviewee(session_id=s.id, name="Bob Smith", email_or_identifier=BOB))
+    db.flush()
+
+    result = check_incoming_identity(
+        db,
+        session_id=s.id,
+        incoming={"reviewers": [_reviewer("Robert Smith")], "reviewees": []},
+    )
+
+    assert result == {"reviewers": [], "reviewees": []}
 
 
 def test_two_uploaded_files_that_disagree_are_each_refused(db: Session) -> None:

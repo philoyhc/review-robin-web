@@ -372,7 +372,11 @@ def test_a_typed_tag_survives_a_failed_quick_setup_upload(
 def test_the_settings_slot_commits_its_own_work(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``_run_quick_setup_settings`` commits, whatever the Tags box.
+    """A Settings upload commits, whatever the Tags box.
+
+    Asserted on ``_run_quick_setup``, the pipeline every Quick Setup
+    upload runs through since ``guide/quick_setup_update.md`` Item 1
+    (rung 3); it was ``_run_quick_setup_settings`` when this was found.
 
     Found by a review of this rung and **not caused by it**:
     ``apply_session_config`` flushes but never commits, and ``get_db``
@@ -420,20 +424,23 @@ def test_the_settings_slot_commits_its_own_work(
 
     monkeypatch.setattr(SASession, "commit", _spy)
     failure = asyncio.run(
-        _quick_setup._run_quick_setup_settings(
-            file=UploadFile(
-                filename="s.csv",
-                file=io.BytesIO(
-                    _settings_csv(
-                        [("session.help_contact", "x@example.edu", "string")]
-                    )
-                ),
-            ),
+        _quick_setup._run_quick_setup(
+            uploads={
+                "settings": UploadFile(
+                    filename="s.csv",
+                    file=io.BytesIO(
+                        _settings_csv(
+                            [("session.help_contact", "x@example.edu", "string")]
+                        )
+                    ),
+                )
+            },
             review_session=review_session,
             user=db.get(User, review_session.created_by_user_id),
             db=db,
             replacing=True,
             confirm_replace="true",
+            acknowledge_response_loss=None,
         )
     )
 

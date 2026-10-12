@@ -27,8 +27,8 @@ Two sibling registers hold the open work that is not queued here:
 ### In progress
 
 - `guide/quick_setup_update.md` Item 1 — files uploaded together are
-  checked together and saved all or nothing. Plan written 2026-10-12;
-  rung 2 (the checks as pure functions) is next.
+  checked together and saved all or nothing. Rung 2 (#2999) and rung 3
+  (the routes) are built; the close follows the author's browser check.
 
 ### Queued segments
 
