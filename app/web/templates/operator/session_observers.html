@@ -235,9 +235,9 @@
     </form>
   {% endif %}
 
-  {# The `Lock` control, defined once and called at the panel's foot
-     (participant info Item 2). A macro since 19P.2, when it had two
-     homes; it keeps the markup out of the panel's flow. #}
+  {# The `Lock` control, called once, at the panel's foot (participant
+     info Item 2). A macro since 19P.2, when two columns could call it;
+     left as one rather than churned. #}
   {% macro lock_control() %}
     <div class="roster-card-actions">
       <button type="button" class="btn secondary" id="roster-unlock-btn"
@@ -273,9 +273,8 @@
 
      **Upload LEFT, Danger Zone RIGHT**, which is the order they
      already had in the grid — the operator's muscle memory for this
-     page survives the move. Reviewers is mirrored rather than copied
-     here: its left column holds a tag-labels editor Observers does not
-     have, so the columns cannot correspond anyway.
+     page survives the move. (Reviewers then mirrored it; since
+     participant info Item 2 all four pages put `Upload` left.)
 
      **The card is NOT gated; only the panel is** — following Reviewers,
      and corrected mid-rung on the author's instruction. The first draft

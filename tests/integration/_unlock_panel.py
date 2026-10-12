@@ -38,14 +38,22 @@ def panel_columns(html: str) -> tuple[str, str, str]:
 
 
 def assert_lock_at_panel_foot(html: str) -> None:
-    """Open, the one `Lock` control is the panel's own child, after both
-    columns — not inside either stack."""
+    """Open, the one `Lock` control is the panel's direct last child,
+    after both columns — not inside either stack, and not wrapped."""
     panel, left, right = panel_columns(html)
     assert html.count('id="roster-unlock-btn"') == 1, "two Lock controls"
     assert 'class="roster-card-actions"' not in left + right, (
         "Lock sits inside a column rather than at the panel's foot"
     )
-    after_right = panel.index(right) + len(right)
-    assert panel.index('class="roster-card-actions"') > after_right, (
-        "Lock is not after both columns"
+    # After the right stack: only comments and whitespace, then the
+    # actions row, then nothing but the panel's own close tag.
+    rest = panel[panel.index(right) + len(right):]
+    rest = re.sub(r"<!--.*?-->", "", rest, flags=re.S).strip()
+    marker = '<div class="roster-card-actions">'
+    assert rest.startswith(marker), (
+        "Lock is not the panel's next child after both columns"
+    )
+    actions = div_block(rest, marker)
+    assert rest[len(actions):].strip() == "</div>", (
+        "Lock is not the panel's last child"
     )

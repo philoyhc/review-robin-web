@@ -169,13 +169,13 @@ def test_the_lock_control_starts_inside_the_panel_when_it_arrives_open(
     client: TestClient, db: Session, page: str, noun: str, Noun: str
 ) -> None:
     """One element, two homes. Collapsed it is the card's last child;
-    open it belongs under the upload card, inside the panel. The toggle
+    open it is the panel's foot, inside the panel. The toggle
     MOVES it rather than rendering two copies — so a page that arrives
     open has to start it in the panel, or the first Lock click moves it
     out of a place it was never in.
 
-    Read by position: the control is inside `.unlock-right` when open and
-    outside the panel when closed.
+    Read by position: the control is the panel's last child when open
+    (after both columns) and outside the panel when closed.
     """
     rs = _mk(client, db, f"up-l-{page[:4]}")
     _seed(db, rs.id, page)
@@ -188,10 +188,7 @@ def test_the_lock_control_starts_inside_the_panel_when_it_arrives_open(
     )
 
     opened = _card(_get(client, rs, page, "?unlocked=1"), page)
-    right_at = opened.index('class="unlock-stack unlock-right"')
-    assert opened.index('class="roster-card-actions"') > right_at, (
-        "arriving open, the control is not in the panel's right column"
-    )
+    assert_lock_at_panel_foot(opened)
 
 
 @pytest.mark.parametrize("page,noun,Noun", PAGES)

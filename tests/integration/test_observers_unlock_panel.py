@@ -199,9 +199,8 @@ def test_upload_goes_left_and_the_danger_zone_right(
     the order they already had in the grid, so the operator's muscle
     memory for this page survives the move.
 
-    NOT Reviewers' arrangement, which is the mirror of this. Its left
-    column holds a tag-labels editor Observers does not have, so the
-    columns cannot correspond anyway.
+    Since participant info Item 2 the other three pages put `Upload`
+    left too, with their tag-labels editor over the Danger Zone right.
     """
     panel = _panel(_page(client, _session(client, db, "unl-2")))
 

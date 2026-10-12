@@ -320,9 +320,18 @@ Taken 2026-10-12 at `1fa68b24`.
   both columns, and the toggle appends it to the panel;
   `data-lock-home` retired. `tests/integration/_unlock_panel.py` holds
   the one "Lock at the panel's foot" check the four pages share.
+- Reads: one `diff-reviewer` read and one `spec-writer` verify. Both
+  found the old placement in four specs the plan had not named (they
+  joined `Doc impact`) and stale comments in templates and tests; the
+  read also had the shared check pin `Lock` as the panel's direct last
+  child, and the scaffold test file reuse its div-balancer.
 
 ### Doc impact
 
 - `spec/setup_pages.md` — the Unlock panel's column contents on all four pages and `Lock` at the panel's foot; Observers no longer the mirror.
 - `spec/ui_elements.md` — the `.unlock-panel` row: the `Lock` row at the foot.
+- `spec/operator_button_audit.md` — the rows naming a panel column (#39, #41, #43, #45, #178, #179, #269).
+- `spec/visual_style_rrw.md` — the roster pages' arrangement example.
+- `spec/rrw_functional_spec.md` — Observers' panel no longer mirrored.
+- `spec/operator_ui_concept.md` — Observers' differences: no mirrored columns.
 - `guide/things_to_check_in_browser.md` — a section for the reorder.

@@ -26,6 +26,7 @@ from app.db.models import Reviewer, ReviewSession
 
 from ._feature_toggles import enable_observers, enable_relationships
 from ._unlock_panel import assert_lock_at_panel_foot, panel_columns
+from ._unlock_panel import div_block as _div_block
 
 R_CSV = b"ReviewerName,ReviewerEmail\nR1,r1@example.com\nR2,r2@example.com\n"
 
@@ -807,7 +808,7 @@ def test_the_hidden_unlock_panel_is_actually_hidden(client, db):
 
 def test_the_lock_control_ships_as_the_cards_last_child(client, db):
     """Collapsed is the served state, so the markup puts the control at
-    the card's foot. Open, the script moves it into the right column —
+    the card's foot. Open, the script moves it to the panel's foot —
     see the test below."""
     html = _page(client, _with_reviewers(client, db, "rc23"))
     card = re.search(r'id="roster-card".*?(?=<!-- |\n  <div class="card-columns")',
@@ -1525,22 +1526,6 @@ def _add_page(client: TestClient, rs: ReviewSession) -> str:
     assert 'id="reviewers-row-editor"' in response.text, "not in add mode"
     assert 'name="name"' in response.text, "the add row has no fields"
     return _markup(response.text)
-
-
-def _div_block(html: str, marker: str) -> str:
-    """The element opened by `marker`, div-balanced.
-
-    Same reason as `_left_pane`: `.*?</div>` stops at the first close
-    tag, which here is the left column's — so a truncated block would
-    report the editor "outside" the container whatever its real nesting.
-    """
-    start = html.index(marker)
-    depth, i = 1, start + len(marker)
-    for tag in re.finditer(r"<div\b|</div>", html[i:]):
-        depth += 1 if tag.group(0) != "</div>" else -1
-        if depth == 0:
-            return html[start:i + tag.end()]
-    raise AssertionError(f"{marker} never closes")
 
 
 def _panel(html: str) -> str:
