@@ -11,7 +11,8 @@ from app.db.models import ReviewSession
 
 from app.services.participant_info import (
     SelfFieldsError,
-    normalize_reviewer_self_fields,
+    normalize_self_fields,
+    self_fields_columns,
 )
 
 from ._apply_shared import (
@@ -21,6 +22,10 @@ from ._apply_shared import (
     _parse_datetime,
     _parse_json,
 )
+
+#: The Settings CSV's own-entry selections (participant info Items 1 and
+#: 4): the `session.*` key, and the participant it normalizes against.
+_SELF_FIELDS_KEYS = self_fields_columns()
 
 
 #: The ``session.*`` keys applied only where the destination is blank
@@ -93,10 +98,10 @@ def _apply_session_kv(
         parsed = _parse_json(value, default=None)
         plan.session_overrides[key] = parsed if parsed else None
         return
-    if key == "reviewer_self_fields":
-        # participant info Item 1. Blank → ``None`` (the default); a
-        # JSON list of roster field keys otherwise, ``[]`` meaning
-        # nothing. An unknown key is refused rather than dropped.
+    if key in _SELF_FIELDS_KEYS:
+        # participant info Items 1 and 4. Blank → ``None`` (the
+        # default); a JSON list of roster field keys otherwise, ``[]``
+        # meaning nothing. An unknown key is refused rather than dropped.
         if not value:
             plan.session_overrides[key] = None
             return
@@ -108,7 +113,9 @@ def _apply_session_kv(
                 f"expected a JSON list of field keys, got {value!r}"
             )
         try:
-            plan.session_overrides[key] = normalize_reviewer_self_fields(parsed)
+            plan.session_overrides[key] = normalize_self_fields(
+                _SELF_FIELDS_KEYS[key], parsed
+            )
         except SelfFieldsError as exc:
             raise _ParseError(str(exc)) from exc
         return
@@ -158,6 +165,7 @@ def _apply_session_metadata(
         "relationships_enabled",
         "observers_enabled",
         "reviewer_self_fields",
+        "reviewee_self_fields",
         "scheduled_activate_at",
         "responses_release_at",
         "responses_release_until",

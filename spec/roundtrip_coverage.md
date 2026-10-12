@@ -54,7 +54,8 @@ responses. See `spec/rehydrate.md`.
 | `retention_exception`, `retention_overrides` | ✅ | ✅ | Clone copies retention config |
 | **`relationships_enabled`, `observers_enabled`** | ✅ | ✅ | Both paths carry them — a cloned "all"-mode session's copied observer / relationship rows would otherwise be hidden by a `False` toggle |
 | `reviewer_self_fields` | ✅ | ✅ | Force-applied. The Settings CSV row `session.reviewer_self_fields` is a JSON list: blank restores NULL (the default), `[]` restores "nothing", so a cleared selection and an unset one stay distinct. Clone copies the column as it stands |
-| `reviewee_self_fields`, `observer_self_fields` | ❌ | ✅ | Columns with no reader or writer yet. The Settings CSV does not carry them; clone copies them verbatim |
+| `reviewee_self_fields` | ✅ | ✅ | As `reviewer_self_fields`, row `session.reviewee_self_fields`: blank restores NULL (the default), `[]` restores "nothing" |
+| `observer_self_fields` | ❌ | ✅ | Column with no reader or writer yet. The Settings CSV does not carry it; clone copies it verbatim |
 | `assignment_mode` | ❌ | ❌ | Machine-derived: the Settings CSV drops it, and a clone starts NULL because it copies no assignment rows |
 | `status`, `activated_at`, `created_by_user_id` | — | — | Runtime / identity — intentionally reset |
 

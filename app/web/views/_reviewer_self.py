@@ -1,28 +1,38 @@
-"""What a reviewer is shown of their own roster entry (participant info Item 1).
+"""What a participant is shown of their own roster entry, per side.
 
-`guide/participant_info.md` Items 1 and 3. One session-wide selection of
-a reviewer's roster fields, shown to that reviewer after the role pills
-on the reviewer surface and its operator preview, ``/summary`` and the
-pre-open "opens later" page, chosen on the Reviewers
-page's Unlock panel and reported in its roster card's readout row.
+`guide/participant_info.md` Items 1, 3 and 4. The reviewer's functions
+(Item 1: the reviewer surface and its preview, ``/summary`` and the
+pre-open "opens later" page; the Reviewers page's card and readout) and
+the reviewee's (Item 4: ``/results``; the Reviewees page's card and
+readout), each a thin wrapper over ``_participant_self``'s one core.
 
-The selection itself, its default and its storage live in
-``app.services.participant_info``; this module shapes it for the pages.
+The selections themselves, their defaults and their storage live in
+``app.services.participant_info``; this module shapes them for the pages.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass
 
-from app.db.models import Reviewer, ReviewSession
-from app.services import field_labels as field_labels_service
+from app.db.models import Reviewee, Reviewer, ReviewSession
 from app.services.participant_info import (
     REVIEWER_SELF_DEFAULT,
     REVIEWER_SELF_FIELD_KEYS,
     effective_reviewer_self_fields,
+    effective_self_fields,
 )
 
+from ._participant_self import (
+    REVIEWEE_SPEC,
+    REVIEWER_SPEC,
+    SelfFieldChip,
+    SelfFieldValue,
+    self_chips,
+    self_kept,
+    self_label,
+    self_line,
+    self_readout,
+)
 from ._setup import ColumnReadout
 
 __all__ = [
@@ -30,6 +40,8 @@ __all__ = [
     "REVIEWER_SELF_FIELD_KEYS",
     "SelfFieldChip",
     "SelfFieldValue",
+    "reviewee_self_card_context",
+    "reviewee_self_line_for",
     "reviewer_self_card_context",
     "reviewer_self_chips",
     "reviewer_self_kept",
@@ -39,48 +51,13 @@ __all__ = [
     "reviewer_self_readout",
 ]
 
-# `reviewer_column_state` names its readouts by the preview table's chip
-# slots; the selection uses the model's column names.
-_SLOT_TO_KEY = {
-    "name": "name",
-    "email": "email",
-    "profile": "profile_link",
-    "tag-1": "tag_1",
-    "tag-2": "tag_2",
-    "tag-3": "tag_3",
-}
 
-
-@dataclass(frozen=True)
-class SelfFieldChip:
-    """One selector chip on the Unlock panel's card."""
-
-    key: str
-    label: str
-    selected: bool
-
-
-@dataclass(frozen=True)
-class SelfFieldValue:
-    """One field of the reviewer's own line on the surface."""
-
-    key: str
-    label: str
-    value: str
+# ── Reviewers (Items 1 and 3) ────────────────────────────────────────
 
 
 def reviewer_self_label(review_session: ReviewSession, key: str) -> str:
-    """The field's operator-facing name: a literal for the three fixed
-    columns, the friendly label for a tag, as the roster index reads."""
-    if key == "name":
-        return "Name"
-    if key == "email":
-        return "Email"
-    if key == "profile_link":
-        return "Profile"
-    return field_labels_service.resolve_pair(
-        review_session, "reviewer", key
-    ).friendly
+    """The field's operator-facing name, as the roster index reads."""
+    return self_label(REVIEWER_SPEC, review_session, key)
 
 
 def reviewer_self_chips(
@@ -92,30 +69,14 @@ def reviewer_self_chips(
     Email always, Profile and each tag only while some row holds a value,
     each already under its operator-facing label.
     """
-    chosen = set(selected)
-    return [
-        SelfFieldChip(
-            key=_SLOT_TO_KEY[r.slot],
-            label=r.label,
-            selected=_SLOT_TO_KEY[r.slot] in chosen,
-        )
-        for r in readouts
-        if r.slot in _SLOT_TO_KEY
-    ]
+    return self_chips(REVIEWER_SPEC, readouts, selected)
 
 
 def reviewer_self_kept(
     chips: Iterable[SelfFieldChip], selected: Iterable[str]
 ) -> list[str]:
-    """Selected keys the card offers no chip for (no data in that
-    column), in roster order: the card posts them back as hidden
-    ``keep`` inputs so a save does not drop them."""
-    offered = {chip.key for chip in chips}
-    chosen = set(selected)
-    return [
-        key for key in REVIEWER_SELF_FIELD_KEYS
-        if key in chosen and key not in offered
-    ]
+    """Selected keys the card offers no chip for, in roster order."""
+    return self_kept(REVIEWER_SPEC, chips, selected)
 
 
 def reviewer_self_card_context(
@@ -142,12 +103,7 @@ def reviewer_self_readout(
     review_session: ReviewSession, selected: Iterable[str]
 ) -> list[str]:
     """The roster card's `Reviewers see:` pills, in roster order."""
-    chosen = set(selected)
-    return [
-        reviewer_self_label(review_session, key)
-        for key in REVIEWER_SELF_FIELD_KEYS
-        if key in chosen
-    ]
+    return self_readout(REVIEWER_SPEC, review_session, selected)
 
 
 def reviewer_self_line(
@@ -157,22 +113,7 @@ def reviewer_self_line(
 ) -> list[SelfFieldValue]:
     """The selected fields of this reviewer's own row, in roster order;
     a field empty on the row is skipped."""
-    chosen = set(selected)
-    line: list[SelfFieldValue] = []
-    for key in REVIEWER_SELF_FIELD_KEYS:
-        if key not in chosen:
-            continue
-        value = getattr(reviewer, key) or ""
-        if not value.strip():
-            continue
-        line.append(
-            SelfFieldValue(
-                key=key,
-                label=reviewer_self_label(review_session, key),
-                value=value,
-            )
-        )
-    return line
+    return self_line(REVIEWER_SPEC, review_session, reviewer, selected)
 
 
 def reviewer_self_line_for(
@@ -183,4 +124,35 @@ def reviewer_self_line_for(
     after the ``Reviewer`` pill (participant info Items 1 and 3)."""
     return reviewer_self_line(
         review_session, reviewer, effective_reviewer_self_fields(review_session)
+    )
+
+
+# ── Reviewees (Item 4) ───────────────────────────────────────────────
+
+
+def reviewee_self_card_context(
+    review_session: ReviewSession, readouts: Iterable[ColumnReadout]
+) -> dict[str, object]:
+    """The Reviewees page's card chips and kept keys and its `Reviewees
+    see:` pills, as `reviewer_self_card_context` gives the Reviewers
+    page's — under the same three keys, since each page has one card."""
+    selected = effective_self_fields(review_session, "reviewee")
+    chips = self_chips(REVIEWEE_SPEC, readouts, selected)
+    return {
+        "self_field_chips": chips,
+        "self_field_kept": self_kept(REVIEWEE_SPEC, chips, selected),
+        "self_field_readout": self_readout(REVIEWEE_SPEC, review_session, selected),
+    }
+
+
+def reviewee_self_line_for(
+    review_session: ReviewSession, reviewee: Reviewee
+) -> list[SelfFieldValue]:
+    """The reviewee's own line on ``/results``, after the role pills,
+    under the session's selection, stored or default."""
+    return self_line(
+        REVIEWEE_SPEC,
+        review_session,
+        reviewee,
+        effective_self_fields(review_session, "reviewee"),
     )

@@ -140,11 +140,12 @@
 
   {# ------------------------------------------------------------------
      19P.3 rung 4 — the roster card: what the roster holds, and an Unlock
-     panel holding the three controls that change it.
+     panel holding the controls that change it.
 
      Every roster page's arrangement (participant info Item 2): `Upload`
      on the left, the tag-labels editor over the `Danger Zone` on the
-     right, and `Lock` under the right column's last card.
+     right, and `Lock` ending the right column. Here the own-entry card
+     (Item 4) sits above `Upload`.
      ------------------------------------------------------------------ #}
   <div class="card roster-card" id="roster-card">
     <div class="roster-readouts">
@@ -168,6 +169,19 @@
           </span>
         {% endif %}
       </div>
+      {# participant info Item 4 — what a reviewee sees of their own
+         roster entry, after the role pills on `/results`. In every
+         state, as Reviewers' `Reviewers see:`. #}
+      <div class="roster-readout" data-reviewee-self-readout>
+        <span class="roster-readout-label">Reviewees see:</span>
+        <span class="roster-readout-values">
+          {% for label in self_field_readout %}
+            <span class="pill pill-count">{{ label }}</span>
+          {% else %}
+            <span class="roster-readout-empty">none</span>
+          {% endfor %}
+        </span>
+      </div>
     </div>
 
     {# Suppressed, not disabled, when the session is not editable:
@@ -176,8 +190,67 @@
        above stay — they are informational in every state. #}
     {% if unlock_available %}
       <div class="unlock-panel" id="roster-unlock-panel"{% if not panel_open %} hidden{% endif %}>
-        {# Left column: the upload card (participant info Item 2). #}
+        {# Left column: what reviewees see of themselves (participant
+           info Item 4) over the upload card (Item 2). #}
         <div class="unlock-stack">
+          {# participant info Item 4 — what reviewees see of their own
+             entry, after the role pills on `/results`. As the Reviewers
+             card: one chip per populated column (Name and Email always);
+             a selected key the card cannot offer rides as a hidden `keep`
+             input; Save / Cancel wait for a chip to move. #}
+          <section class="card" id="reviewee-self-fields"
+                   aria-labelledby="reviewee-self-fields-h"
+                   data-reviewee-self-card>
+            <h2 id="reviewee-self-fields-h">What reviewees see of their own entry</h2>
+            <form method="post" action="{{ reviewees_base_url }}/self-fields"
+                  id="reviewee-self-fields-form" autocomplete="off">
+              <div class="reviewer-self-chips">
+                {% for chip in self_field_chips %}
+                  <label class="pill pill-count tag-chip">
+                    <input type="checkbox" class="visually-hidden"
+                           name="fields" value="{{ chip.key }}"
+                           {% if chip.selected %}checked{% endif %}>{{ chip.label }}</label>
+                {% endfor %}
+              </div>
+              {% for key in self_field_kept %}
+                <input type="hidden" name="keep" value="{{ key }}">
+              {% endfor %}
+              <div class="unlock-col-actions">
+                <button type="button" class="btn secondary"
+                        data-reviewee-self-cancel disabled>Cancel</button>
+                <button type="submit" class="btn secondary"
+                        data-reviewee-self-save disabled>Save</button>
+              </div>
+            </form>
+            <script>
+              (function () {
+                var form = document.getElementById("reviewee-self-fields-form");
+                if (!form) return;
+                var saveBtn = form.querySelector("[data-reviewee-self-save]");
+                var cancelBtn = form.querySelector("[data-reviewee-self-cancel]");
+                var boxes = form.querySelectorAll('input[type="checkbox"]');
+                var initial = Array.prototype.map.call(boxes, function (b) {
+                  return b.checked;
+                });
+                function refresh() {
+                  var dirty = Array.prototype.some.call(boxes, function (b, i) {
+                    return b.checked !== initial[i];
+                  });
+                  saveBtn.disabled = !dirty;
+                  cancelBtn.disabled = !dirty;
+                }
+                Array.prototype.forEach.call(boxes, function (b) {
+                  b.addEventListener("change", refresh);
+                });
+                cancelBtn.addEventListener("click", function () {
+                  Array.prototype.forEach.call(boxes, function (b, i) {
+                    b.checked = initial[i];
+                  });
+                  refresh();
+                });
+              })();
+            </script>
+          </section>
           <section class="card" id="upload-csv" aria-labelledby="reviewees-upload-h">
             <h2 id="reviewees-upload-h">Upload Reviewees</h2>
             <p class="form-help">
