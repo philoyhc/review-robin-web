@@ -516,6 +516,13 @@ Taken 2026-10-12 at `ddd589d3`.
   posted. Save disables until there is an email and no half-filled cell.
   Codex's #2988 finding (a rejected edit emptied the builder) missed that
   merge and rides here.
+  Codex on #2989: a stale key (a field or operand the dropdown lacks)
+  loaded into a *disabled* option, which the browser leaves out of the
+  submission, so a rename cleared or scrambled the rule — the option is
+  selectable now, and `+` does not copy it into a new cell; and a typed
+  operator with no value (`CONTAINS ""` matches every row) was refused
+  only by the route — `CohortRule` now refuses it under every writer,
+  the Observers CSV import included.
 
 ### PR ladder
 

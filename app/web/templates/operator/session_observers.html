@@ -872,6 +872,12 @@
         clone.querySelectorAll('input[type="text"]').forEach(function (i) {
           i.value = '';
         });
+        // A stale key's synthetic option belongs to the cell it was
+        // loaded into: a new cell offers only the live dropdown, or `+`
+        // would make a key the dropdown omits pickable.
+        clone.querySelectorAll('option[data-observer-stale]').forEach(function (o) {
+          o.remove();
+        });
         clone.querySelectorAll('select').forEach(function (s) {
           s.selectedIndex = 0;
         });
@@ -998,13 +1004,15 @@
           if (valInput) valInput.style.display = useTag ? 'none' : '';
         }
       };
-      // Insert a disabled synthetic option carrying ``value`` so
-      // a saved rule referencing a tag slot whose friendly label
-      // has since been cleared (and is therefore missing from
-      // the live dropdown) still loads visibly into the editor.
-      // The operator sees the stale canonical key suffixed with
-      // ``(missing label)``, can't re-select it (disabled), and
-      // overwrites on save by picking a valid option.
+      // Insert a synthetic option carrying ``value`` so a saved rule
+      // referencing a slot the live dropdown lacks (a tag whose friendly
+      // label was cleared, a pair-context tag, an imported operand)
+      // still loads visibly into the editor, suffixed ``(missing
+      // label)``. Selectable, not disabled: a selected disabled option
+      // is left out of the form submission, so a rename saved from the
+      // row editor would have cleared or scrambled the stored rule
+      // (Codex on #2989). The stored key is a valid one, so it
+      // round-trips unchanged unless the operator picks another.
       function observerEnsureStaleOption(selectEl, value) {
         if (!selectEl || !value) return;
         for (var i = 0; i < selectEl.options.length; i++) {
@@ -1013,7 +1021,7 @@
         var opt = document.createElement('option');
         opt.value = value;
         opt.text = value + ' (missing label)';
-        opt.disabled = true;
+        opt.setAttribute('data-observer-stale', '');
         selectEl.appendChild(opt);
       }
 

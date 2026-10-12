@@ -123,6 +123,14 @@ class CohortRule(BaseModel):
                     f"{self.operand_tag!r}; allowed: "
                     f"{sorted(ALLOWED_RIGHT_FIELDS)}"
                 )
+        elif not self.operand_value.strip():
+            # A typed operator with nothing typed: `CONTAINS ""` matches
+            # every row, so it is refused here, under every writer — the
+            # row editor, the bulk Save and the CSV import alike
+            # (operator pages Item 4; Codex on #2989).
+            raise ValueError(
+                f"operator {self.op!r} requires operand_value"
+            )
         return self
 
 

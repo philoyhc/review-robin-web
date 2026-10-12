@@ -151,3 +151,61 @@ def test_save_waits_for_an_email_and_a_finished_rule(
     rule = _stored_rule(live_server.database_url, "gate@example.org")
     assert rule["rules"][0]["op"] == "IS"
     assert rule["rules"][0]["operand_value"] == "Red"
+
+
+def test_a_rule_the_dropdown_lacks_survives_a_rename(
+    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+) -> None:
+    """Codex on #2989: a stale key loaded into a disabled
+    option, which the browser leaves out of the submission — so a rename
+    saved from the row editor cleared or scrambled the rule. The option
+    is selectable now, and the rule round-trips unchanged."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Observer
+
+    session_id = new_session()
+    observer_id = _seed_observer(live_server.database_url, session_id)
+    stale = {
+        "combinator": "AND",
+        "rules": [{
+            # The pair-level join is not in the dropdown at all.
+            "field": "pair_context.tag1", "op": "IS THE SAME AS",
+            "operand_tag": "reviewer.tag2", "operand_value": "",
+        }],
+    }
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            db.get(Observer, observer_id).cohort_rule = stale
+            db.commit()
+    finally:
+        engine.dispose()
+
+    page.goto(f"/operator/sessions/{session_id}/observers?edit_id={observer_id}")
+    builder = page.locator(
+        "[data-observer-edit-cohort] [data-observer-cohort-builder]"
+    )
+    # `+` clones the first cell, but not its stale option: a key the
+    # dropdown omits is not offered in a new cell.
+    builder.locator("[data-observer-rule-add]").click()
+    new_cell = builder.locator("[data-observer-rule-cell]").nth(1)
+    assert new_cell.locator("option[data-observer-stale]").count() == 0
+    new_cell.locator("[data-observer-rule-remove]").click()
+    page.locator('input[name="display_name"][form="observer-edit-form"]').fill(
+        "Renamed")
+    with page.expect_navigation():
+        page.locator("[data-observer-edit-save]").click()
+
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            name, rule = db.execute(
+                select(Observer.display_name, Observer.cohort_rule)
+                .where(Observer.id == observer_id)
+            ).one()
+    finally:
+        engine.dispose()
+    assert name == "Renamed"
+    assert rule == stale

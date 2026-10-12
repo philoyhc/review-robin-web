@@ -125,16 +125,20 @@ def test_field_operator_accepts_cross_roster_operand() -> None:
     assert rule.operand_tag == "reviewee.tag2"
 
 
-def test_value_operator_allows_empty_value() -> None:
-    rule = CohortRule.model_validate(
-        {
-            "field": "reviewer.tag1",
-            "op": "CONTAINS",
-            "operand_tag": "",
-            "operand_value": "",
-        }
-    )
-    assert rule.operand_value == ""
+@pytest.mark.parametrize("value", ["", "   "])
+def test_value_operator_requires_a_value(value: str) -> None:
+    """`CONTAINS ""` matches every row, so a typed operator with nothing
+    typed is refused under every writer (operator pages Item 4; Codex on
+    #2989). It was allowed until then."""
+    with pytest.raises(ValidationError):
+        CohortRule.model_validate(
+            {
+                "field": "reviewer.tag1",
+                "op": "CONTAINS",
+                "operand_tag": "",
+                "operand_value": value,
+            }
+        )
 
 
 def test_extra_keys_rejected() -> None:
