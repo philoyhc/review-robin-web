@@ -672,7 +672,9 @@ def test_both_panel_cards_right_align_their_action_with_no_inline_style(
         f"{card[max(0, card.find('style=') - 120):card.find('style=') + 80]!r}"
     )
     assert "btn-pair" not in card, "the upload action row reverted to `.btn-pair`"
-    # Both cards — Upload and Delete-all — use the panel's own row.
-    assert card.count('class="unlock-col-actions"') == 2, (
-        "one of the panel's two cards does not right-align its action"
+    # Upload and Delete-all use the panel's own row; on Reviewees so does
+    # the own-entry card (participant info Item 4) above Upload.
+    expected = 3 if page == "reviewees" else 2
+    assert card.count('class="unlock-col-actions"') == expected, (
+        "one of the panel's cards does not right-align its action"
     )

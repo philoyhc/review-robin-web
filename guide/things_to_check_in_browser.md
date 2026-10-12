@@ -362,3 +362,16 @@ section (git history keeps it), so this file lists only what is owed.
   appears below the roster card while the row is open.
 - [ ] **Unlocked.** On a draft, Unlock: the labels card is in the panel
   and saves as before.
+
+## A reviewee's own entry: the scaffold (participant info Item 4, rung 2)
+
+- [ ] **Readout.** On Reviewees, the roster card's row ends with
+  `Reviewees see:` Name, Email, Profile, locked or unlocked.
+- [ ] **The card.** On a draft, Unlock Reviewees: "What reviewees see of
+  their own entry" sits above `Upload Reviewees` in the left column,
+  chips Name, Email, Profile selected and any tag unselected; Save and
+  Cancel stay disabled (rung 3 wires them).
+- [ ] **Results.** As a reviewee with a released result, `/results`
+  shows the name, email and Profile link (or `•••`) after the
+  `Reviewee` pill, muted, as the reviewer pages show a reviewer's.
+

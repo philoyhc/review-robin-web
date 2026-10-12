@@ -928,6 +928,13 @@ async def _handle_import(
                 column_state = views.reviewee_column_state(db, review_session)
                 col_data = column_state.col_data
                 col_readouts = column_state.readouts
+                # participant info Item 4 — Item 1's lesson, kept: this
+                # path owes the own-entry card and readout their keys.
+                context.update(
+                    views.reviewee_self_card_context(
+                        review_session, col_readouts
+                    )
+                )
             context.update(
                 {
                     "total_row_count": len(list_items),

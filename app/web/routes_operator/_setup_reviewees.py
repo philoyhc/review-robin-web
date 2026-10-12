@@ -318,6 +318,12 @@ def _render_reviewees_page(
             # concurrent delete renders a chip reading `Tag 1 (0)`.
             "col_data": column_state.col_data,
             "col_readouts": column_state.readouts,
+            # participant info Item 4 — what reviewees see of their own
+            # entry on `/results`: the Unlock panel's chips and the
+            # readout row's pills (rung 2, the scaffold: the default).
+            **views.reviewee_self_card_context(
+                review_session, column_state.readouts
+            ),
             "edit_id": edit_id,
             "add_mode": add_mode,
             "edit_values": edit_values,

@@ -21,9 +21,10 @@
 
    Optional: ``reviewer_self_fields`` (``views.reviewer_self_line_for``;
    the reviewer surface, the summary and the pre-open "opens later"
-   page) — the reviewer's own roster fields, inline after the LAST
-   pill so they never split the role pills of a reviewer who holds
-   other roles too (``guide/participant_info.md`` Items 1 and 3). #}
+   page) or ``reviewee_self_fields`` (``views.reviewee_self_line_for``;
+   ``/results``) — the participant's own roster fields, inline after the
+   LAST pill so they never split the role pills of someone who holds
+   other roles too (``guide/participant_info.md`` Items 1, 3 and 4). #}
 {% from "_partials/profile_value.html" import profile_value %}
 {% if role_chips %}
   <div class="rs-role-nav">
@@ -37,9 +38,19 @@
         <span class="pill pill-role-{{ chip.role }} rs-role-nav-muted">{{ label }}</span>
       {% endif %}
     {% endfor %}
+    {# One own-entry line per page: the reviewer's on the reviewer
+       pages, the reviewee's on `/results` (Item 4). The data attribute
+       names whose it is. #}
     {% if reviewer_self_fields %}
-      <span class="rs-self-info" data-reviewer-self-info>
-        {%- for field in reviewer_self_fields -%}
+      {% set self_fields, self_role = reviewer_self_fields, "reviewer" %}
+    {% elif reviewee_self_fields %}
+      {% set self_fields, self_role = reviewee_self_fields, "reviewee" %}
+    {% else %}
+      {% set self_fields, self_role = [], "" %}
+    {% endif %}
+    {% if self_fields %}
+      <span class="rs-self-info" data-{{ self_role }}-self-info>
+        {%- for field in self_fields -%}
           {%- if not loop.first %}<span class="rs-self-info-sep" aria-hidden="true"> · </span>{% endif -%}
           {%- if field.key == "profile_link" -%}
             {{ profile_value(field.value, "Profile") }}

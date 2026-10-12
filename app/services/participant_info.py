@@ -30,6 +30,23 @@ REVIEWER_SELF_FIELD_KEYS: tuple[str, ...] = (
 #: The selection while none is stored: tags can be shown but start off.
 REVIEWER_SELF_DEFAULT: tuple[str, ...] = ("name", "email", "profile_link")
 
+#: What a reviewee can be shown of themselves (Item 4), in roster order.
+REVIEWEE_SELF_FIELD_KEYS: tuple[str, ...] = (
+    "name",
+    "email_or_identifier",
+    "profile_link",
+    "tag_1",
+    "tag_2",
+    "tag_3",
+)
+
+#: The reviewees' selection while none is stored, as the reviewers'.
+REVIEWEE_SELF_DEFAULT: tuple[str, ...] = (
+    "name",
+    "email_or_identifier",
+    "profile_link",
+)
+
 
 class SelfFieldsError(ValueError):
     """A selection named a key outside ``REVIEWER_SELF_FIELD_KEYS``."""

@@ -556,6 +556,17 @@ Taken 2026-10-12 at `5761ab7e`.
 
 - Observers: Item 5.
 
+### Status
+
+- Rung 2 (2026-10-12), the scaffold: `views._participant_self`, one
+  core parameterized by a `SelfSpec` per participant, with
+  `views._reviewer_self`'s reviewer functions now thin wrappers over it
+  and the reviewee's beside them; the reviewee keys and default in
+  `participant_info`; the inert card, the `Reviewees see:` readout (the
+  failed-import re-render included) and the `/results` line, all at the
+  default; `_role_chips.html` renders whichever own line the page passes,
+  under `data-reviewer-self-info` or `data-reviewee-self-info`.
+
 ### Doc impact
 
 - `spec/participant_model.md` — the reviewee's own line on `/results`.

@@ -32,6 +32,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewee, ReviewSession, User
 from app.db.session import get_db
 from app.services import reviewees as reviewees_service
+from app.web import views
 from app.web.deps import (
     get_or_create_user,
     require_reviewee_with_current_grant,
@@ -76,6 +77,11 @@ def reviewee_results(
                 user=user,
                 review_session=review_session,
                 active_role="reviewee",
+            ),
+            # participant info Item 4 — the reviewee's own roster
+            # fields after the role pills.
+            "reviewee_self_fields": views.reviewee_self_line_for(
+                review_session, reviewee
             ),
             "sections": context.sections,
             "acknowledged_at": reviewee.results_acknowledged_at,

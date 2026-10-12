@@ -168,6 +168,19 @@
           </span>
         {% endif %}
       </div>
+      {# participant info Item 4 — what a reviewee sees of their own
+         roster entry, after the role pills on `/results`. In every
+         state, as Reviewers' `Reviewers see:`. #}
+      <div class="roster-readout" data-reviewee-self-readout>
+        <span class="roster-readout-label">Reviewees see:</span>
+        <span class="roster-readout-values">
+          {% for label in self_field_readout %}
+            <span class="pill pill-count">{{ label }}</span>
+          {% else %}
+            <span class="roster-readout-empty">none</span>
+          {% endfor %}
+        </span>
+      </div>
     </div>
 
     {# Suppressed, not disabled, when the session is not editable:
@@ -176,8 +189,31 @@
        above stay — they are informational in every state. #}
     {% if unlock_available %}
       <div class="unlock-panel" id="roster-unlock-panel"{% if not panel_open %} hidden{% endif %}>
-        {# Left column: the upload card (participant info Item 2). #}
+        {# Left column: what reviewees see of themselves (participant
+           info Item 4) over the upload card (Item 2). #}
         <div class="unlock-stack">
+          {# participant info Item 4 rung 2 — SCAFFOLD, inert: the chips
+             sit at the default and toggle only on screen, nothing posts,
+             and Save / Cancel stay disabled. Rung 3 stores the selection.
+             One chip per populated column (Name and Email always), as the
+             roster index reads. #}
+          <section class="card" id="reviewee-self-fields"
+                   aria-labelledby="reviewee-self-fields-h"
+                   data-reviewee-self-card>
+            <h2 id="reviewee-self-fields-h">What reviewees see of their own entry</h2>
+            <div class="reviewer-self-chips">
+              {% for chip in self_field_chips %}
+                <label class="pill pill-count tag-chip">
+                  <input type="checkbox" class="visually-hidden"
+                         name="fields" value="{{ chip.key }}"
+                         {% if chip.selected %}checked{% endif %}>{{ chip.label }}</label>
+              {% endfor %}
+            </div>
+            <div class="unlock-col-actions">
+              <button type="button" class="btn secondary" disabled>Cancel</button>
+              <button type="button" class="btn secondary" disabled>Save</button>
+            </div>
+          </section>
           <section class="card" id="upload-csv" aria-labelledby="reviewees-upload-h">
             <h2 id="reviewees-upload-h">Upload Reviewees</h2>
             <p class="form-help">
