@@ -161,3 +161,116 @@ Taken 2026-10-12 at `1c08ae3a` (#2997).
 
 - `spec/quick_setup_card_spec.md` — "Per-slot dispatch": check everything, then save everything, in one unit; "Result reporting": its closing paragraph (nothing applies when a slot fails); "Validation scope": files uploaded together; "New-session variant": its Failure mode (Item 1).
 - `spec/csv_contracts.md` — §3.1 "Cross-roster identity": files uploaded together are checked against each other, not against the rosters they replace; also the function table's incoming-set entry, the Relationships notes on incoming rosters, and the Create tag note "bails out at an earlier Quick Setup slot" (Item 1).
+
+---
+
+## Item 2 — Observers on Home's card, and an upload turns its tab on
+
+### Opportunity
+
+Home's Quick Setup card shows the Observers slot only while
+`observers_enabled` is on, while the New session card always shows it.
+Relationships shows on both whatever `relationships_enabled` says. And
+an Observers or Relationships file that saves while its toggle is off
+leaves rows behind a hidden tab: Create already does this for observers
+(author, 2026-10-12).
+
+### Decision
+
+The author's ruling, 2026-10-12:
+
+- **Home always shows the Observers slot**, as New session does. Both
+  cards then show the same five slots.
+- **A Quick Setup upload that populates Observers or Relationships turns
+  that toggle on**, if it was off. This applies on Home and on Create.
+
+**Rejected:** showing each slot only while its toggle is on. That
+needs a script on New session (its toggles sit in the same form), a
+server rule for a file posted while its toggle is off, and a card whose
+slot count changes. The upload-turns-it-on rule instead matches the
+lock-on-data invariant `update_session` already enforces
+(`spec/participant_model.md`), where a toggle can't be turned off while
+its roster has rows.
+
+### Semantics
+
+- **Populates** means the file saved at least one row. A header-only
+  file replaces the roster with nothing and leaves the toggle alone.
+- **Inside the unit:** the toggles are set inside Item 1's
+  `unit_of_work.atomic`, after the last slot (Settings included). So a
+  refusal anywhere leaves them unchanged too, and a Settings file saying
+  `observers_enabled=false` can't hide the rows that the same submit
+  just saved.
+- **Audit:** each change writes `session.feature_toggled` (the event the
+  Session details toggle writes), with the change and the upload as its
+  reason.
+- **Validated sessions:** no extra demotion. The roster import in the
+  same submit already demotes a validated session.
+- **Not covered:** a Settings file alone turning a toggle off while rows
+  exist. That is today's force-applied settings behavior, unchanged here.
+
+### Judgment calls — decided
+
+- **The toggle turns on and nothing else changes.** No banner or message
+  says so: the tab simply appears.
+- **The Home card's description always lists observers**, and its
+  layout keeps one fixed five-slot split.
+
+### Blast radius (measured)
+
+Taken 2026-10-12 at `7acfac1e`.
+
+- `observers_enabled` appears 5 times in `app/web/views/_quick_setup.py`
+  (`grep -c`): the Home slot gate and the description phrase.
+- One template comment describes the conditional split
+  (`app/web/templates/operator/partials/_quick_setup_card.html`).
+- `tests/integration/test_quick_setup_observers_slot.py` asserts the
+  hidden slot while observers are off; that test inverts.
+- Live prose naming the conditional slot (`grep -rn "Observers conditional\|Observers slot when\|Observers when" spec README.md`, archive aside):
+  `spec/quick_setup_card_spec.md` "Slots", `spec/session_home.md` (prose and lifecycle table),
+  `spec/csv_contracts.md`, `spec/README.md`, `spec/rrw_functional_spec.md`, `README.md`.
+- `session.feature_toggled` has 1 schema entry in `app/services/audit.py`.
+
+### PR ladder
+
+1. **This plan item** (prose).
+2. **Build.** The Home slot is always shown, and the save unit turns the
+   toggles on. Tests cover:
+   - the slot showing with observers off;
+   - each toggle turning on from Home and from Create;
+   - a header-only file leaving the toggle off;
+   - a refusal leaving the toggles unchanged;
+   - a Settings file saying `false` in the same submit;
+   - the audit event.
+
+   Plus the spec, a browser-check section, and a `diff-reviewer` read
+   on the rung's own diff, since it is the item's only build rung.
+3. **Close**, with Item 1's close if they land together.
+
+### Definition of done
+
+- By test: Home's card has five slots whatever the toggles say. A
+  Relationships or Observers upload that saves rows turns its toggle
+  on, from Home and from Create, inside the unit.
+- `### Doc impact` current; `spec-writer` flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- None open (author, 2026-10-12; Decision).
+
+### Out of scope
+
+- Gating slots on their toggles (rejected above).
+- Settings-only toggle changes over existing rows.
+
+### Doc impact
+
+- `spec/quick_setup_card_spec.md` — "Slots": Observers always renders on both variants; "Per-slot dispatch" or "Result reporting": an upload that populates Observers or Relationships turns its toggle on; "New-session variant": the Observers bullet (Item 2).
+- `spec/participant_model.md` — the "Lock-on-data invariant": the converse, that a Quick Setup upload which populates a roster turns its flag on (Item 2).
+- `spec/session_home.md` — the Quick Setup card: five slots whatever the toggles, in its prose and its lifecycle table (Item 2).
+- `spec/csv_contracts.md` — the inbound-paths row for the Quick Setup slots (Item 2).
+- `spec/README.md` — the `quick_setup_card_spec.md` row (Item 2).
+- `spec/rrw_functional_spec.md` — the Session Home Quick Setup card bullet (Item 2).
+- `spec/settings_inventory.md` — the `relationships_enabled` / `observers_enabled` rows: also turned on by an upload (Item 2).
+- `README.md` — the Quick Setup card bullet (Item 2).
