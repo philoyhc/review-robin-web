@@ -506,58 +506,42 @@ Taken 2026-10-12 at `ddd589d3`.
 - Tests: `grep -rln "observers/create\|observers_create\|observers_update" tests --include=*.py | wc -l` → 10;
   `grep -rln "cohort-rule\|cohort_rule_field" tests --include=*.py` → 8 files.
 
-### Status
+### Status — closed 2026-10-12
 
-- Rung 2 (2026-10-12), the scaffold: the builder's markup is one macro,
-  `cohort_builder(form_id)`, rendered into the selection expander's
-  `<template>` (bulk form) and the row editor's bar (edit form), which
-  now splits in two panes as the expander does. The rule rides as JSON
-  on the pane and `window.observerFillRule`, now shared with the
-  expander, loads it; the builder's handlers render whenever the page is
-  not archived. The routes ignore the fields: Save saves the row alone.
-- Rung 3 (2026-10-12), the write and the gate: `create_observer` /
-  `update_observer` take `cohort_rule`, validated before any write and
-  committed with the row (`observer.cohort_rule_assigned` beside the row's
-  event, one correlation id; none when unchanged; never demotes
-  `validated`). The routes read the builder (`_row_editor_rule`): blank
-  cells dropped, half-filled refused with a 400 that keeps what was
-  posted. Save disables until there is an email and no half-filled cell.
-  Codex's #2988 finding (a rejected edit emptied the builder) missed that
-  merge and rides here.
-  Codex on #2989: a stale key (a field or operand the dropdown lacks)
-  loaded into a *disabled* option, which the browser leaves out of the
-  submission, so a rename cleared or scrambled the rule — the option is
-  selectable now, and `+` does not copy it into a new cell; and a typed
-  operator with no value (`CONTAINS ""` matches every row) was refused
-  only by the route — `CohortRule` now refuses it under every writer,
-  the Observers CSV import included.
-- Rung 4 (2026-10-12), `Edit` opens the editor: the expander's builder,
-  its `<template>`, dirty gate and discard guard are gone; `Edit` is live
-  at any arity (`?edit_id=` for one row, `?rule_id=…` for several). The
-  several-row editor hangs under the last selected row, the rows
-  read-only, loading a shared rule or none with the "different cohort
-  rules" note, and posts `/observers/cohort-rule`, which now reads cells
-  as the row editor does (blank clears, half-filled 400s). The editor
-  took over the page's leave guard (`rrwLeaveWillPrompt`), now covering
-  row fields too. A browser test caught Save disabled in rule-only mode
-  (no email field read as an empty one); fixed before push.
-- One cumulative `diff-reviewer` read (from `af77fa0b`, at rung 4) found:
-  a stale cohort key loaded into a *disabled* option, which browsers
-  leave out of the submission, so a rename cleared or scrambled the rule
-  (high); the several-row Save live over differing rules; the spec's
-  route gate claiming a looser gate than the bulk routes (false — all use
-  `_require_not_archived`); NULL vs the empty rule set compared three
-  ways; `Edit` dropping the filter and page; a leave after a rejected
-  save not prompting; stale comments. All fixed in rung 4: the option is
-  selectable, Save waits for a change there, `same_cohort_rule` is the
-  one comparison (bulk saves skip unchanged observers too), `Edit`
-  carries the view, `cohort_rule_signature` retired. A focused re-read of
-  the fixes found `+` copying a stale option into a new cell, where it
-  became pickable (fixed: the clone strips it, on #2989 too), the
-  several-row gate being form- not meaning-based (kept; a judgment call
-  above), two stale wordings and the settings inventory's "no rule"
-  row (fixed), and thin coverage of `Edit` keeping the view and of the
-  rejected-save guard (tests added).
+Shipped in four rungs (#2987 plan, #2988 scaffold, #2989 the write and
+the gate, #2990 `Edit` opens the editor); rung 4 was added by the
+author's amendment at rung 3. The author's browser check passed
+2026-10-12.
+
+- **Diverged from the plan:** the selection expander lost its builder
+  (the amendment); `Edit` is live at any arity, one row opening the row
+  editor and several the builder alone, which posts
+  `/observers/cohort-rule` and waits for a change. The row editor took
+  over the page's leave guard (`rrwLeaveWillPrompt`).
+- **Built:** `cohort_builder(form_id, blank_field)`, one macro;
+  `create_observer` / `update_observer` take the rule, validated before
+  any write, committed with the row (`observer.cohort_rule_assigned`
+  under one correlation id, none when unchanged, never demoting
+  `validated`); blank cells dropped, half-filled ones refused (400
+  re-render); `CohortRule` refuses a typed operator with no value under
+  every writer; `same_cohort_rule` the one comparison (NULL and an empty
+  set alike); `views.rule_edit_state` the several-row editor's state
+  (Codex on #2990: it had been computed in the route).
+- **Reads:** one cumulative `diff-reviewer` read from `af77fa0b` at rung
+  4 and a focused re-read of its fixes, plus one of the Codex fix. They
+  found a stale key loading into a *disabled* option (left out of the
+  submission, so a rename cleared the rule: high), the several-row Save
+  live over differing rules, NULL vs an empty set compared three ways,
+  `Edit` dropping the filter and page, a rejected save not arming the
+  leave guard, `+` copying a stale option, and stale prose. All fixed;
+  the form-based several-row gate kept as a judgment call.
+- **Found after merge:** #2991's CI caught a timing race in a rung-4
+  browser test (Save read once, before the `setTimeout` re-check); the
+  test now waits, fixed there.
+- **`spec-writer` at close:** one edit — the several-row editor's
+  "different cohort rules" note reads the stored rules, so a rejected
+  save shows it too (`spec/setup_pages.md`, the `rule_edit_state`
+  change).
 
 ### PR ladder
 

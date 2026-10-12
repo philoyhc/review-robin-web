@@ -312,7 +312,8 @@ which columns arrived.
 **The Unlock panel** (`#roster-unlock-panel`) holds, in two columns,
 the tag-label editor, `Upload` and `Danger Zone` cards (Reviewers and
 Reviewees each add a fourth, the own-entry card, § *Reviewers page* and
-§ *Reviewees page*): **`Upload` on the left**, and **the tag-label
+§ *Reviewees page*; Observers has no label slots, so its own-entry card
+takes the tag-label editor's place, § *Observers page*): **`Upload` on the left**, and **the tag-label
 editor over the `Danger Zone` on the right**. While the panel
 is open, **`Lock` ends the right column**, flush right and 20px under
 its last card. The right column stretches to the row; it always holds
@@ -1692,7 +1693,9 @@ read-only and highlighted, and there are no row fields. The heading reads
 - **Load.** One shared rule (all-unset included) loads into the builder.
   Differing rules load nothing and the bar adds *"The selected observers
   currently have different cohort rules. Saving replaces them all with
-  the rule above."* Ids not on the rendered page are dropped.
+  the rule above."* The note reads the **stored** rules, so a rejected
+  save shows it too, over the rule as posted. Ids not on the rendered
+  page are dropped.
 - **A lone `rule_id`** — given, or left after dropping — opens nothing:
   one row is the row editor's job.
 - **Save** posts `POST /operator/sessions/{id}/observers/cohort-rule`
