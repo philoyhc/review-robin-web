@@ -27,8 +27,11 @@ Two sibling registers hold the open work that is not queued here:
 ### In progress
 
 - `guide/quick_setup_update.md` Item 1 — files uploaded together are
-  checked together and saved all or nothing. Rung 2 (#2999) and rung 3
-  (the routes) are built; the close follows the author's browser check.
+  checked together and saved all or nothing. Built (#2999, #3000); the
+  close follows the author's browser check.
+- `guide/quick_setup_update.md` Item 2 — Home's card always shows
+  Observers, and an upload that populates Observers or Relationships
+  turns its tab on. Planned 2026-10-12; build next.
 
 ### Queued segments
 
