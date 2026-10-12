@@ -34,6 +34,7 @@ __all__ = [
     "reviewer_self_kept",
     "reviewer_self_label",
     "reviewer_self_line",
+    "reviewer_self_line_for",
     "reviewer_self_readout",
 ]
 
@@ -171,3 +172,14 @@ def reviewer_self_line(
             )
         )
     return line
+
+
+def reviewer_self_line_for(
+    review_session: ReviewSession, reviewer: Reviewer
+) -> list[SelfFieldValue]:
+    """The reviewer's own line under the session's selection, stored or
+    default: what the surface, ``/summary`` and the pre-open page show
+    after the ``Reviewer`` pill (participant info Items 1 and 3)."""
+    return reviewer_self_line(
+        review_session, reviewer, effective_reviewer_self_fields(review_session)
+    )

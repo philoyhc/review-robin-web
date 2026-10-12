@@ -18,7 +18,7 @@ from app.services import invitations as invitations_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
-from app.web import breadcrumbs
+from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -149,6 +149,12 @@ def review_surface(
                 "deadline_text": deadline_text,
                 "deadline_timezone_label": deadline_timezone_label,
                 "is_archived": lifecycle.is_archived(review_session),
+                # participant info Item 3 — the reviewer's own roster
+                # fields, so they can check them before the review
+                # opens. The closed variant does not render them.
+                "reviewer_self_fields": views.reviewer_self_line_for(
+                    review_session, reviewer
+                ),
             },
         )
     pages = _pages_for_session(db, review_session.id)

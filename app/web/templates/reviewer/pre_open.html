@@ -10,6 +10,9 @@
    An ``archived`` session reaches the same route (an old invitation
    link or a bookmark) and gets closed copy instead: "opens later"
    would be false (findings A25, 2026-10-03).
+
+   ``reviewer_self_fields`` (participant info Item 3): the reviewer's
+   own line, rendered on the "opens later" variant only.
 #}
 {% extends "base.html" %}
 
@@ -33,6 +36,11 @@
   </div>
   {% else %}
   <h1>{{ session.name }} — opens later</h1>
+  {# participant info Item 3 — a static `Reviewer` pill and the
+     reviewer's own roster fields after it, as the operator preview
+     renders them: this page has no role navigator of its own. #}
+  {% set role_chips = [{"role": "reviewer", "active": true, "enabled": false, "target": ""}] %}
+  {% include "reviewer/_role_chips.html" %}
 
   <div class="card">
     <div class="banner banner-info" style="margin: 0;">

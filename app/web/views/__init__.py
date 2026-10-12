@@ -124,6 +124,7 @@ from ._reviewer_self import (
     reviewer_self_kept,
     reviewer_self_label,
     reviewer_self_line,
+    reviewer_self_line_for,
     reviewer_self_readout,
 )
 
@@ -318,6 +319,7 @@ __all__ = [
     "reviewer_self_kept",
     "reviewer_self_label",
     "reviewer_self_line",
+    "reviewer_self_line_for",
     "reviewer_self_readout",
     "parse_super_failure",
     "constraint_summary_for_field",

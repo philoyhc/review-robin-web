@@ -24,7 +24,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services import date_formatting, participant_info
+from app.services import date_formatting
 from app.services import instruments as instruments_service
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
@@ -699,9 +699,7 @@ def _surface_context(
         "preview_mode": preview_mode,
         # participant info Item 1 — the reviewer's own roster fields
         # after the role pills: the stored selection, or the default.
-        "reviewer_self_fields": views.reviewer_self_line(
-            review_session,
-            reviewer,
-            participant_info.effective_reviewer_self_fields(review_session),
+        "reviewer_self_fields": views.reviewer_self_line_for(
+            review_session, reviewer
         ),
     }

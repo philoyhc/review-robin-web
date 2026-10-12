@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import Reviewer, ReviewSession
+from app.db.models import Assignment, Reviewer, ReviewSession
 from app.web import views
 
 from ._unlock_panel import panel_columns
@@ -476,3 +476,78 @@ def test_duplicate_copies_all_three_selections(
     assert clone.reviewer_self_fields == ["email"]
     assert clone.reviewee_self_fields == ["name"]
     assert clone.observer_self_fields == []
+
+
+# ── Item 3: /summary and the pre-open page ───────────────────────────
+
+
+def test_the_summary_shows_the_line_after_the_pills(
+    client: TestClient,
+    db: Session,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """participant info Item 3: the reviewer's `/summary` carries the
+    same line as the surface, under the stored selection."""
+    rs = _pair(client, db, "rsi-summary")
+    _save(client, rs, fields=["name", "tag_1"])
+    _activate(client, db, rs)
+    assignment = db.execute(
+        select(Assignment).where(Assignment.session_id == rs.id)
+    ).scalar_one()
+    rae_client = make_client(rae)
+    submitted = rae_client.post(
+        f"/me/sessions/{rs.id}/submit",
+        data={f"response[{assignment.id}][rating]": "3"},
+        follow_redirects=False,
+    )
+    assert submitted.status_code == 303, submitted.status_code
+    html = rae_client.get(f"/me/sessions/{rs.id}/summary").text
+    assert "Your responses" in html, html[:400]
+    nav = _div_at(html, 'class="rs-role-nav"')
+    assert nav.index("rs-role-nav-active") < nav.index("data-reviewer-self-info")
+    info = _info(html)
+    assert "Rae Reviewer" in info and "Cohort: Blue" in info
+    assert "rae@example.edu" not in info
+
+
+def test_the_pre_open_page_shows_a_reviewer_pill_and_the_line(
+    client: TestClient,
+    db: Session,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Before the review opens there is no role navigator, so the page
+    renders a static `Reviewer` pill, as the operator preview does."""
+    from ._validated import validate_session
+
+    rs = _pair(client, db, "rsi-preopen")
+    validate_session(rs)
+    db.commit()
+    html = make_client(rae).get(f"/me/sessions/{rs.id}/1").text
+    assert "opens later" in html, html[:400]
+    nav = _div_at(html, 'class="rs-role-nav"')
+    assert re.search(
+        r'<span class="pill pill-role-reviewer rs-role-nav-active">Reviewer</span>',
+        nav,
+    )
+    assert "<a " not in nav.split("data-reviewer-self-info")[0]
+    info = _info(html)
+    assert "Rae Reviewer" in info and "rae@example.edu" in info
+
+
+def test_the_closed_pre_open_page_has_no_line(
+    client: TestClient,
+    db: Session,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The archived variant: the review is over, so nothing on the page
+    acts on the reviewer's details (Item 3, judgment call)."""
+    rs = _pair(client, db, "rsi-closed")
+    rs.status = "archived"
+    db.commit()
+    html = make_client(rae).get(f"/me/sessions/{rs.id}/1").text
+    assert "This review has closed." in html, html[:400]
+    assert "data-reviewer-self-info" not in html
+    assert 'class="rs-role-nav"' not in html
