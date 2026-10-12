@@ -238,3 +238,37 @@ def test_create_turns_relationships_on_when_the_box_is_unticked(
     assert rs.relationships_enabled is True
     (event,) = _toggled(db, rs)
     assert event.detail["changes"] == {"relationships_enabled": [False, True]}
+
+
+def test_a_toggle_turned_on_by_another_request_is_not_logged_again(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    """The before-state is read under the session lock, which re-reads
+    the row: a toggle another request turned on after this one loaded
+    the session is already on, so no flip is logged (Codex on #3002)."""
+    from sqlalchemy import update
+
+    from app.services import session_guard
+    from app.web.routes_operator import _quick_setup
+
+    rs = _session(client, db, "tabs-race", observers_enabled=False)
+    real_lock = session_guard.lock_session
+
+    def racer_commits_first(db_, session_):
+        # Another request's committed write, landing before this lock.
+        db_.execute(
+            update(ReviewSession)
+            .where(ReviewSession.id == session_.id)
+            .values(observers_enabled=True)
+        )
+        return real_lock(db_, session_)
+
+    monkeypatch.setattr(
+        _quick_setup.session_guard, "lock_session", racer_commits_first
+    )
+
+    _submit_all(client, rs, observers=OBSERVERS)
+
+    db.refresh(rs)
+    assert rs.observers_enabled is True
+    assert _toggled(db, rs) == []

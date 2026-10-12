@@ -46,7 +46,7 @@ from app.services import (
     session_tags,
     sessions,
 )
-from app.services import unit_of_work
+from app.services import session_guard, unit_of_work
 from app.services import session_lifecycle as lifecycle
 from app.web import views
 from app.web.deps import (
@@ -674,12 +674,17 @@ def _save_uploads(
     back since 19C Item 1 retired them from the settings bundle."""
 
     current = staged[0].kind
-    before = {
-        field_name: getattr(review_session, field_name)
-        for field_name in sessions.FEATURE_TOGGLE_FOR_ROSTER.values()
-    }
     try:
         with unit_of_work.atomic(db):
+            # The toggles as they stood before this submit, read under the
+            # session lock (which re-reads the row), so a toggle another
+            # request turned on since this one loaded the session is not
+            # logged as flipped again (Codex on #3002).
+            session_guard.lock_session(db, review_session)
+            before = {
+                field_name: getattr(review_session, field_name)
+                for field_name in sessions.FEATURE_TOGGLE_FOR_ROSTER.values()
+            }
             populated: list[str] = []
             for item in staged:
                 current = item.kind
