@@ -1459,9 +1459,9 @@ is a `pill pill-role-<role>` labeled with the capitalized role name:
 - not active, not enabled → `<span>` with `rs-role-nav-muted`.
 
 **The reviewer's own line.** On the reviewer surface, the per-session
-summary and the pre-open page's "opens later" variant (not `/collation`,
-nor the pre-open page's closed variant; `/results` has the reviewee's
-line, below), the partial
+summary and the pre-open page's "opens later" variant (not the pre-open
+page's closed variant; `/results` and `/collation` have the reviewee's
+and the observer's lines, below), the partial
 takes an optional
 `reviewer_self_fields` and renders it in a muted `.rs-self-info` span
 **inline after the last role pill**, so it never splits the pills of a
@@ -1487,9 +1487,16 @@ Profile, Tag 1–3.
 renders it in the same `.rs-self-info` span under
 `data-reviewee-self-info` (the reviewer's is `data-reviewer-self-info`).
 Everything above applies, except that Email is the row's
-`email_or_identifier` and a tag takes the reviewee friendly label. A page
-passes one of the two, so a reviewer who is also a reviewee sees only
-the active page's line. The selection is in `spec/settings_inventory.md`.
+`email_or_identifier` and a tag takes the reviewee friendly label.
+
+**The observer's own line.** On `/collation` the partial takes
+`observer_self_fields` (`views.observer_self_line_for`) under
+`data-observer-self-info`: Name is the row's `display_name`, and the one
+tag reads `Tag: <value>`, the Observers page's literal label.
+
+A page passes one of the three, so a participant holding several roles
+sees only the active page's line. The selections are in
+`spec/settings_inventory.md`.
 
 The partial branches on chip state, never on role, so a fourth role
 would touch only `_ROLE_PRIORITY`, the per-role branch in

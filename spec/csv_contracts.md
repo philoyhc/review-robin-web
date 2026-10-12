@@ -513,6 +513,10 @@ blank for NULL.
 **`session.reviewee_self_fields`** (`json`): as the reviewers' row, with
 `email_or_identifier` for `email` in the keys and the default.
 
+**`session.observer_self_fields`** (`json`): as the reviewers' row, with
+the keys `display_name`, `email`, `tag_1` and the default `display_name`,
+`email`.
+
 If phase 1 finds errors, phase 2 is **not attempted** — the
 `ApplyResult` carries `errors` and the route surfaces them.
 

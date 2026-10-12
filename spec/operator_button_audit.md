@@ -371,7 +371,7 @@ the cross-references to them stay true.
 
 > **Lifecycle.** This page does **not** read `is_editable`. Every
 > mutating route takes `_require_not_archived`, so **every mutating
-> control below** — rows 165, 167–174 and 176–180 — renders through `ready` and
+> control below** — rows 165, 167–174, 176–180 and 273–274 — renders through `ready` and
 > `expired` and is absent only on `archived`. That is the exception the
 > gate note above §6 describes; `spec/lifecycle.md` §5 carries the
 > reason.
@@ -400,9 +400,11 @@ the cross-references to them stay true.
 | 174 | Edit-row bar (cohort pane) | `X` | `<button type="button">` | `btn destructive cohort-cell-btn` | Destructive | Removes a rule cell; `disabled` on the first. |
 | 176 | Edit-row bar | Save | `<button type="submit">` | `btn secondary` | Secondary | The editor's one Save, covering the row **and its cohort rule**: posts `/observers/create` or `/observers/{id}/update` via `form="observer-edit-form"`, or `/observers/cohort-rule` when `Edit` opened the rule of several rows. `disabled` until the editor is savable — a non-blank email (where the row's fields are present) and no half-filled rule cell; the server refuses the same cases (400). Renders in a bracketed expander beneath the row being edited, not in a card — the same shape as Reviewers' (#128). |
 | 177 | Edit-row bar | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the bare list with the pager fragment, abandoning the edit. Exempt from the editor's `beforeunload` guard, as #176 is. |
-| 178 | Roster card | Unlock / Lock | `<button type="button">` | `btn secondary` | Secondary | Toggles the Unlock panel. **One element, two homes** — the card's last child when collapsed, the right column's last child when open, under its last card (at the column's foot on an empty roster). The label names the state it moves *to*. Each home carries a `<noscript>` twin (`?unlocked=1#roster-card` and back), the panel being unreachable without JS otherwise. |
+| 178 | Roster card | Unlock / Lock | `<button type="button">` | `btn secondary` | Secondary | Toggles the Unlock panel. **One element, two homes** — the card's last child when collapsed, the right column's last child when open, under its last card (on an empty roster, the own-entry card). The label names the state it moves *to*. Each home carries a `<noscript>` twin (`?unlocked=1#roster-card` and back), the panel being unreachable without JS otherwise. |
 | 179 | Unlock panel — Upload Observers | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/observers/import`. On a roster with rows it ships `disabled` behind the `replace-observers` confirm; on an empty roster it renders enabled, that being the initial bulk create. **Left** column, as on the other three roster pages — see `spec/setup_pages.md` § *The roster card and the Unlock panel*. |
 | 180 | Unlock panel — Danger Zone | Delete all observers | `<button type="submit">` | `btn destructive` | Destructive | Posts `/observers/delete-all`; `disabled` until the `delete-all` confirm is ticked, and the route 400s without it. No response-loss acknowledgement: nothing references an observer, so the loss the gate guards cannot occur. |
+| 273 | What observers see of their own entry | Cancel | `<button type="button">` | `btn secondary` | Secondary | As #269. **Heads the Unlock panel's right column**, above the Danger Zone; suppressed with the panel only when the session is `archived`. |
+| 274 | What observers see of their own entry | Save | `<button type="submit">` | `btn secondary` | Secondary | As #270, posting `/observers/self-fields`, except that the route answers 409 only when the session is `archived`. |
 
 Row 175, the selection expander's cohort `Save`, is retired with that
 expander's builder; the number is not reused.

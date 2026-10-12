@@ -23,8 +23,8 @@ from ._apply_shared import (
     _parse_json,
 )
 
-#: The Settings CSV's own-entry selections (participant info Items 1 and
-#: 4): the `session.*` key, and the participant it normalizes against.
+#: The Settings CSV's own-entry selections (participant info Items 1, 4
+#: and 5): the `session.*` key, and the participant it normalizes against.
 _SELF_FIELDS_KEYS = self_fields_columns()
 
 
@@ -99,7 +99,7 @@ def _apply_session_kv(
         plan.session_overrides[key] = parsed if parsed else None
         return
     if key in _SELF_FIELDS_KEYS:
-        # participant info Items 1 and 4. Blank → ``None`` (the
+        # participant info Items 1, 4 and 5. Blank → ``None`` (the
         # default); a JSON list of roster field keys otherwise, ``[]``
         # meaning nothing. An unknown key is refused rather than dropped.
         if not value:
@@ -166,6 +166,7 @@ def _apply_session_metadata(
         "observers_enabled",
         "reviewer_self_fields",
         "reviewee_self_fields",
+        "observer_self_fields",
         "scheduled_activate_at",
         "responses_release_at",
         "responses_release_until",

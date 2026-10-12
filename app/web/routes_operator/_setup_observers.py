@@ -38,7 +38,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Observer, ReviewSession, User
 from app.db.session import get_db
 from app.schemas.observer_cohort_rule import VALUE_OPERATORS
-from app.services import csv_imports
+from app.services import csv_imports, participant_info
 from app.services import observers as observers_service
 from app.services import session_lifecycle as lifecycle
 from app.services.observers import ObserverOperationError
@@ -771,6 +771,52 @@ async def observers_cohort_rule_save(
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
         anchor=_row_action_anchor(observer_ids, noun="observer"),
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/observers/self-fields",
+    response_class=RedirectResponse,
+)
+async def observers_save_self_fields(
+    request: Request,
+    review_session: ReviewSession = Depends(
+        require_observers_enabled_session
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Save what observers see of their own entry (participant info
+    Item 5), as the Reviewers and Reviewees cards save theirs: the ticked
+    chips plus ``keep``, the selected keys the card offered no chip for.
+    Refused only when archived, the Observers roster's gate: checked
+    here as every sibling route does, and again under the row lock in
+    the service."""
+    _require_not_archived(review_session)
+    form = await request.form()
+    keys = [str(v) for v in form.getlist("fields")]
+    keys += [str(v) for v in form.getlist("keep")]
+    try:
+        # The service locks the session row: wait for it off the loop.
+        await run_in_threadpool(
+            participant_info.set_self_fields,
+            db,
+            review_session=review_session,
+            user=user,
+            participant="observer",
+            keys=keys,
+            correlation_id=request_correlation_id(),
+        )
+    except participant_info.SelfFieldsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/observers"
+            "?unlocked=1#roster-card"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

@@ -673,7 +673,26 @@ Taken 2026-10-12 at `5761ab7e`.
   (fixed labels Name, Email, Tag); the inert card heading the right
   column, the `Observers see:` readout (the failed-import re-render
   included) and the `/collation` line, all at the default. The
-  empty-roster panel test now pins the card above `Lock`.
+  empty-roster panel test now pins the card above `Lock`. Its CI also
+  caught a race in a rung-4 Observers row-editor browser test (Save read
+  before the page's `setTimeout` re-check); fixed there, by `expect`.
+- Rung 3 (2026-10-12), storage and the live card: an `observer` entry in
+  `participant_info`'s registry, whose `require` is `require_not_archived`
+  (the registry's gate is per participant now, `require_editable` for the
+  other two); `session.observer_self_fields_set`;
+  `POST …/observers/self-fields`; the Settings CSV row; specs, including
+  `spec/reviewer-surface.md`, `spec/operator_button_audit.md` (#273,
+  #274) and `spec/ui_elements.md`, as Item 4's.
+- One `diff-reviewer` read, on the cumulative diff from `ac163cbf`: no
+  code defect. It found the rung-2 empty-right-column prose still in
+  three spec places beyond the one rung 3 fixed (the shared panel
+  section and its table, button-audit #178), #274 inheriting #270's
+  `is_editable` 409, "two tenants" prose and the `?unlocked=1` row
+  predating the card, the Observers audit list lacking the new event,
+  and the rung-2 browser check saying Save stays disabled (Items 1 and
+  4's reads caught the same). It also asked for the save route to call
+  `_require_not_archived` as its siblings do, and for a multi-role
+  `/collation` test. All fixed.
 
 ### Doc impact
 
@@ -682,4 +701,7 @@ Taken 2026-10-12 at `5761ab7e`.
 - `spec/settings_inventory.md` — the per-session setting, default and gate.
 - `spec/csv_contracts.md` — the Settings CSV `session.observer_self_fields` row.
 - `spec/roundtrip_coverage.md` — the column's round trip.
+- `spec/reviewer-surface.md` — the chip strip renders the observer's line on `/collation` (added at rung 3).
+- `spec/operator_button_audit.md` — the observer card's Cancel / Save rows (added at rung 3).
+- `spec/ui_elements.md` — `.reviewer-self-chips` serves the Observers card too (added at rung 3).
 - `guide/things_to_check_in_browser.md` — a section per code rung.

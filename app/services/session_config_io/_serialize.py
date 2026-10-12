@@ -186,6 +186,16 @@ def _session_rows(review_session: ReviewSession) -> list[Row]:
             ),
             "json",
         ),
+        # participant info Item 5 — the observers' selection, likewise.
+        Row(
+            "session.observer_self_fields",
+            (
+                ""
+                if review_session.observer_self_fields is None
+                else _json(list(review_session.observer_self_fields))
+            ),
+            "json",
+        ),
         # Segment 18N PR 5 — the eight 18G scheduled-event columns
         # added 2026-05-20 (Part 0 schema) + lit up across Parts 1-3.
         # Two datetime anchors + four offset / offset-list strings +

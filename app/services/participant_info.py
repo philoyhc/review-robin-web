@@ -3,14 +3,13 @@
 `guide/participant_info.md`. One session-wide selection per participant
 type, stored as a list of roster field keys on the session row (``NULL``
 means the participant's default). Item 1 reads and writes the reviewers'
-selection, Item 4 the reviewees'; Item 5's observer keys are here, but
-its column (one migration for all three, author 2026-10-12) is neither
-read nor written until Item 5's rung 3.
+selection, Item 4 the reviewees', Item 5 the observers' (one migration
+for all three columns, author 2026-10-12).
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
@@ -67,6 +66,12 @@ class _Participant:
     column: str
     #: The plural the audit summary reads ("reviewers see …").
     plural: str
+    #: The save's lifecycle gate: the roster page's own predicate.
+    #: ``require_editable`` for Reviewers and Reviewees; the Observers
+    #: roster stays open while the session runs, so ``require_not_archived``.
+    require: Callable[[Session, ReviewSession], ReviewSession] = (
+        lifecycle.require_editable
+    )
 
 
 _PARTICIPANTS: dict[str, _Participant] = {
@@ -77,6 +82,11 @@ _PARTICIPANTS: dict[str, _Participant] = {
     "reviewee": _Participant(
         REVIEWEE_SELF_FIELD_KEYS, REVIEWEE_SELF_DEFAULT,
         "reviewee_self_fields", "reviewees",
+    ),
+    "observer": _Participant(
+        OBSERVER_SELF_FIELD_KEYS, OBSERVER_SELF_DEFAULT,
+        "observer_self_fields", "observers",
+        require=lifecycle.require_not_archived,
     ),
 }
 
@@ -142,12 +152,12 @@ def set_self_fields(
 
     A no-op when the stored list already equals it. With nothing stored,
     saving even the default writes it, so the choice is recorded and a
-    later change to the default does not move this session. Gated by
-    ``is_editable`` like every Reviewers- and Reviewees-page setting; the
-    setting is display-only, so a save never demotes ``validated``.
+    later change to the default does not move this session. Gated as the
+    participant's roster page is (``_Participant.require``); the setting
+    is display-only, so a save never demotes ``validated``.
     """
     spec = _PARTICIPANTS[participant]
-    lifecycle.require_editable(db, review_session)
+    spec.require(db, review_session)
     new = normalize_self_fields(participant, keys)
     stored = getattr(review_session, spec.column)
     # Compared with what is stored, not the effective selection, so a
