@@ -1491,6 +1491,9 @@ selector scoped under `body.ui-v2`:
   text-decoration: underline;`, the affordance that says clickable.
 - `.rs-role-nav .rs-role-nav-active` — `font-weight: 600;`, keeping the
   role's own palette to read as selected.
+- `.rs-role-nav .rs-self-info` — `align-self: center; margin-left:
+  var(--space-2); color: var(--text-subtle);`, the reviewer's own line
+  beside the pills.
 - A linked chip (`a.pill.pill-role-*`) also wears the interactive-chip
   edge (`spec/ui_elements.md` "Label or control"); the `<span>` forms
   do not.
