@@ -423,3 +423,104 @@ Closed 2026-10-09. Shipped as planned in two PRs, #2926 and #2927.
 - `spec/extract_data.md` — the three empty-row-drop chips are type 2, always dark (PR 2).
 - `guide/things_to_check_in_browser.md` — a section per PR.
 
+
+---
+
+## Item 4 — Observers: one Save for the row and its cohort rule
+
+### Opportunity
+
+On the Observers page, `Add` and `Edit` open the row editor
+(`/observers/create`, `/observers/{id}/update`: email, name, tag,
+status), but the cohort rule is set elsewhere: only the selection
+expander's builder reaches `/observers/cohort-rule`, and only for saved
+rows. A new observer cannot get a rule until its row exists, and editing
+one means two saves in two places (author, 2026-10-12, with screenshots).
+
+### Decision
+
+The author's ruling, 2026-10-12:
+
+- **One editor.** In add and edit mode the row editor shows the cohort
+  builder beneath it, loaded with the observer's rule (empty on `Add`),
+  and **one Save** submits both.
+- **Savable, or Save is disabled.** A non-blank email and no half-filled
+  rule cell (a field chosen without an operand, or the reverse). The
+  rule is **optional**: an empty builder saves an observer with no rule,
+  who sees nothing (`spec/setup_pages.md` "Cohort match rule editor").
+- **The selection expander keeps its builder** for applying one rule to
+  several observers at once.
+
+Rejected: making a rule required on every save. An imported observer
+without one could not have a typo in its name fixed until it was given
+a rule.
+
+### Semantics
+
+- **One write.** `create_observer` / `update_observer` take the rule and
+  write it in their own commit, emitting `observer.cohort_rule_assigned`
+  beside their own event under one correlation id. The rule is validated
+  (`CohortRuleSet`) before anything is written, so a bad rule re-renders
+  the editor with the operator's values and an error, as a bad email does.
+- **Unchanged rule, no event.** An edit that leaves the rule as stored
+  writes no rule event; an emptied builder on an observer with a rule
+  clears it.
+- **Gate** `not is_archived`, as every Observers route.
+- **Half-filled cells** are refused by the server too (400 re-render), so
+  the disabled Save is a convenience, not the guard.
+
+### Judgment calls — decided
+
+- Save is gated on validity, not on a change: Cancel already discards.
+- The rule's builder is the expander's, not a second copy: the inert
+  `<template>` is cloned under the edit row and form-associated to it.
+
+### Blast radius (measured)
+
+Taken 2026-10-12 at `ddd589d3`.
+
+- Routes: `app/web/routes_operator/_setup_observers.py` (`create`,
+  `update`, `_parse_cohort_rule_form` reused).
+- Service: `app/services/observers.py` (`create_observer`,
+  `update_observer`; each ends in one `db.commit()`).
+- Template: `app/web/templates/operator/session_observers.html` — the
+  builder `<template>` renders only `if not edit_mode` today.
+- Tests: `grep -rln "observers/create\|observers_create\|observers_update" tests --include=*.py | wc -l` → 10;
+  `grep -rln "cohort-rule\|cohort_rule_field" tests --include=*.py` → 8 files.
+
+### PR ladder
+
+1. **This plan.** Prose only.
+2. **Scaffold.** In add and edit mode the builder renders under the edit
+   row, loaded with the rule, its cells form-associated to the edit form;
+   the routes ignore them, and Save keeps today's behavior.
+3. **The write and the gate.** The services take the rule; the routes
+   parse it; Save disables until savable; tests, specs, a browser-check
+   section. A `diff-reviewer` read on the cumulative diff from rung 2's
+   base.
+
+### Definition of done
+
+- Adding an observer with a rule, editing a rule from the row editor, and
+  clearing one by emptying the builder each save in one POST, by test;
+  a half-filled cell answers 400 with the editor re-rendered, by test.
+- Save disabled while unsavable, by a browser test.
+- `guide/things_to_check_in_browser.md` has a section per code rung.
+- `### Doc impact` current, every bullet checked by hand.
+- `spec-writer` run against the doc-impact specs; flags adjudicated.
+- `### Status` compacted; `guide/todo_master.md` entry updated.
+
+### Open questions
+
+- None open.
+
+### Out of scope
+
+- The selection expander's bulk builder, beyond sharing its template.
+- Observer CSV import's `CohortRule` column.
+
+### Doc impact
+
+- `spec/setup_pages.md` — the Observers row editor carries the cohort builder and one Save; "Cohort match rule editor" names both places it appears.
+- `spec/operator_button_audit.md` — the row editor's Save covers the rule; its disabled state.
+- `guide/things_to_check_in_browser.md` — a section per code rung.

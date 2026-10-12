@@ -29,6 +29,8 @@ Two sibling registers hold the open work that is not queued here:
 - **Participant info** — `guide/participant_info.md`: Item 4, a
   reviewee's own entry on `/results`, then Item 5, an observer's on
   `/collation` (Items 1–3 closed 2026-10-12).
+- **Operator pages enhancements** — `guide/operator_pages_enhancements.md`
+  Item 4: the Observers row editor and its cohort rule under one Save.
 
 ### Queued segments
 
