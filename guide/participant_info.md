@@ -524,13 +524,16 @@ Taken 2026-10-12 at `5761ab7e`.
 - Settings CSV: `app/services/session_config_io/` (3 files);
   `app/services/audit.py` (`EVENT_SCHEMAS`).
 - Tests: `grep -rln "reviewee_self\|observer_self" tests --include=*.py`
-  → 0; new tests mirror `tests/integration/test_reviewer_self_info.py`.
+  → `tests/integration/test_reviewer_self_info.py` only, whose Duplicate
+  test already asserts both columns are copied; new tests mirror it.
 
 ### PR ladder
 
 1. **This plan**, with Item 3's close. Prose only.
 2. **Scaffold.** The inert card, the `Reviewees see:` readout and the
-   `/results` line, all at the default.
+   `/results` line, all at the default: the line shows what `NULL` will
+   mean, so no page shows a choice it later ignores (Item 1's rung 2).
+   Nothing reads or writes the column yet.
 3. **Storage and the live card.** The generalized service and audit
    event, the save route, the Settings CSV row, specs, a browser-check
    section. A `diff-reviewer` read on the cumulative diff from rung 2's
@@ -613,7 +616,8 @@ Taken 2026-10-12 at `5761ab7e`.
 ### PR ladder
 
 1. **This plan**, with Item 3's close and Item 4's plan. Prose only.
-2. **Scaffold**, after Item 4 closes: inert card, readout, line.
+2. **Scaffold**, after Item 4 closes: inert card, readout, line, at
+   the default as Item 4's rung 2.
 3. **Storage and the live card**, on Item 4's generalized service. Read
    on the cumulative diff.
 
