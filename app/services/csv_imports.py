@@ -246,6 +246,7 @@ def cell_length_issues(
                         f"{header} is {len(value)} characters; "
                         f"at most {limit} fit"
                     ),
+                    problem=f"{header} is longer than {limit} characters",
                 )
             )
     return issues
@@ -292,6 +293,7 @@ def tag_comma_issues(
             row_number=row_number,
             field=header,
             message=f"{header} may not contain a comma",
+            problem=f"{header} contains a comma",
         )
         for attr, header in headers.items()
         if "," in (getattr(row, attr) or "")
@@ -367,6 +369,7 @@ def _parse_status(
                 f"Status must be one of {sorted(_VALID_ROSTER_STATUSES)}; "
                 f"got {value!r}"
             ),
+            problem="Status is not active or inactive",
         )
     return value
 
@@ -406,6 +409,7 @@ def _parse_email(
             row_number=row_number,
             field=field,
             message=f"{field} '{value}' is not a valid email address",
+            problem=f"{field} is not a valid email address",
         )
     return value
 
@@ -446,6 +450,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
                     row_number=index,
                     field="ReviewerName",
                     message="ReviewerName is required",
+                    problem="ReviewerName is blank",
                 )
             )
             continue
@@ -457,6 +462,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
                     row_number=index,
                     field="ReviewerEmail",
                     message="ReviewerEmail is required",
+                    problem="ReviewerEmail is blank",
                 )
             )
             continue
@@ -478,7 +484,9 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
                     f"Duplicate ReviewerEmail '{email}' "
                     f"(also on row {prior_index})"
                 )
+                problem = "ReviewerEmail appears on more than one row"
             else:
+                problem = "ReviewerEmail is used with different names"
                 message = (
                     f"ReviewerEmail '{email}' was used for '{prior_name}' "
                     f"on row {prior_index} — names must match."
@@ -490,6 +498,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
                     row_number=index,
                     field="ReviewerEmail",
                     message=message,
+                    problem=problem,
                 )
             )
             continue
@@ -574,6 +583,7 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
                     row_number=index,
                     field="RevieweeName",
                     message="RevieweeName is required",
+                    problem="RevieweeName is blank",
                 )
             )
             continue
@@ -585,6 +595,7 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
                     row_number=index,
                     field="RevieweeEmail",
                     message="RevieweeEmail is required",
+                    problem="RevieweeEmail is blank",
                 )
             )
             continue
@@ -606,7 +617,9 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
                     f"Duplicate RevieweeEmail '{identifier}' "
                     f"(also on row {prior_index})"
                 )
+                problem = "RevieweeEmail appears on more than one row"
             else:
+                problem = "RevieweeEmail is used with different names"
                 message = (
                     f"RevieweeEmail '{identifier}' was used for '{prior_name}' "
                     f"on row {prior_index} — names must match."
@@ -618,6 +631,7 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
                     row_number=index,
                     field="RevieweeEmail",
                     message=message,
+                    problem=problem,
                 )
             )
             continue
@@ -718,6 +732,7 @@ def parse_observer_csv(content: bytes) -> ParseResult:
                     row_number=index,
                     field="ObserverEmail",
                     message="ObserverEmail is required",
+                    problem="ObserverEmail is blank",
                 )
             )
             continue
@@ -743,6 +758,7 @@ def parse_observer_csv(content: bytes) -> ParseResult:
                         f"Duplicate ObserverEmail '{email}' "
                         f"(also on row {prior})"
                     ),
+                    problem="ObserverEmail appears on more than one row",
                 )
             )
             continue
@@ -765,6 +781,7 @@ def parse_observer_csv(content: bytes) -> ParseResult:
                         row_number=index,
                         field="CohortRule",
                         message="CohortRule is not valid JSON",
+                        problem="CohortRule is not valid JSON",
                     )
                 )
                 continue
@@ -781,6 +798,7 @@ def parse_observer_csv(content: bytes) -> ParseResult:
                             "CohortRule failed cohort-rule schema "
                             "validation"
                         ),
+                        problem="CohortRule is not a valid cohort rule",
                     )
                 )
                 continue
@@ -1055,6 +1073,10 @@ def check_cross_table_identity(
                     f"{spec['field']} '{identifier}' is already used by "
                     f"{holder_label} '{holder_name}' in this session — "
                     f"names must match (got '{name}')."
+                ),
+                problem=(
+                    f"{spec['field']} is already used under a different "
+                    f"name in another roster"
                 ),
             )
         )

@@ -330,6 +330,7 @@ class ValidationIssue(BaseModel):
     row_number: int | None = None
     field: str | None = None
     message: str
+    problem: str | None = None
     detail: dict[str, Any] | None = None
     # Stamped by the orchestrator from the rule's metadata:
     rule_key: str | None = None
@@ -342,6 +343,12 @@ class ValidationIssue(BaseModel):
 `severity` is the `Severity` enum (`error` / `warning` / `info`).
 `is_blocking` is a derived predicate — `severity is
 Severity.error`.
+
+`problem` is the issue's type with no row number or cell value in it
+("ReviewerEmail is blank"). Every row-level issue the roster CSV parsers
+raise sets it, for Quick Setup's banner to list
+(`spec/quick_setup_card_spec.md` "Result reporting"); the registry's
+rules leave it unset.
 
 The five fix-link fields (`rule_key`, `fix_url`, `fix_anchor`,
 `fix_page_label`, `why`) default to `None` so issues emitted

@@ -120,6 +120,7 @@ def parse_relationship_csv(
                     row_number=index,
                     field="ReviewerEmail",
                     message="ReviewerEmail is required",
+                    problem="ReviewerEmail is blank",
                 )
             )
             continue
@@ -131,6 +132,7 @@ def parse_relationship_csv(
                     row_number=index,
                     field="RevieweeEmail",
                     message="RevieweeEmail is required",
+                    problem="RevieweeEmail is blank",
                 )
             )
             continue
@@ -147,6 +149,10 @@ def parse_relationship_csv(
                         f"Unknown reviewer '{reviewer_email}' — import "
                         f"reviewers first."
                     ),
+                    problem=(
+                        "ReviewerEmail is not on the Reviewers roster "
+                        "(import reviewers first)"
+                    ),
                 )
             )
             continue
@@ -161,6 +167,10 @@ def parse_relationship_csv(
                     message=(
                         f"Unknown reviewee '{reviewee_email}' — import "
                         f"reviewees first."
+                    ),
+                    problem=(
+                        "RevieweeEmail is not on the Reviewees roster "
+                        "(import reviewees first)"
                     ),
                 )
             )
@@ -178,6 +188,7 @@ def parse_relationship_csv(
                         f"Duplicate pair ({reviewer_email}, "
                         f"{reviewee_email}) — also on row {prior_index}"
                     ),
+                    problem="A reviewer–reviewee pair appears on more than one row",
                 )
             )
             continue
@@ -197,6 +208,7 @@ def parse_relationship_csv(
                         f"Status must be 'active' or 'inactive' "
                         f"(got '{status_raw}')"
                     ),
+                    problem="Status is not active or inactive",
                 )
             )
             continue

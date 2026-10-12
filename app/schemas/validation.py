@@ -18,6 +18,11 @@ class ValidationIssue(BaseModel):
     row_number: int | None = None
     field: str | None = None
     message: str
+    # The problem's type, free of row numbers and cell values ("ReviewerEmail
+    # is blank"), so a caller can say what went wrong without saying where:
+    # Quick Setup's banner lists these. Unset on a file-level issue, whose
+    # message names no row already.
+    problem: str | None = None
     detail: dict[str, Any] | None = None
     # Per-issue fix-link fields stamped by the validate-session-setup
     # rule registry (Segment 11G PR B). Defaults preserve back-compat

@@ -399,7 +399,7 @@ the pattern itself is specified in `spec/setup_pages.md`.
 |---|---|---|
 | `?return_to=<path>` | Chrome-detour pages (Operator Settings, About) | Round-trip target for the `← Back to {{ return_to_label }}` back-link. |
 | `?activate=1` | Validate detail page | Surfaces the activate-warns acknowledgment banner. |
-| `?quick_setup_error=…&quick_setup_reason=…` (+ repeated `&quick_setup_detail=…`) | Session Home | Slot-scoped error feedback after a failed Quick Setup submit; `quick_setup_detail` carries a failed Settings CSV's error lines. |
+| `?quick_setup_error=…&quick_setup_reason=…` (+ repeated `&quick_setup_detail=…`) | Session Home | Slot-scoped error feedback after a failed Quick Setup submit; `quick_setup_detail` carries the banner's lines: a failed Settings CSV's errors, or a refused roster file's kinds of problem. |
 | `?edit_id=<id>` | All four roster Setup pages | Server-rendered inline-Edit state — that row's cells render as inputs / pickers. On Reviewers and Observers the Save / Cancel pair renders in an expander bar beneath the row rather than in a card. |
 | `?add=1` | All four roster Setup pages | Server-rendered Add-new-row state — a blank input row prepends the table. |
 | `?selected=<id>` (repeatable) | All four roster Setup pages | Row selection carried through the post-Edit / post-bulk-action redirect so the acted-on rows stay checked. On Reviewers and Observers the restored selection also rebuilds the row expander, since the panel is a function of the checked rows. |
