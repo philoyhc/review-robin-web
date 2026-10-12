@@ -296,3 +296,17 @@ section (git history keeps it), so this file lists only what is owed.
   Reviewees files, type a tag, and Create: you land on Session Home with
   the Reviewees banner; the session exists with its tag, and its
   Reviewers roster is empty.
+
+## Quick Setup shows Observers, and an upload turns its tab on (quick_setup_update Item 2)
+
+- [ ] **The slot is there.** On a session with observers turned off,
+  Session Home's Quick Setup card shows five slots, Observers between
+  Relationships and Session settings.
+- [ ] **Observers turn on.** Upload an Observers CSV with one row there:
+  the Observers tab appears in Setup, and Session details shows the
+  observers toggle on (and greyed, since the roster now has rows).
+- [ ] **Relationships turn on.** On a session with relationships off,
+  submit Reviewers, Reviewees and a Relationships CSV together: the
+  Relationships tab appears.
+- [ ] **Create.** On New session, leave the Observers box unticked, stage
+  an Observers CSV, and Create: the new session has the Observers tab.

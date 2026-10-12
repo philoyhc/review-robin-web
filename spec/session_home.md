@@ -505,14 +505,15 @@ in the Workflow card's body copy when relevant.
 The Quick Setup card sits in the bottom-left of Home's
 `.bottom-grid`, paired with the Owners card on the right, which sits
 level with it above the Danger Zone. It
-renders four wired slots — Reviewers, Reviewees, Relationships,
-Session settings — plus a conditional Observers slot when
-`observers_enabled`. The functional spec is
+renders five wired slots — Reviewers, Reviewees, Relationships,
+Observers, Session settings — whatever the session's feature toggles
+say; an upload that gives Observers or Relationships rows turns that
+tab on. The functional spec is
 `spec/quick_setup_card_spec.md`.
 
 Layout: a 2-column grid — Reviewers
-+ Reviewees stack in the left column; Relationships, Observers (when
-rendered) and Session settings stack in the right column, with Submit
++ Reviewees stack in the left column; Relationships, Observers and
+Session settings stack in the right column, with Submit
 in a footer at the bottom-right. There is **no Lock / Unlock**: the
 card is live on load while it is available — setup editable (`draft`
 or `validated`) with no persisted responses

@@ -45,9 +45,8 @@ class QuickSetupSlot:
 
     key: str
     """Stable slot identifier — ``reviewers`` / ``reviewees`` /
-    ``relationships`` / ``observers`` / ``settings`` (Session Home
-    shows ``observers`` only while ``observers_enabled``; the new-session
-    variant always does). Used as the
+    ``relationships`` / ``observers`` / ``settings``; both variants show
+    all five. Used as the
     DOM-id suffix (``#quick-setup-{key}``) so URL fragments scroll
     directly to a slot, and as the ``data-wire-target`` value so
     11J's wiring can locate the slot without a CSS-selector
@@ -258,28 +257,24 @@ def build_quick_setup_context(
             cancel_url=cancel_url_for("relationships"),
         ),
     ]
-    # Observers slot — gated on the session-level toggle. When
-    # ``observers_enabled`` is False (the default for sessions
-    # whose operator hasn't opted in to observers), the slot drops
-    # entirely so the right column stays the original 2-row shape;
-    # the toggle lives in Session Edit Details under "User
-    # interface settings" and is also surfaced as a roster filter
-    # on the rest of the UI.
-    if review_session.observers_enabled:
-        slots.append(
-            QuickSetupSlot(
-                key="observers",
-                label="Observers",
-                count=observer_count,
-                mode="file_upload",
-                is_wired=True,
-                wire_url=f"/operator/sessions/{sid}/quick-setup/observers",
-                coming_in=None,
-                error_message=_error_for("observers"),
-                error_details=_details_for("observers"),
-                cancel_url=cancel_url_for("observers"),
-            )
+    # Observers slot — always shown, as on the New session card
+    # (``guide/quick_setup_update.md`` Item 2). An upload that saves rows
+    # turns ``observers_enabled`` on, so the rows never sit behind a
+    # hidden tab.
+    slots.append(
+        QuickSetupSlot(
+            key="observers",
+            label="Observers",
+            count=observer_count,
+            mode="file_upload",
+            is_wired=True,
+            wire_url=f"/operator/sessions/{sid}/quick-setup/observers",
+            coming_in=None,
+            error_message=_error_for("observers"),
+            error_details=_details_for("observers"),
+            cancel_url=cancel_url_for("observers"),
         )
+    )
     slots.append(
         QuickSetupSlot(
             key="settings",
@@ -300,8 +295,6 @@ def build_quick_setup_context(
     slot_phrase = (
         "reviewers, reviewees, relationships, observers, and "
         "session settings"
-        if review_session.observers_enabled
-        else "reviewers, reviewees, relationships, and session settings"
     )
     if has_responses:
         # A session reverted from ``ready`` keeps its responses, so it
@@ -533,12 +526,10 @@ def build_new_session_quick_setup_context(
             wire_url=None,
             coming_in=None if is_wired else "Wired in Segment 15D PR 7c",
         ),
-        # Observers slot — always renders on the new-session form
-        # since the operator may tick the ``observers_enabled``
-        # toggle and upload observers in the same submission. When
-        # the toggle stays off, the upload is still parsed +
-        # persisted; the rows are visible once the operator turns
-        # the toggle on later.
+        # Observers slot — always renders, as on Session Home. An upload
+        # that saves rows turns ``observers_enabled`` on whether or not
+        # the form's box is ticked (``guide/quick_setup_update.md``
+        # Item 2).
         QuickSetupSlot(
             key="observers",
             label="Observers",

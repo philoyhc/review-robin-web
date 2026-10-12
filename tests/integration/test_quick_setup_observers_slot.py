@@ -1,7 +1,8 @@
 """Integration coverage for the Quick Setup Observers slot.
 
 Closes W12 from `guide/archive/participant_model_remainder.md`: gates the
-Observers slot on the session's ``observers_enabled`` toggle,
+Observers slot on the session's ``observers_enabled`` toggle (until
+quick_setup_update Item 2, which shows it always),
 shipped end-to-end through the per-slot POST + the consolidated
 submit-all chain. Mirrors the Relationships slot pattern (PR 7c)
 — file-upload mode, ``needs_confirm`` on replace, lifecycle gate
@@ -54,13 +55,13 @@ def _make_session(
 # ---------------------------------------------------------------------------
 
 
-def test_observers_slot_renders_only_when_toggle_on(
+def test_observers_slot_renders_whatever_the_toggle(
     client: TestClient, db: Session
 ) -> None:
-    """The Observers slot is suppressed when the session's
-    ``observers_enabled`` toggle is off (default) and appears
-    between Relationships and Session settings on the right
-    column when on."""
+    """The Observers slot renders between Relationships and Session
+    settings whether ``observers_enabled`` is on or off, as on the New
+    session card (``guide/quick_setup_update.md`` Item 2; it was hidden
+    while the toggle was off until then)."""
     rs_off = _make_session(
         client, db, code="qsobs-off", observers_enabled=False
     )
@@ -69,6 +70,7 @@ def test_observers_slot_renders_only_when_toggle_on(
         "reviewers",
         "reviewees",
         "relationships",
+        "observers",
         "settings",
     ]
 

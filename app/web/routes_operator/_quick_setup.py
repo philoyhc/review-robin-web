@@ -676,19 +676,42 @@ def _save_uploads(
     current = staged[0].kind
     try:
         with unit_of_work.atomic(db):
+            populated: list[str] = []
             for item in staged:
                 current = item.kind
-                _save_slot(
+                saved = _save_slot(
                     db,
                     item,
                     review_session=review_session,
                     user=user,
                     correlation_id=correlation_id,
                 )
+                if saved and item.kind in _FEATURE_TOGGLES:
+                    populated.append(_FEATURE_TOGGLES[item.kind])
+            # After every slot, Settings included, so a settings file's
+            # ``*_enabled=false`` cannot hide rows this submit just saved
+            # (Item 2): an upload that populates a roster turns its tab on.
+            if populated:
+                sessions.turn_on_populated_features(
+                    db,
+                    review_session,
+                    fields=populated,
+                    user=user,
+                    reason="quick_setup_upload",
+                    correlation_id=correlation_id,
+                )
     except lifecycle.SessionStateConflict as exc:
         raise _UnitRefused(
             _SlotRefusal(current, _SlotFailure("lifecycle"))
         ) from exc
+
+
+#: The rosters with a session feature toggle, and the toggle each turns
+#: on when an upload gives it rows (guide/quick_setup_update.md Item 2).
+_FEATURE_TOGGLES = {
+    "relationships": "relationships_enabled",
+    "observers": "observers_enabled",
+}
 
 
 def _save_slot(
@@ -698,7 +721,9 @@ def _save_slot(
     review_session: ReviewSession,
     user: User,
     correlation_id: str,
-) -> None:
+) -> int:
+    """Save one checked slot; returns how many roster rows it saved
+    (0 for Settings)."""
     common = {
         "session": review_session,
         "user": user,
@@ -709,12 +734,15 @@ def _save_slot(
         csv_imports.save_reviewers(
             db, rows=item.rows, field_labels_captured=item.field_labels, **common
         )
+        return len(item.rows)
     elif item.kind == "reviewees":
         csv_imports.save_reviewees(
             db, rows=item.rows, field_labels_captured=item.field_labels, **common
         )
+        return len(item.rows)
     elif item.kind == "observers":
         csv_imports.save_observers(db, rows=item.rows, **common)
+        return len(item.rows)
     elif item.kind == "relationships":
         # Parsed again against the rosters as they now stand inside the
         # unit, for their real ids — under the session lock, so a roster
@@ -746,6 +774,7 @@ def _save_slot(
             field_labels_captured=result.field_labels,
             **common,
         )
+        return len(result.rows)
     else:  # settings
         lifecycle.require_editable(db, review_session)
         result = session_config_io.apply_session_config(
@@ -764,6 +793,7 @@ def _save_slot(
                     ),
                 )
             )
+        return 0
 
 
 def _slot_redirect(

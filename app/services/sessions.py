@@ -497,6 +497,47 @@ def delete_session(
 
 
 
+def turn_on_populated_features(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    fields: list[str],
+    user: User,
+    reason: str,
+    correlation_id: str | None = None,
+) -> dict[str, list[bool]]:
+    """Turn on each feature toggle in ``fields`` that is off, because an
+    upload just gave its roster rows (``guide/quick_setup_update.md``
+    Item 2). The converse of the lock-on-data invariant
+    (``spec/participant_model.md``): rows never sit behind a hidden tab.
+
+    Flushes only — the caller's unit commits — and writes one
+    ``session.feature_toggled`` event carrying the flips and ``reason``.
+    Returns the changes, empty when every toggle was already on."""
+
+    changes: dict[str, list[bool]] = {}
+    for field_name in fields:
+        if field_name not in {"relationships_enabled", "observers_enabled"}:
+            raise ValueError(f"not a feature toggle: {field_name!r}")
+        if not getattr(review_session, field_name):
+            setattr(review_session, field_name, True)
+            changes[field_name] = [False, True]
+    if not changes:
+        return changes
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="session.feature_toggled",
+        summary=f"Session {review_session.code} feature toggle(s) turned on",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.changes(changes),
+        reason=reason,
+        correlation_id=correlation_id,
+    )
+    return changes
+
+
 def _has_relationships(db: Session, session_id: int) -> bool:
     """True iff any ``relationships`` row exists for the session.
 

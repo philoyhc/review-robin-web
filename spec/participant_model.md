@@ -43,9 +43,9 @@ Two boolean columns on `sessions` gate which of the optional Setup tabs render a
 
 On the Create page the card sits above the Quick Setup card; on Session Home the toggles are a field of the details card, under Tags (`spec/session_home.md`). Saving the form persists both flags through `SessionCreate` to `sessions.create_session` (on the Create form) or `sessions.update_session` (on the Session details card).
 
-**Lock-on-data invariant.** Once a roster has at least one row, the corresponding flag cannot flip True → False — `sessions.update_session` silently no-ops the flip (the UI also renders the checkbox `disabled` in this case). This prevents orphaning data behind a hidden tab. Both `_has_relationships(db, session_id)` and `_has_observers(db, session_id)` are the load-bearing readers.
+**Lock-on-data invariant.** Once a roster has at least one row, the corresponding flag cannot flip True → False — `sessions.update_session` silently no-ops the flip (the UI also renders the checkbox `disabled` in this case). This prevents orphaning data behind a hidden tab. Both `_has_relationships(db, session_id)` and `_has_observers(db, session_id)` are the load-bearing readers. **The converse holds on upload:** a Quick Setup submit that saves rows into either roster turns its flag on (`sessions.turn_on_populated_features`, `spec/quick_setup_card_spec.md` "Turning tabs on"); the roster's own Setup page is reachable only with the flag already on.
 
-**Audit.** Every flip emits `session.feature_toggled` with the canonical `audit.changes({field: [old, new]})` envelope, in addition to the general `session.updated` event recording the same diff alongside any other field edits in the same save.
+**Audit.** Every flip emits `session.feature_toggled` with the canonical `audit.changes({field: [old, new]})` envelope, in addition to the general `session.updated` event recording the same diff alongside any other field edits in the same save. A flip made by a Quick Setup upload emits `session.feature_toggled` alone, with `reason="quick_setup_upload"`.
 
 ---
 

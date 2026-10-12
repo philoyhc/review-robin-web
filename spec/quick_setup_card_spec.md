@@ -26,9 +26,9 @@ The card is **available** while setup is editable — `draft` or `validated`, th
 
 ### Slots
 
-The card contains four always-present live slots (Reviewers, Reviewees, Relationships, Session settings) and one conditional slot (Observers, rendered on Home only when `observers_enabled`; the new-session variant always renders it). All five share a "file upload" shape — no rule selectors or other slot-specific input modes. **The card must not gain an Assignments slot.** Assignments are a materialized derivative — the Workflow card's **Prepare session** generates one row per eligible `(reviewer, reviewee, instrument)` triple from each instrument's rule (`spec/assignments.md`) — not a dataset an operator uploads.
+The card contains five live slots on both variants — Reviewers, Reviewees, Relationships, Observers, Session settings — whatever the session's `relationships_enabled` / `observers_enabled` toggles say (Observers was hidden on Home while its toggle was off until `guide/quick_setup_update.md` Item 2). All five share a "file upload" shape — no rule selectors or other slot-specific input modes. **The card must not gain an Assignments slot.** Assignments are a materialized derivative — the Workflow card's **Prepare session** generates one row per eligible `(reviewer, reviewee, instrument)` triple from each instrument's rule (`spec/assignments.md`) — not a dataset an operator uploads.
 
-**Layout.** A two-column grid hosts the slots. Reviewers + Reviewees stack in the left column; Relationships, Observers (when rendered) and Session settings stack in the right column, in that order. There is no horizontal divider between the slot groups.
+**Layout.** A two-column grid hosts the slots. Reviewers + Reviewees stack in the left column; Relationships, Observers and Session settings stack in the right column, in that order. There is no horizontal divider between the slot groups.
 
 **No count indicators.** Each slot's heading is its label and the inline action "Upload a CSV"; it does not show how many rows the session holds. The per-entity Setup pages carry the counts.
 
@@ -69,6 +69,8 @@ Each CSV's expected schema (column names, required vs. optional fields, encoding
 Inline JS mirrors the checkbox state into the form's hidden `confirm_replace` input on submit. The route gate stays the source of truth: when any roster slot whose `existing > 0` runs, or the Settings slot runs on an existing session, without `confirm_replace == "true"`, the submit 303s with `?quick_setup_error={kind}&quick_setup_reason=needs_confirm` and the slot's banner-error directs the operator at the card-level checkbox. Where responses exist, the Reviewers, Reviewees and Settings slots also need `acknowledge_response_loss=true` (Relationships and Observers check the tick only) (`spec/lifecycle.md` §3.2); the card never sends it, because it is locked whenever responses exist, so only a direct POST that bypasses the card can reach that case. A refusal on the missing acknowledgement shows the same `needs_confirm` banner as a missing tick, as the Reviewers and Reviewees slots do.
 
 **Per-slot dispatch.** The submit-all handler takes each slot whose input is present, in order: Reviewers → Reviewees → Relationships → Observers → Settings. It **checks every file first, then saves them all in one unit** (`_run_quick_setup`): each slot in order runs its file's own checks, then its replacement gates (the tick, and the response-loss acknowledgement where it applies), and the first slot to refuse 303s with its `quick_setup_error` flag with **nothing saved**. Only when every file has passed are they saved, in the same order, inside one `unit_of_work.atomic` and under one correlation id, so the per-entity savers nest and nothing commits until the last slot has saved; a refusal met during the saves — a Settings error only `apply_session_config` finds, or a lifecycle change the savers' lock sees — rolls every slot back and is reported on the slot that met it. The per-slot routes and the create-session POST run the same pipeline, with one file and with the staged files respectively, so it is the **only** save site behind every Quick Setup upload route, which is what makes a fix there reach all of them.
+
+**Turning tabs on.** A submit that saves at least one Observers or Relationships row turns that session's `observers_enabled` / `relationships_enabled` on if it was off — the converse of the lock-on-data invariant (`spec/participant_model.md`), so rows never sit behind a hidden tab. It runs inside the unit after every slot, Settings included, so a settings file saying `false` cannot hide rows the same submit saved, and a refusal leaves the toggles as they were. A header-only file saves no rows and turns nothing on. Each change writes `session.feature_toggled` with `reason="quick_setup_upload"` (`sessions.turn_on_populated_features`).
 
 **Empty submissions** are clean no-op redirects — submit-all without any input 303s back to Home with no slot fragment.
 
@@ -121,12 +123,13 @@ The description copy explains the rule from the operator's vantage point. It has
 
 ### New-session variant (`/operator/sessions/new`)
 
-The Quick Setup card also renders on the create-new-session page, below the Session details form. The variant has four differences from the Home version:
+The Quick Setup card also renders on the create-new-session page, below the Session details form. The variant has three differences from the Home version:
 
 - **Title.** "Quick setup (optional)" — flags that the operator can fill it in alongside the session details, but doesn't have to.
 - **No footer.** The card is always live, and the footer row that holds Submit on Home doesn't render: Create session submits the uploads.
 - **No card-level replacement-confirmation checkbox.** A freshly-created session has nothing to replace, so the "Yes, replace existing reviewers, reviewees or settings…" tick is omitted. The body wrapper still exists; only the checkbox is suppressed.
-- **Observers slot always renders.** The operator may tick `observers_enabled` on the same form; an Observers upload is parsed and saved whether or not the box is ticked (`build_new_session_quick_setup_context`).
+
+Its slots are Home's five. The form's Relationships and Observers boxes need not be ticked for those slots: an upload is saved either way and turns its tab on (**Turning tabs on**, above).
 
 **Submission semantics.** The card has no Submit button of its own. Each slot's inputs associate with the create-session form via the HTML `form="create-session-form"` attribute, so the single "Create session" button submits both the session details and any staged Quick Setup uploads in one POST. After `POST /operator/sessions` creates the session, the handler runs the provided slots through the same pipeline the Home submit-all uses (`_run_quick_setup`; see **Per-slot dispatch** above for why that matters). `confirm_replace` is implicitly `"true"` on this path for the roster slots — there's nothing to overwrite, so the route layer's gate is satisfied trivially — and the Settings slot is called with `replacing=False`, which skips its gate for the same reason.
 

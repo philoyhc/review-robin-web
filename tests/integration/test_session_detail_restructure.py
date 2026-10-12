@@ -707,10 +707,10 @@ def test_session_card_buttons_when_draft(
 def test_quick_setup_card_renders_scaffold_in_draft(
     client: TestClient, db: Session
 ) -> None:
-    """Post-15D PR 7c the Quick Setup card on Session Home renders
-    a 4-slot layout in draft (Reviewers, Reviewees, Relationships,
-    Settings). Settings remains inert pending Segment 12A PR 6.
-    The legacy Assignments slot retired in PR 7a."""
+    """The Quick Setup card on Session Home renders five slots in draft
+    (Reviewers, Reviewees, Relationships, Observers, Settings) —
+    Observers whatever its toggle since quick_setup_update Item 2. The
+    legacy Assignments slot retired in PR 7a."""
 
     review_session = _make_session(client, db, code="qs-draft")
     body = client.get(f"/operator/sessions/{review_session.id}").text
@@ -720,11 +720,11 @@ def test_quick_setup_card_renders_scaffold_in_draft(
     assert "<h2>Quick Setup</h2>" in body
     # Action-oriented body copy in draft / validated.
     assert (
-        "Bulk-populate reviewers, reviewees, relationships, and "
-        "session settings"
+        "Bulk-populate reviewers, reviewees, relationships, observers, "
+        "and session settings"
     ) in body
-    # Four slots render with stable fragment anchors.
-    for key in ("reviewers", "reviewees", "relationships", "settings"):
+    # Five slots render with stable fragment anchors.
+    for key in ("reviewers", "reviewees", "relationships", "observers", "settings"):
         assert f'id="quick-setup-{key}"' in body
     # Legacy Assignments slot retired in PR 7a.
     assert 'id="quick-setup-assignments"' not in body
