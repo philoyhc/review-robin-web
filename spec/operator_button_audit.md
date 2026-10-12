@@ -301,7 +301,7 @@ Source: `app/web/templates/operator/session_reviewers.html`.
 | 128 | Row expander bar (Edit/Add) | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits the `/{id}/update` or `/create` form. **Not "below the divider"**: there is no divider on Reviewers and no editor card — the pair renders in an expander bar directly beneath the edited row, styled as that row's own expander. **Secondary on all four roster pages**; whether the pair *should* be Primary is a question for the page that next revisits it. |
 | 129 | Row expander bar (Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list, carrying the pager anchor so Cancel lands where Save would. |
 | 37 | Danger Zone | Delete all reviewers | `<button type="submit">` | `btn destructive` | Destructive | Posts `/reviewers/delete-all`. **In the roster card's Unlock panel**. Rendered only when the roster has rows — not because the route refuses an empty one (it answers 303 and writes "Deleted all 0 reviewers") but because `_delete_all` invalidates a `validated` session before it counts, so an ungated one demotes to `draft` while deleting nothing. |
-| 231 | Roster card | Unlock / Lock | `<button type="button">` | `btn secondary` | Secondary | Toggles the Unlock panel; renders only while the session is `is_editable` and no row is being edited or added. **One element, two homes**, as Observers' #178: the card's last child when collapsed, inside the panel when open. The label names the state it moves *to*. Each home carries a `<noscript>` twin (`?unlocked=1#roster-card` and back) |
+| 231 | Roster card | Unlock / Lock | `<button type="button">` | `btn secondary` | Secondary | Toggles the Unlock panel; renders only while the session is `is_editable` and no row is being edited or added. **One element, two homes**, as Observers' #178: the card's last child when collapsed, the right column's last child when open. The label names the state it moves *to*. Each home carries a `<noscript>` twin (`?unlocked=1#roster-card` and back) |
 
 ---
 
@@ -328,7 +328,7 @@ shared roster shape — toolbar, row expander, Unlock panel
 | 135 | Row expander bar (Edit/Add) | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits the `/{id}/update` or `/create` form; shown below the divider in Edit/Add mode. Secondary, as #128. |
 | 136 | Row expander bar (Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
 | 41 | Danger Zone | Delete all reviewees | `<button type="submit">` | `btn destructive` | Destructive | Posts `/reviewees/delete-all`. In the **Unlock panel's right column**, beneath the tag-labels editor; the card renders only on a roster with rows. |
-| 232 | Roster card | Unlock / Lock | `<button type="button">` | `btn secondary` | Secondary | Toggles the Unlock panel; renders only while the session is `is_editable` and no row is being edited or added. **One element, two homes**, as Observers' #178: the card's last child when collapsed, inside the panel when open. The label names the state it moves *to*. Each home carries a `<noscript>` twin (`?unlocked=1#roster-card` and back) |
+| 232 | Roster card | Unlock / Lock | `<button type="button">` | `btn secondary` | Secondary | Toggles the Unlock panel; renders only while the session is `is_editable` and no row is being edited or added. **One element, two homes**, as Observers' #178: the card's last child when collapsed, the right column's last child when open. The label names the state it moves *to*. Each home carries a `<noscript>` twin (`?unlocked=1#roster-card` and back) |
 
 ---
 
@@ -356,7 +356,7 @@ and the Unlock panel*).
 | 142 | Row expander bar (Edit/Add) | Save | `<button type="submit">` | `btn secondary` | Secondary | Submits the `/{id}/update` or `/create` form; reviewer / reviewee chosen via name-or-email `<datalist>` pickers. Secondary, as #128. |
 | 143 | Row expander bar (Edit/Add) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the plain list. |
 | 45 | Danger Zone | Delete all relationships | `<button type="submit">` | `btn destructive` | Destructive | Posts `/relationships/delete-all`. In the **Unlock panel's right column**, beneath the pair-context labels editor; the card renders only on a roster with rows. |
-| 233 | Roster card | Unlock / Lock | `<button type="button">` | `btn secondary` | Secondary | Toggles the Unlock panel; renders only while the session is `is_editable` and no row is being edited or added. **One element, two homes**, as Observers' #178: the card's last child when collapsed, inside the panel when open. The label names the state it moves *to*. Each home carries a `<noscript>` twin (`?unlocked=1#roster-card` and back) |
+| 233 | Roster card | Unlock / Lock | `<button type="button">` | `btn secondary` | Secondary | Toggles the Unlock panel; renders only while the session is `is_editable` and no row is being edited or added. **One element, two homes**, as Observers' #178: the card's last child when collapsed, the right column's last child when open. The label names the state it moves *to*. Each home carries a `<noscript>` twin (`?unlocked=1#roster-card` and back) |
 
 ---
 

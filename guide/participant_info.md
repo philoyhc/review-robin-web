@@ -323,32 +323,29 @@ Taken 2026-10-12 at `1fa68b24`.
 - `What reviewees see` and `What observers see`: later items, which
   place their cards by this Decision.
 
-### Status
+### Status — closed 2026-10-12
 
-- Rung 2 (2026-10-12, #2981): the four templates reordered; `Lock`
-  the panel's last child, a row spanning both columns; `data-lock-home`
-  retired. `tests/integration/_unlock_panel.py` holds the one placement
-  check the four pages share.
-- Rung 3 (2026-10-12): the row under the taller column left a gap under
-  a shorter right one, measured in Chromium at 59px on Reviewers and
-  124px on Observers with rows by the agent's Chromium render of the
-  four pages (author: remove it). `Lock` ends the
-  right column again; `.unlock-panel > .unlock-right` stretches to the
-  row and `.roster-card-actions:first-child` takes `margin-top: auto`,
-  so an empty right column puts it at the foot. 20px from the last card
-  on all four pages in the same render; the author's check is owed.
-  Its `diff-reviewer` read found the plan still rejecting what the
-  amendment adopts, three stale plan lines, no rung 3 in the ladder, the
-  moved block under-indented, and no check that `Lock` is an empty
-  right column's only element; all fixed. A second read of those fixes
-  found the new ladder rung filed under Item 1; moved.
-- Reads: two `diff-reviewer` reads and one `spec-writer` verify. The
-  first read and the verify both
-  found the old placement in four specs the plan had not named (they
-  joined `Doc impact`) and stale comments in templates and tests; the
-  read also had the shared check pin `Lock` as the panel's direct last
-  child, and the scaffold test file reuse its div-balancer.
-  The second read, of those fixes, found nothing new.
+Shipped in two code rungs (#2981, #2982) after the plan (#2980); the
+author's browser check passed 2026-10-12.
+
+- **Diverged from the plan:** rung 2 made `Lock` a row of its own under
+  both columns; on the author's check it left a gap under a shorter
+  right column (59px on Reviewers, 124px on Observers with rows, in the
+  agent's Chromium render). Rung 3 (Decision amendment) put it back at
+  the end of the right column, which stretches to the row so an empty
+  one (Observers with no rows) puts `Lock` at its foot.
+- **Built:** the four templates reordered; `data-lock-home` retired;
+  `.unlock-panel > .unlock-right { align-self: stretch }` and
+  `.unlock-right > .roster-card-actions:first-child { margin-top: auto }`;
+  `tests/integration/_unlock_panel.py` holds the one placement check
+  the four pages share.
+- **Reads:** rung 2 took two `diff-reviewer` reads and a `spec-writer`
+  verify (four specs the plan had not named joined `Doc impact`; stale
+  comments; the shared check tightened), rung 3 two reads (stale plan
+  lines, indentation, an empty-column test; then a misfiled ladder
+  rung). `spec-writer` at close: no divergence; two edits,
+  `spec/operator_button_audit.md` #231–233 and the panel's tenants in
+  `spec/operator_ui_concept.md`.
 
 ### Doc impact
 
@@ -359,3 +356,83 @@ Taken 2026-10-12 at `1fa68b24`.
 - `spec/rrw_functional_spec.md` — Observers' panel no longer mirrored.
 - `spec/operator_ui_concept.md` — Observers' differences: no mirrored columns.
 - `guide/things_to_check_in_browser.md` — a section for the reorder.
+
+---
+
+## Item 3 — The reviewer's own line on `/summary` and the pre-open page
+
+### Opportunity
+
+Item 1 put the line on the reviewer surface and its preview only. On its
+browser check (author, 2026-10-12) the author asked for it on the
+reviewer's `/summary` too, and, asked which other reviewer pages should
+carry it, chose the pre-open page as well.
+
+### Decision
+
+The author's ruling, 2026-10-12:
+
+- **`/me/sessions/{id}/summary`** shows the line after the role pills,
+  as the surface does: the same `_role_chips.html` row, the same
+  selection.
+- **The pre-open page** (`reviewer/pre_open.html`, "opens later") shows
+  it too, so a reviewer can check their details before the review
+  opens.
+- **Not** the reviewee `/results` or observer `/collation` pages (a
+  reviewer who holds those roles too): there the line would follow the
+  wrong pill, and those audiences' own items will decide.
+
+Rejected: the dashboard `/me` (one row per session; the line is per
+session and would repeat across rows).
+
+### Semantics
+
+- One selection, Item 1's: `effective_reviewer_self_fields` and
+  `views.reviewer_self_line`, read the same way on all three pages.
+- `/summary` already renders `_role_chips.html`; it gains the
+  `reviewer_self_fields` key.
+- The pre-open page has no role row. It gains one holding a static
+  `Reviewer` pill and the line, as the operator preview does.
+
+### Judgment calls — decided
+
+- The pre-open page's **closed** variant (an archived session) gets no
+  line: the review is over and nothing on the page acts on it.
+
+### Blast radius (measured)
+
+Taken 2026-10-12 at `9ec18ca1`.
+
+- Routes: `app/web/routes_reviewer/_summary.py` (one key),
+  `app/web/routes_reviewer/_surface/_routes.py` (the pre-open render).
+- Templates: `app/web/templates/reviewer/pre_open.html`.
+- Tests: `grep -rln "pre_open\|/summary\|reviewer/summary" tests --include=*.py | wc -l` → 15.
+- Spec: `spec/reviewer-surface.md` § *Per-session summary* and
+  § *Pre-open page*.
+
+### PR ladder
+
+1. **This plan**, with Item 2's close. Prose only.
+2. **Both pages.** The two contexts, the pre-open role row, tests, the
+   spec, a browser-check section. Read on its own diff.
+
+### Definition of done
+
+- `/summary` and the "opens later" pre-open page show the selected
+  fields after a `Reviewer` pill, by test; the closed variant, `/results`
+  and `/collation` do not.
+- `### Doc impact` current; `spec-writer` flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- None open.
+
+### Out of scope
+
+- What reviewees and observers see of themselves: later items.
+
+### Doc impact
+
+- `spec/reviewer-surface.md` — the line on the per-session summary and on the pre-open page's "opens later" variant.
+- `guide/things_to_check_in_browser.md` — a section for the two pages.
