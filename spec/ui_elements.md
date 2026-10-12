@@ -658,8 +658,9 @@ Clear all (`.pill-tag-clear`, also on the Archived page) and AND/OR
 (`.tag-mode-chip`) chips, and a
 role pill when it is a link (`a.pill.pill-role-*`: the `/me`
 dashboard's role column and the role navigator's other-role links,
-whose `<span>` forms stay plain). Static pills carry no edge: the
-Visibility card's locked preview table (`spec/instruments.md` "Visibility
+whose `<span>` forms stay plain). The edge says link, so the anchor is
+not underlined until hovered, on the dashboard as in the navigator.
+Static pills carry no edge: the Visibility card's locked preview table (`spec/instruments.md` "Visibility
 card") is the static, no-click-handler pattern. A fixed switch carries
 no edge either (`.tag-chip.is-fixed`, below), and that includes the
 display-field table's locked Name / Email chips (`spec/instruments.md`
