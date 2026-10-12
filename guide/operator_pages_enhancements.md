@@ -480,7 +480,11 @@ a rule.
 - Save is gated on validity, not on a change: Cancel already discards.
   In the several-row editor (rung 4) it also waits for a change: over
   differing rules the builder arrives empty, and a live Save would clear
-  them all in one click — the job the expander's dirty gate did.
+  them all in one click — the job the expander's dirty gate did. The
+  change is to the form, not to what the rule means: touching `AND`/`OR`
+  or adding a blank cell enables Save, which is also the deliberate way
+  to clear differing rules in one go (the note says Save replaces them
+  all). A meaning-based gate would leave no way to do that.
 - The rule's builder is the expander's, not a second copy: one macro,
   `cohort_builder(form_id)`, rendered in both places until rung 4 left
   the row editor its only home.
@@ -547,8 +551,13 @@ Taken 2026-10-12 at `ddd589d3`.
   save not prompting; stale comments. All fixed in rung 4: the option is
   selectable, Save waits for a change there, `same_cohort_rule` is the
   one comparison (bulk saves skip unchanged observers too), `Edit`
-  carries the view, `cohort_rule_signature` retired. A focused re-read
-  covered the fixes.
+  carries the view, `cohort_rule_signature` retired. A focused re-read of
+  the fixes found `+` copying a stale option into a new cell, where it
+  became pickable (fixed: the clone strips it, on #2989 too), the
+  several-row gate being form- not meaning-based (kept; a judgment call
+  above), two stale wordings and the settings inventory's "no rule"
+  row (fixed), and thin coverage of `Edit` keeping the view and of the
+  rejected-save guard (tests added).
 
 ### PR ladder
 

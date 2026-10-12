@@ -452,8 +452,51 @@ def test_null_and_an_empty_set_are_not_different_rules(
 
 def test_edit_keeps_the_filter_and_page(client: TestClient, db: Session) -> None:
     """The several-row editor drops ids not on the rendered window, so
-    `Edit` carries the view it was taken from."""
-    rs, _ = _session(client, db, "orc-view")
-    body = client.get(f"/operator/sessions/{rs.id}/observers").text
-    assert '"&status=" + encodeURIComponent(' in body
-    assert "window.location = OBS_BASE + query + VIEW +" in body
+    `Edit` carries the view it was taken from — and a filtered view opens
+    over the selected rows with its filter still applied."""
+    rs, first = _session(client, db, "orc-view")
+    second = _second(db, rs, RULE)
+    hidden = Observer(session_id=rs.id, email="z@example.org",
+                      display_name="Z", status="inactive")
+    db.add(hidden)
+    db.commit()
+    page = client.get(f"/operator/sessions/{rs.id}/observers").text
+    assert "window.location = OBS_BASE + query + VIEW +" in page
+    body = client.get(
+        f"/operator/sessions/{rs.id}/observers"
+        f"?rule_id={first.id}&rule_id={second.id}"
+        f"&status=active&q=&offset=0"
+    ).text
+    assert "The 2 selected observers" in _bar(body)
+    assert f'id="observer-row-{hidden.id}"' not in body, (
+        "the status filter was dropped"
+    )
+
+
+def test_a_rejected_save_arrives_as_unsaved(
+    client: TestClient, db: Session
+) -> None:
+    """The leave guard and the several-row Save treat a page re-rendered
+    by a rejected save as changed from arrival: what it holds was posted,
+    not stored."""
+    rs, first = _session(client, db, "orc-unsaved")
+    second = _second(db, rs, None)
+    ok = client.get(
+        f"/operator/sessions/{rs.id}/observers"
+        f"?rule_id={first.id}&rule_id={second.id}"
+    ).text
+    assert "var arrivedUnsaved = false;" in ok
+    rejected = client.post(
+        f"/operator/sessions/{rs.id}/observers/cohort-rule",
+        data={
+            "observer_ids": [first.id, second.id],
+            "cohort_combinator": "AND",
+            "cohort_rule_field": ["reviewee.tag1"],
+            "cohort_rule_op": ["IS"],
+            "cohort_rule_operand_tag": [""],
+            "cohort_rule_operand_value": [""],
+        },
+        follow_redirects=False,
+    )
+    assert rejected.status_code == 400
+    assert "var arrivedUnsaved = true;" in rejected.text

@@ -271,8 +271,8 @@ def test_edit_on_several_rows_saves_one_rule_to_each(
     while op.inner_text() != "IS":
         op.click()
     cell.locator("[data-observer-operand-value]").fill("Green")
-    page.locator("[data-observer-edit-save]").click()
-    page.wait_for_load_state("load")
+    with page.expect_navigation():
+        page.locator("[data-observer-edit-save]").click()
 
     rules = _rules(live_server.database_url, session_id)
     assert len(rules) == 2

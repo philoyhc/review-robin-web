@@ -1675,7 +1675,8 @@ read-only and highlighted, and there are no row fields. The heading reads
   with hidden `observer_ids`, and sets every selected observer's rule to
   whatever the builder holds; observers whose rule it leaves unchanged
   are not written and get no audit event. Cells are read exactly as
-  above: all blank **clears** every selected observer's rule (`NULL`); a
+  above: all blank **clears** every selected observer's rule (to `NULL`,
+  an explicit empty set being left as it is — the same "no rule"); a
   half-filled cell answers **400** with the editor re-rendered (one id
   re-renders as that row's editor). An empty or foreign `observer_ids`
   answers a plain 400 with no editor.

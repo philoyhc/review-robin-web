@@ -436,3 +436,12 @@ section (git history keeps it), so this file lists only what is owed.
   builder starts empty with the "different cohort rules" note.
 - [ ] **Leaving.** In any editor, change something and click another
   Setup tab: the browser asks before leaving; Cancel and Save do not.
+- [ ] **Waits for a change.** With two differing rules, `Edit`: Save is
+  disabled until something in the builder changes.
+- [ ] **Keeps the view.** Filter or search the roster, tick two rows,
+  `Edit`: the editor opens over them with the filter still applied.
+- [ ] **A rejected save.** Several rows, a half-filled cell, Save: the
+  error shows; clicking another tab now asks before leaving.
+- [ ] **A rule the dropdown lacks.** An observer whose rule names a
+  pair-context tag: `Edit`, rename, Save — the rule is unchanged; `+`
+  offers no `(missing label)` option in the new cell.

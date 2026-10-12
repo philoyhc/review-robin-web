@@ -448,9 +448,9 @@ def set_cohort_rule(
     ``ObserverOperationError("invalid_cohort_rule", ...)`` and
     leaves the database unchanged.
 
-    Returns the validated cohort-rule dict that landed on every
-    named observer (or ``None`` when clearing). No-ops cleanly
-    when ``observer_ids`` is empty.
+    Returns the validated cohort-rule dict every named observer now
+    holds (or ``None`` when clearing); observers whose rule it leaves
+    unchanged are not written or audited (``same_cohort_rule``).
 
     Lifecycle: cohort_rule changes don't invalidate session
     validation, and the gate is not editability: the cohort rule
