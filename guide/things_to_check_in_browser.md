@@ -447,3 +447,18 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **A rule the dropdown lacks.** An observer whose rule names a
   pair-context tag: `Edit`, rename, Save — the rule is unchanged; `+`
   offers no `(missing label)` option in the new cell.
+
+
+## An observer's own entry: the scaffold (participant info Item 5, rung 2)
+
+- [ ] **Readout.** On Observers, the roster card's row ends with
+  `Observers see:` Name, Email, locked or unlocked.
+- [ ] **The card.** Unlock Observers: "What observers see of their own
+  entry" heads the right column above the `Danger Zone`, chips Name and
+  Email selected and Tag unselected (Tag only while some row has one);
+  the chips toggle on screen, Save and Cancel stay disabled.
+- [ ] **Empty roster.** Delete all observers: the card still shows, Name
+  and Email only, with `Lock` under it.
+- [ ] **Collation.** As an observer, `/collation` shows the name and
+  email after the `Observer` pill, muted, as `/results` shows a
+  reviewee's.

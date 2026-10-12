@@ -1,10 +1,11 @@
 """What a participant is shown of their own roster entry, per side.
 
-`guide/participant_info.md` Items 1, 3 and 4. The reviewer's functions
-(Item 1: the reviewer surface and its preview, ``/summary`` and the
-pre-open "opens later" page; the Reviewers page's card and readout) and
+`guide/participant_info.md` Items 1, 3, 4 and 5. The reviewer's
+functions (Item 1: the reviewer surface and its preview, ``/summary`` and
+the pre-open "opens later" page; the Reviewers page's card and readout),
 the reviewee's (Item 4: ``/results``; the Reviewees page's card and
-readout), each a thin wrapper over ``_participant_self``'s one core.
+readout) and the observer's (Item 5: ``/collation``; the Observers
+page's), each a thin wrapper over ``_participant_self``'s one core.
 
 The selections themselves, their defaults and their storage live in
 ``app.services.participant_info``; this module shapes them for the pages.
@@ -14,8 +15,9 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from app.db.models import Reviewee, Reviewer, ReviewSession
+from app.db.models import Observer, Reviewee, Reviewer, ReviewSession
 from app.services.participant_info import (
+    OBSERVER_SELF_DEFAULT,
     REVIEWER_SELF_DEFAULT,
     REVIEWER_SELF_FIELD_KEYS,
     effective_reviewer_self_fields,
@@ -23,6 +25,7 @@ from app.services.participant_info import (
 )
 
 from ._participant_self import (
+    OBSERVER_SPEC,
     REVIEWEE_SPEC,
     REVIEWER_SPEC,
     SelfFieldChip,
@@ -40,6 +43,8 @@ __all__ = [
     "REVIEWER_SELF_FIELD_KEYS",
     "SelfFieldChip",
     "SelfFieldValue",
+    "observer_self_card_context",
+    "observer_self_line_for",
     "reviewee_self_card_context",
     "reviewee_self_line_for",
     "reviewer_self_card_context",
@@ -156,3 +161,35 @@ def reviewee_self_line_for(
         reviewee,
         effective_self_fields(review_session, "reviewee"),
     )
+
+
+# ── Observers (Item 5) ───────────────────────────────────────────────
+
+
+def observer_self_card_context(
+    review_session: ReviewSession, readouts: Iterable[ColumnReadout]
+) -> dict[str, object]:
+    """The Observers page's card chips and kept keys and its `Observers
+    see:` pills, under the Reviewers page's three keys.
+
+    The Observers index lists all three columns whatever their counts, so
+    the card offers the tag only while some row holds one; Name and Email
+    are always offered, as on the other pages. Rung 2 renders the
+    default: nothing reads the stored column yet.
+    """
+    offered = [r for r in readouts if r.slot != "tag-1" or r.count]
+    selected = OBSERVER_SELF_DEFAULT
+    chips = self_chips(OBSERVER_SPEC, offered, selected)
+    return {
+        "self_field_chips": chips,
+        "self_field_kept": self_kept(OBSERVER_SPEC, chips, selected),
+        "self_field_readout": self_readout(OBSERVER_SPEC, review_session, selected),
+    }
+
+
+def observer_self_line_for(
+    review_session: ReviewSession, observer: Observer
+) -> list[SelfFieldValue]:
+    """The observer's own line on ``/collation``, after the role pills,
+    at the default until rung 3 stores a selection."""
+    return self_line(OBSERVER_SPEC, review_session, observer, OBSERVER_SELF_DEFAULT)

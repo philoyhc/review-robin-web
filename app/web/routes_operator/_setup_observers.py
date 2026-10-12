@@ -211,6 +211,7 @@ def _render_observers_page(
     )
 
     cohort_match_tags = views.new_model_usable_tags(db, review_session)
+    col_readouts = views.observer_column_state(db, review_session).readouts
 
     return _templates.TemplateResponse(
         request,
@@ -267,9 +268,11 @@ def _render_observers_page(
             # 19P.2 rung 6 — the roster index row. Informational in
             # every lifecycle state, which is why the card carrying it
             # renders even where the Unlock panel cannot.
-            "col_readouts": views.observer_column_state(
-                db, review_session
-            ).readouts,
+            "col_readouts": col_readouts,
+            # participant info Item 5 — the own-entry card and the
+            # `Observers see:` readout. This helper renders the GET and the
+            # failed import alike, so the two cannot disagree.
+            **views.observer_self_card_context(review_session, col_readouts),
             # 19P.2 rung 6 — whether the Unlock panel ships open.
             # Server state, not a second source of truth for the JS
             # toggle: the toggle still owns every click, this only

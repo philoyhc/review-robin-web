@@ -39,12 +39,14 @@
       {% endif %}
     {% endfor %}
     {# One own-entry line per page: the reviewer's on the reviewer
-       pages, the reviewee's on `/results` (Item 4). The data attribute
-       names whose it is. #}
+       pages, the reviewee's on `/results` (Item 4), the observer's on
+       `/collation` (Item 5). The data attribute names whose it is. #}
     {% if reviewer_self_fields %}
       {% set self_fields, self_role = reviewer_self_fields, "reviewer" %}
     {% elif reviewee_self_fields %}
       {% set self_fields, self_role = reviewee_self_fields, "reviewee" %}
+    {% elif observer_self_fields %}
+      {% set self_fields, self_role = observer_self_fields, "observer" %}
     {% else %}
       {% set self_fields, self_role = [], "" %}
     {% endif %}

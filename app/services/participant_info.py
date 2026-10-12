@@ -3,8 +3,9 @@
 `guide/participant_info.md`. One session-wide selection per participant
 type, stored as a list of roster field keys on the session row (``NULL``
 means the participant's default). Item 1 reads and writes the reviewers'
-selection, Item 4 the reviewees'; the observer column (one migration for
-all three, author 2026-10-12) stays ``NULL`` until Item 5.
+selection, Item 4 the reviewees'; Item 5's observer keys are here, but
+its column (one migration for all three, author 2026-10-12) is neither
+read nor written until Item 5's rung 3.
 """
 
 from __future__ import annotations
@@ -47,6 +48,13 @@ REVIEWEE_SELF_DEFAULT: tuple[str, ...] = (
     "email_or_identifier",
     "profile_link",
 )
+
+#: What an observer can be shown of themselves (Item 5), in roster order:
+#: the roster has one tag and no profile link.
+OBSERVER_SELF_FIELD_KEYS: tuple[str, ...] = ("display_name", "email", "tag_1")
+
+#: The observers' selection while none is stored: identity on, the tag off.
+OBSERVER_SELF_DEFAULT: tuple[str, ...] = ("display_name", "email")
 
 
 @dataclass(frozen=True)

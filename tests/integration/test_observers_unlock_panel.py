@@ -243,15 +243,13 @@ def test_the_lock_control_ships_as_the_cards_last_child(
     assert 'panel.querySelector(".unlock-right").appendChild(actions)' in toggle
 
 
-def test_the_lock_control_stays_at_the_foot_on_an_empty_roster(
+def test_the_lock_control_follows_the_own_entry_card_on_an_empty_roster(
     client: TestClient, db: Session
 ) -> None:
-    """On an EMPTY roster the right column holds nothing — the Danger
-    Zone is gated on rows. Until participant info Item 2 `Lock` followed
-    whichever column held a card (`data-lock-home`); now it is the
-    right column's last child either way, and the column stretches to
-    the row, so an empty one puts it at the foot, not beside Upload's
-    heading.
+    """The Danger Zone is gated on rows; the own-entry card (participant
+    info Item 5) is not, so the right column always holds a card and
+    `Lock` follows it rather than sitting at the column's foot (Item 2's
+    rule: `Lock` ends the right column either way).
 
     The empty case is not an edge: it is first use, and the state
     `delete-all` redirects into (`?unlocked=1`).
@@ -268,12 +266,13 @@ def test_the_lock_control_stays_at_the_foot_on_an_empty_roster(
         assert "data-lock-home" not in card
 
     # base.html's `.unlock-right > .roster-card-actions:first-child` rule
-    # pushes `Lock` to the column's foot only when nothing precedes it:
-    # on the empty roster it must be the right column's only element.
+    # pushes `Lock` to the foot only when nothing precedes it; here the
+    # card does, on the empty roster as on a full one.
     _, _, right = panel_columns(empty)
     inner = right[right.index(">") + 1:]
-    inner = re.sub(r"<!--.*?-->", "", inner, flags=re.S).strip()
-    assert inner.startswith('<div class="roster-card-actions">'), inner[:200]
+    inner = re.sub(r"\{#.*?#\}|<!--.*?-->", "", inner, flags=re.S).strip()
+    assert inner.startswith('<section class="card" id="observer-self-fields"'), (
+        inner[:200])
 
 
 def test_the_panel_ships_hidden_and_unlocked_opens_it(

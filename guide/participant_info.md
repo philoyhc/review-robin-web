@@ -665,6 +665,16 @@ Taken 2026-10-12 at `5761ab7e`.
 
 - Any change to what observers see of others.
 
+### Status
+
+- Rung 2 (2026-10-12), the scaffold: `OBSERVER_SPEC` on Item 4's core
+  (fixed labels Name, Email, Tag); the inert card heading the right
+  column, the `Observers see:` readout (the failed-import re-render
+  included) and the `/collation` line, all at the default. The
+  empty-roster panel test now pins the card above `Lock`. Landed after
+  Item 4's rung 3 rather than its close (the close is prose and waits
+  on the author's browser check).
+
 ### Doc impact
 
 - `spec/participant_model.md` — the observer's own line on `/collation`.
