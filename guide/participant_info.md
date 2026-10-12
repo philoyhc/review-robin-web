@@ -107,8 +107,8 @@ see of a reviewer; this is what the reviewer sees of themselves).
 
 - The two label renames land on all four roster pages, not only
   Reviewers: the readout row is one shape across them, and
-  `tests/integration/test_roster_unlock_panel.py` pins its label as
-  `{Noun} roster:` for all four. `Reviewers see:` is Reviewers only.
+  the roster-unlock tests pin its label (`Roster:`) and count pill on
+  each page. `Reviewers see:` is Reviewers only.
   (Confirmed by the author, 2026-10-11.)
 
 - The line sits on the role chips' row, after the last chip: with only
@@ -116,6 +116,9 @@ see of a reviewer; this is what the reviewer sees of themselves).
   it never splits the role chips of a reviewer who is also a reviewee.
 - The card saves with a Save / Cancel pair, disabled until a chip
   changes, as the tag-labels editor beside it does.
+- With no column pills (Relationships with no pair-context tags) the
+  readout row stops at the count: no `|`, and no `none yet` that would
+  seem to describe the roster.
 - The line's fields are joined by a muted ` · `: inline text with no
   separator would run a name into an email.
 - The summary, `/results` and `/collation` headers are out: the author

@@ -442,9 +442,10 @@ the only page whose index can be empty. Its `reviewer_id` /
 `reviewee_id` are non-nullable integer foreign keys: a readout answers
 "how many rows carry a value in this column", and for a column that
 cannot be without one the answer is the roster total by construction —
-which the roster count beside it already states. So an empty
-Relationships roster renders the index's `none yet` branch, and the
-other three never can.
+which the roster count beside it already states. So a Relationships
+roster with no pair-context tags has no column pills, and its row
+stops at the count — no `|` divider, nothing after it; the other three
+always list their identity columns.
 
 ## Preview tables (shared toggle pattern)
 

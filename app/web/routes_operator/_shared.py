@@ -914,7 +914,8 @@ async def _handle_import(
                 # a note that Reviewees had no index row yet; once it
                 # had one, the empty list stopped being a placeholder
                 # and started being a lie — a failed import rendered
-                # "Populated columns: none yet" over a roster of three.
+                # an empty index ("Populated columns: none yet", as the
+                # row then read) over a roster of three.
                 # One helper answers both keys, so they cannot drift.
                 column_state = views.reviewee_column_state(db, review_session)
                 col_data = column_state.col_data

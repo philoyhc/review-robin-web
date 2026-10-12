@@ -29,6 +29,8 @@ from sqlalchemy.orm import Session
 from app.db.models import Relationship, Reviewee, Reviewer, ReviewSession
 
 #: ``(page, noun, Noun)`` — the two pages this rung moves.
+_SEP = '<span class="roster-readout-sep" aria-hidden="true">|</span>'
+
 PAGES = [
     ("reviewees", "reviewee", "Reviewees"),
     ("relationships", "relationship", "Relationships"),
@@ -358,12 +360,14 @@ def test_the_index_reports_the_roster_and_its_populated_columns(
     if page == "reviewees":
         # Identity columns are text and always listed, at their count.
         assert any("(3)" in c for c in chips), chips
-        assert "none yet" not in card
+        assert _SEP in card
     else:
         # Relationships lists pair-context tags only — see
         # `relationship_column_state`. This fixture seeds none, so the
-        # list is empty and the `{% else %}` fires.
-        assert "none yet" in card, chips
+        # list is empty and the row stops at the count: no `|`, and no
+        # `none yet` that would seem to describe a roster of three.
+        assert chips == [], chips
+        assert _SEP not in card and "none yet" not in card
 
 
 @pytest.mark.parametrize("page,noun,Noun", PAGES)
@@ -404,10 +408,10 @@ def test_an_empty_roster_reports_what_its_index_can_report(
         assert len(identity) == 2, (
             f"expected both identity columns listed at zero, got {chips}"
         )
-        assert "none yet" not in card
+        assert _SEP in card
     else:
         assert identity == [], chips
-        assert "none yet" in card, "an empty index renders a bare label"
+        assert _SEP not in card, "an empty index renders a bare divider"
 
 
 def test_the_reviewees_index_lists_a_column_only_where_it_is_populated(
@@ -553,7 +557,8 @@ def test_a_failed_import_still_reports_the_real_columns(
     page had no index row yet. Once it had one, that empty list stopped
     being a placeholder: a failed import — the moment an operator is
     looking hardest at which columns arrived — answered "Populated
-    columns: none yet" over a roster of three.
+    columns: none yet" over a roster of three (the row now stops at the
+    count instead, so the `|` divider is what this pins).
 
     The 400 path is the only one that can drift this way, because it is
     the only one that assembles the context by hand rather than through
@@ -579,7 +584,7 @@ def test_a_failed_import_still_reports_the_real_columns(
     assert response.status_code == 400, response.status_code
     card = _card(response.text, page)
 
-    assert "none yet" not in card, (
+    assert _SEP in card, (
         "the failed-import re-render reports an empty index over a "
         "roster it is showing"
     )
