@@ -309,3 +309,53 @@ def test_create_keeps_its_session_tags_and_saves_no_upload_on_a_refusal(
         select(SessionTag).where(SessionTag.session_id == rs.id)
     ).scalars()
     assert [tag.tag for tag in tags] == ["typed"]
+
+
+def test_a_blocked_file_is_the_refusal_reported_not_its_old_roster(
+    client: TestClient, db: Session
+) -> None:
+    """The Reviewees file is blocked (no ``RevieweeName`` column) but its
+    roster is still being replaced: its old "Bob Smith" must not refuse
+    the correct Reviewers file ahead of it (cold read on rung 3)."""
+    rs = _session(client, db, "aon-blocked")
+    _seed_bob(db, rs)
+
+    response = _submit_all(
+        client,
+        rs,
+        reviewers=_reviewers(("Robert Smith", BOB)),
+        reviewees=f"RevieweeEmail\n{BOB}\n".encode(),
+    )
+
+    query = _query(response)
+    assert query["quick_setup_error"] == ["reviewees"]
+    assert query["quick_setup_detail"] == [
+        "Missing required column: RevieweeName"
+    ]
+    assert _names(db, Reviewer, rs) == ["Bob Smith"]
+
+
+def test_create_survives_a_refusal_found_inside_the_save(
+    client: TestClient, db: Session
+) -> None:
+    """A Settings error only the apply finds rolls the unit back before
+    Create writes its tags, which must still land."""
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Spring", "code": "aon-create-apply", "tags": "typed"},
+        files={
+            "reviewers_file": ("r.csv", _reviewers(("Al", "al@example.edu")), "text/csv"),
+            "settings_file": ("s.csv", _bad_settings(), "text/csv"),
+        },
+        follow_redirects=False,
+    )
+
+    assert _query(response)["quick_setup_error"] == ["settings"]
+    rs = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "aon-create-apply")
+    ).scalar_one()
+    assert _names(db, Reviewer, rs) == []
+    tags = db.execute(
+        select(SessionTag).where(SessionTag.session_id == rs.id)
+    ).scalars()
+    assert [tag.tag for tag in tags] == ["typed"]

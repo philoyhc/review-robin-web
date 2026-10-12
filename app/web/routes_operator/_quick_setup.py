@@ -560,14 +560,16 @@ def _check_uploads(
         if kind in _ROSTER_PARSERS
     }
     # Each roster file against the other uploads and the rosters they
-    # do not replace — a blocked file has no rows to hold a name.
+    # do not replace. A blocked file has no rows to hold a name, but its
+    # roster is still being replaced, so it rides in empty: left out, its
+    # old roster would hold names again and could refuse an earlier slot
+    # for a clash the operator's upload already resolves.
     identity = csv_imports.check_incoming_identity(
         db,
         session_id=review_session.id,
         incoming={
-            kind: result.rows
+            kind: [] if result.is_blocked else result.rows
             for kind, result in parsed.items()
-            if not result.is_blocked
         },
     )
 
@@ -715,9 +717,12 @@ def _save_slot(
         csv_imports.save_observers(db, rows=item.rows, **common)
     elif item.kind == "relationships":
         # Parsed again against the rosters as they now stand inside the
-        # unit, for their real ids. The check already parsed it against
-        # the same rows, so a refusal here is a defect, not an operator's
-        # problem: it raises, and the unit rolls back.
+        # unit, for their real ids — under the session lock, so a roster
+        # edit cannot slip in between. The check parsed it against the
+        # same rows; should it refuse now anyway (a roster edited between
+        # the check and this lock), that is reported as the file's
+        # problem and the unit rolls back, rather than answering a 500.
+        lifecycle.require_editable(db, review_session)
         reviewers, reviewees = relationships_service.rosters_for_relationships(
             db, review_session.id
         )
@@ -727,9 +732,13 @@ def _save_slot(
         if result.is_blocked or any(
             issue.severity == "error" for issue in result.issues
         ):
-            raise RuntimeError(
-                "Quick Setup: the Relationships file passed its check but "
-                "not its save-time parse"
+            raise _UnitRefused(
+                _SlotRefusal(
+                    "relationships",
+                    _SlotFailure(
+                        "parse", views.roster_problem_details(result.issues)
+                    ),
+                )
             )
         relationships_service.save_relationships(
             db,

@@ -88,6 +88,23 @@ that is either unsaved or committed and still undoable.
   reviewers first", which would be wrong with that file attached
   (rung 2, 2026-10-12).
 
+### Status
+
+Open, 2026-10-12. Rung 2 is #2999; rung 3 is built and read
+(cumulative `diff-reviewer` from `19a4e26d`, plus a `spec-writer`
+verify). Both reads found one defect, the same one: a blocked roster
+file left out of the identity check let its old roster refuse an
+earlier slot. It was fixed by passing the file in empty, with a test.
+Decisions confirmed at build:
+
+- A Relationships file refused at its save-time parse (a roster edited
+  between the check and the lock) is reported as its `parse` problem,
+  not raised as a 500. The plan said "raises".
+- One correlation id per submit, rather than one per slot.
+- **Deferred:** moving the pipeline from `_quick_setup.py` into a
+  service. It continues the retired helpers' placement, and the move is
+  a refactor of its own (cold read, rung 3).
+
 ### Blast radius (measured)
 
 Taken 2026-10-12 at `1c08ae3a` (#2997).
