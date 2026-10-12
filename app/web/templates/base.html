@@ -3894,6 +3894,14 @@
       body.ui-v2 a.pill.pill-role-observer {
         border-color: var(--selected-bg);
         box-shadow: inset 0 0 0 1px var(--selected-bg);
+        text-decoration: none;
+      }
+      /* Underlined only on hover, on the /me lobby as in the role
+         navigator (author, 2026-10-12): the edge already says link. */
+      body.ui-v2 a.pill.pill-role-reviewer:hover,
+      body.ui-v2 a.pill.pill-role-reviewee:hover,
+      body.ui-v2 a.pill.pill-role-observer:hover {
+        text-decoration: underline;
       }
       /* Role-navigator chip strip below the session-name header
          on each role-specific ``/me`` surface (review surface,

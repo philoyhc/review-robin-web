@@ -281,6 +281,16 @@ def test_a_linked_role_pill_wears_the_edge_and_a_span_does_not(
     assert f"border-color: {EDGE}" in block
     assert f"box-shadow: inset 0 0 0 1px {EDGE}" in block
     assert "background" not in block
+    # Not underlined until hovered, on the /me lobby as in the role
+    # navigator (author, 2026-10-12).
+    assert "text-decoration: none" in block
+    hover = _rule(
+        css,
+        "body.ui-v2 a.pill.pill-role-reviewer:hover,\n"
+        "      body.ui-v2 a.pill.pill-role-reviewee:hover,\n"
+        "      body.ui-v2 a.pill.pill-role-observer:hover",
+    )
+    assert hover is not None and "text-decoration: underline" in hover
 
 
 def test_a_locked_instrument_cards_chips_read_as_display_pills(

@@ -477,3 +477,12 @@ section (git history keeps it), so this file lists only what is owed.
   and saves (the Observers roster stays open until archived).
 - [ ] **Archived.** Archive the session: the readout stays, the card
   goes with the panel.
+
+
+## `/me` lobby role pills underline only on hover
+
+- [ ] **Lobby.** On `/me`, a session where you hold two roles: the role
+  pills that link (edged) carry no underline; hovering one underlines
+  it, as the role chips inside a session do.
+- [ ] **Inside.** On a session's reviewer page, the other-role chip still
+  underlines on hover and the current one stays a plain label.
