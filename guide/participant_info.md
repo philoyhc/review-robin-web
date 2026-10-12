@@ -443,6 +443,7 @@ Taken 2026-10-12 at `9ec18ca1`.
   into the definition of done, `/results` and `/collation` untested,
   a second spec description of the pre-open page and three comments
   stale; all fixed.
+  A second read, of those fixes, found nothing new.
 
 ### Doc impact
 
