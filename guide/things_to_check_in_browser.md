@@ -362,16 +362,3 @@ section (git history keeps it), so this file lists only what is owed.
   appears below the roster card while the row is open.
 - [ ] **Unlocked.** On a draft, Unlock: the labels card is in the panel
   and saves as before.
-
-## A reviewer's own line on /summary and pre-open (participant info Item 3)
-
-- [ ] **Summary.** As a reviewer who has submitted everything, open
-  `/me/sessions/{id}/summary`: after the `Reviewer` pill, the same muted
-  line as on the review pages, with the fields the Reviewers page
-  selects.
-- [ ] **Pre-open.** On a draft or Prepared (not yet activated) session,
-  follow the reviewer's link: under "… — opens later", a plain `Reviewer` pill
-  then the line.
-- [ ] **Closed and other roles.** On an archived session's "closed"
-  page, and on `/results` or `/collation` for someone holding those
-  roles too, no line.

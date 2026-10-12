@@ -1244,10 +1244,10 @@ dashboard's Session column once Reviewer Status is
 - **Gate** — `responses.reviewer_session_state.pill_state ==
   "submitted"`. Otherwise redirects to `/me` with no
   flash banner; the reviewer can re-submit from the surface.
-- **Role row** — the role-navigator chips with the reviewer's own line
-  after the last pill, as on the surface (§ *Role-navigator chip
-  strip*).
 - **H1** — "Your responses — {session.name}".
+- **Role row** — under the H1: the role-navigator chips with the
+  reviewer's own line after the last pill, as on the surface (§
+  *Role-navigator chip strip*).
 - **Caption** — "Submitted on {YYYY-MM-DD HH:MM} ({zone})"
   built from `MAX(response.submitted_at)` across the
   reviewer's rows.
@@ -1303,7 +1303,8 @@ link back to the reviewer dashboard. Under the h1, a role row holds a
 static `Reviewer` pill (this page has no role navigator) and the
 reviewer's own line, so they can check their details before the review
 opens (§ *Role-navigator chip strip*). An `archived` session renders
-the same template with closed copy (see the gate list above). See
+the same template with closed copy (see the gate list above), and
+neither the role row nor the line: the review is over. See
 `spec/lifecycle.md` §4.1 "The reviewer write-path predicate"
 for the gate semantics.
 
@@ -1405,7 +1406,8 @@ The reviewer surface includes it in every mode. The operator preview
 (§ *Operator preview mode*) has no navigator, because its links would
 lead to the inspected reviewer's other surfaces: it gets one static
 `Reviewer` pill (active, not a link) in its place, so the reviewer's own
-line below has the row it reads on for the reviewer.
+line below has the row it reads on for the reviewer. The pre-open page's
+"opens later" variant does the same.
 
 **Builder** — `build_role_chips(db, *, user, review_session,
 active_role)` in `app/web/routes_reviewer/_shared.py`. It returns one
