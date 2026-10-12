@@ -452,7 +452,7 @@ def _data_rows(
     sort_by_reviewer_email: bool = True,
 ) -> Iterable[tuple[Reviewer, tuple[str, ...]]]:
     """Each data row, sorted, with the reviewer it names (for the
-    identity-level columns :func:`_data_block` adjusts). A ``Name only``
+    identity-level columns :func:`_data_block` adjusts). A ``name``-level
     download blanks the email, so it doesn't sort on it either: the
     order of two same-named reviewers would otherwise spell out which
     email was whose."""

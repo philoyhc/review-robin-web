@@ -1090,7 +1090,7 @@ def build_instruments_context(
             db, instruments
         ),
         # ProfileLink updates Item 2 — the identity chip offers
-        # "Name, email, profile" only when some reviewer has a link.
+        # "Reviewer name, email, profile" only when some reviewer has a link.
         "reviewer_identity_labels": REVIEWER_IDENTITY_LABELS,
         "reviewers_have_profile_link": _reviewers_have_profile_link(
             db, review_session
@@ -1226,9 +1226,9 @@ def _band3_visibility_states_for(
 #: The reviewer-identity level chip's words (ProfileLink updates Item 2),
 #: in its cycle order.
 REVIEWER_IDENTITY_LABELS: dict[str, str] = {
-    "name": "Name only",
-    "name_email": "Name, email",
-    "name_email_profile": "Name, email, profile",
+    "name": "Reviewer name only",
+    "name_email": "Reviewer name, email",
+    "name_email_profile": "Reviewer name, email, profile",
 }
 
 

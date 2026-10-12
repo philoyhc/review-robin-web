@@ -2,8 +2,9 @@
 
 ProfileLink updates Item 2 (``guide/profilelink_updates.md``): beside the
 Reviewees and Observers Responses released cells, shown only when the
-cell is Raw, a cycle chip over ``Name only`` / ``Name, email`` and, when
-some reviewer has a ProfileLink, ``Name, email, profile``. The card's
+cell is Raw, a cycle chip over ``Reviewer name only`` / ``Reviewer name,
+email`` and, when some reviewer has a ProfileLink, ``Reviewer name, email,
+profile``. The card's
 Save stores it; the locked table and the reviewer's own copy of the card
 show it as a plain pill after a Raw Reviewees cell.
 """
@@ -76,7 +77,7 @@ def test_the_chip_hides_unless_the_released_cell_is_raw(
     ):
         pill = _span(body, attr)
         assert " hidden" in pill, pill
-        assert pill.endswith(">Name, email</span>"), pill
+        assert pill.endswith(">Reviewer name, email</span>"), pill
     # A reviewer reading their own work is identified to no one.
     assert 'data-new-model-vp-identity="peer_reviewer"' not in body
     assert 'name="peer_reviewer_after_release_reviewer_identity"' not in body
@@ -153,14 +154,15 @@ def test_save_stores_the_level_and_the_pills_show_it(
     assert policies["reviewee"].after_release_reviewer_identity == "name"
     assert policies["observer"].after_release_reviewer_identity == "name_email_profile"
     body = _page(client, session_id)
-    assert _span(body, 'data-new-model-vp-identity="reviewee"').endswith(">Name only</span>")
+    assert _span(body, 'data-new-model-vp-identity="reviewee"').endswith(
+        ">Reviewer name only</span>")
     assert _span(body, 'data-new-model-vp-identity-preview="reviewee"').endswith(
-        ">Name only</span>"
+        ">Reviewer name only</span>"
     )
     # A stored profile level renders as itself with no links, so it can
     # be cycled off; the cycle offers only the first two.
     observer = _span(body, 'data-new-model-vp-identity="observer"')
-    assert observer.endswith(">Name, email, profile</span>")
+    assert observer.endswith(">Reviewer name, email, profile</span>")
     assert 'data-new-model-vp-identity-slugs="name|name_email"' in observer
     assert re.search(
         r'name="reviewee_after_release_reviewer_identity"\s*'
@@ -207,7 +209,8 @@ def test_a_corrupt_stored_level_does_not_block_save(
     policy.after_release_reviewer_identity = "everything"
     db.commit()
     body = _page(client, session_id)
-    assert _span(body, 'data-new-model-vp-identity="reviewee"').endswith(">Name, email</span>")
+    assert _span(body, 'data-new-model-vp-identity="reviewee"').endswith(
+        ">Reviewer name, email</span>")
     match = re.search(
         r'name="reviewee_after_release_reviewer_identity"\s*'
         r'data-new-model-vp-identity-input="reviewee"\s*value="([^"]*)"',
@@ -273,7 +276,7 @@ def test_the_reviewer_sees_the_level_after_a_raw_reviewees_cell(
     db.commit()
     body = make_client(rae).get(f"/me/sessions/{review_session.id}").text
     assert _span(body, "data-rs-reviewer-identity").endswith(
-        ">Name, email, profile</span>"
+        ">Reviewer name, email, profile</span>"
     )
     # The pill widens its column (base.html's ``table.vp-grid:has(...)``;
     # tests/browser/test_vp_identity_chip.py measures it on Band 2).

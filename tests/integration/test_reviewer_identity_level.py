@@ -258,7 +258,7 @@ def test_name_only_does_not_sort_namesakes_by_their_hidden_emails(
     client: TestClient, db: Session
 ) -> None:
     """Two reviewers called Rev: with emails shown they sort by email
-    (aaa@x, answer 9, first); with Name only the order must not give
+    (aaa@x, answer 9, first); at the `name` level the order must not give
     that away, so it falls to the assignment (rev@x, answer 4, first)."""
     _, *shown = _download(
         client, db, code="rid-csv-twin-shown", level="name_email", extra=_a_namesake

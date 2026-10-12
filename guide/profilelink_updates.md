@@ -129,6 +129,10 @@ its right and cycles:
 - `Name, email, profile` (offered only when some reviewer in the
   session has a `ProfileLink`)
 
+(Relabelled `Reviewer name only` / `Reviewer name, email` / `Reviewer
+name, email, profile` on 2026-10-12, at the author's word; the levels
+are unchanged.)
+
 The level is stored per `(instrument, audience)` on the
 `instrument_view_policies` row beside the after-release mode, so it
 travels wherever the mode does: Save, the Settings CSV, Replicate and
