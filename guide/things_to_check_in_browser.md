@@ -372,8 +372,7 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **The card.** On a draft, Unlock Reviewers: "Reviewer information
   shown on surface" sits half width above `Upload Reviewers`, with a
   chip per populated column (Name, Email, Profile selected; tags, under
-  their labels, not). Chips toggle on screen only; Save and Cancel stay
-  disabled.
+  their labels, not). Saving is the rung 3 section below.
 - [ ] **The surface.** As a reviewer, the role row reads `Reviewer` then
   the name, email and a Profile link (or `•••`), muted, on the same
   line; a reviewer who is also a reviewee sees it after both pills.

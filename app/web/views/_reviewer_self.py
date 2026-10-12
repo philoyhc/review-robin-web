@@ -29,6 +29,7 @@ __all__ = [
     "SelfFieldChip",
     "SelfFieldValue",
     "reviewer_self_chips",
+    "reviewer_self_kept",
     "reviewer_self_label",
     "reviewer_self_line",
     "reviewer_self_readout",
@@ -96,6 +97,20 @@ def reviewer_self_chips(
         )
         for r in readouts
         if r.slot in _SLOT_TO_KEY
+    ]
+
+
+def reviewer_self_kept(
+    chips: Iterable[SelfFieldChip], selected: Iterable[str]
+) -> list[str]:
+    """Selected keys the card offers no chip for (no data in that
+    column), in roster order: the card posts them back as hidden
+    ``keep`` inputs so a save does not drop them."""
+    offered = {chip.key for chip in chips}
+    chosen = set(selected)
+    return [
+        key for key in REVIEWER_SELF_FIELD_KEYS
+        if key in chosen and key not in offered
     ]
 
 

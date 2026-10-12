@@ -41,7 +41,10 @@ def normalize_reviewer_self_fields(keys: Iterable[str]) -> list[str]:
     Raises ``SelfFieldsError`` on an unknown key rather than dropping it,
     so a typo in a hand-edited Settings CSV is reported, not swallowed.
     """
-    chosen = {key.strip() for key in keys if key and key.strip()}
+    items = list(keys)
+    if not all(isinstance(key, str) for key in items):
+        raise SelfFieldsError("reviewer field keys must be strings")
+    chosen = {key.strip() for key in items if key.strip()}
     unknown = sorted(chosen - set(REVIEWER_SELF_FIELD_KEYS))
     if unknown:
         raise SelfFieldsError(
@@ -54,11 +57,12 @@ def normalize_reviewer_self_fields(keys: Iterable[str]) -> list[str]:
 def effective_reviewer_self_fields(review_session: ReviewSession) -> tuple[str, ...]:
     """The stored selection, or the default while none is stored.
 
-    A stored value that no longer normalizes (a hand-edited row) falls
-    back to the default rather than failing the reviewer's page.
+    A stored value that no longer normalizes (a hand-edited row, a
+    non-list) falls back to the default rather than failing the
+    reviewer's page.
     """
     stored = review_session.reviewer_self_fields
-    if stored is None:
+    if not isinstance(stored, list):
         return REVIEWER_SELF_DEFAULT
     try:
         return tuple(normalize_reviewer_self_fields(stored))
@@ -74,19 +78,22 @@ def set_reviewer_self_fields(
     keys: Iterable[str],
     correlation_id: str | None = None,
 ) -> None:
-    """Store the reviewers' selection; a no-op when it is unchanged.
+    """Store the reviewers' selection.
 
-    Gated by ``is_editable`` like every Reviewers-page setting. The
-    setting is display-only, so a save never demotes ``validated``.
+    A no-op when the stored list already equals it. With nothing stored,
+    saving even the default writes it, so the choice is recorded and a
+    later change to the default does not move this session. Gated by
+    ``is_editable`` like every Reviewers-page setting; the setting is
+    display-only, so a save never demotes ``validated``.
     """
     lifecycle.require_editable(db, review_session)
     new = normalize_reviewer_self_fields(keys)
-    old = list(effective_reviewer_self_fields(review_session))
-    # Unchanged is a no-op only once something is stored: saving the
-    # default as it stands records the choice, so a later change to the
-    # default does not move this session.
-    if review_session.reviewer_self_fields is not None and old == new:
+    stored = review_session.reviewer_self_fields
+    if stored is not None and list(effective_reviewer_self_fields(review_session)) == new:
         return
+    # The audit records what was stored (``None`` while unset), not the
+    # effective default, so a first save reads as NULL → list.
+    old = list(stored) if isinstance(stored, list) else None
     review_session.reviewer_self_fields = new
     db.flush()
     audit.write_event(

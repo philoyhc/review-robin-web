@@ -175,16 +175,18 @@ def test_the_panel_holds_its_four_cards_and_nothing_else(client, db):
     assertion to check and it would pass on an empty set.
 
     Inverted instead of retired. What the panel must now contain is
-    exactly three cards, each reached by a marker only a WIRED card
+    exactly four cards, each reached by a marker only a WIRED card
     renders — the labels editor's own route, the Danger Zone's heading
-    id, the import form's action — and nothing else. That catches the
-    regression the old test could not: a fourth card, or a scaffold copy
+    id, the import form's action, the reviewer-information form's
+    route — and nothing else. That catches the
+    regression the old test could not: a fifth card, or a scaffold copy
     left behind beside the real one.
 
     It deliberately does NOT assert that no control in the panel is
-    `disabled`. All three cards ship disabled controls by design: the
-    labels editor's Save/Cancel until an input changes, and both
-    destructive buttons until their confirm is ticked.
+    `disabled`. All four cards ship disabled controls by design: the
+    labels editor's and the reviewer-information card's Save/Cancel
+    until an input changes, and both destructive buttons until their
+    confirm is ticked.
     """
     rs = _with_reviewers(client, db, "rc7")
     html = _page(client, rs)
@@ -209,7 +211,8 @@ def test_the_panel_holds_its_four_cards_and_nothing_else(client, db):
     # Each card is excised by a marker its WIRED form renders, not by a
     # class the scaffold also had: the labels editor by its own POST
     # target, the Danger Zone by its heading id, the import by its form
-    # action. Deleting any of the three includes must fail here.
+    # action, the reviewer-information card by its form's route.
+    # Deleting any of the four must fail here.
     # 19P.3 rung 5c — a `<section aria-labelledby>` like the other two,
     # where this was a `<div class="card">` with a bare `<h2>`. Excised
     # the same way they are now, rather than by div-balancing.
@@ -250,16 +253,16 @@ def test_the_panel_holds_its_four_cards_and_nothing_else(client, db):
     scope = scope.replace(self_card.group(0), "")
     assert "data-reviewer-self-card" not in scope, "the excision missed a copy"
 
-    # The excision removed three cards, not the panel: if it had taken
+    # The excision removed four cards, not the panel: if it had taken
     # everything, "nothing left over" below would be trivially true.
     assert "unlock-right" in scope, "the excision took the panel with it"
 
-    # Nothing else in the panel carries a control. A fourth card, or a
+    # Nothing else in the panel carries a control. A fifth card, or a
     # scaffold copy left beside a real one, lands here.
     leftovers = re.findall(r"<(?:button|input|textarea|select)\b[^>]*>", scope)
     assert not leftovers, f"unaccounted controls in the panel: {leftovers}"
     assert "<section" not in scope and 'class="card' not in scope, (
-        "a fourth card is in the panel"
+        "a fifth card is in the panel"
     )
 
 

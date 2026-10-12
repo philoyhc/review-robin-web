@@ -105,13 +105,12 @@ def _apply_session_kv(
             isinstance(item, str) for item in parsed
         ):
             raise _ParseError(
-                f"session.reviewer_self_fields: expected a JSON list of "
-                f"field keys, got {value!r}"
+                f"expected a JSON list of field keys, got {value!r}"
             )
         try:
             plan.session_overrides[key] = normalize_reviewer_self_fields(parsed)
         except SelfFieldsError as exc:
-            raise _ParseError(f"session.reviewer_self_fields: {exc}") from exc
+            raise _ParseError(str(exc)) from exc
         return
     if key in {"name", "code", "description", "help_contact"}:
         plan.session_overrides[key] = value or None

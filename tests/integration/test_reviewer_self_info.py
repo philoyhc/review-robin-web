@@ -138,10 +138,10 @@ def test_the_card_sits_above_upload_with_a_chip_per_populated_column(
     right = html.index("unlock-stack unlock-right")
     assert right < html.index("data-reviewer-self-card") < html.index('id="upload-csv"')
     chips = re.findall(
-        r'<input type="checkbox"[^>]*value="(\w+)"\s*(checked)?>([^<]*)</label>',
+        r'<input type="checkbox"[^>]*value="(\w+)"([^>]*)>([^<]*)</label>',
         card_html,
     )
-    assert [(k, bool(c), label.strip()) for k, c, label in chips] == [
+    assert [(k, "checked" in rest, label.strip()) for k, rest, label in chips] == [
         ("name", True, "Name"),
         ("email", True, "Email"),
         ("profile_link", True, "Profile"),
@@ -312,7 +312,7 @@ def test_a_save_writes_one_audit_event(client: TestClient, db: Session) -> None:
 
     rs = _pair(client, db, "rsi-audit")
     _save(client, rs, fields=["name"])
-    _save(client, rs, fields=["name"])  # unchanged: no second event
+    _save(client, rs, fields=["name"])  # unchanged once stored: no event
     events = db.execute(
         select(AuditEvent).where(
             AuditEvent.session_id == rs.id,
@@ -320,9 +320,32 @@ def test_a_save_writes_one_audit_event(client: TestClient, db: Session) -> None:
         )
     ).scalars().all()
     assert len(events) == 1
-    assert events[0].detail["changes"]["reviewer_self_fields"] == [
-        ["name", "email", "profile_link"], ["name"],
-    ]
+    # The old value is what was stored, NULL, not the effective default.
+    assert events[0].detail["changes"]["reviewer_self_fields"] == [None, ["name"]]
+
+
+def test_saving_the_default_over_null_records_it(
+    client: TestClient, db: Session
+) -> None:
+    """With nothing stored, saving the default as it stands still writes
+    it, so a later change to the default does not move this session."""
+    rs = _pair(client, db, "rsi-default")
+    _save(client, rs, fields=["name", "email", "profile_link"])
+    db.refresh(rs)
+    assert rs.reviewer_self_fields == ["name", "email", "profile_link"]
+
+
+def test_a_hand_edited_stored_value_falls_back_to_the_default(
+    client: TestClient, db: Session
+) -> None:
+    from app.services.participant_info import effective_reviewer_self_fields
+
+    rs = _pair(client, db, "rsi-bad")
+    for bad in ([1], {"a": 1}, ["status"], "name"):
+        rs.reviewer_self_fields = bad
+        assert effective_reviewer_self_fields(rs) == (
+            "name", "email", "profile_link",
+        ), bad
 
 
 def test_a_save_leaves_a_validated_session_validated(

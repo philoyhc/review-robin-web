@@ -322,13 +322,9 @@ def _render_reviewers_page(
             # the surface: the Unlock panel's chips and the readout
             # row's pills, from the stored selection or the default.
             "self_field_chips": self_field_chips,
-            # Selected keys the card offers no chip for (no data in that
-            # column): posted back as hidden `keep` inputs so a save does
-            # not drop them.
-            "self_field_kept": [
-                key for key in self_fields
-                if key not in {chip.key for chip in self_field_chips}
-            ],
+            "self_field_kept": views.reviewer_self_kept(
+                self_field_chips, self_fields
+            ),
             "self_field_readout": views.reviewer_self_readout(
                 review_session, self_fields
             ),

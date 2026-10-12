@@ -358,36 +358,11 @@
           {% endif %}
         </div>
 
-        {# Right column: the upload card, and — while open — the Lock
-           control beneath it. A stack, not a second grid row: a grid row
+        {# Right column: what reviewers see of themselves, the upload
+           card, and — while open — the Lock control beneath them. A stack, not a second grid row: a grid row
            starts below the TALLER column, which would drop the button to
            the panel's foot, far from the card it sits under. #}
         <div class="unlock-stack unlock-right">
-        {# 19P.1 rung 3c — WIRED, and the last of the three cards to
-           move. The live card below the table goes in this same slice,
-           for the reason 2b established and 3b repeated: `sync`
-           resolves a confirm's button with a first-match
-           `querySelector`, so two `replace-roster` keys on one page
-           gate the wrong button.
-
-           `id="upload-csv"` travels with it. No cross-page fragment
-           targets it (measured at the slicing: the id appears in the
-           other three roster templates and nowhere else), but it is
-           the card's identity in this page's own tests and costs
-           nothing to keep. The `aria-labelledby` is new, matching the
-           Danger Zone's shape beside it.
-
-           `.unlock-col-actions` replaces the live card's
-           `<div class="btn-pair" style="margin-top: 20px;">`, and
-           unlike 3a's swap these two do NOT compute alike: `.btn-pair`
-           is a 16px-gap row that starts at the left, this is an 8px
-           flex-end row. So the Upload button moves left -> right and
-           its top margin 20px -> 12px. Chosen, not inherited: both
-           cards in this panel now right-align their action, `.btn-pair`
-           names a pair and this is one button, and `CLAUDE.md` asks for
-           a class over an inline style. It is the same left-vs-right
-           question 3b's Delete-all button already opened for the dev
-           slot — one answer for the panel, not two. #}
         {# participant info Item 1 — what reviewers see of their own
            entry, after the role pills on the reviewer surface. One chip
            per populated column (Name and Email always), as the roster
@@ -405,7 +380,7 @@
               {% for chip in self_field_chips %}
                 <label class="pill pill-count tag-chip">
                   <input type="checkbox" class="visually-hidden"
-                         name="fields" value="{{ chip.key }}"
+                         name="fields" value="{{ chip.key }}" autocomplete="off"
                          {% if chip.selected %}checked{% endif %}>{{ chip.label }}</label>
               {% endfor %}
             </div>
@@ -449,6 +424,31 @@
           </script>
         </section>
 
+        {# 19P.1 rung 3c — WIRED, and the last of the three cards to
+           move. The live card below the table goes in this same slice,
+           for the reason 2b established and 3b repeated: `sync`
+           resolves a confirm's button with a first-match
+           `querySelector`, so two `replace-roster` keys on one page
+           gate the wrong button.
+
+           `id="upload-csv"` travels with it. No cross-page fragment
+           targets it (measured at the slicing: the id appears in the
+           other three roster templates and nowhere else), but it is
+           the card's identity in this page's own tests and costs
+           nothing to keep. The `aria-labelledby` is new, matching the
+           Danger Zone's shape beside it.
+
+           `.unlock-col-actions` replaces the live card's
+           `<div class="btn-pair" style="margin-top: 20px;">`, and
+           unlike 3a's swap these two do NOT compute alike: `.btn-pair`
+           is a 16px-gap row that starts at the left, this is an 8px
+           flex-end row. So the Upload button moves left -> right and
+           its top margin 20px -> 12px. Chosen, not inherited: both
+           cards in this panel now right-align their action, `.btn-pair`
+           names a pair and this is one button, and `CLAUDE.md` asks for
+           a class over an inline style. It is the same left-vs-right
+           question 3b's Delete-all button already opened for the dev
+           slot — one answer for the panel, not two. #}
         <section class="card" id="upload-csv"
                  aria-labelledby="reviewers-upload-h">
           <h2 id="reviewers-upload-h">Upload Reviewers</h2>

@@ -69,6 +69,11 @@ see of a reviewer; this is what the reviewer sees of themselves).
 - **Chips offered.** Name and Email always (both are required on
   import); Profile and each tag only while some reviewer row holds a
   value.
+- **Saving the default records it.** A save is a no-op only when the
+  stored list already equals the selection; with nothing stored, saving
+  even the default writes it, so a later change to the default does not
+  move the session. The audit event's old value is what was stored
+  (`null` while unset).
 - **Save keeps what it cannot show.** A selected key with no chip on
   offer, whether stored or from the `NULL` default, is carried through
   Save unchanged: the card posts it as a hidden input. So `profile_link`
@@ -106,6 +111,8 @@ see of a reviewer; this is what the reviewer sees of themselves).
   it never splits the role chips of a reviewer who is also a reviewee.
 - The card saves with a Save / Cancel pair, disabled until a chip
   changes, as the tag-labels editor beside it does.
+- The line's fields are joined by a muted ` · `: inline text with no
+  separator would run a name into an email.
 - The summary, `/results` and `/collation` headers are out: the author
   named the reviewer surface and its preview.
 
