@@ -369,10 +369,9 @@ section (git history keeps it), so this file lists only what is owed.
   `/me/sessions/{id}/summary`: after the `Reviewer` pill, the same muted
   line as on the review pages, with the fields the Reviewers page
   selects.
-- [ ] **Pre-open.** On a Prepared (not yet activated) session, follow
-  the reviewer's link: under "… — opens later", a plain `Reviewer` pill
+- [ ] **Pre-open.** On a draft or Prepared (not yet activated) session,
+  follow the reviewer's link: under "… — opens later", a plain `Reviewer` pill
   then the line.
 - [ ] **Closed and other roles.** On an archived session's "closed"
   page, and on `/results` or `/collation` for someone holding those
   roles too, no line.
-

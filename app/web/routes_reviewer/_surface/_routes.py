@@ -151,9 +151,11 @@ def review_surface(
                 "is_archived": lifecycle.is_archived(review_session),
                 # participant info Item 3 — the reviewer's own roster
                 # fields, so they can check them before the review
-                # opens. The closed variant does not render them.
-                "reviewer_self_fields": views.reviewer_self_line_for(
-                    review_session, reviewer
+                # opens. The closed (archived) variant shows none.
+                "reviewer_self_fields": (
+                    []
+                    if lifecycle.is_archived(review_session)
+                    else views.reviewer_self_line_for(review_session, reviewer)
                 ),
             },
         )

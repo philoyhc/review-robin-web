@@ -551,3 +551,38 @@ def test_the_closed_pre_open_page_has_no_line(
     assert "This review has closed." in html, html[:400]
     assert "data-reviewer-self-info" not in html
     assert 'class="rs-role-nav"' not in html
+
+
+def test_results_and_collation_carry_no_reviewer_line(
+    client: TestClient, db: Session, grant_reviewee_visibility
+) -> None:
+    """Item 3's ruling: a reviewer who is also a reviewee and an
+    observer sees the role row on `/results` and `/collation`, its
+    Reviewer chip included, but not the reviewer's own line: it would
+    follow the wrong pill, and those audiences' own items decide."""
+    from app.db.models import Observer, Reviewee
+
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Cohort A", "code": "rsi-roles", "description": ""},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    rs = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "rsi-roles")
+    ).scalar_one()
+    # `client` signs in as alice@example.edu (tests/conftest.py).
+    db.add_all([
+        Reviewer(session_id=rs.id, name="Alice", email="alice@example.edu"),
+        Reviewee(
+            session_id=rs.id, name="Alice",
+            email_or_identifier="alice@example.edu",
+        ),
+        Observer(session_id=rs.id, email="alice@example.edu", display_name="Alice"),
+    ])
+    db.commit()
+    grant_reviewee_visibility(rs)
+    for page in ("results", "collation"):
+        body = client.get(f"/me/sessions/{rs.id}/{page}").text
+        assert "pill-role-reviewer" in _div_at(body, 'class="rs-role-nav"'), page
+        assert "data-reviewer-self-info" not in body, page

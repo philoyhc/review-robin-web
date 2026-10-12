@@ -875,10 +875,11 @@ GET requests behave differently depending on which gate fails:
   activated yet). The route
   short-circuits to the **pre-open page**
   (`reviewer/pre_open.html`): session name in the h1 with an
-  "opens later" suffix, an info banner explaining the review
-  hasn't opened yet, the deadline + zone if one is set, and a
-  link back to the reviewer dashboard. No response form is
-  rendered. Applies for `draft` and `validated`.
+  "opens later" suffix, a role row (a static `Reviewer` pill and the
+  reviewer's own line, § *Role-navigator chip strip*), an info banner
+  explaining the review hasn't opened yet, the deadline + zone if one
+  is set, and a link back to the reviewer dashboard. No response form
+  is rendered. Applies for `draft` and `validated`.
 
 - **Session `archived`** (reached through an old invitation link or
   a bookmark; the dashboard lists it unlinked). The same template

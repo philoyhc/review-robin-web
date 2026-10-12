@@ -421,14 +421,7 @@ Taken 2026-10-12 at `9ec18ca1`.
 - `/summary` and the "opens later" pre-open page show the selected
   fields after a `Reviewer` pill, by test; the closed variant, `/results`
   and `/collation` do not.
-- `### Status
-
-- Rung 2 (2026-10-12): `/summary` and the pre-open route pass
-  `reviewer_self_fields`; the pre-open "opens later" variant gains a role
-  row with a static `Reviewer` pill; `views.reviewer_self_line_for`
-  answers all three pages from the session's selection.
-
-### Doc impact` current; `spec-writer` flags adjudicated.
+- `### Doc impact` current; `spec-writer` flags adjudicated.
 - `### Status` compacted.
 
 ### Open questions
@@ -438,6 +431,18 @@ Taken 2026-10-12 at `9ec18ca1`.
 ### Out of scope
 
 - What reviewees and observers see of themselves: later items.
+
+### Status
+
+- Rung 2 (2026-10-12): `/summary` and the pre-open route pass
+  `reviewer_self_fields`; the pre-open "opens later" variant gains a role
+  row with a static `Reviewer` pill. A wrapper,
+  `views.reviewer_self_line_for`, answers all three pages from the
+  session's selection (the Semantics name `views.reviewer_self_line`,
+  which it calls). Its `diff-reviewer` read found this Status pasted
+  into the definition of done, `/results` and `/collation` untested,
+  a second spec description of the pre-open page and three comments
+  stale; all fixed.
 
 ### Doc impact
 

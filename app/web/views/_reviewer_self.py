@@ -1,8 +1,9 @@
 """What a reviewer is shown of their own roster entry (participant info Item 1).
 
-`guide/participant_info.md` Item 1. One session-wide selection of a
-reviewer's roster fields, shown to that reviewer after the role pills on
-the reviewer surface and its operator preview, chosen on the Reviewers
+`guide/participant_info.md` Items 1 and 3. One session-wide selection of
+a reviewer's roster fields, shown to that reviewer after the role pills
+on the reviewer surface and its operator preview, ``/summary`` and the
+pre-open "opens later" page, chosen on the Reviewers
 page's Unlock panel and reported in its roster card's readout row.
 
 The selection itself, its default and its storage live in
