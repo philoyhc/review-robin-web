@@ -341,32 +341,3 @@ section (git history keeps it), so this file lists only what is owed.
   Space without scrolling the page, and the card's Save wakes. Cycling
   Reviewees "Responses released" to Raw this way brings up the identity
   chip, which is the next Tab stop.
-
-## The Responses released column widens beside an identity pill
-
-- [ ] **Band 2.** Unlock an Instruments card and cycle Reviewees
-  "Responses released" to Raw: the column widens so "Raw responses" and
-  "Name, email" sit side by side; cycle on to Anonymized and the two
-  window columns are even again. The same on the locked table.
-- [ ] **Reviewer surface and preview.** With Reviewees released Raw, the
-  reviewer's "Who can see what you wrote" card shows both pills on one
-  line at full width; below ~800px they may wrap, without overflowing.
-
-## The tag-labels card shows only in the Unlock panel
-
-- [ ] **Locked.** On an activated session, Reviewers, Reviewees and
-  Relationships show no "… tag labels" card below the roster card; the
-  labels still read in the headers of the populated tag columns (as a
-  consequence, a label on an empty column shows nowhere when locked).
-- [ ] **Mid-edit.** On a draft, Add or Edit a row: no labels card
-  appears below the roster card while the row is open.
-- [ ] **Unlocked.** On a draft, Unlock: the labels card is in the panel
-  and saves as before.
-
-## `/me` lobby role pills underline only on hover
-
-- [ ] **Lobby.** On `/me`, a session where you hold two roles: the role
-  pills that link (edged) carry no underline; hovering one underlines
-  it, as the role chips inside a session do.
-- [ ] **Inside.** On a session's reviewer page, the other-role chip still
-  underlines on hover and the current one stays a plain label.
