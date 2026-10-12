@@ -1,12 +1,14 @@
 """Unit tests for the cohort-rule observer view helpers.
 
-Pins the signature (mixed-state JS comparison key) + the
-Cohort-cell summary string the Observers Setup table renders.
+Pins the Cohort-cell summary string the Observers Setup table renders.
+(The signature helper retired with the selection expander's builder,
+operator pages Item 4; the several-row editor compares rules with
+`observers.same_cohort_rule`.)
 """
 
 from __future__ import annotations
 
-from app.web.views import cohort_rule_signature, cohort_rule_summary
+from app.web.views import cohort_rule_summary
 
 
 _TAG_LABELS_FULL = {
@@ -21,52 +23,6 @@ _TAG_LABELS_FULL = {
         ("pair_context.tag1", "Tutorial"),
     ],
 }
-
-
-def test_signature_none_is_empty_string() -> None:
-    assert cohort_rule_signature(None) == ""
-
-
-def test_signature_is_stable_across_key_order() -> None:
-    a = {
-        "combinator": "AND",
-        "rules": [
-            {
-                "field": "reviewer.tag1",
-                "op": "IS",
-                "operand_tag": "",
-                "operand_value": "x",
-            }
-        ],
-    }
-    b = {
-        "rules": [
-            {
-                "operand_value": "x",
-                "field": "reviewer.tag1",
-                "op": "IS",
-                "operand_tag": "",
-            }
-        ],
-        "combinator": "AND",
-    }
-    assert cohort_rule_signature(a) == cohort_rule_signature(b)
-
-
-def test_signature_differs_for_distinct_rules() -> None:
-    a = {"combinator": "AND", "rules": []}
-    b = {
-        "combinator": "AND",
-        "rules": [
-            {
-                "field": "reviewer.tag1",
-                "op": "IS",
-                "operand_tag": "",
-                "operand_value": "x",
-            }
-        ],
-    }
-    assert cohort_rule_signature(a) != cohort_rule_signature(b)
 
 
 def test_summary_none_is_empty() -> None:

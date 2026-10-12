@@ -399,9 +399,10 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **Add.** `Add new`: "The new observer is able to see responses
   where" and one default cell; `+`, `X`, `AND`/`OR` and the operator
   cycle work.
-- [ ] **Save is unchanged.** Change the rule in the editor and Save: the
-  row's fields save, the rule does not (rung 3 wired it; see below).
-- [ ] **The selection expander** still loads and saves a rule as before.
+- ~~**Save is unchanged.**~~ Superseded: rung 3 wired the rule into
+  Save (below).
+- ~~**The selection expander** still loads and saves a rule.~~
+  Superseded: rung 4 took the builder out of the expander (below).
 
 ## One Save writes the observer and its rule (operator pages Item 4, rung 3)
 

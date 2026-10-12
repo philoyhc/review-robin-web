@@ -3206,8 +3206,8 @@
       }
       body.ui-v2 .exp-confirm-label { font-size: 0.9em; }
       /* 19P.2 rung 5 — the two-column expander, Observers only so far.
-         Left: the cohort rule builder and its Save. Right: the count,
-         the delete confirm and the row actions.
+         Since operator pages Item 4 it is the Observers row editor's bar:
+         left, the cohort rule builder; right, the error, Save and Cancel.
 
          A MODIFIER on `.row-expander-body`, like `.is-split` on the
          toolbar, for the same reason: the lobby and Reviewers put a
@@ -3216,8 +3216,7 @@
 
          `align-items: start`, so the two columns are TOP-flush and do
          not share a bottom edge. The builder is taller, and the
-         author's call was top-flush: bottom-aligning would anchor
-         `Save` to a button row it has no relationship with. */
+         author's call was top-flush. */
       body.ui-v2 .row-expander-body.is-split {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3280,14 +3279,12 @@
       body.ui-v2 button.cohort-combinator-btn {
         padding: 4px 10px;
       }
-      /* Everything sized to a rule cell's own row: the operator cycle,
-         the `X`, and `Save`, which sits inline immediately after the
-         last cell's `X` so it trails the list as rules are added rather
-         than floating under it. One class rather than three copies of
-         `4px 8px` — the selects are 29px and the `X` 28.9, and Save
-         matching them is now structural rather than a repeated number.
-         The 4px flex gap of the rule row does the spacing, so none of
-         them carries a margin and the gaps match by construction. */
+      /* Everything sized to a rule cell's own row: the operator cycle
+         and the `X`. One class rather than copies of `4px 8px` — the
+         selects are 29px and the `X` 28.9. (A Save rode after the last
+         `X` until operator pages Item 4 moved it to the row editor's
+         bar.) The 4px flex gap of the rule row does the spacing, so
+         neither carries a margin and the gaps match by construction. */
       body.ui-v2 button.cohort-cell-btn {
         padding: 4px 8px;
         flex-shrink: 0;

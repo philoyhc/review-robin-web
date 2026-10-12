@@ -87,6 +87,9 @@ _FIELD_OPERATORS: frozenset[str] = frozenset(
 _VALUE_OPERATORS: frozenset[str] = frozenset(
     {"IS", "IS NOT", "CONTAINS", "DOES NOT CONTAIN"}
 )
+#: The operators whose operand is typed rather than picked — the row
+#: editor's half-filled check reads them, server and page alike.
+VALUE_OPERATORS = _VALUE_OPERATORS
 
 
 class CohortRule(BaseModel):

@@ -282,3 +282,34 @@ def test_edit_on_several_rows_saves_one_rule_to_each(
         # operator picks which one counts.
         assert (cell["field"], cell["op"], cell["operand_value"]) == (
             "reviewee.tag1", "IS", "Green")
+
+
+def test_several_rows_save_waits_for_a_change(
+    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+) -> None:
+    """Over differing rules the builder arrives empty; a live Save would
+    clear them all in one click, so it waits for a change."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Observer
+
+    session_id = new_session()
+    first = _seed_observer(live_server.database_url, session_id)
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            second = Observer(session_id=session_id, email="p@example.org",
+                              display_name="P", status="active")
+            db.add(second)
+            db.commit()
+            second_id = second.id
+    finally:
+        engine.dispose()
+
+    page.goto(f"/operator/sessions/{session_id}/observers"
+              f"?rule_id={first}&rule_id={second_id}")
+    save = page.locator("[data-observer-edit-save]")
+    assert save.is_disabled(), "Save is live over an untouched builder"
+    page.locator("[data-observer-edit-cohort] [data-observer-combinator-toggle]").click()
+    assert save.is_enabled()

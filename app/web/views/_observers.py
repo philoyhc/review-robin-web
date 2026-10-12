@@ -10,7 +10,6 @@ storage shape these helpers translate from.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 # Display labels only. The KEYS are stored — they are what a saved
@@ -25,23 +24,6 @@ _COHORT_OBSERVER_FRIENDLY: dict[str, str] = {
     "observer.email": "Observer: Email",
     "observer.tag1": "Observer: Tag",
 }
-
-
-def cohort_rule_signature(rule: dict[str, Any] | None) -> str:
-    """Stable string key for one observer's saved cohort rule.
-
-    Two observers share the same effective rule iff their
-    signatures match — used by the Observers Setup page's
-    mixed-state JS to decide whether the editor loads a shared
-    rule or shows the "differ — saving overwrites" message.
-
-    ``None`` (no rule saved) maps to ``""`` so the JS distinct-
-    count check treats unset observers as a single shared
-    "empty" group rather than as N distinct rules.
-    """
-    if rule is None:
-        return ""
-    return json.dumps(rule, sort_keys=True, ensure_ascii=False)
 
 
 def _cohort_field_friendly(

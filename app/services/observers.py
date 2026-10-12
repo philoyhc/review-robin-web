@@ -57,6 +57,9 @@ class ObserverOperationError(ValueError):
       already uses this email (case-insensitive).
     - ``invalid_status`` — status not in ``{"active", "inactive"}``.
     - ``too_long`` — a value is longer than its column.
+    - ``half_filled_rule`` — raised by the Observers routes (operator
+      pages Item 4) when the row editor posts a rule cell with a field
+      and no value, or a value and no field.
     - ``comma_in_tag`` — a tag value contains a comma (findings Gc1).
     - ``invalid_cohort_rule`` — cohort-rule payload failed schema
       validation (``CohortRuleSet.model_validate`` rejected it).
@@ -152,7 +155,7 @@ def _validated_cohort_rule(payload: dict[str, Any] | None) -> dict[str, Any] | N
     return ruleset.model_dump(mode="json")
 
 
-def _same_rule(a: dict[str, Any] | None, b: dict[str, Any] | None) -> bool:
+def same_cohort_rule(a: dict[str, Any] | None, b: dict[str, Any] | None) -> bool:
     """Equal rules, counting ``None`` and an empty ``rules`` list as the
     same "no rule": an imported observer can hold the explicit empty set,
     and an untouched editor posts ``None`` — saving its name must not
@@ -314,7 +317,7 @@ def update_observer(
     rule: dict[str, Any] | None = None
     if cohort_rule is not _UNSET:
         rule = _validated_cohort_rule(cohort_rule)  # type: ignore[arg-type]
-        rule_changed = not _same_rule(rule, observer.cohort_rule)
+        rule_changed = not same_cohort_rule(rule, observer.cohort_rule)
     proposed: dict[str, object] = {}
     if email is not _UNSET:
         proposed["email"] = _normalised_email(email)  # type: ignore[arg-type]
@@ -489,7 +492,14 @@ def set_cohort_rule(
             "Invalid observer selection.",
         )
 
-    for observer in candidates:
+    # Only the observers whose rule changes are written and audited: an
+    # untouched Save over a shared rule is not N events (operator pages
+    # Item 4, as `update_observer`).
+    changed = [
+        o for o in candidates
+        if not same_cohort_rule(validated_dump, o.cohort_rule)
+    ]
+    for observer in changed:
         observer.cohort_rule = validated_dump
     db.flush()
 
@@ -498,7 +508,7 @@ def set_cohort_rule(
     # ``refs["observer_id"]`` (per spec/architecture.md
     # "Audit-event detail schema" — refs carries cross-entity int
     # PKs, snapshot carries full-state row capture).
-    for observer in candidates:
+    for observer in changed:
         _write_cohort_rule_event(
             db, review_session=review_session, observer=observer,
             rule=validated_dump, user=user, correlation_id=correlation_id,

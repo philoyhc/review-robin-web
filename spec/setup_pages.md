@@ -1604,8 +1604,12 @@ Instruments page (`new_model_rule_list("link2", …)` in
     builder a complete rule the operator never chose.
     `pair_context.*` tags are accepted
     by the schema but **dropped from the dropdown** since the
-    pair-level join isn't implemented; a saved rule naming one
-    degrades safely via `ensureStaleOption`.
+    pair-level join isn't implemented; a saved rule naming one — or a
+    tag whose label was cleared — loads as an extra option suffixed
+    `(missing label)`. The option is **selectable**, so the stored key is
+    posted back and round-trips unchanged on a save that does not touch
+    it (a disabled option is left out of the submission, which would
+    clear or scramble the rule on a rename).
   - Row 2: operand dropdown (Observer attrs only — Name /
     Email / Tag) **only shown for the two cross-attribute
     ops**; otherwise a text input (for the four literal ops)
@@ -1640,13 +1644,15 @@ one), so cells are read thus:
 **`Save` is disabled until the editor is savable**: a non-blank email
 (where the editor has the row's fields) and no half-filled cell. The server refuses
 the same cases, so the disabled state spares a round trip and is not the
-guard. `Save` gates on validity, not on change — `Cancel` already
-discards.
+guard. In the row editor `Save` gates on validity, not on change — `Cancel`
+already discards; the several-row editor also waits for a change (below).
 
 **Leaving with unsaved changes is guarded.** The editor raises the
 browser's `beforeunload` prompt when any control it owns — row fields and
 rule cells alike — differs from what the page loaded with. `Save` and
-`Cancel`, leaving on purpose, are exempt. The predicate is exposed as
+`Cancel`, leaving on purpose, are exempt. A page re-rendered by a
+rejected save counts as changed from arrival: what it holds was posted,
+not stored. The predicate is exposed as
 `window.rrwLeaveWillPrompt`, which the navigation busy indicator reads so
 the bar does not sit behind the prompt (`spec/ui_elements.md`, *Navigation busy indicator*).
 
@@ -1666,35 +1672,43 @@ read-only and highlighted, and there are no row fields. The heading reads
 - **A lone `rule_id`** — given, or left after dropping — opens nothing:
   one row is the row editor's job.
 - **Save** posts `POST /operator/sessions/{id}/observers/cohort-rule`
-  with hidden `observer_ids`, and overwrites every selected observer with
-  whatever the builder holds. Cells are read exactly as above: all blank
-  **clears** every selected observer's rule (`NULL`); a half-filled cell
-  answers **400** with the editor re-rendered (one id re-renders as that
-  row's editor). `Save` is disabled only while a cell is half-filled —
-  there is no email field to wait for. An empty or foreign
-  `observer_ids` answers a plain 400 with no editor.
+  with hidden `observer_ids`, and sets every selected observer's rule to
+  whatever the builder holds; observers whose rule it leaves unchanged
+  are not written and get no audit event. Cells are read exactly as
+  above: all blank **clears** every selected observer's rule (`NULL`); a
+  half-filled cell answers **400** with the editor re-rendered (one id
+  re-renders as that row's editor). An empty or foreign `observer_ids`
+  answers a plain 400 with no editor.
+- **`Save` waits for a change** here, as well as for no half-filled cell
+  (there is no email field): over differing rules the builder arrives
+  empty, and a live `Save` would clear every one of them in one click.
+  After a rejected save it is live on arrival, the posted rule not being
+  stored.
+- **`Edit` keeps the view.** The navigation carries the status filter,
+  search and page offset, so the editor opens over the rows that were
+  selected.
 
 Storage: `observers.cohort_rule` (`sa.JSON()`, nullable). The
 payload validates through
 `app.schemas.observer_cohort_rule.CohortRuleSet` —
 `combinator` (`AND` / `OR`) plus a list of per-cell
-`{field, op, operand_tag, operand_value}` dicts. `NULL` =
-operator hasn't authored a rule yet; an explicitly-saved
-empty `{"combinator": "AND", "rules": []}` is distinct. See
-`guide/archive/observers.md` "Match-axis schema — decided" for the
-storage rationale.
+`{field, op, operand_tag, operand_value}` dicts. "No rule" is stored two
+ways — `NULL` (never authored, or cleared from an editor) and an explicit
+empty `{"combinator": "AND", "rules": []}` (an import or an older save) —
+and both mean the same: the observer sees nothing. Every comparison
+treats them alike (`observers.same_cohort_rule`), so saving a name never
+rewrites one as the other, and the several-row editor does not call them
+different rules. See `guide/archive/observers.md` "Match-axis schema —
+decided" for the storage rationale.
 
 Route gate: `require_observers_enabled_session` +
-`_require_not_archived` on `create`, `update` and `cohort-rule` alike —
-looser than the bulk-status routes
-(`_require_editable`, draft + validated only) because cohort
-rules govern observer visibility, not response data or roster
-shape, so mid-session refinement (during `ready` / `expired`)
-is the legitimate flow. Only `archived` is a hard stop, and on
-`archived` neither editor opens. `cohort-rule` emits one
-`observer.cohort_rule_assigned` audit event per
-affected observer (`refs={"observer_id": id}` +
-`snapshot={"cohort_rule": …}`).
+`_require_not_archived` on `create`, `update` and `cohort-rule` alike, as
+on every Observers route (19P.2 rung 2): cohort rules govern observer
+visibility, not response data or roster shape, so mid-session refinement
+(during `ready` / `expired`) is the legitimate flow. Only `archived` is a
+hard stop, and on `archived` neither editor opens. `cohort-rule` emits
+one `observer.cohort_rule_assigned` audit event per observer whose rule
+it changes (`refs={"observer_id": id}` + `snapshot={"cohort_rule": …}`).
 
 ### CSV import
 

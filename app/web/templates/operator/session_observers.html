@@ -26,8 +26,9 @@
      card above the table — 19P.2 rung 4, following Reviewers at 19P.1
      rung 2b.
 
-     One macro, two call sites (the Add row and the Edit row), because
-     the alternative is the same markup written twice. #}
+     One macro, three call sites (the Add row, the Edit row, and under
+     the last of several rows editing their rule alone — operator pages
+     Item 4), because the alternative is the same markup written thrice. #}
   {% macro row_editor_bar(col_count) %}
     <tr class="session-expander session-expander-bracketed row-editor-bar">
       <td colspan="{{ col_count }}">
@@ -94,10 +95,9 @@
     </tr>
   {% endmacro %}
 
-  {# The cohort rule builder's markup, one definition for its two homes
-     (operator pages Item 4): the selection expander's `<template>`,
-     whose controls post with the bulk form, and the add / edit row
-     editor, whose controls post with the edit form. #}
+  {# The cohort rule builder's markup (operator pages Item 4), rendered
+     into the row editor's bar; its controls post with `form_id`. It had
+     a second home, the selection expander's `<template>`, until rung 4. #}
   {# `blank_field`: the row editor's field select leads with an empty
      choice, so an untouched builder means "no rule" — the rule is
      optional there (Item 4), and a preselected first tag would save one
@@ -945,9 +945,7 @@
       };
 
       // Load a saved rule into a builder holding its one default cell:
-      // the combinator, then a cell per rule. Shared by the selection
-      // expander (after resetting its clone) and the row editor
-      // (operator pages Item 4), so a rule loads one way in both.
+      // the combinator, then a cell per rule (operator pages Item 4).
       window.observerFillRule = function (cohortBlock, rule) {
         if (!cohortBlock) return;
         var cells = cohortBlock.querySelector('[data-observer-cohort-cells]');
@@ -1031,15 +1029,38 @@
         var block = pane.querySelector("[data-observer-cohort-builder]");
         window.observerFillRule(block, rule);
 
+        // What the edit form holds, as one string: `FormData` reads every
+        // control the form owns, row fields and rule cells alike,
+        // through their `form=` attributes. Taken once the rule is
+        // loaded, so it is the editor as it arrived.
+        var form = document.getElementById("observer-edit-form");
+        function snapshot() {
+          if (!form) return "";
+          try {
+            return JSON.stringify(Array.from(new FormData(form).entries()));
+          } catch (e) {
+            return "";
+          }
+        }
+        var baseline = snapshot();
+        // Arrived from a rejected save: what the form holds was posted
+        // but not stored, so leaving now would lose it.
+        var arrivedUnsaved = {{ "true" if edit_error else "false" }};
+        // Several rows editing their rule alone: Save also waits for a
+        // change. A builder that arrives empty over differing rules
+        // would otherwise clear every one of them in one click — the
+        // job the selection expander's dirty gate did.
+        var RULE_ONLY = {{ "true" if rule_edit_ids else "false" }};
+
         // Save only when savable: an email (when the row is edited), and
-        // no half-filled rule cell
-        // (a field with a typed operator and no value, or a value with no
-        // field). Blank cells are fine — they save as no rule. The
-        // server refuses the same cases; this only spares the round trip.
+        // no half-filled rule cell (a field with a typed operator and no
+        // value, or a value with no field). Blank cells are fine — they
+        // save as no rule. The server refuses the same cases; this only
+        // spares the round trip.
         var save = document.querySelector("[data-observer-edit-save]");
         var email = document.querySelector(
           'input[name="email"][form="observer-edit-form"]');
-        var TYPED = ["IS", "IS NOT", "CONTAINS", "DOES NOT CONTAIN"];
+        var TYPED = {{ cohort_value_ops | tojson }};
         function halfFilled() {
           var cells = block.querySelectorAll("[data-observer-rule-cell]");
           for (var i = 0; i < cells.length; i++) {
@@ -1054,10 +1075,14 @@
           }
           return false;
         }
+        function changed() {
+          return arrivedUnsaved || snapshot() !== baseline;
+        }
         function sync() {
           if (!save) return;
           // No email field when several rows edit their rule alone.
-          var ok = (!email || email.value.trim() !== "") && !halfFilled();
+          var ok = (!email || email.value.trim() !== "") && !halfFilled() &&
+                   (!RULE_ONLY || changed());
           save.disabled = !ok;
           if (ok) save.removeAttribute("aria-disabled");
           else save.setAttribute("aria-disabled", "true");
@@ -1075,18 +1100,6 @@
         // one for an unsaved rule; the editor holds that state now, so
         // it carries the guard: leaving with anything changed asks
         // first, and Save and Cancel — leaving on purpose — do not.
-        // `FormData` reads every control the edit form owns, row fields
-        // and rule cells alike, through their `form=` attributes.
-        var form = document.getElementById("observer-edit-form");
-        function snapshot() {
-          if (!form) return "";
-          try {
-            return JSON.stringify(Array.from(new FormData(form).entries()));
-          } catch (e) {
-            return "";
-          }
-        }
-        var baseline = snapshot();
         var intentionalNav = false;
         if (form) {
           form.addEventListener("submit", function () { intentionalNav = true; });
@@ -1096,7 +1109,7 @@
           cancel.addEventListener("click", function () { intentionalNav = true; });
         }
         function willPrompt() {
-          return !intentionalNav && snapshot() !== baseline;
+          return !intentionalNav && changed();
         }
         // Read by base.html's navigation busy indicator, which stands
         // aside rather than sit behind the prompt
@@ -1121,6 +1134,12 @@
         var selectAll = document.getElementById("observers-select-all");
         var table = document.getElementById("observers-table");
         var OBS_BASE = {{ observers_base_url | tojson }};
+        // The view the operator is on — filter, search and page — so
+        // `Edit` opens the editor over the same rows rather than a
+        // window that may not hold every selected one.
+        var VIEW = "&status=" + encodeURIComponent({{ filter_status | tojson }}) +
+          "&q=" + encodeURIComponent({{ filter_search | tojson }}) +
+          "&offset=" + encodeURIComponent({{ current_offset | tojson }});
         var tickOrder = [];
         var panel = null;
 
@@ -1317,7 +1336,7 @@
               : "?" + ids.map(function (id) {
                   return "rule_id=" + encodeURIComponent(id);
                 }).join("&");
-            window.location = OBS_BASE + query +
+            window.location = OBS_BASE + query + VIEW +
               "#observer-row-" + encodeURIComponent(ids[0]);
           });
         }

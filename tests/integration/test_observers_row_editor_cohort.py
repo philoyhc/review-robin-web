@@ -432,3 +432,28 @@ def test_an_explicit_empty_rule_counts_as_no_rule(
     assert [e for e, _ in _events(db, rs.id)[before:]] == ["observer.updated"]
     db.refresh(observer)
     assert observer.cohort_rule == {"combinator": "AND", "rules": []}
+
+
+def test_null_and_an_empty_set_are_not_different_rules(
+    client: TestClient, db: Session
+) -> None:
+    """Both mean "no rule"; the several-row editor must not call them
+    different (`observers.same_cohort_rule`)."""
+    rs, first = _session(client, db, "orc-null-empty")
+    first.cohort_rule = None
+    db.commit()
+    second = _second(db, rs, {"combinator": "AND", "rules": []})
+    bar = _bar(client.get(
+        f"/operator/sessions/{rs.id}/observers"
+        f"?rule_id={first.id}&rule_id={second.id}"
+    ).text)
+    assert "different cohort rules" not in bar
+
+
+def test_edit_keeps_the_filter_and_page(client: TestClient, db: Session) -> None:
+    """The several-row editor drops ids not on the rendered window, so
+    `Edit` carries the view it was taken from."""
+    rs, _ = _session(client, db, "orc-view")
+    body = client.get(f"/operator/sessions/{rs.id}/observers").text
+    assert '"&status=" + encodeURIComponent(' in body
+    assert "window.location = OBS_BASE + query + VIEW +" in body

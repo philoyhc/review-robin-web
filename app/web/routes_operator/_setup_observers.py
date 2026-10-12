@@ -37,6 +37,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Observer, ReviewSession, User
 from app.db.session import get_db
+from app.schemas.observer_cohort_rule import VALUE_OPERATORS
 from app.services import csv_imports
 from app.services import observers as observers_service
 from app.services import session_lifecycle as lifecycle
@@ -196,13 +197,15 @@ def _render_observers_page(
             rule_edit_ids = []
     if rule_edit_ids and edit_cohort_rule is _STORED_RULE:
         # One shared rule loads into the builder; differing rules load
-        # nothing and say so, as the selection expander did.
+        # nothing and say so, as the selection expander did. Compared as
+        # the service compares them, so NULL and an imported empty set
+        # are the same "no rule".
         by_id = {o.id: o for o in observers}
-        signatures = {
-            views.cohort_rule_signature(by_id[i].cohort_rule)
+        first_rule = by_id[rule_edit_ids[0]].cohort_rule
+        rule_edit_mixed = not all(
+            observers_service.same_cohort_rule(first_rule, by_id[i].cohort_rule)
             for i in rule_edit_ids
-        }
-        rule_edit_mixed = len(signatures) > 1
+        )
         edit_cohort_rule = (
             None if rule_edit_mixed else by_id[rule_edit_ids[0]].cohort_rule
         )
@@ -355,10 +358,12 @@ def _render_observers_page(
                 None,
             ),
             "rule_edit_mixed": rule_edit_mixed,
+            # The page's half-filled check reads the same list the
+            # server's does.
+            "cohort_value_ops": sorted(VALUE_OPERATORS),
             "cohort_match_tags": cohort_match_tags,
             "cohort_rule_views": {
                 obs.id: {
-                    "signature": views.cohort_rule_signature(obs.cohort_rule),
                     "summary": views.cohort_rule_summary(
                         obs.cohort_rule, tag_labels=cohort_match_tags
                     ),
@@ -632,11 +637,6 @@ def observers_bulk_reactivate(
     )
 
 
-#: The operators whose operand is typed, not picked: a cell with one of
-#: these and no value is unfinished.
-_VALUE_OPS = frozenset({"IS", "IS NOT", "CONTAINS", "DOES NOT CONTAIN"})
-
-
 @dataclass(frozen=True)
 class _RowEditorRule:
     """The row editor's builder, read from its form fields."""
@@ -674,7 +674,7 @@ def _row_editor_rule(
     for field, op, tag, value in zip(
         fields, ops, operand_tags, operand_values, strict=False
     ):
-        typed = op in _VALUE_OPS
+        typed = op in VALUE_OPERATORS
         if not field and not (typed and value.strip()):
             continue
         if not field or (typed and not value.strip()):
@@ -711,8 +711,9 @@ async def observers_cohort_rule_save(
 ) -> HTMLResponse | RedirectResponse:
     """POST handler for the Cohort match rule editor's Save
     button. Applies the editor's current rule to every observer
-    in ``observer_ids`` (sourced from the bulk-form's row
-    checkboxes); rejects an empty selection with a 400.
+    in ``observer_ids`` (the hidden inputs the several-row editor
+    carries, operator pages Item 4); rejects an empty selection with a
+    400.
 
     Lifecycle gate is ``_require_not_archived``. This route has
     used it since it was written, on the ground that cohort rules
