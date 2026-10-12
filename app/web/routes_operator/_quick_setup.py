@@ -327,7 +327,7 @@ async def create_session(
     last_fragment = ""
 
     if reviewers_file is not None and reviewers_file.filename:
-        reason = await _run_quick_setup_import(
+        failure = await _run_quick_setup_import(
             file=reviewers_file,
             confirm_replace="true",
             acknowledge_response_loss=None,
@@ -340,12 +340,14 @@ async def create_session(
             save_fn=csv_imports.save_reviewers,
             correlation_id=correlation_id,
         )
-        if reason is not None:
-            return quick_setup_error_redirect("reviewers", reason)
+        if failure is not None:
+            return quick_setup_error_redirect(
+                "reviewers", failure.reason, failure.details
+            )
         last_fragment = "#quick-setup-reviewers"
 
     if reviewees_file is not None and reviewees_file.filename:
-        reason = await _run_quick_setup_import(
+        failure = await _run_quick_setup_import(
             file=reviewees_file,
             confirm_replace="true",
             acknowledge_response_loss=None,
@@ -358,12 +360,14 @@ async def create_session(
             save_fn=csv_imports.save_reviewees,
             correlation_id=correlation_id,
         )
-        if reason is not None:
-            return quick_setup_error_redirect("reviewees", reason)
+        if failure is not None:
+            return quick_setup_error_redirect(
+                "reviewees", failure.reason, failure.details
+            )
         last_fragment = "#quick-setup-reviewees"
 
     if relationships_file is not None and relationships_file.filename:
-        reason = await _run_quick_setup_relationships(
+        failure = await _run_quick_setup_relationships(
             file=relationships_file,
             confirm_replace="true",
             review_session=review_session,
@@ -371,12 +375,14 @@ async def create_session(
             db=db,
             correlation_id=correlation_id,
         )
-        if reason is not None:
-            return quick_setup_error_redirect("relationships", reason)
+        if failure is not None:
+            return quick_setup_error_redirect(
+                "relationships", failure.reason, failure.details
+            )
         last_fragment = "#quick-setup-relationships"
 
     if observers_file is not None and observers_file.filename:
-        reason = await _run_quick_setup_observers(
+        failure = await _run_quick_setup_observers(
             file=observers_file,
             confirm_replace="true",
             review_session=review_session,
@@ -384,8 +390,10 @@ async def create_session(
             db=db,
             correlation_id=correlation_id,
         )
-        if reason is not None:
-            return quick_setup_error_redirect("observers", reason)
+        if failure is not None:
+            return quick_setup_error_redirect(
+                "observers", failure.reason, failure.details
+            )
         last_fragment = "#quick-setup-observers"
 
     if settings_file is not None and settings_file.filename:
@@ -520,7 +528,7 @@ async def _handle_quick_setup_import(
 
     home_url = f"/operator/sessions/{review_session.id}"
     fragment = f"#quick-setup-{kind}"
-    error_reason = await _run_quick_setup_import(
+    failure = await _run_quick_setup_import(
         file=file,
         confirm_replace=confirm_replace,
         acknowledge_response_loss=acknowledge_response_loss,
@@ -532,12 +540,12 @@ async def _handle_quick_setup_import(
         parse_fn=parse_fn,
         save_fn=save_fn,
     )
-    if error_reason is not None:
+    if failure is not None:
+        query = _quick_setup_error_query(
+            kind, failure.reason, failure.details
+        )
         return RedirectResponse(
-            url=(
-                f"{home_url}?quick_setup_error={kind}"
-                f"&quick_setup_reason={error_reason}{fragment}"
-            ),
+            url=f"{home_url}?{query}{fragment}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
     return RedirectResponse(
@@ -566,19 +574,19 @@ async def quick_setup_relationships_submit(
 
     home_url = f"/operator/sessions/{review_session.id}"
     fragment = "#quick-setup-relationships"
-    error_reason = await _run_quick_setup_relationships(
+    failure = await _run_quick_setup_relationships(
         file=file,
         confirm_replace=confirm_replace,
         review_session=review_session,
         user=user,
         db=db,
     )
-    if error_reason is not None:
+    if failure is not None:
+        query = _quick_setup_error_query(
+            "relationships", failure.reason, failure.details
+        )
         return RedirectResponse(
-            url=(
-                f"{home_url}?quick_setup_error=relationships"
-                f"&quick_setup_reason={error_reason}{fragment}"
-            ),
+            url=f"{home_url}?{query}{fragment}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
     return RedirectResponse(
@@ -595,13 +603,13 @@ async def _run_quick_setup_relationships(
     user: User,
     db: Session,
     correlation_id: str | None = None,
-) -> str | None:
+) -> _SlotFailure | None:
     """Reusable Relationships-slot pipeline shared by the per-slot
-    route and the consolidated ``submit-all`` handler. Returns the
-    ``quick_setup_reason`` token on failure, ``None`` on success."""
+    route and the consolidated ``submit-all`` handler. Returns a
+    ``_SlotFailure`` on failure, ``None`` on success."""
 
     if not lifecycle.is_editable(review_session):
-        return "lifecycle"
+        return _SlotFailure("lifecycle")
 
     content = await file.read()
     reviewers = assignments.list_reviewers(db, review_session.id)
@@ -612,11 +620,13 @@ async def _run_quick_setup_relationships(
     if result.is_blocked or any(
         issue.severity == "error" for issue in result.issues
     ):
-        return "parse"
+        return _SlotFailure(
+            "parse", views.roster_problem_details(result.issues)
+        )
 
     existing = relationships_service.existing_count(db, review_session.id)
     if existing > 0 and confirm_replace != "true":
-        return "needs_confirm"
+        return _SlotFailure("needs_confirm")
 
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
@@ -640,7 +650,7 @@ async def _run_quick_setup_relationships(
             field_labels_captured=result.field_labels,
         )
     except lifecycle.SessionStateConflict:
-        return "lifecycle"
+        return _SlotFailure("lifecycle")
     return None
 
 
@@ -663,19 +673,19 @@ async def quick_setup_observers_submit(
 
     home_url = f"/operator/sessions/{review_session.id}"
     fragment = "#quick-setup-observers"
-    error_reason = await _run_quick_setup_observers(
+    failure = await _run_quick_setup_observers(
         file=file,
         confirm_replace=confirm_replace,
         review_session=review_session,
         user=user,
         db=db,
     )
-    if error_reason is not None:
+    if failure is not None:
+        query = _quick_setup_error_query(
+            "observers", failure.reason, failure.details
+        )
         return RedirectResponse(
-            url=(
-                f"{home_url}?quick_setup_error=observers"
-                f"&quick_setup_reason={error_reason}{fragment}"
-            ),
+            url=f"{home_url}?{query}{fragment}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
     return RedirectResponse(
@@ -692,10 +702,10 @@ async def _run_quick_setup_observers(
     user: User,
     db: Session,
     correlation_id: str | None = None,
-) -> str | None:
+) -> _SlotFailure | None:
     """Reusable Observers-slot pipeline shared by the per-slot
-    route and the consolidated ``submit-all`` handler. Returns the
-    ``quick_setup_reason`` token on failure, ``None`` on success.
+    route and the consolidated ``submit-all`` handler. Returns a
+    ``_SlotFailure`` on failure, ``None`` on success.
 
     **The cross-table identity check was skipped here until 19Q Item
     7**, on the same reasoning the standalone importer gave — *a person
@@ -706,7 +716,7 @@ async def _run_quick_setup_observers(
     response-loss ack, though — observers cascade nothing."""
 
     if not lifecycle.is_editable(review_session):
-        return "lifecycle"
+        return _SlotFailure("lifecycle")
 
     content = await file.read()
     result = csv_imports.parse_observer_csv(content)
@@ -725,11 +735,13 @@ async def _run_quick_setup_observers(
     if result.is_blocked or any(
         issue.severity == "error" for issue in result.issues
     ):
-        return "parse"
+        return _SlotFailure(
+            "parse", views.roster_problem_details(result.issues)
+        )
 
     existing = csv_imports.existing_observer_count(db, review_session.id)
     if existing > 0 and confirm_replace != "true":
-        return "needs_confirm"
+        return _SlotFailure("needs_confirm")
 
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
@@ -747,7 +759,7 @@ async def _run_quick_setup_observers(
             correlation_id=correlation_id or request_correlation_id(),
         )
     except lifecycle.SessionStateConflict:
-        return "lifecycle"
+        return _SlotFailure("lifecycle")
     return None
 
 
@@ -764,13 +776,13 @@ async def _run_quick_setup_import(
     parse_fn,
     save_fn,
     correlation_id: str | None = None,
-) -> str | None:
+) -> _SlotFailure | None:
     """Reusable parse / save pipeline shared by the per-slot routes
-    and the consolidated ``submit-all`` handler. Returns the
-    ``quick_setup_reason`` token on failure, ``None`` on success."""
+    and the consolidated ``submit-all`` handler. Returns a
+    ``_SlotFailure`` on failure, ``None`` on success."""
 
     if not lifecycle.is_editable(review_session):
-        return "lifecycle"
+        return _SlotFailure("lifecycle")
 
     content = await file.read()
     result = parse_fn(content)
@@ -787,11 +799,13 @@ async def _run_quick_setup_import(
     if result.is_blocked or any(
         issue.severity == "error" for issue in result.issues
     ):
-        return "parse"
+        return _SlotFailure(
+            "parse", views.roster_problem_details(result.issues)
+        )
 
     existing = existing_count_fn(db, review_session.id)
     if existing > 0 and confirm_replace != "true":
-        return "needs_confirm"
+        return _SlotFailure("needs_confirm")
 
     if existing > 0:
         try:
@@ -799,7 +813,7 @@ async def _run_quick_setup_import(
                 db, review_session, acknowledge_response_loss
             )
         except HTTPException:
-            return "needs_confirm"
+            return _SlotFailure("needs_confirm")
 
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
@@ -820,7 +834,7 @@ async def _run_quick_setup_import(
             field_labels_captured=result.field_labels,
         )
     except lifecycle.SessionStateConflict:
-        return "lifecycle"
+        return _SlotFailure("lifecycle")
     return None
 
 
@@ -879,7 +893,7 @@ async def quick_setup_submit_all(
     last_fragment = ""
 
     if reviewers_file is not None and reviewers_file.filename:
-        reason = await _run_quick_setup_import(
+        failure = await _run_quick_setup_import(
             file=reviewers_file,
             confirm_replace=confirm_replace,
             acknowledge_response_loss=acknowledge_response_loss,
@@ -891,12 +905,14 @@ async def quick_setup_submit_all(
             parse_fn=csv_imports.parse_reviewer_csv,
             save_fn=csv_imports.save_reviewers,
         )
-        if reason is not None:
-            return error_redirect("reviewers", reason)
+        if failure is not None:
+            return error_redirect(
+                "reviewers", failure.reason, failure.details
+            )
         last_fragment = "#quick-setup-reviewers"
 
     if reviewees_file is not None and reviewees_file.filename:
-        reason = await _run_quick_setup_import(
+        failure = await _run_quick_setup_import(
             file=reviewees_file,
             confirm_replace=confirm_replace,
             acknowledge_response_loss=acknowledge_response_loss,
@@ -908,32 +924,38 @@ async def quick_setup_submit_all(
             parse_fn=csv_imports.parse_reviewee_csv,
             save_fn=csv_imports.save_reviewees,
         )
-        if reason is not None:
-            return error_redirect("reviewees", reason)
+        if failure is not None:
+            return error_redirect(
+                "reviewees", failure.reason, failure.details
+            )
         last_fragment = "#quick-setup-reviewees"
 
     if relationships_file is not None and relationships_file.filename:
-        reason = await _run_quick_setup_relationships(
+        failure = await _run_quick_setup_relationships(
             file=relationships_file,
             confirm_replace=confirm_replace,
             review_session=review_session,
             user=user,
             db=db,
         )
-        if reason is not None:
-            return error_redirect("relationships", reason)
+        if failure is not None:
+            return error_redirect(
+                "relationships", failure.reason, failure.details
+            )
         last_fragment = "#quick-setup-relationships"
 
     if observers_file is not None and observers_file.filename:
-        reason = await _run_quick_setup_observers(
+        failure = await _run_quick_setup_observers(
             file=observers_file,
             confirm_replace=confirm_replace,
             review_session=review_session,
             user=user,
             db=db,
         )
-        if reason is not None:
-            return error_redirect("observers", reason)
+        if failure is not None:
+            return error_redirect(
+                "observers", failure.reason, failure.details
+            )
         last_fragment = "#quick-setup-observers"
 
     if settings_file is not None and settings_file.filename:
@@ -1019,10 +1041,12 @@ async def import_session_config(
 
 
 @dataclass(frozen=True)
-class _SettingsFailure:
-    """Why the Settings slot refused an upload: the ``quick_setup_reason``
-    token, plus the CSV's validation errors when it failed on them
-    (findings D31; empty for every other reason)."""
+class _SlotFailure:
+    """Why a slot refused an upload: the ``quick_setup_reason`` token,
+    plus the lines its banner lists when the file failed validation —
+    a Settings CSV's errors (findings D31), a roster file's kinds of
+    problem (``views.roster_problem_details``) — and none for every
+    other reason."""
 
     reason: str
     details: list[str] = field(default_factory=list)
@@ -1049,10 +1073,10 @@ async def _run_quick_setup_settings(
     confirm_replace: str | None = None,
     acknowledge_response_loss: str | None = None,
     correlation_id: str | None = None,
-) -> _SettingsFailure | None:
+) -> _SlotFailure | None:
     """Reusable Settings-slot pipeline shared by the per-slot
     route, the submit-all handler, and the create-session
-    handler. Returns a ``_SettingsFailure`` on failure — the
+    handler. Returns a ``_SlotFailure`` on failure — the
     ``quick_setup_reason`` token, and the CSV's validation errors
     when it failed on them — and ``None`` on success.
 
@@ -1093,7 +1117,7 @@ def _apply_settings_upload(
     confirm_replace: str | None,
     acknowledge_response_loss: str | None,
     correlation_id: str,
-) -> _SettingsFailure | None:
+) -> _SlotFailure | None:
     """``_run_quick_setup_settings`` once the upload is read. The
     session is locked and re-read before the editability gate, so a
     scheduled activation that commits first is refused here rather
@@ -1101,34 +1125,34 @@ def _apply_settings_upload(
 
     session_guard.lock_session(db, review_session)
     if not lifecycle.is_editable(review_session):
-        return _SettingsFailure("lifecycle")
+        return _SlotFailure("lifecycle")
 
     if not content:
-        return _SettingsFailure("parse")
+        return _SlotFailure("parse")
 
     rows, row_errors, parse_error = _read_settings_csv(content)
     if parse_error is not None:
-        return _SettingsFailure("parse")
+        return _SlotFailure("parse")
     if row_errors:
         # A short row refuses the file, reported with every other
         # error the file holds (findings D10).
         errors = session_config_io.validate_session_config(
             review_session, rows, row_errors=row_errors
         )
-        return _SettingsFailure("parse", views.settings_error_details(errors))
+        return _SlotFailure("parse", views.settings_error_details(errors))
 
     # Lifecycle, then parse, then the replacement gates: the order the
     # roster slots use, so a malformed file reports ``parse`` whether or
     # not the tick was sent.
     if replacing:
         if confirm_replace != "true":
-            return _SettingsFailure("needs_confirm")
+            return _SlotFailure("needs_confirm")
         try:
             _require_response_loss_ack(
                 db, review_session, acknowledge_response_loss
             )
         except HTTPException:
-            return _SettingsFailure("needs_confirm")
+            return _SlotFailure("needs_confirm")
 
     result = session_config_io.apply_session_config(
         db,
@@ -1138,7 +1162,7 @@ def _apply_settings_upload(
         correlation_id=correlation_id,
     )
     if not result.ok:
-        return _SettingsFailure(
+        return _SlotFailure(
             "parse", views.settings_error_details(result.errors)
         )
     # ``apply_session_config`` flushes but does not commit, and

@@ -88,9 +88,10 @@ class QuickSetupSlot:
     Cancel target for the error banner. Stable across renders."""
 
     error_details: tuple[str, ...] = ()
-    """The rejected Settings CSV's validation errors, one line each,
-    listed under ``error_message`` (findings D31). Only the Settings
-    slot carries them: the roster slots point at their Setup page."""
+    """The lines listed under ``error_message`` for a rejected file, one
+    each: a Settings CSV's validation errors (findings D31), or a roster
+    file's kinds of problem with no row named
+    (``roster_problem_details``; the roster's Setup page shows rows)."""
 
 
 @dataclass(frozen=True)
@@ -205,7 +206,19 @@ def build_quick_setup_context(
     def _error_for(slot_key: str) -> str | None:
         if error_kind != slot_key:
             return None
-        return _quick_setup_error_message(slot_key, error_reason)
+        return _quick_setup_error_message(
+            slot_key, error_reason, has_details=bool(error_details)
+        )
+
+    def _details_for(slot_key: str) -> tuple[str, ...]:
+        # The lines arrive in the URL, so no more and no longer than
+        # the route sends are shown, whatever it holds.
+        if error_kind != slot_key:
+            return ()
+        return tuple(
+            _clip(line)
+            for line in tuple(error_details)[: SETTINGS_ERROR_DETAIL_LIMIT + 1]
+        )
 
     slots = [
         QuickSetupSlot(
@@ -217,6 +230,7 @@ def build_quick_setup_context(
             wire_url=f"/operator/sessions/{sid}/quick-setup/reviewers",
             coming_in=None,
             error_message=_error_for("reviewers"),
+            error_details=_details_for("reviewers"),
             cancel_url=cancel_url_for("reviewers"),
         ),
         QuickSetupSlot(
@@ -228,6 +242,7 @@ def build_quick_setup_context(
             wire_url=f"/operator/sessions/{sid}/quick-setup/reviewees",
             coming_in=None,
             error_message=_error_for("reviewees"),
+            error_details=_details_for("reviewees"),
             cancel_url=cancel_url_for("reviewees"),
         ),
         QuickSetupSlot(
@@ -239,6 +254,7 @@ def build_quick_setup_context(
             wire_url=f"/operator/sessions/{sid}/quick-setup/relationships",
             coming_in=None,
             error_message=_error_for("relationships"),
+            error_details=_details_for("relationships"),
             cancel_url=cancel_url_for("relationships"),
         ),
     ]
@@ -260,6 +276,7 @@ def build_quick_setup_context(
                 wire_url=f"/operator/sessions/{sid}/quick-setup/observers",
                 coming_in=None,
                 error_message=_error_for("observers"),
+                error_details=_details_for("observers"),
                 cancel_url=cancel_url_for("observers"),
             )
         )
@@ -273,18 +290,7 @@ def build_quick_setup_context(
             wire_url=f"/operator/sessions/{sid}/import-config",
             coming_in=None,
             error_message=_error_for("settings"),
-            error_details=(
-                # The lines arrive in the URL, so no more and no longer
-                # than the route sends are shown, whatever it holds.
-                tuple(
-                    _clip(line)
-                    for line in tuple(error_details)[
-                        : SETTINGS_ERROR_DETAIL_LIMIT + 1
-                    ]
-                )
-                if error_kind == "settings"
-                else ()
-            ),
+            error_details=_details_for("settings"),
             cancel_url=cancel_url_for("settings"),
         )
     )
@@ -326,11 +332,12 @@ def build_quick_setup_context(
     )
 
 
-#: How many Settings CSV errors travel back in the redirect, how long
-#: each may be, and how many URL-encoded bytes they may take together:
-#: the list rides the URL, so it is capped rather than whole (a value
-#: quoted in a message can be non-ASCII, up to twelve encoded bytes a
-#: character). A longer list ends with a count of the rest.
+#: How many error lines travel back in the redirect (a Settings CSV's
+#: errors, a roster file's kinds of problem), how long each may be, and
+#: how many URL-encoded bytes they may take together: the list rides the
+#: URL, so it is capped rather than whole (a value quoted in a message
+#: can be non-ASCII, up to twelve encoded bytes a character). A longer
+#: list ends with a count of the rest.
 SETTINGS_ERROR_DETAIL_LIMIT = 5
 SETTINGS_ERROR_DETAIL_MAX_CHARS = 200
 SETTINGS_ERROR_DETAIL_MAX_BYTES = 2000
@@ -347,38 +354,84 @@ def settings_error_details(errors: list) -> list[str]:
     lines the Settings slot's banner lists (findings D31): the row
     and field when the error has them, then the message."""
 
-    from urllib.parse import quote_plus
-
-    lines: list[str] = []
-    spent = 0
-    for error in errors[:SETTINGS_ERROR_DETAIL_LIMIT]:
+    lines = []
+    for error in errors:
         where = []
         if error.row_number:
             where.append(f"Row {error.row_number}")
         if error.field:
             where.append(error.field)
-        line = _clip(
+        lines.append(
             f"{', '.join(where)}: {error.message}" if where else error.message
         )
+    return _capped(lines)
+
+
+def roster_problem_details(issues: list) -> list[str]:
+    """The kinds of problem that refused a roster file in Quick Setup,
+    one line each with how many rows have it ("ReviewerEmail is blank
+    (2 rows)"). The banner names the problem, not the row (author,
+    2026-10-12): the roster's Setup page shows rows.
+
+    Each blocking issue counts under its ``problem``; a file-level issue
+    (no row) has none and stands under its own message, which names no
+    row already. A row-level issue a parser left unlabeled falls back to
+    its field, so it is still counted rather than lost."""
+
+    rows: dict[str, int] = {}
+    for issue in issues:
+        if not issue.is_blocking:
+            continue
+        if issue.problem:
+            label = issue.problem
+        elif issue.row_number is None:
+            label = issue.message
+        else:
+            label = f"{issue.field or 'A cell'} has a problem"
+        rows.setdefault(label, 0)
+        if issue.row_number is not None:
+            rows[label] += 1
+    return _capped(
+        [
+            f"{label} ({n} row{'' if n == 1 else 's'})" if n else label
+            for label, n in rows.items()
+        ]
+    )
+
+
+def _capped(all_lines: list[str]) -> list[str]:
+    """The lines the redirect carries: at most
+    ``SETTINGS_ERROR_DETAIL_LIMIT``, each clipped, within the byte
+    budget, then a count of the rest."""
+
+    from urllib.parse import quote_plus
+
+    lines: list[str] = []
+    spent = 0
+    for raw in all_lines[:SETTINGS_ERROR_DETAIL_LIMIT]:
+        line = _clip(raw)
         cost = len(quote_plus(line))
         if lines and spent + cost > SETTINGS_ERROR_DETAIL_MAX_BYTES:
             break
         spent += cost
         lines.append(line)
-    hidden = len(errors) - len(lines)
+    hidden = len(all_lines) - len(lines)
     if hidden > 0:
         lines.append(f"…and {hidden} more.")
     return lines
 
 
-def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
+def _quick_setup_error_message(
+    slot_key: str, reason: str | None, has_details: bool = False
+) -> str:
     """Render the banner-error copy for a slot's last failed submit.
 
     ``reason`` is a stable token from the route handler:
 
     - ``"parse"`` — the upload couldn't be parsed / validated. The
       message points the operator at the per-entity Setup page where
-      the per-row error feedback lives.
+      the per-row error feedback lives; with ``has_details`` it leads
+      into the list of the file's kinds of problem the banner shows.
     - ``"lifecycle"`` — the submit failed the slot's inline
       ``is_editable`` check on a ``ready`` session. The message names the next move (Revert to
       draft — the operator-facing name for this transition; *Pause* is
@@ -414,6 +467,11 @@ def _quick_setup_error_message(slot_key: str, reason: str | None) -> str:
         "relationships": "relationships",
         "observers": "observers",
     }.get(slot_key)
+    if per_entity_path and has_details:
+        return (
+            f"Could not import {label.lower()}. The file has these "
+            f"problems; the {label} Setup page shows which rows:"
+        )
     if per_entity_path:
         return (
             f"Could not import {label.lower()}. "

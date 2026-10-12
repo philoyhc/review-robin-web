@@ -267,3 +267,13 @@ section (git history keeps it), so this file lists only what is owed.
   replace confirmation, and Submit:
   the roster changes, the session reads Draft, and the Workflow card
   asks to Prepare again.
+
+## Quick Setup names the kind of problem
+
+- [ ] **Roster.** On Session Home, upload through Quick Setup a Reviewers
+  CSV with two blank emails and one bad Status: the banner reads "Could
+  not import reviewers. The file has these problems; the Reviewers Setup
+  page shows which rows:" over "ReviewerEmail is blank (2 rows)" and
+  "Status is not active or inactive (1 row)", and names no row.
+- [ ] **Missing column.** A CSV without `ReviewerEmail`: the one line is
+  "Missing required column: ReviewerEmail".
