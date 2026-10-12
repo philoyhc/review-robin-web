@@ -26,8 +26,9 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
-- **Participant info** — `guide/participant_info.md`: Item 1, a
-  reviewer sees their own roster entry on the reviewer surface.
+- **Participant info** — `guide/participant_info.md`: Item 2, the
+  Unlock panels' card order on the four roster pages (Item 1 closed
+  2026-10-12).
 
 ### Queued segments
 

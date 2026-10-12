@@ -149,32 +149,35 @@ Taken 2026-10-11 at `7e329db5`.
 - Tests: `grep -rln "rs-role-nav" tests | wc -l` → 2;
   `grep -rln "preview_surface\|preview_mode" tests | wc -l` → 13.
 
-### Status
+### Status — closed 2026-10-12
 
-- Rung 2 (2026-10-12), the scaffold: `views._reviewer_self` (the default,
-  the chips, the readout, the line); the readout row's renames on four
-  pages and Reviewers' `Shown on surface:`; the inert card; the line on
-  the role row, with a static `Reviewer` pill in the preview.
-  `test_the_panel_holds_three_wired_cards_and_nothing_else` became
-  `..._its_four_cards_...`, excising the scaffold card by its marker
-  until rung 3 wires it.
-- Rung 3 (2026-10-12): `app/services/participant_info.py` (keys, default,
+Shipped as laddered, in three rungs (#2976 plan, #2978 scaffold, #2979
+storage and the live card); the author's browser check passed
+2026-10-12.
+
+- **Diverged from the plan:** on a mock-up (2026-10-12) `Populated:`
+  became a `|`, the count `<Noun> (N)` on all four pages, `Shown on
+  surface:` became `Reviewers see:` (Decision amendment). With no column
+  pill the row stops at the count (Judgment calls).
+- **Built:** `app/services/participant_info.py` (keys, default,
   normalize, effective selection, the save and its
-  `session.reviewer_self_fields_set` audit event); migration
-  `c4a8e2f6d1b3` adds `sessions.reviewer_self_fields`,
-  `reviewee_self_fields` and `observer_self_fields`; the card posts to
-  `/reviewers/self-fields` (409 locked, 422 unknown key), unoffered
-  selected keys riding as hidden `keep` inputs; the Settings CSV carries
-  `session.reviewer_self_fields` as a JSON list (blank is the default,
-  `[]` nothing); Duplicate copies all three columns.
-- Reads: one cumulative `diff-reviewer` read on `f97e6219..` and two
-  reads of its fixes. Fixed from them: the audit's old value is what was
-  stored, not the effective default; the save's no-op compares with the
-  stored list, so a save repairs a hand-edited value; a non-list or
-  non-string stored value reads as the default; the kept-keys logic moved
-  to `views`; `autocomplete="off"` on the form; stale test and template
-  prose. `spec-writer` wrote the doc-impact specs and added rows to
-  `spec/operator_button_audit.md` and `spec/ui_elements.md`.
+  `session.reviewer_self_fields_set` event); migration `c4a8e2f6d1b3`
+  adds a JSON column per participant to `sessions`, only the
+  reviewers' read; `POST /reviewers/self-fields` (409 locked, 422
+  unknown key); the Settings CSV row (blank the default, `[]` nothing);
+  Duplicate copies all three; `views.reviewer_self_card_context`
+  answers the card and readout for the GET and the failed-import
+  re-render alike.
+- **Reads:** one cumulative `diff-reviewer` read on `f97e6219..`, two
+  reads of its fixes, two of the readout revision and one of the Codex
+  fix — six, all on rung 3. They found: the audit's old value must be
+  what was stored; the no-op must compare with the stored list, so a
+  save repairs a hand-edited value; a non-list stored value reads as the
+  default; kept keys belong in `views`; stale `none yet` prose and an
+  untested Relationships-with-tags row. Codex found the failed-import
+  re-render rendering the card with no chips.
+- **`spec-writer` at close:** no divergence; one edit, the
+  `.rs-self-info` CSS bullet in `spec/reviewer-surface.md`.
 
 ### PR ladder
 
@@ -223,3 +226,95 @@ Taken 2026-10-11 at `7e329db5`.
 - `spec/csv_contracts.md` — the Settings CSV `session.*` row.
 - `spec/roundtrip_coverage.md` — the new column round-trips.
 - `guide/things_to_check_in_browser.md` — a section per code rung.
+
+---
+
+## Item 2 — The Unlock panels' card order
+
+### Opportunity
+
+On the Item 1 browser check (author, 2026-10-12) the Unlock panels'
+column order no longer matched how an operator works through them, and
+on Observers `Lock` sat under the left column, mid-card, rather than at
+the card's corner.
+
+### Decision
+
+The author's ruling, 2026-10-12, on all four roster pages:
+
+- **Reviewers.** Left: `What reviewers see of their own entry`, then
+  `Upload Reviewers`. Right: tag labels, then `Danger Zone`.
+- **Reviewees** follows Reviewers: left `Upload Reviewees`; right tag
+  labels, then `Danger Zone`.
+- **Relationships.** Left `Upload`; right tag labels (then `Danger
+  Zone`).
+- **Observers.** Left `Upload Observers`; right `Danger Zone`, under
+  `What observers see` once a later item adds it.
+- **`Lock` at the bottom right of the whole card**, on every page: a
+  row of its own at the panel's foot, flush right.
+
+Rejected: `Lock` beneath the right column's last card (19P.1's rule).
+The right column now ends wherever its cards do — on an empty Observers
+roster it holds none — so "under the column" is not the card's corner.
+
+### Semantics
+
+- `Upload` is left on all four pages, so Observers stops being the
+  mirror of the other three, and `Lock` stops following a card: the
+  toggle moves it to the panel's foot, never into a column, and the
+  `data-lock-home` marker retires.
+- Narrow (≤ 800px) the columns stack left then right, then `Lock`.
+- The server-rendered open panel (`?unlocked=1`, a failed import)
+  renders `Lock` in the same place the toggle puts it.
+
+### Judgment calls — decided
+
+- "Reviewees page to follow" read as *follows Reviewers' order*:
+  Reviewees has no self card yet, so it is Upload left, labels over
+  Danger Zone right.
+- `Lock` at the foot on all four pages, not only Observers: after the
+  reorder Reviewers' right column is the shorter one, so the old rule
+  would leave `Lock` mid-card there too.
+
+### Blast radius (measured)
+
+Taken 2026-10-12 at `1fa68b24`.
+
+- Templates: the four `app/web/templates/operator/session_*.html` roster
+  pages and `base.html` (`.unlock-right > .roster-card-actions`):
+  `grep -rln "unlock-right\|data-lock-home\|roster-card-actions" app/web/templates`
+  → 5.
+- Tests: `grep -rln "unlock-right\|data-lock-home\|unlock-stack\|roster-card-actions" tests --include=*.py`
+  → 4.
+- Spec: `spec/setup_pages.md` § *The roster card and the Unlock panel*
+  (the column-contents and `Lock` rows) and § *Observers page*;
+  `spec/ui_elements.md` (`.unlock-panel` row).
+
+### PR ladder
+
+1. **This plan**, with Item 1's close. Prose only.
+2. **The reorder.** The four templates, the `Lock` row's CSS and
+   toggle, tests, the two specs, a browser-check section. One rung,
+   read on its own diff.
+
+### Definition of done
+
+- Each page's panel renders its cards in the Decision's order and
+  `Lock` after both columns, by test, open on load and after the toggle.
+- `### Doc impact` current; `spec-writer` flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- None open.
+
+### Out of scope
+
+- `What reviewees see` and `What observers see`: later items, which
+  place their cards by this Decision.
+
+### Doc impact
+
+- `spec/setup_pages.md` — the Unlock panel's column contents on all four pages and `Lock` at the panel's foot; Observers no longer the mirror.
+- `spec/ui_elements.md` — the `.unlock-panel` row: the `Lock` row at the foot.
+- `guide/things_to_check_in_browser.md` — a section for the reorder.
