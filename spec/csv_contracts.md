@@ -307,7 +307,7 @@ the upload card; Quick Setup's slot 303s back to Session Home with
 | Within-file duplicates | Same `ReviewerEmail` / `RevieweeEmail` twice → per-row error on the second occurrence. |
 | Cell length | A cell longer than its column (§1, *Cell lengths*) → per-row error naming the column, one per over-long cell. A row refused here, or by any check, does not reserve its email, so a later row with the same email is not reported as its duplicate. |
 | Tag comma | A `ReviewerTag1..3` / `RevieweeTag1..3` cell holding a comma → per-row error naming the column (§1, *Tag commas*), reported with the length issues. |
-| Cross-roster identity | `check_cross_table_identity` rejects a row whose email is already held in **another roster under a different name**. Same email + same name is allowed and common — one person is often both reviewer and reviewee, which is the self-review case. Three-way: each roster is compared against the other two, observers included. |
+| Cross-roster identity | `check_cross_table_identity` rejects a row whose email is already held in **another roster under a different name**. Same email + same name is allowed and common — one person is often both reviewer and reviewee, which is the self-review case. Three-way: each roster is compared against the other two, observers included. A roster a file replaces holds nothing. **Files uploaded together** (Quick Setup) are checked against each other and against the existing rosters they do not replace (`check_incoming_identity`), so a rename made in every roster file at once is accepted; a clash between two uploads is its own problem, *"ReviewerEmail is used under a different name in the uploaded Reviewees file"*. |
 
 **Optional columns:** any of `ReviewerTag1..3`, `RevieweeTag1..3`,
 `ProfileLink` may be absent. An absent column is `None` for every
@@ -331,9 +331,9 @@ upsert present, clear absent.
 
 ### 3.2 Relationships — `relationships.py`
 
-`parse_relationship_csv(content, *, reviewers: list[Reviewer],
-reviewees: list[Reviewee])` resolves the two FK columns against the
-already-loaded session rosters — **the roster rows themselves, not
+`parse_relationship_csv(content, *, reviewers, reviewees,
+reviewers_uploaded=False, reviewees_uploaded=False)` resolves the two
+FK columns against the already-loaded session rosters — **the roster rows themselves, not
 lists of strings**; the parser keys them by `normalize_email` and
 returns the resolved FK ids so the save step need not look them up
 again. `ReviewerEmail` matches `reviewers.email`; **`RevieweeEmail`
@@ -352,7 +352,7 @@ carry a `.<label>` friendly-label suffix (§1a);
 | Rule | Detection |
 |---|---|
 | Required cell present | Empty `ReviewerEmail` / `RevieweeEmail` → per-row error. |
-| FK resolution | `ReviewerEmail` not in session's reviewers → per-row error. Same for `RevieweeEmail`. |
+| FK resolution | `ReviewerEmail` not in session's reviewers → per-row error. Same for `RevieweeEmail`. When Quick Setup carries a Reviewers or Reviewees file alongside, that file's rows stand in for the roster it replaces (`rosters_for_relationships`, with stand-in ids), and the error names the file: *"ReviewerEmail is not in the uploaded Reviewers file"*. The save parses again against the rosters as saved, for their real ids. |
 | Within-file duplicates | Same `(ReviewerEmail, RevieweeEmail)` pair twice → the second occurrence is rejected **when the first one parsed**. Detection is on the *resolved* pair, so two spellings of one address collide, and the error names the row the survivor is on. A first occurrence that fails a later check reserves nothing, so a valid second occurrence is kept instead of being reported as a duplicate of a row that never parsed. |
 | Status value | `Status` must be `active` or `inactive`, **case-insensitively and ignoring surrounding whitespace** (`  ACTIVE  ` is accepted); empty or absent defaults to `active`. |
 | Cell length | A `PairContextTag1..3` cell longer than 255 → per-row error naming the column (§1, *Cell lengths*); checked before the pair is reserved. |
@@ -526,9 +526,9 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
 flushes and returns. `get_db` then closes without committing, so an
 uncommitted apply is *rolled back* while the route returns a success
 redirect. Both in-tree callers commit for themselves:
-`_run_quick_setup_settings`, the helper the three upload routes share,
-after a successful apply; and `session_rehydrate`, all-or-nothing at
-the end of its own run. **A third caller that does not commit
+`_run_quick_setup`, the pipeline every Quick Setup upload route shares,
+inside the one unit it saves every slot in; and `session_rehydrate`,
+all-or-nothing at the end of its own run. **A third caller that does not commit
 reproduces the defect silently**, which is why the requirement is
 stated here rather than left to the two call sites.
 
@@ -580,11 +580,10 @@ same empty `tags=` means the opposite on the lobby's row expander**,
 where it clears the session's tags, so the emptiness rule belongs to
 the create route and not to `set_tags`; a later refactor funnelling
 both surfaces through one helper has to keep both meanings. The
-write also runs on the **failed-upload redirect**, so a create that
-bails out at an earlier Quick Setup slot still keeps the typed tag; a
-slot that failed wrote no tags and a slot that never ran cannot have,
-so that path is still "after the settings CSV" in the only sense that
-matters.
+write also runs on the **failed-upload redirect**, so a create whose
+staged upload is refused still keeps the typed tag; a refused upload
+saved nothing, the settings file included, so that path is still
+"after the settings CSV" in the only sense that matters.
 Create is therefore immune to the wipe above; `import-config` on an
 existing session is **not**, and that remains an open hazard rather
 than a solved one.
@@ -840,6 +839,7 @@ shares. Public surface:
 | `tag_comma_issues(row, headers, *, source, row_number)` | One blocking issue per tag cell holding a comma; `headers` maps each tag attribute to its CSV column. Used by all four roster parsers (§1, *Tag commas*). |
 | `_parse_email(value, *, strict, source, row_number, field)` | Email validation with row-context error message. Used by the reviewer, reviewee and observer parsers on their `*Email` columns. **`strict` decides the non-email case**: reviewers and observers pass `strict=True`, so a cell that is not an address is rejected; reviewees pass `strict=False`, which accepts a cell with **no `@`** as an opaque identifier but still requires `EMAIL_RE` of anything containing one, so `foo@` is caught rather than imported. **Not** used by the Relationships importer, which performs no format validation at all: a malformed `ReviewerEmail` there fails FK resolution and is reported as *"Unknown reviewer"* rather than as a bad address. |
 | `check_cross_table_identity(db, *, session_id, rows, kind)` | Cross-roster guard for a parsed CSV — rejects a row whose email another roster already holds under a different name. `kind` is `"reviewers"` / `"reviewees"` / `"observers"`; anything else raises, rather than returning `[]` and reporting success for an import it never checked. |
+| `check_incoming_identity(db, *, session_id, incoming)` | The same guard for several roster files uploaded together, keyed by kind: each file against the other uploads and against the existing rosters not being replaced. `check_cross_table_identity` is its one-kind case. Saves nothing, so Quick Setup can check every file before writing any. |
 | `cross_table_identity_conflict(db, *, session_id, kind, identifier, name)` | The single-row form, for the create / edit services, so the rule has one home and every write path reaches it. Returns the `(roster label, name)` of a holder that disagrees, or `None`. **Any** disagreement is a conflict: a mailbox that already holds two names is not satisfied by matching one of them. |
 | `is_comparable_identity(identifier, name)` | Whether a pair can disagree with another at all — an identifier with no `@`, or a row with no name, cannot. One predicate for the importers, the services and the Validate rules. |
 

@@ -277,3 +277,22 @@ section (git history keeps it), so this file lists only what is owed.
   "Status is not active or inactive (1 row)", and names no row.
 - [ ] **Missing column.** A CSV without `ReviewerEmail`: the one line is
   "Missing required column: ReviewerEmail".
+
+## Quick Setup checks files together and saves all or none (quick_setup_update Item 1)
+
+- [ ] **A rename across rosters.** On a session where one person is
+  "Bob Smith" on both Reviewers and Reviewees, stage a Reviewers and a
+  Reviewees CSV that both say "Robert Smith" for that email, tick the
+  replace confirmation, and Submit: both rosters now read "Robert
+  Smith", with no banner.
+- [ ] **Two uploads that disagree.** Stage the Reviewers file as
+  "Robert Smith" and the Reviewees file as "Bob Smith": the Reviewers
+  banner reads "ReviewerEmail is used under a different name in the
+  uploaded Reviewees file (1 row)", and neither roster changed.
+- [ ] **A late refusal saves nothing.** Stage a good Reviewers CSV and a
+  Reviewees CSV with a blank email: the Reviewees banner shows, and the
+  Reviewers page still lists the old roster.
+- [ ] **Create.** On New session, stage the same good Reviewers and bad
+  Reviewees files, type a tag, and Create: you land on Session Home with
+  the Reviewees banner; the session exists with its tag, and its
+  Reviewers roster is empty.
