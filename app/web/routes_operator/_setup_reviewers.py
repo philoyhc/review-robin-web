@@ -198,8 +198,6 @@ def _render_reviewers_page(
         }
 
     column_state = views.reviewer_column_state(db, review_session)
-    self_fields = participant_info.effective_reviewer_self_fields(review_session)
-    self_field_chips = views.reviewer_self_chips(column_state.readouts, self_fields)
 
     return _templates.TemplateResponse(
         request,
@@ -321,12 +319,8 @@ def _render_reviewers_page(
             # participant info Item 1 — the reviewer's own fields on
             # the surface: the Unlock panel's chips and the readout
             # row's pills, from the stored selection or the default.
-            "self_field_chips": self_field_chips,
-            "self_field_kept": views.reviewer_self_kept(
-                self_field_chips, self_fields
-            ),
-            "self_field_readout": views.reviewer_self_readout(
-                review_session, self_fields
+            **views.reviewer_self_card_context(
+                review_session, column_state.readouts
             ),
             "edit_id": edit_id,
             "add_mode": add_mode,

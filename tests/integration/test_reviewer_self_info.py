@@ -157,6 +157,32 @@ def test_the_card_sits_above_upload_with_a_chip_per_populated_column(
     assert len(re.findall(r"<button[^>]*disabled", card_html)) == 2
 
 
+def test_a_failed_import_still_renders_the_card_and_readout(
+    client: TestClient, db: Session
+) -> None:
+    """The shared import handler re-renders the page in place on a 400
+    and assembles its own context, so it owes the three keys the GET
+    does. Without them the card had no chips (Save could never enable)
+    and the readout read `none` over the default selection."""
+    rs = _pair(client, db, "rsi-badcsv")
+    response = client.post(
+        f"/operator/sessions/{rs.id}/reviewers/import",
+        files={"file": ("r.csv", b"NotAColumn\nx\n", "text/csv")},
+    )
+    assert response.status_code == 400, response.status_code
+    html = response.text
+    card = re.search(
+        r"<section[^>]*data-reviewer-self-card[^>]*>.*?</section>", html, re.S
+    ).group(0)
+    assert re.findall(r'value="(\w+)"\s+checked', card) == [
+        "name", "email", "profile_link",
+    ], card
+    shown = _div_at(html, "data-reviewer-self-readout")
+    assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
+        "Name", "Email", "Profile",
+    ]
+
+
 def test_no_profile_chip_without_a_profile(
     client: TestClient, db: Session
 ) -> None:

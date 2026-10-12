@@ -393,3 +393,7 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **A field with no data.** With no reviewer profile in the roster,
   the card shows no Profile chip, yet the readout still lists Profile
   and a save keeps it.
+- [ ] **A failed upload.** Upload a reviewer CSV with a bad header: the
+  page returns with the errors and the panel open, the card still shows
+  its chips at the current selection, ticking one enables Save, and the
+  readout still lists `Reviewers see:` pills, not `none`.
