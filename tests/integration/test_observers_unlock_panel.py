@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Observer, ReviewSession
 
-from ._unlock_panel import assert_lock_ends_right_column
+from ._unlock_panel import assert_lock_ends_right_column, panel_columns
 
 CSV = b"ObserverEmail,ObserverName\no1@example.org,O1\no2@example.org,O2\n"
 
@@ -266,6 +266,14 @@ def test_the_lock_control_stays_at_the_foot_on_an_empty_roster(
     for card in (full, empty):
         assert_lock_ends_right_column(card)
         assert "data-lock-home" not in card
+
+    # base.html's `.unlock-right > .roster-card-actions:first-child` rule
+    # pushes `Lock` to the column's foot only when nothing precedes it:
+    # on the empty roster it must be the right column's only element.
+    _, _, right = panel_columns(empty)
+    inner = right[right.index(">") + 1:]
+    inner = re.sub(r"<!--.*?-->", "", inner, flags=re.S).strip()
+    assert inner.startswith('<div class="roster-card-actions">'), inner[:200]
 
 
 def test_the_panel_ships_hidden_and_unlocked_opens_it(

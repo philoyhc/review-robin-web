@@ -262,25 +262,25 @@
               </form>
             </section>
           {% endif %}
-        {# Open, `Lock` is the right column's last child, 20px under its
-           last card (participant info Item 2, after the author's browser
-           check). With no card in the column it is pushed to the column's
-           foot instead, which stretches to the row. #}
-        {% if panel_open %}
-        <div class="roster-card-actions">
-          <button type="button" class="btn secondary" id="roster-unlock-btn"
-                  aria-expanded="true" aria-controls="roster-unlock-panel">
-            Lock
-          </button>
-          {# Without JS the button above is inert, so the same state
-             change is offered as a plain navigation. See the Unlock twin
-             below. #}
-          <noscript>
-            <a class="btn secondary"
-               href="{{ relationships_base_url }}#roster-card">Lock</a>
-          </noscript>
-        </div>
-        {% endif %}
+          {# Open, `Lock` is the right column's last child, 20px under its
+             last card (participant info Item 2, after the author's browser
+             check). With no card in the column it is pushed to the column's
+             foot instead, which stretches to the row. #}
+          {% if panel_open %}
+          <div class="roster-card-actions">
+            <button type="button" class="btn secondary" id="roster-unlock-btn"
+                    aria-expanded="true" aria-controls="roster-unlock-panel">
+              Lock
+            </button>
+            {# Without JS the button above is inert, so the same state
+               change is offered as a plain navigation. See the Unlock twin
+               below. #}
+            <noscript>
+              <a class="btn secondary"
+                 href="{{ relationships_base_url }}#roster-card">Lock</a>
+            </noscript>
+          </div>
+          {% endif %}
         </div>
       </div>
 
