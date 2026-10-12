@@ -645,8 +645,10 @@ Taken 2026-10-12 at `5761ab7e`.
 ### PR ladder
 
 1. **This plan**, with Item 3's close and Item 4's plan. Prose only.
-2. **Scaffold**, after Item 4 closes: inert card, readout, line, at
-   the default as Item 4's rung 2.
+2. **Scaffold**, ~~after Item 4 closes~~ after Item 4's rung 3 merges
+   (revised 2026-10-12: it builds on that rung's code; the close is
+   prose and waits on the author's browser check): inert card, readout,
+   line, at the default as Item 4's rung 2.
 3. **Storage and the live card**, on Item 4's generalized service. Read
    on the cumulative diff.
 
@@ -671,9 +673,7 @@ Taken 2026-10-12 at `5761ab7e`.
   (fixed labels Name, Email, Tag); the inert card heading the right
   column, the `Observers see:` readout (the failed-import re-render
   included) and the `/collation` line, all at the default. The
-  empty-roster panel test now pins the card above `Lock`. Landed after
-  Item 4's rung 3 rather than its close (the close is prose and waits
-  on the author's browser check).
+  empty-roster panel test now pins the card above `Lock`.
 
 ### Doc impact
 
